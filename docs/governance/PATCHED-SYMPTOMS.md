@@ -30,6 +30,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-07 · Le retour flottant masquait l’action de dernière ligne d’une liste
+filtrée, reçue au clavier mais interceptée à la souris. Le shell commun réserve
+une fin de défilement en 406, pour les portails et la navigation mobile existants.
+Cause : contrôle fixé au viewport sans espace réservé dans le conteneur défilant.
+Réception souris et viewport mobile effectivement appliqué au registre.
+
 2026-10-07 · Missions : la console affichait zéro alors que le détail ouvrait une
 mission non assignée. PostgreSQL prouve que OR:[{},assigné] réduit au seul assigné.
 v6.27.405 conserve la portée admin existante, sans changer les autres rôles.
@@ -37,7 +43,7 @@ Colonnes métier, besoin et erreurs de lecture remplacent les projections creuse
 Le cockpit comptait une mission active comme livraison à l'heure et comparait
 un ratio courant à une période inexistante ; mesure déclarée indisponible.
 Cause : portée vide et absence de reçu prises pour des filtres/valeurs ordinaires.
-Réception native 405 restante tracée ; ADR-0201 borne le cycle déjà reçu en 404.
+Réception native 405 reçue ; ADR-0201 borne le cycle déjà reçu en 404.
 
 2026-10-07 · Recette locale : session API valide, pages 307 login ; le stress suivait
 le login et annonçait un succès. v6.27.404 distingue transport HTTP local et TLS

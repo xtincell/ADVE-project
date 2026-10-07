@@ -14,7 +14,9 @@ nativement sur BLISS sans IA. Cette recette découvre la liste console admin vid
 Le lot 405 rétablit sa portée existante et ses colonnes métier, montre le besoin
 dans les deux détails et retire les taux/comparaisons temporels sans preuve.
 Quatre scénarios PostgreSQL vérifient visibilité et isolation ; la réception
-native du lot 405 reste distincte de la réception complète du cycle C6.
+native du lot 405 est reçue ; le cycle C6 complet reste ouvert. Le retour
+flottant recouvre une action de dernière ligne : espace commun corrigé en 406,
+réception souris après livraison et responsive restant à éprouver.
 
 ## Observation et décision séparées — 2026-10-07
 

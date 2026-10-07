@@ -78,7 +78,8 @@ export function AppShell({
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto pb-[calc(var(--mobile-tab-height)+env(safe-area-inset-bottom))] md:pb-0">
+        {/* Keep the final action scrollable above feedback and the mobile tab bar. */}
+        <main className="flex-1 overflow-y-auto pb-[calc(var(--mobile-tab-height)+env(safe-area-inset-bottom)+6rem)] md:pb-24">
           <div className="animate-[slide-up_250ms_ease-out] p-4 md:p-6">{children}</div>
         </main>
       </div>

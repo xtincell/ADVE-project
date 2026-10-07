@@ -1,5 +1,21 @@
 # Changelog — La Fusee
 
+## v6.27.406 — fix(ui): rendre les dernières actions accessibles (2026-10-07)
+
+Le bouton flottant de retour pouvait masquer l’action de la dernière ligne,
+reproduit sur la liste filtrée des missions en production 405. Le shell commun
+réserve une fin de défilement au-dessus de ce bouton et de la navigation mobile.
+Le même composant de retour et les actions métier sont conservés.
+La réception souris après livraison reste requise ; le viewport mobile n’a pas
+été effectivement appliqué par le navigateur et ne vaut pas recette responsive.
+
+La réception native 405 retrouve la mission non assignée dans la liste admin,
+applique les filtres de mode/statut, conserve le besoin exact dans les deux
+portails et ouvre la mission depuis la demande. Le cockpit affiche 3/8 achevées
+et « Non mesuré » pour la livraison à l’heure. Fenêtres réseau complètes :
+59 réponses console et 69 cockpit, sans erreur HTTP ni exception observée.
+L’accès sous rôles distincts et le cycle production/livraison restent ouverts.
+
 ## v6.27.405 — fix(missions): retrouver les missions et leur besoin exact (2026-10-07)
 
 La console masquait les missions non assignées à un administrateur pourtant

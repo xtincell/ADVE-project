@@ -24,13 +24,15 @@
   de rôle et la filiation avant une éventuelle absorption conservant les
   historiques ; aucun second écrivain ni suppression anticipée. Déclencheur :
   audit C1/C3 des doublons avant gel du modèle ; effort : un lot de réconciliation.
-- **Missions — réception native 405** : la liste admin vide est reproduite puis
-  corrigée sur PostgreSQL, sans élargir les droits des autres rôles. Mode,
-  affectation et échéance console utilisent leurs colonnes ; les détails montrent
-  le besoin. Le taux de livraison sans événement daté reste « Non mesuré ».
-  Recevoir liste/détail/filtres sur l'image 405, y compris la mission de recette
-  non assignée et l'ouverture depuis la demande. Déclencheur : image 405 reçue ;
-  effort : une recette native sans IA ni engagement client. Cycle C6 toujours ouvert.
+- **Missions — réception native 405 reçue le 7 octobre** : mission non assignée
+  visible dans la liste admin, recherche et filtres mode/statut reçus ; besoin
+  exact console/cockpit et ouverture depuis la demande. 3/8 achevées ; livraison
+  à l’heure non mesurée. Les rôles distincts et le cycle C6 restent à recevoir.
+- **Dernière action masquée par le retour flottant** : constaté sur la liste
+  filtrée 405 ; ouverture au clavier reçue, clic souris intercepté par le retour.
+  Le shell 406 réserve la fin de défilement commune. Recevoir au clic souris
+  après livraison, puis à un viewport mobile effectivement appliqué. Déclencheur :
+  image 406 reçue ; effort : une recette console/cockpit sans mutation métier.
 - **Tickets de reprise de campagne** : le code formé à partir du préfixe campagne
   et d'un compteur par livrable peut entrer en collision entre deux livrables.
   Fermer sur l'identité/numérotation déjà existante, avec deux créations simultanées

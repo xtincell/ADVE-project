@@ -26,6 +26,9 @@ lit les colonnes Mission (mode/slaDeadline/assignee) et le besoin description,
 sans confondre absence de mesure datée et livraison à l'heure. La portée admin
 ne s'exprime pas par un OR contenant un objet vide, qui masque les non-assignées.
 Les tests PostgreSQL gardent la séparation des opérateurs et les modes restreints.
+En production 405, liste/filtres/besoin/lien sont reçus dans les deux portails ;
+la dernière action recouverte reste un défaut de présentation, corrigé au shell
+406 avec une fin de défilement commune. Aucun Intent ni donnée métier modifiés.
 
 ```
    ENTRÉES (templates)            TRANSFORMATION (mécanique)              SORTIES (templates)
