@@ -2,6 +2,13 @@
 
 ## v6.27.403 — fix(portfolio): qualifier les suivis Radar et protéger les raccordements (2026-10-07)
 
+- Réception de livraison : image publiée et conteneur rapprochés du commit
+  `414678d`, version 403 visible. Les trois marques ont reçu leur raccord manuel
+  au même suivi Radar 491 ; le projet Noël et son accès sont uniques dans la vue
+  groupe, sans perte des anciens liens ni copie des statuts. Sept onglets publics
+  reçus. Dette de ces réceptions retirée ; autres promesses marketing, accès
+  natif Radar et cycles complets restent distincts et ouverts.
+
 **Un suivi retrouve son projet et ses marques sans dupliquer les décisions ni écraser un autre lien.**
 
 - Présentation publique des sept fonctions corrigée séparément : rôles exprimés

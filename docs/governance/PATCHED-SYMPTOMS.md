@@ -34,13 +34,18 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 avec disponibilité, révision automatique et fin du travail manuel promises.
 Le correctif de copy 403 décrit les rôles, choix humains et services configurés.
 Cause : copy promotionnelle non confrontée aux registres et aux reçus de release.
-Réception native de la présentation à faire à la livraison 403.
+Sept onglets reçus nativement le 7 octobre en 403. Les promesses des autres
+sections restent une dette distincte ; cette réception ne vaut pas cycle complet.
 
 2026-10-07 · Portfolio : une référence invalide masquait tout le tableau ; deux
 éditions pouvaient écraser les liens récents. v6.27.403 préserve les entrées saines,
 signale les rejets et compare la version dans l’écriture commune. Cause : lecture
 all-or-nothing prise pour absence et remplacement de tableau sans précondition.
-Identité d’instance traitée en ADR-0200 ; réception native tracée au registre.
+Identité d’instance traitée en ADR-0200. Ajout manuel reçu en production pour
+Bonnet Rouge, Peak et Belle Hollandaise : même brief 491, instance radar-matanga,
+origine barre-matanga / PRJ-EOTY26. La vue groupe reçoit un projet et un seul
+accès FRC-076. Anciens raccords conservés ; aucun état métier recopié. La réception
+de l'écran Radar, des autres rôles natifs et du cycle complet reste ouverte.
 
 2026-10-07 · Gazette : mesure à la une contredite par son état vide, qualifications
 fabriquées, demande assistée échouée affichée en exécution et reprise masquée.

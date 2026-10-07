@@ -190,16 +190,16 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
 
 ## Intégration des marques — 2026-10-02 (ADR-0193)
 
-- **Réception native des raccordements Radar — v6.27.403, ADR-0200** : identité
-  d’instance, contexte projet, lecture partielle diagnostiquée et contrôle de
-  concurrence sont reçus par tests et commandes authentifiées locales. Le
-  navigateur local reste bloqué par sa politique de requêtes ; aucun test HTTP
-  ne vaut réception d’écran. Fermer par rendu sous session réelle, ajout/reprise
-  manuels et raccord des trois marques au reçu Noël id 491 dans Radar Matanga.
-  Effort : un parcours et une relecture des identités ; reprise dès déploiement
-  403 sur le portefeuille déjà accessible, avant réception Shinkiro R04/R06/R07.
-  Recevoir aussi la présentation publique des sept fonctions : rôles, aide IA
-  facultative et absence de promesses automatiques ou de compteurs périmés.
+- **Promesses des autres sections publiques — constat natif du 7 octobre 2026** :
+  les sept fonctions ont reçu leur correction 403, mais `/lafusee` promet encore
+  un diagnostic en quinze minutes, la production en quarante-huit heures et des
+  missions dispatchées. Ces délais et résultats ne sont pas reçus sur le cycle
+  complet. Étendre la revue aux composants du hero, diagnostic, trajectoire,
+  bandeau et offres ; conserver le positionnement et qualifier les exemples,
+  prérequis, délais indicatifs et actes humains. Fermer par lecture native de
+  chaque section et rapprochement avec les capacités effectivement disponibles.
+  Déclencheur : recette C4/R10, avant l'offre TPE ; effort : une passe de contenu
+  et de réception, sans nouvelle fonction ni changement doctrinal.
 
 - **Portée du stress HTTP** : le script suit les redirections et accepte les
   réponses 401/403/404 ; ses 281 réponses ne prouvent pas 281 écrans authentifiés.
