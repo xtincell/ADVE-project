@@ -12,7 +12,7 @@
 "use client";
 
 import { usePortfolioOperator } from "@/components/portfolio/use-portfolio-operator";
-import { useRouter } from "next/navigation";
+import { PortfolioOperatorSelect } from "@/components/portfolio/PortfolioOperatorSelect";
 import { useState } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
@@ -23,7 +23,6 @@ import { Plus, Building, Upload } from "lucide-react";
 export default function PortfolioRootPage() {
   const [showForm, setShowForm] = useState(false);
   const { operator, operators, isLoading: operatorLoading, error } = usePortfolioOperator();
-  const router = useRouter();
 
   if (operatorLoading) return <div className="p-6 text-sm text-foreground-secondary">Chargement…</div>;
   if (error) return <p role="alert" className="p-6 text-error">Le portefeuille n’a pas pu être chargé : {error.message}</p>;
@@ -65,14 +64,11 @@ export default function PortfolioRootPage() {
         </div>
       </header>
 
-      {operators.length > 1 && <label className="flex items-center gap-3 text-sm">Équipe
-        <select aria-label="Équipe du portefeuille" value={operator.id} onChange={(e) => router.push(`/cockpit/portfolio?operator=${encodeURIComponent(e.target.value)}`)} className="rounded-lg border border-border bg-background px-3 py-2">
-          {operators.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-        </select>
-      </label>}
+      <PortfolioOperatorSelect operatorId={operator.id} operators={operators} />
       {showForm && (
         <div className="rounded border border-border bg-surface-raised/50">
           <BrandNodeForm
+            key={operator.id}
             operatorId={operator.id}
             parentNodeId={null}
             strategyId={`audit:${operator.id}`}

@@ -34,6 +34,16 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.409",
+    date: "2026-10-07",
+    headline: "Votre équipe accompagne le suivi des campagnes",
+    highlights: [{
+      emoji: "🧭",
+      title: "Un contexte conservé",
+      body: "L’équipe choisie dans le portefeuille accompagne le tableau, les livrables et leurs reprises. Une lecture refusée reste visible et peut être relancée.",
+    }],
+  },
+  {
     version: "6.27.408",
     date: "2026-10-07",
     headline: "Des reprises qui gardent leur contexte",

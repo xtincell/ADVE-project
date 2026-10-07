@@ -9,7 +9,7 @@
  *  3. **KPIs Agency** — Header dashboard : compteurs cross-clients, RAG breakdown,
  *     Sentinels alertes, top urgentes.
  *
- * Les data sont scopées par operator (operatorId courant via session) avec
+ * Les données sont bornées par l’équipe accessible choisie au portefeuille, avec
  * filtres optionnels (countryCode IN AFRICA, clusterTag, status, rag).
  */
 
@@ -21,6 +21,8 @@ import { trpc } from "@/lib/trpc/client";
 import { Activity, AlertTriangle, CheckCircle2, Layers, Package, Ticket, ClipboardList } from "lucide-react";
 import { OperatorActionForm } from "@/components/portfolio/OperatorActionForm";
 import { Button } from "@/components/primitives/button";
+import { usePortfolioOperator } from "@/components/portfolio/use-portfolio-operator";
+import { PortfolioOperatorSelect } from "@/components/portfolio/PortfolioOperatorSelect";
 
 const TABS = ["KPIS", "PROJECTS", "DELIVERABLES", "ACTIONS", "TICKETS"] as const;
 type Tab = (typeof TABS)[number];
@@ -33,16 +35,16 @@ const RAG_COLORS: Record<string, string> = {
 
 export default function AfricaPortfolioPage() {
   const [tab, setTab] = useState<Tab>("KPIS");
-  const { data: operator, error, refetch } = trpc.operator.getOwn.useQuery();
+  const { operator, operators, isLoading, error, refetch } = usePortfolioOperator();
   if (error) return <div role="alert" className="space-y-3 p-6">
     <p>{error.message}</p>
     <Button variant="outline" onClick={() => { void refetch(); }}>Réessayer la lecture</Button>
   </div>;
-  if (operator === null) return <div className="space-y-3 p-6">
+  if (isLoading) return <div className="p-6 text-sm text-foreground-secondary">Chargement de l’équipe…</div>;
+  if (!operator) return <div className="space-y-3 p-6">
     <p>Aucune équipe rattachée à ce compte. Le suivi nécessite une équipe.</p>
     <Link href="/console" className="text-accent hover:underline">Retour à la console</Link>
   </div>;
-  if (!operator) return <div className="p-6 text-sm text-foreground-secondary">Chargement de l’équipe…</div>;
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -52,6 +54,8 @@ export default function AfricaPortfolioPage() {
           Dashboard cross-clients : campagnes en vol, livrables matrice 6D, KPIs agrégés Afrique.
         </p>
       </header>
+
+      <PortfolioOperatorSelect operatorId={operator.id} operators={operators} />
 
       <nav className="flex gap-1 border-b border-zinc-700">
         {TABS.map((t) => (
@@ -73,17 +77,19 @@ export default function AfricaPortfolioPage() {
         ))}
       </nav>
 
-      {tab === "KPIS" && <KpisView operatorId={operator.id} />}
-      {tab === "PROJECTS" && <ProjectsView operatorId={operator.id} />}
-      {tab === "DELIVERABLES" && <DeliverablesView operatorId={operator.id} />}
-      {tab === "ACTIONS" && <ActionsView operatorId={operator.id} />}
-      {tab === "TICKETS" && <TicketsView operatorId={operator.id} />}
+      {tab === "KPIS" && <KpisView key={operator.id} operatorId={operator.id} />}
+      {tab === "PROJECTS" && <ProjectsView key={operator.id} operatorId={operator.id} />}
+      {tab === "DELIVERABLES" && <DeliverablesView key={operator.id} operatorId={operator.id} />}
+      {tab === "ACTIONS" && <ActionsView key={operator.id} operatorId={operator.id} />}
+      {tab === "TICKETS" && <TicketsView key={operator.id} operatorId={operator.id} />}
     </div>
   );
 }
 
 function KpisView({ operatorId }: { operatorId: string }) {
-  const { data: stats } = trpc.campaignDeliverable.statsForOperator.useQuery({ operatorId });
+  const { data: stats, error, isLoading, refetch } = trpc.campaignDeliverable.statsForOperator.useQuery({ operatorId });
+  if (error || isLoading || !stats) return <PortfolioReadState error={error} onRetry={refetch} label="Chargement des indicateurs…" />;
+  if (stats.total === 0) return <p className="rounded border border-border p-6 text-sm text-foreground-secondary">Aucun livrable enregistré pour cette équipe. Les indicateurs apparaîtront avec les premières tâches.</p>;
 
   const totalDeliverables = stats?.total ?? 0;
   const ragRed = stats?.byRag.RED ?? 0;
@@ -122,7 +128,8 @@ function KpisView({ operatorId }: { operatorId: string }) {
 }
 
 function ProjectsView({ operatorId }: { operatorId: string }) {
-  const { data: deliverables } = trpc.campaignDeliverable.listForOperator.useQuery({ operatorId });
+  const { data: deliverables, error, isLoading, refetch } = trpc.campaignDeliverable.listForOperator.useQuery({ operatorId });
+  if (error || isLoading || !deliverables) return <PortfolioReadState error={error} onRetry={refetch} label="Chargement des campagnes…" />;
   // Group by campaignId
   const byCampaign = new Map<string, { campaign: { id: string; name: string; strategyId: string }; total: number; ragCounts: Record<string, number> }>();
   for (const d of deliverables ?? []) {
@@ -170,7 +177,7 @@ function ProjectsView({ operatorId }: { operatorId: string }) {
               <td className="p-2 text-right">{p.ragCounts.GREEN ?? 0}</td>
               <td className="p-2">
                 <Link
-                  href={`/cockpit/operate/campaigns/${p.campaign.id}`}
+                  href={`/cockpit/operate/campaigns/${p.campaign.id}?operator=${encodeURIComponent(operatorId)}`}
                   className="text-accent hover:underline"
                 >
                   Détail →
@@ -188,11 +195,12 @@ function DeliverablesView({ operatorId }: { operatorId: string }) {
   const [filterRag, setFilterRag] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
 
-  const { data: deliverables } = trpc.campaignDeliverable.listForOperator.useQuery({
+  const { data: deliverables, error, isLoading, refetch } = trpc.campaignDeliverable.listForOperator.useQuery({
     operatorId,
     rag: filterRag.length > 0 ? (filterRag as Array<"GREEN" | "AMBER" | "RED">) : undefined,
     status: filterStatus.length > 0 ? filterStatus : undefined,
   });
+  if (error || isLoading || !deliverables) return <PortfolioReadState error={error} onRetry={refetch} label="Chargement des livrables…" />;
 
   return (
     <section className="flex flex-col gap-3">
@@ -229,7 +237,7 @@ function DeliverablesView({ operatorId }: { operatorId: string }) {
                 <tr key={d.id} className="border-t border-zinc-800 hover:bg-zinc-900/30">
                   <td className="p-2">
                     <Link
-                      href={`/console/operate/africa-portfolio/deliverable/${d.id}`}
+                      href={`/console/operate/africa-portfolio/deliverable/${d.id}?operator=${encodeURIComponent(operatorId)}`}
                       className="hover:text-accent hover:underline"
                     >
                       {d.campaign.name}
@@ -266,7 +274,7 @@ function ActionsView({ operatorId }: { operatorId: string }) {
   const [showForm, setShowForm] = useState(false);
   const [showDone, setShowDone] = useState(false);
 
-  const { data: actions } = trpc.operatorAction.listForOperator.useQuery({
+  const { data: actions, error, isLoading, refetch } = trpc.operatorAction.listForOperator.useQuery({
     operatorId,
     done: showDone ? undefined : false,
   });
@@ -274,6 +282,7 @@ function ActionsView({ operatorId }: { operatorId: string }) {
   const toggleMutation = trpc.operatorAction.toggleDone.useMutation({
     onSuccess: () => utils.operatorAction.invalidate(),
   });
+  if (error || isLoading || !actions) return <PortfolioReadState error={error} onRetry={refetch} label="Chargement des actions…" />;
 
   const PRIO_COLORS: Record<string, string> = {
     CRITIQUE: "bg-error/15 text-error",
@@ -284,6 +293,7 @@ function ActionsView({ operatorId }: { operatorId: string }) {
 
   return (
     <section className="flex flex-col gap-3">
+      {toggleMutation.error && <p role="alert" className="text-sm text-error">{toggleMutation.error.message}</p>}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <ClipboardList className="h-4 w-4" />
@@ -377,7 +387,8 @@ function ActionsView({ operatorId }: { operatorId: string }) {
 // ──────────────────────────────────────────────────────────────────────
 
 function TicketsView({ operatorId }: { operatorId: string }) {
-  const { data: tickets } = trpc.campaignChangeRequest.listOpenForOperator.useQuery({ operatorId });
+  const { data: tickets, error, isLoading, refetch } = trpc.campaignChangeRequest.listOpenForOperator.useQuery({ operatorId });
+  if (error || isLoading || !tickets) return <PortfolioReadState error={error} onRetry={refetch} label="Chargement des reprises…" />;
 
   const IMPACT_COLORS: Record<string, string> = {
     COSMETIC: "bg-emerald-500/15 text-emerald-300",
@@ -421,7 +432,7 @@ function TicketsView({ operatorId }: { operatorId: string }) {
             <tbody>
               {tickets.map((t) => (
                 <tr key={t.id} className="border-t border-zinc-800 hover:bg-zinc-900/30">
-                  <td className="p-2 font-mono text-[10px]">{t.ticketCode}</td>
+                  <td className="p-2 font-mono text-[10px]"><Link className="text-accent hover:underline" href={`/console/operate/africa-portfolio/deliverable/${t.campaignDeliverableId}?operator=${encodeURIComponent(operatorId)}`}>{t.ticketCode}</Link></td>
                   <td className="p-2">{t.requestedByName}</td>
                   <td className="p-2 max-w-md truncate" title={t.description}>{t.description}</td>
                   <td className="p-2">
@@ -443,6 +454,18 @@ function TicketsView({ operatorId }: { operatorId: string }) {
       )}
     </section>
   );
+}
+
+function PortfolioReadState({ error, onRetry, label }: {
+  error?: { message: string } | null;
+  onRetry: () => unknown;
+  label: string;
+}) {
+  if (error) return <div role="alert" className="space-y-3 rounded border border-error/30 bg-error/10 p-4">
+    <p className="text-sm text-error">{error.message}</p>
+    <Button variant="outline" onClick={() => { void onRetry(); }}>Réessayer la lecture</Button>
+  </div>;
+  return <p role="status" className="p-6 text-sm text-foreground-secondary">{label}</p>;
 }
 
 function KpiCard({ icon, label, value, highlight }: { icon: React.ReactNode; label: string; value: string | number; highlight?: boolean }) {

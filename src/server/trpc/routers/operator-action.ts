@@ -16,6 +16,7 @@ import {
   listActionsForOperator,
 } from "@/server/services/operator-action";
 import { db } from "@/lib/db";
+import { getOperatorContext } from "@/server/services/operator-isolation";
 
 /* lafusee:governed-active — Phase 18/19 router. Toutes les mutations utilisent governedProcedure (ADR-0004 strict cible atteinte) ; tag corrigé 2026-05-06 strangler→governed (faux positif initial — le router a toujours utilisé governedProcedure depuis sa création). */
 
@@ -151,12 +152,16 @@ export const operatorActionRouter = createTRPCRouter({
         category: z.array(CategoryEnum).optional(),
       }),
     )
-    .query(({ input }) =>
-      listActionsForOperator({
+    .query(async ({ input, ctx }) => {
+      const scope = await getOperatorContext(ctx.session.user.id);
+      if (scope.role !== "ADMIN" && scope.operatorId !== input.operatorId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette équipe." });
+      }
+      return listActionsForOperator({
         operatorId: input.operatorId,
         done: input.done,
         priority: input.priority,
         category: input.category,
-      }),
-    ),
+      });
+    }),
 });

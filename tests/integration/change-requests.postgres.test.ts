@@ -7,6 +7,7 @@ vi.mock("next-auth", () => ({}));
 import { db } from "@/lib/db";
 import { campaignChangeRequestRouter } from "@/server/trpc/routers/campaign-change-request";
 import { campaignDeliverableRouter } from "@/server/trpc/routers/campaign-deliverable";
+import { operatorActionRouter } from "@/server/trpc/routers/operator-action";
 import { createChangeRequestHandler } from "@/server/services/campaign-change-request";
 
 const operators: string[] = [], users: string[] = [], brands: string[] = [];
@@ -68,6 +69,7 @@ beforeAll(async () => {
   [brand, foreignBrand] = brands as [string, string];
 });
 afterAll(async () => {
+  await db.operatorAction.deleteMany({ where: { operatorId: { in: operators } } });
   await db.intentEmission.deleteMany({ where: { strategyId: { in: brands } } });
   await db.campaignChangeRequest.deleteMany({ where: { deliverable: { campaignId: { in: campaigns } } } });
   await db.campaignDeliverable.deleteMany({ where: { campaignId: { in: campaigns } } });
@@ -80,6 +82,18 @@ afterAll(async () => {
 });
 
 describe.sequential("campaign change requests through the existing governed boundary", () => {
+  it("lists the own operator action without including another team", async () => {
+    const ownAction = await db.operatorAction.create({ data: { operatorId: localOperator, label: "Action de recette locale" } });
+    const foreignAction = await db.operatorAction.create({ data: { operatorId: foreignOperator, label: "Action de recette étrangère" } });
+    const actions = operatorActionRouter.createCaller({ db, headers: undefined, session: session() });
+    const rows = await actions.listForOperator({ operatorId: localOperator });
+    expect(rows.map(row => row.id)).toContain(ownAction.id);
+    expect(rows.map(row => row.id)).not.toContain(foreignAction.id);
+  });
+  it("refuses a foreign operator action list even for an attached account", async () => {
+    const actions = operatorActionRouter.createCaller({ db, headers: undefined, session: session() });
+    await expect(actions.listForOperator({ operatorId: foreignOperator })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
   it("lists CampaignDeliverable tickets without looking up a MissionDeliverable", async () => {
     const f = await fixture(); const ticket = await existingTicket(f);
     expect((await caller().listForDeliverable({ deliverableId: f.tasks[0]!.id })).map(t => t.id)).toEqual([ticket.id]);

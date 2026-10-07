@@ -2,15 +2,17 @@
 
 ## Reprises de campagne — 2026-10-07 (ADR-0202)
 
-- **Corrigé localement en 408** : identité complète tâche/reprise, verrouillage
+- **Livré en 408** : identité complète tâche/reprise, verrouillage
   PostgreSQL, retry explicite persistant, marque/opérateur réels, terminal conservé,
   brief et responsable bornés. Erreurs et dialogues reçus en rendu statique ;
   cela ne vaut pas recette navigateur. HTTP authentifié reçu sous deux comptes
   synthétiques : retries 200/200, résolutions 200/409, refus étrangers 403,
   zéro delta IA/Process. Build et stress FULL reçus : 276 réponses de pages,
   cinq identités demo absentes non reçues, forges explicitement simulées.
-  Fermer la livraison par CI/image/runtime et parcours natif sur une campagne de recette
-  identifiée, sans simuler une validation Noël. Déclencheur : livraison 408.
+  CI 4 054 unitaires et 57 PostgreSQL, image exacte 7ef4f75 puis runtime 6.27.408
+  rapprochés ; conteneur unique et volume privé conservés. Natif : absence
+  d’équipe explicite reçue. Parcours natif sur campagne de recette identifiée
+  encore ouvert, sans simuler une validation Noël. Déclencheur : réception 409.
 - **Statut de campagne automatique absent** : retirer le statut manuel est refusé
   sans écriture ; pas de vert par défaut. Qualifier le calcul canonique avant
   raccord, éprouver retard, blocages et absence de données. Déclencheur : réception
@@ -30,13 +32,33 @@
 - **Cycle complet** : résoudre une reprise ne livre pas sa tâche. Production,
   preuve de validation, diffusion, mesure et reprise ultérieure restent à recevoir
   sur les vrais projets. Déclencheur : traversée C6 après recette 408.
-- **Contexte administrateur multi-équipe** : reçu natif 407, operator.getOwn
-  répond 200/null et la page reste Loading. Absence et erreur explicites en 408 ;
-  aucun rattachement de compte inventé. Raccorder le choix d'équipe existant au
-  portefeuille et au détail, avec autorisation serveur, puis recevoir le parcours
-  admin et opérateur. Les autres vues du tableau doivent aussi distinguer erreur,
-  chargement et absence de mesure. Déclencheur : prochain lot C4/C6 sur ce suivi ;
-  effort : un lot de contexte et recette native, sans nouvelle permission.
+- **Contexte administrateur multi-équipe — corrigé localement en 409** :
+  tableau et détail réutilisent `usePortfolioOperator` et le choix existant.
+  Les liens conservent l’équipe ; un contexte demandé inaccessible est signalé,
+  sans autre équipe silencieuse. Les cinq vues distinguent erreur, chargement
+  et absence réelle. Quatorze contre-exemples rouges avant correction, quatre
+  reçus après seul raccord du contexte puis dix erreurs de lecture encore
+  rouges, enfin suite de rendu ciblée verte. Build final et HTTP authentifié
+  reçus : contextes propres/admin 200, quatre lectures étrangères 403, zéro
+  delta métier/IA/Process. Stress 276 pages, cinq identités demo non reçues,
+  zéro échec, forges simulées. Fermer par choix natif d’équipe,
+  ouverture d’une tâche de recette puis retour au tableau, avec refus d’une
+  équipe étrangère sous compte opérateur. Déclencheur : livraison 409 ; effort :
+  une recette native, sans nouvelle permission ni mutation d’appartenance.
+- **Périmètre des actions opérateur** : lecture étrangère reproduite sur deux
+  comptes/actions synthétiques PostgreSQL, corrigée localement en 409 avec le
+  même contrôle que livrables/tickets. Les mutations create/update/toggle/delete
+  et leurs handlers Mestor restent à confronter à la propriété réelle des actions
+  et liens campagne/responsable ; le garde staff seul ne prouve pas ce périmètre.
+  Fermer par refus croisés, pivot forgé, responsabilité étrangère et concurrence,
+  puis réutiliser les gardes existantes dans les écrivains communs. Déclencheur :
+  suite immédiate C3/C6 après réception du contexte 409 ; effort : un lot actions.
+- **Raisons structurées des refus Mestor** : le garde CampaignScopeError est
+  effectif, mais `vetoed(tool, message)` classe le texte anglais ; un message
+  français peut devenir VALIDATION_FAILED au lieu de FORBIDDEN/CONFLICT.
+  Transmettre le code typé de l’erreur existante, puis éprouver ces refus via
+  les Intents réels, sans retirer la garde. Déclencheur : prochain lot C3/C6
+  des erreurs de reprise ; effort : un correctif du handler et sa recette.
 
 ## Dossier SPAWT — réception des assets partagés (2026-10-07)
 

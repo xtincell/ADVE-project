@@ -1,5 +1,34 @@
 # Changelog — La Fusee
 
+## v6.27.409 — fix(portfolio): garder l’équipe dans le suivi des campagnes (2026-10-07)
+
+**Le suivi reprend l’équipe accessible choisie dans le portefeuille.**
+
+- `usePortfolioOperator` et le sélecteur existants sont partagés avec le tableau.
+  Le détail, les liens de campagne et de reprise conservent l’équipe. Aucun
+  rattachement ni droit ajouté ; une équipe demandée inaccessible ne bascule
+  plus silencieusement sur une autre. Les formulaires enfants sont remontés
+  quand le contexte change.
+- Les cinq vues distinguent erreur, chargement et absence réelle. Un échec ne
+  produit ni zéro compteur ni liste vide ; sans tâche, aucun taux de validation
+  fictif. Les refus de changement d’action sont visibles. Les tickets ouverts
+  mènent au détail existant, dans le même contexte.
+- La liste des actions compare aussi l’équipe demandée au rattachement réel
+  du compte, avec accès administrateur conservé. Le contre-exemple PostgreSQL
+  lisait une action synthétique étrangère ; il reçoit désormais FORBIDDEN.
+  Le segment commun porte la frontière Suspense requise par le contexte URL.
+- Console/Admin, INFRASTRUCTURE : extension des lectures existantes pour accéder
+  à la production de campagnes, sans nouvel écrivain, agent, Intent ou table.
+  Quatorze contre-exemples rouges puis 58 contrôles portfolio, 1 592 gouvernance
+  et 59 PostgreSQL verts. Build final reçu après l’échec Suspense conservé.
+  HTTP authentifié : équipes administrateur et équipe propre 200, quatre lectures
+  étrangères 403, aucun delta tâche/ticket/action/IA/Process. Stress FULL :
+  276 pages reçues, cinq identités demo non reçues, zéro échec ; forges simulées.
+  Navigateur après livraison et cycle complet suivis dans RESIDUAL-DEBT.
+- Réception 408 rapprochée : CI 4 054 unitaires / 57 PostgreSQL, image exacte et
+  runtime 6.27.408 avec volume privé conservé. État natif d’absence reçu ; cela
+  ne recevait pas encore le contexte administrateur corrigé par ce lot.
+
 ## v6.27.408 — fix(campaigns): conserver l’identité et le reçu des reprises (2026-10-07)
 
 Les reprises utilisent le code de leur tâche et une identité explicite de demande.

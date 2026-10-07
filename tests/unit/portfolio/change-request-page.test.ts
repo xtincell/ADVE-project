@@ -5,12 +5,13 @@ const state = vi.hoisted(() => ({
   operator: {} as Record<string, unknown>, tasks: {} as Record<string, unknown>,
   tickets: {} as Record<string, unknown>, mutationError: null as Error | null,
 }));
-vi.mock("next/navigation", () => ({ useParams: () => ({ id: "task-fixture" }), useRouter: () => ({}) }));
+vi.mock("next/navigation", () => ({ useParams: () => ({ id: "task-fixture" }), useRouter: () => ({}), usePathname: () => "/console/operate/africa-portfolio", useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/lib/trpc/client", () => {
   const mutation = () => ({ isPending: false, error: state.mutationError, mutate: vi.fn(), mutateAsync: vi.fn() });
   return { trpc: {
+    auth: { me: { useQuery: () => ({ data: { role: "USER" }, refetch: vi.fn() }) } },
     useUtils: () => ({ campaignDeliverable: { invalidate: vi.fn() }, campaignChangeRequest: { invalidate: vi.fn() } }),
-    operator: { getOwn: { useQuery: () => state.operator } },
+    operator: { getOwn: { useQuery: () => state.operator }, list: { useQuery: () => ({ data: [], refetch: vi.fn() }) } },
     campaignDeliverable: { listForOperator: { useQuery: () => state.tasks }, update: { useMutation: mutation } },
     campaignChangeRequest: { listForDeliverable: { useQuery: () => state.tickets },
       resolve: { useMutation: mutation }, escalate: { useMutation: mutation }, create: { useMutation: mutation } },

@@ -30,6 +30,14 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-07 · Le suivi de campagne ignorait le choix d’équipe du portefeuille ;
+les erreurs de ses cinq lectures ressemblaient à des listes vides ou des zéros.
+409 : contexte/sélecteur partagés, frontière de chargement commune et états
+  de lecture distincts. Liste d’actions étrangères refusée côté serveur, après
+  contre-exemple PostgreSQL et HTTP authentifié. Hypothèse :
+raccords frontend parallèles malgré la présence du mécanisme commun. Native
+après livraison et cycle complet suivis dans RESIDUAL-DEBT.
+
 2026-10-07 · Boot Phase 18 : l’exemple utilisait le littéral `pending`, rejeté
 par l’enum Prisma. Commande corrigée en `PENDING`, exercée sur PostgreSQL local :
 zéro résidu en attente. Cause : exemple non confronté au schéma ; aucun état

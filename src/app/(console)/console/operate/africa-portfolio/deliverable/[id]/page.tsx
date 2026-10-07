@@ -16,6 +16,7 @@ import { Dialog } from "@/components/primitives/dialog";
 import { Button } from "@/components/primitives/button";
 import { Textarea } from "@/components/primitives/textarea";
 import { CampaignChangeRequestForm } from "@/components/portfolio/CampaignChangeRequestForm";
+import { usePortfolioOperator } from "@/components/portfolio/use-portfolio-operator";
 import {
   ArrowLeft, Ticket, AlertTriangle, CheckCircle2,
   Clock, Tag, MapPin, Globe, FileText, Edit3,
@@ -58,7 +59,8 @@ export default function DeliverableDetailPage() {
   const [decision, setDecision] = useState<{ ticketId: string; action: "resolve" | "escalate" } | null>(null);
   const [decisionNotes, setDecisionNotes] = useState("");
 
-  const { data: operator, error: operatorError, refetch: refetchOperator } = trpc.operator.getOwn.useQuery();
+  const { operator, error: operatorError, isLoading: operatorLoading, refetch: refetchOperator } = usePortfolioOperator();
+  const operatorQuery = operator ? `?operator=${encodeURIComponent(operator.id)}` : "";
 
   const { data: deliverables, error: deliverablesError, isLoading: deliverablesLoading, refetch: refetchDeliverables } = trpc.campaignDeliverable.listForOperator.useQuery(
     { operatorId: operator?.id ?? "" },
@@ -86,15 +88,16 @@ export default function DeliverableDetailPage() {
     <p>{operatorError?.message ?? deliverablesError?.message}</p>
     <Button variant="outline" onClick={() => { void refetchOperator(); void refetchDeliverables(); }}>Réessayer la lecture</Button>
   </div>;
-  if (operator === null) return <div className="space-y-3 p-6">
+  if (operatorLoading) return <div className="p-6 text-sm text-foreground-secondary">Chargement de l’équipe…</div>;
+  if (!operator) return <div className="space-y-3 p-6">
     <p>Aucune équipe rattachée à ce compte. Le suivi nécessite une équipe.</p>
     <Link href="/console" className="text-accent hover:underline">Retour à la console</Link>
   </div>;
-  if (!operator || deliverablesLoading) return <div className="p-6 text-sm text-foreground-secondary">Chargement du livrable…</div>;
+  if (deliverablesLoading) return <div className="p-6 text-sm text-foreground-secondary">Chargement du livrable…</div>;
   if (!deliverable) {
     return (
       <div className="p-6">
-        <Link href="/console/operate/africa-portfolio" className="text-accent hover:underline">
+        <Link href={`/console/operate/africa-portfolio${operatorQuery}`} className="text-accent hover:underline">
           ← Retour dashboard
         </Link>
         <div className="mt-4 rounded border border-error/30 bg-error/10 p-4 text-sm">
@@ -117,7 +120,7 @@ export default function DeliverableDetailPage() {
     <div className="flex flex-col gap-6 p-6">
       <header>
         <Link
-          href="/console/operate/africa-portfolio"
+          href={`/console/operate/africa-portfolio${operatorQuery}`}
           className="inline-flex items-center gap-1 text-sm text-foreground-secondary hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" /> Retour dashboard
@@ -128,7 +131,7 @@ export default function DeliverableDetailPage() {
               {deliverable.taskCode ?? deliverable.deliverableType}
             </h1>
             <div className="mt-1 flex items-center gap-2 text-sm">
-              <Link href={`/cockpit/operate/campaigns/${deliverable.campaignId}`} className="text-accent hover:underline">
+              <Link href={`/cockpit/operate/campaigns/${deliverable.campaignId}${operatorQuery}`} className="text-accent hover:underline">
                 {deliverable.campaign.name}
               </Link>
               <span className="text-foreground-secondary">·</span>
