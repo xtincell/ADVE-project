@@ -30,18 +30,25 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-07 · Boot Phase 18 : l’exemple utilisait le littéral `pending`, rejeté
+par l’enum Prisma. Commande corrigée en `PENDING`, exercée sur PostgreSQL local :
+zéro résidu en attente. Cause : exemple non confronté au schéma ; aucun état
+métier ni contrôle de production modifié.
+
 2026-10-07 · Dossier SPAWT : deux cartes et un compteur doublé pour le même
 lien de logo dans deux stratégies. v6.27.407 factorise la projection de lecture
 par source et adresse de fichier, conserve chaque contenu/état/dossier et filtre
 les archives avant regroupement. Trois contre-exemples rouges, rendu statique
 reçu. Cause : une référence de rattachement était comptée comme un fichier distinct.
-Réception native après livraison tracée dans RESIDUAL-DEBT.
+Réception native 407 : une carte, deux lectures distinctes, recherche et archives ;
+mobile 390 × 844 et non-régression Noël reçus. Corpus et décisions restent ouverts.
 
 2026-10-07 · Le retour flottant masquait l’action de dernière ligne d’une liste
 filtrée, reçue au clavier mais interceptée à la souris. Le shell commun réserve
 une fin de défilement en 406, pour les portails et la navigation mobile existants.
 Cause : contrôle fixé au viewport sans espace réservé dans le conteneur défilant.
-Réception souris et viewport mobile effectivement appliqué au registre.
+Réception souris et mobile CSS 390 × 844 confirmée ; le dernier bouton ouvre
+le bon dialogue. Le contrôle reste borné à cette action.
 
 2026-10-07 · Missions : la console affichait zéro alors que le détail ouvrait une
 mission non assignée. PostgreSQL prouve que OR:[{},assigné] réduit au seul assigné.

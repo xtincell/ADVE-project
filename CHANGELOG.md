@@ -2,6 +2,17 @@
 
 ## v6.27.407 — fix(portfolio): lire les fichiers partagés avec tous leurs usages (2026-10-07)
 
+Réception complémentaire du 7 octobre, image exacte `be89e909` : une carte,
+deux fiches BrandVault distinctes, recherche et filtre archives reçus nativement.
+Noël conserve le projet commun et FRC-076 ; cinq aperçus produits chargent.
+Mobile CSS 390 × 844 confirmé : dialogue dans le viewport et pas de débordement
+horizontal. La dernière mission 406 s’ouvre aussi dans le bon dialogue sur ce
+viewport, neuf réponses sans erreur HTTP ni exception. Cela ne clôture ni le
+corpus complet ni les autres rôles/parcours mobiles.
+
+Le protocole de boot Phase 18 utilise désormais l’enum `PENDING` réel ; commande
+exercée sur la base locale dédiée, zéro entrée. Aucune mutation métier.
+
 **Un même lien de fichier ne multiplie plus les cartes ni le compteur d’assets.**
 
 - Réception native SPAWT 406 : le même logo horizontal figure dans deux dossiers.
