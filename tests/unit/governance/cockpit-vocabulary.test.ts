@@ -48,6 +48,7 @@ const EXTRA_FILES = [
   join(ROOT, "src/components/creative-intelligence/recipe-cards.tsx"),
   join(ROOT, "src/components/creative-intelligence/advanced-observations.tsx"),
   join(ROOT, "src/components/portfolio/BrandWorkspace.tsx"),
+  join(ROOT, "src/components/portfolio/WorkspaceAssets.tsx"),
   join(ROOT, "src/components/portfolio/PortfolioReferencesForm.tsx"),
   join(ROOT, "src/components/portfolio/PortfolioTreeView.tsx"),
   join(ROOT, "src/components/portfolio/PortfolioShell.tsx"),

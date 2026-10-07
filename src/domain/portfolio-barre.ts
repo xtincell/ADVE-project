@@ -1,4 +1,4 @@
-import type { PortfolioReference } from "./portfolio-reference";
+import { portfolioFileUrl, type PortfolioReference } from "./portfolio-reference";
 
 export const BARRE_ORIGIN = "https://labarre.powerupgraders.com";
 type Row = Record<string, unknown>;
@@ -21,7 +21,27 @@ export function barreFileUrl(value: unknown): string | null {
 export interface WorkspaceAsset {
   id: string; name: string; brand: string; kind: string; state: string;
   preview: string | null; url: string | null; source: string; note: string;
-  nativeId?: string;
+  nativeId?: string; strategyId?: string;
+}
+
+/** Read projection only: a shared address never merges source records or validations. */
+export function groupWorkspaceAssets(assets: WorkspaceAsset[], options: { includeArchives?: boolean; search?: string } = {}) {
+  const groups = new Map<string, { id: string; url: string | null; usages: WorkspaceAsset[] }>();
+  for (const [index, asset] of assets.entries()) {
+    if (options.includeArchives === false && ["Archivé", "Remplacé"].includes(asset.state)) continue;
+    const url = portfolioFileUrl(asset.url);
+    // Preserve the full address, including versions/query, and its source authority.
+    // Preview and title cannot establish file identity; fileless entries stay separate.
+    const id = JSON.stringify(url ? ["file", asset.source, url] : ["record", asset.source, asset.id, index]);
+    const group = groups.get(id) ?? { id, url, usages: [] };
+    group.usages.push(asset);
+    groups.set(id, group);
+  }
+  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const search = normalize(options.search ?? "");
+  // Search selects a file and keeps every visible usage, rather than hiding its context.
+  return [...groups.values()].filter((group) => group.usages.some((asset) =>
+    normalize(`${asset.name} ${asset.brand} ${asset.kind}`).includes(search)));
 }
 export interface WorkspaceKnowledge {
   id: string; brand: string; title: string; value: string;

@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.407",
+    date: "2026-10-07",
+    headline: "Un fichier partagé, tous ses usages visibles",
+    highlights: [
+      { emoji: "🗂️", title: "Une seule carte par lien de fichier", body: "Lorsqu’un fichier est relié à plusieurs dossiers, retrouvez ses rattachements sur une même carte. Chaque dossier conserve son contenu, son nom et son état." },
+      { emoji: "🔎", title: "Une recherche qui garde le contexte", body: "Rechercher un dossier conserve les autres usages visibles du fichier. Les archives restent consultables sur demande et les versions de fichier différentes restent séparées." },
+    ],
+  },
+  {
     version: "6.27.404",
     date: "2026-10-07",
     headline: "Suivez la suite réelle de vos demandes",

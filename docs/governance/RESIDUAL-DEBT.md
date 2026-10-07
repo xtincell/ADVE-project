@@ -1,5 +1,33 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Dossier SPAWT — réception des assets partagés (2026-10-07)
+
+- **Grille 407 à recevoir nativement** : le même logo horizontal était compté
+  deux fois depuis les dossiers `spawt-strategy-001` et `spawt-strategy`.
+  La projection regroupe les adresses de fichier par source et préserve chaque
+  rattachement et lecture autorisée. Reproduit sur l’ancienne grille ; rendu
+  statique reçu. Le navigateur refuse le serveur local : recevoir en production
+  une carte, deux contenus, recherche et archives, puis contrôle FrieslandCampina.
+  Déclencheur : image 407 livrée ; effort : une traversée de lecture native.
+- **Dossiers stratégiques distincts** : le dossier principal contient une
+  fondation renseignée et cinq documents ; le dossier associé garde son histoire.
+  Le regroupement de fichiers ne les rapproche pas sémantiquement. Fermer en
+  comparant décisions, versions et usages avant toute absorption, avec conflits
+  explicités. Déclencheur : suite de réception C1/C2 SPAWT ; effort : un lot de
+  réconciliation sans supprimer ni valider automatiquement les contenus.
+  Constat natif : principal A/D/V/E proposés et R/T/I/S à revoir ; associé huit
+  états VALIDATED enregistrés. `seed-spawt-complete.ts` peut écrire ces états
+  avec auteur de version `seed-spawt` : cela ne prouve pas l’origine de chaque
+  état en production. Recevoir versions/émissions avant de conclure à une
+  validation humaine. Une provenance du positionnement de l’application cite
+  Motion19, UPgraders et Akwa Palace : qualifier la source exacte, conserver
+  l’historique et corriger la filiation via les écrivains existants.
+- **Procédure de boot Phase 18** : le skill utilise `status: 'pending'`, refusé
+  par Prisma ; l’enum du schéma est `PENDING`. La lecture locale corrigée reçoit
+  zéro résidu pending. Corriger les exemples du protocole dans un lot docs dédié
+  puis exercer la commande ; déclencheur : maintenance NEFER avant prochaine
+  action Phase 18 ; effort : borné à la documentation, aucun changement métier.
+
 ## Réception des observations et décisions — 2026-10-07 (ADR-0199)
 
 - **Fermé localement en 402** : le leaf LLM synchrone et la prescription RUNNING
@@ -30,9 +58,11 @@
   à l’heure non mesurée. Les rôles distincts et le cycle C6 restent à recevoir.
 - **Dernière action masquée par le retour flottant** : constaté sur la liste
   filtrée 405 ; ouverture au clavier reçue, clic souris intercepté par le retour.
-  Le shell 406 réserve la fin de défilement commune. Recevoir au clic souris
-  après livraison, puis à un viewport mobile effectivement appliqué. Déclencheur :
-  image 406 reçue ; effort : une recette console/cockpit sans mutation métier.
+  Le shell 406 réserve la fin de défilement commune. Fermé à la souris le
+  7 octobre sur la dernière ligne : bon dialogue de mission, 57 réponses sans
+  HTTP en erreur ni exception. Reste le viewport mobile effectivement appliqué.
+  Déclencheur : outil capable d’appliquer et de confirmer les dimensions ;
+  effort : une recette console/cockpit sans mutation métier.
 - **Tickets de reprise de campagne** : le code formé à partir du préfixe campagne
   et d'un compteur par livrable peut entrer en collision entre deux livrables.
   Fermer sur l'identité/numérotation déjà existante, avec deux créations simultanées

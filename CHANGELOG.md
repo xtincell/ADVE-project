@@ -1,5 +1,26 @@
 # Changelog — La Fusee
 
+## v6.27.407 — fix(portfolio): lire les fichiers partagés avec tous leurs usages (2026-10-07)
+
+**Un même lien de fichier ne multiplie plus les cartes ni le compteur d’assets.**
+
+- Réception native SPAWT 406 : le même logo horizontal figure dans deux dossiers.
+  La projection de lecture existante regroupe par source et adresse complète,
+  sans fusion de BrandAsset, stratégie, état ou contenu. Versions d’URL,
+  autorités sources et entrées sans fichier restent distinctes. La recherche
+  garde tous les usages visibles ; archives filtrées par rattachement.
+- Chaque contenu conserve sa lecture autorisée dans BrandVault. Les différences
+  de nom et d’état restent visibles. Grille extraite sans nouvel écran, API,
+  modèle, Intent ou production assistée. Guidance / Mestor : identité et réemploi
+  cohérents alimentent les campagnes puis la progression de l’engagement.
+- Trois contre-exemples rouges sur la grille antérieure ; réception de rendu et
+  frontières de regroupement vertes. Le navigateur local est bloqué par sa
+  politique d’accès : écran 407 en production à recevoir après livraison,
+  sans confondre tests de rendu statique et réception native.
+- Réception 406 : dernier bouton de mission ouvert à la souris, 57 réponses
+  observées sans HTTP en erreur ni exception. Dette mobile conservée : le
+  viewport demandé n’a pas été effectivement appliqué.
+
 ## v6.27.406 — fix(ui): rendre les dernières actions accessibles (2026-10-07)
 
 Le bouton flottant de retour pouvait masquer l’action de la dernière ligne,

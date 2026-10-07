@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, ArrowRight, Search, Layers3, FolderOpen, ImageIcon, FileText, AlertCircle, RefreshCw, Link2 } from "lucide-react";
+import { ArrowUpRight, ArrowRight, Search, Layers3, FolderOpen, FileText, AlertCircle, RefreshCw, Link2 } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useStrategy } from "@/components/cockpit/strategy-context";
 import { PORTFOLIO_KIND_LABELS, PORTFOLIO_LIFECYCLE_LABELS, portfolioFileUrl, readPortfolioReferences, portfolioProjectFollowUps, type PortfolioReference } from "@/domain/portfolio-reference";
 import type { PortfolioWorkspace } from "@/server/services/brand-node/workspace";
-import type { WorkspaceAsset } from "@/domain/portfolio-barre";
+import { groupWorkspaceAssets, type WorkspaceAsset } from "@/domain/portfolio-barre";
 import { AssetContent } from "./AssetContent";
+import { WorkspaceAssets, WorkspaceAssetMedia } from "./WorkspaceAssets";
 import { PortfolioReferencesForm } from "./PortfolioReferencesForm";
 
 type Section = "overview" | "projects" | "products" | "assets" | "identity" | "sources";
@@ -20,13 +21,6 @@ const dateLabel = (s: string) => { const d = new Date(s); return Number.isNaN(d.
 
 function Empty({ children }: { children: React.ReactNode }) {
   return <div className="rounded-xl border border-dashed border-border p-8 text-sm text-foreground-secondary">{children}</div>;
-}
-function Media({ asset }: { asset: WorkspaceAsset }) {
-  const [failed, setFailed] = useState(false);
-  return <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg bg-surface-raised">
-    {asset.preview && !failed ? <img src={asset.preview} alt={asset.name} loading="lazy" className="h-full w-full object-contain p-3" onError={() => setFailed(true)} />
-      : <div className="px-6 text-center text-foreground-secondary"><ImageIcon className="mx-auto mb-2 h-6 w-6" /><span className="text-xs">{failed ? "Aperçu indisponible" : "Sans aperçu"}</span></div>}
-  </div>;
 }
 
 export function BrandWorkspace({ nodeId }: { nodeId: string }) {
@@ -55,18 +49,19 @@ function WorkspaceContent({ data, refresh, refreshing }: { data: PortfolioWorksp
   const knowledge = (barre?.knowledge ?? []).filter((k) => match(`${k.brand} ${k.title} ${k.value}`));
   const assets = useMemo(() => {
     const native: WorkspaceAsset[] = data.strategies.flatMap((s) => s.brandAssets.map((a) => ({
-      id: a.id, nativeId: a.id, name: a.name, brand: s.name, kind: a.kind.replace(/_/g, " ").toLowerCase(), state: label(a.state),
+      id: a.id, nativeId: a.id, strategyId: s.id, name: a.name, brand: s.name, kind: a.kind.replace(/_/g, " ").toLowerCase(), state: label(a.state),
       preview: portfolioFileUrl(a.fileUrl) ?? (a.fileUrl?.startsWith("data:image/") ? a.fileUrl : null),
       url: portfolioFileUrl(a.fileUrl),
       source: "La Fusée", note: [data.inheritedFrom?.strategyId === s.id ? `Asset du socle partagé de ${data.inheritedFrom.name}.` : "", a.staleAt ? "À revoir : la stratégie a changé depuis sa création." : ""].filter(Boolean).join(" "),
     })));
     return [...native, ...(barre?.assets ?? [])];
   }, [data.strategies, data.inheritedFrom, barre]);
-  const filteredAssets = assets.filter((a) => (showArchives || !["Archivé", "Remplacé"].includes(a.state)) && match(`${a.name} ${a.brand} ${a.kind}`));
+  const assetCount = groupWorkspaceAssets(assets).length;
+
   const refs = data.nodes.flatMap((n) => readPortfolioReferences(n.sourceRefs).map((r) => ({ ...r, node: n.name })));
   const links = refs.filter((r) => r.system === "WEB" || r.system === "GITHUB");
   const sourceProductNodes = new Map(data.nodes.flatMap((n) => readPortfolioReferences(n.sourceRefs).filter((r) => r.system === "LA_BARRE" && r.kind === "sku").map((r) => [r.id, n.slug] as const)));
-  const counts: Partial<Record<Section, number>> = { projects: barre?.projects.length, products: (barre?.products.filter((p) => !p.archived).length || ownChildren.length), assets: assets.length, identity: barre?.knowledge.length };
+  const counts: Partial<Record<Section, number>> = { projects: barre?.projects.length, products: (barre?.products.filter((p) => !p.archived).length || ownChildren.length), assets: assetCount, identity: barre?.knowledge.length };
 
   return <section aria-label={`Dossier ${data.root.name}`} className="min-w-0 space-y-6">
     <div className="flex flex-wrap items-center justify-between gap-3 border-y border-border py-3 text-xs text-foreground-secondary">
@@ -89,7 +84,7 @@ function WorkspaceContent({ data, refresh, refreshing }: { data: PortfolioWorksp
         {links.length > 0 && <div className="space-y-3"><h3 className="text-sm font-medium">Points d’accès</h3>{links.map((r, i) => <a key={`${r.id}-${i}`} href={r.url} target="_blank" rel="noreferrer" className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm hover:border-accent"><span>{r.label ?? r.node}</span><ArrowUpRight className="h-4 w-4 shrink-0" /></a>)}</div>}
       </div>
       <div className="space-y-5">
-        <div className="rounded-2xl bg-surface-raised p-6"><p className="text-xs uppercase tracking-widest text-foreground-secondary">Dossier vivant</p><div className="mt-5 grid grid-cols-2 gap-5">{[["Campagnes", barre?.campaigns.length], ["Projets", barre?.projects.length], ["Références produit", barre?.products.filter((p) => !p.archived).length], ["Assets référencés", assets.length]].map(([title, value]) => <div key={String(title)}><p className="font-display text-3xl">{value ?? "—"}</p><p className="mt-1 text-xs text-foreground-secondary">{title}</p></div>)}</div><p className="mt-5 text-xs leading-relaxed text-foreground-secondary">Ces nombres mesurent le contenu relié. Ils ne constituent pas une validation de la stratégie ni une preuve de livraison.</p></div>
+        <div className="rounded-2xl bg-surface-raised p-6"><p className="text-xs uppercase tracking-widest text-foreground-secondary">Dossier vivant</p><div className="mt-5 grid grid-cols-2 gap-5">{[["Campagnes", barre?.campaigns.length], ["Projets", barre?.projects.length], ["Références produit", barre?.products.filter((p) => !p.archived).length], ["Assets", assetCount]].map(([title, value]) => <div key={String(title)}><p className="font-display text-3xl">{value ?? "—"}</p><p className="mt-1 text-xs text-foreground-secondary">{title}</p></div>)}</div><p className="mt-5 text-xs leading-relaxed text-foreground-secondary">Ces nombres mesurent le contenu relié. Les assets regroupent {assets.length} références par lien de fichier et source. Ils ne constituent pas une validation de la stratégie ni une preuve de livraison.</p></div>
         {projects.length > 0 && <div><h3 className="mb-2 text-sm font-medium">À retrouver rapidement</h3>{[...projects].sort((a, b) => b.deadline.localeCompare(a.deadline)).slice(0, 4).map((p) => <a key={p.id} href={p.sourceUrl} target="_blank" rel="noreferrer" className="flex items-start gap-3 border-b border-border py-3 text-sm hover:text-accent"><FolderOpen className="mt-1 h-4 w-4 shrink-0 text-foreground-secondary" /><span className="min-w-0 flex-1">{p.name}<span className="mt-1 block text-xs text-foreground-secondary">{label(p.status)}{p.deadline ? ` · ${dateLabel(p.deadline)}` : ""}</span></span><ArrowUpRight className="h-4 w-4 shrink-0" /></a>)}</div>}
         {(barre?.issues.length ?? 0) > 0 && <div className="rounded-xl border border-warning/30 bg-warning/10 p-4"><h3 className="flex gap-2 text-sm font-medium text-warning"><AlertCircle className="h-4 w-4" />Rattachements à clarifier</h3><ul className="mt-3 space-y-2 text-xs leading-relaxed text-foreground-secondary">{barre!.issues.map((i) => <li key={i}>{i}</li>)}</ul></div>}
       </div>
@@ -105,9 +100,9 @@ function WorkspaceContent({ data, refresh, refreshing }: { data: PortfolioWorksp
       {data.strategies.some((s) => s.campaigns.length) && <div className="border-t border-border pt-5"><h3 className="mb-3 font-medium">Dossiers présents dans La Fusée</h3>{data.strategies.flatMap((s) => s.campaigns.map((c) => <p key={c.id} className="py-2 text-sm">{c.name} <span className="text-foreground-secondary">· {s.name} · {label(c.status)}</span></p>))}</div>}
     </div>}
     {section === "products" && <div className="space-y-4">
-      {!products.length ? (ownChildren.length ? <NodeList nodes={ownChildren.filter((n) => match(n.name))} operatorId={data.root.operatorId} /> : <Empty>Aucune référence produit déclarée à ce niveau.</Empty>) : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{products.map((p) => <article key={p.id} className="rounded-xl border border-border p-4"><Media asset={{ id: p.id, name: p.name, brand: p.brand, kind: p.range, state: "", preview: p.preview, url: p.url, source: "La Barre", note: "" }} /><p className="mt-3 text-xs text-accent">{p.brand} · {p.range || "Gamme à préciser"}</p><h3 className="mt-1 font-medium">{sourceProductNodes.has(p.id) && sourceProductNodes.get(p.id) !== data.root.slug ? <Link className="hover:text-accent underline decoration-border underline-offset-4" href={`/cockpit/portfolio/${sourceProductNodes.get(p.id)}?operator=${encodeURIComponent(data.root.operatorId)}`}>{p.name}</Link> : p.name}</h3><p className="mt-1 text-xs text-foreground-secondary">{[p.format, p.language.toUpperCase()].filter(Boolean).join(" · ")}</p>{(p.needsQualification || p.possibleDuplicate) && <p className="mt-2 text-xs text-warning">{p.possibleDuplicate ? "Caractéristiques partagées · version à qualifier" : "À qualifier"}</p>}{p.archived && <p className="mt-2 text-xs text-warning">Archivé · {p.archiveReason}</p>}{p.url && <a href={p.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs underline">Ouvrir le fichier <ArrowUpRight className="h-3 w-3" /></a>}</article>)}</div>}
+      {!products.length ? (ownChildren.length ? <NodeList nodes={ownChildren.filter((n) => match(n.name))} operatorId={data.root.operatorId} /> : <Empty>Aucune référence produit déclarée à ce niveau.</Empty>) : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{products.map((p) => <article key={p.id} className="rounded-xl border border-border p-4"><WorkspaceAssetMedia asset={{ id: p.id, name: p.name, brand: p.brand, kind: p.range, state: "", preview: p.preview, url: p.url, source: "La Barre", note: "" }} /><p className="mt-3 text-xs text-accent">{p.brand} · {p.range || "Gamme à préciser"}</p><h3 className="mt-1 font-medium">{sourceProductNodes.has(p.id) && sourceProductNodes.get(p.id) !== data.root.slug ? <Link className="hover:text-accent underline decoration-border underline-offset-4" href={`/cockpit/portfolio/${sourceProductNodes.get(p.id)}?operator=${encodeURIComponent(data.root.operatorId)}`}>{p.name}</Link> : p.name}</h3><p className="mt-1 text-xs text-foreground-secondary">{[p.format, p.language.toUpperCase()].filter(Boolean).join(" · ")}</p>{(p.needsQualification || p.possibleDuplicate) && <p className="mt-2 text-xs text-warning">{p.possibleDuplicate ? "Caractéristiques partagées · version à qualifier" : "À qualifier"}</p>}{p.archived && <p className="mt-2 text-xs text-warning">Archivé · {p.archiveReason}</p>}{p.url && <a href={p.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs underline">Ouvrir le fichier <ArrowUpRight className="h-3 w-3" /></a>}</article>)}</div>}
     </div>}
-    {section === "assets" && (filteredAssets.length ? <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{filteredAssets.map((a) => <article key={a.id} className="min-w-0 rounded-xl border border-border p-3"><Media asset={a} /><div className="p-2"><p className="mt-2 text-xs text-accent">{a.brand}</p><h3 className="mt-1 break-words text-sm font-medium">{a.name}</h3><p className="mt-2 text-xs text-foreground-secondary">{a.kind} · {a.state} · {a.source}</p>{a.note && <details className="mt-2 text-xs text-foreground-secondary"><summary className="cursor-pointer">Provenance et usage</summary><p className="mt-2 whitespace-pre-line break-words">{a.note}</p></details>}{a.nativeId && <button type="button" onClick={() => setSelectedAssetId(a.nativeId!)} className="mr-4 mt-3 text-xs text-accent underline">Consulter le contenu</button>}{a.url && <a href={a.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs underline">Ouvrir <ArrowUpRight className="h-3 w-3" /></a>}</div></article>)}</div> : <Empty>Aucun asset correspondant dans les sources disponibles.</Empty>)}
+    {section === "assets" && <WorkspaceAssets assets={assets} search={search} includeArchives={showArchives} onSelectContent={setSelectedAssetId} />}
     {section === "identity" && <div className="space-y-5">
       <p className="max-w-3xl text-sm leading-relaxed text-foreground-secondary">Authenticité, Distinction, Valeur, Engagement : le socle durable de la marque. Les informations issues d’un brief restent distinctes des décisions de marque. Une référence à une source ne vaut pas validation.</p>
       {data.strategies.length > 1 && <p role="status" className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-warning">Plusieurs dossiers de stratégie sont reliés. Leurs contenus et validations restent distincts ; un rapprochement est nécessaire avant de les traiter comme une stratégie unique.</p>}

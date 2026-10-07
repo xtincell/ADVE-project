@@ -30,6 +30,13 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-07 · Dossier SPAWT : deux cartes et un compteur doublé pour le même
+lien de logo dans deux stratégies. v6.27.407 factorise la projection de lecture
+par source et adresse de fichier, conserve chaque contenu/état/dossier et filtre
+les archives avant regroupement. Trois contre-exemples rouges, rendu statique
+reçu. Cause : une référence de rattachement était comptée comme un fichier distinct.
+Réception native après livraison tracée dans RESIDUAL-DEBT.
+
 2026-10-07 · Le retour flottant masquait l’action de dernière ligne d’une liste
 filtrée, reçue au clavier mais interceptée à la souris. Le shell commun réserve
 une fin de défilement en 406, pour les portails et la navigation mobile existants.
