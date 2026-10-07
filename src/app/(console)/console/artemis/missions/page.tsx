@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -55,7 +55,8 @@ export default function FuseeMissionsPage() {
 
   // Detail modal
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const { data: selectedMission } = trpc.mission.get.useQuery(
+  useEffect(() => { setSelectedId(new URLSearchParams(window.location.search).get("missionId")); }, []);
+  const { data: selectedMission, isLoading: detailLoading, error: detailError, refetch: reloadDetail } = trpc.mission.get.useQuery(
     { id: selectedId! },
     { enabled: !!selectedId },
   );
@@ -423,6 +424,8 @@ export default function FuseeMissionsPage() {
         title={detail?.title ?? "Mission"}
         size="lg"
       >
+        {detailLoading && <p role="status">Lecture de la mission…</p>}
+        {detailError && <div role="alert" className="space-y-2 text-warning"><p>La mission n’a pas pu être lue.</p><button onClick={() => void reloadDetail()} className="text-sm underline">Relire la mission</button></div>}
         {detail ? (
           <div className="space-y-6">
             {/* Mission info */}

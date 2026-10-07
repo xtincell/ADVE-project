@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 45 modules (src/domain, cœur métier pur)
+## Domain — 46 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
@@ -80,6 +80,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **forecast** — ADR-0156 — Moteur de forecast déterministe (pur, zéro IO, zéro LLM).
 - **identity-graph** — ADR-0147 — Identity Graph : cœur déterministe (Layer 0, pur, zéro-LLM, zéro-IO).
 - **intent-progress** — src/domain/intent-progress.ts — IntentPhase + IntentProgressEvent.
+- **intervention-request**
 - **lifecycle** — src/domain/lifecycle.ts — Strategy lifecycle state machine.
 - **market-scale** — src/domain/market-scale.ts — Layer 0. Échelle de marché déclarée d'une marque
 - **overton-graph** — ADR-0148 — Overton Graph : cœur déterministe (Layer 0, pur, zéro-LLM zéro-IO).

@@ -1,5 +1,14 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Session locale en build production — 2026-10-07
+
+- Credentials/session et tRPC répondent sous la même session réelle locale ; les
+  pages protégées renvoient pourtant au login. proxy.ts force le nom Secure du
+  cookie dès NODE_ENV=production, même pour AUTH_URL HTTP sur 127.0.0.1. Fermer par
+  test rouge/vert du choix de cookie local/TLS/proxy public et nouvelle réception
+  HTTP, sans affaiblir les hôtes publics. Déclencheur : correctif dédié immédiat
+  après le commit interventions 404, avant déploiement ; effort : un lot auth.
+
 ## Réception des observations et décisions — 2026-10-07 (ADR-0199)
 
 - **Fermé localement en 402** : le leaf LLM synchrone et la prescription RUNNING
@@ -12,11 +21,23 @@
   Signal existant, avec deux ordres de recalcul, concurrence et reprise sans
   doublon. Déclencheur : prochaine traversée C3/C6 après livraison 402 ; effort :
   un lot scoreur/feedback, sans ajouter une nouvelle métrique ou file.
-- **Interventions opérateur** : la surface de demandes attend des états en minuscules
-  alors que le router émet PENDING/CONVERTED/DISMISSED ; la conversion concurrente
-  et le rejet d'une demande déjà convertie restent à recevoir. Reprendre les
-  états et commandes existants, puis éprouver auteur, affectation, conversion et
-  résolution depuis l'UX. Déclencheur : recette C4/C6 après 402 ; effort : un lot.
+- **Interventions — réception native 404** : ADR-0201 répare localement les états,
+  concurrence, droits et faux SLA/affectation. Les scénarios PostgreSQL passent ;
+  cela ne reçoit pas l’UX. Fermer par demande manuelle, conversion/rejet, conflit
+  et ouverture de la mission exacte depuis les deux portails après livraison.
+  Déclencheur : image 404 reçue ; effort : une recette native sans génération.
+- **InterventionRequest au schéma** : aucune lecture/écriture identifiée dans src ;
+  le seed Wakanda en crée une, retrouvée seule en production le 7 octobre, déjà
+  COMPLETED. Le parcours actif persiste ses demandes client dans Signal ; les
+  commentaires parlent aussi d’intervention interne. Qualifier cette différence
+  de rôle et la filiation avant une éventuelle absorption conservant les
+  historiques ; aucun second écrivain ni suppression anticipée. Déclencheur :
+  audit C1/C3 des doublons avant gel du modèle ; effort : un lot de réconciliation.
+- **Projection des missions console** : mode/affectation/échéance sont encore lus
+  dans advertis_vector plutôt que dans leurs colonnes dédiées sur plusieurs vues.
+  Raccorder leurs champs et états existants, sans inventer d’affectation ; éprouver
+  changement manuel puis retour depuis la demande. Déclencheur : cycle C4/C6 après
+  réception 404 ; effort : un lot de projection/recette.
 - **Tickets de reprise de campagne** : le code formé à partir du préfixe campagne
   et d'un compteur par livrable peut entrer en collision entre deux livrables.
   Fermer sur l'identité/numérotation déjà existante, avec deux créations simultanées

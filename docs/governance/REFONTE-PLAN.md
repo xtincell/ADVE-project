@@ -1,5 +1,14 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Demande et mission reçues séparément — 2026-10-07
+
+ADR-0201 étend les demandes Signal et les missions existantes : décision opérateur
+versionnée, préparation atomique, rejet motivé, droit de traitement projeté et reçu
+commun console/cockpit. Conversion n'est pas livraison. Aucun deuxième suivi,
+agent, table ou Intent ; données historiques et modèle InterventionRequest dormant
+à qualifier avant convergence. Les preuves serveur et réception native restent
+distinctes ; la réception complète du cycle de mission reste au chantier C6.
+
 ## Observation et décision séparées — 2026-10-07
 
 ADR-0199 retire le diagnostic LLM implicite et la file de prescriptions parallèle.

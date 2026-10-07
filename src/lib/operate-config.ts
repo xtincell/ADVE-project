@@ -18,6 +18,26 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
+import type { InterventionState } from "@/domain/intervention-request";
+
+/** Existing request Signal states; the legacy InterventionRequest table keeps its own taxonomy. */
+export const INTERVENTION_STATE_CONFIG: Record<InterventionState, {
+  label: string; tone: "neutral" | "info" | "warning" | "success";
+}> = {
+  PENDING: { label: "À examiner", tone: "warning" },
+  CONVERTED: { label: "Mission préparée", tone: "info" },
+  DISMISSED: { label: "Écartée", tone: "neutral" },
+  OPEN: { label: "Ouverte (historique)", tone: "warning" },
+  ASSIGNED: { label: "Affectée (historique)", tone: "info" },
+  IN_PROGRESS: { label: "En cours (historique)", tone: "info" },
+  RESOLVED: { label: "Résolue (historique)", tone: "success" },
+  COMPLETED: { label: "Terminée (historique)", tone: "success" },
+  CLOSED: { label: "Fermée (historique)", tone: "neutral" },
+  UNKNOWN: { label: "État à vérifier", tone: "warning" },
+};
+export const INTERVENTION_URGENCY = { low: "Faible", medium: "Moyenne", high: "Haute", critical: "Critique" };
+export const INTERVENTION_TYPE = { one_off: "Ponctuelle", recurring: "Récurrente", emergency: "Urgence" };
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Types — dérivés des enums Prisma (schema.prisma)
 // ─────────────────────────────────────────────────────────────────────────────

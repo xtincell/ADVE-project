@@ -63,7 +63,7 @@ Artemis pilote les thrusters. Ces pages opèrent les Glory tools, sequences, mis
 | `/console/artemis/page.tsx` | Propulsion | M | active | Hub Artemis |
 | `/console/artemis/campaigns/page.tsx` | Propulsion | M | active | Campagnes en vol |
 | `/console/artemis/drivers/page.tsx` | Propulsion | M | active | Drivers d'engagement |
-| `/console/artemis/interventions/page.tsx` | Propulsion | M | active | Interventions tactiques |
+| `/console/artemis/interventions/page.tsx` | Propulsion | M | active | Examen versionné, mission liée, rejet motivé (ADR-0201) |
 | `/console/artemis/media/page.tsx` | Propulsion | M | active | Media buy/plan |
 | `/console/artemis/missions/page.tsx` | Propulsion | M | active | Missions production |
 | `/console/artemis/pr/page.tsx` | Propulsion | M | active | RP / publications |
@@ -220,7 +220,7 @@ Le founder allume des thrusters.
 | `/cockpit/operate/campaigns/page.tsx` | Propulsion | M | active | Campagnes founder |
 | `/cockpit/operate/campaigns/[id]/page.tsx` | Propulsion | M | active | Campagne détail |
 | `/cockpit/operate/missions/page.tsx` | Propulsion | M | active | Missions founder |
-| `/cockpit/operate/requests/page.tsx` | Propulsion | M | active | Requests partenaires |
+| `/cockpit/operate/requests/page.tsx` | Propulsion | M | active | Demande manuelle, historique et reçu réel de mission (ADR-0201) |
 
 ### 2.4 — Mestor + New + Messages (mixte)
 

@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.404",
+    date: "2026-10-07",
+    headline: "Suivez la suite réelle de vos demandes",
+    highlights: [
+      { emoji: "📋", title: "Un besoin, une mission liée", body: "Votre équipe peut préparer une mission à partir de votre demande ou enregistrer le motif pour l’écarter. Retrouvez le besoin et l’état actuel de la mission depuis le détail de la demande." },
+      { emoji: "🛡️", title: "Des décisions qui ne s’écrasent plus", body: "Deux examens simultanés ne créent pas deux missions. Une demande déjà traitée doit être relue. Une mission préparée reste distincte d’un travail livré ; responsable et délai restent à confirmer." },
+    ],
+  },
+  {
     version: "6.27.403",
     date: "2026-10-07",
     headline: "Retrouvez le suivi de chaque projet",

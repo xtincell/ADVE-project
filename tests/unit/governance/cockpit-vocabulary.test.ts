@@ -43,6 +43,7 @@ const SCAN_DIRS = [
 // Composants hors components/cockpit mais rendus dans le portail founder,
 // + sources de chaînes rendues au prospect (grille /pricing).
 const EXTRA_FILES = [
+  join(ROOT, "src/lib/operate-config.ts"),
   join(ROOT, "src/components/brand/source-preparation-option.tsx"),
   join(ROOT, "src/components/creative-intelligence/recipe-cards.tsx"),
   join(ROOT, "src/components/creative-intelligence/advanced-observations.tsx"),

@@ -1,5 +1,21 @@
 # Changelog — La Fusee
 
+## v6.27.404 — fix(intervention): recevoir une seule mission par demande (2026-10-07)
+
+**Une demande garde son besoin, sa marque et sa décision humaine sans inventer une livraison.**
+
+- ADR-0201 : conversion/rejet versionnés, type et marque contrôlés, firewall
+  collaborateur et frontière opérateur explicites. Mission et reçu atomiques ;
+  une seule décision gagne, sans mission orpheline ni rejet d’une conversion.
+  Besoin, données antérieures et auteurs conservés ; canal inter-marques refusé.
+- Les deux portails partagent la projection et le reçu existants. La mission liée
+  s’ouvre dans sa marque, au-delà de la liste paginée. États historiques et erreurs
+  restent explicites. Affectation fictive, SLA arbitraires et durée de résolution
+  estimée retirés ; historique, détail, urgence et répartition par type conservés.
+- Aucune nouvelle table, tâche, IA, décision ADVE ou autorité collaborateur.
+  InterventionRequest dormant au schéma reste à qualifier avant toute absorption.
+  Réception locale et livraison native tracées séparément dans RESIDUAL-DEBT.
+
 ## v6.27.403 — fix(portfolio): qualifier les suivis Radar et protéger les raccordements (2026-10-07)
 
 - Réception de livraison : image publiée et conteneur rapprochés du commit

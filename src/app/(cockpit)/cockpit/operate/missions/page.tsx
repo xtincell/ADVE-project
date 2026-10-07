@@ -2,7 +2,7 @@
 
 import { PILLAR_STORAGE_KEYS } from "@/domain";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -171,6 +171,8 @@ export default function MissionsPage() {
   const [search, setSearch] = useState("");
   const [expandedMission, setExpandedMission] = useState<string | null>(null);
   const [detailMission, setDetailMission] = useState<string | null>(null);
+  useEffect(() => { setDetailMission(new URLSearchParams(window.location.search).get("missionId")); }, []);
+  const linkedMission = trpc.mission.get.useQuery({ id: detailMission ?? "" }, { enabled: !!detailMission });
   const [validateTarget, setValidateTarget] = useState<{
     id: string;
     title: string;
@@ -405,7 +407,8 @@ export default function MissionsPage() {
   ];
 
   const detailData = detailMission
-    ? allMissions.find((m) => m.id === detailMission)
+    ? allMissions.find((m) => m.id === detailMission) ??
+      (linkedMission.data?.strategyId === strategyId ? linkedMission.data : null)
     : null;
 
   return (
@@ -428,6 +431,10 @@ export default function MissionsPage() {
         </button>
       </PageHeader>
 
+      {detailMission && !detailData && <div role="alert" className="space-y-2 rounded-lg border border-warning/30 bg-warning/10 p-4 text-warning">
+        <p>{linkedMission.isLoading ? "Lecture de la mission liée…" : "La mission liée ne peut pas être confirmée dans cette marque."}</p>
+        {!linkedMission.isLoading && <button onClick={() => void linkedMission.refetch()} className="text-sm underline">Relire la mission</button>}
+      </div>}
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard title="Total missions" value={stats.total} icon={Rocket} />

@@ -30,6 +30,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-07 · Demandes : états incohérents, affectation non persistée, SLA et moyenne
+de résolution fabriqués ; conversion/rejet concurrents pouvaient perdre la suite.
+v6.27.404 raccorde le Signal existant à une Mission atomique et à un reçu commun.
+Cause : deux taxonomies confondues et écritures indépendantes sans version lue.
+ADR-0201 traite le cycle ; réception native et table dormante restent au registre.
+
 2026-10-07 · Présentation publique : compteurs Artemis périmés, catalogue confondu
 avec disponibilité, révision automatique et fin du travail manuel promises.
 Le correctif de copy 403 décrit les rôles, choix humains et services configurés.

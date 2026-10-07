@@ -9,6 +9,17 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Demandes d’intervention — ADR-0201, 2026-10-07
+
+Besoin humain → `intervention.create` gouverné → Signal INTERVENTION_REQUEST
+PENDING → examen opérateur versionné → Mission DRAFT + reçu CONVERTED atomiques,
+ou motif/auteur DISMISSED. Les deux portails lisent le même reçu ; mission.get
+fournit l’état de production actuel. Aucune conversion n’est une résolution.
+Le vecteur de la Strategy est conservé à la préparation, sans amendement ADVE,
+SLA, responsable ou génération déduits. Erreur/conflit → relire puis décider.
+Le modèle InterventionRequest sans consommateur src identifié n’est pas un
+second chemin d’écriture ; sa réconciliation runtime reste au registre C1/C3.
+
 ```
    ENTRÉES (templates)            TRANSFORMATION (mécanique)              SORTIES (templates)
    intake · brief · sources  ──►  pillar-gateway (writePillarAndScore)  ──►  Oracle 35 · Glory/BrandAsset
