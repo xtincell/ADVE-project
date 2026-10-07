@@ -1,14 +1,5 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
-## Session locale en build production — 2026-10-07
-
-- Credentials/session et tRPC répondent sous la même session réelle locale ; les
-  pages protégées renvoient pourtant au login. proxy.ts force le nom Secure du
-  cookie dès NODE_ENV=production, même pour AUTH_URL HTTP sur 127.0.0.1. Fermer par
-  test rouge/vert du choix de cookie local/TLS/proxy public et nouvelle réception
-  HTTP, sans affaiblir les hôtes publics. Déclencheur : correctif dédié immédiat
-  après le commit interventions 404, avant déploiement ; effort : un lot auth.
-
 ## Réception des observations et décisions — 2026-10-07 (ADR-0199)
 
 - **Fermé localement en 402** : le leaf LLM synchrone et la prescription RUNNING
@@ -222,14 +213,14 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
   Déclencheur : recette C4/R10, avant l'offre TPE ; effort : une passe de contenu
   et de réception, sans nouvelle fonction ni changement doctrinal.
 
-- **Portée du stress HTTP** : le script suit les redirections et accepte les
-  réponses 401/403/404 ; ses 281 réponses ne prouvent pas 281 écrans authentifiés.
-  Il ne sonde que trois procédures de lecture. Conserver la distinction avec les
-  commandes métier authentifiées et la réception native. Fermer par reçus de
-  route finale/rôle/statut et par couverture déclarée des appels, puis contre-test
-  login et route absente. Déclencheur : recette transverse C4/R10 après 403 ;
-  effort : correction bornée de l’observabilité du script existant, sans navigateur
-  alternatif ni assouplissement de ses invariants.
+- **Couverture restante du stress HTTP** : v6.27.404 ferme la fausse réception des
+  redirections login/refus et des 401/403/404 ; les routes finales et les identités
+  non reçues sont explicites. Le contre-test réel trouve 230 refus avant correction
+  du cookie local, puis zéro après. Cinq identités `demo` absentes restent non
+  reçues, et seules trois procédures de lecture sont sondées. Recevoir ces routes
+  avec des identités de recette réelles, puis les commandes métier et le rendu
+  hydraté séparément. Déclencheur : recette transverse C4/R10 ; effort : un lot de
+  couverture sur les parcours existants, sans navigation alternative ni bypass.
 
 - **Fraîcheur des dérivés et autres écrivains** : v6.27.398 invalide atomiquement
   l’index lors de la correction manuelle ; v6.27.399 factorise les deux préparations,

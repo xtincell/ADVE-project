@@ -30,6 +30,14 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-07 · Recette locale : session API valide, pages 307 login ; le stress suivait
+le login et annonçait un succès. v6.27.404 distingue transport HTTP local et TLS
+public pour le nom/salt du cookie, sans changer les droits. Le contrôle HTTP
+classe route finale, refus et absence, et construit correctement la racine.
+Causes : NODE_ENV confondu avec HTTPS ; statut final confondu avec page demandée.
+Contre-test réel : 230 refus détectés avant, zéro après ; 276 réponses reçues,
+cinq routes demo non reçues. Couverture native/métier restante au registre.
+
 2026-10-07 · Demandes : états incohérents, affectation non persistée, SLA et moyenne
 de résolution fabriqués ; conversion/rejet concurrents pouvaient perdre la suite.
 v6.27.404 raccorde le Signal existant à une Mission atomique et à un reçu commun.

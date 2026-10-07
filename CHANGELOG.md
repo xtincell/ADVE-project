@@ -15,6 +15,15 @@
 - Aucune nouvelle table, tâche, IA, décision ADVE ou autorité collaborateur.
   InterventionRequest dormant au schéma reste à qualifier avant toute absorption.
   Réception locale et livraison native tracées séparément dans RESIDUAL-DEBT.
+- Correctif dédié de réception : `next start` local HTTP retrouve le cookie
+  réellement posé par Auth.js ; TLS et production publique conservent Secure.
+  Les refus de session/rôle restent fermés. Le stress distingue réponse reçue,
+  route non reçue et échec ; login redirigé et 401/403 authentifiés ne valent plus
+  succès. La racine marketing est sondée à `/`. Vingt contre-tests passent,
+  dont deux défauts de cookie, six fausses réceptions et deux routes reproduits.
+  Relecture réelle : quatre pages protégées HTTP 200 ; stress FULL : 276 réponses
+  reçues, cinq identités `demo` absentes explicitement non reçues, zéro échec.
+  Cette preuve ne vaut ni hydratation native ni couverture métier complète.
 
 ## v6.27.403 — fix(portfolio): qualifier les suivis Radar et protéger les raccordements (2026-10-07)
 

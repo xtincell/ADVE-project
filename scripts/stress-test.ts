@@ -49,6 +49,8 @@ interface Finding {
 }
 
 const findings: Finding[] = [];
+let pageReceipt: { received: number; unreceived: number; failed: number } | null = null;
+const unreceivedPages: Array<{ route: string; status: number; finalPath: string; category: string }> = [];
 const BASE_URL = process.env.STRESS_TEST_BASE_URL ?? "http://localhost:3000";
 const ADMIN_SESSION_COOKIE = process.env.STRESS_TEST_SESSION_COOKIE ?? "";
 
@@ -82,44 +84,35 @@ async function record(f: Finding) {
 
 async function phaseCrawlPages() {
   console.log("→ Phase 1 : Crawl pages");
-  const { listFiles } = await import("./_stress_helpers");
+  const { listFiles, classifyPageProbe, pageRouteFromFile } = await import("./_stress_helpers");
   const pageFiles = await listFiles("src/app", /^page\.tsx$/);
   let okCount = 0;
+  let unreceivedCount = 0;
   let errCount = 0;
 
   for (const f of pageFiles) {
-    const route =
-      "/" +
-      f
-        .replace(/^src\/app\//, "")
-        .replace(/\/page\.tsx$/, "")
-        .replace(/\([^)]+\)\//g, "")
-        .replace(/\[[^\]]+\]/g, "demo"); // [id] → demo
+    const route = pageRouteFromFile(f); // Dynamic fixture segments use "demo".
 
     if (route.includes("api/")) continue;
 
     try {
       const headers: Record<string, string> = {};
       if (ADMIN_SESSION_COOKIE) headers.Cookie = ADMIN_SESSION_COOKIE;
-      const res = await fetch(`${BASE_URL}${route}`, { method: "GET", headers });
-      if (res.status >= 500) {
+      const requestedUrl = `${BASE_URL}${route}`;
+      const res = await fetch(requestedUrl, { method: "GET", headers });
+      const receipt = classifyPageProbe(res.status, requestedUrl, res.url, Boolean(ADMIN_SESSION_COOKIE));
+      if (receipt.state === "FAILED") {
         await record({
           phase: "1-pages",
-          category: `HTTP_${res.status}`,
-          severity: "ERROR",
+          category: receipt.category,
+          severity: receipt.severity,
           target: route,
-          message: `${res.status} ${res.statusText}`,
+          message: receipt.message,
         });
         errCount++;
-      } else if (res.status >= 400 && res.status !== 401 && res.status !== 403 && res.status !== 404) {
-        await record({
-          phase: "1-pages",
-          category: `HTTP_${res.status}`,
-          severity: "WARN",
-          target: route,
-          message: `${res.status} ${res.statusText}`,
-        });
-        errCount++;
+      } else if (receipt.state === "UNRECEIVED") {
+        unreceivedCount++;
+        unreceivedPages.push({ route, status: res.status, finalPath: new URL(res.url).pathname, category: receipt.category });
       } else {
         okCount++;
       }
@@ -135,7 +128,8 @@ async function phaseCrawlPages() {
       errCount++;
     }
   }
-  console.log(`   ✓ ${okCount} OK / ✗ ${errCount} errors`);
+  pageReceipt = { received: okCount, unreceived: unreceivedCount, failed: errCount };
+  console.log(`   HTTP: ${okCount} received / ${unreceivedCount} unreceived / ${errCount} failed (native UI untested)`);
 }
 
 // ── PHASE 2 : Routers tRPC (queries readonly) ───────────────────────
@@ -390,6 +384,8 @@ function buildReport() {
       {
         timestamp: new Date().toISOString(),
         totalFindings: findings.length,
+        pageReceipt,
+        unreceivedPages,
         bySeverity,
         byPhase: Object.fromEntries(
           Object.entries(byPhase).map(([k, v]) => [k, v.length]),
@@ -406,6 +402,8 @@ function buildReport() {
 
   let md = `# Stress Test Report — ${new Date().toISOString()}\n\n`;
   md += `**Total findings** : ${findings.length} (${bySeverity.ERROR} errors, ${bySeverity.WARN} warns)\n\n`;
+  if (pageReceipt) md += `**HTTP pages** : ${pageReceipt.received} received, ${pageReceipt.unreceived} unreceived, ${pageReceipt.failed} failed. Native UI untested.\n\n`;
+  if (unreceivedPages.length) md += `**Unreceived routes**\n\n${unreceivedPages.map((p) => `- ${p.route}: HTTP ${p.status}, ${p.category}, final path ${p.finalPath}`).join("\n")}\n\n`;
   for (const [phase, items] of Object.entries(byPhase)) {
     md += `## ${phase} — ${items.length} findings\n\n`;
     const grouped = new Map<string, Finding[]>();
