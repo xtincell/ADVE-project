@@ -9,7 +9,7 @@
  */
 
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
-import { cataloguePriceLabel, productLadderPriceLabel } from "@/domain/product-catalog";
+import { cataloguePriceLabel, productLadderPriceLabel, resolveProductRef } from "@/domain/product-catalog";
 import {
   Section, ACard, EmptyBody, EmptyValue, TagRow, ObjCard, ProofList,
   isEmpty, asRec, asArr, str, makeStatusFor, type Rec,
@@ -130,7 +130,7 @@ function ProductLadder({ items, catalogue, status }: { items: unknown; catalogue
       {empty ? <EmptyBody /> : (
         <div className="ck-v-ladder">
           {arr.map((t, i) => (
-            <div className="ck-v-ladder__step" key={i} style={{ "--i": i, "--n": arr.length } as React.CSSProperties}>
+            <div className="ck-v-ladder__step" key={i}>
               <div className="ck-v-ladder__bar">
                 <span className="ck-v-ladder__tier">{str(t.tier)}</span>
                 <span className="ck-v-ladder__price">{productLadderPriceLabel(t, catalogue)}</span>
@@ -215,8 +215,19 @@ function MultiSens({ value, status }: { value: unknown; status?: string }) {
 // ── Composant principal ────────────────────────────────────────────────
 
 // ── Système produit (ADR-0170 — le mécanisme interne du produit) ─────────
-function ProductSystem({ value, status }: { value: unknown; status?: string }) {
+function ProductSystem({ value, catalogue, status }: { value: unknown; catalogue: unknown; status?: string }) {
   const ps = asRec(value);
+  const products = asArr(catalogue);
+  const productNames = (refs: unknown) => Array.isArray(refs) ? refs.map((ref) => {
+    const product = typeof ref === "string" ? resolveProductRef(products, ref) : null;
+    return typeof product?.nom === "string" && product.nom.trim() ? product.nom : "Offre à vérifier";
+  }) : ["Offres à vérifier"];
+  const displayRows = (rows: unknown) => asArr(rows).map((row) => {
+    if (typeof row !== "object" || Array.isArray(row)) return row;
+    return { ...row,
+      ...(Object.hasOwn(row, "relatedProductIds") ? { relatedProductIds: productNames(row.relatedProductIds) } : {}),
+    };
+  });
   const dims: Array<[string, string, Array<[string, string]>]> = [
     ["axes", "Axes du mécanisme", [["label", "Axe"], ["poleLow", "Pôle bas"], ["poleHigh", "Pôle haut"], ["description", "Description"]]],
     ["archetypes", "Archétypes", [["name", "Nom"], ["axesSignature", "Signature"], ["essence", "Essence"], ["progressionNames", "Noms progressifs"], ["relatedProductIds", "Produits liés"]]],
@@ -233,11 +244,11 @@ function ProductSystem({ value, status }: { value: unknown; status?: string }) {
         <div className="ck-v-psys">
           {!isEmpty(ps.coreConcept) ? <p className="ck-a-stmt ck-a-stmt--big">{str(ps.coreConcept)}</p> : null}
           {!isEmpty(ps.anchorProductIds) ? (
-            <div className="ck-v-psys__anchor"><span className="ck-a-obj__k">Produits socles</span><TagRow items={ps.anchorProductIds} tone="emerald" /></div>
+            <div className="ck-v-psys__anchor"><span className="ck-a-obj__k">Produits socles</span><TagRow items={productNames(ps.anchorProductIds)} tone="emerald" /></div>
           ) : null}
           <div className="ck-a-grid">
             {present.map(([k, label, cols]) => (
-              <ProofList key={k} title={label} items={ps[k]} cols={cols} />
+              <ProofList key={k} title={label} items={displayRows(ps[k])} cols={cols} status={status} />
             ))}
           </div>
         </div>
@@ -278,7 +289,7 @@ export function PillarVFields({ content, certainty }: { content: Rec; certainty:
 
       <Section title="Système produit" sub="Le mécanisme interne du produit — axes, archétypes, progression, modes, artefacts, règles (distinct du catalogue)">
         <div className="ck-a-grid">
-          <ProductSystem value={v.productSystem} status={st("productSystem")} />
+          <ProductSystem value={v.productSystem} catalogue={v.produitsCatalogue} status={st("productSystem")} />
         </div>
       </Section>
 

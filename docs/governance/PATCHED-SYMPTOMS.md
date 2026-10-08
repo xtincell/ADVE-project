@@ -30,6 +30,14 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-08 · Le système produit affichait ses ids de catalogue et perdait
+l’origine du champ sur les sous-cartes ; le fond des gammes rendait leurs
+conditions peu contrastées. Le lot 420 relit les noms sans changer les données,
+relaie l’origine existante et retire la couleur/largeur progressive par index.
+Le résolveur commun refuse les homonymes au lieu de choisir le premier.
+Cause : relations et provenance étaient rendues comme des données isolées.
+Réception source documentaire, disponibilité et publication restent distinctes.
+
 2026-10-08 · L’amendement ignorait les reçus documentaires, le MCP ne transmettait
 pas la version lue, et Recommendation attribuait une validation humaine à l’agent.
 Un refus de provenance était aussi accusé comme APPLIED. v6.27.419 raccorde le

@@ -80,6 +80,18 @@
   identité principale. Klinsman exclusif/Gotham secondaire et Poppins/JetBrains
   dans les applications coexistent dans le document. Aucun arbitrage inventé.
 
+- **Version de marque vers les surfaces SPAWT** : la vitrine lit ses textes et
+  modes en code ; le quiz conserve ses questions/cartes/moteur ; l’app porte
+  sa calibration, son moteur et ses flags. La page publique `/b/[slug]` relit
+  A/D et le coffre, mais ne constitue pas un export de marque approuvé et
+  versionné pour ces dépôts. `/api/export/[strategyId]` est un export privé
+  autorisé, pas un manifeste publiable. **Plan** : rapprocher source historique,
+  décisions et implémentation par surface, réutiliser export/coffre/publication
+  existants pour une projection publique bornée, puis recevoir version consommée,
+  changement, refus de conflit et retour à la précédente. Aucune copie intégrale
+  du dossier privé dans le site. **Déclencheur** : raccord C2/C3 avant actualisation
+  publique SPAWT ; effort : audit de filiation puis un lot de raccord existant.
+
 ## Réception des observations et décisions — 2026-10-07 (ADR-0199)
 
 - **Fermé localement en 402** : le leaf LLM synchrone et la prescription RUNNING
@@ -445,6 +457,20 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
 - **B2 — mutations directes non gouvernées** — 🟢 **actions GOUVERNÉES** (v6.27.264) : `actions.setSelected`/`setTiming`/`autoSchedule` (décision opérateur — `setTiming`/`autoSchedule` arment le CRON social) passent désormais par `emitIntent(SET_BRAND_ACTION_STATUS)` (kind câblé union/commandant/handler `artemis/action-db/set-status`, garde de zone calendrier ADR-0131 conservée au routeur, mirror de `propose`). **Reclassé documenté-exempt (rationale valide)** : `brand-mcp.createKey/revokeKey` (**credential infra** ADR-0145, `canAccessStrategy`-gardé, header `lafusee:governed-active`) + `mcp-billing.*` (**adminProcedure** billing infra, relevés gelés + `paymentRef` = audit propre) — ce ne sont pas des mutations d'entité de marque au sens doctrine ; les auditer via `auditedProcedure` régresserait les collaborateurs (veto firewall sur kind LEGACY hors-zone) pour un gain marginal (déjà access-gardés + auto-audités). Décision de ne PAS sur-gouverner une infra documentée (anti « innovation pour l'innovation »).
 - **T2 — DS interdit #2 sans enforcement** : `design-tokens-canonical` est gardé par `DESIGN_STRICT` (jamais posé) → vacant ; pas de regex hex ; le lint `lafusee/design-token-only` n'est pas dans `eslint.config.mjs`. **Fermeture** : dé-garder le test (assert `[]` toujours) + regex hex + étendre le `walk` à `src/app` ; OU activer le lint `error`. **Risque** : révélera les `text-white`/violet/zinc existants (dont J4) → coordonner avec la passe DS. **Déclencheur** : passe DS mode-jour (avec J4).
 - **G — moteur de restauration réel (Compensate)** — 🟢 **ROLLBACK_PILLAR BÂTI** ([ADR-0176](adr/0176-real-rollback-pillar-compensation.md), v6.27.262) : `PillarVersion.intentId` + handler `pillar-gateway/rollback.ts` (restaure le contenu pré-écriture via le gateway, C5 ; refus honnête sans instantané lié) + câblage union/commandant/compensate. La Loi 1 a des dents pour les écritures pilier gouvernées. **Restants (audit-only honnête, plan)** : `ROLLBACK_ADVE` (multi-piliers A/D/V/E — annuler un FILL_ADVE = restaurer 4 piliers, chacun via son instantané `intentId`) · `ROLLBACK_RTIS_CASCADE` (effacer R/T/I/S — dérivés, régénérables) · `DISCARD/REVERT_RECOMMENDATIONS` (état reco, pas pilier). **Fermeture** : même patron que ROLLBACK_PILLAR, un handler par kind. **Déclencheur** : quand un besoin réel de compenser un FILL_ADVE/cascade apparaît (faible fréquence, admin-gated).
+- **Amendements et restauration précise — réception 419 du 8 octobre** : les
+  trois archives SPAWT V15/V16/V17 portent MESTOR et leur auteur, mais leur
+  intentId est null alors que trois émissions OPERATOR_AMEND_PILLAR sont OK.
+  Le bus génère son id puis appelle execute sans le transmettre au handler ;
+  author.intentId existe déjà au gateway. La table des compensateurs n'inclut
+  pas cette intention. Le rollback existant ne protège pas d'une écriture
+  postérieure et restaure le contenu sans les reçus/certitudes d'avant.
+  **Plan** : transmettre le contexte serveur existant (jamais un id client),
+  recevoir le lien réel émission/archive sur deux modifications concurrentes,
+  puis réutiliser snapshot/gateway/compensation pour restaurer la version exacte
+  avec ses métadonnées ou refuser si un travail ultérieur serait écrasé.
+  Ne pas reconstruire les liens historiques par proximité temporelle.
+  **Déclencheur** : C5 avant autonomie/compensation des amendements ; effort :
+  un lot sur les mécanismes existants et recette PostgreSQL/HTTP adversariale.
 - **`pillar.rollbackVersion` — restauration opérateur non gouvernée** *(trouvé à l'audit G, 2026-07-22)* : la mutation `operatorProcedure` `pillar.rollbackVersion` (restaure vers une `versionId` choisie) appelle `pillarVersioning.rollback` qui **bare-write `Pillar.content`** (C5-allowlisté) SANS émission (Q1/Q2 absents) ni scoring gateway (juste `propagateFromPillar` manuel). **Fermeture** : router la restauration via un chemin gateway (comme `rollbackPillar`) + émettre → ferme l'entrée allowlist C5 ET le trou d'émission. **Déclencheur** : rattaché au chantier **B2** (gouverner les mutations directes).
 - **J4 — `text-white` en mode jour** — 🟢 **CLOS (v6.27.306, 2026-07-23)** : les **330** `text-white` du cockpit ont été traités **par occurrence** (fond gouvernant tracé, pas de sweep aveugle) — **303 remplacés** (`text-foreground` sur fonds theme-inversants `bg-background`/`bg-surface-*` + tints ≤20 % qui composent clair en mode jour ; **+4 `text-foreground-inverse`** pour les `hover:bg-foreground` — blancs invisibles en mode NUIT, corrigés en passant) et **27 GARDÉS** (tous sur couleur fixe `bg-accent`/`bg-success`/`bg-warning`/`bg-info`/`bg-rocket-red` — blanc correct dans les deux thèmes). Périmètre = `(cockpit)` UNIQUEMENT (le toggle mode-jour n'est monté que là ; `(console)`/`(creator)`/`(agency)` sont dark-only → hors périmètre, ne pas toucher). Garde CI dédiée `cockpit-day-mode-readability.test.ts` (baseline décroissant 27, bloque tout nouveau `text-white` régressant sur un fond inversant) — plus honnête qu'étendre `design-tokens-canonical` (un ban total casserait les 27 keeps légitimes).
 - **E5 — armes `z.unknown()` des `S.computed`** (`pillar-schemas.ts:1447+`) : `budgetByPhase`/`devotionFunnel` acceptent tout objet/array → gate SHAPE neutralisé pour ces champs. **Fermeture** : resserrer vers les formes concrètes de `computePillarS` **en coordination avec le seed spawt** (qui portait des formes divergentes — risque de re-casser le seed sinon). **Déclencheur** : passe seed spawt / computePillarS.
@@ -576,6 +602,15 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
 - **Intégrité financière (double-payout + webhook momo + redelivery)** — 🟢 **CLOS round-8 (d)** (v6.27.281). **(MED)** `commission.generatePaymentOrder` : `create` nu sans dedup (pas d'unique `commissionId`) → double-clic = talent payé 2× → garde d'idempotence (renvoie l'ordre non-FAILED existant). **(MED)** webhook momo `publicProcedure` non signé → écriture ledger anonyme → secret fail-closed `MOBILE_MONEY_WEBHOOK_SECRET`. **(LOW)** Stripe/CinetPay re-fulfillaient sur redelivery → claim atomique `updateMany({status not PAID})` (comme PayPal). Verrou `financial-integrity-round8.test.ts`. **Restants (non-bloquants, tracés)** : (1) course concurrente pure sur `generatePaymentOrder` — deux appels SIMULTANÉS passent tous deux le `findFirst` → nécessite un unique PARTIEL `commissionId WHERE status != FAILED` (Prisma partial unique = SQL brut) ; pratique (double-clic séquentiel) fermé. **Déclencheur** : si un double-payout concurrent est observé. (2) Signature RÉELLE par provider momo (Orange/MTN/Wave HMAC) à l'intégration — le secret partagé est l'interim fail-closed. **Déclencheur** : intégration d'un provider momo live.
 - **Correctness Oracle/scoring (round-9 c)** — 🟢 **CLOS** (v6.27.284, fan-out correctness). **(HIGH)** l'Oracle re-plafonnait le composite avec un miroir d'évidence périmé (cibles NATION pré-ADR-0126 + `createdAt`) → palier INFÉRIEUR au dashboard (qui lit le composite persisté déjà scale-aware-capped) ; miroir supprimé. **(MED-HIGH)** §15 comptait les évangélistes via `"evangeliste"` minuscule (jamais matché) + seuils 0.8/0.95 vs canon `TIER_MIN_DEPTH` 0.65/0.85 → aligné. **(LOW)** lock `acquireGenerationLock` défait par un `OR { id: existing.id }` toujours-vrai → retiré ; `nested_complete` vacuously-true sur `{}` → gardé. Verrou `correctness-round9.test.ts`. Aucun résidu.
 - **Auth/session — durcissements + 2 résidus (round-9 b)** — 🟡 **partiel** (v6.27.285). **Fermé** : `allowDangerousEmailAccountLinking` retiré (pre-account-hijacking Google), MFA sur rôle EFFECTIF (god-mode challengé), `forgotPassword` fire-and-forget (anti-énumération timing), open-redirect callback OAuth (`//`/`\` rejetés). **Résidus tracés** : **(1) prise du stub non-réclamé (MED)** — `auth.register` pose un mot de passe sur un stub sans mdp (créé par `quickIntake.activateBrand`) SANS vérifier la propriété de l'email → un attaquant qui connaît l'email d'un prospect ayant fait un intake hérite de son Client + Strategy. **Plan** : vérification email pour la revendication (réutiliser l'infra reset-token : à la revendication, envoyer un lien de vérification à l'email du stub ; le mdp n'est posé qu'après clic). **Déclencheur** : décision produit sur la friction onboarding (sécurité vs conversion) — nécessite un arbitrage opérateur car change le flux d'inscription. **(2) rate-limit login/MFA + anti-replay TOTP (LOW)** — aucun throttle/lockout sur le credentials path ; `verifyTotp` sans cache de code utilisé ni comparaison constant-time. **Plan** : limiteur par-compte (in-memory/Redis) + fenêtre TOTP single-use. **Déclencheur** : passe infra rate-limiting / si un bruteforce est observé. **Bornage** : bcrypt cost-12 + TOTP 6 chiffres ±1 step = frein réel mais non-lockout.
+- **Session et rôle courant — C7, constat du 8 octobre** : la session ADMIN
+  du compte FOUNDER SPAWT est expliquée par isGodModeEmail effectivement vrai
+  dans le runtime 419 ; aucune divergence de rôle ordinaire n'est déduite de
+  ce cas. Les comptes ordinaires restent à recevoir sur rétrogradation,
+  suppression et transfert ; resolve-session-user peut recréer un utilisateur
+  supprimé depuis un JWT signé. **Plan** : contre-exemples locaux avec sessions
+  actives, retirer toute autorité périmée en réutilisant la résolution existante,
+  puis recevoir les refus sans élargir le god-mode. **Déclencheur** : C7 avant
+  réception multi-tenant ; effort : un lot auth et recettes de révocation.
 - **Audit gouverné — statut de fin honnête** — 🟢 **CLOS round-4** (v6.27.274, trouvé à la vérif du diff round-3) : `governedProcedure` fermait les mutations REFUSÉES/échouées en aval avec `status="OK"` + publiait `intent.completed` + Seshat les marquait OBSERVED (tRPC v11 `next()` NE JETTE PAS sur échec aval — il renvoie `{ok:false}`, donc le `catch` du lane ne voyait que ses propres throws). Corrigé : `governed-procedure.ts` teste `result.ok` et ferme `VETOED` (FORBIDDEN/UNAUTHORIZED) ou `FAILED` sinon — parité avec `auditedProcedure` qui testait déjà `result.ok`. Ferme la falsification de combustion sur le lane gouverné (miroir du fix `/api/nsp` DELETE). NB : sécurité intacte avant/après (le corps ne s'exécutait jamais) — c'était une intégrité d'audit (Q1/Q2).
 - **`session.user.operatorId` jamais peuplé — champ `User.operatorId` surchargé** *(trouvé à l'audit
   B1, 2026-07-22)* : le callback NextAuth (`lib/auth/config.ts`) ne pose que `role`+`id` sur la
@@ -764,15 +799,40 @@ restent à qualifier et ne reçoivent aucune maturité économique par ce lot.
 financiers locaux ; afficher l'absence, dater la base et séparer scénario/réel.
 **Effort** : audit puis contrats de projection et tests multi-périodes/monnaies.
 **Déclencheur** : avant toute réception du résultat économique SPAWT/Noël26 C6.
-Le catalogue SPAWT et ses gammes doivent encore être rapprochés de leurs sources
-et amendés via le gateway, sans faire passer le PRD historique pour une offre
-publiée. Reprendre à la réception native du lot conditions commerciales.
+Le catalogue SPAWT et ses gammes sont rapprochés en production 419 le 8 octobre :
+cinq offres/cinq paliers, conditions HT/TTC et périodes, références acquises
+résolues, V15→16→17 ; deux archives. Le Palais documentaire est ensuite reçu
+V17→18 : cinq axes, cinq archétypes du PRD historique, cinq stades, un mode prévu,
+deux artefacts et douze règles, avec conflit au seuil 50 et portée mobile/quiz
+explicites. Six sources et quinze autres piliers identiques ; aucun appel IA.
+Les lectures natives reçoivent les contenus, pas leur validation humaine.
+La version 420 corrige la lecture des relations et origines dans ce volet.
+La passation finale, masquée dans le checkout partiel mais présente en Git,
+renvoie au repo documentaire `project_spawt`. Son amendement du 26/07 est retrouvé
+sur `claude/app-finale-ios-android-f8ewrp`, commit
+`140ddf9eaaf991bed1ba8eff9cdff3bf495d25da` (absent de main) : il attribue à
+Alexandre les décisions de passer à treize archétypes, inclure B2B et portail,
+paiement web, palette brandbook et base unifiée. Cela rétablit la filiation,
+sans déduire revue humaine de la donnée importée ni migrations/runtime reçus.
+Le document ne modifie pas explicitement l’inertie : cinq recalculs dans l’app
+contre 30 jours/cinq lieux au PRD ; le seuil 50 reste ambigu. Amendement et passation
+sont admis par le formulaire manuel existant le 08/10, sources DECLARED/EXTRACTED,
+sans préparation assistée : six sources précédentes, seize piliers des deux dossiers
+SPAWT et 73 archives inchangés, compteurs IA/processus/actifs/fragments identiques.
+**Plan** : rapprocher productSystem et offres aux huit sources, conserver les écarts
+de mue/seuil ; recevoir ensuite chaque surface, sans réduction automatique à cinq
+ni publication mobile inférée. Empreintes/lecture dans `preuves-systeme-produit-spawt/`,
+admission et reçu dans `preuves-sources-finales-spawt/`.
+**Déclencheur** : suite C2/C3 du raccord public SPAWT, avant toute projection.
 
 Le raccord documentaire de l’amendement est corrigé par ADR-0206 (419) : reçus
 et version relue sont transmis au contrôle transactionnel existant ; agent et
 revue humaine sont distingués, un refus n’est plus accusé comme appliqué. La
 citation d’un document ne vaut ni grounding mesuré ni validation de ses offres.
-Le vrai corpus reste à rapprocher par amendements gouvernés et lectures natives.
+Les trois amendements documentaires SPAWT sont reçus en production 419 par
+l’outil existant et relus nativement, MESTOR/INFERRED sans revue humaine.
+Le reste du corpus, les chiffres économiques et les autres surfaces restent
+à rapprocher par les mêmes écrivains ; aucune réception globale déduite.
 Recommendation.confidence reste le littéral historique 1.0 de cette intention,
 y compris pour un amendement agent ; il ne représente aucune mesure reçue.
 **Plan** : distinguer l’autorisation de la confiance mesurée avec les métadonnées
@@ -786,10 +846,10 @@ non ambigus, doublons refusés et aucune déduction par index. Les tests Postgre
 reçoivent les cinq opérations, la protection humaine imbriquée et la concurrence.
 Le renommage natif a révélé un lien historique par nom encore fragile : transition
 exacte unique reçue par le même writer, sans rapprocher homonymes ou produits retirés.
-Le corpus SPAWT et ses références restent à amender via le circuit gouverné puis
-à relire nativement ; aucun backfill SQL de production ne vaut cette réception.
+Les références catalogue/gammes et les produits socles du Palais SPAWT sont
+reçus par amendement gouverné et lecture native ; aucun backfill SQL utilisé.
 La réservation d'id couvre l'état précédent, pas tout l'historique des retraits.
-Le lecteur historique tolérant accepte encore le premier nom/slug homonyme ;
+Le lecteur commun du lot 420 refuse désormais un id/nom/slug homonyme ;
 les noms de personaSegmentMap ne portent pas tous une identité acquise. Leur
 résolution générale et un retrait/réintroduction ne sont pas reçus par ce lot.
 **Plan** : qualifier les références historiques avant réintroduction d'un ancien

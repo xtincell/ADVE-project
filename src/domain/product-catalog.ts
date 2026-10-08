@@ -170,6 +170,8 @@ function norm(s: unknown): string {
 /**
  * Résout une référence (id OU nom OU slug) vers un produit du catalogue.
  * Tolérant : fonctionne même si les produits n'ont pas d'id (match par nom).
+ * Une identité acquise prime ; chaque niveau doit résoudre UN produit.
+ * Un homonyme ou un slug ambigu ne devient jamais « le premier du tableau ».
  */
 export function resolveProductRef<T extends CatalogueProduct>(
   catalogue: readonly T[],
@@ -177,12 +179,12 @@ export function resolveProductRef<T extends CatalogueProduct>(
 ): T | null {
   const r = norm(ref);
   if (!r) return null;
-  return (
-    catalogue.find((p) => norm(p.id) === r) ??
-    catalogue.find((p) => norm(p.nom) === r) ??
-    catalogue.find((p) => productSlug(typeof p.nom === "string" ? p.nom : "") === r) ??
-    null
-  );
+  const byId = catalogue.filter((p) => norm(p.id) === r);
+  if (byId.length) return byId.length === 1 ? byId[0]! : null;
+  const byName = catalogue.filter((p) => norm(p.nom) === r);
+  if (byName.length) return byName.length === 1 ? byName[0]! : null;
+  const bySlug = catalogue.filter((p) => typeof p.nom === "string" && p.nom.trim() && productSlug(p.nom) === r);
+  return bySlug.length === 1 ? bySlug[0]! : null;
 }
 
 export interface DanglingRef {

@@ -1,5 +1,25 @@
 # Changelog — La Fusee
 
+## v6.27.420 — fix(cockpit): rendre les relations produit lisibles (2026-10-08)
+
+**Le mécanisme produit montre les offres actuelles et conserve son origine.**
+
+- Le système produit V relit les noms du catalogue pour ses produits socles et
+  ses relations d’archétypes, modes et artefacts ; les ids persistés restent
+  identiques. Un lien absent ou ambigu reste à vérifier, sans choix par ordre.
+  Le résolveur commun exige une seule correspondance par id, nom ou slug.
+- Les six dimensions reprennent l’origine de leur champ parent, sans déduire une
+  validation humaine. Les formes compactes historiques restent lisibles.
+  Les gammes gardent un fond discret et une largeur constante ; leurs conditions
+  textuelles utilisent la couleur de texte, sans progression verte par index.
+- Corpus réel séparément reçu sur 419 : cinq offres/cinq paliers V15→17, puis
+  Palais documentaire V17→18 ; six sources et quinze autres piliers inchangés,
+  trois archives, aucun appel IA. Le Palais explicite le périmètre historique du
+  PRD et les conflits, sans retirer les treize archétypes du quiz ou de l’app.
+  Cela ne reçoit ni la publication mobile ni une version de marque pour le site.
+- Les contre-exemples de noms bruts, sous-origines perdues et homonymes ont été
+  reproduits avant correction. Réception native et livraison sont distinctes.
+
 ## v6.27.419 — fix(mestor): recevoir les sources de l’amendement (2026-10-08)
 
 **Une proposition documentaire reste liée à la version lue et à son auteur réel.**

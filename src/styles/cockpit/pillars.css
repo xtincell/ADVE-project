@@ -308,11 +308,11 @@
 /* échelle produit */
 .ck-v-ladder { display: flex; flex-direction: column; gap: 8px; }
 .ck-v-ladder__step { display: flex; align-items: stretch; gap: 14px; }
-.ck-v-ladder__bar { flex: none; width: calc(34% + (var(--i) * 14%)); min-width: 130px; max-width: 70%; border-radius: var(--radius-md);
-  background: linear-gradient(90deg, color-mix(in srgb, var(--success) calc(22% + var(--i) * 16%), var(--surface-card)), color-mix(in srgb, var(--success) calc(12% + var(--i) * 10%), var(--surface-card)));
+.ck-v-ladder__bar { flex: none; width: 42%; min-width: 130px; max-width: 70%; border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--success) 8%, var(--surface-card));
   border: 1px solid color-mix(in srgb, var(--success) 30%, var(--border)); padding: 11px 14px; display: flex; flex-direction: column; gap: 2px; }
 .ck-v-ladder__tier { font-family: var(--font-sans); font-weight: 700; font-size: 14px; color: var(--text-primary); }
-.ck-v-ladder__price { font-family: var(--font-mono); font-size: 12px; color: var(--success); }
+.ck-v-ladder__price { font-family: var(--font-sans); font-size: 13px; line-height: 1.5; color: var(--text-primary); }
 .ck-v-ladder__txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; justify-content: center; }
 .ck-v-ladder__desc { font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .ck-v-ladder__cible { font-size: 12px; color: var(--text-muted); }

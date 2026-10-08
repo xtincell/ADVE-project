@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.420", date: "2026-10-08",
+    headline: "Le fonctionnement du produit devient plus lisible",
+    highlights: [
+      { emoji: "🔗", title: "Des offres reconnaissables", body: "Les produits liés aux profils, modes et objets de votre marque affichent les noms actuels du catalogue. Une relation incertaine reste à vérifier." },
+      { emoji: "📄", title: "Une origine conservée", body: "Les différentes parties du fonctionnement produit conservent l’origine de leur fiche, sans présenter une proposition comme une validation humaine." },
+      { emoji: "👓", title: "Des conditions faciles à lire", body: "Les tarifs et leurs réserves restent lisibles dans chaque niveau d’offre, avec un fond discret et une présentation régulière." },
+    ],
+  },
+  {
     version: "6.27.419", date: "2026-10-08",
     headline: "Des corrections rattachées aux documents relus",
     highlights: [

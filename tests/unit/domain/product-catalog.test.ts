@@ -37,8 +37,9 @@ describe("product-catalog — ids stables & résolution", () => {
 
   it("resolveProductRef résout par id, par nom, par slug (tolérant)", () => {
     expect(resolveProductRef(CATALOGUE, "kit-podcast")?.nom).toBe("Kit Podcast"); // par id
-    expect(resolveProductRef(CATALOGUE, "Caméra RX-100")?.categorie).toBe("PHOTO"); // par nom
-    expect(resolveProductRef(CATALOGUE, "camera-rx-100")?.categorie).toBe("PHOTO"); // par slug
+    expect(resolveProductRef([CATALOGUE[0]!], "Caméra RX-100")?.categorie).toBe("PHOTO"); // nom unique
+    expect(resolveProductRef([CATALOGUE[0]!], "camera-rx-100")?.categorie).toBe("PHOTO"); // slug unique
+    expect(resolveProductRef(CATALOGUE, "Caméra RX-100")).toBeNull(); // homonyme
     expect(resolveProductRef(CATALOGUE, "Produit fantôme")).toBeNull();
   });
   it("ne devine pas une identité à partir d'un nom ambigu ou d'un index", () => {
@@ -75,8 +76,8 @@ describe("product-catalog — détection des références fantômes", () => {
     // les refs valides ne sont PAS signalées.
     expect(refs).not.toContain("kit-podcast");
     expect(refs).not.toContain("Kit Podcast");
-    expect(refs).not.toContain("Caméra RX-100");
-    expect(dangling.length).toBe(3);
+    expect(refs).toContain("Caméra RX-100"); // un homonyme n'est pas un lien reçu
+    expect(dangling.length).toBe(4);
   });
 
   it("catalogue vide → aucune fausse alerte", () => {
