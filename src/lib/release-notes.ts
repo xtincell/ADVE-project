@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.415", date: "2026-10-08",
+    headline: "Vos documents partagés restent accessibles depuis la marque",
+    highlights: [
+      { emoji: "📄", title: "Une pièce, plusieurs dossiers", body: "Le dossier de marque retrouve aussi les documents partagés avec lui et indique leur propriétaire. Vous pouvez les consulter directement depuis Sources & liens." },
+      { emoji: "🔎", title: "Une consultation à jour", body: "Chaque ouverture vérifie l’accès au document. Si son usage a été retiré, le lecteur vous le signale et n’affiche plus l’ancien texte." },
+    ],
+  },
+  {
     version: "6.27.414", date: "2026-10-08",
     headline: "Vos modifications restent dans le bon champ",
     highlights: [

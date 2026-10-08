@@ -11,6 +11,7 @@ import { groupWorkspaceAssets, type WorkspaceAsset } from "@/domain/portfolio-ba
 import { AssetContent } from "./AssetContent";
 import { WorkspaceAssets, WorkspaceAssetMedia } from "./WorkspaceAssets";
 import { PortfolioReferencesForm } from "./PortfolioReferencesForm";
+import { SourceReadDialog } from "@/components/brand/source-read-dialog";
 
 type Section = "overview" | "projects" | "products" | "assets" | "identity" | "sources";
 const TABS: Array<[Section, string]> = [["overview", "Vue d’ensemble"], ["projects", "Campagnes & projets"], ["products", "Produits & gammes"], ["assets", "Assets"], ["identity", "Identité"], ["sources", "Sources & liens"]];
@@ -48,6 +49,7 @@ function WorkspaceContent({ data, refresh, refreshing }: { data: PortfolioWorksp
   const [search, setSearch] = useState("");
   const [showArchives, setShowArchives] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [selectedSource, setSelectedSource] = useState<{ id: string; strategyId: string } | null>(null);
   const { setStrategyId } = useStrategy();
   const match = (s: string) => normalize(s).includes(normalize(search));
   const barre = data.barre;
@@ -132,9 +134,10 @@ function WorkspaceContent({ data, refresh, refreshing }: { data: PortfolioWorksp
     </div>}
     {section === "sources" && <div className="space-y-6">
       <PortfolioReferencesForm node={data.root} onSaved={refresh} />
-      {data.strategies.map((s) => <div key={s.id}><h2 className="mb-3 font-medium">{s.name}</h2>{s.dataSources.length ? <ul className="divide-y divide-border">{s.dataSources.map((source) => <li key={source.id} className="flex items-start gap-3 py-3 text-sm"><FileText className="mt-1 h-4 w-4 shrink-0 text-foreground-secondary" /><div><p>{source.fileName ?? "Source sans titre"}</p><p className="mt-1 text-xs text-foreground-secondary">{label(source.certainty)} · {label(source.processingStatus)} · {dateLabel(source.updatedAt.toISOString())}</p></div></li>)}</ul> : <p className="text-sm text-foreground-secondary">Aucun document ingéré dans ce dossier.</p>}</div>)}
+      {data.strategies.map((s) => <div key={s.id}><h2 className="mb-3 font-medium">{s.name}</h2>{s.dataSources.length ? <ul className="divide-y divide-border">{s.dataSources.map((source) => <li key={source.id} className="flex items-start gap-3 py-3 text-sm"><FileText className="mt-1 h-4 w-4 shrink-0 text-foreground-secondary" /><div><button type="button" aria-label={`Consulter ${source.fileName ?? "la source sans titre"} dans ${s.name}`} onClick={() => setSelectedSource({ id: source.id, strategyId: s.id })} className="text-left underline decoration-border underline-offset-4 hover:text-accent focus-visible:outline-2 focus-visible:outline-accent">{source.fileName ?? "Source sans titre"}</button>{source.shared && <p className="mt-1 text-xs text-foreground-secondary">Document partagé par {source.ownerBrandName} · consultation pour ce dossier</p>}<p className="mt-1 text-xs text-foreground-secondary">{label(source.certainty)} · {label(source.processingStatus)} · {dateLabel(source.updatedAt.toISOString())}</p></div></li>)}</ul> : <p className="text-sm text-foreground-secondary">Aucun document ingéré dans ce dossier.</p>}</div>)}
       <div><h2 className="mb-3 font-medium">Identités et points d’accès reliés</h2><ul className="max-h-[32rem] divide-y divide-border overflow-y-auto">{refs.map((r, i) => <li key={`${r.system}:${r.id}:${i}`} className="flex items-start gap-3 py-3 text-sm"><Link2 className="mt-1 h-4 w-4 shrink-0 text-foreground-secondary" /><div className="min-w-0"><p>{r.node} · {r.label ?? r.id}</p><p className="mt-1 break-all text-xs text-foreground-secondary">{r.system === "LA_BARRE" ? "La Barre" : r.system === "LA_FUSEE" ? "La Fusée" : r.system === "WEB" ? "Site web" : r.system === "RADAR" ? "Radar" : "Dépôt de code"} · {r.id}{r.instance ? ` · ${r.instance}` : ""}{r.project ? ` · projet ${r.project.id}` : ""}</p>{r.url && <a href={r.url} target="_blank" rel="noreferrer" className="text-xs underline">Ouvrir la source</a>}</div></li>)}</ul></div>
     </div>}
+    {selectedSource && <SourceReadDialog key={`${selectedSource.strategyId}:${selectedSource.id}`} sourceId={selectedSource.id} strategyId={selectedSource.strategyId} onClose={() => setSelectedSource(null)} />}
     {selectedAssetId && <AssetContent assetId={selectedAssetId} onClose={() => setSelectedAssetId(null)} />}
     <footer className="border-t border-border pt-4 text-xs leading-relaxed text-foreground-secondary">La Fusée porte l’architecture et ses dossiers de stratégie. La Barre conserve les campagnes, projets et références qui y sont suivis. Radar conserve les décisions et états de son suivi ; les liens ne les recopient pas.{barre?.savedAt && <> Dernière sauvegarde La Barre : {dateLabel(barre.savedAt)}.</>}{data.fetchedAt && <> Lecture : {new Date(data.fetchedAt).toLocaleTimeString("fr-FR")}.</>}</footer>
   </section>;

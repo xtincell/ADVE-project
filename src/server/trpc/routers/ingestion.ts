@@ -8,13 +8,12 @@ import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import * as ingestion from "@/server/services/ingestion-pipeline";
 import { AdveKeySchema } from "@/domain";
-import { sourceOriginalSummary } from "@/domain/source-original";
 import { SourceCertaintySchema } from "@/domain/source-certainty";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
 import { assertStrategyRead } from "./_strategy-read-guard";
 import { getOperatorContext } from "@/server/services/operator-isolation";
-import { sourceScope, sourceFingerprint, sharedSourceAnalysis, resolveBrandSource, setSourceUse, invalidateSourceDerivatives } from "@/server/services/ingestion-pipeline/source-usage";
+import { listBrandSourceSummaries, resolveBrandSource, setSourceUse, invalidateSourceDerivatives } from "@/server/services/ingestion-pipeline/source-usage";
 /* lafusee:governed-active */
 
 /**
@@ -119,61 +118,7 @@ export const ingestionRouter = createTRPCRouter({
   listSources: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const sources = await ctx.db.brandDataSource.findMany({
-        where: await sourceScope(input.strategyId, ctx.db),
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          strategyId: true,
-          strategy: { select: { name: true } },
-          uses: { where: { strategyId: input.strategyId, revokedAt: null }, select: { analysisStatus: true, pillarMapping: true, analyzedSourceHash: true } },
-          sourceType: true,
-          fileName: true,
-          fileType: true,
-          processingStatus: true,
-          pillarMapping: true,
-          extractedFields: true,
-          rawContent: true, rawData: true,
-          errorMessage: true,
-          createdAt: true,
-          // PR-A (ADR-0032)
-          certainty: true,
-          origin: true,
-          originalUpload: { select: { storageReceipt: true } },
-        },
-      });
-
-      // ADR-0184 — « déposé » ne veut pas dire « exploitable ». L'indexation est
-      // best-effort (`void` + `console.warn`) : une source EXTRACTED jamais
-      // indexée ne se signalait NULLE PART, et le porteur croyait sa
-      // documentation prise en compte. On lit le compte réel de chunks.
-      const fingerprints = new Map(sources.map((s) => [s.id, sourceFingerprint(s)]));
-      const indexed = await ctx.db.brandContextNode.findMany({
-        where: { strategyId: input.strategyId, kind: "BRAND_SOURCE", sourceId: { in: sources.map((s) => s.id) } },
-        select: { sourceId: true, payload: true },
-      });
-      const chunksBySource = new Map<string, number>();
-      for (const row of indexed) {
-        if (row.sourceId && (row.payload as Record<string, unknown> | null)?.sourceContentHash === fingerprints.get(row.sourceId)) {
-          chunksBySource.set(row.sourceId, (chunksBySource.get(row.sourceId) ?? 0) + 1);
-        }
-      }
-
-      return sources.map((s) => ({
-        ...s,
-        shared: s.strategyId !== input.strategyId,
-        ownerBrandName: s.strategy.name,
-        ownerStrategyId: s.strategyId,
-        processingStatus: s.strategyId === input.strategyId ? s.processingStatus : sharedSourceAnalysis(s, s.uses[0]).analysisStatus,
-        pillarMapping: s.strategyId === input.strategyId ? s.pillarMapping : sharedSourceAnalysis(s, s.uses[0]).pillarMapping,
-        strategy: undefined,
-        uses: undefined,
-        originalUpload: undefined,
-        rawContent: undefined, rawData: undefined,
-        original: sourceOriginalSummary(s.originalUpload?.storageReceipt),
-        /** Nombre de fragments indexés — 0 = pas encore exploitable en analyse. */
-        indexedChunks: chunksBySource.get(s.id) ?? 0,
-      }));
+      return listBrandSourceSummaries(input.strategyId, ctx.db);
     }),
 
   // Get ONE source with its raw content (lazy — listSources omits rawContent
@@ -181,7 +126,12 @@ export const ingestionRouter = createTRPCRouter({
   getSource: protectedProcedure
     .input(z.object({ id: z.string(), strategyId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
-      const { source, consumerStrategyId } = await resolveBrandSource(input.id, input.strategyId, ctx.db);
+      const { source, consumerStrategyId } = await resolveBrandSource(input.id, input.strategyId, ctx.db).catch((error: unknown) => {
+        if (error instanceof Error && error.message.startsWith("SOURCE_UNAVAILABLE:")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Ce document n’est plus accessible dans ce dossier." });
+        }
+        throw error;
+      });
       await assertStrategyRead(ctx.session.user.id, consumerStrategyId);
       return { id: source.id, fileName: source.fileName, rawContent: source.rawContent,
         certainty: source.certainty, sourceType: source.sourceType, origin: source.origin };

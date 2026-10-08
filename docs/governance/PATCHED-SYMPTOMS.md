@@ -30,6 +30,17 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-08 · Le portefeuille ignorait les BrandSourceUse pourtant reçus dans
+Sources : Peak ne retrouvait pas le brief commun. v6.27.415 factorise la liste
+canonique et ouvre le lecteur avec le dossier consommateur. La recette de
+retrait a révélé un ancien texte en cache pendant la vérification et un refus
+classé en erreur 500 ; le lecteur attend la réponse courante et getSource
+traduit ce refus connu en FORBIDDEN, sans relances automatiques sur ce refus.
+Les erreurs temporaires conservent leurs trois reprises. Causes : projection par propriété seule,
+durée de vie du cache confondue avec la validité de l’accès, frontière tRPC
+sans traduction de l’indisponibilité documentaire. Aucun droit élargi ; les
+recettes bornées ne reçoivent ni arbitrage de corpus ni publication complète.
+
 2026-10-08 · AmendPillarModal conservait proposition/motif entre deux champs et
 acceptait une réponse tardive dans un autre brouillon. Une lecture actualisée
 remplaçait aussi expectedVersion sous une saisie ancienne. v6.27.414 lie la

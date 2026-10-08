@@ -1,8 +1,13 @@
 /** Read projection against disposable PostgreSQL. No brand corpus or providers. */
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+// The session is supplied to the real tRPC caller; no Next.js request is made.
+vi.mock("@/lib/auth/config", () => ({ auth: vi.fn(async () => null) }));
+vi.mock("next-auth", () => ({}));
 import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
 import { getPortfolioWorkspace } from "@/server/services/brand-node/workspace";
+import { setSourceUse, resolveBrandSource } from "@/server/services/ingestion-pipeline/source-usage";
+import { ingestionRouter } from "@/server/trpc/routers/ingestion";
 let operatorId: string, userId: string, foreignUserId: string;
 const strategies: string[] = [], nodes: string[] = [];
 beforeAll(async () => {
@@ -18,12 +23,65 @@ beforeAll(async () => {
 afterAll(async () => {
   if (nodes.length) await db.brandNode.deleteMany({ where: { id: { in: nodes }, operatorId } });
   if (strategies.length) {
+    await db.brandDataSource.deleteMany({ where: { strategyId: { in: strategies } } });
     await db.pillar.deleteMany({ where: { strategyId: { in: strategies } } });
     await db.strategy.deleteMany({ where: { id: { in: strategies } } });
   }
   if (userId && foreignUserId) await db.user.deleteMany({ where: { id: { in: [userId, foreignUserId] } } });
   if (operatorId) await db.operator.delete({ where: { id: operatorId } });
   await db.$disconnect();
+});
+
+describe("documents utilisables depuis le portefeuille", () => {
+  async function sharedFixture() {
+    const { own, node } = await fixture();
+    const owner = await db.strategy.create({ data: { name: "Marque propriétaire", userId, operatorId } });
+    strategies.push(owner.id);
+    const source = await db.brandDataSource.create({ data: { strategyId: owner.id, sourceType: "MANUAL_INPUT",
+      fileName: "Brief multimarque synthétique", rawContent: "Une seule pièce et deux usages, sans analyse implicite.",
+      certainty: "DECLARED", processingStatus: "PROCESSED" } });
+    await setSourceUse({ sourceId: source.id, strategyId: own.id, userId, operatorId, admin: false, revoke: false });
+    const read = () => getPortfolioWorkspace(node, { allowBarre: false, actor: { userId, operatorId, role: "USER" } });
+    return { own, owner, source, read };
+  }
+  it("retrouve le document canonique avec son propriétaire et l’état local, sans exposer le texte", async () => {
+    const { source, read } = await sharedFixture();
+    const before = await db.brandSourceUse.findMany({ where: { sourceId: source.id } });
+    const view = await read();
+    const documents = view.strategies[0]!.dataSources;
+    expect(documents).toHaveLength(1);
+    expect(documents[0]).toMatchObject({ id: source.id, shared: true, ownerBrandName: "Marque propriétaire",
+      certainty: "DECLARED", processingStatus: "EXTRACTED", fileName: source.fileName });
+    expect(documents[0]).not.toHaveProperty("rawContent");
+    expect(documents[0]).not.toHaveProperty("rawData");
+    expect(documents[0]).not.toHaveProperty("uses");
+    expect(await db.brandSourceUse.findMany({ where: { sourceId: source.id } })).toEqual(before);
+    expect(await db.brandDataSource.count({ where: { id: source.id } })).toBe(1);
+  });
+  it("ne confond pas un document propre avec un usage partagé", async () => {
+    const { own, read } = await sharedFixture();
+    const local = await db.brandDataSource.create({ data: { strategyId: own.id, sourceType: "MANUAL_INPUT",
+      fileName: "Pièce du dossier", rawContent: "Une pièce propre à cette marque.", processingStatus: "EXTRACTED" } });
+    const documents = (await read()).strategies[0]!.dataSources;
+    expect(documents).toHaveLength(2);
+    expect(documents.find((d) => d.id === local.id)).toMatchObject({ shared: false, ownerStrategyId: own.id });
+  });
+  it("retire l’usage révoqué au prochain chargement et refuse sa consultation", async () => {
+    const { own, source, read } = await sharedFixture();
+    await setSourceUse({ sourceId: source.id, strategyId: own.id, userId, operatorId, admin: false, revoke: true });
+    expect((await read()).strategies[0]!.dataSources).toEqual([]);
+    await expect(resolveBrandSource(source.id, own.id)).rejects.toThrow("SOURCE_UNAVAILABLE");
+    const caller = ingestionRouter.createCaller({ db, headers: undefined, session: {
+      user: { id: userId, role: "USER" }, expires: new Date(Date.now() + 60_000).toISOString(),
+    } });
+    await expect(caller.getSource({ id: source.id, strategyId: own.id })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+  it("retire aussi la pièce si le propriétaire quitte le périmètre partagé", async () => {
+    const { own, owner, source, read } = await sharedFixture();
+    await db.strategy.update({ where: { id: owner.id }, data: { operatorId: null } });
+    expect((await read()).strategies[0]!.dataSources).toEqual([]);
+    await expect(resolveBrandSource(source.id, own.id)).rejects.toThrow("SOURCE_UNAVAILABLE");
+  });
 });
 async function fixture() {
   const own = await db.strategy.create({ data: { name: "Dossier propre", userId, operatorId } });

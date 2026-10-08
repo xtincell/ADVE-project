@@ -4,6 +4,7 @@
 import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { sourceOriginalSummary } from "@/domain/source-original";
 import { getPillarDependents, type PillarKey } from "@/lib/types/advertis-vector";
 
 export type SourceDb = Prisma.TransactionClient;
@@ -61,6 +62,62 @@ export async function sourceScope(strategyId: string, client: SourceDb = db): Pr
       strategy: { operatorId: target.operatorId },
     } } },
   ] };
+}
+
+/** One metadata projection for Sources and portfolio. Contents are hashed on the
+ * server and excluded from this response; consultation resolves access again. */
+export async function listBrandSourceSummaries(strategyId: string, client: SourceDb = db) {
+  const sources = await client.brandDataSource.findMany({
+    where: await sourceScope(strategyId, client),
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      strategyId: true,
+      strategy: { select: { name: true } },
+      uses: { where: { strategyId: strategyId, revokedAt: null }, select: { analysisStatus: true, pillarMapping: true, analyzedSourceHash: true } },
+      sourceType: true,
+      fileName: true,
+      fileType: true,
+      processingStatus: true,
+      pillarMapping: true,
+      extractedFields: true,
+      rawContent: true, rawData: true,
+      errorMessage: true,
+      createdAt: true, updatedAt: true,
+      // PR-A (ADR-0032)
+      certainty: true,
+      origin: true,
+      originalUpload: { select: { storageReceipt: true } },
+    },
+  });
+
+  // ADR-0184 — « déposé » ne veut pas dire « exploitable ». L'indexation est
+  // best-effort (`void` + `console.warn`) : une source EXTRACTED jamais
+  // indexée ne se signalait NULLE PART, et le porteur croyait sa
+  // documentation prise en compte. On lit le compte réel de chunks.
+  const fingerprints = new Map(sources.map((s) => [s.id, sourceFingerprint(s)]));
+  const indexed = await client.brandContextNode.findMany({
+    where: { strategyId: strategyId, kind: "BRAND_SOURCE", sourceId: { in: sources.map((s) => s.id) } },
+    select: { sourceId: true, payload: true },
+  });
+  const chunksBySource = new Map<string, number>();
+  for (const row of indexed) {
+    if (row.sourceId && (row.payload as Record<string, unknown> | null)?.sourceContentHash === fingerprints.get(row.sourceId)) {
+      chunksBySource.set(row.sourceId, (chunksBySource.get(row.sourceId) ?? 0) + 1);
+    }
+  }
+
+  return sources.map(({ strategy, uses, originalUpload, rawContent: _rawContent, rawData: _rawData, ...s }) => ({
+    ...s,
+    shared: s.strategyId !== strategyId,
+    ownerBrandName: strategy.name,
+    ownerStrategyId: s.strategyId,
+    processingStatus: s.strategyId === strategyId ? s.processingStatus : sharedSourceAnalysis({ ...s, rawContent: _rawContent, rawData: _rawData }, uses[0]).analysisStatus,
+    pillarMapping: s.strategyId === strategyId ? s.pillarMapping : sharedSourceAnalysis({ ...s, rawContent: _rawContent, rawData: _rawData }, uses[0]).pillarMapping,
+    original: sourceOriginalSummary(originalUpload?.storageReceipt),
+    /** Nombre de fragments indexés — 0 = pas encore exploitable en analyse. */
+    indexedChunks: chunksBySource.get(s.id) ?? 0,
+  }));
 }
 
 export async function resolveBrandSource(sourceId: string, strategyId?: string, client: SourceDb = db) {

@@ -1,6 +1,7 @@
 import type { BrandNode } from "@prisma/client";
 import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { db } from "@/lib/db";
+import { listBrandSourceSummaries } from "@/server/services/ingestion-pipeline/source-usage";
 import { inspectPortfolioReferences, portfolioReferenceKey } from "@/domain/portfolio-reference";
 import { BARRE_ORIGIN, projectBarreWorkspace, type BarreWorkspace } from "@/domain/portfolio-barre";
 
@@ -50,7 +51,7 @@ export async function getPortfolioWorkspace(root: BrandNode, options: { allowBar
   const accessibleIds = (await Promise.all(strategyIds.map(async (id) =>
     await canAccessStrategy(id, options.actor) ? id : null))).filter((id): id is string => id !== null);
   // A source reference is not an access grant; apply the native access policy.
-  const strategies = await db.strategy.findMany({
+  const strategyRows = await db.strategy.findMany({
     where: { id: { in: accessibleIds } },
     select: { id: true, name: true, status: true,
       pillars: { select: { key: true, validationStatus: true, completionLevel: true, staleAt: true, currentVersion: true,
@@ -59,11 +60,17 @@ export async function getPortfolioWorkspace(root: BrandNode, options: { allowBar
         versions: { orderBy: [{ version: "desc" }, { createdAt: "desc" }], take: 1,
           select: { version: true, author: true, createdAt: true } },
       } },
-      dataSources: { select: { id: true, fileName: true, certainty: true, processingStatus: true, updatedAt: true } },
       brandAssets: { select: { id: true, name: true, kind: true, state: true, fileUrl: true, staleAt: true } },
       campaigns: { select: { id: true, name: true, status: true } },
     },
   });
+  const strategies = await Promise.all(strategyRows.map(async (strategy) => ({
+    ...strategy, dataSources: (await listBrandSourceSummaries(strategy.id)).map((source) => ({
+      id: source.id, fileName: source.fileName, certainty: source.certainty,
+      processingStatus: source.processingStatus, updatedAt: source.updatedAt,
+      shared: source.shared, ownerBrandName: source.ownerBrandName, ownerStrategyId: source.ownerStrategyId,
+    })),
+  })));
   let barre: BarreWorkspace | null = null;
   let sourceStatus: "LIVE" | "UNAVAILABLE" | "NOT_CONNECTED" = "NOT_CONNECTED";
   let sourceError: string | null = null, fetchedAt: string | null = null;

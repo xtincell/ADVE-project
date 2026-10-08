@@ -2,7 +2,7 @@
 
 > Auto-généré par `npm run audit:llm` (`scripts/audit-llm-nodes.ts`). Ne pas éditer à la main.
 
-Généré le 2026-10-06.
+Généré le 2026-10-08.
 
 Deux contrats vérifiés par nœud : **sortie** (validation Zod stricte) et **entrée** (pas d'appel LLM direct qui court-circuite la validation et concatène l'entrée brute).
 
@@ -12,10 +12,10 @@ Deux contrats vérifiés par nœud : **sortie** (validation Zod stricte) et **en
 |---|---|---|---|---|
 | Glory tools (LLM/HYBRID) | 78 | 78 | 100% | 0 |
 | Frameworks | 28 | 28 | 100% | 0 |
-| Appels LLM directs (bypass wrapper) | 39 | 39 (entrée durcie) | 100% | 0 bruts |
+| Appels LLM directs (bypass wrapper) | 38 | 38 (entrée durcie) | 100% | 0 bruts |
 
 
-Entrée durcie = 37 fichiers `FENCED` (neutralisation `wrapUntrusted`/`sanitizeInline`) + 2 `INTERNAL` (annotés `@llm-input-internal` — entrée 100% interne). 53 appels directs au total.
+Entrée durcie = 36 fichiers `FENCED` (neutralisation `wrapUntrusted`/`sanitizeInline`) + 2 `INTERNAL` (annotés `@llm-input-internal` — entrée 100% interne). 52 appels directs au total.
 
 ## SORTIE — nœuds sans contrat de validation
 
@@ -37,15 +37,14 @@ Ces points appellent `callLLM`/`callLLMAndParse` sans passer par `executeStructu
 | `src/server/services/brief-ingest/analyzer.ts` | 154 | 1 | ✅ FENCED | non |
 | `src/server/services/brief-ingest/index.ts` | 167 | 1 | 🔒 INTERNAL | non |
 | `src/server/services/campaign-plan-generator/index.ts` | 122 | 1 | ✅ FENCED | non |
-| `src/server/services/feedback-loop/index.ts` | 245 | 1 | ✅ FENCED | non |
 | `src/server/services/implementation-generator/index.ts` | 105, 118, 144, 163 | 4 | ✅ FENCED | non |
-| `src/server/services/ingestion-pipeline/ai-filler.ts` | 152, 251, 433 | 3 | ✅ FENCED | non |
+| `src/server/services/ingestion-pipeline/ai-filler.ts` | 154, 245, 431 | 3 | ✅ FENCED | non |
 | `src/server/services/mestor/commandant.ts` | 96, 172, 220 | 3 | ✅ FENCED | non |
 | `src/server/services/mestor/i-pillar-sequenced.ts` | 148 | 1 | ✅ FENCED | non |
-| `src/server/services/mestor/insights.ts` | 251 | 1 | ✅ FENCED | non |
+| `src/server/services/mestor/insights.ts` | 253 | 1 | ✅ FENCED | non |
 | `src/server/services/mestor/rtis-cascade.ts` | 72 | 1 | ✅ FENCED | non |
 | `src/server/services/notoria/engine.ts` | 45 | 1 | ✅ FENCED | non |
-| `src/server/services/pillar-maturity/auto-filler.ts` | 1029, 1285 | 2 | ✅ FENCED | non |
+| `src/server/services/pillar-maturity/auto-filler.ts` | 1032, 1275 | 2 | ✅ FENCED | non |
 | `src/server/services/qc-router/automated-qc.ts` | 151 | 1 | ✅ FENCED | non |
 | `src/server/services/quick-intake/brand-level-evaluator.ts` | 288 | 1 | ✅ FENCED | non |
 | `src/server/services/quick-intake/deduce-adve.ts` | 147, 173 | 2 | ✅ FENCED | non |

@@ -1,5 +1,46 @@
 # Changelog — La Fusee
 
+
+## v6.27.415 — fix(portfolio): consulter les documents partagés dans leur dossier (2026-10-08)
+
+**Une pièce commune reste retrouvable et consultable depuis chaque marque qui l’utilise.**
+
+- Le portefeuille ne listait que les sources possédées par une stratégie : les
+  usages reçus ailleurs dans La Fusée disparaissaient de cette vue. Le lecteur
+  de liste existant est factorisé dans ingestion-pipeline et réutilisé ici.
+  Propriétaire, certitude et analyse locale restent distincts ; aucun texte,
+  original, usage ou état d’analyse n’est créé par cette consultation.
+- Chaque pièce ouvre le dialogue existant avec la stratégie consommatrice,
+  sans changer le contexte global. Le texte en cache attend la vérification
+  courante ; un retrait d’usage reçoit un refus explicite, pas une erreur 500.
+  Les autres erreurs restent des erreurs, sans conversion en permission refusée.
+  Le refus connu ne reçoit plus les trois relances automatiques ; les erreurs
+  temporaires conservent leurs reprises bornées.
+- Guidance, Mestor : BrandNode relie BrandDataSource et BrandSourceUse existants.
+  Cette lecture fournit aux décisions et briefs leur pièce canonique ; elle
+  précède la production puis l’apprentissage. Aucun modèle, Intent, agent,
+  connecteur ou workflow supplémentaire ; aucune mutation de marque.
+- Deux contre-exemples PostgreSQL rouges avant factorisation, trois tests UI
+  rouges avant ouverture native, puis un contre-exemple de cache, un de code
+  d’erreur et un de retry. Cinq tests du composant et 99 PostgreSQL passent ;
+  le gauntlet initial et 4 096 unitaires passent avant le réglage du retry.
+- Compilation locale authentifiée : même pièce lue pour propriétaire et
+  consommateur, page 200, DOM à 157 ms, titre observé à 420 ms (borne incluant
+  les appels d’outil). Trace complète de 83 réponses sans HTTP ≥400 ni exception.
+  Retrait fictif : quatre 403 avant réglage, aucun texte pendant la vérification,
+  refus explicite puis disparition après actualisation. La recette du retry
+  corrigé et la réception de production sont consignées séparément.
+- Dernier correctif reçu en standalone local : typage, lints, cycles, 1 604 tests
+  gouvernance et build verts ; cinq tests du composant verts après le dernier
+  rouge. Page 200, DOM à 108 ms et titre observé à 347 ms (borne d’outil),
+  83 réponses sans erreur HTTP ni exception. Retrait : un seul 403, message
+  observé à 303 ms, aucun ancien texte et liste actualisée. Fixture rétablie.
+  L’essai dev intermédiaire a servi 404 et n’est pas reçu ; ces preuves portent
+  sur la compilation exacte, sans en déduire une cause de ce défaut dev.
+- Audit LLM régénéré : un appel supprimé dans un lot antérieur est désormais
+  retiré du rapport généré. Aucun nouveau nœud ni contournement détecté.
+  Corpus SPAWT, publication web et cycle complet restent ouverts.
+
 ## v6.27.414 — fix(pillars): isoler le brouillon et sa version de départ (2026-10-08)
 
 **Une proposition ne peut plus changer de destinataire pendant son édition.**
