@@ -1,6 +1,31 @@
 # Changelog — La Fusee
 
 
+## v6.27.416 — fix(pillars): afficher l’origine réelle des valeurs (2026-10-08)
+
+**Une valeur renseignée n’est plus présentée comme déclarée par défaut.**
+
+- Les huit lecteurs de piliers relisent `content._fieldProvenance`, déjà écrit
+  par le gateway. HUMAN, SOURCE et INFERRED gardent leurs libellés canoniques.
+  Sans cette trace, seul un marqueur legacy explicite est repris ; absence ou
+  code inconnu affiche « Origine inconnue ». Les champs vides restent à saisir.
+  La fiabilité d’un document et l’approbation du contenu restent distinctes.
+- Console/Admin, INFRASTRUCTURE : extension du kit partagé, aucun modèle,
+  score, agent, Intent ni mutation de marque. La chaîne sources → fondation →
+  briefs/publication dispose ainsi d’une lecture honnête de l’origine conservée.
+- Treize contre-exemples couvrent les huit volets, les traces absentes,
+  les marqueurs legacy et une provenance qui contredit l’ancien badge.
+  Douze échouent avant correction ; treize passent après correction.
+- Recette locale authentifiée sur fixture synthétique : page 200, DOM chargé
+  à 2 080 ms ; titre observé dans les 14 926 ms (borne incluant les appels
+  d’outil, pas une mesure de rendu). 53 réponses, aucun HTTP ≥400, aucune
+  exception ni échec réseau, trace non tronquée. Quatre origines et champ vide
+  reçus ; zéro mutation métier déclenchée par la lecture.
+- Purge documentaire : la confirmation écrivait déjà HUMAN via le gateway ;
+  une dette la disait encore non protégée. SOURCE ne doit pas être transformé
+  en OFFICIAL par recopie de la certitude d’un document. La revue legacy et
+  le rapprochement sémantique SPAWT restent bornés dans RESIDUAL-DEBT.
+
 ## v6.27.415 — fix(portfolio): consulter les documents partagés dans leur dossier (2026-10-08)
 
 **Une pièce commune reste retrouvable et consultable depuis chaque marque qui l’utilise.**

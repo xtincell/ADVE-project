@@ -247,7 +247,7 @@ function ProductSystem({ value, status }: { value: unknown; status?: string }) {
 
 export function PillarVFields({ content, certainty }: { content: Rec; certainty: Record<string, string> | null | undefined }) {
   const v = content;
-  const st = makeStatusFor(certainty, "v");
+  const st = makeStatusFor(certainty, "v", content._fieldProvenance);
   const schemaKeys = Object.keys((PILLAR_SCHEMAS.V as { shape?: Record<string, unknown> }).shape ?? {});
   const total = schemaKeys.length;
   const filled = schemaKeys.filter((k) => !isEmpty(v[k])).length;

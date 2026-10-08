@@ -209,7 +209,7 @@ function ComputedBanner({ computed, score }: { computed: unknown; score: unknown
 
 export function PillarSFields({ content, certainty }: { content: Rec; certainty: Record<string, string> | null | undefined }) {
   const v = content;
-  const st = makeStatusFor(certainty, "s");
+  const st = makeStatusFor(certainty, "s", content._fieldProvenance);
   const schemaKeys = Object.keys((PILLAR_SCHEMAS.S as { shape?: Record<string, unknown> }).shape ?? {});
   const total = schemaKeys.length;
   const filled = schemaKeys.filter((k) => !isEmpty(v[k])).length;

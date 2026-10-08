@@ -158,7 +158,7 @@ function RiskScoreGauge({ score }: { score: unknown }) {
 
 export function PillarRFields({ content, certainty }: { content: Rec; certainty: Record<string, string> | null | undefined }) {
   const v = content;
-  const st = makeStatusFor(certainty, "r");
+  const st = makeStatusFor(certainty, "r", content._fieldProvenance);
   const schemaKeys = Object.keys((PILLAR_SCHEMAS.R as { shape?: Record<string, unknown> }).shape ?? {});
   const total = schemaKeys.length;
   const filled = schemaKeys.filter((k) => !isEmpty(v[k])).length;

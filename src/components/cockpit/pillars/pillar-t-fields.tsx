@@ -162,7 +162,7 @@ function Traction({ value, status }: { value: unknown; status?: string }) {
 
 export function PillarTFields({ content, certainty }: { content: Rec; certainty: Record<string, string> | null | undefined }) {
   const v = content;
-  const st = makeStatusFor(certainty, "t");
+  const st = makeStatusFor(certainty, "t", content._fieldProvenance);
   const schemaKeys = Object.keys((PILLAR_SCHEMAS.T as { shape?: Record<string, unknown> }).shape ?? {});
   const total = schemaKeys.length;
   const filled = schemaKeys.filter((k) => !isEmpty(v[k])).length;

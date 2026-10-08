@@ -423,7 +423,7 @@ Définition de « fermé » (loi opérateur) : fonctionnel en prod + verrou CI +
   ne doit pas être réinventée. Un ACTIVE ne prouve pas une approbation globale.
   Déclencheur : suite C2/C3 SPAWT ; effort : rapprochement et circulation via les
   écrivains existants, sans absorption ni nouvelle charte automatique.
-- **Root 2b — régen wholesale d'un objet top-level à forme invalide écrase des feuilles définies quand la provenance est UNKNOWN/INFERRED (MED, clobber)** *(finding agent Explore, v6.27.326)* : le fill est empty-only au grain feuille/cellule (prouvé), MAIS un champ top-level OBJET flaggé `missing` pour **forme jugée invalide** (`assessor` : `offShape > intersection`, ou string legacy là où un objet est attendu, ou array/string sous le seuil) est régénéré EN ENTIER (`setNestedValue(content, "<topKey>", value)`) → clobbe ses feuilles définies. La garde de provenance (`provenance-guard.ts`) protège HUMAN/SOURCE au grain top-level, mais est **INERTE pour UNKNOWN (seed direct, ex. SPAWT/Motion19) et INFERRED**. `confirmInferredField` n'accorde PAS HUMAN (efface juste le badge). **Fermeture** : ne pas régénérer wholesale un objet top-level qui porte des feuilles définies non-vides — préférer le fill additif de ses feuilles vides (retirer ce topKey du set de régen quand `Object.keys(non-vide) > 0`), OU étendre la garde de provenance pour refuser tout INFERRED qui RÉDUIT l'information (feuilles définies → écrasées). **Risque** : changement de comportement transverse aux 8 piliers → passe adversariale dédiée obligatoire. **Déclencheur** : prochaine passe « Enrichir ne détruit jamais du défini », ou si l'opérateur constate une régression de données définies après Enrichir. Effort ~1 session.
+- **Root 2b — régen wholesale d'un objet top-level à forme invalide écrase des feuilles définies quand la provenance est UNKNOWN/INFERRED (MED, clobber)** *(finding agent Explore, v6.27.326)* : le fill est empty-only au grain feuille/cellule (prouvé), MAIS un champ top-level OBJET flaggé `missing` pour **forme jugée invalide** (`assessor` : `offShape > intersection`, ou string legacy là où un objet est attendu, ou array/string sous le seuil) est régénéré EN ENTIER (`setNestedValue(content, "<topKey>", value)`) → clobbe ses feuilles définies. La garde de provenance (`provenance-guard.ts`) protège HUMAN/SOURCE au grain top-level, mais est **INERTE pour UNKNOWN (seed direct, ex. SPAWT/Motion19) et INFERRED**. **Fermeture** : ne pas régénérer wholesale un objet top-level qui porte des feuilles définies non-vides — préférer le fill additif de ses feuilles vides (retirer ce topKey du set de régen quand `Object.keys(non-vide) > 0`), OU étendre la garde de provenance pour refuser tout INFERRED qui RÉDUIT l'information (feuilles définies → écrasées). **Risque** : changement de comportement transverse aux 8 piliers → passe adversariale dédiée obligatoire. **Déclencheur** : prochaine passe « Enrichir ne détruit jamais du défini », ou si l'opérateur constate une régression de données définies après Enrichir. Effort ~1 session.
 
 ## Chantier « notoria profondeur + recos lisibles » 2026-07-23 ([ADR-0177](adr/0177-schema-leaf-inventory-and-notoria-depth.md)) — déférés
 
@@ -746,15 +746,16 @@ faux-négatif scalaire-dans-record du classifieur (`isContainer` + record), pers
 motivations sans repli-nom, story non dupliquée, manifesto non écrit, flag `wrote`), S computed corrompu
 VALIDATED (unions S + gate S), surclaims de docstrings (OFFICIAL/LLM-zéro-fab). **Restent (latents/systémiques)** :
 
-- **Deux voies de confiance disjointes** (pré-existant) : `content._fieldProvenance` (garde de provenance)
-  vs `Pillar.fieldCertainty` (seeds/intake/`confirmInferredField`). Un champ confirmé opérateur reste
-  `_fieldProvenance:UNKNOWN` → une écriture SOURCE (ingestion) le surécrit en silence (`decideOverwrite`
-  ALLOW). **Bornage** : `confirmInferredField` doit passer par le gateway (poser `_fieldProvenance:HUMAN`)
-  OU le garde doit consulter `fieldCertainty`. **Déclencheur** : chantier provenance unifiée (avant tout
-  usage prod de l'ingestion qui écrase).
-- **Certitude par champ non posée à l'ingestion** : le persister pose `fieldProvenance:SOURCE` mais pas
-  `Pillar.fieldCertainty=OFFICIAL` (seule `BrandDataSource.certainty` l'est). **Bornage** : écrire la
-  certitude par champ après le write. **Déclencheur** : surface cockpit d'ingestion.
+- **Revue legacy et provenance** : le kit des huit volets lit désormais
+  `_fieldProvenance` (v6.27.416), sans déclarer une valeur par défaut.
+  `confirmInferredField` écrit déjà HUMAN via le gateway avant d’effacer le
+  marqueur legacy ; l’ancienne dette contraire est retirée. Le panneau de
+  confirmation ne liste cependant que `fieldCertainty` : un champ uniquement
+  tracé INFERRED reste révisable par Modifier, sans bouton de confirmation dans
+  ce panneau. **Plan** : rapprocher sa liste et la précondition de confirmation
+  au même grain, avec conflit de version et tests adversariaux ; ne jamais
+  transformer SOURCE en OFFICIAL ni confirmer automatiquement. **Déclencheur** :
+  prochaine passe de revue de fondation SPAWT après réception du lecteur 416.
 - **`ingestBrandBook`/`previewBrandBook` = `operatorProcedure` non scopé par stratégie** (les reads sœurs
   sont `strategyScopedProcedure`). Modèle de confiance opérateur intentionnel, mais asymétrique.
   **Bornage** : `strategyScopedProcedure` + garde operator. **Déclencheur** : si `operatorProcedure` est

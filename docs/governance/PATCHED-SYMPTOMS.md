@@ -30,6 +30,14 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-08 · Les huit volets de marque affichaient « Déclaré » en l’absence
+de fieldCertainty et ignoraient la provenance réelle conservée dans content.
+v6.27.416 branche le kit partagé sur cette trace et rend l’origine absente
+explicitement inconnue. Treize tests de lecture, dont douze rouges sur l’ancien
+lecteur, couvrent les huit volets. Cause : deux métadonnées distinctes et une
+absence de trace transformée en affirmation positive. Aucun contenu confirmé
+automatiquement ; le rapprochement SPAWT reste ouvert dans RESIDUAL-DEBT.
+
 2026-10-08 · Le portefeuille ignorait les BrandSourceUse pourtant reçus dans
 Sources : Peak ne retrouvait pas le brief commun. v6.27.415 factorise la liste
 canonique et ouvre le lecteur avec le dossier consommateur. La recette de

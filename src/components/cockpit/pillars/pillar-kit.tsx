@@ -14,6 +14,8 @@
  */
 
 import type { ReactNode } from "react";
+import { coerceProvenance, FIELD_PROVENANCE_LABEL } from "@/domain/field-provenance";
+import { SOURCE_CERTAINTY_LABEL } from "@/domain/source-certainty";
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -24,17 +26,35 @@ export function isEmpty(v: unknown): boolean {
 }
 
 const STATUS_LABEL: Record<string, [string, string]> = {
-  DECLARED: ["Déclaré", "ok"],
-  INFERRED: ["Inféré", "orange"],
+  HUMAN: [FIELD_PROVENANCE_LABEL.HUMAN, "ok"],
+  SOURCE: [FIELD_PROVENANCE_LABEL.SOURCE, "info"],
+  UNKNOWN: [FIELD_PROVENANCE_LABEL.UNKNOWN, "muted"],
+  DECLARED: [SOURCE_CERTAINTY_LABEL.DECLARED, "ok"],
+  OFFICIAL: [SOURCE_CERTAINTY_LABEL.OFFICIAL, "info"],
+  ARBITRARY: [SOURCE_CERTAINTY_LABEL.ARBITRARY, "orange"],
+  INFERRED: [FIELD_PROVENANCE_LABEL.INFERRED, "orange"],
   CALCULATED: ["Calculé", "info"],
   EMPTY: ["À saisir", "muted"],
 };
 
-/** Resolve a field's certainty marker for a bare key, tolerating "a.key" form. */
-export function makeStatusFor(certainty: Record<string, string> | null | undefined, pillarKey: string) {
+/**
+ * Origine de la valeur courante, distincte de la fiabilité d'un document et
+ * d'une approbation. La provenance du gateway prime sur une ancienne certitude.
+ * Sans trace de provenance, conserver uniquement le marqueur legacy explicite.
+ */
+export function makeStatusFor(
+  certainty: Record<string, string> | null | undefined,
+  pillarKey: string,
+  provenance?: unknown,
+) {
   const fc = certainty ?? {};
+  const origins = asRec(provenance);
   const prefix = `${pillarKey.toLowerCase()}.`;
-  return (key: string): string | undefined => fc[key] ?? fc[`${prefix}${key}`];
+  return (key: string): string | undefined => {
+    const raw = origins[key] ?? origins[`${prefix}${key}`];
+    if (raw !== undefined) return coerceProvenance(raw);
+    return fc[key] ?? fc[`${prefix}${key}`];
+  };
 }
 
 export function asRec(v: unknown): Rec {
@@ -85,10 +105,11 @@ export function Section({ title, sub, children }: { title: string; sub?: string;
 // ── Status dot ─────────────────────────────────────────────────────────
 
 export function StatusDot({ status, empty }: { status?: string; empty: boolean }) {
-  const fallback: [string, string] = ["Déclaré", "ok"];
-  const entry = (empty ? STATUS_LABEL.EMPTY : STATUS_LABEL[status ?? "DECLARED"]) ?? fallback;
+  const marker = empty ? "EMPTY" : status ?? "UNKNOWN";
+  const entry = (Object.hasOwn(STATUS_LABEL, marker) ? STATUS_LABEL[marker] : undefined)
+    ?? [FIELD_PROVENANCE_LABEL.UNKNOWN, "muted"];
   const [lbl, tone] = entry;
-  return <span className="ck-fc__status" data-t={tone}>{lbl}</span>;
+  return <span className="ck-fc__status" data-t={tone} title="L’origine d’une valeur ne constitue pas une approbation de son contenu.">{lbl}</span>;
 }
 
 export function EmptyValue() {

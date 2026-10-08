@@ -71,7 +71,7 @@ function PotentielBudget({ value, status }: { value: unknown; status?: string })
 
 export function PillarIFields({ content, certainty }: { content: Rec; certainty: Record<string, string> | null | undefined }) {
   const v = content;
-  const st = makeStatusFor(certainty, "i");
+  const st = makeStatusFor(certainty, "i", content._fieldProvenance);
   const schemaKeys = Object.keys((PILLAR_SCHEMAS.I as { shape?: Record<string, unknown> }).shape ?? {});
   const total = schemaKeys.length;
   const filled = schemaKeys.filter((k) => !isEmpty(v[k])).length;

@@ -255,7 +255,7 @@ function StoryRatio({ value, status }: { value: unknown; status?: string }) {
 
 export function PillarDFields({ content, certainty }: { content: Rec; certainty: Record<string, string> | null | undefined }) {
   const v = content;
-  const st = makeStatusFor(certainty, "d");
+  const st = makeStatusFor(certainty, "d", content._fieldProvenance);
   const schemaKeys = Object.keys((PILLAR_SCHEMAS.D as { shape?: Record<string, unknown> }).shape ?? {});
   const total = schemaKeys.length;
   const filled = schemaKeys.filter((k) => !isEmpty(v[k])).length;

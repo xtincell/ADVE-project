@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.416", date: "2026-10-08",
+    headline: "Distinguez l’origine de vos informations",
+    highlights: [
+      { emoji: "🔎", title: "Des indications fidèles", body: "Votre plateforme de marque distingue les valeurs saisies par une personne, issues d’une source ou inférées par l’IA. Sans trace conservée, l’origine est indiquée comme inconnue. Ces indications ne valent pas approbation du contenu." },
+    ],
+  },
+  {
     version: "6.27.415", date: "2026-10-08",
     headline: "Vos documents partagés restent accessibles depuis la marque",
     highlights: [
