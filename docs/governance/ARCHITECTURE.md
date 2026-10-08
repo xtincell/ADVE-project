@@ -30,7 +30,7 @@ sequenceDiagram
   participant Artemis
   participant Ptah
   participant Bus as EventBus
-  participant DB as IntentEmission
+  participant DB as PostgreSQL
 
   Client->>Mestor: emitIntent(kind, payload)
   Mestor->>DB: INSERT IntentEmission (hash-chained)
@@ -42,7 +42,11 @@ sequenceDiagram
     opt asset matérialisation requise
       Mestor->>Mestor: emitIntent(PTAH_MATERIALIZE_BRIEF)
       Mestor->>Ptah: dispatch(forgeBrief)
-      Ptah->>Bus: ASSET_FORGED (post webhook reconcile)
+      Ptah->>Mestor: emitIntent(PTAH_RECONCILE_TASK, webhook ou sync)
+      Mestor->>Ptah: reconcileTask dans le scope de la marque
+      Ptah->>DB: checkpoint résultat fournisseur
+      Ptah->>DB: transaction versions + coffre + coût + COMPLETED
+      Ptah-->>Mestor: ids stables des versions admises
     end
     loop each step
       Artemis->>Bus: publish intent.progress
@@ -59,6 +63,20 @@ sequenceDiagram
     Mestor->>DB: UPDATE IntentEmission (status=VETOED|DOWNGRADED)
   end
 ```
+
+**Frontière Ptah, candidat 6.27.425 au 2026-10-08** : la transaction d’admission
+utilise le verrou partagé du coffre et celui de la tâche. Un résultat checkpointé
+peut être repris sans nouvelle forge ; un actif archivé reste archivé. Le coût
+de forge est écrit dans cette transaction, à partir du montant déclaré par le
+fournisseur, sans en déduire une facture réelle. Vingt-quatre tests PostgreSQL
+isolés sont reçus, ainsi que les suites locales 4 144 unitaires/219 PostgreSQL/
+1 610 gouvernance, zéro cycle et lint sans erreur/24 warnings. Les refus HTTP
+réels et la reprise après arrêt/nouveau processus sont reçus : checkpoint
+synthétique conservé, retry/replay 200 identiques, une version/un actif/un coût
+et chaîne FAILED→OK→OK vérifiée, zéro appel fournisseur. Livraison 425 à recevoir.
+Le stress isolé ne reçoit pas les pages/tRPC ni les fournisseurs sans credentials.
+Le journal terminal du spine, les octets/CDN et les adaptateurs réels
+restent distincts : [réception courante](RECEPTION-PTAH-ADMISSION.md).
 
 ## Glory tools — outils intriqués
 

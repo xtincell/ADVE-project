@@ -50,16 +50,6 @@ sept chantiers ; les résidus actifs suivent.
   aux interruptions, sans second coffre ni backfill de validation. **Déclencheur** :
   prochaine traversée C3/C5 des actifs, avant autonomie de ces chemins ; effort :
   un lot de contrats et recette par famille d’écrivains.
-- **Ptah — résultat produit avant admission durable** : lecture du code
-  `ptah/index.ts::reconcileTask` : COMPLETED est écrit avant les AssetVersion ;
-  l’admission BrandAsset est best-effort et un retry COMPLETED retourne sans la
-  reprendre. Ce constat source ne vaut pas reproduction de panne provider.
-  **Fermer** par pannes injectées après résultat, après une version et avant coffre,
-  puis reprise idempotente fondée sur GenerativeTask/AssetVersion/source existants ;
-  le reçu doit distinguer production, admission et durabilité sans nouvelle file.
-  **Déclencheur** : suite C3/C6 de forge, avant réception de ses actifs dans le cycle
-  Noël/publication ; effort : un lot de réconciliation et tests sur fixture locale,
-  sans achat ni appel provider requis pour reproduire la frontière.
 - **Fermeture du journal après commit** : `mestor/intents.ts::emitIntent` capture
   encore une panne de closeEmission et peut rendre le résultat métier avec une
   émission PENDING. Le sweep existant après six heures signale l’orpheline ; il
@@ -73,7 +63,67 @@ sept chantiers ; les résidus actifs suivent.
   approbation publique. ADR-0209 ajoute le contrat borné et son choix explicite ;
   son runtime 423 et la consommation des textes/liens SPAWT sont reçus sous
   « Édition publique et surfaces de marque ». Ce contrat ne reçoit pas les autres écrivains,
-  Ptah ni la fenêtre de fermeture du journal décrits ci-dessus.
+  les réceptions Ptah restantes ni la fenêtre de fermeture du journal.
+
+## Ptah — limites après admission atomique locale 425 (2026-10-08)
+
+L’ancienne cause « COMPLETED avant versions/coffre, reprise terminale vide » est
+fermée dans le correctif candidat et retirée du registre : checkpoint persistant,
+admission unique et reprise stable éprouvés par 24 tests PostgreSQL isolés après
+dix contre-exemples initiaux rouges. Fournisseur synthétique, aucun reçu réel
+SPAWT/Noël ; production reçue encore 423. Suites locales reçues : 4 144 unitaires,
+219 PostgreSQL, 1 610 gouvernance ; zéro cycle, lint sans erreur/24 warnings.
+HTTP local après panne injectée et redémarrage reçu : checkpoint conservé,
+admission annulée puis retry/replay 200, mêmes ids, une version/un actif/un coût,
+chaîne FAILED→OK→OK vérifiée, zéro appel fournisseur. Fixture nettoyée.
+Stress isolé sans credentials sans pages/tRPC atteints,
+forges différées, machine d’états bornée. Ce retrait ne ferme pas les dettes suivantes.
+
+- **Réception du candidat** : image et runtime de production 425 non reçus à
+  cet instant ; le stress isolé ne reçoit pas les pages/tRPC ni les
+  fournisseurs réels. **Fermer** en rapprochant ces
+  reçus de la même source et en relisant task/versions/coffre/coût après reprise,
+  sans appeler un fournisseur payant pour certifier la frontière de persistance.
+  **Déclencheur** : réception du lot 425 en cours ; effort : une recette de
+  livraison. État courant : [RECEPTION-PTAH-ADMISSION.md](RECEPTION-PTAH-ADMISSION.md).
+- **Conservation des octets et propagation CDN** : `download-archiver.ts` peut
+  remplir AssetVersion.cdnUrl après l’admission ; le BrandAsset existant conserve
+  alors son fileUrl, et un reçu d’URL ne prouve pas la conservation d’un média
+  temporaire. **Fermer** en éprouvant download/stockage/relecture après expiration,
+  hash des octets et reprise, puis en raccordant la référence durable au coffre
+  sous ses verrous existants, sans réactiver les archives. **Déclencheur** : avant
+  réception C3/C6 d’un média temporaire réel ou publication de cet actif ; effort :
+  un lot archiver/coffre et recette de stockage configuré.
+- **Canva/Figma — réconciliation vide** : `providers/canva.ts` et `figma.ts`
+  renvoient toujours `resultUrls: []`, désormais refusé comme résultat invalide.
+  **Fermer** en raccordant le résultat d’export/polling réel au contrat existant,
+  puis en recevant URL, scope, reprise et octets avec les accès fournisseur
+  nécessaires. Ne pas rendre un succès vide ni contourner le refus.
+  **Déclencheur** : prochaine activation de l’un de ces fournisseurs avec ses
+  accès/onboarding ; effort : un lot adaptateur et recette par fournisseur.
+- **Coût déclaré sans facture** : plusieurs adaptateurs renvoient zéro faute de
+  reçu financier. La transaction conserve ce montant déclaré ; elle ne démontre
+  ni gratuité ni dépense réelle. **Fermer** en recevant la preuve fournisseur,
+  en distinguant absence de facture et montant nul dans le contrat existant,
+  puis en rapprochant chaque tâche du reçu sans substituer une estimation.
+  **Déclencheur** : première forge facturée reçue par fournisseur, avant promesse
+  de comptabilité exhaustive ; effort : un lot contrat/coût et recette par facture.
+- **Références métier à l’entrée** : `materializeBrief` ne transmet pas encore
+  toutes les références business upstream à la création de GenerativeTask.
+  Contrôler les références présentes à la réconciliation ne remplit pas celles
+  absentes. Les reçus documentaires sourceDataSourceId/sourceContentHash ne sont
+  pas encore propagés jusqu’au matériau ; l’invalidation après correction de la
+  source et staleAt n’est pas reçue. Le cas positif conserve sourceBrandAssetId
+  en metadata, campaignId/briefId/sourceIntentId ; il ne démontre pas une
+  provenance complète ni une source courante garantie. **Fermer** en suivant
+  références business et reçus documentaires depuis le writer réel jusqu’à la
+  tâche puis au coffre, et en éprouvant correction de source/invalidation,
+  refus inter-marques et reprise, par extension des contrats existants.
+  **Déclencheur** : après livraison 425, suite du chantier d’irrigation C3/C6
+  depuis le brief réel ; effort : un lot de propagation et recette.
+
+La fermeture best-effort de l’Intent après commit reste la dette distincte
+« Fermeture du journal après commit » ci-dessus : le checkpoint Ptah n’y supplée pas.
 
 ## Reprises de campagne — 2026-10-07 (ADR-0202)
 

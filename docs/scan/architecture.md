@@ -61,7 +61,7 @@ sequenceDiagram
   participant Artemis
   participant Ptah
   participant Bus as EventBus
-  participant DB as IntentEmission
+  participant DB as PostgreSQL
 
   Client->>Mestor: emitIntent(kind, payload)
   Mestor->>DB: INSERT IntentEmission (hash-chained)
@@ -73,7 +73,11 @@ sequenceDiagram
     opt asset matérialisation requise
       Mestor->>Mestor: emitIntent(PTAH_MATERIALIZE_BRIEF)
       Mestor->>Ptah: dispatch(forgeBrief)
-      Ptah->>Bus: ASSET_FORGED (post webhook reconcile)
+      Ptah->>Mestor: emitIntent(PTAH_RECONCILE_TASK, webhook ou sync)
+      Mestor->>Ptah: reconcileTask scoped to the brand
+      Ptah->>DB: checkpoint provider result
+      Ptah->>DB: transaction versions + vault + cost + COMPLETED
+      Ptah-->>Mestor: stable admitted version ids
     end
     loop each step
       Artemis->>Bus: publish intent.progress
@@ -90,6 +94,18 @@ sequenceDiagram
     Mestor->>DB: UPDATE IntentEmission (status=VETOED|DOWNGRADED)
   end
 ```
+
+**Ptah boundary, 2026-10-08:** candidate 6.27.425 checkpoints the provider result,
+then admits versions/vault/reported cost/COMPLETED in one transaction. Twenty-four
+isolated PostgreSQL admission tests are received with synthetic providers.
+Local suites passed: 4,144 unit / 219 PostgreSQL / 1,610 governance; zero cycles,
+lint zero errors / 24 warnings. Real HTTP failure and restart are received:
+checkpoint retained, retry/replay 200 with identical bodies and ids, one
+version/asset/cost and verified FAILED→OK→OK chain, zero provider calls.
+Delivery remains pending. Isolated stress reached no pages/tRPC and deferred
+forges without credentials. Production received remains 423.
+Bytes/CDN, real providers and invoices, upstream business references and spine
+terminal closure remain separate: [current receipt](../governance/RECEPTION-PTAH-ADMISSION.md).
 
 **Intent lifecycle** — `PROPOSED → DELIBERATED → DISPATCHED → EXECUTING → OBSERVED → COMPLETED` (or `FAILED`/`VETOED`/`DOWNGRADED`). Each transition:
 

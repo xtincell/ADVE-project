@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.425", date: "2026-10-08",
+    headline: "Une production reçue peut reprendre après interruption",
+    highlights: [
+      { emoji: "↻", title: "Une reprise sans doublon", body: "Un résultat déjà reçu peut rejoindre votre bibliothèque après une interruption, sans recréer les fichiers déjà enregistrés. Les actifs archivés gardent leur état." },
+    ],
+  },
+  {
     version: "6.27.423", date: "2026-10-08",
     headline: "Choisissez la version publique de votre marque",
     highlights: [

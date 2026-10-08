@@ -1,5 +1,36 @@
 # Changelog — La Fusee
 
+## v6.27.425 — fix(ptah): reprendre l’admission d’un résultat sans doublon (2026-10-08)
+
+**Un résultat de forge conservé peut rejoindre le coffre après interruption.**
+
+- `GenerativeTask.resultUrls` et `realisedCostUsd` sont checkpointés avant
+  admission. Versions, actifs du coffre, reçu de coût et état COMPLETED sont
+  ensuite écrits dans une seule transaction ; le verrou partagé coffre/tâche
+  sérialise les callbacks. La reprise conserve les ids et les archives, refuse
+  les reçus ambigus et ne relance pas une forge pour un résultat déjà checkpointé.
+- La portée marque/équipe/campagne/brief/source est relue. Webhook authentifié
+  et fournisseur synchrone passent par l’Intent existant PTAH_RECONCILE_TASK ;
+  les futures forges utilisent l’identifiant réel de leur émission parent.
+  Aucun nouveau modèle, service, Intent, agent ou Glory tool.
+- Le journal de coût reçoit le fournisseur et le montant checkpointés dans la
+  transaction ; un ancien reçu zéro-token/Anthropic peut être réparé depuis ce
+  résultat persistant. Ce montant déclaré ne prouve pas une facture fournisseur.
+  L’ancienne dette COMPLETED avant admission est retirée ; octets/CDN, réponses
+  vides Canva/Figma, facture, références métier et reçus documentaires upstream,
+  invalidation de source/staleAt et close du spine restent bornés séparément dans
+  RESIDUAL-DEBT. Contrôle de portée ne vaut pas provenance complète.
+- Réception locale : 4 144 unitaires, 219 PostgreSQL dont les 24 cas d’admission,
+  et 1 610 gouvernance verts ; zéro cycle, lint sans erreur/24 warnings.
+  Dix contre-exemples initiaux rouges. HTTP réel : 400/403/400, puis panne coffre
+  500 avec checkpoint conservé et aucune admission. Après arrêt et nouveau
+  processus, retry/replay 200 identiques, mêmes ids, une version/un actif/un coût ;
+  chaîne FAILED→OK→OK vérifiée. Zéro appel fournisseur, fixture nettoyée.
+  Image et déploiement 425 restent à recevoir. Stress isolé sans credentials : pages/tRPC non atteignables,
+  forges différées et machine d’états bornée ; aucun stress E2E entier reçu.
+  Fournisseur synthétique, aucune forge réelle SPAWT/Noël ; production reçue 423.
+  Détail : [réception Ptah](docs/governance/RECEPTION-PTAH-ADMISSION.md).
+
 ## v6.27.424 — fix(runtime): isoler les imports Node de l’instrumentation Edge (2026-10-08)
 
 **Le serveur local démarre sans importer web-push dans le bundle Edge.**

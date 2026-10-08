@@ -7,6 +7,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { createHash, randomBytes } from "node:crypto";
 import type {
   ForgeBrief,
@@ -155,8 +156,8 @@ interface AssetVersionInput {
   metadata?: Record<string, unknown>;
 }
 
-export async function createAssetVersion(input: AssetVersionInput) {
-  return db.assetVersion.create({
+export async function createAssetVersion(input: AssetVersionInput, client: Prisma.TransactionClient = db) {
+  return client.assetVersion.create({
     data: {
       parentAssetId: input.parentAssetId,
       generativeTaskId: input.generativeTaskId,
@@ -195,38 +196,19 @@ export async function updateProviderHealth(
     cost?: number;
     circuitState?: "OPEN" | "CLOSED" | "HALF_OPEN";
   },
+  client: Prisma.TransactionClient = db,
 ) {
-  const existing = await db.forgeProviderHealth.findUnique({ where: { provider } });
   const now = new Date();
-  if (!existing) {
-    return db.forgeProviderHealth.create({
-      data: {
-        provider,
-        circuitState: patch.circuitState ?? "CLOSED",
-        failureCount: patch.failure ? 1 : 0,
-        lastFailureAt: patch.failure ? now : null,
-        lastSuccessAt: patch.success ? now : null,
-        totalRequests: 1,
-        totalFailures: patch.failure ? 1 : 0,
-        totalCostUsd: patch.cost ?? 0,
-      },
-    });
-  }
-  return db.forgeProviderHealth.update({
+  return client.forgeProviderHealth.upsert({
     where: { provider },
-    data: {
-      circuitState: patch.circuitState ?? existing.circuitState,
-      failureCount: patch.failure
-        ? existing.failureCount + 1
-        : patch.success
-          ? 0
-          : existing.failureCount,
-      lastFailureAt: patch.failure ? now : existing.lastFailureAt,
-      lastSuccessAt: patch.success ? now : existing.lastSuccessAt,
-      totalRequests: existing.totalRequests + 1,
-      totalFailures: patch.failure ? existing.totalFailures + 1 : existing.totalFailures,
-      totalCostUsd: existing.totalCostUsd + (patch.cost ?? 0),
-    },
+    create: { provider, circuitState: patch.circuitState ?? "CLOSED", failureCount: patch.failure ? 1 : 0,
+      lastFailureAt: patch.failure ? now : null, lastSuccessAt: patch.success ? now : null,
+      totalRequests: 1, totalFailures: patch.failure ? 1 : 0, totalCostUsd: patch.cost ?? 0 },
+    update: { ...(patch.circuitState ? { circuitState: patch.circuitState } : {}),
+      ...(patch.failure ? { failureCount: { increment: 1 }, lastFailureAt: now }
+        : patch.success ? { failureCount: 0, lastSuccessAt: now } : {}),
+      totalRequests: { increment: 1 }, totalFailures: { increment: patch.failure ? 1 : 0 },
+      totalCostUsd: { increment: patch.cost ?? 0 } },
   });
 }
 

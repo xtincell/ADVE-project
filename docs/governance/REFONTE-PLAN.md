@@ -1,5 +1,31 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Admission Ptah après résultat — 2026-10-08
+
+Correctif 6.27.425 en réception, sur les primitives existantes. Le résultat
+fournisseur est checkpointé dans GenerativeTask avant une transaction commune
+AssetVersion/BrandAsset/reçu de coût/COMPLETED. Verrou coffre partagé et verrou
+de tâche rendent la reprise stable, sans doublon ni réactivation d’une archive.
+La portée marque/équipe/campagne/brief/source est relue ; webhook et sync utilisent
+PTAH_RECONCILE_TASK, et les futures forges portent leur émission parent réelle.
+Aucun nouveau modèle, service, Intent, agent ou Glory tool.
+
+Vingt-quatre tests PostgreSQL isolés verts, après dix contre-exemples initiaux
+rouges, reçoivent cette frontière locale avec fournisseur synthétique. Suites
+locales reçues : 4 144 unitaires/219 PostgreSQL/1 610 gouvernance ; zéro cycle,
+lint sans erreur/24 warnings. HTTP après panne coffre et vrai redémarrage reçu :
+checkpoint conservé sans admission, puis retry/replay 200 identiques, mêmes ids
+et une version/un actif/un coût ; chaîne FAILED→OK→OK vérifiée. Zéro appel
+fournisseur, fixture nettoyée. Image et déploiement 425 restent à recevoir,
+production reçue encore 423.
+Stress isolé sans credentials : pages/tRPC non atteints, forges différées,
+machine d’états bornée ; aucun stress E2E entier reçu.
+L’ancienne dette COMPLETED avant coffre est retirée.
+Octets/CDN, réponses vides Canva/Figma, facture fournisseur, filiation business
+upstream et journal terminal durable restent ouverts avec plans et déclencheurs.
+Voir [la réception courante](RECEPTION-PTAH-ADMISSION.md) et RESIDUAL-DEBT ; aucune
+forge réelle SPAWT/Noël ni clôture des sept chantiers n’en est déduite.
+
 ## Édition publique distincte du brouillon — 2026-10-08
 
 ADR-0209 étend BrandAsset BRAND_GUIDELINES/public-brand-v1, Connexions,
@@ -27,7 +53,7 @@ un seul nouvel actif pour l’édition ; zéro IA. Les fonts sont reçues sans s
 
 La réception porte les textes/liens v1 ; tokens, voix, variantes, version du
 quiz/application et retour des résultats, brouillon interrompu, autres écrivains,
-Ptah et journal durable restent ouverts. Sept chantiers EN_COURS/accepted=false,
+réception fournisseur Ptah et journal durable restent ouverts. Sept chantiers EN_COURS/accepted=false,
 116 examens bornés et 80 donneurs ouverts au registre programme ; aucun parcours
 large accepté. Les preuves détaillées et leurs limites figurent dans ADR-0209.
 
@@ -40,7 +66,8 @@ Remplacement/version/slot sont atomiques ; les retries préservent la décision
 existante et les émissions locales non chaînées sont retirées. Aucun nouveau
 modèle, service, page, agent ou Glory tool. Les preuves PostgreSQL, la recette
 native et le runtime restent des réceptions distinctes. Création, expiration,
-classifieur, Ptah et fermeture durable du spine restent au registre de dette.
+classifieur, réceptions Ptah hors admission locale 425 et fermeture durable du
+spine restent au registre de dette.
 Un ACTIVE générique n’est ni une validation humaine ni une publication : ADR-0209
 ajoute le choix explicite de l’édition publique ; sa consommation SPAWT et la
 réception des surfaces restent distinctes du cycle d’actif.

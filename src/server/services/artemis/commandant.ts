@@ -234,13 +234,13 @@ export async function execute(intent: Intent, context?: { intentId: string }): P
 
       // ── Phase 9 — Ptah Forge (ADR-0009) ──────────────────────────
       case "PTAH_MATERIALIZE_BRIEF":
-        return wrap({ ...base, ...(await ptahMaterialize(intent)) });
+        return wrap({ ...base, ...(await ptahMaterialize(intent, context?.intentId)) });
 
       case "PTAH_RECONCILE_TASK":
         return wrap({ ...base, ...(await ptahReconcile(intent)) });
 
       case "PTAH_REGENERATE_FADING_ASSET":
-        return wrap({ ...base, ...(await ptahRegenerate(intent)) });
+        return wrap({ ...base, ...(await ptahRegenerate(intent, context?.intentId)) });
 
       // ── Phase 14 — Imhotep full activation (ADR-0019, supersedes ADR-0017) ──
       case "IMHOTEP_DRAFT_CREW_PROGRAM":
@@ -1639,9 +1639,10 @@ async function updateModelPolicy(
 
 async function ptahMaterialize(
   intent: Extract<Intent, { kind: "PTAH_MATERIALIZE_BRIEF" }>,
+  intentId?: string,
 ): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
   const { materializeBrief } = await import("@/server/services/ptah");
-  const intentId = `intent-ptah-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  if (!intentId) throw new Error("PTAH_EMISSION_REQUIRED");
   const result = await materializeBrief(
     {
       strategyId: intent.strategyId,
@@ -1666,7 +1667,7 @@ async function ptahReconcile(
   intent: Extract<Intent, { kind: "PTAH_RECONCILE_TASK" }>,
 ): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
   const { reconcileTask } = await import("@/server/services/ptah");
-  const result = await reconcileTask(intent.taskId, intent.webhookPayload);
+  const result = await reconcileTask(intent.taskId, intent.webhookPayload, { strategyId: intent.strategyId });
   return {
     status: "OK",
     summary: `Ptah task ${intent.taskId} reconciled — ${result.assetVersionIds.length} asset(s) created realCost=$${result.realisedCostUsd.toFixed(3)}`,
@@ -1680,9 +1681,10 @@ async function ptahReconcile(
 
 async function ptahRegenerate(
   intent: Extract<Intent, { kind: "PTAH_REGENERATE_FADING_ASSET" }>,
+  intentId?: string,
 ): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
   const { regenerateFadingAsset } = await import("@/server/services/ptah");
-  const intentId = `intent-ptah-regen-${Date.now()}`;
+  if (!intentId) throw new Error("PTAH_EMISSION_REQUIRED");
   const result = await regenerateFadingAsset(
     { strategyId: intent.strategyId, assetVersionId: intent.assetVersionId },
     { operatorId: intent.operatorId, intentId },

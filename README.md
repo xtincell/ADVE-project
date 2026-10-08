@@ -34,7 +34,7 @@ createdb lafusee            # ou : psql -c 'CREATE DATABASE lafusee;'
 
 # 4. Générer le client Prisma + appliquer les migrations sur une DB vide
 npm run db:generate
-npx prisma migrate deploy   # applique les 37 migrations dans l'ordre
+npx prisma migrate deploy   # applique les migrations versionnées dans l'ordre
 
 # 5. (Optionnel) seed des données de référence + démo
 npm run db:seed             # seed de base
@@ -64,7 +64,26 @@ npm run dev                 # → http://localhost:3000
 
 ---
 
-## ✅ État vérifié (2026-06-19)
+## État courant borné — 2026-10-08
+
+La dernière livraison de production reçue est **6.27.423** : SPAWT consomme
+son édition publique choisie, limitée aux textes et liens. Le raccord complet
+de l’univers de marque et les sept chantiers Shinkiro restent ouverts.
+
+Le correctif **6.27.425 est en réception** : Ptah conserve le résultat avant
+admission, puis écrit versions, coffre, reçu de coût et COMPLETED ensemble.
+La reprise retrouve les mêmes actifs et respecte leurs archives. Vingt-quatre
+tests d’admission PostgreSQL isolés sont verts après dix contre-exemples initiaux
+rouges ; le fournisseur y est synthétique. Suites locales : 4 144 unitaires,
+219 PostgreSQL, 1 610 gouvernance verts ; zéro cycle, lint sans erreur/24 warnings.
+HTTP local après panne injectée et redémarrage reçu : checkpoint conservé,
+retry/replay 200 avec les mêmes ids et une seule admission, zéro appel fournisseur.
+Image et déploiement 425 restent à recevoir. Le stress isolé n’a pas atteint les pages/tRPC ; ses
+forges sans credentials sont différées. La conservation des octets, les
+fournisseurs réels et leur facturation restent des réceptions distinctes.
+Voir [le reçu courant et ses limites](docs/governance/RECEPTION-PTAH-ADMISSION.md).
+
+## Historique des vérifications — 2026-06-19
 
 Vérifié sur la machine mainteneur (branche PR #258 « Fusée non-dépendante du LLM ») :
 
@@ -147,7 +166,7 @@ flowchart LR
 |---|---|---|
 | **Mestor** | Guidance — décision. Point d'entrée unique de toute mutation (`mestor.emitIntent`). | LOI 1 — chaque mutation traverse Mestor. |
 | **Artemis** | Propulsion (brief) — Glory tools rédactionnels. Livrable phare : l'**Oracle** (35 sections). | LOI 2 — Artemis produit, ne décide pas. |
-| **Ptah** | Propulsion (forge) — matérialise les briefs via Magnific / Adobe Firefly / Figma / Canva. | LOI 2bis — Ptah forge ce qu'Artemis prescrit. |
+| **Ptah** | Propulsion (forge) — soumet les briefs aux fournisseurs configurés et admet leurs résultats. Canva/Figma renvoient encore un résultat vide, désormais refusé ; leur livraison reste à recevoir. | LOI 2bis — Ptah forge ce qu'Artemis prescrit. |
 | **Seshat** | Telemetry — observation + Tarsis (signaux faibles) + Overton. Read-only. | LOI 3 — Seshat n'écrit jamais sur la marque. |
 | **Thot** | Sustainment — cerveau financier, cost-gate, fuel. | LOI 4 — pas de combustion sans propellant. |
 | **Imhotep** | Crew — matching talent + Académie + QC. | LOI 5 — Imhotep apparie, ne forge pas. |

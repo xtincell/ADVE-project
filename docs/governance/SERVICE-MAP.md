@@ -61,38 +61,46 @@ src/server/services/anubis/
 
 Dépendances satellites : `email`, `oauth-integrations`, `advertis-connectors`, `financial-brain`. **4 nouveaux models Prisma** : `CommsPlan`, `BroadcastJob`, `EmailTemplate`, `SmsTemplate`. Réutilise `Notification`, `NotificationPreference`, `WebhookConfig`, `ExternalConnector` existants. Pages : `/console/anubis/page.tsx` (dashboard) + `/console/anubis/credentials/page.tsx` (Credentials Center). Router tRPC : `anubis.ts`.
 
-### Ptah — service Phase 9 ✅ shipped (ADR-0009)
+### Ptah — service Phase 9 existant ; admission 425 en réception
+
+ADR-0009 décrit la fondation historique. État courant au 2026-10-08 : le candidat
+6.27.425 checkpoint le résultat fournisseur avant l’admission atomique
+versions/coffre/coût/COMPLETED ; webhook et sync passent par PTAH_RECONCILE_TASK.
+Vingt-quatre tests d’admission PostgreSQL isolés verts, fournisseur synthétique ;
+suites locales 4 144 unitaires/219 PostgreSQL/1 610 gouvernance vertes, zéro cycle,
+lint sans erreur/24 warnings. HTTP après panne et arrêt/nouveau processus reçu :
+checkpoint conservé, retry/replay 200, mêmes ids et admission unique, chaîne
+FAILED→OK→OK vérifiée ; zéro appel fournisseur. Livraison 425 à recevoir,
+production reçue encore 423. Le stress
+isolé ne reçoit pas les pages/tRPC ; les forges sans credentials sont différées.
+Canva/Figma renvoient encore un résultat vide, désormais refusé. Octets/CDN,
+factures et filiation business upstream restent ouverts, distincts du close du
+spine : [réception et limites](RECEPTION-PTAH-ADMISSION.md).
 
 ```
 src/server/services/ptah/
 ├── manifest.ts             # governor: MESTOR, acceptsIntents: PTAH_MATERIALIZE_BRIEF, PTAH_RECONCILE_TASK, PTAH_REGENERATE_FADING_ASSET
-├── index.ts                # public API + handleIntent dispatcher
-├── governance.ts           # cost gates, retry policy, circuit breaker per provider
+├── index.ts                # API forge/réconciliation ; checkpoint et admission transactionnelle
+├── governance.ts           # pilier source et cohérence du mode demandé
 ├── types.ts                # ForgeBrief, ForgeSpec, ForgeProvider interface
 ├── pricing.ts              # cost table par modèle × provider
-├── webhook-handler.ts      # POST /api/ptah/webhook (Magnific callback)
-├── task-store.ts           # CRUD GenerativeTask via Prisma (tenantScopedDb)
-├── forges/
-│   ├── image.ts            # generation → routing par mode + qualité
-│   ├── video.ts
-│   ├── audio.ts            # TTS / voice clone / SFX / lip-sync / SAM Audio
-│   ├── icon.ts             # text-to-icon PNG/SVG
-│   ├── refine.ts           # upscale, relight, style transfer
-│   ├── transform.ts        # change camera, inpaint, outpaint, bg removal
-│   ├── classify.ts         # AI classifier (sync), image-to-prompt
-│   ├── stock.ts            # stock library search & ingest (250M+)
-│   └── design.ts           # Adobe / Figma / Canva
+├── task-store.ts           # GenerativeTask/AssetVersion/santé provider ; client transactionnel
+├── download-archiver.ts    # archivage d’URL temporaire ; octets/CDN à recevoir
 ├── providers/
-│   ├── magnific.ts         # client REST + webhook signature verify
+│   ├── index.ts            # registre des adaptateurs existants
+│   ├── magnific.ts         # client REST ; secret de callback vérifié par la route HTTP
 │   ├── adobe.ts            # OAuth 2.0 server-to-server, Firefly Services
-│   ├── figma.ts            # PAT + REST + Variables API
-│   └── canva.ts            # OAuth 2.0 + Connect API (gated par CANVA_ENABLED flag)
-├── routing/
-│   ├── model-policy.ts     # mirror du pattern model-policy/
-│   ├── budget-gate.ts      # délègue à financial-brain.checkCapacity
-│   └── provider-selector.ts # choisit provider selon coût/qualité/disponibilité
-└── README.md               # doc gouvernance Ptah
+│   ├── openai.ts           # chemin image synchrone
+│   ├── figma.ts            # export PAT ; reconcile renvoie encore []
+│   └── canva.ts            # Connect API gated ; reconcile renvoie encore []
+└── routing/
+    ├── budget-gate.ts      # plafond coût/superfan attendu avant forge
+    └── provider-selector.ts # choisit provider selon coût/qualité/disponibilité
 ```
+
+Entrée HTTP : `src/app/api/ptah/webhook/route.ts`. Dispatch existant :
+`src/server/services/artemis/commandant.ts`, avec l’émission parent réelle pour
+les futures forges. Le manifeste Ptah reste gouverné par MESTOR.
 
 ---
 
@@ -115,7 +123,7 @@ Génèrent la poussée vers l'apogée. **19 services briefs (incl. `deliverable-
 | `guidelines-renderer/` | Lecture identité du coffre, références et exports (ADR-0203) | ARTEMIS | ✅ existant |
 | `value-report-generator/` | Rendu rapport valeur (livrable client) | ARTEMIS | ✅ existant |
 | `seshat-bridge/` | **Bridge** Telemetry → Propulsion (signaux qui déclenchent missions) | ARTEMIS | ✅ existant |
-| `ptah/` | **Forge orchestrator** — matérialise les briefs en assets (image/video/audio/icon/refine/...) | **PTAH** (ADR-0009) | ✅ existant |
+| `ptah/` | **Forge orchestrator** — soumission fournisseur et admission des résultats ; réception bornée ci-dessus | **MESTOR** (manifest Ptah) | ✅ existant |
 | `deliverable-orchestrator/` | **Output-first composer** (Phase 17b, ADR-0050 — anciennement ADR-0037) — résout DAG briefs depuis kind matériel cible, scan vault, mode PREVIEW | ARTEMIS | ✅ existant |
 | `intention/` | Aval de l'ADVE (Phase 24, ADR-0106) : capture l'intention du dirigeant → brief candidat (intention × ADVE, manual-first) | ARTEMIS | ✅ existant |
 | `oracle-section/` | OracleSection first-class (Phase 21 F-B/F-C, ADR-0068/0070) : lifecycle 35 sections, lock optimiste, runners | ARTEMIS | ✅ existant |

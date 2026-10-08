@@ -2,6 +2,32 @@
 
 This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/code). It briefs any agent picking up work on this repo.
 
+## Réception courante — 2026-10-08
+
+**Production reçue : 6.27.423. Candidat en réception : 6.27.425, admission Ptah.**
+Le résultat fournisseur est checkpointé dans GenerativeTask avant la transaction
+unique versions/coffre/coût/COMPLETED. Reprise stable, archives préservées et scope
+marque/équipe/campagne/brief/source sont éprouvés sur PostgreSQL isolé : 24 tests
+verts, après dix contre-exemples initiaux rouges. Webhook et sync émettent
+PTAH_RECONCILE_TASK ; les futures forges portent leur vraie émission parent.
+Aucun nouveau modèle, service ou Intent. Ce reçu synthétique local ne vaut pas
+forge fournisseur réelle, conservation des octets, facture ni réception SPAWT/Noël.
+Suites locales reçues : 4 144 unitaires, 219 PostgreSQL, 1 610 gouvernance verts ;
+zéro cycle, lint sans erreur/24 warnings. HTTP réel : refus 400/403/400, panne coffre
+500 sans admission puis arrêt/nouveau processus ; retry/replay 200 identiques,
+mêmes ids et une version/un actif/un coût, chaîne FAILED→OK→OK vérifiée.
+Checkpoint synthétique, zéro appel fournisseur, fixture nettoyée/serveur arrêté.
+Image et déploiement 425 restent à recevoir. Stress isolé sans credentials : pages/tRPC non atteints, forges
+différées ; ne pas déclarer le stress E2E entièrement reçu.
+Canva/Figma réconcilient toujours une liste vide, désormais refusée ; les montants
+zéro de plusieurs providers ne prouvent pas la gratuité. Références business
+upstream, reçus documentaires sourceDataSourceId/sourceContentHash, invalidation
+après correction de source/staleAt et close best-effort du spine restent des
+dettes distinctes. Ne pas revendiquer une provenance complète ou une source
+courante garantie ; reprendre l’irrigation après livraison 425.
+État détaillé : [RECEPTION-PTAH-ADMISSION.md](docs/governance/RECEPTION-PTAH-ADMISSION.md)
+et [RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md).
+
 ---
 
 ## 📜 STATE_FINAL_BLUEPRINT — canon absolu (lecture première)

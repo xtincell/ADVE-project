@@ -30,6 +30,18 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-08 · Ptah écrivait ses coûts de forge dans un journal zéro-token attribué
+à Anthropic : montant zéro même lorsqu’un résultat persisté portait un autre
+montant/fournisseur. v6.27.425 transmet ces valeurs checkpointées dans la
+transaction d’admission et répare ce cas legacy strict sans nouveau reçu ni
+nouvelle charge. Les identifiants de parent inventés dans le commandant sont
+aussi remplacés par la vraie émission pour les futures forges. Cause plus large :
+forme LLM, filiation et preuve fournisseur étaient assimilées. La cause
+COMPLETED avant coffre est corrigée et retirée de RESIDUAL-DEBT.
+Vingt-quatre tests PostgreSQL locaux verts ;
+les factures absentes, références business upstream, octets/CDN et close du spine
+restent distincts, planifiés dans RESIDUAL-DEBT. Livraison 425 encore à recevoir.
+
 2026-10-08 · L’instrumentation Edge tentait de résoudre `http` via web-push
 malgré le retour anticipé `NEXT_RUNTIME !== "nodejs"`. v6.27.424 enveloppe les
 imports Node dans une branche positive `NEXT_RUNTIME === "nodejs"`, reconnue

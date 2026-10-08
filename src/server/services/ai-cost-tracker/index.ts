@@ -3,9 +3,13 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 
 interface CostEntry {
   model: string;
+  provider?: string;
+  /** Provider-reported flat cost for a non-token forge; never substitute an estimate. */
+  realisedCostUsd?: number;
   inputTokens: number;
   outputTokens: number;
   context?: string;
@@ -25,13 +29,14 @@ export function calculateCost(model: string, inputTokens: number, outputTokens: 
   return (inputTokens / 1_000_000) * price!.input + (outputTokens / 1_000_000) * price!.output;
 }
 
-export async function track(entry: CostEntry): Promise<string> {
-  const cost = calculateCost(entry.model, entry.inputTokens, entry.outputTokens);
+export async function track(entry: CostEntry, client: Prisma.TransactionClient = db): Promise<string> {
+  const cost = entry.realisedCostUsd ?? calculateCost(entry.model, entry.inputTokens, entry.outputTokens);
+  if (!Number.isFinite(cost) || cost < 0) throw new Error("INVALID_COST_RECEIPT");
 
-  const log = await db.aICostLog.create({
+  const log = await client.aICostLog.create({
     data: {
       model: entry.model,
-      provider: "anthropic",
+      provider: entry.provider ?? "anthropic",
       inputTokens: entry.inputTokens,
       outputTokens: entry.outputTokens,
       cost,
