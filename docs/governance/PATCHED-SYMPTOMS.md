@@ -30,6 +30,14 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-08 · SET_FIELDS profond mutait aussi le précédent état et masquait la
+différence au garde ; une source pouvait écraser une feuille de catalogue humain.
+v6.27.418 clone profondément avant arbitrage. Le même lot factorise les ids au
+point commun, retire les faux « déjà confirmé » des inférences canoniques et
+rend confirmation/version/retrait legacy atomiques. Cause : référence mémoire
+partagée et lecteurs/écrivains divergents. Contrats PostgreSQL adversariaux reçus ;
+corpus réel et anciens remplisseurs séparés restent à recevoir, ADR-0205.
+
 2026-10-08 · Catalogue : gratuit masqué, chaîne historique convertie en NaN,
 conditions HT/TTC et périodes perdues ; prix de repli et moyenne non pondérée
 alimentaient budget/CAC. v6.27.417 factorise lecture et abstention dans

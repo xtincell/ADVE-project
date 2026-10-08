@@ -178,6 +178,7 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
       userId: operatorId,
       reason: intent.viaAgent ? `${reason} (via agent MCP)` : reason,
     },
+    options: { expectedVersion: pillar.currentVersion },
   });
   if (!writeResult.success) {
     await db.recommendation.update({

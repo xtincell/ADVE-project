@@ -61,6 +61,38 @@ export function coerceProvenance(value: unknown): FieldProvenance {
   return isFieldProvenance(value) ? value : "UNKNOWN";
 }
 
+/** Même grain que le gateway : confirmer une feuille confirme son champ de tête. */
+export function provenanceTopKey(path: string, pillarKey: string): string {
+  const prefix = `${pillarKey.toLowerCase()}.`;
+  return (path.startsWith(prefix) ? path.slice(prefix.length) : path).split(/[.[]/)[0] ?? "";
+}
+
+/** La provenance canonique prime ; une absence n'est jamais une déclaration. */
+export function fieldStatusFor(certainty: Record<string, string> | null | undefined, pillarKey: string, provenance?: unknown) {
+  const fc = certainty ?? {};
+  const origins = provenance && typeof provenance === "object" && !Array.isArray(provenance)
+    ? provenance as Record<string, unknown> : {};
+  const prefix = `${pillarKey.toLowerCase()}.`;
+  return (path: string): string | undefined => {
+    const bare = path.startsWith(prefix) ? path.slice(prefix.length) : path;
+    const top = provenanceTopKey(bare, pillarKey);
+    const raw = origins[top] ?? origins[`${prefix}${top}`] ?? origins[bare] ?? origins[`${prefix}${bare}`];
+    if (raw !== undefined) return coerceProvenance(raw);
+    return fc[bare] ?? fc[`${prefix}${bare}`] ?? fc[top] ?? fc[`${prefix}${top}`];
+  };
+}
+
+/** Liste confirmable partagée par lecteur et écrivain, sans champs absents. */
+export function inferredFieldPaths(content: Record<string, unknown>, certainty: Record<string, string> | null | undefined, pillarKey: string): string[] {
+  const provenance = content._fieldProvenance;
+  const origins = provenance && typeof provenance === "object" && !Array.isArray(provenance) ? provenance : {};
+  const status = fieldStatusFor(certainty, pillarKey, provenance);
+  const paths = [...Object.keys(certainty ?? {}), ...Object.keys(origins)];
+  return [...new Set(paths.filter(path => status(path) === "INFERRED").map(path => provenanceTopKey(path, pillarKey)))]
+    .filter(key => key && !key.startsWith("_") && Object.hasOwn(content, key) && content[key] != null && content[key] !== "")
+    .sort();
+}
+
 /**
  * Décision d'écrasement d'un champ existant (provenance `existing`) par une
  * écriture entrante (provenance `incoming`).

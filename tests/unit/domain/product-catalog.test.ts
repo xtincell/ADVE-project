@@ -9,6 +9,7 @@ import { describe, it, expect } from "vitest";
 import {
   productSlug,
   ensureProductIds,
+  rebindProductRefs,
   resolveProductRef,
   danglingProductRefs,
 } from "@/domain/product-catalog";
@@ -39,6 +40,18 @@ describe("product-catalog — ids stables & résolution", () => {
     expect(resolveProductRef(CATALOGUE, "Caméra RX-100")?.categorie).toBe("PHOTO"); // par nom
     expect(resolveProductRef(CATALOGUE, "camera-rx-100")?.categorie).toBe("PHOTO"); // par slug
     expect(resolveProductRef(CATALOGUE, "Produit fantôme")).toBeNull();
+  });
+  it("ne devine pas une identité à partir d'un nom ambigu ou d'un index", () => {
+    const previous = [{ nom: "Commun", id: "ancien-1" }, { nom: "Commun", id: "ancien-2" }];
+    expect(ensureProductIds<Record<string, unknown>>([{ nom: "Commun" }, { nom: "Nouveau" }], previous).map(p => p.id)).toEqual(["commun", "nouveau"]);
+    expect(previous).toEqual([{ nom: "Commun", id: "ancien-1" }, { nom: "Commun", id: "ancien-2" }]);
+  });
+  it("ne rattache ni homonyme ambigu, ni produit retiré, ni nom approximatif", () => {
+    const previous = [{ id: "retire", nom: "Commun" }, { id: "a", nom: "Doublon" }, { id: "b", nom: "Doublon" }];
+    const products = [{ id: "nouveau", nom: "Commun" }, { id: "a", nom: "Renommé" }, { id: "b", nom: "Autre" }];
+    const content = { productLadder: [{ produitIds: ["Commun", "Doublon", "renommé", "a"] }], _fieldProvenance: { productLadder: "HUMAN" } };
+    expect(rebindProductRefs(content, previous, products)).toEqual(content);
+    expect(content.productLadder[0]!.produitIds).toEqual(["Commun", "Doublon", "renommé", "a"]);
   });
 });
 

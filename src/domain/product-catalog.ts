@@ -84,13 +84,26 @@ export function productSlug(nom: string): string {
 }
 
 /**
- * Backfill des ids manquants (déterministe, dédupliqué). Ne touche JAMAIS un id
- * existant (stabilité des références). Retourne une NOUVELLE liste.
+ * Ids manquants : reprend un nom EXACT et non ambigu de l'état précédent,
+ * sinon alloue un slug dédupliqué. Ne réutilise pas l'id d'un produit supprimé
+ * et ne déduit jamais une identité de la position dans le tableau.
+ * Ne touche JAMAIS un id existant. Retourne une NOUVELLE liste.
  */
-export function ensureProductIds<T extends CatalogueProduct>(catalogue: readonly T[]): T[] {
+export function ensureProductIds<T extends CatalogueProduct>(
+  catalogue: readonly T[], previous: readonly CatalogueProduct[] = [],
+): T[] {
+  const claimed = new Set(catalogue.flatMap(p => typeof p.id === "string" && p.id ? [p.id] : []));
+  const recovered = catalogue.map(p => {
+    if (typeof p.id === "string" && p.id) return p;
+    const matches = previous.filter(old => typeof p.nom === "string" && p.nom === old.nom);
+    const oldId = matches.length === 1 ? matches[0]!.id : undefined;
+    if (typeof oldId !== "string" || !oldId || claimed.has(oldId) || catalogue.filter(next => next.nom === p.nom).length !== 1) return p;
+    claimed.add(oldId);
+    return { ...p, id: oldId };
+  });
   const used = new Set<string>();
-  for (const p of catalogue) if (typeof p.id === "string" && p.id) used.add(p.id);
-  return catalogue.map((p) => {
+  for (const p of [...previous, ...recovered]) if (typeof p.id === "string" && p.id) used.add(p.id);
+  return recovered.map((p) => {
     if (typeof p.id === "string" && p.id) return p;
     let candidate = productSlug(typeof p.nom === "string" ? p.nom : "");
     let n = 2;
@@ -98,6 +111,55 @@ export function ensureProductIds<T extends CatalogueProduct>(catalogue: readonly
     used.add(candidate);
     return { ...p, id: candidate };
   });
+}
+
+/**
+ * À l'édition du catalogue, conserve la destination des références historiques.
+ * Les champs *Ids prennent l'id acquis ; productNames conserve un nom lisible.
+ * Correspondances EXACTES et uniques seulement, sans rapprocher un produit retiré
+ * d'un nouveau produit homonyme. Aucun prix, origine ou autre champ n'est réécrit.
+ */
+export function rebindProductRefs(
+  content: Record<string, unknown>, previous: readonly CatalogueProduct[],
+  products: readonly CatalogueProduct[],
+): Record<string, unknown> {
+  const unique = (list: readonly CatalogueProduct[], key: "id" | "nom", ref: string) => {
+    const matches = list.filter(p => p[key] === ref);
+    return matches.length === 1 ? matches[0] : undefined;
+  };
+  const destination = (ref: string): CatalogueProduct | undefined => {
+    const byId = unique(products, "id", ref);
+    if (byId) return byId;
+    if (unique(previous, "id", ref)) return undefined;
+    // Une ancienne identité acquise ne peut pas basculer vers un homonyme.
+    const oldNames = previous.filter(p => p.nom === ref);
+    if (oldNames.length > 1) return undefined;
+    const old = oldNames[0];
+    if (old?.id) return unique(products, "id", old.id);
+    return unique(products, "nom", ref);
+  };
+  const refs = (value: unknown, names = false) => Array.isArray(value)
+    ? value.map(ref => {
+      if (typeof ref !== "string") return ref;
+      const product = destination(ref);
+      return (names ? product?.nom : product?.id) || ref;
+    }) : value;
+  const records = (value: unknown, key: string, names = false) => Array.isArray(value)
+    ? value.map(item => item && typeof item === "object" && !Array.isArray(item) && Object.hasOwn(item, key)
+      ? { ...item, [key]: refs(item[key], names) } : item) : value;
+  const result = { ...content };
+  if (Object.hasOwn(content, "productLadder")) result.productLadder = records(content.productLadder, "produitIds");
+  if (Object.hasOwn(content, "personaSegmentMap")) result.personaSegmentMap = records(content.personaSegmentMap, "productNames", true);
+  const ps = content.productSystem;
+  if (ps && typeof ps === "object" && !Array.isArray(ps)) {
+    const system = { ...ps } as Record<string, unknown>;
+    if (Object.hasOwn(system, "anchorProductIds")) system.anchorProductIds = refs(system.anchorProductIds);
+    for (const key of ["modes", "artifacts", "archetypes"]) {
+      if (Object.hasOwn(system, key)) system[key] = records(system[key], "relatedProductIds");
+    }
+    result.productSystem = system;
+  }
+  return result;
 }
 
 /** Normalise une chaîne pour comparaison tolérante (nom/id). */

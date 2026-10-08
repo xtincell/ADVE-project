@@ -20,6 +20,8 @@
  */
 
 import { db } from "@/lib/db";
+import { ensureProductIds, rebindProductRefs, type CatalogueProduct } from "@/domain/product-catalog";
+import { inferredFieldPaths, provenanceTopKey } from "@/domain/field-provenance";
 import { setNestedValue, tokenizePillarPath, assertSafePillarPath } from "@/lib/pillar-path";
 import { coerceValue, applyResolvedRecoOps } from "./apply-resolved-ops";
 import type { Prisma } from "@prisma/client";
@@ -57,6 +59,10 @@ type PillarWriteOperation =
   | { type: "APPLY_RECOS_RESOLVED"; operations: Array<{ field: string; operation: string; proposedValue: unknown; targetMatch?: { key: string; value: string }; recoId: string }> };
 
 interface PillarWriteOptions {
+  /** Version du contenu effectivement relu par l'appelant, contrôlée dans la transaction. */
+  expectedVersion?: number;
+  /** Confirmation humaine : provenance et retrait des marqueurs legacy dans la même écriture. */
+  confirmInferredField?: string;
   sourceReceipts?: SourceReceipt[];
   requiredSourceIds?: string[];
   skipValidation?: boolean;
@@ -254,6 +260,19 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
       const previousContent = (pillar.content ?? {}) as Record<string, unknown>;
       const currentStatus = (pillar.validationStatus ?? "DRAFT") as ValidationStatus;
 
+      if (options?.expectedVersion !== undefined && options.expectedVersion !== pillar.currentVersion) {
+        throw new Error(`PILLAR_VERSION_CONFLICT: version attendue ${options.expectedVersion}, courante ${pillar.currentVersion} — recharger et réappliquer.`);
+      }
+      let confirmedCertainty: Record<string, string> | undefined;
+      if (options?.confirmInferredField) {
+        const field = options.confirmInferredField;
+        const certainty = (pillar.fieldCertainty ?? {}) as Record<string, string>;
+        if (author.system !== "OPERATOR" || options.fieldProvenance?.[field] !== "HUMAN" || !inferredFieldPaths(previousContent, certainty, pillarKey).includes(field)) {
+          throw new Error("FIELD_CONFIRMATION_CONFLICT: ce champ n'est plus une valeur inférée à confirmer — recharger.");
+        }
+        confirmedCertainty = Object.fromEntries(Object.entries(certainty).filter(([path]) => provenanceTopKey(path, pillarKey) !== field));
+      }
+
       // ── GUARD: validationStatus ──────────────────────────────────
       if (currentStatus === "LOCKED" && author.system !== "OPERATOR") {
         return { success: false, version: pillar.currentVersion ?? 0, previousContent, newContent: previousContent, stalePropagated: [], warnings: [], error: `Pilier ${pillarKey} est LOCKED — seul un OPERATOR peut le modifier` };
@@ -270,7 +289,9 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
           newContent = deepMerge(previousContent, operation.patch);
           break;
         case "SET_FIELDS":
-          newContent = { ...previousContent };
+          // setNestedValue mutates its containers. A shallow copy also mutates
+          // previousContent, hiding the change from the provenance guard.
+          newContent = structuredClone(previousContent);
           for (const { path, value } of operation.fields) {
             setNestedValue(newContent, path, value);
           }
@@ -430,6 +451,22 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
         warnings.push(`Provenance guard skipped: ${err instanceof Error ? err.message : String(err)}`);
       }
 
+      // Only an accepted catalogue change acquires ids. Unrelated edits and
+      // refused source changes must never backfill the human catalogue.
+      if (pillarKey === "v" && JSON.stringify(newContent.produitsCatalogue) !== JSON.stringify(previousContent.produitsCatalogue)) {
+        const namedProducts = (value: unknown): value is CatalogueProduct[] => Array.isArray(value) && value.every(
+          p => p !== null && typeof p === "object" && !Array.isArray(p) && typeof p.nom === "string" && p.nom.trim(),
+        );
+        if (namedProducts(newContent.produitsCatalogue)) {
+          const previous = namedProducts(previousContent.produitsCatalogue) ? previousContent.produitsCatalogue : [];
+          const products = ensureProductIds(newContent.produitsCatalogue, previous);
+          const ids = products.map(p => p.id);
+          if (new Set(ids).size !== ids.length) throw new Error("CATALOGUE_ID_CONFLICT: deux produits portent le même identifiant — corriger le catalogue avant de réappliquer.");
+          newContent.produitsCatalogue = products;
+          newContent = rebindProductRefs(newContent, previous, products);
+        }
+      }
+
       // ── VERSION: create PillarVersion ────────────────────────────
       // La PillarVersion capture le contenu PRÉ-écriture, stampé de l'intent
       // courant → ROLLBACK_PILLAR restaure EXACTEMENT cet état (G, ADR-0176).
@@ -498,6 +535,7 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
           validationStatus: targetStatus,
           staleAt: null, // This pillar is now fresh
           currentVersion: newVersion,
+          ...(confirmedCertainty ? { fieldCertainty: confirmedCertainty as Prisma.InputJsonValue } : {}),
           ...(options?.sourceReceipts?.length ? { sources: [
             ...(Array.isArray(pillar.sources) ? pillar.sources.filter((entry) => !readSourceReceipts([entry]).some((old) => options.sourceReceipts!.some((r) => r.sourceId === old.sourceId))) : []),
             ...options.sourceReceipts,

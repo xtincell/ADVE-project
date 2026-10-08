@@ -26,6 +26,8 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { inferredFieldPaths, provenanceTopKey } from "@/domain/field-provenance";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
@@ -38,7 +40,6 @@ import { scoreObject } from "@/server/services/advertis-scorer";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import { assertWritten } from "./_pillar-write-guard";
 import { getNestedArray } from "@/lib/pillar-path";
-import { ensureProductIds } from "@/domain/product-catalog";
 import type { PillarKey as PK } from "@/lib/types/advertis-vector";
 import { triggerNextStageFrameworks } from "@/server/services/artemis";
 import {
@@ -279,17 +280,13 @@ export const pillarRouter = createTRPCRouter({
       const content = (pillar?.content as Record<string, unknown>) ?? {};
       const catalogue = getArraySafe(content.produitsCatalogue);
       catalogue.push(input.product);
-      // Ids stables : le nouveau produit (et tout legacy sans id) reçoit un id
-      // déterministe → les gammes/système peuvent référencer de façon fiable (ADR-0171).
-      const withIds = ensureProductIds(catalogue as Array<Record<string, unknown>>);
-
       const w = await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "v",
-        operation: { type: "SET_FIELDS", fields: [{ path: "produitsCatalogue", value: withIds }] },
+        operation: { type: "SET_FIELDS", fields: [{ path: "produitsCatalogue", value: catalogue }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addProduct" },
       });
       assertWritten(w, "addProduct");
-      return { success: true, productCount: withIds.length };
+      return { success: true, productCount: catalogue.length };
     }),
 
   /** Convenience: add a persona to D.personas */
@@ -1327,14 +1324,9 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
   /**
    * PR-C (ADR-0035) — confirm an INFERRED field as DECLARED.
    *
-   * The LLM inference pass at activateBrand time pre-fills the 7 needsHuman
-   * ADVE fields with values marked as INFERRED in `Pillar.fieldCertainty`.
-   * The cockpit shows a yellow "Inféré IA — à valider" badge next to those
-   * fields. This mutation removes the INFERRED marker (the field then
-   * defaults to the absence of marker = treated as DECLARED in the UI),
-   * signalling that the operator has reviewed the value and accepts it
-   * as-is. The actual content stays unchanged — operators who want to edit
-   * the value should use the regular amend flow (OPERATOR_AMEND_PILLAR).
+   * Confirmation explicite d'une valeur inférée relue à une version donnée.
+   * La provenance HUMAN et le retrait des marqueurs legacy sont atomiques.
+   * La fiabilité d'une source documentaire n'est jamais modifiée par ce geste.
    */
   confirmInferredField: governedProcedure({
     kind: "LEGACY_PILLAR_CONFIRM_INFERRED_FIELD",
@@ -1343,79 +1335,41 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
       strategyId: z.string().min(1),
       pillarKey: z.enum(["a", "d", "v", "e", "r", "t", "i", "s", "A", "D", "V", "E", "R", "T", "I", "S"]),
       fieldPath: z.string().min(1),
+      expectedVersion: z.number().int().min(1),
     }),
   }).mutation(async ({ ctx, input }) => {
       const pillar = await ctx.db.pillar.findUnique({
         where: { strategyId_key: { strategyId: input.strategyId, key: input.pillarKey.toLowerCase() } },
-        select: { id: true, fieldCertainty: true, content: true },
+        select: { id: true, fieldCertainty: true, content: true, currentVersion: true },
       });
       if (!pillar) return { ok: false, alreadyConfirmed: false, reason: "pillar_not_found" as const };
 
+      if (input.expectedVersion !== pillar.currentVersion) {
+        throw new TRPCError({ code: "CONFLICT", message: "Cette valeur a changé depuis l’ouverture de l’écran. Recharge avant de la valider." });
+      }
       const certainty = (pillar.fieldCertainty as Record<string, string> | null) ?? {};
-      // Field path stored without the pillar prefix in the UI ("archetype")
-      // OR fully qualified ("a.archetype") in the LLM service. Accept both.
-      const qualifiedPath = input.fieldPath.includes(".")
-        ? input.fieldPath
-        : `${input.pillarKey.toLowerCase()}.${input.fieldPath}`;
-
-      if (!(qualifiedPath in certainty) && !(input.fieldPath in certainty)) {
+      const content = (pillar.content ?? {}) as Record<string, unknown>;
+      const topKey = provenanceTopKey(input.fieldPath, input.pillarKey);
+      if (!inferredFieldPaths(content, certainty, input.pillarKey).includes(topKey)) {
         return { ok: true, alreadyConfirmed: true };
       }
-
-      delete certainty[qualifiedPath];
-      delete certainty[input.fieldPath];
-
-      // Confirmer n'accordait AUCUNE protection : seul le badge `fieldCertainty`
-      // disparaissait, la provenance restait INFERRED, et la prochaine passe
-      // d'ingestion ou de remplissage (`SOURCE`/`INFERRED` sur `INFERRED` =
-      // ALLOW) écrasait silencieusement la valeur que l'opérateur venait de
-      // valider. Le geste de confirmation doit donc écrire la provenance, sinon
-      // il ne veut rien dire.
-      //
-      // Le grain est celui du garde (`provenance-guard` arbitre les clés de
-      // TÊTE) : confirmer `a.identite.archetype` verrouille `identite`.
-      //
-      // On passe par la GATEWAY plutôt que d'écrire `content` en direct (C5) :
-      // ré-écrire la valeur courante sous l'autorité OPERATOR fait poser la
-      // provenance HUMAN par le chemin normal, et laisse au passage une
-      // `PillarVersion` qui date la confirmation. Idempotent — la valeur ne
-      // change pas, seule son autorité change.
-      const content = (pillar.content ?? {}) as Record<string, unknown>;
-      const bare = qualifiedPath.startsWith(`${input.pillarKey.toLowerCase()}.`)
-        ? qualifiedPath.slice(input.pillarKey.length + 1)
-        : qualifiedPath;
-      const topKey = bare.split(/[.[]/)[0];
-
-      // La PROVENANCE d'abord, le badge ensuite : l'ordre inverse laissait le
-      // badge supprimé quand la gateway refusait l'écriture — l'opérateur
-      // voyait « confirmé » sur un champ dont l'autorité n'avait pas bougé.
-      let provenanceLocked: string | null = null;
-      if (topKey && topKey in content) {
-        const w = await writePillarAndScore({
+      const w = await writePillarAndScore({
           strategyId: input.strategyId,
           pillarKey: input.pillarKey.toLowerCase() as Lowercase<PillarKey>,
           operation: { type: "SET_FIELDS", fields: [{ path: topKey, value: content[topKey] }] },
           author: {
             system: "OPERATOR",
             userId: ctx.session.user.id,
-            reason: `Confirmation opérateur de « ${qualifiedPath} » — provenance HUMAN`,
+            intentId: ctx.intentId,
+            reason: `Confirmation opérateur de « ${input.pillarKey.toLowerCase()}.${topKey} » — provenance HUMAN`,
           },
-          // DÉCLARATION explicite : la valeur ne change pas, seule son autorité
-          // change. Sans elle le garde court-circuite le champ inchangé et
-          // n'écrit rien — la confirmation était un no-op qui se déclarait
-          // verrou (relecture adversariale 2026-07-27).
-          options: { fieldProvenance: { [topKey]: "HUMAN" } },
+          options: { fieldProvenance: { [topKey]: "HUMAN" }, expectedVersion: input.expectedVersion, confirmInferredField: topKey },
         });
-        assertWritten(w, "confirmInferredField");
-        provenanceLocked = topKey;
+      if (!w.success && (w.error?.includes("PILLAR_VERSION_CONFLICT") || w.error?.includes("FIELD_CONFIRMATION_CONFLICT"))) {
+        throw new TRPCError({ code: "CONFLICT", message: "Cette valeur a changé pendant la validation. Recharge avant de réessayer." });
       }
-
-      await ctx.db.pillar.update({
-        where: { id: pillar.id },
-        data: { fieldCertainty: certainty as Prisma.InputJsonValue },
-      });
-
-      return { ok: true, alreadyConfirmed: false, provenanceLocked };
+      assertWritten(w, "confirmInferredField");
+      return { ok: true, alreadyConfirmed: false, provenanceLocked: topKey };
     }),
 });
 

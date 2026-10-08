@@ -754,14 +754,23 @@ Le catalogue SPAWT et ses gammes doivent encore être rapprochés de leurs sourc
 et amendés via le gateway, sans faire passer le PRD historique pour une offre
 publiée. Reprendre à la réception native du lot conditions commerciales.
 
-L'audit du writer montre aussi que `ensureProductIds` n'est appelé que par
-`addProduct`, pas par tous les amendements de catalogue. Les références par nom
-restent lisibles ; elles ne suffisent pas à garantir une identité après renommage.
-**Plan** : rapprocher les chemins d'écriture dans le gateway existant, préserver
-les ids acquis et n'assigner un id manquant qu'au catalogue réellement modifié,
-avec tests de provenance, concurrence et absence d'effet sur un autre champ V.
-**Déclencheur** : avant l'amendement des offres SPAWT et de leurs références,
-immédiatement après la réception native ADR-0204 ; aucune réécriture SQL de prod.
+L'écart des écrivains catalogue est corrigé par ADR-0205 (418) : attribution
+commune après arbitrage sur changement accepté, ids acquis conservés, noms exacts
+non ambigus, doublons refusés et aucune déduction par index. Les tests PostgreSQL
+reçoivent les cinq opérations, la protection humaine imbriquée et la concurrence.
+Le renommage natif a révélé un lien historique par nom encore fragile : transition
+exacte unique reçue par le même writer, sans rapprocher homonymes ou produits retirés.
+Le corpus SPAWT et ses références restent à amender via le circuit gouverné puis
+à relire nativement ; aucun backfill SQL de production ne vaut cette réception.
+La réservation d'id couvre l'état précédent, pas tout l'historique des retraits.
+Le lecteur historique tolérant accepte encore le premier nom/slug homonyme ;
+les noms de personaSegmentMap ne portent pas tous une identité acquise. Leur
+résolution générale et un retrait/réintroduction ne sont pas reçus par ce lot.
+**Plan** : qualifier les références historiques avant réintroduction d'un ancien
+produit, recevoir la résolution unique et les ancres des références par nom,
+puis borner l'allocation au contexte/version existant si nécessaire.
+**Déclencheur** : avant une recette réelle de retrait/réintroduction C3/C6 ; aucun
+rapprochement automatique par nom similaire ou position dans la liste.
 
 L'éditeur de `unitEconomics.pointMort` reste numérique alors que son schéma
 attend une description textuelle du seuil. **Plan** : aligner ce contrôle sur
@@ -792,16 +801,16 @@ faux-négatif scalaire-dans-record du classifieur (`isContainer` + record), pers
 motivations sans repli-nom, story non dupliquée, manifesto non écrit, flag `wrote`), S computed corrompu
 VALIDATED (unions S + gate S), surclaims de docstrings (OFFICIAL/LLM-zéro-fab). **Restent (latents/systémiques)** :
 
-- **Revue legacy et provenance** : le kit des huit volets lit désormais
-  `_fieldProvenance` (v6.27.416), sans déclarer une valeur par défaut.
-  `confirmInferredField` écrit déjà HUMAN via le gateway avant d’effacer le
-  marqueur legacy ; l’ancienne dette contraire est retirée. Le panneau de
-  confirmation ne liste cependant que `fieldCertainty` : un champ uniquement
-  tracé INFERRED reste révisable par Modifier, sans bouton de confirmation dans
-  ce panneau. **Plan** : rapprocher sa liste et la précondition de confirmation
-  au même grain, avec conflit de version et tests adversariaux ; ne jamais
-  transformer SOURCE en OFFICIAL ni confirmer automatiquement. **Déclencheur** :
-  prochaine passe de revue de fondation SPAWT après réception du lecteur 416.
+- **Revue legacy et provenance** : liste et confirmation partagent désormais
+  l'origine au grain du garde (ADR-0205, 418). Version attendue requise ; origine,
+  retrait legacy et historique atomiques, testés avec de vraies courses PostgreSQL.
+  La revue du vrai corpus et sa réception native restent nécessaires.
+  **Résidu distinct** : infer-needs-human-fields/auto-filler écrivent encore
+  fieldCertainty séparément. Le lecteur canonique prime, mais le journal legacy
+  peut être périmé après concurrence. **Plan** : passer leur delta dans la
+  transaction existante, garder les versions attendues et éprouver un refus de
+  provenance sans faux marqueur. **Déclencheur** : avant la prochaine exécution
+  d'inférence/remplissage sur le corpus SPAWT ou Noël26, sans promotion de source.
 - **`ingestBrandBook`/`previewBrandBook` = `operatorProcedure` non scopé par stratégie** (les reads sœurs
   sont `strategyScopedProcedure`). Modèle de confiance opérateur intentionnel, mais asymétrique.
   **Bornage** : `strategyScopedProcedure` + garde operator. **Déclencheur** : si `operatorProcedure` est

@@ -1895,6 +1895,17 @@ ni publication. Les lecteurs réutilisent le module pur `product-catalog`.
 Un prix seul est une référence de scénario, pas un panier mesuré ; les offres
 conditionnelles ou non comparables ne produisent pas de CA/ROAS par défaut.
 
+### Identité produit et confirmation humaine
+
+ADR-0205, 2026-10-08 : le gateway attribue les ids au catalogue V accepté et
+réellement modifié, préserve les références acquises et refuse les doublons.
+Une copie profonde conserve le précédent état pour l'arbitrage et l'historique.
+Les liens historiques par nom exact unique sont réancrés dans cette écriture ;
+gammes/système utilisent l'id et la carte persona garde le nom courant lisible.
+La revue lit la provenance canonique avant les anciens marqueurs. Confirmer
+requiert la version relue et pose HUMAN avec retrait legacy dans une transaction ;
+ce geste ne certifie aucun document et ne valide aucun champ automatiquement.
+
 > Canon absorbé depuis `LEXICON.md` (consolidation bible 2026-05). Source = stub de redirection.
 
 

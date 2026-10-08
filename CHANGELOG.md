@@ -1,5 +1,38 @@
 # Changelog — La Fusee
 
+## v6.27.418 — fix(domain): stabiliser catalogue et confirmation humaine (2026-10-08)
+
+**Une référence produit et une validation humaine survivent aux écritures suivantes.**
+
+- `SET_FIELDS` clone les conteneurs avant toute édition profonde : le précédent
+  contenu reste intact et le garde voit réellement la différence. Une source ne
+  contourne plus HUMAN en ne modifiant qu'une feuille de produit.
+- Le gateway attribue les ids après arbitrage, uniquement au catalogue V modifié.
+  Tous ses chemins partagent `ensureProductIds`. Ids acquis conservés, récupération
+  par nom exact non ambigu, aucune identité déduite d'un index, aucun id de l'état
+  précédent réattribué. Doublons explicites refusés sans archive ni écriture partielle.
+- Un ancien lien par nom unique est réancré dans la même écriture : id dans les
+  gammes/système, nom courant dans la carte persona. Un renommage à id acquis
+  conserve sa destination. Les homonymes, retraits et noms approximatifs ne sont
+  jamais rapprochés ; les références absentes restent visibles.
+- La liste de revue et la confirmation lisent la même origine au même grain.
+  Les valeurs uniquement tracées INFERRED deviennent confirmables ; une origine
+  HUMAN/SOURCE/UNKNOWN ne prend pas l'ancien badge INFERRED pour autorité.
+  La version relue est exigée. Provenance HUMAN, marqueurs legacy et version
+  persistent ensemble ; l'amendement Mestor transmet aussi la version lue.
+- Vingt-deux contrats PostgreSQL couvrent les cinq écrivains, refus de source,
+  snapshots, legacy imbriqué, idempotence, anciennes versions et courses réelles.
+  Six défauts initiaux puis trois défauts de confirmation échouent avant correction.
+  Le renommage natif a révélé un ancien lien par nom rompu, reproduit rouge sur
+  PostgreSQL avant correction. Aucun nouveau modèle, service, router, page, Intent ou agent.
+- Recette native de la compilation finale : confirmation puis conditions et
+  renommage gouvernés, versions 1→2→3→4, trois archives et zéro appel IA.
+  La gamme conserve destination et conditions ; le second produit reste intact.
+  HTTP 200, DOM 1 122,5 ms ; titre observé sous 11 147 ms (borne, pas first paint).
+  70 réponses sans erreur HTTP ni exception, 23 annulations de navigation ;
+  les trois réponses de mutation sont relues. Déploiement et onboarding des
+  marques restent distincts. Retrait/réintroduction et noms ambigus non reçus.
+
 
 ## v6.27.417 — fix(offers): conserver les conditions et relire le catalogue (2026-10-08)
 

@@ -9,6 +9,18 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Identité produit et confirmation — ADR-0205, 2026-10-08
+
+Catalogue V réellement amendé → arbitrage de provenance → ids stables partagés
+par les cinq opérations du gateway → références des gammes/système/personas.
+Les noms exacts uniques deviennent des ids dans les champs de référence et restent
+des noms actualisés dans la carte persona ; retrait et homonymie ne créent pas de lien.
+Une saisie sans nom exploitable reste un brouillon, jamais un produit inventé.
+Valeur inférée relue → confirmation gouvernée avec version attendue → provenance
+HUMAN et retrait legacy dans la même transaction → protection contre une source
+contradictoire. Le lecteur et le writer partagent la résolution au champ de tête.
+Aucune promotion de BrandDataSource.certainty et aucune confirmation automatique.
+
 ### Conditions des offres — ADR-0204, 2026-10-08
 
 Source commerciale conservée / saisie humaine → amendement gouverné existant

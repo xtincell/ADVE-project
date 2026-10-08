@@ -1,6 +1,7 @@
 "use client";
 
 import { ADVE_STORAGE_KEYS } from "@/domain";
+import { inferredFieldPaths } from "@/domain/field-provenance";
 
 /**
  * PillarPage — Composant partagé pour les pages pilier du Cockpit
@@ -258,10 +259,10 @@ export function PillarPage({ pageKey }: PillarPageProps) {
       assessQuery.refetch();
     },
   });
-  // PR-C (ADR-0035) — confirm an LLM-inferred field as DECLARED. Triggers
-  // pillar refetch so the badge disappears immediately on success.
+  // La confirmation porte sur la valeur relue, pas sur une version concurrente.
   const confirmInferredMutation = trpc.pillar.confirmInferredField.useMutation({
     onSuccess: () => pillarQuery.refetch(),
+    onError: () => pillarQuery.refetch(),
   });
   const acceptRecosMutation = trpc.notoria.acceptRecos.useMutation({
     onSuccess: () => {
@@ -926,24 +927,13 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         );
       })() : null}
 
-      {/* ── PR-C (ADR-0035) — Inferred fields panel ─────────────────────
-            Lists the fields where the LLM inference pass at activateBrand
-            time pre-filled a value. The operator can: (a) keep the value
-            as-is and click "Valider" to flip the certainty marker to
-            DECLARED, or (b) edit/replace via the regular amend flow. The
-            content stays editable through the standard pillar form — this
-            panel is just the surfacing of the INFERRED state. ─ */}
+      {/* Revue des valeurs inférées : même provenance et même grain que le writer. */}
       {isAdve && pillarQuery.data?.pillar ? (() => {
         const fc = (pillarQuery.data.pillar.fieldCertainty as Record<string, string> | null) ?? {};
-        const pillarPrefix = `${upperKey.toLowerCase()}.`;
-        // Accept both qualified ("a.archetype") and bare ("archetype") keys.
-        const inferredPaths: string[] = Object.entries(fc)
-          .filter(([, level]) => level === "INFERRED")
-          .map(([path]) => path.startsWith(pillarPrefix) ? path.slice(pillarPrefix.length) : path)
-          .filter((p, i, arr) => arr.indexOf(p) === i);
+        const content = (pillarQuery.data.pillar.content as Record<string, unknown> | null) ?? {};
+        const inferredPaths = inferredFieldPaths(content, fc, upperKey);
         if (inferredPaths.length === 0) return null;
 
-        const content = (pillarQuery.data.pillar.content as Record<string, unknown> | null) ?? {};
         const renderPreview = (val: unknown): string => {
           if (val == null) return "—";
           if (typeof val === "string") return val.length > 80 ? `${val.slice(0, 80)}…` : val;
@@ -961,13 +951,14 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                   {inferredPaths.length} champ{inferredPaths.length > 1 ? "s" : ""} inféré{inferredPaths.length > 1 ? "s" : ""} par l&apos;IA — à valider
                 </div>
                 <p className="mt-1 text-2xs text-foreground-muted">
-                  Draft initial pré-rempli au moment de l&apos;activation. Clique <strong>Valider tel quel</strong> si la valeur convient, ou utilise <strong>Saisir</strong> pour la réécrire (le badge disparaîtra dans les deux cas).
+                  Relis la valeur proposée. <strong>Valider tel quel</strong> enregistre ta décision pour tout le champ affiché. Utilise <strong>Saisir</strong> pour le réécrire.
                 </p>
               </div>
               <span className="rounded-full bg-warning/15 px-2 py-0.5 text-2xs font-bold text-warning whitespace-nowrap">
                 Proposé par l’IA — à valider
               </span>
             </div>
+            {confirmInferredMutation.error ? <p role="alert" className="mb-3 text-xs text-error">{confirmInferredMutation.error.message}</p> : null}
             <div className="space-y-1.5">
               {inferredPaths.map((path) => {
                 const value = content[path];
@@ -1013,10 +1004,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                             strategyId,
                             pillarKey: upperKey,
                             fieldPath: path,
+                            expectedVersion: pillarQuery.data!.pillar!.currentVersion,
                           });
                         }}
                         className="flex items-center gap-1 rounded-md bg-warning/15 px-2.5 py-1 text-2xs font-medium text-warning transition-colors hover:bg-warning/25 disabled:cursor-not-allowed disabled:opacity-50"
-                        title="Garder cette valeur — passe la certitude à DECLARED"
+                        title="Garder cette valeur et enregistrer ta validation"
                       >
                         <CheckCircle className="h-3 w-3" />
                         Valider tel quel

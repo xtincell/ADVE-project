@@ -14,7 +14,7 @@
  */
 
 import type { ReactNode } from "react";
-import { coerceProvenance, FIELD_PROVENANCE_LABEL } from "@/domain/field-provenance";
+import { FIELD_PROVENANCE_LABEL } from "@/domain/field-provenance";
 import { SOURCE_CERTAINTY_LABEL } from "@/domain/source-certainty";
 
 // ── Helpers ────────────────────────────────────────────────────────────
@@ -42,20 +42,7 @@ const STATUS_LABEL: Record<string, [string, string]> = {
  * d'une approbation. La provenance du gateway prime sur une ancienne certitude.
  * Sans trace de provenance, conserver uniquement le marqueur legacy explicite.
  */
-export function makeStatusFor(
-  certainty: Record<string, string> | null | undefined,
-  pillarKey: string,
-  provenance?: unknown,
-) {
-  const fc = certainty ?? {};
-  const origins = asRec(provenance);
-  const prefix = `${pillarKey.toLowerCase()}.`;
-  return (key: string): string | undefined => {
-    const raw = origins[key] ?? origins[`${prefix}${key}`];
-    if (raw !== undefined) return coerceProvenance(raw);
-    return fc[key] ?? fc[`${prefix}${key}`];
-  };
-}
+export { fieldStatusFor as makeStatusFor } from "@/domain/field-provenance";
 
 export function asRec(v: unknown): Rec {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as Rec) : {};

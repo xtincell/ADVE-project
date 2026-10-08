@@ -13,6 +13,8 @@ import {
   coerceProvenance,
   decideOverwrite,
   isFieldProvenance,
+  fieldStatusFor,
+  inferredFieldPaths,
 } from "@/domain/field-provenance";
 
 describe("FieldProvenance — échelle d'autorité", () => {
@@ -33,6 +35,27 @@ describe("FieldProvenance — échelle d'autorité", () => {
     for (const lvl of FIELD_PROVENANCE_LEVELS) expect(isFieldProvenance(lvl)).toBe(true);
     expect(isFieldProvenance("DECLARED")).toBe(false);
     expect(isFieldProvenance("")).toBe(false);
+  });
+});
+
+describe("revue des champs — même autorité pour le lecteur et la confirmation", () => {
+  it("propose l'inférence canonique même sans ancien marqueur", () => {
+    expect(inferredFieldPaths({ promesse: "À relire", _fieldProvenance: { promesse: "INFERRED" } }, {}, "v")).toEqual(["promesse"]);
+  });
+  it("une autorité humaine de tête prime sur le badge d'une feuille", () => {
+    const fc = { "v.produitsCatalogue[0].nom": "INFERRED" };
+    const content = { produitsCatalogue: [{ nom: "Relu" }], _fieldProvenance: { produitsCatalogue: "HUMAN" } };
+    expect(fieldStatusFor(fc, "v", content._fieldProvenance)("produitsCatalogue[0].nom")).toBe("HUMAN");
+    expect(inferredFieldPaths(content, fc, "v")).toEqual([]);
+  });
+  it("regroupe les anciennes feuilles au grain du garde sans proposer les champs absents", () => {
+    expect(inferredFieldPaths({ matrice: { gauche: "A", droite: "B" } }, {
+      "a.matrice.gauche": "INFERRED", "matrice.droite": "INFERRED", fantome: "INFERRED",
+    }, "a")).toEqual(["matrice"]);
+  });
+  it("sans trace ne déclare rien ; UNKNOWN explicite prime sur le legacy", () => {
+    expect(fieldStatusFor({}, "a")("vision")).toBeUndefined();
+    expect(inferredFieldPaths({ vision: "À revoir", _fieldProvenance: { vision: "UNKNOWN" } }, { vision: "INFERRED" }, "a")).toEqual([]);
   });
 });
 

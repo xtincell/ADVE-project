@@ -35,12 +35,12 @@ const SRC = join(ROOT, "src");
 const ALLOWED_BARE_CALLERS: ReadonlyArray<{ file: string; line: number; reason: string }> = [
   {
     file: "src/server/services/pillar-gateway/index.ts",
-    line: 591,
+    line: 629,
     reason: "Batch atomique interne — writePillar utilise la transaction partagée ; scoring, cache et événements suivent le commit (ADR-0198, reçu PostgreSQL).",
   },
   {
     file: "src/server/services/pillar-gateway/index.ts",
-    line: 620,
+    line: 658,
     reason: "Implémentation interne de writePillarAndScore — appelle writePillar puis cache reconcile + scoring + event.",
   },
   {

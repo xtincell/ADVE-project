@@ -60,7 +60,7 @@ const writeSucceeded: PostCondition = {
 export const manifest = defineManifest({
   service: "pillar-gateway",
   governor: "INFRASTRUCTURE",
-  version: "1.2.0",
+  version: "1.2.1",
   acceptsIntents: ["WRITE_PILLAR"],
   capabilities: [
     {

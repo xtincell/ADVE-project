@@ -1,5 +1,15 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Identité et revue de fondation — 2026-10-08
+
+ADR-0205 factorise l'identité produit dans le gateway existant après arbitrage,
+et la lecture des valeurs confirmables dans le domaine. L'édition profonde
+conserve le précédent état ; confirmation et marqueurs legacy sont atomiques,
+conditionnés à la version effectivement relue. Courses et refus sont reçus sur
+PostgreSQL isolé ; la revue du corpus SPAWT et le cycle Shinkiro restent distincts.
+Le lien historique par nom est réancré au même changement de catalogue, par
+correspondance exacte unique. Renommer conserve la destination, jamais par index.
+
 ## Demande et mission reçues séparément — 2026-10-07
 
 ADR-0201 étend les demandes Signal et les missions existantes : décision opérateur

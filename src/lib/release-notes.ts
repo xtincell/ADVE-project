@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.418", date: "2026-10-08",
+    headline: "Vos liens produit et vos validations tiennent",
+    highlights: [
+      { emoji: "🔗", title: "Des références stables", body: "Une modification du catalogue conserve les identifiants acquis. Les produits ajoutés reçoivent leur référence commune pour les gammes et les autres vues." },
+      { emoji: "✓", title: "Une validation explicite", body: "Retrouvez les valeurs proposées par l’IA, relisez-les puis validez tout le champ affiché. Une source contradictoire conserve votre décision et signale le conflit." },
+      { emoji: "↻", title: "Une édition concurrente visible", body: "Si le contenu a changé depuis votre lecture, la validation est refusée et l’écran se recharge. Votre décision ne porte jamais silencieusement sur une autre version." },
+    ],
+  },
+  {
     version: "6.27.417", date: "2026-10-08",
     headline: "Vos offres gardent leurs conditions",
     highlights: [
