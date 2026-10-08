@@ -410,7 +410,19 @@ Définition de « fermé » (loi opérateur) : fonctionnel en prod + verrou CI +
 ### Contamination inter-items + guidelines incohérentes (Root 2 du fix v6.27.326) — déférés
 
 - **Root 1 (contamination « Betsy dans Awa ») — ✅ CLOS v6.27.326** (`buildFieldAnchor` + `summarizePillar`/`compactPillar` identity-preserving + consigne LLM + notoria inline). Reste ci-dessous le Root 2, distinct (changement de comportement à valider en adversarial).
-- **Root 2a — guidelines issues du coffre (ADR-0203, correction 6.27.413)** : le renderer ne réimprime plus `directionArtistique.brandGuidelines` comme règles. Contrat structuré écran/export, sélection d’identité commune avec le cockpit, remplacés et périmés exclus, références et reçus documentaires distincts. Trois contre-exemples PostgreSQL rouges avant correction ; six scénarios du lot verts, suites 1 706/95. Écran local authentifié, source consultée et trois HTML relus reçus ; aucun appel IA ni écriture. **Reste à recevoir** : CI/image et version servie. **Reprise** : avant clôture du lot 413. La réconciliation des variantes de charte/logo/palette/typo du corpus SPAWT est une décision documentaire séparée ; la présence d’un actif ACTIVE ne la ferme pas.
+- **Root 2a — lecteur corrigé et reçu en production 413 (ADR-0203)** : contrat
+  structuré écran/export et sélection du coffre communs ; remplacés et périmés
+  exclus, reçus documentaires distincts. CI : 4 080 unitaires et 95 PostgreSQL ;
+  image et runtime rapprochés, volume privé conservé. Natif : identité, six sources,
+  texte exact en lecture seule et deux exports reparsés ; 60 réponses sans erreur
+  HTTP ni exception, viewport CSS 390 × 844 sans débordement. Seize piliers, six
+  sources et compteurs inchangés. **Résidu documentaire** : réconcilier les variantes
+  de charte/logo/palette/typo par usage, qualifier les assertions et leur provenance,
+  puis recevoir version choisie → produits → résultats. Le guide de l’application
+  porte un erratum explicite de palette/polices ; la décision produit existante
+  ne doit pas être réinventée. Un ACTIVE ne prouve pas une approbation globale.
+  Déclencheur : suite C2/C3 SPAWT ; effort : rapprochement et circulation via les
+  écrivains existants, sans absorption ni nouvelle charte automatique.
 - **Root 2b — régen wholesale d'un objet top-level à forme invalide écrase des feuilles définies quand la provenance est UNKNOWN/INFERRED (MED, clobber)** *(finding agent Explore, v6.27.326)* : le fill est empty-only au grain feuille/cellule (prouvé), MAIS un champ top-level OBJET flaggé `missing` pour **forme jugée invalide** (`assessor` : `offShape > intersection`, ou string legacy là où un objet est attendu, ou array/string sous le seuil) est régénéré EN ENTIER (`setNestedValue(content, "<topKey>", value)`) → clobbe ses feuilles définies. La garde de provenance (`provenance-guard.ts`) protège HUMAN/SOURCE au grain top-level, mais est **INERTE pour UNKNOWN (seed direct, ex. SPAWT/Motion19) et INFERRED**. `confirmInferredField` n'accorde PAS HUMAN (efface juste le badge). **Fermeture** : ne pas régénérer wholesale un objet top-level qui porte des feuilles définies non-vides — préférer le fill additif de ses feuilles vides (retirer ce topKey du set de régen quand `Object.keys(non-vide) > 0`), OU étendre la garde de provenance pour refuser tout INFERRED qui RÉDUIT l'information (feuilles définies → écrasées). **Risque** : changement de comportement transverse aux 8 piliers → passe adversariale dédiée obligatoire. **Déclencheur** : prochaine passe « Enrichir ne détruit jamais du défini », ou si l'opérateur constate une régression de données définies après Enrichir. Effort ~1 session.
 
 ## Chantier « notoria profondeur + recos lisibles » 2026-07-23 ([ADR-0177](adr/0177-schema-leaf-inventory-and-notoria-depth.md)) — déférés

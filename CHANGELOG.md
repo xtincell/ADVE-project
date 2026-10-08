@@ -28,8 +28,16 @@
   appels d’outil : bornes d’observation, pas mesure du premier affichage. Export
   natif de 2 824 octets retrouvé sur disque après expiration du suivi, sans
   deuxième clic ; trois HTML reparsés et même document hors date de lecture.
-  La version servie reste à recevoir ; réconciliation sémantique, partage public,
-  thème jour natif et raccord marque → publication restent ouverts.
+  Quatre HTML locaux reparsés au total ; l’imprimable reste du HTML.
+- Livraison reçue : CI 37710903270, 4 080 unitaires et 95 PostgreSQL ; image
+  37711041268 bootée sur base neuve, registre et runtime 6.27.413 rapprochés.
+  Conteneur unique sous `nextjs`, volume privé conservé. Natif administrateur :
+  identité, six sources et texte opérateur exact en lecture seule, 60 réponses
+  sans erreur HTTP et zéro exception ; deux exports de 4 028 octets téléchargés
+  puis reparsés. Viewport CSS 390 × 844 sans débordement ; aucun partage créé.
+  Seize piliers, six sources et compteurs IA restent identiques. Noël conserve
+  un projet, trois marques et l’échéance du 20 octobre. Réconciliation sémantique,
+  thème jour natif, appareil réel et raccord marque → publication restent ouverts.
 
 ## v6.27.412 — fix(portfolio): distinguer les écritures des approbations (2026-10-08)
 
