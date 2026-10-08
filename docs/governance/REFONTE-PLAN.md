@@ -6,41 +6,30 @@ ADR-0209 étend BrandAsset BRAND_GUIDELINES/public-brand-v1, Connexions,
 strategy.update et l’export existants. La copie explicitement choisie est bornée,
 versionnée, liée aux sources/piliers relus et servie sans dossier privé. Les
 changements privés ne la réécrivent plus ; revenir à une ancienne copie crée une
-nouvelle édition. La migration des pages historiques conserve une observation
-spined sans inventer de revue humaine. Aucun nouveau service, modèle, page,
-agent ou Glory tool. Réception locale avant alias portail : 195 PostgreSQL dont 16 pour le contrat,
-4 144 unitaires et 1 610 de gouvernance ; types/linters sans erreur, cycles nuls.
-Vitrine : 30 tests/types/vocabulaire/build verts et lecture locale du titre,
-Moka, six questions sans compteur, sans erreur JavaScript observée. PR #4 fusionnée
-en 346e466, CI 37838306953 verte, vitrine déployée à 20:20:09 UTC ; CSP et bundle
-de trois domaines rapprochés du conteneur. Alerte fonts rectifiée : checkout local
-partiel excluant public, dix fichiers suivis dans Git et cinq WOFF2 Klinsman/Gotham
-reçus en production (200/type/signature/hashes), sans substitution. Build La Fusée
-avant alias à source stable, huit appels
-authentifiés et export public/privé reçus localement. Natif FOUNDER isolé :
-publication v4 et retour à v3 créant v5, copie relue après reload. Stress sans
-finding, sept forges DEFERRED sans prestataire reçu. CORS ajoute l’origine https
-exacte portail.spawt.online aux origines spawt.online/WWW, avec HTTP et domaines
-ressemblants exclus. Source 8cc1209a/CI 37839043556 reçues avant alias ; image
-37839472712 annulée avant déploiement. CORS reçu après patch : 195 PostgreSQL verts,
-dont les mêmes 16 public-brand ; WWW/portail admis, HTTP/domaines ressemblants refusés.
-Avant patch, le portail échoue dans la contre-épreuve (15 verts/un rouge).
-Les cinq gardes finaux et 1 610 tests de gouvernance sont reçus. Source après alias
-59ef5fda, CI 37840436060 verte, build local réussi/2 529 fichiers source stables ;
-huit HTTP authentifiés finaux, restauration v3 et export/CORS/ETag reçus, fixtures
-nettoyées à zéro. Le natif reste avant alias, interface inchangée.
-L’image 37841025811 échoue au smoke boot avant push/déploiement : postgres-array
-3.0.4 requis par Prisma adapter-pg est tronqué à package.json dans le standalone.
-Le loader Prisma passe après copie, puis le bundle complet révèle zod absent.
-Le diagnostic porte les dépendances externes du bundle, au-delà du seul loader :
-Docker copie désormais postgres-array et zod complets, avec les scopes @prisma.
-Après les deux copies, freeze-public-brands exact reçoit exit 0 sur DB isolée,
-captured=0/humanReview=false, sans contourner gardes ou capture. Aucun boot Docker
-déduit ; nouvelle source/image/boot à recevoir ;
-production 422 intacte, 423 jamais déployée, vitrine live. Runtime et raccord final
-restent distincts des preuves locales ; 59ef n’est pas une livraison reçue.
-Ce premier contrat porte la copie publique et les liens, pas les tokens, la voix,
-les variantes d’identité ni l’ensemble du quiz/application. Sept chantiers ouverts.
+nouvelle édition. Aucun nouveau service, modèle, page, agent ou Glory tool.
+
+Production 423 reçue : source 5abee4ff, CI 37843378476 verte (4 144 unitaires,
+195 PostgreSQL), image 37843924558 bootée, 101 migrations/login 200/PDF deux pages.
+Déploiement terminé à 21:10:56 UTC, runtime exact rapproché. Le défaut de
+dépendances externes du bundle est fermé par les copies complètes postgres-array
+3.0.4 et zod ; les gardes et la capture ne sont pas contournés. Erratum : zéro
+page historique admissible ; deux anciens slugs non LFA- étaient déjà refusés
+en 422. Aucun renommage, publication automatique ou reçu historique inventé.
+
+SPAWT canonique : v1 LFA-spawt choisie dans Connexions réelle, acteur/émission
+chaînée reçus ; copie publique existante conservée à l’identique. Principal et
+portail consomment la même édition/digest, titre et promesse concordants ; WWW
+redirige au principal. CORS exact/ETag/export privé/page publique reçus ; hors
+origines, la ressource publique répond 200 sans en-tête CORS. Six questions,
+aucun compteur expiré, aucune exception, réponse 500 ou chargement échoué observé.
+Corpus privé et actifs ordinaires conservés,
+un seul nouvel actif pour l’édition ; zéro IA. Les fonts sont reçues sans substitution.
+
+La réception porte les textes/liens v1 ; tokens, voix, variantes, version du
+quiz/application et retour des résultats, brouillon interrompu, autres écrivains,
+Ptah et journal durable restent ouverts. Sept chantiers EN_COURS/accepted=false,
+116 examens bornés et 80 donneurs ouverts au registre programme ; aucun parcours
+large accepté. Les preuves détaillées et leurs limites figurent dans ADR-0209.
 
 ## Décisions d’actifs factorisées — 2026-10-08
 

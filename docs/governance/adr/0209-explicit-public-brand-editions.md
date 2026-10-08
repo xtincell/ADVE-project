@@ -66,7 +66,8 @@ table, router, page, agent, Glory tool ou Intent kind n’est créé.
   chosen/digest/contenu ; les pins et identités privées restent exclus. ETag lie
   édition et digest, avec réponse 304 et cache court. CORS navigateur autorise
   exactement `https://spawt.online`, `https://www.spawt.online` et
-  `https://portail.spawt.online` ; HTTP et domaines ressemblants sont exclus.
+  `https://portail.spawt.online`. HTTP et domaines ressemblants ne reçoivent pas
+  d’en-tête Access-Control-Allow-Origin ; la ressource reste publique, HTTP 200.
   L’alias portail est ajouté avant le premier déploiement 423 ; l’édition reste
   une ressource publique.
   L’export intégral JSON/CSV conserve son authentification et son contrôle d’accès.
@@ -76,7 +77,10 @@ table, router, page, agent, Glory tool ou Intent kind n’est créé.
   fabriquée ; le reçu indique humanReview=false. Une lecture anonyme ne déclenche
   jamais cette capture. Le bundle est exécuté après les migrations de schéma ;
   un échec bloque le démarrage et expose l’instruction de reprise, sans l’ignorer.
-- Le consommateur SPAWT prévu dans son dépôt applique uniquement la copie du
+  En production 423, zéro page historique est admissible : aucune capture ni
+  émission historique n’est inventée. Les deux anciens slugs hors LFA- étaient
+  déjà refusés par 422 ; ils ne sont ni renommés ni publiés automatiquement.
+- Le consommateur SPAWT dans son dépôt applique uniquement la copie du
   hero et les liens issus de ce contrat. Il conserve les valeurs existantes si
   l’édition ne peut pas être reçue. Direction artistique, quiz à six questions,
   déductions, application et disponibilités produit gardent leurs contrats propres.
@@ -92,7 +96,8 @@ activation et les variations de rendu doivent être rapprochées avant livraison
 
 Le contrat v1 ne porte pas les tokens de design, la voix structurée, les variantes
 de logo ni les règles de composition. Le consommateur SPAWT, sa copie réellement
-choisie et ses images déployées doivent être reçus séparément. Les autres écrivains,
+choisie et ses images déployées sont reçus séparément dans la réception de
+production ci-dessous, limitée aux textes/liens. Les autres écrivains,
 Ptah et la fermeture durable best-effort du spine restent au registre de dette.
 La publication ne signifie ni univers de marque entièrement raccordé, ni cycle
 Noël reçu, ni achèvement d’un des sept chantiers Shinkiro.
@@ -145,13 +150,14 @@ La Fusée avant alias : source 8cc1209a et CI 37839043556 verte ; la constructio
 37839472712 est annulée avant déploiement. L’ajout CORS du portail est reçu :
 `alias-red.log` compte 16 cas, 15 verts et un rouge avant patch (portail refusé) ;
 `postgres-final-alias.log` reçoit 195/195 PostgreSQL après patch, dont les mêmes
-16 public-brand, avec WWW/portail autorisés et HTTP/domaines ressemblants refusés.
+16 public-brand, avec en-tête CORS pour WWW/portail et absence d’en-tête pour
+HTTP/domaines ressemblants, sans refus HTTP de la ressource publique.
 Les cinq gardes finaux et 1 610 tests de gouvernance sont reçus. La source après
 alias `59ef5fda9640f265a7d995da40041d83d4389d46` a sa CI 37840436060 verte, son
 build local exit 0 et 2 529 fichiers source identiques au commit avant/après.
 HTTP authentifié final : [200, 403, 200, 409, 200, 200, 200, 200], publication
 et restauration v3 reçues ; CORS spawt/WWW/portail exact, domaine ressemblant
-refusé, export privé 401 et ETag 304. Les fixtures sont nettoyées à zéro.
+HTTP 200 sans en-tête CORS, export privé 401 et ETag 304. Les fixtures sont nettoyées à zéro.
 L’interface native est inchangée par le correctif d’alias ; ses reçus ci-dessus
 restent bornés à la source avant alias, distincts de ces HTTP finaux.
 
@@ -173,8 +179,51 @@ les paquets complets postgres-array et zod au runner. Après ces deux copies,
 le bundle exact freeze-public-brands exécuté sur DB isolée reçoit exit 0,
 captured=0, humanReview=false (`packaging-migration.json` et `packaging-migration.log`).
 La capture et les gardes restent bloquants ; aucun boot d’image Docker ni runtime
-de production n’est déduit de cette exécution isolée. Nouvelle source, image et boot doivent encore être
-reçus avant de revendiquer une livraison. La candidate 59ef n’est
-ni publiée ni déployée ; production 422 intacte et vitrine SPAWT live.
-423 n’a jamais été déployée. Runtime, capture historique et raccord final SPAWT
-en production restent à recevoir ; la vitrine seule ne clôt pas ce raccord.
+de production n’était déduit de cette exécution isolée. La candidate 59ef n’a été
+ni publiée ni déployée ; la production est restée en 422 jusqu’à la réception
+de la source corrigée ci-dessous. L’historique de cet échec est conservé ; la dette
+de packaging est fermée et retirée du registre transitoire.
+
+### Réception de production — 2026-10-08
+
+Source `5abee4ff56a98dcde2f0621b6216926975356700`, CI 37843378476 verte : 4 144
+unitaires et 195 PostgreSQL. Image 37843924558 verte : boot, 101 migrations,
+login HTTP 200 et PDF deux pages. Index image
+`f3df52afdc98c91d1422807201e23f42286fdf45961b2d5d334cc0860f020068`, manifest
+`21b02ab9fbda10cbc5c7f6ca7d9600bc8bccef182d3a36c78fd33b382b9635c7`.
+Déploiement FABLE `fmfssee6f9fhadz1zqdqrqj2` terminé à 21:10:56 UTC, runtime
+6.27.423 rapproché. Le runner contient postgres-array 3.0.4 et zod complets,
+sans contournement de capture ou de garde.
+
+Erratum de migration : l’attente de deux pages historiques était fausse. Zéro
+page admissible est constatée ; motion19/xtincell ne respectent pas la règle
+`/^LFA-/`, déjà appliquée en 422 et conservée en 423. Pages et API 404 sont
+reçues. Aucun slug renommé, aucune page legacy publiée et aucune émission
+historique ou validation humaine fabriquée.
+
+SPAWT canonique : publication depuis Connexions réelle, édition
+`cmv01feev000001pjqvuxpxbg`, v1 `LFA-spawt`, EXPLICIT_SELECTION, acteur réel et
+selfHash du spine reçus. La copie publique existante est conservée exactement ;
+aucune modification marketing de test ni écriture des fondations de marque.
+HTTP : CORS des trois origines exactes 200, ETag 304, export privé 401 et /b 200.
+Hors origines, l’export public répond 200 sans en-tête Access-Control-Allow-Origin ;
+la ressource est volontairement publique. Navigateur principal et portail :
+feed 200, même édition et digest, titre/promesse concordants, six questions et
+aucun compteur expiré ; aucune exception, réponse 500 ou chargement échoué observé.
+WWW redirige au principal ; aucune lecture native sous Origin WWW n’est déduite.
+Ce reçu prouve le flux/digest et son rendu sans déduire une modification
+visuelle de la copie. Le retour à une édition antérieure reste reçu sur fixtures,
+sans mutation de test de la communication réelle en production.
+
+Le corpus privé reste inchangé : 12 sources, 40 piliers, deux usages, 2 431 coûts,
+19 processes, 108 fragments et digest des actifs ordinaires conservés. BrandAsset
+passe de 255 à 256 uniquement pour l’édition publique ; zéro appel IA.
+Preuves privées : `preuves-publication-spawt-423/reception.json`,
+`production-http.json`, `public-slug-admission.json` et reçus natifs voisins ;
+aucun contenu privé n’est recopié dans cet ADR.
+
+Le reçu porte uniquement les textes/liens v1. Tokens, voix, variantes/règles de
+composition, version consommée par quiz/app et retour des résultats, brouillon
+après interruption, autres écrivains, Ptah et journal durable restent ouverts.
+Sept chantiers EN_COURS/accepted=false ; 116 examens bornés et 80 donneurs ouverts
+au registre programme. Aucun univers complet ni parcours large accepté.

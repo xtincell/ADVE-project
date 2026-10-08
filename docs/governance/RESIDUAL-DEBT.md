@@ -9,50 +9,20 @@ production, HTTP 200, font/woff2, signature wOF2 et hashes dans
 `preuves-publication-spawt-423/font-runtime.json`. La fausse dette est retirée,
 sans substitution de police.
 
-- **Activation et consommation à recevoir** : le contrat public borné, la carte
-  Connexions et l’export sont implémentés ; avant alias portail, 195 tests PostgreSQL passent, dont 16
-  public-brand, ainsi que 4 144 unitaires et 1 610 de gouvernance. La vitrine a
-  30 tests/types/vocabulaire/build verts ; sur localhost:3318, titre/Moka/six
-  questions/sans compteur sont reçus sans erreur JavaScript observée. PR #4 fusionnée
-  en 346e466, CI 37838306953 verte ; déploiement terminé à 20:20:09 UTC, CSP/bundle
-  de trois domaines rapprochés du conteneur. Build La Fusée avant alias réussi à
-  source stable ; huit HTTP authentifiés locaux, export public/privé et recette
-  native FOUNDER isolé reçus : v4 publiée, retour à v3 créant v5, titre/lien relus
-  après reload, zéro erreur de page ou réponse >=500. Stress sans finding, sept
-  forges DEFERRED sans provider reçu. Source La Fusée 8cc1209a/CI 37839043556 reçues
-  avant alias, image 37839472712 annulée avant déploiement. Le CORS exact ajoute
-  https://portail.spawt.online aux origines https spawt.online/WWW. Contre-épreuve
-  avant patch : 16 cas, 15 verts/un rouge (portail refusé). Après patch : 195/195
-  PostgreSQL verts, dont les mêmes 16 public-brand, WWW/portail autorisés et
-  HTTP/domaines ressemblants refusés. Cinq gardes finaux et 1 610 tests de
-  gouvernance reçus. Source après alias 59ef5fda/CI 37840436060 verte ; build local
-  réussi, 2 529 fichiers source identiques au commit. Huit HTTP authentifiés finaux,
-  restauration v3, export privé 401/ETag 304/CORS reçus, fixtures nettoyées à zéro.
-  Le natif reste avant alias, interface inchangée. L’image 37841025811 échoue au
-  smoke boot avant push/déploiement ; 59ef n’est pas une livraison reçue.
-  Production 422 intacte, 423 jamais déployée. Capture historique, runtime et
-  raccord final SPAWT restent à recevoir. **Fermer** par rapprochement
-  source/pins → choix → édition/digest → fichier → consommateur SPAWT → image et
-  lecture native, avec panne réseau, conflit, opérateur étranger et retour à la
-  précédente. Conserver contenu/versions privés et copie publique pendant les
-  refus. **Déclencheur** : suite immédiate C2/C3 de publication SPAWT ; effort :
-  une recette de bout en bout et déploiement sur les applications existantes.
-- **Dépendances externes du bundle — boot 423 non reçu** : smoke 37841025811 échoué avec
-  `Error: Cannot find module '/app/node_modules/postgres-array/index.js'`.
-  Prisma adapter-pg exige postgres-array 3.0.4 ; le standalone n’a conservé que
-  son package.json. Après réparation du loader Prisma, l’exécution du bundle
-  complet révèle aussi `Cannot find module 'zod'`. Les dépendances externes
-  @prisma/client, @prisma/adapter-pg et zod doivent toutes être présentes au runner.
-  Docker copie désormais postgres-array et zod complets, en plus des scopes @prisma.
-  Loader reçu rouge/vert, puis bundle exact freeze-public-brands reçu exit 0 sur
-  DB isolée, captured=0/humanReview=false après les deux copies ; preuves
-  `packaging-migration-zod-red.log`, `packaging-migration.json` et
-  `packaging-migration.log`. **Fermer** en recevant le boot de la nouvelle image
-  Docker, sa capture sur base isolée, sa publication puis son runtime exact.
-  Aucun contournement de capture ou des gardes ; ces reçus isolés ne valent pas
-  boot Docker ni livraison en production.
-  **Déclencheur** : prochain build 423, avant push/déploiement ; effort : un lot
-  Docker et recette de démarrage. Production 422 et vitrine SPAWT restent intactes.
+Réception bornée de production 423 : source 5abee4ff, CI 37843378476 et image
+37843924558 reçues, runtime exact après déploiement à 21:10:56 UTC. Publication
+SPAWT v1 depuis Connexions réelle, acteur/émission chaînée, copie existante
+conservée ; principal et portail reçoivent la même édition/digest, titre et
+promesse concordants, WWW redirige au principal. CORS trois origines/ETag/export
+privé/page publique reçus ; hors origines, HTTP 200 sans en-tête CORS. Six questions,
+sans compteur expiré/zéro exception, 500 ou chargement échoué observé. Corpus privé conservé, un seul
+nouvel actif d’édition, zéro IA. La dette de dépendances externes du bundle est
+fermée et retirée ; son diagnostic et sa preuve de boot restent dans ADR-0209.
+Erratum migration : zéro page historique admissible, deux slugs déjà refusés
+par la règle LFA- en 422 et 423 ; aucune page renommée/publiée ni émission
+historique inventée. Cette réception ne ferme pas l’univers de marque ou les
+sept chantiers ; les résidus actifs suivent.
+
 - **Identité au-delà de la copie v1** : public-brand-v1 ne porte pas tokens de
   design, voix structurée ni variantes de logo. Le premier consommateur SPAWT est
   limité au hero et aux liens, sans modifier la direction artistique, le quiz
@@ -101,8 +71,8 @@ sans substitution de police.
   ces commandes ; effort : un lot spine/réconciliation et recette PostgreSQL.
 - **Projection publique** : l’actif ACTIVE générique reste un usage, pas une
   approbation publique. ADR-0209 ajoute le contrat borné et son choix explicite ;
-  l’activation/runtime et la consommation SPAWT restent à recevoir sous « Édition
-  publique et surfaces de marque ». Ce contrat ne reçoit pas les autres écrivains,
+  son runtime 423 et la consommation des textes/liens SPAWT sont reçus sous
+  « Édition publique et surfaces de marque ». Ce contrat ne reçoit pas les autres écrivains,
   Ptah ni la fenêtre de fermeture du journal décrits ci-dessus.
 
 ## Reprises de campagne — 2026-10-07 (ADR-0202)
@@ -188,13 +158,13 @@ sans substitution de police.
 - **Version de marque vers les surfaces SPAWT** : ADR-0209 remplace la lecture
   publique directe de A/D par une édition BrandAsset choisie et versionnée, et
   ajoute `format=public-brand` à l’export sans ouvrir le dossier privé. Le premier
-  consommateur vise seulement la copie du hero et les liens ; quiz, calibration,
+  consommateur reçoit la copie du hero et les liens en production 423 ; quiz, calibration,
   moteur d’application, disponibilités et modes gardent leurs contrats propres.
-  **Plan** : recevoir le choix réel, sa filiation, la version consommée et le retour
-  sur la vitrine, puis qualifier les identités et décisions par destination.
-  Aucun raccord des trois surfaces déduit du seul export. **Déclencheur** : suite
-  C2/C3 immédiatement après livraison du contrat public ; effort : recette du
-  premier consommateur puis un lot de filiation par surface. Le détail des
+  **Plan** : qualifier les identités et décisions par destination, recevoir le
+  raccord au quiz/application et le retour des résultats ; le retour de publication
+  reste reçu sur fixtures, sans mutation de test de la copie réelle. Aucun raccord
+  des trois surfaces déduit de la vitrine. **Déclencheur** : suite C2/C3 après
+  réception des textes/liens ; effort : un lot de filiation par surface. Le détail des
   réceptions encore ouvertes figure sous « Édition publique et surfaces de marque ».
 
 ## Réception des observations et décisions — 2026-10-07 (ADR-0199)

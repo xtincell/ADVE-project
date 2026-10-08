@@ -1,5 +1,36 @@
 # Changelog — La Fusee
 
+## v6.27.423 — docs(governance): recevoir la publication SPAWT en production (2026-10-08)
+
+**La vitrine SPAWT reçoit son édition publique choisie depuis La Fusée.**
+
+- Source 5abee4ff, CI 37843378476 verte (4 144 unitaires/195 PostgreSQL), image
+  37843924558 reçue : boot, 101 migrations, login 200 et PDF deux pages. Déploiement
+  fmfssee6f9fhadz1zqdqrqj2 terminé à 21:10:56 UTC ; runtime 6.27.423 rapproché.
+  Les dépendances externes postgres-array 3.0.4/zod sont complètes au runner ;
+  dette de packaging fermée et retirée de RESIDUAL-DEBT, sans garde contourné.
+- SPAWT canonique publiée depuis Connexions réelle, édition v1 LFA-spawt avec
+  EXPLICIT_SELECTION, acteur réel et émission chaînée reçus. La copie publique
+  existante est conservée à l’identique : aucune mutation marketing de test ni
+  correction de fondation de marque. Site principal et portail consomment la même
+  édition/digest, titre et promesse concordants, six questions et aucun compteur
+  expiré ; zéro exception, réponse 500 ou chargement échoué observé. WWW redirige
+  au principal. CORS trois origines exactes/ETag 304, export privé 401 et page
+  publique 200 reçus. Hors origines, l’export public reste HTTP 200 sans en-tête CORS.
+- Erratum migration : zéro page historique admissible, et non deux captures.
+  Les anciens slugs motion19/xtincell étaient déjà exclus par la règle LFA- en
+  422, comme en 423 ; pages/API 404 constatées. Aucun slug renommé, aucune ancienne
+  page publiée, aucune émission historique ni validation humaine inventée.
+- Corpus privé inchangé : 12 sources, 40 piliers, deux usages, coûts/processes/
+  fragments et actifs ordinaires conservés. Le coffre passe de 255 à 256 actifs
+  uniquement par cette édition publique ; zéro appel IA. Preuves privées de
+  réception référencées dans ADR-0209, sans copie du dossier privé.
+- Réception limitée aux textes/liens v1. Tokens, voix, variantes, raccord quiz/app
+  et retour des résultats, brouillon interrompu, autres écrivains/Ptah et journal
+  durable restent ouverts. Les sept chantiers restent EN_COURS/accepted=false ;
+  116 examens bornés et 80 donneurs ouverts au registre programme, sans parcours
+  large déclaré accepté.
+
 ## v6.27.423 — feat(brand-vault): publier une édition publique choisie (2026-10-08)
 
 **La page publique garde sa version jusqu’à votre prochaine publication.**
@@ -15,7 +46,7 @@
 - `/b/[slug]` et `format=public-brand` lisent cette édition persistée ; le digest et
   l’ETag permettent d’en identifier le contenu. L’export intégral reste privé.
   Les commandes génériques du coffre refusent le format réservé à la publication.
-- Le démarrage capture les pages historiques déjà publiques dans le spine avec
+- Le démarrage capture les pages historiques admissibles dans le spine avec
   origine OBSERVED_PUBLICATION et humanReview=false. Cette migration ne crée ni
   approbation humaine ni publication à la lecture anonyme ; son échec est bloquant.
 - Le test du wrapper a révélé un id de marque absent du pivot strategyId : sa
@@ -50,13 +81,15 @@
   https://portail.spawt.online, aux côtés de spawt.online et www.spawt.online en https.
   Contre-épreuve avant patch : 16 cas, 15 verts et un rouge (portail refusé).
   Après patch : 195/195 PostgreSQL verts, dont les mêmes 16 public-brand ; WWW et
-  portail autorisés, HTTP et domaines ressemblants refusés. Les cinq gardes finaux
+  portail avec en-tête CORS ; HTTP et domaines ressemblants sans cet en-tête,
+  sans refuser la ressource publique HTTP 200. Les cinq gardes finaux
   et 1 610 tests de gouvernance sont reçus ; recette native ci-dessus avant alias.
 - La Fusée avant alias : source 8cc1209a et CI 37839043556 verte ; construction
   37839472712 annulée avant déploiement. Après alias : source 59ef5fda, CI
   37840436060 verte, build local réussi et 2 529 fichiers source identiques au
   commit. Huit HTTP authentifiés finaux reçus, restauration v3, CORS exact
-  spawt/WWW/portail, refus du domaine ressemblant, export privé 401 et ETag 304 ;
+  spawt/WWW/portail, absence d’en-tête CORS pour le domaine ressemblant,
+  export privé 401 et ETag 304 ;
   fixtures nettoyées à zéro.
 - L’image 37841025811 échoue au smoke boot avant push et déploiement :
   `Error: Cannot find module '/app/node_modules/postgres-array/index.js'`.
@@ -67,10 +100,10 @@
   postgres-array et zod complets, en plus des scopes @prisma existants.
   Après les deux copies, le bundle exact freeze-public-brands reçoit exit 0,
   captured=0/humanReview=false sur DB isolée, sans contourner capture ni gardes.
-  Ce reçu ne vaut pas boot Docker ; nouvelle source/image/boot à recevoir.
-  Production 422 inchangée, 423
-  jamais déployée. Runtime, capture historique et raccord final SPAWT restent
-  à recevoir. Tokens, voix, variantes de logo, autres écrivains/Ptah et
+  À ce stade de recette, ce reçu ne valait pas boot Docker et la production
+  restait en 422. La réception de l’image corrigée et du runtime 423 figure dans
+  l’entrée docs(governance) ci-dessus ; la candidate 59ef n’a pas été déployée.
+  Tokens, voix, variantes de logo, autres écrivains/Ptah et
   fermeture durable du journal restent ouverts ; aucun univers de marque complet
   ni chantier Shinkiro n’est déclaré reçu.
 
