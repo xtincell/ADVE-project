@@ -30,6 +30,15 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-08 · La forge manuelle Oracle créait une tâche DEFERRED puis rendait
+HTTP 500 : enveloppe Intent et post-condition racine divergeaient, le schéma
+de sortie excluait DEFERRED. Le candidat 427 reconnaît racine ou enveloppe OK
+et les états CREATED/IN_PROGRESS/DEFERRED, en maintenant les refus incompatibles.
+Deux rouges/neuf verts avant patch, puis 11 tests verts ; après redémarrage,
+HTTP 200/Intent OK/DEFERRED, portée et émission enfant vérifiées localement.
+Cause bornée fermée, gates/livraison en attente. Le bouton OK/succès sans état
+de production reste une dette UX dans RESIDUAL-DEBT ; aucun fournisseur reçu.
+
 2026-10-08 · Campagne/brief/actif source se perdaient entre entrées et création
 de tâche ; la régénération réutilisait une tâche incluse sans concordance propre.
 Le candidat 426 transmet les trois références, partage leur contrôle avant
@@ -38,8 +47,8 @@ sur l’admission. Neuf rouges initiaux puis 35 cas ciblés/230 PostgreSQL verts
 MCP/tRPC/replay locaux sur fixtures reçus. Cause : contrats d’entrée, filiation
 et persistance divergeaient. Fallbacks d’émission, sources multiples, provenance
 documentaire, gate activeBriefId, octets/CDN, parentAssetId/facture/journal restent
-planifiés dans RESIDUAL-DEBT. Le 500 manuel Oracle reste un défaut distinct à
-corriger en 427 avant image ; aucune livraison 426 isolée ni cycle réel reçu.
+planifiés dans RESIDUAL-DEBT. Le 500 manuel Oracle est corrigé localement dans
+le lot 427 ci-dessus ; aucune livraison 426 isolée ni cycle réel reçu.
 
 2026-10-08 · Ptah écrivait ses coûts de forge dans un journal zéro-token attribué
 à Anthropic : montant zéro même lorsqu’un résultat persisté portait un autre

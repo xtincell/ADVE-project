@@ -18,13 +18,18 @@ const taskCreatedWithProviderId: PostCondition = {
   name: "task-created-with-provider-id",
   check: (output) => {
     if (!output || typeof output !== "object") return false;
-    const o = output as { taskId?: string; provider?: string; status?: string };
+    const envelope = output as { status?: string; output?: unknown };
+    // The manual section route returns an Intent receipt around ForgeTaskCreated.
+    // Only a successful envelope may expose that task; a failed one stays failed.
+    const candidate = envelope.status === "OK" ? envelope.output : output;
+    if (!candidate || typeof candidate !== "object") return false;
+    const o = candidate as { taskId?: string; provider?: string; status?: string };
     return (
       typeof o.taskId === "string" &&
       o.taskId.length > 0 &&
       typeof o.provider === "string" &&
       o.provider.length > 0 &&
-      (o.status === "CREATED" || o.status === "IN_PROGRESS")
+      (o.status === "CREATED" || o.status === "IN_PROGRESS" || o.status === "DEFERRED")
     );
   },
 };
@@ -91,7 +96,7 @@ export const manifest = defineManifest({
         provider: z.string(),
         providerModel: z.string(),
         estimatedCostUsd: z.number(),
-        status: z.enum(["CREATED", "IN_PROGRESS"]),
+        status: z.enum(["CREATED", "IN_PROGRESS", "DEFERRED"]),
       }),
       sideEffects: ["DB_WRITE", "EXTERNAL_API"],
       qualityTier: "A",

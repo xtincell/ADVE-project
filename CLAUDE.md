@@ -34,22 +34,20 @@ courante garantie.
 État détaillé : [RECEPTION-PTAH-ADMISSION.md](docs/governance/RECEPTION-PTAH-ADMISSION.md)
 et [RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md).
 
-**Candidat 426 en préparation, production reçue toujours 425** : champs existants
-campaignId/briefId/sourceBrandAssetId transmis MCP/tRPC→Intent→Artemis→Ptah/task-store,
-séquences et forge manuelle depuis BrandAsset. Contrôle partagé de portée avant
-fournisseur/admission, gate brief de campagne existante, tâche historique relue
-en régénération ; descriptif MCP corrigé. Neuf rouges initiaux, puis 35 cas ciblés/
-230 PostgreSQL verts ; types/lint/lint:governance sans erreur, 24 warnings, cycles0.
-MCP/tRPC/replay locaux reçus sur fixtures et vraie session OPERATOR, pas sur une
-forge réelle. Suite complète 4 144 unitaires/1 610 gouvernance verte ; types finaux verts, stress isolé borné sans pages/tRPC, livraison en attente. Forge manuelle Oracle : 412
-sans ADVE puis 500 après création DEFERRED malgré gate satisfaite, désaccord
-enveloppe/post-condition/schémas ; correctif 427 dédié avant image, aucune
-livraison 426 isolée. activeBriefId n’est vérifié que non-null : portée/kind/état
-restent un constat statique ouvert.
-Les fallbacks GloryOutput/BrandAsset ne prouvent
-pas une émission upstream réelle ; batch multiple, reçus documentaires, octets,
-parentAssetId, facture et journal restent ouverts. Aucun nouveau modèle/service/
-Intent/outil/ADR : [reçu filiation](docs/governance/RECEPTION-PTAH-FILIATION.md).
+**Travaux locaux 426+427, production reçue encore 425** : la filiation 426 est
+reçue sur fixtures, sans forge réelle ([reçu](docs/governance/RECEPTION-PTAH-FILIATION.md)).
+Le candidat 427 reconnaît le résultat racine ou enveloppé par Intent OK et admet
+DEFERRED ; les enveloppes refusées et états incompatibles ne deviennent pas OK.
+Deux rouges/neuf verts avant patch, puis 11 tests de contrat verts ; après
+redémarrage local, Oracle HTTP 200/Intent OK/DEFERRED, portée et émission enfant
+vérifiées. Réconciliation/replay stables sur checkpoint synthétique. Gates 427
+et livraison encore en attente ; aucun fournisseur reçu.
+Les trois références d’entrée étaient déjà en 426. Aucun changement UI :
+PtahForgeButton projette encore Intent OK/succès sans état de production DEFERRED.
+Reprendre dans l’UX existante avant acceptation C4/C5/C6 ; pas de preuve de rendu
+par appel de route. activeBriefId, émission upstream, batch multiple, documentaire,
+octets/CDN, parentAssetId, facture et journal restent ouverts.
+Voir [le contrat de résultat](docs/governance/RECEPTION-PTAH-RESULTAT.md).
 
 ---
 

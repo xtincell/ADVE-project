@@ -84,25 +84,31 @@ chaîne FAILED→OK→OK vérifiée, zéro appel fournisseur. Fixture nettoyée.
 Stress isolé sans credentials sans pages/tRPC atteints,
 forges différées, machine d’états bornée. Ce retrait ne ferme pas les dettes suivantes.
 
-**Candidat 426 en préparation** : transmission de campaignId/briefId/
+**Travaux locaux 426+427, livraison en attente** : transmission de campaignId/briefId/
 sourceBrandAssetId, contrôle partagé avant fournisseur/admission, concordance
 de la tâche historique en régénération et descriptif MCP ajustés. Neuf rouges
 initiaux puis 35 cas ciblés/230 PostgreSQL verts ; types/lint/lint:governance sans
 erreur, 24 warnings, zéro cycle. MCP/tRPC/replay locaux sur fixtures reçus ;
-suite complète 4 144 unitaires/1 610 gouvernance verte, stress/tsc final en cours,
-livraison en attente. La forge manuelle
-Oracle échoue nativement après création de tâche et exige le correctif 427
-avant image. Les limites de 425
+suite complète 4 144 unitaires/1 610 gouvernance verte. Le désaccord de sortie
+Oracle est fermé localement en 427 : 11 tests de contrat verts, HTTP 200 après
+redémarrage, Intent OK/output DEFERRED, portée et émission enfant vérifiées.
+Gates 427 et livraison commune encore à recevoir ; production reçue 425.
+Les limites de 425
 ci-dessous sont précisées, sans clôture globale : [reçu filiation](RECEPTION-PTAH-FILIATION.md).
 
 - **Stress et parcours réel hors fixture** : le stress isolé n’a pas atteint les
   pages/tRPC ; les forges sans credentials sont différées. La livraison et ses
   lectures/refus ne reçoivent pas ces parcours ni un cycle réel SPAWT/Noël.
+  PtahForgeButton affiche encore Intent OK et un badge succès sans exposer
+  output.status DEFERRED ; aucun changement UI ni rendu natif n’est reçu en 426/427.
   **Fermer** en exerçant les surfaces accessibles avec acteur natif, puis le
   parcours réel documenté et ses refus, sans assimiler DEFERRED à une livraison
-  fournisseur ni la fixture locale à un média produit. **Déclencheur** : prochaine
-  réception C3/C6 sur serveur joignable et accès fournisseur nécessaires au cas
-  réel ; effort : une recette bornée par parcours.
+  fournisseur ni la fixture locale à un média produit. Distinguer état de demande
+  et état de production dans l’UX existante, sans nouveau workflow, et recevoir
+  le bouton nativement avant acceptation C4/C5/C6. **Déclencheur** : prochaine
+  passe manuelle native ; parcours réel C3/C6 sur serveur joignable et accès
+  fournisseur nécessaires au cas réel ; effort : un lot UX borné et une recette
+  par parcours.
 - **Conservation des octets et propagation CDN** : `download-archiver.ts` peut
   remplir AssetVersion.cdnUrl après l’admission ; le BrandAsset existant conserve
   alors son fileUrl, et un reçu d’URL ne prouve pas la conservation d’un média
@@ -142,13 +148,10 @@ ci-dessous sont précisées, sans clôture globale : [reçu filiation](RECEPTION
   provenance complète ni une source courante garantie. Le contexte repris en
   régénération ne complète pas parentAssetId ni sa sémantique de succession.
   Constat statique de `campaign-manager/brief-gate.ts` : activeBriefId est admis
-  non-null sans contrôle de sa portée/kind/état. Défaut natif distinct sur la
-  forge manuelle Oracle : HTTP 412 sans préconditions ADVE, puis HTTP 500 avec
-  ADVE synthétique ENRICHED et gate RTIS_CASCADE satisfaite, après création d’une
-  tâche DEFERRED. La route enveloppe {status: IntentResult.status, output:
-  ForgeTaskCreated} ; la post-condition du manifeste attend taskId/provider/
-  status CREATED|IN_PROGRESS en racine. Le schéma de sortie exclut aussi DEFERRED
-  et celui d’entrée omet les trois références. Ce parcours manuel n’est pas reçu.
+  non-null sans contrôle de sa portée/kind/état. Le désaccord enveloppe/
+  post-condition/schéma de sortie Oracle est corrigé et reçu localement en 427,
+  retiré des actions restantes ; les trois références d’entrée étaient déjà
+  transmises en 426. Ce reçu HTTP ne reçoit pas le bouton ni une forge réelle.
   **Fermer** en suivant vraie émission, références métier et reçus documentaires
   depuis le writer réel jusqu’à la
   tâche puis au coffre, et en éprouvant correction de source/invalidation,
@@ -157,13 +160,11 @@ ci-dessous sont précisées, sans clôture globale : [reçu filiation](RECEPTION
   refus avant fournisseur et conservation du contexte ; il ne reçoit pas la
   succession complète. Recevoir les lots
   multi-sources par décision explicite et la succession de régénération via les
-  relations existantes, sans deviner une émission ou un parent. Réaligner
-  enveloppe/post-condition et schémas du manifeste dans le **lot 427 immédiat
-  avant image**, puis recevoir le même appel HTTP manuel sans 500 ni tâche
-  dupliquée. Contrôler activeBriefId par portée/kind/état dans le **prochain lot
+  relations existantes, sans deviner une émission ou un parent.
+  Contrôler activeBriefId par portée/kind/état dans le **prochain lot
   de brief documentaire réel avant acceptation C3/C6**. Déclencheur upstream
-  atteint après livraison 425 ; effort : un lot de contrat/recette 427, puis
-  propagation documentaire et succession par relations existantes.
+  atteint après livraison 425 ; effort : propagation documentaire et succession
+  par relations existantes. La livraison commune 426+427 reste à recevoir.
 
 La fermeture best-effort de l’Intent après commit reste la dette distincte
 « Fermeture du journal après commit » ci-dessus : le checkpoint Ptah n’y supplée pas.

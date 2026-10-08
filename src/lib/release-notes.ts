@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.427", date: "2026-10-08",
+    headline: "Une demande différée reste enregistrée sans erreur",
+    highlights: [
+      { emoji: "↻", title: "Une demande à reprendre", body: "Depuis une section du livre de marque, une demande enregistrée sans connexion fournisseur ne renvoie plus une erreur après sa création. Sa tâche reste disponible pour la suite." },
+    ],
+  },
+  {
     version: "6.27.426", date: "2026-10-08",
     headline: "Vos productions conservent leur campagne et leur brief",
     highlights: [

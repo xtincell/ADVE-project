@@ -16,6 +16,7 @@ import { magnificProvider } from "@/server/services/ptah/providers/magnific";
 import { adobeProvider } from "@/server/services/ptah/providers/adobe";
 import { canvaProvider } from "@/server/services/ptah/providers/canva";
 import { figmaProvider } from "@/server/services/ptah/providers/figma";
+import { manifest } from "@/server/services/ptah/manifest";
 
 // Toutes les env vars de credentials lues par les `isAvailable()` providers.
 const CRED_ENV = [
@@ -68,4 +69,24 @@ describe("Ptah providers — isAvailable() pilote le deferral (ADR-0021)", () =>
     process.env.ADOBE_FIREFLY_CLIENT_SECRET = "test-secret";
     expect(await adobeProvider.isAvailable()).toBe(true);
   });
+});
+
+describe("Ptah materialize output contract", () => {
+  const capability = manifest.capabilities.find(c => c.name === "materializeBrief")!;
+  const check = (output: unknown) => capability.postconditions![0]!.check(output, { db: null });
+  const deferred = { taskId: "fixture-task", provider: "openai", providerModel: "default",
+    estimatedCostUsd: 0, status: "DEFERRED" };
+  it("accepts a persisted deferred task without presenting it as materialized", () => {
+    expect(check(deferred)).toBe(true);
+    expect(capability.outputSchema.safeParse(deferred).success).toBe(true);
+  });
+  it("checks the task inside the manual route's successful Intent envelope", () => {
+    expect(check({ status: "OK", output: deferred, sectionId: "fixture" })).toBe(true);
+    expect(check({ status: "OK", output: { ...deferred, status: "IN_PROGRESS" } })).toBe(true);
+  });
+  it.each(["FAILED", "VETOED"])("refuses a %s envelope even with a task-shaped payload", status => {
+    expect(check({ status, output: deferred })).toBe(false);
+  });
+  it.each([{ ...deferred, taskId: "" }, { ...deferred, provider: "" }, { ...deferred, status: "COMPLETED" }])(
+    "refuses incomplete or terminal task receipts", output => expect(check(output)).toBe(false));
 });

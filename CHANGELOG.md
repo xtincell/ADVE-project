@@ -1,5 +1,23 @@
 # Changelog — La Fusee
 
+## v6.27.427 — fix(ptah): reconnaître le reçu d’une demande différée (2026-10-08)
+
+**Une demande différée peut être acceptée sans provoquer un faux échec HTTP.**
+
+- La post-condition accepte ForgeTaskCreated en racine ou dans une enveloppe
+  Intent OK, avec état CREATED/IN_PROGRESS/DEFERRED ; enveloppes FAILED/VETOED,
+  ids/providers invalides et COMPLETED restent refusés. Le schéma de sortie
+  admet DEFERRED ; les trois références d’entrée étaient déjà ajoutées en 426.
+- Deux rouges/neuf verts avant patch, puis 11 tests de contrat verts. Après
+  redémarrage local, forge Oracle HTTP 200/Intent OK/tâche DEFERRED, portée et
+  émission enfant vérifiées ; réconciliation/replay stables sur checkpoint
+  synthétique. Ce reçu ferme le désaccord de sortie, sans recevoir de fournisseur.
+- Gates 427 verts (types/lints sans erreur, 24 warnings préexistants, zéro cycle,
+  4 151 unitaires et 1 610 gouvernance) ; livraison commune 426+427 en attente, production reçue encore 425.
+  Aucune interface modifiée : PtahForgeButton affiche encore OK/succès sans exposer DEFERRED.
+  Plan UX existant et limites provider/média/facture/cycle maintenus dans
+  [le reçu du contrat](docs/governance/RECEPTION-PTAH-RESULTAT.md).
+
 ## v6.27.426 — fix(ptah): transmettre les références métier jusqu’à la forge (2026-10-08)
 
 **Le candidat conserve campagne, brief et actif source dans le circuit existant.**

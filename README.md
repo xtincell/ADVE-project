@@ -88,14 +88,12 @@ filiation upstream et contrats de régénération/MCP restent à recevoir ; les
 fournisseurs réels et leur facturation restent des réceptions distinctes.
 Voir [le reçu courant et ses limites](docs/governance/RECEPTION-PTAH-ADMISSION.md).
 
-**Candidat 6.27.426, réception en attente** : campagne, brief et actif source
-sont transmis jusqu’à la tâche de forge ; portée et tâche historique de
-régénération sont contrôlées avant fournisseur. Neuf rouges initiaux puis
-35 cas ciblés/230 PostgreSQL verts, MCP/tRPC et replay locaux sur fixture reçus.
-Forge manuelle Oracle : 500 après tâche DEFERRED malgré gate satisfaite ; correctif
-427 requis avant image. Suite complète 4 144 unitaires/1 610 gouvernance verte ;
-stress/tsc final/livraison en attente. Cela ne reçoit ni
-provenance complète ni cycle réel : [reçu filiation](docs/governance/RECEPTION-PTAH-FILIATION.md).
+**Travaux locaux 426+427, livraison en attente** : les références métier 426 sont
+reçues sur fixtures ([filiation](docs/governance/RECEPTION-PTAH-FILIATION.md)).
+Le candidat 427 réaligne le reçu de la demande différée : 11 tests de contrat
+verts et appel Oracle HTTP 200/DEFERRED reçus localement, gates/livraison en attente.
+Le bouton n’expose pas encore DEFERRED,
+et aucun cycle réel n’est reçu : [contrat de résultat](docs/governance/RECEPTION-PTAH-RESULTAT.md).
 
 ## Historique des vérifications — 2026-06-19
 

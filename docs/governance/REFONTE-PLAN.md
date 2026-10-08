@@ -1,5 +1,15 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Reçu de demande différée — candidat 427 (2026-10-08)
+
+La post-condition reconnaît le résultat racine ou son enveloppe Intent OK,
+avec DEFERRED admis par le schéma de sortie. Onze tests verts après deux rouges ;
+Oracle HTTP 200/DEFERRED reçu localement après redémarrage, portée et émission
+enfant vérifiées. Désaccord de sortie fermé ; gates/livraison commune 426+427 en
+attente, production encore 425. Aucune interface modifiée : distinguer demande
+et production dans PtahForgeButton reste une reprise de l’UX existante avant
+acceptation C4/C5/C6. Voir [le reçu du contrat](RECEPTION-PTAH-RESULTAT.md).
+
 ## Références métier jusqu’à Ptah — candidat 426 (2026-10-08)
 
 Les champs existants campaignId/briefId/sourceBrandAssetId sont transmis depuis
@@ -9,10 +19,11 @@ brief de campagne est réutilisée. La régénération relit la concordance de s
 historique et conserve ses références ; le descriptif MCP est réaligné.
 Neuf rouges initiaux puis 35 cas ciblés/230 PostgreSQL verts ; types/lint/
 lint:governance sans erreur, 24 warnings, zéro cycle. MCP/tRPC/replay locaux reçus
-sur fixtures ; 4 144 unitaires/1 610 gouvernance verts, stress/tsc final en cours,
-livraison à recevoir, dernier runtime reçu 425. Forge Oracle non reçue : 412 sans
-ADVE puis 500 après tâche DEFERRED malgré gate satisfaite. Correctif 427 dédié
-enveloppe/post-condition/schémas requis avant image ; pas de livraison 426 isolée.
+sur fixtures ; 4 144 unitaires/1 610 gouvernance verts, types finaux reçus ;
+stress isolé sans pages/tRPC et forges différées. Livraison à recevoir, dernier
+runtime reçu 425. Au reçu 426, forge Oracle non reçue : 412 sans ADVE puis 500
+après tâche DEFERRED malgré gate satisfaite. Correctif 427 dédié du contrat de
+sortie reçu localement ci-dessus ; pas de livraison 426 isolée.
 activeBriefId n’est vérifié que non-null : sa
 portée/kind/état rejoint le plan du prochain brief documentaire réel.
 Aucun nouveau modèle/service/Intent/outil/ADR, ni provenance
