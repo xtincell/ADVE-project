@@ -13,7 +13,7 @@ export async function GET(
   if (url.searchParams.get("format") === "public-brand") {
     const edition = await exportPublicBrand(strategyId);
     const origin = request.headers.get("origin");
-    const allowed = origin === "https://spawt.online" || origin === "https://www.spawt.online";
+    const allowed = origin === "https://spawt.online" || origin === "https://www.spawt.online" || origin === "https://portail.spawt.online";
     const headers = {
       "Cache-Control": "public, max-age=0, s-maxage=30",
       "Vary": "Origin",

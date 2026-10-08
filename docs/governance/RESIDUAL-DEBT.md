@@ -2,30 +2,35 @@
 
 ## Édition publique et surfaces de marque — 2026-10-08 (ADR-0209)
 
+Rectification : la dette d’absence/packaging fonts SPAWT était un faux constat
+du checkout local partiel qui excluait public. Git suit dix fichiers de polices ;
+les cinq WOFF2 Klinsman-Regular/Bold et Gotham-Book/Medium/Bold sont reçus en
+production, HTTP 200, font/woff2, signature wOF2 et hashes dans
+`preuves-publication-spawt-423/font-runtime.json`. La fausse dette est retirée,
+sans substitution de police.
+
 - **Activation et consommation à recevoir** : le contrat public borné, la carte
-  Connexions et l’export sont implémentés ; 195 tests PostgreSQL passent, dont 16
+  Connexions et l’export sont implémentés ; avant alias portail, 195 tests PostgreSQL passent, dont 16
   public-brand, ainsi que 4 144 unitaires et 1 610 de gouvernance. La vitrine a
   30 tests/types/vocabulaire/build verts ; sur localhost:3318, titre/Moka/six
   questions/sans compteur sont reçus sans erreur JavaScript observée. PR #4 fusionnée
-  en 346e466, CI 37838306953 verte ; déploiement en cours. Build La Fusée réussi à
+  en 346e466, CI 37838306953 verte ; déploiement terminé à 20:20:09 UTC, CSP/bundle
+  de trois domaines rapprochés du conteneur. Build La Fusée avant alias réussi à
   source stable ; huit HTTP authentifiés locaux, export public/privé et recette
   native FOUNDER isolé reçus : v4 publiée, retour à v3 créant v5, titre/lien relus
   après reload, zéro erreur de page ou réponse >=500. Stress sans finding, sept
-  forges DEFERRED sans provider reçu. La capture historique, les images/runtime423
-  et le raccord SPAWT en production restent à recevoir. **Fermer** par rapprochement
+  forges DEFERRED sans provider reçu. Source La Fusée 8cc1209a/CI 37839043556 reçues
+  avant alias, image 37839472712 annulée avant déploiement. Le CORS exact ajoute
+  https://portail.spawt.online aux origines https spawt.online/WWW ; assertions
+  WWW/portail et refus HTTP/domaines ressemblants, nouvelle source/build/CI/image
+  finales à recevoir. L’interface native reste inchangée ; 423 n’a jamais été
+  déployée. Capture historique, runtime et
+  raccord final SPAWT restent à recevoir. **Fermer** par rapprochement
   source/pins → choix → édition/digest → fichier → consommateur SPAWT → image et
   lecture native, avec panne réseau, conflit, opérateur étranger et retour à la
   précédente. Conserver contenu/versions privés et copie publique pendant les
   refus. **Déclencheur** : suite immédiate C2/C3 de publication SPAWT ; effort :
   une recette de bout en bout et déploiement sur les applications existantes.
-- **Fonts SPAWT non reçues** : le build de la vitrine signale des fichiers
-  Klinsman/Gotham absents de `public/fonts`, défaut préexistant sur la branche
-  distante. Un build vert et la lecture locale ne prouvent pas l’emploi de ces
-  polices. **Fermer** en vérifiant les fichiers de référence et leur disponibilité,
-  le packaging de l’image et les réponses de chargement navigateur, puis en
-  recevant le rendu prévu ; conserver les polices choisies, sans les remplacer.
-  **Déclencheur** : réception C2/C4 de la direction artistique SPAWT avant son
-  acceptation complète ; effort : un lot de packaging et recette de rendu.
 - **Identité au-delà de la copie v1** : public-brand-v1 ne porte pas tokens de
   design, voix structurée ni variantes de logo. Le premier consommateur SPAWT est
   limité au hero et aux liens, sans modifier la direction artistique, le quiz

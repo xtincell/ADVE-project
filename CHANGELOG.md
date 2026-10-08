@@ -22,12 +22,12 @@
   transformation avant gouvernance rétablit la filiation scoped. Le consommateur
   SPAWT est borné à la copie du hero et aux liens, avec conservation de l’existant
   en cas de panne ; réception du consommateur et du déploiement suivies séparément.
-- Réception locale : 195/195 tests PostgreSQL, dont 16 pour public-brand ;
+- Réception locale avant ajout de l’alias portail : 195/195 tests PostgreSQL, dont 16 pour public-brand ;
   4 144/4 144 unitaires sur 395 fichiers et 1 610/1 610 de gouvernance sur 165
   fichiers. Types et linters sans erreur (24 avertissements préexistants), cycles
   nuls. Une contre-épreuve significative du lecteur est reçue en rouge, puis la
   source courante restaurée. Ces résultats ne valent pas livraison en production.
-- Build de production La Fusée réussi, manifeste source identique avant/après.
+- Build de production La Fusée avant alias réussi, manifeste source identique avant/après.
   Huit appels HTTP authentifiés locaux : six réussites, un accès étranger refusé
   et un conflit attendu ; copie publique stable après correction privée et retour
   en version 3. Export anonyme 200/ETag 304, CORS borné et export privé 401 reçus.
@@ -39,11 +39,20 @@
 - Vitrine SPAWT : 30/30 tests, types/vocabulaire/build verts. Lecture locale sur
   localhost:3318 : titre, Moka, six questions et absence de compteur ; aucune erreur
   JavaScript observée. [PR #4](https://github.com/xtincell/project_spawt_mobile_ci/pull/4)
-  fusionnée en 346e466, CI 37838306953 verte ; déploiement en cours. Les fichiers
-  Klinsman/Gotham absents signalés au build restent à vérifier
-  pour la réception complète de la direction artistique, sans police de substitution.
-- CI, image et runtime La Fusée 423, capture historique et raccord SPAWT de
-  production restent à recevoir. Tokens, voix, variantes de logo, autres écrivains/Ptah et
+  fusionnée en 346e466, CI 37838306953 verte ; vitrine déployée le 8 octobre à
+  20:20:09 UTC. CSP et bundle de trois domaines rapprochés du conteneur.
+- Rectification fonts : l’alerte locale venait du sparse-checkout de recette,
+  qui excluait public, et non de fichiers absents du dépôt ou de la production.
+  Git suit dix fichiers de polices ; les cinq WOFF2 Klinsman/Gotham répondent 200,
+  font/woff2, signature wOF2 et hashes reçus dans font-runtime.json. La fausse dette
+  d’absence/packaging est retirée ; aucune substitution de police.
+- Correctif avant le premier déploiement 423 : CORS autorise aussi l’origine exacte
+  https://portail.spawt.online, aux côtés de spawt.online et www.spawt.online en https.
+  Assertions WWW/portail et refus HTTP/domaines ressemblants à recevoir sur la source finale.
+- La Fusée avant alias : source 8cc1209a et CI 37839043556 verte ; construction
+  37839472712 annulée avant déploiement. Nouvelle source/CI/image finales à recevoir ;
+  423 n’a jamais été déployée. Runtime, capture historique et raccord final SPAWT restent
+  à recevoir. Tokens, voix, variantes de logo, autres écrivains/Ptah et
   fermeture durable du journal restent ouverts ; aucun univers de marque complet
   ni chantier Shinkiro n’est déclaré reçu.
 

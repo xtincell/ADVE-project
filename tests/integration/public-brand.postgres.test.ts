@@ -168,6 +168,14 @@ describe("Public brand editions", () => {
     expect(JSON.stringify(payload)).not.toMatch(/PRIVATE|NEVER_PUBLIC|businessContext|sourceReceipts/);
     const cached = await GET(new Request(request, { headers: { "If-None-Match": response.headers.get("etag")! } }), { params: Promise.resolve({ strategyId: s.publicSlug! }) }); expect(cached.status).toBe(304);
     const foreign = await GET(new Request(request, { headers: { Origin: "https://other.invalid" } }), { params: Promise.resolve({ strategyId: s.publicSlug! }) }); expect(foreign.headers.get("access-control-allow-origin")).toBeNull();
+    for (const origin of ["https://www.spawt.online", "https://portail.spawt.online"]) {
+      const alias = await GET(new Request(request, { headers: { Origin: origin } }), { params: Promise.resolve({ strategyId: s.publicSlug! }) });
+      expect(alias.headers.get("access-control-allow-origin")).toBe(origin);
+    }
+    for (const origin of ["http://portail.spawt.online", "https://portail.spawt.online.other.invalid"]) {
+      const unknown = await GET(new Request(request, { headers: { Origin: origin } }), { params: Promise.resolve({ strategyId: s.publicSlug! }) });
+      expect(unknown.headers.get("access-control-allow-origin")).toBeNull();
+    }
     const privateResponse = await GET(new Request(`https://powerupgraders.com/api/export/${s.id}`), { params: Promise.resolve({ strategyId: s.id }) }); expect(privateResponse.status).toBe(401);
   });
 });

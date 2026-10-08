@@ -8,16 +8,23 @@ versionnée, liée aux sources/piliers relus et servie sans dossier privé. Les
 changements privés ne la réécrivent plus ; revenir à une ancienne copie crée une
 nouvelle édition. La migration des pages historiques conserve une observation
 spined sans inventer de revue humaine. Aucun nouveau service, modèle, page,
-agent ou Glory tool. Réception locale : 195 PostgreSQL dont 16 pour le contrat,
+agent ou Glory tool. Réception locale avant alias portail : 195 PostgreSQL dont 16 pour le contrat,
 4 144 unitaires et 1 610 de gouvernance ; types/linters sans erreur, cycles nuls.
 Vitrine : 30 tests/types/vocabulaire/build verts et lecture locale du titre,
 Moka, six questions sans compteur, sans erreur JavaScript observée. PR #4 fusionnée
-en 346e466, CI 37838306953 verte, déploiement en cours ; fonts Klinsman/Gotham à
-vérifier avant réception DA complète. Build La Fusée à source stable, huit appels
+en 346e466, CI 37838306953 verte, vitrine déployée à 20:20:09 UTC ; CSP et bundle
+de trois domaines rapprochés du conteneur. Alerte fonts rectifiée : checkout local
+partiel excluant public, dix fichiers suivis dans Git et cinq WOFF2 Klinsman/Gotham
+reçus en production (200/type/signature/hashes), sans substitution. Build La Fusée
+avant alias à source stable, huit appels
 authentifiés et export public/privé reçus localement. Natif FOUNDER isolé :
 publication v4 et retour à v3 créant v5, copie relue après reload. Stress sans
-finding, sept forges DEFERRED sans prestataire reçu. CI/image/runtime 423 et raccord
-de production restent des réceptions distinctes.
+finding, sept forges DEFERRED sans prestataire reçu. CORS ajoute l’origine https
+exacte portail.spawt.online aux origines spawt.online/WWW, avec HTTP et domaines
+ressemblants exclus. Source 8cc1209a/CI 37839043556 reçues avant alias ; image
+37839472712 annulée avant déploiement. Nouvelle source/build/CI/image et assertions
+CORS finales à recevoir. L’interface native reste inchangée ; 423 n’a jamais été
+déployée, runtime et raccord final restent distincts de ces reçus locaux.
 Ce premier contrat porte la copie publique et les liens, pas les tokens, la voix,
 les variantes d’identité ni l’ensemble du quiz/application. Sept chantiers ouverts.
 

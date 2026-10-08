@@ -64,8 +64,11 @@ table, router, page, agent, Glory tool ou Intent kind n’est créé.
   `format=public-brand`, résolu par slug public, sans authentification ni clé
   permanente. Il expose schéma/slug/édition/version/date/origine observed ou
   chosen/digest/contenu ; les pins et identités privées restent exclus. ETag lie
-  édition et digest, avec réponse 304 et cache court. CORS navigateur est limité
-  à spawt.online et www.spawt.online ; l’édition reste une ressource publique.
+  édition et digest, avec réponse 304 et cache court. CORS navigateur autorise
+  exactement `https://spawt.online`, `https://www.spawt.online` et
+  `https://portail.spawt.online` ; HTTP et domaines ressemblants sont exclus.
+  L’alias portail est ajouté avant le premier déploiement 423 ; l’édition reste
+  une ressource publique.
   L’export intégral JSON/CSV conserve son authentification et son contrôle d’accès.
 - La migration de démarrage capture une seule fois les champs publics bornés des
   marques possédant déjà un slug admissible, sans édition. Elle utilise le spine
@@ -102,13 +105,13 @@ refusés, logo périmé/signé, publication concurrente, retour en nouvelle vers
 format réservé, retry, projection minimale, export privé 401, CORS et ETag.
 La suite couvre aussi le nom public distinct du dossier interne, la correction
 documentaire avant publication, un retour étranger/archivé et la panne d’insertion
-du successeur. Réception locale : 195/195 PostgreSQL dont 16 pour ce contrat,
+du successeur. Réception locale avant ajout de l’alias portail : 195/195 PostgreSQL dont 16 pour ce contrat,
 4 144/4 144 unitaires sur 395 fichiers, 1 610/1 610 de gouvernance sur 165 fichiers ;
 types/linters sans erreur (24 avertissements préexistants), aucun cycle. Une
 contre-épreuve significative du lecteur est reçue en rouge, puis la source
 courante restaurée ; les autres tests ne sont pas déclarés rouges par déduction.
 
-Build de production La Fusée réussi. Le manifeste des sources avant/après est
+Build de production La Fusée avant alias réussi. Le manifeste des sources avant/après est
 identique, SHA-256 `9b731f1bb83b6cd1b7e0404e95c5804d1f85b90cc8e242d712fcec531ed173d8`.
 Huit appels authentifiés locaux reçoivent [200, 403, 200, 409, 200, 200, 200, 200] :
 la correction privée laisse l’ancienne copie publique stable, le retour crée v3.
@@ -124,10 +127,25 @@ observée. `stress:full` : zéro finding, sept forges DEFERRED faute de clés pr
 aucun prestataire n’est reçu par ce stress.
 
 Vitrine SPAWT : PR #4 fusionnée en 346e466, CI 37838306953 verte ; déploiement
-`j6kd6n7k28apge6fukzq71m4` en cours. 30/30 tests, types, vocabulaire et build
+`j6kd6n7k28apge6fukzq71m4` terminé le 8 octobre à 20:20:09 UTC. CSP et bundle
+de trois domaines rapprochés du conteneur. 30/30 tests, types, vocabulaire et build
 verts. Sur localhost:3318, titre/Moka/six questions/sans
-compteur reçus, aucune erreur JavaScript observée. Le build signale les fichiers
-Klinsman/Gotham absents : packaging et disponibilité restent à vérifier, sans
-substitution, avant réception complète de la direction artistique. CI/image/runtime
-La Fusée 423, capture historique et raccord SPAWT en production ne sont pas
-présumés reçus ; la recette locale ne clôt pas le raccord de production.
+compteur reçus, aucune erreur JavaScript observée.
+
+Rectification documentaire : l’alerte d’absence de fonts venait du sparse-checkout
+de `/spawt-vitrine-reception`, qui excluait `/public`. L’arbre Git contient dix
+fichiers dans public/fonts. Les cinq WOFF2 Klinsman-Regular/Bold et
+Gotham-Book/Medium/Bold sont reçus en production : HTTP 200, type font/woff2,
+signature wOF2, SHA-256 consignés dans `preuves-publication-spawt-423/font-runtime.json`.
+Il n’existe donc pas de dette d’absence/packaging démontrée par cette alerte ;
+aucune police n’a été substituée. Cette réception des fichiers n’équivaut pas à
+une réception de tout l’univers de marque.
+
+La Fusée avant alias : source 8cc1209a et CI 37839043556 verte ; la construction
+37839472712 est annulée avant déploiement. L’ajout CORS du portail exige les
+assertions WWW/portail autorisés et HTTP/domaines ressemblants refusés sur la
+nouvelle source finale, puis son build/CI/image. L’interface native est inchangée
+par ce correctif ; ses reçus ci-dessus restent bornés à la source avant alias.
+423 n’a jamais été déployée. Runtime, capture historique et raccord final SPAWT
+en production ne sont pas présumés reçus ; la vitrine déjà déployée ne clôt pas
+seule ce raccord.
