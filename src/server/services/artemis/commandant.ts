@@ -1647,6 +1647,9 @@ async function ptahMaterialize(
     {
       strategyId: intent.strategyId,
       sourceIntentId: intent.sourceIntentId,
+      campaignId: intent.campaignId,
+      briefId: intent.briefId,
+      sourceBrandAssetId: intent.sourceBrandAssetId,
       brief: intent.brief,
       overrideMixViolation: intent.overrideMixViolation,
     },

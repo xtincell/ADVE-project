@@ -65,6 +65,9 @@ export const ptahRouter = createTRPCRouter({
       z.object({
         strategyId: z.string(),
         sourceIntentId: z.string(),
+        campaignId: z.string().nullish(),
+        briefId: z.string().nullish(),
+        sourceBrandAssetId: z.string().nullish(),
         brief: ForgeBriefSchema,
         overrideMixViolation: z.boolean().optional(),
         // C6 (ADR-0103) — « forger quand même » : passe le VETO d'incohérence
@@ -80,6 +83,9 @@ export const ptahRouter = createTRPCRouter({
           strategyId: input.strategyId,
           operatorId,
           sourceIntentId: input.sourceIntentId,
+          campaignId: input.campaignId,
+          briefId: input.briefId,
+          sourceBrandAssetId: input.sourceBrandAssetId,
           brief: input.brief as Extract<Intent, { kind: "PTAH_MATERIALIZE_BRIEF" }>["brief"],
           overrideMixViolation: input.overrideMixViolation,
           coherenceOverride: input.coherenceOverride,

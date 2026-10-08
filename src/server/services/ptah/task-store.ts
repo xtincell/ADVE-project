@@ -20,6 +20,9 @@ interface CreateTaskInput {
   sourceIntentId: string | null;
   operatorId: string;
   strategyId: string | null;
+  campaignId?: string | null;
+  briefId?: string | null;
+  sourceBrandAssetId?: string | null;
   brief: ForgeBrief;
   provider: ProviderName;
   providerModel: string;
@@ -52,6 +55,9 @@ export async function createGenerativeTask(input: CreateTaskInput) {
       sourceIntentId: input.sourceIntentId,
       operatorId: input.operatorId,
       strategyId: input.strategyId,
+      campaignId: input.campaignId,
+      briefId: input.briefId,
+      sourceBrandAssetId: input.sourceBrandAssetId,
       forgeKind: input.brief.forgeSpec.kind,
       provider: input.provider,
       providerModel: input.providerModel,

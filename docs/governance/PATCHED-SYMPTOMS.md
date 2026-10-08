@@ -30,6 +30,17 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-08 · Campagne/brief/actif source se perdaient entre entrées et création
+de tâche ; la régénération réutilisait une tâche incluse sans concordance propre.
+Le candidat 426 transmet les trois références, partage leur contrôle avant
+fournisseur/admission et contrôle la tâche historique. Descriptif MCP réaligné
+sur l’admission. Neuf rouges initiaux puis 35 cas ciblés/230 PostgreSQL verts ;
+MCP/tRPC/replay locaux sur fixtures reçus. Cause : contrats d’entrée, filiation
+et persistance divergeaient. Fallbacks d’émission, sources multiples, provenance
+documentaire, gate activeBriefId, octets/CDN, parentAssetId/facture/journal restent
+planifiés dans RESIDUAL-DEBT. Le 500 manuel Oracle reste un défaut distinct à
+corriger en 427 avant image ; aucune livraison 426 isolée ni cycle réel reçu.
+
 2026-10-08 · Ptah écrivait ses coûts de forge dans un journal zéro-token attribué
 à Anthropic : montant zéro même lorsqu’un résultat persisté portait un autre
 montant/fournisseur. v6.27.425 transmet ces valeurs checkpointées dans la

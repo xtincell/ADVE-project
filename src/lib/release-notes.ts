@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.426", date: "2026-10-08",
+    headline: "Vos productions conservent leur campagne et leur brief",
+    highlights: [
+      { emoji: "🔗", title: "Le bon dossier jusqu’à la bibliothèque", body: "Les références de campagne, de brief et de document source accompagnent désormais la production, même différée ou régénérée. Une référence appartenant à une autre marque est refusée avant l’appel au fournisseur." },
+    ],
+  },
+  {
     version: "6.27.425", date: "2026-10-08",
     headline: "Une production reçue peut reprendre après interruption",
     highlights: [

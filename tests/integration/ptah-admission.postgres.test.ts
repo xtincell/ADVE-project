@@ -5,8 +5,10 @@ vi.mock("@/lib/auth/config", () => ({ auth: vi.fn() }));
 vi.mock("next-auth", () => ({}));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
 import { db } from "@/lib/db";
-import { reconcileTask } from "@/server/services/ptah";
+import { materializeBrief, reconcileTask, regenerateFadingAsset } from "@/server/services/ptah";
 import { getProvider } from "@/server/services/ptah/providers";
+import * as providerSelection from "@/server/services/ptah/routing/provider-selector";
+import type { ForgeBrief } from "@/server/services/ptah/types";
 import { execute } from "@/server/services/artemis/commandant";
 import { POST } from "@/app/api/ptah/webhook/route";
 
@@ -50,6 +52,22 @@ async function counts(strategyId: string) {
   const where = { strategyId };
   return [await db.assetVersion.count({ where }), await db.brandAsset.count({ where }), await db.aICostLog.count({ where })];
 }
+const entryBrief: ForgeBrief = { briefText: "Synthetic campaign production",
+  forgeSpec: { kind: "image", parameters: {} }, pillarSource: "D", manipulationMode: "entertainer" };
+function deferProvider() {
+  return vi.spyOn(providerSelection, "selectProvider").mockRejectedValue(
+    new providerSelection.NoAvailableProviderError("image", ["openai"]));
+}
+async function businessScope(strategyId: string, sourceOperator = operatorId) {
+  const campaign = await db.campaign.create({ data: { strategyId, name: "Synthetic campaign" } });
+  const brief = await db.campaignBrief.create({ data: { campaignId: campaign.id, title: "Synthetic brief", content: {} } });
+  const source = await db.brandAsset.create({ data: { strategyId, operatorId: sourceOperator,
+    name: "Synthetic production brief", kind: "KV_ART_DIRECTION_BRIEF", campaignId: campaign.id, briefId: brief.id } });
+  return { campaignId: campaign.id, briefId: brief.id, sourceBrandAssetId: source.id };
+}
+function entryPayload(strategyId: string, refs: Record<string, string> = {}) {
+  return { strategyId, sourceIntentId: "synthetic-upstream-" + randomUUID(), brief: entryBrief, ...refs };
+}
 async function fault(table: "BrandAsset" | "GenerativeTask", expression: string, run: () => Promise<void>) {
   const constraint = "fixture_forge_" + randomUUID().replaceAll("-", "");
   await db.$executeRawUnsafe(`ALTER TABLE "${table}" ADD CONSTRAINT ${constraint} CHECK (${expression}) NOT VALID`);
@@ -57,6 +75,94 @@ async function fault(table: "BrandAsset" | "GenerativeTask", expression: string,
 }
 
 describe("Ptah result admission", () => {
+  it("retains business scope through the existing commandant and a selected asynchronous provider", async () => {
+    const f = await fixture(), refs = await businessScope(f.strategy.id), payload = entryPayload(f.strategy.id, refs);
+    const forge = vi.fn().mockResolvedValue({ providerTaskId: "synthetic-provider-task", providerModel: "synthetic", estimatedCostUsd: 0 });
+    vi.spyOn(providerSelection, "selectProvider").mockResolvedValue({ ...getProvider("magnific"), name: "magnific",
+      sync: false, forge, estimateCost: () => 0, isAvailable: async () => true });
+    const emissionId = "synthetic-emission-" + randomUUID();
+    const result = await execute({ kind: "PTAH_MATERIALIZE_BRIEF", operatorId, ...payload,
+      brief: { ...payload.brief, forgeSpec: { ...payload.brief.forgeSpec, providerHint: "magnific" } } }, { intentId: emissionId });
+    expect(result.status).toBe("OK"); expect(forge).toHaveBeenCalledTimes(1);
+    const task = await db.generativeTask.findFirstOrThrow({ where: { intentId: emissionId } });
+    expect(task).toMatchObject({ ...refs, sourceIntentId: payload.sourceIntentId, status: "IN_PROGRESS" });
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("retains business references from a deferred entry through material admission", async () => {
+    const f = await fixture(), refs = await businessScope(f.strategy.id);
+    const selection = deferProvider(), payload = entryPayload(f.strategy.id, refs);
+    const result = await materializeBrief(payload, { operatorId, intentId: "synthetic-emission-" + randomUUID() });
+    expect(result.status).toBe("DEFERRED"); expect(selection).toHaveBeenCalledTimes(1);
+    const task = await db.generativeTask.findUniqueOrThrow({ where: { id: result.taskId } });
+    expect(task).toMatchObject({ ...refs, sourceIntentId: payload.sourceIntentId });
+    await db.generativeTask.update({ where: { id: task.id }, data: { status: "IN_PROGRESS", resultUrls: [url], realisedCostUsd: 0 } });
+    const admitted = await reconcileTask(task.id, null);
+    const material = await db.brandAsset.findFirstOrThrow({ where: { sourceAssetVersionId: admitted.assetVersionIds[0] } });
+    expect(material).toMatchObject({ campaignId: refs.campaignId, briefId: refs.briefId, sourceIntentId: task.intentId });
+    expect(material.metadata).toMatchObject({ sourceBrandAssetId: refs.sourceBrandAssetId });
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it.each(["campaignId", "briefId", "sourceBrandAssetId"] as const)("refuses a foreign entry %s before provider selection", async (field) => {
+    const f = await fixture(), other = await fixture();
+    const refs = await businessScope(f.strategy.id), foreign = await businessScope(other.strategy.id);
+    const selection = deferProvider();
+    await expect(materializeBrief(entryPayload(f.strategy.id, { ...refs, [field]: foreign[field] }),
+      { operatorId, intentId: "synthetic-emission-" + randomUUID() })).rejects.toThrow();
+    expect(selection).not.toHaveBeenCalled();
+    expect(await db.generativeTask.count({ where: { strategyId: f.strategy.id } })).toBe(1);
+  });
+
+  it("refuses an entry source attributed to another operator before provider selection", async () => {
+    const f = await fixture(), refs = await businessScope(f.strategy.id, operators[1]);
+    const selection = deferProvider();
+    await expect(materializeBrief(entryPayload(f.strategy.id, refs),
+      { operatorId, intentId: "synthetic-emission-" + randomUUID() })).rejects.toThrow();
+    expect(selection).not.toHaveBeenCalled();
+  });
+
+  it("requires an existing campaign brief before selecting a provider", async () => {
+    const f = await fixture();
+    const campaign = await db.campaign.create({ data: { strategyId: f.strategy.id, name: "No brief" } });
+    const selection = deferProvider();
+    await expect(materializeBrief(entryPayload(f.strategy.id, { campaignId: campaign.id }),
+      { operatorId, intentId: "synthetic-emission-" + randomUUID() })).rejects.toMatchObject({ code: "BRIEF_MISSING" });
+    expect(selection).not.toHaveBeenCalled();
+  });
+
+  it.each(["brand", "operator"] as const)("refuses a version linked to a task of another %s before regeneration", async (foreignScope) => {
+    const f = await fixture(), other = await fixture();
+    if (foreignScope === "operator") await db.generativeTask.update({ where: { id: other.task.id },
+      data: { strategyId: f.strategy.id, operatorId: operators[1] } });
+    const version = await db.assetVersion.create({ data: { strategyId: f.strategy.id, operatorId,
+      generativeTaskId: other.task.id, kind: "image", url, metadata: {} } });
+    const selection = deferProvider();
+    await expect(regenerateFadingAsset({ strategyId: f.strategy.id, assetVersionId: version.id },
+      { operatorId, intentId: "synthetic-emission-" + randomUUID() })).rejects.toThrow();
+    expect(selection).not.toHaveBeenCalled();
+  });
+
+  it("retains the original business scope when regenerating a compatible version", async () => {
+    const f = await fixture(), refs = await businessScope(f.strategy.id);
+    await db.generativeTask.update({ where: { id: f.task.id }, data: refs });
+    const version = await db.assetVersion.create({ data: { strategyId: f.strategy.id, operatorId,
+      generativeTaskId: f.task.id, kind: "image", url, metadata: {} } });
+    deferProvider();
+    const result = await regenerateFadingAsset({ strategyId: f.strategy.id, assetVersionId: version.id },
+      { operatorId, intentId: "synthetic-emission-" + randomUUID() });
+    expect(await db.generativeTask.findUniqueOrThrow({ where: { id: result.taskId } }))
+      .toMatchObject({ ...refs, sourceIntentId: f.task.intentId });
+  });
+
+  it("keeps a brand-wide manual production valid without inventing campaign references", async () => {
+    const f = await fixture(); deferProvider();
+    const result = await materializeBrief(entryPayload(f.strategy.id),
+      { operatorId, intentId: "synthetic-emission-" + randomUUID() });
+    expect(await db.generativeTask.findUniqueOrThrow({ where: { id: result.taskId } }))
+      .toMatchObject({ campaignId: null, briefId: null, sourceBrandAssetId: null });
+  });
+
   it.each(["BrandAsset", "GenerativeTask"] as const)("keeps a checkpoint and rolls back admission on late %s failure", async (table) => {
     const f = await fixture();
     vi.spyOn(getProvider("openai"), "reconcile").mockResolvedValue({ resultUrls: [url], realisedCostUsd: 0.07, completedAt: new Date() });

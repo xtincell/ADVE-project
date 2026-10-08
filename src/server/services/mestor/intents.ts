@@ -296,6 +296,9 @@ export type Intent =
       kind: "PTAH_MATERIALIZE_BRIEF";
       strategyId: string;
       operatorId: string;
+      campaignId?: string | null;
+      briefId?: string | null;
+      sourceBrandAssetId?: string | null;
       sourceIntentId: string;
       brief: {
         briefText: string;

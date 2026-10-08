@@ -131,6 +131,9 @@ export const strategyPresentationRouter = createTRPCRouter({
         strategyId: input.strategyId,
         operatorId: strategy.operatorId,
         sourceIntentId: brandAsset.sourceIntentId ?? brandAsset.id,
+        campaignId: brandAsset.campaignId,
+        briefId: brandAsset.briefId,
+        sourceBrandAssetId: brandAsset.id,
         brief: {
           briefText,
           forgeSpec: {

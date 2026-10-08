@@ -85,6 +85,9 @@ export interface ForgeBrief {
  */
 export interface MaterializeBriefPayload {
   strategyId: string;
+  campaignId?: string | null;
+  briefId?: string | null;
+  sourceBrandAssetId?: string | null;
   /** intentId du INVOKE_GLORY_TOOL Artemis qui a produit le brief. */
   sourceIntentId: string;
   brief: ForgeBrief;

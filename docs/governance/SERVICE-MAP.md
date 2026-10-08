@@ -78,6 +78,15 @@ Canva/Figma renvoient encore un résultat vide, désormais refusé. Octets/CDN,
 factures et filiation business upstream restent ouverts, distincts du close du
 spine : [réception et limites](RECEPTION-PTAH-ADMISSION.md).
 
+En préparation, candidat 426 : transmission des références métier depuis
+MCP/tRPC/séquences/forge manuelle, contrôle partagé avant fournisseur et admission,
+tâche historique de régénération contrôlée, descriptif MCP corrigé. Neuf rouges
+initiaux puis 35 cas ciblés/230 PostgreSQL verts, MCP/tRPC/replay locaux reçus sur
+fixtures ; 4 144 unitaires/1 610 gouvernance verts, stress/tsc final en cours.
+Forge Oracle 500 malgré gate satisfaite : correctif 427 dédié avant image,
+aucune livraison 426 isolée reçue ou promise.
+Voir [le reçu filiation](RECEPTION-PTAH-FILIATION.md).
+
 ```
 src/server/services/ptah/
 ├── manifest.ts             # governor: MESTOR, acceptsIntents: PTAH_MATERIALIZE_BRIEF, PTAH_RECONCILE_TASK, PTAH_REGENERATE_FADING_ASSET

@@ -264,6 +264,7 @@ async function executeGloryStep(
         toolOutput: output,
         // sourceIntentId préfère la vraie IntentEmission row si dispo, fallback gloryOutput.id
         sourceIntentId: gloryIntentId ?? outputId,
+        sourceBrandAssetId: brandAssetIds.length === 1 ? brandAssetIds[0] : undefined,
         strategyId,
         context,
       });
@@ -420,6 +421,7 @@ export async function chainGloryToPtah(args: {
   tool: NonNullable<ReturnType<typeof getGloryTool>>;
   toolOutput: Record<string, unknown>;
   sourceIntentId: string;
+  sourceBrandAssetId?: string;
   strategyId: string;
   context: SequenceContext;
 }): Promise<string | undefined> {
@@ -468,6 +470,9 @@ export async function chainGloryToPtah(args: {
       operatorId: strategy.operatorId,
       // sourceIntentId = vraie IntentEmission INVOKE_GLORY_TOOL ID (hash-chain Mestor)
       sourceIntentId,
+      campaignId: context._campaignId as string | undefined,
+      briefId: context._briefId as string | undefined,
+      sourceBrandAssetId: args.sourceBrandAssetId,
       brief: {
         briefText,
         forgeSpec: {

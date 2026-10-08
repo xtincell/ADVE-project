@@ -80,6 +80,9 @@ export const manifest = defineManifest({
       inputSchema: z.object({
         strategyId: z.string(),
         sourceIntentId: z.string(),
+        campaignId: z.string().nullish(),
+        briefId: z.string().nullish(),
+        sourceBrandAssetId: z.string().nullish(),
         brief: ForgeBriefSchema,
         overrideMixViolation: z.boolean().optional(),
       }),

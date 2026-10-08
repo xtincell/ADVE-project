@@ -81,6 +81,16 @@ Le stress isolé ne reçoit pas les pages/tRPC ni les fournisseurs sans credenti
 Le journal terminal du spine, les octets/CDN et les adaptateurs réels
 restent distincts : [réception courante](RECEPTION-PTAH-ADMISSION.md).
 
+**Candidat 426** : les références métier existantes traversent les entrées
+MCP/tRPC et les producteurs jusqu’à la tâche ; le même contrôle de portée
+précède le fournisseur et l’admission. Régénération et descriptif MCP sont
+ajustés, sans nouvelle couche. Neuf rouges initiaux puis 35 cas ciblés/230
+PostgreSQL verts ; MCP/tRPC/replay locaux reçus sur fixtures, zéro fournisseur
+réel. Suite complète 4 144 unitaires/1 610 gouvernance verte ; stress/tsc final
+en cours. Le 500 natif de forge Oracle impose un correctif 427 avant image ;
+pas de livraison 426 isolée :
+[réception filiation](RECEPTION-PTAH-FILIATION.md).
+
 ## Glory tools — outils intriqués
 
 ```mermaid

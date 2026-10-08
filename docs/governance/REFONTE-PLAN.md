@@ -1,5 +1,23 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Références métier jusqu’à Ptah — candidat 426 (2026-10-08)
+
+Les champs existants campaignId/briefId/sourceBrandAssetId sont transmis depuis
+MCP/tRPC, séquences et forge manuelle du coffre jusqu’à GenerativeTask. Le contrôle
+partagé de portée précède la sélection fournisseur et l’admission ; la gate de
+brief de campagne est réutilisée. La régénération relit la concordance de sa tâche
+historique et conserve ses références ; le descriptif MCP est réaligné.
+Neuf rouges initiaux puis 35 cas ciblés/230 PostgreSQL verts ; types/lint/
+lint:governance sans erreur, 24 warnings, zéro cycle. MCP/tRPC/replay locaux reçus
+sur fixtures ; 4 144 unitaires/1 610 gouvernance verts, stress/tsc final en cours,
+livraison à recevoir, dernier runtime reçu 425. Forge Oracle non reçue : 412 sans
+ADVE puis 500 après tâche DEFERRED malgré gate satisfaite. Correctif 427 dédié
+enveloppe/post-condition/schémas requis avant image ; pas de livraison 426 isolée.
+activeBriefId n’est vérifié que non-null : sa
+portée/kind/état rejoint le plan du prochain brief documentaire réel.
+Aucun nouveau modèle/service/Intent/outil/ADR, ni provenance
+complète ou cycle réel présumé : [réception filiation](RECEPTION-PTAH-FILIATION.md).
+
 ## Admission Ptah après résultat — 2026-10-08
 
 Correctif 6.27.425 livré, sur les primitives existantes. Le résultat

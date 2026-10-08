@@ -84,6 +84,17 @@ chaîne FAILED→OK→OK vérifiée, zéro appel fournisseur. Fixture nettoyée.
 Stress isolé sans credentials sans pages/tRPC atteints,
 forges différées, machine d’états bornée. Ce retrait ne ferme pas les dettes suivantes.
 
+**Candidat 426 en préparation** : transmission de campaignId/briefId/
+sourceBrandAssetId, contrôle partagé avant fournisseur/admission, concordance
+de la tâche historique en régénération et descriptif MCP ajustés. Neuf rouges
+initiaux puis 35 cas ciblés/230 PostgreSQL verts ; types/lint/lint:governance sans
+erreur, 24 warnings, zéro cycle. MCP/tRPC/replay locaux sur fixtures reçus ;
+suite complète 4 144 unitaires/1 610 gouvernance verte, stress/tsc final en cours,
+livraison en attente. La forge manuelle
+Oracle échoue nativement après création de tâche et exige le correctif 427
+avant image. Les limites de 425
+ci-dessous sont précisées, sans clôture globale : [reçu filiation](RECEPTION-PTAH-FILIATION.md).
+
 - **Stress et parcours réel hors fixture** : le stress isolé n’a pas atteint les
   pages/tRPC ; les forges sans credentials sont différées. La livraison et ses
   lectures/refus ne reçoivent pas ces parcours ni un cycle réel SPAWT/Noël.
@@ -95,17 +106,14 @@ forges différées, machine d’états bornée. Ce retrait ne ferme pas les dett
 - **Conservation des octets et propagation CDN** : `download-archiver.ts` peut
   remplir AssetVersion.cdnUrl après l’admission ; le BrandAsset existant conserve
   alors son fileUrl, et un reçu d’URL ne prouve pas la conservation d’un média
-  temporaire. Le descriptif MCP `src/server/mcp/ptah/index.ts::ptah_reconcile_task`
-  promet encore download CDN/ASSET_FORGED, contrairement au catalogue reçu ;
-  constat statique, pas exécution E2E. **Fermer** en éprouvant download/stockage/
-  relecture après expiration,
+  temporaire. Le descriptif MCP borné est reçu localement en discovery/catalogue
+  et appel 426 ; cette cause est retirée du plan de transport.
+  **Fermer** en éprouvant download/stockage/relecture après expiration,
   hash des octets et reprise, puis en raccordant la référence durable au coffre
-  sous ses verrous existants, sans réactiver les archives. Réaligner le descriptif
-  MCP sur le contrat réel et recevoir tools/list puis appel borné dans le prochain
-  lot upstream/MCP ; ne pas transformer une description en capacité présumée.
-  **Déclencheur** : prochaine passe upstream/MCP après livraison 425, désormais
-  atteinte, et avant réception C3/C6/publication d’un média temporaire réel ;
-  effort : un lot archiver/coffre et recette de stockage/contrat configurés.
+  sous ses verrous existants, sans réactiver les archives.
+  **Déclencheur** : prochaine passe stockage après livraison du lot courant,
+  avant réception C3/C6/publication d’un média temporaire réel ; effort : un lot
+  archiver/coffre et recette de stockage configuré.
 - **Canva/Figma — réconciliation vide** : `providers/canva.ts` et `figma.ts`
   renvoient toujours `resultUrls: []`, désormais refusé comme résultat invalide.
   **Fermer** en raccordant le résultat d’export/polling réel au contrat existant,
@@ -120,25 +128,42 @@ forges différées, machine d’états bornée. Ce retrait ne ferme pas les dett
   puis en rapprochant chaque tâche du reçu sans substituer une estimation.
   **Déclencheur** : première forge facturée reçue par fournisseur, avant promesse
   de comptabilité exhaustive ; effort : un lot contrat/coût et recette par facture.
-- **Références métier à l’entrée** : `materializeBrief` ne transmet pas encore
-  toutes les références business upstream à la création de GenerativeTask.
-  Contrôler les références présentes à la réconciliation ne remplit pas celles
-  absentes. Les reçus documentaires sourceDataSourceId/sourceContentHash ne sont
+- **Filiation au-delà des trois références métier** : le candidat 426 transmet
+  campaignId/briefId/sourceBrandAssetId jusqu’à GenerativeTask et contrôle la
+  tâche historique en régénération ; ces références et refus sont reçus localement
+  dans les 35 cas ciblés, livraison encore à recevoir.
+  sourceIntentId conserve des fallbacks GloryOutput/BrandAsset qui ne prouvent
+  pas une émission upstream réelle. Une séquence ne transmet l’actif source que
+  si le lot est unique ; plusieurs sources restent ambiguës, sans sélection
+  arbitraire. Les reçus documentaires sourceDataSourceId/sourceContentHash ne sont
   pas encore propagés jusqu’au matériau ; l’invalidation après correction de la
   source et staleAt n’est pas reçue. Le cas positif conserve sourceBrandAssetId
   en metadata, campaignId/briefId/sourceIntentId ; il ne démontre pas une
-  provenance complète ni une source courante garantie. Constat statique voisin :
-  regenerateFadingAsset filtre AssetVersion par stratégie/opérateur, mais réutilise
-  parameters/provider/pilier/intentId de la GenerativeTask historique incluse sans
-  revalider sa propre stratégie/opérateur ; la FK ne garantit pas cette concordance.
-  **Fermer** en suivant références business et reçus documentaires depuis le writer réel jusqu’à la
+  provenance complète ni une source courante garantie. Le contexte repris en
+  régénération ne complète pas parentAssetId ni sa sémantique de succession.
+  Constat statique de `campaign-manager/brief-gate.ts` : activeBriefId est admis
+  non-null sans contrôle de sa portée/kind/état. Défaut natif distinct sur la
+  forge manuelle Oracle : HTTP 412 sans préconditions ADVE, puis HTTP 500 avec
+  ADVE synthétique ENRICHED et gate RTIS_CASCADE satisfaite, après création d’une
+  tâche DEFERRED. La route enveloppe {status: IntentResult.status, output:
+  ForgeTaskCreated} ; la post-condition du manifeste attend taskId/provider/
+  status CREATED|IN_PROGRESS en racine. Le schéma de sortie exclut aussi DEFERRED
+  et celui d’entrée omet les trois références. Ce parcours manuel n’est pas reçu.
+  **Fermer** en suivant vraie émission, références métier et reçus documentaires
+  depuis le writer réel jusqu’à la
   tâche puis au coffre, et en éprouvant correction de source/invalidation,
-  refus inter-marques et reprise, par extension des contrats existants. Ajouter
-  le contre-exemple d’une version locale liée à une tâche étrangère : refus avant
-  tout fournisseur, conservation de campagne/brief/source. Aucun reçu E2E de ce
-  contre-exemple n’est annoncé. **Déclencheur atteint** : livraison 425 reçue,
-  prochaine passe upstream du chantier d’irrigation C3/C6
-  depuis le brief réel ; effort : un lot de propagation et recette.
+  refus inter-marques et reprise, par extension des contrats existants. Le
+  contre-exemple version locale/tâche étrangère est reçu sur PostgreSQL, avec
+  refus avant fournisseur et conservation du contexte ; il ne reçoit pas la
+  succession complète. Recevoir les lots
+  multi-sources par décision explicite et la succession de régénération via les
+  relations existantes, sans deviner une émission ou un parent. Réaligner
+  enveloppe/post-condition et schémas du manifeste dans le **lot 427 immédiat
+  avant image**, puis recevoir le même appel HTTP manuel sans 500 ni tâche
+  dupliquée. Contrôler activeBriefId par portée/kind/état dans le **prochain lot
+  de brief documentaire réel avant acceptation C3/C6**. Déclencheur upstream
+  atteint après livraison 425 ; effort : un lot de contrat/recette 427, puis
+  propagation documentaire et succession par relations existantes.
 
 La fermeture best-effort de l’Intent après commit reste la dette distincte
 « Fermeture du journal après commit » ci-dessus : le checkpoint Ptah n’y supplée pas.

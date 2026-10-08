@@ -41,6 +41,7 @@ import type {
 } from "./types";
 import { PILLAR_KEYS, type PillarKey } from "@/domain";
 import { FORGE_KINDS, MANIPULATION_MODES } from "./types";
+import { assertCampaignHasBrief } from "../campaign-manager/brief-gate";
 
 export { manifest } from "./manifest";
 
@@ -62,8 +63,8 @@ export async function materializeBrief(
   payload: MaterializeBriefPayload,
   ctx: { operatorId: string; intentId: string },
 ): Promise<ForgeTaskCreated> {
-  const strategy = await db.strategy.findUnique({ where: { id: payload.strategyId }, select: { operatorId: true } });
-  if (!strategy || strategy.operatorId !== ctx.operatorId) throw new Error("PTAH_TASK_SCOPE_MISMATCH");
+  await assertBusinessScope(db, { ...payload, operatorId: ctx.operatorId });
+  if (payload.campaignId) await assertCampaignHasBrief(payload.campaignId);
   ensurePillarSource(payload.brief);
   await checkManipulationCoherence(
     payload.strategyId,
@@ -100,6 +101,9 @@ export async function materializeBrief(
         sourceIntentId: payload.sourceIntentId,
         operatorId: ctx.operatorId,
         strategyId: payload.strategyId,
+        campaignId: payload.campaignId,
+        briefId: payload.briefId,
+        sourceBrandAssetId: payload.sourceBrandAssetId,
         brief: payload.brief,
         provider: nominal,
         providerModel: payload.brief.forgeSpec.modelHint ?? "default",
@@ -151,6 +155,9 @@ export async function materializeBrief(
     sourceIntentId: payload.sourceIntentId,
     operatorId: ctx.operatorId,
     strategyId: payload.strategyId,
+    campaignId: payload.campaignId,
+    briefId: payload.briefId,
+    sourceBrandAssetId: payload.sourceBrandAssetId,
     brief: payload.brief,
     provider: provider.name,
     providerModel: payload.brief.forgeSpec.modelHint ?? "default",
@@ -362,6 +369,14 @@ async function assertTaskScope(client: Prisma.TransactionClient, task: Generativ
     || !(MANIPULATION_MODES as readonly string[]).includes(task.manipulationMode)) throw new Error("PTAH_TASK_PROVENANCE_INVALID");
   if (["VETOED", "EXPIRED"].includes(task.status)) throw new Error("PTAH_TASK_NOT_RECONCILABLE");
   if (!task.strategyId || (strategyId && task.strategyId !== strategyId)) throw new Error("PTAH_TASK_SCOPE_MISMATCH");
+  await assertBusinessScope(client, { ...task, strategyId: task.strategyId });
+}
+
+/** Shared entry/reconcile boundary; reject foreign references before provider work. */
+async function assertBusinessScope(client: Prisma.TransactionClient, task: {
+  strategyId: string; operatorId: string;
+  campaignId?: string | null; briefId?: string | null; sourceBrandAssetId?: string | null;
+}) {
   const strategy = await client.strategy.findUnique({ where: { id: task.strategyId }, select: { operatorId: true } });
   if (!strategy || strategy.operatorId !== task.operatorId) throw new Error("PTAH_TASK_SCOPE_MISMATCH");
   if (task.campaignId) {
@@ -377,7 +392,7 @@ async function assertTaskScope(client: Prisma.TransactionClient, task: Generativ
   if (task.sourceBrandAssetId) {
     const source = await client.brandAsset.findUnique({ where: { id: task.sourceBrandAssetId } });
     if (!source || source.strategyId !== task.strategyId || source.operatorId !== task.operatorId
-      || source.campaignId !== task.campaignId || source.briefId !== task.briefId) throw new Error("PTAH_SOURCE_SCOPE_MISMATCH");
+      || source.campaignId !== (task.campaignId ?? null) || source.briefId !== (task.briefId ?? null)) throw new Error("PTAH_SOURCE_SCOPE_MISMATCH");
   }
 }
 
@@ -401,6 +416,8 @@ export async function regenerateFadingAsset(
   if (!original.generativeTask) {
     throw new Error(`Ptah regenerate: AssetVersion has no source GenerativeTask`);
   }
+  if (original.generativeTask.operatorId !== ctx.operatorId) throw new Error("PTAH_TASK_SCOPE_MISMATCH");
+  await assertTaskScope(db, original.generativeTask, payload.strategyId);
   // Re-construire un brief depuis le task original (simplifié — Phase H raffinement)
   const brief: ForgeBrief = {
     briefText: `[REGEN] Asset fading detected — refresh narrative & visuals while preserving brand identity.`,
@@ -417,6 +434,9 @@ export async function regenerateFadingAsset(
     {
       strategyId: payload.strategyId,
       sourceIntentId: original.generativeTask.intentId,
+      campaignId: original.generativeTask.campaignId,
+      briefId: original.generativeTask.briefId,
+      sourceBrandAssetId: original.generativeTask.sourceBrandAssetId,
       brief,
     },
     ctx,

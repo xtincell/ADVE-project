@@ -30,12 +30,26 @@ zéro de plusieurs providers ne prouvent pas la gratuité. Références business
 upstream, reçus documentaires sourceDataSourceId/sourceContentHash, invalidation
 après correction de source/staleAt et close best-effort du spine restent des
 dettes distinctes. Ne pas revendiquer une provenance complète ou une source
-courante garantie. Déclencheur de reprise upstream atteint : contrôler aussi
-la concordance de la tâche historique incluse par regenerateFadingAsset et
-réaligner le descriptif MCP ptah_reconcile_task, encore trop large, dans le
-prochain lot ; constats statiques, aucune reproduction E2E de ces deux défauts.
+courante garantie.
 État détaillé : [RECEPTION-PTAH-ADMISSION.md](docs/governance/RECEPTION-PTAH-ADMISSION.md)
 et [RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md).
+
+**Candidat 426 en préparation, production reçue toujours 425** : champs existants
+campaignId/briefId/sourceBrandAssetId transmis MCP/tRPC→Intent→Artemis→Ptah/task-store,
+séquences et forge manuelle depuis BrandAsset. Contrôle partagé de portée avant
+fournisseur/admission, gate brief de campagne existante, tâche historique relue
+en régénération ; descriptif MCP corrigé. Neuf rouges initiaux, puis 35 cas ciblés/
+230 PostgreSQL verts ; types/lint/lint:governance sans erreur, 24 warnings, cycles0.
+MCP/tRPC/replay locaux reçus sur fixtures et vraie session OPERATOR, pas sur une
+forge réelle. Suite complète 4 144 unitaires/1 610 gouvernance verte ; types finaux verts, stress isolé borné sans pages/tRPC, livraison en attente. Forge manuelle Oracle : 412
+sans ADVE puis 500 après création DEFERRED malgré gate satisfaite, désaccord
+enveloppe/post-condition/schémas ; correctif 427 dédié avant image, aucune
+livraison 426 isolée. activeBriefId n’est vérifié que non-null : portée/kind/état
+restent un constat statique ouvert.
+Les fallbacks GloryOutput/BrandAsset ne prouvent
+pas une émission upstream réelle ; batch multiple, reçus documentaires, octets,
+parentAssetId, facture et journal restent ouverts. Aucun nouveau modèle/service/
+Intent/outil/ADR : [reçu filiation](docs/governance/RECEPTION-PTAH-FILIATION.md).
 
 ---
 

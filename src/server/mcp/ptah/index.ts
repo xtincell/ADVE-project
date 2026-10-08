@@ -43,6 +43,9 @@ const materializeBriefSchema = z.object({
   strategyId: z.string(),
   operatorId: z.string(),
   sourceIntentId: z.string().describe("IntentEmission ID du INVOKE_GLORY_TOOL Artemis qui a produit ce brief — lineage hash-chain"),
+  campaignId: z.string().nullish(),
+  briefId: z.string().nullish(),
+  sourceBrandAssetId: z.string().nullish(),
   briefText: z.string(),
   forgeKind: forgeKindEnum,
   providerHint: providerEnum.optional(),
@@ -79,6 +82,9 @@ export const tools: ToolDefinition[] = [
           strategyId: parsed.strategyId,
           operatorId: parsed.operatorId,
           sourceIntentId: parsed.sourceIntentId,
+          campaignId: parsed.campaignId,
+          briefId: parsed.briefId,
+          sourceBrandAssetId: parsed.sourceBrandAssetId,
           brief: {
             briefText: parsed.briefText,
             forgeSpec: {
@@ -99,7 +105,7 @@ export const tools: ToolDefinition[] = [
   {
     name: "ptah_reconcile_task",
     description:
-      "Réconcilie un GenerativeTask depuis un webhook provider — download URLs vers CDN, crée AssetVersion, track cost réalisé, emit ASSET_FORGED. Sync.",
+      "Réconcilie une tâche dans sa marque : conserve le résultat fournisseur puis admet ensemble versions, coffre, coût déclaré et état terminé. Rejouable après interruption ; ne garantit ni octets durables ni facture fournisseur.",
     inputSchema: reconcileTaskSchema,
     handler: async (input) => {
       const parsed = reconcileTaskSchema.parse(input);

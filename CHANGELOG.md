@@ -1,5 +1,33 @@
 # Changelog — La Fusee
 
+## v6.27.426 — fix(ptah): transmettre les références métier jusqu’à la forge (2026-10-08)
+
+**Le candidat conserve campagne, brief et actif source dans le circuit existant.**
+
+- campaignId/briefId/sourceBrandAssetId traversent MCP/tRPC, Intent, Artemis et
+  Ptah jusqu’à GenerativeTask, y compris séquences et forge manuelle du coffre.
+  Un contrôle partagé relit leur portée avant sélection fournisseur et pendant
+  admission ; la gate existante exige un brief pour la campagne.
+- La régénération contrôle la marque et l’opérateur de sa tâche historique et
+  reprend ses références métier. Le descriptif MCP de réconciliation décrit
+  l’admission, sans promettre CDN/ASSET_FORGED. Aucun nouveau modèle, service,
+  Intent, outil ou ADR.
+- Réception locale : neuf rouges initiaux, puis 35 cas PostgreSQL ciblés et
+  230 PostgreSQL complets verts ; types/lint/lint:governance sans erreur,
+  24 warnings préexistants, zéro cycle. MCP réel discovery/catalogue et appels,
+  tRPC sous session OPERATOR, refus étranger et replay de checkpoint reçus sur
+  fixture, sans fournisseur réel. Suite complète : 4 144 unitaires/1 610
+  gouvernance verts ; stress isolé et tsc final en cours, livraison à recevoir.
+  Production reçue encore 425. Fallbacks
+  d’émission upstream, sources multiples, provenance documentaire, octets/CDN,
+  parentAssetId, facture et journal restent ouverts ; aucun cycle réel SPAWT/Noël
+  ni clôture des sept chantiers. activeBriefId n’est vérifié que non-null par la
+  gate existante ; sa portée/kind/état restent au plan documentaire.
+  Forge manuelle Oracle non reçue : 412 sans ADVE, puis 500 malgré gate satisfaite
+  après tâche DEFERRED créée (enveloppe/post-condition et schémas divergents).
+  Correctif 427 dédié requis avant image ; aucune livraison 426 isolée.
+  Voir [le reçu filiation](docs/governance/RECEPTION-PTAH-FILIATION.md).
+
 ## v6.27.425 — docs(governance): recevoir la livraison Ptah sans présumer une forge réelle (2026-10-08)
 
 **Le correctif d’admission est livré ; la reprise après interruption reste une preuve locale.**
