@@ -5,7 +5,7 @@
  * Les générateurs de livrables serveur (Brand Bible PDF, Oracle PDF) rendaient
  * dans la palette UPgraders EN DUR. Ce module dérive un thème **des couleurs de
  * la marque** — depuis son coffre (`CHROMATIC_STRATEGY` / `TYPOGRAPHY_SYSTEM` /
- * `LOGO_*`) et, en second, le pilier D `directionArtistique` — pour que le
+ * `LOGO_*`) — pour que le
  * livrable sorte à l'identité du client (SPAWT en noir/or, Motion19 en bleu),
  * pas au gabarit générique.
  *
@@ -28,6 +28,7 @@
 
 import { db as defaultDb } from "@/lib/db";
 import type { PrismaClient } from "@prisma/client";
+import { portfolioFileUrl } from "@/domain/portfolio-reference";
 
 export type RGB = readonly [number, number, number];
 
@@ -169,7 +170,7 @@ export function collectHexes(content: unknown): { accent: string | null; primary
 }
 
 /** Extrait les familles typographiques (tolérant SPAWT `primary/secondary` vs Motion19 `display/text`). */
-export function extractFontFamilies(content: unknown): { display: string | null; body: string | null } {
+export function extractFontFamilies(content: unknown): { display: string | null; body: string | null; all: string[] } {
   const c = content && typeof content === "object" ? (content as Record<string, unknown>) : {};
   const fam = (v: unknown): string | null => {
     if (typeof v === "string" && v.trim()) return v.trim();
@@ -179,10 +180,11 @@ export function extractFontFamilies(content: unknown): { display: string | null;
     }
     return null;
   };
-  return {
-    display: fam(c.primary) ?? fam(c.display) ?? fam(c.titrage) ?? null,
-    body: fam(c.secondary) ?? fam(c.text) ?? fam(c.body) ?? null,
-  };
+  const recorded = Array.isArray(c.fonts) ? c.fonts : [];
+  const byRole = (role: RegExp) => recorded.find((f) => f && typeof f === "object" && typeof f.role === "string" && role.test(f.role.trim()));
+  const display = fam(c.primary) ?? fam(c.display) ?? fam(c.titrage) ?? fam(byRole(/^(primary|display|titrage|titres?)$/i));
+  const body = fam(c.secondary) ?? fam(c.text) ?? fam(c.body) ?? fam(byRole(/^(secondary|body|text|texte|corps)$/i));
+  return { display, body, all: [...new Set([display, body, ...recorded.map(fam)].filter((f): f is string => Boolean(f)))] };
 }
 
 // ── Construction pure du thème ───────────────────────────────────────────────
@@ -262,50 +264,46 @@ export function buildBrandTheme(input: {
 
 // ── Résolution async (lecture coffre) ────────────────────────────────────────
 
-/**
- * Résout le thème de rendu d'une marque depuis son coffre. Lecture SEULE, zéro
- * LLM. `CHROMATIC_STRATEGY`/`TYPOGRAPHY_SYSTEM` ACTIVE en priorité, puis récent ;
- * logo `LOGO_FINAL` ACTIVE > récent > `LOGO_IDEA`. Rien → thème UPgraders.
+/** One selection for cockpit, guidelines and renderers. Never upgrades an asset.
+ * Read the eligible pool before ranking: a recent-window limit hid old ACTIVEs.
  */
+export async function resolveBrandIdentity(strategyId: string, client: PrismaClient = defaultDb) {
+  const assets = await client.brandAsset.findMany({
+    where: { strategyId, kind: { in: ["CHROMATIC_STRATEGY", "TYPOGRAPHY_SYSTEM", "LOGO_FINAL", "LOGO_IDEA"] },
+      state: { notIn: ["SUPERSEDED", "ARCHIVED", "REJECTED"] }, staleAt: null },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    select: { id: true, kind: true, name: true, content: true, fileUrl: true,
+      state: true, version: true, metadata: true, createdAt: true },
+  });
+  const byKind = (kind: string) => assets.filter((a) => a.kind === kind);
+  const select = <T extends { state: string }>(rows: T[]) => rows.find((a) => a.state === "ACTIVE") ?? rows[0] ?? null;
+  const finals = byKind("LOGO_FINAL").filter((a) => portfolioFileUrl(a.fileUrl));
+  const ideas = byKind("LOGO_IDEA").filter((a) => portfolioFileUrl(a.fileUrl));
+  const chromatics = byKind("CHROMATIC_STRATEGY");
+  const typographies = byKind("TYPOGRAPHY_SYSTEM");
+  return {
+    logo: select(finals) ?? select(ideas),
+    chromatic: select(chromatics),
+    typography: select(typographies),
+    counts: { logos: finals.length + ideas.length, palettes: chromatics.length, typographies: typographies.length },
+    // More than one ACTIVE is a recorded ambiguity, not consensus or approval.
+    activeCounts: { logos: (finals.length ? finals : ideas).filter((a) => a.state === "ACTIVE").length,
+      palettes: chromatics.filter((a) => a.state === "ACTIVE").length,
+      typographies: typographies.filter((a) => a.state === "ACTIVE").length },
+  };
+}
+
+/** Read only, zero LLM. A recorded ACTIVE state is not proof of human approval. */
 export async function resolveBrandTheme(strategyId: string, client?: PrismaClient): Promise<BrandTheme> {
   const db = client ?? defaultDb;
-  const [strategy, chromatics, typographies, logos] = await Promise.all([
+  const [strategy, identity] = await Promise.all([
     db.strategy.findUnique({ where: { id: strategyId }, select: { name: true } }),
-    db.brandAsset.findMany({
-      where: { strategyId, kind: "CHROMATIC_STRATEGY", state: { notIn: ["ARCHIVED", "REJECTED"] } },
-      orderBy: { createdAt: "desc" },
-      take: 4,
-      select: { content: true, state: true },
-    }),
-    db.brandAsset.findMany({
-      where: { strategyId, kind: "TYPOGRAPHY_SYSTEM", state: { notIn: ["ARCHIVED", "REJECTED"] } },
-      orderBy: { createdAt: "desc" },
-      take: 4,
-      select: { content: true, state: true },
-    }),
-    db.brandAsset.findMany({
-      where: {
-        strategyId,
-        kind: { in: ["LOGO_FINAL", "LOGO_IDEA"] },
-        fileUrl: { not: null },
-        state: { notIn: ["ARCHIVED", "REJECTED"] },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 12,
-      select: { kind: true, fileUrl: true, state: true },
-    }),
+    resolveBrandIdentity(strategyId, db),
   ]);
-
-  const chromatic = (chromatics.find((c) => c.state === "ACTIVE") ?? chromatics[0])?.content ?? null;
-  const typography = (typographies.find((t) => t.state === "ACTIVE") ?? typographies[0])?.content ?? null;
-  const finals = logos.filter((l) => l.kind === "LOGO_FINAL");
-  const logoUrl =
-    (finals.find((l) => l.state === "ACTIVE") ?? finals[0] ?? logos[0])?.fileUrl ?? null;
-
   return buildBrandTheme({
-    chromatic,
-    typography,
-    logoUrl,
+    chromatic: identity.chromatic?.content ?? null,
+    typography: identity.typography?.content ?? null,
+    logoUrl: identity.logo?.fileUrl ?? null,
     brandName: strategy?.name ?? "",
   });
 }

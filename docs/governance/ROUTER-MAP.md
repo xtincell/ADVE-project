@@ -65,7 +65,7 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 | `strategy.ts` | Strategy CRUD + comparables | M | point gouverné présent |
 | `strategy-presentation.ts` | Oracle 35 sections (assemblage read-time + exports ; génération via router `oracle` — legacy `enrichOracle` déposé ADR-0125) | M | point gouverné présent |
 | `framework.ts` | Frameworks Artemis | M | point gouverné présent |
-| `guidelines.ts` | Brand guidelines render | M | point gouverné présent |
+| `guidelines.ts` | Identité et références ; partage gouverné (ADR-0203) | M | point gouverné présent |
 | `boot-sequence.ts` | Boot sequence trigger | M | point gouverné présent |
 | `brand-vault.ts` | Vault brand content | M | point gouverné présent |
 | `implementation-generator.ts` | Plans d'implémentation | M | point gouverné présent |

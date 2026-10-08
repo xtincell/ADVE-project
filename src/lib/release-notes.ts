@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.413", date: "2026-10-08",
+    headline: "Vos guidelines relisent l’identité conservée",
+    highlights: [
+      { emoji: "📖", title: "Le dossier reste lisible", body: "Logo, couleurs, typographies et documents de référence se consultent ensemble. Actualiser relit les données sans modifier votre marque." },
+      { emoji: "🔎", title: "Propositions et sources distinctes", body: "Une proposition reste signalée comme telle. Les références modifiées ou devenues inaccessibles sont indiquées, sans validation inventée." },
+    ],
+  },
+  {
     version: "6.27.412", date: "2026-10-08",
     headline: "Vos fichiers et leurs origines restent lisibles",
     highlights: [

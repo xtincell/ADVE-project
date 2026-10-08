@@ -648,57 +648,19 @@ export const cockpitRouter = createTRPCRouter({
         }
       }
 
-      const [logos, typographyCount, chromatics, vaultTotal] = await Promise.all([
-        ctx.db.brandAsset.findMany({
-          where: {
-            strategyId: strategy.id,
-            kind: { in: ["LOGO_FINAL", "LOGO_IDEA"] },
-            fileUrl: { not: null },
-            state: { notIn: ["ARCHIVED", "REJECTED"] },
-          },
-          orderBy: { createdAt: "desc" },
-          take: 12,
-          select: { id: true, kind: true, name: true, fileUrl: true, state: true },
-        }),
-        ctx.db.brandAsset.count({
-          where: { strategyId: strategy.id, kind: "TYPOGRAPHY_SYSTEM", state: { notIn: ["ARCHIVED", "REJECTED"] } },
-        }),
-        ctx.db.brandAsset.findMany({
-          where: { strategyId: strategy.id, kind: "CHROMATIC_STRATEGY", state: { notIn: ["ARCHIVED", "REJECTED"] } },
-          orderBy: { createdAt: "desc" },
-          take: 4,
-          select: { content: true, state: true },
-        }),
+      const { resolveBrandIdentity, collectHexes } = await import("@/server/services/brand-theme");
+      const [identity, vaultTotal] = await Promise.all([
+        resolveBrandIdentity(strategy.id, ctx.db),
         ctx.db.brandAsset.count({ where: { strategyId: strategy.id } }),
       ]);
-
-      // Logo actif : LOGO_FINAL ACTIVE > LOGO_FINAL récent > LOGO_IDEA récent.
-      const finals = logos.filter((l) => l.kind === "LOGO_FINAL");
-      const logo =
-        finals.find((l) => l.state === "ACTIVE") ?? finals[0] ?? logos[0] ?? null;
-
-      // ADR-0130 — palette de la marque (actif CHROMATIC_STRATEGY structuré).
-      // Hex STRICTEMENT validés avant de sortir (ils finissent en CSS custom
-      // properties côté client — jamais de chaîne libre injectée).
-      const HEX = /^#[0-9a-fA-F]{6}$/;
-      const chromaticContent = (chromatics.find((c) => c.state === "ACTIVE") ?? chromatics[0])?.content as
-        | { accent?: unknown; primary?: unknown }
-        | null
-        | undefined;
-      const accent = typeof chromaticContent?.accent === "string" && HEX.test(chromaticContent.accent) ? chromaticContent.accent : null;
-      const primary = typeof chromaticContent?.primary === "string" && HEX.test(chromaticContent.primary) ? chromaticContent.primary : null;
-
+      const { logo } = identity;
+      // The same strict color reader is used by guidelines and exports.
+      const { accent, primary } = collectHexes(identity.chromatic?.content);
       return {
         brandName: strategy.name,
         logo: logo ? { url: logo.fileUrl as string, name: logo.name, state: String(logo.state) } : null,
-        // null = pas de palette déclarée → le cockpit garde le thème par défaut.
         palette: accent || primary ? { accent: accent ?? primary, primary: primary ?? accent } : null,
-        assetCounts: {
-          logos: finals.length,
-          typographies: typographyCount,
-          palettes: chromatics.length,
-          total: vaultTotal,
-        },
+        assetCounts: { ...identity.counts, total: vaultTotal },
       };
     }),
 

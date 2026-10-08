@@ -80,9 +80,14 @@ describe("ADR-0129 — StrategyCollaborator (accès délégué par marque)", () 
     expect(strategyRouter).toMatch(/kind: "REVOKE_STRATEGY_COLLABORATOR"[\s\S]{0,400}requireOperator: true/);
   });
 
-  it("(6) le theming cockpit ne sort JAMAIS un hex non validé (ADR-0130)", () => {
+  it("(6) le theming cockpit ne sort JAMAIS un hex non validé (ADR-0130)", async () => {
     const router = read("src/server/trpc/routers/cockpit-router.ts");
-    expect(router).toMatch(/HEX = \/\^#\[0-9a-fA-F\]\{6\}\$\//);
+    expect(router).toContain("collectHexes(identity.chromatic?.content)");
+    const { collectHexes } = await import("@/server/services/brand-theme");
+    for (const invalid of ["#abc", "red", "#AABBCC; background:url(evil)", "javascript:evil", null, {}]) {
+      expect(collectHexes({ accent: invalid, primary: invalid })).toEqual({ accent: null, primary: null, all: [] });
+    }
+    expect(collectHexes({ accent: "#AABBCC", primary: "#112233" }).all).toEqual(["#AABBCC", "#112233"]);
     const theme = read("src/components/cockpit/brand-theme.tsx");
     expect(theme).toContain("HEX.test(accent)");
   });

@@ -45,6 +45,8 @@ const SCAN_DIRS = [
 const EXTRA_FILES = [
   join(ROOT, "src/lib/operate-config.ts"),
   join(ROOT, "src/components/brand/source-preparation-option.tsx"),
+  join(ROOT, "src/components/brand/source-read-dialog.tsx"),
+  join(ROOT, "src/components/brand/guidelines-document.tsx"),
   join(ROOT, "src/components/creative-intelligence/recipe-cards.tsx"),
   join(ROOT, "src/components/creative-intelligence/advanced-observations.tsx"),
   join(ROOT, "src/components/portfolio/BrandWorkspace.tsx"),

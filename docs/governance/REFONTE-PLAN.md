@@ -1318,3 +1318,12 @@ Argos explicitement revue. Les lots manuels codés doivent être recensés dans 
 maps ; l'ADR consigne leur validation avant toute affirmation de livraison.
 Les accès externes et la traversée Argos-studio restent dans RESIDUAL-DEBT avec
 leurs déclencheurs réels, sans réinventer le fonds documentaire de SHK-0002.
+
+### Réception 8 octobre 2026 — lecteurs de guidelines (ADR-0203)
+
+Guidance, ARTEMIS existant : le lecteur de guidelines et le cockpit consomment
+la même sélection d’identité que les rendus. Aucun modèle/Intent/service créé.
+Le contrat structuré remplace la recherche heuristique de neuf titres HTML ;
+la consultation documentaire réutilise le lecteur de Sources. Les références
+et les propositions restent distinctes d’une charte adoptée. La réconciliation
+des corpus et l’irrigation vers les publications ne sont pas closes par ce lot.

@@ -410,7 +410,7 @@ Définition de « fermé » (loi opérateur) : fonctionnel en prod + verrou CI +
 ### Contamination inter-items + guidelines incohérentes (Root 2 du fix v6.27.326) — déférés
 
 - **Root 1 (contamination « Betsy dans Awa ») — ✅ CLOS v6.27.326** (`buildFieldAnchor` + `summarizePillar`/`compactPillar` identity-preserving + consigne LLM + notoria inline). Reste ci-dessous le Root 2, distinct (changement de comportement à valider en adversarial).
-- **Root 2a — « Guidelines de marque » rendues ≠ vrai brand book (MED, divergence de source)** *(finding agent Explore, v6.27.326)* : le renderer `guidelines-renderer` (page cockpit `/cockpit/brand/guidelines` + PDF public) lit le pilier `d.directionArtistique.brandGuidelines` — champ **fabricable** par le Glory tool `brand-guidelines-generator` ET l'auto-filler — tandis que le VRAI brand book ingéré vit dans le vault (`BrandAsset` kind `BRAND_BOOK` + assets DRAFT/ACTIVE `CHROMATIC_STRATEGY`/`TYPOGRAPHY_SYSTEM`), que le renderer NE lit PAS. Le persister d'ingestion (`brand-book-ingestion/persister.ts`) **n'écrit délibérément pas** `directionArtistique.*` (anti-misfile). Résultat : palette/typo/guidelines affichées peuvent être une invention LLM qui contredit le book réel (« les infos sont fausses, les bonnes ont pourtant été définies »). **Fermeture (2 voies, à trancher en adversarial)** : (a) le renderer PRÉFÈRE les assets vault OFFICIAL/ACTIVE (`resolveBrandTheme` existe déjà pour palette/typo — l'étendre aux guidelines) + badge provenance INFERRED vs OFFICIAL ; OU (b) source-first : `extractFromSources` lit les assets vault d'identité pour ancrer le fill de `directionArtistique` sur le book réel. **Déclencheur** : dès la prochaine passe guidelines/brand-book. Effort ~1 session. **NB** : l'ancre v6.27.326 réduit déjà l'incohérence intra-`directionArtistique` (chaque `sections[i].content` ancré à son `title` + sœurs), mais n'injecte pas la palette réelle du vault.
+- **Root 2a — guidelines issues du coffre (ADR-0203, correction 6.27.413)** : le renderer ne réimprime plus `directionArtistique.brandGuidelines` comme règles. Contrat structuré écran/export, sélection d’identité commune avec le cockpit, remplacés et périmés exclus, références et reçus documentaires distincts. Trois contre-exemples PostgreSQL rouges avant correction ; six scénarios du lot verts, suites 1 706/95. Écran local authentifié, source consultée et trois HTML relus reçus ; aucun appel IA ni écriture. **Reste à recevoir** : CI/image et version servie. **Reprise** : avant clôture du lot 413. La réconciliation des variantes de charte/logo/palette/typo du corpus SPAWT est une décision documentaire séparée ; la présence d’un actif ACTIVE ne la ferme pas.
 - **Root 2b — régen wholesale d'un objet top-level à forme invalide écrase des feuilles définies quand la provenance est UNKNOWN/INFERRED (MED, clobber)** *(finding agent Explore, v6.27.326)* : le fill est empty-only au grain feuille/cellule (prouvé), MAIS un champ top-level OBJET flaggé `missing` pour **forme jugée invalide** (`assessor` : `offShape > intersection`, ou string legacy là où un objet est attendu, ou array/string sous le seuil) est régénéré EN ENTIER (`setNestedValue(content, "<topKey>", value)`) → clobbe ses feuilles définies. La garde de provenance (`provenance-guard.ts`) protège HUMAN/SOURCE au grain top-level, mais est **INERTE pour UNKNOWN (seed direct, ex. SPAWT/Motion19) et INFERRED**. `confirmInferredField` n'accorde PAS HUMAN (efface juste le badge). **Fermeture** : ne pas régénérer wholesale un objet top-level qui porte des feuilles définies non-vides — préférer le fill additif de ses feuilles vides (retirer ce topKey du set de régen quand `Object.keys(non-vide) > 0`), OU étendre la garde de provenance pour refuser tout INFERRED qui RÉDUIT l'information (feuilles définies → écrasées). **Risque** : changement de comportement transverse aux 8 piliers → passe adversariale dédiée obligatoire. **Déclencheur** : prochaine passe « Enrichir ne détruit jamais du défini », ou si l'opérateur constate une régression de données définies après Enrichir. Effort ~1 session.
 
 ## Chantier « notoria profondeur + recos lisibles » 2026-07-23 ([ADR-0177](adr/0177-schema-leaf-inventory-and-notoria-depth.md)) — déférés
@@ -1002,3 +1002,18 @@ sign-off direction (cf. § Actions opérateur).
   par `executeStructuredLLMCall` (ADR-0067).
 - **Won't-do historiques** (V8 sandbox, multi-region, Web Components, GraphQL, Yjs full runtime) —
   inchangés.
+
+### Harnais de stress global — cible et providers à isoler
+
+Inspection statique du 8 octobre 2026 : `scripts/stress-test.ts` annonce des
+forges « mock », mais sa phase 4 appelle réellement `materializeBrief` avec
+`providerHint: magnific`, sur le premier opérateur et sa stratégie. Aucun
+adaptateur mock ni cible de recette dédiée n’est imposé dans cette phase.
+`stress:full` n’est donc pas une preuve reçue du lot 413 et n’a pas été exécuté.
+Les lecteurs modifiés sont éprouvés séparément sous session et PostgreSQL
+jetable ; aucune forge ni classification n’est nécessaire à ces lectures.
+
+Plan : imposer une base et une cible jetables, injecter explicitement un
+provider de test et prouver qu’aucun appel réseau sortant n’est possible avant
+de relancer le stress global. Déclencheur : prochaine réception globale des
+ateliers/forges (C5), avant d’utiliser ce harnais comme gate de release.

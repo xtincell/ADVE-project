@@ -176,7 +176,7 @@ Le founder édite et consulte tous les aspects de sa fusée.
 | `/cockpit/brand/assets/page.tsx` | Propulsion | M | active | Vault assets brand |
 | `/cockpit/brand/deliverables/page.tsx` | Propulsion | M | active | Liste livrables |
 | `/cockpit/brand/deliverables/[key]/page.tsx` | Propulsion | M | active | Livrable détail |
-| `/cockpit/brand/guidelines/page.tsx` | Propulsion | M | active | Brand guidelines rendered |
+| `/cockpit/brand/guidelines/page.tsx` | Guidance | M | active | Identité enregistrée et références consultables (ADR-0203) |
 | `/cockpit/brand/jehuty/page.tsx` | Telemetry | M | active | Jehuty pour ce founder |
 | `/cockpit/brand/notoria/page.tsx` | Propulsion | M | active | Pipeline Notoria |
 | `/cockpit/brand/offer/page.tsx` | Guidance | M | active | Offre commerciale |

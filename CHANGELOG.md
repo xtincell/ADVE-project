@@ -1,5 +1,36 @@
 # Changelog — La Fusee
 
+## v6.27.413 — fix(guidelines): relire l’identité et ses documents sans la réinventer (2026-10-08)
+
+**Une marque déjà documentée ne paraît plus vide dans ses guidelines.**
+
+- Contrat objet/HTML réparé : la page consomme l’identité et les références
+  du service réel. Les neuf sections heuristiques et le pourcentage fabriqué
+  disparaissent. Actualiser est une lecture ; aucun remplissage assisté ni
+  remplacement irréversible n’est annoncé. Sources et Guidelines partagent
+  le même lecteur documentaire, chargé à la demande.
+- ADR-0203, Guidance/ARTEMIS existants : une sélection de coffre commune au
+  cockpit, au thème et aux guidelines. Un ACTIVE ancien n’est plus masqué par
+  quatre propositions récentes ; remplacés, archivés, rejetés et périmés sont
+  exclus. Plusieurs ACTIVE restent une ambiguïté, pas une approbation.
+- Exports HTML et imprimables issus de la même identité ; pas de profil inféré
+  réimprimé comme charte. Reçus documentaires absents, modifiés ou inaccessibles
+  explicites ; aucune source étrangère exposée par un identifiant de metadata.
+  Texte des sources consultable dans le dossier, distinct des exports. Aucun
+  modèle, Intent, écriture de corpus ou appel IA ajouté à la consultation.
+- Trois contre-exemples PostgreSQL et deux rendus de page rouges avant correction.
+  Six scénarios PostgreSQL du lot passent ensuite ; suites locales : 1 706 tests
+  gouvernance/portfolio et 95 PostgreSQL. Typage, lints (24 warnings historiques),
+  cycles, audit et build passent. HTTP authentifié : cinq lectures/exports 200
+  en 13–73 ms, puis cinq refus 403 depuis un autre compte ; compteurs identiques.
+- Natif local sous session : page et document consulté reçus, 58 réponses sans
+  erreur, zéro exception. DOM observé à 491 ms, titre constaté à 9 373 ms entre
+  appels d’outil : bornes d’observation, pas mesure du premier affichage. Export
+  natif de 2 824 octets retrouvé sur disque après expiration du suivi, sans
+  deuxième clic ; trois HTML reparsés et même document hors date de lecture.
+  La version servie reste à recevoir ; réconciliation sémantique, partage public,
+  thème jour natif et raccord marque → publication restent ouverts.
+
 ## v6.27.412 — fix(portfolio): distinguer les écritures des approbations (2026-10-08)
 
 **Le dossier de marque expose les versions sans fabriquer leur validation.**

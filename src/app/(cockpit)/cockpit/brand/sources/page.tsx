@@ -23,6 +23,7 @@ import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Modal } from "@/components/shared/modal";
+import { SourceReadDialog } from "@/components/brand/source-read-dialog";
 import { SourcePreparationOption } from "@/components/brand/source-preparation-option";
 import {
   FileText, Upload, Image as ImageIcon, MessageSquare,
@@ -468,7 +469,11 @@ function SourceUses({ sourceId }: { sourceId: string }) {
   </div>;
 }
 
-function SourceEditModal({
+function SourceEditModal(props: { sourceId: string; strategyId: string; onClose: () => void; onSaved: () => void; readOnly?: boolean }) {
+  return props.readOnly ? <SourceReadDialog sourceId={props.sourceId} strategyId={props.strategyId} onClose={props.onClose} /> : <EditableSourceModal {...props} />;
+}
+
+function EditableSourceModal({
   sourceId,
   strategyId,
   onClose,

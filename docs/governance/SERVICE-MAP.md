@@ -112,7 +112,7 @@ Génèrent la poussée vers l'apogée. **19 services briefs (incl. `deliverable-
 | `campaign-plan-generator/` | Génération plans de campagne | ARTEMIS | ✅ existant |
 | `mission-templates/` | Templates de missions standard | ARTEMIS | ✅ existant |
 | `implementation-generator/` | Génération plans d'implémentation | ARTEMIS | ✅ existant |
-| `guidelines-renderer/` | Rendu brand guidelines (livrable) | ARTEMIS | ✅ existant |
+| `guidelines-renderer/` | Lecture identité du coffre, références et exports (ADR-0203) | ARTEMIS | ✅ existant |
 | `value-report-generator/` | Rendu rapport valeur (livrable client) | ARTEMIS | ✅ existant |
 | `seshat-bridge/` | **Bridge** Telemetry → Propulsion (signaux qui déclenchent missions) | ARTEMIS | ✅ existant |
 | `ptah/` | **Forge orchestrator** — matérialise les briefs en assets (image/video/audio/icon/refine/...) | **PTAH** (ADR-0009) | ✅ existant |
@@ -132,7 +132,7 @@ Dirigent la trajectoire. Décisions, validations, plans.
 | Service | Rôle guidance | Governor | Manifest |
 |---|---|---|---|
 | `brand-bible/` | Composition déterministe du livre de marque, lecture seule (ADR-0185) | Extension de Guidance | sans manifest propre |
-| `brand-theme/` | Thème de rendu dérivé des assets et du pilier D (ADR-0169) | Extension de Guidance | sans manifest propre |
+| `brand-theme/` | Sélection d’identité commune et thème issu du coffre (ADR-0169/0203) | Extension de Guidance | sans manifest propre |
 | `brand-tier-transition/` | Handler de transition de palier après gate (ADR-0167) | MESTOR | sans manifest propre |
 | `mestor/` | Computer de guidage central — Intent dispatcher (`emitIntent`) | MESTOR | partiel (`intents.ts:179`) |
 | `pillar-gateway/` | Écriture gouvernée des Pillars (`writePillarAndScore`) | MESTOR | ✅ existant |
