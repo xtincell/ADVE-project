@@ -66,11 +66,12 @@ npm run dev                 # → http://localhost:3000
 
 ## État courant borné — 2026-10-08
 
-La dernière livraison de production reçue est **6.27.423** : SPAWT consomme
-son édition publique choisie, limitée aux textes et liens. Le raccord complet
-de l’univers de marque et les sept chantiers Shinkiro restent ouverts.
+La dernière livraison de production reçue est **6.27.425**, source 2a296152,
+CI 37850685120 et image 37850690058 rapprochées du runtime exact. Le corpus privé
+et l’édition publique SPAWT sont conservés ; son raccord reste limité aux textes
+et liens. L’univers de marque complet et les sept chantiers Shinkiro restent ouverts.
 
-Le correctif **6.27.425 est en réception** : Ptah conserve le résultat avant
+Le correctif **6.27.425 est livré** : Ptah conserve le résultat avant
 admission, puis écrit versions, coffre, reçu de coût et COMPLETED ensemble.
 La reprise retrouve les mêmes actifs et respecte leurs archives. Vingt-quatre
 tests d’admission PostgreSQL isolés sont verts après dix contre-exemples initiaux
@@ -78,8 +79,12 @@ rouges ; le fournisseur y est synthétique. Suites locales : 4 144 unitaires,
 219 PostgreSQL, 1 610 gouvernance verts ; zéro cycle, lint sans erreur/24 warnings.
 HTTP local après panne injectée et redémarrage reçu : checkpoint conservé,
 retry/replay 200 avec les mêmes ids et une seule admission, zéro appel fournisseur.
-Image et déploiement 425 restent à recevoir. Le stress isolé n’a pas atteint les pages/tRPC ; ses
-forges sans credentials sont différées. La conservation des octets, les
+En production, seuls version, lectures et refus ont été exercés ; aucune tâche
+ni version de forge n’y existait avant ou après livraison. La reprise locale ne
+prouve donc aucune forge réelle SPAWT/Noël. Connexions 425 et son édition publique
+v1 sont relues nativement sans soumission. Le stress isolé n’a pas atteint les
+pages/tRPC ; ses forges sans credentials sont différées. Conservation des octets,
+filiation upstream et contrats de régénération/MCP restent à recevoir ; les
 fournisseurs réels et leur facturation restent des réceptions distinctes.
 Voir [le reçu courant et ses limites](docs/governance/RECEPTION-PTAH-ADMISSION.md).
 

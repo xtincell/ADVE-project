@@ -4,7 +4,9 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-08
 
-**Production reçue : 6.27.423. Candidat en réception : 6.27.425, admission Ptah.**
+**Production reçue : 6.27.425, admission Ptah — code livré, preuve de reprise locale.**
+Source 2a296152, CI 37850685120 et image 37850690058 reçues ; déploiement terminé
+à 22:14:28 UTC, runtime nextjs/version/index concordants, volume privé conservé.
 Le résultat fournisseur est checkpointé dans GenerativeTask avant la transaction
 unique versions/coffre/coût/COMPLETED. Reprise stable, archives préservées et scope
 marque/équipe/campagne/brief/source sont éprouvés sur PostgreSQL isolé : 24 tests
@@ -17,14 +19,21 @@ zéro cycle, lint sans erreur/24 warnings. HTTP réel : refus 400/403/400, panne
 500 sans admission puis arrêt/nouveau processus ; retry/replay 200 identiques,
 mêmes ids et une version/un actif/un coût, chaîne FAILED→OK→OK vérifiée.
 Checkpoint synthétique, zéro appel fournisseur, fixture nettoyée/serveur arrêté.
-Image et déploiement 425 restent à recevoir. Stress isolé sans credentials : pages/tRPC non atteints, forges
+Production : version/lecture/refus reçus, corpus privé et édition SPAWT inchangés ;
+zéro GenerativeTask/AssetVersion avant et après, aucune forge réelle réparée.
+Connexions rechargée/hydratée nativement : version 425, édition v1 et liens relus,
+note vue puis fermée, aucune soumission ni métrique réseau native capturée.
+Stress isolé sans credentials : pages/tRPC non atteints, forges
 différées ; ne pas déclarer le stress E2E entièrement reçu.
 Canva/Figma réconcilient toujours une liste vide, désormais refusée ; les montants
 zéro de plusieurs providers ne prouvent pas la gratuité. Références business
 upstream, reçus documentaires sourceDataSourceId/sourceContentHash, invalidation
 après correction de source/staleAt et close best-effort du spine restent des
 dettes distinctes. Ne pas revendiquer une provenance complète ou une source
-courante garantie ; reprendre l’irrigation après livraison 425.
+courante garantie. Déclencheur de reprise upstream atteint : contrôler aussi
+la concordance de la tâche historique incluse par regenerateFadingAsset et
+réaligner le descriptif MCP ptah_reconcile_task, encore trop large, dans le
+prochain lot ; constats statiques, aucune reproduction E2E de ces deux défauts.
 État détaillé : [RECEPTION-PTAH-ADMISSION.md](docs/governance/RECEPTION-PTAH-ADMISSION.md)
 et [RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md).
 

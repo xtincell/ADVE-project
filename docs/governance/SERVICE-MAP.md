@@ -61,17 +61,18 @@ src/server/services/anubis/
 
 Dépendances satellites : `email`, `oauth-integrations`, `advertis-connectors`, `financial-brain`. **4 nouveaux models Prisma** : `CommsPlan`, `BroadcastJob`, `EmailTemplate`, `SmsTemplate`. Réutilise `Notification`, `NotificationPreference`, `WebhookConfig`, `ExternalConnector` existants. Pages : `/console/anubis/page.tsx` (dashboard) + `/console/anubis/credentials/page.tsx` (Credentials Center). Router tRPC : `anubis.ts`.
 
-### Ptah — service Phase 9 existant ; admission 425 en réception
+### Ptah — service Phase 9 existant ; code d’admission 425 livré
 
-ADR-0009 décrit la fondation historique. État courant au 2026-10-08 : le candidat
+ADR-0009 décrit la fondation historique. État courant au 2026-10-08 : le correctif
 6.27.425 checkpoint le résultat fournisseur avant l’admission atomique
 versions/coffre/coût/COMPLETED ; webhook et sync passent par PTAH_RECONCILE_TASK.
 Vingt-quatre tests d’admission PostgreSQL isolés verts, fournisseur synthétique ;
 suites locales 4 144 unitaires/219 PostgreSQL/1 610 gouvernance vertes, zéro cycle,
 lint sans erreur/24 warnings. HTTP après panne et arrêt/nouveau processus reçu :
 checkpoint conservé, retry/replay 200, mêmes ids et admission unique, chaîne
-FAILED→OK→OK vérifiée ; zéro appel fournisseur. Livraison 425 à recevoir,
-production reçue encore 423. Le stress
+FAILED→OK→OK vérifiée ; zéro appel fournisseur. Source 2a296152, CI 37850685120,
+image 37850690058 et runtime exact 425 reçus ; corpus/édition SPAWT conservés,
+aucune tâche/version de forge en production avant/après. Le stress
 isolé ne reçoit pas les pages/tRPC ; les forges sans credentials sont différées.
 Canva/Figma renvoient encore un résultat vide, désormais refusé. Octets/CDN,
 factures et filiation business upstream restent ouverts, distincts du close du

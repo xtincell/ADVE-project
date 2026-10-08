@@ -40,7 +40,8 @@ forme LLM, filiation et preuve fournisseur étaient assimilées. La cause
 COMPLETED avant coffre est corrigée et retirée de RESIDUAL-DEBT.
 Vingt-quatre tests PostgreSQL locaux verts ;
 les factures absentes, références business upstream, octets/CDN et close du spine
-restent distincts, planifiés dans RESIDUAL-DEBT. Livraison 425 encore à recevoir.
+restent distincts, planifiés dans RESIDUAL-DEBT. Code 425 reçu en production
+le 8 octobre ; aucun fournisseur ni cycle de forge réel reçu.
 
 2026-10-08 · L’instrumentation Edge tentait de résoudre `http` via web-push
 malgré le retour anticipé `NEXT_RUNTIME !== "nodejs"`. v6.27.424 enveloppe les

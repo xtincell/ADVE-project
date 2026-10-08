@@ -68,32 +68,44 @@ sept chantiers ; les résidus actifs suivent.
 ## Ptah — limites après admission atomique locale 425 (2026-10-08)
 
 L’ancienne cause « COMPLETED avant versions/coffre, reprise terminale vide » est
-fermée dans le correctif candidat et retirée du registre : checkpoint persistant,
+fermée dans le correctif livré et retirée du registre : checkpoint persistant,
 admission unique et reprise stable éprouvés par 24 tests PostgreSQL isolés après
 dix contre-exemples initiaux rouges. Fournisseur synthétique, aucun reçu réel
-SPAWT/Noël ; production reçue encore 423. Suites locales reçues : 4 144 unitaires,
-219 PostgreSQL, 1 610 gouvernance ; zéro cycle, lint sans erreur/24 warnings.
+SPAWT/Noël. Code 425 reçu en production : source 2a296152, CI 37850685120, image
+37850690058 et runtime exact rapprochés après déploiement à 22:14:28 UTC ; volume
+privé conservé, lectures/refus reçus, corpus et édition SPAWT inchangés. Aucune
+tâche/version de forge en production avant/après. La dette image/runtime est
+fermée et retirée ; la reprise reçue reste locale synthétique.
+Suites locales reçues : 4 144 unitaires, 219 PostgreSQL, 1 610 gouvernance ;
+zéro cycle, lint sans erreur/24 warnings.
 HTTP local après panne injectée et redémarrage reçu : checkpoint conservé,
 admission annulée puis retry/replay 200, mêmes ids, une version/un actif/un coût,
 chaîne FAILED→OK→OK vérifiée, zéro appel fournisseur. Fixture nettoyée.
 Stress isolé sans credentials sans pages/tRPC atteints,
 forges différées, machine d’états bornée. Ce retrait ne ferme pas les dettes suivantes.
 
-- **Réception du candidat** : image et runtime de production 425 non reçus à
-  cet instant ; le stress isolé ne reçoit pas les pages/tRPC ni les
-  fournisseurs réels. **Fermer** en rapprochant ces
-  reçus de la même source et en relisant task/versions/coffre/coût après reprise,
-  sans appeler un fournisseur payant pour certifier la frontière de persistance.
-  **Déclencheur** : réception du lot 425 en cours ; effort : une recette de
-  livraison. État courant : [RECEPTION-PTAH-ADMISSION.md](RECEPTION-PTAH-ADMISSION.md).
+- **Stress et parcours réel hors fixture** : le stress isolé n’a pas atteint les
+  pages/tRPC ; les forges sans credentials sont différées. La livraison et ses
+  lectures/refus ne reçoivent pas ces parcours ni un cycle réel SPAWT/Noël.
+  **Fermer** en exerçant les surfaces accessibles avec acteur natif, puis le
+  parcours réel documenté et ses refus, sans assimiler DEFERRED à une livraison
+  fournisseur ni la fixture locale à un média produit. **Déclencheur** : prochaine
+  réception C3/C6 sur serveur joignable et accès fournisseur nécessaires au cas
+  réel ; effort : une recette bornée par parcours.
 - **Conservation des octets et propagation CDN** : `download-archiver.ts` peut
   remplir AssetVersion.cdnUrl après l’admission ; le BrandAsset existant conserve
   alors son fileUrl, et un reçu d’URL ne prouve pas la conservation d’un média
-  temporaire. **Fermer** en éprouvant download/stockage/relecture après expiration,
+  temporaire. Le descriptif MCP `src/server/mcp/ptah/index.ts::ptah_reconcile_task`
+  promet encore download CDN/ASSET_FORGED, contrairement au catalogue reçu ;
+  constat statique, pas exécution E2E. **Fermer** en éprouvant download/stockage/
+  relecture après expiration,
   hash des octets et reprise, puis en raccordant la référence durable au coffre
-  sous ses verrous existants, sans réactiver les archives. **Déclencheur** : avant
-  réception C3/C6 d’un média temporaire réel ou publication de cet actif ; effort :
-  un lot archiver/coffre et recette de stockage configuré.
+  sous ses verrous existants, sans réactiver les archives. Réaligner le descriptif
+  MCP sur le contrat réel et recevoir tools/list puis appel borné dans le prochain
+  lot upstream/MCP ; ne pas transformer une description en capacité présumée.
+  **Déclencheur** : prochaine passe upstream/MCP après livraison 425, désormais
+  atteinte, et avant réception C3/C6/publication d’un média temporaire réel ;
+  effort : un lot archiver/coffre et recette de stockage/contrat configurés.
 - **Canva/Figma — réconciliation vide** : `providers/canva.ts` et `figma.ts`
   renvoient toujours `resultUrls: []`, désormais refusé comme résultat invalide.
   **Fermer** en raccordant le résultat d’export/polling réel au contrat existant,
@@ -115,11 +127,17 @@ forges différées, machine d’états bornée. Ce retrait ne ferme pas les dett
   pas encore propagés jusqu’au matériau ; l’invalidation après correction de la
   source et staleAt n’est pas reçue. Le cas positif conserve sourceBrandAssetId
   en metadata, campaignId/briefId/sourceIntentId ; il ne démontre pas une
-  provenance complète ni une source courante garantie. **Fermer** en suivant
-  références business et reçus documentaires depuis le writer réel jusqu’à la
+  provenance complète ni une source courante garantie. Constat statique voisin :
+  regenerateFadingAsset filtre AssetVersion par stratégie/opérateur, mais réutilise
+  parameters/provider/pilier/intentId de la GenerativeTask historique incluse sans
+  revalider sa propre stratégie/opérateur ; la FK ne garantit pas cette concordance.
+  **Fermer** en suivant références business et reçus documentaires depuis le writer réel jusqu’à la
   tâche puis au coffre, et en éprouvant correction de source/invalidation,
-  refus inter-marques et reprise, par extension des contrats existants.
-  **Déclencheur** : après livraison 425, suite du chantier d’irrigation C3/C6
+  refus inter-marques et reprise, par extension des contrats existants. Ajouter
+  le contre-exemple d’une version locale liée à une tâche étrangère : refus avant
+  tout fournisseur, conservation de campagne/brief/source. Aucun reçu E2E de ce
+  contre-exemple n’est annoncé. **Déclencheur atteint** : livraison 425 reçue,
+  prochaine passe upstream du chantier d’irrigation C3/C6
   depuis le brief réel ; effort : un lot de propagation et recette.
 
 La fermeture best-effort de l’Intent après commit reste la dette distincte

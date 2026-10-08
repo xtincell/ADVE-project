@@ -64,7 +64,7 @@ sequenceDiagram
   end
 ```
 
-**Frontière Ptah, candidat 6.27.425 au 2026-10-08** : la transaction d’admission
+**Frontière Ptah, code 6.27.425 livré au 2026-10-08** : la transaction d’admission
 utilise le verrou partagé du coffre et celui de la tâche. Un résultat checkpointé
 peut être repris sans nouvelle forge ; un actif archivé reste archivé. Le coût
 de forge est écrit dans cette transaction, à partir du montant déclaré par le
@@ -73,7 +73,10 @@ isolés sont reçus, ainsi que les suites locales 4 144 unitaires/219 PostgreSQL
 1 610 gouvernance, zéro cycle et lint sans erreur/24 warnings. Les refus HTTP
 réels et la reprise après arrêt/nouveau processus sont reçus : checkpoint
 synthétique conservé, retry/replay 200 identiques, une version/un actif/un coût
-et chaîne FAILED→OK→OK vérifiée, zéro appel fournisseur. Livraison 425 à recevoir.
+et chaîne FAILED→OK→OK vérifiée, zéro appel fournisseur. Source 2a296152,
+CI 37850685120, image 37850690058 et runtime exact reçus à 22:14:28 UTC ; volume
+privé conservé. Les lectures/refus de production et la conservation du corpus
+sont reçus, sans tâche ni version de forge réelle avant/après livraison.
 Le stress isolé ne reçoit pas les pages/tRPC ni les fournisseurs sans credentials.
 Le journal terminal du spine, les octets/CDN et les adaptateurs réels
 restent distincts : [réception courante](RECEPTION-PTAH-ADMISSION.md).

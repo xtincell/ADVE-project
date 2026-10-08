@@ -95,15 +95,17 @@ sequenceDiagram
   end
 ```
 
-**Ptah boundary, 2026-10-08:** candidate 6.27.425 checkpoints the provider result,
+**Ptah boundary, 2026-10-08:** shipped code 6.27.425 checkpoints the provider result,
 then admits versions/vault/reported cost/COMPLETED in one transaction. Twenty-four
 isolated PostgreSQL admission tests are received with synthetic providers.
 Local suites passed: 4,144 unit / 219 PostgreSQL / 1,610 governance; zero cycles,
 lint zero errors / 24 warnings. Real HTTP failure and restart are received:
 checkpoint retained, retry/replay 200 with identical bodies and ids, one
 version/asset/cost and verified FAILED→OK→OK chain, zero provider calls.
-Delivery remains pending. Isolated stress reached no pages/tRPC and deferred
-forges without credentials. Production received remains 423.
+Source 2a296152, CI 37850685120, image 37850690058 and exact runtime 425 are
+received; the private corpus and SPAWT edition are unchanged. Production exercised
+reads/refusals only; no forge tasks or versions existed before or after delivery.
+Isolated stress reached no pages/tRPC and deferred forges without credentials.
 Bytes/CDN, real providers and invoices, upstream business references and spine
 terminal closure remain separate: [current receipt](../governance/RECEPTION-PTAH-ADMISSION.md).
 

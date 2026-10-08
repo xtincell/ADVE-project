@@ -2,7 +2,7 @@
 
 ## Admission Ptah après résultat — 2026-10-08
 
-Correctif 6.27.425 en réception, sur les primitives existantes. Le résultat
+Correctif 6.27.425 livré, sur les primitives existantes. Le résultat
 fournisseur est checkpointé dans GenerativeTask avant une transaction commune
 AssetVersion/BrandAsset/reçu de coût/COMPLETED. Verrou coffre partagé et verrou
 de tâche rendent la reprise stable, sans doublon ni réactivation d’une archive.
@@ -16,13 +16,18 @@ locales reçues : 4 144 unitaires/219 PostgreSQL/1 610 gouvernance ; zéro cycle
 lint sans erreur/24 warnings. HTTP après panne coffre et vrai redémarrage reçu :
 checkpoint conservé sans admission, puis retry/replay 200 identiques, mêmes ids
 et une version/un actif/un coût ; chaîne FAILED→OK→OK vérifiée. Zéro appel
-fournisseur, fixture nettoyée. Image et déploiement 425 restent à recevoir,
-production reçue encore 423.
+fournisseur, fixture nettoyée. Source 2a296152, CI 37850685120 et image 37850690058
+reçues ; déploiement terminé à 22:14:28 UTC, runtime 425/index exact rapprochés,
+volume privé conservé. Lectures/refus de production reçus, corpus et édition
+SPAWT inchangés ; aucune tâche/version de forge en production avant et après.
 Stress isolé sans credentials : pages/tRPC non atteints, forges différées,
 machine d’états bornée ; aucun stress E2E entier reçu.
 L’ancienne dette COMPLETED avant coffre est retirée.
 Octets/CDN, réponses vides Canva/Figma, facture fournisseur, filiation business
 upstream et journal terminal durable restent ouverts avec plans et déclencheurs.
+Les constats statiques de concordance de tâche historique en régénération et de
+descriptif MCP trop large rejoignent ces plans existants. Déclencheur upstream
+atteint après livraison 425 ; aucun test E2E de ces défauts n’est présumé.
 Voir [la réception courante](RECEPTION-PTAH-ADMISSION.md) et RESIDUAL-DEBT ; aucune
 forge réelle SPAWT/Noël ni clôture des sept chantiers n’en est déduite.
 

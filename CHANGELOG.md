@@ -1,5 +1,30 @@
 # Changelog — La Fusee
 
+## v6.27.425 — docs(governance): recevoir la livraison Ptah sans présumer une forge réelle (2026-10-08)
+
+**Le correctif d’admission est livré ; la reprise après interruption reste une preuve locale.**
+
+- Source 2a296152, CI 37850685120 verte (4 144 unitaires/219 PostgreSQL, dont
+  24 cas d’admission), image 37850690058 reçue après boot sur base neuve, login
+  200 et lecture d’un PDF fixture de deux pages. Déploiement unique
+  a5d0qfsttw95xja1wjvncn9d terminé à
+  22:14:28 UTC ; runtime nextjs 6.27.425 et index exact rapprochés, volume privé
+  conservé en lecture/écriture. Détail et digests dans le reçu courant Ptah.
+- Production : lecture webhook 200, refus de POST sans paramètres 400 et faux
+  secret 403 ; version 425 reçue. Corpus privé et édition publique SPAWT inchangés,
+  trois origines/ETag 304/export privé 401 reçus. Zéro tâche/version de forge en
+  production avant et après : aucune forge réelle réparée ou démontrée.
+  Connexions 425 relue nativement, édition v1 visible, aucune soumission ; la
+  lecture séparée de la vitrine conserve six questions et aucun décompte expiré.
+- HTTP local après panne coffre puis nouveau processus : retry/replay 200,
+  ids stables, admission unique et chaîne FAILED→OK→OK reçus avec checkpoint
+  synthétique, zéro fournisseur. Médias, facture, cycle réel et stress E2E restent
+  non reçus ; la dette image/runtime est fermée, les autres limites sont conservées.
+- Les constats statiques de tâche historique non revalidée en régénération et de
+  descriptif MCP promettant encore CDN/ASSET_FORGED rejoignent les plans upstream
+  existants. Aucun code applicatif modifié par cette réception documentaire,
+  rattachée par équivalence à l’image 2a296152 ; aucun redéploiement nécessaire.
+
 ## v6.27.425 — docs(ptah): borner le contrat déclaré de réconciliation (2026-10-08)
 
 **Le contrat décrit l’admission reçue, sans promettre le transport des médias.**
