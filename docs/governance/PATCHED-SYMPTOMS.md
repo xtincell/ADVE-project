@@ -30,6 +30,13 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-08 · L’instrumentation Edge tentait de résoudre `http` via web-push
+malgré le retour anticipé `NEXT_RUNTIME !== "nodejs"`. v6.27.424 enveloppe les
+imports Node dans une branche positive `NEXT_RUNTIME === "nodejs"`, reconnue
+par webpack. Échec de compilation reproduit, puis démarrage et quatre réponses
+HTTP locales reçus. Cause : une garde d’exécution ne délimitait pas les imports
+pour le bundler Edge. Portée démarrage seulement ; aucune production reçue.
+
 2026-10-08 · `strategy.update` recevait id mais pas strategyId : sa mutation
 gouvernée pouvait réussir sans émission scoped sur la marque. Le test de
 publication a échoué sur ce reçu manquant avant correction. v6.27.423 résout

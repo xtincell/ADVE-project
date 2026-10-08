@@ -1,5 +1,17 @@
 # Changelog — La Fusee
 
+## v6.27.424 — fix(runtime): isoler les imports Node de l’instrumentation Edge (2026-10-08)
+
+**Le serveur local démarre sans importer web-push dans le bundle Edge.**
+
+- Le retour anticipé `NEXT_RUNTIME !== "nodejs"` laissait webpack résoudre
+  `http` via web-push dans l’instrumentation Edge. Les imports Node sont désormais
+  enveloppés dans une branche positive `NEXT_RUNTIME === "nodejs"`.
+- Échec webpack reproduit avant correction, compilation et route HTTP locale
+  reçues après correction : 400 paramètres manquants, 403 secret erroné,
+  400 JSON invalide, 500 sur panne injectée du coffre. Ce reçu borne le démarrage
+  local et ces refus ; aucune livraison de production ni forge fournisseur reçue.
+
 ## v6.27.423 — docs(governance): recevoir la publication SPAWT en production (2026-10-08)
 
 **La vitrine SPAWT reçoit son édition publique choisie depuis La Fusée.**

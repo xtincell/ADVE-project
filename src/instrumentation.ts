@@ -11,11 +11,11 @@
  */
 
 export async function register(): Promise<void> {
-  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { bootstrapGovernance } = await import("@/server/governance/bootstrap");
+    bootstrapGovernance();
 
-  const { bootstrapGovernance } = await import("@/server/governance/bootstrap");
-  bootstrapGovernance();
-
-  const { startOpsDaemon } = await import("@/lib/ops-daemon");
-  startOpsDaemon();
+    const { startOpsDaemon } = await import("@/lib/ops-daemon");
+    startOpsDaemon();
+  }
 }
