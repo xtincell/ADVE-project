@@ -462,7 +462,12 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
   partagent le moteur ciblé ; l’action d’historique utilise désormais le gateway
   avec son émission existante. Son ancienne description « sans émission » était
   périmée ; le writer direct existait encore et est supprimé par ce lot.
-  Réception PostgreSQL adversariale et surface native consignées au lot C5.
+  Cause racine reçue le 8 octobre : 21 cas adversariaux PostgreSQL, trois
+  compensations natives locales et un conflit attendu ; CI 37812842810 reçoit
+  4 144 unitaires et 150 PostgreSQL. Image 37813353453 et runtime exact 421
+  reçus, migration appliquée. Natif production : dialogue ouvert puis fermé,
+  sans annulation réelle. Les trois symptômes fermés sont retirés du registre
+  transitoire ; leur historique reste dans CHANGELOG et ADR-0207.
   Les anciennes archives SPAWT sans intentId/checkpoint ne sont pas reconstruites.
   **Restants** : ROLLBACK_ADVE, ROLLBACK_RTIS_CASCADE et DISCARD/REVERT_RECOMMENDATIONS
   restent audit-only ; les autres writers qui perdent le contexte d’émission ne

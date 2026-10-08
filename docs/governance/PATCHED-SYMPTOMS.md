@@ -1,10 +1,5 @@
 # PATCHED SYMPTOMS — journal heuristique des fixes en passant
 
-- 2026-10-08 — Console Intents : le clic Compensate lançait `prompt()`, non pris
-  en charge dans le navigateur intégré (exception avant HTTP). Réutilisation du
-  Modal DS, motif accessible et retours résultat/refus dans l’écran ; cause :
-  dépendance à une fenêtre native pour une opération métier (ADR-0207).
-
 > Doctrine : [NEFER.md §3.4](NEFER.md) — interdit absolu n°4 (« un problème découvert se résout, se
 > patche-et-trace, ou se planifie — jamais ne s'enterre »).
 
@@ -349,13 +344,3 @@ Lignes dérivées purgées :
   manuel/handler et refus typés. Cause : contexte transverse d’équipe confondu
   avec un contexte de marque et projection de campagnes dérivée des seules tâches.
   Réception finale à suivre dans RESIDUAL-DEBT, sans clôture du cycle métier.
-
-- 2026-10-08 · v6.27.421 / ADR-0207 : annuler la première de deux décisions
-  effaçait la seconde et promouvait l’ancienne valeur en HUMAN ; la compensation
-  ignorait l’accès à la marque résolue. Cause : archive sans état appliqué ni
-  métadonnées, remplacement intégral et contexte du spine perdu au dispatch.
-  Compensation ciblée, même gateway pour l’historique, liens réels et verrous.
-- 2026-10-08 · recette 421 : sept tests documentaires échouaient en CI sur
-  Strategy_operatorId_fkey. Cause : opérateur emprunté à une fixture parallèle
-  puis supprimé par son propriétaire. Opérateur désormais créé et nettoyé par
-  le fichier documentaire ; aucune sérialisation ni réduction de la suite.

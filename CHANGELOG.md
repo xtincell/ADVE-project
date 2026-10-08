@@ -4,6 +4,12 @@
 
 **Annuler une écriture préserve les décisions indépendantes prises depuis.**
 
+- Réception finale : CI 4 144 unitaires/150 PostgreSQL, image démarrée sur base
+  neuve puis runtime 421 rapproché. Dialogue de production reçu sans annulation
+  réelle ; 40 piliers/12 sources/deux usages SPAWT et FrieslandCampina inchangés.
+  Trois symptômes fermés retirés du registre transitoire (compensation, prompt
+  natif, opérateur de fixture) ; autres écrivains et raccord public restent ouverts.
+
 - Complément de recette : le test documentaire crée et nettoie son propre
   opérateur. Il empruntait celui d’un autre fichier, supprimé en parallèle en CI ;
   cette dépendance provoquait une violation de clé étrangère entre deux tests.
