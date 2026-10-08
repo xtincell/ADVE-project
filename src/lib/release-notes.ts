@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.423", date: "2026-10-08",
+    headline: "Choisissez la version publique de votre marque",
+    highlights: [
+      { emoji: "👓", title: "Une publication relue", body: "Dans Connexions, relisez les textes, le logo et les liens avant de les publier. Les changements privés ne modifient plus automatiquement la page en ligne." },
+      { emoji: "↶", title: "Un historique conservé", body: "Publiez une nouvelle version ou revenez à une copie précédente sans effacer l’historique. Si la marque a changé depuis votre lecture, la publication est refusée et la page actuelle reste en place." },
+    ],
+  },
+  {
     version: "6.27.422", date: "2026-10-08",
     headline: "Vos actifs gardent une version en usage cohérente",
     highlights: [

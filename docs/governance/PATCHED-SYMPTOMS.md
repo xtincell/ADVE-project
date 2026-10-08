@@ -30,6 +30,14 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-08 · `strategy.update` recevait id mais pas strategyId : sa mutation
+gouvernée pouvait réussir sans émission scoped sur la marque. Le test de
+publication a échoué sur ce reçu manquant avant correction. v6.27.423 résout
+strategyId dans le schéma avant gouvernance, sans second champ de formulaire.
+Cause : identité du contrat natif et pivot de gouvernance étaient divergents.
+ADR-0209 reçoit cette voie ; la portée des autres écrivains et la fermeture
+durable de l’émission restent au registre de dette, sans succès global présumé.
+
 2026-10-08 · Le système produit affichait ses ids de catalogue et perdait
 l’origine du champ sur les sous-cartes ; le fond des gammes rendait leurs
 conditions peu contrastées. Le lot 420 relit les noms sans changer les données,

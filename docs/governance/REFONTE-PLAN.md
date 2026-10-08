@@ -1,5 +1,26 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Édition publique distincte du brouillon — 2026-10-08
+
+ADR-0209 étend BrandAsset BRAND_GUIDELINES/public-brand-v1, Connexions,
+strategy.update et l’export existants. La copie explicitement choisie est bornée,
+versionnée, liée aux sources/piliers relus et servie sans dossier privé. Les
+changements privés ne la réécrivent plus ; revenir à une ancienne copie crée une
+nouvelle édition. La migration des pages historiques conserve une observation
+spined sans inventer de revue humaine. Aucun nouveau service, modèle, page,
+agent ou Glory tool. Réception locale : 195 PostgreSQL dont 16 pour le contrat,
+4 144 unitaires et 1 610 de gouvernance ; types/linters sans erreur, cycles nuls.
+Vitrine : 30 tests/types/vocabulaire/build verts et lecture locale du titre,
+Moka, six questions sans compteur, sans erreur JavaScript observée. PR #4 fusionnée
+en 346e466, CI 37838306953 verte, déploiement en cours ; fonts Klinsman/Gotham à
+vérifier avant réception DA complète. Build La Fusée à source stable, huit appels
+authentifiés et export public/privé reçus localement. Natif FOUNDER isolé :
+publication v4 et retour à v3 créant v5, copie relue après reload. Stress sans
+finding, sept forges DEFERRED sans prestataire reçu. CI/image/runtime 423 et raccord
+de production restent des réceptions distinctes.
+Ce premier contrat porte la copie publique et les liens, pas les tokens, la voix,
+les variantes d’identité ni l’ensemble du quiz/application. Sept chantiers ouverts.
+
 ## Décisions d’actifs factorisées — 2026-10-08
 
 ADR-0208 étend le moteur BrandVault existant : les quatre commandes déjà
@@ -10,8 +31,9 @@ existante et les émissions locales non chaînées sont retirées. Aucun nouveau
 modèle, service, page, agent ou Glory tool. Les preuves PostgreSQL, la recette
 native et le runtime restent des réceptions distinctes. Création, expiration,
 classifieur, Ptah et fermeture durable du spine restent au registre de dette.
-Un ACTIVE n’est ni une validation humaine ni une publication : le raccord public
-versionné SPAWT reste une étape propre, avant toute actualisation de ses surfaces.
+Un ACTIVE générique n’est ni une validation humaine ni une publication : ADR-0209
+ajoute le choix explicite de l’édition publique ; sa consommation SPAWT et la
+réception des surfaces restent distinctes du cycle d’actif.
 
 ## Identité et revue de fondation — 2026-10-08
 

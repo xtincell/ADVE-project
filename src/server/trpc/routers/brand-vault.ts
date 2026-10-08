@@ -10,6 +10,7 @@ import { governedProcedure } from "@/server/governance/governed-procedure";
 import type { Context } from "@/server/trpc/context";
 import {
   BrandAssetLifecycleError,
+  assertOrdinaryAsset,
   selectFromBatch as engineSelectFromBatch,
   promoteToActive as enginePromoteToActive,
   supersede as engineSupersede,
@@ -191,6 +192,7 @@ export const brandVaultRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await assertBrandAssetAccess(ctx, input.id);
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
+      await vaultResult(async () => assertOrdinaryAsset(asset.format));
       const existing = (asset.pillarTags as Record<string, unknown>) ?? {};
       return ctx.db.brandAsset.update({
         where: { id: input.id },
@@ -213,6 +215,7 @@ export const brandVaultRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await assertBrandAssetAccess(ctx, input.id);
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
+      await vaultResult(async () => assertOrdinaryAsset(asset.format));
       const tags = (asset.pillarTags as Record<string, unknown>) ?? {};
       return ctx.db.brandAsset.update({
         where: { id: input.id },
@@ -255,10 +258,11 @@ export const brandVaultRouter = createTRPCRouter({
       // un founder pouvait hard-delete le vault d'un autre tenant (IDOR CRITIQUE).
       const owned = await ctx.db.brandAsset.findMany({
         where: { id: { in: input.assetIds } },
-        select: { id: true, strategyId: true },
+        select: { id: true, strategyId: true, format: true },
       });
       const accessibleStrategies = new Set<string>();
       for (const a of owned) {
+        await vaultResult(async () => assertOrdinaryAsset(a.format));
         if (!accessibleStrategies.has(a.strategyId)) {
           await assertStrategyAccessForAsset(ctx, a.strategyId);
           accessibleStrategies.add(a.strategyId);

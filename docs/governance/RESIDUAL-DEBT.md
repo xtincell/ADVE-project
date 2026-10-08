@@ -1,5 +1,46 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Édition publique et surfaces de marque — 2026-10-08 (ADR-0209)
+
+- **Activation et consommation à recevoir** : le contrat public borné, la carte
+  Connexions et l’export sont implémentés ; 195 tests PostgreSQL passent, dont 16
+  public-brand, ainsi que 4 144 unitaires et 1 610 de gouvernance. La vitrine a
+  30 tests/types/vocabulaire/build verts ; sur localhost:3318, titre/Moka/six
+  questions/sans compteur sont reçus sans erreur JavaScript observée. PR #4 fusionnée
+  en 346e466, CI 37838306953 verte ; déploiement en cours. Build La Fusée réussi à
+  source stable ; huit HTTP authentifiés locaux, export public/privé et recette
+  native FOUNDER isolé reçus : v4 publiée, retour à v3 créant v5, titre/lien relus
+  après reload, zéro erreur de page ou réponse >=500. Stress sans finding, sept
+  forges DEFERRED sans provider reçu. La capture historique, les images/runtime423
+  et le raccord SPAWT en production restent à recevoir. **Fermer** par rapprochement
+  source/pins → choix → édition/digest → fichier → consommateur SPAWT → image et
+  lecture native, avec panne réseau, conflit, opérateur étranger et retour à la
+  précédente. Conserver contenu/versions privés et copie publique pendant les
+  refus. **Déclencheur** : suite immédiate C2/C3 de publication SPAWT ; effort :
+  une recette de bout en bout et déploiement sur les applications existantes.
+- **Fonts SPAWT non reçues** : le build de la vitrine signale des fichiers
+  Klinsman/Gotham absents de `public/fonts`, défaut préexistant sur la branche
+  distante. Un build vert et la lecture locale ne prouvent pas l’emploi de ces
+  polices. **Fermer** en vérifiant les fichiers de référence et leur disponibilité,
+  le packaging de l’image et les réponses de chargement navigateur, puis en
+  recevant le rendu prévu ; conserver les polices choisies, sans les remplacer.
+  **Déclencheur** : réception C2/C4 de la direction artistique SPAWT avant son
+  acceptation complète ; effort : un lot de packaging et recette de rendu.
+- **Identité au-delà de la copie v1** : public-brand-v1 ne porte pas tokens de
+  design, voix structurée ni variantes de logo. Le premier consommateur SPAWT est
+  limité au hero et aux liens, sans modifier la direction artistique, le quiz
+  ou le moteur de l’app. **Fermer** par comparaison source/usage pour chaque
+  destination, sélection explicite et pins dans le contrat existant étendu,
+  puis version consommée/refus de périmé/retour reçu. Ne pas résoudre les variantes
+  par index ni transporter une charte privée entière. **Déclencheur** : prochain
+  raccord C2 des identités après réception de la copie publique ; effort : un lot
+  de contrat et recette par famille d’usage, sans nouveau système parallèle.
+- **Brouillon après interruption** : la carte conserve révision et contenu pendant
+  son ouverture ; leur survie à une fermeture/recharge n’est pas reçue. **Fermer**
+  en éprouvant l’interruption et en réutilisant le mécanisme de brouillon existant
+  si nécessaire, sans changer la publication avant décision. **Déclencheur** :
+  réception C4 de continuité manuelle ; effort : une recette et un raccord borné.
+
 ## Coffre et circulation des actifs — 2026-10-08 (ADR-0208)
 
 - **Autres écrivains hors réception du cycle** : les quatre décisions partagent
@@ -31,10 +72,11 @@
   persistant et reprise du même identifiant d’émission, sans deuxième journal ni
   doublon métier. **Déclencheur** : réception C5 d’interruption avant autonomie de
   ces commandes ; effort : un lot spine/réconciliation et recette PostgreSQL.
-- **Projection publique** : l’actif ACTIVE reste un usage, pas une approbation
-  publique. Le contrat borné/versionné et sa consommation SPAWT restent ouverts
-  dans « Version de marque vers les surfaces SPAWT » ci-dessous ; ADR-0208 en
-  prépare la frontière de décision sans déclarer ce raccord livré.
+- **Projection publique** : l’actif ACTIVE générique reste un usage, pas une
+  approbation publique. ADR-0209 ajoute le contrat borné et son choix explicite ;
+  l’activation/runtime et la consommation SPAWT restent à recevoir sous « Édition
+  publique et surfaces de marque ». Ce contrat ne reçoit pas les autres écrivains,
+  Ptah ni la fenêtre de fermeture du journal décrits ci-dessus.
 
 ## Reprises de campagne — 2026-10-07 (ADR-0202)
 
@@ -116,19 +158,17 @@
   identité principale. Klinsman exclusif/Gotham secondaire et Poppins/JetBrains
   dans les applications coexistent dans le document. Aucun arbitrage inventé.
 
-- **Version de marque vers les surfaces SPAWT** : la vitrine lit ses textes et
-  modes en code ; le quiz conserve ses questions/cartes/moteur ; l’app porte
-  sa calibration, son moteur et ses flags. La page publique `/b/[slug]` relit
-  A/D et le coffre, mais ne constitue pas un export de marque approuvé et
-  versionné pour ces dépôts. `/api/export/[strategyId]` est un export privé
-  autorisé, pas un manifeste publiable. **Plan** : rapprocher source historique,
-  décisions et implémentation par surface, réutiliser export/coffre/publication
-  existants pour une projection publique bornée, puis recevoir version consommée,
-  changement, refus de conflit et retour à la précédente. Aucune copie intégrale
-  du dossier privé dans le site. **Déclencheur** : raccord C2/C3 avant actualisation
-  publique SPAWT ; effort : audit de filiation puis un lot de raccord existant.
-  ADR-0208 factorise les décisions du coffre en amont ; il ne crée ni approbation
-  publique, ni projection exportée, ni version consommée par les trois surfaces.
+- **Version de marque vers les surfaces SPAWT** : ADR-0209 remplace la lecture
+  publique directe de A/D par une édition BrandAsset choisie et versionnée, et
+  ajoute `format=public-brand` à l’export sans ouvrir le dossier privé. Le premier
+  consommateur vise seulement la copie du hero et les liens ; quiz, calibration,
+  moteur d’application, disponibilités et modes gardent leurs contrats propres.
+  **Plan** : recevoir le choix réel, sa filiation, la version consommée et le retour
+  sur la vitrine, puis qualifier les identités et décisions par destination.
+  Aucun raccord des trois surfaces déduit du seul export. **Déclencheur** : suite
+  C2/C3 immédiatement après livraison du contrat public ; effort : recette du
+  premier consommateur puis un lot de filiation par surface. Le détail des
+  réceptions encore ouvertes figure sous « Édition publique et surfaces de marque ».
 
 ## Réception des observations et décisions — 2026-10-07 (ADR-0199)
 

@@ -1,20 +1,34 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/config";
-import { exportStrategyData, exportAsCsv } from "@/server/services/data-export";
+import { exportStrategyData, exportAsCsv, exportPublicBrand } from "@/server/services/data-export";
 import { canAccessStrategy } from "@/server/services/operator-isolation";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ strategyId: string }> }
 ) {
+  const url = new URL(request.url);
+  const { strategyId } = await params;
+  if (url.searchParams.get("format") === "public-brand") {
+    const edition = await exportPublicBrand(strategyId);
+    const origin = request.headers.get("origin");
+    const allowed = origin === "https://spawt.online" || origin === "https://www.spawt.online";
+    const headers = {
+      "Cache-Control": "public, max-age=0, s-maxage=30",
+      "Vary": "Origin",
+      ...(allowed ? { "Access-Control-Allow-Origin": origin } : {}),
+    };
+    if (!edition) return NextResponse.json({ error: "Publication introuvable" }, { status: 404, headers });
+    const etag = `"${edition.edition}-${edition.digest}"`;
+    if (request.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers: { ...headers, ETag: etag } });
+    return NextResponse.json(edition, { headers: { ...headers, ETag: etag } });
+  }
   // Auth check
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const { strategyId } = await params;
 
   // Operator isolation — prevent IDOR: only ADMIN, the strategy owner, or the
   // same operator may export this brand's data. Mirrors the strategy router.
@@ -27,7 +41,6 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const url = new URL(request.url);
   const format = url.searchParams.get("format") ?? "json";
 
   try {

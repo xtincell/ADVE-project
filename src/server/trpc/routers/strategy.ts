@@ -20,6 +20,8 @@ import {
   type TierTransitionDirection,
 } from "@/server/services/mestor/gates/palier-promotion-proofs";
 import { computeEvidenceBreakdown } from "@/server/services/advertis-scorer/evidence";
+import { PublicBrandPublicationInput } from "@/domain/public-brand";
+import { previewPublicBrand, publishPublicBrand, PublicBrandError } from "@/server/services/brand-vault/publication";
 /* lafusee:governed-active */
 
 export const strategyRouter = createTRPCRouter({
@@ -223,7 +225,8 @@ export const strategyRouter = createTRPCRouter({
       // produit n'écrivait publicSlug (seeds/scripts uniquement) — le founder
       // ne pouvait ni activer sa page publique ni en connaître l'URL.
       enablePublicPage: z.boolean().optional(),
-    }),
+      publicPage: PublicBrandPublicationInput.optional(),
+    }).transform((input) => ({ ...input, strategyId: input.id })),
 
 
     caller: "strategy:update",
@@ -231,7 +234,28 @@ export const strategyRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const { id, recalculateScore, sector, enablePublicPage, watchSubjects, ...data } = input;
+      const { id, strategyId: _strategyId, recalculateScore, sector, enablePublicPage, watchSubjects, publicPage, ...data } = input;
+
+      if (publicPage) {
+        if (Object.keys(input).some((key) => !["id", "strategyId", "publicPage", "recalculateScore"].includes(key))) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Publiez la page séparément des autres modifications." });
+        }
+        try {
+          await publishPublicBrand(id, ctx.session.user.id, ctx.intentId, publicPage);
+          return await ctx.db.strategy.findUniqueOrThrow({ where: { id } });
+        } catch (error) {
+          if (error instanceof PublicBrandError) throw new TRPCError({ code: error.code, message: error.message, cause: error });
+          if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+            throw new TRPCError({ code: "CONFLICT", message: "Cette adresse vient d’être prise. Rechargez l’aperçu pour réessayer.", cause: error });
+          }
+          if (error instanceof Error && (/^SOURCE_/.test(error.message) || error.name === "CollaboratorWriteVetoError")) {
+            throw new TRPCError({ code: error.name === "CollaboratorWriteVetoError" ? "FORBIDDEN" : "PRECONDITION_FAILED", message: error.message, cause: error });
+          }
+          throw error;
+        }
+      }
+      if (enablePublicPage !== undefined) throw new TRPCError({ code: "PRECONDITION_FAILED",
+        message: "Ouvrez Connexions → Page publique pour relire et publier la version choisie." });
 
       // Enforce operator isolation
       const hasAccess = await canAccessStrategy(id, {
@@ -252,41 +276,10 @@ export const strategyRouter = createTRPCRouter({
               ...(watchSubjects !== undefined ? { watchSubjects } : {}),
             } as Prisma.InputJsonValue)
           : undefined;
-      // Page publique : slug canonique dérivé du nom (format LFA-, idempotent).
-      // Non-latin-safe (jamais de throw) + désambiguïsation de collision (le slug
-      // est @unique GLOBAL ; deux marques homonymes crashaient sinon en P2002 500).
-      let publicSlugPatch: { publicSlug: string } | undefined;
-      if (enablePublicPage && !previous.publicSlug) {
-        const { brandPublicSlugSafe, disambiguateBrandSlug } = await import("@/domain/brand-slug");
-        let candidate = brandPublicSlugSafe(previous.name, previous.id);
-        const clash = await ctx.db.strategy.findFirst({
-          where: { publicSlug: candidate, id: { not: id } },
-          select: { id: true },
-        });
-        if (clash) candidate = disambiguateBrandSlug(candidate, previous.id);
-        publicSlugPatch = { publicSlug: candidate };
-      }
-      const buildUpdateData = (slugPatch?: { publicSlug: string }) => ({
+      const updated = await ctx.db.strategy.update({ where: { id }, data: {
         ...data,
         ...(mergedBusinessContext !== undefined ? { businessContext: mergedBusinessContext } : {}),
-        ...(slugPatch ?? {}),
-      });
-      let updated;
-      try {
-        updated = await ctx.db.strategy.update({ where: { id }, data: buildUpdateData(publicSlugPatch) });
-      } catch (err) {
-        // Course entre le findFirst et l'update sur le slug → réessai désambiguïsé.
-        // Duck-typing sur `.code` (l'import Prisma est type-only ici).
-        const isUniqueViolation =
-          !!err && typeof err === "object" && (err as { code?: unknown }).code === "P2002";
-        if (publicSlugPatch && isUniqueViolation) {
-          const { disambiguateBrandSlug } = await import("@/domain/brand-slug");
-          updated = await ctx.db.strategy.update({
-            where: { id },
-            data: buildUpdateData({ publicSlug: disambiguateBrandSlug(publicSlugPatch.publicSlug, previous.id) }),
-          });
-        } else throw err;
-      }
+      } });
 
       // Audit trail (non-blocking)
       auditTrail.log({
@@ -310,6 +303,11 @@ export const strategyRouter = createTRPCRouter({
 
       return updated;
     }),
+
+  publicPage: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+    await assertStrategyRead(ctx.session.user.id, input.id);
+    return previewPublicBrand(input.id, ctx.session.user.id);
+  }),
 
   get: protectedProcedure
     .input(z.object({ id: z.string() }))

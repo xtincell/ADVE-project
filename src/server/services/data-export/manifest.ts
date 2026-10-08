@@ -6,14 +6,24 @@
  */
 import { z } from "zod";
 import { defineManifest } from "@/server/governance/manifest";
+import { PublicBrandEdition } from "@/domain/public-brand";
 
 export const manifest = defineManifest({
   service: "data-export",
   governor: "INFRASTRUCTURE",
-  version: "1.1.0",
+  version: "1.2.0",
   acceptsIntents: [],
   emits: [],
   capabilities: [
+    {
+      name: "exportPublicBrand",
+      inputSchema: z.object({ slug: z.string() }),
+      outputSchema: PublicBrandEdition.nullable(),
+      sideEffects: ["DB_READ"],
+      qualityTier: "B",
+      missionContribution: "GROUND_INFRASTRUCTURE",
+      groundJustification: "Read the explicitly selected public edition without disclosing the private strategy.",
+    },
     {
       name: "exportStrategy",
       inputSchema: z.object({ strategyId: z.string().optional() }).passthrough(),

@@ -12,6 +12,7 @@
 import { z } from "zod";
 import { defineManifest } from "@/server/governance/manifest";
 import { PillarKeySchema } from "@/domain/pillars";
+import { PublicBrandPublicationInput, PublicBrandEdition } from "@/domain/public-brand";
 
 const StringId = z.string().min(1);
 
@@ -56,10 +57,32 @@ const BrandAssetOutput = z.object({
 export const manifest = defineManifest({
   service: "brand-vault",
   governor: "MESTOR",
-  version: "1.1.0",
+  version: "1.2.0",
   acceptsIntents: ["SELECT_BRAND_ASSET", "PROMOTE_BRAND_ASSET_TO_ACTIVE", "SUPERSEDE_BRAND_ASSET", "ARCHIVE_BRAND_ASSET"],
   emits: [],
   capabilities: [
+    {
+      name: "previewPublicBrand",
+      inputSchema: z.object({ strategyId: StringId, actorId: StringId }),
+      outputSchema: z.unknown(),
+      sideEffects: ["DB_READ"],
+      missionContribution: "DIRECT_BOTH",
+    },
+    {
+      name: "publishPublicBrand",
+      inputSchema: z.object({ strategyId: StringId, actorId: StringId, intentId: StringId, input: PublicBrandPublicationInput }),
+      outputSchema: BrandAssetOutput,
+      sideEffects: ["DB_WRITE"],
+      idempotent: true,
+      missionContribution: "DIRECT_BOTH",
+    },
+    {
+      name: "readPublicBrand",
+      inputSchema: z.object({ slug: StringId }),
+      outputSchema: PublicBrandEdition.nullable(),
+      sideEffects: ["DB_READ"],
+      missionContribution: "DIRECT_BOTH",
+    },
     {
       name: "createBrandAsset",
       inputSchema: CreateBrandAssetInput,

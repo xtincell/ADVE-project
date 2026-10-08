@@ -19,6 +19,12 @@ import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { assertCollaboratorMayEmit } from "@/server/governance/collaborator-firewall";
 import { isGodModeEmail } from "@/lib/auth/god-mode";
 import { randomBytes } from "node:crypto";
+import { PUBLIC_BRAND_FORMAT } from "@/domain/public-brand";
+
+export function assertOrdinaryAsset(format: string | null | undefined) {
+  if (format === PUBLIC_BRAND_FORMAT) throw new BrandAssetLifecycleError("PRECONDITION_FAILED",
+    "Cette publication se gère depuis Connexions → Page publique, pour conserver son historique.");
+}
 
 /** Mapping outputFormat Glory tool → BrandAsset.kind canonique. */
 export const FORMAT_TO_KIND: Record<string, string> = {
@@ -166,6 +172,7 @@ export interface CreateBrandAssetInput {
  * (sourceGloryOutputId, batchIndex) pour éviter les doublons en cas de replay.
  */
 export async function createBrandAsset(input: CreateBrandAssetInput, client: Prisma.TransactionClient = db): Promise<import("@prisma/client").BrandAsset> {
+  assertOrdinaryAsset(input.format);
   // Source-derived assets are committed under the same evidence lock as corrections.
   if (client === db && typeof input.metadata?.sourceDataSourceId === "string") {
     return db.$transaction((tx) => createBrandAsset(input, tx));
@@ -272,6 +279,8 @@ async function withLockedAsset<T>(args: {
   useSource?: boolean;
 }, mutate: (tx: Prisma.TransactionClient, asset: BrandAsset, operatorId: string | null) => Promise<T>): Promise<T> {
   const initial = await db.brandAsset.findUniqueOrThrow({ where: { id: args.assetId } });
+  assertOrdinaryAsset(initial.format);
+  assertOrdinaryAsset(args.next?.format);
   if ((args.strategyId && initial.strategyId !== args.strategyId)
     || (args.next && args.next.strategyId !== initial.strategyId)) {
     throw new BrandAssetLifecycleError("FORBIDDEN", "ASSET_SCOPE_MISMATCH: cet actif ne relève pas de la marque indiquée.");

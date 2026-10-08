@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { PUBLIC_BRAND_FORMAT } from "@/domain/public-brand";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchFilter } from "@/components/shared/search-filter";
@@ -389,8 +391,12 @@ export default function AssetsPage() {
                     key={asset.id}
                     className="group relative rounded-xl border border-border bg-background/80 p-4 text-left transition-colors hover:border-border"
                   >
-                    {/* Delete button */}
-                    <button
+                    {asset.format === PUBLIC_BRAND_FORMAT ? (
+                      <Link href="/cockpit/settings/connections" title="Gérer cette publication" aria-label="Gérer cette publication"
+                        className="absolute right-2 top-2 z-10 rounded-lg border border-border bg-background p-1.5 text-accent">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                    ) : <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setDeleteTarget({ id: asset.id, name: asset.name });
@@ -399,7 +405,7 @@ export default function AssetsPage() {
                       title="Supprimer cet asset"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    </button>}
                     <button
                       onClick={() => setSelectedAsset(asset.id)}
                       className="w-full text-left"
@@ -506,16 +512,17 @@ export default function AssetsPage() {
                         ).toLocaleDateString("fr-FR")}
                       </p>
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteTarget({ id: asset.id, name: asset.name });
-                      }}
-                      className="rounded-lg border border-border bg-background p-1.5 text-foreground-muted opacity-0 transition-opacity hover:bg-error/50 hover:text-error group-hover:opacity-100"
-                      title="Supprimer cet asset"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    {asset.format === PUBLIC_BRAND_FORMAT ? (
+                      <Link href="/cockpit/settings/connections" title="Gérer cette publication" aria-label="Gérer cette publication"
+                        className="rounded-lg border border-border bg-background p-1.5 text-accent">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                    ) : <button
+                        onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: asset.id, name: asset.name }); }}
+                        className="rounded-lg border border-border bg-background p-1.5 text-foreground-muted opacity-0 transition-opacity hover:bg-error/50 hover:text-error group-hover:opacity-100"
+                        title="Supprimer cet asset">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>}
                   </div>
                 );
               })}

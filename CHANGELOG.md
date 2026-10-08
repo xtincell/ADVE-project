@@ -1,5 +1,52 @@
 # Changelog — La Fusee
 
+## v6.27.423 — feat(brand-vault): publier une édition publique choisie (2026-10-08)
+
+**La page publique garde sa version jusqu’à votre prochaine publication.**
+
+- BrandAsset BRAND_GUIDELINES/public-brand-v1 reçoit la copie publique strictement
+  bornée : nom, titre, promesse, présentation, logo admissible et liens. L’aperçu
+  et la publication passent par Connexions/strategy.update existants ; aucun nouveau
+  service, modèle, page, agent, Glory tool ou Intent kind (ADR-0209).
+- La publication exige l’acteur autorisé, les reçus courants, la révision relue et
+  l’édition attendue. Version, parent et remplacement commitent ensemble ; conflit
+  ou source retirée laisse la précédente en ligne. Le retour à une ancienne copie
+  crée une nouvelle édition et conserve l’historique, sans validation ADVE implicite.
+- `/b/[slug]` et `format=public-brand` lisent cette édition persistée ; le digest et
+  l’ETag permettent d’en identifier le contenu. L’export intégral reste privé.
+  Les commandes génériques du coffre refusent le format réservé à la publication.
+- Le démarrage capture les pages historiques déjà publiques dans le spine avec
+  origine OBSERVED_PUBLICATION et humanReview=false. Cette migration ne crée ni
+  approbation humaine ni publication à la lecture anonyme ; son échec est bloquant.
+- Le test du wrapper a révélé un id de marque absent du pivot strategyId : sa
+  transformation avant gouvernance rétablit la filiation scoped. Le consommateur
+  SPAWT est borné à la copie du hero et aux liens, avec conservation de l’existant
+  en cas de panne ; réception du consommateur et du déploiement suivies séparément.
+- Réception locale : 195/195 tests PostgreSQL, dont 16 pour public-brand ;
+  4 144/4 144 unitaires sur 395 fichiers et 1 610/1 610 de gouvernance sur 165
+  fichiers. Types et linters sans erreur (24 avertissements préexistants), cycles
+  nuls. Une contre-épreuve significative du lecteur est reçue en rouge, puis la
+  source courante restaurée. Ces résultats ne valent pas livraison en production.
+- Build de production La Fusée réussi, manifeste source identique avant/après.
+  Huit appels HTTP authentifiés locaux : six réussites, un accès étranger refusé
+  et un conflit attendu ; copie publique stable après correction privée et retour
+  en version 3. Export anonyme 200/ETag 304, CORS borné et export privé 401 reçus.
+- Natif local sous compte FOUNDER isolé : publication 4 dans Connexions, titre et
+  lien publics relus ; retour à la copie 3 crée la version 5, ancien titre conservé
+  après reload. « Gérer cette publication » depuis Assets rejoint Connexions.
+  Rechargement HTTP 200, aucune réponse serveur >=500 ni erreur de page observée.
+  Stress : zéro finding ; sept forges DEFERRED sans clé, aucun prestataire reçu.
+- Vitrine SPAWT : 30/30 tests, types/vocabulaire/build verts. Lecture locale sur
+  localhost:3318 : titre, Moka, six questions et absence de compteur ; aucune erreur
+  JavaScript observée. [PR #4](https://github.com/xtincell/project_spawt_mobile_ci/pull/4)
+  fusionnée en 346e466, CI 37838306953 verte ; déploiement en cours. Les fichiers
+  Klinsman/Gotham absents signalés au build restent à vérifier
+  pour la réception complète de la direction artistique, sans police de substitution.
+- CI, image et runtime La Fusée 423, capture historique et raccord SPAWT de
+  production restent à recevoir. Tokens, voix, variantes de logo, autres écrivains/Ptah et
+  fermeture durable du journal restent ouverts ; aucun univers de marque complet
+  ni chantier Shinkiro n’est déclaré reçu.
+
 ## v6.27.422 — fix(brand-vault): partager un cycle d’actif atomique (2026-10-08)
 
 **Choisir, activer, remplacer et archiver utilisent la même décision de marque.**

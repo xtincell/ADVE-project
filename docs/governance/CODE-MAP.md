@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 46 modules (src/domain, cœur métier pur)
+## Domain — 47 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
@@ -91,6 +91,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **portfolio-reference**
 - **product-catalog** — product-catalog.ts — intégrité du socle produit (ADR-0171).
 - **product-system** — product-system.ts — le SYSTÈME produit d'une marque (ADR-0170, pilier V).
+- **public-brand**
 - **schema-normalizer** — schema-normalizer.ts — normalisation déterministe vers le schéma STRICT (ADR-0172).
 - **scoreur/anchors** — ADR-0149 — ancres-étalons + jauge de ligue (canon, θ fixé — la seule main
 - **scoreur/bradley-terry** — ADR-0149 — estimateur Bradley-Terry / Rasch (pur TS, déterministe, zéro-LLM).
