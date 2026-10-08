@@ -38,6 +38,8 @@ Cause : durée de vie du composant confondue avec celle de la décision éditée
 Onze contre-exemples rouges ; douze tests verts, écriture/relecture et conflit
 reçus nativement sur fixture locale. La conservation après interruption et le
 raccord vers la publication restent des parcours distincts ouverts au registre.
+Réception production 414 : changement de champ et réouverture dans SPAWT,
+sans soumission ; seize piliers et six sources identiques après livraison.
 
 2026-10-07 · Boot Phase 18 : l’exemple utilisait le littéral `pending`, rejeté
 par l’enum Prisma. Commande corrigée en `PENDING`, exercée sur PostgreSQL local :

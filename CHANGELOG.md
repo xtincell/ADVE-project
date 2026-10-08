@@ -27,6 +27,14 @@
   Recette fictive uniquement ; aucune génération IA ni écriture de vraie marque.
 - Raccord SPAWT marque→publication et reprise persistée après interruption
   restent ouverts. Cette correction ne reçoit pas le cycle Shinkiro complet.
+- Livraison reçue : CI 37727291199, 4 092 unitaires et 95 PostgreSQL ; image
+  37727306034 bootée sur base neuve et rapprochée du registre/runtime 6.27.414.
+  Un seul déploiement, conteneur `nextjs` et volume privé conservé. Natif ADMIN
+  SPAWT : changement de champ et réouverture reçus, aucune soumission ni preview.
+  Les seize piliers, six sources et compteurs IA restent identiques. La première
+  trace est tronquée ; le rechargement suivant observe 60 réponses sans HTTP
+  ≥400 ni exception, avec 13 requêtes annulées ERR_ABORTED. Ce reçu borné ne
+  vaut pas chargement intégral sans échec ni cycle de publication reçu.
 
 ## v6.27.413 — fix(guidelines): relire l’identité et ses documents sans la réinventer (2026-10-08)
 
