@@ -737,6 +737,20 @@ Le backend d'ingestion (extracteurs + Intent + tRPC + persister) est shippé et 
   description l'est). **Bornage** : ré-upload image séparé → `LOGO_FINAL` (chaîne existante). **Déclencheur** :
   quand un vrai book est ingéré en prod.
 
+### §Transport MCP et clé limitée à un serveur — 2026-10-08
+
+Recette HTTP locale 419 : une clé active `server=advertis`, limitée à la marque
+synthétique, reçoit 401 sur `/api/mcp/rpc` dès tools/list. authenticateMcpRequest
+est appelé avec `*` mais n’accepte que la clé `server=*` ; la promesse du commentaire
+de route (« clé scopée à un serveur précis honorée ») n’est pas reçue.
+**Plan** : transmettre la portée serveur à la frontière de dispatch et l’imposer
+par outil avant d’autoriser cette clé sur le transport agrégé ; recevoir liste,
+appel autorisé et refus d’un autre serveur. Ne pas desserrer l’auth seule, ce qui
+élargirait la portée. La recette 419 utilise une clé locale éphémère `server=*`,
+BRAND uniquement, sans modification des accès de production.
+**Déclencheur** : avant réception C7 des connexions MCP multi-serveurs avec clé
+limitée ; hors raccord documentaire de l’amendement.
+
 ### §Conditions commerciales et projection économique — 2026-10-08
 
 Le lot ADR-0204 conserve les conditions des offres et supprime le ticket de
@@ -753,6 +767,18 @@ financiers locaux ; afficher l'absence, dater la base et séparer scénario/rée
 Le catalogue SPAWT et ses gammes doivent encore être rapprochés de leurs sources
 et amendés via le gateway, sans faire passer le PRD historique pour une offre
 publiée. Reprendre à la réception native du lot conditions commerciales.
+
+Le raccord documentaire de l’amendement est corrigé par ADR-0206 (419) : reçus
+et version relue sont transmis au contrôle transactionnel existant ; agent et
+revue humaine sont distingués, un refus n’est plus accusé comme appliqué. La
+citation d’un document ne vaut ni grounding mesuré ni validation de ses offres.
+Le vrai corpus reste à rapprocher par amendements gouvernés et lectures natives.
+Recommendation.confidence reste le littéral historique 1.0 de cette intention,
+y compris pour un amendement agent ; il ne représente aucune mesure reçue.
+**Plan** : distinguer l’autorisation de la confiance mesurée avec les métadonnées
+existantes, puis éprouver leur consommation dans la priorisation.
+**Déclencheur** : avant réception de toute priorisation autonome de ces corrections.
+
 
 L'écart des écrivains catalogue est corrigé par ADR-0205 (418) : attribution
 commune après arbitrage sur changement accepté, ids acquis conservés, noms exacts

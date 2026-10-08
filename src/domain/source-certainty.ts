@@ -38,6 +38,13 @@ export type SourceCertainty = (typeof SOURCE_CERTAINTY_LEVELS)[number];
 
 export const SourceCertaintySchema = z.enum(SOURCE_CERTAINTY_LEVELS);
 
+/** Version documentaire effectivement lue ; ne constitue pas une validation humaine. */
+export const SourceReceiptSchema = z.object({
+  sourceId: z.string().min(1),
+  contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+});
+export type SourceReceipt = z.infer<typeof SourceReceiptSchema>;
+
 /**
  * Validateur runtime — vérifie qu'une string est un SourceCertainty connu.
  */

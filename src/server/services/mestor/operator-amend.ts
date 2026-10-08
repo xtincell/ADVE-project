@@ -10,7 +10,7 @@
  *   1. Concurrency guard (expectedVersion vs Pillar.currentVersion).
  *   2. PILLAR_COHERENCE gate (LOCKED/destructive/cross-ADVE/financial).
  *   3. Cost gate Thot pre-flight if mode != PATCH_DIRECT.
- *   4. Recommendation row (status ACCEPTED, agent HUMAN, source USER_INTENT).
+ *   4. Recommendation row (ACCEPTED, auteur réel, source USER_INTENT).
  *   5. writePillarAndScore (author OPERATOR) — RTIS staleness propagated
  *      automatically by the gateway (LOI 1).
  *   6. Mark Recommendation APPLIED.
@@ -28,6 +28,7 @@ import type { Intent, IntentResult } from "./intents";
 import { applyPillarCoherenceGate } from "@/server/services/notoria/gates";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import { db } from "@/lib/db";
+import { SourceReceiptSchema } from "@/domain/source-certainty";
 
 type AmendIntent = Extract<Intent, { kind: "OPERATOR_AMEND_PILLAR" }>;
 
@@ -48,9 +49,16 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
     reason,
     overrideLocked,
     expectedVersion,
+    sourceReceipts,
   } = intent;
 
   // ── 0. Argument coherence (cheap guards before any DB read) ─────────
+  if (sourceReceipts !== undefined && !SourceReceiptSchema.array().safeParse(sourceReceipts).success) {
+    return { status: "VETOED", summary: "Références documentaires invalides. Relire les sources.", reason: "SOURCE_RECEIPT_INVALID" };
+  }
+  if (sourceReceipts?.length && expectedVersion === undefined) {
+    return { status: "VETOED", summary: "Relire la version du pilier avant un amendement documentaire.", reason: "SOURCE_VERSION_REQUIRED" };
+  }
   if (mode === "STRATEGIC_REWRITE" && reason.trim().length < 20) {
     return {
       status: "VETOED",
@@ -137,7 +145,7 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
     }
   }
 
-  // ── 4. Create Recommendation (ACCEPTED, agent HUMAN, USER_INTENT) ──
+  // ── 4. Create Recommendation (ACCEPTED, auteur réel, USER_INTENT) ──
   const reco = await db.recommendation.create({
     data: {
       strategyId,
@@ -149,7 +157,7 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
         field,
       ) as Prisma.InputJsonValue,
       proposedValue: proposedValue as Prisma.InputJsonValue,
-      agent: "HUMAN",
+      agent: intent.viaAgent ? "MESTOR" : "HUMAN",
       source: "USER_INTENT",
       confidence: 1.0,
       explain: reason,
@@ -158,8 +166,12 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
       applyPolicy:
         mode === "STRATEGIC_REWRITE" ? "requires_review" : "auto",
       status: "ACCEPTED",
-      reviewedBy: operatorId,
-      reviewedAt: new Date(),
+      reviewedBy: intent.viaAgent ? null : operatorId,
+      reviewedAt: intent.viaAgent ? null : new Date(),
+      ...(sourceReceipts?.length ? {
+        sourceReceipts,
+        citedSourceIds: [...new Set(sourceReceipts.map(r => r.sourceId))],
+      } : {}),
       missionType: "ADVE_UPDATE",
     },
   });
@@ -178,7 +190,12 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
       userId: operatorId,
       reason: intent.viaAgent ? `${reason} (via agent MCP)` : reason,
     },
-    options: { expectedVersion: pillar.currentVersion },
+    options: {
+      expectedVersion: pillar.currentVersion,
+      sourceReceipts,
+      requiredSourceIds: sourceReceipts?.map(r => r.sourceId),
+      rejectOnProvenanceRefusal: intent.viaAgent,
+    },
   });
   if (!writeResult.success) {
     await db.recommendation.update({

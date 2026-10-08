@@ -1,4 +1,5 @@
 import type { PortfolioReference } from "@/domain/portfolio-reference";
+import type { SourceReceipt } from "@/domain/source-certainty";
 import { ADVE_STORAGE_KEYS, type BrandTier } from "@/domain";
 
 /**
@@ -500,6 +501,8 @@ export type Intent =
       overrideLocked?: boolean;
       /** Optimistic concurrency. Pillar.version (Pillar.updatedAt fallback). */
       expectedVersion?: number;
+      /** Versions des documents effectivement lus, revérifiées dans la transaction d'écriture. */
+      sourceReceipts?: SourceReceipt[];
       /**
        * L'amendement vient-il d'un AGENT et non d'un humain ?
        *

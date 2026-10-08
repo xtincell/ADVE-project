@@ -28,6 +28,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { inferredFieldPaths, provenanceTopKey } from "@/domain/field-provenance";
+import { SourceReceiptSchema } from "@/domain/source-certainty";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
@@ -1295,6 +1296,7 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
         reason: z.string().min(1),
         overrideLocked: z.boolean().optional(),
         expectedVersion: z.number().int().positive().optional(),
+        sourceReceipts: SourceReceiptSchema.array().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -1315,6 +1317,7 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
           reason: input.reason,
           overrideLocked: input.overrideLocked,
           expectedVersion: input.expectedVersion,
+          sourceReceipts: input.sourceReceipts,
         },
         { caller: "trpc.pillar.amend" },
       );

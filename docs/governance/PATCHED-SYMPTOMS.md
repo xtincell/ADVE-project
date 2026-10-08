@@ -30,6 +30,13 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-08 · L’amendement ignorait les reçus documentaires, le MCP ne transmettait
+pas la version lue, et Recommendation attribuait une validation humaine à l’agent.
+Un refus de provenance était aussi accusé comme APPLIED. v6.27.419 raccorde le
+contrat existant au contrôle transactionnel des sources, journalise MESTOR sans
+revue humaine et refuse avant version tout amendement agent non autorisé. Cause :
+métadonnées de preuve et accusé d’application divergeaient du writer. ADR-0206.
+
 2026-10-08 · SET_FIELDS profond mutait aussi le précédent état et masquait la
 différence au garde ; une source pouvait écraser une feuille de catalogue humain.
 v6.27.418 clone profondément avant arbitrage. Le même lot factorise les ids au

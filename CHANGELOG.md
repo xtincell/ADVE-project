@@ -1,5 +1,28 @@
 # Changelog — La Fusee
 
+## v6.27.419 — fix(mestor): recevoir les sources de l’amendement (2026-10-08)
+
+**Une proposition documentaire reste liée à la version lue et à son auteur réel.**
+
+- Le contrat OPERATOR_AMEND_PILLAR et ses entrées existantes tRPC/MCP transmettent
+  sourceReceipts ; getPillarContent expose currentVersion. Le hash documentaire est
+  celui d’ADR-0198, vérifié dans la transaction existante, avec les droits actuels.
+  Un reçu mal formé, une version absente/obsolète, un document corrigé ou révoqué
+  refuse l’écriture ; aucune archive ni nouvelle source du pilier n’est conservée.
+- Une proposition MCP reste MESTOR/INFERRED, sans reviewedBy/reviewedAt inventés.
+  Citations et reçus sont conservés ; ni groundingScore ni groundedSourceIds ne
+  sont fabriqués. La décision humaine explicite garde sa voie et son journal.
+- Un amendement agent refusé par le garde ne répond plus « appliqué » : il échoue
+  avant version/metadata. L’erreur du garde est bloquante sur cette voie. Les
+  autres écrivains conservent leur politique actuelle ; aucun nouveau writer.
+- Cinq défauts reproduits en rouge sur PostgreSQL isolé ; reçu technique et
+  raccord du corpus SPAWT sont séparés. 129 tests PostgreSQL, 1 604 de gouvernance
+  et 38 contrats ciblés verts ; types/linters/cycles/build reçus. Transport MCP
+  réel : cinq HTTP 200 relus, source corrigée et version obsolète refusées,
+  une archive, zéro IA. Clé BRAND synthétique nettoyée ; limite des clés serveur
+  sur le transport agrégé inscrite à la dette. Aucun tarif ni état commercial publié
+  ne se déduit d’un document historique. ADR-0206 ; sept chantiers ouverts.
+
 ## v6.27.418 — fix(domain): stabiliser catalogue et confirmation humaine (2026-10-08)
 
 **Une référence produit et une validation humaine survivent aux écritures suivantes.**

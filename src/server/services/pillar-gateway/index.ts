@@ -65,6 +65,8 @@ interface PillarWriteOptions {
   confirmInferredField?: string;
   sourceReceipts?: SourceReceipt[];
   requiredSourceIds?: string[];
+  /** Un amendement agent refusé ne doit créer ni version ni accusé « appliqué ». */
+  rejectOnProvenanceRefusal?: boolean;
   skipValidation?: boolean;
   targetStatus?: ValidationStatus;
   confidenceDelta?: number;
@@ -409,8 +411,10 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
 
       // ── PROVENANCE GUARD: HUMAIN > SOURCE > INFÉRÉ (au champ) ─────
       // Inerte tant qu'aucune provenance n'est tracée (champs UNKNOWN → ALLOW).
-      // Wrappé : un bug du garde ne doit jamais bloquer une écriture légitime.
+      // Les anciens callers restent tolérants ; l'amendement agent exige
+      // un arbitrage réussi et refuse toute erreur du garde.
       let challenged: string[] = [];
+      let denied: string[] = [];
       try {
         const { applyProvenanceGuard, provenanceFromAuthorSystem } = await import("./provenance-guard");
         const existingProvenance = (previousContent._fieldProvenance ?? null) as Record<string, unknown> | null;
@@ -446,9 +450,14 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
         }
         newContent._fieldProvenance = guard.provenance;
         challenged = guard.challenged;
+        denied = guard.denied;
         for (const w of guard.warnings) warnings.push(w);
       } catch (err) {
+        if (options?.rejectOnProvenanceRefusal) throw err;
         warnings.push(`Provenance guard skipped: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      if (options?.rejectOnProvenanceRefusal && (denied.length || challenged.length)) {
+        throw new Error(`FIELD_PROVENANCE_REFUSED: autorité insuffisante pour ${[...denied, ...challenged].join(", ")}. Une décision humaine reste nécessaire.`);
       }
 
       // Only an accepted catalogue change acquires ids. Unrelated edits and

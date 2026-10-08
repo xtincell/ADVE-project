@@ -5,10 +5,11 @@ import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { sourceOriginalSummary } from "@/domain/source-original";
+import type { SourceReceipt } from "@/domain/source-certainty";
 import { getPillarDependents, type PillarKey } from "@/lib/types/advertis-vector";
 
 export type SourceDb = Prisma.TransactionClient;
-export type SourceReceipt = { sourceId: string; contentHash: string };
+export type { SourceReceipt } from "@/domain/source-certainty";
 
 function canonical(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonical);

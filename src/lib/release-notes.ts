@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.419", date: "2026-10-08",
+    headline: "Des corrections rattachées aux documents relus",
+    highlights: [
+      { emoji: "📄", title: "Une source toujours actuelle", body: "Une correction accompagnée de ses documents est refusée si l’un d’eux a changé ou si son accès a été retiré depuis la lecture." },
+      { emoji: "✓", title: "Votre décision reste la vôtre", body: "Une proposition d’agent conserve son auteur. Elle ne se présente plus comme une validation humaine, et un refus ne s’affiche plus comme une correction appliquée." },
+    ],
+  },
+  {
     version: "6.27.418", date: "2026-10-08",
     headline: "Vos liens produit et vos validations tiennent",
     highlights: [
