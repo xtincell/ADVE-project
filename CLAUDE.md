@@ -2,52 +2,49 @@
 
 This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/code). It briefs any agent picking up work on this repo.
 
-## Réception courante — 2026-10-08
+## Réception courante — 2026-10-09
 
-**Production reçue : 6.27.425, admission Ptah — code livré, preuve de reprise locale.**
-Source 2a296152, CI 37850685120 et image 37850690058 reçues ; déploiement terminé
-à 22:14:28 UTC, runtime nextjs/version/index concordants, volume privé conservé.
-Le résultat fournisseur est checkpointé dans GenerativeTask avant la transaction
-unique versions/coffre/coût/COMPLETED. Reprise stable, archives préservées et scope
-marque/équipe/campagne/brief/source sont éprouvés sur PostgreSQL isolé : 24 tests
-verts, après dix contre-exemples initiaux rouges. Webhook et sync émettent
-PTAH_RECONCILE_TASK ; les futures forges portent leur vraie émission parent.
-Aucun nouveau modèle, service ou Intent. Ce reçu synthétique local ne vaut pas
-forge fournisseur réelle, conservation des octets, facture ni réception SPAWT/Noël.
-Suites locales reçues : 4 144 unitaires, 219 PostgreSQL, 1 610 gouvernance verts ;
-zéro cycle, lint sans erreur/24 warnings. HTTP réel : refus 400/403/400, panne coffre
-500 sans admission puis arrêt/nouveau processus ; retry/replay 200 identiques,
-mêmes ids et une version/un actif/un coût, chaîne FAILED→OK→OK vérifiée.
-Checkpoint synthétique, zéro appel fournisseur, fixture nettoyée/serveur arrêté.
-Production : version/lecture/refus reçus, corpus privé et édition SPAWT inchangés ;
-zéro GenerativeTask/AssetVersion avant et après, aucune forge réelle réparée.
-Connexions rechargée/hydratée nativement : version 425, édition v1 et liens relus,
-note vue puis fermée, aucune soumission ni métrique réseau native capturée.
-Stress isolé sans credentials : pages/tRPC non atteints, forges
-différées ; ne pas déclarer le stress E2E entièrement reçu.
-Canva/Figma réconcilient toujours une liste vide, désormais refusée ; les montants
-zéro de plusieurs providers ne prouvent pas la gratuité. Références business
-upstream, reçus documentaires sourceDataSourceId/sourceContentHash, invalidation
-après correction de source/staleAt et close best-effort du spine restent des
-dettes distinctes. Ne pas revendiquer une provenance complète ou une source
-courante garantie.
-État détaillé : [RECEPTION-PTAH-ADMISSION.md](docs/governance/RECEPTION-PTAH-ADMISSION.md)
-et [RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md).
+**Production reçue : 6.27.427, livraison commune de la filiation 426 et du contrat de sortie 427.**
+Source 919cebb49fcfc5f5599ccd3dab5101b7b9f62d0e, CI 37856242347 et image
+37856486468 reçues ; déploiement terminé le 8 octobre à 23:06:42 UTC, runtime
+nextjs/version/index concordants, volume privé RW conservé. Aucune livraison
+426 isolée. Aucun nouveau modèle, service, Intent, outil ou ADR.
 
-**Travaux locaux 426+427, production reçue encore 425** : la filiation 426 est
-reçue sur fixtures, sans forge réelle ([reçu](docs/governance/RECEPTION-PTAH-FILIATION.md)).
-Le candidat 427 reconnaît le résultat racine ou enveloppé par Intent OK et admet
-DEFERRED ; les enveloppes refusées et états incompatibles ne deviennent pas OK.
-Deux rouges/neuf verts avant patch, puis 11 tests de contrat verts ; après
-redémarrage local, Oracle HTTP 200/Intent OK/DEFERRED, portée et émission enfant
-vérifiées. Réconciliation/replay stables sur checkpoint synthétique. Gates 427
-et livraison encore en attente ; aucun fournisseur reçu.
-Les trois références d’entrée étaient déjà en 426. Aucun changement UI :
-PtahForgeButton projette encore Intent OK/succès sans état de production DEFERRED.
-Reprendre dans l’UX existante avant acceptation C4/C5/C6 ; pas de preuve de rendu
-par appel de route. activeBriefId, émission upstream, batch multiple, documentaire,
-octets/CDN, parentAssetId, facture et journal restent ouverts.
-Voir [le contrat de résultat](docs/governance/RECEPTION-PTAH-RESULTAT.md).
+campaignId/briefId/sourceBrandAssetId traversent MCP/tRPC, Intent, Artemis et
+Ptah jusqu’à GenerativeTask ; portée relue avant fournisseur et admission.
+Régénération : concordance propre de la tâche historique et références reprises.
+La post-condition reconnaît le résultat racine ou enveloppé par Intent OK,
+CREATED/IN_PROGRESS/DEFERRED ; les refus ne deviennent pas des succès.
+Suites reçues : 4 151 unitaires/395 fichiers, 230 PostgreSQL/13 fichiers,
+1 610 gouvernance/165 fichiers ; types/lints sans erreur, 24 warnings, zéro cycle.
+Deux rouges/neuf verts puis 11 tests de contrat verts. Oracle HTTP 200/Intent
+OK/DEFERRED après redémarrage, portée et émission enfant vérifiées ; MCP/tRPC et
+replay stables **sur fixtures locales synthétiques**, zéro fournisseur.
+L’admission atomique et la reprise interrompue 425 restent historiques :
+[RECEPTION-PTAH-ADMISSION.md](docs/governance/RECEPTION-PTAH-ADMISSION.md).
+
+Production : version/lecture/refus reçus, corpus et édition SPAWT inchangés ;
+zéro GenerativeTask/AssetVersion avant/après, aucune forge réelle réparée.
+Connexions 427/édition v1 relues après hydratation, note vue puis fermée, aucune
+saisie/soumission ni métrique réseau native capturée. Le bouton de production
+lui-même n’est pas reçu. PtahForgeButton projette encore Intent OK/succès sans
+DEFERRED ; constats statiques : pas d’OperatorSurface ni requireOperator:true
+sur forgeForSection. Reprendre gardes existantes et état demande/production,
+puis recette native OPERATOR/FOUNDER avec refus sans effet avant C4/C5/C6.
+Préciser « Oracle » au prochain lot UX sans réécrire la note 427 publiée.
+DEFERRED n’a pas de commande de relance de la même tâche : matérialiser en crée
+une autre, réconcilier ne lance pas forge(). Clés Ptah lues dans l’environnement ;
+aucun chemin Connexions efficace reçu. Prochaine C5 : reprise manuelle via tâche/
+Intent existants, garde portée/coûts et preuve anti-double appel, configuration
+réelle reçue avant autonomie. Ne promettre ni reprise automatique ni lien non reçu.
+
+Ne pas déclarer stress E2E, fournisseur, octets durables/CDN, facture ou cycle
+réel reçus. Fallbacks d’émission upstream, multisource, sourceDataSourceId/hash,
+invalidation/staleAt, portée/kind/état activeBriefId, parentAssetId/régénération
+complète, Canva/Figma et journal restent ouverts. Aucun univers SPAWT complet,
+cycle Noël, sept chantiers ou acceptation métier globale n’est certifié :
+[reçu courant](docs/governance/RECEPTION-PTAH-RESULTAT.md) et
+[RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md).
 
 ---
 

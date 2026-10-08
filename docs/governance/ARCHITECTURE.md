@@ -64,32 +64,26 @@ sequenceDiagram
   end
 ```
 
-**Frontière Ptah, code 6.27.425 livré au 2026-10-08** : la transaction d’admission
-utilise le verrou partagé du coffre et celui de la tâche. Un résultat checkpointé
-peut être repris sans nouvelle forge ; un actif archivé reste archivé. Le coût
-de forge est écrit dans cette transaction, à partir du montant déclaré par le
-fournisseur, sans en déduire une facture réelle. Vingt-quatre tests PostgreSQL
-isolés sont reçus, ainsi que les suites locales 4 144 unitaires/219 PostgreSQL/
-1 610 gouvernance, zéro cycle et lint sans erreur/24 warnings. Les refus HTTP
-réels et la reprise après arrêt/nouveau processus sont reçus : checkpoint
-synthétique conservé, retry/replay 200 identiques, une version/un actif/un coût
-et chaîne FAILED→OK→OK vérifiée, zéro appel fournisseur. Source 2a296152,
-CI 37850685120, image 37850690058 et runtime exact reçus à 22:14:28 UTC ; volume
-privé conservé. Les lectures/refus de production et la conservation du corpus
-sont reçus, sans tâche ni version de forge réelle avant/après livraison.
-Le stress isolé ne reçoit pas les pages/tRPC ni les fournisseurs sans credentials.
-Le journal terminal du spine, les octets/CDN et les adaptateurs réels
-restent distincts : [réception courante](RECEPTION-PTAH-ADMISSION.md).
+**Frontière Ptah, code 6.27.427 livré (réception 2026-10-09)** : le résultat
+checkpointé rejoint versions/coffre/coût déclaré/COMPLETED dans une transaction
+sous verrou partagé du coffre et de la tâche ; reprise stable, archives préservées.
+Le code 426 transmet les références métier existantes jusqu’à la tâche et relit
+leur portée avant fournisseur/admission, ainsi que la tâche historique en
+régénération. Le code 427 reconnaît le résultat racine ou enveloppé par Intent OK,
+avec DEFERRED admis ; les refus restent des refus. Aucun service ajouté.
 
-**Candidat 426** : les références métier existantes traversent les entrées
-MCP/tRPC et les producteurs jusqu’à la tâche ; le même contrôle de portée
-précède le fournisseur et l’admission. Régénération et descriptif MCP sont
-ajustés, sans nouvelle couche. Neuf rouges initiaux puis 35 cas ciblés/230
-PostgreSQL verts ; MCP/tRPC/replay locaux reçus sur fixtures, zéro fournisseur
-réel. Suite complète 4 144 unitaires/1 610 gouvernance verte ; stress/tsc final
-en cours. Le 500 natif de forge Oracle impose un correctif 427 avant image ;
-pas de livraison 426 isolée :
-[réception filiation](RECEPTION-PTAH-FILIATION.md).
+Suites finales : 4 151 unitaires/230 PostgreSQL/1 610 gouvernance, types/lints sans
+erreur, 24 warnings, zéro cycle. HTTP Oracle 200/DEFERRED, portée/émission et
+replay reçus localement sur fixtures synthétiques ; aucun fournisseur réel.
+Source 919cebb4, CI 37856242347/image 37856486468 et runtime 427 reçus le 8 octobre
+à 23:06:42 UTC, volume privé conservé ; aucune livraison 426 isolée. Production :
+lectures/refus, corpus et édition SPAWT inchangés, zéro tâche/version de forge
+avant/après. Ce reçu ne démontre aucun cycle réel.
+
+L’état du bouton et sa garde opérateur restent à recevoir nativement avant
+C4/C5/C6 ; filiation upstream/documentaire, octets/CDN, facture, Canva/Figma et
+journal restent distincts : [reçu courant](RECEPTION-PTAH-RESULTAT.md),
+[reprise interrompue historique 425](RECEPTION-PTAH-ADMISSION.md).
 
 ## Glory tools — outils intriqués
 

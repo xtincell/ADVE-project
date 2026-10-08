@@ -5,7 +5,7 @@ Le [reçu 425](RECEPTION-PTAH-ADMISSION.md) reste historique ; ses preuves ne
 certifient pas ce nouveau lot.
 
 Suite distincte : le [reçu du contrat 427](RECEPTION-PTAH-RESULTAT.md) consigne
-la correction locale du 500 manuel et la livraison commune encore attendue ;
+la correction locale du 500 manuel et la livraison commune reçue le 8 octobre ;
 les constats de ce reçu 426 restent historiques.
 
 ## Périmètre du candidat

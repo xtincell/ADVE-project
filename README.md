@@ -64,36 +64,33 @@ npm run dev                 # → http://localhost:3000
 
 ---
 
-## État courant borné — 2026-10-08
+## État courant borné — 2026-10-09
 
-La dernière livraison de production reçue est **6.27.425**, source 2a296152,
-CI 37850685120 et image 37850690058 rapprochées du runtime exact. Le corpus privé
-et l’édition publique SPAWT sont conservés ; son raccord reste limité aux textes
-et liens. L’univers de marque complet et les sept chantiers Shinkiro restent ouverts.
+La dernière livraison de production reçue est **6.27.427**, source 919cebb4,
+CI 37856242347 et image 37856486468 rapprochées du runtime exact le 8 octobre à
+23:06:42 UTC. Le volume privé, le corpus et l’édition publique SPAWT sont conservés.
+Le raccord SPAWT reste limité aux textes/liens ; l’univers complet, les sept
+chantiers Shinkiro et leurs acceptations métier restent ouverts.
 
-Le correctif **6.27.425 est livré** : Ptah conserve le résultat avant
-admission, puis écrit versions, coffre, reçu de coût et COMPLETED ensemble.
-La reprise retrouve les mêmes actifs et respecte leurs archives. Vingt-quatre
-tests d’admission PostgreSQL isolés sont verts après dix contre-exemples initiaux
-rouges ; le fournisseur y est synthétique. Suites locales : 4 144 unitaires,
-219 PostgreSQL, 1 610 gouvernance verts ; zéro cycle, lint sans erreur/24 warnings.
-HTTP local après panne injectée et redémarrage reçu : checkpoint conservé,
-retry/replay 200 avec les mêmes ids et une seule admission, zéro appel fournisseur.
-En production, seuls version, lectures et refus ont été exercés ; aucune tâche
-ni version de forge n’y existait avant ou après livraison. La reprise locale ne
-prouve donc aucune forge réelle SPAWT/Noël. Connexions 425 et son édition publique
-v1 sont relues nativement sans soumission. Le stress isolé n’a pas atteint les
-pages/tRPC ; ses forges sans credentials sont différées. Conservation des octets,
-filiation upstream et contrats de régénération/MCP restent à recevoir ; les
-fournisseurs réels et leur facturation restent des réceptions distinctes.
-Voir [le reçu courant et ses limites](docs/governance/RECEPTION-PTAH-ADMISSION.md).
+Le code 426+427 transmet campagne/brief/actif source jusqu’à la tâche, contrôle
+leur portée et celle de la tâche historique, puis reconnaît le résultat
+DEFERRED sans faux 500. Aucune livraison 426 isolée. Suites reçues : 4 151
+unitaires, 230 PostgreSQL, 1 610 gouvernance ; types/lints sans erreur,
+24 warnings préexistants, zéro cycle. Appel Oracle HTTP 200/Intent OK/DEFERRED,
+portée/émission et replay reçus **localement sur fixtures**, zéro fournisseur.
+L’admission atomique et la reprise après interruption de 425 restent documentées
+[dans leur reçu historique](docs/governance/RECEPTION-PTAH-ADMISSION.md).
 
-**Travaux locaux 426+427, livraison en attente** : les références métier 426 sont
-reçues sur fixtures ([filiation](docs/governance/RECEPTION-PTAH-FILIATION.md)).
-Le candidat 427 réaligne le reçu de la demande différée : 11 tests de contrat
-verts et appel Oracle HTTP 200/DEFERRED reçus localement, gates/livraison en attente.
-Le bouton n’expose pas encore DEFERRED,
-et aucun cycle réel n’est reçu : [contrat de résultat](docs/governance/RECEPTION-PTAH-RESULTAT.md).
+En production : lectures/refus et corpus comparé reçus, toujours zéro tâche ou
+version de forge. Connexions 427/édition publique v1 relues nativement sans
+soumission ; le bouton Oracle lui-même n’est pas reçu. Celui-ci n’expose pas
+encore DEFERRED ; sa garde opérateur et la distinction demande/production
+restent au plan de la prochaine passe native. La relance de la même tâche après
+configuration n’est pas reçue ; les clés Ptah sont lues dans l’environnement,
+sans chemin Connexions prouvé. Aucun fournisseur, média, facture
+ou cycle réel SPAWT/Noël n’est reçu. Provenance documentaire, sources multiples,
+activeBriefId, octets/CDN, succession de régénération et journal restent ouverts :
+[reçu courant et limites](docs/governance/RECEPTION-PTAH-RESULTAT.md).
 
 ## Historique des vérifications — 2026-06-19
 
@@ -277,7 +274,11 @@ npx prisma migrate deploy
 
 **Les flows LLM échouent mais l'app charge** — attendu sans `ANTHROPIC_API_KEY`. L'app boote, l'intake ADVE marche ; les étapes génératives (Oracle, briefs) ont besoin d'une clé LLM.
 
-**Connecteurs en "attente d'activation" / DEFERRED** — attendu : paiements, mobile money, email, Tarsis, CRM, providers Ptah sont tous ship-without-keys. Configure-les dans le Credentials Vault (Console) ou via `.env.local`.
+**Connecteurs en "attente d'activation" / DEFERRED** — paiements, mobile money,
+email, Tarsis, CRM et providers Ptah peuvent rester différés sans accès configuré.
+Pour Ptah, les adaptateurs lisent les variables d’environnement globales ; le
+chemin de configuration via Connexions/Credentials Vault reste à recevoir.
+Configurer un accès ne relance pas à lui seul la tâche DEFERRED existante.
 
 ---
 

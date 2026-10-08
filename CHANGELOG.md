@@ -1,5 +1,28 @@
 # Changelog — La Fusee
 
+## v6.27.427 — docs(governance): recevoir la livraison commune de filiation Ptah (2026-10-09)
+
+**Le code 426+427 est livré ; ses preuves métier restent locales et synthétiques.**
+
+- Source 919cebb4, CI 37856242347 verte (4 151 unitaires/230 PostgreSQL), image
+  37856486468 reçue après boot sur base neuve, login 200 et lecture PDF fixture
+  deux pages. Déploiement unique terminé le 8 octobre à 23:06:42 UTC ; runtime
+  6.27.427/index exact et volume privé en lecture/écriture rapprochés. Aucune
+  livraison 426 isolée.
+- Lectures/refus de production, corpus et édition publique SPAWT inchangés ;
+  zéro tâche/version de forge avant/après, zéro fixture/fournisseur en production.
+  Connexions 427/édition v1 relues nativement sans soumission ; le bouton Oracle
+  lui-même n’est pas reçu. Le faux 500 et le transport des trois références sont
+  fermés et retirés des registres actifs ; ni média, facture, provenance complète
+  ni cycle réel ne sont déduits.
+- Reprise UX existante : distinguer Intent OK de la production DEFERRED, vérifier
+  garde opérateur et surface correspondante, puis recevoir OPERATOR/FOUNDER avant
+  C4/C5/C6. La note publiée « livre de marque » sera précisée au prochain lot UX :
+  la route reçue est Oracle. La reprise d’une même tâche DEFERRED et le chemin
+  de configuration Ptah restent à recevoir en C5. Limites et digests dans
+  [le reçu courant](docs/governance/RECEPTION-PTAH-RESULTAT.md) ; sept chantiers et
+  acceptations métier restent ouverts. Aucun code applicatif modifié ici.
+
 ## v6.27.427 — fix(ptah): reconnaître le reçu d’une demande différée (2026-10-08)
 
 **Une demande différée peut être acceptée sans provoquer un faux échec HTTP.**
@@ -13,7 +36,7 @@
   émission enfant vérifiées ; réconciliation/replay stables sur checkpoint
   synthétique. Ce reçu ferme le désaccord de sortie, sans recevoir de fournisseur.
 - Gates 427 verts (types/lints sans erreur, 24 warnings préexistants, zéro cycle,
-  4 151 unitaires et 1 610 gouvernance) ; livraison commune 426+427 en attente, production reçue encore 425.
+  4 151 unitaires et 1 610 gouvernance) ; livraison commune 426+427 reçue ci-dessus.
   Aucune interface modifiée : PtahForgeButton affiche encore OK/succès sans exposer DEFERRED.
   Plan UX existant et limites provider/média/facture/cycle maintenus dans
   [le reçu du contrat](docs/governance/RECEPTION-PTAH-RESULTAT.md).

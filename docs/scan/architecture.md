@@ -95,19 +95,22 @@ sequenceDiagram
   end
 ```
 
-**Ptah boundary, 2026-10-08:** shipped code 6.27.425 checkpoints the provider result,
-then admits versions/vault/reported cost/COMPLETED in one transaction. Twenty-four
-isolated PostgreSQL admission tests are received with synthetic providers.
-Local suites passed: 4,144 unit / 219 PostgreSQL / 1,610 governance; zero cycles,
-lint zero errors / 24 warnings. Real HTTP failure and restart are received:
-checkpoint retained, retry/replay 200 with identical bodies and ids, one
-version/asset/cost and verified FAILED→OK→OK chain, zero provider calls.
-Source 2a296152, CI 37850685120, image 37850690058 and exact runtime 425 are
-received; the private corpus and SPAWT edition are unchanged. Production exercised
-reads/refusals only; no forge tasks or versions existed before or after delivery.
-Isolated stress reached no pages/tRPC and deferred forges without credentials.
-Bytes/CDN, real providers and invoices, upstream business references and spine
-terminal closure remain separate: [current receipt](../governance/RECEPTION-PTAH-ADMISSION.md).
+**Ptah boundary, received 2026-10-09:** shipped code 6.27.427 retains the
+checkpoint and atomic versions/vault/reported cost/COMPLETED admission. Business
+references now reach the task with shared scope checks before provider/admission;
+regeneration validates its historical task. Root or Intent-OK-wrapped task output
+accepts DEFERRED without a false HTTP 500, preserving refused outcomes.
+Final suites passed: 4,151 unit / 230 PostgreSQL / 1,610 governance; types/lints
+zero errors / 24 warnings, zero cycles. Oracle HTTP 200/DEFERRED, scope/emission
+and replay are local synthetic fixture evidence, with zero provider calls.
+Source 919cebb4, CI 37856242347, image 37856486468 and exact runtime 427 were
+received after deployment on October 8 at 23:06:42 UTC; private RW volume retained.
+426 was not deployed separately. Production reads/refusals, unchanged corpus
+and SPAWT edition, and zero forge tasks/versions before/after are received.
+No real provider/media/invoice/business cycle or native forge button is accepted.
+Operator guard and request-vs-production UI, upstream/documentary lineage,
+bytes/CDN, invoices and journal closure remain open:
+[current receipt](../governance/RECEPTION-PTAH-RESULTAT.md).
 
 **Intent lifecycle** — `PROPOSED → DELIBERATED → DISPATCHED → EXECUTING → OBSERVED → COMPLETED` (or `FAILED`/`VETOED`/`DOWNGRADED`). Each transition:
 

@@ -1,33 +1,34 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## Reçu de demande différée — candidat 427 (2026-10-08)
+## Filiation et reçu de demande — livraison commune 426+427 (2026-10-09)
 
-La post-condition reconnaît le résultat racine ou son enveloppe Intent OK,
-avec DEFERRED admis par le schéma de sortie. Onze tests verts après deux rouges ;
-Oracle HTTP 200/DEFERRED reçu localement après redémarrage, portée et émission
-enfant vérifiées. Désaccord de sortie fermé ; gates/livraison commune 426+427 en
-attente, production encore 425. Aucune interface modifiée : distinguer demande
-et production dans PtahForgeButton reste une reprise de l’UX existante avant
-acceptation C4/C5/C6. Voir [le reçu du contrat](RECEPTION-PTAH-RESULTAT.md).
+Le code 426 transmet campaignId/briefId/sourceBrandAssetId jusqu’à la tâche et
+partage le contrôle de portée avant fournisseur/admission ; la régénération relit
+sa tâche historique, le descriptif MCP décrit l’admission. Le correctif 427
+reconnaît le résultat racine ou enveloppé par Intent OK et admet DEFERRED.
+Neuf rouges de filiation puis 35 ciblés/230 PostgreSQL verts ; deux rouges de
+contrat puis 11 verts. Oracle HTTP 200/DEFERRED après redémarrage, portée et
+émission enfant vérifiées ; MCP/tRPC/replay reçus sur fixtures locales, zéro
+fournisseur. Suites finales 4 151 unitaires/1 610 gouvernance, types/lints sans
+erreur, 24 warnings, zéro cycle.
 
-## Références métier jusqu’à Ptah — candidat 426 (2026-10-08)
-
-Les champs existants campaignId/briefId/sourceBrandAssetId sont transmis depuis
-MCP/tRPC, séquences et forge manuelle du coffre jusqu’à GenerativeTask. Le contrôle
-partagé de portée précède la sélection fournisseur et l’admission ; la gate de
-brief de campagne est réutilisée. La régénération relit la concordance de sa tâche
-historique et conserve ses références ; le descriptif MCP est réaligné.
-Neuf rouges initiaux puis 35 cas ciblés/230 PostgreSQL verts ; types/lint/
-lint:governance sans erreur, 24 warnings, zéro cycle. MCP/tRPC/replay locaux reçus
-sur fixtures ; 4 144 unitaires/1 610 gouvernance verts, types finaux reçus ;
-stress isolé sans pages/tRPC et forges différées. Livraison à recevoir, dernier
-runtime reçu 425. Au reçu 426, forge Oracle non reçue : 412 sans ADVE puis 500
-après tâche DEFERRED malgré gate satisfaite. Correctif 427 dédié du contrat de
-sortie reçu localement ci-dessus ; pas de livraison 426 isolée.
-activeBriefId n’est vérifié que non-null : sa
-portée/kind/état rejoint le plan du prochain brief documentaire réel.
-Aucun nouveau modèle/service/Intent/outil/ADR, ni provenance
-complète ou cycle réel présumé : [réception filiation](RECEPTION-PTAH-FILIATION.md).
+Source 919cebb4, CI 37856242347, image 37856486468 et runtime 427 reçus le 8 octobre
+à 23:06:42 UTC ; 426 n’a pas été déployée seule. Corpus/édition SPAWT conservés,
+zéro tâche/version de forge en production avant/après. Transport des références
+et désaccord de sortie fermés ; aucun fournisseur/média/facture/cycle réel reçu.
+Connexions 427/édition v1 relues nativement sans soumission, pas le bouton Oracle.
+Reprendre état de demande/production et gardes opérateur dans l’UX existante :
+PtahForgeButton n’expose pas DEFERRED/OperatorSurface, forgeForSection ne déclare
+pas requireOperator:true. Recette native OPERATOR/FOUNDER et refus sans effet
+avant acceptation C4/C5/C6 ; préciser Oracle au prochain lot UX sans réécrire la
+note 427 publiée. Prochaine C5 : relance manuelle de la même tâche DEFERRED via
+tâche/Intent existants, portée/coûts/anti-double appel et configuration réelle
+reçus avant autonomie ; aucun chemin Connexions ni reprise automatique prouvés.
+activeBriefId, upstream/multisource/documentaire/invalidation,
+octets/CDN, Canva/Figma, parentAssetId, facture et journal restent au registre.
+Aucun nouveau concept, modèle, service, Intent, outil ou ADR ; sept chantiers et
+acceptations métier restent ouverts : [reçu courant](RECEPTION-PTAH-RESULTAT.md),
+[constats historiques 426](RECEPTION-PTAH-FILIATION.md).
 
 ## Admission Ptah après résultat — 2026-10-08
 
@@ -100,7 +101,7 @@ Remplacement/version/slot sont atomiques ; les retries préservent la décision
 existante et les émissions locales non chaînées sont retirées. Aucun nouveau
 modèle, service, page, agent ou Glory tool. Les preuves PostgreSQL, la recette
 native et le runtime restent des réceptions distinctes. Création, expiration,
-classifieur, réceptions Ptah hors admission locale 425 et fermeture durable du
+classifieur, réception fournisseur/média Ptah et fermeture durable du
 spine restent au registre de dette.
 Un ACTIVE générique n’est ni une validation humaine ni une publication : ADR-0209
 ajoute le choix explicite de l’édition publique ; sa consommation SPAWT et la

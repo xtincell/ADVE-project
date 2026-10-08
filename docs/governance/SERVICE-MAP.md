@@ -61,31 +61,25 @@ src/server/services/anubis/
 
 Dépendances satellites : `email`, `oauth-integrations`, `advertis-connectors`, `financial-brain`. **4 nouveaux models Prisma** : `CommsPlan`, `BroadcastJob`, `EmailTemplate`, `SmsTemplate`. Réutilise `Notification`, `NotificationPreference`, `WebhookConfig`, `ExternalConnector` existants. Pages : `/console/anubis/page.tsx` (dashboard) + `/console/anubis/credentials/page.tsx` (Credentials Center). Router tRPC : `anubis.ts`.
 
-### Ptah — service Phase 9 existant ; code d’admission 425 livré
+### Ptah — service Phase 9 existant ; code 426+427 livré en 6.27.427
 
-ADR-0009 décrit la fondation historique. État courant au 2026-10-08 : le correctif
-6.27.425 checkpoint le résultat fournisseur avant l’admission atomique
-versions/coffre/coût/COMPLETED ; webhook et sync passent par PTAH_RECONCILE_TASK.
-Vingt-quatre tests d’admission PostgreSQL isolés verts, fournisseur synthétique ;
-suites locales 4 144 unitaires/219 PostgreSQL/1 610 gouvernance vertes, zéro cycle,
-lint sans erreur/24 warnings. HTTP après panne et arrêt/nouveau processus reçu :
-checkpoint conservé, retry/replay 200, mêmes ids et admission unique, chaîne
-FAILED→OK→OK vérifiée ; zéro appel fournisseur. Source 2a296152, CI 37850685120,
-image 37850690058 et runtime exact 425 reçus ; corpus/édition SPAWT conservés,
-aucune tâche/version de forge en production avant/après. Le stress
-isolé ne reçoit pas les pages/tRPC ; les forges sans credentials sont différées.
-Canva/Figma renvoient encore un résultat vide, désormais refusé. Octets/CDN,
-factures et filiation business upstream restent ouverts, distincts du close du
-spine : [réception et limites](RECEPTION-PTAH-ADMISSION.md).
+ADR-0009 décrit la fondation historique. État courant au 2026-10-09 : résultat
+checkpointé puis admission atomique versions/coffre/coût/COMPLETED ; webhook et
+sync passent par PTAH_RECONCILE_TASK. Les références campagne/brief/actif source
+traversent les entrées et producteurs jusqu’à la tâche, avec contrôle partagé
+avant fournisseur/admission ; tâche historique de régénération contrôlée.
+Le reçu de demande racine ou enveloppé accepte DEFERRED sans faux 500.
+Suites finales : 4 151 unitaires/230 PostgreSQL/1 610 gouvernance vertes,
+types/lints sans erreur, 24 warnings préexistants, zéro cycle. MCP/tRPC/Oracle
+HTTP 200/DEFERRED et replay reçus sur fixtures locales synthétiques, zéro fournisseur.
 
-En préparation, candidat 426 : transmission des références métier depuis
-MCP/tRPC/séquences/forge manuelle, contrôle partagé avant fournisseur et admission,
-tâche historique de régénération contrôlée, descriptif MCP corrigé. Neuf rouges
-initiaux puis 35 cas ciblés/230 PostgreSQL verts, MCP/tRPC/replay locaux reçus sur
-fixtures ; 4 144 unitaires/1 610 gouvernance verts, stress/tsc final en cours.
-Forge Oracle 500 malgré gate satisfaite : correctif 427 dédié avant image,
-aucune livraison 426 isolée reçue ou promise.
-Voir [le reçu filiation](RECEPTION-PTAH-FILIATION.md).
+Source 919cebb4, CI 37856242347/image 37856486468 et runtime exact 427 reçus le
+8 octobre à 23:06:42 UTC ; aucune livraison 426 isolée, volume privé conservé.
+Lectures/refus et corpus/édition SPAWT conservés ; zéro tâche/version de forge
+avant/après, aucune forge réelle réparée. Bouton/garde opérateur à reprendre
+nativement, octets/CDN, Canva/Figma, facture, filiation au-delà des trois
+références et journal restent ouverts : [reçu courant](RECEPTION-PTAH-RESULTAT.md)
+et [admission historique 425](RECEPTION-PTAH-ADMISSION.md). Aucun service ajouté.
 
 ```
 src/server/services/ptah/
