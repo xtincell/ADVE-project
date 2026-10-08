@@ -22,9 +22,23 @@ publication v4 et retour à v3 créant v5, copie relue après reload. Stress san
 finding, sept forges DEFERRED sans prestataire reçu. CORS ajoute l’origine https
 exacte portail.spawt.online aux origines spawt.online/WWW, avec HTTP et domaines
 ressemblants exclus. Source 8cc1209a/CI 37839043556 reçues avant alias ; image
-37839472712 annulée avant déploiement. Nouvelle source/build/CI/image et assertions
-CORS finales à recevoir. L’interface native reste inchangée ; 423 n’a jamais été
-déployée, runtime et raccord final restent distincts de ces reçus locaux.
+37839472712 annulée avant déploiement. CORS reçu après patch : 195 PostgreSQL verts,
+dont les mêmes 16 public-brand ; WWW/portail admis, HTTP/domaines ressemblants refusés.
+Avant patch, le portail échoue dans la contre-épreuve (15 verts/un rouge).
+Les cinq gardes finaux et 1 610 tests de gouvernance sont reçus. Source après alias
+59ef5fda, CI 37840436060 verte, build local réussi/2 529 fichiers source stables ;
+huit HTTP authentifiés finaux, restauration v3 et export/CORS/ETag reçus, fixtures
+nettoyées à zéro. Le natif reste avant alias, interface inchangée.
+L’image 37841025811 échoue au smoke boot avant push/déploiement : postgres-array
+3.0.4 requis par Prisma adapter-pg est tronqué à package.json dans le standalone.
+Le loader Prisma passe après copie, puis le bundle complet révèle zod absent.
+Le diagnostic porte les dépendances externes du bundle, au-delà du seul loader :
+Docker copie désormais postgres-array et zod complets, avec les scopes @prisma.
+Après les deux copies, freeze-public-brands exact reçoit exit 0 sur DB isolée,
+captured=0/humanReview=false, sans contourner gardes ou capture. Aucun boot Docker
+déduit ; nouvelle source/image/boot à recevoir ;
+production 422 intacte, 423 jamais déployée, vitrine live. Runtime et raccord final
+restent distincts des preuves locales ; 59ef n’est pas une livraison reçue.
 Ce premier contrat porte la copie publique et les liens, pas les tokens, la voix,
 les variantes d’identité ni l’ensemble du quiz/application. Sept chantiers ouverts.
 

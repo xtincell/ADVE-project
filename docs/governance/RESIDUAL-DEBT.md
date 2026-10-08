@@ -21,16 +21,38 @@ sans substitution de police.
   après reload, zéro erreur de page ou réponse >=500. Stress sans finding, sept
   forges DEFERRED sans provider reçu. Source La Fusée 8cc1209a/CI 37839043556 reçues
   avant alias, image 37839472712 annulée avant déploiement. Le CORS exact ajoute
-  https://portail.spawt.online aux origines https spawt.online/WWW ; assertions
-  WWW/portail et refus HTTP/domaines ressemblants, nouvelle source/build/CI/image
-  finales à recevoir. L’interface native reste inchangée ; 423 n’a jamais été
-  déployée. Capture historique, runtime et
+  https://portail.spawt.online aux origines https spawt.online/WWW. Contre-épreuve
+  avant patch : 16 cas, 15 verts/un rouge (portail refusé). Après patch : 195/195
+  PostgreSQL verts, dont les mêmes 16 public-brand, WWW/portail autorisés et
+  HTTP/domaines ressemblants refusés. Cinq gardes finaux et 1 610 tests de
+  gouvernance reçus. Source après alias 59ef5fda/CI 37840436060 verte ; build local
+  réussi, 2 529 fichiers source identiques au commit. Huit HTTP authentifiés finaux,
+  restauration v3, export privé 401/ETag 304/CORS reçus, fixtures nettoyées à zéro.
+  Le natif reste avant alias, interface inchangée. L’image 37841025811 échoue au
+  smoke boot avant push/déploiement ; 59ef n’est pas une livraison reçue.
+  Production 422 intacte, 423 jamais déployée. Capture historique, runtime et
   raccord final SPAWT restent à recevoir. **Fermer** par rapprochement
   source/pins → choix → édition/digest → fichier → consommateur SPAWT → image et
   lecture native, avec panne réseau, conflit, opérateur étranger et retour à la
   précédente. Conserver contenu/versions privés et copie publique pendant les
   refus. **Déclencheur** : suite immédiate C2/C3 de publication SPAWT ; effort :
   une recette de bout en bout et déploiement sur les applications existantes.
+- **Dépendances externes du bundle — boot 423 non reçu** : smoke 37841025811 échoué avec
+  `Error: Cannot find module '/app/node_modules/postgres-array/index.js'`.
+  Prisma adapter-pg exige postgres-array 3.0.4 ; le standalone n’a conservé que
+  son package.json. Après réparation du loader Prisma, l’exécution du bundle
+  complet révèle aussi `Cannot find module 'zod'`. Les dépendances externes
+  @prisma/client, @prisma/adapter-pg et zod doivent toutes être présentes au runner.
+  Docker copie désormais postgres-array et zod complets, en plus des scopes @prisma.
+  Loader reçu rouge/vert, puis bundle exact freeze-public-brands reçu exit 0 sur
+  DB isolée, captured=0/humanReview=false après les deux copies ; preuves
+  `packaging-migration-zod-red.log`, `packaging-migration.json` et
+  `packaging-migration.log`. **Fermer** en recevant le boot de la nouvelle image
+  Docker, sa capture sur base isolée, sa publication puis son runtime exact.
+  Aucun contournement de capture ou des gardes ; ces reçus isolés ne valent pas
+  boot Docker ni livraison en production.
+  **Déclencheur** : prochain build 423, avant push/déploiement ; effort : un lot
+  Docker et recette de démarrage. Production 422 et vitrine SPAWT restent intactes.
 - **Identité au-delà de la copie v1** : public-brand-v1 ne porte pas tokens de
   design, voix structurée ni variantes de logo. Le premier consommateur SPAWT est
   limité au hero et aux liens, sans modifier la direction artistique, le quiz

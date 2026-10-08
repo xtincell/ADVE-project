@@ -142,10 +142,39 @@ aucune police n’a été substituée. Cette réception des fichiers n’équiva
 une réception de tout l’univers de marque.
 
 La Fusée avant alias : source 8cc1209a et CI 37839043556 verte ; la construction
-37839472712 est annulée avant déploiement. L’ajout CORS du portail exige les
-assertions WWW/portail autorisés et HTTP/domaines ressemblants refusés sur la
-nouvelle source finale, puis son build/CI/image. L’interface native est inchangée
-par ce correctif ; ses reçus ci-dessus restent bornés à la source avant alias.
+37839472712 est annulée avant déploiement. L’ajout CORS du portail est reçu :
+`alias-red.log` compte 16 cas, 15 verts et un rouge avant patch (portail refusé) ;
+`postgres-final-alias.log` reçoit 195/195 PostgreSQL après patch, dont les mêmes
+16 public-brand, avec WWW/portail autorisés et HTTP/domaines ressemblants refusés.
+Les cinq gardes finaux et 1 610 tests de gouvernance sont reçus. La source après
+alias `59ef5fda9640f265a7d995da40041d83d4389d46` a sa CI 37840436060 verte, son
+build local exit 0 et 2 529 fichiers source identiques au commit avant/après.
+HTTP authentifié final : [200, 403, 200, 409, 200, 200, 200, 200], publication
+et restauration v3 reçues ; CORS spawt/WWW/portail exact, domaine ressemblant
+refusé, export privé 401 et ETag 304. Les fixtures sont nettoyées à zéro.
+L’interface native est inchangée par le correctif d’alias ; ses reçus ci-dessus
+restent bornés à la source avant alias, distincts de ces HTTP finaux.
+
+L’image 37841025811 échoue au smoke boot avant push ghcr et déploiement, avec
+l’erreur exacte `Error: Cannot find module '/app/node_modules/postgres-array/index.js'`.
+Prisma adapter-pg exige postgres-array 3.0.4 ; le standalone n’en contient que
+package.json. Le loader Prisma seul ne couvre pas toutes les dépendances externes
+du bundle : @prisma/client, @prisma/adapter-pg, zod et les modules natifs.
+Les scopes @prisma sont déjà copiés ; l’adapter exige aussi postgres-array.
+Réception locale du loader, dans une copie du standalone hors dépôt avec les
+scopes @prisma/.prisma reproduits : require('@prisma/adapter-pg') échoue avec
+MODULE_NOT_FOUND sur postgres-array/index.js (exit 1), puis la copie du paquet
+complet charge PrismaPg (exit 0). Preuves : packaging-loader.json et
+packaging-red.log/green.log dans preuves-publication-spawt-423.
+
+L’exécution du bundle complet dans ce runtime révèle ensuite `Cannot find module 'zod'`,
+absent du standalone (`packaging-migration-zod-red.log`). Docker copie désormais
+les paquets complets postgres-array et zod au runner. Après ces deux copies,
+le bundle exact freeze-public-brands exécuté sur DB isolée reçoit exit 0,
+captured=0, humanReview=false (`packaging-migration.json` et `packaging-migration.log`).
+La capture et les gardes restent bloquants ; aucun boot d’image Docker ni runtime
+de production n’est déduit de cette exécution isolée. Nouvelle source, image et boot doivent encore être
+reçus avant de revendiquer une livraison. La candidate 59ef n’est
+ni publiée ni déployée ; production 422 intacte et vitrine SPAWT live.
 423 n’a jamais été déployée. Runtime, capture historique et raccord final SPAWT
-en production ne sont pas présumés reçus ; la vitrine déjà déployée ne clôt pas
-seule ce raccord.
+en production restent à recevoir ; la vitrine seule ne clôt pas ce raccord.

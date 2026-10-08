@@ -48,10 +48,28 @@
   d’absence/packaging est retirée ; aucune substitution de police.
 - Correctif avant le premier déploiement 423 : CORS autorise aussi l’origine exacte
   https://portail.spawt.online, aux côtés de spawt.online et www.spawt.online en https.
-  Assertions WWW/portail et refus HTTP/domaines ressemblants à recevoir sur la source finale.
+  Contre-épreuve avant patch : 16 cas, 15 verts et un rouge (portail refusé).
+  Après patch : 195/195 PostgreSQL verts, dont les mêmes 16 public-brand ; WWW et
+  portail autorisés, HTTP et domaines ressemblants refusés. Les cinq gardes finaux
+  et 1 610 tests de gouvernance sont reçus ; recette native ci-dessus avant alias.
 - La Fusée avant alias : source 8cc1209a et CI 37839043556 verte ; construction
-  37839472712 annulée avant déploiement. Nouvelle source/CI/image finales à recevoir ;
-  423 n’a jamais été déployée. Runtime, capture historique et raccord final SPAWT restent
+  37839472712 annulée avant déploiement. Après alias : source 59ef5fda, CI
+  37840436060 verte, build local réussi et 2 529 fichiers source identiques au
+  commit. Huit HTTP authentifiés finaux reçus, restauration v3, CORS exact
+  spawt/WWW/portail, refus du domaine ressemblant, export privé 401 et ETag 304 ;
+  fixtures nettoyées à zéro.
+- L’image 37841025811 échoue au smoke boot avant push et déploiement :
+  `Error: Cannot find module '/app/node_modules/postgres-array/index.js'`.
+  Le standalone ne contient que package.json de postgres-array 3.0.4, requis par
+  Prisma adapter-pg. Le loader Prisma isolé passe après copie, mais le bundle
+  complet révèle ensuite `Cannot find module 'zod'` : les dépendances externes
+  du script ne sont pas toutes incluses par le standalone. Docker copie désormais
+  postgres-array et zod complets, en plus des scopes @prisma existants.
+  Après les deux copies, le bundle exact freeze-public-brands reçoit exit 0,
+  captured=0/humanReview=false sur DB isolée, sans contourner capture ni gardes.
+  Ce reçu ne vaut pas boot Docker ; nouvelle source/image/boot à recevoir.
+  Production 422 inchangée, 423
+  jamais déployée. Runtime, capture historique et raccord final SPAWT restent
   à recevoir. Tokens, voix, variantes de logo, autres écrivains/Ptah et
   fermeture durable du journal restent ouverts ; aucun univers de marque complet
   ni chantier Shinkiro n’est déclaré reçu.

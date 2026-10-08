@@ -79,6 +79,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # (The `pg` driver and its deps ARE traced into standalone.)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+# The boot migration loads external packages outside Next's bundled chunks.
+# The trace retains only postgres-array's metadata and omits zod's loader.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/postgres-array ./node_modules/postgres-array
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/zod ./node_modules/zod
 
 # Migrations Prisma + applicateur maison. Le CLI Prisma N'EST PAS fiable dans
 # l'image standalone (trace élaguée → WASM + deps `@prisma/config`/`effect`
