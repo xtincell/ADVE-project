@@ -1,6 +1,6 @@
 {
   "name": "lafusee",
-  "version": "6.27.413",
+  "version": "6.27.414",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -142,6 +142,7 @@
     "@commitlint/config-conventional": "^20.5.3",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.3.2",
+    "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.0.0",
     "@types/html2canvas": "^1.0.0",
     "@types/node": "^25.6.0",
@@ -153,6 +154,7 @@
     "eslint-plugin-lafusee": "file:./eslint-plugin-lafusee",
     "eslint-plugin-react-hooks": "^7.1.1",
     "husky": "^9.0.0",
+    "jsdom": "^26.1.0",
     "madge": "^8.0.0",
     "postcss": "^8.5.13",
     "tailwindcss": "^4.0.0",

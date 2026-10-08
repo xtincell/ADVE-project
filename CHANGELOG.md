@@ -1,5 +1,33 @@
 # Changelog — La Fusee
 
+## v6.27.414 — fix(pillars): isoler le brouillon et sa version de départ (2026-10-08)
+
+**Une proposition ne peut plus changer de destinataire pendant son édition.**
+
+- Le formulaire existant possède une session par marque/pilier et un brouillon
+  par champ/mode. Fermer, rouvrir ou changer de contexte ne reprend plus la
+  proposition ni le motif précédents. Les réponses tardives restent attachées
+  à leur session ; une reformulation ne remplace pas une saisie plus récente.
+- Valeur courante et expectedVersion partagent le même instantané. Un refetch
+  ne met plus la précondition d’un ancien brouillon à jour et ne réinitialise
+  plus ses cellules structurées. Le writer Mestor et son refus de concurrence
+  restent les mêmes. Labels associés aux contrôles, motif vide non soumissible.
+- Console/Admin, INFRASTRUCTURE : l’éditeur manuel existant fiabilise la
+  fondation qui alimente brief, assets et communauté. Aucun modèle, Intent,
+  agent, stockage de brouillon ou mécanisme de publication supplémentaire.
+- Onze contre-exemples rouges sur HEAD, douze tests de composant verts après
+  correction. Typage, lints (24 warnings historiques), cycles et 1 604 tests
+  gouvernance passent ; 4 054 tests unitaires locaux verts. Dépendances de test
+  seulement : jsdom et peer DOM.
+- Natif local authentifié : changement de champ, fermeture/réouverture,
+  écriture 12→13, relecture et conflit 13/14 reçus. L’écriture concurrente 14
+  reste intacte. Page 200, DOM à 644 ms et titre observé à 3 605 ms après
+  rechargement ; borne d’observation, pas première peinture instrumentée.
+  Trace d’exercice : 59 réponses, zéro HTTP ≥400 et zéro exception JavaScript.
+  Recette fictive uniquement ; aucune génération IA ni écriture de vraie marque.
+- Raccord SPAWT marque→publication et reprise persistée après interruption
+  restent ouverts. Cette correction ne reçoit pas le cycle Shinkiro complet.
+
 ## v6.27.413 — fix(guidelines): relire l’identité et ses documents sans la réinventer (2026-10-08)
 
 **Une marque déjà documentée ne paraît plus vide dans ses guidelines.**

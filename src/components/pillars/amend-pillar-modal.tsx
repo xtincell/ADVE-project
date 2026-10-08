@@ -12,7 +12,7 @@
  * ADR-0023 §I.2). Zod stays the runtime validator at the gateway.
  */
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useId } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { Modal } from "@/components/shared/modal";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
@@ -33,16 +33,48 @@ interface AmendPillarModalProps {
   onApplied?: (result: { stalePillars: string[]; staleAssets: number; version: number }) => void;
 }
 
-export function AmendPillarModal({
+export function AmendPillarModal(props: AmendPillarModalProps) {
+  // Une fermeture ou un autre dossier ne réutilise jamais une proposition
+  // non soumise. Les callbacks en vol appartiennent à l'ancienne session.
+  return props.open ? (
+    <AmendPillarSession key={JSON.stringify([props.strategyId, props.pillarKey, props.initialField])} {...props} />
+  ) : null;
+}
+
+function AmendPillarSession(props: AmendPillarModalProps) {
+  const [field, setField] = useState<string | null>(props.initialField ?? null);
+  const [mode, setMode] = useState<Mode>("PATCH_DIRECT");
+  return (
+    <AmendPillarEditor key={JSON.stringify([field, mode])} {...props}
+      field={field} mode={mode} onFieldChange={setField} onModeChange={setMode} />
+  );
+}
+
+interface AmendPillarEditorProps extends AmendPillarModalProps {
+  field: string | null;
+  mode: Mode;
+  onFieldChange: (field: string | null) => void;
+  onModeChange: (mode: Mode) => void;
+}
+
+function AmendPillarEditor({
   open,
   onClose,
   strategyId,
   pillarKey,
-  initialField,
   onApplied,
-}: AmendPillarModalProps) {
-  const [field, setField] = useState<string | null>(initialField ?? null);
-  const [mode, setMode] = useState<Mode>("PATCH_DIRECT");
+  field,
+  mode,
+  onFieldChange,
+  onModeChange,
+}: AmendPillarEditorProps) {
+  const inputId = useId();
+  const active = useRef(true);
+  const previewRevision = useRef(0);
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
   const [proposedValue, setProposedValue] = useState<string>("");
   const [rephrasePrompt, setRephrasePrompt] = useState<string>("");
   const [reason, setReason] = useState<string>("");
@@ -52,10 +84,18 @@ export function AmendPillarModal({
   // champ a une shape déclarée au registre (matrices, objets imbriqués).
   const [structuredDraft, setStructuredDraft] = useState<unknown>(null);
 
-  const editable = trpc.pillar.listEditableFields.useQuery(
+  const latestEditable = trpc.pillar.listEditableFields.useQuery(
     { strategyId, pillarKey },
     { enabled: open },
   );
+  // Conserver le contenu ET la version à partir desquels ce brouillon est
+  // saisi. Un refetch ne doit ni écraser une cellule, ni actualiser la
+  // précondition d'un patch ancien : le serveur refuse alors le conflit.
+  const [snapshot, setSnapshot] = useState(latestEditable.data);
+  useEffect(() => {
+    if (!snapshot && latestEditable.data) setSnapshot(latestEditable.data);
+  }, [snapshot, latestEditable.data]);
+  const editable = { ...latestEditable, data: snapshot };
   const previewMutation = trpc.pillar.previewAmend.useMutation();
   const amendMutation = trpc.pillar.amend.useMutation();
 
@@ -80,7 +120,7 @@ export function AmendPillarModal({
   const isLocked = editable.data?.validationStatus === "LOCKED";
   const reasonTooShort = mode === "STRATEGIC_REWRITE" && reason.trim().length < 20;
   const cannotApply =
-    !field ||
+    !field || !selectedFieldEntry || !editable.data || !reason.trim() ||
     reasonTooShort ||
     (mode === "PATCH_DIRECT" && !usesStructured && !proposedValue) ||
     (mode === "LLM_REPHRASE" && !proposedValue) ||
@@ -88,10 +128,12 @@ export function AmendPillarModal({
 
   function handlePreview() {
     if (!field || !rephrasePrompt) return;
+    const revision = ++previewRevision.current;
     previewMutation.mutate(
       { strategyId, pillarKey, field, rephrasePrompt },
       {
         onSuccess: (out) => {
+          if (!active.current || previewRevision.current !== revision) return;
           if (typeof out.proposedValue === "string") setProposedValue(out.proposedValue);
           else if (out.proposedValue != null) setProposedValue(JSON.stringify(out.proposedValue, null, 2));
         },
@@ -100,7 +142,7 @@ export function AmendPillarModal({
   }
 
   function doApply() {
-    if (!field) return;
+    if (cannotApply || !field) return;
     let parsedValue: unknown;
     if (usesStructured) {
       // L'éditeur récursif a construit la valeur complète (matrice/objet
@@ -131,6 +173,7 @@ export function AmendPillarModal({
       },
       {
         onSuccess: (res) => {
+          if (!active.current) return;
           if (res.status === "OK") {
             const out = (res.output ?? {}) as {
               version?: number;
@@ -186,11 +229,12 @@ export function AmendPillarModal({
 
           {/* Field selector */}
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-foreground-secondary">Variable à amender</label>
+            <label htmlFor={`${inputId}-field`} className="block text-xs font-medium text-foreground-secondary">Variable à amender</label>
             <select
+              id={`${inputId}-field`}
               className="w-full rounded-lg border border-white/10 bg-background-overlay px-3 py-2 text-sm"
               value={field ?? ""}
-              onChange={(e) => setField(e.target.value || null)}
+              onChange={(e) => onFieldChange(e.target.value || null)}
               disabled={editable.isLoading}
             >
               <option value="">Choisir une variable…</option>
@@ -216,7 +260,7 @@ export function AmendPillarModal({
                   <button
                     key={m}
                     type="button"
-                    onClick={() => setMode(m)}
+                    onClick={() => onModeChange(m)}
                     className={`flex-1 rounded-md px-2 py-1 text-xs font-medium ${
                       mode === m ? "bg-accent/20 text-accent" : "text-foreground-muted hover:text-foreground"
                     }`}
@@ -246,14 +290,15 @@ export function AmendPillarModal({
           {/* LLM_REPHRASE prompt */}
           {field && mode === "LLM_REPHRASE" ? (
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-foreground-secondary">
+              <label htmlFor={`${inputId}-prompt`} className="block text-xs font-medium text-foreground-secondary">
                 Décris ton intention en langage naturel
               </label>
               <textarea
+                id={`${inputId}-prompt`}
                 className="w-full rounded-lg border border-white/10 bg-background-overlay px-3 py-2 text-sm"
                 rows={3}
                 value={rephrasePrompt}
-                onChange={(e) => setRephrasePrompt(e.target.value)}
+                onChange={(e) => { previewRevision.current++; setRephrasePrompt(e.target.value); }}
                 placeholder="Ex: Renforcer le ton premium, supprimer toute référence au low-cost…"
               />
               <button
@@ -275,7 +320,7 @@ export function AmendPillarModal({
           {/* Proposed value */}
           {field ? (
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-foreground-secondary">
+              <label htmlFor={usesStructured ? undefined : `${inputId}-proposed`} className="block text-xs font-medium text-foreground-secondary">
                 Valeur proposée
                 {selectedFieldEntry?.spec.format && !usesStructured ? (
                   <span className="ml-2 text-[10px] text-foreground-muted">
@@ -297,10 +342,11 @@ export function AmendPillarModal({
                 />
               ) : (
                 <textarea
+                  id={`${inputId}-proposed`}
                   className="w-full rounded-lg border border-white/10 bg-background-overlay px-3 py-2 text-sm font-mono"
                   rows={5}
                   value={proposedValue}
-                  onChange={(e) => setProposedValue(e.target.value)}
+                  onChange={(e) => { previewRevision.current++; setProposedValue(e.target.value); }}
                   placeholder={selectedFieldEntry?.spec.examples?.[0] ?? ""}
                 />
               )}
@@ -315,13 +361,14 @@ export function AmendPillarModal({
           {/* Reason */}
           {field ? (
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-foreground-secondary">
+              <label htmlFor={`${inputId}-reason`} className="block text-xs font-medium text-foreground-secondary">
                 Raison
                 {mode === "STRATEGIC_REWRITE" ? (
                   <span className="ml-2 text-[10px] text-amber-400">(≥20 caractères)</span>
                 ) : null}
               </label>
               <textarea
+                id={`${inputId}-reason`}
                 className="w-full rounded-lg border border-white/10 bg-background-overlay px-3 py-2 text-sm"
                 rows={2}
                 value={reason}

@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.414", date: "2026-10-08",
+    headline: "Vos modifications restent dans le bon champ",
+    highlights: [
+      { emoji: "✍️", title: "Un brouillon par contexte", body: "Changer de champ, de mode ou de marque ouvre une nouvelle saisie. Une réponse assistée tardive ne remplace plus votre nouvelle proposition." },
+      { emoji: "🛡️", title: "Une édition concurrente reste protégée", body: "Votre brouillon garde sa version de départ. Si la fiche a changé entre-temps, relisez-la avant d’appliquer votre modification." },
+    ],
+  },
+  {
     version: "6.27.413", date: "2026-10-08",
     headline: "Vos guidelines relisent l’identité conservée",
     highlights: [

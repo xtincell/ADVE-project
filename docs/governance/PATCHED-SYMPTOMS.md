@@ -30,6 +30,15 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-08 · AmendPillarModal conservait proposition/motif entre deux champs et
+acceptait une réponse tardive dans un autre brouillon. Une lecture actualisée
+remplaçait aussi expectedVersion sous une saisie ancienne. v6.27.414 lie la
+session au contexte, isole les brouillons et fige valeur/version ensemble.
+Cause : durée de vie du composant confondue avec celle de la décision éditée.
+Onze contre-exemples rouges ; douze tests verts, écriture/relecture et conflit
+reçus nativement sur fixture locale. La conservation après interruption et le
+raccord vers la publication restent des parcours distincts ouverts au registre.
+
 2026-10-07 · Boot Phase 18 : l’exemple utilisait le littéral `pending`, rejeté
 par l’enum Prisma. Commande corrigée en `PENDING`, exercée sur PostgreSQL local :
 zéro résidu en attente. Cause : exemple non confronté au schéma ; aucun état
