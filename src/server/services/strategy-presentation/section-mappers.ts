@@ -9,6 +9,7 @@
 
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
 import { resolveCultIndexTier } from "@/domain/cult-index-tier";
+import { cataloguePriceLabel, productLadderPriceLabel } from "@/domain/product-catalog";
 import { TIER_MIN_DEPTH } from "@/domain/superfan-conditions";
 import { collectNormalizedInitiatives, type NormalizedInitiative } from "@/lib/types/pillar-schemas";
 // section-defaults n'est plus consommé par les mappers (audit galileo) : les
@@ -982,7 +983,7 @@ export function mapPropositionValeur(strategy: any): PropositionValeurSection {
   // générique inventé ("Echelle de prix a definir…").
   const ladder = arr(vContent?.productLadder).length > 0 ? arr(vContent?.productLadder) : arr(vContent?.produitsCatalogue);
   const ladderDescription = ladder.length > 0
-    ? ladder.map((t: any) => `${pickStr(t, ["tier", "nom", "name"])}${typeof t.prix === "number" ? ` (${t.prix.toLocaleString("fr-FR")} FCFA)` : ""} — ${pickStr(t, ["cible", "segmentCible", "description", "position"])}`.replace(/ — $/, "")).join(" · ")
+    ? ladder.map((t: any) => `${pickStr(t, ["tier", "nom", "name"])} (${arr(vContent?.productLadder).length > 0 ? productLadderPriceLabel(t, vContent?.produitsCatalogue) : cataloguePriceLabel(t)}) — ${pickStr(t, ["cible", "segmentCible", "description", "position"])}`.replace(/ — $/, "")).join(" · ")
     : "";
   const pricingStrategy = pickStr(vContent, ["pricingJustification", "pricingStrategy", "pricing"]);
   const pricing = (pricingStrategy || ladderDescription) ? {
@@ -1689,4 +1690,3 @@ function pickArr(obj: any, keys: string[]): string[] {
   }
   return [];
 }
-

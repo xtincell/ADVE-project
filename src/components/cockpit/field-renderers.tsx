@@ -10,6 +10,7 @@
  */
 
 import { useState } from "react";
+import { cataloguePriceLabel } from "@/domain/product-catalog";
 import { getVariableSpec } from "@/lib/types/variable-bible";
 import { getVariableId } from "@/lib/types/variable-ids";
 import { findCanonicalCodes, CANONICAL_MAP } from "@/lib/types/variable-bible-canonical-map";
@@ -895,8 +896,8 @@ export function ProduitsCatalogueCard({ produits, onFocus }: { produits: Array<R
             className={`rounded-lg border border-white/5 bg-white/[0.02] p-3 ${onFocus ? "cursor-pointer hover:bg-white/[0.05] transition-colors" : ""}`}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-semibold text-white">{String(p.nom ?? p.name ?? "")}</span>
-              {p.prix ? <span className="text-xs font-bold text-success">{Number(p.prix).toLocaleString()} XAF</span> : null}
             </div>
+            <p className="mb-1.5 whitespace-pre-wrap break-words text-xs font-bold text-success">{cataloguePriceLabel(p)}</p>
             <div className="flex flex-wrap gap-1.5 text-2xs">
               {p.categorie ? <span className="rounded bg-info/10 px-1.5 py-0.5 text-info">{String(p.categorie)}</span> : null}
               {p.segmentCible ? <span className="rounded bg-accent/10 px-1.5 py-0.5 text-accent">{String(p.segmentCible)}</span> : null}

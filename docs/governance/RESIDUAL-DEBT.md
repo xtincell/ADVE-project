@@ -737,6 +737,52 @@ Le backend d'ingestion (extracteurs + Intent + tRPC + persister) est shippé et 
   description l'est). **Bornage** : ré-upload image séparé → `LOGO_FINAL` (chaîne existante). **Déclencheur** :
   quand un vrai book est ingéré en prod.
 
+### §Conditions commerciales et projection économique — 2026-10-08
+
+Le lot ADR-0204 conserve les conditions des offres et supprime le ticket de
+repli et la moyenne non pondérée. Il ne reçoit pas les calculs économiques :
+`budget-allocator` conserve des benchmarks XAF/Cameroun et des conversions
+hypothétiques, sans panier daté, monnaie/base/période comparables ni mix de ventes.
+Le caller tRPC réel local 417 reçoit bien CA/ROAS null, mais conserve des cibles
+Reach/Leads/NPS et un verdict VIABLE à 100 malgré aucun canal actif ; ces sorties
+restent à qualifier et ne reçoivent aucune maturité économique par ce lot.
+**Plan** : raccorder les mesures existantes de ventes/conversion et les paramètres
+financiers locaux ; afficher l'absence, dater la base et séparer scénario/réel.
+**Effort** : audit puis contrats de projection et tests multi-périodes/monnaies.
+**Déclencheur** : avant toute réception du résultat économique SPAWT/Noël26 C6.
+Le catalogue SPAWT et ses gammes doivent encore être rapprochés de leurs sources
+et amendés via le gateway, sans faire passer le PRD historique pour une offre
+publiée. Reprendre à la réception native du lot conditions commerciales.
+
+L'audit du writer montre aussi que `ensureProductIds` n'est appelé que par
+`addProduct`, pas par tous les amendements de catalogue. Les références par nom
+restent lisibles ; elles ne suffisent pas à garantir une identité après renommage.
+**Plan** : rapprocher les chemins d'écriture dans le gateway existant, préserver
+les ids acquis et n'assigner un id manquant qu'au catalogue réellement modifié,
+avec tests de provenance, concurrence et absence d'effet sur un autre champ V.
+**Déclencheur** : avant l'amendement des offres SPAWT et de leurs références,
+immédiatement après la réception native ADR-0204 ; aucune réécriture SQL de prod.
+
+L'éditeur de `unitEconomics.pointMort` reste numérique alors que son schéma
+attend une description textuelle du seuil. **Plan** : aligner ce contrôle sur
+le schéma et recevoir une saisie manuelle sans perte du contenu existant.
+**Déclencheur** : prochaine réception des hypothèses économiques, avant C6.
+
+### §Honnêteté du livrable Oracle hors conditions tarifaires — 2026-10-08
+
+La recette synthétique ADR-0204 reçoit les tarifs de §04, pas le document entier.
+Sans autres piliers, l'HTML montre pourtant « 6 sections complètes » pour zéro
+section rédigée, un mix 25/25/25/25 qualifié « déclaré », des conditions générales
+standard (cession, annulation, validité) et des métriques à zéro. Le PDF expose
+également des zéros sans distinguer absence et mesure. Ce sont des projections
+legacy ; elles ne constituent ni données reçues ni engagement commercial.
+**Plan** : rapprocher assemblePresentation, les mappers et les lecteurs HTML/PDF
+sur présence/origine, conserver les cadres de méthode comme cadres, afficher les
+absences et soumettre les conditions à l'amendement gouverné existant. Recette
+adversariale d'une marque vide, puis des deux marques réelles sans fausse complétude.
+**Déclencheur** : réception des livrables Shinkiro C3/C6, avant tout partage externe
+ou publication commerciale de SPAWT/Noël26 ; pas de livrable complet annoncé par 417.
+
 ### §Revue adversariale 2026-07-22 (chantier « La Fusée compile ») — déférés tracés
 
 3 agents adversariaux ont attaqué unions / gate+normaliseur / ingestion. **Bugs réels CORRIGÉS le jour

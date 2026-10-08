@@ -9,6 +9,7 @@
  */
 
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
+import { cataloguePriceLabel, productLadderPriceLabel } from "@/domain/product-catalog";
 import {
   Section, ACard, EmptyBody, EmptyValue, TagRow, ObjCard, ProofList,
   isEmpty, asRec, asArr, str, makeStatusFor, type Rec,
@@ -94,7 +95,7 @@ function Catalogue({ items, status }: { items: unknown; status?: string }) {
                   <span className="ck-v-prod__cat">{[p.categorie, p.skuRef].filter((x) => !isEmpty(x)).map(str).join(" · ")}</span>
                 </div>
                 <div className="ck-v-prod__econ">
-                  <div className="ck-v-prod__price">{fcfa(p.prix)}</div>
+                  <div className={`ck-v-prod__price${typeof p.conditionsTarifaires === "string" ? " ck-v-prod__price--conditions" : ""}`}>{cataloguePriceLabel(p)}</div>
                   {!isEmpty(p.margeUnitaire) ? <div className="ck-v-prod__marge">marge {fcfa(p.margeUnitaire)}</div> : null}
                 </div>
               </div>
@@ -121,7 +122,7 @@ function Catalogue({ items, status }: { items: unknown; status?: string }) {
   );
 }
 
-function ProductLadder({ items, status }: { items: unknown; status?: string }) {
+function ProductLadder({ items, catalogue, status }: { items: unknown; catalogue: unknown; status?: string }) {
   const empty = isEmpty(items);
   const arr = asArr(items);
   return (
@@ -132,7 +133,7 @@ function ProductLadder({ items, status }: { items: unknown; status?: string }) {
             <div className="ck-v-ladder__step" key={i} style={{ "--i": i, "--n": arr.length } as React.CSSProperties}>
               <div className="ck-v-ladder__bar">
                 <span className="ck-v-ladder__tier">{str(t.tier)}</span>
-                <span className="ck-v-ladder__price">{fcfa(t.prix)}</span>
+                <span className="ck-v-ladder__price">{productLadderPriceLabel(t, catalogue)}</span>
               </div>
               <div className="ck-v-ladder__txt">
                 {!isEmpty(t.description) ? <span className="ck-v-ladder__desc">{str(t.description)}</span> : null}
@@ -271,7 +272,7 @@ export function PillarVFields({ content, certainty }: { content: Rec; certainty:
           <ProofList title="Persona × Segment" items={v.personaSegmentMap} status={st("personaSegmentMap")}
             cols={[["personaName", "Persona"], ["productNames", "Produits"], ["devotionLevel", "Niveau d'engagement"], ["revenueContributionPct", "% CA"]]} />
           <Catalogue items={v.produitsCatalogue} status={st("produitsCatalogue")} />
-          <ProductLadder items={v.productLadder} status={st("productLadder")} />
+          <ProductLadder items={v.productLadder} catalogue={v.produitsCatalogue} status={st("productLadder")} />
         </div>
       </Section>
 

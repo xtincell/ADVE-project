@@ -9,6 +9,16 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Conditions des offres — ADR-0204, 2026-10-08
+
+Source commerciale conservée / saisie humaine → amendement gouverné existant
+`OPERATOR_AMEND_PILLAR` → `V.produitsCatalogue.conditionsTarifaires` → gammes par produitIds existants
+et lecteurs Offre/carte partagée/présentation. Aucune deuxième saisie tarifaire. Le garde existant
+exclut la fabrication de cette cellule lors du remplissage incrémental.
+`product-catalog` rend les termes ; budget-allocator/cross-validator s'abstiennent
+sur une référence ambiguë. Aucun prix, publication, panier ou revenu mesuré
+déduit de l'existence du document ; aucun deuxième circuit d'écriture.
+
 ### Demandes d’intervention — ADR-0201, 2026-10-07
 
 Besoin humain → `intervention.create` gouverné → Signal INTERVENTION_REQUEST

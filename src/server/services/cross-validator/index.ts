@@ -5,7 +5,7 @@
 
 import { db } from "@/lib/db";
 import { SCHWARTZ_VALUES } from "@/lib/types/taxonomies";
-import { danglingProductRefs } from "@/domain/product-catalog";
+import { catalogueReferencePrice, danglingProductRefs } from "@/domain/product-catalog";
 import { findDanglingReferences, type PillarBag } from "@/domain/pillar-reference-edges";
 
 export interface CrossRefValidation {
@@ -231,7 +231,7 @@ export async function validateCrossReferences(strategyId: string): Promise<Cross
   const tPillar = p.T as Record<string, unknown> | null;
   const ue = (vPillar?.unitEconomics ?? {}) as Record<string, unknown>;
   const vProduits = vPillar?.produitsCatalogue as Array<Record<string, unknown>> | undefined;
-  const prixProduit = vProduits?.[0]?.prix as number | undefined;
+  const prixProduit = catalogueReferencePrice(vProduits);
   const cac = ue.cac as number | undefined;
   const ltv = ue.ltv as number | undefined;
   const ltvCacRatio = ue.ltvCacRatio as number | undefined;
@@ -243,10 +243,10 @@ export async function validateCrossReferences(strategyId: string): Promise<Cross
   const tamSamSom = tPillar?.tamSamSom as Record<string, unknown> | undefined;
 
   // 18. CAC < prix produit
-  if (!cac || !prixProduit) {
-    results.push({ rule: "CAC < Prix produit", ruleId: 18, from: "V.unitEconomics.cac", to: "V.produitsCatalogue.prix", status: "SKIPPED", message: "Donnees insuffisantes" });
+  if (typeof cac !== "number" || !Number.isFinite(cac) || cac < 0 || prixProduit == null || prixProduit === 0) {
+    results.push({ rule: "CAC < Prix produit", ruleId: 18, from: "V.unitEconomics.cac", to: "V.produitsCatalogue.prix", status: "SKIPPED", message: "Comparaison non qualifiée : panier, conditions tarifaires ou CAC insuffisamment renseignés. Un accès gratuit ne démontre pas la rentabilité." });
   } else {
-    results.push({ rule: "CAC < Prix produit", ruleId: 18, from: "V.unitEconomics.cac", to: "V.produitsCatalogue.prix", status: cac < prixProduit ? "VALID" : "INVALID", message: cac < prixProduit ? `CAC ${cac} < prix ${prixProduit}` : `CAC ${cac} depasse le prix produit ${prixProduit}` });
+    results.push({ rule: "CAC < Prix produit", ruleId: 18, from: "V.unitEconomics.cac", to: "V.produitsCatalogue.prix", status: cac < prixProduit ? "VALID" : "INVALID", message: cac < prixProduit ? `CAC ${cac} < prix de référence ${prixProduit}. Comparaison nominale, pas une preuve de rentabilité (période, fiscalité, marge et panier à vérifier).` : `CAC ${cac} dépasse le prix de référence ${prixProduit}. Comparaison nominale ; période, fiscalité, marge et panier à vérifier.` });
   }
 
   // 19. LTV/CAC >= 1.0

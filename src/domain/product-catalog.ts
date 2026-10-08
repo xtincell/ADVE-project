@@ -22,6 +22,55 @@ export interface CatalogueProduct {
   [k: string]: unknown;
 }
 
+/** Conditions déclarées, sans extraire ni inventer montant, période ou fiscalité. */
+export function cataloguePriceLabel(product: CatalogueProduct): string {
+  if (Object.hasOwn(product, "conditionsTarifaires") && product.conditionsTarifaires != null) {
+    return typeof product.conditionsTarifaires === "string" && product.conditionsTarifaires.trim()
+      ? product.conditionsTarifaires.trim()
+      : "Conditions tarifaires à vérifier";
+  }
+  const price = product.prix;
+  if (typeof price === "number" && Number.isFinite(price) && price >= 0) {
+    return price === 0 ? "Gratuit" : `${new Intl.NumberFormat("fr-FR").format(price)} FCFA`;
+  }
+  // Les anciennes chaînes restent lisibles : aucune conversion Number("…/mois").
+  return typeof price === "string" && price.trim() ? price.trim() : "Prix non renseigné";
+}
+
+/**
+ * Référence scalaire legacy, PAS panier mesuré. Une liste de prix différents
+ * n'a pas de pondération de ventes ; les conditions textuelles peuvent contenir
+ * plusieurs périodes/bases. Dans ces cas on s'abstient, jamais une moyenne ou 0.
+ */
+export function catalogueReferencePrice(products: unknown): number | null {
+  if (!Array.isArray(products) || products.length === 0) return null;
+  const amounts: number[] = [];
+  for (const product of products) {
+    if (!product || typeof product !== "object" || Array.isArray(product)) return null;
+    if (Object.hasOwn(product, "conditionsTarifaires") && product.conditionsTarifaires != null) return null;
+    const amount: unknown = product.prix;
+    if (typeof amount !== "number" || !Number.isFinite(amount) || amount < 0) return null;
+    amounts.push(amount);
+  }
+  return amounts.every(amount => amount === amounts[0]) ? amounts[0]! : null;
+}
+
+/** La gamme lit son produit canonique ; son ancien prix ne masque ni évolution ni lien cassé. */
+export function productLadderPriceLabel(tier: CatalogueProduct, catalogue: unknown): string {
+  const rawRefs = tier.produitIds;
+  if (rawRefs === undefined) return cataloguePriceLabel(tier); // Ancienne gamme sans liens.
+  if (!Array.isArray(rawRefs) || rawRefs.length === 0 || !rawRefs.every(ref => typeof ref === "string" && ref.trim())) return "Références produit à vérifier";
+  const products: CatalogueProduct[] = Array.isArray(catalogue)
+    ? catalogue.filter((p): p is CatalogueProduct => p !== null && typeof p === "object" && !Array.isArray(p))
+    : [];
+  const resolved = rawRefs.map(ref => ({ ref, product: resolveProductRef(products, ref as string) }));
+  const missing = resolved.filter(r => !r.product);
+  if (missing.length > 0) return missing.map(r => `Produit « ${r.ref} » introuvable`).join("\n");
+  const labels = resolved.map(r => cataloguePriceLabel(r.product!));
+  if (labels.every(label => label === labels[0])) return labels[0]!;
+  return resolved.map((r, i) => `${r.product!.nom ?? r.ref} : ${labels[i]}`).join("\n");
+}
+
 /** Slug déterministe d'un nom de produit (ascii, kebab, borné). */
 export function productSlug(nom: string): string {
   const base = (nom || "")

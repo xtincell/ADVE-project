@@ -1,6 +1,43 @@
 # Changelog — La Fusee
 
 
+## v6.27.417 — fix(offers): conserver les conditions et relire le catalogue (2026-10-08)
+
+**Une offre garde ses conditions ; la gamme relit son produit sans seconde saisie.**
+
+- ProduitService reçoit `conditionsTarifaires?` : périodes, HT/TTC, options et
+  état déclaré. Les lecteurs Offre/carte partagée/présentation partagent le
+  rendu ; gratuit et prix historiques restent lisibles, sans coercition NaN.
+- La gamme et la présentation relisent les produitIds du catalogue existant.
+  Un prix de gamme ancien ne masque plus une évolution ou une référence cassée.
+  Aucun second champ tarifaire, modèle, service, router, page ou Intent ajouté.
+  Guidance/Mestor : amendement gouverné manuel, Thot : scénario explicitement
+  qualifié. Le garde commun exclut la fabrication de conditions manquantes.
+- Le budget ne moyenne plus des offres sans mix de ventes et n'invente plus
+  un ticket de 10 000. Catalogue absent/non comparable/conditionnel : CA/ROAS
+  null. Le CAC n'est plus comparé au premier montant d'une offre conditionnelle.
+  Une référence nominale et des benchmarks restent des hypothèses, pas du réel.
+- Recette locale native : catalogue, gratuit, périodes et réserve reçus ;
+  sélection en 348 ms (mesure d'action), trace sans erreur ni troncature.
+  Saisies structurées gouvernées : versions 1→2→3, deux archives, conditions puis
+  palier référencé au rang cinq, zéro appel IA. Mobile 390 px : conditions sous le
+  nom, sans débordement
+  horizontal (document 384 px), capture relue. Le rapprochement commercial des
+  marques et la réception économique complète restent au registre Shinkiro.
+- Seize contrats couvrent schéma, lecture, propagation, garde et abstention.
+  Neuf défauts initiaux, puis un garde et deux doublons de gamme échouent avant
+  correction. L'éditeur de gamme permet aussi les références produit, le nom
+  libre et le cinquième rang déjà acceptés par le schéma (contre-exemple rouge).
+  Un lien vide ou mal formé ne remet pas non plus un ancien prix en circulation.
+  Le contrôle Prix de la gamme est retiré : les anciens scalaires restent
+  conservés, mais une offre référencée se tarifie uniquement dans son catalogue.
+  Coût numérique réaligné dans l'éditeur ; manifest budget DB_READ.
+- Compilation finale : page 200, DOM 232 ms, titre observé avant 9 020 ms
+  (borne comprenant les appels d'outil) ; 58 réponses sans HTTP >=400 ni exception,
+  20 Fetch annulés, trace non tronquée. HTML partagé et PDF natif de cinq pages
+  relus : gratuit et conditions identiques, pilier inchangé, un snapshot local.
+  Les autres sections Oracle ne sont pas reçues par cette recette.
+
 ## v6.27.416 — fix(pillars): afficher l’origine réelle des valeurs (2026-10-08)
 
 **Une valeur renseignée n’est plus présentée comme déclarée par défaut.**

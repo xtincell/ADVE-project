@@ -277,9 +277,12 @@
 .ck-v-prod__id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ck-v-prod__name { font-family: var(--font-sans); font-weight: 700; font-size: 16px; color: var(--text-primary); }
 .ck-v-prod__cat { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
-.ck-v-prod__econ { text-align: right; flex: none; }
+.ck-v-prod__econ { text-align: right; flex: 0 1 55%; min-width: 0; }
 .ck-v-prod__price { font-family: var(--font-display); font-weight: 700; font-size: 20px; color: var(--success); }
 .ck-v-prod__marge { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+.ck-v-prod__price, .ck-v-ladder__price { white-space: pre-line; overflow-wrap: anywhere; }
+.ck-v-prod__price--conditions { font-family: var(--font-sans); font-size: 14px; font-weight: 600; line-height: 1.5; }
+@media (max-width: 620px){ .ck-v-prod__head { flex-direction: column; align-items: stretch; gap: 8px; } .ck-v-prod__econ { flex: auto; text-align: left; } }
 
 /* matrice de valeur 2×2×2 */
 .ck-v-mx { display: grid; grid-template-columns: auto 1fr 1fr; gap: 6px; }

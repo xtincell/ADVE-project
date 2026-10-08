@@ -427,8 +427,8 @@ export const BIBLE_D: Record<string, VariableSpec> = {
 export const BIBLE_V: Record<string, VariableSpec> = {
   produitsCatalogue: {
     description: "Le catalogue complet des produits/services de la marque",
-    format: "Array d'objets { nom, categorie (enum), prix, cout, margeUnitaire, gainClientConcret, lienPromesse, segmentCible, phaseLifecycle (enum) }",
-    rules: ["1 minimum, 50 maximum", "gainClientConcret = bénéfice tangible, pas marketing", "segmentCible = ref D.personas"],
+    format: "Array d'objets { nom, categorie (enum), prix (scalaire optionnel), conditionsTarifaires? (texte déclaré : périodes, HT/TTC, options, état de publication), cout, margeUnitaire, gainClientConcret, lienPromesse, segmentCible, phaseLifecycle (enum) }",
+    rules: ["1 minimum, 50 maximum", "gainClientConcret = bénéfice tangible, pas marketing", "segmentCible = ref D.personas", "conditionsTarifaires conserve les termes sourcés ou saisis ; jamais inventer prix, fiscalité, période ou disponibilité", "Un prix absent reste inconnu ; gratuit exige zéro explicite. Des conditions ne sont pas un panier moyen"],
   },
   unitEconomics: {
     description: "Les métriques économiques unitaires de la marque",
@@ -485,8 +485,8 @@ export const BIBLE_V: Record<string, VariableSpec> = {
   },
   productLadder: {
     description: "L'échelle de produits par tier (entrée de gamme → premium)",
-    format: "Array de 2-5 objets { tier (nom, pas 'Tier 1'), prix, produitIds[], cible (ref persona), position (rang) }",
-    rules: ["2 minimum", "Prix croissants", "Chaque tier cible un persona ou un usage distinct"],
+    format: "Array de 2-7 objets { tier (nom, pas 'Tier 1'), prix (scalaire historique optionnel), produitIds[], cible (ref persona), position (rang) }",
+    rules: ["2 minimum", "Comparer les prix seulement à période et base comparables", "La gamme lit les conditions du catalogue référencé ; aucune seconde saisie tarifaire ni conversion", "Chaque tier cible un persona ou un usage distinct"],
     feedsInto: ["e.ladderProductAlignment"],
   },
   promesseDeValeur: {

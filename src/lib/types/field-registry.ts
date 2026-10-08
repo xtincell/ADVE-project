@@ -223,6 +223,7 @@ const PILLAR_V: Record<string, FieldDef> = {
       nom: textField("Nom"),
       categorie: enumField("Categorie", PRODUCT_CATEGORIES),
       prix: numberField("Prix", { min: 0, unit: "FCFA" }),
+      conditionsTarifaires: textField("Conditions tarifaires", { multiline: true, placeholder: "Montants, période, HT/TTC, options et état de l’offre — sans remplacer l’inconnu par zéro" }),
       cout: numberField("Cout", { min: 0, unit: "FCFA" }),
       margeUnitaire: numberField("Marge unitaire", { min: 0, unit: "FCFA" }),
       gainClientConcret: textField("Gain client concret"),
@@ -231,7 +232,7 @@ const PILLAR_V: Record<string, FieldDef> = {
       gainMarqueAbstrait: textField("Gain marque abstrait"),
       coutClientConcret: textField("Cout client concret"),
       coutClientAbstrait: textField("Cout client abstrait"),
-      coutMarqueConcret: textField("Cout marque concret"),
+      coutMarqueConcret: numberField("Coût marque concret (FCFA)", { min: 0 }),
       coutMarqueAbstrait: textField("Cout marque abstrait"),
       lienPromesse: textField("Lien avec la promesse"),
       segmentCible: textField("Segment cible"),
@@ -248,11 +249,11 @@ const PILLAR_V: Record<string, FieldDef> = {
   productLadder: {
     kind: "array-of-objects", label: "Echelle produit", itemLabel: "Palier",
     itemFields: {
-      tier: enumField("Palier", ["ENTREE", "COEUR", "PREMIUM", "SIGNATURE"] as const),
-      prix: numberField("Prix", { min: 0, unit: "FCFA" }),
+      tier: textField("Palier"),
+      produitIds: stringsField("Produits référencés", "Identifiant ou nom exact du produit dans le catalogue"),
       description: textField("Description"),
       cible: textField("Cible"),
-      position: numberField("Position", { min: 1, max: 4 }),
+      position: numberField("Position", { min: 1 }),
     },
   },
   unitEconomics: {

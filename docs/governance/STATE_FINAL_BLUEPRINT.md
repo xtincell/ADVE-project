@@ -1886,6 +1886,15 @@ locaux. Un reçu `{sourceId, contentHash}` identifie la version réellement lue 
 un index, une proposition ou une écriture. Il ne remplace ni la certitude de la
 source ni la validation d'une décision ; une correction invalide les dérivés.
 
+### Conditions des offres
+
+ADR-0204, 2026-10-08 : `V.produitsCatalogue` reste le socle produit ; ses gammes
+référencent les mêmes identifiants. `conditionsTarifaires?` conserve les termes
+déclarés (périodes, HT/TTC, options, état de l'offre), sans inférence de montant
+ni publication. Les lecteurs réutilisent le module pur `product-catalog`.
+Un prix seul est une référence de scénario, pas un panier mesuré ; les offres
+conditionnelles ou non comparables ne produisent pas de CA/ROAS par défaut.
+
 > Canon absorbé depuis `LEXICON.md` (consolidation bible 2026-05). Source = stub de redirection.
 
 

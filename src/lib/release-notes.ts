@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.417", date: "2026-10-08",
+    headline: "Vos offres gardent leurs conditions",
+    highlights: [
+      { emoji: "🏷️", title: "Des tarifs lisibles", body: "Conservez les périodes, le HT/TTC, les options et l’état de vos offres dans le catalogue. Les accès gratuits et les anciens libellés restent visibles, y compris sur mobile." },
+      { emoji: "🔗", title: "Une saisie qui se propage", body: "Les gammes relisent les conditions de leurs produits référencés. Un lien manquant est indiqué au lieu d’être masqué par un ancien prix." },
+      { emoji: "📐", title: "Des calculs qui s’abstiennent", body: "Sans prix comparables, le plan ne remplace plus votre panier par un montant arbitraire. Les projections de chiffre d’affaires et de retour publicitaire restent inconnues." },
+    ],
+  },
+  {
     version: "6.27.416", date: "2026-10-08",
     headline: "Distinguez l’origine de vos informations",
     highlights: [

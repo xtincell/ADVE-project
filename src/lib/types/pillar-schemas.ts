@@ -513,6 +513,7 @@ const ProduitServiceSchema = z.object({
   nom: textShort,
   categorie: z.enum(PRODUCT_CATEGORIES),
   prix: currency.optional(),
+  conditionsTarifaires: z.string().min(1).optional(), // Périodes, HT/TTC, options et état de l'offre ; aucune coercition numérique
   cout: currency.optional(),
   margeUnitaire: currency.optional(), // Derived: prix - cout
 

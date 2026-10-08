@@ -30,6 +30,15 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-08 · Catalogue : gratuit masqué, chaîne historique convertie en NaN,
+conditions HT/TTC et périodes perdues ; prix de repli et moyenne non pondérée
+alimentaient budget/CAC. v6.27.417 factorise lecture et abstention dans
+product-catalog ; éditeur coût réaligné numérique, manifest budget en DB_READ.
+La gamme expose ses références, son nom libre et les rangs admis par le schéma ;
+les liens cassés, vides ou mal formés restent visibles au lieu de relire un vieux prix.
+Hypothèse : les consommateurs assimilaient scalaire, panier et preuve financière.
+Dette liée : projection économique locale / mesures datées, ADR-0204.
+
 2026-10-08 · Les huit volets de marque affichaient « Déclaré » en l’absence
 de fieldCertainty et ignoraient la provenance réelle conservée dans content.
 v6.27.416 branche le kit partagé sur cette trace et rend l’origine absente

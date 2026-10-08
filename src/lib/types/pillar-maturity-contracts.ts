@@ -603,6 +603,9 @@ const REF_KEY_SUFFIX = /(Id|Ids|Ref|Refs|Url|Urls)$/;
 export function isNonFabricableLeaf(leaf: { path: string; topKey: string; scalarKind: ScalarKind }): boolean {
   if (!isInferableKind(leaf.scalarKind)) return true;
   if (leaf.topKey === "computed") return true;
+  // Conditions commerciales déclarées : texte ne signifie pas opinion inférable.
+  // Saisie opérateur / extraction sourcée ; jamais compléter une case vide au hasard.
+  if (["produitsCatalogue", "productLadder"].includes(leaf.topKey) && leaf.path.endsWith(".conditionsTarifaires")) return true;
   const last = leaf.path.split(".").pop() ?? leaf.path;
   return leaf.scalarKind !== "enum" && REF_KEY_SUFFIX.test(last);
 }
@@ -645,7 +648,7 @@ export function findEmptyArrayCellPaths(pillarKey: string, content: Record<strin
         // FK/id/URL/ref typés texte|liste (`riskId`, `targetsPersonaIds`, `linkedinUrl`…) →
         // jamais fabriqués (uuid inventé = référence morte, backbone ADR-0088 ; URL réelle).
         // Un enum « …Ref » (choix borné) reste inférable → on ne l'exclut PAS.
-        if (kind !== "enum" && REF_KEY_SUFFIX.test(k)) continue;
+        if (isNonFabricableLeaf({ path: `${arrLeaf.path}[${i}].${k}`, topKey: arrLeaf.topKey, scalarKind: kind })) continue;
         if (isEmpty(rec[k])) out.push({ path: `${arrLeaf.path}[${i}].${k}`, topKey: arrLeaf.topKey, isArray: kind === "array", optional, scalarKind: kind });
       }
     }
