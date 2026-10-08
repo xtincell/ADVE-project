@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.421", date: "2026-10-08",
+    headline: "Annulez une correction sans perdre les suivantes",
+    highlights: [
+      { emoji: "↶", title: "Des décisions préservées", body: "L’annulation d’une correction conserve les changements indépendants effectués ensuite. Un conflit ou un historique insuffisant entraîne un refus explicite." },
+      { emoji: "📄", title: "Une origine fidèle", body: "Les informations restaurées conservent leur origine et leurs documents. Une ancienne proposition ne devient pas une validation humaine." },
+    ],
+  },
+  {
     version: "6.27.420", date: "2026-10-08",
     headline: "Le fonctionnement du produit devient plus lisible",
     highlights: [

@@ -198,6 +198,14 @@ Decision rationale in [ADR-0001](docs/governance/adr/0001-framework-name-apogee.
 
 ## Phase status (état réel du repo)
 
+### Compensation ciblée — ADR-0207 (2026-10-08)
+
+Le gateway restaure une écriture par comparaison avant/appliqué/courant. Il garde
+les décisions indépendantes, les origines et les reçus, et refuse les conflits ou
+archives insuffisantes. Historique et journal partagent l’identité d’effet ; le
+motif utilise le dialogue DS de la console. Réception exacte et limites C5/C7
+suivies dans RESIDUAL-DEBT ; aucun chantier Shinkiro clos par ce correctif.
+
 ### Originaux de sources — ADR-0197 (2026-10-06)
 
 Le dépôt réutilise `FileUpload` et l’archive privée chiffrée. Admission par empreinte,

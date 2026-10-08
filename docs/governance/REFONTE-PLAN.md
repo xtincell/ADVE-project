@@ -1337,3 +1337,12 @@ Le contrat structuré remplace la recherche heuristique de neuf titres HTML ;
 la consultation documentaire réutilise le lecteur de Sources. Les références
 et les propositions restent distinctes d’une charte adoptée. La réconciliation
 des corpus et l’irrigation vers les publications ne sont pas closes par ce lot.
+
+### Réception 8 octobre 2026 — compensation ciblée (ADR-0207)
+
+Étendre PillarVersion, spine et gateway existants : delta accepté, métadonnées,
+identité d’effet partagée entre historique et journal, contrôle d’accès relu sous
+verrou et refus des conflits. L’action d’historique perd son writer direct ;
+l’amendement conserve l’id serveur réel. Aucun nouveau modèle, Intent ou agent.
+Les anciennes archives et les autres compensateurs ne sont pas reçus par ce lot.
+La restauration intégrale du SI demeure au chantier C7 Shinkiro.

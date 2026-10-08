@@ -37,7 +37,7 @@ type HandlerResult = Pick<
   "status" | "summary" | "tool" | "output" | "reason" | "estimatedCost"
 >;
 
-export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerResult> {
+export async function operatorAmendPillar(intent: AmendIntent, context?: { intentId: string }): Promise<HandlerResult> {
   const startedAt = Date.now();
   const {
     strategyId,
@@ -188,6 +188,7 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
     author: {
       system: intent.viaAgent ? "MESTOR" : "OPERATOR",
       userId: operatorId,
+      intentId: context?.intentId,
       reason: intent.viaAgent ? `${reason} (via agent MCP)` : reason,
     },
     options: {

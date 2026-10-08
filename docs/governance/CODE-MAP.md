@@ -139,7 +139,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **GloryOutput** (12 fields)
 - **BrandAsset** (50 fields) — BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.  Couvre deux familles :  - Actifs **intellectue
 - **Pillar** (18 fields)
-- **PillarVersion** (10 fields)
+- **PillarVersion** (12 fields)
 - **BrandDataSource** (18 fields)
 - **BrandSourceUse** (14 fields) — ADR-0198 — an explicit document use, never a copy of its text or original.
 - **Invoice** (14 fields)

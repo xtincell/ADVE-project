@@ -1877,6 +1877,14 @@ d'invariants spécifiques (cf. `tests/integration/`).
 
 # ANNEXE CANON L — LEXIQUE NORMATIF
 
+### Compensation d’une écriture
+
+ADR-0207, 2026-10-08 : `PillarVersion` conserve l’avant et le delta accepté dans
+son checkpoint. L’action inverse compare cet effet à l’état courant, préserve les
+feuilles indépendantes et conserve provenance et reçus. `compensatedFrom` identifie
+un effet unique par pilier, commun à l’historique et au journal. Une archive sans
+checkpoint ne permet pas de déduire une restauration précise.
+
 ### Usage documentaire
 
 ADR-0198, 2026-10-07 : une `BrandDataSource` garde son propriétaire, son original

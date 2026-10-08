@@ -1986,7 +1986,7 @@ export async function emitIntent(
   // Dispatch to Artemis
   let result: IntentResult;
   try {
-    result = await execute(intent);
+    result = await execute(intent, { intentId: emissionId });
   } catch (err) {
     result = {
       intentKind: intent.kind,

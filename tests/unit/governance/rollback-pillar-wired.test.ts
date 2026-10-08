@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   pillarFindUnique: vi.fn(),
-  pvFindFirst: vi.fn(),
+  pvFindMany: vi.fn(),
   intentEmissionFindUnique: vi.fn(),
   writePillarAndScore: vi.fn(),
 }));
@@ -20,13 +20,19 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/db", () => ({
   db: {
     pillar: { findUnique: mocks.pillarFindUnique },
-    pillarVersion: { findFirst: mocks.pvFindFirst },
+    pillarVersion: { findMany: mocks.pvFindMany },
     intentEmission: { findUnique: mocks.intentEmissionFindUnique },
   },
 }));
 vi.mock("@/server/services/pillar-gateway/index", () => ({
   writePillarAndScore: mocks.writePillarAndScore,
 }));
+
+vi.mock("@/server/services/operator-isolation", () => ({
+  getOperatorContext: vi.fn(async () => ({ userId: "op-1", role: "ADMIN", operatorId: "operator-1" })),
+  canAccessStrategy: vi.fn(async () => true),
+}));
+vi.mock("@/server/governance/collaborator-firewall", () => ({ assertCollaboratorMayEmit: vi.fn(async () => {}) }));
 
 import { rollbackPillar } from "@/server/services/pillar-gateway/rollback";
 import { buildCompensatingIntent, COMPENSATING_MAP } from "@/server/governance/compensating-intents";
@@ -74,7 +80,7 @@ describe("buildCompensatingIntent — propage le pilier depuis WRITE_PILLAR (ADR
       strategyId: "s1",
       status: "OK",
     });
-    const built = await buildCompensatingIntent({ originalIntentId: "int-1", reason: "erreur" });
+    const built = await buildCompensatingIntent({ originalIntentId: "int-1", reason: "erreur", userId: "op-1" });
     expect(built.reverseKind).toBe("ROLLBACK_PILLAR");
     expect((built.reverseIntent as unknown as { key?: string }).key).toBe("d");
     expect((built.reverseIntent as unknown as { compensatedFrom?: string }).compensatedFrom).toBe("int-1");
@@ -82,9 +88,9 @@ describe("buildCompensatingIntent — propage le pilier depuis WRITE_PILLAR (ADR
 });
 
 describe("rollbackPillar — restaure réellement OU refuse honnêtement (ADR-0176)", () => {
-  it("instantané pré-écriture trouvé → réécrit le contenu antérieur via le GATEWAY", async () => {
-    mocks.pillarFindUnique.mockResolvedValue({ id: "pil-d" });
-    mocks.pvFindFirst.mockResolvedValue({ content: { promesseMaitre: "ancienne" }, version: 4 });
+  it("instantané pré-écriture trouvé → demande une compensation ciblée via le GATEWAY", async () => {
+    mocks.pillarFindUnique.mockResolvedValue({ id: "pil-d", currentVersion: 5 });
+    mocks.pvFindMany.mockResolvedValue([{ id: "version-4", version: 4 }]);
     mocks.writePillarAndScore.mockResolvedValue({ success: true });
 
     const r = await rollbackPillar({
@@ -92,6 +98,7 @@ describe("rollbackPillar — restaure réellement OU refuse honnêtement (ADR-01
       pillarKey: "D",
       compensatedFrom: "int-1",
       operatorId: "op-1",
+      intentId: "undo-1",
       reason: "erreur de saisie",
     });
 
@@ -102,14 +109,16 @@ describe("rollbackPillar — restaure réellement OU refuse honnêtement (ADR-01
       expect.objectContaining({
         strategyId: "s1",
         pillarKey: "d",
-        operation: { type: "REPLACE_FULL", content: { promesseMaitre: "ancienne" } },
+        operation: { type: "RESTORE_VERSION", versionId: "version-4", compensatedFrom: "int-1" },
+        author: expect.objectContaining({ intentId: "undo-1", userId: "op-1" }),
+        options: { expectedVersion: 5 },
       }),
     );
   });
 
   it("aucun instantané lié → REFUS honnête (pas de restauration à l'aveugle)", async () => {
-    mocks.pillarFindUnique.mockResolvedValue({ id: "pil-d" });
-    mocks.pvFindFirst.mockResolvedValue(null); // écriture antérieure au suivi intentId
+    mocks.pillarFindUnique.mockResolvedValue({ id: "pil-d", currentVersion: 5 });
+    mocks.pvFindMany.mockResolvedValue([]); // écriture antérieure au suivi intentId
 
     const r = await rollbackPillar({
       strategyId: "s1",

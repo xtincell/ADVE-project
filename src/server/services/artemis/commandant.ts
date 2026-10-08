@@ -28,7 +28,7 @@ import type { GlorySequenceKey } from "./tools/sequences";
 
 // ── Public API ────────────────────────────────────────────────────────
 
-export async function execute(intent: Intent): Promise<IntentResult> {
+export async function execute(intent: Intent, context?: { intentId: string }): Promise<IntentResult> {
   const startedAt = new Date().toISOString();
   const base = {
     intentKind: intent.kind,
@@ -168,6 +168,7 @@ export async function execute(intent: Intent): Promise<IntentResult> {
           strategyId: intent.strategyId,
           pillarKey: intent.key,
           compensatedFrom: intent.compensatedFrom,
+          intentId: context?.intentId,
           operatorId: intent.operatorId,
           reason: intent.reason,
         });
@@ -540,7 +541,7 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         const { operatorAmendPillar } = await import(
           "@/server/services/mestor/operator-amend"
         );
-        return wrap({ ...base, ...(await operatorAmendPillar(intent)) });
+        return wrap({ ...base, ...(await operatorAmendPillar(intent, context)) });
       }
 
       case "INGEST_BRAND_BOOK": {

@@ -24,7 +24,11 @@ import { ensureProductIds, rebindProductRefs, type CatalogueProduct } from "@/do
 import { inferredFieldPaths, provenanceTopKey } from "@/domain/field-provenance";
 import { setNestedValue, tokenizePillarPath, assertSafePillarPath } from "@/lib/pillar-path";
 import { coerceValue, applyResolvedRecoOps } from "./apply-resolved-ops";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import { isDeepStrictEqual } from "node:util";
+import { createCheckpoint, pillarMetadata, planCompensation, readCheckpoint, type PillarMetadata } from "@/server/services/pillar-versioning/checkpoint";
+import { getOperatorContext, canAccessStrategy } from "@/server/services/operator-isolation";
+import { assertCollaboratorMayEmit } from "@/server/governance/collaborator-firewall";
 import { type PillarKey, getPillarDependents } from "@/lib/types/advertis-vector";
 import { validatePillarPartial } from "@/lib/types/pillar-schemas";
 import { validateAgainstBible } from "@/lib/types/variable-bible";
@@ -52,6 +56,7 @@ interface PillarWriteAuthor {
 }
 
 type PillarWriteOperation =
+  | { type: "RESTORE_VERSION"; versionId: string; compensatedFrom?: string }
   | { type: "REPLACE_FULL"; content: Record<string, unknown> }
   | { type: "MERGE_DEEP"; patch: Record<string, unknown> }
   | { type: "SET_FIELDS"; fields: Array<{ path: string; value: unknown }> }
@@ -108,6 +113,8 @@ interface PillarWriteRequest {
 
 interface PillarWriteResult {
   success: boolean;
+  /** Existing compensation receipt; no new version or downstream effect. */
+  noOp?: boolean;
   version: number;
   previousContent: Record<string, unknown>;
   newContent: Record<string, unknown>;
@@ -238,7 +245,7 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
   // Single writes keep their historical upsert; an atomic batch includes it in
   // its transaction. createVersion uses that same transaction, so a refusal
   // rolls back both content and snapshots. The key upsert remains race-safe.
-  await (transaction ?? db).pillar.upsert({
+  if (operation.type !== "RESTORE_VERSION") await (transaction ?? db).pillar.upsert({
     where: { strategyId_key: { strategyId, key: pillarKey } },
     create: { strategyId, key: pillarKey, content: {}, confidence: 0, currentVersion: 1 },
     update: {},
@@ -256,11 +263,62 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
 
       if (!pillar) {
         // Should never happen after the upsert above — defensive guard.
-        return { success: false, version: 0, previousContent: {}, newContent: {}, stalePropagated: [], warnings: [], error: `Pillar ${pillarKey} not found for strategy ${strategyId} (post-upsert)` };
+        return { success: false, version: 0, previousContent: {}, newContent: {}, stalePropagated: [], warnings: [], error: `Pillar ${pillarKey} not found for strategy ${strategyId}` };
       }
 
       const previousContent = (pillar.content ?? {}) as Record<string, unknown>;
       const currentStatus = (pillar.validationStatus ?? "DRAFT") as ValidationStatus;
+
+      let restoration: { content: Record<string, unknown>; metadata: PillarMetadata; compensatedFrom: string } | undefined;
+      if (operation.type === "RESTORE_VERSION") {
+        if (author.system !== "OPERATOR" || !author.userId || !author.intentId || options?.expectedVersion === undefined) {
+          throw new Error("RESTORE_AUTHORITY_REQUIRED: acteur, intention et version attendue requis.");
+        }
+        const actor = await getOperatorContext(author.userId, tx);
+        if (!(await canAccessStrategy(strategyId, actor, tx))) throw new Error("RESTORE_ACCESS_REFUSED");
+        const emission = await tx.intentEmission.findUnique({ where: { id: author.intentId }, select: { strategyId: true, intentKind: true } });
+        if (!emission || emission.strategyId !== strategyId || !["ROLLBACK_PILLAR", "LEGACY_PILLAR_ROLLBACK_VERSION"].includes(emission.intentKind)) {
+          throw new Error("RESTORE_EMISSION_REQUIRED: intention de restauration introuvable pour cette marque.");
+        }
+        await assertCollaboratorMayEmit({ userId: actor.userId, role: actor.role, strategyId, kind: emission.intentKind }, tx);
+        const snapshot = await tx.pillarVersion.findUnique({ where: { id: operation.versionId } });
+        if (!snapshot || snapshot.pillarId !== pillar.id || (operation.compensatedFrom && snapshot.intentId !== operation.compensatedFrom)) {
+          throw new Error("RESTORE_ARCHIVE_UNAVAILABLE: archive étrangère ou absente.");
+        }
+        if (snapshot.intentId) {
+          const related = await tx.pillarVersion.findMany({ where: { pillarId: pillar.id, intentId: snapshot.intentId }, take: 2, select: { id: true } });
+          if (related.length !== 1) throw new Error("RESTORE_AMBIGUOUS: plusieurs écritures du pilier portent cette intention.");
+        }
+        // History and intent actions share one effect identity for the SAME write.
+        const compensatedFrom = snapshot.intentId ?? `version:${snapshot.id}`;
+        const previous = await tx.pillarVersion.findUnique({ where: { pillarId_compensatedFrom: { pillarId: pillar.id, compensatedFrom } } });
+        if (previous) return { success: true, noOp: true, version: previous.version + 1, previousContent, newContent: previousContent,
+          stalePropagated: [], warnings: ["La compensation de cette écriture est déjà enregistrée."] };
+        const checkpoint = readCheckpoint(snapshot.checkpoint, snapshot.version);
+        const laterRows = isDeepStrictEqual(checkpoint.beforeMetadata.sources, checkpoint.afterMetadata.sources) ? []
+          : await tx.pillarVersion.findMany({ where: { pillarId: pillar.id, version: { gte: checkpoint.afterVersion, lt: pillar.currentVersion } } });
+        const later = laterRows.map(row => readCheckpoint(row.checkpoint, row.version));
+        const planned = planCompensation({ beforeContent: snapshot.content, checkpoint, currentContent: pillar.content,
+          currentMetadata: pillarMetadata(pillar), currentVersion: pillar.currentVersion, later });
+        const receipts = readSourceReceipts(planned.metadata.sources);
+        if (planned.metadata.sources !== null && (!Array.isArray(planned.metadata.sources) || receipts.length !== planned.metadata.sources.length)) {
+          throw new Error("RESTORE_SOURCE_RECEIPT_UNAVAILABLE: références historiques non vérifiables.");
+        }
+        // Same lock order as documentary writers: sources, strategy, actor, pillar.
+        await assertCurrentSourceReceipts(tx, strategyId, receipts);
+        await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${strategyId} FOR SHARE`;
+        await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${author.userId} FOR SHARE`;
+        await tx.$queryRaw`SELECT id FROM "StrategyCollaborator" WHERE "strategyId" = ${strategyId} AND "userId" = ${author.userId} FOR SHARE`;
+        const currentActor = await getOperatorContext(author.userId, tx);
+        if (!(await canAccessStrategy(strategyId, currentActor, tx))) throw new Error("RESTORE_ACCESS_REFUSED");
+        await assertCollaboratorMayEmit({ userId: currentActor.userId, role: currentActor.role, strategyId, kind: emission.intentKind }, tx);
+        await tx.$queryRaw`SELECT id FROM "Pillar" WHERE id = ${pillar.id} FOR UPDATE`;
+        const locked = await tx.pillar.findUniqueOrThrow({ where: { id: pillar.id } });
+        if (locked.currentVersion !== pillar.currentVersion || !isDeepStrictEqual(locked.content, pillar.content) || !isDeepStrictEqual(pillarMetadata(locked), pillarMetadata(pillar))) {
+          throw new Error("PILLAR_VERSION_CONFLICT: état modifié pendant la préparation de la restauration.");
+        }
+        restoration = { ...planned, compensatedFrom };
+      }
 
       if (options?.expectedVersion !== undefined && options.expectedVersion !== pillar.currentVersion) {
         throw new Error(`PILLAR_VERSION_CONFLICT: version attendue ${options.expectedVersion}, courante ${pillar.currentVersion} — recharger et réappliquer.`);
@@ -284,6 +342,9 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
       let newContent: Record<string, unknown>;
 
       switch (operation.type) {
+        case "RESTORE_VERSION":
+          newContent = restoration!.content;
+          break;
         case "REPLACE_FULL":
           newContent = operation.content;
           break;
@@ -333,7 +394,7 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
       // RTIS protocols cannot persist malformed LLM output. Default behaviour
       // (warnings-only) is preserved for operator drafts, ingestion, and
       // legacy call sites that knowingly accept partial data.
-      if (!options?.skipValidation) {
+      if (!restoration && !options?.skipValidation) {
         // PillarKey from advertis-vector and from pillar-schemas are the same set
         // but typed independently; cast is safe here.
         const validation = validatePillarPartial(pillarKey.toUpperCase() as Parameters<typeof validatePillarPartial>[0], newContent);
@@ -360,7 +421,7 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
       // ── VALIDATE: SHAPE gate (corruption structurelle uniquement) ──────────
       // Bloque un scalaire-là-où-conteneur (casse le rendu) sans toucher aux advisories
       // DRAFT. Couvre le runtime (CRUD/amend) que le gate seed ne voyait pas.
-      if (options?.shapeGate) {
+      if (!restoration && options?.shapeGate) {
         const { classifyPillarConformance } = await import("@/lib/types/pillar-conformance");
         const conf = classifyPillarConformance(
           pillarKey.toUpperCase() as Parameters<typeof classifyPillarConformance>[0],
@@ -382,7 +443,7 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
       }
 
       // ── VALIDATE: Bible rules (format de fond) ──────────────────
-      const bibleViolations = validateAgainstBible(pillarKey, newContent);
+      const bibleViolations = restoration ? [] : validateAgainstBible(pillarKey, newContent);
       for (const v of bibleViolations) {
         warnings.push(`Bible[${v.severity}]: ${v.message}`);
       }
@@ -400,7 +461,9 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
 
       // ── Determine target validationStatus ────────────────────────
       let targetStatus: ValidationStatus;
-      if (options?.targetStatus) {
+      if (restoration) {
+        targetStatus = restoration.metadata.validationStatus;
+      } else if (options?.targetStatus) {
         targetStatus = options.targetStatus;
       } else if (author.system === "OPERATOR") {
         targetStatus = currentStatus; // Operator preserves current status
@@ -415,7 +478,7 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
       // un arbitrage réussi et refuse toute erreur du garde.
       let challenged: string[] = [];
       let denied: string[] = [];
-      try {
+      if (!restoration) try {
         const { applyProvenanceGuard, provenanceFromAuthorSystem } = await import("./provenance-guard");
         const existingProvenance = (previousContent._fieldProvenance ?? null) as Record<string, unknown> | null;
         const defaultProv = provenanceFromAuthorSystem(author.system);
@@ -462,7 +525,7 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
 
       // Only an accepted catalogue change acquires ids. Unrelated edits and
       // refused source changes must never backfill the human catalogue.
-      if (pillarKey === "v" && JSON.stringify(newContent.produitsCatalogue) !== JSON.stringify(previousContent.produitsCatalogue)) {
+      if (!restoration && pillarKey === "v" && JSON.stringify(newContent.produitsCatalogue) !== JSON.stringify(previousContent.produitsCatalogue)) {
         const namedProducts = (value: unknown): value is CatalogueProduct[] => Array.isArray(value) && value.every(
           p => p !== null && typeof p === "object" && !Array.isArray(p) && typeof p.nom === "string" && p.nom.trim(),
         );
@@ -476,31 +539,20 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
         }
       }
 
-      // ── VERSION: create PillarVersion ────────────────────────────
-      // La PillarVersion capture le contenu PRÉ-écriture, stampé de l'intent
-      // courant → ROLLBACK_PILLAR restaure EXACTEMENT cet état (G, ADR-0176).
-      await createVersion({
-        pillarId: pillar.id,
-        content: newContent,
-        author: `${author.system}${author.userId ? `:${author.userId}` : ""}`,
-        reason: author.reason,
-        intentId: author.intentId,
-      }, tx);
-
       const newVersion = (pillar.currentVersion ?? 1) + 1;
 
       // ── Confidence adjustment ────────────────────────────────────
-      let newConfidence = pillar.confidence ?? 0;
-      if (options?.confidenceDelta) {
-        newConfidence = Math.min(0.95, Math.max(0, newConfidence + options.confidenceDelta));
+      let newConfidence = restoration ? restoration.metadata.confidence : (pillar.confidence ?? 0);
+      if (!restoration && options?.confidenceDelta) {
+        newConfidence = Math.min(0.95, Math.max(0, (newConfidence ?? 0) + options.confidenceDelta));
       }
 
       // ── v4 AUTO-APPROVAL: auto-promote AI_PROPOSED → VALIDATED ──
       // Conditions: RTIS protocol author + high confidence + low impact
       if (
-        targetStatus === "AI_PROPOSED" &&
+        !restoration && targetStatus === "AI_PROPOSED" &&
         author.system.startsWith("PROTOCOLE_") &&
-        newConfidence > 0.9 &&
+        (newConfidence ?? 0) > 0.9 &&
         warnings.length === 0
       ) {
         // Assess impact: low impact = less than 30% new keys added
@@ -525,6 +577,23 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
         }
       }
 
+      const newSources = restoration ? restoration.metadata.sources : (options?.sourceReceipts?.length ? [
+        ...(Array.isArray(pillar.sources) ? pillar.sources.filter(entry => !readSourceReceipts([entry]).some(old => options.sourceReceipts!.some(r => r.sourceId === old.sourceId))) : []),
+        ...options.sourceReceipts,
+      ] : pillar.sources);
+      const newCertainty = restoration ? restoration.metadata.fieldCertainty : (confirmedCertainty ?? pillar.fieldCertainty);
+      const newStaleAt = restoration?.metadata.staleAt ? new Date(restoration.metadata.staleAt) : null;
+      const beforeMetadata = pillarMetadata(pillar);
+      const afterMetadata = pillarMetadata({ sources: newSources, fieldCertainty: newCertainty, confidence: newConfidence,
+        validationStatus: targetStatus, staleAt: newStaleAt });
+      // Capture the accepted state, including auto-approval commentary, inside this transaction.
+      await createVersion({ pillarId: pillar.id, content: newContent,
+        author: `${author.system}${author.userId ? `:${author.userId}` : ""}`, reason: author.reason, intentId: author.intentId,
+        compensatedFrom: restoration?.compensatedFrom,
+        checkpoint: createCheckpoint(previousContent, newContent, beforeMetadata, afterMetadata, newVersion,
+          readSourceReceipts([...(Array.isArray(pillar.sources) ? pillar.sources : []), ...(Array.isArray(newSources) ? newSources : [])])) as Prisma.InputJsonValue,
+      }, tx);
+
       // ── PERSIST (verrou optimiste — round-12, corrigé round-13a) ──
       // Conditionné à la version LUE (`pillar.currentVersion`, l.336). Sans ce
       // prédicat, deux écritures concurrentes du MÊME pilier (fenêtre findUnique
@@ -542,13 +611,12 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
           content: newContent as Prisma.InputJsonValue,
           confidence: newConfidence,
           validationStatus: targetStatus,
-          staleAt: null, // This pillar is now fresh
+          staleAt: newStaleAt,
           currentVersion: newVersion,
-          ...(confirmedCertainty ? { fieldCertainty: confirmedCertainty as Prisma.InputJsonValue } : {}),
-          ...(options?.sourceReceipts?.length ? { sources: [
-            ...(Array.isArray(pillar.sources) ? pillar.sources.filter((entry) => !readSourceReceipts([entry]).some((old) => options.sourceReceipts!.some((r) => r.sourceId === old.sourceId))) : []),
-            ...options.sourceReceipts,
-          ] as Prisma.InputJsonValue } : {}),
+          ...(restoration ? { fieldCertainty: newCertainty === null ? Prisma.DbNull : newCertainty as Prisma.InputJsonValue,
+            sources: newSources === null ? Prisma.DbNull : newSources as Prisma.InputJsonValue }
+            : { ...(confirmedCertainty ? { fieldCertainty: confirmedCertainty as Prisma.InputJsonValue } : {}),
+              ...(options?.sourceReceipts?.length ? { sources: newSources as Prisma.InputJsonValue } : {}) }),
         },
       });
       if (persisted.count !== 1) {
@@ -610,7 +678,7 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
     // l'Oracle. Le chemin commun est ici. Idempotent (COMPLETE→STALE
     // uniquement — no-op à l'intake où aucune section n'existe) et
     // conservateur : sur-invalider est sûr, sous-invalider était le bug.
-    if (result.success && !transaction) await invalidateOracleAfterCommit(strategyId);
+    if (result.success && !result.noOp && !transaction) await invalidateOracleAfterCommit(strategyId);
     return result;
   } catch (err) {
     return {
@@ -641,9 +709,11 @@ export async function writePillarsAtomically(requests: PillarWriteRequest[]): Pr
     }
     return written;
   }, { timeout: 30_000, maxWait: 15_000 });
-  await invalidateOracleAfterCommit(strategyId);
-  await postWriteScore(strategyId);
-  for (const request of requests) await reconcileAndPublishPillar(request);
+  if (results.some(result => !result.noOp)) {
+    await invalidateOracleAfterCommit(strategyId);
+    await postWriteScore(strategyId);
+  }
+  for (const [index, request] of requests.entries()) if (!results[index]!.noOp) await reconcileAndPublishPillar(request);
   return results;
 }
 
@@ -665,7 +735,7 @@ export async function postWriteScore(strategyId: string): Promise<void> {
  */
 export async function writePillarAndScore(request: PillarWriteRequest): Promise<PillarWriteResult> {
   const result = await writePillar(request);
-  if (result.success) {
+  if (result.success && !result.noOp) {
     await postWriteScore(request.strategyId);
     await reconcileAndPublishPillar(request);
   }

@@ -10,6 +10,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import {
   collaboratorCanWrite,
   collaboratorZoneForKind,
@@ -38,19 +39,19 @@ export async function assertCollaboratorMayEmit(params: {
   role: string | null | undefined;
   strategyId: string | null | undefined;
   kind: string;
-}): Promise<void> {
+}, client: Pick<Prisma.TransactionClient, "strategy" | "user" | "strategyCollaborator"> = db): Promise<void> {
   const { userId, role, strategyId, kind } = params;
   if (!userId || !strategyId || strategyId === "(none)") return;
   if (role === "ADMIN") return;
 
-  const strategy = await db.strategy.findUnique({
+  const strategy = await client.strategy.findUnique({
     where: { id: strategyId },
     select: { userId: true, operatorId: true, client: { select: { operatorId: true } } },
   });
   if (!strategy) return; // l'inexistence est gérée par la garde d'accès aval
   if (strategy.userId === userId) return; // owner
 
-  const user = await db.user.findUnique({
+  const user = await client.user.findUnique({
     where: { id: userId },
     select: { operatorId: true },
   });
@@ -61,7 +62,7 @@ export async function assertCollaboratorMayEmit(params: {
     return; // staff opérateur de la marque
   }
 
-  const collab = await db.strategyCollaborator.findUnique({
+  const collab = await client.strategyCollaborator.findUnique({
     where: { strategyId_userId: { strategyId, userId } },
     select: { status: true, role: true },
   });

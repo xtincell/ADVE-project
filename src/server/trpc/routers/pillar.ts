@@ -665,7 +665,7 @@ export const pillarRouter = createTRPCRouter({
       return { versions, currentVersion: pillar.currentVersion ?? 1 };
     }),
 
-  /** Rollback a pillar to a previous version */
+  /** Compensate the archived change while preserving later independent decisions. */
   rollbackVersion: governedProcedure({
     kind: "LEGACY_PILLAR_ROLLBACK_VERSION",
     caller: "pillar:rollbackVersion",
@@ -677,14 +677,8 @@ export const pillarRouter = createTRPCRouter({
       });
       if (!pillar) return { success: false, error: "Pillar not found" };
 
-      await pillarVersioning.rollback(pillar.id, input.versionId, ctx.session.user.id);
-
-      // Propagate staleness after rollback
-      await propagateFromPillar(input.strategyId, input.key).catch((err) => {
-        console.warn("[staleness] propagation after rollback failed:", err instanceof Error ? err.message : err);
-      });
-
-      return { success: true };
+      const result = await pillarVersioning.rollback(pillar.id, input.versionId, ctx.session.user.id, ctx.intentId);
+      return { success: true, alreadyRecorded: !!result.noOp, version: result.version };
     }),
 
   // ── Mestor RTIS Cascade ────────────────────────────────────────────────

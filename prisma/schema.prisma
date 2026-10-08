@@ -1772,6 +1772,10 @@ model PillarVersion {
   /// (au lieu de deviner « la dernière version »). Additif nullable — les
   /// versions antérieures au suivi ne sont pas restaurables avec précision.
   intentId String?
+  /// ADR-0207 — applied delta + before/after metadata, immutable and nullable for legacy.
+  checkpoint Json?
+  /// One effect per compensated write. NULL for ordinary writes; no historical backfill.
+  compensatedFrom String?
 
   pillar Pillar @relation(fields: [pillarId], references: [id], onDelete: Cascade)
 
@@ -1780,6 +1784,7 @@ model PillarVersion {
   @@index([pillarId])
   @@index([createdAt])
   @@index([intentId])
+  @@unique([pillarId, compensatedFrom])
 }
 
 model BrandDataSource {

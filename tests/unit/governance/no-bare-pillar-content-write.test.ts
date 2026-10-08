@@ -129,14 +129,6 @@ const ALLOWED_BARE_PILLAR_CONTENT_WRITES: ReadonlyArray<AcceptedBareWrite> = [
     reroutePlanned: true,
   },
   {
-    file: "src/server/services/pillar-versioning/index.ts",
-    line: 86,
-    hole: "—",
-    reason:
-      "Primitive de rollback : restaure le content d'un `PillarVersion` déjà validé + bump explicite de currentVersion (round-13a : createVersion ne bumpe plus). Sous-service du gateway (createVersion y est appelé) ; la restauration d'une version antérieure est un retour à un état déjà scoré.",
-    reroutePlanned: false,
-  },
-  {
     file: "src/server/services/rtis-protocols/strategy.ts",
     line: 722,
     hole: "—",

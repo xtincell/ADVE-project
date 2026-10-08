@@ -142,11 +142,12 @@ export function scopeMissions(ctx: OperatorContext): Prisma.MissionWhereInput {
  */
 export async function canAccessStrategy(
   strategyId: string,
-  ctx: OperatorContext
+  ctx: OperatorContext,
+  client: Pick<Prisma.TransactionClient, "strategy" | "strategyCollaborator"> = db,
 ): Promise<boolean> {
   if (ctx.role === "ADMIN") return true;
 
-  const strategy = await db.strategy.findUnique({
+  const strategy = await client.strategy.findUnique({
     where: { id: strategyId },
     select: { userId: true, operatorId: true },
   });
@@ -161,7 +162,7 @@ export async function canAccessStrategy(
 
   // ADR-0129 — collaborateur délégué par marque (grant gouverné, révocable).
   // Scopé à UNE strategy — jamais opérateur-large.
-  const collab = await db.strategyCollaborator.findUnique({
+  const collab = await client.strategyCollaborator.findUnique({
     where: { strategyId_userId: { strategyId, userId: ctx.userId } },
     select: { status: true },
   });
@@ -256,8 +257,8 @@ export async function canAccessMission(
 /**
  * Get operator context from a user
  */
-export async function getOperatorContext(userId: string): Promise<OperatorContext> {
-  const user = await db.user.findUnique({
+export async function getOperatorContext(userId: string, client: Pick<Prisma.TransactionClient, "user"> = db): Promise<OperatorContext> {
+  const user = await client.user.findUnique({
     where: { id: userId },
     select: { id: true, email: true, role: true, operatorId: true },
   });

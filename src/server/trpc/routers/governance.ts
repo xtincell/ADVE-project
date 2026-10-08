@@ -102,8 +102,7 @@ export const governanceRouter = createTRPCRouter({
       const built = await buildCompensatingIntent({
         originalIntentId: input.originalIntentId,
         reason: input.reason,
-        // ADR-0167 — les compensateurs de palier (DEMOTE_*) exigent operatorId.
-        payloadOverride: { operatorId: ctx.session.user.id },
+        userId: ctx.session.user.id,
       });
 
       // ADR-0167/0176 — si le compensateur a un VRAI handler, on le DISPATCHE
@@ -151,6 +150,7 @@ export const governanceRouter = createTRPCRouter({
       });
       return { ok: true, reverseKind: built.reverseKind, originalKind: built.originalKind, executed: false };
     } catch (err) {
+      if (err instanceof TRPCError) throw err;
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: err instanceof Error ? err.message : "Failed to compensate intent",

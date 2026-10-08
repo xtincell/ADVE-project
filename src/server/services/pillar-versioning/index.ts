@@ -12,6 +12,8 @@ interface VersionEntry {
   reason?: string;
   /** G (ADR-0176) — IntentEmission qui produit cette écriture (rollback précis). */
   intentId?: string;
+  checkpoint?: Prisma.InputJsonValue;
+  compensatedFrom?: string;
 }
 
 /**
@@ -34,6 +36,8 @@ export async function createVersion(entry: VersionEntry, client: Prisma.Transact
       author: entry.author,
       reason: entry.reason,
       intentId: entry.intentId ?? null,
+      ...(entry.checkpoint ? { checkpoint: entry.checkpoint } : {}),
+      compensatedFrom: entry.compensatedFrom ?? null,
     },
   });
 
@@ -45,8 +49,7 @@ export async function createVersion(entry: VersionEntry, client: Prisma.Transact
   // 0 ligne → `count !== 1` → throw PILLAR_VERSION_CONFLICT → TOUTE écriture pilier
   // gouvernée échouait sur un vrai Postgres (invisible en CI : DB stub + tx mockée).
   // Le bump du compteur appartient désormais au SEUL persist atomique du gateway,
-  // qui devient un verrou optimiste réel. Les callers hors gateway (rollback ci-dessous)
-  // bumpent explicitement. Invariant verrouillé par create-version-no-bump.test.ts.
+  // qui devient un verrou optimiste réel. La restauration utilise aussi ce gateway. Invariant verrouillé par create-version-no-bump.test.ts.
   // ADR-0198 : le gateway passe maintenant sa transaction ; snapshot et contenu
   // sont annulés ensemble si un pilier du lot est refusé.
   return version.id;
@@ -63,33 +66,19 @@ export async function getHistory(pillarId: string, limit = 20) {
   });
 }
 
-/**
- * Rollback to a specific version
- */
-export async function rollback(pillarId: string, versionId: string, author?: string): Promise<void> {
-  const version = await db.pillarVersion.findUniqueOrThrow({ where: { id: versionId } });
-  if (version.pillarId !== pillarId) throw new Error("Version does not belong to this pillar");
-
-  // Save current state before rolling back
-  await createVersion({
-    pillarId,
-    content: version.content as Record<string, unknown>,
-    author,
-    reason: `rollback_to_v${version.version}`,
+/** The history action uses exactly the same checkpoint, authority and fences as compensation. */
+export async function rollback(pillarId: string, versionId: string, author: string, intentId: string) {
+  const pillar = await db.pillar.findUniqueOrThrow({ where: { id: pillarId } });
+  // Dynamic import avoids the versioning -> gateway -> versioning module cycle.
+  const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+  const result = await writePillarAndScore({
+    strategyId: pillar.strategyId, pillarKey: pillar.key as import("@/lib/types/advertis-vector").PillarKey,
+    operation: { type: "RESTORE_VERSION", versionId },
+    author: { system: "OPERATOR", userId: author, intentId, reason: `Compensation de la version ${versionId}` },
+    options: { expectedVersion: pillar.currentVersion },
   });
-
-  // Apply the old content. round-13a : bump `currentVersion` explicitement ici —
-  // createVersion ne le fait plus, et ce chemin de rollback (LEGACY_PILLAR_ROLLBACK_VERSION,
-  // pillar.rollbackVersion) ne passe pas par le persist du gateway. Sans ce bump le
-  // compteur resterait figé (le snapshot pré-rollback et le suivant porteraient le
-  // même numéro). État final identique à `main` : contenu restauré + currentVersion +1.
-  await db.pillar.update({
-    where: { id: pillarId },
-    data: {
-      content: version.content as Prisma.InputJsonValue,
-      currentVersion: { increment: 1 },
-    },
-  });
+  if (!result.success) throw new Error(result.error ?? "RESTORE_REFUSED");
+  return result;
 }
 
 /**

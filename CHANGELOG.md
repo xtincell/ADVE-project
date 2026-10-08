@@ -1,5 +1,27 @@
 # Changelog — La Fusee
 
+## v6.27.421 — fix(governance): compenser sans effacer les décisions suivantes (2026-10-08)
+
+**Annuler une écriture préserve les décisions indépendantes prises depuis.**
+
+- L’archive enregistre le delta réellement accepté et les métadonnées avant/après
+  dans la transaction du gateway existant. La compensation compare les feuilles
+  avant/appliquées/courantes ; tableaux modifiés, archives ambiguës ou anciennes
+  sans checkpoint refusent plutôt que choisir un état au hasard (ADR-0207).
+- Origines, certitudes et reçus documentaires sont restitués sans déclaration
+  HUMAN inventée. Les sources encore utilisées sont conservées ; documents
+  corrigés, accès révoqués et versions en conflit refusent sans nouvelle archive.
+- L’id du spine atteint l’amendement et la compensation. Le contrôle d’accès
+  canonique est refait sous verrou, l’effet est unique par écriture compensée,
+  et la compensation elle-même reste compensable. L’action d’historique utilise
+  le même gateway ; son ancien writer direct et son exception C5 disparaissent.
+- Le motif de la console utilise le dialogue du design system ; résultat et
+  refus restent lisibles dans l’écran. Le prompt natif échouait dans le navigateur
+  intégré avant même de joindre le serveur.
+- Les contre-exemples ont échoué avant correction sur PostgreSQL isolé. Cette
+  livraison ne répare pas les liens historiques SPAWT absents, ne reçoit pas les
+  autres compensateurs et ne clôt aucun des sept chantiers Shinkiro.
+
 ## v6.27.420 — fix(cockpit): rendre les relations produit lisibles (2026-10-08)
 
 **Le mécanisme produit montre les offres actuelles et conserve son origine.**
