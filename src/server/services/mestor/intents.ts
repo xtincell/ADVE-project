@@ -21,6 +21,7 @@ import { ADVE_STORAGE_KEYS, type BrandTier } from "@/domain";
  */
 
 import type { PillarKey } from "@/lib/types/advertis-vector";
+import type { CreateBrandAssetInput } from "@/server/services/brand-vault/engine";
 
 // ── Phase enum ────────────────────────────────────────────────────────
 
@@ -348,6 +349,25 @@ export type Intent =
       overrideManipulationMode?: "peddler" | "dealer" | "facilitator" | "entertainer";
       /** Mode preview : retourne le DAG résolu + estimation coût sans dispatcher. */
       previewOnly?: boolean;
+    }
+  // ADR-0208 — already catalogued vault commands, same engine as manual UI.
+  | {
+      kind: "SELECT_BRAND_ASSET"; strategyId: string;
+      batchId: string; selectedAssetId: string; selectedById: string;
+      selectedReason?: string; promoteToActive?: boolean;
+    }
+  | {
+      kind: "PROMOTE_BRAND_ASSET_TO_ACTIVE"; strategyId: string;
+      brandAssetId: string; promotedById: string; force?: boolean;
+    }
+  | {
+      kind: "SUPERSEDE_BRAND_ASSET"; strategyId: string;
+      oldAssetId: string; supersededById: string; reason?: string;
+      newAssetInput: Omit<CreateBrandAssetInput, "operatorId"> & { operatorId?: string | null };
+    }
+  | {
+      kind: "ARCHIVE_BRAND_ASSET"; strategyId: string;
+      brandAssetId: string; archivedById: string; reason?: string;
     }
   // ── Phase 14 — Imhotep full activation (ADR-0019, supersedes ADR-0017). ──
   // 6ème Neter ACTIF. Orchestrateur des satellites matching/talent/team/tier/qc.
@@ -1380,6 +1400,10 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "RUN_ORACLE_SEQUENCE":
     case "PROMOTE_SEQUENCE_LIFECYCLE":
     case "UPDATE_MODEL_POLICY":
+    case "SELECT_BRAND_ASSET":
+    case "PROMOTE_BRAND_ASSET_TO_ACTIVE":
+    case "SUPERSEDE_BRAND_ASSET":
+    case "ARCHIVE_BRAND_ASSET":
     case "PTAH_MATERIALIZE_BRIEF":
     case "PTAH_RECONCILE_TASK":
     case "PTAH_REGENERATE_FADING_ASSET":

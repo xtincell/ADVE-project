@@ -1,5 +1,38 @@
 # Changelog — La Fusee
 
+## v6.27.422 — fix(brand-vault): partager un cycle d’actif atomique (2026-10-08)
+
+**Choisir, activer, remplacer et archiver utilisent la même décision de marque.**
+
+- Les quatre commandes du coffre déjà cataloguées atteignent désormais les mêmes
+  helpers que les actions manuelles. Types, manifest et dispatcher sont raccordés ;
+  une commande non prise en charge rend un échec explicite. Aucun nouveau service,
+  modèle, page, agent, Glory tool ou Intent kind (ADR-0208).
+- Sources, marque, campagne et actif sont relus sous verrous ; les permissions de
+  l’acteur et le firewall collaborateur sont refaits dans la transaction. Un lot
+  ne rejette plus de candidat étranger. L’équipe du successeur vient de la marque,
+  sans confondre l’auteur et son opérateur.
+- Le remplacement conserve ensemble ancien état, successeur, parent, version et
+  slot de campagne. Un échec tardif ne laisse plus d’actif orphelin ACTIVE. La
+  sélection directe applique aussi la qualité ; force ne ressuscite pas une archive
+  et ne contourne pas une source périmée. Un slot occupé exige un remplacement.
+- L’archivage ne retire que son propre slot ; un retry ne rétrograde pas ACTIVE.
+  Le même intentId persisté retrouve son successeur. Les cinq émissions locales
+  non chaînées et leur exception de test disparaissent ; les enveloppes existantes
+  restent responsables du spine, avec sa limite de fermeture best-effort tracée.
+- Les refus métier natifs gardent un code d’accès, conflit ou précondition, sans
+  erreur serveur artificielle. Le stress utilise l’acteur réellement propriétaire
+  et nettoie la filiation enfant avant parent, au lieu d’un identifiant fictif.
+- Réception locale : 16 contre-exemples rouges avant correction, 179 tests
+  PostgreSQL verts (29 pour le coffre), 4 144 unitaires, types/linters/cycles et
+  build à empreinte source stable. Neuf appels HTTP avec authentification réelle :
+  cinq réussites, deux accès refusés, deux préconditions refusées. Le stress rend
+  zéro erreur, 46 pages HTTP reçues et 235 non reçues ; aucune recette UI globale.
+  Le contrat dérivé du manifest est refermé dans ce lot, sans symptôme transitoire
+  conservé. CI et déploiement exact restent des preuves distinctes.
+  Ce lot ne publie aucune marque : projection publique SPAWT, autres écrivains
+  et sept chantiers Shinkiro restent ouverts.
+
 ## v6.27.421 — fix(governance): compenser sans effacer les décisions suivantes (2026-10-08)
 
 **Annuler une écriture préserve les décisions indépendantes prises depuis.**

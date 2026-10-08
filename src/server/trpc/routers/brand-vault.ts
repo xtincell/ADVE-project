@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
@@ -8,11 +9,11 @@ import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import type { Context } from "@/server/trpc/context";
 import {
+  BrandAssetLifecycleError,
   selectFromBatch as engineSelectFromBatch,
   promoteToActive as enginePromoteToActive,
   supersede as engineSupersede,
   archive as engineArchive,
-  type CreateBrandAssetInput,
 } from "@/server/services/brand-vault/engine";
 import { isBrandAssetKind } from "@/domain/brand-asset-kinds";
 import { PILLAR_KEYS } from "@/domain";
@@ -52,6 +53,27 @@ async function assertStrategyAccessForAsset(ctx: Context, strategyId: string): P
       })
     : false;
   if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cet actif." });
+}
+
+/** Resolve the audit pivot before Mestor's ownership/delegation gates, while
+ * preserving the existing native input contract (asset id, no extra user step). */
+async function withAssetStrategy<T extends { selectedAssetId?: string; brandAssetId?: string; oldAssetId?: string }>(input: T) {
+  const id = input.selectedAssetId ?? input.brandAssetId ?? input.oldAssetId;
+  const asset = id ? await db.brandAsset.findUnique({ where: { id }, select: { strategyId: true } }) : null;
+  if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "Actif introuvable." });
+  return { ...input, strategyId: asset.strategyId };
+}
+
+/** Expected lifecycle refusals are actionable 4xx responses, not server outages. */
+async function vaultResult<T>(mutate: () => Promise<T>): Promise<T> {
+  try { return await mutate(); } catch (error) {
+    if (error instanceof BrandAssetLifecycleError) throw new TRPCError({ code: error.code, message: error.message, cause: error });
+    if (error instanceof Error && error.name === "CollaboratorWriteVetoError") throw new TRPCError({ code: "FORBIDDEN", message: error.message, cause: error });
+    if (error instanceof Error && (error.name === "SequenceQualityError" || /^SOURCE_/.test(error.message))) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error.message, cause: error });
+    }
+    throw error;
+  }
 }
 
 export const brandVaultRouter = createTRPCRouter({
@@ -266,7 +288,7 @@ export const brandVaultRouter = createTRPCRouter({
       selectedAssetId: z.string(),
       selectedReason: z.string().optional(),
       promoteToActive: z.boolean().optional(),
-    }),
+    }).transform(withAssetStrategy),
 
 
     caller: "brand-vault:selectFromBatch",
@@ -275,13 +297,14 @@ export const brandVaultRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertBrandAssetAccess(ctx, input.selectedAssetId);
-      return engineSelectFromBatch({
+      return vaultResult(() => engineSelectFromBatch({
+        strategyId: input.strategyId,
         batchId: input.batchId,
         selectedAssetId: input.selectedAssetId,
         selectedById: ctx.session.user.id,
         selectedReason: input.selectedReason,
         promoteToActive: input.promoteToActive,
-      });
+      }));
     }),
 
   promoteToActive: governedProcedure({
@@ -298,7 +321,7 @@ export const brandVaultRouter = createTRPCRouter({
        * payload minimal contractualisé. Audit trail conservé.
        */
       force: z.boolean().optional(),
-    }),
+    }).transform(withAssetStrategy),
 
 
     caller: "brand-vault:promoteToActive",
@@ -307,11 +330,12 @@ export const brandVaultRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertBrandAssetAccess(ctx, input.brandAssetId);
-      return enginePromoteToActive({
+      return vaultResult(() => enginePromoteToActive({
+        strategyId: input.strategyId,
         brandAssetId: input.brandAssetId,
         promotedById: ctx.session.user.id,
         force: input.force,
-      });
+      }));
     }),
 
   supersede: governedProcedure({
@@ -342,7 +366,7 @@ export const brandVaultRouter = createTRPCRouter({
         briefId: z.string().optional(),
         metadata: z.record(z.string(), z.unknown()).optional(),
       }),
-    }),
+    }).transform(withAssetStrategy),
 
 
     caller: "brand-vault:supersede",
@@ -353,16 +377,14 @@ export const brandVaultRouter = createTRPCRouter({
       // Ownership sur l'actif superséédé ET sur la marque du nouvel actif.
       await assertBrandAssetAccess(ctx, input.oldAssetId);
       await assertStrategyAccessForAsset(ctx, input.newAsset.strategyId);
-      const newAssetInput: CreateBrandAssetInput = {
-        ...input.newAsset,
-        operatorId: ctx.session.user.id,
-      };
-      return engineSupersede({
+      return vaultResult(() => engineSupersede({
+        strategyId: input.strategyId,
+        intentId: ctx.intentId,
         oldAssetId: input.oldAssetId,
-        newAssetInput,
+        newAssetInput: input.newAsset,
         reason: input.reason,
         supersededById: ctx.session.user.id,
-      });
+      }));
     }),
 
   archive: governedProcedure({
@@ -374,7 +396,7 @@ export const brandVaultRouter = createTRPCRouter({
     inputSchema: z.object({
       brandAssetId: z.string(),
       reason: z.string().optional(),
-    }),
+    }).transform(withAssetStrategy),
 
 
     caller: "brand-vault:archive",
@@ -383,11 +405,12 @@ export const brandVaultRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertBrandAssetAccess(ctx, input.brandAssetId);
-      return engineArchive({
+      return vaultResult(() => engineArchive({
+        strategyId: input.strategyId,
         brandAssetId: input.brandAssetId,
         archivedById: ctx.session.user.id,
         reason: input.reason,
-      });
+      }));
     }),
 
   // ── Phase 10 listing — kind-aware retrieval ─────────────────────

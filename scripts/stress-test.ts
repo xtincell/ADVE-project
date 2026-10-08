@@ -284,7 +284,7 @@ async function phaseBrandAssetStateMachine() {
     await selectFromBatch({
       batchId: batch.batchId,
       selectedAssetId: batch.candidates[0]!.id,
-      selectedById: "stress-test",
+      selectedById: strategy.userId,
       promoteToActive: true,
     });
 
@@ -320,7 +320,7 @@ async function phaseBrandAssetStateMachine() {
         pillarSource: "D",
         manipulationMode: "entertainer",
       },
-      supersededById: "stress-test",
+      supersededById: strategy.userId,
       reason: "stress-test supersession",
     });
     if (supersedeRes.oldAsset.state !== "SUPERSEDED" || supersedeRes.newAsset.state !== "ACTIVE") {
@@ -336,16 +336,15 @@ async function phaseBrandAssetStateMachine() {
     // 5. Archive
     await archive({
       brandAssetId: supersedeRes.newAsset.id,
-      archivedById: "stress-test",
+      archivedById: strategy.userId,
       reason: "stress-test cleanup",
     });
 
     // Cleanup created assets
     if (!keepData) {
-      await db.brandAsset.deleteMany({
-        where: { batchId: batch.batchId },
-      });
-      await db.brandAsset.delete({ where: { id: supersedeRes.newAsset.id } }).catch(() => {});
+      // Delete the successor before its parent (lineage foreign key).
+      await db.brandAsset.delete({ where: { id: supersedeRes.newAsset.id } });
+      await db.brandAsset.deleteMany({ where: { batchId: batch.batchId } });
     }
   } catch (err) {
     await record({

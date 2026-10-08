@@ -84,6 +84,27 @@ export async function execute(intent: Intent, context?: { intentId: string }): P
       case "PROPOSE_VAULT_FROM_SOURCE":
         return wrap({ ...base, ...(await proposeVaultFromSource(intent)) });
 
+      case "SELECT_BRAND_ASSET": {
+        const { selectFromBatch } = await import("@/server/services/brand-vault/engine");
+        const output = await selectFromBatch(intent);
+        return wrap({ ...base, status: "OK", summary: "Actif sélectionné.", tool: "brand-vault:selectFromBatch", output });
+      }
+      case "PROMOTE_BRAND_ASSET_TO_ACTIVE": {
+        const { promoteToActive } = await import("@/server/services/brand-vault/engine");
+        const output = await promoteToActive(intent);
+        return wrap({ ...base, status: "OK", summary: "Actif en usage.", tool: "brand-vault:promoteToActive", output });
+      }
+      case "SUPERSEDE_BRAND_ASSET": {
+        const { supersede } = await import("@/server/services/brand-vault/engine");
+        const output = await supersede({ ...intent, intentId: context?.intentId });
+        return wrap({ ...base, status: "OK", summary: "Version remplacée, historique conservé.", tool: "brand-vault:supersede", output });
+      }
+      case "ARCHIVE_BRAND_ASSET": {
+        const { archive } = await import("@/server/services/brand-vault/engine");
+        const output = await archive(intent);
+        return wrap({ ...base, status: "OK", summary: "Actif archivé.", tool: "brand-vault:archive", output });
+      }
+
       case "INGEST_MARKET_STUDY":
         return wrap({ ...base, ...(await ingestMarketStudyHandler(intent)) });
 
@@ -730,6 +751,9 @@ export async function execute(intent: Intent, context?: { intentId: string }): P
           },
         });
       }
+      default:
+        return wrap({ ...base, status: "FAILED", reason: "UNSUPPORTED_INTENT",
+          summary: `Commande non prise en charge : ${base.intentKind}.` });
     }
   } catch (err) {
     return {

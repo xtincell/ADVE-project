@@ -1,5 +1,41 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
+## Coffre et circulation des actifs — 2026-10-08 (ADR-0208)
+
+- **Autres écrivains hors réception du cycle** : les quatre décisions partagent
+  désormais leurs helpers, mais `createBrandAsset`/`createCandidateBatch`,
+  `source-classifier/index.ts`, l’invalidation de `source-usage.ts` et les écrivains
+  de création/expiration ne sont pas tous reçus par ce lot. Le classement conserve
+  notamment son remplacement documentaire dans sa propre transaction. **Fermer**
+  en inventoriant leurs préconditions et ordres de verrou, puis en étendant les
+  primitives existantes aux courses création/sélection/correction/révocation et
+  aux interruptions, sans second coffre ni backfill de validation. **Déclencheur** :
+  prochaine traversée C3/C5 des actifs, avant autonomie de ces chemins ; effort :
+  un lot de contrats et recette par famille d’écrivains.
+- **Ptah — résultat produit avant admission durable** : lecture du code
+  `ptah/index.ts::reconcileTask` : COMPLETED est écrit avant les AssetVersion ;
+  l’admission BrandAsset est best-effort et un retry COMPLETED retourne sans la
+  reprendre. Ce constat source ne vaut pas reproduction de panne provider.
+  **Fermer** par pannes injectées après résultat, après une version et avant coffre,
+  puis reprise idempotente fondée sur GenerativeTask/AssetVersion/source existants ;
+  le reçu doit distinguer production, admission et durabilité sans nouvelle file.
+  **Déclencheur** : suite C3/C6 de forge, avant réception de ses actifs dans le cycle
+  Noël/publication ; effort : un lot de réconciliation et tests sur fixture locale,
+  sans achat ni appel provider requis pour reproduire la frontière.
+- **Fermeture du journal après commit** : `mestor/intents.ts::emitIntent` capture
+  encore une panne de closeEmission et peut rendre le résultat métier avec une
+  émission PENDING. Le sweep existant après six heures signale l’orpheline ; il
+  ne prouve pas son effet métier et ne constitue pas son reçu terminal immédiat.
+  Les émissions locales du coffre ont disparu, pas cette fenêtre commune.
+  **Fermer** par injection de panne/arrêt après commit, rapprochement de l’effet
+  persistant et reprise du même identifiant d’émission, sans deuxième journal ni
+  doublon métier. **Déclencheur** : réception C5 d’interruption avant autonomie de
+  ces commandes ; effort : un lot spine/réconciliation et recette PostgreSQL.
+- **Projection publique** : l’actif ACTIVE reste un usage, pas une approbation
+  publique. Le contrat borné/versionné et sa consommation SPAWT restent ouverts
+  dans « Version de marque vers les surfaces SPAWT » ci-dessous ; ADR-0208 en
+  prépare la frontière de décision sans déclarer ce raccord livré.
+
 ## Reprises de campagne — 2026-10-07 (ADR-0202)
 
 - **Statut de campagne automatique absent** : retirer le statut manuel est refusé
@@ -91,6 +127,8 @@
   changement, refus de conflit et retour à la précédente. Aucune copie intégrale
   du dossier privé dans le site. **Déclencheur** : raccord C2/C3 avant actualisation
   publique SPAWT ; effort : audit de filiation puis un lot de raccord existant.
+  ADR-0208 factorise les décisions du coffre en amont ; il ne crée ni approbation
+  publique, ni projection exportée, ni version consommée par les trois surfaces.
 
 ## Réception des observations et décisions — 2026-10-07 (ADR-0199)
 

@@ -1,5 +1,18 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Décisions d’actifs factorisées — 2026-10-08
+
+ADR-0208 étend le moteur BrandVault existant : les quatre commandes déjà
+cataloguées et les wrappers manuels utilisent une frontière transactionnelle
+commune, avec accès courant, source relue, état valide et scope de filiation.
+Remplacement/version/slot sont atomiques ; les retries préservent la décision
+existante et les émissions locales non chaînées sont retirées. Aucun nouveau
+modèle, service, page, agent ou Glory tool. Les preuves PostgreSQL, la recette
+native et le runtime restent des réceptions distinctes. Création, expiration,
+classifieur, Ptah et fermeture durable du spine restent au registre de dette.
+Un ACTIVE n’est ni une validation humaine ni une publication : le raccord public
+versionné SPAWT reste une étape propre, avant toute actualisation de ses surfaces.
+
 ## Identité et revue de fondation — 2026-10-08
 
 ADR-0205 factorise l'identité produit dans le gateway existant après arbitrage,

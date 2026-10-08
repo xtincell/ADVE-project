@@ -14,7 +14,10 @@
 
 import { db } from "@/lib/db";
 import { assertAssetSourceCurrent } from "@/server/services/ingestion-pipeline/source-usage";
-import type { BrandAssetState, Prisma } from "@prisma/client";
+import { Prisma, type BrandAsset, type BrandAssetState } from "@prisma/client";
+import { canAccessStrategy } from "@/server/services/operator-isolation";
+import { assertCollaboratorMayEmit } from "@/server/governance/collaborator-firewall";
+import { isGodModeEmail } from "@/lib/auth/god-mode";
 import { randomBytes } from "node:crypto";
 
 /** Mapping outputFormat Glory tool → BrandAsset.kind canonique. */
@@ -131,7 +134,7 @@ export const CAMPAIGN_ACTIVE_KIND_FIELDS: Record<string, string> = {
 
 export interface CreateBrandAssetInput {
   strategyId: string;
-  operatorId: string;
+  operatorId: string | null;
   name: string;
   kind: string;
   format?: string;
@@ -251,270 +254,189 @@ export async function createCandidateBatch(args: {
   return { batchId, candidates: created };
 }
 
+export class BrandAssetLifecycleError extends Error {
+  constructor(public readonly code: "FORBIDDEN" | "CONFLICT" | "PRECONDITION_FAILED", message: string) {
+    super(message); this.name = "BrandAssetLifecycleError";
+  }
+}
+
 /**
- * Sélectionne UN BrandAsset parmi un batch de candidats : passe en SELECTED,
- * met les autres en REJECTED, et si la kind est dans CAMPAIGN_ACTIVE_KIND_FIELDS,
- * promote en ACTIVE et update Campaign.active{Kind}Id.
- *
- * Hash-chain : crée IntentEmission SELECT_BRAND_ASSET (best-effort).
+ * One mutation boundary for manual wrappers and catalogued commands (ADR-0208).
+ * Lock order: documentary sources -> strategy -> vault mutex -> campaign -> asset.
+ * A correction uses the same source lock before invalidating assets. Never take
+ * an asset lock first and then wait for a source held by that correction.
  */
+async function withLockedAsset<T>(args: {
+  assetId: string; actorId: string; kind: string; strategyId?: string;
+  next?: Omit<CreateBrandAssetInput, "operatorId"> & { operatorId?: string | null };
+  useSource?: boolean;
+}, mutate: (tx: Prisma.TransactionClient, asset: BrandAsset, operatorId: string | null) => Promise<T>): Promise<T> {
+  const initial = await db.brandAsset.findUniqueOrThrow({ where: { id: args.assetId } });
+  if ((args.strategyId && initial.strategyId !== args.strategyId)
+    || (args.next && args.next.strategyId !== initial.strategyId)) {
+    throw new BrandAssetLifecycleError("FORBIDDEN", "ASSET_SCOPE_MISMATCH: cet actif ne relève pas de la marque indiquée.");
+  }
+  const sourceId = (metadata: unknown) => {
+    const meta = metadata as Record<string, unknown> | null;
+    return typeof meta?.sourceDataSourceId === "string" ? meta.sourceDataSourceId : null;
+  };
+  const sourceIds = [...new Set([sourceId(initial.metadata), sourceId(args.next?.metadata)]
+    .filter((id): id is string => id !== null))].sort();
+  return db.$transaction(async (tx) => {
+    if (sourceIds.length) await tx.$queryRaw(Prisma.sql`
+      SELECT id FROM "BrandDataSource" WHERE id IN (${Prisma.join(sourceIds)}) ORDER BY id FOR UPDATE`);
+    if (sourceIds.length) await tx.$queryRaw(Prisma.sql`
+      SELECT id FROM "Strategy" WHERE id=${initial.strategyId}
+      OR id IN (SELECT "strategyId" FROM "BrandDataSource" WHERE id IN (${Prisma.join(sourceIds)})) ORDER BY id FOR SHARE`);
+    else await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id=${initial.strategyId} FOR SHARE`;
+    // Different assets in one batch must contend on the SAME lock.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${"brand-vault:" + initial.strategyId}, 0))`;
+    if (initial.campaignId) await tx.$queryRaw`SELECT id FROM "Campaign" WHERE id=${initial.campaignId} FOR UPDATE`;
+    await tx.$queryRaw`SELECT id FROM "BrandAsset" WHERE id=${initial.id} FOR UPDATE`;
+    const current = await tx.brandAsset.findUniqueOrThrow({ where: { id: initial.id } });
+    if (current.strategyId !== initial.strategyId || current.campaignId !== initial.campaignId
+      || current.kind !== initial.kind || current.briefId !== initial.briefId
+      || sourceId(current.metadata) !== sourceId(initial.metadata)) {
+      throw new BrandAssetLifecycleError("CONFLICT", "ASSET_CHANGED: le dossier de cet actif a changé. Relire avant de décider.");
+    }
+    const actor = await tx.user.findUnique({ where: { id: args.actorId }, select: { id: true, email: true, operatorId: true, role: true } });
+    // Same effective role as authentication; a legacy DB role must not revoke
+    // an existing administrator's authority, and the caller cannot supply it.
+    const role = isGodModeEmail(actor?.email) ? "ADMIN" : actor?.role;
+    if (!actor || !role || !await canAccessStrategy(current.strategyId, { userId: actor.id, operatorId: actor.operatorId, role }, tx)) {
+      throw new BrandAssetLifecycleError("FORBIDDEN", "ASSET_ACCESS_DENIED: accès refusé à cet actif.");
+    }
+    await assertCollaboratorMayEmit({ userId: actor.id, role, strategyId: current.strategyId, kind: args.kind }, tx);
+    const strategy = await tx.strategy.findUniqueOrThrow({ where: { id: current.strategyId }, select: { operatorId: true } });
+    if (args.next?.operatorId !== undefined && args.next.operatorId !== strategy.operatorId) {
+      throw new BrandAssetLifecycleError("FORBIDDEN", "ASSET_SCOPE_MISMATCH: l’équipe du nouvel actif ne correspond pas à la marque.");
+    }
+    if (current.campaignId) {
+      const campaign = await tx.campaign.findUniqueOrThrow({ where: { id: current.campaignId }, select: { strategyId: true } });
+      if (campaign.strategyId !== current.strategyId) throw new BrandAssetLifecycleError("PRECONDITION_FAILED", "ASSET_CAMPAIGN_MISMATCH: campagne étrangère.");
+    }
+    if (args.useSource) await assertAssetSourceCurrent(tx, current);
+    return mutate(tx, current, strategy.operatorId);
+  });
+}
+
+async function assertQuality(assetId: string, content: unknown, force = false) {
+  if (force) return;
+  const { applySequenceQualityGate, SequenceQualityError } = await import("@/server/services/artemis/tools/quality-gate");
+  const gate = await applySequenceQualityGate(`promote:${assetId}`, (content ?? {}) as Record<string, unknown>);
+  if (!gate.ok) throw new SequenceQualityError(`promote:${assetId}`, gate.reasons);
+}
+
+/** A campaign slot cannot silently displace an active decision. Use supersede. */
+async function activateSlot(tx: Prisma.TransactionClient, asset: BrandAsset, replacesId?: string) {
+  const field = CAMPAIGN_ACTIVE_KIND_FIELDS[asset.kind];
+  if (!asset.campaignId || !field) return;
+  const campaign = await tx.campaign.findUniqueOrThrow({ where: { id: asset.campaignId } });
+  const current = (campaign as unknown as Record<string, unknown>)[field];
+  if (current && current !== asset.id && current !== replacesId) {
+    throw new BrandAssetLifecycleError("CONFLICT", "ACTIVE_SLOT_OCCUPIED: remplacer la version en usage avant d’en activer une autre.");
+  }
+  await tx.campaign.update({ where: { id: campaign.id }, data: { [field]: asset.id } });
+}
+
+/** Select one candidate in its own brand/campaign/kind batch; retry is a no-op. */
 export async function selectFromBatch(args: {
-  batchId: string;
-  selectedAssetId: string;
-  selectedById: string;
-  selectedReason?: string;
-  promoteToActive?: boolean;
+  batchId: string; selectedAssetId: string; selectedById: string;
+  selectedReason?: string; promoteToActive?: boolean; strategyId?: string;
 }) {
-  const selected = await db.brandAsset.findUnique({ where: { id: args.selectedAssetId } });
-  if (!selected) throw new Error(`BrandAsset ${args.selectedAssetId} not found`);
-  if (selected.batchId !== args.batchId) {
-    throw new Error(`BrandAsset ${args.selectedAssetId} doesn't belong to batch ${args.batchId}`);
-  }
-
-  const targetState = args.promoteToActive ? "ACTIVE" : "SELECTED";
-  const updated = await db.$transaction(async (tx) => {
-    await assertAssetSourceCurrent(tx, selected);
-  // Mark selected → SELECTED (or ACTIVE if promoteToActive)
-  const updated = await tx.brandAsset.update({
-    where: { id: args.selectedAssetId },
-    data: {
-      state: targetState,
-      selectedAt: new Date(),
-      selectedById: args.selectedById,
-      selectedReason: args.selectedReason ?? null,
-    },
-  });
-
-  // Mark others in batch as REJECTED
-  await tx.brandAsset.updateMany({
-    where: { batchId: args.batchId, id: { not: args.selectedAssetId }, state: "CANDIDATE" },
-    data: { state: "REJECTED" },
-  });
-
-  // If kind has an active slot on Campaign, update it
-  if (args.promoteToActive && selected.campaignId) {
-    const fieldName = CAMPAIGN_ACTIVE_KIND_FIELDS[selected.kind];
-    if (fieldName) {
-      await tx.campaign.update({
-        where: { id: selected.campaignId },
-        data: { [fieldName]: args.selectedAssetId } as Prisma.CampaignUpdateInput,
-      });
+  return withLockedAsset({ assetId: args.selectedAssetId, actorId: args.selectedById,
+    kind: "SELECT_BRAND_ASSET", strategyId: args.strategyId, useSource: true }, async (tx, selected) => {
+    if (selected.batchId !== args.batchId) throw new BrandAssetLifecycleError("PRECONDITION_FAILED", "ASSET_BATCH_MISMATCH: cet actif ne fait pas partie de ce lot.");
+    if (!["CANDIDATE", "SELECTED", "ACTIVE"].includes(selected.state)) {
+      throw new BrandAssetLifecycleError("PRECONDITION_FAILED", `ASSET_TRANSITION_REFUSED: ${selected.state} → SELECTED`);
     }
-  }
-
+    // Repeating a selection must not demote ACTIVE to SELECTED.
+    if (selected.state === "ACTIVE" || (selected.state === "SELECTED" && !args.promoteToActive)) return selected;
+    if (args.promoteToActive) await assertQuality(selected.id, selected.content);
+    const updated = await tx.brandAsset.update({ where: { id: selected.id }, data: {
+      state: args.promoteToActive ? "ACTIVE" : "SELECTED",
+      selectedAt: selected.selectedAt ?? new Date(), selectedById: selected.selectedById ?? args.selectedById,
+      selectedReason: selected.selectedReason ?? args.selectedReason ?? null,
+    } });
+    await tx.brandAsset.updateMany({ where: {
+      strategyId: selected.strategyId, campaignId: selected.campaignId, kind: selected.kind,
+      batchId: args.batchId, id: { not: selected.id }, state: "CANDIDATE",
+    }, data: { state: "REJECTED" } });
+    if (args.promoteToActive) await activateSlot(tx, updated);
     return updated;
   });
-
-  // Best-effort IntentEmission for hash-chain
-  try {
-    await db.intentEmission.create({
-      data: {
-        intentKind: "SELECT_BRAND_ASSET",
-        strategyId: selected.strategyId,
-        payload: {
-          batchId: args.batchId,
-          selectedAssetId: args.selectedAssetId,
-          selectedById: args.selectedById,
-          promotedToActive: args.promoteToActive ?? false,
-        } as Prisma.InputJsonValue,
-        caller: `brand-vault.selectFromBatch`,
-        result: { brandAssetId: args.selectedAssetId, state: targetState } as Prisma.InputJsonValue,
-        completedAt: new Date(),
-      },
-    });
-  } catch {
-    /* best-effort */
-  }
-
-  return updated;
 }
 
-/**
- * Promote un BrandAsset SELECTED → ACTIVE et met à jour Campaign.active{Kind}Id.
- *
- * Phase 18 (ADR-0044) — Quality gate avant promote.
- *
- * Si le `content` est structurellement vide (au sens
- * `applySequenceQualityGate`), le promote est refusé sauf si l'opérateur
- * passe `force: true` explicitement. Empêche le compteur Oracle 35/35
- * cosmétique observé sur Makrea (mai 2026).
- *
- * Cas légitimes pour `force: true` :
- * - Sections dormantes par design (Imhotep/Anubis pré-réservés en Phase 13)
- * - BrandAssets opérateur-saisis bypass-Glory avec payload contractualisé
- * - Tests fixtures
- */
+/** DRAFT/SELECTED -> ACTIVE. Force bypasses quality only, never state or source. */
 export async function promoteToActive(args: {
-  brandAssetId: string;
-  promotedById: string;
-  force?: boolean;
+  brandAssetId: string; promotedById: string; force?: boolean; strategyId?: string;
 }) {
-  const asset = await db.brandAsset.findUnique({ where: { id: args.brandAssetId } });
-  if (!asset) throw new Error(`BrandAsset ${args.brandAssetId} not found`);
-
-  // Quality gate (ADR-0044). Refuse promote si content empty deep, sauf force.
-  if (!args.force) {
-    const content = (asset.content ?? {}) as Record<string, unknown>;
-    const { applySequenceQualityGate, SequenceQualityError } = await import(
-      "@/server/services/artemis/tools/quality-gate"
-    );
-    const gate = await applySequenceQualityGate(
-      `promote:${args.brandAssetId}`,
-      content,
-    );
-    if (!gate.ok) {
-      // Audit trail : log la tentative refusée
-      try {
-        await db.intentEmission.create({
-          data: {
-            intentKind: "PROMOTE_BRAND_ASSET_TO_ACTIVE",
-            strategyId: asset.strategyId,
-            payload: {
-              brandAssetId: args.brandAssetId,
-              promotedById: args.promotedById,
-              refusedReasons: gate.reasons,
-            } as Prisma.InputJsonValue,
-            caller: `brand-vault.promoteToActive:refused`,
-            completedAt: new Date(),
-          },
-        });
-      } catch {
-        /* best-effort audit */
-      }
-      throw new SequenceQualityError(`promote:${args.brandAssetId}`, gate.reasons);
-    }
-  }
-
-  const updated = await db.$transaction(async (tx) => {
-    await assertAssetSourceCurrent(tx, asset);
-  const updated = await tx.brandAsset.update({
-    where: { id: args.brandAssetId },
-    data: { state: "ACTIVE" },
-  });
-
-  if (asset.campaignId) {
-    const fieldName = CAMPAIGN_ACTIVE_KIND_FIELDS[asset.kind];
-    if (fieldName) {
-      await tx.campaign.update({
-        where: { id: asset.campaignId },
-        data: { [fieldName]: args.brandAssetId } as Prisma.CampaignUpdateInput,
-      });
-    }
-  }
-
+  return withLockedAsset({ assetId: args.brandAssetId, actorId: args.promotedById,
+    kind: "PROMOTE_BRAND_ASSET_TO_ACTIVE", strategyId: args.strategyId, useSource: true }, async (tx, asset) => {
+    if (asset.state === "ACTIVE") return asset;
+    if (!["DRAFT", "SELECTED"].includes(asset.state)) throw new BrandAssetLifecycleError("PRECONDITION_FAILED", `ASSET_TRANSITION_REFUSED: ${asset.state} → ACTIVE`);
+    await assertQuality(asset.id, asset.content, args.force);
+    const updated = await tx.brandAsset.update({ where: { id: asset.id }, data: { state: "ACTIVE" } });
+    await activateSlot(tx, updated);
     return updated;
   });
-
-  try {
-    await db.intentEmission.create({
-      data: {
-        intentKind: "PROMOTE_BRAND_ASSET_TO_ACTIVE",
-        strategyId: asset.strategyId,
-        payload: {
-          brandAssetId: args.brandAssetId,
-          promotedById: args.promotedById,
-          forced: args.force ?? false,
-        } as Prisma.InputJsonValue,
-        caller: `brand-vault.promoteToActive${args.force ? ":forced" : ""}`,
-        completedAt: new Date(),
-      },
-    });
-  } catch {
-    /* best-effort */
-  }
-
-  return updated;
 }
 
-/**
- * Supersede un BrandAsset ACTIVE par une nouvelle version.
- * L'ancien passe en SUPERSEDED, le nouveau en ACTIVE.
- */
+/** Atomic replacement; the old lineage, successor and active slot commit together. */
 export async function supersede(args: {
   oldAssetId: string;
-  newAssetInput: CreateBrandAssetInput;
-  reason?: string;
-  supersededById: string;
+  newAssetInput: Omit<CreateBrandAssetInput, "operatorId"> & { operatorId?: string | null };
+  reason?: string; supersededById: string; strategyId?: string; intentId?: string;
 }) {
-  const oldAsset = await db.brandAsset.findUnique({ where: { id: args.oldAssetId } });
-  if (!oldAsset) throw new Error(`BrandAsset ${args.oldAssetId} not found`);
-
-  const newAsset = await createBrandAsset({
-    ...args.newAssetInput,
-    state: "ACTIVE",
-  });
-
-  const oldAssetUpdated = await db.brandAsset.update({
-    where: { id: args.oldAssetId },
-    data: {
-      state: "SUPERSEDED",
-      supersededById: newAsset.id,
-      supersededAt: new Date(),
-      supersededReason: args.reason ?? null,
-    },
-  });
-
-  // Update parent chain
-  const newAssetUpdated = await db.brandAsset.update({
-    where: { id: newAsset.id },
-    data: { parentBrandAssetId: args.oldAssetId, version: oldAsset.version + 1 },
-  });
-
-  // Update Campaign active slot if applicable
-  if (oldAsset.campaignId) {
-    const fieldName = CAMPAIGN_ACTIVE_KIND_FIELDS[oldAsset.kind];
-    if (fieldName) {
-      await db.campaign.update({
-        where: { id: oldAsset.campaignId },
-        data: { [fieldName]: newAsset.id } as Prisma.CampaignUpdateInput,
-      });
+  return withLockedAsset({ assetId: args.oldAssetId, actorId: args.supersededById,
+    kind: "SUPERSEDE_BRAND_ASSET", strategyId: args.strategyId, next: args.newAssetInput }, async (tx, old, operatorId) => {
+    const next = args.newAssetInput;
+    if (next.kind !== old.kind || (next.campaignId !== undefined && next.campaignId !== old.campaignId)) {
+      throw new BrandAssetLifecycleError("PRECONDITION_FAILED", "ASSET_LINEAGE_MISMATCH: une version conserve la nature et la campagne de son actif.");
     }
-  }
-
-  try {
-    await db.intentEmission.create({
-      data: {
-        intentKind: "SUPERSEDE_BRAND_ASSET",
-        strategyId: oldAsset.strategyId,
-        payload: { oldAssetId: args.oldAssetId, newAssetId: newAsset.id, reason: args.reason ?? null } as Prisma.InputJsonValue,
-        caller: `brand-vault.supersede`,
-        completedAt: new Date(),
-      },
-    });
-  } catch {
-    /* best-effort */
-  }
-
-  return { oldAsset: oldAssetUpdated, newAsset: newAssetUpdated };
+    if (args.intentId && old.supersededById) {
+      const successor = await tx.brandAsset.findUniqueOrThrow({ where: { id: old.supersededById } });
+      const meta = successor.metadata as Record<string, unknown> | null;
+      if (meta?.vaultSupersessionIntentId === args.intentId && successor.parentBrandAssetId === old.id) {
+        return { oldAsset: old, newAsset: successor };
+      }
+    }
+    if (old.state !== "ACTIVE") throw new BrandAssetLifecycleError("PRECONDITION_FAILED", `ASSET_TRANSITION_REFUSED: ${old.state} → SUPERSEDED`);
+    const briefId = next.briefId ?? old.briefId;
+    if (briefId) {
+      const brief = await tx.campaignBrief.findUniqueOrThrow({ where: { id: briefId }, select: { campaignId: true, campaign: { select: { strategyId: true } } } });
+      if (brief.campaign.strategyId !== old.strategyId || brief.campaignId !== old.campaignId) {
+        throw new BrandAssetLifecycleError("PRECONDITION_FAILED", "ASSET_BRIEF_MISMATCH: brief étranger à cette campagne.");
+      }
+    }
+    await assertQuality(old.id, next.content);
+    const created = await createBrandAsset({ ...next, operatorId, campaignId: old.campaignId ?? undefined,
+      briefId: briefId ?? undefined, state: "ACTIVE", sourceIntentId: next.sourceIntentId ?? args.intentId,
+      metadata: { ...next.metadata, ...(args.intentId ? { vaultSupersessionIntentId: args.intentId } : {}) },
+    }, tx);
+    const newAsset = await tx.brandAsset.update({ where: { id: created.id }, data: { parentBrandAssetId: old.id, version: old.version + 1 } });
+    const oldAsset = await tx.brandAsset.update({ where: { id: old.id }, data: {
+      state: "SUPERSEDED", supersededById: newAsset.id, supersededAt: new Date(), supersededReason: args.reason ?? null,
+    } });
+    await activateSlot(tx, newAsset, old.id);
+    return { oldAsset, newAsset };
+  });
 }
 
-/**
- * Archive un BrandAsset (mort rituelle — lecture seule).
- */
-export async function archive(args: { brandAssetId: string; archivedById: string; reason?: string }) {
-  const asset = await db.brandAsset.findUnique({ where: { id: args.brandAssetId } });
-  if (!asset) throw new Error(`BrandAsset ${args.brandAssetId} not found`);
-
-  const updated = await db.brandAsset.update({
-    where: { id: args.brandAssetId },
-    data: { state: "ARCHIVED" },
-  });
-
-  try {
-    await db.intentEmission.create({
-      data: {
-        intentKind: "ARCHIVE_BRAND_ASSET",
-        strategyId: asset.strategyId,
-        payload: { brandAssetId: args.brandAssetId, archivedById: args.archivedById, reason: args.reason ?? null } as Prisma.InputJsonValue,
-        caller: `brand-vault.archive`,
-        completedAt: new Date(),
-      },
+/** Archiving stale/superseded evidence is allowed; never leaves an active slot dangling. */
+export async function archive(args: {
+  brandAssetId: string; archivedById: string; reason?: string; strategyId?: string;
+}) {
+  return withLockedAsset({ assetId: args.brandAssetId, actorId: args.archivedById,
+    kind: "ARCHIVE_BRAND_ASSET", strategyId: args.strategyId }, async (tx, asset) => {
+    if (asset.state === "ARCHIVED") return asset;
+    const updated = await tx.brandAsset.update({ where: { id: asset.id }, data: { state: "ARCHIVED" } });
+    const field = CAMPAIGN_ACTIVE_KIND_FIELDS[asset.kind];
+    if (asset.campaignId && field) await tx.campaign.updateMany({
+      where: { id: asset.campaignId, [field]: asset.id }, data: { [field]: null },
     });
-  } catch {
-    /* best-effort */
-  }
-
-  return updated;
+    return updated;
+  });
 }
 
 /** Helper : extrait le kind canonique depuis un Glory tool outputFormat. */

@@ -62,13 +62,6 @@ const ALLOWED_BARE_EMISSION_CREATES: ReadonlyArray<{
     reroutePlanned: true,
   },
   {
-    file: "src/server/services/brand-vault/engine.ts",
-    count: 5,
-    reason:
-      "Ledger vault (promotions/dépréciations d'assets) écrit en direct — hors chaîne, selfHash null assumé.",
-    reroutePlanned: true,
-  },
-  {
     file: "src/server/services/founder-psychology/index.ts",
     count: 1,
     reason: "Trace d'analyse psycho founder écrite en direct — hors chaîne, selfHash null assumé.",

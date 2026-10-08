@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.422", date: "2026-10-08",
+    headline: "Vos actifs gardent une version en usage cohérente",
+    highlights: [
+      { emoji: "↻", title: "Un remplacement complet", body: "Remplacer un actif conserve ensemble son historique et la version utilisée par la campagne. En cas d’échec, la version précédente reste en place." },
+      { emoji: "🛡️", title: "Des choix dans le bon dossier", body: "Choisir un candidat laisse intacts les autres marques et campagnes. Une archive ne peut plus être réactivée par un forçage, et un document périmé demande une relecture." },
+    ],
+  },
+  {
     version: "6.27.421", date: "2026-10-08",
     headline: "Annulez une correction sans perdre les suivantes",
     highlights: [
