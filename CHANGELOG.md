@@ -1,5 +1,16 @@
 # Changelog — La Fusee
 
+## v6.27.425 — docs(ptah): borner le contrat déclaré de réconciliation (2026-10-08)
+
+**Le contrat décrit l’admission reçue, sans promettre le transport des médias.**
+
+- Le descriptif PTAH_RECONCILE_TASK et son catalogue généré reflètent le
+  checkpoint, la reprise et l’admission atomique. Les promesses de téléchargement
+  vers CDN et d’émission ASSET_FORGED sont retirées : ce handler ne les réalise pas.
+- Conservation des médias, facture fournisseur et retour métier restent non
+  prouvés par ce lot. Aucun nouveau kind ni changement de version ; CI finale,
+  image et production 425 restent à recevoir.
+
 ## v6.27.425 — fix(ptah): reprendre l’admission d’un résultat sans doublon (2026-10-08)
 
 **Un résultat de forge conservé peut rejoindre le coffre après interruption.**
