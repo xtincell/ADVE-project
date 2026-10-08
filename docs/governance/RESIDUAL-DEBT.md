@@ -46,11 +46,13 @@
   avec FRC-076 et ses trois marques ; cinq aperçus produit chargés. Mobile CSS
   390 × 844 confirmé : aucun débordement horizontal, dialogue dans le viewport.
   Ces reçus bornent la lecture ; le corpus et le cycle métier restent ouverts.
-- **Contraste des aperçus transparents** : le wordmark sombre SPAWT est difficile
-  à lire sur le fond sombre de la carte. Correctif local 412 : fonds clair/sombre
-  fixes via le média commun, sans altération du fichier. Fermer après réception
-  native en modes jour/nuit et mobile. Déclencheur : déploiement 412 ; effort :
-  une recette des aperçus SPAWT et non-régression produits FrieslandCampina.
+- **Aperçus en thème jour à recevoir** : le défaut de contraste sombre est
+  corrigé et reçu en production 412 en thème nuit et viewport CSS 390 × 844 :
+  logo lisible sur fond clair, choix sombre réversible, huit images produit
+  FrieslandCampina chargées. Les fonds sont fixes dans les deux thèmes en code ;
+  la recette native jour et l’appareil mobile réel ne sont pas reçus. Déclencheur :
+  prochaine recette d’apparence autorisée ; effort : vérifier les mêmes aperçus,
+  sans altération des fichiers ni changement de préférence laissé en place.
 - **Dossiers stratégiques distincts** : le dossier principal contient une
   fondation renseignée et cinq documents ; le dossier associé garde son histoire.
   Le regroupement de fichiers ne les rapproche pas sémantiquement. Fermer en
@@ -70,7 +72,13 @@
   leur équivalence sémantique. Le principal conserve 78 provenances de champ
   dans `_fieldProvenance`, distinctes des anciennes colonnes sources/certainty
   vides. Le lot 412 rend version et origine d’écriture visibles sans déclarer
-  une approbation. Réception native et rapprochement de contenu encore requis.
+  une approbation ; ces seize lectures sont reçues nativement en production 412.
+  Les contenus/états/versions et cinq sources restent identiques avant/après.
+  Le rapprochement sémantique reste ouvert : la palette du principal correspond
+  à la source Guidelines v2, l’associé conserve une palette distincte ; le
+  document privilégie Carte alors que le lockup Calico horizontal est nommé
+  identité principale. Klinsman exclusif/Gotham secondaire et Poppins/JetBrains
+  dans les applications coexistent dans le document. Aucun arbitrage inventé.
 
 ## Réception des observations et décisions — 2026-10-07 (ADR-0199)
 

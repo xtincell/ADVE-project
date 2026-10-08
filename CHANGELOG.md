@@ -17,13 +17,20 @@
 - Console/Admin, INFRASTRUCTURE ; lecteur BrandNode existant, sous Mestor.
   Une identité lisible et sourcée évite que la production de marque réutilise
   une ancienne proposition comme un choix approuvé. Aucun modèle ou Intent créé.
-  La réception native, le rapprochement sémantique des deux dossiers et
-  l’irrigation d’une version approuvée vers les produits restent ouverts.
+  Le rapprochement sémantique des deux dossiers et l’irrigation d’une version
+  approuvée vers les produits restent ouverts.
 - Vérification locale : quatre contre-exemples de rendu et deux PostgreSQL
   rouges avant correction ; 1 659 tests gouvernance/portfolio et 89 PostgreSQL
   verts après correction. Typage, lints sans erreur (24 warnings historiques),
   cycles et build passent. HTTP authentifié : 200/403/404 en 11–54 ms ; page
   serveur 200. Ce reçu HTTP ne remplace pas la réception native hydratée.
+- Livraison reçue le 8 octobre : CI 37704614804, 4 077 unitaires et 89 PostgreSQL ;
+  image bootée puis servie depuis `db2db35f`, conteneur unique `nextjs`, volume
+  privé conservé. Après un premier suivi expiré, le même déploiement finit sans
+  deuxième demande. Natif ADMIN : logo clair/sombre, seize versions/origines,
+  un projet Noël/trois marques et huit images produit reçus. Mobile CSS
+  390 × 844 sans débordement ; thème jour natif et appareil réel non reçus.
+  Les seize piliers et cinq sources SPAWT restent identiques après livraison.
 
 ## v6.27.411 — docs(governance): clore les reçus du lot 410 (2026-10-07)
 
