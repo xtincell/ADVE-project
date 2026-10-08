@@ -355,3 +355,7 @@ Lignes dérivées purgées :
   ignorait l’accès à la marque résolue. Cause : archive sans état appliqué ni
   métadonnées, remplacement intégral et contexte du spine perdu au dispatch.
   Compensation ciblée, même gateway pour l’historique, liens réels et verrous.
+- 2026-10-08 · recette 421 : sept tests documentaires échouaient en CI sur
+  Strategy_operatorId_fkey. Cause : opérateur emprunté à une fixture parallèle
+  puis supprimé par son propriétaire. Opérateur désormais créé et nettoyé par
+  le fichier documentaire ; aucune sérialisation ni réduction de la suite.

@@ -1160,6 +1160,17 @@ sign-off direction (cf. § Actions opérateur).
 - **Won't-do historiques** (V8 sandbox, multi-region, Web Components, GraphQL, Yjs full runtime) —
   inchangés.
 
+### Recette documentaire hors CI — fixture de source partagée
+
+Revue CI du 8 octobre 2026 (lot 421) : `source-uses.postgres.test.ts`, hors de
+`vitest.feedback-postgres.config.mts`, emprunte encore le premier opérateur
+d’une stratégie existante. La course reproduite dans `amend-source` est corrigée ;
+ce second fichier n’est pas reçu par cette correction. Plan : lui attribuer
+ses opérateurs/utilisateurs jetables, nettoyer leurs dépendances et exécuter
+la suite depuis une base migrée vide puis avec les autres fichiers en parallèle.
+Déclencheur : prochaine recette de l’irrigation documentaire C3, avant admission
+de ce fichier dans la CI. Aucun assouplissement de la suite existante.
+
 ### Harnais de stress global — cible et providers à isoler
 
 Inspection statique du 8 octobre 2026 : `scripts/stress-test.ts` annonce des

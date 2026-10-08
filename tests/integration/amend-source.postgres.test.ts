@@ -13,7 +13,11 @@ const strategies: string[] = [];
 beforeAll(async () => {
   const url = new URL(process.env.DATABASE_URL!);
   expect(["127.0.0.1", "localhost"]).toContain(url.hostname); expect(url.pathname).toBe("/shinkiro_verify");
-  operatorId = (await db.strategy.findFirstOrThrow({ where: { operatorId: { not: null } } })).operatorId!;
+  operatorId = (await db.operator.create({ data: {
+    name: "Amendement source — opérateur isolé", slug: `amend-source-${randomUUID()}`,
+    status: "ACTIVE", licenseType: "TRIAL", licensedAt: new Date(),
+    licenseExpiry: new Date(Date.now() + 86_400_000),
+  } })).id;
   userId = (await db.user.create({ data: { email: `amend-source-${randomUUID()}@example.test`, role: "ADMIN", operatorId } })).id;
 });
 afterAll(async () => {
@@ -29,6 +33,7 @@ afterAll(async () => {
     await db.strategy.deleteMany({ where: { id: { in: strategies } } });
   }
   if (userId) await db.user.delete({ where: { id: userId } });
+  if (operatorId) await db.operator.delete({ where: { id: operatorId } });
   await db.$disconnect();
 });
 async function fixture(human = false) {

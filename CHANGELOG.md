@@ -4,6 +4,9 @@
 
 **Annuler une écriture préserve les décisions indépendantes prises depuis.**
 
+- Complément de recette : le test documentaire crée et nettoie son propre
+  opérateur. Il empruntait celui d’un autre fichier, supprimé en parallèle en CI ;
+  cette dépendance provoquait une violation de clé étrangère entre deux tests.
 - L’archive enregistre le delta réellement accepté et les métadonnées avant/après
   dans la transaction du gateway existant. La compensation compare les feuilles
   avant/appliquées/courantes ; tableaux modifiés, archives ambiguës ou anciennes
