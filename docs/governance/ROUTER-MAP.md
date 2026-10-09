@@ -6,7 +6,7 @@ Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts`
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**Candidat 436 — routes de validation factorisées** : strategy.validateSynthesis
+**436 livré — routes de validation factorisées** : strategy.validateSynthesis
 devient une entrée compatible de pillar.transitionStatus, même
 LEGACY_PILLAR_TRANSITION_STATUS gouverné et requireOperator existant. Pour S,
 expectedVersion porte la version relue ; forceConfidence ne fait qu’acquitter
@@ -17,7 +17,9 @@ generateProjectsFromActions reste sous son kind existant, exige l’opérateur e
 contrôle une synthèse approuvée/composée/fraîche au début de la commande.
 Aucun router, procédure parallèle, permission ou kind ajouté ; quatorze
 PostgreSQL ciblés verts, autres writers et consommateurs globaux non reçus
-par ces seuls tests. [Native synthétique et réceptions restantes](RECEPTION-VALIDATION-SYNTHESE.md).
+par ces seuls tests. Source 80e2122f/CI/image/runtime 436 reçus ; lecture réelle
+SPAWT S existant/.912/AI_PROPOSED v3/non approuvable reçue. Postmerge documentaire
+et contrats transverses ouverts : [réceptions bornées](RECEPTION-VALIDATION-SYNTHESE.md).
 [ADR-0214 Proposed et bornes](adr/0214-synthesis-approval-preserves-confidence.md).
 
 **Statut governance** :

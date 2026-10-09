@@ -4,7 +4,7 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
-**6.27.436 candidat — approbation S distincte de sa confiance** : le helper d’état
+**6.27.436 livré au runtime — approbation S distincte de sa confiance, métier partiel** : le helper d’état
 dans pillar-gateway existant est partagé par les deux routes gouvernées de
 validation, sans kind/service/modèle/page/droit nouveau. Contrat ENRICHED/COMPLETE
 et schéma S strict pour composition, version relue requise pour approuver S ;
@@ -32,10 +32,23 @@ finale reçue : modal non mesuré/lien juste/Risque absent, confirmation conserv
 null et contenu ; deux HTTP 200/zéro ≥500/exception dans ces gestes complets,
 sans SLO ou zéro global. Gauntlet final cinq exit 0, gouvernance 1 620/166,
 DS trois/vocab cinq verts, 24 warnings préexistants. Fixture nettoyée/zéro
-stratégie exacte, Next arrêté, next-env restauré ; CI/image/runtime/postmerge
-à recevoir. ADR-0214 Proposed,
+stratégie exacte, Next arrêté, next-env restauré. Source 80e2122f poussée main,
+CI 37979818869 reçue success (4 190/400 et 288/15), Chromatic 37979818760/Mission
+37979818867 success ; image 37980217686 success/index exact, déploiement unique
+terminé à 19:39:09 UTC, runtime 436/nextjs/volume privé RW/API version 200 reçus.
+Documentation/postmerge distincts de la source déployée. Native réelle SPAWT :
+S existe, .912/91 %, AI_PROPOSED v3, composed/canValidate=false/bouton désactivé.
+Readiness canonique COMPLETE/100/stale mais 80 chemins refusés par schéma strict :
+types/liens/structure, pas 80 faits métier absents. Réconciliation des contrats,
+formes historiques et S calculé requise avant C3/C4/C6, sans affaiblissement ni
+contenu inventé. Fenêtre complète 62 réponses/zéro ≥500/exception, 17 Fetch
+ERR_ABORTED annulés conservés, pas zéro transport global/SLO. Schema diff CI non mesuré faute de
+shadowDatabaseUrl, warning schema-ahead trompeur/zéro diff schéma-migration 436,
+dette C7 sans migration déduite. Vitrines SPAWT relues : six questions/décompte
+expiré absent, identité v6 déjà projetée ; quiz/app/retours non reçus. Revue
+statique d’autres sources S bornée, aucune réception globale. ADR-0214 Proposed,
 [reçu courant](docs/governance/RECEPTION-VALIDATION-SYNTHESE.md) ; les sept
-chantiers/dix gates restent non acceptés. Runtime reçu courant : 435 ci-dessous.
+chantiers/dix gates restent non acceptés. Runtime courant : 436 ; historique 435 ci-dessous.
 
 **6.27.435 livré — suivi vide SPAWT reçu, métier partiel** : après refus natif tracker
 403 en 434 pour compte non affecté, listForges seulement résout le dossier choisi

@@ -193,7 +193,7 @@ conservé. Corpus/édition SPAWT et zéro tâche/version de forge inchangés.
 Livraison fermée ; bouton/rôles restent reçus avec préconditions synthétiques locales,
 aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
 
-- **Confiance S et décision de validation — candidat 436, réception ouverte** :
+- **Confiance S et décision de validation — 436 livré, métier partiel** :
   le faux label ACTIVE avait été corrigé en 434 ; les défauts distincts d’absence
   rendue 0 % et de confirmation imposant 1.0 sont réparés dans le candidat.
   Les deux routes partagent une décision d’état gouvernée dans pillar-gateway,
@@ -206,12 +206,23 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   gardant 22 % ou mesure inconnue et conflit 409/nouvelle lecture reçus.
   Copie finale native et défaut confidence=1.0 remis en rouge/restauré reçus ;
   contenu inchangé/zéro AICostLog, sans production. Aucune validation d’un noyau
-  réel ou livraison 436 reçue. **Fermer** : recevoir revue de noyaux réels,
-  CI/runtime exacts/postmerge ; gauntlet final vert, fixture nettoyée. Auditer
-  ensuite les autres écrivains et
-  consommateurs globaux ainsi que la modification de source pendant création
+  réel reçue. **Fermer** : recevoir revue de noyaux réels et postmerge ; gauntlet
+  final vert, fixture nettoyée. Source 80e2122f/CI 37979818869/image/runtime 436
+  reçus. Native réelle SPAWT en lecture seule : S existe, .912/91 %, AI_PROPOSED
+  v3, composed=false/canValidate=false. Contrat canonique COMPLETE/100/stale et
+  schéma strict en désaccord sur 80 chemins de types/liens/structure, pas 80 faits
+  business absents. **Réconcilier** les contrats et formes historiques avec le
+  S calculé et ses sources réelles, puis les consommateurs ; ne pas affaiblir la
+  gate, forcer une approbation ou fabriquer du contenu pour passer le contrôle.
+  Preuve privée native-s-composition-contract-conflict.json. Revue statique
+  bornée : l’écriture OPERATOR conserve validationStatus par défaut en
+  incrémentant currentVersion ; canon-sync rafraîchit S.computed/content
+  directement ; sequence-vault considère confiance ≥0.6 OU VALIDATED pour son
+  préalable. Aucun comportement global reçu par cette lecture. Auditer ces
+  écrivains/consommateurs ainsi que la modification de source pendant création
   de projets, sans déduire leur couverture des deux routes réparées.
-  **Déclencheur** : réception 436 en cours, puis passe des consommateurs S avant
+  **Déclencheur** : prochain lot transverse de factorisation des contrats/formes
+  S et de ses écrivains/consommateurs avant
   acceptation C3/C4/C6 ; effort : un lot borné de réception et une passe transverse.
   [ADR-0214 Proposed](adr/0214-synthesis-approval-preserves-confidence.md) ·
   [bornes et preuves](RECEPTION-VALIDATION-SYNTHESE.md).
@@ -657,6 +668,17 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
   Effort : un lot de maintenance documentaire Git ; déclencheur : prochaine
   maintenance des workflows ou actualisation de cette référence. Aucun fichier
   documentaire supprimé pour masquer cet avertissement non bloquant.
+- **Comparaison schéma/migrations CI non mesurée — C7** : run 37979818869 success,
+  étape `.github/workflows/ci.yml` « Schema diff vs migrations » incapable de
+  mesurer faute de datasource.shadowDatabaseUrl ; le warning schema-ahead est
+  trompeur et ne prouve aucun drift. Le lot 436 ne change ni schéma ni migration.
+  **Fermer** : fournir une instance/shadow DB jetable isolée, comparer réellement
+  migrations et schéma, puis distinguer drift et impossibilité de mesurer dans
+  le reçu CI en conservant les gates requises. Ne créer aucune migration depuis
+  ce faux warning. **Déclencheur** : prochaine recette C7 de base et déploiement,
+  avant acceptation du contrat de release ; effort : un lot CI/base isolé.
+  Preuve privée ci-schema-diff-unreceived.json ; dette checkout Git ci-dessus
+  conservée séparément, aucun doublon ou suppression de référence.
 - **Workflow de déploiement legacy sans script — préexistant** :
   `.github/workflows/deploy.yml` appelle `scripts/deploy-coolify.sh`, absent.
   La voie canonique `build-image.yml` est utilisée ; le workflow legacy n'est

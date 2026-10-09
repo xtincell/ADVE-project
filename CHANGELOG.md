@@ -2,7 +2,7 @@
 
 ## v6.27.436 — fix(guidance): séparer approbation et confiance de la synthèse (2026-10-09)
 
-**Une approbation porte sur la synthèse relue et conserve sa confiance ; 436 reste un candidat en réception.**
+**436 est livré au runtime ; la lecture réelle du S de SPAWT est reçue, son approbation reste ouverte.**
 
 - ADR-0214 Proposed : factoriser la décision d’état dans pillar-gateway existant,
   partagée par strategy.validateSynthesis et pillar.transitionStatus sous
@@ -43,9 +43,27 @@
   sur ces gestes complets seulement. Gauntlet final cinq exit 0, gouvernance
   1 620/166, DS trois/vocab cinq verts, 24 warnings préexistants ; fixture
   nettoyée/zéro stratégie exacte, serveur arrêté et next-env restauré.
-  CI/image/runtime/postmerge encore attendus. Fenêtres d’approbation/
+  Source 80e2122ffebfce42f8edd37e3430c746a200076d poussée sur main ; CI
+  37979818869 reçue success, 4 190/400 unitaires et 288/15 PG ; Chromatic
+  37979818760/Mission 37979818867 success. Image 37980217686 success, index
+  sha256:19e64c96481cd2255e3af21348f7660d427655375fbbae5f7bc43a93ee99c8ec,
+  configuration candidate/publiée identique. Déploiement unique terminé à
+  19:39:09 UTC ; runtime 436/nextjs/volume privé RW/digest exact/API version 200
+  reçus. Documentation et postmerge distincts de la source déployée. Fenêtres d’approbation/
   conflit complètes, anciennes navigations tronquées et timeouts de compilation
   dev récupérés ; aucune assertion globale zéro erreur ou SLO.
+  Relecture native des deux entrées SPAWT : six questions et décompte expiré
+  absent, identité vitrine déjà projetée v6 ; app/quiz/retours non reçus.
+  Le warning CI schema-ahead vient d’un diff non mesuré faute de shadowDatabaseUrl,
+  pas d’un drift prouvé ; zéro modification schéma/migration dans 436, dette C7
+  tracée sans migration fabriquée. Revue statique d’autres écrivains/consommateurs
+  S bornée, aucune réception globale déduite. Native réelle SPAWT en lecture seule :
+  S existe, confiance .912/91 %, AI_PROPOSED v3, bouton désactivé/composed=false.
+  Readiness canonique COMPLETE/100 mais stale ; schéma strict refuse 80 chemins
+  de structure/types/liens, pas 80 faits business absents. Réconciliation de
+  contrats/formes historiques/S calculé prévue avant C3/C4/C6, sans affaiblir
+  la gate ni inventer le contenu. Fenêtre complète : 62 réponses/zéro ≥500/exception,
+  17 Fetch annulés ERR_ABORTED conservés, pas zéro transport global ni SLO.
   Aucune approbation SPAWT/FrieslandCampina ni coût fournisseur ; les autres écrivains
   et consommateurs globaux ne sont pas reçus par ces seuls cas.
   Sept chantiers/dix gates non acceptés :

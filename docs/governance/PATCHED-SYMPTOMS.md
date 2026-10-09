@@ -30,7 +30,7 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
-2026-10-09 · Candidat 436, correctif reçu sur contre-exemples PostgreSQL locaux
+2026-10-09 · 436 livré au runtime, correctif reçu sur contre-exemples PostgreSQL locaux
 et quatorze cas ciblés verts : confiance absente rendue 0 %, confirmation transformant la mesure
 en 1.0 et S absent pouvant valider Strategy. Les deux routes de validation utilisent
 la même décision d’état dans pillar-gateway ; composition, version relue et
@@ -45,10 +45,13 @@ sources », même route ; copie finale native reçue, aucune hypothèse certifi�
 par ce retrait. Native locale synthétique absence/partiel, confirmations gardant
 22 % ou mesure inconnue et conflit 409 puis nouvelle lecture reçus, sans production.
 Suites locales complètes 4 190/400 unitaires et 288/15 PG vertes ; stress global
-en échec et livraison non reçue. Confidence=1.0 réintroduit : trois cas rouges puis
+en échec. Confidence=1.0 réintroduit : trois cas rouges puis
 trois verts après restauration exacte, onze non sélectionnés ; aucune marque réelle approuvée.
 Gauntlet final cinq exit 0/1 620 gouvernance, fixture nettoyée et serveur arrêté ;
-CI/image/runtime/postmerge encore attendus, aucun stress vert déduit.
+Source 80e2122f/CI 37979818869/image/runtime reçus ; lecture réelle SPAWT S existant,
+confiance 91 %/AI_PROPOSED v3 non approuvable reçue, aucune approbation ou production.
+Contrats de composition en désaccord, dette S maintenue ; documentation/postmerge
+et audit global distincts, aucun stress vert déduit.
 Couverture globale des écrivains/
 consommateurs et concurrence entre
 précondition et création de projets restent dans RESIDUAL-DEBT.

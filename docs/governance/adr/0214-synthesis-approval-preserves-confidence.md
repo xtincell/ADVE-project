@@ -2,7 +2,7 @@
 
 - **Status** : Proposed
 - **Date** : 2026-10-09
-- **Phase** : Réception partielle Shinkiro C3/C4/C6 — candidat 6.27.436
+- **Phase** : Réception partielle Shinkiro C3/C4/C6 — runtime 6.27.436 reçu
 - **Depends on** : ADR-0060, ADR-0088, ADR-0102, ADR-0124, ADR-0174
 - **Supersedes** : — (extension des routes et du gateway existants)
 
@@ -79,8 +79,15 @@ réponses 200 et zéro ≥500/exception sur ses gestes complets seulement, confi
 null/contenu conservés. Le défaut confidence=1.0 remis en place donne trois
 rouges puis trois verts après restauration exacte, onze non sélectionnés.
 Gauntlet final cinq exit 0/gouvernance 1 620/166 reçu, 24 warnings préexistants ;
-fixture nettoyée et serveur arrêté. CI/image/runtime/postmerge et parcours réels
-restent à recevoir. Aucun verrou ni borne n’est affaibli.
+fixture nettoyée et serveur arrêté. Source 80e2122f/CI 37979818869/image
+37980217686/runtime 436 exact reçus. Native réelle SPAWT en lecture seule : S
+existe à 91 %/AI_PROPOSED v3 mais non approuvable. Readiness canonique
+COMPLETE/100/stale et schéma strict en désaccord sur 80 chemins de types/liens/
+structure, pas 80 faits business absents. Réconcilier contrats/formes historiques/
+S calculé et consommateurs avant C3/C4/C6, sans gate affaiblie ou contenu inventé.
+Postmerge documentaire et parcours réels restent ouverts ; revue statique
+d’autres écrivains/consommateurs S bornée, sans couverture globale.
+Aucun verrou ni borne n’est affaibli, ADR Proposed conservé.
 
 [Réception courante et limites](../RECEPTION-VALIDATION-SYNTHESE.md) ·
 [reprise planifiée des consommateurs transverses](../RESIDUAL-DEBT.md).

@@ -90,7 +90,7 @@ journal restent distincts : [reçu courant](RECEPTION-PTAH-UX.md),
 
 ## Runtime 435, suivi vide SPAWT reçu — réception métier partielle
 
-**Extension candidate 436 — décision d’état dans Guidance** : la transition
+**Extension 436 livrée — décision d’état dans Guidance** : la transition
 manuelle est partagée dans pillar-gateway/validation-status.ts par
 strategy.validateSynthesis et pillar.transitionStatus, sous
 LEGACY_PILLAR_TRANSITION_STATUS existant. Elle relit acteur/portée et verrouille
@@ -104,7 +104,9 @@ Neter/droit supplémentaire, aucune production automatique par approbation S.
 La commande de projets issus des initiatives utilise une précondition S approuvé
 au début de ses effets ; atomicité du cycle de production non déduite.
 Quatorze PostgreSQL ciblés verts et cinq cas natifs synthétiques reçus ; autres
-écrivains/consommateurs globaux et livraison finale ouverts :
+écrivains/consommateurs globaux et audit final ouverts. Source 80e2122f/CI/image/
+runtime 436 reçus, lecture réelle SPAWT S existant/non approuvable reçue ;
+contrats de forme/historique/calcul à réconcilier, postmerge documentaire distinct :
 [ADR-0214 Proposed](adr/0214-synthesis-approval-preserves-confidence.md) ·
 [bornes](RECEPTION-VALIDATION-SYNTHESE.md).
 

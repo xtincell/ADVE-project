@@ -1,7 +1,8 @@
-# Réception — approbation de la synthèse, candidat 6.27.436
+# Réception — approbation de la synthèse, runtime 6.27.436
 
-État au 2026-10-09 : **candidat local, réception en cours**. Runtime reçu courant :
-435 ; aucun runtime 436 ni approbation réelle de marque reçu par ce document.
+État au 2026-10-09 : **source/CI/image/runtime reçus, métier partiel**. Source
+80e2122ffebfce42f8edd37e3430c746a200076d ; runtime courant 436.
+Lecture réelle de SPAWT reçue ; aucune approbation ni production réelle de marque.
 [ADR-0214 Proposed](adr/0214-synthesis-approval-preserves-confidence.md).
 
 ## Contrat et rayon de correction
@@ -38,6 +39,19 @@ chemins indépendants de campagne/actif sont inchangés.
   Les suites complètes restent distinctes de ce fichier ciblé.
 - Suites locales complètes : unit-final.log reçoit 4 190 tests/400 fichiers verts ;
   postgres-final.log reçoit 288 tests/15 fichiers verts, les 14 cas S inclus.
+- CI exacte 37979818869 success sur source 80e2122f : 4 190/400 unitaires et
+  288/15 PostgreSQL reçus ; Chromatic 37979818760/Mission 37979818867 success.
+  Image 37980217686 success exacte source 80e2122f : index
+  sha256:19e64c96481cd2255e3af21348f7660d427655375fbbae5f7bc43a93ee99c8ec,
+  configuration candidate/publiée identique et registre concordant.
+- Déploiement unique kjlvdrd0yvvafnhk8khnlonj terminé à 19:39:09 UTC ; runtime.json
+  reçoit 436/nextjs/conteneur suffixe 193805599055/volume privé RW/digest exact et
+  /api/version HTTP 200. Source/image/runtime sont distincts du prochain commit
+  documentaire ; aucun nouveau déploiement requis par ces seules docs.
+- Contrôle CI du schéma non reçu : « Schema diff vs migrations » exige
+  datasource.shadowDatabaseUrl absent. Le warning schema-ahead ne prouve pas
+  un drift, et 436 ne modifie aucun schéma/migration. ci-schema-diff-unreceived.json
+  trace la comparaison sur shadow jetable avant C7 ; aucune migration déduite.
 - Native locale synthétique : absence et S partielle affichées non approuvables ;
   S composée à .22 ouvre une confirmation, l’approbation conserve 22 % visible
   et affiche « Synthèse approuvée ». Confiance null : confirmation puis approbation
@@ -88,8 +102,34 @@ chemins indépendants de campagne/actif sont inchangés.
   crawl anonyme seulement : aucune réception protégée, de cycle ou fournisseur.
   Reprise datée dans la dette existante du harnais : recette globale C4/C5 sur
   artifact build et instance isolés, diagnostic mémoire si récidive.
-- Stress reçu, CI, image,
-  runtime exact 436 et postmerge : **à recevoir**. Aucun SLO
+- Vitrines SPAWT relues nativement : spawt.online et bientot.spawt.online rendent
+  six questions et aucun décompte expiré, captures texte privées conservées.
+  Identité vitrine déjà projetée v6 ; quiz/app et autres retours non reçus par
+  cette seule relecture. Portefeuille SPAWT reçu avant swap en runtime 435 :
+  cinq produits/services, site et quiz Actifs, autres branches à achever ;
+  ces statuts ne reçoivent pas leur cycle opérationnel complet.
+- Native production réelle SPAWT, lecture seule en 436 : S **existe**, confiance
+  .912 affichée 91 %, AI_PROPOSED/currentVersion=3, composed=false/canValidate=false
+  et bouton désactivé. getSynthesisConfidence HTTP 200/body relu ; aucune
+  approbation ou production. Capture native-production-spawt.png inspectée.
+  Fenêtre complète : 62 réponses/zéro ≥500/exception ; 17 Fetch ERR_ABORTED
+  canceled=true conservés, aucune assertion zéro transport global. DOM 811,2 ms/
+  response 656,7 ms/load 1 573,9 ms, titre observé à une borne haute 14 285 ms
+  seulement ; aucune latence exacte de première apparition ni SLO reçu.
+- Contrat de composition réel en désaccord : readiness canonique COMPLETE/100,
+  stale=true, alors que le schéma S strict refuse 80 chemins de types/liens/
+  structure. Ce ne sont **pas 80 faits business absents**. La fraîcheur est un
+  constat distinct. native-s-composition-contract-conflict.json impose une
+  réconciliation des contrats/formes historiques/S calculé, sans gate affaiblie,
+  approbation forcée ou contenu inventé.
+- Lecture du portefeuille FrieslandCampina et du projet EVAP Noël en runtime
+  435 avant swap : huit marques/26 campagnes/46 projets/101 références/
+  177 assets/188 éléments d’identité. EVAP — End Of Year 2026 est rendu une fois
+  avec Bonnet Rouge/Peak/Belle Hollandaise, brief/dates/livrables, budget non
+  renseigné, liens Radar FRC-076 et La Barre PRJ-EOTY26. Dates/périmètres inférés
+  restent indiqués comme tels. Ouvrir ce projet ne livre pas la campagne ; ces
+  gestes n’ont pas de fenêtre de métriques isolée et ne reçoivent aucun cycle Noël.
+- Stress reçu, postmerge documentaire et audit global : **à recevoir**. Aucun SLO
   ou couverture globale n’est déduit des tests locaux intermédiaires.
 - Aucune approbation SPAWT/FrieslandCampina, aucune production/facture fournisseur,
   ni cycle Noël 2026 ne sont reçus. Les preuves privées restent hors dépôt.
@@ -97,13 +137,20 @@ chemins indépendants de campagne/actif sont inchangés.
 ## Limites et prochaine reprise
 
 Les autres écrivains globaux, auto-approval/content writers et consommateurs S
-ne sont pas couverts par la réparation des deux routes. La transaction de
+ne sont pas couverts par la réparation des deux routes. Revue statique bornée
+dans global-s-followup-static.json : writePillar OPERATOR préserve validationStatus
+par défaut en incrémentant currentVersion ; canon-sync rafraîchit S.computed/content
+directement ; le préalable sequence-vault considère confiance ≥0.6 OU VALIDATED.
+Ces constats exigent une recette, pas une conclusion sur leurs comportements
+globaux ou E2E. Le conflit réel de composition de SPAWT demande d’abord la
+factorisation des contrats de forme et du calcul de S depuis ses sources,
+puis leur réception par les consommateurs, avant C3/C4/C6. La transaction de
 précondition des projets se termine avant leurs écritures ; contrôler une
 source au début n’est pas une preuve d’atomicité face à une modification
 ultérieure. Auditer ces chemins et recevoir les refus/correction de source au
 prochain lot transverse S, avant acceptation C3/C4/C6.
 
-Terminer d’abord la réception native et livraison exacte du candidat ; recevoir
+Fermer le postmerge documentaire distinct du code 436 déployé ; recevoir
 ensuite une revue humaine de noyaux réels et le cycle demandé avec ses fournisseurs,
 actifs, mesure et retour de valeur. Sept chantiers/dix gates restent non acceptés.
 [Dette et déclencheur](RESIDUAL-DEBT.md) · [plan](REFONTE-PLAN.md).

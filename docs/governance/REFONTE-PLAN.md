@@ -1,6 +1,6 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## Décision de synthèse — candidat 436, réception en cours (2026-10-09)
+## Décision de synthèse — runtime 436 reçu, métier partiel (2026-10-09)
 
 ADR-0214 Proposed factorise l’état de validation dans pillar-gateway existant,
 partagé par strategy.validateSynthesis et pillar.transitionStatus, sous le kind
@@ -15,7 +15,12 @@ verts et cinq cas natifs synthétiques reçus, dont confirmations sans modifier
 Suites locales complètes vertes ; stress-full en échec après redémarrage mémoire
 Next dev, reprise sur artifact build/instance isolée planifiée dans la dette du
 harnais. Copie native finale et faute confidence=1.0 remise en rouge/restaurée
-reçues. Gauntlet final vert/fixture nettoyée ; terminer CI/runtime/postmerge puis autres
+reçues. Gauntlet final vert/fixture nettoyée, source 80e2122f/CI/image/runtime reçus.
+Lecture réelle SPAWT : S existe à 91 %/AI_PROPOSED v3, non approuvable ; readiness
+COMPLETE/100/stale et 80 chemins de types/liens/structure refusés par schéma strict,
+pas 80 faits absents. Prochain lot : factoriser les contrats/formes historiques/S
+calculé depuis les sources, sans affaiblir la gate ni inventer du contenu.
+Terminer documentation/postmerge puis autres
 écrivains/consommateurs S et concurrence de création des projets. Aucun noyau
 réel validé, sept chantiers/dix gates toujours non acceptés.
 [Contrat proposé](adr/0214-synthesis-approval-preserves-confidence.md) ·
@@ -81,7 +86,7 @@ Recevoir ensuite le suivi natif des productions présentes et les reprises
 effectives, sans assimiler les lectures du sélecteur/portefeuille à un cycle reçu.
 Puis configuration et fournisseur réels, octets,
 provenance et facture ; le sceau ne ferme pas le close best-effort du journal.
-Passe S/validation reprise dans le candidat 436 ci-dessus avant acceptation
+Passe S/validation reçue au runtime 436 ci-dessus, encore partielle avant acceptation
 C3/C4/C6 : confiance inconnue, composition et décision séparées ; réception
 finale et consommateurs transverses restent ouverts. Le faux label ACTIVE seul
 était réparé en 434 ; [résidu et déclencheur](RESIDUAL-DEBT.md).

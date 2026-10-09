@@ -16,7 +16,7 @@
 
 ## Quick start
 
-**Candidat 6.27.436, réception en cours** : la page de production distingue une
+**6.27.436 livré, réception métier partielle** : la page de production distingue une
 synthèse absente, incomplète ou composée et une confiance non mesurée d’un vrai
 zéro. Une confirmation conserve la confiance enregistrée et porte sur la version
 relue ; un contenu obsolète ou modifié appelle une nouvelle lecture. Ce correctif
@@ -25,7 +25,13 @@ l’absence, le contenu partiel, des confirmations gardant 22 % ou une confiance
 non mesurée et le refus d’une version modifiée, sans production.
 Suites locales complètes vertes ; stress global en échec après redémarrage
 mémoire du serveur de développement. Copie native finale reçue sur fixture,
-contrôles locaux finaux verts et fixture nettoyée ; livraison encore à recevoir.
+contrôles locaux finaux verts et fixture nettoyée. Source, CI, image et runtime
+436 reçus. La lecture réelle de SPAWT conserve sa confiance 91 % ; sa synthèse
+existe mais reste non approuvable : ses contrats de forme doivent être réconciliés
+et ses sources actualisées. Aucun contenu métier absent n’est déduit du nombre
+de chemins refusés. Les deux entrées SPAWT
+affichent six questions sans décompte expiré ; quiz, application et retours
+restent à recevoir.
 Le cycle complet de
 SPAWT/FrieslandCampina et les sept chantiers ne sont pas achevés.
 [Réception bornée](docs/governance/RECEPTION-VALIDATION-SYNTHESE.md).

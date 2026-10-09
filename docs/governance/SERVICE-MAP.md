@@ -8,7 +8,7 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**Candidat 436 — état de validation, extension du service existant** :
+**436 livré — état de validation, extension du service existant** :
 `pillar-gateway/validation-status.ts` partage inspection de composition et décision
 de validation entre les deux routes existantes. Contrat ENRICHED/COMPLETE + schéma
 S strict, version relue, acteur/portée et sources contrôlés sous verrou ; S/Strategy
@@ -17,8 +17,10 @@ le lecteur transactionnel, sans second service ; assessor expose son test de
 champ existant. Le contrôle initial des projets issus des initiatives réutilise
 ce helper. Aucun provider dans l’approbation S, aucun nouveau service/Neter/kind.
 Quatorze PostgreSQL ciblés verts et cinq cas natifs synthétiques reçus ; suites
-locales complètes et gauntlet final verts, fixture nettoyée ; stress/livraison et autres consommateurs
-restent ouverts.
+locales complètes et gauntlet final verts, fixture nettoyée ; stress/réception globale et autres consommateurs
+restent ouverts. Source 80e2122f/CI/image/runtime 436 reçus ; lecture réelle SPAWT
+S existant/non approuvable reçue, conflit de contrats à réconcilier. Postmerge
+documentaire et couverture globale distincts.
 [ADR-0214 Proposed](adr/0214-synthesis-approval-preserves-confidence.md) ·
 [réception](RECEPTION-VALIDATION-SYNTHESE.md).
 

@@ -84,7 +84,7 @@ retour reçus, sans validation de marque entière. Réception partielle C2/C3/C4
 
 ## Tracker existant — runtime 435, suivi vide reçu (2026-10-09)
 
-**Composition de validation candidate 436, hors table auto-générée** : dans la
+**Composition de validation 436 livrée, hors table auto-générée** : dans la
 page forge existante, formatConfidence réutilise une lecture pure de la mesure :
 null/non fini/hors intervalle = inconnu, vrai zéro = 0 %. Bannière et modal
 existants séparent mesure, composition et décision ; aucune barre fabriquée,
@@ -92,7 +92,9 @@ confiance visible après approbation et erreur serveur en alerte. Bouton désact
 si lecture/composition indisponible, confirmation liée à expectedVersion.
 OperatorSurface inchangé, aucune primitive/page nouvelle. Cinq cas natifs
 synthétiques reçus : absence/partiel, confirmations sans modifier la confiance
-et conflit de version/message visible ; livraison à recevoir, sans production.
+et conflit de version/message visible ; source 80e2122f/CI/image/runtime 436
+reçus. Native réelle SPAWT : 91 % conservé et bouton désactivé pour S existant
+AI_PROPOSED v3 non approuvable, aucune production réelle.
 [ADR-0214 Proposed et reçu](RECEPTION-VALIDATION-SYNTHESE.md).
 
 Native réelle 434 : lecture refusée 403 pour compte non affecté, écran non reçu.
