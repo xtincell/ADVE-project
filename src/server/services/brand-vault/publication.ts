@@ -11,6 +11,7 @@ import { assertCollaboratorMayEmit } from "@/server/governance/collaborator-fire
 import { isGodModeEmail } from "@/lib/auth/god-mode";
 import { z } from "zod";
 import { resolveBrandIdentity, resolveBrandDeploymentOrigin } from "@/server/services/brand-theme";
+import { publicLogoReceipt, retainPublicLogo, readPublicLogoBytes, publicLogoSnapshotUrl, type PublicLogoReceipt } from "./public-media";
 
 type Client = Prisma.TransactionClient;
 const scope = { kind: "BRAND_GUIDELINES", format: PUBLIC_BRAND_FORMAT, campaignId: null };
@@ -137,6 +138,7 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
     let content = requested.content;
     let chosenLogoId = requested.logoAssetId;
     let restoredLogo: Record<string, unknown> | null = null;
+    let logoArchive: PublicLogoReceipt | null = null;
     if (requested.restoreId) {
       const prior = await tx.brandAsset.findFirst({ where: { id: requested.restoreId, strategyId, ...scope, state: "SUPERSEDED" } });
       if (!prior) throw new PublicBrandError("PRECONDITION_FAILED", "Cette ancienne publication n’est pas disponible.");
@@ -146,8 +148,21 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
       content = PublicBrandContent.parse(prior.content);
       restoredLogo = object(object(prior.metadata).logoAsset);
       chosenLogoId = text(restoredLogo.id) || undefined;
+      logoArchive = publicLogoReceipt(prior.metadata);
+      if (content.logoUrl && !logoArchive) throw new PublicBrandError("PRECONDITION_FAILED", "Cette ancienne édition ne conserve pas son fichier. Choisissez le logo actuel et publiez une nouvelle version après relecture.");
     }
-    const matches = current.logos.filter((logo) => logo.url === content.logoUrl && (!chosenLogoId || logo.id === chosenLogoId));
+    // A text-only review keeps the visible edition's verified bytes. A fresh
+    // selection supplies the source URL and captures a new copy instead.
+    if (!requested.restoreId && active && content.logoUrl
+      && content.logoUrl === PublicBrandContent.parse(active.content).logoUrl) {
+      const retained = publicLogoReceipt(active.metadata);
+      if (retained && content.logoUrl === publicLogoSnapshotUrl(active.id, retained)) {
+        restoredLogo = object(object(active.metadata).logoAsset);
+        if (chosenLogoId === text(restoredLogo.id)) logoArchive = retained;
+      }
+    }
+    const matches = current.logos.filter((logo) => (logoArchive ? logo.id === chosenLogoId : logo.url === content.logoUrl)
+      && (!chosenLogoId || logo.id === chosenLogoId));
     const chosenLogo = content.logoUrl && matches.length === 1 ? matches[0]! : null;
     if ((content.logoUrl && !chosenLogo) || (!content.logoUrl && chosenLogoId)
       || (restoredLogo?.fingerprint && restoredLogo.fingerprint !== chosenLogo?.fingerprint)) {
@@ -155,6 +170,14 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
     }
     // Eligible source ids are already fenced above in the same lock order.
     if (chosenLogo) await assertAssetSourceCurrent(tx, { strategyId, metadata: chosenLogo.metadata });
+    if (chosenLogo) {
+      try {
+        if (logoArchive) await readPublicLogoBytes(logoArchive);
+        else logoArchive = await retainPublicLogo(chosenLogo.url);
+      } catch {
+        throw new PublicBrandError("PRECONDITION_FAILED", "Le logo n’a pas pu être conservé et vérifié. La publication précédente reste en ligne. Vérifiez son fichier et le stockage avant de réessayer.");
+      }
+    }
     let slug = current.strategy.publicSlug;
     if (!slug) {
       slug = brandPublicSlugSafe(content.name, strategyId);
@@ -164,7 +187,7 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
     const version = (current.editions[0]?.version ?? 0) + 1;
     // Keep the old edition and the lineage; commit the choice atomically.
     if (active) await tx.brandAsset.update({ where: { id: active.id }, data: { state: "SUPERSEDED", supersededAt: new Date(), supersededReason: "Nouvelle publication choisie" } });
-    const edition = await tx.brandAsset.create({ data: {
+    let edition = await tx.brandAsset.create({ data: {
       strategyId, operatorId: current.strategy.operatorId, ...scope, family: "INTELLECTUAL", level: "production",
       name: `Page publique — version ${version}`, content: content as Prisma.InputJsonValue,
       state: "ACTIVE", version, parentBrandAssetId: active?.id, sourceIntentId: intentId,
@@ -172,12 +195,17 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
       metadata: { publicationOrigin: "EXPLICIT_SELECTION", proposalRevision: current.revision,
         sourceReceipts: current.receipts,
         logoAsset: chosenLogo ? { id: chosenLogo.id, version: chosenLogo.version, fileUrl: chosenLogo.fileUrl, fingerprint: chosenLogo.fingerprint } : null,
+        ...(logoArchive ? { logoArchive } : {}),
         pillarVersions: current.pins.pillars.map((p) => ({ key: p.key, version: p.version })),
         ...(requested.restoreId ? { restoredFromId: requested.restoreId } : {}) },
     } });
+    if (logoArchive) {
+      content = { ...content, logoUrl: publicLogoSnapshotUrl(edition.id, logoArchive) };
+      edition = await tx.brandAsset.update({ where: { id: edition.id }, data: { content: content as Prisma.InputJsonValue } });
+    }
     if (active) await tx.brandAsset.update({ where: { id: active.id }, data: { supersededById: edition.id } });
     return edition;
-  }, { timeout: 15000 });
+  }, { timeout: 30000 });
 }
 
 export async function readPublicBrand(slug: string) {

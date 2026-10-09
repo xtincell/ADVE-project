@@ -1,5 +1,22 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Octets de publication — candidat 431 (2026-10-09)
+
+Le transport d’une copie publique vérifiée manque malgré le stockage chiffré
+existant. ADR-0211 Proposed l’étend depuis brand-vault/Sustainment/MESTOR :
+reçu d’octets privé, conservation/relecture avant commit, URL par édition/hash et
+lecture bornée avec contrôle avant 304. Retour sous pins/source courants, aucun
+backfill des anciennes éditions ; nettoyage volume protège les copies référencées.
+Trois rouges/22 verts puis 25, 32 et 33 PostgreSQL ciblés verts ; gauntlet local
+vert : 4167 unitaires en trois commandes/1617 gouvernance/256 PostgreSQL,
+types/lints sans erreur/24 warnings et zéro cycle. HTTP/UI locale en cours ;
+CI/image/native/livraison encore à recevoir. Prochaine étape : image et parcours
+natif publication/relecture/retour, refus et corpus comparé avant clôture de la
+cause octets. Production 430/édition SPAWT v2 conservée ; continuité de marque
+visée, aucun résultat business ni acceptation globale déduit.
+[Architecture proposée](adr/0211-retained-public-logo-bytes.md) ·
+[reçu courant](RECEPTION-IDENTITE-PUBLIQUE.md).
+
 ## Origine de marque — 430 livré après blocage 429 (2026-10-09)
 
 429 est livrée, source 383f5e8a/image 37868294874/runtime exact, déploiement

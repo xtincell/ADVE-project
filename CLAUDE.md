@@ -47,6 +47,22 @@ entière. Trace locale 430 tronquée maintenue. Cause d’origine fermée ;
 immutabilité des octets, identité complète/quiz-app/retour de valeur et sept
 chantiers ouverts : [reçu et limites](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
 
+**Candidat 431, octets non encore reçus en production** : ADR-0211 Proposed,
+brand-vault/Sustainment/MESTOR, stockage chiffré existant et reçu privé logoArchive.
+Transport borné /brand/editions/[editionId]/[hash.extension], intégrité à chaque
+lecture avant 304, 503 sans repli source si corruption/absence, 404 hors périmètre.
+Conservation/relecture avant commit ; retour sous pins/source actuels, copie
+réutilisée et nouveau successeur. Ancien logo sans reçu non restauré aveuglément,
+aucun backfill. Nettoyage VOLUME après 24 h protège les objets référencés ; crash
+précommit peut laisser un jeune orphelin. Trois rouges/22 verts, puis 25, 32 et
+33 PostgreSQL ciblés verts. Gauntlet local : types/lints sans erreur/24 warnings,
+zéro cycle, 1617 gouvernance/166 ; unitaires 4129/395 + src 9/1 + adversarial 29/1,
+soit 4167/397 en trois commandes ; PostgreSQL 248/13 + source-uses 8/1 = 256/14.
+HTTP/UI locale en cours, aucun natif réussi reçu ; CI/image/livraison 431 à recevoir.
+Production 430/édition SPAWT v2 inchangée ; cause octets ouverte.
+La continuité de marque soutient l’accumulation de superfans visée, sans résultat
+business reçu ni nouveau modèle/service/router/Intent/agent/permission.
+
 campaignId/briefId/sourceBrandAssetId traversent MCP/tRPC, Intent, Artemis et
 Ptah jusqu’à GenerativeTask ; portée relue avant fournisseur et admission.
 Régénération : concordance propre de la tâche historique et références reprises.

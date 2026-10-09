@@ -1,4 +1,4 @@
-# Identité publique — échec 429 et logo reçu en production 430
+# Identité publique — logo reçu en 430, conservation candidate 431
 
 État au 2026-10-09. ADR-0210 reste la décision d’architecture et la recette
 locale historique ; ce reçu distingue livraison et usage réel.
@@ -86,9 +86,73 @@ octets. Identité complète, quiz/app, retour de valeur, fournisseurs, cycle ré
 et sept chantiers demeurent ouverts. Aucun contenu privé ni inventaire d’actifs
 n’est publié par ce reçu.
 
+## 431 candidat — copie d’octets, réception locale ciblée
+
+Production reçue toujours 430/source 2b9b2fa4/édition SPAWT v2, sans mutation
+ou backfill de ces données par la recette. [ADR-0211 Proposed](adr/0211-retained-public-logo-bytes.md)
+justifie le transport absent malgré le stockage chiffré existant.
+
+brand-vault conserve/décode le fichier admissible, put/get/hash avant commit,
+puis reçoit metadata.logoArchive privé et URL par édition/hash. La lecture
+anonyme vérifie à chaque appel les octets et l’admission de l’édition, même
+avant 304 ; corruption/absence 503 sans repli source, hors périmètre 404.
+PNG/JPEG/WebP/SVG autonome, 10 Mo/20 Mpx, garde SSRF existante pour le distant.
+Rollback garde l’ancienne édition ; un crash avant commit peut laisser un
+jeune orphelin. Nettoyage VOLUME existant après 24 h protège les objets de toute
+édition ; balayage HTTP_BLOB non reçu.
+
+Restaurer réutilise la copie vérifiée sous pins/source courants, nouvelle édition
+et origine runtime actuelle. Ancien logo sans reçu d’octets : refus du retour
+aveugle, relecture/republication explicite, aucun backfill automatique. JSON v1,
+lecteur/CSP/DA SPAWT compatibles, aucune nouvelle entité/service/router/Intent/
+agent/permission. Continuité de marque et accumulation de superfans restent
+la finalité visée, sans résultat business reçu.
+
+Un contre-exemple supplémentaire montre la relecture de texte refusée lorsque
+published.content conserve l’URL snapshot, avec bouton invalide. Correctif :
+réutiliser le reçu de l’édition ACTIVE seulement si URL et id sélectionné
+concordent avec elle, candidat toujours éligible et fingerprint/source actuels.
+Le formulaire accepte alors le logo publié inchangé ; un nouveau choix de
+variante reprend l’URL source et conserve une copie neuve. Le test republie le
+titre modifié après dérive des octets source A→B et exige A dans la nouvelle
+édition. Ce passage ciblé rouge (32 autres cas non exécutés) puis 33/33 verts
+est reçu localement ; il ne reçoit pas un geste natif ou une production 431.
+
+Trois rouges/22 anciens verts sur dérive source, changement d’origine au retour
+et stockage absent ; correctif 25 verts, puis 32 PostgreSQL ciblés verts avec
+corruption/ETag/retrait/brouillon/nettoyage/replay/étranger/legacy/image invalide,
+puis le contre-exemple de republication ci-dessus porte la suite à 33/33 verts.
+Gauntlet final local vert : types/lints sans erreur, 24 warnings préexistants,
+zéro cycle et 1617 gouvernance/166 fichiers. Unitaires reçus en trois commandes
+conservées dans les preuves : 4129/395 + src 9/1 + adversarial 29/1 = 4167/397.
+PostgreSQL local : feedback 248/13 + source-uses integration 8/1 = 256/14 ;
+périmètre CI attendu 248/13, sans reçu CI à ce stade.
+
+Recette native locale sous vraie session FOUNDER synthétique : Connexions
+HTTP 200, réédition de texte 200, deux refus de corruption 412 (second essai
+pour recevoir le toast manqué au premier), puis retour 200 créant le successeur
+v3. Refus français réellement lu, version 2 restée active pendant la panne ;
+retour affichant version 3. Image HTTP directe chargée nativement 4123×1714,
+224112 octets, SHA-256 25a7c390e84fb352a5e433883628f5310460cdf15355e34138e8451ab05ec58c.
+Après retour : JSON 78 ms, image 200/35 ms, 304/29 ms, query 404/19 ms,
+faux hash 404/21 ms, privé 401/21 ms.
+
+Fenêtres initiale et gestes non tronquées : zéro >=500/exception dans ces
+fenêtres. DOM 5790 ms, premier H1 observé au plus tard à 27995 ms en dev local
+avec compilation, sans SLO. L’image HTTPS absolue dans la page locale pointe
+vers l’origine de production et n’est pas reçue ; seuls transport HTTP direct
+et gestes UI le sont, aucune page publique complète déduite. CI/image/livraison
+production 431 restent non reçues ; ADR Proposed et cause octets ouverte.
+La cause octets reste ouverte, ainsi que Moka/palette/polices/voix/quiz-app/
+retour de valeur et les sept chantiers.
+
 Preuves privées : release/preuves-identite-publique-429 et
 release/preuves-origine-marque-430 ; notamment compiled-logo-base-diagnosis.json,
 native-production-blocked.json, runtime.json, origin-red/green.log,
 export-reception.json, native-export.json, native-guidelines-hot/visible.json,
 cleanup.json, compiled-origin.json, native-production-load.json,
 native-choices/published/spawt/public-brand.json et production-http-apres-choix.json.
+431 : release/preuves-octets-publics-431/ECART.md, avant.log,
+apres-initial.log et apres-adversarial.log.
+Complément : republish-avant.log et republish-apres.log.
+Recette native locale : native-local-reception.json et captures locales voisines.

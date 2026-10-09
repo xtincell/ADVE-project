@@ -83,6 +83,15 @@ production reçue sans >=500/exception ; aucun SLO ni cycle métier complet déd
 Les pins portent l’enregistrement, pas l’immutabilité des octets :
 [échec 429, livraison 430 et limites](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
 
+**Candidat 431, conservation des octets** : le coffre réutilise le stockage chiffré
+existant et sert une copie vérifiée par édition, sans changer le contrat public
+ou la DA SPAWT. Trois rouges puis 33 PostgreSQL ciblés verts. Gauntlet local vert :
+4167 unitaires en trois commandes, 1617 gouvernance/256 PostgreSQL, types/lints
+sans erreur, 24 warnings préexistants et zéro cycle. HTTP/UI locale en cours ;
+CI/image/native/livraison à recevoir. L’édition v2 en production reste celle de
+430, sans backfill automatique. Continuité de marque visée, aucun résultat
+business déduit : [ADR-0211 Proposed](docs/governance/adr/0211-retained-public-logo-bytes.md).
+
 Le code 426+427 transmet campagne/brief/actif source jusqu’à la tâche, contrôle
 leur portée et celle de la tâche historique, puis reconnaît le résultat
 DEFERRED sans faux 500. Aucune livraison 426 isolée. Suites finales 428 : 4 167

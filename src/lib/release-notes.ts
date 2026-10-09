@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.431", date: "2026-10-09",
+    headline: "Votre logo publié conserve son fichier",
+    highlights: [
+      { emoji: "◈", title: "Une copie vérifiée à la publication", body: "Lors d’une nouvelle publication, le fichier du logo choisi est conservé et vérifié. Modifier ensuite le fichier source ne change pas ce logo publié. Si sa conservation échoue, la version précédente reste en ligne." },
+    ],
+  },
+  {
     version: "6.27.430", date: "2026-10-09",
     headline: "Retrouvez vos logos dans Connexions",
     highlights: [

@@ -9,6 +9,21 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Octets du logo publié — ADR-0211 Proposed, candidat 431 du 2026-10-09
+
+Choix gouverné → fichier admissible/décodé → stockage chiffré existant →
+relecture/hash avant commit → reçu privé d’édition → transport public borné →
+logoUrl JSON v1 → consommateur SPAWT existant. Lire vérifie l’intégrité avant
+même un 304 ; corruption/absence ne retourne pas à la source mutable. Restaurer
+réutilise la copie sous pins/source courants, sans migration automatique des
+éditions historiques. Conservation d’identité → continuité de marque →
+accumulation de superfans est le chemin de valeur visé, sans effet business reçu.
+33 PostgreSQL ciblés verts après contre-exemples ; gauntlet local vert
+(4167 unitaires en trois commandes/1617 gouvernance/256 PostgreSQL, types/lints/
+zéro cycle). HTTP/UI locale en cours, CI/image/native/livraison non reçues ;
+production 430/édition v2 inchangée.
+[Décision proposée et limites](adr/0211-retained-public-logo-bytes.md).
+
 ### Variante publique de logo — ADR-0210, raccord reçu en 430 le 2026-10-09
 
 Pool resolveBrandIdentity → choix explicite Connexions → strategy.update existant

@@ -43,12 +43,19 @@ sept chantiers ; les résidus actifs suivent.
   de contrat et recette par famille d’usage, sans nouveau système parallèle.
 - **Octets derrière les URL /brand/** : les pins du logo en 429 portent
   l’enregistrement, pas les octets servis ; le digest JSON ne prouve pas le hash
-  du fichier. **Fermer** par conservation/version et empreinte d’octets sur les
-  primitives existantes, puis relecture après publication, changement d’origine
-  et restauration sans coffre parallèle. **Déclencheur** : prochain raccord C2/C3
-  de conservation avant promesse d’édition immuable ; effort : un lot stockage/
-  version et recette par famille d’actifs. Le fichier reçu en 430 est identique
-  au checkout à cet instant ; cela ne garantit pas son immutabilité future.
+  du fichier. 431 candidat conserve une copie dans le stockage chiffré existant,
+  reçu privé/URL par édition/hash, intégrité avant 304 et retour sous pins/source
+  courants. Trois rouges puis 33 PostgreSQL ciblés verts ; gauntlet local vert
+  (4167 unitaires en trois commandes/1617 gouvernance/256 PostgreSQL,
+  types/lints/zéro cycle), aucune livraison/native reçue ; production 430/v2
+  reste sans backfill. **Fermer** par image puis parcours
+  natif publication/relecture/refus/retour et corpus comparé. Ancien logo sans
+  reçu exige relecture/republication explicite. Crash précommit : jeune objet
+  orphelin possible ; nettoyage existant après 24 h borné au VOLUME, copies
+  référencées protégées. Balayage HTTP_BLOB non reçu. **Déclencheur** : livraison
+  431 et réception C2/C3 avant promesse d’édition immuable ; effort : lot de
+  conservation/transport et recette, sans coffre parallèle.
+  [ADR-0211 Proposed](adr/0211-retained-public-logo-bytes.md).
 - **Brouillon après interruption** : la carte conserve révision et contenu pendant
   son ouverture ; leur survie à une fermeture/recharge n’est pas reçue. **Fermer**
   en éprouvant l’interruption et en réutilisant le mécanisme de brouillon existant

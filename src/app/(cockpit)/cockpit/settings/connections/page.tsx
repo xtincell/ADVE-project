@@ -371,8 +371,10 @@ function PublicPageCard({ strategyId }: { strategyId: string }) {
       logoAssetId: data.published?.logoAssetId ?? (matches.length === 1 ? matches[0]!.id : undefined) });
   };
   const edit = (patch: Partial<PublicBrandContent>) => setDraft((old) => old ? { ...old, content: { ...old.content, ...patch } } : old);
+  const keepsPublishedLogo = !!draft && data?.published?.id === draft.publishedId
+    && data.published.logoAssetId === draft.logoAssetId && data.published.content.logoUrl === draft.content.logoUrl;
   const valid = draft ? PublicBrandContent.safeParse(draft.content).success && (draft.content.logoUrl === null
-    || draft.logos.some((logo) => logo.id === draft.logoAssetId && logo.url === draft.content.logoUrl)) : false;
+    || draft.logos.some((logo) => logo.id === draft.logoAssetId && (logo.url === draft.content.logoUrl || keepsPublishedLogo))) : false;
   return (
     <div className="ck-card">
       <p className="ck-card__eyebrow"><ArrowRight />Page publique</p>

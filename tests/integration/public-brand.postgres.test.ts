@@ -1,5 +1,9 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { randomUUID } from "node:crypto";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, mkdtemp, readFile, readdir, rm, utimes, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import sharp from "sharp";
 vi.mock("@/lib/auth/config", () => ({ auth: vi.fn() }));
 vi.mock("next-auth", () => ({}));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
@@ -10,12 +14,28 @@ import { brandVaultRouter } from "@/server/trpc/routers/brand-vault";
 import { openEmission, closeEmission } from "@/server/governance/emission-spine";
 import { PublicBrandContent, PublicBrandEdition } from "@/domain/public-brand";
 import { GET } from "@/app/api/export/[strategyId]/route";
+import { GET as imageGet } from "@/app/brand/editions/[editionId]/[file]/route";
+import { mediaStoreConfiguration, putEncryptedMedia } from "@/lib/encrypted-media-store";
+import { purgeExpiredCreativeMedia } from "@/server/services/seshat/creative-intelligence/media-archive";
 
 afterEach(() => vi.unstubAllEnvs());
 const brands: string[] = [], users: string[] = [], ops: string[] = [];
+const sourcePath = `/brand/public-fixture-${randomUUID()}`;
+let storeRoot: string, pngOne: Buffer, pngTwo: Buffer;
+const digestBytes = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
+beforeEach(() => {
+  vi.stubEnv("CREATIVE_MEDIA_ENCRYPTION_KEY", "15".repeat(32));
+  vi.stubEnv("CREATIVE_MEDIA_ARCHIVE_DIR", storeRoot);
+  vi.stubEnv("AUTH_URL", "https://powerupgraders.com");
+});
 beforeAll(async () => {
   const url = new URL(process.env.DATABASE_URL!);
   expect(["127.0.0.1", "localhost"]).toContain(url.hostname); expect(url.pathname).toBe("/shinkiro_verify");
+  storeRoot = await mkdtemp(path.join(tmpdir(), "public-brand-bytes-"));
+  await mkdir(path.join(process.cwd(), "public", sourcePath), { recursive: true });
+  pngOne = await sharp({ create: { width: 2, height: 2, channels: 4, background: "red" } }).png().toBuffer();
+  pngTwo = await sharp({ create: { width: 2, height: 2, channels: 4, background: "blue" } }).png().toBuffer();
+  for (const name of ["contour", "versioned", "runtime-logo"]) await writeFile(path.join(process.cwd(), "public", sourcePath, name + ".png"), pngOne);
   for (let i = 0; i < 2; i++) {
     const op = await db.operator.create({ data: { name: "Public edition fixture", slug: randomUUID(), status: "ACTIVE",
       licenseType: "TRIAL", licensedAt: new Date(), licenseExpiry: new Date(Date.now() + 86400000) } }); ops.push(op.id);
@@ -33,6 +53,8 @@ afterAll(async () => {
   await db.campaign.deleteMany({ where });
   await db.strategy.deleteMany({ where: { id: { in: brands } } });
   await db.user.deleteMany({ where: { id: { in: users } } }); await db.operator.deleteMany({ where: { id: { in: ops } } });
+  await rm(path.join(process.cwd(), "public", sourcePath), { recursive: true, force: true });
+  await rm(storeRoot, { recursive: true, force: true });
   await db.$disconnect();
 });
 async function fixture(slug = "LFA-fixture-" + randomUUID()) {
@@ -49,7 +71,144 @@ async function publish(id: string, title: string) {
     expectedPublishedId: p.published?.id ?? null, content: { ...p.proposed, title } } });
   return p;
 }
+// Exercise static serving before the fix, then the actual bounded image route.
+async function renderedLogoBytes(url: string) {
+  const pathname = new URL(url).pathname;
+  if (pathname.startsWith("/brand/editions/")) {
+    const [, , , editionId, file] = pathname.split("/");
+    const response = await imageGet(new Request(url), { params: Promise.resolve({ editionId: editionId!, file: file! }) });
+    expect(response.status).toBe(200);
+    return Buffer.from(await response.arrayBuffer());
+  }
+  return readFile(path.join(process.cwd(), "public", pathname));
+}
+async function imageResponse(url: string, headers?: HeadersInit) {
+  const [, , , editionId, file] = new URL(url).pathname.split("/");
+  return imageGet(new Request(url, { headers }), { params: Promise.resolve({ editionId: editionId!, file: file! }) });
+}
+async function logoFixture(name: string) {
+  const s = await fixture(), relative = `${sourcePath}/${randomUUID()}.png`;
+  await writeFile(path.join(process.cwd(), "public", relative), pngOne);
+  const logo = await db.brandAsset.create({ data: { strategyId: s.id, name, kind: "LOGO_FINAL", state: "ACTIVE", fileUrl: relative } });
+  return { s, logo, relative };
+}
 describe("Public brand editions", () => {
+  it("republishes a reviewed edition with the same retained logo despite a changed source", async () => {
+    const { s, relative } = await logoFixture("Reviewed logo"); await publish(s.id, "First text");
+    const p = await caller().publicPage({ id: s.id });
+    await writeFile(path.join(process.cwd(), "public", relative), pngTwo);
+    await caller().update({ id: s.id, recalculateScore: false, publicPage: {
+      expectedRevision: p.revision, expectedPublishedId: p.published!.id,
+      content: { ...p.published!.content, title: "Reviewed second text" }, logoAssetId: p.published!.logoAssetId!,
+    } });
+    const next = (await readPublicBrand(s.publicSlug!))!;
+    expect(next.content.title).toBe("Reviewed second text"); expect(next.edition).not.toBe(p.published!.id);
+    expect(digestBytes(await renderedLogoBytes(next.content.logoUrl!))).toBe(digestBytes(pngOne));
+  });
+  it("refuses damaged storage instead of returning source bytes or a false 304", async () => {
+    const { s, relative } = await logoFixture("Corrupt retained copy");
+    await publish(s.id, "Keep this edition"); const edition = (await readPublicBrand(s.publicSlug!))!;
+    const first = await imageResponse(edition.content.logoUrl!);
+    expect(first.status).toBe(200); expect(first.headers.get("content-type")).toBe("image/png");
+    expect(first.headers.get("x-content-sha256")).toBe(digestBytes(pngOne));
+    expect((await imageResponse(edition.content.logoUrl!, { "If-None-Match": first.headers.get("etag")! })).status).toBe(304);
+    const receipt = await db.brandAsset.findUniqueOrThrow({ where: { id: edition.edition } });
+    const archive = (receipt.metadata as { logoArchive: { objectKey: string } }).logoArchive;
+    await writeFile(path.join(storeRoot, archive.objectKey + ".enc"), "corrupt");
+    await writeFile(path.join(process.cwd(), "public", relative), pngTwo);
+    const broken = await imageResponse(edition.content.logoUrl!, { "If-None-Match": first.headers.get("etag")! });
+    expect(broken.status).toBe(503); expect(broken.headers.get("cache-control")).toBe("no-store");
+    expect((await readPublicBrand(s.publicSlug!))?.edition).toBe(edition.edition);
+  });
+  it("serves only the published edition and exact hash while respecting brand withdrawal", async () => {
+    const { s } = await logoFixture("Bounded public copy"); await publish(s.id, "Public");
+    const edition = (await readPublicBrand(s.publicSlug!))!;
+    expect((await imageResponse(edition.content.logoUrl! + "?token=wrong")).status).toBe(404);
+    expect((await imageResponse(edition.content.logoUrl!.replace(digestBytes(pngOne), "0".repeat(64)))).status).toBe(404);
+    const publicAsset = await db.brandAsset.findUniqueOrThrow({ where: { id: edition.edition } });
+    const privateCopy = await db.brandAsset.create({ data: { strategyId: s.id, name: "Never public", kind: "BRAND_GUIDELINES", format: "public-brand-v1", state: "DRAFT", content: publicAsset.content!, metadata: publicAsset.metadata! } });
+    expect((await imageResponse(edition.content.logoUrl!.replace(edition.edition, privateCopy.id))).status).toBe(404);
+    await db.strategy.update({ where: { id: s.id }, data: { status: "ARCHIVED" } });
+    expect((await imageResponse(edition.content.logoUrl!)).status).toBe(404);
+  });
+  it("keeps historical archive references during cleanup and removes actual orphans", async () => {
+    const { s } = await logoFixture("Historical retained copy"); await publish(s.id, "One");
+    const edition = (await readPublicBrand(s.publicSlug!))!;
+    const published = await db.brandAsset.findUniqueOrThrow({ where: { id: edition.edition } });
+    const archive = (published.metadata as { logoArchive: { objectKey: string } }).logoArchive;
+    await publish(s.id, "Two");
+    const orphan = "c7".repeat(32); await putEncryptedMedia(mediaStoreConfiguration()!, orphan, pngTwo);
+    const old = new Date(Date.now() - 2 * 86400000);
+    for (const key of [archive.objectKey, orphan]) await utimes(path.join(storeRoot, key + ".enc"), old, old);
+    expect((await purgeExpiredCreativeMedia()).orphanedRemoved).toBe(1);
+    expect((await readdir(storeRoot)).includes(orphan + ".enc")).toBe(false);
+    expect(digestBytes(await renderedLogoBytes(edition.content.logoUrl!))).toBe(digestBytes(pngOne));
+  });
+  it("never invents historical bytes when restoring an edition that has no byte receipt", async () => {
+    const { s, relative } = await logoFixture("Legacy source");
+    const old = await db.brandAsset.create({ data: { strategyId: s.id, name: "Legacy publication", kind: "BRAND_GUIDELINES", format: "public-brand-v1", state: "ACTIVE",
+      content: { name: s.name, title: "Legacy", tagline: "", description: "", links: [], logoUrl: "https://powerupgraders.com" + relative } } });
+    await publish(s.id, "Current retained version"); const p = await caller().publicPage({ id: s.id });
+    await expect(caller().update({ id: s.id, publicPage: { expectedRevision: p.revision, expectedPublishedId: p.published!.id, content: p.proposed, restoreId: old.id } })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    expect((await readPublicBrand(s.publicSlug!))?.content.title).toBe("Current retained version");
+  });
+  it("replays a retained publication without capturing changed source bytes or writing another object", async () => {
+    const { s, relative } = await logoFixture("Idempotent capture"), p = await caller().publicPage({ id: s.id });
+    const intentId = await openEmission({ kind: "LEGACY_STRATEGY_UPDATE", strategyId: s.id, caller: "test:byte-replay", payload: {} });
+    const input = { expectedRevision: p.revision, expectedPublishedId: null, content: p.proposed };
+    const first = await publishPublicBrand(s.id, users[0]!, intentId, input), files = await readdir(storeRoot);
+    await writeFile(path.join(process.cwd(), "public", relative), pngTwo);
+    const replay = await publishPublicBrand(s.id, users[0]!, intentId, input);
+    expect(replay.id).toBe(first.id); expect(await readdir(storeRoot)).toEqual(files);
+    expect(digestBytes(await renderedLogoBytes((replay.content as { logoUrl: string }).logoUrl))).toBe(digestBytes(pngOne));
+    await closeEmission({ intentId, status: "OK", result: {} });
+  });
+  it("does not write a retained object for a foreign publisher", async () => {
+    const { s } = await logoFixture("Foreign publisher"), p = await caller().publicPage({ id: s.id }), files = await readdir(storeRoot);
+    await expect(caller(users[1]).update({ id: s.id, publicPage: { expectedRevision: p.revision, expectedPublishedId: null, content: p.proposed } })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(await readdir(storeRoot)).toEqual(files); expect(await readPublicBrand(s.publicSlug!)).toBeNull();
+  });
+  it("refuses invalid images and SVGs with external resources without replacing the live edition", async () => {
+    const { s, relative } = await logoFixture("Bad source"); await publish(s.id, "Keep retained image");
+    const edition = (await readPublicBrand(s.publicSlug!))!;
+    for (const bytes of [Buffer.from("not an image"), pngOne.subarray(0, 40), Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><image href="https://example.invalid/changing.png"/></svg>')]) {
+      await writeFile(path.join(process.cwd(), "public", relative), bytes);
+      await expect(publish(s.id, "Refused image")).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+      expect((await readPublicBrand(s.publicSlug!))?.edition).toBe(edition.edition);
+    }
+    expect(digestBytes(await renderedLogoBytes(edition.content.logoUrl!))).toBe(digestBytes(pngOne));
+  });
+  it("keeps the published bytes when the source file changes at the same URL", async () => {
+    const s = await fixture(), relative = `${sourcePath}/mutable.png`;
+    await writeFile(path.join(process.cwd(), "public", relative), pngOne);
+    await db.brandAsset.create({ data: { strategyId: s.id, name: "Mutable source", kind: "LOGO_FINAL", state: "ACTIVE", fileUrl: relative } });
+    await publish(s.id, "Frozen bytes"); const edition = (await readPublicBrand(s.publicSlug!))!;
+    await writeFile(path.join(process.cwd(), "public", relative), pngTwo);
+    expect(digestBytes(await renderedLogoBytes(edition.content.logoUrl!))).toBe(digestBytes(pngOne));
+  });
+  it("restores the bytes of the old edition after the source changes and the origin moves", async () => {
+    const s = await fixture(), relative = `${sourcePath}/restored.png`;
+    await writeFile(path.join(process.cwd(), "public", relative), pngOne);
+    await db.brandAsset.create({ data: { strategyId: s.id, name: "Restore source", kind: "LOGO_FINAL", state: "ACTIVE", fileUrl: relative } });
+    await publish(s.id, "One"); const one = (await readPublicBrand(s.publicSlug!))!;
+    await publish(s.id, "Two");
+    await writeFile(path.join(process.cwd(), "public", relative), pngTwo);
+    vi.stubEnv("AUTH_URL", "https://next-public.example.invalid");
+    const p = await caller().publicPage({ id: s.id });
+    await caller().update({ id: s.id, publicPage: { expectedRevision: p.revision, expectedPublishedId: p.published!.id,
+      content: p.proposed, restoreId: one.edition } });
+    const restored = (await readPublicBrand(s.publicSlug!))!;
+    expect(digestBytes(await renderedLogoBytes(restored.content.logoUrl!))).toBe(digestBytes(pngOne));
+    expect(new URL(restored.content.logoUrl!).origin).toBe("https://next-public.example.invalid");
+  });
+  it("does not acknowledge a logo publication without configured byte retention", async () => {
+    const s = await fixture(), relative = `${sourcePath}/no-store.png`;
+    await writeFile(path.join(process.cwd(), "public", relative), pngOne);
+    await db.brandAsset.create({ data: { strategyId: s.id, name: "No store", kind: "LOGO_FINAL", state: "ACTIVE", fileUrl: relative } });
+    vi.stubEnv("CREATIVE_MEDIA_ENCRYPTION_KEY", "");
+    await expect(publish(s.id, "No receipt")).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    expect(await readPublicBrand(s.publicSlug!)).toBeNull();
+  });
   it("never publishes from a slug or an anonymous read", async () => {
     const s = await fixture(); expect(await readPublicBrand(s.publicSlug!)).toBeNull();
     expect(await db.brandAsset.count({ where: { strategyId: s.id } })).toBe(0);
@@ -118,15 +277,16 @@ describe("Public brand editions", () => {
   it("lists selected variants with versions and never picks the first of several active logos", async () => {
     const s = await fixture();
     vi.stubEnv("NEXT_PUBLIC_BASE_URL", "https://powerupgraders.com");
-    const dark = await db.brandAsset.create({ data: { strategyId: s.id, name: "Contour pour fond sombre", kind: "LOGO_FINAL", state: "SELECTED", version: 3, fileUrl: "/brand/fixture/contour.png" } });
+    const dark = await db.brandAsset.create({ data: { strategyId: s.id, name: "Contour pour fond sombre", kind: "LOGO_FINAL", state: "SELECTED", version: 3, fileUrl: `${sourcePath}/contour.png` } });
     await db.brandAsset.createMany({ data: ["one", "two"].map((name) => ({ strategyId: s.id, name, kind: "LOGO_FINAL", state: "ACTIVE" as const, fileUrl: `https://example.invalid/${name}.png` })) });
     const p = await caller().publicPage({ id: s.id });
     expect(p.proposed.logoUrl).toBeNull();
-    expect(p.logos).toContainEqual({ id: dark.id, name: dark.name, version: 3, state: "SELECTED", url: "https://powerupgraders.com/brand/fixture/contour.png" });
+    expect(p.logos).toContainEqual({ id: dark.id, name: dark.name, version: 3, state: "SELECTED", url: `https://powerupgraders.com${sourcePath}/contour.png` });
     await caller().update({ id: s.id, publicPage: { expectedRevision: p.revision, expectedPublishedId: null,
-      content: { ...p.proposed, logoUrl: "https://powerupgraders.com/brand/fixture/contour.png" }, logoAssetId: dark.id } });
+      content: { ...p.proposed, logoUrl: p.logos.find(l => l.id === dark.id)!.url }, logoAssetId: dark.id } });
     const e = (await readPublicBrand(s.publicSlug!))!;
-    expect(e.content.logoUrl).toBe("https://powerupgraders.com/brand/fixture/contour.png");
+    expect(e.content.logoUrl).toBe(`https://powerupgraders.com/brand/editions/${e.edition}/${digestBytes(pngOne)}.png`);
+    expect(digestBytes(await renderedLogoBytes(e.content.logoUrl!))).toBe(digestBytes(pngOne));
     const receipt = await db.brandAsset.findUniqueOrThrow({ where: { id: e.edition } });
     expect(receipt.metadata).toMatchObject({ logoAsset: { id: dark.id, version: 3, fileUrl: dark.fileUrl } });
     expect(JSON.stringify(e)).not.toContain(dark.id);
@@ -144,7 +304,7 @@ describe("Public brand editions", () => {
   });
   it("fences variant changes and refuses restoration after its selected asset version changed", async () => {
     const s = await fixture();
-    const logo = await db.brandAsset.create({ data: { strategyId: s.id, name: "Chosen", kind: "LOGO_FINAL", state: "ACTIVE", fileUrl: "https://example.invalid/logo.png" } });
+    const logo = await db.brandAsset.create({ data: { strategyId: s.id, name: "Chosen", kind: "LOGO_FINAL", state: "ACTIVE", fileUrl: `${sourcePath}/versioned.png` } });
     await publish(s.id, "One"); const one = (await readPublicBrand(s.publicSlug!))!;
     const p = await caller().publicPage({ id: s.id });
     await db.brandAsset.update({ where: { id: logo.id }, data: { version: 2 } });
@@ -175,12 +335,13 @@ describe("Public brand editions", () => {
     vi.stubEnv("AUTH_URL", "https://runtime.example.invalid");
     vi.stubEnv("NEXTAUTH_URL", "https://other.example.invalid");
     const s = await fixture();
-    const logo = await db.brandAsset.create({ data: { strategyId: s.id, name: "Runtime logo", kind: "LOGO_FINAL", state: "SELECTED", fileUrl: "/brand/example/logo.png" } });
+    const logo = await db.brandAsset.create({ data: { strategyId: s.id, name: "Runtime logo", kind: "LOGO_FINAL", state: "SELECTED", fileUrl: `${sourcePath}/runtime-logo.png` } });
     const p = await caller().publicPage({ id: s.id });
-    expect(p.logos).toEqual([expect.objectContaining({ id: logo.id, url: "https://runtime.example.invalid/brand/example/logo.png" })]);
+    expect(p.logos).toEqual([expect.objectContaining({ id: logo.id, url: `https://runtime.example.invalid${sourcePath}/runtime-logo.png` })]);
     await caller().update({ id: s.id, publicPage: { expectedRevision: p.revision, expectedPublishedId: null,
       content: { ...p.proposed, logoUrl: p.logos[0]!.url }, logoAssetId: logo.id } });
-    expect((await readPublicBrand(s.publicSlug!))?.content.logoUrl).toBe("https://runtime.example.invalid/brand/example/logo.png");
+    const edition = (await readPublicBrand(s.publicSlug!))!;
+    expect(edition.content.logoUrl).toBe(`https://runtime.example.invalid/brand/editions/${edition.edition}/${digestBytes(pngOne)}.png`);
   });
   it("serializes two publishers from the same preview", async () => {
     const s = await fixture(), p = await caller().publicPage({ id: s.id });

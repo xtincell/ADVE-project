@@ -1,5 +1,41 @@
 # Changelog — La Fusee
 
+## v6.27.431 — fix(brand): conserver les octets du logo de chaque publication (2026-10-09)
+
+**Le candidat rattache l’image publique à une copie vérifiée de son édition.**
+
+- ADR-0211 Proposed : brand-vault/Sustainment sous MESTOR réutilise le stockage
+  chiffré existant, avec reçu privé metadata.logoArchive et transport public borné
+  /brand/editions/[editionId]/[hash.extension]. Aucun modèle/service/router/Intent/
+  agent/droit ajouté, contrat JSON v1 et DA/lecteur/CSP SPAWT conservés.
+- PNG/JPEG/WebP/SVG autonome décodés, limites 10 Mo/20 Mpx et garde SSRF existante.
+  Conservation/relecture/hash avant commit ; échec garde l’ancienne édition.
+  Lecture publique seulement d’éditions publiées admissibles, intégrité avant 304,
+  absence/corruption 503 sans repli source ; privé/query/hash faux 404.
+- Retour reçu d’octets réutilise la copie vérifiée, sous pins/source courants et
+  nouvelle édition. Ancien logo sans reçu : relecture/republication explicite,
+  aucun backfill. Nettoyage volume existant protège toute copie référencée ;
+  objet orphelin après crash récupérable après 24 h, sans transaction stockage/DB.
+- Réédition du texte : URL snapshot/id concordants avec l’édition ACTIVE et
+  fingerprint/source toujours actuels permettent de garder sa copie vérifiée.
+  Le formulaire accepte le logo publié inchangé si son candidat reste éligible ;
+  un nouveau choix de variante utilise l’URL source et une copie neuve.
+- Trois contre-exemples rouges/22 anciens verts, puis 25 et 32 PostgreSQL ciblés
+  verts ; contre-exemple de republication rouge puis suite ciblée 33/33 verte.
+  Gauntlet local vert : types/lints sans erreur, 24 warnings préexistants, zéro
+  cycle, 1617 gouvernance/166 fichiers ; unitaires 4129/395 + 9/1 + 29/1 en trois
+  commandes, soit 4167/397 ; PostgreSQL 248/13 + source-uses 8/1, soit 256/14.
+  Session FOUNDER synthétique native : réédition texte 200, corruption 412
+  avec refus français visible et version 2 conservée, retour 200/successeur v3.
+  Transport HTTP direct/image reçu ; image HTTPS absolue dans la page locale
+  non reçue, aucune page publique complète déduite. Fenêtres initiale/gestes
+  non tronquées sans >=500/exception, timings dev sans SLO.
+  CI/image/livraison production 431 non reçues.
+  Production reçue 430, SPAWT édition v2. Cause octets encore ouverte jusqu’à
+  recette livrée ; Moka/palette/polices/voix/quiz-app/retour de valeur et sept
+  chantiers restent ouverts. [Décision proposée](docs/governance/adr/0211-retained-public-logo-bytes.md)
+  et [réception bornée](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
+
 ## v6.27.430 — fix(brand): résoudre l’origine des logos depuis la configuration serveur (2026-10-09)
 
 **430 est livrée : une variante de logo choisie dans Connexions est publiée et rendue sur SPAWT.**
