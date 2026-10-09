@@ -141,7 +141,7 @@ reçue ; reload local tronqué et bornes tardives production, sans SLO déduit.
 | `notoria.ts` | Pipeline production | M | point gouverné présent |
 | `sequence-vault.ts` | Séquences GLORY | M | point gouverné présent |
 | `deliverable-orchestrator.ts` | **Deliverable Forge tRPC** (Phase 17b, ADR-0050 — anciennement ADR-0037) — `listSupportedKinds` query, `resolveRequirements` query auditée, `compose` mutation auditée hash-chained via `mestor.emitIntent({ kind: "COMPOSE_DELIVERABLE" })` | M | point gouverné présent |
-| `actions.ts` | Base d'actions canonique du Pilier I — `BrandAction` + calendrier/plan d'actions (ADR-0094). Candidat 440 : sync vérifie assertCalendarWrite avant reconstruction, mêmes droits ; huit PG ciblés/complet 317/17 et refus natif local reçus. Préservation des choix propriétaire ouverte ; livraison attendue ([reçu](REFONTE-PLAN.md)). | M | point gouverné présent |
+| `actions.ts` | Base d'actions canonique du Pilier I — `BrandAction` + calendrier/plan d'actions (ADR-0094). 440 livré : sync vérifie assertCalendarWrite avant reconstruction, mêmes droits ; huit PG ciblés/complet 317/17 et refus natif local reçus. Source e217c08e/CI/image/runtime 440 exact reçus ; lecture réelle SPAWT seulement, aucune sync de production. Préservation des choix propriétaire ouverte ([reçu](REFONTE-PLAN.md)). | M | point gouverné présent |
 | `creative-proposal.ts` | Proposition Créative — gate de génération de production (ADR-0120) | M | point gouverné présent |
 | `intention.ts` | Intention dirigeant → brief candidat, validation (ADR-0106) | M | point gouverné présent |
 | `media-plan.ts` | Plan média (acteur Média, ADR-0115) | M | point gouverné présent |

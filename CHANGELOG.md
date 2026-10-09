@@ -2,31 +2,27 @@
 
 ## v6.27.440 — fix(actions): vérifier le droit d’écriture avant synchronisation (2026-10-09)
 
-**440 candidat : le refus d’accès est reçu localement ; livraison et préservation des choix du propriétaire restent à recevoir.**
+**440 livré : droit d’écriture contrôlé avant synchronisation ; les choix du propriétaire restent à préserver.**
 
 - actions.sync réutilise assertCalendarWrite avant syncBrandActionsFromBlob :
-  propriétaire, même opérateur, ADMIN ou délégation calendrier ACTIVE admis ;
-  autre opérateur, ART_DIRECTOR en lecture seule et délégation révoquée refusés,
-  cible absente NOT_FOUND. Aucun droit, modèle, service, route, kind, Neter, page
-  ou ADR ajouté ; la synchronisation reste une écriture de projection existante.
-- Reproduction locale d’accès : quatre rouges/deux verts puis six verts.
-  PostgreSQL : cinq rouges/trois verts, puis huit ciblés/un fichier et complet
-  317/dix-sept fichiers verts ; le nouveau fichier est inclus dans la suite.
-- Native USER/TRIAL fictive par login normal, patch 440 sur serveur local
-  affichant 439 : lecture seule HTTP 403/FORBIDDEN avec notice visible, choix
-  selected=true/SCHEDULED/titre préservés ; propriétaire HTTP 200, une initiative,
-  une action upsertée/zéro supprimée, même identifiant. Les deux fenêtres d’appel
-  complètes n’ont ni ≥500 ni exception ; fenêtre login/navigation tronquée,
-  aucune affirmation globale d’erreur ou SLO. Captures inspectées, fixture
-  remaining=0/serveur arrêté/onglet fermé, aucun dossier réel ni fournisseur.
-- Le même geste autorisé reproduit encore selected=false/PROPOSED chez le
-  propriétaire : choix, états et budgets à préserver par la reprise Guidance,
-  avec writeback I/S versionné, remap UUID et versions des sources toujours
-  ouverts. Cold compile et ancien cookie local sont des incidents de recette
-  conservés. Cinq contrôles locaux finaux exit 0, gouvernance 1 620/166 verts,
-  24 warnings connus sans erreur. CI, image et runtime 440 attendus ; runtime
-  reçu 439. Sept chantiers/dix gates non acceptés.
-  [Réception bornée et suite](docs/governance/REFONTE-PLAN.md).
+  autorités existantes conservées, lecture seule/autre opérateur/délégation
+  révoquée refusés. Cible absente NOT_FOUND pour USER ; contrôle ADMIN inchangé.
+  Aucun droit, modèle, service, route, kind, Neter, page ou ADR ajouté.
+- Baseline locale quatre rouges/deux verts, puis six verts ; PostgreSQL cinq
+  rouges/trois verts puis huit ciblés et complet 317/17 verts. Native USER/TRIAL
+  fictive : 403 conserve la ligne, propriétaire 200 conserve l’identifiant mais
+  écrase encore selected/SCHEDULED. Fixtures nettoyées, aucun dossier réel
+  synchronisé ; plan writeback I/S, choix/budgets, remap UUID et versions source
+  maintenu dans la dette Guidance.
+- Cinq contrôles locaux finaux exit 0, gouvernance 1 620/166, 24 warnings connus
+  sans erreur. Source e217c08e, CI 38001813652 success (4 197/401 unitaires,
+  317/17 PG), Mission/Chromatic et image 38002258278 success ; index 92b1b601
+  exact au runtime 440 running/nextjs/volume privé RW/version publique 200.
+  Déploiement unique ltimbilw87f2raani3h9hbi2 terminé le 9 octobre à 23:13:52 UTC.
+  Lecture réelle SPAWT USER v440/PÉRIMÉ/deux 100 % reçue ; mutations d’accès
+  seulement locales, aucune décision réelle ou fournisseur. Sept chantiers/dix
+  gates non acceptés ; vitrine live/décompte retiré reçus avant ce lot.
+  [Preuves, bornes natives et reprise](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.439 — fix(cockpit): lire l’état actuel de marque et aligner le quiz SPAWT (2026-10-09)
 

@@ -30,25 +30,19 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
-2026-10-09 · **440 candidat, refus d’accès reçu localement** : actions.sync
-écrivait les BrandAction avec la seule appartenance opérateur, sans appliquer
-le contrôle calendrier déjà utilisé par les mutations voisines. Le routeur
-appelle maintenant assertCalendarWrite avant syncBrandActionsFromBlob ; mêmes
-autorités, refus lecture seule/autre opérateur/délégation révoquée, NOT_FOUND
-sur cible absente. Cause bornée : une reconstruction de projection traitée comme
-opération neutre alors qu’elle remplace des lignes. Aucun droit/entité ajouté.
-Accès local quatre rouges/deux verts puis six verts ; PostgreSQL cinq rouges/
-trois verts puis huit ciblés et complet 317/17 verts. Native USER/TRIAL fictive
-normalement authentifiée : 403/FORBIDDEN/notice lecture seule conserve choix,
-état et titre ; propriétaire 200/une action/même ID. Deux fenêtres d’appel
-complètes sans ≥500/exception, pas fenêtre globale/SLO ; captures inspectées,
-fixture remaining=0/serveur arrêté/onglet fermé. Le propriétaire perd encore
-son choix et SCHEDULED devient PROPOSED : contre-exemple distinct non réparé,
-dans la dette Guidance existante. Cinq contrôles locaux finaux exit 0, gouvernance
-1 620/166 verts, 24 warnings connus sans erreur. CI/image/runtime 440 attendus,
-runtime reçu 439 ; aucun dossier réel ou fournisseur, sept chantiers/dix gates
-ouverts. [Reçu local et reprise](REFONTE-PLAN.md) ·
-[dette liée](RESIDUAL-DEBT.md).
+2026-10-09 · **440 livré, garde d’accès reçue localement** : actions.sync
+rematérialisait BrandAction sous la seule appartenance opérateur. Le contrôle
+calendrier existant assertCalendarWrite est désormais appliqué avant le writer,
+mêmes autorités ; NOT_FOUND pour cible absente USER, contrôle ADMIN conservé.
+Cause bornée : reconstruction de projection traitée comme neutre malgré ses
+écritures. Baseline accès quatre rouges/deux verts puis six verts ; PostgreSQL
+cinq rouges/trois verts puis huit ciblés/complet 317/17 verts. Native locale
+403 conserve la ligne ; propriétaire 200 perd encore selected/SCHEDULED,
+contre-exemple non réparé dans la dette Guidance existante. Source e217c08e/
+CI 38001813652/image 38002258278/runtime 440 exact et contrôles finaux reçus.
+Lecture réelle SPAWT USER PÉRIMÉ/deux 100 % seulement, aucune sync de production,
+décision réelle ou fournisseur ; sept chantiers/dix gates ouverts.
+[Preuves et bornes](REFONTE-PLAN.md) · [dette liée](RESIDUAL-DEBT.md).
 
 2026-10-09 · **439 livré, cause d’affichage/corpus fermée** : PillarPage affichait Complet à partir
 de assess.currentStage malgré readiness stale/Périmé, avec un autre badge de

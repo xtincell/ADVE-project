@@ -1,11 +1,12 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## Synchronisation d’actions — 440 candidat, réception locale (2026-10-09)
+## Synchronisation d’actions — 440 livré, réception bornée (2026-10-09 UTC)
 
 actions.sync réutilise assertCalendarWrite avant syncBrandActionsFromBlob :
 propriétaire, même opérateur, ADMIN et délégation calendrier ACTIVE conservent
 leur autorité ; autre opérateur, ART_DIRECTOR en lecture seule et délégation
-révoquée sont refusés, cible absente NOT_FOUND. Aucun nouveau droit, modèle,
+révoquée sont refusés, cible absente NOT_FOUND pour USER ; contrôle ADMIN existant
+conservé. Aucun nouveau droit, modèle,
 service, route, kind, Neter, page ou ADR. La vérification répare un chemin
 d’écriture existant ; elle ne réconcilie pas les décisions de la projection.
 
@@ -44,9 +45,33 @@ transverse ; aucun backfill global ou fait métier inventé.
 **Contrôles locaux finaux reçus** : gauntlet.json, cinq sorties 0 ; gouvernance
 1 620 tests/166 fichiers verts, 24 warnings connus sans erreur. Régénération
 officielle CODE-MAP réussie, aucun diff.
-**À recevoir pour 440** : CI, image et runtime ; runtime actuellement reçu
-439. Aucune connexion de vitrine attribuée à ce lot de
-plomberie ; sept chantiers/dix gates restent ouverts, wholeJourneyAccepted=false.
+
+**Source, CI et image reçues** : e217c08e447761dcdfa4298208fb94decb0ae2ba,
+CI 38001813652 success (4 197 tests/401 fichiers unitaires, 317/17 PostgreSQL),
+Mission 38001813576/Chromatic 38001813575 success. Image 38002258278 success,
+configuration candidate/publiée identique, index
+sha256:92b1b601c98af11264f075061809827f2032cb7e6ad9176ffc9c7042331b5be8
+exact vérifié au registre ; ci-tests-receipt.json/image-digest.json relus.
+
+**Runtime et lecture de production reçus** : déploiement unique
+ltimbilw87f2raani3h9hbi2 terminé 2026-10-09T23:13:52Z ; runtime 6.27.440
+running/nextjs/volume privé RW, index 92b1b601 exact, source e217c08e et version
+publique HTTP 200. runtime.json reçu à 23:14:50 UTC. Lecture seule réelle USER
+SPAWT après reload, titre Stratégie/v440 visible : PÉRIMÉ avec deux 100 %
+inchangés. Journal complet truncated=false/hasMore=false : 60 réponses toutes
+200, zéro ≥500 et zéro exception ; douze net::ERR_ABORTED tous canceled=true,
+aucun zéro transport global. native-runtime-receipt/events/ax/png et corps
+readiness relus, capture inspectée. headingObservedWithinMs=16 203 est une borne
+supérieure incluant le délai entre appels, ni premier paint exact ni SLO.
+
+Aucune actions.sync sur un vrai dossier de production, aucune décision réelle,
+approbation ou production payante ; mutations d’accès 403/200 reçues seulement
+sur fixture locale avant commit. nativeReadReceived=true/nativeReceived=false
+rend cette limite explicite, wholeJourneyAccepted=false. Source/image/runtime
+distincts du présent reçu documentaire. Aucune connexion de vitrine attribuée
+à ce lot de plomberie ; sept chantiers/dix gates restent ouverts. Le résidu
+propriétaire, les contrats I/S, versions sources et remap UUID gardent leur plan
+et déclencheur Guidance ci-dessus.
 
 ## État actuel de marque et six questions — 439 livré (2026-10-09)
 

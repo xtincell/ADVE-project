@@ -4,18 +4,17 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
-**6.27.440 candidat — accès à actions.sync** : assertCalendarWrite est relu
-avant la synchronisation de projection ; autorités existantes conservées,
-lecture seule/autre opérateur/délégation révoquée refusés, cible absente NOT_FOUND.
-Huit PostgreSQL ciblés puis complet 317/17 verts ; native locale USER/TRIAL
-fictive reçoit 403 sans altération en lecture seule et 200 pour le propriétaire.
-Ce dernier conserve l’identifiant mais perd encore selected/SCHEDULED lors du
-rebuild : préservation des décisions et writeback I/S restent dans Guidance.
-Fixture nettoyée, aucun dossier réel/fournisseur ; deux fenêtres d’appel
-complètes seulement, pas de métrique globale. Cinq contrôles locaux finaux exit 0,
-gouvernance 1 620/166 verts, 24 warnings connus sans erreur. CI/image/runtime
-440 attendus, runtime reçu 439 ; aucun droit ou entité ajouté, sept chantiers/dix
-gates ouverts. [Preuves et reprise](docs/governance/REFONTE-PLAN.md).
+**6.27.440 livré — garde d’accès à actions.sync** : assertCalendarWrite appliqué
+avant la projection, mêmes autorités ; refus lecture seule/autre opérateur/
+délégation révoquée. NOT_FOUND sur cible absente pour USER, contrôle ADMIN
+conservé. Huit PG ciblés/complet 317/17 et native locale fictive 403/200 reçus.
+Le propriétaire autorisé perd encore selected/SCHEDULED : dette Guidance
+choix/writeback I/S/versions sources/remap UUID ouverte. Source e217c08e,
+CI 38001813652 (4 197/401 unitaires, 317/17 PG)/image 38002258278/runtime 440
+exact reçus ; cinq contrôles locaux verts. Lecture réelle SPAWT USER PÉRIMÉ/
+deux 100 % reçue, aucune actions.sync en production : nativeReadReceived=true,
+nativeReceived=false. Pas de décision réelle/fournisseur ni entité ajoutée ;
+sept chantiers/dix gates ouverts. [Preuves et reprise](docs/governance/REFONTE-PLAN.md).
 
 **6.27.439 livré — état courant et corpus six questions** :
 PillarPage lit pillar.readiness pour un seul Badge d’état ; assess mesure la

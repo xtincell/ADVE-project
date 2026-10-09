@@ -16,11 +16,13 @@
 
 ## Quick start
 
-**6.27.440 en validation locale** : reconstruire les actions requiert désormais
+**6.27.440 livré** : reconstruire les actions requiert désormais
 le droit d’écriture du calendrier. Le refus en lecture seule et l’accès du
 propriétaire sont reçus sur dossiers fictifs ; les choix du propriétaire peuvent
-encore être écrasés par cette reconstruction et restent à corriger. Livraison
-440 attendue, runtime reçu 439 ; cycle réel et sept chantiers restent ouverts.
+encore être écrasés par cette reconstruction et restent à corriger. Source, CI
+et image vérifiées, runtime 440 exact reçu. La lecture réelle de SPAWT conserve
+« Périmé » et ses deux 100 % ; aucune synchronisation du dossier réel exécutée.
+Cycle réel et sept chantiers restent ouverts.
 [Périmètre et suite](docs/governance/REFONTE-PLAN.md).
 
 **6.27.439 livré** : l’état de marque reprend sa
