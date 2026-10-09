@@ -8,6 +8,30 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
+**437 candidat — extension des writers existants** : pillar-gateway remplace les
+collections S au MERGE_DEEP et rétracte S/Strategy après version ou dépendance
+nouvelle ; PillarVersion conserve le précédent plan. Aucune auto-approbation S,
+restauration à relire, LOCKED conservé sur staleness et null conservé.
+ingestion-pipeline/source-usage permet aux writers de prendre directement
+Strategy UPDATE après les sources, puis les piliers. canon-sync réutilise le
+gateway pour son recalcul. review-invalidation.ts est un module interne du même
+gateway, pas un service du registre ; réutilisé par invalidation documentaire
+et les deux écrivains de staleness. Strategy UPDATE triées/sourceUse UPDATE,
+lookup d’âge lowercase ; propagateFromPillar true/false reçu, Process seulement
+en mode auto existant. Pas de service/worker/Neter ajouté. 21 cas S ciblés reçus ;
+complet 304/seize antérieur aux cinq ajouts, final complet 309/seize reçu et HARD
+collections rouge/restauration exacte/vert reçu. Unitaire complet 4 190/400 et
+cinq contrôles finaux verts, premier rouge temporel conservé/recontrôlé sans
+changer le test. Build isolé exit 0 ; native locale USER/TRIAL revue v1/null,
+écriture v2 retire l’ancienne revue, relecture/réapprobation v2/null reçue.
+Stress compilé isolé exit 0/46 reçus/235 non reçus/sept DEFERRED sans credentials,
+pas fournisseur/cycle. canon-sync statique + writer PG, sans import privilégié
+natif ; sept DEFERRED bornées/estimation zéro/sans providerTaskId, sept tâches/
+quatre marques synthétiques nettoyées/remaining=0, serveur isolé arrêté.
+CI/runtime 437 et autres modes non reçus.
+Calcul S commun et Notoria facultative prévus.
+[Décision Accepted et bornes](adr/0215-synthesis-writes-require-new-review.md).
+
 **436 livré — état de validation, extension du service existant** :
 `pillar-gateway/validation-status.ts` partage inspection de composition et décision
 de validation entre les deux routes existantes. Contrat ENRICHED/COMPLETE + schéma

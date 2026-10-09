@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { sourceOriginalSummary } from "@/domain/source-original";
 import type { SourceReceipt } from "@/domain/source-certainty";
 import { getPillarDependents, type PillarKey } from "@/lib/types/advertis-vector";
+import { markPillarsStale } from "@/server/services/pillar-gateway/review-invalidation";
 
 export type SourceDb = Prisma.TransactionClient;
 export type { SourceReceipt } from "@/domain/source-certainty";
@@ -179,6 +180,7 @@ export async function recordSourceAnalysis(client: SourceDb, strategyId: string,
  */
 export async function assertCurrentSourceReceipts(
   client: SourceDb, strategyId: string, receipts: SourceReceipt[], requiredSourceIds: string[] = [],
+  strategyLock: "SHARE" | "UPDATE" = "SHARE",
 ): Promise<void> {
   if (requiredSourceIds.some((id) => !receipts.some((r) => r.sourceId === id))) {
     throw new Error("SOURCE_RECEIPT_MISSING: la version documentaire de cette proposition doit être revue.");
@@ -186,9 +188,12 @@ export async function assertCurrentSourceReceipts(
   const ids = [...new Set(receipts.map((r) => r.sourceId))].sort();
   if (!ids.length) return;
   await client.$queryRaw(Prisma.sql`SELECT id FROM "BrandDataSource" WHERE id IN (${Prisma.join(ids)}) ORDER BY id FOR UPDATE`);
-  // A tenant transfer updates Strategy, hence waits for this read fence too.
+  // A pillar writer also withdraws Strategy approval. Acquire its final lock
+  // directly, avoiding two concurrent SHARE → UPDATE upgrades. Other source
+  // consumers retain their read fence. Source rows are always locked first.
+  const lock = strategyLock === "UPDATE" ? Prisma.sql`FOR UPDATE` : Prisma.sql`FOR SHARE`;
   await client.$queryRaw(Prisma.sql`SELECT id FROM "Strategy" WHERE id = ${strategyId}
-    OR id IN (SELECT "strategyId" FROM "BrandDataSource" WHERE id IN (${Prisma.join(ids)})) ORDER BY id FOR SHARE`);
+    OR id IN (SELECT "strategyId" FROM "BrandDataSource" WHERE id IN (${Prisma.join(ids)})) ORDER BY id ${lock}`);
   for (const receipt of receipts) {
     const current = await resolveBrandSource(receipt.sourceId, strategyId, client);
     if (current.contentHash !== receipt.contentHash) throw new Error("SOURCE_CHANGED: le document a été corrigé. Relire ou refaire cette proposition.");
@@ -241,9 +246,11 @@ export async function invalidateSourceDerivatives(client: SourceDb, sourceId: st
     for (const key of getPillarDependents(p.key as PillarKey)) keys.add(key);
     affected.set(p.strategyId, keys);
   }
-  for (const [id, keys] of affected) await client.pillar.updateMany({
-    where: { strategyId: id, key: { in: [...keys] } }, data: { staleAt: new Date() },
-  });
+  // Multi-brand documentary changes acquire their final strategy locks in a
+  // stable order before touching pillars, matching approval and gateway writes.
+  const ids = [...affected.keys()].sort();
+  if (ids.length) await client.$queryRaw(Prisma.sql`SELECT id FROM "Strategy" WHERE id IN (${Prisma.join(ids)}) ORDER BY id FOR UPDATE`);
+  for (const id of ids) await markPillarsStale(client, id, [...affected.get(id)!]);
 }
 
 /** Only source ownership/operator management can grant; collaboration is read access. */
@@ -253,7 +260,7 @@ export async function setSourceUse(input: {
   return db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${input.sourceId} FOR UPDATE`;
     const { source } = await resolveBrandSource(input.sourceId, undefined, tx);
-    await tx.$queryRaw(Prisma.sql`SELECT id FROM "Strategy" WHERE id IN (${Prisma.join([source.strategyId, input.strategyId].sort())}) ORDER BY id FOR SHARE`);
+    await tx.$queryRaw(Prisma.sql`SELECT id FROM "Strategy" WHERE id IN (${Prisma.join([source.strategyId, input.strategyId].sort())}) ORDER BY id FOR UPDATE`);
     const owner = await tx.strategy.findUniqueOrThrow({ where: { id: source.strategyId }, select: { operatorId: true, userId: true } });
     const target = await tx.strategy.findUniqueOrThrow({ where: { id: input.strategyId }, select: { id: true, operatorId: true, userId: true } });
     if (target.id === source.strategyId) throw new Error("Le document appartient déjà à cette marque.");

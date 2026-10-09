@@ -187,6 +187,46 @@ R Risk (menaces détectées) → T Track (capteur Seshat/Tarsis) → I Innovatio
 
 Les 4 Intent kinds RTIS sont uniquement routables via `commandant.ts` — **zéro appel auto-déclenché** depuis Tarsis, Notoria, ou OPERATOR_AMEND_PILLAR. La décision est inline pendant l'AMEND opérateur (l'opérateur choisit d'enchaîner ou non) OU explicite via UI séparée. Doctrine = code.
 
+### 4.4 Plan courant et relecture — candidat 437 (2026-10-09)
+
+S dérive des sources de la marque ; calculer une nouvelle projection et
+l’approuver sont deux gestes distincts. Dans le candidat 437, MERGE_DEEP remplace
+ses collections à toute profondeur ; PillarVersion conserve l’ancien plan.
+L’écriture S, y compris sa restauration, ne peut porter une approbation humaine
+sur la nouvelle version. Une dépendance modifiée retire Strategy VALIDATED et
+S VALIDATED atomiquement ; S LOCKED reste verrouillé et obsolète. Une confiance
+non mesurée reste null. canon-sync utilise le même gateway pour import/recalcul,
+sans exception directe S ni erreurs masquées ; vector reste projection de score.
+Les verrous documentaires précèdent Strategy et les piliers.
+
+La même primitive interne review-invalidation.ts sert les corrections,
+suppression/révocation documentaires et les deux écrivains de staleness.
+Strategy UPDATE sont prises en ordre stable avant les piliers ; sourceUse évite
+l’upgrade de verrou. La recherche d’âge normalise S→s. Dans propagateFromPillar,
+les modes autoRecalculate true/false sont reçus localement : Process seulement si auto,
+aucun appel réseau dans la fixture. Cela ne reçoit pas tous les modes/agents.
+
+Ce contrat d’écriture ne certifie pas le choix des actions ou leurs budgets.
+Le dispatch manuel SYNTHESIZE_S appelle encore Notoria ; sa convergence avec
+le calcul, la synchronisation I/BrandAction, les identifiants et versions source,
+et le désaccord maturité par présence/schéma strict restent à recevoir dans
+Guidance. L’entrée manuelle doit converger vers le calcul existant avec assistance
+Notoria facultative. PostgreSQL complet 309/seize (21 S) et HARD collections
+rouge/restauration exacte/vert reçus ; premier rouge de délai withRetry conservé,
+36/1 puis 4 190/400 verts sans changement du test. Cinq contrôles finaux exit 0,
+gouvernance 1 620/166 verts. Build isolé terminé exit 0. Native locale USER/TRIAL :
+S null v1 approuvé, écriture v2 retire la revue, proposition relue/réapprouvée
+v2 HTTP 200/null ; fenêtre complète bornée, 17 Fetch annulés conservés. Stress
+isolé compilé exit 0/zéro finding, 46 HTTP reçus/235 non reçus/sept DEFERRED sans
+credentials et réseau externe interdit ; pas réception des parcours non visités.
+canon-sync statique + writer PG, sans import privilégié natif. Les sept tâches
+stress de la fenêtre exacte sont DEFERRED/estimation zéro/sans providerTaskId ;
+sept tâches/quatre marques synthétiques nettoyées/remaining=0, serveur isolé
+arrêté. CI/image/runtime 437 en attente ;
+aucune doctrine nouvelle ni réception d’un cycle autonome n’est déduite.
+[ADR-0215 Accepted, décision architecturale](adr/0215-synthesis-writes-require-new-review.md) ·
+[bornes et reprise](RECEPTION-ECRITURE-SYNTHESE.md).
+
 ---
 
 ## 5. Yggdrasil — Le système d'irrigation per-brand

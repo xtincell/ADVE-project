@@ -1,0 +1,103 @@
+# Réception — écritures et relecture S, candidat 437
+
+Date : 2026-10-09. Sous-système Guidance, tutelle Mestor.
+Statut : **candidat local ; runtime reçu précédent 436**.
+
+## Périmètre
+
+Étendre le gateway, PillarVersion et les reçus de sources existants : remplacer
+les collections du plan S à toute profondeur, préserver l’ancien plan archivé,
+retirer les anciennes approbations après version/restauration ou dépendance
+nouvelle. S LOCKED reste verrouillé/stale lorsque sa dépendance change.
+Un writer/PROTOCOLE_S ne donne pas d’approbation ; null reste non mesuré même
+avec delta. Sources → Strategy UPDATE → piliers, import/recalcul canon-sync par
+gateway avec erreurs rendues ; vector reste projection de score légitime.
+Pas de modèle/page/service/router/kind/Neter/droit ajouté.
+
+review-invalidation.ts est un module interne du gateway, partagé par writer,
+correction/suppression/révocation documentaire et les deux écrivains de staleness.
+Strategy UPDATE triées avant piliers/sourceUse directement UPDATE. Lookup d’âge
+S→s normalisé ; true/false respecte le mode auto existant (Process seulement si
+auto). Le chemin d’audit global d’âge est rerouté statiquement, pas reçu par les
+deux seuls tests de propagateFromPillar ; autres modes/agents restent ouverts.
+Lecture statique supplémentaire : auditAllStrategies ne scanne que ACTIVE et
+ne consulte pas autoRecalculate=false avant Process ; ni reproduit ni corrigé
+dans 437. Reproduire DRAFT/VALIDATED + mode manuel false, séparer fraîcheur et
+lancement automatique ; reprise à la prochaine réception C5/échéances,
+effort borné de reproduction/factorisation dans la dette existante.
+
+## Preuves reçues et limites
+
+Preuves privées :
+`/Users/imacmatanga1/HOSTINGER/audit-shinkiro-2026-09-25/release/preuves-ecriture-s-437`.
+
+| Vérification | Reçu | Limite |
+|---|---|---|
+| Baseline S | 10 rouges/3 verts sur 13 cas, puis 13 verts | Checkpoint historique local |
+| Ciblées combinées | 70 verts/4 fichiers | Ne vaut pas suite globale finale |
+| PostgreSQL complet, checkpoint | 304 tests/16 fichiers verts, sortie 0 ; 16 cas S | Antérieur aux cinq ajouts, conservé comme checkpoint |
+| PostgreSQL complet final | 309 tests/16 fichiers verts, sortie 0 ; 21 cas S | Local isolé, pas réception réelle des marques |
+| PostgreSQL S courant | 21 ciblés verts/1 fichier, sortie 0 | Base isolée, marques synthétiques, réseau externe interdit |
+| Invalidation documentaire | 3 cas ingestion.updateSource : correction VALIDATED/LOCKED, révocation d’usage partagé | Propriétaire/autre dossier inchangés ; suppression reroutée, pas exercée par ces cas |
+| Propagation d’âge | 1 rouge/1 vert en baseline, 19 non sélectionnés ; puis 2 verts true/false réels après S→s | Process uniquement en mode auto existant ; zéro fetch, pas couverture globale des modes |
+| Restauration | Router rollbackVersion réel, nouvelle version non approuvée/null, retry idempotent | Aucun rollback SPAWT/FrieslandCampina |
+| Concurrence | Modification/revue et deux sources distinctes sur une Strategy | Pas toutes interleavings/modes/cycles reçus |
+| Atomicité | Échec rétraction Strategy annule contenu/archive ; refus ne crée pas S absent | Pas atomicité globale de production déduite |
+| Cleanup | Échec FK ScoreSnapshot intermédiaire conservé, fixture corrigée ; seuls orphelins s-writer-* nettoyés | ScoreSnapshot/Process/Signal/VariableStoreConfig couverts ; passe intermédiaire non finale |
+| Unitaire premier complet | 4 189/4 190 verts ; seul withRetry elapsed 102 ms attendu <50 sous charge build | Premier rouge conservé, aucun correctif produit du délai déduit |
+| Recontrôle délai | 36 tests/1 fichier verts, sortie 0 | Test inchangé |
+| Unitaire complet reçu | 4 190 tests/400 fichiers verts, sortie 0 | Rerun sans modification du test |
+| Gauntlet final | Cinq exit 0 : types/lint/lint-governance/cycles/gouvernance ; 1 620/166 gouvernance verts | Premiers offsets corrigés 724/755, pas acceptation globale du programme |
+| Build isolé | Exit 0, compilation 6,6 minutes/typecheck/prerender reçus | Build local, pas image/runtime production |
+| Réintroduction/restauration HARD | Collections append réintroduit : exit 1 ; source exactement restaurée : exit 0 | Défaut ciblé, pas preuve de tous les calculs/modes |
+| Native locale | USER/opérateur TRIAL par login normal ; S null v1 approuvé, écriture v2 AI_PROPOSED/Strategy DRAFT, relecture et réapprobation v2/200/null | Fixture, pas marques réelles ni cycle complet |
+| Fenêtre native | 64 réponses/0 ≥500/0 exception, truncated=false/hasMore=false ; 17 canceled ERR_ABORTED conservés | Pas zéro transport global |
+| Timing native | DOM 133,6 ms/load 148,2 ms ; titre observé ≤517 ms | Borne supérieure d’observation, pas first paint exact ni SLO |
+| Stress-full isolé compilé | Exit 0/zéro finding, 46 HTTP reçus/235 non reçus/0 échec, 3 queries anonymes, 7 forges DEFERRED et machine d’état | Sans credentials/réseau externe interdit ; pas 235 parcours/native globale/provider reçus |
+| canon-sync | Reroutage statique + writer partagé PostgreSQL | Aucun import canon privilégié natif |
+| Tâches stress bornées | Fenêtre 20:49:00–20:49:23 UTC, exactement 7 DEFERRED, estimation 0/sans providerTaskId | final-bounded.json seulement ; final.json historique trop large écarté |
+| Cleanup natif/stress | 7 tâches/quatre marques synthétiques nettoyées, remaining=0 ; server-cleanup.json stopped=2/onlyOwnedProofProcesses=true, onglet temporaire fermé | Aucun dossier réel supprimé, zéro final borné à ces fixtures |
+| CI/image/runtime 437 | En attente | Livraison production non reçue, runtime précédent 436 |
+
+hard-bite.json confirme la restauration exacte du gateway, SHA-256
+`88576eebdf1872602e1456baea3e919e9908ed9e28a7c2766fbef356895642b1`.
+native-approval-response.json relu : avertissement et confirmation v2 HTTP 200,
+version 2, confidence null et décision VALIDATED. Reload rend « Proposition à
+relire » après écriture v2 ; nouvelle vision relue. Captures native-current/
+native-approved inspectées, zéro coût sur cette fixture ; aucune approbation
+SPAWT/FrieslandCampina ou production payante.
+
+Recompte frais du 2026-10-09 : 232 modèles, 127 fichiers routers, 123 dossiers
+services, 281 pages, 215 ADR ; registry-recount.log relu : 633 Intent kinds,
+56 CORE/153 registry, 94 séquences dont 91 DRAFT, 28 frameworks. Topologie
+code inchangée, ADR +1 seulement ; ces cardinalités ne mesurent pas la maturité.
+
+La réception 436 reste distincte :
+[approbation/confiance et lecture réelle SPAWT](RECEPTION-VALIDATION-SYNTHESE.md).
+Le S réel SPAWT existe à 91 %/AI_PROPOSED v3 mais non approuvable dans ce reçu :
+readiness COMPLETE/100/stale et schéma strict divergent sur des formes/types/liens,
+sans démontrer autant de faits métier absents. Aucun contenu réel n’est corrigé
+ou approuvé par les fixtures 437 ; aucune production fournisseur reçue.
+
+## Reprise planifiée
+
+**Prochaine exécution Guidance, avant C3/C4/C6** : distinguer dans
+rtis-protocols/strategy.ts les propositions fondées sur des standards des décisions
+effectives (sélection, temps, budget) ; faire converger l’entrée manuelle
+SYNTHESIZE_S avec le calcul existant, en gardant l’assistance Notoria facultative.
+Faire passer le writeback I par
+le chemin versionné et recevoir sa synchronisation avec BrandAction choisies ;
+coordonner le remap UUID, puis prouver les versions de toutes les sources au
+recalcul. Réconcilier formes historiques, maturité par présence et schéma strict
+avec les sources réelles, sans assouplir les gates ou inventer de contenu.
+
+Recevoir ensuite consommateurs, cycles/modes/isolation et parcours réels
+SPAWT/Noël. Effort : un lot Guidance borné pour calcul/choix/contrats puis une
+passe transverse de réception. Stress 436 à 22 findings et harnais DB/shadow
+restent leurs dettes distinctes ; la recette ciblée ne les ferme pas.
+Le stress compilé vert 437 ne ferme ni les 235 parcours non reçus ni le stress
+436 à 22 findings ; son cleanup natif/stress borné est reçu.
+**Sept chantiers/dix gates non acceptés.**
+
+[ADR-0215 Accepted, livraison candidate](adr/0215-synthesis-writes-require-new-review.md) ·
+[plan et dettes en place](RESIDUAL-DEBT.md) · [circuit](PROPAGATION-MAP.md).

@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.437", date: "2026-10-09",
+    headline: "Un plan courant, une approbation à jour",
+    highlights: [
+      { emoji: "👓", title: "Relisez le plan qui a changé", body: "Les nouvelles listes d’une synthèse remplacent les précédentes en conservant leurs archives. Une modification du plan, de ses sources ou une restauration nécessite une nouvelle lecture avant approbation. Une confiance non mesurée reste indiquée comme telle." },
+    ],
+  },
+  {
     version: "6.27.436", date: "2026-10-09",
     headline: "Approuvez une synthèse sans modifier sa confiance",
     highlights: [

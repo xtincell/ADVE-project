@@ -1,5 +1,87 @@
 # Changelog — La Fusee
 
+## v6.27.437 — fix(guidance): préserver le plan courant et la relecture de la synthèse (2026-10-09)
+
+**437 est sous validation : une écriture de synthèse ne transporte plus l’approbation de son ancien plan.**
+
+- ADR-0215 Accepted : extension du gateway, de PillarVersion et des verrous
+  documentaires existants, sans modèle, page, service, router, kind ou Neter ajouté.
+  MERGE_DEEP remplace les tableaux S à toute profondeur ; les champs non concernés
+  restent et les archives conservent l’ancien plan. Les autres piliers gardent
+  leur fusion additive.
+- Un writer S ne peut ni demander VALIDATED/LOCKED ni auto-approuver par
+  PROTOCOLE_S, même à confiance élevée. Toute nouvelle version S, restauration
+  comprise, requiert une nouvelle revue. Nouvelle écriture ou dépendance modifiée
+  retire Strategy VALIDATED dans la même transaction ; S VALIDATED redevient
+  AI_PROPOSED. Une dépendance modifiée conserve S LOCKED et le rend obsolète,
+  sans autoriser sa réécriture. Confiance null conservée, y compris avec delta.
+- Ordre commun des verrous : sources documentaires, Strategy puis piliers ;
+  les writers prennent directement le verrou Strategy UPDATE. canon-sync importe
+  et recalcule S par le gateway, sans approbation implicite, et remonte ses refus.
+  L’exception d’écriture directe S est retirée du keystone ; la projection de
+  score vector reste l’exception légitime existante.
+- review-invalidation.ts est un module interne du gateway, sans service ajouté
+  au registre : retrait de revue et staleness partagés par le writer, les
+  corrections/suppressions/révocations documentaires et les deux écrivains du
+  staleness-propagator. Strategy UPDATE triées avant piliers ; sourceUse prend
+  directement UPDATE. Recherche d’âge S majuscule alors que le stockage est s :
+  un rouge/un vert puis normalisation lowercase. propagateFromPillar reçu en
+  modes autoRecalculate true/false ; Process créé seulement dans le mode auto
+  existant, zéro fetch dans la fixture, sans réception globale des modes/agents.
+- Baseline ciblée : dix rouges/trois verts, puis treize verts ; checkpoint
+  combiné 70 verts/quatre fichiers. Checkpoint PostgreSQL complet : 304 tests/
+  seize fichiers verts, dont seize cas S, avant cinq nouveaux cas ; maintenant
+  21 S ciblés verts. Trois nouveaux cas passent par ingestion.updateSource pour
+  correction VALIDATED/LOCKED et révocation d’un usage partagé sans toucher
+  le propriétaire/autre dossier ; deux exécutent la propagation d’âge réelle.
+  Suite PostgreSQL complète finale reçue : 309 tests/seize fichiers verts,
+  21 S inclus. Restauration par le router réel avec retry
+  idempotent, deux sources distinctes sans deadlock et refus S absent sans
+  ghost row inclus. Passe intermédiaire avec cleanup FK ScoreSnapshot en échec
+  conservée ; fixture corrigée et seuls orphelins s-writer-* nettoyés.
+  Cleanup couvre aussi Process/Signal/VariableStoreConfig. Première passe unité/
+  gouvernance rouge sur les seuls offsets internes du gateway, pointers corrigés
+  724/755. HARD reçu : défaut de collections réintroduit, rouge exit 1, source
+  exactement restaurée puis vert exit 0. Suite unitaire complète : 4 189/4 190,
+  seul refus withRetry à 102 ms pour un seuil <50 pendant la charge build ;
+  premier rouge conservé. Recontrôles sans modification du test : 36/1 ciblés,
+  puis 4 190/400 unitaires complets verts, sortie 0. Gauntlet final cinq exit 0,
+  gouvernance 1 620/166 verts. Build isolé exit 0, compilation 6,6 minutes puis
+  typecheck/prerender reçus ; aucune correction produit déduite du recontrôle de délai.
+  Native locale USER/opérateur TRIAL par login normal : S null v1 lu/confirmé,
+  puis writePillar réel v2 retire S/Strategy, reload « Proposition à relire »,
+  nouvelle vision relue et seconde approbation v2 HTTP 200/null conservé.
+  Fenêtre complète : 64 réponses/zéro ≥500/exception, 17 ERR_ABORTED annulés,
+  pas zéro transport. DOM 133,6 ms/load 148,2 ms/titre seulement borne observée
+  ≤517 ms, sans SLO ; captures inspectées, fixture seulement/zéro coût.
+  Stress-full instance compilée isolée exit 0/zéro finding : 46 HTTP reçus/
+  235 non reçus/zéro échec, trois queries anonymes, sept forges sans credentials
+  DEFERRED/réseau externe interdit, machine d’état. final-bounded.json, fenêtre
+  exacte 20:49:00–20:49:23 UTC : sept tâches DEFERRED, estimation zéro et aucun
+  providerTaskId. Cleanup des sept tâches/quatre marques synthétiques reçu,
+  remaining=0 ; serveur isolé arrêté/onglet temporaire fermé. Le scan historique
+  final.json est écarté de cette réception.
+  Ce vert ne reçoit pas les 235 parcours, ni ne ferme les 22 findings historiques
+  436. canon-sync reste statique + writer PG, aucun import privilégié natif.
+  CI, image et runtime
+  437 restent à recevoir ; ces cas synthétiques n’approuvent aucune marque réelle.
+- Prochaine exécution Guidance : distinguer décisions et standards de sélection/
+  temps/budget, réunir SYNTHESIZE_S manuel et calcul avec assistance Notoria
+  facultative, fermer le writeback I et la
+  désynchronisation BrandAction, coordonner le remap UUID et prouver les versions
+  source au recalcul. Réconcilier maturité par présence, formes historiques et
+  contrat strict sans gate affaiblie ni contenu inventé. Cycles, modes, isolation
+  et sept chantiers/dix gates restent ouverts.
+  auditAllStrategies : lecture statique ACTIVE seul/sans autoRecalculate=false
+  avant Process ; non reproduit/corrigé en 437. Reproduction DRAFT/VALIDATED +
+  mode manuel, séparation fraîcheur/lancement prévues à C5/échéances.
+  Recompte du 2026-10-09 : 232 modèles, 127 fichiers routers, 123 dossiers services,
+  281 pages, 215 ADR ; 633 Intent kinds, 56 CORE/153 registry, 94 séquences dont
+  91 DRAFT, 28 frameworks. Topologie code inchangée, ADR +1 seulement ; ces
+  comptes ne mesurent pas la maturité.
+  [Décision Accepted](docs/governance/adr/0215-synthesis-writes-require-new-review.md) ·
+  [réception bornée](docs/governance/RECEPTION-ECRITURE-SYNTHESE.md).
+
 ## v6.27.436 — fix(guidance): séparer approbation et confiance de la synthèse (2026-10-09)
 
 **436 est livré au runtime ; la lecture réelle du S de SPAWT est reçue, son approbation reste ouverte.**

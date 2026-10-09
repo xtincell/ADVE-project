@@ -9,6 +9,45 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Sources → nouveau plan → nouvelle revue — candidat 437 (2026-10-09)
+
+Version documentaire contrôlée sous verrou source → Strategy UPDATE → piliers
+→ gateway remplace les collections S à toute profondeur → PillarVersion garde
+l’ancien plan → rétraction atomique des anciennes approbations S/Strategy.
+Une dépendance modifiée garde S LOCKED/stale ; une restauration crée une version
+à relire, sans transporter sa validation. PROTOCOLE_S/writer ne décide aucune
+approbation et null reste null, y compris avec delta. canon-sync importe/recalcule
+S par le même chemin et rend ses refus ; vector reste projection légitime.
+
+Le même module interne review-invalidation.ts sert correction/suppression/
+révocation documentaires et les deux writers de staleness ; Strategy UPDATE
+triées/sourceUse directement UPDATE. Lookup d’âge S→s réparé après un rouge/un
+vert ; propagateFromPillar true/false reçu, Process seulement en mode auto existant.
+21 S ciblés verts ; complet 304/seize antérieur à cinq ajouts, puis final 309/seize
+reçu. HARD collections rouge/restauration exacte/vert reçu ; unitaire de délai à
+recontrôler dans le premier reçu, puis 36/1 et complet 4 190/400 verts sans
+changer le test. Cinq contrôles finaux exit 0/gouvernance 1 620/166 verts ; build
+isolé exit 0. Native locale USER/TRIAL S null v1 → écriture v2/revue retirée →
+nouvelle vision relue/réapprouvée v2/200/null ; stress compiled isolé exit 0/zéro
+finding, 46 reçus/235 non reçus/sept DEFERRED sans fournisseur. Fenêtre native
+complète bornée, 17 annulations réseau conservées ; sept DEFERRED dans la fenêtre
+stress exacte/estimation zéro/sans providerTaskId, sept tâches/quatre marques
+synthétiques nettoyées/remaining=0, serveur isolé arrêté. Parcours réels/CI/
+runtime 437 en attente. canon-sync statique + writer PG,
+sans import privilégié natif. Restauration
+via router/retry, sources distinctes et révocation d’usage partagée isolée reçues.
+La preuve d’une version documentaire fournie
+au writer ne prouve pas toutes les versions lues par le calcul. Sélection/temps/
+budget standards, SYNTHESIZE_S manuel via Notoria, writeback I/BrandAction, remap
+UUID et contrat COMPLETE/strict restent à factoriser avant C3/C4/C6. Le dispatch
+manuel doit converger vers calcul existant avec assistance Notoria facultative. Cycles/modes/
+isolation et sept chantiers non acceptés.
+auditAllStrategies reste non reçu : ACTIVE seul/flag manuel false non consulté
+avant Process, lecture statique/non corrigée ; reproduction DRAFT/VALIDATED +
+false puis séparation fraîcheur/lancement à C5/échéances (dette en place).
+[Décision Accepted](adr/0215-synthesis-writes-require-new-review.md) ·
+[reprise et bornes](RECEPTION-ECRITURE-SYNTHESE.md).
+
 ### Synthèse relue → décision humaine — runtime 436 reçu (2026-10-09)
 
 Sources/version S → contrat canonique de composition ENRICHED/COMPLETE + schéma
@@ -186,7 +225,7 @@ la dernière action recouverte reste un défaut de présentation, corrigé au sh
 - **ADVE** (`a`/`d`/`v`/`e`) = **socle fondateur**, mais **nourri par les entrées** (l'intake est le point d'entrée n°1 de la valeur ; il n'est pas l'origine, il est alimenté). Muté ensuite **uniquement** par l'opérateur via `OPERATOR_AMEND_PILLAR`.
 - **RTIS** (`r`/`t`/`i`/`s`) = **dérivé** de l'ADVE (cascade `ENRICH_R_FROM_ADVE` → `ENRICH_T_FROM_ADVE_R_SESHAT` → `GENERATE_I_ACTIONS` → `SYNTHESIZE_S`). Jamais édité à la main (contrainte type-level).
 - **Tout artefact aval** doit avoir une **chaîne traçable jusqu'à l'ADVE** — et l'ADVE jusqu'à une **entrée**.
-- **Chokepoint unique d'écriture pilier** : `writePillar` / `writePillarAndScore` dans `src/server/services/pillar-gateway/index.ts:250` (core) / `:592` (avec scoring). Ops : `REPLACE_FULL | MERGE_DEEP | SET_FIELDS | APPLY_RECOS | APPLY_RECOS_RESOLVED`. Authors : `INGESTION | BRIEF_INGEST | OPERATOR | MESTOR | ARTEMIS | GLORY | PROTOCOLE_R/T/I/S`. **Toute écriture de `Pillar.content` DOIT passer par là** (validation Zod + `PillarVersion` + scoring + cascade staleness + auto-approval). Les écritures `db.pillar.*` directes hors gateway sont des trous (cf. §6b).
+- **Chokepoint unique d'écriture pilier** : `writePillar` / `writePillarAndScore` dans `src/server/services/pillar-gateway/index.ts`. Ops : `REPLACE_FULL | MERGE_DEEP | SET_FIELDS | APPLY_RECOS | APPLY_RECOS_RESOLVED | RESTORE_VERSION`. Authors : `INGESTION | BRIEF_INGEST | OPERATOR | MESTOR | ARTEMIS | GLORY | PROTOCOLE_R/T/I/S`. **Toute écriture de `Pillar.content` DOIT passer par là** (validation Zod + `PillarVersion` + scoring + cascade staleness ; auto-approval hors S dans le candidat 437). La revue S reste une transition distincte, jamais une option du writer. Les écritures `db.pillar.*` directes de piliers métier hors gateway sont des trous ; vector est une projection de score légitime (cf. §6b).
 
 **Définition d'un trou** : une entité / un champ / une surface dont le chemin (entrée→ADVE→sortie) est **cassé, implicite, hardcodé, mocké, bypassé, ou absent**. Un trou est un drift en puissance.
 
@@ -211,7 +250,7 @@ Réseau fini. `G` = passe par le chemin gouverné (`emitIntent` et/ou gateway). 
 | **A9 ChangeRequest / OperatorAction** | workflow opérateur | divers | audit/workflow ; `RECONCILE_CAMPAIGN_TO_ORACLE` peut émettre `OPERATOR_AMEND_PILLAR_PROPOSAL[]` (boucle retour ADVE) | G | `campaign-change-request/`, `operator-action/` |
 | **A10 Brand tree** | overrides de nœud | `pillarOverrides` | résolution (lecture) + overrides via gateway | G | `brand-node/inheritance.ts:92` |
 | **A11 Connecteurs (Vault)** | CRM, ad networks, Tarsis API | `ConnectorResult<T>` | **telemetry/signal seulement — jamais piliers** | G (read-only) | `anubis/providers/*` |
-| **A12 Seeds / canon-sync / infer** | bootstrap & god-mode | objets piliers pré-fabriqués | `Pillar.content` **direct** | direct ⚠️ | `prisma/seed-*.ts`, `canon-sync.ts:144`, `infer-needs-human-fields.ts:451` |
+| **A12 Seeds / canon-sync / infer** | bootstrap & god-mode | objets piliers pré-fabriqués | seeds : `Pillar.content` direct ; infer via gateway ; canon-sync S via gateway (candidat 437), vector projection | mixte, voir C3/C4 | `prisma/seed-*.ts`, `canon-sync.ts`, `infer-needs-human-fields.ts` |
 | **A13 Réseaux de la marque (OAuth founder)** | comptes sociaux connectés par le porteur (ADR-0128) | tokens OAuth chiffrés AES-GCM + compteurs d'audience | `SocialConnection` + `FollowerSnapshot` (**telemetry/communauté seulement — jamais piliers** ; E atteint via rescan footprint A1/ADR-0121) | G (`ANUBIS_SOCIAL_CONNECT_ACCOUNT` emitIntent + governedProcedure sync/disconnect) | `oauth-integrations/`, `anubis/social-connect.ts`, `api/integrations/oauth/*` |
 | **A14 Recherche `/scorer` (empreinte publique)** | marque hors-plateforme scorée par un prospect (ADR-0151) | empreinte /100 + ventilation dimensions + compteurs followers (Apify) | `BrandFootprintSnapshot` (**base marché Seshat — jamais piliers, jamais leaderboard /200 D9** ; cache instantané par `brandKey`) | observabilité (single-writer `seshat/brand-registry/`, best-effort, non gouverné — précédent `persistSnapshot`) | `seshat/brand-registry/`, `trpc/routers/footprint.ts`, `/console/signal/brand-directory` |
 | **A15 Prospect Scoring (opérateur)** | l'opérateur place un prospect + rivaux sur le leaderboard /200 (ADR-0154) | shell Client+Strategy → footprint (`ENRICH_E`→`FollowerSnapshot`→arènes A/V) + victoires documentées LLM sourcées → quarantaine `EpreuveCandidate` → revue → `Epreuve` | `ScoreVerdict` (leaderboard) ; **jamais l'ADVE** (le scoreur ne lit pas les piliers) | G (`SESHAT_SCORE_PROSPECT`/`SESHAT_HUNT_VICTORIES`/`SESHAT_DECIDE_EPREUVE_CANDIDATE`, requireOperator ; LLM cantonné à HUNT via Gateway) | `seshat/scoreur/{prospect,candidates}.ts`, `seshat/argos/victory-hunt.ts`, `/console/signal/prospect-scoring` |
@@ -292,7 +331,7 @@ Sévérité : 🔴 à corriger · 🟡 par-design mais flaggé honnête · 🟢 
 |---|---|---|---|
 | **C1** | ~~Conversion intake → Strategy écrit `Pillar.content` direct~~ → **rerouté via le gateway** (`seedPillarFromIntake` → `writePillar`, REPLACE_FULL, author INGESTION) : validation Zod (warnings — contenu intake partiel, jamais strict) + `PillarVersion` + cascade staleness + author trail désormais appliqués sur les 3 chemins de conversion. **Bare `writePillar` volontaire** (pas `writePillarAndScore`) : préserve l'`advertis_vector` calculé à l'intake — un recompute depuis le contenu brut partiel ferait régresser le score affiché ; reconcile/score sur la prochaine écriture réelle / activation. | 🟢 **corrigé** (2026-06-16) | `trpc/routers/quick-intake.ts` (`seedPillarFromIntake`) |
 | **C2** | ~~`infer-needs-human-fields` écrit `content`+`fieldCertainty` direct~~ → **rerouté via le gateway** (`writePillar` REPLACE_FULL + `targetStatus: AI_PROPOSED`, author AUTO_FILLER) ; `fieldCertainty` (métadonnée, pas content) écrite séparément. Validation + version + cascade + author trail + protection LOCKED désormais. | 🟢 **corrigé** (2026-06-16) | `infer-needs-human-fields.ts` |
-| **C3** | `canon-sync` écrit pilier S direct + matérialise `vector` (god-mode push) hors gateway | 🟡 ouvert (best-effort) | `canon-sync.ts:144-154` |
+| **C3** | canon-sync import/recalcul S reroutés via gateway, version attendue et refus rendus ; exception directe S retirée. vector conserve sa projection légitime | 🟡 candidat 437, validation finale/runtime en attente | `canon-sync.ts` · [reçu](RECEPTION-ECRITURE-SYNTHESE.md) |
 | **C4** | seeds écrivent piliers direct (bootstrap, attendu) mais **non gardés par CI** | 🟡 par-design non-gardé | `prisma/seed-*.ts`, `scripts/seed-*` |
 | **C5** | ~~aucun test CI n'impose l'écriture pilier via gateway~~ → **KEYSTONE posé** : test CI HARD qui interdit toute écriture `Pillar.content` brute (non-vide) hors gateway, avec allowlist d'exceptions formalisée « à mes risques et périls » (hole id + reason + reroutePlanned). « single write point » = désormais invariant CI, pas convention. Attrape C1/C2/C3 + sites non catalogués (strategy.ts:78, boot-sequence) — inscrits comme risques acceptés. Le writer historique de pillar-versioning est rerouté et son exception supprimée par ADR-0207 (2026-10-08). | 🟢 **corrigé** (2026-06-16) | `tests/unit/governance/no-bare-pillar-content-write.test.ts` |
 | **C6** | gate **`BRIEF_VS_ADVE_COHERENCE` advisory posé** (ADR-0103) : cohérence brief↔noyau ADVE **déterministe** (recouvrement vocabulaire, zéro LLM), câblée pre-flight `emitIntent` sur `PTAH_MATERIALIZE_BRIEF` (frontière production), verdict `WARN` non-bloquant surfacé sur `IntentResult.warnings`. Reste 🟡 : enforcement `BLOCK` + wiring A2/A7 + UI override manuel = **Phase 24** (heuristique trop fragile pour hard-bloquer). `INTAKE_LEAD_QUALIFICATION` toujours absent (D-8.2). | 🟡 advisory posé (BLOCK Phase 24) | `mestor/gates/brief-vs-adve-coherence.ts` |
@@ -300,6 +339,12 @@ Sévérité : 🔴 à corriger · 🟡 par-design mais flaggé honnête · 🟢 
 | **C8** | écart nom-vs-réalité **Seshat→T** : `ENRICH_T_FROM_ADVE_R_SESHAT` implique un flux Seshat→pilier T, mais le prompt T raisonne ADVE+R seuls (`seshatRefs` réservé/non-utilisé). Le marché atteint le client via Oracle §33/34 + RAG, pas via une écriture tracée dans T. | 🟡 ouvert · Artemis | `rtis-cascade.ts:147` |
 
 > Les 🔴 ne doivent pas être « comblés » en inventant des données. Avancement (galileo PR #258) : ~~**C5**~~ ✅ **posé** (keystone, convention → invariant CI) · ~~**C6**~~ 🟡 **advisory posé** (cohérence brief↔ADVE déterministe, WARN non-bloquant ; BLOCK = Phase 24) · ~~**C1**~~ ✅ **rerouté** (`seedPillarFromIntake` → gateway, 3 entrées retirées de l'allowlist C5). **La « base saine » que la doctrine exige est atteinte** : tout bypass pilier restant (C2/C3 + 3 sites catalogués) est *déclaré et traçable* (allowlist « à mes risques »), plus jamais silencieux ; une modif aval ne peut plus introduire un nouveau bypass sans faire échouer la CI. ~~C2~~ ✅ rerouté + ~~C7~~ ✅ posé. Restant (non-bloquant) : **C3** (`canon-sync` god-mode best-effort — 1 site `reroutePlanned`, le pilier `vector` est une projection légitime) + **C8** (Seshat→T nom-vs-réalité — chantier Artemis). Les sites non catalogués `strategy.ts` (seed brand-create) + `boot-sequence` (normalize) restent `reroutePlanned` à l'allowlist.
+
+État courant 2026-10-09, distinct du reçu historique PR #258 ci-dessus : le
+candidat 437 retire le site S direct de C3, garde seulement la projection vector
+légitime et rend les erreurs de recalcul. Cette réparation de circuit ne reçoit
+ni le calcul/choix complet S ni les gates programme portant les mêmes numéros.
+Les autres trous et la validation finale 437 restent ouverts selon leurs reçus.
 
 ---
 

@@ -35,6 +35,7 @@ import { validateAgainstBible } from "@/lib/types/variable-bible";
 import { createVersion } from "@/server/services/pillar-versioning";
 import * as auditTrail from "@/server/services/audit-trail";
 import { assertCurrentSourceReceipts, readSourceReceipts, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
+import { markPillarsStale, withdrawSynthesisReview } from "./review-invalidation";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -129,7 +130,7 @@ export type { PillarWriteRequest, PillarWriteResult, PillarWriteAuthor, PillarWr
 
 // ── Deep merge utility ────────────────────────────────────────────────
 
-function deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
+function deepMerge(target: Record<string, unknown>, source: Record<string, unknown>, replaceArrays = false): Record<string, unknown> {
   const result = { ...target };
   for (const [key, value] of Object.entries(source)) {
     if (value === undefined) continue;
@@ -140,10 +141,11 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
       typeof value === "object" && value !== null && !Array.isArray(value)
     ) {
       // Recursive merge for nested objects
-      result[key] = deepMerge(existing as Record<string, unknown>, value as Record<string, unknown>);
+      result[key] = deepMerge(existing as Record<string, unknown>, value as Record<string, unknown>, replaceArrays);
     } else if (Array.isArray(existing) && Array.isArray(value)) {
-      // Arrays: append new items (never replace — LOI 1)
-      result[key] = [...existing, ...value];
+      // S collections describe the current derived plan, not an additive
+      // catalogue. The existing PillarVersion preserves the previous plan.
+      result[key] = replaceArrays ? [...value] : [...existing, ...value];
     } else {
       // Scalars: new value wins
       result[key] = value;
@@ -242,19 +244,34 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
   const { strategyId, pillarKey, operation, author, options } = request;
   const warnings: string[] = [];
 
+  // Content persistence cannot approve S. Only the existing reviewed-version
+  // transition owns that decision, even for canonical imports and operators.
+  if (pillarKey === "s" && ["VALIDATED", "LOCKED"].includes(options?.targetStatus ?? "")) {
+    const current = await (transaction ?? db).pillar.findUnique({ where: { strategyId_key: { strategyId, key: pillarKey } } });
+    const content = (current?.content ?? {}) as Record<string, unknown>;
+    return { success: false, version: current?.currentVersion ?? 0, previousContent: content, newContent: content,
+      stalePropagated: [], warnings: [], error: "SYNTHESIS_REVIEW_REQUIRED: approuvez la version relue de la synthèse par la transition dédiée." };
+  }
+
   // Single writes keep their historical upsert; an atomic batch includes it in
   // its transaction. createVersion uses that same transaction, so a refusal
   // rolls back both content and snapshots. The key upsert remains race-safe.
   if (operation.type !== "RESTORE_VERSION") await (transaction ?? db).pillar.upsert({
     where: { strategyId_key: { strategyId, key: pillarKey } },
-    create: { strategyId, key: pillarKey, content: {}, confidence: 0, currentVersion: 1 },
+    create: { strategyId, key: pillarKey, content: {}, confidence: null, currentVersion: 1 },
     update: {},
   });
 
   try {
     const perform = async (tx: Prisma.TransactionClient): Promise<PillarWriteResult> => {
-      if (options?.sourceReceipts || options?.requiredSourceIds?.length) {
-        await assertCurrentSourceReceipts(tx, strategyId, options.sourceReceipts ?? [], options.requiredSourceIds);
+      if (operation.type !== "RESTORE_VERSION") {
+        if (options?.sourceReceipts || options?.requiredSourceIds?.length) {
+          await assertCurrentSourceReceipts(tx, strategyId, options.sourceReceipts ?? [], options.requiredSourceIds, "UPDATE");
+        }
+        // Same strategy-before-pillar order as human review. Without this,
+        // an edit can keep the Strategy approval of an earlier S version, or
+        // deadlock with the reviewer while invalidating that approval.
+        await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${strategyId} FOR UPDATE`;
       }
       // ── Load current pillar ──────────────────────────────────────
       const pillar = await tx.pillar.findUnique({
@@ -305,8 +322,8 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
           throw new Error("RESTORE_SOURCE_RECEIPT_UNAVAILABLE: références historiques non vérifiables.");
         }
         // Same lock order as documentary writers: sources, strategy, actor, pillar.
-        await assertCurrentSourceReceipts(tx, strategyId, receipts);
-        await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${strategyId} FOR SHARE`;
+        await assertCurrentSourceReceipts(tx, strategyId, receipts, [], "UPDATE");
+        await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${strategyId} FOR UPDATE`;
         await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${author.userId} FOR SHARE`;
         await tx.$queryRaw`SELECT id FROM "StrategyCollaborator" WHERE "strategyId" = ${strategyId} AND "userId" = ${author.userId} FOR SHARE`;
         const currentActor = await getOperatorContext(author.userId, tx);
@@ -349,7 +366,7 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
           newContent = operation.content;
           break;
         case "MERGE_DEEP":
-          newContent = deepMerge(previousContent, operation.patch);
+          newContent = deepMerge(previousContent, operation.patch, pillarKey === "s");
           break;
         case "SET_FIELDS":
           // setNestedValue mutates its containers. A shallow copy also mutates
@@ -542,15 +559,23 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
       const newVersion = (pillar.currentVersion ?? 1) + 1;
 
       // ── Confidence adjustment ────────────────────────────────────
-      let newConfidence = restoration ? restoration.metadata.confidence : (pillar.confidence ?? 0);
-      if (!restoration && options?.confidenceDelta) {
-        newConfidence = Math.min(0.95, Math.max(0, (newConfidence ?? 0) + options.confidenceDelta));
+      let newConfidence = restoration ? restoration.metadata.confidence : pillar.confidence;
+      if (!restoration && newConfidence !== null && options?.confidenceDelta) {
+        newConfidence = Math.min(0.95, Math.max(0, newConfidence + options.confidenceDelta));
+      }
+
+      // A new S version (including a restored historical plan) is a new
+      // reviewable object. Preserve the content/confidence, never transport
+      // an old decision to the new version.
+      if (pillarKey === "s" && (targetStatus === "VALIDATED" || targetStatus === "LOCKED")) {
+        targetStatus = "AI_PROPOSED";
+        warnings.push("La synthèse a changé de version ; son approbation doit être renouvelée après lecture.");
       }
 
       // ── v4 AUTO-APPROVAL: auto-promote AI_PROPOSED → VALIDATED ──
       // Conditions: RTIS protocol author + high confidence + low impact
       if (
-        !restoration && targetStatus === "AI_PROPOSED" &&
+        pillarKey !== "s" && !restoration && targetStatus === "AI_PROPOSED" &&
         author.system.startsWith("PROTOCOLE_") &&
         (newConfidence ?? 0) > 0.9 &&
         warnings.length === 0
@@ -628,15 +653,8 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
 
       // ── STALE: propagate to dependents (cascade ADVERTIS) ────────
       const dependents = getPillarDependents(pillarKey);
-      if (dependents.length > 0) {
-        await tx.pillar.updateMany({
-          where: {
-            strategyId,
-            key: { in: dependents },
-          },
-          data: { staleAt: new Date() },
-        });
-      }
+      await markPillarsStale(tx, strategyId, dependents);
+      if (pillarKey === "s") await withdrawSynthesisReview(tx, strategyId);
 
       // ── SCORE: recalculate (outside transaction to avoid timeout) ─
       // Will be done after transaction commits — see below
@@ -700,7 +718,7 @@ export async function writePillarsAtomically(requests: PillarWriteRequest[]): Pr
   if (requests.some((r) => r.strategyId !== strategyId)) throw new Error("PILLAR_BATCH_STRATEGY_MISMATCH");
   const results = await db.$transaction(async (tx) => {
     await assertCurrentSourceReceipts(tx, strategyId, requests.flatMap((r) => r.options?.sourceReceipts ?? []),
-      requests.flatMap((r) => r.options?.requiredSourceIds ?? []));
+      requests.flatMap((r) => r.options?.requiredSourceIds ?? []), "UPDATE");
     const written: PillarWriteResult[] = [];
     for (const request of requests) {
       const result = await writePillar(request, tx);

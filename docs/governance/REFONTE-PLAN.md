@@ -1,5 +1,47 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Plan courant et relecture — candidat 437 (2026-10-09)
+
+ADR-0215 Accepted étend le gateway et les archives existants : collections S
+remplacées à toute profondeur, pas d’auto-approbation par writer, version restaurée
+à relire et rétraction atomique S/Strategy après écriture ou dépendance modifiée.
+Le verrou LOCKED reste ; la mesure inconnue reste null. Sources documentaires
+→ Strategy UPDATE → piliers, canon-sync par gateway avec erreur rendue ; aucune
+entité/service/kind/page/Neter ajouté. review-invalidation.ts, module interne,
+partage rétraction/staleness avec invalidation documentaire et deux writers du
+staleness-propagator ; Strategy UPDATE triées/sourceUse directement UPDATE.
+S→s corrigé après un rouge/un vert ; propagateFromPillar true/false reçu, Process
+seulement en mode auto existant/zéro fetch. 21 cas S ciblés verts ; complet
+304/seize reçu avant cinq ajouts, puis final complet 309/seize reçu. Baseline
+dix rouges/trois verts puis treize verts, checkpoint 70/quatre fichiers.
+Cleanup intermédiaire corrigé, fixture nettoyée ; HARD collections rouge/
+restauration exacte/vert reçu. Unitaire 4 189/4 190 : seul délai withRetry sous
+charge build conservé ; recontrôles 36/1 puis complet 4 190/400 verts sans changement
+du test. Cinq contrôles finaux exit 0/gouvernance 1 620/166 verts ; build isolé
+terminé exit 0. Native locale USER/TRIAL approbation null v1 → écriture v2/revue
+retirée → proposition relue/réapprouvée v2/200/null reçue. Stress isolé compiled
+exit 0/zéro finding, 46 HTTP reçus/235 non reçus/sept DEFERRED sans fournisseur ;
+pas réception des autres parcours ni clôture des 22 findings 436. canon-sync
+statique + writer PG seulement. Sept tâches de la fenêtre stress bornée DEFERRED/
+estimation zéro/sans providerTaskId, nettoyées avec quatre marques synthétiques,
+remaining=0 ; serveur isolé arrêté. CI/image/runtime 437 en attente. Décision architecturale
+acceptée, livraison et tous autres modes/agents non reçus.
+
+Prochaine exécution Guidance avant C3/C4/C6 : séparer estimations standards et
+décisions de sélection/temps/budget, converger SYNTHESIZE_S manuel vers calcul
+existant avec assistance Notoria facultative,
+passer le writeback I par le chemin versionné et réconcilier BrandAction,
+coordonner le remap UUID et prouver les versions source au recalcul. Réconcilier
+les formes historiques, maturité par présence et contrat strict sans abaisser
+la gate ou inventer des faits. Reprendre ensuite consommateurs, cycles/modes/
+isolation et recette réelle SPAWT/Noël ; les sept chantiers restent ouverts.
+À C5/échéances : reproduire auditAllStrategies sur DRAFT/VALIDATED + manuel false,
+puis séparer fraîcheur/lancement automatique. Lecture ACTIVE seul/flag non
+consulté statique, ni reproduite ni corrigée dans 437.
+[Décision Accepted](adr/0215-synthesis-writes-require-new-review.md) ·
+[réception bornée](RECEPTION-ECRITURE-SYNTHESE.md) ·
+[dette et déclencheur](RESIDUAL-DEBT.md).
+
 ## Décision de synthèse — runtime 436 reçu, métier partiel (2026-10-09)
 
 ADR-0214 Proposed factorise l’état de validation dans pillar-gateway existant,

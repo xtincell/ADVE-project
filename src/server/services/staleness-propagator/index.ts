@@ -8,6 +8,7 @@
 
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { markPillarsStale } from "@/server/services/pillar-gateway/review-invalidation";
 
 interface PropagationResult {
   pillarsMarkedStale: string[];
@@ -85,7 +86,7 @@ export async function propagateFromPillar(
   // 2. For each dependent, check if it needs recalculation
   for (const depKey of dependents) {
     const pillar = await db.pillar.findUnique({
-      where: { strategyId_key: { strategyId, key: depKey } },
+      where: { strategyId_key: { strategyId, key: depKey.toLowerCase() } },
     });
 
     if (!pillar) continue;
@@ -112,10 +113,7 @@ export async function propagateFromPillar(
       result.signalsCreated++;
 
       // Mark the pillar record as stale
-      await db.pillar.updateMany({
-        where: { strategyId, key: depKey.toLowerCase() },
-        data: { staleAt: new Date() },
-      });
+      await db.$transaction(tx => markPillarsStale(tx, strategyId, [depKey]));
 
       // Create a refresh Process so the scheduler/pipeline-orchestrator picks it up
       await db.process.create({
@@ -252,10 +250,7 @@ export async function auditAllStrategies(): Promise<{
           });
 
           // Mark the pillar record as stale
-          await db.pillar.updateMany({
-            where: { strategyId: strategy.id, key: pillar.key.toLowerCase() },
-            data: { staleAt: new Date() },
-          });
+          await db.$transaction(tx => markPillarsStale(tx, strategy.id, [pillar.key]));
 
           // Create a refresh Process for the scheduler/pipeline-orchestrator
           await db.process.create({

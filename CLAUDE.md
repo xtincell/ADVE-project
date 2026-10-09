@@ -4,6 +4,59 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
+**6.27.437 candidat — versions S et relecture, runtime 436 inchangé** : le gateway
+remplace les tableaux S à toute profondeur, conserve l’historique dans PillarVersion
+et retire atomiquement les anciennes approbations S/Strategy après écriture ou
+changement de dépendance. S LOCKED reste verrouillé et obsolète lorsque sa source
+change. Un writer S/PROTOCOLE_S n’approuve jamais le contenu ; restaurer un ancien
+plan crée une version à relire. null reste inconnu, même avec delta. Les writers
+documentaires verrouillent sources puis Strategy UPDATE puis piliers ; canon-sync
+importe/recalcule S par le gateway et rend ses erreurs. vector reste une projection
+légitime, pas une exception d’écriture S. review-invalidation.ts, module interne
+du gateway, est partagé par writer, invalidation documentaire et les deux writers
+de staleness ; Strategy UPDATE triées avant piliers, sourceUse directement UPDATE.
+La recherche d’âge normalise S→s (un rouge/un vert reproduit) ; propagation réelle
+autoRecalculate true/false reçue, Process seulement en mode auto existant/zéro fetch.
+Baseline dix rouges/trois verts puis treize verts, checkpoint 70/quatre fichiers ;
+checkpoint complet PostgreSQL 304/seize avant cinq ajouts, puis 21 S ciblés
+verts et complet final 309/seize reçus. Corrections documentaires VALIDATED/LOCKED et révocation de l’usage partagé
+par ingestion.updateSource reçues sans toucher propriétaire/autre dossier.
+Cleanup FK intermédiaire conservé puis fixture nettoyée ;
+rollback réel/retry, sources distinctes sans deadlock et S absent sans création
+reçus. HARD collections rouge exit 1/restauration exacte/vert exit 0 reçu.
+Unitaire complet 4 189/4 190 : seul withRetry elapsed 102 ms/seuil <50 sous charge
+build, premier rouge conservé. Recontrôles sans changement du test : 36/1 puis
+4 190/400 unitaires complets verts ; cinq contrôles finaux exit 0, gouvernance
+1 620/166 verts. Build isolé exit 0, compile 6,6 minutes/typecheck/prerender reçus ;
+aucun correctif produit du délai déduit. Native locale USER/TRIAL/login normal :
+S null v1 approuvé, écriture réelle v2 AI_PROPOSED/Strategy DRAFT/null, UI
+« Proposition à relire », vision relue et seconde approbation v2 HTTP 200/null.
+64 réponses/zéro ≥500/exception sur fenêtre complète, 17 ERR_ABORTED annulés,
+pas zéro transport ; DOM 133,6/load 148,2 ms/titre borne ≤517 ms, sans SLO.
+Stress compiled isolé exit 0/zéro finding : 46 HTTP reçus/235 non reçus/zéro
+échec, trois queries anonymes/sept forges DEFERRED sans credentials/réseau
+externe interdit, machine d’état. Fenêtre finale bornée 20:49:00–20:49:23 UTC :
+exactement sept DEFERRED/estimation zéro/sans providerTaskId ; final.json historique
+écarté. Sept tâches/quatre marques synthétiques nettoyées/remaining=0, serveur
+isolé arrêté/onglet temporaire fermé. Aucun noyau
+réel/cycle/fournisseur reçu ; 235 parcours et stress 436 à 22 findings restent
+ouverts. canon-sync statique + writer PG, aucun import privilégié natif.
+CI/image/runtime 437 non reçus. Premières erreurs de
+pointers internes corrigées 724/755. Autres modes/agents et versions source du calcul non reçus.
+Sélection/temps/budgets standards, SYNTHESIZE_S manuel via Notoria, writeback I/
+BrandAction, remap UUID, versions source au recalcul et contradiction COMPLETE/
+strict restent dans la prochaine exécution Guidance avant C3/C4/C6 ; l’entrée
+manuelle doit converger vers le calcul existant avec assistance Notoria facultative. Aucun noyau
+réel approuvé ni cycle reçu ; sept chantiers/dix gates non acceptés.
+auditAllStrategies (statique) : ACTIVE seul et mode manuel false non consulté
+avant Process ; non corrigé. Reproduction DRAFT/VALIDATED + false et séparation
+fraîcheur/lancement prévues à la prochaine réception C5/échéances.
+Recompte 2026-10-09 : 232 modèles, 127 fichiers routers, 123 dossiers services,
+281 pages et 215 ADR ; registres 633 Intent kinds/56 CORE/153 registry/94 séquences
+dont 91 DRAFT/28 frameworks. Cardinalités inchangées hors ADR +1, pas maturité.
+[ADR-0215 Accepted, décision architecturale](docs/governance/adr/0215-synthesis-writes-require-new-review.md) ·
+[reçu candidat](docs/governance/RECEPTION-ECRITURE-SYNTHESE.md).
+
 **6.27.436 livré au runtime — approbation S distincte de sa confiance, métier partiel** : le helper d’état
 dans pillar-gateway existant est partagé par les deux routes gouvernées de
 validation, sans kind/service/modèle/page/droit nouveau. Contrat ENRICHED/COMPLETE

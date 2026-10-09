@@ -16,6 +16,29 @@
 
 ## Quick start
 
+**6.27.437 en validation, runtime 436** : une nouvelle synthèse remplace ses
+anciennes collections et demande une nouvelle lecture avant approbation.
+L’ancien plan reste dans l’historique ; restaurer ce plan ne restaure pas son
+approbation. Les changements de sources retirent la validation précédente,
+sans déverrouiller une synthèse protégée ni transformer une confiance inconnue
+en zéro. Les vérifications PostgreSQL locales sont reçues ; validation globale,
+parcours réel et livraison 437 restent ouverts. Les choix d’actions, estimations
+et formes historiques demandent encore une réconciliation.
+Corrections de documents et retrait de leur usage partagé suivent ce même
+contrat de relecture. La propagation d’âge respecte le mode automatique existant ;
+ces cas ciblés ne certifient pas tous les modes de fonctionnement.
+Suites PostgreSQL et unitaire complètes, contrôles finaux et test de
+réintroduction/restauration reçus. Le premier échec de délai a passé ses
+recontrôles sans changer le test ; build isolé terminé. Un compte normal a reçu
+le parcours local approbation → modification → nouvelle lecture/approbation,
+en conservant la confiance inconnue. Le stress isolé passe sur les chemins
+visités ; les autres parcours, marques réelles et livraison 437 restent ouverts.
+Les fixtures ont été nettoyées et le serveur de recette arrêté ; aucune marque
+réelle approuvée ni production payante reçue.
+Le calcul commun reste la prochaine étape,
+avec assistance des agents facultative.
+[Périmètre et suite prévue](docs/governance/RECEPTION-ECRITURE-SYNTHESE.md).
+
 **6.27.436 livré, réception métier partielle** : la page de production distingue une
 synthèse absente, incomplète ou composée et une confiance non mesurée d’un vrai
 zéro. Une confirmation conserve la confiance enregistrée et porte sur la version

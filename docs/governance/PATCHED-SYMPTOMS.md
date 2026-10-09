@@ -30,6 +30,51 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-09 · Candidat 437, contre-exemples PostgreSQL reçus : régénérations S
+appendant les anciens plans à toute profondeur, writer/PROTOCOLE_S donnant une
+approbation implicite et Strategy VALIDATED survivant à une nouvelle version ou
+dépendance. Le gateway remplace les collections S, archive l’ancien contenu et
+rétracte les anciennes approbations dans la transaction ; dépendance modifiée
+garde S LOCKED/stale. Restauration exige une nouvelle revue et null reste null.
+canon-sync passe son import/recalcul S par le gateway et remonte les refus ;
+exception directe S retirée, vector reste projection légitime. Cause bornée :
+fusion d’une collection source confondue avec remplacement d’un plan dérivé,
+et statut de revue traité comme propriété transmissible du contenu. Ordre source
+→ Strategy UPDATE → piliers évite l’upgrade SHARE→UPDATE entre deux writers.
+Dix rouges/trois verts puis treize verts ; checkpoint 70/quatre fichiers ;
+checkpoint complet 304 PostgreSQL/seize fichiers verts, seize cas S dont rollback réel/retry,
+sources distinctes et refus sans ghost row. Cleanup FK intermédiaire conservé
+puis fixture corrigée/nettoyée. Ce checkpoint précède l’extension et les recettes
+finales ci-dessous ; CI/runtime restent attendus. Choix/calcul/contrats/
+consommateurs restent dans la dette S unique.
+[Réception candidate](RECEPTION-ECRITURE-SYNTHESE.md).
+
+Extension du même lot : review-invalidation.ts factorise la rétraction/staleness
+pour gateway, correction/suppression/révocation documentaires et les deux writers
+du staleness-propagator. Correction réelle ingestion.updateSource et révocation
+d’usage partagé isolées du propriétaire/autre dossier : trois nouveaux PG verts.
+La propagation d’âge recherchait key S alors que le stockage est s : un rouge/
+un vert reproduits, lookup lowercase réparé ; deux PG true/false exécutent
+propagateFromPillar, Process seulement en mode auto existant/zéro fetch. Cause
+bornée supplémentaire : marquage stale dupliqué sans rétraction de revue et casse
+de clé divergente. Strategy UPDATE triées avant piliers/sourceUse directement
+UPDATE ; 21 S ciblés verts. Le complet 304/seize reste antérieur à ces cinq cas,
+suite complète finale 309/seize reçue, 21 S inclus. Premiers offsets gateway des
+gardes unitaires/gouvernance corrigés 724/755. HARD collections rouge exit 1 puis
+restauration exacte/vert exit 0 reçu ; unitaire complet 4 189/4 190, seul délai
+withRetry 102 ms/seuil <50 sous charge build, premier rouge conservé. Recontrôles
+36/1 puis complet 4 190/400 verts sans changer le test, aucune correction produit
+du délai déduite. Cinq contrôles finaux exit 0/gouvernance 1 620/166 verts ; build
+isolé terminé exit 0. Native locale USER/TRIAL : approbation S null v1, vraie
+écriture v2 retire revue S/Strategy, proposition à relire puis nouvelle
+approbation v2/200/null. Stress isolé compilé exit 0/zéro finding, 46 HTTP reçus/
+235 non reçus/sept DEFERRED sans fournisseur, estimation zéro/sans providerTaskId
+dans la fenêtre 20:49:00–20:49:23 UTC. Sept tâches/quatre marques synthétiques
+nettoyées/remaining=0, serveur isolé arrêté ; scan final.json historique écarté.
+Fenêtre native complète bornée avec 17 annulations réseau conservées ; aucun
+import canon-sync privilégié natif, aucun noyau réel/cycle reçu, aucune livraison
+ni réception globale de l’agentique déduite.
+
 2026-10-09 · 436 livré au runtime, correctif reçu sur contre-exemples PostgreSQL locaux
 et quatorze cas ciblés verts : confiance absente rendue 0 %, confirmation transformant la mesure
 en 1.0 et S absent pouvant valider Strategy. Les deux routes de validation utilisent

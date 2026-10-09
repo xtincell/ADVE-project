@@ -17,6 +17,34 @@ Layer N peut importer ≤ N (sauf `import type` cross-layer). Enforced par
 [`eslint.config.mjs`](../../eslint.config.mjs)) +
 `madge --circular`.
 
+**Extension Guidance 437, candidate** : le gateway existant distingue collection
+source additive et plan S remplacé à toute profondeur. PillarVersion garde le
+contenu antérieur ; nouvelle version/restauration ou dépendance modifiée retire
+atomiquement les anciennes approbations S/Strategy. LOCKED reste une protection
+d’écriture lorsque S devient stale. PROTOCOLE_S/writer ne produit aucune décision
+humaine ; null n’est pas transformé en mesure. Les reçus documentaires prennent
+leurs verrous avant Strategy UPDATE puis les piliers, dans l’ordre de la revue.
+canon-sync importe/recalcule S par le gateway et remonte les erreurs ; vector
+reste projection de score hors des piliers métier. Pas de nouvelle couche/service/
+entité/kind/Neter. review-invalidation.ts est une primitive interne du gateway :
+gateway, invalidation documentaire et deux écrivains de staleness partagent
+retrait de revue/marquage stale. Strategy UPDATE triées avant piliers ; sourceUse
+prend UPDATE sans upgrade. Lookup d’âge S→s réparé ; true/false reçus sur
+propagateFromPillar, Process uniquement dans le mode auto existant. 21 S ciblés
+reçus dans le complet PG 309/seize ; HARD collections rouge/restauration exacte/
+vert reçu. Unitaire complet 4 190/400/cinq contrôles finaux verts ; premier rouge
+de délai conservé/recontrôlé sans changer le test. Autres modes et versions source
+du calcul non reçus ; build isolé exit 0 et native locale USER/TRIAL reçue sur
+S null v1 → écriture v2/rétraction → relecture/réapprobation v2/null. Stress
+compilé isolé vert borné (46 HTTP reçus/235 non reçus, sans fournisseur),
+canon-sync statique + writer PG sans import privilégié natif. Sept DEFERRED de
+la fenêtre stress bornée/estimation zéro/sans providerTaskId ; sept tâches et
+quatre marques synthétiques nettoyées/remaining=0, serveur isolé arrêté.
+Parcours réels et CI/runtime en attente. La convergence
+de l’entrée manuelle vers le calcul gardera Notoria facultative.
+Décision architecturale acceptée, livraison candidate.
+[ADR-0215 Accepted](adr/0215-synthesis-writes-require-new-review.md).
+
 ## Panthéon Neteru — cascade Glory→Brief→Forge
 
 **7 Neteru actifs** (Mestor, Artemis, Seshat, Thot, Ptah, **Imhotep** Phase 14, **Anubis** Phase 15). Plafond APOGEE = 7 atteint. Source narrative : [PANTHEON.md](PANTHEON.md).

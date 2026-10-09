@@ -193,9 +193,9 @@ conservé. Corpus/édition SPAWT et zéro tâche/version de forge inchangés.
 Livraison fermée ; bouton/rôles restent reçus avec préconditions synthétiques locales,
 aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
 
-- **Confiance S et décision de validation — 436 livré, métier partiel** :
+- **Synthèse S : revue 436 livrée, écritures 437 candidates, métier partiel** :
   le faux label ACTIVE avait été corrigé en 434 ; les défauts distincts d’absence
-  rendue 0 % et de confirmation imposant 1.0 sont réparés dans le candidat.
+  rendue 0 % et de confirmation imposant 1.0 sont livrés en 436.
   Les deux routes partagent une décision d’état gouvernée dans pillar-gateway,
   sans nouveau modèle/service/permission : composition canonique ENRICHED/COMPLETE
   et schéma S strict, confiance conservée, version relue et sources contrôlées
@@ -214,18 +214,63 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   business absents. **Réconcilier** les contrats et formes historiques avec le
   S calculé et ses sources réelles, puis les consommateurs ; ne pas affaiblir la
   gate, forcer une approbation ou fabriquer du contenu pour passer le contrôle.
-  Preuve privée native-s-composition-contract-conflict.json. Revue statique
-  bornée : l’écriture OPERATOR conserve validationStatus par défaut en
-  incrémentant currentVersion ; canon-sync rafraîchit S.computed/content
-  directement ; sequence-vault considère confiance ≥0.6 OU VALIDATED pour son
-  préalable. Aucun comportement global reçu par cette lecture. Auditer ces
-  écrivains/consommateurs ainsi que la modification de source pendant création
-  de projets, sans déduire leur couverture des deux routes réparées.
-  **Déclencheur** : prochain lot transverse de factorisation des contrats/formes
-  S et de ses écrivains/consommateurs avant
-  acceptation C3/C4/C6 ; effort : un lot borné de réception et une passe transverse.
+  Preuve privée native-s-composition-contract-conflict.json. La revue statique
+  436 relevait la validation conservée après currentVersion++ et le rafraîchissement
+  direct canon-sync. **437 candidat, causes locales réparées** : collections S
+  remplacées à toute profondeur, historique conservé ; aucune approbation
+  writer/PROTOCOLE_S ; nouvelle version/restauration ou dépendance modifiée
+  retire les anciennes approbations dans la transaction. LOCKED conservé/stale,
+  null conservé avec delta ; sources → Strategy UPDATE → piliers ; import/recalcul
+  canon-sync par gateway et erreurs rendues. Module interne review-invalidation
+  partagé avec correction/suppression/révocation documentaire et les deux writers
+  de staleness ; Strategy UPDATE triées avant piliers/sourceUse directement UPDATE.
+  Lookup d’âge S→s réparé après un rouge/un vert ; vrai propagateFromPillar
+  true/false reçu, Process seulement en mode auto existant/zéro fetch. 21 S ciblés
+  verts, dont trois corrections/révocation via ingestion.updateSource préservant
+  propriétaire/autre dossier ; complet 304/seize antérieur aux cinq nouveaux,
+  puis complet final 309/seize reçu. Cleanup FK intermédiaire corrigé et fixture
+  nettoyée (ScoreSnapshot/Process/Signal/VariableStoreConfig inclus).
+  HARD collections rouge exit 1/restauration exacte/vert exit 0 reçu. Unitaire
+  complet 4 189/4 190, seul withRetry 102 ms/seuil <50 sous charge build à
+  recontrôler dans le premier reçu, conservé. Recontrôles sans changement du test :
+  36/1 puis unitaire complet 4 190/400 verts ; cinq contrôles finaux exit 0,
+  gouvernance 1 620/166 verts. Aucun défaut produit réparé déduit de ce recontrôle.
+  Build isolé exit 0/typecheck/prerender reçus. Native locale USER/TRIAL :
+  approbation S null v1, vraie écriture v2 retire revue S/Strategy, proposition
+  relue/réapprouvée v2/200/null. Fenêtre complète 64 réponses/zéro ≥500/exception,
+  17 annulations ERR_ABORTED conservées, pas zéro transport/SLO. Stress isolé
+  compiled exit 0/zéro finding, 46 reçus/235 non reçus/sept DEFERRED sans credentials,
+  réseau externe interdit ; ne ferme pas les parcours absents ni les 22 findings
+  436. canon-sync statique + writer PG, aucun import privilégié natif. Sept tâches
+  de la fenêtre stress bornée DEFERRED/estimation zéro/sans providerTaskId,
+  nettoyées avec quatre marques synthétiques/remaining=0 ; serveur isolé arrêté.
+  CI/image/runtime 437 encore attendus ;
+  aucune validation réelle ni couverture globale déduite.
+  **Reste à fermer** : rtis-protocols/strategy.ts sélectionne/planifie/budgète à
+  partir de standards présentés comme décisions ; distinguer proposition,
+  estimation et choix effectif, puis brancher les choix réels. SYNTHESIZE_S
+  manuel appelle encore Notoria batch ; le faire converger avec le calcul existant
+  en gardant une assistance Notoria facultative.
+  Fermer le writeback I direct et sa synchronisation BrandAction choisies par
+  le chemin versionné, coordonner le remap UUID et prouver toutes les versions
+  source au recalcul. Réconcilier maturité COMPLETE par présence/formes
+  historiques/schéma strict sans gate affaiblie ni matière inventée. Recevoir
+  les consommateurs (dont sequence-vault : confiance ≥0.6 OU VALIDATED), la
+  source modifiée pendant création de projets, puis cycles/modes/isolation.
+  **Âge global, lecture statique seulement** : auditAllStrategies scanne
+  Strategy.status ACTIVE et ne consulte pas autoRecalculate=false avant Process.
+  Ce défaut n’est ni reproduit ni corrigé en 437. **Plan** : reproduire les
+  dossiers DRAFT/VALIDATED et le mode manuel false, puis séparer marquage de
+  fraîcheur et lancement automatique du refresh. **Déclencheur spécifique** :
+  prochaine réception C5/échéances ; effort : un lot borné de reproduction et
+  factorisation du déclenchement, sans déduire sa réception de propagateFromPillar.
+  **Déclencheur** : prochaine exécution Guidance, avant acceptation C3/C4/C6 ;
+  effort : un lot borné calcul/choix/contrats puis une passe transverse de réception.
+  Sept chantiers/dix gates restent non acceptés.
   [ADR-0214 Proposed](adr/0214-synthesis-approval-preserves-confidence.md) ·
-  [bornes et preuves](RECEPTION-VALIDATION-SYNTHESE.md).
+  [reçu 436](RECEPTION-VALIDATION-SYNTHESE.md) ·
+  [ADR-0215 Accepted, livraison candidate 437](adr/0215-synthesis-writes-require-new-review.md) ·
+  [bornes et reprise](RECEPTION-ECRITURE-SYNTHESE.md).
 - **Accueil console et compte de catalogue figé** : portal-welcome.tsx:101 rend
   « Intent Catalog 350+ » ; le registre INTENT_KINDS compte 633 au recompte du
   2026-10-09. Constat natif local dans l’accueil console, sans correctif livré.
@@ -1067,9 +1112,14 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
   `== caller` ou nœud corporate qu'il possède, sinon ignorer et défaut au contexte du caller).
   **Effort** : ~½ session (touche le modèle d'accès portfolio multi-tenant). **Déclencheur** : prochaine
   passe multi-opérateur (lié à `session.operatorId`/`Deal.operatorId` ci-dessus) OU 2ᵉ opérateur réel.
-- **C3 canon-sync god-mode** : écrit le pilier S direct (best-effort, push manuel god-mode) —
-  2 entrées allowlist C5 (`reroutePlanned:true` pour le bloc computed). **Plan** : reroute gateway.
-  **Déclencheur** : basse priorité, prochain passage sur canon-sync.
+- **Trou C3 canon-sync — reroutage candidat 437** : l’écriture S directe est
+  remplacée par le gateway pour import/recalcul, version attendue et AI_PROPOSED ;
+  refus rendus dans results.s. Son exception keystone est retirée ; vector reste
+  la projection de score légitime existante. **Fermer** : recevoir contrôles
+  finaux/CI/runtime de ce chemin et son refus de recalcul, sans assimiler le
+  reroutage à une composition S réelle reçue. **Déclencheur** : validation du
+  lot 437 ; effort : une réception bornée. Contrats/calculs/consommateurs restent
+  dans la dette S ci-dessus : [reçu candidat](RECEPTION-ECRITURE-SYNTHESE.md).
 - **C6 `BRIEF_VS_ADVE_COHERENCE` WARN → BLOCK + override** — 🟢 **MÉCANISME BÂTI (v6.27.313)**,
   activation = décision opérateur : le mode BLOCK + l'override fondateur sont câblés et testés
   ([ADR-0103](adr/0103-brief-vs-adve-coherence-deterministic-advisory.md)). Défaut **WARN**
@@ -1612,6 +1662,16 @@ Ce résultat n’est ni un stress vert ni une réception protégée/cycle/fourni
 Suites locales complètes 4 190/400 unitaires et 288/15 PG vertes restent des
 preuves distinctes. Les refus réseau et le redémarrage sont conservés ; aucune
 refonte du harnais sans diagnostic de cette interruption.
+
+Complément 437 : instance compilée isolée localhost:3320, build exit 0,
+stress-full exit 0/zéro finding ; 46 HTTP reçus/235 non reçus/zéro échec,
+trois queries anonymes et sept forges sans credentials DEFERRED avec réseau
+externe interdit, machine d’état. final-bounded.json, fenêtre exacte
+20:49:00–20:49:23 UTC : sept DEFERRED/estimation zéro/sans providerTaskId ;
+final.json historique trop large écarté. Sept tâches/quatre marques synthétiques
+nettoyées/remaining=0, serveur isolé arrêté/onglet temporaire fermé.
+Ce reçu ne visite pas les 235 parcours, ne reçoit pas la native globale et
+ne ferme pas les 22 findings historiques 436 ; aucune production payante reçue.
 
 Plan : imposer une base et une cible jetables, injecter explicitement un
 provider de test et prouver qu’aucun appel réseau sortant n’est possible avant

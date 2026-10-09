@@ -6,6 +6,27 @@ Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts`
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
+**437 candidat — mêmes routes, relecture des nouvelles versions** : canon-sync
+importe S sans approbation et recalcule computed/globalBudget par
+writePillarAndScore ; les refus apparaissent dans results.s, plus de catch
+silencieux. La projection vector conserve son exception légitime. rollbackVersion
+restaure un plan S dans une nouvelle version AI_PROPOSED, sans transporter sa
+validation ; retry idempotent reçu en PostgreSQL avec null conservé. Les routes
+de revue 436 restent le point d’approbation ; aucune route/permission/kind ajouté.
+ingestion.updateSource réutilise l’invalidation commune pour correction et
+révocation d’usage partagé ; trois cas PG reçus préservent propriétaire/autre
+dossier. 21 cas S dans le complet PostgreSQL 309/seize reçus, HARD collections
+rouge/restauration exacte/vert reçu ; unitaire complet 4 190/400/cinq contrôles
+finaux verts après recontrôle sans changement du test de délai. Native locale
+USER/TRIAL : S null v1 puis v2 effectivement relue après écriture/revue retirée,
+seconde approbation HTTP 200/corps relu. canon-sync statique + writer PG seulement,
+aucun import privilégié natif ; CI/runtime 437 en attente. SYNTHESIZE_S manuel doit converger vers calcul existant
+avec assistance Notoria facultative ; aucun nouveau router ou droit de partage.
+Cleanup natif/stress reçu : sept DEFERRED bornées sans providerTaskId et quatre
+marques synthétiques supprimées, remaining=0 ; serveur isolé arrêté. Ce reçu
+ne concerne aucun dossier réel.
+[Réception candidate](RECEPTION-ECRITURE-SYNTHESE.md).
+
 **436 livré — routes de validation factorisées** : strategy.validateSynthesis
 devient une entrée compatible de pillar.transitionStatus, même
 LEGACY_PILLAR_TRANSITION_STATUS gouverné et requireOperator existant. Pour S,
@@ -254,7 +275,7 @@ reçue ; reload local tronqué et bornes tardives production, sans SLO déduit.
 | `cockpit-router.ts` | Cockpit-specific aggregator (piliers scopés ADR-0166) | G | lecture seule |
 | `accounts.ts` | Console Superviseur (Vague 7) : rôles comptes + `createBrandLogin` (ADR-0140, payload redacté) | G | point gouverné présent |
 | `brand-mcp.ts` | Clés MCP scopées à la marque — surface founder self-service (ADR-0145) | G | appels à suivre |
-| `canon-sync.ts` | Push canon UPgraders → base live (Vague 10 ; god-mode best-effort C3) | G | point gouverné présent |
+| `canon-sync.ts` | Push canon UPgraders ; S importé/recalculé via gateway et refus rendus (candidat 437), vector reste projection de score | G | point gouverné présent |
 | `feedback.ts` | Remontées testeurs (ADR-0155) : dépôt + inbox opérateur | G | point gouverné présent |
 | `governance.ts` | Audit trail IntentEmission + compensating intents (anticipé §11 — livré) | G | point gouverné présent |
 | `phase18-residuals.ts` | Formulaire résiduels Phase 18 (`upsert/resolve/dismiss/list/stats`) | G | appels à suivre |
