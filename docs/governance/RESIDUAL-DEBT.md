@@ -23,8 +23,7 @@ par la règle LFA- en 422 et 423 ; aucune page renommée/publiée ni émission
 historique inventée. Cette réception ne ferme pas l’univers de marque ou les
 sept chantiers ; les résidus actifs suivent.
 
-- **Identité au-delà de la copie v1** : public-brand-v1 ne porte pas tokens de
-  design ni voix structurée. 431 reçoit choix/rendu et octets du logo public :
+- **Identité au-delà de la vitrine reçue** : 431 reçoit choix/rendu et octets du logo public :
   sélection sans promotion, copie VOLUME vérifiée, publication SPAWT v3 puis deux
   logos vitrine/page publique chargés ; textes/liens inchangés. Causes du rendu,
   choix par id, CSP, origine inlinée et octets des nouvelles éditions fermées dans
@@ -33,19 +32,24 @@ sept chantiers ; les résidus actifs suivent.
   Admission documentaire ultérieure : CANON conservé/consultable, 13 textes
   exacts et 53 binaires seulement inventoriés, DECLARED/analyse désactivée ;
   références antérieures et édition v3 conservées. Comparaisons readonly du
-  coffre/CANON/checkout/HTTP reçues, sans raccord dynamique déduit. Rôles
+  coffre/CANON/checkout/HTTP reçues, sans raccord dynamique déduit de cette seule
+  admission. Rôles
   typographiques contradictoires entre document historique et CANON explicites ;
   toutes les TONE_CHARTER observées restent DRAFT. Tables WOFF2, équivalence pixels
   PNG/WebP et filiation des masters HD ne sont pas reçues.
-  **Candidat 432** : [ADR-0212 Proposed](adr/0212-versioned-public-identity-projection.md)
+  **432 livré, reçu partiel C2/C3/C4** : [ADR-0212 Accepted, borné](adr/0212-versioned-public-identity-projection.md)
   étend publication/conservation existantes à public-brand-v2 compatible v1 :
   référence et versions, six couleurs par usage, familles/fichiers OTF/TTF,
   poses et citation bornée. Revue texte/retour réutilisent les copies ; le lecteur
-  vérifie l’ensemble avant application, sans promotion ou CSP élargie. Gauntlet
-  complet vert ; native locale publication/revue/retour producer et première
-  consommation sous harness reçus. Retour consumer natif interrompu, CSP et
-  livraison production à recevoir ; la cause reste ouverte jusqu’à ce reçu.
-  **Fermer** en factorisant, dans les primitives existantes, source/version →
+  vérifie l’ensemble avant application, sans promotion ou CSP élargie. Gauntlet/
+  CI/image/runtime et native réelle publication v4/revue inchangée v5/retour v6
+  reçus côté producer/consumer : huit copies stables, cinq polices/trois poses/
+  six couleurs/citation consommées, source conservée. Causes de projection/
+  copies/consommation/retour des familles choisies retirées dans ce seul périmètre,
+  aucune fermeture C2/C3/C4 ou acceptation des sept chantiers/dix gates programme.
+  Le retour du harness local interrompu reste historique. Corpus hors trois
+  éditions inchangé ; stockage complet et autres destinations non reçus.
+  **Fermer les résidus** en étendant le circuit reçu, dans les primitives existantes, source/version →
   choix explicite id/version/rôle par destination → projection publique bornée
   et versionnée → copies et dérivations reçues → consommation/retour par famille.
   Révision/pins couvrent ces choix ; compatibilité v1 et dernière édition reçue
@@ -54,10 +58,10 @@ sept chantiers ; les résidus actifs suivent.
   sans publier les textes privés ni promouvoir une charte. Vérifier fichiers,
   rôles et filiation avant d’appliquer chaque famille atomiquement dans le lecteur
   existant ; styles app/web adaptés à leur usage, sans transplanter une échelle.
-  Le raccord dynamique Moka/palette/polices/citation, la voix au-delà d’un extrait,
-  quiz/application et retour de valeur restent ouverts. **Déclencheur** : recette
-  C2/C3 du candidat 432, la référence étant disponible, avant acceptation de ces
-  familles puis de l’identité multidestination ;
+  Dernier reçu client après fermeture de page, voix au-delà d’un extrait,
+  autres poses/destinations, quiz/application et retour de valeur restent ouverts.
+  **Déclencheur** : prochaine destination/famille ou recette d’interruption client,
+  avant acceptation de l’identité multidestination ;
   effort : un lot de contrat/conservation/consommation et recette par famille,
   sans nouveau coffre, registre ou service de synchronisation.
 - **Anciennes éditions sans archive d’octets** : 431 ne backfill pas les anciens

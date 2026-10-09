@@ -4,22 +4,31 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
-**Candidat logiciel 6.27.432 — ADR-0212 Proposed** : choix référence/id/version/
+**Production 6.27.432 — ADR-0212 Accepted, borné** : choix référence/id/version/
 rôle dans Connexions, identité publique v2 compatible v1, mêmes coffre/stockage/
 transport. Palette, OTF/TTF, poses et citation bornées ; pins privés, copies
 vérifiées et consommation vitrine de l’ensemble avant application. Types/lints/
 cycles, 1617 gouvernance/253 PostgreSQL et domaine trois verts reçus ; vitrine
 38 tests/types/build verts. Native FOUNDER locale : référence/publication/revue/
 retour reçus, huit copies stables ; première vitrine sous harness local reçue,
-pas sa CSP production ni son retour natif interrompu. Suite globale finale après
+pas la CSP production par ce harness ; son retour natif interrompu reste historique.
+Suite globale finale après
 bump/arrêt des serveurs : 4170/398 verts, gauntlet complet vert. Récidive timing
 pendant compilation puis relance sans compilation verte, cause non démontrée.
-CI/image/runtime/publication réelle en attente, production ci-dessous inchangée. Le dossier
+Source 3968c0a1, trois CI vertes, image 37886082203/runtime 432 exact reçus. Publication
+réelle SPAWT v4, revue inchangée v5, retour v4→v6 reçu côté producer/consumer :
+huit copies stables, cinq polices loaded/trois PNG/six couleurs/citation, privé
+exclu et v1 compatible. Corpus hors trois éditions inchangé (258→261 actifs).
+Vitrine PR #7 puis espacement PR #8 livrés, gap 16 px/mobile 390 sans overflow,
+origines/CSP inchangées reçues. Première trace producteur tronquée ; reload complet
+DOM 545,9 ms, H1 lu tard <=39853 ms, aucune latence précise/SLO déduits. Fenêtre
+finale complète avec Log activé sans exception/>=500/entrée Log observée. Le dossier
 privé preuves-identite-projetee-433 est un repère de preuve, pas une version.
 Reprise/stockage/filiation/quiz-app/retour de valeur et sept chantiers restent
-ouverts : [décision proposée](docs/governance/adr/0212-versioned-public-identity-projection.md).
+ouverts, sept chantiers/dix gates programme non acceptés :
+[décision reçue, bornée](docs/governance/adr/0212-versioned-public-identity-projection.md).
 
-**Production reçue : 6.27.431, logo SPAWT conservé et rendu depuis l’édition v3.**
+**Livraison 431 reçue — historique : logo SPAWT conservé depuis l’édition v3.**
 Source 3f1040726620a21ba4d2afcd7fc5ab887d8c2e54, CI 37876777265, Chromatic
 37876777303, MissionDrift 37876777213 et image 37876782159 verts ; déploiement
 terminé le 9 octobre à 03:07:30 UTC, runtime

@@ -1,17 +1,17 @@
-# Identité publique — logo 431 reçu, projection 432 en réception
+# Identité publique — projection et retour de vitrine reçus en 432
 
 État au 2026-10-09. ADR-0210 reste la décision d’architecture et la recette
 locale historique ; ce reçu distingue livraison et usage réel.
 
-## Candidat logiciel 432 — reçus locaux partiels, livraison à recevoir
+## 432 livrée — réception partielle C2/C3/C4 de la vitrine choisie
 
-ADR-0212 Proposed, dossier privé release/preuves-identite-projetee-433.
+ADR-0212 Accepted au seul périmètre reçu, dossier privé release/preuves-identite-projetee-433.
 Ce numéro de dossier est distinct de la version logicielle ; l’admission
 documentaire ultérieure décrite plus bas n’était pas une release. Production
-reçue reste 431/SPAWT v3. Les contrôles et gestes locaux ci-dessous ne reçoivent
-ni le déploiement 432, ni une publication d’identité SPAWT réelle.
+432 et édition SPAWT v6 reçues ; les contrôles locaux et la réception réelle
+sont distingués ci-dessous. Aucun univers SPAWT intégral reçu.
 
-Le code candidat étend les mêmes resolver/BrandAsset/strategy.update/stockage
+Le code livré étend les mêmes resolver/BrandAsset/strategy.update/stockage
 chiffré/transport d’édition. Revue Connexions PublicIdentityReview : référence,
 id/version et usages explicitement choisis, sans promouvoir un actif ou une
 charte DRAFT. Palette six rôles avec quatre paires de contraste usuelles,
@@ -53,17 +53,58 @@ du retour Connexions et PostgreSQL reçu.
 
 Fenêtres locales non tronquées sans exception/>=500 observé : vitrine document
 200/DOM 116 ms ; Connexions document 200/DOM 6460 ms, titre <=8887 ms. Dev avec
-compilation chargée, sans SLO ni performance production. À recevoir : retour
-vitrine natif, CI/image/runtime exact, CSP/publication
-SPAWT réelle et corpus hors publication conservé. Aucun média, texte
+compilation chargée, sans SLO ni performance production. Le retour consumer
+interrompu reste une limite de cette étape locale, pas de la réception réelle
+ci-dessous. Fixture locale nettoyée : zéro source/édition/émission. Aucun média, texte
 source privé, identifiant d’acteur/actif ou empreinte documentaire recopié ici.
 Legacy sans archive, récupération/disponibilité du stockage, WOFF2/masters HD,
 voix complète, destinations quiz/application et retour de valeur restent ouverts.
 Sept chantiers et parcours de marque intégral non acceptés.
-[Architecture proposée](adr/0212-versioned-public-identity-projection.md).
+[Architecture reçue, bornée](adr/0212-versioned-public-identity-projection.md).
 Preuves privées : release/preuves-identite-projetee-433, native-http.json,
 native-return-state.json, native-connections-bounded.json, native-vitrine-events.json
 et native-vitrine-final-reload-unreceived.json ; aucun identifiant de fixture publié.
+
+Livraison réelle : source 3968c0a1a7e197547a6777f1b38101a7c77e8806, CI
+37885602637/37885602643/37885602628 vertes, 4170 unitaires/398 fichiers et
+253 PostgreSQL/13 en CI. Image 37886082203 reçue, index
+sha256:851faeecf7c3885799d15b8b5d10287ebf1516c63a3ce09be07fed696734b73a ;
+runtime exact 6.27.432/nextjs concordant. Vitrine PR #7 fusionnée 308fcf2b et
+déployée, puis PR #8 d’espacement livrée adc4738d. Gap 0→16 px et mobile 390 px
+sans débordement horizontal reçus, origines et CSP inchangées.
+
+Gestes natifs réels SPAWT : publication identité v4, republication à contenu
+inchangé v5 sans resélection, retour v4 créant l’édition v6 actuelle. Trois
+émissions LEGACY_STRATEGY_UPDATE OK, huit copies de mêmes hashes/objectKeys,
+référence inchangée. Retour reçu côté producteur et vitrine ; cinq polices
+loaded, trois PNG décodés, six couleurs et citation reçues ensemble. HTTP v2 et
+fichiers exacts, v1 compatible, champs privés exclus, textes/liens conservés.
+L’état de charte DRAFT et les contradictions historiques ne sont pas réécrits.
+
+Invariants avant/après : 13 sources/40 piliers sur le corpus suivi, global
+27 sources/504 piliers, sources/usages/actifs d’identité antérieurs inchangés.
+Actifs 258→261, seuls trois ajouts d’édition ; 2431 coûts/19 processus/108 fragments
+inchangés. Aucun appel fournisseur. Réception partielle rattachée à C2/C3/C4,
+pas acceptation des chantiers ou du parcours de marque entier ; les sept
+chantiers/dix gates programme restent non acceptés, sans pourcentage global déduit.
+
+Première trace producteur tronquée conservée. Reload complet : DOM 545,9 ms,
+titre seulement lu de façon différée <=39853 ms ; aucune latence d’apparition
+précise ou SLO déduits. Première fenêtre consumer complète DOM 1046,9 ms ;
+fenêtre de retour complète DOM 482 ms, cinq polices/trois images décodées.
+Fenêtre finale avec Log activé, complète/non tronquée : zéro exception/>=500/
+entrée Log observée. Ces observations n’acceptent ni toutes les fenêtres ni
+tous les parcours. Retour local interrompu et première trace tronquée restent
+historiques, sans être substitués au retour de production reçu.
+
+Cette livraison reçoit choix/publication/copies/consommation/retour pour les
+familles choisies de la vitrine. Legacy sans archive, disponibilité/récupération
+du stockage/clé, dernier reçu client après fermeture de page, WOFF2/filiation HD,
+voix complète, autres destinations/quiz/application et retour de valeur restent
+ouverts. Reçus privés : reception.json, runtime.json, production-http-restored.json,
+retained-copies-return-received.json, global-corpus-invariants-received.json,
+native-production-vitrine-restored-dom.json et spacing-delivery/spawt-runtime.json
+dans release/preuves-identite-projetee-433.
 
 ## 429 livré, sélection réelle non reçue
 

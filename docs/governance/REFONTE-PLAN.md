@@ -1,8 +1,8 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## Identité projetée par usage — candidat 432 (2026-10-09)
+## Identité projetée par usage — 432 livrée, reçu partiel C2/C3/C4 (2026-10-09)
 
-ADR-0212 Proposed étend le circuit reçu du logo et la référence admise : source
+ADR-0212 Accepted borné étend le circuit reçu du logo et la référence admise : source
 → choix explicite id/version/rôle → édition publique v2 → copies conservées →
 lecteur vitrine vérifiant l’ensemble. Palette, familles/fichiers OTF/TTF, poses
 et citation de référence restent facultatifs ; styles par destination et lecture
@@ -12,13 +12,17 @@ brand-vault/Sustainment/MESTOR conserve les reçus et le transport borné.
 
 Gauntlet local reçu : 4170 unitaires/1617 gouvernance/253 PostgreSQL, types/lints/
 cycles sans erreur, 24 warnings ; vitrine 38/types/build verts. Native locale
-publication/revue/retour producer et première consommation sous harness reçus,
-pas le retour consumer interrompu ni la CSP production. CI/image/runtime 432 à
-recevoir. Déclencheur courant C2/C3 : achever ces retours et recevoir publication
-réelle/consommation par famille ; aucune acceptation préalable. Ensuite reprendre
+publication/revue/retour producer et première consommation sous harness reçus ;
+retour local consumer interrompu historique. CI/image/runtime 432 exact reçus,
+source 3968c0a1. Publication réelle v4/revue inchangée v5/retour v6 reçus côté
+producer et consumer : huit copies stables, cinq polices/trois poses/six couleurs/
+citation, origines/CSP conservées ; trois éditions seulement ajoutées. Espacement
+16 px/mobile 390 sans overflow reçu. Réception partielle C2/C3/C4 ; reprendre
 filiation HD/WOFF2, legacy sans archive, récupération stockage et autres
-destinations/quiz-app/retour de valeur. Production reçue reste 431/SPAWT v3,
-sept chantiers ouverts. [ADR proposé](adr/0212-versioned-public-identity-projection.md) ·
+destinations/quiz-app/retour de valeur. Déclencheur : prochaine destination ou
+recette stockage/filiation, avant acceptation de ces parcours. Production reçue
+432/SPAWT v6, sept chantiers/dix gates programme non acceptés.
+[ADR reçu, borné](adr/0212-versioned-public-identity-projection.md) ·
 [réceptions distinctes](RECEPTION-IDENTITE-PUBLIQUE.md).
 
 ## Octets de publication — 431 livré et reçu (2026-10-09)

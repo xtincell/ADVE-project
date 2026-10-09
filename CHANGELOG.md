@@ -2,9 +2,10 @@
 
 ## v6.27.432 — feat(brand): choisir une identité publique par usage (2026-10-09)
 
-**Le candidat projette des choix d’identité versionnés vers la vitrine ; sa réception reste ouverte.**
+**432 est livrée : l’identité choisie de SPAWT est publiée, relue et restaurée sur la vitrine.**
 
-- ADR-0212 Proposed : extension BrandAsset/strategy.update, resolver, stockage
+- ADR-0212 Accepted au seul périmètre reçu : extension BrandAsset/strategy.update,
+  resolver, stockage
   chiffré et transport existants sous brand-vault/Sustainment/MESTOR. Contrat
   public-brand-v2, lecture v1 compatible ; aucun modèle/service/router/Intent/
   fournisseur/droit ajouté. PublicIdentityReview compose la revue Connexions.
@@ -22,17 +23,31 @@
   verts. Session FOUNDER locale : référence/publication/revue/retour 200, trois
   émissions OK, huit copies conservées sur trois versions ; HTTP/hash reçus.
   Premier consumer natif sous harness local : cinq FontFace, trois poses décodées,
-  couleurs/citation ensemble ; pas preuve CSP production. Retour consumer natif
-  interrompu, non reçu. Fenêtres locales sans exception/>=500, aucun SLO déduit.
+  couleurs/citation ensemble ; pas preuve CSP production par ce harness. Retour
+  local consumer interrompu conservé comme historique. Fenêtres locales sans
+  exception/>=500, aucun SLO déduit ; fixture nettoyée, zéro source/édition/émission.
 - Suite globale finale après bump/arrêt des serveurs locaux : 4170/398 verts,
-  gauntlet complet vert. Premier échec attendu de
-  note avant bump et récidive withRetry 281 ms/borne 200 ms gardés au registre,
+  gauntlet complet vert. Premier échec attendu de note avant bump et récidive
+  withRetry 281 ms/borne 200 ms gardés au registre,
   relance sans compilation verte mais cause non démontrée.
-  CI/image/runtime/publication réelle 432 **à recevoir**. Production reçue
-  431/SPAWT v3 inchangée à ce stade. Legacy sans archive, récupération du stockage,
-  filiation/WOFF2, multidestination/quiz-app/retour de valeur et sept chantiers
-  restent ouverts. [Architecture proposée](docs/governance/adr/0212-versioned-public-identity-projection.md)
-  et [réception en cours](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
+  Source 3968c0a1, trois CI vertes (4170/398 unitaires, 253/13 PostgreSQL), image
+  37886082203/runtime 432/index exact reçus. Vitrine PR #7 puis espacement PR #8
+  livrés : gap 0→16 px, mobile 390 px sans overflow, origines/CSP inchangées.
+- Natif production : publication SPAWT v4, republication inchangée v5 sans
+  resélection, retour v4→v6 actuel, trois émissions OK ; huit copies exactes et
+  référence conservées. Cinq polices loaded, trois poses PNG, six couleurs et
+  citation reçues ensemble, retour producer/consumer reçu. v1 compatible,
+  privé exclu, textes/liens inchangés. Sources/piliers/usages/coûts/processus/
+  fragments conservés ; seuls trois actifs d’édition, 258→261.
+- Première trace producteur tronquée historique ; reload complet DOM 545,9 ms,
+  H1 seulement lu tard <=39853 ms, aucune latence précise/SLO déduits. Fenêtre
+  finale complète avec Log activé sans exception/>=500/Log observé. Causes de
+  projection/consommation/retour des familles choisies fermées dans ce périmètre ;
+  réception partielle rattachée à C2/C3/C4.
+  Legacy sans archive, récupération du stockage, filiation/WOFF2, voix complète,
+  multidestination/quiz-app/retour de valeur restent ouverts. Sept chantiers et
+  dix gates programme non acceptés. [Architecture reçue, bornée](docs/governance/adr/0212-versioned-public-identity-projection.md)
+  et [réceptions distinctes](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
 
 ## v6.27.431 — fix(brand): conserver les octets du logo de chaque publication (2026-10-09)
 

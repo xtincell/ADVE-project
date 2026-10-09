@@ -68,7 +68,7 @@ Hook `useCalibrationStream` (`src/hooks/use-calibration-stream.ts`) — SSE cons
 
 Cf. [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md), [DESIGN-LEXICON.md](DESIGN-LEXICON.md).
 
-## Composition de revue d’identité — candidat 432 (2026-10-09)
+## Composition de revue d’identité — 432 livré et reçu, borné (2026-10-09)
 
 `PublicIdentityReview` (`src/components/brand/public-identity-review.tsx`) compose
 Button/Input/Select/Textarea et SourceReadDialog dans la carte publique existante
@@ -78,5 +78,6 @@ gardent leur présentation locale. Validation de choix avant strategy.update,
 aucune promotion d’actif ou nouvelle primitive/page/permission. Hors table
 auto-générée des primitives ci-dessus ; aucun compte structurel modifié.
 Scans UI/vocab et gestes natifs locaux reçus sur fixture ; gauntlet vert.
-Livraison production encore à recevoir.
-[ADR-0212 Proposed](adr/0212-versioned-public-identity-projection.md).
+Livraison 432 et gestes natifs réels SPAWT publication/revue sans resélection/
+retour reçus, sans validation de marque entière. Réception partielle C2/C3/C4.
+[ADR-0212 Accepted, borné](adr/0212-versioned-public-identity-projection.md).

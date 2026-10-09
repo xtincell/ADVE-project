@@ -1,14 +1,14 @@
 # ADR-0212 — Projeter une identité publique choisie depuis le coffre existant
 
-- **Status** : Proposed
+- **Status** : Accepted
 - **Date** : 2026-10-09
-- **Phase** : Réception Shinkiro C2/C3, candidat logiciel 6.27.432
+- **Phase** : Réception partielle Shinkiro C2/C3/C4, 6.27.432 livrée — vitrine choisie
 - **Depends on** : ADR-0208, ADR-0209, ADR-0210, ADR-0211
 - **Supersedes** : — (extension, sans réécriture des éditions ou décisions historiques)
 
-Le candidat reçoit le gauntlet et des gestes natifs locaux bornés. CI, image et
-livraison 432 restent à recevoir ; la production
-reçue demeure 431/SPAWT v3. Le retour natif côté vitrine n’est pas reçu.
+Architecture acceptée après gauntlet, CI/image/runtime et gestes natifs de
+publication/revue/retour reçus en production 432. Le périmètre est l’identité
+choisie de la vitrine SPAWT, édition v6 ; aucun univers de marque intégral reçu.
 Le dossier privé preuves-identite-projetee-433 ne désigne pas une version logicielle.
 
 ## Contexte
@@ -44,7 +44,8 @@ de superfans visée. Aucun résultat business n’est reçu par ce raccord.
 - Typographie facultative : familles titres/corps du système choisi, fichiers
   OTF/TTF référencés dans ce système, id/version/graisse explicites. Vérifier
   structure bornée, famille et graisse du fichier, conserver et relire ses
-  octets ; le décodage FontFace du navigateur reste une réception distincte.
+  octets ; le décodage FontFace du navigateur constitue une réception distincte,
+  reçue pour les cinq fichiers choisis de cette vitrine.
   Aucun WOFF2 reconstruit ni équivalence de chaque glyphe déduite.
 - Mascotte facultative : personnage de référence et illustrations choisies par
   accueil/découverte/guidage, avec description accessible. Le choix explicite
@@ -96,11 +97,38 @@ retour reçu côté producer/PG seulement, pas côté consumer natif.
 Fenêtres locales non tronquées sans exception/>=500 observé : vitrine document
 200/DOM 116 ms ; nouvelle fenêtre Connexions document 200/DOM 6460 ms, premier
 titre <=8887 ms. Dev/compilation chargée, aucun SLO/performance production déduit.
-CI/image/runtime et publication SPAWT réelle restent à recevoir. Preuves privées :
+Ce retour local interrompu reste historique ; le retour vitrine en production
+est reçu ci-dessous. Preuves privées de cette étape locale :
 release/preuves-identite-projetee-433, native-http.json, native-return-state.json,
 native-connections-bounded.json et native-vitrine-final-reload-unreceived.json ;
 [réception et limites](../RECEPTION-IDENTITE-PUBLIQUE.md).
 
+Livraison 432 : source 3968c0a1a7e197547a6777f1b38101a7c77e8806, CI
+37885602637/37885602643/37885602628 vertes, unitaires 4170/398 et PostgreSQL
+253/13 reçus en CI ; image 37886082203 et runtime exact/version 432/nextjs reçus.
+Index sha256:851faeecf7c3885799d15b8b5d10287ebf1516c63a3ce09be07fed696734b73a.
+Vitrine PR #7 fusionnée 308fcf2b, puis correction d’espacement PR #8 livrée
+adc4738d : gap 0→16 px, mobile 390 px sans débordement horizontal.
+
+Production native : publication SPAWT v4, republication inchangée sans resélection
+v5, retour v4 créant v6. Trois émissions existantes OK, huit copies de mêmes
+hashes/objectKeys et référence inchangée. Producteur et consumer reçoivent le
+retour ; cinq polices loaded, trois PNG décodés, six couleurs et citation reçues
+ensemble. HTTP v1 compatible, données privées exclues, textes/liens conservés ;
+origines/CSP inchangées reçues. Corpus 13 sources/40 piliers, global 27/504,
+coûts 2431/processus 19/fragments 108 inchangés ; seuls trois actifs d’édition
+ajoutés, 258→261. Fixture locale nettoyée, zéro source/édition/émission.
+
+Première trace producteur tronquée conservée. Rechargement complet : DOM 545,9 ms,
+premier titre seulement lu de façon différée <=39853 ms, aucune latence précise
+ni SLO déduits. Fenêtre consumer retour complète DOM 482 ms ; fenêtre finale
+avec Log activé, sans exception/>=500/entrée Log observée. Ces fenêtres ne
+reçoivent pas tous les parcours. Reçus privés : reception.json, runtime.json,
+production-http-restored.json, retained-copies-return-received.json,
+global-corpus-invariants-received.json, native-production-vitrine-restored-dom.json
+et spacing-delivery/spawt-runtime.json du même dossier.
+
 Legacy sans archive, récupération/disponibilité du stockage, filiation HD et
 WOFF2, autres destinations/quiz/application/retour de valeur restent ouverts.
-Aucun parcours de marque entier ni aucun des sept chantiers n’est accepté.
+Aucun parcours de marque entier, aucun des sept chantiers ni aucune des dix
+gates de release du programme n’est accepté par cette livraison.

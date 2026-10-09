@@ -66,21 +66,25 @@ npm run dev                 # → http://localhost:3000
 
 ## État courant borné — 2026-10-09
 
-**Candidat 6.27.432, identité par usage** : Connexions étend la publication
+**6.27.432 livrée, identité par usage reçue** : Connexions étend la publication
 existante aux choix de palette, typographies, poses de mascotte et citation de
 référence, avec copies vérifiées et lecteur vitrine appliquant l’ensemble reçu.
 Contrat v2/lecture v1 compatible, sans promotion d’actifs ni charte privée exposée.
 Contrôles locaux et publication/revue/retour Connexions sur fixture reçus ;
-première consommation vitrine reçue sous harness local, retour consumer natif
-interrompu. Gauntlet complet vert, dont 4170 unitaires/1617 gouvernance/253
-PostgreSQL ; CI/image/runtime/publication réelle restent à recevoir. Aucune CSP
-production, identité complète ou acceptation Shinkiro déduite.
-[ADR-0212 Proposed](docs/governance/adr/0212-versioned-public-identity-projection.md).
+première consommation sous harness local et retour local interrompu historiques.
+Gauntlet vert : 4170 unitaires/1617 gouvernance/253 PostgreSQL. CI/image/runtime
+432 reçus ; publication réelle v4, revue inchangée v5 et retour v6, huit copies
+stables, cinq polices/trois poses/six couleurs/citation reçues sur SPAWT. Origines/
+CSP conservées, espacement 16 px/mobile 390 sans overflow. Les seuls trois actifs
+d’édition ajoutés portent le coffre à 261 ; corpus hors éditions inchangé.
+Identité complète, autres destinations/quiz-app/retour de valeur, sept chantiers
+et dix gates programme restent ouverts.
+[ADR-0212 Accepted, borné](docs/governance/adr/0212-versioned-public-identity-projection.md).
 
-La dernière livraison de production reçue est **6.27.431**, source 3f104072,
-CI 37876777265 et image 37876782159 rapprochées du runtime exact le 9 octobre à
-03:07:30 UTC. Le volume privé et le corpus hors éditions sont conservés.
-Le raccord SPAWT reçoit textes/liens et logo choisi ; l’univers complet, les sept
+La dernière livraison de production reçue est **6.27.432**, source 3968c0a1,
+trois CI vertes et image 37886082203 rapprochées du runtime exact le
+9 octobre. Le corpus hors éditions est conservé.
+Le raccord SPAWT reçoit textes/liens, logo et familles d’identité choisies ; l’univers complet, les sept
 chantiers Shinkiro et leurs acceptations métier restent ouverts.
 
 **Logo reçu en production 430** : l’origine serveur à l’exécution remplace le

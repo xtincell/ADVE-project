@@ -11,11 +11,13 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 - `appels à suivre` : mutations présentes sans ces marqueurs directs ; vérifier leurs services et leurs justifications avant de conclure à un contournement.
 - `lecture seule` : aucune déclaration `.mutation(...)` dans le router.
 
-Extension candidate 432 : strategy.publicPage fournit les choix admissibles à
+Extension 432 livrée : strategy.publicPage fournit les choix admissibles à
 la revue Connexions ; strategy.update reste l’unique écriture de cette publication
 d’identité v2. Aucun router/procedure parallèle ni droit ajouté. Gauntlet et
-publication/revue/retour natifs locaux producer reçus ; livraison production
-encore à recevoir : [ADR-0212 Proposed](adr/0212-versioned-public-identity-projection.md).
+publication/revue/retour natifs locaux producer reçus ; runtime exact et trois
+gestes réels SPAWT v4/v5/v6 reçus, émissions existantes OK. Réception partielle
+C2/C3/C4, pas couverture de tous les writers ou parcours :
+[ADR-0212 Accepted, borné](adr/0212-versioned-public-identity-projection.md).
 ---
 
 ## Synthèse globale

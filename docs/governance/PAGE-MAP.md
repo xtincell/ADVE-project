@@ -229,12 +229,13 @@ publiques admissibles ; intégrité avant 304, absence/corruption 503 sans repli
 source, requête/édition privée/hash faux 404. Aucune nouvelle page ni permission.
 [ADR-0211 Accepted, borné](adr/0211-retained-public-logo-bytes.md).
 
-Candidat 432 : ce même transport admet les copies d’identité d’une édition v2,
+432 livré : ce même transport admet les copies d’identité d’une édition v2,
 images et fichiers OTF/TTF vérifiés, avec CORS des trois origines SPAWT existantes.
 La revue Connexions compose PublicIdentityReview ; aucune nouvelle page, droit
-ou CSP élargie. Gauntlet et gestes natifs locaux producer/HTTP reçus ; CSP et
-livraison production, retour consumer natif restent à recevoir.
-[ADR-0212 Proposed](adr/0212-versioned-public-identity-projection.md).
+ou CSP élargie. Gauntlet et gestes natifs locaux producer/HTTP reçus ; runtime,
+publication/revue/retour production et consumer natif reçus sur la vitrine choisie,
+origines/CSP inchangées. Réception partielle C2/C3/C4, pas univers de marque entier.
+[ADR-0212 Accepted, borné](adr/0212-versioned-public-identity-projection.md).
 
 ### 2.4 — Mestor + New + Messages (mixte)
 

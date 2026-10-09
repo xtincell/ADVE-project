@@ -145,7 +145,7 @@ Dirigent la trajectoire. Décisions, validations, plans.
 | Service | Rôle guidance | Governor | Manifest |
 |---|---|---|---|
 | `brand-bible/` | Composition déterministe du livre de marque, lecture seule (ADR-0185) | Extension de Guidance | sans manifest propre |
-| `brand-theme/` | Sélection d’identité/thème, pool de logos et origine runtime partagée publisher/export (ADR-0169/0203/[0210](adr/0210-explicit-public-logo-variants.md) ; [430 livré, choix/rendu réel reçus](RECEPTION-IDENTITE-PUBLIQUE.md)) ; pool palette/typos/fichiers/personnages/illustrations étendu dans le [candidat 432](adr/0212-versioned-public-identity-projection.md), reçu localement seulement | Extension de Guidance | sans manifest propre |
+| `brand-theme/` | Sélection d’identité/thème, pool de logos et origine runtime partagée publisher/export (ADR-0169/0203/[0210](adr/0210-explicit-public-logo-variants.md) ; [430 livré, choix/rendu réel reçus](RECEPTION-IDENTITE-PUBLIQUE.md)) ; pool palette/typos/fichiers/personnages/illustrations étendu dans le [432 livré](adr/0212-versioned-public-identity-projection.md), reçu sur la vitrine choisie | Extension de Guidance | sans manifest propre |
 | `brand-tier-transition/` | Handler de transition de palier après gate (ADR-0167) | MESTOR | sans manifest propre |
 | `mestor/` | Computer de guidage central — Intent dispatcher (`emitIntent`) | MESTOR | partiel (`intents.ts:179`) |
 | `pillar-gateway/` | Écriture gouvernée des Pillars (`writePillarAndScore`) | MESTOR | ✅ existant |
@@ -231,7 +231,7 @@ Maintiennent la mission viable techniquement. Mémoires long terme, transports, 
 | `sla-tracker/` | SLO/SLA tracking par Intent kind | INFRASTRUCTURE | ✅ existant |
 | `operator-isolation/` | Tenant isolation (default-deny) | INFRASTRUCTURE | ✅ existant |
 | `neteru-shared/` | Governance registry central | INFRASTRUCTURE | manifests des autres |
-| `brand-vault/` | BrandAsset CRUD engine — vault unifié ; conservation d’identité publique par stockage chiffré existant/transport borné ([ADR-0211 Accepted](adr/0211-retained-public-logo-bytes.md), 431 livré et logo reçu) | MESTOR | ✅ existant |
+| `brand-vault/` | BrandAsset CRUD engine — vault unifié ; conservation d’identité publique par stockage chiffré existant/transport borné ([ADR-0211 Accepted](adr/0211-retained-public-logo-bytes.md), logo 431 reçu ; [ADR-0212 Accepted borné](adr/0212-versioned-public-identity-projection.md), identité de vitrine 432 reçue) | MESTOR | ✅ existant |
 | `strategy-archive/` | 2-phase soft archive + hard purge (`Strategy.archivedAt`) | INFRASTRUCTURE | ✅ existant |
 | `sentinel-handlers/` | Handlers cron `/api/cron/sentinels` — consomme IntentEmission PENDING (Loi 4 maintien orbite) | MESTOR | ✅ existant |
 | `nsp/` | Neteru Streaming Protocol — transport publish/subscribe vers UI | INFRASTRUCTURE | ✅ existant (stub utilitaire) |
@@ -243,11 +243,14 @@ La conservation d’identité publique relève de **Sustainment/MESTOR** dans
 brand-vault existant : continuité de marque, condition de l’accumulation de
 superfans visée. 431 reçoit le logo public conservé, aucun résultat business ; stockage
 et transport sont des extensions, sans service ni Neteru supplémentaire.
-Le candidat 432 étend ces mêmes publication/copies/transport aux choix d’identité
+432 livré étend ces mêmes publication/copies/transport aux choix d’identité
 v2 (palette, OTF/TTF, poses, citation), avec pins privés et lecture v1 conservée.
 La consommation vitrine vérifie l’ensemble, sans CSP élargie ; gauntlet et
-première lecture sous harness local reçus. Retour consumer natif et livraison/CSP
-production à recevoir. [ADR-0212 Proposed](adr/0212-versioned-public-identity-projection.md).
+première lecture sous harness local reçus. CI/image/runtime et publication/revue/
+retour réels reçus côté producer/consumer, huit copies stables, cinq polices/
+trois poses/six couleurs/citation, origines/CSP conservées. Réception partielle
+C2/C3/C4 de la vitrine choisie, aucune acceptation globale ni réception du stockage
+complet/autres destinations. [ADR-0212 Accepted, borné](adr/0212-versioned-public-identity-projection.md).
 
 ---
 
