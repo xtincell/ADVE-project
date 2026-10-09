@@ -16,6 +16,13 @@
 
 ## Quick start
 
+**6.27.438 en validation, runtime 436** : le code applicatif 437 est
+conservé. Son job PostgreSQL CI a été bloqué par le quota de téléchargement
+Docker Hub avant l’exécution des tests. Le candidat 438 acquiert les mêmes
+images officielles, vérifiées et épinglées, depuis ECR ; nouveau run CI,
+image et runtime restent à recevoir.
+[Acquisition et maintenance](docs/deploy/BUILD-DEPORT.md).
+
 **6.27.437 en validation, runtime 436** : une nouvelle synthèse remplace ses
 anciennes collections et demande une nouvelle lecture avant approbation.
 L’ancien plan reste dans l’historique ; restaurer ce plan ne restaure pas son

@@ -1,13 +1,15 @@
-# syntax=docker/dockerfile:1
-#
 # La Fusée OS — container image for Cloudflare Containers (and any Node host).
 # Runs the Next.js standalone server (`output: "standalone"` in next.config.ts).
 #
 # Stages: deps → builder → runner. The runner ships only the standalone bundle
 # (+ static + public), not the full node_modules or source.
 
+# Use BuildKit's bundled frontend and the same pinned Docker Official Image
+# from its public ECR repository; no anonymous Docker Hub pull for the stages.
+ARG NODE_IMAGE=public.ecr.aws/docker/library/node:22-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392
+
 # ── deps ─────────────────────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS deps
+FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
 # Skip puppeteer's Chromium download — the runner installs system Chromium.
 ENV PUPPETEER_SKIP_DOWNLOAD=true
@@ -18,7 +20,7 @@ COPY prisma.config.ts ./
 RUN npm ci
 
 # ── builder ──────────────────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS builder
+FROM ${NODE_IMAGE} AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
@@ -41,7 +43,7 @@ RUN npm run build
 RUN ./node_modules/.bin/esbuild scripts/freeze-public-brands.ts --bundle --platform=node --packages=external --format=cjs --outfile=public-brand-migration.cjs
 
 # ── runner ───────────────────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS runner
+FROM ${NODE_IMAGE} AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

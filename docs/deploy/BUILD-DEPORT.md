@@ -10,6 +10,47 @@
 > ci-dessous est conservée comme **archive de la procédure**, pas comme un
 > reste à faire.
 
+## Acquisition des bases officielles — candidat 438 (2026-10-09)
+
+Le [job PostgreSQL 114024488078 du run 37990904417](https://github.com/xtincell/ADVE-project/actions/runs/37990904417/job/114024488078)
+échoue avant checkout/test : quota Docker Hub anonyme, trois retries refusés.
+Les autres jobs applicables sont verts ; cela ne reçoit pas ce job PostgreSQL.
+Le lot applicatif 437/source 406beb67 est conservé, runtime 436 inchangé.
+
+Le candidat 438 acquiert les **mêmes Docker Official Images** sur
+`public.ecr.aws/docker/library`, avec les versions PostgreSQL 16/16-alpine et
+Node 22-bookworm-slim inchangées. AWS décrit cette distribution par le publisher
+Docker et la [disponibilité des Docker Official Images sur ECR Public](https://aws.amazon.com/blogs/containers/docker-official-images-now-available-on-amazon-elastic-container-registry-public/).
+La [documentation ECR Public Gallery](https://docs.aws.amazon.com/AmazonECR/latest/public/public-gallery.html)
+confirme l’acquisition publique sans authentification et le repérage des
+publishers vérifiés. Aucun compte, secret, abonnement ou service nouveau.
+
+Préflight du 2026-10-09, registry-preflight.json : six réponses HTTP 200,
+**corps des manifestes Hub/ECR identiques** et mêmes références linux/amd64
+pour chaque image. ECR ne fournit pas le header digest dans ce relevé ; le
+SHA-256 est calculé sur le corps reçu, sans inventer un header absent.
+
+| Usage existant | Image officielle ECR | Index épinglé, identique au corps Hub |
+|---|---|---|
+| PostgreSQL CI | docker/library/postgres:16 | sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d |
+| PostgreSQL smoke | docker/library/postgres:16-alpine | sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea |
+| Node deps/builder/runner | docker/library/node:22-bookworm-slim | sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 |
+
+Les trois FROM réutilisent NODE_IMAGE épinglé. La directive #syntax est retirée
+pour le frontend BuildKit embarqué ; aucune nouvelle action, version de BuildKit
+ou autre service de build. Le workflow et son smoke restent les chemins existants.
+Préflight manifeste reçu ; **nouvelle CI, build/smoke/image et runtime 438 encore
+attendus**. Ce changement ne supprime aucun contrôle et ne vaut ni migration
+de base réelle, déploiement ni réception des sept chantiers/dix gates.
+
+**Maintenance** : les digests ne suivent plus automatiquement leurs tags.
+Toute mise à jour future exige de comparer les manifestes officiels Hub/ECR,
+changer explicitement les pins correspondants dans Dockerfile et workflows,
+puis recevoir la CI PostgreSQL et le build/smoke avant livraison.
+Preuves privées :
+`/Users/imacmatanga1/HOSTINGER/audit-shinkiro-2026-09-25/release/preuves-ecriture-s-437/registry-preflight.json`
+et cadrage-ci.md. Pas de note client 438 : infrastructure uniquement.
+
 ## Le problème (nuit du 2026-07-12)
 
 Coolify était configuré pour **construire l'app sur le VPS de prod** (`next build`
@@ -128,7 +169,8 @@ Pour tester à la main sur n'importe quelle machine Docker :
 
 ```sh
 docker run -d --name pg -e POSTGRES_USER=lafusee -e POSTGRES_PASSWORD=lafusee \
-  -e POSTGRES_DB=lafusee postgres:16-alpine
+  -e POSTGRES_DB=lafusee \
+  public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
 docker run --rm -p 3000:3000 --link pg \
   -e DATABASE_URL="postgresql://lafusee:lafusee@pg:5432/lafusee?schema=public" \
   -e NEXTAUTH_SECRET="test-secret-test-secret-32-characters" \

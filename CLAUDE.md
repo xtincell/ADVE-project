@@ -4,6 +4,19 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
+**6.27.438 candidat — acquisition CI, runtime 436** : 437/source 406beb67 reste
+le lot applicatif. Run 37990904417 : jobs applicables verts sauf PostgreSQL
+114024488078, quota anonyme Docker Hub après trois retries avant checkout/test.
+Ce refus ne prouve ni une régression applicative ni la réception PostgreSQL CI.
+postgres:16 en CI, postgres:16-alpine au smoke et Node 22-bookworm-slim des trois
+stages sont acquis comme mêmes Docker Official Images ECR, index épinglés après
+préflight Hub/ECR : trois corps de manifeste/références amd64 identiques, six 200.
+#syntax retiré pour frontend BuildKit embarqué ; aucun job supprimé, action,
+buildkit, service, fonction ou ADR ajouté. Maintenance des digests explicite,
+nouvelle comparaison puis CI/build/smoke requis. Nouveau run/image/runtime 438
+non reçus ; pas de note client pour ce lot d’infrastructure. Sept chantiers/dix
+gates restent ouverts : [runbook et sources](docs/deploy/BUILD-DEPORT.md).
+
 **6.27.437 candidat — versions S et relecture, runtime 436 inchangé** : le gateway
 remplace les tableaux S à toute profondeur, conserve l’historique dans PillarVersion
 et retire atomiquement les anciennes approbations S/Strategy après écriture ou

@@ -1,5 +1,28 @@
 # Changelog — La Fusee
 
+## v6.27.438 — fix(ci): acquérir les mêmes images officielles sans le quota Docker Hub (2026-10-09)
+
+**438 est un candidat d’infrastructure ; le correctif applicatif 437 reste conservé, runtime 436.**
+
+- Run 37990904417/source applicative 437 406beb67 : tous les jobs applicables
+  verts sauf PostgreSQL 114024488078, bloqué avant checkout/test après trois
+  retries de postgres:16 refusés par le quota anonyme Docker Hub. Aucun échec
+  du code dans ce job ni validation PostgreSQL CI n’en est déduit.
+- CI postgres:16, smoke postgres:16-alpine et les trois stages Node
+  22-bookworm-slim utilisent les mêmes Docker Official Images sur
+  public.ecr.aws/docker/library, épinglées aux index contrôlés. Preflight :
+  six réponses 200, corps des manifestes Hub/ECR et références amd64 identiques
+  pour les trois images. Pas de changement de moteur/version de base.
+- Directive #syntax retirée pour utiliser le frontend BuildKit embarqué,
+  sans action/buildkit/service nouveau ; smoke et job PostgreSQL conservés.
+  La maintenance des pins demande une mise à jour explicite et une nouvelle
+  comparaison des manifestes, puis les jobs effectifs/build/smoke reçus.
+- Sources primaires AWS et digests dans
+  [le runbook de build](docs/deploy/BUILD-DEPORT.md). Préflight distinct d’une
+  CI reçue : nouveau run, image/build et runtime 438 encore attendus.
+  YAML CI/build relus ; gauntlet local cinq sorties 0, gouvernance 1 620/166 verts.
+  Aucun changement produit ni note client ; sept chantiers/dix gates ouverts.
+
 ## v6.27.437 — fix(guidance): préserver le plan courant et la relecture de la synthèse (2026-10-09)
 
 **437 est sous validation : une écriture de synthèse ne transporte plus l’approbation de son ancien plan.**

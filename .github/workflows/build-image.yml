@@ -78,7 +78,7 @@ jobs:
           docker network create lf-smoke
           docker run -d --name pg --network lf-smoke \
             -e POSTGRES_USER=lafusee -e POSTGRES_PASSWORD=lafusee -e POSTGRES_DB=lafusee \
-            postgres:16-alpine
+            public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
           echo "Attente Postgres…"
           for i in $(seq 1 30); do
             if docker exec pg pg_isready -U lafusee >/dev/null 2>&1; then break; fi

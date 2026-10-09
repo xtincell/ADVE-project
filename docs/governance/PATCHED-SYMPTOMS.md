@@ -30,6 +30,18 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-09 · Candidat infra 438, lot applicatif 437 conservé : job PostgreSQL
+114024488078/run 37990904417 bloqué avant checkout après trois retries, quota
+anonyme Docker Hub. Tous les autres jobs applicables sont verts ; aucun test
+PG CI exécuté dans ce job. Acquisition ECR des mêmes Docker Official Images
+PostgreSQL 16/16-alpine et Node 22-bookworm-slim, index épinglés après égalité
+des trois corps Hub/ECR et références amd64, six réponses 200. Frontend BuildKit
+embarqué sans directive #syntax, aucun nouveau job/service/action ni suppression
+du test. Cause bornée : disponibilité d’acquisition externe assimilée à verdict
+applicatif. Préflight reçu, nouveaux CI/build/smoke/runtime encore attendus ;
+pins à maintenir explicitement après comparaison et validation. Runtime 436,
+sept chantiers/dix gates ouverts. [Périmètre et sources](../deploy/BUILD-DEPORT.md).
+
 2026-10-09 · Candidat 437, contre-exemples PostgreSQL reçus : régénérations S
 appendant les anciens plans à toute profondeur, writer/PROTOCOLE_S donnant une
 approbation implicite et Strategy VALIDATED survivant à une nouvelle version ou
