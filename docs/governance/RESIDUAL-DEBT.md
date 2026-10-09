@@ -30,18 +30,27 @@ sept chantiers ; les résidus actifs suivent.
   choix par id, CSP, origine inlinée et octets des nouvelles éditions fermées dans
   ce périmètre. L’échec 429 et
   sa correction restent dans le [reçu](RECEPTION-IDENTITE-PUBLIQUE.md).
-  Cela ne reçoit ni identité complète ni quiz/application.
-  **Fermer** par comparaison source/usage pour chaque
-  destination, sélection explicite et pins dans le contrat existant étendu,
-  puis version consommée/refus de périmé/retour reçu pour chaque famille non
-  reçue. Gauntlet 431 final vert (4167 unitaires/1617 gouvernance/256 PostgreSQL,
-  types/lints/zéro cycle) et livraison/image/native reçues. Le raccord dynamique
-  de Moka, palette, polices et voix reste à recevoir ; conserver leur CANON,
-  ne pas ouvrir toutes les origines ni remplacer la DA.
-  Ne pas résoudre les variantes
-  par index ni transporter une charte privée entière. **Déclencheur** : prochain
-  raccord C2 des identités après réception de la copie publique ; effort : un lot
-  de contrat et recette par famille d’usage, sans nouveau système parallèle.
+  Admission documentaire ultérieure : CANON conservé/consultable, 13 textes
+  exacts et 53 binaires seulement inventoriés, DECLARED/analyse désactivée ;
+  références antérieures et édition v3 conservées. Comparaisons readonly du
+  coffre/CANON/checkout/HTTP reçues, sans raccord dynamique déduit. Rôles
+  typographiques contradictoires entre document historique et CANON explicites ;
+  toutes les TONE_CHARTER observées restent DRAFT. Tables WOFF2, équivalence pixels
+  PNG/WebP et filiation des masters HD ne sont pas reçues.
+  **Fermer** en factorisant, dans les primitives existantes, source/version →
+  choix explicite id/version/rôle par destination → projection publique bornée
+  et versionnée → copies et dérivations reçues → consommation/retour par famille.
+  Révision/pins couvrent ces choix ; compatibilité v1 et dernière édition reçue
+  sont conservées. Éprouver source corrigée, variante étrangère/de campagne/DRAFT,
+  ordre ou nom changé, copie absente/corrompue et retour de toutes les familles,
+  sans publier les textes privés ni promouvoir une charte. Vérifier fichiers,
+  rôles et filiation avant d’appliquer chaque famille atomiquement dans le lecteur
+  existant ; styles app/web adaptés à leur usage, sans transplanter une échelle.
+  Le raccord dynamique Moka/palette/polices/voix, quiz/application et retour de
+  valeur restent ouverts. **Déclencheur** : prochaine passe C2/C3, la référence
+  étant désormais disponible, avant acceptation d’identité multidestination ;
+  effort : un lot de contrat/conservation/consommation et recette par famille,
+  sans nouveau coffre, registre ou service de synchronisation.
 - **Anciennes éditions sans archive d’octets** : 431 ne backfill pas les anciens
   logos publiés ; leur retour aveugle est refusé. **Fermer** par relecture du logo
   actuel et republication explicite sur le chemin existant, puis retour reçu,

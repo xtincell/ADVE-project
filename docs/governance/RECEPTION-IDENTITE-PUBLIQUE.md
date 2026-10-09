@@ -176,6 +176,38 @@ archive, disponibilité/récupération du stockage et orphelins HTTP_BLOB resten
 ouverts avec plan/déclencheur au registre. Moka/palette/polices/voix/quiz-app/
 multidestination/retour de valeur et sept chantiers ne sont pas acceptés.
 
+## Admission documentaire ultérieure — 2026-10-09, runtime 431 inchangé
+
+Ce lot est une admission de référence dans Sources existant, aucune release
+logicielle 432, aucun déploiement ni publication publique. SPAWT principal conserve
+une source native lisible : 13 fichiers texte exacts du CANON, 53 fichiers binaires
+seulement inventoriés. Certitude DECLARED, analyse désactivée ; émission existante
+fermée OK et source liée. Aucun texte source, média, identifiant privé ou empreinte
+documentaire n’est recopié ici ; l’admission ne valide aucun actif ni pilier.
+
+Sources principal 8→9 ; corpus cinq marques 12→13 sources/40 piliers ; global
+26→27 sources/504 piliers. Tous les enregistrements antérieurs, usages, piliers
+et édition v3 restent inchangés, ainsi que 258 actifs/2431 coûts/19 processus/
+108 fragments. Aucun appel fournisseur ni analyse IA déclenché.
+
+Comparaisons readonly reçues : six fichiers de polices et 25 Moka du coffre
+identiques aux octets CANON/checkout/HTTP 200 ; dix fichiers font et trois WebP
+vitrine identiques au checkout/HTTP 200 ; cinq originaux font identiques au
+CANON. Trois Moka chargés nativement, familles CSS Klinsman/Gotham déclarées.
+Le style calculé ne prouve pas quel fichier a rendu chaque glyphe. Comparaison
+des tables WOFF2 non reçue faute de fontTools dans les runtimes consultés ;
+PNG/WebP distincts, équivalence pixels non reçue. Masters HD présents dans
+uploads sans filiation reçue. Aucune absence de polices ni substitution déduite.
+
+La contradiction de rôles entre document historique et CANON reste explicite,
+sans réécriture des actifs. Toutes les TONE_CHARTER observées sont DRAFT.
+Le plan existant d’identité porte désormais source → choix id/version/rôle →
+projection bornée → copie/retour/consommation, avec styles app/web adaptés et
+contre-exemples de périmé/étranger/DRAFT/dérivation/copie/retour. Aucun nouveau
+coffre, service ou agent nécessaire. Ces comparaisons ne reçoivent pas le raccord
+dynamique palette/polices/Moka/voix, l’app/quiz, la récupération du stockage,
+un cycle métier/retour de valeur ou les sept chantiers.
+
 Preuves privées : release/preuves-identite-publique-429 et
 release/preuves-origine-marque-430 ; notamment compiled-logo-base-diagnosis.json,
 native-production-blocked.json, runtime.json, origin-red/green.log,
@@ -189,3 +221,6 @@ Recette native locale : native-local-reception.json et captures locales voisines
 Livraison 431 : reception.json, runtime.json, production-http-apres-choix.json,
 native-spawt.json, native-public-brand.json, native-reopen.json et
 native-production-fresh-load-summary.json du même dossier privé.
+Admission documentaire ultérieure : release/preuves-identite-multisurface-432/
+reception.json, ECART.md et RACCORD-IDENTITE.md ; numéro de dossier privé,
+sans changement de version logicielle.

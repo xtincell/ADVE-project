@@ -47,6 +47,12 @@
   Moka/palette/polices/voix/quiz-app/multidestination/retour de valeur et sept
   chantiers restent ouverts. [Décision reçue](docs/governance/adr/0211-retained-public-logo-bytes.md)
   et [réception bornée](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
+- docs(governance), réception documentaire ultérieure du 9 octobre : source CANON
+  SPAWT consultable nativement, 13 fichiers texte exacts et 53 binaires seulement
+  inventoriés, DECLARED/analyse désactivée. Une source ajoutée, enregistrements
+  antérieurs et édition v3 conservés ; runtime 431 inchangé, aucune release 432.
+  Comparaisons de fichiers reçues, raccord dynamique d’identité toujours ouvert :
+  [admission et limites](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
 
 ## v6.27.430 — fix(brand): résoudre l’origine des logos depuis la configuration serveur (2026-10-09)
 
