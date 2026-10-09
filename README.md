@@ -16,20 +16,22 @@
 
 ## Quick start
 
-**6.27.438 en validation, runtime 436** : le code applicatif 437 est
-conservé. Son job PostgreSQL CI a été bloqué par le quota de téléchargement
-Docker Hub avant l’exécution des tests. Le candidat 438 acquiert les mêmes
-images officielles, vérifiées et épinglées, depuis ECR ; nouveau run CI,
-image et runtime restent à recevoir.
+**6.27.438 livré** : le code applicatif 437 est inclus. Après le blocage du
+téléchargement Docker Hub, les mêmes images officielles vérifiées et épinglées
+sont acquises depuis ECR. CI PostgreSQL, image et runtime 438 reçus. La lecture
+du plan et de la Forge SPAWT est reçue en production ; la marque n’a été ni
+modifiée, approuvée ou recalculée. Son approbation reste désactivée : la synthèse
+est périmée et son contrat incomplet, tandis que le plan affiche « Complet ».
+Cet écart, les budgets, formes historiques et cohérence du canon restent ouverts.
 [Acquisition et maintenance](docs/deploy/BUILD-DEPORT.md).
 
-**6.27.437 en validation, runtime 436** : une nouvelle synthèse remplace ses
+**6.27.437 inclus dans le runtime 438, métier partiel** : une nouvelle synthèse remplace ses
 anciennes collections et demande une nouvelle lecture avant approbation.
 L’ancien plan reste dans l’historique ; restaurer ce plan ne restaure pas son
 approbation. Les changements de sources retirent la validation précédente,
 sans déverrouiller une synthèse protégée ni transformer une confiance inconnue
-en zéro. Les vérifications PostgreSQL locales sont reçues ; validation globale,
-parcours réel et livraison 437 restent ouverts. Les choix d’actions, estimations
+en zéro. Les vérifications locales et la livraison sont reçues ; le cycle réel
+reste ouvert. Les choix d’actions, estimations
 et formes historiques demandent encore une réconciliation.
 Corrections de documents et retrait de leur usage partagé suivent ce même
 contrat de relecture. La propagation d’âge respecte le mode automatique existant ;
@@ -39,7 +41,7 @@ réintroduction/restauration reçus. Le premier échec de délai a passé ses
 recontrôles sans changer le test ; build isolé terminé. Un compte normal a reçu
 le parcours local approbation → modification → nouvelle lecture/approbation,
 en conservant la confiance inconnue. Le stress isolé passe sur les chemins
-visités ; les autres parcours, marques réelles et livraison 437 restent ouverts.
+visités ; les autres parcours et approbations des marques réelles restent ouverts.
 Les fixtures ont été nettoyées et le serveur de recette arrêté ; aucune marque
 réelle approuvée ni production payante reçue.
 Le calcul commun reste la prochaine étape,

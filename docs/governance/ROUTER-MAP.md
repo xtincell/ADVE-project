@@ -6,7 +6,7 @@ Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts`
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**437 candidat — mêmes routes, relecture des nouvelles versions** : canon-sync
+**437 livré dans 438 — mêmes routes, relecture des nouvelles versions** : canon-sync
 importe S sans approbation et recalcule computed/globalBudget par
 writePillarAndScore ; les refus apparaissent dans results.s, plus de catch
 silencieux. La projection vector conserve son exception légitime. rollbackVersion
@@ -20,12 +20,17 @@ rouge/restauration exacte/vert reçu ; unitaire complet 4 190/400/cinq contrôle
 finaux verts après recontrôle sans changement du test de délai. Native locale
 USER/TRIAL : S null v1 puis v2 effectivement relue après écriture/revue retirée,
 seconde approbation HTTP 200/corps relu. canon-sync statique + writer PG seulement,
-aucun import privilégié natif ; CI/runtime 437 en attente. SYNTHESIZE_S manuel doit converger vers calcul existant
+aucun import privilégié natif ; CI 37992424716/image 37992697193/runtime 438 exact
+reçus sur source 912e481e. Lecture seule SPAWT plan/Forge reçue : getSynthesisConfidence
+rend S v3 AI_PROPOSED/91,2 %, composed=false/canValidate=false ; aucun appel de
+revue ou recalcul réel. COMPLETE/100 par présence/stale et plan Complet contredisent
+displayLabel=Périmé et DISPLAY_AS_COMPLETE/ORACLE_EXPORT refusés ; reprise Guidance.
+SYNTHESIZE_S manuel doit converger vers calcul existant
 avec assistance Notoria facultative ; aucun nouveau router ou droit de partage.
 Cleanup natif/stress reçu : sept DEFERRED bornées sans providerTaskId et quatre
-marques synthétiques supprimées, remaining=0 ; serveur isolé arrêté. Ce reçu
-ne concerne aucun dossier réel.
-[Réception candidate](RECEPTION-ECRITURE-SYNTHESE.md).
+marques synthétiques supprimées, remaining=0 ; serveur isolé arrêté. Ce cleanup
+ne concerne aucun dossier réel ; les lectures SPAWT ne modifient pas la marque.
+[Réception livrée et limites métier](RECEPTION-ECRITURE-SYNTHESE.md).
 
 **436 livré — routes de validation factorisées** : strategy.validateSynthesis
 devient une entrée compatible de pillar.transitionStatus, même
@@ -39,8 +44,9 @@ contrôle une synthèse approuvée/composée/fraîche au début de la commande.
 Aucun router, procédure parallèle, permission ou kind ajouté ; quatorze
 PostgreSQL ciblés verts, autres writers et consommateurs globaux non reçus
 par ces seuls tests. Source 80e2122f/CI/image/runtime 436 reçus ; lecture réelle
-SPAWT S existant/.912/AI_PROPOSED v3/non approuvable reçue. Postmerge documentaire
-et contrats transverses ouverts : [réceptions bornées](RECEPTION-VALIDATION-SYNTHESE.md).
+SPAWT S existant/.912/AI_PROPOSED v3/non approuvable reçue. Suite postmerge reçue
+dans le bundle 438 ci-dessus ; contrats transverses ouverts :
+[réceptions bornées](RECEPTION-VALIDATION-SYNTHESE.md).
 [ADR-0214 Proposed et bornes](adr/0214-synthesis-approval-preserves-confidence.md).
 
 **Statut governance** :
@@ -275,7 +281,7 @@ reçue ; reload local tronqué et bornes tardives production, sans SLO déduit.
 | `cockpit-router.ts` | Cockpit-specific aggregator (piliers scopés ADR-0166) | G | lecture seule |
 | `accounts.ts` | Console Superviseur (Vague 7) : rôles comptes + `createBrandLogin` (ADR-0140, payload redacté) | G | point gouverné présent |
 | `brand-mcp.ts` | Clés MCP scopées à la marque — surface founder self-service (ADR-0145) | G | appels à suivre |
-| `canon-sync.ts` | Push canon UPgraders ; S importé/recalculé via gateway et refus rendus (candidat 437), vector reste projection de score | G | point gouverné présent |
+| `canon-sync.ts` | Push canon UPgraders ; S importé/recalculé via gateway et refus rendus (437 livré dans 438), vector reste projection de score ; import privilégié natif non reçu | G | point gouverné présent |
 | `feedback.ts` | Remontées testeurs (ADR-0155) : dépôt + inbox opérateur | G | point gouverné présent |
 | `governance.ts` | Audit trail IntentEmission + compensating intents (anticipé §11 — livré) | G | point gouverné présent |
 | `phase18-residuals.ts` | Formulaire résiduels Phase 18 (`upsert/resolve/dismiss/list/stats`) | G | appels à suivre |

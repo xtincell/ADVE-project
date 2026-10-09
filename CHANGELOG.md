@@ -2,7 +2,7 @@
 
 ## v6.27.438 — fix(ci): acquérir les mêmes images officielles sans le quota Docker Hub (2026-10-09)
 
-**438 est un candidat d’infrastructure ; le correctif applicatif 437 reste conservé, runtime 436.**
+**438 est livré au runtime ; le correctif applicatif 437 est inclus, lecture du plan SPAWT reçue sans modification.**
 
 - Run 37990904417/source applicative 437 406beb67 : tous les jobs applicables
   verts sauf PostgreSQL 114024488078, bloqué avant checkout/test après trois
@@ -19,13 +19,35 @@
   comparaison des manifestes, puis les jobs effectifs/build/smoke reçus.
 - Sources primaires AWS et digests dans
   [le runbook de build](docs/deploy/BUILD-DEPORT.md). Préflight distinct d’une
-  CI reçue : nouveau run, image/build et runtime 438 encore attendus.
+  CI reçue : source 912e481e1131ed1577ae8bab00ca5111783dc3a0, CI 37992424716
+  success, PostgreSQL effectif 309/seize fichiers verts, neuf jobs applicables
+  verts/trois skips PR. Mission 37992424910/Chromatic 37992424676 success.
+  Image 37992697193 success : boot sur base neuve/migrations/login 200 et PDF
+  deux pages reçus, configuration candidate/publiée identique. Index
+  sha256:54066a02f035955680a449513540bbb65046cdcbb45f5298ed31c402a0f89c8f,
+  manifest amd64 sha256:c27851290932b346ad2c9f42799b4a47f91c61db99a723dcac14d1f3419b0e1b.
+  Déploiement gj2cruddtb8mxcur3wbb7n5g terminé à 21:31:35 UTC ; runtime 438
+  running/nextjs/index exact/volume privé RW/version publique 200 reçu à
+  21:33:22 UTC. Source/image/runtime distincts du présent reçu documentaire.
+  Native plan SPAWT en lecture seule HTTP 200 : 61 réponses/zéro ≥500/exception
+  sur fenêtre complète, 14 ERR_ABORTED annulés conservés. DOM 1 199 ms/load
+  1 763,6 ms ; attente initiale du titre masqué par « Quoi de neuf », modal
+  inspecté puis fermé normalement. Borne relevée ensuite 57 487 ms, pas premier
+  affichage ni SLO. Capture inspectée ; marque ni modifiée, approuvée ou recalculée.
+  Native Forge SPAWT HTTP 200 : 65 réponses/zéro ≥500/exception, 17 ERR_ABORTED
+  annulés ; S v3 AI_PROPOSED/91,2 %, approbation désactivée. Readiness COMPLETE/
+  100 par présence mais stale/Périmé, affichage complet et export refusés alors
+  que le plan affiche Complet : contre-exemple UX ouvert. Borne de titre
+  61 794 ms inclut le travail du modèle, pas paint/SLO ; captures inspectées.
+  Anciens écarts trois budgets/plans legacy/80 diagnostics de types-liens-structure
+  restent non réconciliés ; pas 80 faits métier manquants. Six questions visibles
+  sur la vitrine, canon/copy encore cinq statiquement : dette de cohérence ouverte.
   YAML CI/build relus ; gauntlet local cinq sorties 0, gouvernance 1 620/166 verts.
   Aucun changement produit ni note client ; sept chantiers/dix gates ouverts.
 
 ## v6.27.437 — fix(guidance): préserver le plan courant et la relecture de la synthèse (2026-10-09)
 
-**437 est sous validation : une écriture de synthèse ne transporte plus l’approbation de son ancien plan.**
+**Checkpoint historique avant livraison dans 438 : une écriture de synthèse ne transporte plus l’approbation de son ancien plan.**
 
 - ADR-0215 Accepted : extension du gateway, de PillarVersion et des verrous
   documentaires existants, sans modèle, page, service, router, kind ou Neter ajouté.

@@ -30,7 +30,7 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
-2026-10-09 · Candidat infra 438, lot applicatif 437 conservé : job PostgreSQL
+2026-10-09 · Infra 438 livrée, lot applicatif 437 inclus : job PostgreSQL
 114024488078/run 37990904417 bloqué avant checkout après trois retries, quota
 anonyme Docker Hub. Tous les autres jobs applicables sont verts ; aucun test
 PG CI exécuté dans ce job. Acquisition ECR des mêmes Docker Official Images
@@ -38,11 +38,19 @@ PostgreSQL 16/16-alpine et Node 22-bookworm-slim, index épinglés après égali
 des trois corps Hub/ECR et références amd64, six réponses 200. Frontend BuildKit
 embarqué sans directive #syntax, aucun nouveau job/service/action ni suppression
 du test. Cause bornée : disponibilité d’acquisition externe assimilée à verdict
-applicatif. Préflight reçu, nouveaux CI/build/smoke/runtime encore attendus ;
-pins à maintenir explicitement après comparaison et validation. Runtime 436,
+applicatif. Préflight puis source 912e481e/CI 37992424716/image 37992697193/runtime
+438 exact reçus, PostgreSQL effectif 309/seize ; pins à maintenir explicitement
+après comparaison et validation. Native plan réel SPAWT en lecture seule reçue,
+61 réponses/zéro ≥500/exception, 14 annulations réseau conservées ; modal
+« Quoi de neuf » masque d’abord le titre, borne tardive pas premier affichage/SLO.
+Forge SPAWT réelle également reçue en lecture seule : 65 réponses/zéro ≥500/
+exception, 17 ERR_ABORTED annulés ; S v3 AI_PROPOSED/91,2 % non approuvable.
+COMPLETE/100 par présence mais stale/Périmé et affichage complet/export refusés
+contredisent le plan Complet : symptôme non corrigé, inscrit dans la dette S.
+Aucune marque réelle modifiée/approuvée/recalculée ; écarts de contenu ouverts,
 sept chantiers/dix gates ouverts. [Périmètre et sources](../deploy/BUILD-DEPORT.md).
 
-2026-10-09 · Candidat 437, contre-exemples PostgreSQL reçus : régénérations S
+2026-10-09 · 437 livré dans le bundle 438, contre-exemples PostgreSQL reçus : régénérations S
 appendant les anciens plans à toute profondeur, writer/PROTOCOLE_S donnant une
 approbation implicite et Strategy VALIDATED survivant à une nouvelle version ou
 dépendance. Le gateway remplace les collections S, archive l’ancien contenu et
@@ -57,9 +65,9 @@ Dix rouges/trois verts puis treize verts ; checkpoint 70/quatre fichiers ;
 checkpoint complet 304 PostgreSQL/seize fichiers verts, seize cas S dont rollback réel/retry,
 sources distinctes et refus sans ghost row. Cleanup FK intermédiaire conservé
 puis fixture corrigée/nettoyée. Ce checkpoint précède l’extension et les recettes
-finales ci-dessous ; CI/runtime restent attendus. Choix/calcul/contrats/
+finales ci-dessous ; CI/runtime désormais reçus par 438. Choix/calcul/contrats/
 consommateurs restent dans la dette S unique.
-[Réception candidate](RECEPTION-ECRITURE-SYNTHESE.md).
+[Réception livrée et limites métier](RECEPTION-ECRITURE-SYNTHESE.md).
 
 Extension du même lot : review-invalidation.ts factorise la rétraction/staleness
 pour gateway, correction/suppression/révocation documentaires et les deux writers
@@ -84,7 +92,8 @@ approbation v2/200/null. Stress isolé compilé exit 0/zéro finding, 46 HTTP re
 dans la fenêtre 20:49:00–20:49:23 UTC. Sept tâches/quatre marques synthétiques
 nettoyées/remaining=0, serveur isolé arrêté ; scan final.json historique écarté.
 Fenêtre native complète bornée avec 17 annulations réseau conservées ; aucun
-import canon-sync privilégié natif, aucun noyau réel/cycle reçu, aucune livraison
+import canon-sync privilégié natif, aucun noyau réel approuvé/cycle reçu ; livraison reçue
+par le bundle 438, aucune acceptation globale
 ni réception globale de l’agentique déduite.
 
 2026-10-09 · 436 livré au runtime, correctif reçu sur contre-exemples PostgreSQL locaux

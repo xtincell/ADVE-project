@@ -193,7 +193,7 @@ conservé. Corpus/édition SPAWT et zéro tâche/version de forge inchangés.
 Livraison fermée ; bouton/rôles restent reçus avec préconditions synthétiques locales,
 aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
 
-- **Synthèse S : revue 436 livrée, écritures 437 candidates, métier partiel** :
+- **Synthèse S : revue 436 et écritures 437 livrées dans 438, métier partiel** :
   le faux label ACTIVE avait été corrigé en 434 ; les défauts distincts d’absence
   rendue 0 % et de confirmation imposant 1.0 sont livrés en 436.
   Les deux routes partagent une décision d’état gouvernée dans pillar-gateway,
@@ -206,7 +206,8 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   gardant 22 % ou mesure inconnue et conflit 409/nouvelle lecture reçus.
   Copie finale native et défaut confidence=1.0 remis en rouge/restauré reçus ;
   contenu inchangé/zéro AICostLog, sans production. Aucune validation d’un noyau
-  réel reçue. **Fermer** : recevoir revue de noyaux réels et postmerge ; gauntlet
+  réel reçue. **Fermer** : recevoir revue de noyaux réels ; postmerge livré par
+  438 ci-dessous, gauntlet
   final vert, fixture nettoyée. Source 80e2122f/CI 37979818869/image/runtime 436
   reçus. Native réelle SPAWT en lecture seule : S existe, .912/91 %, AI_PROPOSED
   v3, composed=false/canValidate=false. Contrat canonique COMPLETE/100/stale et
@@ -216,7 +217,7 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   gate, forcer une approbation ou fabriquer du contenu pour passer le contrôle.
   Preuve privée native-s-composition-contract-conflict.json. La revue statique
   436 relevait la validation conservée après currentVersion++ et le rafraîchissement
-  direct canon-sync. **437 candidat, causes locales réparées** : collections S
+  direct canon-sync. **437 livré dans 438, causes locales réparées** : collections S
   remplacées à toute profondeur, historique conservé ; aucune approbation
   writer/PROTOCOLE_S ; nouvelle version/restauration ou dépendance modifiée
   retire les anciennes approbations dans la transaction. LOCKED conservé/stale,
@@ -244,8 +245,15 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   436. canon-sync statique + writer PG, aucun import privilégié natif. Sept tâches
   de la fenêtre stress bornée DEFERRED/estimation zéro/sans providerTaskId,
   nettoyées avec quatre marques synthétiques/remaining=0 ; serveur isolé arrêté.
-  CI/image/runtime 437 encore attendus ;
-  aucune validation réelle ni couverture globale déduite.
+  CI 37992424716/image 37992697193/runtime 438 exact reçus sur source 912e481e.
+  Lecture seule réelle plan/Forge SPAWT : S v3 AI_PROPOSED/91,2 %, approbation
+  désactivée, composed=false/canValidate=false. Readiness COMPLETE/100 par
+  présence mais stale=true, displayLabel=Périmé et DISPLAY_AS_COMPLETE/ORACLE_EXPORT
+  refusés ; le plan affiche pourtant Complet. **Contre-exemple UX reçu en 438**,
+  à traiter avec contrats/formes historiques/consommateurs dans la reprise
+  Guidance ci-dessous. Les trois budgets et les plans legacy restent divergents,
+  les 80 diagnostics de types/références/structures ne sont pas 80 faits métier
+  absents. Aucune validation réelle, recalcul ou couverture globale déduite.
   **Reste à fermer** : rtis-protocols/strategy.ts sélectionne/planifie/budgète à
   partir de standards présentés comme décisions ; distinguer proposition,
   estimation et choix effectif, puis brancher les choix réels. SYNTHESIZE_S
@@ -254,7 +262,8 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   Fermer le writeback I direct et sa synchronisation BrandAction choisies par
   le chemin versionné, coordonner le remap UUID et prouver toutes les versions
   source au recalcul. Réconcilier maturité COMPLETE par présence/formes
-  historiques/schéma strict sans gate affaiblie ni matière inventée. Recevoir
+  historiques/schéma strict et affichage Complet/Périmé sans gate affaiblie ni
+  matière inventée. Recevoir
   les consommateurs (dont sequence-vault : confiance ≥0.6 OU VALIDATED), la
   source modifiée pendant création de projets, puis cycles/modes/isolation.
   **Âge global, lecture statique seulement** : auditAllStrategies scanne
@@ -269,7 +278,7 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   Sept chantiers/dix gates restent non acceptés.
   [ADR-0214 Proposed](adr/0214-synthesis-approval-preserves-confidence.md) ·
   [reçu 436](RECEPTION-VALIDATION-SYNTHESE.md) ·
-  [ADR-0215 Accepted, livraison candidate 437](adr/0215-synthesis-writes-require-new-review.md) ·
+  [ADR-0215 Accepted, 437 livré dans 438](adr/0215-synthesis-writes-require-new-review.md) ·
   [bornes et reprise](RECEPTION-ECRITURE-SYNTHESE.md).
 - **Accueil console et compte de catalogue figé** : portal-welcome.tsx:101 rend
   « Intent Catalog 350+ » ; le registre INTENT_KINDS compte 633 au recompte du
@@ -511,6 +520,19 @@ La fermeture best-effort de l’Intent après commit reste la dette distincte
   des trois surfaces déduit de la vitrine. **Déclencheur** : suite C2/C3 après
   réception des textes/liens ; effort : un lot de filiation par surface. Le détail des
   réceptions encore ouvertes figure sous « Édition publique et surfaces de marque ».
+  **Cohérence six questions, relevé de la source livrée 438 le 2026-10-09** :
+  la vitrine publique reçue présente six questions et aucun compteur expiré ;
+  spawt-canon.ts y contient encore six mentions statiques de cinq questions
+  (lignes 59/305/322/394/490/606),
+  et le document source Customers/SPAWT/SPAWT-social-et-calendrier-prelancement.md:59
+  reste à cinq. Six réponses alimentent cinq axes ; « Ton radar » précise
+  Foule/Secret, pas un sixième axe. **Fermer** : confronter le quiz réel, son
+  moteur, la projection canonique et les copies actuelles, amender les références
+  présentes avec leurs sources en conservant l’historique du document fourni,
+  puis recevoir vitrine → quiz/application → retour au noyau. **Déclencheur** :
+  prochaine reprise C2/C3 SPAWT ; effort : un lot borné de réconciliation des
+  contrats/copies, suivi d’une traversée réelle. Lecture de vitrine seule ne
+  reçoit ni déduction du quiz ni ventilation complète de la marque.
 
 ## Réception des observations et décisions — 2026-10-07 (ADR-0199)
 
@@ -1112,14 +1134,15 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
   `== caller` ou nœud corporate qu'il possède, sinon ignorer et défaut au contexte du caller).
   **Effort** : ~½ session (touche le modèle d'accès portfolio multi-tenant). **Déclencheur** : prochaine
   passe multi-opérateur (lié à `session.operatorId`/`Deal.operatorId` ci-dessus) OU 2ᵉ opérateur réel.
-- **Trou C3 canon-sync — reroutage candidat 437** : l’écriture S directe est
+- **Trou C3 canon-sync — code 437 livré dans 438, import natif non reçu** : l’écriture S directe est
   remplacée par le gateway pour import/recalcul, version attendue et AI_PROPOSED ;
   refus rendus dans results.s. Son exception keystone est retirée ; vector reste
-  la projection de score légitime existante. **Fermer** : recevoir contrôles
-  finaux/CI/runtime de ce chemin et son refus de recalcul, sans assimiler le
-  reroutage à une composition S réelle reçue. **Déclencheur** : validation du
-  lot 437 ; effort : une réception bornée. Contrats/calculs/consommateurs restent
-  dans la dette S ci-dessus : [reçu candidat](RECEPTION-ECRITURE-SYNTHESE.md).
+  la projection de score légitime existante. Contrôles locaux/PG partagé/CI/image/
+  runtime reçus par le bundle 438. **Fermer** : recevoir l’import canon privilégié
+  natif et son refus de recalcul, sans assimiler le reroutage à une composition S
+  réelle reçue. **Déclencheur** : prochaine exécution Guidance/import canon avant
+  C3/C4/C6 ; effort : une réception bornée. Contrats/calculs/consommateurs restent
+  dans la dette S ci-dessus : [réception et limites](RECEPTION-ECRITURE-SYNTHESE.md).
 - **C6 `BRIEF_VS_ADVE_COHERENCE` WARN → BLOCK + override** — 🟢 **MÉCANISME BÂTI (v6.27.313)**,
   activation = décision opérateur : le mode BLOCK + l'override fondateur sont câblés et testés
   ([ADR-0103](adr/0103-brief-vs-adve-coherence-deterministic-advisory.md)). Défaut **WARN**

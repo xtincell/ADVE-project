@@ -1,7 +1,7 @@
-# Réception — écritures et relecture S, candidat 437
+# Réception — écritures et relecture S, 437 livré dans 438
 
 Date : 2026-10-09. Sous-système Guidance, tutelle Mestor.
-Statut : **candidat local ; runtime reçu précédent 436**.
+Statut : **livré dans le runtime 438 ; réception métier partielle**.
 
 ## Périmètre
 
@@ -57,7 +57,7 @@ Preuves privées :
 | canon-sync | Reroutage statique + writer partagé PostgreSQL | Aucun import canon privilégié natif |
 | Tâches stress bornées | Fenêtre 20:49:00–20:49:23 UTC, exactement 7 DEFERRED, estimation 0/sans providerTaskId | final-bounded.json seulement ; final.json historique trop large écarté |
 | Cleanup natif/stress | 7 tâches/quatre marques synthétiques nettoyées, remaining=0 ; server-cleanup.json stopped=2/onlyOwnedProofProcesses=true, onglet temporaire fermé | Aucun dossier réel supprimé, zéro final borné à ces fixtures |
-| CI/image/runtime 437 | En attente | Livraison production non reçue, runtime précédent 436 |
+| CI/image/runtime du bundle 438 | Source 912e481e, CI 37992424716 success/PG 309-16, image 37992697193/runtime 438 exact reçus | Pas de runtime 437 autonome ni acceptation globale |
 
 hard-bite.json confirme la restauration exacte du gateway, SHA-256
 `88576eebdf1872602e1456baea3e919e9908ed9e28a7c2766fbef356895642b1`.
@@ -71,6 +71,42 @@ Recompte frais du 2026-10-09 : 232 modèles, 127 fichiers routers, 123 dossiers
 services, 281 pages, 215 ADR ; registry-recount.log relu : 633 Intent kinds,
 56 CORE/153 registry, 94 séquences dont 91 DRAFT, 28 frameworks. Topologie
 code inchangée, ADR +1 seulement ; ces cardinalités ne mesurent pas la maturité.
+
+## Livraison du bundle 438 et lecture réelle
+
+Source 912e481e1131ed1577ae8bab00ca5111783dc3a0 ; CI 37992424716 success,
+PostgreSQL effectif 309/seize fichiers, neuf jobs verts/trois skips PR.
+Mission 37992424910/Chromatic 37992424676 success. Image 37992697193 success,
+boot sur base neuve/migrations/login 200/PDF deux pages, config candidate/publiée
+identique ; index sha256:54066a02f035955680a449513540bbb65046cdcbb45f5298ed31c402a0f89c8f.
+Déploiement terminé 21:31:35 UTC, runtime 438 running/nextjs/index exact/volume
+privé RW/version publique 200 reçu à 21:33:22 UTC. Preuves privées dans le dossier
+voisin preuves-ci-438 : ci.json, image.json, image-digest.json, runtime.json.
+Ce reçu documentaire reste distinct de la source et de l’image déployées.
+
+Native-plan-receipt.json réel SPAWT, lecture seule HTTP 200 : 61 réponses/zéro
+≥500/exception sur fenêtre complète, 14 ERR_ABORTED annulés conservés. DOM
+1 199/load 1 763,6 ms ; titre initialement inaccessible derrière « Quoi de neuf »,
+modal inspecté puis fermé dans l’UI normale. Borne relevée ensuite 57 487 ms,
+pas mesure du premier affichage ni SLO. Capture inspectée ; marque ni modifiée,
+approuvée ou recalculée. Anciennes divergences de budgets/plans legacy et
+80 diagnostics de formes/types/liens restent non réconciliées, sans déduire
+80 faits métier manquants. Six questions sur la vitrine, canon/copy encore cinq
+statiquement ; dette de cohérence, pas sept chantiers reçus.
+
+Native-forge-receipt.json/native-forge-events.json relus : lecture seule réelle
+SPAWT HTTP 200, 65 réponses/zéro ≥500/zéro exception, fenêtre complète
+truncated=false/hasMore=false ; 17 loadingFailed tous ERR_ABORTED/canceled.
+DOM 609,6/load 610,8 ms ; titre borne tardive 61 794 ms incluant le travail du
+modèle, pas first paint ni SLO. Captures Forge/plan inspectées. S existe en
+version 3, AI_PROPOSED, confiance .912 (91,2 %, affichée 91 %), composed=false/
+canValidate=false et bouton d’approbation désactivé. Les 80 diagnostics stricts
+portent sur types/références/structures, pas 80 faits métier absents.
+Readiness renvoie COMPLETE/100 % en présence, stale=true, displayLabel=Périmé ;
+DISPLAY_AS_COMPLETE et ORACLE_EXPORT refusés. La roadmap affiche pourtant
+Complet : **contre-exemple UX réel ouvert**, à réconcilier avec les contrats,
+formes historiques et consommateurs avant C3/C4/C6. Aucune approbation,
+modification, recalcul ou production réels demandés par ces lectures.
 
 La réception 436 reste distincte :
 [approbation/confiance et lecture réelle SPAWT](RECEPTION-VALIDATION-SYNTHESE.md).
@@ -88,7 +124,8 @@ SYNTHESIZE_S avec le calcul existant, en gardant l’assistance Notoria facultat
 Faire passer le writeback I par
 le chemin versionné et recevoir sa synchronisation avec BrandAction choisies ;
 coordonner le remap UUID, puis prouver les versions de toutes les sources au
-recalcul. Réconcilier formes historiques, maturité par présence et schéma strict
+recalcul. Réconcilier formes historiques, maturité par présence, affichage
+Complet/Périmé et schéma strict
 avec les sources réelles, sans assouplir les gates ou inventer de contenu.
 
 Recevoir ensuite consommateurs, cycles/modes/isolation et parcours réels
@@ -99,5 +136,5 @@ Le stress compilé vert 437 ne ferme ni les 235 parcours non reçus ni le stress
 436 à 22 findings ; son cleanup natif/stress borné est reçu.
 **Sept chantiers/dix gates non acceptés.**
 
-[ADR-0215 Accepted, livraison candidate](adr/0215-synthesis-writes-require-new-review.md) ·
+[ADR-0215 Accepted, livré dans 438](adr/0215-synthesis-writes-require-new-review.md) ·
 [plan et dettes en place](RESIDUAL-DEBT.md) · [circuit](PROPAGATION-MAP.md).

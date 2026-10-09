@@ -2,7 +2,7 @@
 
 - **Status** : Accepted
 - **Date** : 2026-10-09
-- **Phase** : Guidance — candidat 6.27.437, réception locale bornée
+- **Phase** : Guidance — 6.27.437 livré dans le bundle 438, métier partiel
 - **Depends on** : ADR-0088, ADR-0198, ADR-0207, ADR-0214
 - **Supersedes** : — (extension du gateway et de la revue existants)
 
@@ -80,8 +80,19 @@ zéro finding, 46 HTTP reçus/235 non reçus/sept DEFERRED sans credentials/rés
 externe interdit, pas cycle/fournisseur réel. canon-sync statique + writer PG,
 aucun import privilégié natif. Sept DEFERRED dans la fenêtre exacte du stress,
 estimation zéro/sans providerTaskId ; sept tâches et quatre marques synthétiques
-nettoyées/remaining=0, serveur isolé arrêté. CI/image/runtime 437 restent à
-recevoir. Premiers offsets internes de gardes 724/755 corrigés.
+nettoyées/remaining=0, serveur isolé arrêté. Source 912e481e/CI 37992424716 avec
+PG effectif 309/seize/image 37992697193/runtime 438 reçus, pas de runtime 437
+autonome. Native plan réel SPAWT en lecture seule HTTP 200 reçue : 61 réponses/
+zéro ≥500/exception, 14 Fetch annulés conservés. Modal « Quoi de neuf » masquait
+d’abord le titre ; borne ultérieure 57 487 ms, pas premier affichage/SLO. Aucune
+modification/approbation/recalcul réels ; anciens écarts de contenu conservés.
+Forge réelle reçue en lecture seule HTTP 200 : 65 réponses/zéro ≥500/exception,
+17 ERR_ABORTED annulés ; S v3 AI_PROPOSED/91,2 % non approuvable. Readiness
+COMPLETE/100/stale/Périmé et affichage complet/export refusés contredisent le
+plan Complet. Les 80 diagnostics stricts sont des formes/types/références ;
+ce désaccord reste dans la reprise métier, aucune matière inventée. Borne de
+titre 61 794 ms inclut le travail du modèle, pas paint/SLO.
+Premiers offsets internes de gardes 724/755 corrigés.
 
 Le contenu et ses décisions ne sont pas globalement certifiés par ces tests.
 Standards de sélection/temps/budget, dispatch manuel SYNTHESIZE_S vers Notoria,
@@ -89,7 +100,7 @@ writeback I/BrandAction, remap UUID, versions source et contrat COMPLETE/strict
 restent à factoriser avant C3/C4/C6. L’entrée manuelle doit converger vers le
 calcul existant avec assistance Notoria facultative. Cycles, modes, isolation et les sept chantiers
 restent ouverts. Décision Accepted : factorisation de doctrine existante, sans
-doctrine ni fonction nouvelle ; livraison et réception restent candidates.
+doctrine ni fonction nouvelle ; livraison reçue dans 438, réception métier partielle.
 auditAllStrategies reste une limite statique non reproduite/corrigée : ACTIVE
 seul et flag manuel false non consulté avant Process. Reproduire DRAFT/VALIDATED
 et manuel false, puis séparer fraîcheur/lancement automatique à C5/échéances ;

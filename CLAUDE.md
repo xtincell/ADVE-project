@@ -4,7 +4,7 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
-**6.27.438 candidat — acquisition CI, runtime 436** : 437/source 406beb67 reste
+**6.27.438 livré — acquisition CI, runtime 438 reçu** : 437/source 406beb67 reste
 le lot applicatif. Run 37990904417 : jobs applicables verts sauf PostgreSQL
 114024488078, quota anonyme Docker Hub après trois retries avant checkout/test.
 Ce refus ne prouve ni une régression applicative ni la réception PostgreSQL CI.
@@ -13,11 +13,27 @@ stages sont acquis comme mêmes Docker Official Images ECR, index épinglés apr
 préflight Hub/ECR : trois corps de manifeste/références amd64 identiques, six 200.
 #syntax retiré pour frontend BuildKit embarqué ; aucun job supprimé, action,
 buildkit, service, fonction ou ADR ajouté. Maintenance des digests explicite,
-nouvelle comparaison puis CI/build/smoke requis. Nouveau run/image/runtime 438
-non reçus ; pas de note client pour ce lot d’infrastructure. Sept chantiers/dix
+nouvelle comparaison puis CI/build/smoke requis. Source 912e481e, CI 37992424716
+success (PG effectif 309/seize, neuf jobs verts/trois skips PR), Mission/Chromatic
+success et image 37992697193 reçus ; base neuve/migrations/login 200/PDF deux pages,
+config candidate/publiée identique. Déploiement terminé 21:31:35 UTC/runtime
+438 nextjs/index exact/volume privé RW/API version 200 à 21:33:22 UTC.
+Native plan réel SPAWT HTTP 200 en lecture seule : 61 réponses/zéro ≥500/exception,
+14 ERR_ABORTED annulés, pas zéro transport ; DOM 1 199/load 1 763,6 ms. Titre
+d’abord masqué par « Quoi de neuf », modal inspecté/fermé ; borne ultérieure
+57 487 ms, pas premier affichage/SLO. Aucune modification/approbation/recalcul
+réels. Trois budgets/plans legacy/80 diagnostics de forme restent à réconcilier,
+pas 80 faits métier absents. Forge SPAWT HTTP 200 en lecture seule : 65 réponses/
+zéro ≥500/exception, 17 ERR_ABORTED annulés ; S v3 AI_PROPOSED/91,2 %, bouton
+désactivé, composed=false/canValidate=false. COMPLETE/100 par présence mais
+stale=true/displayLabel=Périmé, DISPLAY_AS_COMPLETE/ORACLE_EXPORT refusés ; le
+plan affiche pourtant Complet. Contre-exemple UX ouvert, aucune mutation réelle ;
+borne de titre 61 794 ms inclut le travail du modèle, pas paint/SLO.
+Vitrine six questions/canon-copy encore cinq au relevé livré 438 : dette
+ouverte. Pas de note client pour ce lot d’infrastructure. Sept chantiers/dix
 gates restent ouverts : [runbook et sources](docs/deploy/BUILD-DEPORT.md).
 
-**6.27.437 candidat — versions S et relecture, runtime 436 inchangé** : le gateway
+**6.27.437 livré dans le bundle 438 — versions S et relecture, métier partiel** : le gateway
 remplace les tableaux S à toute profondeur, conserve l’historique dans PillarVersion
 et retire atomiquement les anciennes approbations S/Strategy après écriture ou
 changement de dépendance. S LOCKED reste verrouillé et obsolète lorsque sa source
@@ -52,9 +68,10 @@ externe interdit, machine d’état. Fenêtre finale bornée 20:49:00–20:49:23
 exactement sept DEFERRED/estimation zéro/sans providerTaskId ; final.json historique
 écarté. Sept tâches/quatre marques synthétiques nettoyées/remaining=0, serveur
 isolé arrêté/onglet temporaire fermé. Aucun noyau
-réel/cycle/fournisseur reçu ; 235 parcours et stress 436 à 22 findings restent
+réel approuvé/cycle/fournisseur reçu ; 235 parcours et stress 436 à 22 findings restent
 ouverts. canon-sync statique + writer PG, aucun import privilégié natif.
-CI/image/runtime 437 non reçus. Premières erreurs de
+CI/image/runtime reçus par le bundle 438 ci-dessus ; pas de runtime 437 autonome.
+Lecture du plan et de la Forge réels seulement, revue/cycle non reçus. Premières erreurs de
 pointers internes corrigées 724/755. Autres modes/agents et versions source du calcul non reçus.
 Sélection/temps/budgets standards, SYNTHESIZE_S manuel via Notoria, writeback I/
 BrandAction, remap UUID, versions source au recalcul et contradiction COMPLETE/
@@ -68,7 +85,7 @@ Recompte 2026-10-09 : 232 modèles, 127 fichiers routers, 123 dossiers services,
 281 pages et 215 ADR ; registres 633 Intent kinds/56 CORE/153 registry/94 séquences
 dont 91 DRAFT/28 frameworks. Cardinalités inchangées hors ADR +1, pas maturité.
 [ADR-0215 Accepted, décision architecturale](docs/governance/adr/0215-synthesis-writes-require-new-review.md) ·
-[reçu candidat](docs/governance/RECEPTION-ECRITURE-SYNTHESE.md).
+[réception livrée, limites métier](docs/governance/RECEPTION-ECRITURE-SYNTHESE.md).
 
 **6.27.436 livré au runtime — approbation S distincte de sa confiance, métier partiel** : le helper d’état
 dans pillar-gateway existant est partagé par les deux routes gouvernées de

@@ -17,7 +17,7 @@ Layer N peut importer ≤ N (sauf `import type` cross-layer). Enforced par
 [`eslint.config.mjs`](../../eslint.config.mjs)) +
 `madge --circular`.
 
-**Extension Guidance 437, candidate** : le gateway existant distingue collection
+**Extension Guidance 437, livrée dans 438** : le gateway existant distingue collection
 source additive et plan S remplacé à toute profondeur. PillarVersion garde le
 contenu antérieur ; nouvelle version/restauration ou dépendance modifiée retire
 atomiquement les anciennes approbations S/Strategy. LOCKED reste une protection
@@ -40,9 +40,15 @@ compilé isolé vert borné (46 HTTP reçus/235 non reçus, sans fournisseur),
 canon-sync statique + writer PG sans import privilégié natif. Sept DEFERRED de
 la fenêtre stress bornée/estimation zéro/sans providerTaskId ; sept tâches et
 quatre marques synthétiques nettoyées/remaining=0, serveur isolé arrêté.
-Parcours réels et CI/runtime en attente. La convergence
+CI 37992424716/image 37992697193/runtime 438 exact reçus sur source 912e481e.
+Lecture seule du plan et de la Forge SPAWT reçue, aucune mutation réelle : S v3
+AI_PROPOSED à 91,2 %, approbation désactivée. COMPLETE/100 par présence mais
+stale=true, displayLabel=Périmé et DISPLAY_AS_COMPLETE/ORACLE_EXPORT refusés ;
+le plan affiche pourtant Complet. Ce désaccord UX/contrats reste ouvert ; les
+80 diagnostics portent sur formes/types/références, pas 80 faits métier absents.
+Parcours réels complets et autres modes restent non reçus. La convergence
 de l’entrée manuelle vers le calcul gardera Notoria facultative.
-Décision architecturale acceptée, livraison candidate.
+Décision architecturale acceptée et code livré ; sept chantiers/dix gates ouverts.
 [ADR-0215 Accepted](adr/0215-synthesis-writes-require-new-review.md).
 
 ## Panthéon Neteru — cascade Glory→Brief→Forge

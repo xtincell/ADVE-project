@@ -8,7 +8,7 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**437 candidat — extension des writers existants** : pillar-gateway remplace les
+**437 livré dans 438 — extension des writers existants** : pillar-gateway remplace les
 collections S au MERGE_DEEP et rétracte S/Strategy après version ou dépendance
 nouvelle ; PillarVersion conserve le précédent plan. Aucune auto-approbation S,
 restauration à relire, LOCKED conservé sur staleness et null conservé.
@@ -28,7 +28,11 @@ Stress compilé isolé exit 0/46 reçus/235 non reçus/sept DEFERRED sans creden
 pas fournisseur/cycle. canon-sync statique + writer PG, sans import privilégié
 natif ; sept DEFERRED bornées/estimation zéro/sans providerTaskId, sept tâches/
 quatre marques synthétiques nettoyées/remaining=0, serveur isolé arrêté.
-CI/runtime 437 et autres modes non reçus.
+CI 37992424716/image 37992697193/runtime 438 exact reçus, source 912e481e.
+Lecture seule SPAWT plan/Forge reçue : S v3 AI_PROPOSED/91,2 % non approuvable ;
+readiness COMPLETE/100/stale, displayLabel=Périmé mais plan Complet. Contrats,
+formes historiques et affichage restent à réconcilier, sans inventer de contenu.
+Autres modes/cycle complet et sept chantiers/dix gates non reçus.
 Calcul S commun et Notoria facultative prévus.
 [Décision Accepted et bornes](adr/0215-synthesis-writes-require-new-review.md).
 

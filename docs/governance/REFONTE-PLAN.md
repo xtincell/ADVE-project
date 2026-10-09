@@ -1,6 +1,6 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## Plan courant et relecture — candidat 437 (2026-10-09)
+## Plan courant et relecture — 437 livré dans 438 (2026-10-09)
 
 ADR-0215 Accepted étend le gateway et les archives existants : collections S
 remplacées à toute profondeur, pas d’auto-approbation par writer, version restaurée
@@ -24,16 +24,22 @@ exit 0/zéro finding, 46 HTTP reçus/235 non reçus/sept DEFERRED sans fournisse
 pas réception des autres parcours ni clôture des 22 findings 436. canon-sync
 statique + writer PG seulement. Sept tâches de la fenêtre stress bornée DEFERRED/
 estimation zéro/sans providerTaskId, nettoyées avec quatre marques synthétiques,
-remaining=0 ; serveur isolé arrêté. CI/image/runtime 437 en attente. Décision architecturale
-acceptée, livraison et tous autres modes/agents non reçus.
+remaining=0 ; serveur isolé arrêté. Source 912e481e/CI 37992424716/image 37992697193/
+runtime 438 exact reçus ; décision architecturale acceptée et code livré.
+Lecture seule réelle du plan et de la Forge SPAWT reçue, sans approbation/recalcul :
+S v3 AI_PROPOSED/91,2 %, composed=false/canValidate=false. Readiness COMPLETE/100
+par présence mais stale, displayLabel=Périmé et DISPLAY_AS_COMPLETE/ORACLE_EXPORT
+refusés ; le plan affiche pourtant Complet. Ce contre-exemple UX rejoint la
+réconciliation des contrats/formes, pas un besoin de 80 faits métier inventés.
+Tous autres modes/agents, sept chantiers/dix gates non reçus.
 
 Prochaine exécution Guidance avant C3/C4/C6 : séparer estimations standards et
 décisions de sélection/temps/budget, converger SYNTHESIZE_S manuel vers calcul
 existant avec assistance Notoria facultative,
 passer le writeback I par le chemin versionné et réconcilier BrandAction,
 coordonner le remap UUID et prouver les versions source au recalcul. Réconcilier
-les formes historiques, maturité par présence et contrat strict sans abaisser
-la gate ou inventer des faits. Reprendre ensuite consommateurs, cycles/modes/
+les formes historiques, maturité par présence, affichage Complet/Périmé et contrat
+strict sans abaisser la gate ou inventer des faits. Reprendre ensuite consommateurs, cycles/modes/
 isolation et recette réelle SPAWT/Noël ; les sept chantiers restent ouverts.
 À C5/échéances : reproduire auditAllStrategies sur DRAFT/VALIDATED + manuel false,
 puis séparer fraîcheur/lancement automatique. Lecture ACTIVE seul/flag non
@@ -62,8 +68,8 @@ Lecture réelle SPAWT : S existe à 91 %/AI_PROPOSED v3, non approuvable ; readi
 COMPLETE/100/stale et 80 chemins de types/liens/structure refusés par schéma strict,
 pas 80 faits absents. Prochain lot : factoriser les contrats/formes historiques/S
 calculé depuis les sources, sans affaiblir la gate ni inventer du contenu.
-Terminer documentation/postmerge puis autres
-écrivains/consommateurs S et concurrence de création des projets. Aucun noyau
+La suite documentaire/postmerge et les écrivains 437 sont reçus par 438 ci-dessus ;
+autres consommateurs S et concurrence de création des projets restent ouverts. Aucun noyau
 réel validé, sept chantiers/dix gates toujours non acceptés.
 [Contrat proposé](adr/0214-synthesis-approval-preserves-confidence.md) ·
 [réception et limites](RECEPTION-VALIDATION-SYNTHESE.md).

@@ -187,10 +187,10 @@ R Risk (menaces détectées) → T Track (capteur Seshat/Tarsis) → I Innovatio
 
 Les 4 Intent kinds RTIS sont uniquement routables via `commandant.ts` — **zéro appel auto-déclenché** depuis Tarsis, Notoria, ou OPERATOR_AMEND_PILLAR. La décision est inline pendant l'AMEND opérateur (l'opérateur choisit d'enchaîner ou non) OU explicite via UI séparée. Doctrine = code.
 
-### 4.4 Plan courant et relecture — candidat 437 (2026-10-09)
+### 4.4 Plan courant et relecture — 437 livré dans 438 (2026-10-09)
 
 S dérive des sources de la marque ; calculer une nouvelle projection et
-l’approuver sont deux gestes distincts. Dans le candidat 437, MERGE_DEEP remplace
+l’approuver sont deux gestes distincts. Depuis 437 livré dans 438, MERGE_DEEP remplace
 ses collections à toute profondeur ; PillarVersion conserve l’ancien plan.
 L’écriture S, y compris sa restauration, ne peut porter une approbation humaine
 sur la nouvelle version. Une dépendance modifiée retire Strategy VALIDATED et
@@ -222,7 +222,13 @@ credentials et réseau externe interdit ; pas réception des parcours non visit�
 canon-sync statique + writer PG, sans import privilégié natif. Les sept tâches
 stress de la fenêtre exacte sont DEFERRED/estimation zéro/sans providerTaskId ;
 sept tâches/quatre marques synthétiques nettoyées/remaining=0, serveur isolé
-arrêté. CI/image/runtime 437 en attente ;
+arrêté. CI 37992424716/image 37992697193/runtime 438 exact reçus sur source
+912e481e. Lecture seule SPAWT plan/Forge reçue : S v3 AI_PROPOSED/91,2 %, bouton
+désactivé ; COMPLETE/100 par présence mais stale, displayLabel=Périmé et gates
+DISPLAY_AS_COMPLETE/ORACLE_EXPORT refusées, tandis que le plan affiche Complet.
+Contrats, formes historiques et vocabulaire d’état restent à réconcilier ; les
+80 diagnostics ne démontrent pas 80 faits métier manquants. Aucune mutation
+réelle ni acceptation des sept chantiers/dix gates ;
 aucune doctrine nouvelle ni réception d’un cycle autonome n’est déduite.
 [ADR-0215 Accepted, décision architecturale](adr/0215-synthesis-writes-require-new-review.md) ·
 [bornes et reprise](RECEPTION-ECRITURE-SYNTHESE.md).
