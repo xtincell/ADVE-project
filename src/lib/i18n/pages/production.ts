@@ -1,4 +1,5 @@
 export const productionFr = {
+  "production.readOnly": "Suivi en lecture seule. La reprise est réservée à l’équipe affectée à ce dossier.",
   "production.waiting": "À reprendre",
   "production.emptyWaiting": "Aucune production à reprendre dans ce dossier.",
   "production.all": "Toutes les productions",
@@ -19,7 +20,7 @@ export const productionFr = {
   "production.unknown": "État à vérifier",
   "production.unknownSubmission": "Envoi réservé, reçu fournisseur absent. Vérifiez le reçu avant toute nouvelle production.",
   "production.receiptMissing": "Résultat annoncé mais aucun fichier reçu. Vérification nécessaire.",
-  "production.configuration": "Le service de production doit être configuré. Vous pouvez ensuite vérifier et reprendre le brief conservé.",
+  "production.configuration": "Le service de production doit être configuré avant la vérification et la reprise du brief conservé.",
   "production.resume": "Vérifier et reprendre",
   "production.resumeTitle": "Reprendre ce brief ?",
   "production.resumeMessage": "Le brief original sera relu et les contrôles actuels appliqués. Si le service est disponible, cette même tâche sera envoyée. Le coût sera estimé avant l’envoi.",
@@ -53,6 +54,7 @@ export const productionFr = {
 } as const;
 
 export const productionEn = {
+  "production.readOnly": "Read-only tracking. Resumption is reserved for the team assigned to this workspace.",
   "production.waiting": "Awaiting resumption",
   "production.emptyWaiting": "No production awaiting resumption in this workspace.",
   "production.all": "All productions",
@@ -73,7 +75,7 @@ export const productionEn = {
   "production.unknown": "State to review",
   "production.unknownSubmission": "Submission reserved, supplier receipt missing. Review the receipt before any new production.",
   "production.receiptMissing": "Result reported but no file received. Review required.",
-  "production.configuration": "Configure the production service, then check and resume the retained brief.",
+  "production.configuration": "The production service must be configured before the retained brief can be checked and resumed.",
   "production.resume": "Check and resume",
   "production.resumeTitle": "Resume this brief?",
   "production.resumeMessage": "The original brief will be reread and current checks applied. If the service is available, this same task will be submitted. Cost will be estimated before submission.",
@@ -107,6 +109,7 @@ export const productionEn = {
 } as const;
 
 export const productionZh = {
+  "production.readOnly": "仅供查看。只有负责此工作区的团队可以恢复任务。",
   "production.waiting": "待恢复",
   "production.emptyWaiting": "此工作区没有待恢复的制作任务。",
   "production.all": "所有制作任务",
@@ -127,7 +130,7 @@ export const productionZh = {
   "production.unknown": "状态待核查",
   "production.unknownSubmission": "已预留提交，但缺少供应商回执。重新制作前请核查回执。",
   "production.receiptMissing": "显示已完成但未收到文件。需要核查。",
-  "production.configuration": "请先配置制作服务，然后核查并恢复保留的需求。",
+  "production.configuration": "配置制作服务后，才能核查并恢复保留的需求。",
   "production.resume": "核查并恢复",
   "production.resumeTitle": "恢复此需求？",
   "production.resumeMessage": "将重新读取原始需求并执行当前检查。服务可用时将提交同一任务，提交前估算费用。",

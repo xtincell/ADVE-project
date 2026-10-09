@@ -1,9 +1,11 @@
 # Ptah — reprise d’une demande différée et sceau du brief
 
-État au 2026-10-09 : fix session 6.27.433 dédié, puis prototype Ptah/sceau
-6.27.434, **tous deux non livrés et non acceptés**.
+État au 2026-10-09 : fix session 6.27.433 inclus dans le bundle Ptah/sceau
+6.27.434 **livré au runtime, réception métier partielle** ; candidat lecture
+6.27.435 non livré.
 ADR-0213 Proposed ; dossier privé release/preuves-reprise-ptah-434, repère de
-preuve et non reçu de livraison. Production reçue demeure 432. Tous les chantiers et gates
+preuve locale et de runtime, sans réception native complète. Production courante 434.
+Tous les chantiers et gates
 programme restent non acceptés ; aucun cycle SPAWT/Noël ou fournisseur reçu.
 
 ## Prérequis de session — correctif 433 local
@@ -13,12 +15,12 @@ ne transmet pas operatorId. Correction existante auth/config/types : relire
 l’affectation actuelle en base à chaque session, aucun tenant mis en cache JWT
 ni changement de rôle/droit. Tests réaffectation/révocation/base indisponible :
 trois rouges puis trois verts. La page native retrouve la marque. Ce correctif
-est isolé dans le commit d973f735, non poussé/non livré à ce stade. Livraison
-prévue dans le bundle 434, aucun runtime 433 autonome. Réception locale finale
+est isolé dans le commit d973f735, livré dans le bundle 434, aucun runtime 433
+autonome. Réception locale finale
 après découplage : suite canonique 4 180/399, PostgreSQL 270/14 et gauntlet cinq
-exit 0 reçus ; CI/image/runtime restent à recevoir.
+exit 0 reçus ; CI/image/runtime 434 reçus, sans recette de reprise réelle déduite.
 
-## Contrat candidat 434
+## Contrat livré 434 — preuves métier locales
 
 La mutation ptah.materializeBrief et l’Intent PTAH_MATERIALIZE_BRIEF existants
 acceptent resumeTaskId. Les deux entrées tRPC sont strictes : reprise ou nouveau
@@ -131,8 +133,7 @@ pas une preuve de leurs cas ni un stress de la source finale exacte.
 Avant nettoyage : 35 DEFERRED, zéro providerTaskId/version/coût/actif/émission.
 Après nettoyage stress/native : compteurs fixture à zéro ; ErrorVault de test
 conservé. Suite globale 4 180/399, gauntlet et PG 270/14 finaux locaux reçus après
-découplage ; parcours restants, CI/image/runtime et déploiement
-434 restent en attente.
+découplage ; CI/image/runtime 434 reçus, parcours restants non reçus.
 Preuves : emission-red.log, red.log, emission-green.log du dossier privé, sans
 payload, identifiant privé ni secret recopié ici.
 Complément : session-red.log/session-green.log, postgres-final.log,
@@ -142,14 +143,65 @@ stress-test-2026-10-09T07-57-54.json, stress-cleanup.json, hybrid-input-red/gree
 seal-guard-red/green, completion-guard-green, unit-final.log et clock-red/green.
 Aucun résultat de livraison inféré de ces reçus locaux.
 
+## Runtime 434 partiel et correctif de lecture 435
+
+Source 24ddb3c85e094a2b211e644d70849512699a4438, CI 37907427545,
+image 37907430453, Chromatic 37907427572 et MissionDrift 37907427786 verts.
+Index sha256:177af4c2bb82b4a12833c9c831cbc338f39691faa014bd0e098fb3e9a8c48e8c,
+runtime exact 434/nextjs/volume privé RW, API version HTTP 200 reçus.
+Native réelle : tracker refusé HTTP 403, compte sans affectation, écran de
+production non reçu. Premier wait H1 3 s échoué, H1 seulement borne tardive
+46 310 ms ; événements tronqués, aucun zéro global HTTP/exception ou SLO déduit.
+
+Candidat 435, dossier privé preuves-lecture-ptah-435 : listForges seulement
+résout le dossier explicitement sélectionné pour ADMIN effectif relu par
+getOperatorContext, god-mode canonique existant compris, sans équipe par défaut.
+canResume repose sur l’affectation actuelle ; lecture seule sans bouton si absente.
+Mutations/getForge/getAssetVersion restent strictes, aucune permission, équipe,
+affectation, rôle ou allowlist ajouté/modifié. Quatre cas PostgreSQL ajoutés :
+deux rouges/49 verts sur 51 puis 51 verts ciblés. Rôle ADMIN périmé, absence de
+choix, dossier absent/sans équipe, portée de deux équipes et refus de mutation
+sans émission/fournisseur couverts. Gauntlet local final 435 reçu : cinq exit 0,
+gouvernance 1 620/166 et 24 warnings préexistants/zéro erreur. PostgreSQL complet
+exécuté seul après arrêt Next : 274/14 exit 0 en 41,09 s, dont Ptah 51. Suite
+globale non répétée localement en 435 : 4 180/399 est le reçu historique 434,
+pas un reçu unitaire 435. CI/image/runtime 435 restent à recevoir ; aucune reprise
+ADMIN sans affectation annoncée.
+
+Recette native locale 435 sur fixtures ADMIN sans affectation, deux équipes et
+deux dossiers ouverts par leur URL connue : chaque dossier rend exactement sa
+tâche DEFERRED, en lecture seule, sans « Vérifier et reprendre ». Route authentifiée
+ptah.listForges HTTP 200, canResume=false et secret absent. Actualiser est reçu
+dans une fenêtre complète, non tronquée/hasMore=false : une réponse HTTP 200 et
+zéro exception observée. Le sélecteur natif ouvert affiche 0/0 sur cette fixture ;
+aucun changement par ce sélecteur n’est reçu. La lecture par URL connue ne reçoit
+pas ce choix dans l’interface.
+
+Première navigation froide : timeout CDP, DOM 70 882,3 ms et titre seulement
+borne supérieure tardive 124 722 ms ; trace tronquée, aucune mesure précise du
+premier H1, zéro exhaustif ou SLO déduit. La copie FR finale de configuration,
+neutralisée pour la lecture seule, est relue après reload : deuxième dossier,
+une ligne et zéro Reprendre. Ce reload a DOM 8 654,6 ms et H1 seulement borne
+tardive ≤ 93 408 ms ; sa trace reste tronquée. Ces relevés ne sont pas fusionnés
+avec la fenêtre Actualiser complète. La modification FR/EN/ZH ne reçoit pas à
+elle seule le rendu natif des trois langues.
+
+Avant nettoyage : deux tâches DEFERRED, providerTaskId absent, zéro version/coût
+et deux émissions de fixture ; aucun fournisseur contacté. Cleanup reçu : zéro
+tâche/émission, puis serveur local arrêté volontairement. Aucun enregistrement
+ni secret de fixture n’est reproduit dans cette documentation. Livraison 435 et
+sélecteur natif restent à recevoir ; production courante 434.
+
 ## Réception restant requise
 
 Achever les refus/gestes restants : étranger/legacy non vérifiable,
 concurrence et reprise sans doublon,
 interruption après réservation et état incertain sans nouvel appel. Puis rôles
 OPERATOR/FOUNDER natifs complets et reçu fournisseur réel de tâche ;
-stress des parcours restants et
-CI/image/runtime exact.
+stress des parcours restants, CI/image/runtime et livraison du correctif 435,
+native de production exacte, puis choix du dossier par le sélecteur existant.
+La lecture locale par URL connue et son actualisation ne ferment pas ce dernier
+parcours.
 L’accès à des clés n’est pas une preuve de production ou de facture fournisseur.
 
 Provenance documentaire/invalidation/activeBriefId, filiation complète,

@@ -1,8 +1,35 @@
 # Changelog — La Fusee
 
+## v6.27.435 — fix(ptah): lire les productions du dossier sélectionné en supervision (2026-10-09)
+
+**Le candidat permet la lecture ADMIN du dossier choisi ; aucune reprise sans affectation n’est ajoutée.**
+
+- Refus natif 403 en production 434 : le compte non affecté ne peut pas lire
+  le tracker. listForges résout seulement le dossier explicitement sélectionné
+  pour le rôle ADMIN effectif de getOperatorContext, god-mode existant compris,
+  sans équipe par défaut ou nouvelle permission.
+- canResume dérive de l’affectation actuelle ; lecture seule/sans bouton si
+  absente. Mutations, getForge et getAssetVersion gardent l’affectation stricte.
+  Aucun rôle, affectation ou allowlist modifié.
+- Quatre cas PostgreSQL ajoutés : deux rouges/49 verts puis 51 verts ciblés,
+  rôle périmé/absence de choix/dossier absent/sans équipe/deux équipes et refus
+  de mutation sans émission/fournisseur couverts.
+- Native locale ADMIN sans affectation : deux dossiers de deux équipes ouverts
+  par URL connue rendent chacun la seule tâche attendue, en lecture seule,
+  canResume=false, sans bouton Reprendre ni secret. Actualiser : HTTP 200 et
+  zéro exception dans une fenêtre complète ; sélecteur natif 0/0 non reçu.
+- Copie FR finale neutralisée relue ; reload tronqué, sans zéro exhaustif ni SLO.
+  Deux DEFERRED/deux émissions, zéro fournisseur/version/coût avant cleanup,
+  puis zéro tâche/émission ; serveur local arrêté.
+- Gauntlet 435 : cinq exit 0, gouvernance 1 620/166, 24 warnings préexistants/
+  zéro erreur. PostgreSQL complet exécuté seul après arrêt Next : 274/14 verts
+  en 41,09 s, Ptah 51 inclus. Suite globale non répétée localement en 435 ;
+  4 180/399 reste le reçu historique 434. CI/image/runtime 435 à recevoir ;
+  ADR-0213 Proposed, sept chantiers/dix gates programme non acceptés.
+
 ## v6.27.434 — fix(ptah): reprendre une demande différée sur son reçu initial (2026-10-09)
 
-**Le prototype reprend une tâche existante et vérifie son brief ; la livraison reste à recevoir.**
+**434 est livrée au runtime ; le tracker réel est refusé 403 et sa réception reste partielle.**
 
 - ADR-0213 Proposed : extension materializeBrief/Intent existant par resumeTaskId,
   brief initial et portée contrôlés, gates courantes sans replay des overrides.
@@ -50,15 +77,19 @@
 - PG complet post-dates concurrent : 269 verts/un timeout spawnSync 20 s ;
   relance complète seule 270/14 verte en 24,02 s. Log conservé, aucune cause
   racine démontrée ni borne affaiblie ; gauntlet post-dates cinq exit 0 reçu.
-- Parcours restants, CI/image/runtime 434 en attente ; production
-  reçue 432 inchangée. Configuration réelle/fournisseur/facture, provenance,
+- Source 24ddb3c8, CI 37907427545/image 37907430453/Chromatic 37907427572/
+  MissionDrift 37907427786 verts ; runtime exact 434/nextjs, volume privé RW et
+  API version HTTP 200 reçus. Native réelle : tracker 403, compte sans affectation,
+  écran de production non reçu. Trace tronquée/premier wait 3 s échoué/H1 borne
+  tardive 46 310 ms ; aucun zéro exhaustif réseau/exception ni SLO déduit.
+  Correctif dédié 435 en préparation. Configuration réelle/fournisseur/facture, provenance,
   octets/CDN et journal restent ouverts. Sept chantiers/dix gates programme
   non acceptés. [Contrat proposé](docs/governance/adr/0213-deferred-production-resumption-and-seals.md)
   et [réception en cours](docs/governance/RECEPTION-PTAH-REPRISE.md).
 
 ## v6.27.433 — fix(auth): relire l’affectation de l’opérateur dans la session (2026-10-09)
 
-**Le correctif retrouve les marques affectées ; réception locale, livraison avec 434 à recevoir.**
+**Le code du correctif est livré dans le bundle 434 ; la recette métier reste locale.**
 
 - OPERATOR/canOperate=true recevait strategy.list vide : la session n’exposait
   pas son operatorId. Le callback relit l’affectation actuelle en base à chaque
@@ -66,10 +97,9 @@
 - Trois tests rouges puis trois verts : réaffectation, révocation et base
   indisponible. La page native retrouve la marque ; retrait d’affectation refusé.
   Aucun élargissement de permission ni cycle de marque complet déduit.
-- Commit dédié d973f735 avant Ptah 434, non poussé/non livré à ce stade.
-  Contrôles locaux de l’ensemble verts après découplage des dates ; livraison en cours.
-  Pas de runtime 433
-  autonome annoncé : le bundle final doit inclure ce prérequis.
+- Commit dédié d973f735 inclus dans le bundle 434, aucun runtime 433 autonome.
+  Contrôles locaux de l’ensemble verts après découplage des dates ; ce code ne
+  reçoit pas les parcours de production ou une affectation absente.
 
 ## v6.27.432 — feat(brand): choisir une identité publique par usage (2026-10-09)
 

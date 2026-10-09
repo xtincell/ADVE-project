@@ -4,7 +4,20 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
-**Prototype 6.27.434 — ADR-0213 Proposed, non livré** : reprise par resumeTaskId
+**Candidat 6.27.435 — lecture de supervision bornée** : après refus natif tracker
+403 en 434 pour compte non affecté, listForges seulement résout le dossier choisi
+explicitement pour ADMIN effectif canonique ; canResume selon affectation actuelle,
+lecture seule sans bouton si absente. Mutations/getForge/getAssetVersion restent
+strictes ; aucun droit/équipe/rôle/allowlist nouveau. Deux rouges/49 verts puis
+51 PostgreSQL ciblés verts. Native locale par URL connue : deux dossiers de deux
+équipes, chacun sa tâche en lecture seule, canResume=false, sans bouton ni secret.
+Actualiser HTTP 200/zéro exception, fenêtre complète ; copie FR finale relue.
+Sélecteur 0/0 non reçu, reload tronqué sans SLO ; fixture nettoyée, serveur arrêté.
+Gauntlet 435 cinq exit 0, gouvernance 1620/166/24 warnings préexistants ; PG complet
+seul après arrêt Next 274/14 en 41,09 s, Ptah 51 inclus. Suite globale 435 non
+répétée localement, 4180/399 historique 434 ; CI/image/runtime 435 à recevoir.
+
+**Code 6.27.434 livré au runtime — ADR-0213 Proposed, métier partiel** : reprise par resumeTaskId
 sur brief/émission initiale, même tâche, gates courantes et réservation avant
 réseau ; tracker existant monté dans forge sous le layout OperatorSurface.
 Sceau v2 JSON canonique/versionné et horodatage sous verrou, v1 conservé ; legacy
@@ -32,14 +45,15 @@ réglage production ; harnais général non réparé, fixtures nettoyées et Err
 de test conservé. Ce stress précède les gardes hybride/COMPLETED et les dates.
 Suite canonique 4 180/399 et PG 270/14 finaux post-découplage reçus ; timeout PG
 concurrent conservé, relance complète seule verte, cause non démontrée.
-CI/image/runtime en attente pour le
-bundle 434 comprenant auth 433 (commit d973f735, pas runtime autonome).
-Production 432 ci-dessous
-inchangée. Fournisseur/facture/configuration réelle, provenance, octets/CDN et
+Source 24ddb3c8, CI 37907427545/image 37907430453 et runtime exact 434/nextjs/
+volume privé RW/API version 200 reçus, bundle incluant auth 433 sans runtime
+autonome. Native réelle tracker 403, écran non reçu ; trace tronquée/H1 borne
+tardive 46 310 ms, aucun zéro global ni SLO déduit. Fournisseur/facture/
+configuration réelle, provenance, octets/CDN et
 journal ouverts ; sept chantiers/dix gates non acceptés.
 [Reçu candidat borné](docs/governance/RECEPTION-PTAH-REPRISE.md).
 
-**Production 6.27.432 — ADR-0212 Accepted, borné** : choix référence/id/version/
+**Réception identité 6.27.432 — ADR-0212 Accepted, borné** : choix référence/id/version/
 rôle dans Connexions, identité publique v2 compatible v1, mêmes coffre/stockage/
 transport. Palette, OTF/TTF, poses et citation bornées ; pins privés, copies
 vérifiées et consommation vitrine de l’ensemble avant application. Types/lints/

@@ -66,7 +66,20 @@ npm run dev                 # → http://localhost:3000
 
 ## État courant borné — 2026-10-09
 
-**Prototype 6.27.434 non livré** : reprendre une demande différée depuis son
+**Candidat 6.27.435, lecture ADMIN du dossier choisi** : listForges seulement
+utilise le rôle effectif canonique et le dossier explicitement sélectionné,
+sans équipe par défaut. Lecture seule sans reprise si affectation absente ;
+mutations/autres lectures restent strictes, aucun droit/équipe/rôle nouveau.
+Deux rouges/49 verts puis 51 PG ciblés verts. Native locale par URL connue sur
+deux dossiers de deux équipes : chacun sa tâche, canResume=false, lecture seule,
+sans bouton ni secret. Actualiser HTTP 200/zéro exception, fenêtre complète ;
+copie FR finale relue, fixture nettoyée/serveur arrêté. Sélecteur 0/0 non reçu,
+reload tronqué sans SLO. Gauntlet 435 cinq exit 0, gouvernance 1620/166/24 warnings
+préexistants ; PG complet seul après arrêt Next 274/14 en 41,09 s, Ptah 51 inclus.
+Suite globale 435 non répétée localement, 4180/399 historique 434 ; CI/image/
+runtime 435 à recevoir.
+
+**6.27.434 livré au runtime, réception métier partielle** : reprendre une demande différée depuis son
 brief initial dans la page de production existante, conserver la tâche et
 réserver l’envoi avant le réseau. Sceau versionné/état incertain explicite,
 aucune reprise automatique. Fix session 433 séparé, affectation opérateur relue
@@ -82,9 +95,10 @@ Glory phase 3/fournisseur réel reçu ; fixtures nettoyées. Harnais général n
 réparé, heap local augmenté seulement. Suite canonique 4 180/399 et PG 270/14
 finaux post-découplage verts ; timeout PG concurrent conservé, relance seule
 verte/cause non démontrée. Stress antérieur aux dernières gardes/dates. Parcours restants
-et livraison du bundle 434 comprenant auth 433 restent à recevoir, sans runtime
-433 autonome. Production 432 conservée,
-aucun fournisseur/facture/cycle métier ou chantier global reçu par ce prototype.
+restent à recevoir. Bundle 434 comprenant auth 433 reçu, sans runtime 433
+autonome ; native réelle tracker refusée 403 pour compte non affecté, écran non
+reçu. Trace tronquée/H1 borne tardive, pas SLO ni zéro exhaustif déduit ; correctif
+435 séparé. Aucun fournisseur/facture/cycle métier ou chantier global reçu.
 [ADR-0213 Proposed](docs/governance/adr/0213-deferred-production-resumption-and-seals.md).
 
 **6.27.432 livrée, identité par usage reçue** : Connexions étend la publication
@@ -102,9 +116,10 @@ Identité complète, autres destinations/quiz-app/retour de valeur, sept chantie
 et dix gates programme restent ouverts.
 [ADR-0212 Accepted, borné](docs/governance/adr/0212-versioned-public-identity-projection.md).
 
-La dernière livraison de production reçue est **6.27.432**, source 3968c0a1,
-trois CI vertes et image 37886082203 rapprochées du runtime exact le
-9 octobre. Le corpus hors éditions est conservé.
+La livraison de runtime courante est **6.27.434**, source 24ddb3c8,
+CI 37907427545/image 37907430453 verts, runtime exact/volume privé RW/API version
+200 reçus ; tracker natif refusé 403, réception métier partielle. L’identité 432
+et son corpus hors éditions ont leur reçu historique distinct.
 Le raccord SPAWT reçoit textes/liens, logo et familles d’identité choisies ; l’univers complet, les sept
 chantiers Shinkiro et leurs acceptations métier restent ouverts.
 

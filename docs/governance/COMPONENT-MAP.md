@@ -82,7 +82,18 @@ Livraison 432 et gestes natifs réels SPAWT publication/revue sans resélection/
 retour reçus, sans validation de marque entière. Réception partielle C2/C3/C4.
 [ADR-0212 Accepted, borné](adr/0212-versioned-public-identity-projection.md).
 
-## Tracker de production existant — prototype 434 (2026-10-09)
+## Tracker existant — runtime 434 partiel, lecture 435 candidate (2026-10-09)
+
+Native réelle 434 : lecture refusée 403 pour compte non affecté, écran non reçu.
+Candidat 435 : canResume dérivé de l’affectation actuelle, sans bouton si absente ;
+lecture seule ADMIN du dossier explicitement choisi, aucune reprise ADMIN sans
+affectation ou droit nouveau. Deux rouges/49 verts puis 51 PG ciblés verts. Native
+locale par URL connue sur deux dossiers : chacun sa tâche, lecture seule, zéro
+bouton Reprendre et secret absent ; Actualiser HTTP 200/zéro exception, fenêtre
+complète. Copie FR finale relue, fixture nettoyée. Sélecteur 0/0 non reçu ;
+gauntlet 435 cinq exit 0/gouvernance 1620/166/24 warnings préexistants, PG complet
+seul 274/14/Ptah 51 inclus reçus. CI/image/runtime 435 à recevoir, sans SLO déduit
+du reload tronqué.
 
 `PtahKilnTracker` (`src/components/neteru/ptah-kiln-tracker.tsx`) est monté dans
 la page forge existante, enveloppée par son layout OperatorSurface ; ce layout
@@ -100,5 +111,5 @@ découplage des dates startedAt réel/emittedAt logique ; scénario local
 clôture/durée reçu, pas SLO global.
 stress isolé reçu hors native protégée/Glory phase 3/fournisseur réel, avant les
 dernières gardes de contrat et dates. Suite canonique 4 180/399 et PG 270/14
-finaux post-découplage reçus ; parcours restants/livraison à recevoir,
-prototype non livré : [ADR-0213 Proposed](adr/0213-deferred-production-resumption-and-seals.md).
+finaux post-découplage reçus ; code/CI/runtime 434 reçus, parcours restants non reçus :
+[ADR-0213 Proposed](adr/0213-deferred-production-resumption-and-seals.md).

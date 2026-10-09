@@ -60,9 +60,10 @@ export function PtahKilnTracker({ strategyId }: { strategyId: string }) {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <Text variant="caption">{task.provider} · {task.realisedCostUsd !== null ? `${t("production.knownCost")} : ${money(task.realisedCostUsd)}`
                   : task.status !== "DEFERRED" && task.estimatedCostUsd > 0 ? `${t("production.estimate")} : ${money(task.estimatedCostUsd)}` : t("production.costUnknown")}</Text>
-                {task.status === "DEFERRED" && <Button variant="outline" size="sm" disabled={resume.isPending} onClick={() => { setNotice(null); setConfirmId(task.id); }}>{t("production.resume")}</Button>}
+                {task.status === "DEFERRED" && task.canResume && <Button variant="outline" size="sm" disabled={resume.isPending} onClick={() => { setNotice(null); setConfirmId(task.id); }}>{t("production.resume")}</Button>}
               </div>
               {task.status === "DEFERRED" && <Text variant="caption" tone="warning">{t("production.configuration")}</Text>}
+              {task.status === "DEFERRED" && !task.canResume && <Text variant="caption">{t("production.readOnly")}</Text>}
               {unknownSubmission && <Text variant="caption" tone="warning">{t("production.unknownSubmission")}</Text>}
               {missingReceipt && <Text variant="caption" tone="warning">{t("production.receiptMissing")}</Text>}
               {task.errorMessage && task.status !== "DEFERRED" && <Text variant="caption" tone="error" className="break-words">{task.errorMessage}</Text>}

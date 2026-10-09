@@ -106,7 +106,7 @@ sept chantiers ; les résidus actifs suivent.
   persistant et reprise du même identifiant d’émission, sans deuxième journal ni
   doublon métier. **Déclencheur** : réception C5 d’interruption avant autonomie de
   ces commandes ; effort : un lot spine/réconciliation et recette PostgreSQL.
-- **Sceau du brief et historique vérifiable — prototype 434** : un hash v1
+- **Historique vérifiable — code 434 au runtime, limites restantes** : un hash v1
   sérialise l’ordre imbriqué des clés, que JSONB peut changer ; l’horodatage avant
   verrou peut aussi rendre l’ordre des nouvelles émissions ambigu. ADR-0213
   Proposed étend le spine commun par sceau v2 canonique/versionné et temps
@@ -118,7 +118,7 @@ sept chantiers ; les résidus actifs suivent.
   legacy non vérifiable/sans sceau refusés, fixture nettoyée. Refus natif du reçu
   altéré HTTP 412 reçu localement ; gauntlet final post-découplage vert,
   1620/166 gouvernance. Suite globale 4 180/399 et PG 270/14 finaux verts après
-  découplage ; runtime et parcours réels à recevoir.
+  découplage ; CI/image/runtime 434 reçus, parcours réels à recevoir.
   Le vérificateur distingue altération
   v2, legacy non vérifiable, absence de sceau et fenêtre bornée ; le sceau
   individuel ne certifie ni l’ascendance ni le résultat mutable. emittedAt pris
@@ -127,15 +127,16 @@ sept chantiers ; les résidus actifs suivent.
   startedAt réel séparé après verrou : horloge future 60 s, un rouge/quatre verts
   puis cinq PostgreSQL verts avec closeEmission réel/durée non négative/hash
   vérifiable ; ce reçu borné ne prouve aucun SLO global.
-  **Fermer** par réception image/runtime
-  du chemin éprouvé localement ;
-  contre-exemples, ordre concurrent et contrôle natif du reçu sont déjà reçus
+  Les causes de sérialisation/ordre sont corrigées dans le code livré, pas un
+  reçu de toutes les anciennes empreintes. **Fermer les résidus** par parcours
+  réel du reçu initial, après correction de lecture 435 ; contre-exemples,
+  ordre concurrent et contrôle natif du reçu sont déjà reçus
   sur fixtures. Pour les empreintes
   historiques irrécupérables, recevoir un rapprochement explicite depuis les
   preuves disponibles, sans recalcul/hash/payload rétroactif présenté comme
   ancien reçu. Qualifier l’écart d’horloge et la date métier depuis les sources
   disponibles, garder l’incertitude lorsque celles-ci manquent. **Déclencheur** :
-  réception 434 en cours, puis ancien timestamp futur ou première demande
+  réception 435 en cours, puis ancien timestamp futur ou première demande
   de reprise dont le reçu legacy est non vérifiable ; effort : contrôle commun
   et recette bornée par historique concerné. Dette closeEmission distincte.
 - **Projection publique** : l’actif ACTIVE générique reste un usage, pas une
@@ -235,23 +236,42 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   seulement, tests/production inchangés, harnais général non réparé ; ce stress
   précède les gardes hybride/COMPLETED et le découplage des dates. Avant cleanup 35 DEFERRED et zéro
   providerTaskId/version/coût/actif/émission, après cleanup stress/native
-  compteurs fixture à zéro, ErrorVault de test conservé. Runtime du
-  bundle 434 comprenant auth 433 non reçus, sans runtime 433 autonome.
+  compteurs fixture à zéro, ErrorVault de test conservé. Runtime du bundle 434
+  comprenant auth 433 reçu, sans runtime 433 autonome. Native production tracker
+  refusée 403 pour compte non affecté, écran non reçu/trace tronquée sans zéro
+  exhaustif ou SLO déduit. Correctif séparé 435 local : listForges seulement
+  résout le dossier explicitement choisi pour ADMIN effectif canonique,
+  canResume selon affectation actuelle/lecture seule sans bouton si absente.
+  Mutations/getForge/getAssetVersion restent strictes ; aucun rôle, droit,
+  affectation ou équipe par défaut ajouté. Deux rouges/49 verts puis 51 PG
+  ciblés verts. Native locale 435 par URL connue sur deux dossiers/deux équipes :
+  chacun sa tâche, canResume=false/lecture seule, sans bouton ni secret. Actualiser
+  HTTP 200/zéro exception, fenêtre complète ; copie FR finale neutralisée relue.
+  Deux DEFERRED/deux émissions, zéro fournisseur/version/coût avant cleanup,
+  puis zéro tâche/émission et serveur arrêté. Reload tronqué sans SLO ni zéro
+  exhaustif déduit ; sélecteur ouvert 0/0 non reçu. Gauntlet 435 cinq exit 0,
+  gouvernance 1620/166/24 warnings préexistants ; PG complet seul après arrêt
+  Next 274/14 en 41,09 s, Ptah 51 inclus. Suite globale 435 non répétée localement,
+  4180/399 reste historique 434 ; CI/image/runtime 435 en attente.
   Une réservation sans réponse doit rester incertaine, sans réémission aveugle.
   Les clés Ptah
   sont lues dans l’environnement global, sans chemin Connexions reçu.
-  **Fermer** en exerçant les surfaces accessibles avec acteur natif, puis le
-  parcours réel documenté et ses refus, sans assimiler DEFERRED à une livraison
+  **Fermer** en recevant la livraison/lecture 435 exacte, puis le choix de dossier
+  dans le sélecteur existant : dossiers admissibles explicites, portée courante,
+  absence d’équipe par défaut et lecture seule sans capacité de reprise. Le
+  changement reçu par URL connue ne reçoit pas le sélecteur 0/0. Exercer ensuite
+  le parcours réel documenté et ses refus, sans assimiler DEFERRED à une livraison
   fournisseur ni la fixture locale à un média produit. La reprise manuelle d’une
   même tâche est déjà reçue sur fixture ; recevoir le cas configuré/fournisseur
   réel, portée/coûts/anti-double appel et chemin réel de configuration avant autonomie. Ne promettre ni
   reprise automatique ni lien Connexions efficace ; l’UX peut seulement dire
   qu’aucune production n’est lancée et qu’une configuration est nécessaire.
-  **Déclencheur** :
-  livraison 434 en cours pour la reprise,
-  puis C5 pour configuration/réponse incertaine ;
+  **Déclencheur** : CI/image/runtime 435 en cours pour la lecture,
+  puis prochaine recette native du sélecteur avant acceptation C3/C4/C5/C6 ;
+  C5 pour configuration/réponse incertaine ;
   parcours réel C3/C6 sur serveur joignable et accès
-  fournisseur nécessaires au cas réel ; effort : un lot reprise/configuration borné et une recette
+  fournisseur nécessaires au cas réel ; effort : correctif de lecture 435 puis
+  un lot reprise/configuration borné et une recette
   par parcours.
 - **Conservation des octets et propagation CDN** : `download-archiver.ts` peut
   remplir AssetVersion.cdnUrl après l’admission ; le BrandAsset existant conserve

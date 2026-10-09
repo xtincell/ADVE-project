@@ -237,7 +237,7 @@ publication/revue/retour production et consumer natif reçus sur la vitrine choi
 origines/CSP inchangées. Réception partielle C2/C3/C4, pas univers de marque entier.
 [ADR-0212 Accepted, borné](adr/0212-versioned-public-identity-projection.md).
 
-Prototype 434, aucune page supplémentaire : PtahKilnTracker existant est monté
+Code 434 livré au runtime, aucune page supplémentaire : PtahKilnTracker existant est monté
 dans /cockpit/operate/forge, sous le layout OperatorSurface déjà présent.
 Liste paginée/états et confirmation de reprise d’une tâche, montage réservé aux
 opérateurs par ce layout. Faux vert ACTIVE remplacé par validationStatus
@@ -250,7 +250,18 @@ Gauntlet final vert après découplage startedAt réel/emittedAt logique,
 scénario local durée/clôture reçu sans SLO global. Stress isolé reçoit
 46 HTTP/235 non reçus/0 échec, hors native protégée/Glory phase 3/fournisseur réel,
 avant les dernières gardes et dates. Suite canonique 4 180/399 et PG 270/14
-finaux post-découplage reçus ; parcours restants/livraison en attente.
+finaux post-découplage reçus ; CI/runtime 434 reçus, parcours restants en attente.
+Native production 434 : tracker 403/compte non affecté, écran non reçu, trace
+tronquée sans zéro exhaustif/SLO déduit. Candidat 435 : lecture seule du dossier
+explicitement choisi pour ADMIN effectif, canResume selon affectation actuelle,
+aucun bouton sans celle-ci. Mutations/autres lectures restent strictes, aucun
+droit/équipe/rôle nouveau. 51 PG ciblés verts après deux rouges. Native locale :
+deux dossiers de deux équipes ouverts par URL connue, chacun sa tâche en lecture
+seule/canResume=false, sans bouton ni secret ; Actualiser HTTP 200/zéro exception,
+fenêtre complète. Copie FR finale relue, fixture nettoyée. Sélecteur 0/0 non reçu,
+reload tronqué sans SLO. Gauntlet 435 cinq exit 0, gouvernance 1620/166/24 warnings
+préexistants ; PG complet seul 274/14, Ptah 51 inclus reçus. CI/image/runtime 435
+à recevoir.
 [ADR-0213 Proposed](adr/0213-deferred-production-resumption-and-seals.md).
 
 ### 2.4 — Mestor + New + Messages (mixte)

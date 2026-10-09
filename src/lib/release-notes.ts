@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.435", date: "2026-10-09",
+    headline: "Consultez le suivi du dossier choisi",
+    highlights: [
+      { emoji: "👓", title: "Une consultation de supervision", body: "L’administrateur peut consulter les productions de la marque choisie, même sans affectation à son équipe. Le suivi indique alors la lecture seule. La reprise reste réservée à l’équipe affectée à ce dossier." },
+    ],
+  },
+  {
     version: "6.27.434", date: "2026-10-09",
     headline: "Reprenez une production en attente",
     highlights: [

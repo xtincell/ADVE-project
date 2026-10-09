@@ -30,18 +30,26 @@ import {
 } from "@/server/services/ptah/types";
 import { hasSubmissionClaim, providerParameters } from "@/server/services/ptah/resumption";
 import { listProviders } from "@/server/services/ptah/routing/provider-selector";
+import { getOperatorContext } from "@/server/services/operator-isolation";
 
 /* lafusee:governed-active — Phase 0 migration complete v6.18.17 (Sprint 3) : 2 mutations (materializeBrief/regenerateFadingAsset) traversent mestor.emitIntent({ kind: "PTAH_*" }) via emitIntentTyped. Imports ptah.* sont pour Awaited<ReturnType<>> casts + queries (db direct). */
 
-async function resolveOperatorId(userId: string): Promise<string> {
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { operatorId: true },
-  });
-  if (!user?.operatorId) {
+async function resolveOperatorId(userId: string, readStrategyId?: string) {
+  const current = await getOperatorContext(userId);
+  let operatorId = current.operatorId;
+  // Only the selected-brand list passes this read scope. Submission and private
+  // task lookup keep the user's actual assignment; never infer a default team.
+  if (readStrategyId && current.role === "ADMIN") {
+    const strategy = await db.strategy.findUnique({ where: { id: readStrategyId }, select: { operatorId: true } });
+    if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Ce dossier n’existe plus." });
+    if (!strategy.operatorId) throw new TRPCError({ code: "PRECONDITION_FAILED",
+      message: "Ce dossier n’est affecté à aucune équipe de production. Faites vérifier son affectation." });
+    operatorId = strategy.operatorId;
+  }
+  if (!operatorId) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Votre compte n’est affecté à aucune équipe de production. Faites vérifier cette affectation." });
   }
-  return user.operatorId;
+  return { operatorId, canResume: current.operatorId === operatorId };
 }
 
 const ForgeSpecSchema = z.object({
@@ -78,7 +86,7 @@ export const ptahRouter = createTRPCRouter({
       }).strict()]),
     )
     .mutation(async ({ ctx, input }) => {
-      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      const { operatorId } = await resolveOperatorId(ctx.session.user.id);
       const payload = "resumeTaskId" in input ? await (async () => {
         try { return (await resolveResumptionPayload(input.resumeTaskId, input.strategyId, operatorId)).payload; }
         catch (error) { throw new TRPCError({ code: "PRECONDITION_FAILED",
@@ -110,7 +118,7 @@ export const ptahRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      const { operatorId } = await resolveOperatorId(ctx.session.user.id);
       return emitIntentTyped<Awaited<ReturnType<typeof regenerateFadingAsset>>>(
         {
           kind: "PTAH_REGENERATE_FADING_ASSET",
@@ -127,7 +135,7 @@ export const ptahRouter = createTRPCRouter({
   getForge: operatorProcedure
     .input(z.object({ taskId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      const { operatorId } = await resolveOperatorId(ctx.session.user.id);
       const task = await db.generativeTask.findFirst({
         where: { id: input.taskId, operatorId },
         include: { versions: true },
@@ -146,7 +154,7 @@ export const ptahRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      const { operatorId, canResume } = await resolveOperatorId(ctx.session.user.id, input.strategyId);
       const tasks = await db.generativeTask.findMany({
         where: {
           operatorId,
@@ -167,7 +175,7 @@ export const ptahRouter = createTRPCRouter({
       return tasks.map(task => {
         // Webhook secrets and reservation metadata are not presentation data.
         const { webhookSecret: _secret, parameters: _parameters, ...publicTask } = task;
-        return { ...publicTask, parameters: providerParameters(task),
+        return { ...publicTask, canResume, parameters: providerParameters(task),
           submissionUnknown: task.status === "CREATED" && !task.providerTaskId && hasSubmissionClaim(task),
           campaignTitle: campaigns.find(c => c.id === task.campaignId)?.name ?? null,
           briefTitle: briefs.find(b => b.id === task.briefId)?.title ?? null };
@@ -177,7 +185,7 @@ export const ptahRouter = createTRPCRouter({
   getAssetVersion: operatorProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      const { operatorId } = await resolveOperatorId(ctx.session.user.id);
       return db.assetVersion.findFirst({
         where: { id: input.id, operatorId },
         include: { generativeTask: true, parent: true, children: true },

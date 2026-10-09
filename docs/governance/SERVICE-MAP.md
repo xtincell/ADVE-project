@@ -63,7 +63,7 @@ Dépendances satellites : `email`, `oauth-integrations`, `advertis-connectors`, 
 
 ### Ptah — service Phase 9 existant ; code 6.27.428 livré
 
-Prototype 434 non livré, ADR-0213 Proposed : helper resumption dans Ptah existant,
+Code 434 reçu au runtime, ADR-0213 Proposed/métier partiel : helper resumption dans Ptah existant,
 reprise de la même tâche par reçu original vérifié et réservation avant réseau.
 Reprise/brief nouveau stricts au tRPC, hybride refusé avant effet ; reçu COMPLETED
 contient les IDs AssetVersion existants/scopés, exigés non vides par manifest/schema.
@@ -81,10 +81,20 @@ Types/lints/cycles/gouvernance finaux verts après découplage, 1620/166 ; stres
 46 HTTP reçus/235 non reçus/0 échec, hors native protégée/Glory phase 3/fournisseur réel,
 fixtures nettoyées. Harnais général non réparé, stress antérieur aux dernières
 gardes et dates ; suite canonique 4 180/399 et PG 270/14 finaux post-découplage
-reçus, parcours restants/CI/runtime
+reçus, CI/runtime 434 reçus, parcours restants
 en attente. emittedAt logique ne prouve pas l’heure métier ou la fraîcheur de
 l’historique. startedAt réel distinct après verrou, horloge future 60 s : cinq
 PostgreSQL verts après un rouge, closeEmission/durée/hash relus, pas SLO global.
+Native tracker 434 refusée 403, compte non affecté. Candidat 435 : seul listForges
+réutilise getOperatorContext canonique et le dossier explicitement choisi pour
+ADMIN effectif ; canResume selon affectation actuelle. Mutations/autres lectures
+restent strictes, aucune équipe/droit/rôle nouveau. 51 PG ciblés verts après deux
+rouges. Native locale par URL connue sur deux dossiers/deux équipes : chacun sa
+tâche, canResume=false, lecture seule sans bouton ni secret ; Actualiser HTTP 200/
+zéro exception, fenêtre complète. Copie FR finale relue, fixture nettoyée ;
+sélecteur 0/0 non reçu. Gauntlet 435 cinq exit 0, gouvernance 1620/166/24 warnings
+préexistants et PG complet seul 274/14/Ptah 51 inclus reçus. CI/image/runtime 435
+à recevoir. Reload tronqué sans zéro exhaustif ou SLO déduit.
 [Réception candidate](RECEPTION-PTAH-REPRISE.md).
 
 ADR-0009 décrit la fondation historique. Réception antérieure au 2026-10-09 : résultat
@@ -110,7 +120,7 @@ et [admission historique 425](RECEPTION-PTAH-ADMISSION.md). Aucun service ajout�
 src/server/services/ptah/
 ├── manifest.ts             # governor: MESTOR, acceptsIntents: PTAH_MATERIALIZE_BRIEF, PTAH_RECONCILE_TASK, PTAH_REGENERATE_FADING_ASSET
 ├── index.ts                # API forge/réconciliation ; checkpoint et admission transactionnelle
-├── resumption.ts           # candidat 434 : reçu initial/paramètres/réservation, non livré
+├── resumption.ts           # code 434 livré : reçu initial/paramètres/réservation, métier local
 ├── governance.ts           # pilier source et cohérence du mode demandé
 ├── types.ts                # ForgeBrief, ForgeSpec, ForgeProvider interface
 ├── pricing.ts              # cost table par modèle × provider

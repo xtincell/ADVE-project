@@ -88,7 +88,19 @@ documentaire, octets/CDN, facture, Canva/Figma et
 journal restent distincts : [reçu courant](RECEPTION-PTAH-UX.md),
 [reprise interrompue historique 425](RECEPTION-PTAH-ADMISSION.md).
 
-## Prototype 434 — reçu original et sceau versionné, non livré
+## Code 434 au runtime, lecture 435 candidate — réception métier partielle
+
+Runtime exact 434/source 24ddb3c8/CI 37907427545/image 37907430453 reçus ; native
+tracker réelle 403 pour compte non affecté, écran non reçu/trace tronquée.
+Candidat 435 : listForges seulement résout le dossier explicitement choisi pour
+ADMIN effectif canonique, sans équipe par défaut ; canResume selon affectation
+actuelle. Mutations/autres lectures restent strictes, aucun droit ou rôle ajouté.
+Deux rouges/49 verts puis 51 PG ciblés verts. Native locale par URL connue : deux
+dossiers de deux équipes, chacun sa tâche, canResume=false/lecture seule, sans
+bouton ni secret ; Actualiser HTTP 200, fenêtre complète/zéro exception. Sélecteur
+0/0 non reçu, copie FR finale relue, fixture nettoyée. Gauntlet 435 cinq exit 0,
+gouvernance 1620/166/24 warnings préexistants ; PG complet seul 274/14, Ptah 51
+inclus. CI/image/runtime 435 en attente. Reload tronqué sans zéro exhaustif/SLO déduit.
 
 ADR-0213 Proposed étend Ptah/Intent/tâche existants par une reprise manuelle
 sur brief original : portée/paramètres/sceau relus, gates actuelles puis
@@ -120,9 +132,8 @@ Glory phase 3/fournisseur réel, fixtures nettoyées. Harnais général non rép
 heap local 8 192 MiB seulement ; stress antérieur aux dernières gardes et dates.
 Suite canonique 4 180/399 et PG 270/14 finaux post-découplage reçus ; timeout
 concurrent conservé/relance PG seule verte sans cause racine démontrée.
-Parcours restants/CI/runtime non reçus.
-Auth 433 committée séparément, à livrer avec le bundle 434 sans runtime autonome.
-Production 432,
+Parcours restants non reçus, CI/runtime 434 reçus. Auth 433 committée séparément,
+incluse dans le bundle 434 sans runtime autonome. Production 434,
 sept chantiers/dix gates programme non acceptés : [réception candidate](RECEPTION-PTAH-REPRISE.md).
 
 ## Glory tools — outils intriqués

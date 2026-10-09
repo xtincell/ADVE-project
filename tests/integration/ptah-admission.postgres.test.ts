@@ -250,6 +250,48 @@ describe("Ptah result admission", () => {
     finally { await db.user.update({ where: { id: owner }, data: { operatorId } }); }
   });
 
+  async function administrativeCaller(role: "ADMIN" | "USER" = "ADMIN") {
+    const user = await db.user.create({ data: { email: "read-scope-" + randomUUID() + "@example.invalid", role } });
+    users.push(user.id);
+    return { user, caller: ptahRouter.createCaller({ db, headers: undefined,
+      session: { user: { id: user.id, role: "ADMIN" }, expires: new Date(Date.now() + 60_000).toISOString() } }) };
+  }
+  it("reads only the explicitly selected administrator brand and retains assignment-based resumption", async () => {
+    const own = await fixture(), other = await fixture();
+    await db.strategy.update({ where: { id: other.strategy.id }, data: { operatorId: operators[1] } });
+    await db.generativeTask.update({ where: { id: other.task.id }, data: { operatorId: operators[1] } });
+    const admin = await administrativeCaller();
+    const ownRows = await admin.caller.listForges({ strategyId: own.strategy.id });
+    expect(ownRows.map(row => row.id)).toEqual([own.task.id]);
+    expect(ownRows[0]).toMatchObject({ canResume: false });
+    expect(ownRows[0]).not.toHaveProperty("webhookSecret");
+    expect((await admin.caller.listForges({ strategyId: other.strategy.id })).map(row => row.id)).toEqual([other.task.id]);
+    await db.user.update({ where: { id: admin.user.id }, data: { operatorId } });
+    expect((await admin.caller.listForges({ strategyId: own.strategy.id }))[0]).toMatchObject({ canResume: true });
+    expect((await admin.caller.listForges({ strategyId: other.strategy.id }))[0]).toMatchObject({ canResume: false });
+  });
+  it("requires an explicit assigned brand for an unassigned administrator read", async () => {
+    const f = await fixture(), admin = await administrativeCaller();
+    await expect(admin.caller.listForges({})).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(admin.caller.listForges({ strategyId: "missing-" + randomUUID() })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await db.strategy.update({ where: { id: f.strategy.id }, data: { operatorId: null } });
+    await expect(admin.caller.listForges({ strategyId: f.strategy.id })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+  });
+  it("does not turn a stale ADMIN session into an administrator read right", async () => {
+    const f = await fixture(), stale = await administrativeCaller("USER");
+    await expect(stale.caller.listForges({ strategyId: f.strategy.id })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+  it("does not grant submission or private task lookup to an unassigned administrator", async () => {
+    const f = await fixture(), admin = await administrativeCaller();
+    const emissions = await db.intentEmission.count({ where: { strategyId: f.strategy.id } });
+    const selection = deferProvider();
+    await expect(admin.caller.materializeBrief({ strategyId: f.strategy.id, resumeTaskId: f.task.id })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(admin.caller.getForge({ taskId: f.task.id })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(selection).not.toHaveBeenCalled();
+    expect(await db.intentEmission.count({ where: { strategyId: f.strategy.id } })).toBe(emissions);
+    expect(await db.generativeTask.findUnique({ where: { id: f.task.id } })).toEqual(f.task);
+  });
+
   it("retains business scope through the existing commandant and a selected asynchronous provider", async () => {
     const f = await fixture(), refs = await businessScope(f.strategy.id), payload = entryPayload(f.strategy.id, refs);
     const forge = vi.fn().mockResolvedValue({ providerTaskId: "synthetic-provider-task", providerModel: "synthetic", estimatedCostUsd: 0 });

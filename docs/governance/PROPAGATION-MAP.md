@@ -9,7 +9,19 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
-### Reprise de production — ADR-0213 Proposed, prototype 434 (2026-10-09)
+### Reprise et supervision — runtime 434 partiel, candidat 435 (2026-10-09)
+
+Native tracker réelle 434 refusée 403 pour compte non affecté, écran non reçu.
+Candidat 435 : ADMIN effectif canonique + dossier choisi explicitement →
+listForges seulement → canResume selon affectation actuelle → lecture seule
+sans reprise si absente. Mutations/getForge/getAssetVersion restent strictes,
+aucune équipe par défaut/droit/rôle ajouté. Deux rouges/49 verts puis 51 PG ciblés
+verts. Native locale par URL connue → deux dossiers de deux équipes → chacun sa
+tâche, canResume=false/lecture seule, sans bouton ni secret. Actualiser HTTP 200/
+zéro exception, fenêtre complète ; copie FR finale relue et fixture nettoyée.
+Sélecteur 0/0 non reçu ; gauntlet 435 cinq exit 0, gouvernance 1620/166/24 warnings
+préexistants et PG complet seul 274/14/Ptah 51 inclus reçus. CI/image/runtime 435
+à recevoir, sans SLO déduit du reload tronqué.
 
 Tâche DEFERRED → reçu original scellé/portée/paramètres concordants → commande
 materializeBrief/Intent existants → gates courantes → réservation même tâche
@@ -34,8 +46,7 @@ Types/lints/cycles/gouvernance finaux verts après découplage, 1620/166 ;
 stress isolé exit 0 : 46 HTTP reçus/235 non reçus/0 échec, hors native protégée/
 Glory phase 3/fournisseur réel, fixtures nettoyées. Ce stress précède les dernières
 gardes et dates ; suite canonique 4 180/399 et PG 270/14 finaux post-découplage
-reçus, parcours restants/CI/runtime non reçus, production 432
-conservée. Fournisseur/facture/provenance/octets/journal
+reçus ; CI/runtime 434 reçus, parcours restants non reçus. Fournisseur/facture/provenance/octets/journal
 et sept chantiers/dix gates programme restent ouverts.
 [Contrat candidat](adr/0213-deferred-production-resumption-and-seals.md).
 

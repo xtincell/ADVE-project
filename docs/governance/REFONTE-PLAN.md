@@ -1,6 +1,20 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## Reprise de production et sceau du brief — prototype 434 (2026-10-09)
+## Reprise et supervision — runtime 434 partiel, candidat 435 (2026-10-09)
+
+434/source 24ddb3c8/CI 37907427545/image 37907430453/runtime reçus ; native
+tracker 403 pour compte sans affectation, écran non reçu. Reprendre le chokepoint
+existant par listForges seulement : dossier explicitement choisi/ADMIN effectif
+canonique, aucune équipe par défaut ; canResume selon affectation actuelle,
+lecture seule sans bouton si absente. Mutations/autres lectures restent strictes.
+Candidat 435 : quatre cas PG ajoutés, deux rouges/49 verts puis 51 ciblés verts ;
+native locale par URL connue sur deux dossiers/deux équipes reçue : chacun sa
+tâche en lecture seule/canResume=false, sans bouton ni secret. Actualiser HTTP 200/
+zéro exception, fenêtre complète ; copie FR finale relue, fixture nettoyée.
+Sélecteur 0/0 non reçu : reprendre sa recette avant validation de ce parcours ;
+gauntlet 435 cinq exit 0/gouvernance 1620/166/24 warnings préexistants et PG complet
+seul 274/14/Ptah 51 inclus reçus. CI/image/runtime 435 à recevoir. Reload tronqué
+sans SLO déduit.
 
 ADR-0213 Proposed : demande différée → reçu original vérifié/portée relue →
 gates actuelles → réservation même tâche avant réseau → état connu ou incertain →
@@ -10,7 +24,7 @@ existants/scopés non vides. Tracker/page/gardes existants, pas de second
 journal ni nouveau service/router/Intent/modèle/permission. Sceau v2 canonique
 et horodatage sous verrou du spine commun ; v1 conservé, historique non
 recalculable non vérifiable, aucun backfill de payload ou de validation.
-Fix session 433 dédié d973f735 avant Ptah/sceau 434, livraison dans le bundle 434
+Fix session 433 dédié d973f735 avant Ptah/sceau 434, livré dans le bundle 434
 sans runtime 433 autonome : affectation relue en base par session,
 trois rouges/verts auth et marque native retrouvée, sans tenant JWT/rôle/droit.
 Faux vert ACTIVE corrigé par validationStatus explicite dans forge.
@@ -37,14 +51,14 @@ fournisseur réel. Wrapper/heap locaux uniquement, harnais général non répar�
 fixtures nettoyées ; ce stress précède les dernières gardes de contrat et dates.
 Prochaine réception C3/C4/C5/C6 : achever les parcours natifs restants,
 concurrence/interruption/réponse incertaine sans doublon,
-stress des parcours restants/CI/runtime.
+stress des parcours restants puis réception 435 ; CI/runtime 434 déjà reçus.
 Puis configuration et fournisseur réels, octets,
 provenance et facture ; le sceau ne ferme pas le close best-effort du journal.
 Prochaine passe S/validation avant acceptation C3/C4/C6 : confiance absente
 affichée comme inconnue, validation séparée de la mesure/composition ; éprouver
 confirmation sans S composé, sans fabriquer 1.0. Le faux label ACTIVE seul est
 réparé ici ; [résidu et déclencheur](RESIDUAL-DEBT.md).
-Prototype non livré, production 432 conservée, sept chantiers/dix gates non
+Runtime 434 reçu, native tracker non reçue ; sept chantiers/dix gates non
 acceptés. [Contrat](adr/0213-deferred-production-resumption-and-seals.md) ·
 [réception bornée](RECEPTION-PTAH-REPRISE.md).
 

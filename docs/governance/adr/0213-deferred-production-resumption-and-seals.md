@@ -2,14 +2,14 @@
 
 - **Status** : Proposed
 - **Date** : 2026-10-09
-- **Phase** : Réception partielle Shinkiro C3/C4/C5/C6 — prototype non livré
+- **Phase** : Réception partielle Shinkiro C3/C4/C5/C6 — runtime 434, lecture 435 candidate
 - **Depends on** : ADR-0009, ADR-0021, ADR-0124, ADR-0207
 - **Supersedes** : — (extension, aucune réécriture des reçus historiques)
 
 ## Contexte
 
-Le parcours actuel ne relance pas une GenerativeTask DEFERRED : une nouvelle
-matérialisation crée une autre tâche. Le tracker existant est exporté mais non
+Avant 434, le parcours ne relançait pas une GenerativeTask DEFERRED : une nouvelle
+matérialisation créait une autre tâche. Le tracker existant était exporté mais non
 monté. Les contre-exemples PostgreSQL du lot privé 434 reproduisent la duplication,
 l'absence de conservation du brief et la concurrence. Un autre test réel montre
 que le hash d'une émission inchangée ne se recalcule pas après lecture JSONB :
@@ -21,6 +21,10 @@ la session ne transporte pas son operatorId réel. Réparer le callback existant
 par relecture de l’affectation en base, sans l’enfermer dans le JWT ni changer
 les rôles/droits, est requis pour atteindre le parcours. Tests de réaffectation,
 révocation et base indisponible exigés.
+
+434 livré au runtime révèle ensuite tracker natif 403 pour compte non affecté.
+La lecture du dossier choisi en supervision ADMIN effectif et l’exécution pour
+son équipe doivent rester distinctes ; correctif séparé 435 sans nouvelle permission.
 
 Ce raccord appartient à Propulsion/PTAH, avec conservation et contrôle MESTOR,
 carburant THOT et observation SESHAT : décision → production → actif traçable.
@@ -43,6 +47,11 @@ Il ne prouve ni livraison client, ni revenu, ni coût fournisseur facturé.
 - Monter le tracker existant dans la page de production existante, sous la même
   restriction opérateur. Afficher attentes, erreurs, état réel et prix connu ou
   inconnu, confirmation explicite de reprise et pagination des tâches.
+- 435 : listForges seulement résout le dossier explicitement sélectionné pour
+  ADMIN effectif via getOperatorContext canonique, god-mode déjà existant compris,
+  sans équipe par défaut. canResume dépend de l’affectation actuelle ; lecture
+  seule sans bouton si absente. Mutations/getForge/getAssetVersion restent
+  strictes ; aucun rôle/affectation/droit/allowlist modifié.
 - Utiliser IntentEmission.version existant pour un sceau v2 : JSON canonique
   récursif, version incluse, périmètre d'émission (result:null). Conserver le
   calcul v1. Une ancienne empreinte non recalculable est non vérifiable, pas une
@@ -73,9 +82,17 @@ Stress isolé 46 HTTP reçus/235 non reçus/zéro échec avant les dernières ga
 ce découplage,
 sans native protégée/Glory phase 3/fournisseur réel et sans réparation du harnais
 général. Timeout PG concurrent conservé, relance complète seule 270/14 verte en
-24,02 s, cause non démontrée. CI/image/runtime et native production restent
-à recevoir ; auth 433 committée séparément, livraison prévue dans le bundle 434
-sans runtime 433 autonome. [Bornes et preuves locales](../RECEPTION-PTAH-REPRISE.md).
+24,02 s, cause non démontrée. CI/image/runtime 434 reçus, auth 433 incluse sans
+runtime autonome ; native tracker 403/écran non reçu, trace tronquée et H1 borne
+tardive sans zéro exhaustif ou SLO déduit. 435 : deux rouges/49 verts puis 51 PG
+ciblés verts. Native locale par URL connue sur deux dossiers/deux équipes : chacun
+sa tâche en lecture seule/canResume=false, sans bouton ni secret. Actualiser
+HTTP 200/zéro exception dans une fenêtre complète ; copie FR finale relue, fixture
+nettoyée. Sélecteur 0/0 non reçu. Gauntlet local final 435 cinq exit 0, gouvernance
+1620/166/24 warnings préexistants ; PG complet seul 274/14 en 41,09 s, Ptah 51
+inclus. Suite globale 435 non répétée localement, 4180/399 historique 434 ;
+CI/image/runtime 435 en attente. Reload tronqué sans zéro exhaustif ou SLO déduit.
+[Bornes et preuves](../RECEPTION-PTAH-REPRISE.md). ADR reste Proposed.
 Réponses fournisseur incertaines, preuves historiques irrécupérables, lineage
 source complet, coût facturé et cycle client intégral restent à recevoir.
 Les sept chantiers et les dix gates globales demeurent ouverts.
