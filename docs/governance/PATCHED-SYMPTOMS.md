@@ -30,6 +30,30 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-09 · Candidat 436, correctif reçu sur contre-exemples PostgreSQL locaux
+et quatorze cas ciblés verts : confiance absente rendue 0 %, confirmation transformant la mesure
+en 1.0 et S absent pouvant valider Strategy. Les deux routes de validation utilisent
+la même décision d’état dans pillar-gateway ; composition, version relue et
+sources exigées, confiance conservée, S/Strategy atomiques. La page existante
+sépare confiance inconnue, composition et approbation ; projets issus des
+initiatives contrôlent S approuvé avant leurs effets. Cause bornée : mesure,
+composition et décision humaine confondues, avec deux écritures de validation
+indépendantes. Revue native : la boîte Risque affirmait encore que les briefs/KPI
+reposeraient sur des hypothèses non validées, conclusion non établie par une
+confiance faible/null. Boîte retirée et lien renommé « Relire la synthèse et ses
+sources », même route ; copie finale native reçue, aucune hypothèse certifiée
+par ce retrait. Native locale synthétique absence/partiel, confirmations gardant
+22 % ou mesure inconnue et conflit 409 puis nouvelle lecture reçus, sans production.
+Suites locales complètes 4 190/400 unitaires et 288/15 PG vertes ; stress global
+en échec et livraison non reçue. Confidence=1.0 réintroduit : trois cas rouges puis
+trois verts après restauration exacte, onze non sélectionnés ; aucune marque réelle approuvée.
+Gauntlet final cinq exit 0/1 620 gouvernance, fixture nettoyée et serveur arrêté ;
+CI/image/runtime/postmerge encore attendus, aucun stress vert déduit.
+Couverture globale des écrivains/
+consommateurs et concurrence entre
+précondition et création de projets restent dans RESIDUAL-DEBT.
+[Réception en cours](RECEPTION-VALIDATION-SYNTHESE.md).
+
 2026-10-09 · 435 livré, réception partielle : tracker réel 403 en 434 pour compte
 sans affectation malgré rôle ADMIN effectif. listForges seulement résout le dossier
 explicitement choisi via getOperatorContext canonique ; canResume selon

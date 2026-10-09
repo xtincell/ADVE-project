@@ -50,7 +50,7 @@ export type PillarBag = Partial<Record<"A" | "D" | "V" | "E" | "R" | "T" | "I" |
  * n'est vérifiée que si la cible existe (sinon on ne peut pas juger — pool vide toléré,
  * cf. `pool.size` gardé) SAUF pour les liens par nom, où l'absence de cible EST le dangle.
  */
-export function findDanglingReferences(p: PillarBag): DanglingReference[] {
+export function findDanglingReferences(p: PillarBag, options: { strictS?: boolean } = {}): DanglingReference[] {
   const D = (p.D ?? {}) as Rec, V = (p.V ?? {}) as Rec, E = (p.E ?? {}) as Rec;
   const R = (p.R ?? {}) as Rec, T = (p.T ?? {}) as Rec, I = (p.I ?? {}) as Rec, S = (p.S ?? {}) as Rec;
   const out: DanglingReference[] = [];
@@ -85,9 +85,9 @@ export function findDanglingReferences(p: PillarBag): DanglingReference[] {
   });
 
   // ── FK UUID : S → I / R ──
-  for (const key of ["selectedFromI", "rejectedFromI"] as const) {
+  for (const key of options.strictS ? ["selectedFromI", "rejectedFromI", "sprint90Days"] : ["selectedFromI", "rejectedFromI"]) {
     arr(S[key]).forEach((s, i) => {
-      if (actionIds.size && s.sourceInitiativeId && !actionIds.has(asStr(s.sourceInitiativeId))) {
+      if ((actionIds.size || options.strictS) && s.sourceInitiativeId && !actionIds.has(asStr(s.sourceInitiativeId))) {
         out.push({ edge: `S.${key}.sourceInitiativeId → I.actions[].id`, source: `S.${key}[${i}].sourceInitiativeId`, ref: asStr(s.sourceInitiativeId) });
       }
     });
@@ -95,7 +95,7 @@ export function findDanglingReferences(p: PillarBag): DanglingReference[] {
   // S.fenetreOverton.strategieDeplacement est un ARRAY d'étapes {riskId} (schéma:1320) —
   // PAS un objet à `S.strategieDeplacement` (toujours undefined). L'arête ne se déclenchait
   // JAMAIS (false negative — le but même de l' id ADR-0174). Corrigé : chemin + itération.
-  if (blockerIds.size) {
+  if (blockerIds.size || options.strictS) {
     const fenetreOverton = (S.fenetreOverton ?? {}) as Rec;
     arr(fenetreOverton.strategieDeplacement).forEach((step, i) => {
       if (step.riskId && !blockerIds.has(asStr(step.riskId))) {
@@ -104,6 +104,10 @@ export function findDanglingReferences(p: PillarBag): DanglingReference[] {
           source: `S.fenetreOverton.strategieDeplacement[${i}].riskId`,
           ref: asStr(step.riskId),
         });
+      }
+      if (options.strictS && step.hypothesisId && !hypothesisIds.has(asStr(step.hypothesisId))) {
+        out.push({ edge: "S.fenetreOverton.strategieDeplacement[].hypothesisId → T.hypothesisValidation[].id",
+          source: `S.fenetreOverton.strategieDeplacement[${i}].hypothesisId`, ref: asStr(step.hypothesisId) });
       }
     });
   }

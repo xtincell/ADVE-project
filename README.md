@@ -16,6 +16,20 @@
 
 ## Quick start
 
+**Candidat 6.27.436, réception en cours** : la page de production distingue une
+synthèse absente, incomplète ou composée et une confiance non mesurée d’un vrai
+zéro. Une confirmation conserve la confiance enregistrée et porte sur la version
+relue ; un contenu obsolète ou modifié appelle une nouvelle lecture. Ce correctif
+n’approuve aucune marque à votre place. La réception locale synthétique couvre
+l’absence, le contenu partiel, des confirmations gardant 22 % ou une confiance
+non mesurée et le refus d’une version modifiée, sans production.
+Suites locales complètes vertes ; stress global en échec après redémarrage
+mémoire du serveur de développement. Copie native finale reçue sur fixture,
+contrôles locaux finaux verts et fixture nettoyée ; livraison encore à recevoir.
+Le cycle complet de
+SPAWT/FrieslandCampina et les sept chantiers ne sont pas achevés.
+[Réception bornée](docs/governance/RECEPTION-VALIDATION-SYNTHESE.md).
+
 > **Prérequis** : Node.js ≥ 22 (testé v22.14), PostgreSQL ≥ 14, npm.
 
 ```bash

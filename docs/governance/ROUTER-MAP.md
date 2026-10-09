@@ -6,6 +6,20 @@ Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts`
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
+**Candidat 436 — routes de validation factorisées** : strategy.validateSynthesis
+devient une entrée compatible de pillar.transitionStatus, même
+LEGACY_PILLAR_TRANSITION_STATUS gouverné et requireOperator existant. Pour S,
+expectedVersion porte la version relue ; forceConfidence ne fait qu’acquitter
+une confiance faible/inconnue, conservée. Les deux mutations réutilisent le
+helper d’état de pillar-gateway. getSynthesisConfidence fournit absence,
+composition, version et confiance inconnue distincte du zéro.
+generateProjectsFromActions reste sous son kind existant, exige l’opérateur et
+contrôle une synthèse approuvée/composée/fraîche au début de la commande.
+Aucun router, procédure parallèle, permission ou kind ajouté ; quatorze
+PostgreSQL ciblés verts, autres writers et consommateurs globaux non reçus
+par ces seuls tests. [Native synthétique et réceptions restantes](RECEPTION-VALIDATION-SYNTHESE.md).
+[ADR-0214 Proposed et bornes](adr/0214-synthesis-approval-preserves-confidence.md).
+
 **Statut governance** :
 - `point gouverné présent` : présence de `governedProcedure` ou d'un appel `emitIntent` dans le code du router ; la couverture de chaque mutation se vérifie séparément.
 - `appels à suivre` : mutations présentes sans ces marqueurs directs ; vérifier leurs services et leurs justifications avant de conclure à un contournement.

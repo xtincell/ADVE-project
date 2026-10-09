@@ -4,6 +4,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { SCHWARTZ_VALUES } from "@/lib/types/taxonomies";
 import { catalogueReferencePrice, danglingProductRefs } from "@/domain/product-catalog";
 import { findDanglingReferences, type PillarBag } from "@/domain/pillar-reference-edges";
@@ -19,8 +20,8 @@ export interface CrossRefValidation {
 
 type PillarMap = Record<string, Record<string, unknown> | null>;
 
-async function loadPillars(strategyId: string): Promise<PillarMap> {
-  const pillars = await db.pillar.findMany({ where: { strategyId } });
+async function loadPillars(strategyId: string, client: Pick<Prisma.TransactionClient, "pillar">): Promise<PillarMap> {
+  const pillars = await client.pillar.findMany({ where: { strategyId } });
   const map: PillarMap = {};
   for (const p of pillars) {
     map[p.key.toUpperCase()] = p.content as Record<string, unknown> | null;
@@ -48,8 +49,10 @@ function similarity(a: string, b: string): number {
 /**
  * Exécute les 17 validations croisées inter-piliers
  */
-export async function validateCrossReferences(strategyId: string): Promise<CrossRefValidation[]> {
-  const p = await loadPillars(strategyId);
+export async function validateCrossReferences(
+  strategyId: string, client: Pick<Prisma.TransactionClient, "pillar"> = db,
+): Promise<CrossRefValidation[]> {
+  const p = await loadPillars(strategyId, client);
   const results: CrossRefValidation[] = [];
 
   // 1. A.archetype → D.directionArtistique.lsiMatrix.concepts

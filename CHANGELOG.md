@@ -1,5 +1,57 @@
 # Changelog — La Fusee
 
+## v6.27.436 — fix(guidance): séparer approbation et confiance de la synthèse (2026-10-09)
+
+**Une approbation porte sur la synthèse relue et conserve sa confiance ; 436 reste un candidat en réception.**
+
+- ADR-0214 Proposed : factoriser la décision d’état dans pillar-gateway existant,
+  partagée par strategy.validateSynthesis et pillar.transitionStatus sous
+  LEGACY_PILLAR_TRANSITION_STATUS. Aucun modèle, service, router, Intent, outil,
+  Neter, page ou droit ajouté. Le nom forceConfidence reste compatible mais ne
+  signifie qu’une confirmation ; aucune confiance n’est remplacée par 1.0.
+- Composition fondée sur le contrat canonique ENRICHED/COMPLETE et PillarSSchema,
+  distincte des exigences supplémentaires de maturité COMPLETE. Refus S absent,
+  incomplet, obsolète, version relue changée ou référence déclarée sans cible ;
+  liens du sprint inclus. Acteur et portée relus sous verrou des lignes source.
+  Décisions S/Strategy atomiques, retry sans seconde écriture, retour S en DRAFT
+  retire Strategy VALIDATED. Approuver S ne déclenche aucun fournisseur.
+- Page forge existante : confiance inconnue distincte du vrai zéro, mesure
+  conservée après approbation, état de composition et erreur visibles. La boîte
+  Risque qui déduisait des hypothèses non validées d’une confiance faible/null
+  est retirée ; lien « Relire la synthèse et ses sources », sans nouvelle route.
+  Copie finale native reçue sur fixture, aucune hypothèse certifiée par ce retrait.
+  La commande de projets issus des initiatives exige désormais l’opérateur et une synthèse
+  approuvée/composée/fraîche avant ses effets ; les autres chemins de campagne
+  et d’actif restent indépendants de cette décision.
+- Neuf contre-exemples rouges puis neuf/treize et quatorze PostgreSQL ciblés
+  verts ; refus d’une commande de projets sans S approuvé avant tout effet inclus.
+  Échec de cleanup FK historique conservé. Native locale synthétique : S absent/
+  partiel non approuvables ; S composé à 22 % et confiance null confirmés sans
+  modifier leurs mesures. Version 1→2 entre avertissement et confirmation :
+  conflit 409/message visible puis approbation après nouvelle lecture. Contenu
+  inchangé, zéro ligne AICostLog, sans production. Types/lints/cycles passés ;
+  pointer préexistant de seed décalé par les imports corrigé après deux échecs
+  gouvernance, quatre cas ciblés verts, aucun bypass ajouté. Suites locales
+  complètes : 4 190/400 unitaires et 288/15 PostgreSQL verts, dont les 14 cas S.
+  Stress-full chaud exit 1 : 32 HTTP reçus/230 non reçus/19 pages FETCH_FAILED
+  et trois queries FETCH_FAILED, 22 findings ; redémarrage mémoire Next dev
+  observé sur le dernier segment. Aucun stress vert ou parcours protégé reçu
+  déduit, heap local 8 192 MiB seulement. Défaut confidence=1.0 réintroduit :
+  trois cas ciblés rouges puis trois verts après restauration exacte de la source,
+  onze non sélectionnés. Copie finale native : modal/lien corrects et Risque absent,
+  confirmation HTTP 200/null inchangé, deux réponses 200 et zéro ≥500/exception
+  sur ces gestes complets seulement. Gauntlet final cinq exit 0, gouvernance
+  1 620/166, DS trois/vocab cinq verts, 24 warnings préexistants ; fixture
+  nettoyée/zéro stratégie exacte, serveur arrêté et next-env restauré.
+  CI/image/runtime/postmerge encore attendus. Fenêtres d’approbation/
+  conflit complètes, anciennes navigations tronquées et timeouts de compilation
+  dev récupérés ; aucune assertion globale zéro erreur ou SLO.
+  Aucune approbation SPAWT/FrieslandCampina ni coût fournisseur ; les autres écrivains
+  et consommateurs globaux ne sont pas reçus par ces seuls cas.
+  Sept chantiers/dix gates non acceptés :
+  [contrat proposé](docs/governance/adr/0214-synthesis-approval-preserves-confidence.md) ·
+  [réception en cours](docs/governance/RECEPTION-VALIDATION-SYNTHESE.md).
+
 ## v6.27.435 — fix(ptah): lire les productions du dossier sélectionné en supervision (2026-10-09)
 
 **435 est livré ; le suivi vide SPAWT est reçu en production. La reprise reste réservée à l’équipe affectée.**

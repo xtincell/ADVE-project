@@ -39,6 +39,7 @@ import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import { getStrategyReadiness } from "@/server/governance/pillar-readiness";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
+import { transitionPillarStatus } from "@/server/services/pillar-gateway/validation-status";
 import { assertWritten } from "./_pillar-write-guard";
 import { getNestedArray } from "@/lib/pillar-path";
 import type { PillarKey as PK } from "@/lib/types/advertis-vector";
@@ -496,85 +497,12 @@ export const pillarRouter = createTRPCRouter({
       strategyId: z.string(),
       key: pillarKeyEnum,
       targetStatus: z.enum(["DRAFT", "AI_PROPOSED", "VALIDATED", "LOCKED"]),
+      expectedVersion: z.number().int().min(1).optional(),
+      acknowledgeLowConfidence: z.boolean().optional().default(false),
     }),
   }).mutation(async ({ ctx, input }) => {
-      const pillar = await ctx.db.pillar.findUnique({
-        where: { strategyId_key: { strategyId: input.strategyId, key: input.key.toLowerCase() } },
-      });
-      if (!pillar) return { success: false, error: "Pillar not found" };
-
-      const currentStatus = pillar.validationStatus ?? "DRAFT";
-
-      // Enforce valid transitions
-      const validTransitions: Record<string, string[]> = {
-        DRAFT: ["AI_PROPOSED", "VALIDATED"],
-        AI_PROPOSED: ["DRAFT", "VALIDATED"],
-        VALIDATED: ["LOCKED", "DRAFT"],
-        LOCKED: ["DRAFT"], // Can only unlock back to DRAFT
-      };
-
-      const allowed = validTransitions[currentStatus] ?? [];
-      if (!allowed.includes(input.targetStatus)) {
-        return {
-          success: false,
-          error: `Transition invalide: ${currentStatus} → ${input.targetStatus}. Transitions permises: ${allowed.join(", ")}`,
-        };
-      }
-
-      // Gate: Cannot validate a stale pillar
-      if (input.targetStatus === "VALIDATED" && pillar.staleAt) {
-        return {
-          success: false,
-          error: `Impossible de valider: le pilier ${input.key} est marque obsolete depuis le ${pillar.staleAt.toLocaleDateString("fr-FR")}. Mettez a jour le contenu d'abord.`,
-          staleAt: pillar.staleAt.toISOString(),
-        };
-      }
-
-      // Gate: VALIDATED requires no stale dependencies
-      if (input.targetStatus === "VALIDATED") {
-        const { checkStaleness } = await import("@/server/services/staleness-propagator");
-        const staleness = await checkStaleness(input.strategyId, input.key);
-        if (staleness.isStale) {
-          return {
-            success: false,
-            error: `Impossible de valider: pilier ${input.key} est stale depuis ${staleness.staleDays} jour(s). Mettez a jour les dependances (${staleness.dependsOn.join(", ")}) ou rafraichissez ce pilier.`,
-            staleness,
-          };
-        }
-      }
-
-      // Gate: VALIDATED requires cross-validation check (only rules involving THIS pillar)
-      if (input.targetStatus === "VALIDATED") {
-        const allRefs = await validateCrossReferences(input.strategyId);
-        const key = input.key.toUpperCase();
-        const relevantInvalid = allRefs.filter(
-          (r: { status: string; from: string; to: string }) =>
-            r.status === "INVALID" && (r.from.startsWith(`${key}.`) || r.to.startsWith(`${key}.`))
-        );
-        if (relevantInvalid.length > 0) {
-          return {
-            success: false,
-            error: `Impossible de valider ${key}: ${relevantInvalid.length} violation(s) cross-pilier. ${relevantInvalid.map((r: { rule: string }) => r.rule).join(", ")}`,
-            crossRefViolations: relevantInvalid,
-          };
-        }
-      }
-
-      // Gate: LOCKED requires minimum confidence
-      if (input.targetStatus === "LOCKED") {
-        if ((pillar.confidence ?? 0) < 0.7) {
-          return {
-            success: false,
-            error: `Impossible de verrouiller: confiance insuffisante (${(pillar.confidence ?? 0).toFixed(2)} < 0.70).`,
-          };
-        }
-      }
-
-      // validationStatus is a state machine transition, not content — direct write OK
-      await ctx.db.pillar.update({
-        where: { id: pillar.id },
-        data: { validationStatus: input.targetStatus },
-      });
+      const decision = await transitionPillarStatus({ ...input, userId: ctx.session.user.id });
+      if (!decision.success || decision.alreadyApplied) return decision;
 
       // If all ADVE are VALIDATED, check for RTIS trigger
       if (input.targetStatus === "VALIDATED" && (ADVE_STORAGE_KEYS as readonly string[]).includes(input.key.toLowerCase())) {
@@ -604,13 +532,13 @@ export const pillarRouter = createTRPCRouter({
       }
 
       // Artemis auto-trigger: run relevant frameworks for the next pipeline stage
-      if (input.targetStatus === "VALIDATED") {
+      if (input.targetStatus === "VALIDATED" && input.key !== "S") {
         triggerNextStageFrameworks(input.strategyId, input.key.toLowerCase()).catch((err) => {
           console.warn("[pillar] Artemis auto-trigger failed:", err instanceof Error ? err.message : err);
         });
       }
 
-      return { success: true, newStatus: input.targetStatus };
+      return decision;
     }),
 
   /** Apply a GLORY tool output to D.directionArtistique */

@@ -222,6 +222,16 @@ Le founder allume des thrusters.
 | `/cockpit/operate/missions/page.tsx` | Propulsion | M | active | Missions founder |
 | `/cockpit/operate/requests/page.tsx` | Propulsion | M | active | Demande manuelle, historique et reçu réel de mission (ADR-0201) |
 
+**Candidat 436 dans la page forge existante** : l’état absent/incomplet/composé/
+obsolète provient de getSynthesisConfidence ; l’approbation requiert la version
+relue et l’opérateur actuel. Confiance inconnue sans fausse barre 0 %, vrai zéro
+conservé, mesure encore visible après décision, refus serveur visible et
+confirmation distincte du contenu. Aucun nouvel écran ou droit ; le layout
+OperatorSurface reste en place. Cinq cas natifs synthétiques reçus : absence/
+partiel, confirmations sans modifier la confiance et conflit de version puis
+nouvelle lecture. Livraison reste à recevoir,
+aucune approbation de marque réelle : [réception](RECEPTION-VALIDATION-SYNTHESE.md).
+
 Transport associé, **hors dénombrement des pages** :
 `GET /brand/editions/[editionId]/[file]` (hash.extension), livré et reçu en 431,
 Sustainment/MESTOR via brand-vault existant. Lecture anonyme bornée aux éditions

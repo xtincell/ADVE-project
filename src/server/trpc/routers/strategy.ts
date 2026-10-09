@@ -22,6 +22,8 @@ import {
 import { computeEvidenceBreakdown } from "@/server/services/advertis-scorer/evidence";
 import { PublicBrandPublicationInput } from "@/domain/public-brand";
 import { previewPublicBrand, publishPublicBrand, PublicBrandError } from "@/server/services/brand-vault/publication";
+import { inspectSynthesis, transitionPillarStatus, assertApprovedSynthesis } from "@/server/services/pillar-gateway/validation-status";
+import { measuredConfidence } from "@/lib/confidence";
 /* lafusee:governed-active */
 
 export const strategyRouter = createTRPCRouter({
@@ -875,75 +877,32 @@ export const strategyRouter = createTRPCRouter({
       );
 
       return {
-        confidence: sPillar?.confidence ?? null,
+        ...inspectSynthesis(sPillar),
+        confidence: measuredConfidence(sPillar?.confidence),
         validationStatus: sPillar?.validationStatus ?? "DRAFT",
         fieldCertainty: sPillar?.fieldCertainty ?? null,
         pillarScores,
-        hasLowConfidence: (sPillar?.confidence ?? 0) < 0.30,
+        hasLowConfidence: measuredConfidence(sPillar?.confidence) !== null && sPillar!.confidence! < 0.30,
         isAiProposed: sPillar?.validationStatus === "AI_PROPOSED",
       };
     }),
 
-  validateSynthesis: protectedProcedure
-    .input(z.object({
+  // Compatibility endpoint: same governed state decision as pillar.transitionStatus.
+  validateSynthesis: governedProcedure({
+    kind: "LEGACY_PILLAR_TRANSITION_STATUS",
+    caller: "strategy:validateSynthesis",
+    requireOperator: true,
+    inputSchema: z.object({
       strategyId: z.string(),
-      /** Si true : force la validation même si confiance < 30% et met confidence=1.0 */
+      expectedVersion: z.number().int().min(1),
+      // Historical name retained; acknowledgement never alters a measurement.
       forceConfidence: z.boolean().optional().default(false),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      await assertStrategyRead(ctx.session.user.id, input.strategyId);
-      // 1. Lire le pilier S
-      const sPillar = await ctx.db.pillar.findFirst({
-        where: { strategyId: input.strategyId, key: "s" },
-      });
-
-      const confidence = sPillar?.confidence ?? 0;
-
-      // 2. Si confiance < 30% et pas de forceConfidence → retourner un warning
-      //    Le client affichera le modal de confirmation.
-      if (confidence < 0.30 && !input.forceConfidence) {
-        return {
-          warning: true as const,
-          confidence,
-          validationStatus: sPillar?.validationStatus ?? "DRAFT",
-          message: "Stratégie majoritairement inférée par l'IA. Confirmation requise.",
-          updated: null,
-        };
-      }
-
-      // 3. Valider la stratégie
-      const updated = await ctx.db.strategy.update({
-        where: { id: input.strategyId },
-        data: { status: "VALIDATED" },
-      });
-
-      // 4. Si pilier S existe : mettre confidence=1.0 et status=VALIDATED
-      if (sPillar) {
-        await ctx.db.pillar.update({
-          where: { id: sPillar.id },
-          data: {
-            confidence: 1.0,
-            validationStatus: "VALIDATED",
-          },
-        });
-      }
-
-      // Audit trail (non-blocking)
-      auditTrail.log({
-        userId: ctx.session.user.id,
-        action: "UPDATE",
-        entityType: "Strategy",
-        entityId: input.strategyId,
-        newValue: {
-          status: "VALIDATED",
-          sPillarConfidence: 1.0,
-          forceConfidence: input.forceConfidence,
-          previousConfidence: confidence,
-        },
-      }).catch((err) => { console.warn("[audit-trail] strategy validate log failed:", err); });
-
-      return { warning: false as const, confidence: 1.0, updated };
+      key: z.literal("S").default("S"),
+      targetStatus: z.literal("VALIDATED").default("VALIDATED"),
     }),
+  }).mutation(({ ctx, input }) => transitionPillarStatus({
+    ...input, userId: ctx.session.user.id, acknowledgeLowConfidence: input.forceConfidence,
+  })),
 
   generateProjectsFromActions: governedProcedure({
     kind: "LEGACY_STRATEGY_GENERATE_PROJECTS_FROM_ACTIONS",
@@ -952,22 +911,11 @@ export const strategyRouter = createTRPCRouter({
       actionIds: z.array(z.string()),
     }),
     caller: "strategy:generateProjectsFromActions",
+    requireOperator: true,
   })
     .mutation(async ({ ctx, input }) => {
-      if (!(await canAccessStrategy(input.strategyId, {
-        operatorId: (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null,
-        userId: ctx.session.user.id,
-        role: ctx.session.user.role ?? "USER",
-      }))) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé: cette stratégie appartient à un autre opérateur" });
-      }
-
+      const strategy = await assertApprovedSynthesis(input.strategyId, ctx.session.user.id);
       const { generateCampaignCode, generateBriefFromBrandAction } = await import("@/server/services/campaign-manager");
-
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
-        where: { id: input.strategyId },
-        include: { pillars: true },
-      });
 
       const brandActions = await ctx.db.brandAction.findMany({
         where: {

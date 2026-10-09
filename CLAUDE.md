@@ -4,6 +4,39 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
+**6.27.436 candidat — approbation S distincte de sa confiance** : le helper d’état
+dans pillar-gateway existant est partagé par les deux routes gouvernées de
+validation, sans kind/service/modèle/page/droit nouveau. Contrat ENRICHED/COMPLETE
+et schéma S strict pour composition, version relue requise pour approuver S ;
+absence, contenu incomplet/obsolète ou référence déclarée introuvable refusés.
+Acteur/portée relus sous verrou des sources ; S/Strategy changent atomiquement,
+retry conserve timestamps et confiance, DRAFT retire Strategy VALIDATED.
+forceConfidence confirme une décision sans fabriquer de mesure ; null/invalide
+sont inconnus, zéro reste zéro. La page forge rend composition, refus et confiance
+inchangée ; generateProjectsFromActions contrôle une synthèse approuvée au début
+de la commande sous la restriction opérateur existante. Aucune approbation de
+marque réelle ni fournisseur déclenché ; autres écrivains/consommateurs globaux
+restent à recevoir. Quatorze PostgreSQL ciblés verts ; native synthétique absence/
+partiel non approuvables, confirmations de S composé gardant 22 % ou mesure
+inconnue et conflit de version 409 puis nouvelle lecture/approbation reçus,
+sans production/coût, contenu inchangé. Fenêtres approbation/conflit complètes,
+navigations historiques tronquées/timeouts dev récupérés, aucun zéro global/SLO.
+Types/lints/cycles passés, quatre cas gouvernance verts après
+correction du pointer de seed décalé. Suites locales complètes : 4 190/400
+unitaires et 288/15 PG verts, 14 cas S inclus. Stress-full chaud exit 1,
+32 HTTP reçus/230 non reçus/19 pages et trois queries FETCH_FAILED/22 findings,
+redémarrage mémoire Next dev observé ; heap local 8 192 MiB seulement, aucun
+stress vert/parcours protégé reçu. Confidence=1.0 réintroduit : trois cas rouges
+puis trois verts après restauration exacte, onze non sélectionnés. Copie native
+finale reçue : modal non mesuré/lien juste/Risque absent, confirmation conserve
+null et contenu ; deux HTTP 200/zéro ≥500/exception dans ces gestes complets,
+sans SLO ou zéro global. Gauntlet final cinq exit 0, gouvernance 1 620/166,
+DS trois/vocab cinq verts, 24 warnings préexistants. Fixture nettoyée/zéro
+stratégie exacte, Next arrêté, next-env restauré ; CI/image/runtime/postmerge
+à recevoir. ADR-0214 Proposed,
+[reçu courant](docs/governance/RECEPTION-VALIDATION-SYNTHESE.md) ; les sept
+chantiers/dix gates restent non acceptés. Runtime reçu courant : 435 ci-dessous.
+
 **6.27.435 livré — suivi vide SPAWT reçu, métier partiel** : après refus natif tracker
 403 en 434 pour compte non affecté, listForges seulement résout le dossier choisi
 explicitement pour ADMIN effectif canonique ; canResume selon affectation actuelle,

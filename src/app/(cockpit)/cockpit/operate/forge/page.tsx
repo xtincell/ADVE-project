@@ -54,6 +54,7 @@ export default function DeliverableForgePage() {
   const [routeGuildeOnCreate, setRouteGuildeOnCreate] = useState(false);
   // Modal de confirmation validation S < 30%
   const [showLowConfidenceModal, setShowLowConfidenceModal] = useState(false);
+  const [reviewedVersion, setReviewedVersion] = useState<number | null>(null);
 
   // Tab 2: Deliverable Forge States
   const [targetKind, setTargetKind] = useState<string>("");
@@ -82,13 +83,14 @@ export default function DeliverableForgePage() {
   const validateSynthesisMutation = trpc.strategy.validateSynthesis.useMutation({
     onSuccess: (data) => {
       if (data && "warning" in data && data.warning) {
-        // Confiance < 30% — afficher le modal
+        setReviewedVersion(data.version);
         setShowLowConfidenceModal(true);
       } else {
         strategyQuery.refetch();
         synthesisConfidenceQuery.refetch();
       }
-    }
+    },
+    onError: () => { synthesisConfidenceQuery.refetch(); },
   });
 
   const generateProjectsMutation = trpc.strategy.generateProjectsFromActions.useMutation({
@@ -152,19 +154,16 @@ export default function DeliverableForgePage() {
     composeMutation.mutate({ strategyId, targetKind, previewOnly: false });
   }
 
-  async function handleValidateStrategy() {
-    if (!strategyId) return;
-    // Lance la validation — le serveur retourne { warning: true } si confiance < 30%
-    // Le onSuccess du mutation gère l'affichage du modal
-    await validateSynthesisMutation.mutateAsync({ strategyId });
+  function handleValidateStrategy() {
+    const expectedVersion = synthesisConfidenceQuery.data?.currentVersion;
+    if (!strategyId || expectedVersion == null) return;
+    validateSynthesisMutation.mutate({ strategyId, expectedVersion });
   }
 
-  async function handleForceValidate() {
-    if (!strategyId) return;
+  function handleForceValidate() {
+    if (!strategyId || reviewedVersion == null) return;
     setShowLowConfidenceModal(false);
-    await validateSynthesisMutation.mutateAsync({ strategyId, forceConfidence: true });
-    strategyQuery.refetch();
-    synthesisConfidenceQuery.refetch();
+    validateSynthesisMutation.mutate({ strategyId, expectedVersion: reviewedVersion, forceConfidence: true });
   }
 
   async function handleGenerateProjects() {
@@ -204,7 +203,8 @@ export default function DeliverableForgePage() {
   const strategy = strategyQuery.data;
   // ACTIVE is also the schema default; it is not a recorded synthesis approval.
   const isStrategyValidated = (strategy?.status === "VALIDATED" || strategy?.status === "ACTIVE")
-    && synthesisConfidenceQuery.data?.validationStatus === "VALIDATED";
+    && ["VALIDATED", "LOCKED"].includes(synthesisConfidenceQuery.data?.validationStatus ?? "")
+    && synthesisConfidenceQuery.data?.canValidate === true;
   const actions = actionsQuery.data ?? [];
   const sConf = synthesisConfidenceQuery.data;
   const confFmt = formatConfidence(sConf?.confidence);
@@ -219,7 +219,7 @@ export default function DeliverableForgePage() {
       <PtahKilnTracker key={strategyId} strategyId={strategyId} />
 
       {/* ── Bannière confiance Pilier S ──────────────────────────────────── */}
-      {sConf && !isStrategyValidated && (
+      {sConf && (
         <div
           className={cn(
             "rounded-xl border p-4 space-y-3",
@@ -227,7 +227,7 @@ export default function DeliverableForgePage() {
               ? "border-error/30 bg-error/5"
               : confFmt.level === "medium"
                 ? "border-warning/30 bg-warning/5"
-                : "border-success/20 bg-success/5"
+                : confFmt.level === "unknown" ? "border-border bg-background/50" : "border-success/20 bg-success/5"
           )}
         >
           <div className="flex items-start justify-between gap-4">
@@ -235,7 +235,7 @@ export default function DeliverableForgePage() {
               <ShieldAlert
                 className={cn(
                   "h-4 w-4 shrink-0",
-                  sConf.hasLowConfidence ? "text-error" : confFmt.level === "medium" ? "text-warning" : "text-success"
+                  sConf.hasLowConfidence ? "text-error" : confFmt.level === "medium" ? "text-warning" : confFmt.level === "unknown" ? "text-foreground-muted" : "text-success"
                 )}
               />
               <div>
@@ -243,13 +243,9 @@ export default function DeliverableForgePage() {
                   Confiance stratégique — Pilier S (Synthèse)
                 </p>
                 <p className="text-xs text-foreground-muted mt-0.5">
-                  {sConf.isAiProposed
-                    ? "⚠️ La majorité des données stratégiques ont été inférées par l'IA et ne sont pas encore validées par un opérateur."
-                    : confFmt.level === "low"
-                      ? "Les données de synthèse sont insuffisantes pour garantir la qualité des projets générés."
-                      : confFmt.level === "medium"
-                        ? "La stratégie est partiellement validée. Une revue avant forge est recommandée."
-                        : "La stratégie est bien documentée. Vous pouvez forger en toute confiance."}
+                  {confFmt.level === "unknown"
+                    ? "La confiance n’a pas été mesurée. Une approbation humaine ne crée pas une mesure."
+                    : "Confiance enregistrée sur la synthèse. Votre décision de validation conserve cette valeur."}
                 </p>
               </div>
             </div>
@@ -259,13 +255,13 @@ export default function DeliverableForgePage() {
               </span>
               {sConf.isAiProposed && (
                 <p className="text-[9px] font-mono uppercase tracking-widest text-error mt-0.5">
-                  AI_PROPOSED
+                  Proposition à relire
                 </p>
               )}
             </div>
           </div>
           {/* Barre de progression */}
-          <div className="h-1.5 w-full rounded-full bg-background/40">
+          {confFmt.level !== "unknown" && <div className="h-1.5 w-full rounded-full bg-background/40">
             <div
               className={cn(
                 "h-1.5 rounded-full transition-all",
@@ -273,7 +269,7 @@ export default function DeliverableForgePage() {
               )}
               style={{ width: confFmt.pct }}
             />
-          </div>
+          </div>}
         </div>
       )}
 
@@ -282,18 +278,13 @@ export default function DeliverableForgePage() {
         <Modal
           open={showLowConfidenceModal}
           onClose={() => setShowLowConfidenceModal(false)}
-          title={`⚠️ Stratégie à ${confFmt.pct} de confiance`}
+          title={confFmt.level === "unknown" ? "Confiance non mesurée" : `Confiance enregistrée : ${confFmt.pct}`}
         >
           <div className="space-y-4">
             <p className="text-sm text-foreground-secondary">
-              La majorité des données de cette stratégie ont été <strong>inférées par l'IA</strong>
-              {sConf.isAiProposed ? " (statut : AI_PROPOSED)" : ""}. Forger des projets sur une base
-              aussi incertaine peut produire des campagnes mal alignées avec votre réalité terrain.
+              Vous approuvez la synthèse relue avec une confiance faible ou non mesurée.
+              Cette décision conserve la confiance enregistrée et les sources du contenu.
             </p>
-            <div className="rounded-lg border border-error/20 bg-error/5 p-3 text-xs text-error">
-              <strong>Risque :</strong> les briefs et KPI générés seront basés sur des hypothèses non validées.
-              Nous recommandons de revoir votre fondation de marque avant de procéder.
-            </div>
             <div className="flex flex-col gap-2 pt-2">
               <a
                 href="/cockpit/brand/roadmap"
@@ -301,7 +292,7 @@ export default function DeliverableForgePage() {
                 className="flex items-center justify-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm font-semibold text-accent transition-colors hover:bg-accent/20"
               >
                 <BookOpen className="h-4 w-4" />
-                Relire et compléter la fondation
+                Relire la synthèse et ses sources
               </a>
               <button
                 type="button"
@@ -309,11 +300,17 @@ export default function DeliverableForgePage() {
                 className="flex items-center justify-center gap-2 rounded-xl border border-error/20 bg-error/5 px-4 py-3 text-sm font-medium text-error transition-colors hover:bg-error/10"
               >
                 <CheckCircle2 className="h-4 w-4" />
-                Valider malgré la confiance faible
+                Confirmer mon approbation
               </button>
             </div>
           </div>
         </Modal>
+      )}
+
+      {validateSynthesisMutation.error && (
+        <p role="alert" className="rounded-lg border border-error/30 bg-error/5 p-3 text-sm text-error">
+          {validateSynthesisMutation.error.message}
+        </p>
       )}
 
       {/* Tabs Selector */}
@@ -355,7 +352,7 @@ export default function DeliverableForgePage() {
                 <div className="space-y-1">
                   <h3 className="text-sm font-bold text-foreground">Validation du S requise</h3>
                   <p className="text-xs text-foreground-secondary leading-relaxed">
-                    La stratégie de la marque <span className="font-semibold text-foreground">{strategy?.name}</span> n'a pas encore été validée. La validation de la synthèse est nécessaire pour verrouiller la stratégie et déclencher sa vie opérationnelle.
+                    La synthèse de <span className="font-semibold text-foreground">{strategy?.name}</span> doit être composée et relue avant la création de projets issus de ses initiatives. Les autres travaux de marque restent accessibles.
                   </p>
                 </div>
               </div>
@@ -366,30 +363,27 @@ export default function DeliverableForgePage() {
                   Critères de validation stratégique
                 </h4>
 
-                <ul className="space-y-2 text-xs">
-                  <li className="flex items-center gap-2 text-foreground-secondary">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-foreground-muted" />
-                    Piliers A, D, V, E complétés et qualifiés
-                  </li>
-                  <li className="flex items-center gap-2 text-foreground-secondary">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-foreground-muted" />
-                    Bilan des risques et opportunités (R+T) calculé
-                  </li>
-                  <li className="flex items-center gap-2 text-foreground-secondary">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-foreground-muted" />
-                    Oracle stratégique validé et assemblé
-                  </li>
-                </ul>
+                <p className="text-xs text-foreground-secondary" aria-live="polite">
+                  {synthesisConfidenceQuery.isLoading ? "Lecture de la synthèse…"
+                    : synthesisConfidenceQuery.isError ? "La synthèse n’a pas pu être chargée. Actualisez pour réessayer."
+                      : !sConf?.exists ? "Synthèse absente : composez-la depuis la fondation de marque."
+                        : !sConf.composed ? "Synthèse incomplète : relisez ses axes, actions, jalons et sources."
+                          : !sConf.canValidate ? "Synthèse obsolète : actualisez-la depuis ses sources."
+                            : "Synthèse composée. Relisez-la avant de confirmer votre approbation."}
+                </p>
+                <a href="/cockpit/brand/roadmap" className="text-xs text-accent underline">
+                  Relire la synthèse et ses sources
+                </a>
               </div>
 
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleValidateStrategy}
-                  disabled={validateSynthesisMutation.isPending}
+                  disabled={validateSynthesisMutation.isPending || !sConf?.canValidate || synthesisConfidenceQuery.isFetching}
                   className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-background hover:bg-accent/90 disabled:opacity-50"
                 >
                   <ShieldCheck className="h-4 w-4" />
-                  {validateSynthesisMutation.isPending ? "Validation..." : "Valider le S → Déclencher la vie de la marque"}
+                  {validateSynthesisMutation.isPending ? "Validation..." : "Approuver la synthèse relue"}
                 </button>
               </div>
             </section>
@@ -398,7 +392,7 @@ export default function DeliverableForgePage() {
               <div className="flex items-center gap-3">
                 <ShieldCheck className="h-5 w-5 text-success" />
                 <div className="text-xs">
-                  <span className="font-semibold text-foreground">Stratégie Validée.</span> La vie opérationnelle de la marque est active. Vous pouvez forger des projets ci-dessous.
+                  <span className="font-semibold text-foreground">Synthèse approuvée.</span> La confiance enregistrée reste inchangée. Vous pouvez choisir les initiatives à transformer en projets.
                 </div>
               </div>
             </section>

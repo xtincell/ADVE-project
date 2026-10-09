@@ -29,7 +29,7 @@ import { getContracts } from "./contracts-loader";
 /**
  * Check if a field requirement is satisfied by the pillar content.
  */
-function isFieldSatisfied(content: Record<string, unknown>, req: FieldRequirement): boolean {
+export function isFieldSatisfied(content: Record<string, unknown>, req: FieldRequirement): boolean {
   const value = resolvePillarPath(content, req.path);
 
   switch (req.validator) {

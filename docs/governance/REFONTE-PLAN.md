@@ -1,5 +1,26 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Décision de synthèse — candidat 436, réception en cours (2026-10-09)
+
+ADR-0214 Proposed factorise l’état de validation dans pillar-gateway existant,
+partagé par strategy.validateSynthesis et pillar.transitionStatus, sous le kind
+déjà présent. Composition ENRICHED/COMPLETE + schéma S, version relue, sources,
+acteur et portée contrôlés ; persistance S/Strategy atomique, confidence jamais
+réécrite par la confirmation. La maturité globale COMPLETE garde ses exigences
+propres. Approuver S ne déclenche aucun fournisseur ; les projets explicitement
+issus des initiatives requièrent S approuvé/composé/frais au début de la commande.
+Les autres travaux de marque restent indépendants. Quatorze PostgreSQL ciblés
+verts et cinq cas natifs synthétiques reçus, dont confirmations sans modifier
+22 %/inconnu et conflit de version puis nouvelle lecture, sans production.
+Suites locales complètes vertes ; stress-full en échec après redémarrage mémoire
+Next dev, reprise sur artifact build/instance isolée planifiée dans la dette du
+harnais. Copie native finale et faute confidence=1.0 remise en rouge/restaurée
+reçues. Gauntlet final vert/fixture nettoyée ; terminer CI/runtime/postmerge puis autres
+écrivains/consommateurs S et concurrence de création des projets. Aucun noyau
+réel validé, sept chantiers/dix gates toujours non acceptés.
+[Contrat proposé](adr/0214-synthesis-approval-preserves-confidence.md) ·
+[réception et limites](RECEPTION-VALIDATION-SYNTHESE.md).
+
 ## Reprise et supervision — runtime 435, suivi vide reçu (2026-10-09)
 
 434/source 24ddb3c8/CI 37907427545/image 37907430453/runtime reçus ; native
@@ -60,10 +81,10 @@ Recevoir ensuite le suivi natif des productions présentes et les reprises
 effectives, sans assimiler les lectures du sélecteur/portefeuille à un cycle reçu.
 Puis configuration et fournisseur réels, octets,
 provenance et facture ; le sceau ne ferme pas le close best-effort du journal.
-Prochaine passe S/validation avant acceptation C3/C4/C6 : confiance absente
-affichée comme inconnue, validation séparée de la mesure/composition ; éprouver
-confirmation sans S composé, sans fabriquer 1.0. Le faux label ACTIVE seul est
-réparé ici ; [résidu et déclencheur](RESIDUAL-DEBT.md).
+Passe S/validation reprise dans le candidat 436 ci-dessus avant acceptation
+C3/C4/C6 : confiance inconnue, composition et décision séparées ; réception
+finale et consommateurs transverses restent ouverts. Le faux label ACTIVE seul
+était réparé en 434 ; [résidu et déclencheur](RESIDUAL-DEBT.md).
 Runtime 435/suivi vide SPAWT reçus, métier partiel ; sept chantiers/dix gates non
 acceptés. [Contrat](adr/0213-deferred-production-resumption-and-seals.md) ·
 [réception bornée](RECEPTION-PTAH-REPRISE.md).

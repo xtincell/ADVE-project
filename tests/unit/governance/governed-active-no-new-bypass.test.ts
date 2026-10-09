@@ -95,7 +95,7 @@ const BASELINE: Readonly<Record<string, number>> = {
   "mission-applications.ts": 1, // PENDING — withdraw
   "mobile-money.ts": 1, // EXEMPT — webhook externe (secret partagé fail-closed round-8)
   "monetization.ts": 1, // PENDING — initSubscription (public paywall)
-  "strategy.ts": 1, // PENDING — validateSynthesis
+  "strategy.ts": 0, // validateSynthesis shares the governed pillar state decision
   // ── Round-8 (§B) : routeurs NON tagués `governed-active`, désormais scannés ──
   "payment.ts": 8, // EXEMPT — infra paiement (paywall public + admin) + audit IntakePayment/Subscription propre (ADR-0092)
   "newsletter.ts": 7, // MIXTE — 3 emailProvider* EXEMPT (vault ADR-0021) + 4 PENDING (subscribers*/newsletters* → spine, plan round-7 ; kind async NEWSLETTER_SEND_CAMPAIGN déjà déclaré, à câbler)

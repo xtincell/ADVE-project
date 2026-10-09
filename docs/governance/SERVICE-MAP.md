@@ -8,6 +8,20 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
+**Candidat 436 — état de validation, extension du service existant** :
+`pillar-gateway/validation-status.ts` partage inspection de composition et décision
+de validation entre les deux routes existantes. Contrat ENRICHED/COMPLETE + schéma
+S strict, version relue, acteur/portée et sources contrôlés sous verrou ; S/Strategy
+atomiques et confiance conservée. cross-validator/staleness-propagator acceptent
+le lecteur transactionnel, sans second service ; assessor expose son test de
+champ existant. Le contrôle initial des projets issus des initiatives réutilise
+ce helper. Aucun provider dans l’approbation S, aucun nouveau service/Neter/kind.
+Quatorze PostgreSQL ciblés verts et cinq cas natifs synthétiques reçus ; suites
+locales complètes et gauntlet final verts, fixture nettoyée ; stress/livraison et autres consommateurs
+restent ouverts.
+[ADR-0214 Proposed](adr/0214-synthesis-approval-preserves-confidence.md) ·
+[réception](RECEPTION-VALIDATION-SYNTHESE.md).
+
 Couverture physique des manifests au 2026-10-06 : **120/123 répertoires**. `creative-intelligence/manifest.ts` réexporte le manifest du moteur sous Seshat, car le registre découvre les manifests racines. Les trois extensions ci-dessus ne portent pas de manifest co-localisé ; leur rattachement aux services parents reste à vérifier dans le registre de gouvernance. Le relevé 118/118 du 2026-07-21 est historique et ne décrit plus tout le répertoire.
 
 ---

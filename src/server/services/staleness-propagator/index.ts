@@ -291,7 +291,8 @@ export async function auditAllStrategies(): Promise<{
  */
 export async function checkStaleness(
   strategyId: string,
-  pillarKey: string
+  pillarKey: string,
+  client: Pick<Prisma.TransactionClient, "pillar"> = db,
 ): Promise<{ isStale: boolean; staleDays: number; staleSince: Date | null; dependsOn: string[] }> {
   // Build reverse dependency map: for a given pillar, which pillars does it depend ON?
   // PILLAR_DEPENDENCIES maps source → affected. We need affected → sources.
@@ -309,7 +310,7 @@ export async function checkStaleness(
   }
 
   // Fetch the target pillar
-  const pillar = await db.pillar.findUnique({
+  const pillar = await client.pillar.findUnique({
     where: { strategyId_key: { strategyId, key: pillarKey.toLowerCase() } },
   });
   if (!pillar) {
@@ -325,7 +326,7 @@ export async function checkStaleness(
   }
 
   // Fetch all upstream pillars
-  const upstreamPillars = await db.pillar.findMany({
+  const upstreamPillars = await client.pillar.findMany({
     where: {
       strategyId,
       key: { in: upstream.map((k) => k.toLowerCase()) },

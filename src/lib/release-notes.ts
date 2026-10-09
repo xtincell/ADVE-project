@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.436", date: "2026-10-09",
+    headline: "Approuvez une synthèse sans modifier sa confiance",
+    highlights: [
+      { emoji: "👓", title: "Une décision distincte de la mesure", body: "La page de production distingue une synthèse absente, incomplète ou composée. Une confiance non mesurée reste indiquée comme telle ; votre confirmation conserve la valeur enregistrée. Si le contenu change depuis votre lecture, rechargez-le avant de l’approuver." },
+    ],
+  },
+  {
     version: "6.27.435", date: "2026-10-09",
     headline: "Consultez le suivi du dossier choisi",
     highlights: [

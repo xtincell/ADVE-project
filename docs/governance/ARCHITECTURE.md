@@ -90,6 +90,24 @@ journal restent distincts : [reçu courant](RECEPTION-PTAH-UX.md),
 
 ## Runtime 435, suivi vide SPAWT reçu — réception métier partielle
 
+**Extension candidate 436 — décision d’état dans Guidance** : la transition
+manuelle est partagée dans pillar-gateway/validation-status.ts par
+strategy.validateSynthesis et pillar.transitionStatus, sous
+LEGACY_PILLAR_TRANSITION_STATUS existant. Elle relit acteur/portée et verrouille
+Strategy et les lignes Pillar de ses sources ; composition S canonique
+ENRICHED/COMPLETE + schéma strict, version relue, fraîcheur et références
+déclarées requises. S.validationStatus et Strategy.status changent dans la même
+transaction, jamais confidence/content/provenance/version ; retry sans seconde
+écriture, retour DRAFT rétracte Strategy VALIDATED. cross-validator et
+staleness-propagator lisent la transaction existante. Aucun modèle/service/kind/
+Neter/droit supplémentaire, aucune production automatique par approbation S.
+La commande de projets issus des initiatives utilise une précondition S approuvé
+au début de ses effets ; atomicité du cycle de production non déduite.
+Quatorze PostgreSQL ciblés verts et cinq cas natifs synthétiques reçus ; autres
+écrivains/consommateurs globaux et livraison finale ouverts :
+[ADR-0214 Proposed](adr/0214-synthesis-approval-preserves-confidence.md) ·
+[bornes](RECEPTION-VALIDATION-SYNTHESE.md).
+
 Runtime exact 434/source 24ddb3c8/CI 37907427545/image 37907430453 reçus ; native
 tracker réelle 403 pour compte non affecté, écran non reçu/trace tronquée.
 435 livré : listForges seulement résout le dossier explicitement choisi pour

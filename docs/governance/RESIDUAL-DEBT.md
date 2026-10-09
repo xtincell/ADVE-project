@@ -193,19 +193,36 @@ conservé. Corpus/édition SPAWT et zéro tâche/version de forge inchangés.
 Livraison fermée ; bouton/rôles restent reçus avec préconditions synthétiques locales,
 aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
 
-- **Confiance S et décision de validation** : le faux label ACTIVE est corrigé
-  localement dans 434, pas ces défauts distincts. Dans la page forge,
-  operate-config::formatConfidence transforme une confiance absente en 0 % ;
-  strategy.validateSynthesis peut imposer confidence=1.0 après confirmation,
-  sans vérifier que le S est composé. Constat statique, aucune correction ni
-  validation d’un noyau réel reçue. **Fermer** avec les primitives existantes :
-  afficher l’absence comme inconnue, distinguer composition, décision humaine
-  et confiance mesurée, préserver les valeurs fondées et refuser toute mesure
-  fabriquée par confirmation. Recevoir états absent/partiel/composé/validé et
-  confirmation sans S composé sur route et surface natives, puis propagation
-  aux gates courantes. **Déclencheur** : prochaine passe S/validation après le
-  lot 434, avant acceptation C3/C4/C6 ; effort : un lot borné de contrat,
-  présentation et contre-exemples, sans nouveau modèle/service/permission.
+- **Confiance S et décision de validation — candidat 436, réception ouverte** :
+  le faux label ACTIVE avait été corrigé en 434 ; les défauts distincts d’absence
+  rendue 0 % et de confirmation imposant 1.0 sont réparés dans le candidat.
+  Les deux routes partagent une décision d’état gouvernée dans pillar-gateway,
+  sans nouveau modèle/service/permission : composition canonique ENRICHED/COMPLETE
+  et schéma S strict, confiance conservée, version relue et sources contrôlées
+  sous verrou, S/Strategy atomiques. La commande de projets issus des initiatives
+  exige S approuvé/composé/frais au début de ses effets, sans assimiler cette
+  précondition à l’atomicité de toute la production. Quatorze PostgreSQL ciblés
+  verts ; native synthétique absence/partiel non approuvables, confirmations
+  gardant 22 % ou mesure inconnue et conflit 409/nouvelle lecture reçus.
+  Copie finale native et défaut confidence=1.0 remis en rouge/restauré reçus ;
+  contenu inchangé/zéro AICostLog, sans production. Aucune validation d’un noyau
+  réel ou livraison 436 reçue. **Fermer** : recevoir revue de noyaux réels,
+  CI/runtime exacts/postmerge ; gauntlet final vert, fixture nettoyée. Auditer
+  ensuite les autres écrivains et
+  consommateurs globaux ainsi que la modification de source pendant création
+  de projets, sans déduire leur couverture des deux routes réparées.
+  **Déclencheur** : réception 436 en cours, puis passe des consommateurs S avant
+  acceptation C3/C4/C6 ; effort : un lot borné de réception et une passe transverse.
+  [ADR-0214 Proposed](adr/0214-synthesis-approval-preserves-confidence.md) ·
+  [bornes et preuves](RECEPTION-VALIDATION-SYNTHESE.md).
+- **Accueil console et compte de catalogue figé** : portal-welcome.tsx:101 rend
+  « Intent Catalog 350+ » ; le registre INTENT_KINDS compte 633 au recompte du
+  2026-10-09. Constat natif local dans l’accueil console, sans correctif livré.
+  **Fermer** : supprimer le nombre figé ou lire le registre existant dans le
+  présentateur d’accueil, puis recevoir la copie native et le verrou anti-drift
+  adapté ; ne pas remplacer le littéral par un autre compte figé. **Déclencheur** :
+  prochaine passe de l’accueil console, avant sa réception C4 ; effort : une
+  correction de présentation bornée, sans nouvelle capacité.
 - **Stress et parcours réel hors fixture** : le stress isolé antérieur n’a pas atteint les
   pages/tRPC ; les forges sans credentials sont différées. La livraison et ses
   lectures/refus ne reçoivent pas ces parcours ni un cycle réel SPAWT/Noël.
@@ -1564,7 +1581,20 @@ fournisseur réel. Heap local 8 192 MiB après redémarrages dev, aucun réglage
 production ; fixtures nettoyées/ErrorVault de test conservé. Le harnais général
 reste non réparé, les dernières gardes de contrat sont postérieures à ce stress.
 
+Complément 436 du 2026-10-09 : premier essai sans finding mais HTTP skipped sur
+serveur froid/bornage 5 s, non reçu. Second essai chaud exit 1 : 32 HTTP reçus/
+230 non reçus/19 pages FETCH_FAILED et trois queries FETCH_FAILED, 22 findings.
+Log Next « Server is approaching the used memory threshold, restarting » sur
+le dernier segment ; heap dev 8 192 MiB déjà réglé, aucun flag production changé.
+Ce résultat n’est ni un stress vert ni une réception protégée/cycle/fournisseur.
+Suites locales complètes 4 190/400 unitaires et 288/15 PG vertes restent des
+preuves distinctes. Les refus réseau et le redémarrage sont conservés ; aucune
+refonte du harnais sans diagnostic de cette interruption.
+
 Plan : imposer une base et une cible jetables, injecter explicitement un
 provider de test et prouver qu’aucun appel réseau sortant n’est possible avant
-de relancer le stress global. Déclencheur : prochaine réception globale des
-ateliers/forges (C5), avant d’utiliser ce harnais comme gate de release.
+de relancer le stress global. Utiliser un artifact build et une instance isolée
+sans compilation massive Next dev à froid ; diagnostiquer la mémoire si
+l’interruption persiste. Déclencheur révisé le 2026-10-09 : prochaine recette
+globale C4/C5, avant d’utiliser ce harnais comme gate de release. Effort : une
+recette isolée et, si récidive, un diagnostic mémoire borné.

@@ -19,6 +19,7 @@
  */
 
 import type { InterventionState } from "@/domain/intervention-request";
+import { measuredConfidence } from "@/lib/confidence";
 
 /** Existing request Signal states; the legacy InterventionRequest table keeps its own taxonomy. */
 export const INTERVENTION_STATE_CONFIG: Record<InterventionState, {
@@ -623,9 +624,10 @@ export function getHealthSignalConfig(signal: string): typeof HEALTH_SIGNAL_CONF
 export function formatConfidence(confidence: number | null | undefined): {
   pct: string;
   color: string;
-  level: "low" | "medium" | "high";
+  level: "unknown" | "low" | "medium" | "high";
 } {
-  const val = confidence ?? 0;
+  const val = measuredConfidence(confidence);
+  if (val === null) return { pct: "—", color: "text-foreground-muted", level: "unknown" };
   const pct = `${Math.round(val * 100)}%`;
   if (val < 0.30) return { pct, color: "text-error", level: "low" };
   if (val < 0.70) return { pct, color: "text-warning", level: "medium" };

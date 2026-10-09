@@ -9,6 +9,26 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Synthèse relue → décision humaine — candidat 436 (2026-10-09)
+
+Sources/version S → contrat canonique de composition ENRICHED/COMPLETE + schéma
+strict → version relue, fraîcheur/références et acteur/portée contrôlés sous verrou
+→ décision d’état gouvernée existante → S/Strategy atomiques → confiance mesurée
+inchangée. Absence et mesure inconnue sont distinctes du zéro ; confirmation
+faible/inconnue ne compose rien et ne crée aucune mesure. Retry ne réécrit pas
+l’approbation ; DRAFT retire Strategy VALIDATED. Les deux routes actuelles partagent
+ce circuit sans nouveau kind ; approuver S ne produit aucun appel fournisseur.
+
+Initiatives sélectionnées → generateProjectsFromActions exige opérateur et S
+approuvé/composé/frais au début de la commande → chemin de projets existant.
+Cette précondition ne prouve pas l’atomicité de toute la production, les autres
+consommateurs ou écrivains ni le retour de valeur. Autres chemins de campagne/
+actif indépendants, aucune approbation SPAWT/FrieslandCampina. Quatorze PostgreSQL
+ciblés verts et cinq cas natifs synthétiques reçus ; réception finale/livraison
+en cours, sept chantiers/dix gates non acceptés.
+[Contrat Proposed](adr/0214-synthesis-approval-preserves-confidence.md) ·
+[réception bornée](RECEPTION-VALIDATION-SYNTHESE.md).
+
 ### Reprise et supervision — runtime 435, suivi vide reçu (2026-10-09)
 
 Native tracker réelle 434 refusée 403 pour compte non affecté, écran non reçu.
