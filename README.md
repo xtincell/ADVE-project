@@ -16,6 +16,13 @@
 
 ## Quick start
 
+**6.27.440 en validation locale** : reconstruire les actions requiert désormais
+le droit d’écriture du calendrier. Le refus en lecture seule et l’accès du
+propriétaire sont reçus sur dossiers fictifs ; les choix du propriétaire peuvent
+encore être écrasés par cette reconstruction et restent à corriger. Livraison
+440 attendue, runtime reçu 439 ; cycle réel et sept chantiers restent ouverts.
+[Périmètre et suite](docs/governance/REFONTE-PLAN.md).
+
 **6.27.439 livré** : l’état de marque reprend sa
 fraîcheur réelle ; les pourcentages indiquent les champs renseignés. Les textes
 actuels de SPAWT décrivent six questions pour cinq axes. 58 tests ciblés et cinq

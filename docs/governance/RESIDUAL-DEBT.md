@@ -277,7 +277,23 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   en gardant une assistance Notoria facultative.
   Fermer le writeback I direct et sa synchronisation BrandAction choisies par
   le chemin versionné, coordonner le remap UUID et prouver toutes les versions
-  source au recalcul. Réconcilier maturité COMPLETE par présence/formes
+  source au recalcul. **440 candidat, contre-exemple local propriétaire reçu** :
+  actions.sync applique désormais le droit d’écriture calendrier ; la lecture
+  seule reçoit 403 sans altération et le propriétaire reçoit 200, mais sa ligne
+  choisie/SCHEDULED redevient selected=false/PROPOSED avec le même identifiant.
+  Huit PostgreSQL ciblés/complet 317/17 verts certifient la garde d’accès, pas la
+  conservation des décisions. **Plan du writeback** : réconcilier I versionné et
+  projection BrandAction par les chemins existants, préserver choix/états/budgets,
+  états finis et publications armées ; recevoir choix propriétaire → sync sans
+  effacement → calcul S à sources versionnées → nouvelle revue manuelle.
+  Coordonner le remap UUID et distinguer estimations/choix réels, sans backfill
+  global ni faits inventés. **Déclencheur** : prochaine exécution Guidance avant
+  C3/C4/C6 ; effort : fixture propriétaire bornée, factorisation de la projection
+  existante puis recette manuelle transverse. Local seulement, aucun dossier
+  réel/fournisseur ; cinq contrôles locaux finaux exit 0, gouvernance 1 620/166
+  verts, 24 warnings connus sans erreur. CI/image/runtime 440 attendus, runtime
+  reçu 439. [Reçu 440](REFONTE-PLAN.md).
+  Réconcilier maturité COMPLETE par présence/formes
   historiques/schéma strict et affichage Complet/Périmé sans gate affaiblie ni
   matière inventée. Recevoir
   les consommateurs (dont sequence-vault : confiance ≥0.6 OU VALIDATED), la

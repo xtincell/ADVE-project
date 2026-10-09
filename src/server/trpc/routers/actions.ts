@@ -125,7 +125,10 @@ export const actionsRouter = createTRPCRouter({
    */
   sync: operatorProcedure
     .input(z.object({ strategyId: z.string().min(1) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      // Rebuilding writes rows: operator membership alone does not grant a
+      // calendar write on every brand, nor on a revoked/read-only delegation.
+      await assertCalendarWrite(ctx.session.user.id, input.strategyId);
       return syncBrandActionsFromBlob(input.strategyId);
     }),
 

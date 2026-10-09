@@ -1,5 +1,53 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Synchronisation d’actions — 440 candidat, réception locale (2026-10-09)
+
+actions.sync réutilise assertCalendarWrite avant syncBrandActionsFromBlob :
+propriétaire, même opérateur, ADMIN et délégation calendrier ACTIVE conservent
+leur autorité ; autre opérateur, ART_DIRECTOR en lecture seule et délégation
+révoquée sont refusés, cible absente NOT_FOUND. Aucun nouveau droit, modèle,
+service, route, kind, Neter, page ou ADR. La vérification répare un chemin
+d’écriture existant ; elle ne réconcilie pas les décisions de la projection.
+
+Preuves privées : release/preuves-decisions-actions-440. Accès isolé
+access-baseline-red.json : quatre rouges/deux verts, puis six verts. Suite
+PostgreSQL persistante : baseline cinq rouges/trois verts sur huit cas,
+postgres-targeted-green.log huit/un fichier verts ; postgres-final.log complet
+317/dix-sept fichiers verts. Configuration de suite inclut le nouveau fichier.
+
+Native locale USER/TRIAL fictive, login normal, patch 440 sur serveur de
+développement affichant encore 439 : actions.sync HTTP 403/FORBIDDEN pour la
+lecture seule, notice « Votre rôle sur cette marque est en lecture seule sur le
+calendrier. », selected=true/SCHEDULED/titre préservés. Propriétaire HTTP 200,
+une initiative/une action upsertée/zéro supprimée/même identifiant. Deux fenêtres
+d’appel complètes truncated=false/hasMore=false sans ≥500 ni exception ; fenêtre
+login/navigation tronquée, aucun zéro global ni SLO. Première navigation en
+timeout de compilation froide et ancien cookie localhost non déchiffrable
+conservés comme historique de recette, puis authentification normale réussie.
+Captures lecture seule/propriétaire inspectées ; native-api-receipt.json,
+native-call-windows.json et corps 403/200 relus. fixture-cleanup.json et
+native-cleanup-receipt.json : remaining=0, serveur 3321 arrêté/onglet 11 fermé.
+Aucun dossier réel modifié ni appel fournisseur/production payante.
+
+**Contre-exemple métier ouvert** : le geste propriétaire autorisé transforme
+encore selected=true/SCHEDULED en selected=false/PROPOSED. Le droit d’accès ne
+prouve donc pas la préservation des choix, états ou budgets. La prochaine
+exécution Guidance avant C3/C4/C6 doit réconcilier I versionné et projection
+BrandAction, préserver décisions/états finis/publications armées, coordonner
+remap UUID et versions source du calcul, puis recevoir le parcours choix →
+synchronisation → calcul S → nouvelle revue manuelle. Estimations standards
+distinctes des décisions ; assistance des agents facultative. Effort borné :
+reproduction propriétaire, factorisation des chemins existants, puis réception
+transverse ; aucun backfill global ou fait métier inventé.
+[Dette Guidance existante](RESIDUAL-DEBT.md).
+
+**Contrôles locaux finaux reçus** : gauntlet.json, cinq sorties 0 ; gouvernance
+1 620 tests/166 fichiers verts, 24 warnings connus sans erreur. Régénération
+officielle CODE-MAP réussie, aucun diff.
+**À recevoir pour 440** : CI, image et runtime ; runtime actuellement reçu
+439. Aucune connexion de vitrine attribuée à ce lot de
+plomberie ; sept chantiers/dix gates restent ouverts, wholeJourneyAccepted=false.
+
 ## État actuel de marque et six questions — 439 livré (2026-10-09)
 
 Le contre-exemple réel 438 Complet/Périmé est traité dans le lecteur existant :
