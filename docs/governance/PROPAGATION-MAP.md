@@ -9,6 +9,23 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Présence des champs → état actuel → affichage — candidat 439 (2026-10-09)
+
+assess mesure la présence ; pillar.readiness rend l’état et les gates de
+fraîcheur. PillarPage consomme ce même verdict dans un seul Badge, sans état
+Complet optimiste quand sa lecture est en cours/échoue. Les gestes existants et
+onComplete du recalcul relisent contenu/assess/readiness. Aucun writer ajouté,
+aucune approbation implicite ou gate affaiblie. Canon SPAWT/copy actuelle décrivent
+six questions/cinq axes, sans import de noyau réel. Six rouges de rendu puis
+checkpoint 57/trois et final 58/trois verts, sept UI dont fondation needsHuman.
+Cinq contrôles complets relancés exit 0/gouvernance 1 620/166 ; premier TSC
+stageLabel conservé/corrigé sous first-gauntlet/, gauntlet.json désormais final.
+Build compilée et native locale USER/TRIAL fictive reçues : Périmé avec deux
+100 %, desktop/mobile inspectés, fixture nettoyée/serveur arrêté/onglet fermé.
+CI/image/runtime et lecture réelle production encore à recevoir.
+Contrats stricts, choix/budgets et retour quiz/application restent ouverts :
+[reprise 439 et limites](REFONTE-PLAN.md).
+
 ### Sources → nouveau plan → nouvelle revue — 437 livré dans 438 (2026-10-09)
 
 Version documentaire contrôlée sous verrou source → Strategy UPDATE → piliers

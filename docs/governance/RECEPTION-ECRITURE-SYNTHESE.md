@@ -3,6 +3,32 @@
 Date : 2026-10-09. Sous-système Guidance, tutelle Mestor.
 Statut : **livré dans le runtime 438 ; réception métier partielle**.
 
+## Suite de lecture 439 — candidate
+
+Le contre-exemple réel 438 ci-dessous motive un lecteur partagé : PillarPage
+reprend pillar.readiness dans un seul Badge d’état, assess garde les pourcentages
+de champs renseignés. Chargement/échec inconnus, refresh contenu/assess/readiness
+après gestes existants et onComplete du recalcul, ligne wrap. Six mentions canon
+SPAWT/copy actuelle à six questions/cinq axes, sans import ou approbation réelle.
+Preuves-coherence-439 : ui-red.log six cas de rendu rouges, targeted.log 57 verts/
+trois fichiers (checkpoint), targeted-final.log 58/trois verts dont sept UI/
+fondation needsHuman. Premier TSC stageLabel TS2552 conservé sous
+first-gauntlet/tsc.log et gauntlet-first.json : badge secondaire résiduel supprimé après retrait
+du mapping, tsc-final vert. Cinq contrôles complets relancés exit 0/gouvernance
+1 620/166 ; gauntlet-final.json et gauntlet.json contiennent la passe finale verte.
+Build compilée exit 0, native locale USER/TRIAL fictive roadmap HTTP 200 reçue :
+Périmé avec deux 100 %, 65 réponses/zéro ≥500/exception, 14 ERR_ABORTED canceled
+conservés. DOM 350,053/load 368,845 ms ; titre exact Stratégie observé ≤858 ms,
+borne et non paint/SLO. Premier sélecteur erroné S — Roadmap conservé dans
+native-initial-navigation.json, pas défaut produit. Captures desktop/mobile
+inspectées, mobile demandé 390×844 mais clientWidth/documentScrollWidth mesurés
+384 px/badge dans les bornes. Fixture nettoyée/remaining=0, serveur arrêté et
+onglet fermé (native-local-receipt.json/native-mobile-receipt.json/
+local-cleanup-receipt.json). CI/image/runtime 439 et lecture réelle production
+encore à recevoir, runtime production 438 ; aucune mutation métier ou approbation.
+Budgets, sélections, formes/références strictes et sept chantiers/dix gates ouverts.
+[Reprise courante](REFONTE-PLAN.md). Les preuves livrées 437/438 restent ci-dessous.
+
 ## Périmètre
 
 Étendre le gateway, PillarVersion et les reçus de sources existants : remplacer

@@ -1,5 +1,32 @@
 # Changelog — La Fusee
 
+## v6.27.439 — fix(cockpit): lire l’état actuel de marque et aligner le quiz SPAWT (2026-10-09)
+
+**439 est candidat : les champs renseignés ne valent plus un état Complet, six questions calibrent toujours cinq axes.**
+
+- PillarPage réutilise pillar.readiness et le Badge existants : un seul état
+  canonique, lecture en cours/échec inconnus, état Périmé distingué des pourcentages
+  de présence « Socle renseigné »/« Champs renseignés ». Couleurs conditionnées
+  par DISPLAY_AS_COMPLETE ; aucune approbation ni gate serveur changée.
+- Les gestes existants de la page relisent contenu/assess/readiness ; onComplete
+  du recalcul RTIS est raccordé à cette même lecture. Ligne de statut avec wrap,
+  sans nouvelle page, route, service, modèle, kind, Neter ou ADR.
+- Six mentions de spawt-canon.ts et la copy actuelle passent à six questions ;
+  cinq axes conservés, sixième question « Ton radar » mesurant Foule/Secret dans
+  le quiz déjà livré. Aucun réimport, contenu de noyau réel ou autre fait changé.
+- Six cas de rendu rouges reproduits puis checkpoint 57/trois fichiers verts ;
+  ciblées finales 58/trois verts, dont sept UI/fondation needsHuman. Première
+  compilation rouge TS2552 sur stageLabel restant après retrait du mapping,
+  corrigé ; cinq contrôles complets relancés exit 0, gouvernance 1 620/166 verts
+  (gauntlet-final.json et gauntlet.json désormais finaux). Première erreur
+  conservée sous first-gauntlet/ et gauntlet-first.json. Build compilée exit 0,
+  native locale USER/TRIAL fictive HTTP 200 : Périmé avec deux 100 %, 65 réponses/
+  zéro ≥500/exception et 14 ERR_ABORTED annulés conservés. Desktop/mobile inspectés,
+  badge dans les bornes à 384 px mesurés, fixture nettoyée/serveur arrêté/onglet fermé.
+  Preuves-coherence-439 ; CI/image/runtime 439 et lecture réelle production
+  encore à recevoir ; runtime livré 438. Budgets, sélections, formes/liens stricts
+  S, versions du calcul, cycles et sept chantiers/dix gates restent ouverts.
+
 ## v6.27.438 — fix(ci): acquérir les mêmes images officielles sans le quota Docker Hub (2026-10-09)
 
 **438 est livré au runtime ; le correctif applicatif 437 est inclus, lecture du plan SPAWT reçue sans modification.**

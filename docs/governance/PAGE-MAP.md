@@ -1,14 +1,33 @@
 # PAGE-MAP — Toutes les pages mappées sur APOGEE
 
-**165 pages** au total dans `src/app/` (+ pages Ptah Phase 9 à créer : `/cockpit/forges`, `/cockpit/asset-library`, `/console/ptah/kiln`, `/console/ptah/forge-history`). Chacune classée par **Deck** (Mission Control / Cockpit / Crew Quarters / Launchpad / Public) et **Sous-système APOGEE** (Propulsion / Guidance / Telemetry / Sustainment / Operations / Crew Programs / Comms / Admin). Pour le **Governor Neteru** par sous-système, voir [PANTHEON.md](PANTHEON.md).
+**281 fichiers page.tsx physiques** sous `src/app/` au recompte du 2026-10-09.
+Les tableaux hérités ci-dessous classent un inventaire historique de 165 pages,
+non exhaustif de l’état actuel ; chemins courants dans [CODE-MAP.md](CODE-MAP.md).
+Classement par **Deck** et **Sous-système APOGEE** ; pour le Governor Neteru,
+voir [PANTHEON.md](PANTHEON.md). Un chemin présent ne vaut pas recette de son cycle.
 
 Statut : `active` (page substantive), `redirect` (legacy renommée — redirige), `placeholder` (UI partielle, à finir cf. REFONTE-PLAN P7).
 
 Source de vérité : `find src/app -name 'page.tsx'`. Mis à jour avec [APOGEE.md](APOGEE.md) §4.
 
+**439 candidat — huit pages de marque existantes** : identity, positioning,
+offer, engagement, diagnostic, market, potential et roadmap réutilisent
+PillarPage. Son état vient désormais de pillar.readiness dans un seul Badge ;
+« Socle renseigné »/« Champs renseignés » mesurent la présence, sans prétendre
+une fraîcheur ou approbation. Lecture en cours/échec inconnus, refresh commun
+après gestes existants/recalcul, ligne wrap. Six rouges puis checkpoint 57/trois
+et final 58/trois verts, sept UI dont fondation needsHuman ; premier TSC stageLabel
+conservé/corrigé et cinq contrôles complets relancés exit 0/gouvernance 1 620/166.
+Build compilée/native locale USER/TRIAL fictive reçues sur roadmap : Périmé
+avec deux 100 %, desktop/mobile inspectés (390×844 demandés, largeur client et
+document mesurée 384 px, badge dans les bornes). Fixture nettoyée/serveur arrêté/
+onglet fermé. CI/image/runtime et pages réelles en production restent à recevoir,
+aucune couverture globale des huit pages/mobile déduite. Aucune
+page ajoutée : [reprise et bornes](REFONTE-PLAN.md).
+
 ---
 
-## Synthèse globale
+## Inventaire historique classifié — 165 pages
 
 | Deck | Mission Tier | Ground Tier | Total |
 |---|---|---|---|

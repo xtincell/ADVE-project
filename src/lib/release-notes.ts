@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.439", date: "2026-10-09",
+    headline: "Un état de dossier distinct des champs remplis",
+    highlights: [
+      { emoji: "👓", title: "Repérez les informations périmées", body: "Les fiches de marque affichent leur état courant séparément du nombre de champs renseignés. Une information périmée reste signalée même quand la fiche est remplie à 100 %. Le statut est relu après vos modifications ou un recalcul." },
+    ],
+  },
+  {
     version: "6.27.437", date: "2026-10-09",
     headline: "Un plan courant, une approbation à jour",
     highlights: [

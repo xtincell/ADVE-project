@@ -189,6 +189,20 @@ Les 4 Intent kinds RTIS sont uniquement routables via `commandant.ts` — **zér
 
 ### 4.4 Plan courant et relecture — 437 livré dans 438 (2026-10-09)
 
+**Extension de lecture 439, candidate** : présence mesurée par assess distincte
+de l’état actuel rendu par pillar.readiness. PillarPage affiche un seul Badge
+canonique, avec états inconnus durant chargement/échec ; la relecture de contenu,
+assess et readiness suit les gestes existants et le recalcul. Aucune décision
+créée depuis 100 %. Canon/copy SPAWT six questions/cinq axes, sans import réel.
+Six cas de rendu rouges puis checkpoint 57/trois et final 58/trois verts, sept UI
+dont fondation needsHuman. Cinq contrôles complets relancés exit 0/gouvernance
+1 620/166 ; premier TSC stageLabel conservé/corrigé sous first-gauntlet/,
+gauntlet.json désormais final vert. Build compilée/native locale USER/TRIAL
+fictive reçues : Périmé avec deux 100 %, captures desktop/mobile inspectées et
+fixture nettoyée/serveur arrêté/onglet fermé. CI/image/runtime et lecture réelle
+production à recevoir. Contrats stricts et sept chantiers/dix gates
+restent ouverts.
+
 S dérive des sources de la marque ; calculer une nouvelle projection et
 l’approuver sont deux gestes distincts. Depuis 437 livré dans 438, MERGE_DEEP remplace
 ses collections à toute profondeur ; PillarVersion conserve l’ancien plan.

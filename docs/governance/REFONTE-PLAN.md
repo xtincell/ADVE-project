@@ -1,5 +1,42 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## État actuel de marque et six questions — candidat 439 (2026-10-09)
+
+Le contre-exemple réel 438 Complet/Périmé est traité dans le lecteur existant :
+PillarPage réutilise pillar.readiness pour un seul Badge d’état. assess conserve
+la mesure des champs renseignés ; chargement/échec ne promettent aucun état
+Complet. Contenu/assess/readiness relus après les gestes existants et onComplete
+du recalcul RTIS, ligne wrap. Six mentions canon SPAWT et copy actuelle alignées
+sur six questions/cinq axes ; « Ton radar » mesure Foule/Secret dans le quiz livré.
+Aucun nouveau modèle/service/router/page/kind/Neter/ADR ni mutation/import réel.
+
+Baseline six cas de rendu rouges (ui-red.log), puis 57 verts/trois fichiers
+(targeted.log/tests-summary.json), checkpoint conservé ; targeted-final.log
+reçoit 58/trois verts, sept UI dont fondation needsHuman. Première compilation
+stageLabel TS2552 conservée sous first-gauntlet/tsc.log et gauntlet-first.json,
+référence/badge secondaire retiré puis tsc-final vert. Cinq contrôles complets
+relancés exit 0, gouvernance 1 620/166 ; gauntlet-final.json et gauntlet.json
+contiennent maintenant la passe finale verte. Build compilée exit 0.
+
+Native locale USER/TRIAL fictive, login normal, roadmap HTTP 200 : Périmé avec
+deux 100 %, 65 réponses/zéro ≥500/exception, 14 ERR_ABORTED canceled conservés.
+DOM 350,053/load 368,845 ms ; titre exact Stratégie observé ≤858 ms, borne
+supérieure et non paint/SLO. Premier sélecteur erroné S — Roadmap conservé dans
+native-initial-navigation.json, pas défaut produit. Captures desktop/mobile
+inspectées : mobile demandé 390×844, clientWidth/documentScrollWidth mesurés
+384 px, badge dans les bornes. native-local-receipt.json/native-mobile-receipt.json
+et local-cleanup-receipt.json : fixture cleaned/remaining=0, serveur arrêté,
+onglet fermé. Aucun noyau réel modifié, approuvé ou produit.
+
+**À recevoir avant livraison** : CI/image/runtime 439 et lecture du plan réel
+sur l’image exacte ; runtime production livré 438. Pas responsive global reçu.
+
+L’état affiché ne réconcilie pas les anciens budgets, sélections, formes/liens
+stricts S ou versions du calcul. Aucune approbation ou production réelle ;
+continuer la reprise Guidance ci-dessous puis quiz/application/retour au noyau.
+Sept chantiers/dix gates restent ouverts. Les réceptions 437/438 ci-dessous
+conservent leurs preuves et contre-exemples datés.
+
 ## Plan courant et relecture — 437 livré dans 438 (2026-10-09)
 
 ADR-0215 Accepted étend le gateway et les archives existants : collections S

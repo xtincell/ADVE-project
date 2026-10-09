@@ -254,6 +254,20 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   Guidance ci-dessous. Les trois budgets et les plans legacy restent divergents,
   les 80 diagnostics de types/références/structures ne sont pas 80 faits métier
   absents. Aucune validation réelle, recalcul ou couverture globale déduite.
+  **439 candidat, affichage local réparé** : PillarPage réutilise pillar.readiness
+  pour un seul Badge ; présence des champs distincte de l’état, chargement/échec
+  inconnus. Contenu/assess/readiness relus après gestes existants/onComplete du
+  recalcul, ligne wrap. Six cas de rendu rouges puis checkpoint 57/trois et final
+  58/trois verts, sept UI dont fondation needsHuman. Premier TSC stageLabel TS2552
+  conservé puis référence/badge secondaire retiré ; tsc-final et cinq contrôles
+  complets relancés exit 0/gouvernance 1 620/166 (gauntlet-final.json et gauntlet.json
+  désormais finaux, premier rouge sous first-gauntlet/ et gauntlet-first.json).
+  Build compilée/native locale USER/TRIAL fictive reçues : Périmé avec deux 100 %,
+  desktop/mobile inspectés, fixture nettoyée/serveur arrêté/onglet fermé.
+  **Fermer ce symptôme** : recevoir CI/image/runtime exacts et lecture réelle ; déclencheur
+  validation/livraison 439, effort une recette bornée. Réconcilier les contrats,
+  budgets et sources du calcul reste la reprise Guidance ci-dessous ; le patch
+  d’affichage ne remplit ni ne valide le S réel.
   **Reste à fermer** : rtis-protocols/strategy.ts sélectionne/planifie/budgète à
   partir de standards présentés comme décisions ; distinguer proposition,
   estimation et choix effectif, puis brancher les choix réels. SYNTHESIZE_S
@@ -526,10 +540,15 @@ La fermeture best-effort de l’Intent après commit reste la dette distincte
   (lignes 59/305/322/394/490/606),
   et le document source Customers/SPAWT/SPAWT-social-et-calendrier-prelancement.md:59
   reste à cinq. Six réponses alimentent cinq axes ; « Ton radar » précise
-  Foule/Secret, pas un sixième axe. **Fermer** : confronter le quiz réel, son
-  moteur, la projection canonique et les copies actuelles, amender les références
-  présentes avec leurs sources en conservant l’historique du document fourni,
-  puis recevoir vitrine → quiz/application → retour au noyau. **Déclencheur** :
+  Foule/Secret, pas un sixième axe. **439 candidat** : les six mentions canon
+  et la copy actuelle sont alignées à six/cinq axes, tests de conformité reçus
+  dans le checkpoint 57/trois puis final 58/trois verts ; cinq contrôles finaux
+  exit 0 reçus, aucune réécriture des archives ni
+  import de marque réelle. Native locale reçue sur l’état, CI/image/runtime
+  du corpus restent à recevoir pour fermer
+  ce défaut de description. **Fermer le raccord** : confronter quiz réel,
+  moteur et projection canonique, puis recevoir vitrine → quiz/application →
+  retour au noyau. **Déclencheur** :
   prochaine reprise C2/C3 SPAWT ; effort : un lot borné de réconciliation des
   contrats/copies, suivi d’une traversée réelle. Lecture de vitrine seule ne
   reçoit ni déduction du quiz ni ventilation complète de la marque.

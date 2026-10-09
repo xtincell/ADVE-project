@@ -56,7 +56,7 @@ export const PILLAR_A = {
   ],
   herosJourney: [
     { actNumber: 1, title: "Le bruit", narrative: "Le mangeur d'Abidjan est seul face à 15 000 lieux, 847 résultats Google Maps et 47 messages WhatsApp contradictoires pour choisir un dîner.", emotionalArc: "frustration → lassitude", causalLink: "Le problème n'est pas l'offre, c'est le filtre — il n'existe aucun système qui comprend ce que toi tu aimes." },
-    { actNumber: 2, title: "La rencontre du Chat", narrative: "Un quiz de 5 questions révèle son archétype (Pisteur, Fantôme…) ; le Chat l'accueille et flaire les bons spots pour lui.", emotionalArc: "curiosité → reconnaissance", causalLink: "Pour la première fois, une recommandation lui parle de lui — pas d'une moyenne anonyme." },
+    { actNumber: 2, title: "La rencontre du Chat", narrative: "Un quiz de 6 questions révèle son archétype (Pisteur, Fantôme…) ; le Chat l'accueille et flaire les bons spots pour lui.", emotionalArc: "curiosité → reconnaissance", causalLink: "Pour la première fois, une recommandation lui parle de lui — pas d'une moyenne anonyme." },
     { actNumber: 3, title: "L'exploration", narrative: "Le spawter spawte, note, enrichit son Palais ; son territoire se dessine, ses axes se stabilisent, ses badges s'accumulent.", emotionalArc: "plaisir → maîtrise", causalLink: "Chaque check-in nourrit le système et précise les recommandations suivantes (le flywheel B2C)." },
     { actNumber: 4, title: "La mue", narrative: "Le mangeur devient Detective puis Djidji : le Chat entre dans son nom, la colonie l'écoute, ses Coups de Cœur font et défont les réputations.", emotionalArc: "fierté → appartenance", causalLink: "L'attachement identitaire transforme l'usager en ambassadeur qui recrute sa Meute." },
     { actNumber: 5, title: "Le Guide", narrative: "Au sommet, le spawter est « le chat qui marche devant » — titre rare limité par ville, réévalué annuellement, voix de référence de sa zone.", emotionalArc: "accomplissement → transmission", causalLink: "Les Guides crédibilisent toute la data : leur confirmation calibre la réputation des lieux pour la tribu entière." },
@@ -302,7 +302,7 @@ export const PILLAR_V = {
     effort: "Explorer hors de ses habitudes (la diversité fait progresser), aviser honnêtement, accepter que le titre soit calculé et non choisi.",
   },
   packagingExperience: {
-    unboxingRitual: "Le quiz Palais : 5 questions = 5 axes → ton archétype révélé (Pisteur, Fantôme…), partageable immédiatement — le déballage est une révélation de soi, pas un onboarding.",
+    unboxingRitual: "Le quiz Palais : 6 questions calibrent 5 axes → ton archétype révélé (Pisteur, Fantôme…), partageable immédiatement — le déballage est une révélation de soi, pas un onboarding.",
     packagingMaterial: "App mobile Android premium (noir/or/vert chat) + cartes collectibles (Profil Spawter / Fiche Lieu / Plat Emblématique) générées pour le partage.",
     deliveryMode: "3 modes contextuels qui s'adaptent au moment : Rapide (swipe, choisis, vas-y < 3 min), Crew (sortie de groupe), Explore (flânerie de découverte).",
     sensoryNotes: "Le Chat murmure (notifications taquines, max 1/jour) ; food porn en lumière naturelle ; célébration visuelle dédiée à chaque montée de stade ou mue.",
@@ -319,7 +319,7 @@ export const PILLAR_V = {
     exists: true,
     stage: "PRÉ-LANCEMENT — build Android en cours, GTM 90 jours amorcé",
     description: "App de découverte culinaire : quiz Palais, profil archétype, fiches lieux communautaires, matching contextuel 3 modes, badges/titres, tiers premium B2C et B2B.",
-    features: ["quiz Palais 5 questions → archétype", "fiches lieux + ADN auto-calculé", "matching instinctif 3 modes", "système titres × badges", "premium géographique + tiers B2B"],
+    features: ["quiz Palais 6 questions → archétype", "fiches lieux + ADN auto-calculé", "matching instinctif 3 modes", "système titres × badges", "premium géographique + tiers B2B"],
     launchDate: "2026 (post-Gate 1 J21)",
     userCount: 0,
     feedbackSummary: "Pré-lancement : l'Excel fondateur valide la demande (document le plus demandé du cercle) ; Mission 1 valide l'appétit B2B (8 contacts, 2 lieux très intéressés : Texas Grillz, Kaiten).",
@@ -391,7 +391,7 @@ export const PILLAR_E = {
     { salesChannel: "Supply B2B (terrain Alliés)", touchpointRefs: ["onboarding lieu 30 min", "kit QR table + chevalet", "badge Ambassadeur"] },
   ],
   rituels: [
-    { nom: "Le quiz Palais", frequence: "une fois (onboarding)", description: "5 questions = 5 axes → archétype révélé et partageable (aha moment)" },
+    { nom: "Le quiz Palais", frequence: "une fois (onboarding)", description: "6 questions calibrent 5 axes → archétype révélé et partageable (aha moment)" },
     { nom: "La première trouvaille", frequence: "une fois", description: "Premier spawt en mode Rapide < 3 min — le hook d'activation" },
     { nom: "Le Weekly Digest", frequence: "hebdomadaire (jeudi 17h)", description: "3 trouvailles de la Meute via WhatsApp Community, 100 % UGC" },
     { nom: "La montée de stade / la mue", frequence: "selon comportement", description: "Nouveau titre ajouté à la collection + écran de célébration (montée) ou constat neutre du Chat (mue)" },
@@ -487,7 +487,7 @@ export const PILLAR_E = {
     { commandment: "Tu récompenseras la diversité, pas le volume", justification: "L'influence se gagne en explorant large et en avisant juste, pas en accumulant des check-ins." },
   ],
   sacraments: [
-    { nomSacre: "Le quiz Palais", trigger: "Onboarding lancé", action: "5 questions → calibrage des 5 axes → archétype révélé", reward: "« C'est exactement moi » + carte partageable", kpi: "complétion quiz ≥ 60 %", aarrStage: "Activation" },
+    { nomSacre: "Le quiz Palais", trigger: "Onboarding lancé", action: "6 questions → calibrage des 5 axes → archétype révélé", reward: "« C'est exactement moi » + carte partageable", kpi: "complétion quiz ≥ 60 %", aarrStage: "Activation" },
     { nomSacre: "La première trouvaille", trigger: "App installée", action: "Premier spawt en mode Rapide", reward: "Le hook : une bonne adresse en < 3 min", kpi: "activation < 72h ≥ 50 %", aarrStage: "Activation" },
     { nomSacre: "Le Coup de Cœur reçu", trigger: "Un avis influent confirmé par la Meute", action: "Réception d'un Coup de Cœur (vote social rare)", reward: "Reconnaissance par la colonie", kpi: "badge Aimant (5 Coups de Cœur)", aarrStage: "Referral" },
     { nomSacre: "La montée de stade", trigger: "Seuil de spots franchi", action: "Nouveau titre + écran de célébration + partage", reward: "« Tu passes Detective. Chat Fantôme. »", kpi: "rétention par cohorte de stade", aarrStage: "Retention" },
@@ -603,7 +603,7 @@ export const PILLAR_T = {
     weakSignals: ["Saturation des groupes WhatsApp de recommandation (47 messages pour un choix)", "Maquis non-digitalisés cherchant de la visibilité", "Lassitude des classements anonymes"],
   },
   weakSignalAnalysis: [
-    { id: "ws-spawt-001", thesis: "Le bouche-à-oreille sature et crée une fenêtre pour son industrialisation", rawEvent: "47 messages WhatsApp et 3h de débat pour choisir un lieu d'anniversaire (récit fondateur récurrent)", causalChain: [{ from: "offre massive non filtrée", to: "fatigue du choix" }, { from: "fatigue du choix", to: "demande d'un filtre personnel" }], impactCategory: "OPPORTUNITY", brandImpact: "Le Palais devient le filtre que WhatsApp ne peut pas offrir", confidence: 0.7, urgency: "HIGH", relatedPillars: ["A", "D"], supportingSignals: ["Excel fondateur viral", "groupes WhatsApp débordés"], recommendedAction: "Positionner le quiz Palais comme l'anti-WhatsApp : ton filtre personnel en 5 questions" },
+    { id: "ws-spawt-001", thesis: "Le bouche-à-oreille sature et crée une fenêtre pour son industrialisation", rawEvent: "47 messages WhatsApp et 3h de débat pour choisir un lieu d'anniversaire (récit fondateur récurrent)", causalChain: [{ from: "offre massive non filtrée", to: "fatigue du choix" }, { from: "fatigue du choix", to: "demande d'un filtre personnel" }], impactCategory: "OPPORTUNITY", brandImpact: "Le Palais devient le filtre que WhatsApp ne peut pas offrir", confidence: 0.7, urgency: "HIGH", relatedPillars: ["A", "D"], supportingSignals: ["Excel fondateur viral", "groupes WhatsApp débordés"], recommendedAction: "Positionner le quiz Palais comme l'anti-WhatsApp : ton filtre personnel en 6 questions" },
   ],
   competitorOvertonPositions: [
     { competitorName: "Google Maps (restauration)", overtonPosition: "Le statu quo : la note moyenne anonyme comme seul juge", relativeToUs: "Nous déplaçons la norme vers la reco personnalisée et l'avis pondéré par la crédibilité" },

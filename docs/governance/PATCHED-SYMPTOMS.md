@@ -30,6 +30,30 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-09 · Candidat 439, reçu local : PillarPage affichait Complet à partir
+de assess.currentStage malgré readiness stale/Périmé, avec un autre badge de
+validation. Un seul Badge lit désormais pillar.readiness ; chargement/échec
+restent inconnus, pourcentages nommés comme présence des champs, couleurs selon
+DISPLAY_AS_COMPLETE. Rafraîchissement commun contenu/assess/readiness, y compris
+onComplete du recalcul existant, ligne wrap. Cause bornée : présence, fraîcheur
+et revue confondues par deux projections UI et des callbacks incomplets.
+Six cas de rendu rouges puis checkpoint 57/trois verts ; ciblées finales 58/trois,
+sept UI dont fondation needsHuman. Première compilation rouge stageLabel TS2552
+dans le panel needsHuman après retrait du mapping local : badge secondaire
+restant supprimé, tsc-final vert. Cinq contrôles complets relancés exit 0,
+gouvernance 1 620/166 ; gauntlet-final.json/gauntlet.json finaux verts, première
+erreur conservée sous first-gauntlet/ et gauntlet-first.json.
+Six mentions canon
+SPAWT/copy actuelle à cinq questions corrigées en six/cinq axes, sans réimport.
+Cause : corpus réimportable resté sur la description antérieure du quiz.
+Build compilée exit 0/native locale USER/TRIAL fictive reçue : Périmé avec deux
+100 %, captures desktop/mobile inspectées ; 65 réponses/zéro ≥500/exception,
+14 ERR_ABORTED annulés, badge dans les bornes à 384 px mesurés. Fixture nettoyée,
+serveur arrêté/onglet fermé ; premier sélecteur S — Roadmap erroné conservé,
+titre réel Stratégie, pas défaut produit. CI/image/runtime et lecture réelle
+439 en production non reçus ; budgets/formes strictes/
+cycle et sept chantiers/dix gates ouverts. [Plan et preuves](REFONTE-PLAN.md).
+
 2026-10-09 · Infra 438 livrée, lot applicatif 437 inclus : job PostgreSQL
 114024488078/run 37990904417 bloqué avant checkout après trois retries, quota
 anonyme Docker Hub. Tous les autres jobs applicables sont verts ; aucun test

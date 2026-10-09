@@ -16,6 +16,15 @@
 
 ## Quick start
 
+**6.27.439 en validation, runtime livré 438** : l’état de marque reprend sa
+fraîcheur réelle ; les pourcentages indiquent les champs renseignés. Les textes
+actuels de SPAWT décrivent six questions pour cinq axes. 58 tests ciblés et cinq
+contrôles finaux reçus ; première erreur de compilation conservée puis corrigée.
+Build et interface locale fictive reçus : « Périmé » malgré 100 % de champs,
+captures ordinateur/mobile inspectées. CI et livraison en production encore
+à confirmer ; aucun noyau réel réimporté ou approuvé.
+[Périmètre et limites](docs/governance/REFONTE-PLAN.md).
+
 **6.27.438 livré** : le code applicatif 437 est inclus. Après le blocage du
 téléchargement Docker Hub, les mêmes images officielles vérifiées et épinglées
 sont acquises depuis ECR. CI PostgreSQL, image et runtime 438 reçus. La lecture

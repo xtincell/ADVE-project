@@ -56,7 +56,7 @@ Canaux : 📣 *Annonces* (le Weekly Digest du jeudi) · 🍽️ *Trouvailles* (l
 - Courte (≤80) : *Trouve le bon resto à Abidjan selon TON goût. Pas un classement, ton Palais.*
 - Longue :
   > Marre de scroller 47 messages WhatsApp pour choisir où manger ? SPAWT, c'est la carte du bon goût d'Abidjan.
-  > 🐾 Fais le quiz Palais : 5 questions, ton archétype gustatif parmi 13.
+  > 🐾 Fais le quiz Palais : 6 questions, ton archétype gustatif parmi 13.
   > ⚡ 3 modes : Rapide (une trouvaille en moins de 3 min), Crew (à plusieurs), Explore (sors de ta zone).
   > 🗺️ Des lieux faits pour TOI, calibrés par la Meute — pas une note moyenne anonyme.
   > 💬 Le Chat te guide. Tu spawtes, tu trouves.

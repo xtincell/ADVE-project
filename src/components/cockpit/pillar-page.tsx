@@ -33,21 +33,9 @@ import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { RecalculateRtisButton } from "@/components/pillars/recalculate-rtis-button";
 import { ActionDatabasePanel } from "@/components/cockpit/action-database-panel";
 import { BESPOKE_PILLAR_RENDERERS } from "@/components/cockpit/pillars";
+import { Badge } from "@/components/primitives/badge";
 
 // ── Pillar config ─────────────────────────────────────────────────────
-
-/**
- * Étapes de complétude en langage client — les enums bruts (EMPTY/INTAKE/
- * ENRICHED/COMPLETE) étaient rendus tels quels au founder (audit 2026-07-16,
- * `pillar-page-technical-statuses-founder`).
- */
-const STAGE_LABELS: Record<string, string> = {
-  EMPTY: "À compléter",
-  INTAKE: "Ébauche",
-  ENRICHED: "Suffisant",
-  COMPLETE: "Complet",
-};
-const stageLabel = (s: string | null | undefined) => (s ? STAGE_LABELS[s] ?? s : STAGE_LABELS.EMPTY!);
 
 const PILLAR_CONFIG: Record<string, {
   title: string;
@@ -227,6 +215,16 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     { enabled: !!strategyId },
   );
 
+  // Presence is measured by assess; the current state comes from the same
+  // readiness verdict used by downstream surfaces, including stale sources.
+  const readinessQuery = trpc.pillar.readiness.useQuery(
+    { strategyId: strategyId ?? "" },
+    { enabled: !!strategyId },
+  );
+  const refreshPillarState = () => Promise.all([
+    pillarQuery.refetch(), assessQuery.refetch(), readinessQuery.refetch(),
+  ]);
+
   // ── Notoria recommendations (replaces pillar.getRecos) ──
   const recosQuery = trpc.notoria.getRecosByPillar.useQuery(
     { strategyId: strategyId ?? "", pillarKey: upperKey, status: "PENDING" },
@@ -251,22 +249,21 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     { enabled: !!strategyId && !isAdve },
   );
 
-  const autoFillMutation = trpc.pillar.autoFill.useMutation({ onSuccess: () => { pillarQuery.refetch(); recosQuery.refetch(); } });
-  const actualizeMutation = trpc.pillar.actualize.useMutation({ onSuccess: () => pillarQuery.refetch() });
+  const autoFillMutation = trpc.pillar.autoFill.useMutation({ onSuccess: () => { void refreshPillarState(); recosQuery.refetch(); } });
+  const actualizeMutation = trpc.pillar.actualize.useMutation({ onSuccess: () => refreshPillarState() });
   const triggerMarketStudyMutation = trpc.pillar.triggerMarketStudy.useMutation({
     onSuccess: () => {
-      pillarQuery.refetch();
-      assessQuery.refetch();
+      void refreshPillarState();
     },
   });
   // La confirmation porte sur la valeur relue, pas sur une version concurrente.
   const confirmInferredMutation = trpc.pillar.confirmInferredField.useMutation({
-    onSuccess: () => pillarQuery.refetch(),
-    onError: () => pillarQuery.refetch(),
+    onSuccess: () => refreshPillarState(),
+    onError: () => refreshPillarState(),
   });
   const acceptRecosMutation = trpc.notoria.acceptRecos.useMutation({
     onSuccess: () => {
-      pillarQuery.refetch();
+      void refreshPillarState();
       recosQuery.refetch();
       // Rafraîchir la file des acceptées : c'est elle qui fait apparaître le
       // bouton « Appliquer au pilier », le geste qui écrit réellement.
@@ -284,10 +281,9 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   });
   const applyRecosMutation = trpc.notoria.applyRecos.useMutation({
     onSuccess: (res: { applied: number; warnings: string[] }) => {
-      pillarQuery.refetch();
+      void refreshPillarState();
       recosQuery.refetch();
       acceptedRecosQuery.refetch();
-      assessQuery.refetch();
       // Le gate de remplacement pondéré (ADR-0090) peut REFUSER une écriture :
       // rendre `applied` seul laisserait croire à un succès total alors qu'une
       // partie a été écartée. Les avertissements sont la moitié du résultat.
@@ -309,8 +305,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   // ADR-0089 — sélection d'ambition (pilier S) via Intent gouverné SELECT_ROADMAP_ROUTE.
   const selectRouteMutation = trpc.notoria.selectRoadmapRoute.useMutation({
     onSuccess: (res: { selectedRouteKey: string }) => {
-      pillarQuery.refetch();
-      assessQuery.refetch();
+      void refreshPillarState();
       setEnrichResult({ type: "success", message: `Ambition ${res.selectedRouteKey} retenue — dashboard S recalculé sur ce jeu de stratégie.` });
     },
     onError: (err: any) => { setEnrichResult({ type: "error", message: err?.message ?? "Erreur lors de la sélection d'ambition" }); },
@@ -345,6 +340,12 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const completePct = assess?.completionPct ?? 0;  // Complet
   const rtConsolidated = assess?.rtConsolidated ?? false;
   const validationPct = completePct; // backward compat for progress bar
+  const stateReading = readinessQuery.isLoading || readinessQuery.isFetching;
+  const readiness = readinessQuery.isError || stateReading
+    ? undefined : readinessQuery.data?.byPillar[upperKey];
+  const stateLabel = stateReading ? "État en cours de lecture" : readiness?.displayLabel ?? "État à vérifier";
+  const stateTone = !readiness ? "neutral" : readiness.stale ? "warning"
+    : readiness.gates.DISPLAY_AS_COMPLETE.ok ? "success" : "info";
 
   // Split keys by category. Un inline field qui contient un texte trop long
   // (ex: brandNature avec un paragraphe LLM) bascule vers les fieldKeys pour
@@ -467,8 +468,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
         // Refresh query states after each chunk so the operator can see the fields populate in real-time
         await Promise.all([
-          pillarQuery.refetch(),
-          assessQuery.refetch(),
+          refreshPillarState(),
           recosQuery.refetch(),
         ]);
       }
@@ -536,9 +536,8 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               type: "success",
               message: `Pilier amendé v${res.version}. ${res.stalePillars.length} pilier(s) stratégique(s) à rafraîchir, ${res.staleAssets} asset(s) à régénérer.`,
             });
-            void pillarQuery.refetch();
+            void refreshPillarState();
             void utils.pillar.listEditableFields.invalidate({ strategyId, pillarKey: adveKey });
-            assessQuery.refetch();
           }}
         />
       ) : null}
@@ -560,15 +559,6 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <h1 className={`text-lg font-bold ${config.accent} truncate`}>{config.title}</h1>
-            {pillar?.validationStatus && pillar.validationStatus !== "DRAFT" ? (
-              <span className={`rounded-full px-2 py-0.5 text-2xs font-medium ${
-                // lafusee:allow-adhoc-completion: validationStatus badge logic (status string compare, not completion math)
-                pillar.validationStatus === "VALIDATED" ? "bg-success/15 text-success" :
-                pillar.validationStatus === "AI_PROPOSED" ? "bg-warning/15 text-warning" :
-                "bg-white/10 text-foreground-muted"
-              // lafusee:allow-adhoc-completion: validationStatus badge logic (status string compare, not completion math)
-              }`}>{pillar.validationStatus === "VALIDATED" ? "Valide" : pillar.validationStatus === "AI_PROPOSED" ? "IA" : pillar.validationStatus}</span>
-            ) : null}
           </div>
           <div className="flex items-center gap-2">
             {/* ADR-0023 — manual amend (ADVE only). Operator-only Intent → for
@@ -600,6 +590,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               <RecalculateRtisButton
                 strategyId={strategyId}
                 pillarKey={config.pillarKey.toUpperCase() as "R" | "T" | "I" | "S"}
+                onComplete={() => { void refreshPillarState(); }}
               />
             ) : null}
             {/* Enrichir/étude = pillar.autoFill (operatorProcedure) : masqué
@@ -664,12 +655,13 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             par Stage canonique, pas juste par %. Évite "88% vert + EMPTY"
             qui fait croire au user que tout va bien alors que le système
             refuse la cascade. */}
-        <div className="mt-2 flex items-center gap-3">
+        <div className="mt-2 flex flex-wrap items-center gap-3">
           {/* Suffisant (ENRICHED) */}
           {(() => {
             const stage = assess?.currentStage;
-            const enrichedReached = stage === "ENRICHED" || stage === "COMPLETE";
-            const completeReached = stage === "COMPLETE";
+            const displayReady = stateTone === "success";
+            const enrichedReached = displayReady && (stage === "ENRICHED" || stage === "COMPLETE");
+            const completeReached = displayReady && stage === "COMPLETE";
             // Couleurs : vert = stage atteint ; amber = % haut mais stage manqué (gap needsHuman) ; muted = bas
             const sufClass = enrichedReached
               ? "text-success"
@@ -686,14 +678,14 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             return (
               <>
                 <div className="flex items-center gap-1.5">
-                  <span className={`text-2xs font-semibold ${sufClass}`}>Suffisant</span>
+                  <span className={`text-2xs font-semibold ${sufClass}`}>Socle renseigné</span>
                   <div className="h-1.5 w-16 rounded-full bg-white/5">
                     <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(enrichedPct, 100)}%`, backgroundColor: sufBg }} />
                   </div>
                   <span className={`text-2xs ${sufClass}`}>{enrichedPct}%</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className={`text-2xs font-semibold ${cplClass}`}>Complet</span>
+                  <span className={`text-2xs font-semibold ${cplClass}`}>Champs renseignés</span>
                   <div className="h-1.5 w-16 rounded-full bg-white/5">
                     <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(completePct, 100)}%`, backgroundColor: cplBg }} />
                   </div>
@@ -712,15 +704,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               R+T {rtConsolidated ? "✓" : "—"}
             </span>
           )}
-          {/* Stage badge */}
-          {assess?.currentStage && (
-            <span className={`ml-auto rounded-full px-2 py-0.5 text-2xs font-medium ${
-              assess.currentStage === "COMPLETE" ? "bg-success/15 text-success" :
-              assess.currentStage === "ENRICHED" ? "bg-info/15 text-info" :
-              assess.currentStage === "INTAKE" ? "bg-warning/15 text-warning" :
-              "bg-white/5 text-foreground-muted"
-            }`}>{stageLabel(assess.currentStage)}</span>
-          )}
+          <Badge role="status" tone={stateTone} className="ml-auto">{stateLabel}</Badge>
         </div>
       </div>
 
@@ -882,9 +866,6 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                   Ces champs forment le socle identitaire de la marque. L'IA pré-remplit un draft à l'activation (badge orange ci-dessous), à vous de le valider ou de le réécrire.
                 </p>
               </div>
-              <span className="rounded-full bg-warning/15 px-2 py-0.5 text-2xs font-bold text-warning whitespace-nowrap">
-                {stageLabel(assess.currentStage)}
-              </span>
             </div>
             <div className="space-y-1.5">
               {assess.needsHuman.map((path: string) => {

@@ -6,6 +6,16 @@ Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts`
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
+**439 candidat, lecture existante seulement** : PillarPage consomme pillar.readiness
+en complément de get/assess ; callbacks et onComplete du recalcul relisent les
+trois queries. Aucun router, procédure ou droit ajouté ; gates serveur inchangées,
+aucune mutation réelle de recette. Six rouges puis checkpoint 57/trois et final
+58/trois verts (sept UI), cinq contrôles complets relancés exit 0/gouvernance
+1 620/166 ; premier TSC stageLabel conservé/corrigé. Build compilée et native
+locale USER/TRIAL fictive reçues, Périmé avec deux 100 % ; fixture nettoyée,
+aucune mutation métier. CI/image/runtime et lecture réelle production non reçus :
+[périmètre](REFONTE-PLAN.md).
+
 **437 livré dans 438 — mêmes routes, relecture des nouvelles versions** : canon-sync
 importe S sans approbation et recalcule computed/globalBudget par
 writePillarAndScore ; les refus apparaissent dans results.s, plus de catch

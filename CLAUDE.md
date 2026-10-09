@@ -4,6 +4,25 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
+**6.27.439 candidat — état courant et six questions, runtime livré 438** :
+PillarPage lit pillar.readiness pour un seul Badge d’état ; assess mesure la
+présence des champs, sans Complet optimiste durant chargement/échec. Contenu,
+assess et readiness sont relus après les gestes existants et onComplete du
+recalcul ; ligne de statut wrap. Six mentions canon SPAWT et copy actuelle
+alignées sur six questions/cinq axes, « Ton radar » mesure Foule/Secret.
+Six cas de rendu rouges, checkpoint 57/trois puis 58 ciblés/trois fichiers verts,
+sept UI dont fondation needsHuman. Cinq contrôles complets relancés exit 0,
+gouvernance 1 620/166 ; premier TSC stageLabel TS2552 corrigé et conservé sous
+first-gauntlet/ et gauntlet-first.json, gauntlet.json désormais final vert.
+Build compilée exit 0, native locale USER/TRIAL fictive reçue : Périmé avec deux
+100 %, 65 réponses/zéro ≥500/exception, 14 ERR_ABORTED annulés. Desktop/mobile
+inspectés, badge dans les bornes à 384 px mesurés ; fixture nettoyée/serveur
+arrêté/onglet fermé. CI/image/runtime 439 et native réelle production
+encore à recevoir. Pas d’import, approbation
+ou mutation de noyau réel, aucune entité/route/service/ADR ajouté. Budgets,
+sélections, formes/liens S et cycle restent ouverts, sept chantiers/dix gates
+non acceptés. [Reprise et bornes](docs/governance/REFONTE-PLAN.md).
+
 **6.27.438 livré — acquisition CI, runtime 438 reçu** : 437/source 406beb67 reste
 le lot applicatif. Run 37990904417 : jobs applicables verts sauf PostgreSQL
 114024488078, quota anonyme Docker Hub après trois retries avant checkout/test.
