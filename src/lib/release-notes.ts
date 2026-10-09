@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.432", date: "2026-10-09",
+    headline: "Choisissez l’identité de votre publication",
+    highlights: [
+      { emoji: "◈", title: "Des choix par usage", body: "Dans Connexions, consultez votre référence puis choisissez les couleurs, les polices, les poses de mascotte et une citation pour votre site. Les éléments non choisis gardent leur présentation actuelle." },
+      { emoji: "↻", title: "Une publication conservée", body: "Les fichiers choisis sont conservés et vérifiés. La vitrine reçoit l’ensemble avant de l’appliquer ; si cette réception échoue, la publication déjà reçue dans la page reste affichée." },
+    ],
+  },
+  {
     version: "6.27.431", date: "2026-10-09",
     headline: "Votre logo publié conserve son fichier",
     highlights: [

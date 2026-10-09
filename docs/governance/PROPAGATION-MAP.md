@@ -9,6 +9,22 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Identité publique par usage — ADR-0212 Proposed, candidat 432 (2026-10-09)
+
+Référence consultée → choix explicite actifs/versions/rôles → strategy.update
+gouverné existant → palette/typos/poses/citation bornées → copies/reçus privés
+dans BrandAsset → transport d’édition existant → JSON v2 compatible lecture v1
+→ validation/décodage de tous les fichiers → application ensemble dans la vitrine.
+Source corrigée, version/portée invalide ou copie corrompue doivent refuser sans
+remplacer l’édition ; revue texte/retour réutilisent les copies sous pins courants.
+Le dernier reçu reste dans la page ouverte si une réception échoue, sans promesse
+de cache durable client. Styles adaptés à chaque destination, CSP inchangée,
+aucun texte privé complet ni promotion DRAFT. Gauntlet et native locale producer/
+première consommation sous harness reçus ; retour consumer interrompu, CSP et
+CI/image/runtime 432 non reçus. Production 431/SPAWT v3 reste la référence. Quiz/application,
+filiation/stockage et retour de valeur restent à recevoir, sept chantiers ouverts.
+[Décision proposée](adr/0212-versioned-public-identity-projection.md).
+
 ### Octets du logo publié — ADR-0211 Accepted, 431 reçu le 2026-10-09
 
 Choix gouverné → fichier admissible/décodé → stockage chiffré existant →

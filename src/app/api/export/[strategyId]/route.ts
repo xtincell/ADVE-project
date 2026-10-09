@@ -10,8 +10,8 @@ export async function GET(
 ) {
   const url = new URL(request.url);
   const { strategyId } = await params;
-  if (url.searchParams.get("format") === "public-brand") {
-    const edition = await exportPublicBrand(strategyId);
+  if (["public-brand", "public-brand-v2"].includes(url.searchParams.get("format") ?? "")) {
+    const edition = await exportPublicBrand(strategyId, url.searchParams.get("format") === "public-brand-v2");
     const origin = request.headers.get("origin");
     const allowed = origin === "https://spawt.online" || origin === "https://www.spawt.online" || origin === "https://portail.spawt.online";
     const headers = {

@@ -6,7 +6,7 @@ import { join } from "node:path";
 import sharp from "sharp";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { PublicWebUrl, PUBLIC_BRAND_FORMAT } from "@/domain/public-brand";
+import { PublicWebUrl, PUBLIC_BRAND_FORMAT, PUBLIC_BRAND_IDENTITY_FORMAT } from "@/domain/public-brand";
 import { isBrandPublicSlug } from "@/domain/brand-slug";
 import { mediaStoreConfiguration, putEncryptedMedia, getEncryptedMedia } from "@/lib/encrypted-media-store";
 import { ssrfSafeFetch } from "@/lib/net/ssrf-guard";
@@ -21,8 +21,8 @@ const receiptSchema = z.object({
   keyId: z.string().regex(/^[a-f0-9]{16}$/),
   contentHash: z.string().regex(/^[a-f0-9]{64}$/),
   byteLength: z.number().int().positive().max(MAX_LOGO_BYTES),
-  extension: z.enum(["png", "jpg", "webp", "svg"]),
-  mediaType: z.enum(["image/png", "image/jpeg", "image/webp", "image/svg+xml"]),
+  extension: z.enum(["png", "jpg", "webp", "svg", "otf", "ttf"]),
+  mediaType: z.enum(["image/png", "image/jpeg", "image/webp", "image/svg+xml", "font/otf", "font/ttf"]),
   receivedAt: z.string().datetime(),
 }).strict();
 export type PublicLogoReceipt = z.infer<typeof receiptSchema>;
@@ -30,13 +30,24 @@ const hash = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex")
 
 export function publicLogoReceipt(metadata: unknown): PublicLogoReceipt | null {
   const value = metadata && typeof metadata === "object" && "logoArchive" in metadata ? metadata.logoArchive : null;
-  return value == null ? null : receiptSchema.parse(value);
+  if (value == null) return null;
+  const receipt = receiptSchema.parse(value);
+  if (!receipt.mediaType.startsWith("image/")) throw new Error("Le logo conservé n’est pas une image.");
+  return receipt;
+}
+export const identityArchiveSchema = z.array(z.object({ role: z.string().min(1).max(100),
+  assetId: z.string().min(1), version: z.number().int().positive(), fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+  receipt: receiptSchema }).strict()).max(15);
+export type IdentityArchive = z.infer<typeof identityArchiveSchema>[number];
+export function publicIdentityArchives(metadata: unknown) {
+  const value = metadata && typeof metadata === "object" && "identityArchives" in metadata ? metadata.identityArchives : [];
+  return identityArchiveSchema.parse(value);
 }
 
 async function sourceBytes(rawUrl: string): Promise<Buffer> {
   const url = new URL(PublicWebUrl.parse(rawUrl));
   // Own public files are read from the deployed image, without a loopback fetch.
-  if (url.origin === resolveBrandDeploymentOrigin() && /^\/brand\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.(png|webp|jpe?g|svg)$/.test(url.pathname)) {
+  if (url.origin === resolveBrandDeploymentOrigin() && /^\/brand\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.(png|webp|jpe?g|svg|otf|ttf)$/.test(url.pathname)) {
     const root = await realpath(join(process.cwd(), "public"));
     const filePath = await realpath(join(root, url.pathname));
     if (!filePath.startsWith(root + "/")) throw new Error("Le fichier public sort de son périmètre.");
@@ -47,7 +58,7 @@ async function sourceBytes(rawUrl: string): Promise<Buffer> {
       return await file.readFile();
     } finally { await file.close(); }
   }
-  const response = await ssrfSafeFetch(url.href, { signal: AbortSignal.timeout(10000), headers: { Accept: "image/png,image/jpeg,image/webp,image/svg+xml" } });
+  const response = await ssrfSafeFetch(url.href, { signal: AbortSignal.timeout(10000), headers: { Accept: "image/png,image/jpeg,image/webp,image/svg+xml,font/otf,font/ttf" } });
   if (!response.ok || !response.body) { await response.body?.cancel(); throw new Error("Logo public indisponible."); }
   const reader = response.body.getReader(), chunks: Uint8Array[] = []; let length = 0;
   try {
@@ -69,15 +80,54 @@ export async function readPublicLogoBytes(receipt: PublicLogoReceipt) {
   return bytes;
 }
 
-export async function retainPublicLogo(rawUrl: string): Promise<PublicLogoReceipt> {
+/** Bounded SFNT directory, required glyph/name tables and actual declared weight.
+ * Browser FontFace decoding remains a consumer acceptance condition. WOFF/WOFF2
+ * conversion is deliberately not invented by this persistence primitive. */
+export function inspectPublicFont(bytes: Buffer, weight: number, family?: string) {
+  if (bytes.length < 12 || bytes.length > 2_000_000) throw new Error("Police hors limites.");
+  const otf = bytes.toString("ascii", 0, 4) === "OTTO";
+  if (!otf && bytes.readUInt32BE(0) !== 0x00010000) throw new Error("Police OTF ou TTF autonome requise.");
+  const count = bytes.readUInt16BE(4);
+  if (!count || count > 128 || 12 + 16 * count > bytes.length) throw new Error("Répertoire de police invalide.");
+  const tables = new Map<string, { offset: number; length: number }>();
+  for (let i = 0; i < count; i++) {
+    const at = 12 + 16 * i, tag = bytes.toString("ascii", at, at + 4), offset = bytes.readUInt32BE(at + 8), length = bytes.readUInt32BE(at + 12);
+    if (tables.has(tag) || offset < 12 + 16 * count || offset + length > bytes.length) throw new Error("Table de police invalide.");
+    tables.set(tag, { offset, length });
+  }
+  if (!["head", "maxp", "cmap", "name", "OS/2", ...(otf ? ["CFF "] : ["glyf", "loca"])].every(tag => tables.has(tag))) throw new Error("Police incomplète.");
+  const os2 = tables.get("OS/2")!;
+  if (os2.length < 6 || bytes.readUInt16BE(os2.offset + 4) !== weight) throw new Error("La graisse choisie ne correspond pas au fichier de police.");
+  const names = tables.get("name")!, end = names.offset + names.length;
+  if (names.length < 6) throw new Error("Noms de police incomplets.");
+  const nameCount = bytes.readUInt16BE(names.offset + 2), storage = names.offset + bytes.readUInt16BE(names.offset + 4);
+  if (names.offset + 6 + nameCount * 12 > end || storage < names.offset + 6 + nameCount * 12 || storage > end) throw new Error("Noms de police invalides.");
+  const families = new Set<string>();
+  const normalized = (name: string) => name.toLowerCase().replace(/\btypeface\b/g, "").replace(/\s+/g, " ").trim();
+  for (let i = 0; i < nameCount; i++) {
+    const at = names.offset + 6 + i * 12, platform = bytes.readUInt16BE(at), id = bytes.readUInt16BE(at + 6);
+    const length = bytes.readUInt16BE(at + 8), offset = storage + bytes.readUInt16BE(at + 10);
+    if (offset + length > end) throw new Error("Nom de police tronqué.");
+    if ((id !== 1 && id !== 16) || ![0, 3].includes(platform) || length % 2) continue;
+    families.add(normalized(Buffer.from(bytes.subarray(offset, offset + length)).swap16().toString("utf16le")));
+  }
+  if (family && !families.has(normalized(family))) throw new Error("La famille choisie ne correspond pas au fichier de police.");
+  return otf ? ["otf", "font/otf"] as const : ["ttf", "font/ttf"] as const;
+}
+
+export async function retainPublicMedia(rawUrl: string, fontWeight?: number, fontFamily?: string): Promise<PublicLogoReceipt> {
   const store = mediaStoreConfiguration();
   if (!store || !resolveBrandDeploymentOrigin()) throw new Error("Le stockage et l’adresse publique doivent être configurés avant de publier ce logo.");
   const bytes = await sourceBytes(rawUrl);
   if (!bytes.length || bytes.length > MAX_LOGO_BYTES) throw new Error("Logo hors limites.");
+  let format: readonly [PublicLogoReceipt["extension"], PublicLogoReceipt["mediaType"]];
+  if (fontWeight !== undefined) format = inspectPublicFont(bytes, fontWeight, fontFamily);
+  else {
   const metadata = await sharp(bytes, { limitInputPixels: 20_000_000 }).metadata();
   const formats = { png: ["png", "image/png"], jpeg: ["jpg", "image/jpeg"], webp: ["webp", "image/webp"], svg: ["svg", "image/svg+xml"] } as const;
-  const format = metadata.format && formats[metadata.format as keyof typeof formats];
-  if (!format || !metadata.width || !metadata.height) throw new Error("Le fichier n’est pas un logo image pris en charge.");
+  const detected = metadata.format && formats[metadata.format as keyof typeof formats];
+  if (!detected || !metadata.width || !metadata.height) throw new Error("Le fichier n’est pas une image prise en charge.");
+  format = detected;
   if (metadata.format === "svg") {
     const svg = bytes.toString("utf8");
     // A retained SVG must be self-contained; changing external resources would
@@ -90,6 +140,7 @@ export async function retainPublicLogo(rawUrl: string): Promise<PublicLogoReceip
   }
   // Decode as well as inspect the header; a truncated image is not a receipt.
   await sharp(bytes, { limitInputPixels: 20_000_000 }).resize({ width: 1, height: 1, fit: "inside" }).toBuffer();
+  }
   const receipt: PublicLogoReceipt = { schema: "public-brand-media-v1", objectKey: randomBytes(32).toString("hex"),
     storage: store.kind, backendId: store.backendId, keyId: store.keyId, contentHash: hash(bytes), byteLength: bytes.length,
     extension: format[0], mediaType: format[1], receivedAt: new Date().toISOString() };
@@ -97,6 +148,7 @@ export async function retainPublicLogo(rawUrl: string): Promise<PublicLogoReceip
   await readPublicLogoBytes(receipt);
   return receipt;
 }
+export const retainPublicLogo = (rawUrl: string) => retainPublicMedia(rawUrl);
 
 export function publicLogoSnapshotUrl(editionId: string, receipt: PublicLogoReceipt) {
   const base = resolveBrandDeploymentOrigin();
@@ -106,12 +158,13 @@ export function publicLogoSnapshotUrl(editionId: string, receipt: PublicLogoRece
 
 /** Anonymous bytes are limited to editions that have actually been public. */
 export async function readPublicLogo(editionId: string, file: string) {
-  if (!/^[a-zA-Z0-9_-]{1,100}$/.test(editionId) || !/^[a-f0-9]{64}\.(png|jpg|webp|svg)$/.test(file)) return null;
-  const edition = await db.brandAsset.findFirst({ where: { id: editionId, kind: "BRAND_GUIDELINES", format: PUBLIC_BRAND_FORMAT,
+  if (!/^[a-zA-Z0-9_-]{1,100}$/.test(editionId) || !/^[a-f0-9]{64}\.(png|jpg|webp|svg|otf|ttf)$/.test(file)) return null;
+  const edition = await db.brandAsset.findFirst({ where: { id: editionId, kind: "BRAND_GUIDELINES", format: { in: [PUBLIC_BRAND_FORMAT, PUBLIC_BRAND_IDENTITY_FORMAT] },
     campaignId: null, state: { in: ["ACTIVE", "SUPERSEDED"] } }, include: { strategy: { select: { status: true, publicSlug: true } } } });
   if (!edition || !edition.strategy.publicSlug || !isBrandPublicSlug(edition.strategy.publicSlug)
     || ["ARCHIVED", "DELETED"].includes(edition.strategy.status)) return null;
-  const receipt = publicLogoReceipt(edition.metadata);
-  if (!receipt || file !== `${receipt.contentHash}.${receipt.extension}`) return null;
+  const receipt = [publicLogoReceipt(edition.metadata), ...publicIdentityArchives(edition.metadata).map(a => a.receipt)]
+    .find(r => r && file === `${r.contentHash}.${r.extension}`);
+  if (!receipt) return null;
   return { bytes: await readPublicLogoBytes(receipt), receipt };
 }

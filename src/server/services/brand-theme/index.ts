@@ -282,7 +282,7 @@ export function resolveBrandDeploymentOrigin({ allowHttp = false }: { allowHttp?
  */
 export async function resolveBrandIdentity(strategyId: string, client: Pick<PrismaClient, "brandAsset"> = defaultDb) {
   const assets = await client.brandAsset.findMany({
-    where: { strategyId, kind: { in: ["CHROMATIC_STRATEGY", "TYPOGRAPHY_SYSTEM", "LOGO_FINAL", "LOGO_IDEA"] },
+    where: { strategyId, kind: { in: ["CHROMATIC_STRATEGY", "TYPOGRAPHY_SYSTEM", "LOGO_FINAL", "LOGO_IDEA", "GENERIC", "PERSONA", "KV_VISUAL"] },
       state: { notIn: ["SUPERSEDED", "ARCHIVED", "REJECTED"] }, staleAt: null },
     orderBy: [{ createdAt: "desc" }, { id: "asc" }],
     select: { id: true, kind: true, name: true, content: true, fileUrl: true,
@@ -298,6 +298,11 @@ export async function resolveBrandIdentity(strategyId: string, client: Pick<Pris
     logo: select(finals) ?? select(ideas),
     // Full pool for explicit destination choices; legacy renderers keep their selection.
     logos: [...finals, ...ideas],
+    palettes: chromatics,
+    typographies,
+    fonts: byKind("GENERIC").filter(a => /\.(otf|ttf)$/i.test(a.fileUrl ?? "")),
+    characters: byKind("PERSONA"),
+    illustrations: byKind("KV_VISUAL").filter(a => portfolioFileUrl(a.fileUrl)),
     chromatic: select(chromatics),
     typography: select(typographies),
     counts: { logos: finals.length + ideas.length, palettes: chromatics.length, typographies: typographies.length },

@@ -3,31 +3,33 @@
  */
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { PUBLIC_BRAND_FORMAT, PublicBrandContent, PublicBrandPublicationInput } from "@/domain/public-brand";
+import { PUBLIC_BRAND_FORMAT, PUBLIC_BRAND_IDENTITY_FORMAT, PublicBrandContent, PublicBrandContentV2, PublicBrandPublicationInput, PublicIdentityChoice, PublicIdentity } from "@/domain/public-brand";
 import { isBrandPublicSlug, brandPublicSlugSafe, disambiguateBrandSlug } from "@/domain/brand-slug";
 import { sourceFingerprint, loadBrandSources, assertCurrentSourceReceipts, assertAssetSourceCurrent } from "@/server/services/ingestion-pipeline/source-usage";
 import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { assertCollaboratorMayEmit } from "@/server/governance/collaborator-firewall";
 import { isGodModeEmail } from "@/lib/auth/god-mode";
 import { z } from "zod";
-import { resolveBrandIdentity, resolveBrandDeploymentOrigin } from "@/server/services/brand-theme";
-import { publicLogoReceipt, retainPublicLogo, readPublicLogoBytes, publicLogoSnapshotUrl, type PublicLogoReceipt } from "./public-media";
+import { resolveBrandIdentity, resolveBrandDeploymentOrigin, collectHexes, extractFontFamilies, contrastRatio, hexToRgb } from "@/server/services/brand-theme";
+import { publicLogoReceipt, retainPublicLogo, retainPublicMedia, readPublicLogoBytes, publicLogoSnapshotUrl, publicIdentityArchives, type PublicLogoReceipt, type IdentityArchive } from "./public-media";
 
 type Client = Prisma.TransactionClient;
-const scope = { kind: "BRAND_GUIDELINES", format: PUBLIC_BRAND_FORMAT, campaignId: null };
+const scope = { kind: "BRAND_GUIDELINES", format: { in: [PUBLIC_BRAND_FORMAT, PUBLIC_BRAND_IDENTITY_FORMAT] }, campaignId: null };
+const privateContent = (value: unknown) => PublicBrandContentV2.safeParse(value).success
+  ? PublicBrandContent.parse(Object.fromEntries(Object.entries(object(value)).filter(([key]) => key !== "identity"))) : PublicBrandContent.parse(value);
 const text = (value: unknown) => typeof value === "string" ? value : "";
 const object = (value: unknown) => (value && typeof value === "object" && !Array.isArray(value) ? value : {}) as Record<string, unknown>;
-export const publicBrandDigest = (content: PublicBrandContent) => sourceFingerprint({ rawData: content });
+export const publicBrandDigest = (content: PublicBrandContent | z.infer<typeof PublicBrandContentV2>) => sourceFingerprint({ rawData: content });
 export class PublicBrandError extends Error {
   constructor(public readonly code: "FORBIDDEN" | "CONFLICT" | "PRECONDITION_FAILED", message: string) { super(message); }
 }
 
 /** Only already-public files may leave the vault. A relative /brand/ path
  * belongs to this deployment, never to the consuming site's origin. */
-function publicLogoUrl(value: string | null): string | null {
+function publicLogoUrl(value: string | null, font = false): string | null {
   if (!value || /private-media|\/api\/|token|signature/i.test(value)) return null;
   if (value.startsWith("/")) {
-    if (!/^\/brand\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.(?:png|webp|jpe?g|svg)$/.test(value)) return null;
+    if (!new RegExp(`^/brand/(?:[a-zA-Z0-9_-]+/)*[a-zA-Z0-9_-]+\\.(?:${font ? "otf|ttf" : "png|webp|jpe?g|svg"})$`).test(value)) return null;
     const base = resolveBrandDeploymentOrigin();
     if (!base) return null;
     value = new URL(value, base).href;
@@ -57,6 +59,9 @@ async function inspect(strategyId: string, tx: Client) {
       ? [{ ...logo, url, fingerprint: logoFingerprint(logo) }] : [];
   });
   const activeLogos = logos.filter((logo) => logo.state === "ACTIVE");
+  const identityAssets = [...identity.palettes, ...identity.typographies, ...identity.fonts, ...identity.characters, ...identity.illustrations]
+    .filter(asset => asset.campaignId === null && ["ACTIVE", "SELECTED"].includes(asset.state))
+    .filter(asset => { const meta = object(asset.metadata); return typeof meta.sourceDataSourceId !== "string" || sources.some(source => source.id === meta.sourceDataSourceId && source.contentHash === meta.sourceContentHash); });
   const safeLogo = activeLogos.length === 1 ? activeLogos[0] : null;
   const links: PublicBrandContent["links"] = [];
   const hosts: Record<string, [string, string]> = {
@@ -79,8 +84,8 @@ async function inspect(strategyId: string, tx: Client) {
     pillars: pillars.map((p) => ({ id: p.id, key: p.key, version: p.currentVersion, content: p.content,
       validationStatus: p.validationStatus, fieldCertainty: p.fieldCertainty, sources: p.sources, staleAt: p.staleAt?.toISOString() ?? null })),
     sources: receipts, logos: logos.map((l) => ({ id: l.id, name: l.name, version: l.version, state: l.state, url: l.url, fingerprint: l.fingerprint })),
-    links };
-  return { strategy, proposed, receipts, pins, revision: sourceFingerprint({ rawData: pins }), editions, logos };
+    identity: identityAssets.map(asset => ({ id: asset.id, state: asset.state, version: asset.version, fingerprint: logoFingerprint(asset) })), links };
+  return { strategy, proposed, receipts, pins, revision: sourceFingerprint({ rawData: pins }), editions, logos, identityAssets, sources };
 }
 
 export async function previewPublicBrand(strategyId: string, actorId?: string) {
@@ -97,11 +102,117 @@ export async function previewPublicBrand(strategyId: string, actorId?: string) {
   }
   return { revision: state.revision, proposed: state.proposed, slug: state.strategy.publicSlug, canPublish,
     logos: state.logos.map(({ id, name, version, state: assetState, url }) => ({ id, name, version, state: assetState, url })),
-    published: active ? { id: active.id, version: active.version, logoAssetId: text(object(object(active.metadata).logoAsset).id) || null, content: PublicBrandContent.parse(active.content),
+    identityOptions: {
+      sources: state.sources.map(source => ({ id: source.id, name: source.fileName ?? "Document de marque" })),
+      assets: state.identityAssets.map(asset => ({ id: asset.id, kind: asset.kind, name: asset.name, version: asset.version,
+        url: publicLogoUrl(asset.fileUrl, asset.kind === "GENERIC"),
+        colors: asset.kind === "CHROMATIC_STRATEGY" ? collectHexes(asset.content).all : [],
+        families: asset.kind === "TYPOGRAPHY_SYSTEM" ? extractFontFamilies(asset.content).all : [] })),
+    },
+    published: active ? { id: active.id, version: active.version, logoAssetId: text(object(object(active.metadata).logoAsset).id) || null, content: privateContent(active.content),
+      identityChoice: object(active.metadata).identityChoice ? PublicIdentityChoice.parse(object(active.metadata).identityChoice) : null,
       observed: object(active.metadata).publicationOrigin === "OBSERVED_PUBLICATION" } : null,
     previous: state.editions.filter((e) => e.state === "SUPERSEDED").map((e) => ({ id: e.id, version: e.version })),
     warning: "Relisez les textes avant publication. Ce choix ne valide pas l’ensemble de votre stratégie.",
   };
+}
+
+/** Factor the four families through the same choice/pin/byte-receipt path.
+ * Source text is evidence, never an executable instruction or an auto-approved charter. */
+async function preparePublicIdentity(choice: PublicIdentityChoice | null, state: Awaited<ReturnType<typeof inspect>>,
+  tx: Client, reusable?: unknown) {
+  if (!choice) return { identity: null, archives: [] as IdentityArchive[], pins: [] as Array<{ id: string; version: number; fingerprint: string }> };
+  choice = PublicIdentityChoice.parse(choice);
+  const source = state.sources.find(source => source.id === choice.referenceSourceId);
+  if (!source) throw new PublicBrandError("PRECONDITION_FAILED", "Choisissez une référence actuellement accessible pour cette marque.");
+  const pins: Array<{ id: string; version: number; fingerprint: string }> = [], archives: IdentityArchive[] = [];
+  const old = publicIdentityArchives(reusable);
+  const choose = async (pick: { assetId: string; version: number }, kind: string) => {
+    const asset = state.identityAssets.find(asset => asset.id === pick.assetId && asset.version === pick.version && asset.kind === kind);
+    if (!asset) throw new PublicBrandError("PRECONDITION_FAILED", "Un élément choisi n’est plus une version disponible de cette marque. Relisez la publication.");
+    await assertAssetSourceCurrent(tx, { strategyId: state.strategy.id, metadata: asset.metadata });
+    const pin = { id: asset.id, version: asset.version, fingerprint: logoFingerprint(asset) };
+    if (!pins.some(p => p.id === pin.id)) pins.push(pin);
+    return asset;
+  };
+  const file = async (pick: { assetId: string; version: number }, role: string, weight?: number, family?: string) => {
+    const asset = await choose(pick, weight === undefined ? "KV_VISUAL" : "GENERIC"), fingerprint = logoFingerprint(asset);
+    const url = publicLogoUrl(asset.fileUrl, weight !== undefined);
+    if (!url) throw new PublicBrandError("PRECONDITION_FAILED", "Un fichier choisi n’est pas une ressource publique admissible.");
+    const prior = old.find(a => a.role === role);
+    if (prior && (prior.assetId !== asset.id || prior.version !== asset.version || prior.fingerprint !== fingerprint)) {
+      throw new PublicBrandError("PRECONDITION_FAILED", "Un élément de cette ancienne édition a changé. Relisez-le avant une nouvelle publication.");
+    }
+    let receipt: PublicLogoReceipt;
+    try {
+      if (prior) { await readPublicLogoBytes(prior.receipt); receipt = prior.receipt; }
+      else receipt = await retainPublicMedia(url, weight, family);
+    } catch {
+      throw new PublicBrandError("PRECONDITION_FAILED", "Un fichier de l’identité n’a pas pu être conservé et vérifié. L’édition précédente reste en ligne.");
+    }
+    archives.push({ role, assetId: asset.id, version: asset.version, fingerprint, receipt });
+    return { url: publicLogoSnapshotUrl("pending", receipt), hash: receipt.contentHash, bytes: receipt.byteLength, type: receipt.mediaType };
+  };
+  const identity: PublicIdentity = { palette: null, typography: null, mascots: [], voice: null };
+  if (choice.palette) {
+    const palette = await choose(choice.palette, "CHROMATIC_STRATEGY"), values = collectHexes(palette.content).all.map(v => v.toLowerCase());
+    if (!Object.values(choice.palette.roles).every(value => values.includes(value.toLowerCase()))) {
+      throw new PublicBrandError("PRECONDITION_FAILED", "Les couleurs choisies doivent appartenir à la palette sélectionnée.");
+    }
+    for (const [foreground, background] of [["ink", "paper"], ["ink", "soft"], ["ink", "signature"], ["community", "paper"]] as const) {
+      if (contrastRatio(hexToRgb(choice.palette.roles[foreground])!, hexToRgb(choice.palette.roles[background])!) < 4.5) {
+        throw new PublicBrandError("PRECONDITION_FAILED", "Ces couleurs ne permettent pas de lire les textes usuels du site. Revoyez leurs usages avant publication.");
+      }
+    }
+    identity.palette = choice.palette.roles;
+  }
+  if (choice.typography) {
+    const charter = await choose(choice.typography, "TYPOGRAPHY_SYSTEM"), families = extractFontFamilies(charter.content).all;
+    const files: string[] = [];
+    const walk = (value: unknown, depth = 0) => {
+      if (depth > 5) return;
+      if (typeof value === "string" && /\.(otf|ttf)$/i.test(value)) { const url = publicLogoUrl(value, true); if (url) files.push(url); }
+      else if (Array.isArray(value)) value.forEach(v => walk(v, depth + 1));
+      else if (value && typeof value === "object") Object.values(value).forEach(v => walk(v, depth + 1));
+    }; walk(charter.content);
+    const projectFont = async (font: { family: string; faces: Array<{ assetId: string; version: number; weight: number }> }, role: string) => {
+      if (!families.includes(font.family)) throw new PublicBrandError("PRECONDITION_FAILED", "La famille choisie n’appartient pas à ce système typographique.");
+      const faces = [];
+      for (const face of font.faces) {
+        const candidate = state.identityAssets.find(a => a.id === face.assetId);
+        if (!candidate || !files.includes(publicLogoUrl(candidate.fileUrl, true) ?? "")) throw new PublicBrandError("PRECONDITION_FAILED", "Le fichier choisi n’appartient pas à ce système typographique.");
+        faces.push({ weight: face.weight, file: await file(face, `${role}:${face.weight}`, face.weight, font.family) });
+      }
+      return { family: font.family, faces };
+    };
+    identity.typography = { display: await projectFont(choice.typography.display, "display"), body: await projectFont(choice.typography.body, "body") };
+  }
+  if (choice.mascots) {
+    await choose(choice.mascots, "PERSONA");
+    for (const use of choice.mascots.uses) identity.mascots.push({ role: use.role, alt: use.alt, file: await file(use, `mascot:${use.role}`) });
+  }
+  if (choice.voice) {
+    const normalized = (s: string) => s.replace(/\s+/g, " ").trim();
+    if (!source.rawContent || !normalized(source.rawContent).includes(normalized(choice.voice.quote))) {
+      throw new PublicBrandError("PRECONDITION_FAILED", "La citation doit être un extrait exact de la référence choisie. Aucune charte brouillon n’est publiée automatiquement.");
+    }
+    identity.voice = choice.voice;
+  }
+  return { identity: PublicIdentity.parse(identity), archives, pins };
+}
+
+function identityForEdition(identity: PublicIdentity | null, archives: IdentityArchive[], editionId: string) {
+  if (!identity) return null;
+  const resolved = (role: string, file: z.infer<typeof PublicIdentity>["mascots"][number]["file"]) => {
+    const archive = archives.find(a => a.role === role);
+    if (!archive) throw new PublicBrandError("PRECONDITION_FAILED", "La copie d’un fichier choisi est absente.");
+    return { ...file, url: publicLogoSnapshotUrl(editionId, archive.receipt) };
+  };
+  return PublicIdentity.parse({ ...identity,
+    typography: identity.typography ? Object.fromEntries(Object.entries(identity.typography).map(([role, font]) => [role,
+      { ...font, faces: font.faces.map(face => ({ ...face, file: resolved(`${role}:${face.weight}`, face.file) })) }])) : null,
+    mascots: identity.mascots.map(use => ({ ...use, file: resolved(`mascot:${use.role}`, use.file) })),
+  });
 }
 
 /** The wrapper supplies the persisted emission id and real session actor. */
@@ -121,6 +232,7 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
     await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id=${strategyId} FOR UPDATE`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${"brand-vault:" + strategyId}, 0))`;
     await tx.$queryRaw`SELECT id FROM "Pillar" WHERE "strategyId"=${strategyId} ORDER BY id FOR SHARE`;
+    await tx.$queryRaw`SELECT id FROM "BrandAsset" WHERE "strategyId"=${strategyId} ORDER BY id FOR SHARE`;
     const actor = await tx.user.findUnique({ where: { id: actorId } });
     const role = isGodModeEmail(actor?.email) ? "ADMIN" : actor?.role;
     if (!actor || !role || !await canAccessStrategy(strategyId, { userId: actorId, operatorId: actor.operatorId, role }, tx)) {
@@ -139,22 +251,26 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
     let chosenLogoId = requested.logoAssetId;
     let restoredLogo: Record<string, unknown> | null = null;
     let logoArchive: PublicLogoReceipt | null = null;
+    let identityChoice = requested.identity === undefined ? object(active?.metadata).identityChoice ?? null : requested.identity;
+    let reusableIdentity = requested.identity === undefined ? active?.metadata : undefined;
     if (requested.restoreId) {
       const prior = await tx.brandAsset.findFirst({ where: { id: requested.restoreId, strategyId, ...scope, state: "SUPERSEDED" } });
       if (!prior) throw new PublicBrandError("PRECONDITION_FAILED", "Cette ancienne publication n’est pas disponible.");
       if (prior.staleAt || prior.id !== restore?.id || prior.updatedAt.getTime() !== restore.updatedAt.getTime()) {
         throw new PublicBrandError("PRECONDITION_FAILED", "Cette ancienne publication doit être relue avant réutilisation.");
       }
-      content = PublicBrandContent.parse(prior.content);
+      content = privateContent(prior.content);
       restoredLogo = object(object(prior.metadata).logoAsset);
       chosenLogoId = text(restoredLogo.id) || undefined;
       logoArchive = publicLogoReceipt(prior.metadata);
+      identityChoice = object(prior.metadata).identityChoice ?? null;
+      reusableIdentity = prior.metadata;
       if (content.logoUrl && !logoArchive) throw new PublicBrandError("PRECONDITION_FAILED", "Cette ancienne édition ne conserve pas son fichier. Choisissez le logo actuel et publiez une nouvelle version après relecture.");
     }
     // A text-only review keeps the visible edition's verified bytes. A fresh
     // selection supplies the source URL and captures a new copy instead.
     if (!requested.restoreId && active && content.logoUrl
-      && content.logoUrl === PublicBrandContent.parse(active.content).logoUrl) {
+      && content.logoUrl === privateContent(active.content).logoUrl) {
       const retained = publicLogoReceipt(active.metadata);
       if (retained && content.logoUrl === publicLogoSnapshotUrl(active.id, retained)) {
         restoredLogo = object(object(active.metadata).logoAsset);
@@ -178,6 +294,13 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
         throw new PublicBrandError("PRECONDITION_FAILED", "Le logo n’a pas pu être conservé et vérifié. La publication précédente reste en ligne. Vérifiez son fichier et le stockage avant de réessayer.");
       }
     }
+    const preparedIdentity = await preparePublicIdentity(identityChoice ? PublicIdentityChoice.parse(identityChoice) : null, current, tx, reusableIdentity);
+    if (reusableIdentity && identityChoice) {
+      const oldPins = object(reusableIdentity).identityPins;
+      if (!Array.isArray(oldPins) || sourceFingerprint({ rawData: oldPins }) !== sourceFingerprint({ rawData: preparedIdentity.pins })) {
+        throw new PublicBrandError("PRECONDITION_FAILED", "L’identité de cette ancienne édition a changé. Choisissez les versions actuelles après relecture.");
+      }
+    }
     let slug = current.strategy.publicSlug;
     if (!slug) {
       slug = brandPublicSlugSafe(content.name, strategyId);
@@ -188,7 +311,7 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
     // Keep the old edition and the lineage; commit the choice atomically.
     if (active) await tx.brandAsset.update({ where: { id: active.id }, data: { state: "SUPERSEDED", supersededAt: new Date(), supersededReason: "Nouvelle publication choisie" } });
     let edition = await tx.brandAsset.create({ data: {
-      strategyId, operatorId: current.strategy.operatorId, ...scope, family: "INTELLECTUAL", level: "production",
+      strategyId, operatorId: current.strategy.operatorId, ...scope, format: preparedIdentity.identity ? PUBLIC_BRAND_IDENTITY_FORMAT : PUBLIC_BRAND_FORMAT, family: "INTELLECTUAL", level: "production",
       name: `Page publique — version ${version}`, content: content as Prisma.InputJsonValue,
       state: "ACTIVE", version, parentBrandAssetId: active?.id, sourceIntentId: intentId,
       selectedAt: new Date(), selectedById: actorId, pillarSource: "A",
@@ -196,26 +319,27 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
         sourceReceipts: current.receipts,
         logoAsset: chosenLogo ? { id: chosenLogo.id, version: chosenLogo.version, fileUrl: chosenLogo.fileUrl, fingerprint: chosenLogo.fingerprint } : null,
         ...(logoArchive ? { logoArchive } : {}),
+        identityChoice: identityChoice as Prisma.InputJsonValue ?? null, identityArchives: preparedIdentity.archives as unknown as Prisma.InputJsonValue,
+        identityPins: preparedIdentity.pins,
         pillarVersions: current.pins.pillars.map((p) => ({ key: p.key, version: p.version })),
         ...(requested.restoreId ? { restoredFromId: requested.restoreId } : {}) },
     } });
-    if (logoArchive) {
-      content = { ...content, logoUrl: publicLogoSnapshotUrl(edition.id, logoArchive) };
-      edition = await tx.brandAsset.update({ where: { id: edition.id }, data: { content: content as Prisma.InputJsonValue } });
-    }
+    if (logoArchive) content = { ...content, logoUrl: publicLogoSnapshotUrl(edition.id, logoArchive) };
+    const publishedContent = preparedIdentity.identity ? { ...content, identity: identityForEdition(preparedIdentity.identity, preparedIdentity.archives, edition.id) } : content;
+    edition = await tx.brandAsset.update({ where: { id: edition.id }, data: { content: publishedContent as Prisma.InputJsonValue } });
     if (active) await tx.brandAsset.update({ where: { id: active.id }, data: { supersededById: edition.id } });
     return edition;
-  }, { timeout: 30000 });
+  }, { timeout: 60000 });
 }
 
-export async function readPublicBrand(slug: string) {
+export async function readPublicBrand(slug: string, includeIdentity = false) {
   if (!isBrandPublicSlug(slug)) return null;
   const strategy = await db.strategy.findUnique({ where: { publicSlug: slug }, select: { id: true, status: true } });
   if (!strategy || ["ARCHIVED", "DELETED"].includes(strategy.status)) return null;
   const asset = await db.brandAsset.findFirst({ where: { strategyId: strategy.id, ...scope, state: "ACTIVE" }, orderBy: { version: "desc" } });
   if (!asset) return null;
-  const content = PublicBrandContent.parse(asset.content);
-  return { schema: PUBLIC_BRAND_FORMAT, slug, edition: asset.id, version: asset.version,
+  const content = includeIdentity && asset.format === PUBLIC_BRAND_IDENTITY_FORMAT ? PublicBrandContentV2.parse(asset.content) : privateContent(asset.content);
+  return { schema: includeIdentity && asset.format === PUBLIC_BRAND_IDENTITY_FORMAT ? PUBLIC_BRAND_IDENTITY_FORMAT : PUBLIC_BRAND_FORMAT, slug, edition: asset.id, version: asset.version,
     publishedAt: asset.createdAt.toISOString(),
     selection: object(asset.metadata).publicationOrigin === "OBSERVED_PUBLICATION" ? "observed" as const : "chosen" as const,
     digest: publicBrandDigest(content), content };
@@ -232,7 +356,7 @@ export async function freezeObservedPublicBrand(strategyId: string, intentId: st
     const state = await inspect(strategyId, tx);
     if (!state.strategy.publicSlug || !isBrandPublicSlug(state.strategy.publicSlug)
       || ["ARCHIVED", "DELETED"].includes(state.strategy.status) || state.editions.length) return false;
-    await tx.brandAsset.create({ data: { strategyId, operatorId: state.strategy.operatorId, ...scope,
+    await tx.brandAsset.create({ data: { strategyId, operatorId: state.strategy.operatorId, ...scope, format: PUBLIC_BRAND_FORMAT,
       family: "INTELLECTUAL", name: "Page publique — publication historique observée", state: "ACTIVE",
       content: state.proposed as Prisma.InputJsonValue, sourceIntentId: intentId, pillarSource: "A",
       metadata: { publicationOrigin: "OBSERVED_PUBLICATION", proposalRevision: state.revision, sourceReceipts: state.receipts },

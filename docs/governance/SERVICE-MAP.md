@@ -145,7 +145,7 @@ Dirigent la trajectoire. Décisions, validations, plans.
 | Service | Rôle guidance | Governor | Manifest |
 |---|---|---|---|
 | `brand-bible/` | Composition déterministe du livre de marque, lecture seule (ADR-0185) | Extension de Guidance | sans manifest propre |
-| `brand-theme/` | Sélection d’identité/thème, pool de logos et origine runtime partagée publisher/export (ADR-0169/0203/[0210](adr/0210-explicit-public-logo-variants.md) ; [430 livré, choix/rendu réel reçus](RECEPTION-IDENTITE-PUBLIQUE.md)) | Extension de Guidance | sans manifest propre |
+| `brand-theme/` | Sélection d’identité/thème, pool de logos et origine runtime partagée publisher/export (ADR-0169/0203/[0210](adr/0210-explicit-public-logo-variants.md) ; [430 livré, choix/rendu réel reçus](RECEPTION-IDENTITE-PUBLIQUE.md)) ; pool palette/typos/fichiers/personnages/illustrations étendu dans le [candidat 432](adr/0212-versioned-public-identity-projection.md), reçu localement seulement | Extension de Guidance | sans manifest propre |
 | `brand-tier-transition/` | Handler de transition de palier après gate (ADR-0167) | MESTOR | sans manifest propre |
 | `mestor/` | Computer de guidage central — Intent dispatcher (`emitIntent`) | MESTOR | partiel (`intents.ts:179`) |
 | `pillar-gateway/` | Écriture gouvernée des Pillars (`writePillarAndScore`) | MESTOR | ✅ existant |
@@ -243,6 +243,11 @@ La conservation d’identité publique relève de **Sustainment/MESTOR** dans
 brand-vault existant : continuité de marque, condition de l’accumulation de
 superfans visée. 431 reçoit le logo public conservé, aucun résultat business ; stockage
 et transport sont des extensions, sans service ni Neteru supplémentaire.
+Le candidat 432 étend ces mêmes publication/copies/transport aux choix d’identité
+v2 (palette, OTF/TTF, poses, citation), avec pins privés et lecture v1 conservée.
+La consommation vitrine vérifie l’ensemble, sans CSP élargie ; gauntlet et
+première lecture sous harness local reçus. Retour consumer natif et livraison/CSP
+production à recevoir. [ADR-0212 Proposed](adr/0212-versioned-public-identity-projection.md).
 
 ---
 

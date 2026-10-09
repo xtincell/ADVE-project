@@ -37,6 +37,14 @@ sept chantiers ; les résidus actifs suivent.
   typographiques contradictoires entre document historique et CANON explicites ;
   toutes les TONE_CHARTER observées restent DRAFT. Tables WOFF2, équivalence pixels
   PNG/WebP et filiation des masters HD ne sont pas reçues.
+  **Candidat 432** : [ADR-0212 Proposed](adr/0212-versioned-public-identity-projection.md)
+  étend publication/conservation existantes à public-brand-v2 compatible v1 :
+  référence et versions, six couleurs par usage, familles/fichiers OTF/TTF,
+  poses et citation bornée. Revue texte/retour réutilisent les copies ; le lecteur
+  vérifie l’ensemble avant application, sans promotion ou CSP élargie. Gauntlet
+  complet vert ; native locale publication/revue/retour producer et première
+  consommation sous harness reçus. Retour consumer natif interrompu, CSP et
+  livraison production à recevoir ; la cause reste ouverte jusqu’à ce reçu.
   **Fermer** en factorisant, dans les primitives existantes, source/version →
   choix explicite id/version/rôle par destination → projection publique bornée
   et versionnée → copies et dérivations reçues → consommation/retour par famille.
@@ -46,9 +54,10 @@ sept chantiers ; les résidus actifs suivent.
   sans publier les textes privés ni promouvoir une charte. Vérifier fichiers,
   rôles et filiation avant d’appliquer chaque famille atomiquement dans le lecteur
   existant ; styles app/web adaptés à leur usage, sans transplanter une échelle.
-  Le raccord dynamique Moka/palette/polices/voix, quiz/application et retour de
-  valeur restent ouverts. **Déclencheur** : prochaine passe C2/C3, la référence
-  étant désormais disponible, avant acceptation d’identité multidestination ;
+  Le raccord dynamique Moka/palette/polices/citation, la voix au-delà d’un extrait,
+  quiz/application et retour de valeur restent ouverts. **Déclencheur** : recette
+  C2/C3 du candidat 432, la référence étant disponible, avant acceptation de ces
+  familles puis de l’identité multidestination ;
   effort : un lot de contrat/conservation/consommation et recette par famille,
   sans nouveau coffre, registre ou service de synchronisation.
 - **Anciennes éditions sans archive d’octets** : 431 ne backfill pas les anciens
@@ -476,10 +485,13 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
   4166/4167 ; tests/unit/services/llm-gateway.test.ts:95 attend Date.now()-start
   <50 ms, mesure 93 ms observée pendant compilation locale. Contrôle isolé 36/36
   vert sans modification ; relance complète requise après arrêt du serveur
-  effectuée, 4167/4167 verts. Cause non démontrée. **Fermer** par diagnostic
+  effectuée, 4167/4167 verts. En 432, récidive pendant compilation : 281 ms pour
+  une borne de 200 ms ; global final après arrêt des serveurs locaux/bump vert
+  (4170/398 fichiers). Cause non démontrée. **Fermer** par diagnostic
   reproductible du temps mur/attentes si l’écart revient ; ne pas ignorer le test
-  ni affaiblir sa borne pour masquer l’échec. **Déclencheur** : récidive au prochain
-  passage stabilité ; effort : diagnostic ciblé uniquement si récidive.
+  ni affaiblir sa borne pour masquer l’échec. **Déclencheur atteint** : récidive
+  432, qualification temps mur/attentes à reprendre à la prochaine passe stabilité ;
+  effort : diagnostic ciblé, sans assimiler corrélation compilation et cause.
 
 - **24 warnings de lint/gouvernance, zéro erreur** : relevés au gauntlet 400 (25 au gauntlet ADR-0196),
   déjà présents avant cette extension. Classes observées : import inter-portails,

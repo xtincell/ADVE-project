@@ -2,7 +2,10 @@ import { readPublicLogo } from "@/server/services/brand-vault/public-media";
 
 export const dynamic = "force-dynamic";
 export async function GET(request: Request, { params }: { params: Promise<{ editionId: string; file: string }> }) {
+  const origin = request.headers.get("origin");
+  const allowed = origin === "https://spawt.online" || origin === "https://www.spawt.online" || origin === "https://portail.spawt.online";
   const headers = { "Cache-Control": "public, max-age=0, must-revalidate", "X-Content-Type-Options": "nosniff",
+    "Vary": "Origin", ...(allowed ? { "Access-Control-Allow-Origin": origin } : {}),
     "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox" };
   if (new URL(request.url).search) return new Response(null, { status: 404, headers });
   const { editionId, file } = await params;

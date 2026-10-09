@@ -12,7 +12,7 @@ import { previewPublicBrand, readPublicBrand, freezeObservedPublicBrand, publish
 import { strategyRouter } from "@/server/trpc/routers/strategy";
 import { brandVaultRouter } from "@/server/trpc/routers/brand-vault";
 import { openEmission, closeEmission } from "@/server/governance/emission-spine";
-import { PublicBrandContent, PublicBrandEdition } from "@/domain/public-brand";
+import { PublicBrandContent, PublicBrandEdition, PublicBrandEditionV2, type PublicIdentityChoice } from "@/domain/public-brand";
 import { GET } from "@/app/api/export/[strategyId]/route";
 import { GET as imageGet } from "@/app/brand/editions/[editionId]/[file]/route";
 import { mediaStoreConfiguration, putEncryptedMedia } from "@/lib/encrypted-media-store";
@@ -92,7 +92,102 @@ async function logoFixture(name: string) {
   const logo = await db.brandAsset.create({ data: { strategyId: s.id, name, kind: "LOGO_FINAL", state: "ACTIVE", fileUrl: relative } });
   return { s, logo, relative };
 }
+async function identityFixture() {
+  const s = await fixture(), quote = "Ton chat a flairé un spot que tu n’as jamais testé.";
+  const source = await db.brandDataSource.create({ data: { strategyId: s.id, sourceType: "MANUAL_INPUT", rawContent: "PRIVATE CHARTER\n" + quote, processingStatus: "EXTRACTED" } });
+  const create = (kind: string, name: string, content?: object, fileUrl?: string) => db.brandAsset.create({ data: {
+    strategyId: s.id, kind, name, content, fileUrl, state: "ACTIVE" } });
+  const colors = { ink: "#0A0A0A", signature: "#C8A44E", community: "#2D6B4F", paper: "#FAFAF8", warm: "#E89A39", soft: "#EFE8DC" };
+  const palette = await create("CHROMATIC_STRATEGY", "Palette", { full: Object.values(colors) });
+  const displayUrl = `${sourcePath}/${randomUUID()}.otf`, bodyUrl = `${sourcePath}/${randomUUID()}.ttf`, mascotUrl = `${sourcePath}/${randomUUID()}.png`;
+  for (const [target, original] of [[displayUrl, "/brand/spawt/fonts/Klinsman-Regular.otf"], [bodyUrl, "/brand/spawt/fonts/Gotham-Book.ttf"]])
+    await writeFile(path.join(process.cwd(), "public", target!), await readFile(path.join(process.cwd(), "public", original!)));
+  await writeFile(path.join(process.cwd(), "public", mascotUrl), pngOne);
+  const typography = await create("TYPOGRAPHY_SYSTEM", "Typography with an explicit historical ambiguity", {
+    primary: { family: "Klinsman", role: "body and display", files: [displayUrl] }, secondary: { family: "Gotham", role: "body and display", files: [bodyUrl] } });
+  const display = await create("GENERIC", "Display file", undefined, displayUrl), body = await create("GENERIC", "Body file", undefined, bodyUrl);
+  const persona = await create("PERSONA", "Character"), mascot = await create("KV_VISUAL", "A name that does not determine the role", undefined, mascotUrl);
+  const pick = (a: { id: string; version: number }) => ({ assetId: a.id, version: a.version });
+  const choice: PublicIdentityChoice = { referenceSourceId: source.id, palette: { ...pick(palette), roles: colors },
+    typography: { ...pick(typography), display: { family: "Klinsman", faces: [{ ...pick(display), weight: 400 }] }, body: { family: "Gotham", faces: [{ ...pick(body), weight: 400 }] } },
+    mascots: { ...pick(persona), uses: [{ ...pick(mascot), role: "guide", alt: "Character guides" }] }, voice: { quote, attribution: "Character" } };
+  const submit = async (identity = choice) => { const p = await caller().publicPage({ id: s.id });
+    return caller().update({ id: s.id, recalculateScore: false, publicPage: { expectedRevision: p.revision, expectedPublishedId: p.published?.id ?? null, content: p.published?.content ?? p.proposed, identity } }); };
+  return { s, source, palette, typography, display, body, mascot, choice, submit, mascotUrl, bodyUrl };
+}
 describe("Public brand editions", () => {
+  it("publishes selected palette, font roles, mascot and exact voice without exporting private references", async () => {
+    const f = await identityFixture(); await f.submit();
+    const edition = PublicBrandEditionV2.parse(await readPublicBrand(f.s.publicSlug!, true));
+    expect(edition.content.identity?.palette).toEqual(f.choice.palette!.roles);
+    expect(edition.content.identity?.typography?.body.family).toBe("Gotham");
+    expect(edition.content.identity?.mascots[0]?.role).toBe("guide");
+    expect(edition.content.identity?.voice).toEqual(f.choice.voice);
+    expect(JSON.stringify(edition)).not.toMatch(/PRIVATE CHARTER|referenceSourceId|identityChoice|assetId|identityArchives|sourceReceipts/);
+    const body = edition.content.identity!.typography!.body.faces[0]!.file;
+    const response = await imageResponse(body.url, { Origin: "https://spawt.online" });
+    expect(response.headers.get("content-type")).toBe("font/ttf");
+    expect(response.headers.get("access-control-allow-origin")).toBe("https://spawt.online");
+    expect(digestBytes(Buffer.from(await response.arrayBuffer()))).toBe(body.hash);
+    expect(PublicBrandEdition.parse(await readPublicBrand(f.s.publicSlug!)).content).not.toHaveProperty("identity");
+    const v2 = await GET(new Request(`https://example.invalid/api/export/${f.s.publicSlug}?format=public-brand-v2`), { params: Promise.resolve({ strategyId: f.s.publicSlug! }) });
+    expect(PublicBrandEditionV2.parse(await v2.json()).digest).toBe(edition.digest);
+    expect((await db.brandAsset.findUniqueOrThrow({ where: { id: f.typography.id } })).content).toMatchObject({ primary: { role: "body and display" } });
+  });
+  it("retains and restores every identity file without reading changed mutable sources", async () => {
+    const f = await identityFixture(); await f.submit(); const one = PublicBrandEditionV2.parse(await readPublicBrand(f.s.publicSlug!, true));
+    await writeFile(path.join(process.cwd(), "public", f.mascotUrl), pngTwo);
+    await writeFile(path.join(process.cwd(), "public", f.bodyUrl), "broken new source");
+    await publish(f.s.id, "Text-only review"); const p = await caller().publicPage({ id: f.s.id });
+    await caller().update({ id: f.s.id, recalculateScore: false, publicPage: { expectedRevision: p.revision, expectedPublishedId: p.published!.id, content: p.published!.content, restoreId: one.edition } });
+    const restored = PublicBrandEditionV2.parse(await readPublicBrand(f.s.publicSlug!, true));
+    expect(restored.edition).not.toBe(one.edition);
+    expect(restored.content.identity?.mascots[0]?.file.hash).toBe(digestBytes(pngOne));
+    expect(digestBytes(await renderedLogoBytes(restored.content.identity!.mascots[0]!.file.url))).toBe(digestBytes(pngOne));
+    expect(digestBytes(await renderedLogoBytes(restored.content.identity!.typography!.body.faces[0]!.file.url))).toBe(one.content.identity!.typography!.body.faces[0]!.file.hash);
+  });
+  it("refuses foreign, draft, wrong-version and campaign identity choices without replacing the edition", async () => {
+    const f = await identityFixture(), other = await identityFixture(); await f.submit();
+    const first = await readPublicBrand(f.s.publicSlug!, true);
+    for (const palette of [{ ...f.choice.palette!, assetId: other.palette.id }, { ...f.choice.palette!, version: 999 },
+      { ...f.choice.palette!, roles: { ...f.choice.palette!.roles, ink: "#FFFFFF" } }]) {
+      await expect(f.submit({ ...f.choice, palette })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    }
+    const draft = await db.brandAsset.create({ data: { strategyId: f.s.id, kind: "CHROMATIC_STRATEGY", name: "Unselected proposal", state: "DRAFT", content: { full: Object.values(f.choice.palette!.roles) } } });
+    await expect(f.submit({ ...f.choice, palette: { ...f.choice.palette!, assetId: draft.id } })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    const campaign = await db.campaign.create({ data: { strategyId: f.s.id, name: "Campaign-only palette" } });
+    const scoped = await db.brandAsset.create({ data: { strategyId: f.s.id, campaignId: campaign.id, kind: "CHROMATIC_STRATEGY", name: "Campaign palette", state: "ACTIVE", content: { full: Object.values(f.choice.palette!.roles) } } });
+    await expect(f.submit({ ...f.choice, palette: { ...f.choice.palette!, assetId: scoped.id } })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    await expect(f.submit({ ...f.choice, voice: { quote: "An invented instruction", attribution: "Character" } })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    await expect(f.submit({ ...f.choice, palette: { ...f.choice.palette!, roles: { ...f.choice.palette!.roles, paper: f.choice.palette!.roles.ink } } })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    await expect(f.submit({ ...f.choice, typography: { ...f.choice.typography!, body: { ...f.choice.typography!.body, faces: [{ assetId: f.display.id, version: f.display.version, weight: 400 }] } } })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    await expect(f.submit({ ...f.choice, typography: { ...f.choice.typography!, body: { ...f.choice.typography!.body, faces: [{ assetId: f.body.id, version: f.body.version, weight: 700 }] } } })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    expect((await readPublicBrand(f.s.publicSlug!, true))?.edition).toBe(first!.edition);
+  });
+  it("fences identity edits and documentary corrections between review and publish", async () => {
+    const f = await identityFixture(), p = await caller().publicPage({ id: f.s.id });
+    await db.brandAsset.update({ where: { id: f.palette.id }, data: { content: { full: ["#FFFFFF"] } } });
+    await expect(caller().update({ id: f.s.id, publicPage: { expectedRevision: p.revision, expectedPublishedId: null, content: p.proposed, identity: f.choice } })).rejects.toMatchObject({ code: "CONFLICT" });
+    const q = await caller().publicPage({ id: f.s.id });
+    await db.brandDataSource.update({ where: { id: f.source.id }, data: { rawContent: "Corrected reference" } });
+    await expect(caller().update({ id: f.s.id, publicPage: { expectedRevision: q.revision, expectedPublishedId: null, content: q.proposed, identity: f.choice } })).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(await readPublicBrand(f.s.publicSlug!, true)).toBeNull();
+  });
+  it("does not purge retained identity files and refuses a corrupt font before 304 or republication", async () => {
+    const f = await identityFixture(); await f.submit(); const edition = PublicBrandEditionV2.parse(await readPublicBrand(f.s.publicSlug!, true));
+    const asset = await db.brandAsset.findUniqueOrThrow({ where: { id: edition.edition } });
+    const archives = (asset.metadata as unknown as { identityArchives: Array<{ role: string; receipt: { objectKey: string } }> }).identityArchives;
+    const old = new Date(Date.now() - 2 * 86400000);
+    for (const item of archives) await utimes(path.join(storeRoot, item.receipt.objectKey + ".enc"), old, old);
+    await purgeExpiredCreativeMedia();
+    for (const item of archives) expect(await readFile(path.join(storeRoot, item.receipt.objectKey + ".enc"))).not.toHaveLength(0);
+    const font = edition.content.identity!.typography!.body.faces[0]!.file;
+    const good = await imageResponse(font.url);
+    await writeFile(path.join(storeRoot, archives.find(a => a.role === "body:400")!.receipt.objectKey + ".enc"), "corrupt");
+    expect((await imageResponse(font.url, { "If-None-Match": good.headers.get("etag")! })).status).toBe(503);
+    await expect(publish(f.s.id, "Refused corrupt copy")).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    expect((await readPublicBrand(f.s.publicSlug!, true))?.edition).toBe(edition.edition);
+  });
   it("republishes a reviewed edition with the same retained logo despite a changed source", async () => {
     const { s, relative } = await logoFixture("Reviewed logo"); await publish(s.id, "First text");
     const p = await caller().publicPage({ id: s.id });

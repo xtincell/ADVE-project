@@ -12,7 +12,7 @@
 import { z } from "zod";
 import { defineManifest } from "@/server/governance/manifest";
 import { PillarKeySchema } from "@/domain/pillars";
-import { PublicBrandPublicationInput, PublicBrandEdition } from "@/domain/public-brand";
+import { PublicBrandPublicationInput, AnyPublicBrandEdition } from "@/domain/public-brand";
 
 const StringId = z.string().min(1);
 
@@ -79,7 +79,7 @@ export const manifest = defineManifest({
     {
       name: "readPublicBrand",
       inputSchema: z.object({ slug: StringId }),
-      outputSchema: PublicBrandEdition.nullable(),
+      outputSchema: AnyPublicBrandEdition.nullable(),
       sideEffects: ["DB_READ"],
       missionContribution: "DIRECT_BOTH",
     },

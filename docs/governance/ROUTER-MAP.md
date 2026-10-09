@@ -10,6 +10,12 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 - `point gouverné présent` : présence de `governedProcedure` ou d'un appel `emitIntent` dans le code du router ; la couverture de chaque mutation se vérifie séparément.
 - `appels à suivre` : mutations présentes sans ces marqueurs directs ; vérifier leurs services et leurs justifications avant de conclure à un contournement.
 - `lecture seule` : aucune déclaration `.mutation(...)` dans le router.
+
+Extension candidate 432 : strategy.publicPage fournit les choix admissibles à
+la revue Connexions ; strategy.update reste l’unique écriture de cette publication
+d’identité v2. Aucun router/procedure parallèle ni droit ajouté. Gauntlet et
+publication/revue/retour natifs locaux producer reçus ; livraison production
+encore à recevoir : [ADR-0212 Proposed](adr/0212-versioned-public-identity-projection.md).
 ---
 
 ## Synthèse globale

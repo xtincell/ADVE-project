@@ -1,7 +1,69 @@
-# Identité publique — logo et octets reçus en production 431
+# Identité publique — logo 431 reçu, projection 432 en réception
 
 État au 2026-10-09. ADR-0210 reste la décision d’architecture et la recette
 locale historique ; ce reçu distingue livraison et usage réel.
+
+## Candidat logiciel 432 — reçus locaux partiels, livraison à recevoir
+
+ADR-0212 Proposed, dossier privé release/preuves-identite-projetee-433.
+Ce numéro de dossier est distinct de la version logicielle ; l’admission
+documentaire ultérieure décrite plus bas n’était pas une release. Production
+reçue reste 431/SPAWT v3. Les contrôles et gestes locaux ci-dessous ne reçoivent
+ni le déploiement 432, ni une publication d’identité SPAWT réelle.
+
+Le code candidat étend les mêmes resolver/BrandAsset/strategy.update/stockage
+chiffré/transport d’édition. Revue Connexions PublicIdentityReview : référence,
+id/version et usages explicitement choisis, sans promouvoir un actif ou une
+charte DRAFT. Palette six rôles avec quatre paires de contraste usuelles,
+familles titres/corps et OTF/TTF dont structure/famille/graisse/octets sont
+vérifiés, poses accueil/découverte/guidage, citation contenue dans la référence
+après normalisation des espaces. Une citation ne reçoit pas la voix de marque
+complète ni une charte privée publique.
+
+Format public-brand-v2, lecture v1 compatible ; pins, références privées et
+reçus de conservation restent privés. Revue de texte et retour réutilisent les
+copies sous sources/versions courantes, nouveau choix conserve ses fichiers.
+Portée étrangère/campagne/périmé/corruption doit refuser sans remplacer l’édition.
+Le lecteur vitrine valide le contrat, le digest et tous les fichiers avant
+décodage puis application de l’ensemble. Échec : dernier reçu dans la page
+ouverte conservé, ou repli initial local ; aucune persistance client après
+fermeture déduite. Styles/tailles adaptés à la destination, CSP inchangée.
+
+Reçus locaux : types/deux lints/cycles sans erreur, 24 warnings préexistants,
+1617 gouvernance/166 fichiers avec scans UI/vocab étendus à PublicIdentityReview.
+PostgreSQL 253/13 fichiers dont public-brand 38 (cinq nouveaux), domaine trois
+verts ; verrou input rouge sur ancien code, inspection de police supprimée
+rouge puis source restaurée/38 ciblés verts. Vitrine 38/5/types/build verts.
+Suite globale finale après bump/arrêt des serveurs locaux : 4170/398 verts,
+gauntlet complet vert. Premier passage
+avec compilateur reçoit l’échec attendu de note avant bump et withRetry 281 ms
+pour une borne de 200 ms pendant compilation. Relance sans compilation verte ;
+récidive au registre timing existant, cause non démontrée.
+
+Session FOUNDER native sur fixture locale : référence consultée, publication
+identité v1, revue texte v2 et retour v3 ; strategy.update 200/trois émissions OK.
+Huit copies ont les mêmes hashes/objectKeys sur les trois versions ; une source
+inchangée. HTTP v2 et huit fichiers 200/hash exact, aucun champ privé public.
+Première vitrine native via harness privé, seules deux destinations fetch
+proxifiées localement, contrat/hash/décodeurs inchangés : cinq FontFace loaded,
+trois PNG 393×559/393×567/479×528 et couleurs/citation appliquées ensemble.
+Ce reçu ne prouve pas la CSP production. Rechargement vitrine final après retour
+interrompu par arrêt de fixture : **retour natif consumer non reçu**, distinct
+du retour Connexions et PostgreSQL reçu.
+
+Fenêtres locales non tronquées sans exception/>=500 observé : vitrine document
+200/DOM 116 ms ; Connexions document 200/DOM 6460 ms, titre <=8887 ms. Dev avec
+compilation chargée, sans SLO ni performance production. À recevoir : retour
+vitrine natif, CI/image/runtime exact, CSP/publication
+SPAWT réelle et corpus hors publication conservé. Aucun média, texte
+source privé, identifiant d’acteur/actif ou empreinte documentaire recopié ici.
+Legacy sans archive, récupération/disponibilité du stockage, WOFF2/masters HD,
+voix complète, destinations quiz/application et retour de valeur restent ouverts.
+Sept chantiers et parcours de marque intégral non acceptés.
+[Architecture proposée](adr/0212-versioned-public-identity-projection.md).
+Preuves privées : release/preuves-identite-projetee-433, native-http.json,
+native-return-state.json, native-connections-bounded.json, native-vitrine-events.json
+et native-vitrine-final-reload-unreceived.json ; aucun identifiant de fixture publié.
 
 ## 429 livré, sélection réelle non reçue
 

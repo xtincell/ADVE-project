@@ -66,6 +66,17 @@ npm run dev                 # → http://localhost:3000
 
 ## État courant borné — 2026-10-09
 
+**Candidat 6.27.432, identité par usage** : Connexions étend la publication
+existante aux choix de palette, typographies, poses de mascotte et citation de
+référence, avec copies vérifiées et lecteur vitrine appliquant l’ensemble reçu.
+Contrat v2/lecture v1 compatible, sans promotion d’actifs ni charte privée exposée.
+Contrôles locaux et publication/revue/retour Connexions sur fixture reçus ;
+première consommation vitrine reçue sous harness local, retour consumer natif
+interrompu. Gauntlet complet vert, dont 4170 unitaires/1617 gouvernance/253
+PostgreSQL ; CI/image/runtime/publication réelle restent à recevoir. Aucune CSP
+production, identité complète ou acceptation Shinkiro déduite.
+[ADR-0212 Proposed](docs/governance/adr/0212-versioned-public-identity-projection.md).
+
 La dernière livraison de production reçue est **6.27.431**, source 3f104072,
 CI 37876777265 et image 37876782159 rapprochées du runtime exact le 9 octobre à
 03:07:30 UTC. Le volume privé et le corpus hors éditions sont conservés.

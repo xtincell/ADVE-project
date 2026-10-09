@@ -1,5 +1,26 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Identité projetée par usage — candidat 432 (2026-10-09)
+
+ADR-0212 Proposed étend le circuit reçu du logo et la référence admise : source
+→ choix explicite id/version/rôle → édition publique v2 → copies conservées →
+lecteur vitrine vérifiant l’ensemble. Palette, familles/fichiers OTF/TTF, poses
+et citation de référence restent facultatifs ; styles par destination et lecture
+v1 conservés, sans promouvoir une charte ni ajouter de service ou d’Intent.
+La revue PublicIdentityReview est dans Connexions/strategy.update existants ;
+brand-vault/Sustainment/MESTOR conserve les reçus et le transport borné.
+
+Gauntlet local reçu : 4170 unitaires/1617 gouvernance/253 PostgreSQL, types/lints/
+cycles sans erreur, 24 warnings ; vitrine 38/types/build verts. Native locale
+publication/revue/retour producer et première consommation sous harness reçus,
+pas le retour consumer interrompu ni la CSP production. CI/image/runtime 432 à
+recevoir. Déclencheur courant C2/C3 : achever ces retours et recevoir publication
+réelle/consommation par famille ; aucune acceptation préalable. Ensuite reprendre
+filiation HD/WOFF2, legacy sans archive, récupération stockage et autres
+destinations/quiz-app/retour de valeur. Production reçue reste 431/SPAWT v3,
+sept chantiers ouverts. [ADR proposé](adr/0212-versioned-public-identity-projection.md) ·
+[réceptions distinctes](RECEPTION-IDENTITE-PUBLIQUE.md).
+
 ## Octets de publication — 431 livré et reçu (2026-10-09)
 
 Le transport d’une copie publique vérifiée complète le stockage chiffré

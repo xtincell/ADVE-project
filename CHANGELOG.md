@@ -1,5 +1,39 @@
 # Changelog — La Fusee
 
+## v6.27.432 — feat(brand): choisir une identité publique par usage (2026-10-09)
+
+**Le candidat projette des choix d’identité versionnés vers la vitrine ; sa réception reste ouverte.**
+
+- ADR-0212 Proposed : extension BrandAsset/strategy.update, resolver, stockage
+  chiffré et transport existants sous brand-vault/Sustainment/MESTOR. Contrat
+  public-brand-v2, lecture v1 compatible ; aucun modèle/service/router/Intent/
+  fournisseur/droit ajouté. PublicIdentityReview compose la revue Connexions.
+- Référence et versions choisies explicitement, six couleurs par usage/quatre
+  paires de contraste, familles titres/corps et OTF/TTF vérifiés, poses par usage
+  et citation de référence. Pins/reçus restent privés ; aucune promotion DRAFT,
+  charte privée complète ou décision de filiation inventée.
+- Copies conservées, revue texte et retour sous source/version courantes ;
+  refus étranger/campagne/périmé/corruption. La vitrine vérifie tous les fichiers
+  avant d’appliquer l’ensemble, garde son dernier reçu en cas d’échec et adapte
+  ses styles ; CSP inchangée, aucun contrat quiz/app nouveau.
+- Contrôles locaux reçus : types/lints/cycles sans erreur, 24 warnings préexistants,
+  1617 gouvernance/166, PostgreSQL 253/13 dont public-brand 38 et domaine trois
+  verts ; verrous input/font éprouvés rouges puis verts. Vitrine 38/5/types/build
+  verts. Session FOUNDER locale : référence/publication/revue/retour 200, trois
+  émissions OK, huit copies conservées sur trois versions ; HTTP/hash reçus.
+  Premier consumer natif sous harness local : cinq FontFace, trois poses décodées,
+  couleurs/citation ensemble ; pas preuve CSP production. Retour consumer natif
+  interrompu, non reçu. Fenêtres locales sans exception/>=500, aucun SLO déduit.
+- Suite globale finale après bump/arrêt des serveurs locaux : 4170/398 verts,
+  gauntlet complet vert. Premier échec attendu de
+  note avant bump et récidive withRetry 281 ms/borne 200 ms gardés au registre,
+  relance sans compilation verte mais cause non démontrée.
+  CI/image/runtime/publication réelle 432 **à recevoir**. Production reçue
+  431/SPAWT v3 inchangée à ce stade. Legacy sans archive, récupération du stockage,
+  filiation/WOFF2, multidestination/quiz-app/retour de valeur et sept chantiers
+  restent ouverts. [Architecture proposée](docs/governance/adr/0212-versioned-public-identity-projection.md)
+  et [réception en cours](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
+
 ## v6.27.431 — fix(brand): conserver les octets du logo de chaque publication (2026-10-09)
 
 **431 est livrée : le logo public SPAWT est servi depuis les octets vérifiés de l’édition v3.**

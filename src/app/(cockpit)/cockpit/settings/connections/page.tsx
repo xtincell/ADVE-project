@@ -18,7 +18,8 @@ import { trpc } from "@/lib/trpc/client";
 import { SocialHubCard } from "@/components/cockpit/social/social-hub-card";
 import { EmailProviderCard } from "@/components/cockpit/newsletter/email-provider-card";
 import { Button, Input, Textarea, Select } from "@/components/primitives";
-import { PublicBrandContent } from "@/domain/public-brand";
+import { PublicBrandContent, PublicIdentityChoice } from "@/domain/public-brand";
+import { PublicIdentityReview } from "@/components/brand/public-identity-review";
 import { CopyButton } from "@/components/shared/copy-button";
 import { Plug, Store, RefreshCw, Unlink, ArrowRight, Smartphone, Plug2, KeyRound, Trash2 } from "lucide-react";
 
@@ -351,6 +352,7 @@ function PublicPageCard({ strategyId }: { strategyId: string }) {
   const [draft, setDraft] = useState<{
     revision: string; publishedId: string | null; content: PublicBrandContent;
     logos: NonNullable<typeof preview.data>["logos"]; logoAssetId?: string;
+    identity: PublicIdentityChoice | null; identityChanged: boolean;
   } | null>(null);
   const update = trpc.strategy.update.useMutation({
     onSuccess: () => {
@@ -368,12 +370,13 @@ function PublicPageCard({ strategyId }: { strategyId: string }) {
     const content = data.published?.content ?? data.proposed;
     const matches = data.logos.filter((logo) => logo.url === content.logoUrl);
     setDraft({ revision: data.revision, publishedId: data.published?.id ?? null, content, logos: data.logos,
-      logoAssetId: data.published?.logoAssetId ?? (matches.length === 1 ? matches[0]!.id : undefined) });
+      logoAssetId: data.published?.logoAssetId ?? (matches.length === 1 ? matches[0]!.id : undefined),
+      identity: data.published?.identityChoice ?? null, identityChanged: false });
   };
   const edit = (patch: Partial<PublicBrandContent>) => setDraft((old) => old ? { ...old, content: { ...old.content, ...patch } } : old);
   const keepsPublishedLogo = !!draft && data?.published?.id === draft.publishedId
     && data.published.logoAssetId === draft.logoAssetId && data.published.content.logoUrl === draft.content.logoUrl;
-  const valid = draft ? PublicBrandContent.safeParse(draft.content).success && (draft.content.logoUrl === null
+  const valid = draft ? PublicBrandContent.safeParse(draft.content).success && (!draft.identity || PublicIdentityChoice.safeParse(draft.identity).success) && (draft.content.logoUrl === null
     || draft.logos.some((logo) => logo.id === draft.logoAssetId && (logo.url === draft.content.logoUrl || keepsPublishedLogo))) : false;
   return (
     <div className="ck-card">
@@ -385,12 +388,12 @@ function PublicPageCard({ strategyId }: { strategyId: string }) {
         <div className="space-y-3">
           <p className="ck-ops__note">{data.published
             ? `Version ${data.published.version} en ligne. Les modifications de votre marque restent privées jusqu’à la prochaine publication.`
-            : "Préparez une version publique de votre marque. Seuls les textes, le logo et les liens choisis dans cet aperçu seront publiés."}</p>
+            : "Préparez une version publique de votre marque. Seuls les textes, les liens et les éléments d’identité choisis dans cet aperçu seront publiés."}</p>
           {data.published?.observed && <p className="ck-ops__note">Publication historique conservée. Aucune relecture humaine antérieure n’est présumée.</p>}
           {url && <div className="flex flex-wrap items-center gap-2">
             <a href={url} target="_blank" rel="noreferrer" className="text-sm text-accent hover:underline">Voir la page en ligne</a>
             <CopyButton value={url} />
-            <a href={`/api/export/${data.slug}?format=public-brand`} target="_blank" rel="noreferrer" className="text-sm text-accent hover:underline">Voir le fichier public</a>
+            <a href={`/api/export/${data.slug}?format=public-brand-v2`} target="_blank" rel="noreferrer" className="text-sm text-accent hover:underline">Voir le fichier public</a>
           </div>}
           {!data.canPublish ? <p className="ck-ops__note">La publication est prise en charge par l’équipe de cette marque.</p> : !draft ? (
             <div className="flex flex-wrap gap-2">
@@ -426,10 +429,13 @@ function PublicPageCard({ strategyId }: { strategyId: string }) {
                 <Button size="sm" variant="outline" onClick={() => edit({ links: draft.content.links.filter((_, i) => i !== index) })}>Retirer ce lien</Button>
               </div>)}
               <Button size="sm" variant="outline" disabled={draft.content.links.length >= 12} onClick={() => edit({ links: [...draft.content.links, { label: "", url: "" }] })}>Ajouter un lien</Button>
+              <PublicIdentityReview strategyId={strategyId} options={data.identityOptions} value={draft.identity}
+                onChange={identity => setDraft(old => old ? { ...old, identity, identityChanged: true } : old)} />
               {!valid && <p className="text-sm text-warning">Renseignez le nom, le titre, des liens publics https sans paramètres et un logo disponible si vous en incluez un.</p>}
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" disabled={!valid || update.isPending} onClick={() => update.mutate({ id: strategyId, recalculateScore: false,
-                  publicPage: { expectedRevision: draft.revision, expectedPublishedId: draft.publishedId, content: draft.content, logoAssetId: draft.logoAssetId } })}>
+                  publicPage: { expectedRevision: draft.revision, expectedPublishedId: draft.publishedId, content: draft.content, logoAssetId: draft.logoAssetId,
+                    ...(draft.identityChanged ? { identity: draft.identity } : {}) } })}>
                   {update.isPending ? "Publication…" : "Publier cette version"}</Button>
                 <Button size="sm" variant="outline" disabled={update.isPending} onClick={() => setDraft(null)}>Annuler</Button>
               </div>

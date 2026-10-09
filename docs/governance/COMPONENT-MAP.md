@@ -67,3 +67,16 @@ Hook `useCalibrationStream` (`src/hooks/use-calibration-stream.ts`) — SSE cons
 `<OvertonRadar>` (`src/components/neteru/overton-radar.tsx`) — **Phase 23 Epic 7 SHIPPED** : props driven by `ConnectorResult<OvertonRadarSignal>` (view-model in `@/domain`) + `instance` CVA variant (full/teaser) ; A2 split (`@container` queries) ; honest DEFERRED/DEGRADED/per-axis states (`HonestState` + `MetricCell`) ; a11y `<svg role="img">` + offscreen `table.sr-only`. Co-located `overton-radar.manifest.ts` (v2.0.0, `DIRECT_OVERTON`) + `.stories.tsx`. Consommé par la route `/cockpit/intelligence/overton` (Story 7.5) via le wrapper `<OvertonPanel>` (`src/components/cockpit/intelligence/`, Story 7.4) + le teaser dashboard `OvertonTeaser` (Story 7.6). **Reusable Phase-22 patterns** : `HonestState` (degraded/empty, info-tone), `MetricCell` (per-axis partial, no fabricated 0).
 
 Cf. [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md), [DESIGN-LEXICON.md](DESIGN-LEXICON.md).
+
+## Composition de revue d’identité — candidat 432 (2026-10-09)
+
+`PublicIdentityReview` (`src/components/brand/public-identity-review.tsx`) compose
+Button/Input/Select/Textarea et SourceReadDialog dans la carte publique existante
+de Connexions. Référence consultable, choix explicites par version/usage pour
+palette, typographies/fichiers, poses et citation ; les familles non choisies
+gardent leur présentation locale. Validation de choix avant strategy.update,
+aucune promotion d’actif ou nouvelle primitive/page/permission. Hors table
+auto-générée des primitives ci-dessus ; aucun compte structurel modifié.
+Scans UI/vocab et gestes natifs locaux reçus sur fixture ; gauntlet vert.
+Livraison production encore à recevoir.
+[ADR-0212 Proposed](adr/0212-versioned-public-identity-projection.md).
