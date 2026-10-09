@@ -120,6 +120,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.role = token.role as string;
         session.user.id = token.id as string;
+        // Read the current assignment for each authenticated session. A missing
+        // JWT field hid assigned brands; caching it there would retain revoked scopes.
+        const assignment = await db.user.findUnique({
+          where: { id: session.user.id }, select: { operatorId: true },
+        });
+        session.user.operatorId = assignment?.operatorId ?? null;
       }
       return session;
     },

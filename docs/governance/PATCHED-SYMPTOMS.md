@@ -30,6 +30,14 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-09 · Fix session 433 dédié : OPERATOR/canOperate=true, mais strategy.list
+vide faute d’operatorId dans la session. Callback auth et types existants relisent
+l’affectation actuelle en base à chaque session, sans tenant JWT ni rôle/droit
+nouveau. Trois rouges puis trois verts réaffectation/révocation/base indisponible ;
+la page native retrouve la marque. Cause : rôle reconnu et portée courante de
+l’équipe étaient assimilés. Réception locale ; livraison avec le bundle 434 à
+recevoir, sans runtime 433 autonome ni élargissement d’accès annoncé.
+
 2026-10-08 · Ptah écrivait ses coûts de forge dans un journal zéro-token attribué
 à Anthropic : montant zéro même lorsqu’un résultat persisté portait un autre
 montant/fournisseur. v6.27.425 transmet ces valeurs checkpointées dans la

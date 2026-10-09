@@ -1,5 +1,19 @@
 # Changelog — La Fusee
 
+## v6.27.433 — fix(auth): relire l’affectation de l’opérateur dans la session (2026-10-09)
+
+**Le correctif retrouve les marques affectées ; réception locale, livraison avec 434 à recevoir.**
+
+- OPERATOR/canOperate=true recevait strategy.list vide : la session n’exposait
+  pas son operatorId. Le callback relit l’affectation actuelle en base à chaque
+  session, sans tenant conservé dans le JWT ni changement de rôle/droit.
+- Trois tests rouges puis trois verts : réaffectation, révocation et base
+  indisponible. La page native retrouve la marque ; retrait d’affectation refusé.
+  Aucun élargissement de permission ni cycle de marque complet déduit.
+- Correctif dédié avant Ptah 434. Types/lints/cycles/gouvernance locaux verts ;
+  vérifications finales et livraison de l’ensemble en cours. Pas de runtime 433
+  autonome annoncé : le bundle final doit inclure ce prérequis.
+
 ## v6.27.432 — feat(brand): choisir une identité publique par usage (2026-10-09)
 
 **432 est livrée : l’identité choisie de SPAWT est publiée, relue et restaurée sur la vitrine.**

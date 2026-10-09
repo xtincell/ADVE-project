@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.433", date: "2026-10-09",
+    headline: "Retrouvez les marques affectées à votre équipe",
+    highlights: [
+      { emoji: "◈", title: "Le bon portefeuille", body: "Votre espace utilise l’équipe actuellement affectée à votre compte pour retrouver ses marques. Une affectation retirée ne reste plus mémorisée dans votre session." },
+    ],
+  },
+  {
     version: "6.27.432", date: "2026-10-09",
     headline: "Choisissez l’identité de votre publication",
     highlights: [
