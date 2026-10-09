@@ -33,6 +33,18 @@ async function fixture() {
   return { strategy, active, source };
 }
 describe("guidelines : identité du coffre et documents, sans remplir le profil", () => {
+  it("uses the runtime origin in a downloaded logo despite the build placeholder", async () => {
+    const { strategy } = await fixture();
+    await db.brandAsset.create({ data: { strategyId: strategy.id, name: "Relative runtime logo", kind: "LOGO_FINAL", state: "ACTIVE", fileUrl: "/fixtures/runtime-logo.png" } });
+    vi.stubEnv("NEXT_PUBLIC_BASE_URL", "http://localhost:3000");
+    vi.stubEnv("AUTH_URL", "https://runtime.example.invalid");
+    try {
+      const html = await exportHtml(strategy.id);
+      expect(html).toContain('src="https://runtime.example.invalid/fixtures/runtime-logo.png"');
+      expect(html).not.toContain('src="http://localhost:3000/');
+    } finally { vi.unstubAllEnvs(); }
+  });
+
   it("un export téléchargé conserve une adresse de logo utilisable hors du site", async () => {
     const { strategy } = await fixture();
     const good = await db.brandAsset.create({ data: { strategyId: strategy.id, kind: "LOGO_FINAL", state: "ACTIVE", name: "Logo synthétique", fileUrl: "/fixtures/logo.png", createdAt: new Date("2026-01-01") } });

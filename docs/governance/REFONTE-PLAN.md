@@ -1,6 +1,21 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## Variante de logo publiée — candidat local 429 (2026-10-09)
+## Origine de marque — candidat 430 après blocage livré en 429 (2026-10-09)
+
+429 est livrée, source 383f5e8a/image 37868294874/runtime exact, déploiement
+terminé à 01:22:53 UTC ; corpus et édition SPAWT v1 conservés. Mais le sélecteur
+réel ne propose que « Sans logo », sans publication : NEXT_PUBLIC_BASE_URL reste
+inliné à localhost:3000 dans deux chunks, malgré les origines serveur HTTPS.
+430 centralise la résolution runtime dans brand-theme existant, réutilisée par
+publisher HTTPS et export compatible HTTP local. Deux rouges/27 verts puis
+29 PostgreSQL ciblés verts ; types/lints sans erreur/24 warnings, zéro cycle,
+1617 gouvernance/166 fichiers et 4167 unitaires/397 reçus. Prochaine étape : suite
+PostgreSQL complète encore en cours, CI et image 430, puis choix
+natif de variante en production ; fermer seulement alors la cause d’origine.
+Trace native 429 tronquée, aucune réception exhaustive déduite.
+[Reçu de livraison, échec et bornes](RECEPTION-IDENTITE-PUBLIQUE.md).
+
+## Variante de logo publiée — recette locale 429 (2026-10-09)
 
 ADR-0210 raccorde pool resolveBrandIdentity, choix explicite Connexions/pins
 privés et deux logos de vitrine/CSP bornée/repli, sans promotion ni contrat public
@@ -12,7 +27,8 @@ Vitrine 33 tests verts, PR #6 fusionnée/CI verte/déploiement reçu à 01:01:57
 logo natif en production non reçu. Trois causes C2 retirées des actions locales.
 Après premier passage 4166/4167 et timing 93 ms, isolé 36/36 puis relance complète
 après arrêt du serveur verts ; cause non démontrée, diagnostic si récidive.
-CI/image/livraison backend ouvertes, production ADVE actuelle 428.
+CI/image/livraison backend 429 reçues ; choix natif en production bloqué,
+correctif 430 ci-dessus. La recette locale ne reçoit pas l’identité réelle.
 Pins d’enregistrement sans immutabilité d’octets, identité complète/quiz-app/
 retour de valeur/sept chantiers ouverts : [décision et reçus bornés](adr/0210-explicit-public-logo-variants.md).
 

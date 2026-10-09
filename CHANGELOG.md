@@ -1,5 +1,30 @@
 # Changelog — La Fusee
 
+## v6.27.430 — fix(brand): résoudre l’origine des logos depuis la configuration serveur (2026-10-09)
+
+**Le candidat corrige la liste de logos vide observée après livraison 429.**
+
+- 429 livré : source 383f5e8a, CI/Chromatic/MissionDrift et image verts, runtime
+  exact reçu à 01:22:53 UTC ; corpus et édition SPAWT v1 conservés. Connexions ne
+  propose pourtant que « Sans logo » ; aucune publication effectuée. Deux chunks
+  compilés figent localhost:3000 malgré les origines HTTPS correctes à l’exécution.
+- Dans brand-theme existant, resolveBrandDeploymentOrigin privilégie AUTH_URL puis
+  NEXTAUTH_URL à l’exécution, NEXT_PUBLIC_BASE_URL restant le dernier repli.
+  Publisher HTTPS et export de charte réutilisent ce choix ; HTTP local reste
+  permis pour le seul export. Aucun nouveau modèle/service/router/page/Intent/droit.
+- Deux contre-exemples PostgreSQL rouges/27 anciens verts puis 29/29 verts.
+  Exports HTML/imprimable HTTP 200 et image chargée dans le document natif reçus
+  localement sur fixture ; vue charte FOUNDER affichée, puis fixture nettoyée.
+  Recette chaude et trace tronquée, sans promesse SLO ni zéro erreur exhaustif.
+  Contrôles 430 reçus : types/lints sans erreur, 24 warnings préexistants, zéro
+  cycle, 1617 gouvernance/166 fichiers et 4167 unitaires/397 verts. PostgreSQL
+  237/13 fichiers puis source-uses 8/1, soit 245/14 verts : gauntlet complet vert.
+  CI/image et choix natif en production restent à recevoir ;
+  cause d’origine encore ouverte jusqu’à ces recettes. Trace native 429 tronquée,
+  aucune conclusion de zéro erreur sur toute sa fenêtre. Octets immuables,
+  univers complet/quiz-app/retour de valeur et sept chantiers restent ouverts.
+  [Livraison bloquée et correctif candidat](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
+
 ## v6.27.429 — fix(brand): choisir et rendre le logo de l’édition publique (2026-10-09)
 
 **Le candidat relie une variante choisie dans le coffre au logo de la vitrine.**

@@ -264,6 +264,19 @@ export function buildBrandTheme(input: {
 
 // ── Résolution async (lecture coffre) ────────────────────────────────────────
 
+/** Server origins are runtime configuration. NEXT_PUBLIC_* may contain the
+ * builder placeholder after compilation, so it is only the last fallback.
+ * Downloaded local HTML keeps its existing HTTP support; public editions do not. */
+export function resolveBrandDeploymentOrigin({ allowHttp = false }: { allowHttp?: boolean } = {}): string | null {
+  for (const candidate of [process.env.AUTH_URL, process.env.NEXTAUTH_URL, process.env.NEXT_PUBLIC_BASE_URL]) {
+    const safe = portfolioFileUrl(candidate);
+    if (!safe || !/^https?:\/\//.test(safe)) continue;
+    const url = new URL(safe);
+    if (url.protocol === "https:" || (allowHttp && url.protocol === "http:")) return url.origin;
+  }
+  return null;
+}
+
 /** One selection for cockpit, guidelines and renderers. Never upgrades an asset.
  * Read the eligible pool before ranking: a recent-window limit hid old ACTIVEs.
  */

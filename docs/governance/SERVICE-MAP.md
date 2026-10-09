@@ -145,7 +145,7 @@ Dirigent la trajectoire. Décisions, validations, plans.
 | Service | Rôle guidance | Governor | Manifest |
 |---|---|---|---|
 | `brand-bible/` | Composition déterministe du livre de marque, lecture seule (ADR-0185) | Extension de Guidance | sans manifest propre |
-| `brand-theme/` | Sélection d’identité/thème et pool partagé pour choix de logo public (ADR-0169/0203/[0210](adr/0210-explicit-public-logo-variants.md), candidat 429 reçu localement) | Extension de Guidance | sans manifest propre |
+| `brand-theme/` | Sélection d’identité/thème, pool de logos et origine de déploiement partagée publisher/export (ADR-0169/0203/[0210](adr/0210-explicit-public-logo-variants.md) ; 429 livré avec origine bloquante, [430 candidat](RECEPTION-IDENTITE-PUBLIQUE.md)) | Extension de Guidance | sans manifest propre |
 | `brand-tier-transition/` | Handler de transition de palier après gate (ADR-0167) | MESTOR | sans manifest propre |
 | `mestor/` | Computer de guidage central — Intent dispatcher (`emitIntent`) | MESTOR | partiel (`intents.ts:179`) |
 | `pillar-gateway/` | Écriture gouvernée des Pillars (`writePillarAndScore`) | MESTOR | ✅ existant |

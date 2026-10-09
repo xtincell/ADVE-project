@@ -170,6 +170,18 @@ describe("Public brand editions", () => {
     await expect(caller().update({ id: s.id, publicPage: { expectedRevision: p.revision, expectedPublishedId: null, content: { ...p.proposed, logoUrl: logo.fileUrl }, logoAssetId: logo.id } })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
     expect(await readPublicBrand(s.publicSlug!)).toBeNull();
   });
+  it("publishes a relative logo using runtime HTTPS despite the frozen build placeholder", async () => {
+    vi.stubEnv("NEXT_PUBLIC_BASE_URL", "http://localhost:3000");
+    vi.stubEnv("AUTH_URL", "https://runtime.example.invalid");
+    vi.stubEnv("NEXTAUTH_URL", "https://other.example.invalid");
+    const s = await fixture();
+    const logo = await db.brandAsset.create({ data: { strategyId: s.id, name: "Runtime logo", kind: "LOGO_FINAL", state: "SELECTED", fileUrl: "/brand/example/logo.png" } });
+    const p = await caller().publicPage({ id: s.id });
+    expect(p.logos).toEqual([expect.objectContaining({ id: logo.id, url: "https://runtime.example.invalid/brand/example/logo.png" })]);
+    await caller().update({ id: s.id, publicPage: { expectedRevision: p.revision, expectedPublishedId: null,
+      content: { ...p.proposed, logoUrl: p.logos[0]!.url }, logoAssetId: logo.id } });
+    expect((await readPublicBrand(s.publicSlug!))?.content.logoUrl).toBe("https://runtime.example.invalid/brand/example/logo.png");
+  });
   it("serializes two publishers from the same preview", async () => {
     const s = await fixture(), p = await caller().publicPage({ id: s.id });
     const results = await Promise.allSettled(["First", "Second"].map((title) => caller().update({ id: s.id, publicPage: {

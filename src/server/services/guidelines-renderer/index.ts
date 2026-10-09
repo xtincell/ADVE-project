@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { PILLAR_STORAGE_KEYS, classifyTier } from "@/domain";
 import { portfolioFileUrl } from "@/domain/portfolio-reference";
 import { SOURCE_CERTAINTY_LABEL, isSourceCertainty } from "@/domain/source-certainty";
-import { resolveBrandIdentity, buildBrandTheme, collectHexes, extractFontFamilies } from "@/server/services/brand-theme";
+import { resolveBrandIdentity, resolveBrandDeploymentOrigin, buildBrandTheme, collectHexes, extractFontFamilies } from "@/server/services/brand-theme";
 import { loadBrandSources } from "@/server/services/ingestion-pipeline/source-usage";
 
 export interface GuidelineAsset {
@@ -94,8 +94,8 @@ function renderDocument(doc: GuidelinesDocument): string {
   const exportUrl = (value: string | null) => {
     const safe = portfolioFileUrl(value);
     if (!safe || !safe.startsWith("/")) return safe;
-    const base = portfolioFileUrl(process.env.NEXT_PUBLIC_BASE_URL || process.env.AUTH_URL || process.env.NEXTAUTH_URL);
-    return base && /^https?:\/\//.test(base) ? new URL(safe, base).href : null;
+    const base = resolveBrandDeploymentOrigin({ allowHttp: true });
+    return base ? new URL(safe, base).href : null;
   };
   const logo = assetSection("Logo", doc.identity.logo, (a) => {
     const url = exportUrl(a.fileUrl);

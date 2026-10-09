@@ -10,7 +10,7 @@ import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { assertCollaboratorMayEmit } from "@/server/governance/collaborator-firewall";
 import { isGodModeEmail } from "@/lib/auth/god-mode";
 import { z } from "zod";
-import { resolveBrandIdentity } from "@/server/services/brand-theme";
+import { resolveBrandIdentity, resolveBrandDeploymentOrigin } from "@/server/services/brand-theme";
 
 type Client = Prisma.TransactionClient;
 const scope = { kind: "BRAND_GUIDELINES", format: PUBLIC_BRAND_FORMAT, campaignId: null };
@@ -27,9 +27,9 @@ function publicLogoUrl(value: string | null): string | null {
   if (!value || /private-media|\/api\/|token|signature/i.test(value)) return null;
   if (value.startsWith("/")) {
     if (!/^\/brand\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.(?:png|webp|jpe?g|svg)$/.test(value)) return null;
-    const base = process.env.NEXT_PUBLIC_BASE_URL || process.env.AUTH_URL || process.env.NEXTAUTH_URL;
-    if (!base || !PublicBrandContent.shape.logoUrl.safeParse(base).success) return null;
-    value = new URL(value, new URL(base).origin).href;
+    const base = resolveBrandDeploymentOrigin();
+    if (!base) return null;
+    value = new URL(value, base).href;
   }
   return PublicBrandContent.shape.logoUrl.safeParse(value).success ? value : null;
 }

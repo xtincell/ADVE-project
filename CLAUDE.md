@@ -4,13 +4,15 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
-**Production reçue : 6.27.428, état demande/production et accès opérateur Oracle.**
-Source cdd9f6c01423bdfb8b9da37240c5f9fcb8bef5e4, CI 37862693091 et image
-37862922982 reçues ; déploiement terminé le 9 octobre à 00:19:53 UTC, runtime
+**Production reçue : 6.27.429, choix de logo bloqué sur la marque réelle.**
+Source 383f5e8a2431a25f8d6e28984708fc21564ed553, CI 37868288873, Chromatic
+37868288853, MissionDrift 37868288803 et image 37868294874 verts ; déploiement
+terminé le 9 octobre à 01:22:53 UTC, runtime
 nextjs/version/index concordants, volume privé RW conservé. Aucune livraison
-426 isolée. Aucun nouveau modèle, service, Intent, outil ou ADR.
+426 isolée. Corpus et édition SPAWT v1 conservés. Aucun nouveau modèle, service,
+Intent ou outil ; ADR-0210 étend l’architecture de publication existante.
 
-**Candidat 429, production encore 428** : ADR-0210 étend l’édition publique avec
+**429 livré, recette métier toujours bornée** : ADR-0210 étend l’édition publique avec
 pool partagé, choix de variante sans promotion et pins privés ; contrat v1
 inchangé, deux logos vitrine/repli/CSP bornée. PostgreSQL ciblé 27/27, native
 FOUNDER Connexions/publication/restauration/page publique locale reçue sur fixture,
@@ -22,9 +24,18 @@ cycles 0. Vitrine 33/33/types/vocab/build verts ; PR #6 fusionnée (3e1f9b8d), C
 non reçu. Global 4166/4167 au premier passage, timing
 withRetry 93 ms pour une borne de 50 ms pendant compilation ; isolé 36/36 vert sans
 changement ; relance complète après arrêt du serveur verte, cause non démontrée,
-diagnostic si récidive. CI/image/runtime du backend 429 restent à recevoir ;
-immutabilité des octets, identité complète/quiz-app/retour de valeur
-et sept chantiers ouverts : [ADR-0210](docs/governance/adr/0210-explicit-public-logo-variants.md).
+diagnostic si récidive. Native production 429 : seul choix « Sans logo », aucune
+publication ; deux chunks compilés contiennent localhost:3000 à la place de
+l’origine runtime HTTPS. Trace tronquée, pas de conclusion réseau exhaustive.
+
+**Candidat 430** : resolveBrandDeploymentOrigin dans brand-theme privilégie les
+origines serveur runtime, réutilisées par publisher HTTPS et export de charte
+(compatibilité HTTP locale de l’export conservée). Deux rouges/27 verts puis
+29 PostgreSQL ciblés verts. Types/lints sans erreur, 24 warnings préexistants,
+zéro cycle, 1617 gouvernance/166 fichiers et 4167 unitaires/397 reçus. Suite
+PostgreSQL complète encore en cours ; CI/image/native production à recevoir ;
+immutabilité des octets, identité complète/quiz-app/retour de valeur et sept
+chantiers ouverts : [reçu et limites](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
 
 campaignId/briefId/sourceBrandAssetId traversent MCP/tRPC, Intent, Artemis et
 Ptah jusqu’à GenerativeTask ; portée relue avant fournisseur et admission.
@@ -39,7 +50,7 @@ replay stables **sur fixtures locales synthétiques**, zéro fournisseur.
 L’admission atomique et la reprise interrompue 425 restent historiques :
 [RECEPTION-PTAH-ADMISSION.md](docs/governance/RECEPTION-PTAH-ADMISSION.md).
 
-Production : version/lecture/refus reçus, corpus et édition SPAWT inchangés ;
+Réception 428 : version/lecture/refus reçus, corpus et édition SPAWT inchangés ;
 zéro GenerativeTask/AssetVersion avant/après, aucune forge réelle réparée.
 Connexions 428/édition v1 relues après hydratation, note vue puis fermée, aucune
 saisie/soumission ni métrique réseau native capturée. Le bouton de production

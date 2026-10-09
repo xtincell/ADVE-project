@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.430", date: "2026-10-09",
+    headline: "Retrouvez vos logos dans Connexions",
+    highlights: [
+      { emoji: "◈", title: "Vos variantes disponibles", body: "Les logos admissibles de votre marque apparaissent dans le choix de la page publique. Relisez l’aperçu avant de publier la variante souhaitée." },
+    ],
+  },
+  {
     version: "6.27.429", date: "2026-10-09",
     headline: "Choisissez le logo affiché sur votre site",
     highlights: [
