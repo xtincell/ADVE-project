@@ -10,7 +10,7 @@ Statut : `active` (page substantive), `redirect` (legacy renommée — redirige)
 
 Source de vérité : `find src/app -name 'page.tsx'`. Mis à jour avec [APOGEE.md](APOGEE.md) §4.
 
-**439 candidat — huit pages de marque existantes** : identity, positioning,
+**439 livré — huit pages de marque existantes** : identity, positioning,
 offer, engagement, diagnostic, market, potential et roadmap réutilisent
 PillarPage. Son état vient désormais de pillar.readiness dans un seul Badge ;
 « Socle renseigné »/« Champs renseignés » mesurent la présence, sans prétendre
@@ -21,8 +21,10 @@ conservé/corrigé et cinq contrôles complets relancés exit 0/gouvernance 1 62
 Build compilée/native locale USER/TRIAL fictive reçues sur roadmap : Périmé
 avec deux 100 %, desktop/mobile inspectés (390×844 demandés, largeur client et
 document mesurée 384 px, badge dans les bornes). Fixture nettoyée/serveur arrêté/
-onglet fermé. CI/image/runtime et pages réelles en production restent à recevoir,
-aucune couverture globale des huit pages/mobile déduite. Aucune
+onglet fermé. Source b0399f4f/CI 37997965596/image 37998236655/runtime 439 exact
+reçus ; lecture réelle roadmap SPAWT USER : PÉRIMÉ avec deux 100 %, 116 réponses
+toutes 200/zéro ≥500/exception, 32 ERR_ABORTED retenus. Aucune mutation réelle,
+couverture globale des huit pages/mobile ou cycle déduite. Aucune
 page ajoutée : [reprise et bornes](REFONTE-PLAN.md).
 
 ---

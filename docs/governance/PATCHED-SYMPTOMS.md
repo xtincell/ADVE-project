@@ -30,7 +30,7 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
-2026-10-09 · Candidat 439, reçu local : PillarPage affichait Complet à partir
+2026-10-09 · **439 livré, cause d’affichage/corpus fermée** : PillarPage affichait Complet à partir
 de assess.currentStage malgré readiness stale/Périmé, avec un autre badge de
 validation. Un seul Badge lit désormais pillar.readiness ; chargement/échec
 restent inconnus, pourcentages nommés comme présence des champs, couleurs selon
@@ -50,8 +50,11 @@ Build compilée exit 0/native locale USER/TRIAL fictive reçue : Périmé avec d
 100 %, captures desktop/mobile inspectées ; 65 réponses/zéro ≥500/exception,
 14 ERR_ABORTED annulés, badge dans les bornes à 384 px mesurés. Fixture nettoyée,
 serveur arrêté/onglet fermé ; premier sélecteur S — Roadmap erroné conservé,
-titre réel Stratégie, pas défaut produit. CI/image/runtime et lecture réelle
-439 en production non reçus ; budgets/formes strictes/
+titre réel Stratégie, pas défaut produit. Source b0399f4f/CI 37997965596 (4 197/401
+unitaires, 309/16 PG)/image 37998236655/runtime 439 exact reçus. Native réelle
+SPAWT USER lecture seule : PÉRIMÉ avec deux 100 %, 116 réponses toutes 200/zéro
+≥500/exception, 32 ERR_ABORTED conservés ; notice initiale fermée normalement,
+capture inspectée. Aucune approbation/réimport/production, budgets/formes strictes/
 cycle et sept chantiers/dix gates ouverts. [Plan et preuves](REFONTE-PLAN.md).
 
 2026-10-09 · Infra 438 livrée, lot applicatif 437 inclus : job PostgreSQL

@@ -2,7 +2,7 @@
 
 ## v6.27.439 — fix(cockpit): lire l’état actuel de marque et aligner le quiz SPAWT (2026-10-09)
 
-**439 est candidat : les champs renseignés ne valent plus un état Complet, six questions calibrent toujours cinq axes.**
+**439 est livré : SPAWT affiche Périmé malgré ses champs à 100 %, le corpus décrit six questions pour cinq axes.**
 
 - PillarPage réutilise pillar.readiness et le Badge existants : un seul état
   canonique, lecture en cours/échec inconnus, état Périmé distingué des pourcentages
@@ -23,8 +23,19 @@
   native locale USER/TRIAL fictive HTTP 200 : Périmé avec deux 100 %, 65 réponses/
   zéro ≥500/exception et 14 ERR_ABORTED annulés conservés. Desktop/mobile inspectés,
   badge dans les bornes à 384 px mesurés, fixture nettoyée/serveur arrêté/onglet fermé.
-  Preuves-coherence-439 ; CI/image/runtime 439 et lecture réelle production
-  encore à recevoir ; runtime livré 438. Budgets, sélections, formes/liens stricts
+  Preuves-coherence-439 : source b0399f4fccbc4637f5222ec05468b98048b33240,
+  CI 37997965596 success (4 197/401 unitaires, 309/16 PostgreSQL), Mission
+  37997965599/Chromatic 37997965541 success, image 37998236655 success.
+  Index sha256:20fc879c98528eb86bbedad7f70f55562c3ec72c3ea4a6bc0ebe18fe6efeb3cb
+  exact au runtime 439 running/nextjs/volume privé RW/version publique 200 ;
+  déploiement unique la3ylsl6n7mb0ta0ycr9fl1k terminé à 22:30:20 UTC.
+  Lecture réelle SPAWT USER HTTP 200 reçue : PÉRIMÉ avec deux 100 %, 116 réponses
+  toutes 200/zéro ≥500/exception, 32 ERR_ABORTED conservés, pas zéro transport
+  global. Notice de livraison masquant la première attente de lien fermée
+  normalement, capture inspectée ; aucune approbation, réimport ou production.
+  La vitrine live et le retrait du décompte avaient été reçus avant 439.
+  Source/image/runtime distincts du présent reçu documentaire.
+  Budgets, sélections, formes/liens stricts
   S, versions du calcul, cycles et sept chantiers/dix gates restent ouverts.
 
 ## v6.27.438 — fix(ci): acquérir les mêmes images officielles sans le quota Docker Hub (2026-10-09)

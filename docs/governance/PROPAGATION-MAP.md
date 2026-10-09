@@ -9,7 +9,7 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
-### Présence des champs → état actuel → affichage — candidat 439 (2026-10-09)
+### Présence des champs → état actuel → affichage — 439 livré (2026-10-09)
 
 assess mesure la présence ; pillar.readiness rend l’état et les gates de
 fraîcheur. PillarPage consomme ce même verdict dans un seul Badge, sans état
@@ -22,7 +22,11 @@ Cinq contrôles complets relancés exit 0/gouvernance 1 620/166 ; premier TSC
 stageLabel conservé/corrigé sous first-gauntlet/, gauntlet.json désormais final.
 Build compilée et native locale USER/TRIAL fictive reçues : Périmé avec deux
 100 %, desktop/mobile inspectés, fixture nettoyée/serveur arrêté/onglet fermé.
-CI/image/runtime et lecture réelle production encore à recevoir.
+Source b0399f4f/CI 37997965596 (4 197/401 unitaires, 309/16 PG)/image 37998236655/
+runtime 439 exact reçus. Native réelle SPAWT USER lecture seule : PÉRIMÉ avec
+deux 100 %, 116 réponses toutes 200/zéro ≥500/exception, 32 ERR_ABORTED retenus.
+Pas d’import, approbation ou production ; correction d’affichage reçue,
+aucune acceptation globale de parcours déduite.
 Contrats stricts, choix/budgets et retour quiz/application restent ouverts :
 [reprise 439 et limites](REFONTE-PLAN.md).
 

@@ -1,9 +1,9 @@
-# Réception — écritures et relecture S, 437 livré dans 438
+# Réception — écritures S 437/438 et lecture 439 livrées
 
 Date : 2026-10-09. Sous-système Guidance, tutelle Mestor.
-Statut : **livré dans le runtime 438 ; réception métier partielle**.
+Statut : **runtime courant 439 reçu ; réception métier partielle**.
 
-## Suite de lecture 439 — candidate
+## Suite de lecture 439 — livrée
 
 Le contre-exemple réel 438 ci-dessous motive un lecteur partagé : PillarPage
 reprend pillar.readiness dans un seul Badge d’état, assess garde les pourcentages
@@ -24,8 +24,27 @@ native-initial-navigation.json, pas défaut produit. Captures desktop/mobile
 inspectées, mobile demandé 390×844 mais clientWidth/documentScrollWidth mesurés
 384 px/badge dans les bornes. Fixture nettoyée/remaining=0, serveur arrêté et
 onglet fermé (native-local-receipt.json/native-mobile-receipt.json/
-local-cleanup-receipt.json). CI/image/runtime 439 et lecture réelle production
-encore à recevoir, runtime production 438 ; aucune mutation métier ou approbation.
+local-cleanup-receipt.json).
+
+Source b0399f4fccbc4637f5222ec05468b98048b33240 : CI 37997965596 success,
+4 197 tests/401 fichiers unitaires et 309/16 PostgreSQL effectifs, logs relus.
+Mission 37997965599/Chromatic 37997965541 success ; image 37998236655 success,
+configuration candidate/publiée identique. Index
+sha256:20fc879c98528eb86bbedad7f70f55562c3ec72c3ea4a6bc0ebe18fe6efeb3cb
+exact au runtime 439 running/nextjs/volume privé RW/version publique HTTP 200.
+Déploiement unique la3ylsl6n7mb0ta0ycr9fl1k terminé à 22:30:20 UTC, runtime reçu
+22:32:53 UTC. Source/image/runtime distincts du présent reçu documentaire.
+
+Native réelle SPAWT USER lecture seule roadmap HTTP 200 à 22:34:22 UTC :
+PÉRIMÉ avec deux 100 %, S COMPLETE/100 en présence, AI_PROPOSED/stale/Périmé.
+Native-runtime-events.json non tronqué : 116 réponses toutes 200, zéro ≥500/
+exception, 32 net::ERR_ABORTED, aucun autre type d’échec dans cette fenêtre.
+Flag canceled non conservé dans ce JSON ; aucun zéro transport global/SLO déduit.
+Notice de livraison masquant la première attente de lien fermée normalement,
+capture inspectée (native-runtime.ax.txt/png). Aucune mutation métier, approbation,
+réimport ou appel fournisseur ; wholeJourneyAccepted=false. Vitrine live et
+retrait du décompte reçus avant 439. Les 80 diagnostics stricts historiques
+restent des types/références/structures, pas 80 faits métier absents.
 Budgets, sélections, formes/références strictes et sept chantiers/dix gates ouverts.
 [Reprise courante](REFONTE-PLAN.md). Les preuves livrées 437/438 restent ci-dessous.
 

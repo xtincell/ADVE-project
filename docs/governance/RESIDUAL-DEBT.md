@@ -254,7 +254,7 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   Guidance ci-dessous. Les trois budgets et les plans legacy restent divergents,
   les 80 diagnostics de types/références/structures ne sont pas 80 faits métier
   absents. Aucune validation réelle, recalcul ou couverture globale déduite.
-  **439 candidat, affichage local réparé** : PillarPage réutilise pillar.readiness
+  **439 livré, cause d’affichage fermée** : PillarPage réutilise pillar.readiness
   pour un seul Badge ; présence des champs distincte de l’état, chargement/échec
   inconnus. Contenu/assess/readiness relus après gestes existants/onComplete du
   recalcul, ligne wrap. Six cas de rendu rouges puis checkpoint 57/trois et final
@@ -264,8 +264,10 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   désormais finaux, premier rouge sous first-gauntlet/ et gauntlet-first.json).
   Build compilée/native locale USER/TRIAL fictive reçues : Périmé avec deux 100 %,
   desktop/mobile inspectés, fixture nettoyée/serveur arrêté/onglet fermé.
-  **Fermer ce symptôme** : recevoir CI/image/runtime exacts et lecture réelle ; déclencheur
-  validation/livraison 439, effort une recette bornée. Réconcilier les contrats,
+  Source b0399f4f/CI 37997965596 (4 197/401 unitaires, 309/16 PG)/image 37998236655/
+  runtime 439 exact reçus ; lecture réelle SPAWT USER PÉRIMÉ avec deux 100 %,
+  116 réponses toutes 200/zéro ≥500/exception, 32 ERR_ABORTED retenus.
+  Aucun import, approbation ou production réelle. Réconcilier les contrats,
   budgets et sources du calcul reste la reprise Guidance ci-dessous ; le patch
   d’affichage ne remplit ni ne valide le S réel.
   **Reste à fermer** : rtis-protocols/strategy.ts sélectionne/planifie/budgète à
@@ -540,13 +542,13 @@ La fermeture best-effort de l’Intent après commit reste la dette distincte
   (lignes 59/305/322/394/490/606),
   et le document source Customers/SPAWT/SPAWT-social-et-calendrier-prelancement.md:59
   reste à cinq. Six réponses alimentent cinq axes ; « Ton radar » précise
-  Foule/Secret, pas un sixième axe. **439 candidat** : les six mentions canon
+  Foule/Secret, pas un sixième axe. **439 livré, défaut de description fermé** : les six mentions canon
   et la copy actuelle sont alignées à six/cinq axes, tests de conformité reçus
   dans le checkpoint 57/trois puis final 58/trois verts ; cinq contrôles finaux
   exit 0 reçus, aucune réécriture des archives ni
-  import de marque réelle. Native locale reçue sur l’état, CI/image/runtime
-  du corpus restent à recevoir pour fermer
-  ce défaut de description. **Fermer le raccord** : confronter quiz réel,
+  import de marque réelle. Native locale/réelle reçues sur l’état et
+  CI/image/runtime exacts du corpus reçus sur source b0399f4f. Aucun raccord
+  de données déduit de cette correction de description. **Fermer le raccord** : confronter quiz réel,
   moteur et projection canonique, puis recevoir vitrine → quiz/application →
   retour au noyau. **Déclencheur** :
   prochaine reprise C2/C3 SPAWT ; effort : un lot borné de réconciliation des

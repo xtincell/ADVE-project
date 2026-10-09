@@ -189,7 +189,7 @@ Les 4 Intent kinds RTIS sont uniquement routables via `commandant.ts` — **zér
 
 ### 4.4 Plan courant et relecture — 437 livré dans 438 (2026-10-09)
 
-**Extension de lecture 439, candidate** : présence mesurée par assess distincte
+**Extension de lecture 439, livrée** : présence mesurée par assess distincte
 de l’état actuel rendu par pillar.readiness. PillarPage affiche un seul Badge
 canonique, avec états inconnus durant chargement/échec ; la relecture de contenu,
 assess et readiness suit les gestes existants et le recalcul. Aucune décision
@@ -199,8 +199,11 @@ dont fondation needsHuman. Cinq contrôles complets relancés exit 0/gouvernance
 1 620/166 ; premier TSC stageLabel conservé/corrigé sous first-gauntlet/,
 gauntlet.json désormais final vert. Build compilée/native locale USER/TRIAL
 fictive reçues : Périmé avec deux 100 %, captures desktop/mobile inspectées et
-fixture nettoyée/serveur arrêté/onglet fermé. CI/image/runtime et lecture réelle
-production à recevoir. Contrats stricts et sept chantiers/dix gates
+fixture nettoyée/serveur arrêté/onglet fermé. Source b0399f4f/CI 37997965596
+(4 197/401 unitaires, 309/16 PG)/image 37998236655/runtime 439 exact reçus.
+Native réelle SPAWT USER lecture seule : PÉRIMÉ avec deux 100 %, 116 réponses
+toutes 200/zéro ≥500/exception, 32 ERR_ABORTED retenus, aucune approbation/import.
+Contrats stricts et sept chantiers/dix gates
 restent ouverts.
 
 S dérive des sources de la marque ; calculer une nouvelle projection et

@@ -8,15 +8,18 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**439 candidat, canon existant** : six descriptions de spawt-canon.ts et la copy
+**439 livré, canon existant** : six descriptions de spawt-canon.ts et la copy
 actuelle alignées sur le quiz livré à six questions/cinq axes. Aucune logique
 de quiz, service ou import réel ajouté. Le lecteur PillarPage réutilise la
 readiness existante, sans modifier writer/approbation. Six rouges puis checkpoint
 57/trois et final 58/trois verts (sept UI), cinq contrôles complets relancés
 exit 0/gouvernance 1 620/166 ; premier TSC stageLabel conservé/corrigé. Build
 compilée et native locale USER/TRIAL fictive reçues, Périmé avec deux 100 %,
-sans import canon réel ; fixture nettoyée. CI/image/runtime et lecture réelle
-production non reçus. [Bornes](REFONTE-PLAN.md).
+sans import canon réel ; fixture nettoyée. Source b0399f4f/CI 37997965596
+(4 197/401 unitaires, 309/16 PG)/image 37998236655/runtime 439 exact reçus.
+Lecture réelle SPAWT USER : PÉRIMÉ avec deux 100 %, 116 réponses toutes 200/zéro
+≥500/exception, 32 ERR_ABORTED retenus ; aucun import canon, approbation ou
+production réelle. [Bornes](REFONTE-PLAN.md).
 
 **437 livré dans 438 — extension des writers existants** : pillar-gateway remplace les
 collections S au MERGE_DEEP et rétracte S/Strategy après version ou dépendance

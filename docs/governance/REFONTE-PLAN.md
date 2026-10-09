@@ -1,6 +1,6 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## État actuel de marque et six questions — candidat 439 (2026-10-09)
+## État actuel de marque et six questions — 439 livré (2026-10-09)
 
 Le contre-exemple réel 438 Complet/Périmé est traité dans le lecteur existant :
 PillarPage réutilise pillar.readiness pour un seul Badge d’état. assess conserve
@@ -28,8 +28,23 @@ inspectées : mobile demandé 390×844, clientWidth/documentScrollWidth mesurés
 et local-cleanup-receipt.json : fixture cleaned/remaining=0, serveur arrêté,
 onglet fermé. Aucun noyau réel modifié, approuvé ou produit.
 
-**À recevoir avant livraison** : CI/image/runtime 439 et lecture du plan réel
-sur l’image exacte ; runtime production livré 438. Pas responsive global reçu.
+**Livraison reçue** : source b0399f4fccbc4637f5222ec05468b98048b33240,
+CI 37997965596 success (4 197 tests/401 fichiers unitaires, 309/16 PostgreSQL),
+Mission 37997965599/Chromatic 37997965541 success, image 37998236655 success.
+Configuration candidate/publiée identique, index
+sha256:20fc879c98528eb86bbedad7f70f55562c3ec72c3ea4a6bc0ebe18fe6efeb3cb
+exact au runtime 439 running/nextjs/volume privé RW/version publique 200.
+Déploiement unique la3ylsl6n7mb0ta0ycr9fl1k terminé à 22:30:20 UTC, runtime reçu
+22:32:53 UTC. Native réelle SPAWT USER en lecture seule HTTP 200 à 22:34:22 UTC :
+PÉRIMÉ avec deux 100 %, S COMPLETE/100 en présence, AI_PROPOSED/stale/Périmé.
+116 réponses toutes 200/zéro ≥500/exception ; 32 échecs net::ERR_ABORTED conservés,
+aucun autre type d’échec dans cette fenêtre. Le flag canceled n’est pas conservé
+dans ce JSON ; aucun zéro transport global/SLO déduit. Notice de livraison
+masquant la première attente de lien fermée normalement ; capture inspectée,
+aucune mutation métier, approbation, réimport ou appel fournisseur.
+Native-runtime-receipt/events/ax/png et runtime.json relus ; wholeJourneyAccepted=false.
+Pas responsive global reçu. Source/image/runtime distincts du présent reçu
+documentaire ; vitrine live et retrait du décompte reçus avant 439.
 
 L’état affiché ne réconcilie pas les anciens budgets, sélections, formes/liens
 stricts S ou versions du calcul. Aucune approbation ou production réelle ;

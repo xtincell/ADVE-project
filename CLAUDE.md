@@ -4,7 +4,7 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
-**6.27.439 candidat — état courant et six questions, runtime livré 438** :
+**6.27.439 livré — état courant et corpus six questions** :
 PillarPage lit pillar.readiness pour un seul Badge d’état ; assess mesure la
 présence des champs, sans Complet optimiste durant chargement/échec. Contenu,
 assess et readiness sont relus après les gestes existants et onComplete du
@@ -17,11 +17,17 @@ first-gauntlet/ et gauntlet-first.json, gauntlet.json désormais final vert.
 Build compilée exit 0, native locale USER/TRIAL fictive reçue : Périmé avec deux
 100 %, 65 réponses/zéro ≥500/exception, 14 ERR_ABORTED annulés. Desktop/mobile
 inspectés, badge dans les bornes à 384 px mesurés ; fixture nettoyée/serveur
-arrêté/onglet fermé. CI/image/runtime 439 et native réelle production
-encore à recevoir. Pas d’import, approbation
+arrêté/onglet fermé. Source b0399f4f/CI 37997965596 success, 4 197/401 unitaires
+et 309/16 PG ; Mission 37997965599/Chromatic 37997965541/image 37998236655 success.
+Runtime 439 running/nextjs/index 20fc879c exact/volume privé RW/API version 200,
+déploiement unique terminé 22:30:20 UTC. Native réelle SPAWT USER lecture seule :
+PÉRIMÉ avec deux 100 %, 116 réponses toutes 200/zéro ≥500/exception, 32 ERR_ABORTED
+retenus ; notice masquant la première attente de lien fermée normalement,
+capture inspectée, aucune réception globale de transport/SLO. Pas d’import, approbation
 ou mutation de noyau réel, aucune entité/route/service/ADR ajouté. Budgets,
 sélections, formes/liens S et cycle restent ouverts, sept chantiers/dix gates
-non acceptés. [Reprise et bornes](docs/governance/REFONTE-PLAN.md).
+non acceptés. Vitrine live/décompte retiré reçus avant 439 ; source/image/runtime
+distincts du présent reçu documentaire. [Reprise et bornes](docs/governance/REFONTE-PLAN.md).
 
 **6.27.438 livré — acquisition CI, runtime 438 reçu** : 437/source 406beb67 reste
 le lot applicatif. Run 37990904417 : jobs applicables verts sauf PostgreSQL

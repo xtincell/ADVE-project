@@ -16,13 +16,14 @@
 
 ## Quick start
 
-**6.27.439 en validation, runtime livré 438** : l’état de marque reprend sa
+**6.27.439 livré** : l’état de marque reprend sa
 fraîcheur réelle ; les pourcentages indiquent les champs renseignés. Les textes
 actuels de SPAWT décrivent six questions pour cinq axes. 58 tests ciblés et cinq
 contrôles finaux reçus ; première erreur de compilation conservée puis corrigée.
 Build et interface locale fictive reçus : « Périmé » malgré 100 % de champs,
-captures ordinateur/mobile inspectées. CI et livraison en production encore
-à confirmer ; aucun noyau réel réimporté ou approuvé.
+captures ordinateur/mobile inspectées. CI, image et runtime exacts reçus ; la
+lecture réelle du plan SPAWT affiche désormais « Périmé » avec ses deux 100 %.
+Aucun noyau réel réimporté ou approuvé ; budgets, sources et cycle restent ouverts.
 [Périmètre et limites](docs/governance/REFONTE-PLAN.md).
 
 **6.27.438 livré** : le code applicatif 437 est inclus. Après le blocage du
