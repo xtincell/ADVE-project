@@ -57,6 +57,7 @@ const EXTRA_FILES = [
   join(ROOT, "src/components/portfolio/AssetContent.tsx"),
   join(ROOT, "src/components/neteru/overton-radar.tsx"),
   join(ROOT, "src/components/neteru/apogee-maintenance-dashboard.tsx"),
+  join(ROOT, "src/components/neteru/ptah-forge-button.tsx"),
   join(ROOT, "src/server/services/monetization/pricing-tiers.ts"),
 ];
 

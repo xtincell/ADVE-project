@@ -1,5 +1,23 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## État de production Oracle — candidat local 428 (2026-10-09)
+
+Distinction Intent/tâche, DEFERRED ambre sans faux succès/coût $0, confirmation
+explicite, FR/EN/ZH et gardes OperatorSurface/requireOperator reçus localement.
+Le faux refus du staff révèle la lecture d’un operatorId absent de la session :
+getOperatorContext courant remplace ce raccourci dans le chokepoint existant,
+avant accès/émission ; JWT périmé refusé, sans nouveau droit ni nouvelle couche.
+UI neuf verts après huit rouges ; garde sept verts après deux rouges et cinq
+ownership. Natif : opérateur 403 sans effet puis 200/OK/DEFERRED, une tâche/deux
+émissions sans version/coût ; founder sans commande et 403 sans effet. Zéro
+exception/500 dans les fenêtres, préconditions synthétiques locales uniquement.
+Suites finales 4 167 unitaires/1 617 gouvernance/230 PostgreSQL, types/deux lints
+sans erreur, 24 warnings, zéro cycle reçus ; fixture nettoyée/Next arrêté.
+CI/image/runtime à recevoir, production toujours 427. Distinction
+et garde purgées des actions locales restantes, pas d’acceptation C4/C5/C6.
+Même tâche DEFERRED/configuration réelle restent à recevoir en C5 ; autres
+résidus et sept chantiers inchangés : [reçu UX](RECEPTION-PTAH-UX.md).
+
 ## Filiation et reçu de demande — livraison commune 426+427 (2026-10-09)
 
 Le code 426 transmet campaignId/briefId/sourceBrandAssetId jusqu’à la tâche et
@@ -16,12 +34,10 @@ Source 919cebb4, CI 37856242347, image 37856486468 et runtime 427 reçus le 8 oc
 à 23:06:42 UTC ; 426 n’a pas été déployée seule. Corpus/édition SPAWT conservés,
 zéro tâche/version de forge en production avant/après. Transport des références
 et désaccord de sortie fermés ; aucun fournisseur/média/facture/cycle réel reçu.
-Connexions 427/édition v1 relues nativement sans soumission, pas le bouton Oracle.
-Reprendre état de demande/production et gardes opérateur dans l’UX existante :
-PtahForgeButton n’expose pas DEFERRED/OperatorSurface, forgeForSection ne déclare
-pas requireOperator:true. Recette native OPERATOR/FOUNDER et refus sans effet
-avant acceptation C4/C5/C6 ; préciser Oracle au prochain lot UX sans réécrire la
-note 427 publiée. Prochaine C5 : relance manuelle de la même tâche DEFERRED via
+Connexions 427/édition v1 relues nativement sans soumission, pas le bouton Oracle
+en production. Distinction/garde et OPERATOR/FOUNDER sont reçus localement dans
+le candidat 428 ci-dessus ; sa livraison reste ouverte. Note 428 précisée Oracle,
+note 427 publiée conservée. Prochaine C5 : relance manuelle de la même tâche DEFERRED via
 tâche/Intent existants, portée/coûts/anti-double appel et configuration réelle
 reçus avant autonomie ; aucun chemin Connexions ni reprise automatique prouvés.
 activeBriefId, upstream/multisource/documentaire/invalidation,

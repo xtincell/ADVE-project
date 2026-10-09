@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.428", date: "2026-10-09",
+    headline: "L’Oracle distingue la demande de sa production",
+    highlights: [
+      { emoji: "◷", title: "Un état de production explicite", body: "Une demande acceptée n’est plus présentée comme une production réussie. Si le service de production doit être configuré, l’Oracle indique qu’aucune production n’a démarré et que la demande est conservée." },
+      { emoji: "🛡️", title: "Une production réservée à votre équipe", body: "Les commandes de production restent dans l’espace de votre équipe. Le dirigeant consulte les résultats, sans recevoir de commandes auxquelles il n’a pas accès." },
+    ],
+  },
+  {
     version: "6.27.427", date: "2026-10-08",
     headline: "Une demande différée reste enregistrée sans erreur",
     highlights: [

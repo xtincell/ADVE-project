@@ -1,5 +1,31 @@
 # Changelog — La Fusee
 
+## v6.27.428 — fix(ptah): distinguer demande et production dans l’Oracle (2026-10-09)
+
+**Le candidat rend l’attente de configuration explicite et réserve la commande à l’équipe.**
+
+- PtahForgeButton sépare Intent.status de l’état de tâche : DEFERRED ambre,
+  aucune production démarrée, demande conservée ; ni faux succès, coût $0,
+  reprise automatique ou lien de configuration non reçu. Confirmation explicite,
+  états CREATED/IN_PROGRESS/inconnu/refus/échec distincts et textes FR/EN/ZH.
+- OperatorSurface monte le contrôle après auth.me.canOperate ; forgeForSection
+  exige l’opérateur. La recette native a révélé le faux refus d’un staff non
+  propriétaire : governedProcedure relit maintenant getOperatorContext avant
+  canAccessStrategy/émission, au lieu d’un operatorId absent ou périmé en session.
+  Aucun nouveau droit, concept, modèle, service, router, page, Intent, outil ou ADR.
+- Local : UI huit rouges/un vert puis neuf verts ; garde deux rouges/cinq verts
+  puis sept verts, plus cinq cas ownership. Opérateur natif HTTP 200/OK/DEFERRED,
+  une tâche/deux émissions sans version matérielle ni coût ; founder HTTP 403
+  sans effet et commande absente. Zéro exception/500 dans les fenêtres natives.
+  Suites finales locales : 4 167 unitaires/1 617 gouvernance/230 PostgreSQL verts,
+  types/deux lints sans erreur, 24 warnings, zéro cycle. Fixture nettoyée/Next arrêté.
+  Préconditions synthétiques locales, CI/image/runtime/livraison à recevoir,
+  production reçue encore 427 : [reçu borné](docs/governance/RECEPTION-PTAH-UX.md).
+- Distinction UX et garde retirées des actions locales restantes ; reprise de la
+  même tâche DEFERRED/configuration C5, provenance, octets/CDN, facture et cycles
+  réels restent ouverts. La note 428 précise Oracle, sans réécrire la note 427.
+  Aucun fournisseur ou projet réel reçu, sept chantiers/acceptations inchangés.
+
 ## v6.27.427 — docs(governance): recevoir la livraison commune de filiation Ptah (2026-10-09)
 
 **Le code 426+427 est livré ; ses preuves métier restent locales et synthétiques.**

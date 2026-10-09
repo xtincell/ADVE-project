@@ -30,6 +30,17 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-09 · Un opérateur staff non propriétaire était refusé sur Oracle alors
+que son rattachement courant l’autorisait ; operatorId absent de la session
+Auth.js était assimilé à une absence de portée. Le candidat 428 étend le
+chokepoint existant : getOperatorContext(userId, ctx.db) avant canAccessStrategy
+et émission, sans nouveau droit. Deux rouges/cinq verts puis sept tests verts,
+plus cinq ownership ; un JWT operatorId périmé auparavant accepté est refusé.
+403 natif sans effet avant correction, puis HTTP 200/DEFERRED ; founder 403 sans
+effet. Cause bornée reçue localement, suites/types/lints/cycles verts ;
+CI/image/runtime et livraison en attente. La reprise
+DEFERRED, configuration réelle et cycles restent dans RESIDUAL-DEBT.
+
 2026-10-08 · Ptah écrivait ses coûts de forge dans un journal zéro-token attribué
 à Anthropic : montant zéro même lorsqu’un résultat persisté portait un autre
 montant/fournisseur. v6.27.425 transmet ces valeurs checkpointées dans la

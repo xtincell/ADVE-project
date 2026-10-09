@@ -99,33 +99,33 @@ transport des trois références et du faux 500 sont fermées et retirées des
 actions restantes ; les preuves métier restent synthétiques locales :
 [reçu courant](RECEPTION-PTAH-RESULTAT.md). Aucune acceptation globale n’est reçue.
 
+**Candidat 428 reçu localement** : distinction demande/production et gardes
+opérateur reçues nativement, contexte courant relu avant accès/émission ; staff
+admis et founder refusé sans effet, JWT périmé refusé par test. Neuf tests UI et douze cas
+garde/ownership verts, une tâche DEFERRED/deux émissions sans version/coût.
+Ces causes sont retirées des actions locales restantes ; suites finales
+4 167 unitaires/1 617 gouvernance/230 PostgreSQL, types/lints sans erreur et zéro cycle
+reçus. Fixture nettoyée/Next arrêté ; CI/image/runtime et livraison 428 restent
+ouverts, production 427. Préconditions synthétiques,
+aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
+
 - **Stress et parcours réel hors fixture** : le stress isolé n’a pas atteint les
   pages/tRPC ; les forges sans credentials sont différées. La livraison et ses
   lectures/refus ne reçoivent pas ces parcours ni un cycle réel SPAWT/Noël.
-  PtahForgeButton affiche encore Intent OK et un badge succès sans exposer
-  output.status DEFERRED ; ce widget n’est pas modifié en 426/427 et son rendu
-  natif reste à recevoir.
-  Constats statiques : forgeForSection ne déclare pas requireOperator:true et
-  PtahForgeButton n’utilise pas OperatorSurface. La note 427 publiée parle de
-  « livre de marque » alors que la route reçue est Oracle.
   DEFERRED est dit retriable, mais aucune commande ne relance la même tâche après
   configuration : materializeBrief en crée une nouvelle, reconcileTask ne lance
   pas forge() et appelle reconcile(providerTaskId ou chaîne vide). Les clés Ptah
   sont lues dans l’environnement global, sans chemin Connexions reçu.
   **Fermer** en exerçant les surfaces accessibles avec acteur natif, puis le
   parcours réel documenté et ses refus, sans assimiler DEFERRED à une livraison
-  fournisseur ni la fixture locale à un média produit. Distinguer état de demande
-  et état de production dans l’UX existante, sans nouveau workflow, et recevoir
-  le bouton nativement avant acceptation C4/C5/C6. Reprendre les gardes existantes,
-  éprouver OPERATOR/FOUNDER avec refus sans effet et préciser Oracle dans la
-  prochaine note UX, sans réécrire celle publiée. Recevoir la reprise manuelle
+  fournisseur ni la fixture locale à un média produit. Recevoir la reprise manuelle
   d’une même tâche via tâche/Intent existants, portée/coûts et anti-double appel,
   ainsi que le chemin réel de configuration avant autonomie. Ne promettre ni
   reprise automatique ni lien Connexions efficace ; l’UX peut seulement dire
   qu’aucune production n’est lancée et qu’une configuration est nécessaire.
-  **Déclencheur** : prochaine réception C5 pour reprise/configuration ; prochaine
-  passe manuelle native ; parcours réel C3/C6 sur serveur joignable et accès
-  fournisseur nécessaires au cas réel ; effort : un lot UX/reprise borné et une recette
+  **Déclencheur** : prochaine réception C5 pour reprise/configuration ;
+  parcours réel C3/C6 sur serveur joignable et accès
+  fournisseur nécessaires au cas réel ; effort : un lot reprise/configuration borné et une recette
   par parcours.
 - **Conservation des octets et propagation CDN** : `download-archiver.ts` peut
   remplir AssetVersion.cdnUrl après l’admission ; le BrandAsset existant conserve

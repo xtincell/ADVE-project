@@ -27,11 +27,28 @@ Production : version/lecture/refus reçus, corpus et édition SPAWT inchangés ;
 zéro GenerativeTask/AssetVersion avant/après, aucune forge réelle réparée.
 Connexions 427/édition v1 relues après hydratation, note vue puis fermée, aucune
 saisie/soumission ni métrique réseau native capturée. Le bouton de production
-lui-même n’est pas reçu. PtahForgeButton projette encore Intent OK/succès sans
-DEFERRED ; constats statiques : pas d’OperatorSurface ni requireOperator:true
-sur forgeForSection. Reprendre gardes existantes et état demande/production,
-puis recette native OPERATOR/FOUNDER avec refus sans effet avant C4/C5/C6.
-Préciser « Oracle » au prochain lot UX sans réécrire la note 427 publiée.
+lui-même n’est pas reçu.
+
+**Candidat 428 reçu localement, gauntlet final vert, livraison en attente** :
+PtahForgeButton sépare Intent.status/output.status, DEFERRED ambre/configuration,
+aucune production démarrée, ni coût $0/succès/reprise automatique/lien non reçu.
+Confirmation explicite, états distincts et FR/EN/ZH. OperatorSurface monte le
+contrôle/hook après auth.me.canOperate ; forgeForSection exige l’opérateur.
+La recette a découvert le staff non propriétaire refusé : governedProcedure
+relit getOperatorContext(userId, ctx.db) avant accès/émission, sans droit ajouté.
+UI huit rouges/un vert puis neuf verts ; garde deux rouges/cinq verts puis sept
+verts et cinq ownership, JWT périmé refusé. Opérateur natif 403 sans effet avant
+fix, puis 200/OK/DEFERRED : une tâche/deux émissions, zéro version/coût/appel MCP.
+Founder sans commande et appel USER 403 sans effet ; fenêtres natives sans
+exception/500. Préconditions ADVE/RTIS synthétiques locales, aucun noyau réel
+validé ni fournisseur/production modifiés. Fixture nettoyée (zéro tâche/actif),
+aucune donnée de recette conservée et Next local arrêté volontairement.
+Suites finales locales : 4 167 unitaires/397 fichiers, 1 617 gouvernance/166,
+230 PostgreSQL/13 sans clés externes ; types/deux lints sans erreur, 24 warnings,
+zéro cycle. CI/image/runtime 428 non reçus.
+Note 428 : Oracle, sans réécrire celle de 427. Distinction/garde reçues localement
+ne valent pas acceptation C4/C5/C6 : [reçu UX](docs/governance/RECEPTION-PTAH-UX.md).
+
 DEFERRED n’a pas de commande de relance de la même tâche : matérialiser en crée
 une autre, réconcilier ne lance pas forge(). Clés Ptah lues dans l’environnement ;
 aucun chemin Connexions efficace reçu. Prochaine C5 : reprise manuelle via tâche/
@@ -43,7 +60,7 @@ réel reçus. Fallbacks d’émission upstream, multisource, sourceDataSourceId/
 invalidation/staleAt, portée/kind/état activeBriefId, parentAssetId/régénération
 complète, Canva/Figma et journal restent ouverts. Aucun univers SPAWT complet,
 cycle Noël, sept chantiers ou acceptation métier globale n’est certifié :
-[reçu courant](docs/governance/RECEPTION-PTAH-RESULTAT.md) et
+[reçu livré 427](docs/governance/RECEPTION-PTAH-RESULTAT.md) et
 [RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md).
 
 ---

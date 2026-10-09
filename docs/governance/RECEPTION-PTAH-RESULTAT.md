@@ -44,7 +44,7 @@ capturée, aucun bouton de production reçu.
 ## Limites maintenues
 
 DEFERRED signifie demande persistée en attente de configuration, pas production
-matérielle. PtahForgeButton affiche encore Intent OK et son badge succès sans
+matérielle. Dans la production 427, PtahForgeButton affiche encore Intent OK et son badge succès sans
 exposer output.status DEFERRED. Aucune interface modifiée par 426/427 ; aucun rendu reçu
 par un simple appel de route. Le plan existant doit distinguer état de demande
 et état de production, dans la prochaine passe manuelle native avant acceptation
@@ -54,7 +54,9 @@ requireOperator:true et PtahForgeButton n’utilise pas OperatorSurface. Reprend
 les gardes existantes et recevoir OPERATOR/FOUNDER, avec refus sans effet, avant
 ces acceptations ; aucune reproduction d’abus ni réparation n’est présumée.
 La note 427 publiée parle de « section du livre de marque » ; le parcours reçu
-est Oracle. Préciser cette formulation au prochain lot UX sans réécrire la note.
+est Oracle. Le [candidat UX 428](RECEPTION-PTAH-UX.md) reçoit localement la
+distinction, la garde existante et la relecture du contexte opérateur ; aucun
+nouveau droit, ni livraison 428 présumée. Sa note précise Oracle sans réécrire 427.
 
 DEFERRED n’a pas de commande actuelle qui relance cette même tâche après
 configuration : materializeBrief en crée une nouvelle, reconcileTask appelle

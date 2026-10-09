@@ -76,8 +76,9 @@ HTTP 200/DEFERRED et replay reçus sur fixtures locales synthétiques, zéro fou
 Source 919cebb4, CI 37856242347/image 37856486468 et runtime exact 427 reçus le
 8 octobre à 23:06:42 UTC ; aucune livraison 426 isolée, volume privé conservé.
 Lectures/refus et corpus/édition SPAWT conservés ; zéro tâche/version de forge
-avant/après, aucune forge réelle réparée. Bouton/garde opérateur à reprendre
-nativement, octets/CDN, Canva/Figma, facture, filiation au-delà des trois
+avant/après, aucune forge réelle réparée. Bouton/garde opérateur reçus localement
+dans le [candidat 428](RECEPTION-PTAH-UX.md), gauntlet local vert/livraison en attente ;
+reprise DEFERRED/configuration, octets/CDN, Canva/Figma, facture, filiation au-delà des trois
 références et journal restent ouverts : [reçu courant](RECEPTION-PTAH-RESULTAT.md)
 et [admission historique 425](RECEPTION-PTAH-ADMISSION.md). Aucun service ajouté.
 

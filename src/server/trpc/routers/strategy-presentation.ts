@@ -72,6 +72,7 @@ export const strategyPresentationRouter = createTRPCRouter({
    */
   forgeForSection: governedProcedure({
     kind: "PTAH_MATERIALIZE_BRIEF",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: z.string(),
       sectionId: z.string(),

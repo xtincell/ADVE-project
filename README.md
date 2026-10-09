@@ -83,14 +83,22 @@ L’admission atomique et la reprise après interruption de 425 restent document
 
 En production : lectures/refus et corpus comparé reçus, toujours zéro tâche ou
 version de forge. Connexions 427/édition publique v1 relues nativement sans
-soumission ; le bouton Oracle lui-même n’est pas reçu. Celui-ci n’expose pas
-encore DEFERRED ; sa garde opérateur et la distinction demande/production
-restent au plan de la prochaine passe native. La relance de la même tâche après
+soumission ; le bouton Oracle en production lui-même n’est pas reçu.
+
+**Candidat 428, réception locale native uniquement** : le bouton distingue
+demande acceptée et production DEFERRED, sans faux succès/coût $0 ; contrôle
+réservé à l’opérateur. Le contexte d’équipe est relu en base : staff non
+propriétaire admis, founder refusé sans effet. Un geste crée une tâche différée
+et deux émissions, aucune version matérielle ni coût ; aucun fournisseur.
+Suites finales locales 4 167 unitaires/1 617 gouvernance/230 PostgreSQL vertes,
+types/lints sans erreur et zéro cycle ; fixture nettoyée/Next arrêté. CI/image/
+runtime et livraison en attente : [reçu UX](docs/governance/RECEPTION-PTAH-UX.md).
+La relance de la même tâche après
 configuration n’est pas reçue ; les clés Ptah sont lues dans l’environnement,
 sans chemin Connexions prouvé. Aucun fournisseur, média, facture
 ou cycle réel SPAWT/Noël n’est reçu. Provenance documentaire, sources multiples,
 activeBriefId, octets/CDN, succession de régénération et journal restent ouverts :
-[reçu courant et limites](docs/governance/RECEPTION-PTAH-RESULTAT.md).
+[reçu livré et limites](docs/governance/RECEPTION-PTAH-RESULTAT.md).
 
 ## Historique des vérifications — 2026-06-19
 

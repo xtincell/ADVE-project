@@ -80,8 +80,11 @@ Source 919cebb4, CI 37856242347/image 37856486468 et runtime 427 reçus le 8 oct
 lectures/refus, corpus et édition SPAWT inchangés, zéro tâche/version de forge
 avant/après. Ce reçu ne démontre aucun cycle réel.
 
-L’état du bouton et sa garde opérateur restent à recevoir nativement avant
-C4/C5/C6 ; filiation upstream/documentaire, octets/CDN, facture, Canva/Figma et
+L’état du bouton et sa garde opérateur sont reçus localement dans le
+[candidat 428](RECEPTION-PTAH-UX.md), gauntlet local vert/livraison en attente :
+contexte courant relu par le chokepoint existant, aucun droit ajouté. Les
+acceptations C4/C5/C6, reprise DEFERRED/configuration, filiation upstream/
+documentaire, octets/CDN, facture, Canva/Figma et
 journal restent distincts : [reçu courant](RECEPTION-PTAH-RESULTAT.md),
 [reprise interrompue historique 425](RECEPTION-PTAH-ADMISSION.md).
 

@@ -38,6 +38,7 @@ import {
 import { useToast } from "@/components/shared/notification-toast";
 // Phase 13 R6 — i18n FR/EN
 import { useT } from "@/lib/i18n/use-t";
+import { OperatorSurface } from "@/components/cockpit/operator-surface";
 
 export interface PtahForgeButtonProps {
   strategyId: string;
@@ -61,6 +62,7 @@ interface ForgeResultDisplay {
   status: "OK" | "VETOED" | "FAILED" | "DOWNGRADED" | "QUEUED";
   summary: string;
   taskId?: string;
+  taskStatus?: string;
   provider?: string;
   providerModel?: string;
   estimatedCostUsd?: number;
@@ -82,6 +84,7 @@ function extractForgeResult(data: {
     status: data.status as ForgeResultDisplay["status"],
     summary: data.summary || data.message,
     taskId: typeof output.taskId === "string" ? output.taskId : undefined,
+    taskStatus: typeof output.status === "string" ? output.status : undefined,
     provider: typeof output.provider === "string" ? output.provider : undefined,
     providerModel: typeof output.providerModel === "string" ? output.providerModel : undefined,
     estimatedCostUsd: typeof output.estimatedCostUsd === "number" ? output.estimatedCostUsd : undefined,
@@ -91,7 +94,37 @@ function extractForgeResult(data: {
   };
 }
 
-export function PtahForgeButton({
+/** Acknowledging the request never proves that production has run. */
+function productionReceipt(result: ForgeResultDisplay, t: (key: string) => string) {
+  if (result.status !== "OK") return null;
+  const state = result.taskStatus === "DEFERRED" ? "deferred"
+    : result.taskStatus === "CREATED" ? "created"
+      : result.taskStatus === "IN_PROGRESS" ? "in_progress" : "unknown";
+  return {
+    label: t(`oracle.forge.result.${state}`),
+    note: t(`oracle.forge.result.${state}_note`),
+    tone: state === "deferred" ? "warning" as const : "info" as const,
+  };
+}
+
+function requestLabel(result: ForgeResultDisplay, t: (key: string) => string) {
+  const state = result.status === "OK" ? "ok"
+    : result.status === "VETOED" ? "vetoed"
+      : result.status === "FAILED" ? "failed"
+        : result.status === "QUEUED" ? "queued"
+          : result.status === "DOWNGRADED" ? "downgraded" : "unknown";
+  return t(`oracle.forge.request.${state}`);
+}
+
+export function PtahForgeButton(props: PtahForgeButtonProps) {
+  return (
+    <OperatorSurface>
+      <PtahForgeControl {...props} />
+    </OperatorSurface>
+  );
+}
+
+function PtahForgeControl({
   strategyId,
   sectionId,
   brandAssetKind,
@@ -109,13 +142,15 @@ export function PtahForgeButton({
   const forgeMutation = trpc.strategyPresentation.forgeForSection.useMutation({
     onSuccess: (data) => {
       setConfirmOpen(false);
-      const variant = data.status === "OK" ? "success" : data.status === "VETOED" ? "warning" : "info";
-      toast.toast(`Forge ${data.status}: ${data.summary || data.message}`, variant);
-      setLastResult(extractForgeResult(data));
+      const result = extractForgeResult(data);
+      const receipt = productionReceipt(result, t);
+      const variant = receipt?.tone ?? (data.status === "VETOED" ? "warning" : data.status === "FAILED" ? "error" : "info");
+      toast.toast(receipt?.note ?? `${requestLabel(result, t)}: ${data.summary || data.message}`, variant);
+      setLastResult(result);
     },
     onError: (err) => {
       setConfirmOpen(false);
-      toast.error(`Forge échouée: ${err.message}`);
+      toast.error(`${t("oracle.forge.request.failed")}: ${err.message}`);
       setLastResult({
         status: "FAILED",
         summary: err.message,
@@ -130,6 +165,7 @@ export function PtahForgeButton({
   const buttonLabel =
     label ??
     `${t(`oracle.forge.button.${forgeKind}`)}${providerHint ? ` (${providerHint})` : ""}`;
+  const receipt = lastResult ? productionReceipt(lastResult, t) : null;
 
   return (
     <Stack direction="col" gap={2}>
@@ -147,7 +183,7 @@ export function PtahForgeButton({
 
       {/* Phase 13 R3 + R6 — panneau "Dernière forge" affiché après une mutation */}
       {lastResult ? (
-        <Card surface="outlined">
+        <Card surface="outlined" role="status">
           <CardBody>
             <Stack direction="col" gap={2}>
               <Stack direction="row" justify="between" align="center" gap={2}>
@@ -157,7 +193,7 @@ export function PtahForgeButton({
                 <Badge
                   tone={
                     lastResult.status === "OK"
-                      ? "success"
+                      ? "neutral"
                       : lastResult.status === "VETOED"
                         ? "warning"
                         : lastResult.status === "FAILED"
@@ -165,13 +201,14 @@ export function PtahForgeButton({
                           : "neutral"
                   }
                 >
-                  {lastResult.status}
+                  {requestLabel(lastResult, t)}
                 </Badge>
               </Stack>
-              <Text variant="body">{lastResult.summary}</Text>
+              {receipt ? <Badge tone={receipt.tone}>{receipt.label}</Badge> : null}
+              <Text variant="body">{receipt?.note ?? lastResult.summary}</Text>
               {lastResult.reason ? (
                 <Text variant="caption" tone="muted">
-                  Raison : {lastResult.reason}
+                  {t("oracle.forge.result.reason")} : {lastResult.reason}
                 </Text>
               ) : null}
               {lastResult.taskId ||
@@ -180,19 +217,19 @@ export function PtahForgeButton({
               lastResult.brandAssetId ? (
                 <Stack direction="row" gap={2}>
                   {lastResult.taskId ? (
-                    <Tag>task: {lastResult.taskId.slice(0, 12)}…</Tag>
+                    <Tag>{t("oracle.forge.result.task")} : {lastResult.taskId.slice(0, 12)}…</Tag>
                   ) : null}
                   {lastResult.provider ? <Tag>{lastResult.provider}</Tag> : null}
                   {lastResult.providerModel ? <Tag>{lastResult.providerModel}</Tag> : null}
-                  {lastResult.estimatedCostUsd !== undefined ? (
-                    <Tag>~${lastResult.estimatedCostUsd.toFixed(3)}</Tag>
+                  {lastResult.estimatedCostUsd !== undefined && lastResult.taskStatus !== "DEFERRED" ? (
+                    <Tag>{t("oracle.forge.result.estimated_cost")} : ${lastResult.estimatedCostUsd.toFixed(3)}</Tag>
                   ) : null}
                   {lastResult.brandAssetId ? (
-                    <Tag>asset: {lastResult.brandAssetId.slice(0, 12)}…</Tag>
+                    <Tag>{t("oracle.forge.result.source")} : {lastResult.brandAssetId.slice(0, 12)}…</Tag>
                   ) : null}
                 </Stack>
               ) : null}
-              {lastResult.status === "OK" && lastResult.taskId ? (
+              {lastResult.status === "OK" && lastResult.taskId && ["CREATED", "IN_PROGRESS"].includes(lastResult.taskStatus ?? "") ? (
                 <Text variant="caption" tone="muted">
                   {t("oracle.forge.result.async_note")}
                 </Text>
@@ -206,7 +243,7 @@ export function PtahForgeButton({
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title={t("oracle.forge.dialog.title")}
-        description={`Cette action va produire le livrable ${forgeKind} pour cette section. Le coût est estimé et vérifié avant l'exécution.`}
+        description={t("oracle.forge.dialog.description")}
       >
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">

@@ -115,7 +115,6 @@ const SAFE_BY_DESIGN: Record<string, string> = {
   "social.ts:ingestMetrics": "driverId/postId seulement dans signal.data (JSON) ; signal scopé au strategyId vérifié",
   "pr.ts:createRelease": "driverId stocké dans brandAsset.pillarTags (JSON) ; asset scopé au strategyId vérifié",
   "pr.ts:ingestClipping": "releaseId stocké dans signal.data (JSON) ; signal scopé au strategyId vérifié",
-  "strategy-presentation.ts:forgeForSection": "sectionId = label (jamais chargé) ; l'asset forgé est chargé where { strategyId(vérifié), kind, DRAFT }",
   // ── Résolution en mémoire d'un plan strategy-scopé (stepId ∈ plan.steps) ──
   "mestor-router.ts:resolveStep": "loadPlan(strategyId vérifié) puis resolveHumanStep(plan, stepId) pur en mémoire — stepId étranger no-op",
   "brief-ingest.ts:advance": "orchestrationPlan findFirst where { strategyId } ; même resolveHumanStep en mémoire",

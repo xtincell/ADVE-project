@@ -108,7 +108,9 @@ received after deployment on October 8 at 23:06:42 UTC; private RW volume retain
 426 was not deployed separately. Production reads/refusals, unchanged corpus
 and SPAWT edition, and zero forge tasks/versions before/after are received.
 No real provider/media/invoice/business cycle or native forge button is accepted.
-Operator guard and request-vs-production UI, upstream/documentary lineage,
+Operator guard and request-vs-production UI are received on local synthetic
+fixtures in [candidate 428](../governance/RECEPTION-PTAH-UX.md), with a green local
+gauntlet and delivery pending. Same-task DEFERRED retry/configuration, upstream/documentary lineage,
 bytes/CDN, invoices and journal closure remain open:
 [current receipt](../governance/RECEPTION-PTAH-RESULTAT.md).
 
