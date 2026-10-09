@@ -237,6 +237,22 @@ publication/revue/retour production et consumer natif reçus sur la vitrine choi
 origines/CSP inchangées. Réception partielle C2/C3/C4, pas univers de marque entier.
 [ADR-0212 Accepted, borné](adr/0212-versioned-public-identity-projection.md).
 
+Prototype 434, aucune page supplémentaire : PtahKilnTracker existant est monté
+dans /cockpit/operate/forge, sous le layout OperatorSurface déjà présent.
+Liste paginée/états et confirmation de reprise d’une tâche, montage réservé aux
+opérateurs par ce layout. Faux vert ACTIVE remplacé par validationStatus
+enregistrée ; fix session 433 préalable rend la marque. Reprise même tâche
+DEFERRED HTTP 200/reçu altéré HTTP 412 et dirigeant sans affectation sans Reprendre
+locaux reçus ; tracker/action non montés pour USER sans affectation. Anciens
+compteurs par mauvais sélecteurs écartés, nouvelle pagination 20 puis 22 uniques
+reçue, fixture nettoyée. Confiance S absente/validation à 1.0 restent planifiées.
+Gauntlet final vert après découplage startedAt réel/emittedAt logique,
+scénario local durée/clôture reçu sans SLO global. Stress isolé reçoit
+46 HTTP/235 non reçus/0 échec, hors native protégée/Glory phase 3/fournisseur réel,
+avant les dernières gardes et dates. Suite canonique 4 180/399 et PG 270/14
+finaux post-découplage reçus ; parcours restants/livraison en attente.
+[ADR-0213 Proposed](adr/0213-deferred-production-resumption-and-seals.md).
+
 ### 2.4 — Mestor + New + Messages (mixte)
 
 | Path | Sous-système | Tier | Statut | Notes |

@@ -3,7 +3,8 @@
  * verify-hash-chain.ts
  *
  * Walk the IntentEmission table per-strategy, recompute selfHash for each
- * row, compare to stored selfHash. Mismatch = tamper or storage corruption.
+ * row, compare versioned seals. Legacy key order may be unrecoverable;
+ * that is unverified history, never proof of tampering or a green receipt.
  *
  * Run weekly via .github/workflows/governance-drift.yml. Fails CI if any
  * chain is broken.
@@ -16,7 +17,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { computeSelfHash, verifyChain } from "../src/server/governance/hash-chain";
+import { verifyChain } from "../src/server/governance/hash-chain";
 
 function makeClient() {
   const connectionString = process.env.DATABASE_URL;
@@ -35,10 +36,13 @@ interface Report {
   strategiesChecked: number;
   totalRows: number;
   brokenStrategies: { strategyId: string; brokenAt: string; expected: string; actual: string }[];
+  unverifiableStrategies: { strategyId: string; rowId: string; state: string }[];
+  unsealedRows: number;
+  boundedWindows: number;
 }
 
 async function main(): Promise<void> {
-  const report: Report = { strategiesChecked: 0, totalRows: 0, brokenStrategies: [] };
+  const report: Report = { strategiesChecked: 0, totalRows: 0, brokenStrategies: [], unverifiableStrategies: [], unsealedRows: 0, boundedWindows: 0 };
 
   const strategyIds = ONE
     ? [ONE]
@@ -51,7 +55,7 @@ async function main(): Promise<void> {
   for (const strategyId of strategyIds) {
     const rows = await prisma.intentEmission.findMany({
       where: { strategyId },
-      orderBy: { emittedAt: "asc" },
+      orderBy: [{ emittedAt: "desc" }, { id: "desc" }],
       take: LIMIT,
       select: {
         id: true,
@@ -63,10 +67,13 @@ async function main(): Promise<void> {
         emittedAt: true,
         prevHash: true,
         selfHash: true,
+        version: true,
       },
     });
 
+    rows.reverse();
     if (rows.length === 0) continue;
+    if (LIMIT !== undefined) report.boundedWindows++;
     report.strategiesChecked++;
     report.totalRows += rows.length;
 
@@ -74,11 +81,14 @@ async function main(): Promise<void> {
     // un-hashed legacy rows by skipping them but flagging.
     const hashedRows = rows.filter((r): r is typeof r & { selfHash: string } => Boolean(r.selfHash));
     if (hashedRows.length !== rows.length) {
+      report.unsealedRows += rows.length - hashedRows.length;
       console.warn(`[strategy=${strategyId}] ${rows.length - hashedRows.length} legacy row(s) without selfHash (skipped)`);
     }
     if (hashedRows.length === 0) continue;
 
-    const result = verifyChain(hashedRows);
+    const result = verifyChain(hashedRows, LIMIT !== undefined ? hashedRows[0]!.prevHash : null);
+    if (result.unverifiableAt) report.unverifiableStrategies.push({ strategyId,
+      rowId: result.unverifiableAt.id, state: result.unverifiableAt.state });
     if (!result.ok && result.brokenAt) {
       report.brokenStrategies.push({
         strategyId,
@@ -90,13 +100,15 @@ async function main(): Promise<void> {
   }
 
   console.log(`\n[verify-hash-chain] checked ${report.strategiesChecked} strategies, ${report.totalRows} rows.`);
-  if (report.brokenStrategies.length === 0) {
-    console.log("✓ chain integrity OK across all strategies.\n");
+  if (report.brokenStrategies.length === 0 && report.unverifiableStrategies.length === 0 && report.unsealedRows === 0) {
+    console.log(report.boundedWindows ? "✓ inspected windows verified; predecessor anchors and older history are not verified.\n"
+      : "✓ complete inspected history verified.\n");
     await prisma.$disconnect();
     process.exit(0);
   }
 
-  console.log(`\n✗ ${report.brokenStrategies.length} broken chain(s):\n`);
+  console.log(JSON.stringify({ ...report, scope: LIMIT === undefined ? "all history" : "last 1000 rows per strategy" }, null, 2));
+  console.log(`\n✗ ${report.brokenStrategies.length} broken chain(s), ${report.unverifiableStrategies.length} unverified legacy/unknown-version chain(s), ${report.unsealedRows} unsealed row(s):\n`);
   for (const b of report.brokenStrategies) {
     console.log(`  strategy=${b.strategyId} broken at row ${b.brokenAt}`);
     console.log(`    expected prevHash=${b.expected}`);

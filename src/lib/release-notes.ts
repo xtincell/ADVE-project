@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.434", date: "2026-10-09",
+    headline: "Reprenez une production en attente",
+    highlights: [
+      { emoji: "↻", title: "Une demande conservée", body: "Dans la page de production, votre équipe retrouve les demandes en attente, leur campagne et leur brief. Elle peut vérifier puis reprendre la même demande. Sans connexion au service de production, la demande reste enregistrée." },
+      { emoji: "◷", title: "Une réponse incertaine visible", body: "Si un envoi a été réservé mais que sa réponse n’est pas connue, l’écran signale la vérification nécessaire. La reprise attend le rapprochement de ce reçu." },
+      { emoji: "👓", title: "Un suivi lisible", body: "Votre équipe peut parcourir toutes les demandes. Le montant enregistré se distingue d’une estimation et d’un prix encore inconnu." },
+    ],
+  },
+  {
     version: "6.27.433", date: "2026-10-09",
     headline: "Retrouvez les marques affectées à votre équipe",
     highlights: [

@@ -87,6 +87,17 @@ describe("Ptah materialize output contract", () => {
   it.each(["FAILED", "VETOED"])("refuses a %s envelope even with a task-shaped payload", status => {
     expect(check({ status, output: deferred })).toBe(false);
   });
+  it("accepts a completed replay only with material version receipts", () => {
+    const receipt = { ...deferred, status: "COMPLETED", assetVersionIds: ["received-version"] };
+    expect(check(receipt)).toBe(true);
+    expect(capability.outputSchema.safeParse(receipt).success).toBe(true);
+  });
+  it.each([{ assetVersionIds: [] }, { assetVersionIds: [""] }, { assetVersionIds: ["version", 7] }])(
+    "refuses invalid completed material receipts %j", ({ assetVersionIds }) => {
+    const receipt = { ...deferred, status: "COMPLETED", assetVersionIds };
+    expect(check(receipt)).toBe(false);
+    expect(capability.outputSchema.safeParse(receipt).success).toBe(false);
+  });
   it.each([{ ...deferred, taskId: "" }, { ...deferred, provider: "" }, { ...deferred, status: "COMPLETED" }])(
     "refuses incomplete or terminal task receipts", output => expect(check(output)).toBe(false));
 });

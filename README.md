@@ -66,6 +66,27 @@ npm run dev                 # → http://localhost:3000
 
 ## État courant borné — 2026-10-09
 
+**Prototype 6.27.434 non livré** : reprendre une demande différée depuis son
+brief initial dans la page de production existante, conserver la tâche et
+réserver l’envoi avant le réseau. Sceau versionné/état incertain explicite,
+aucune reprise automatique. Fix session 433 séparé, affectation opérateur relue
+en base, trois tests rouges puis verts/marque native retrouvée. PostgreSQL
+270/14, entrée hybride refusée avant effet et COMPLETED avec références existantes
+scopées reçus localement ; reprise native même tâche DEFERRED reçue,
+reçu altéré refusé ; nouvelle pagination 20 puis 22 uniques reçue après erratum
+des sélecteurs. Gauntlet final post-découplage vert, 1620/166/24 warnings.
+startedAt réel distinct après verrou/emittedAt logique : cinq PostgreSQL verts
+après un rouge d’horloge future, durée/clôture/hash relus, pas SLO global.
+Stress isolé exit 0, 46 HTTP reçus/235 non reçus/0 échec, aucune native protégée/
+Glory phase 3/fournisseur réel reçu ; fixtures nettoyées. Harnais général non
+réparé, heap local augmenté seulement. Suite canonique 4 180/399 et PG 270/14
+finaux post-découplage verts ; timeout PG concurrent conservé, relance seule
+verte/cause non démontrée. Stress antérieur aux dernières gardes/dates. Parcours restants
+et livraison du bundle 434 comprenant auth 433 restent à recevoir, sans runtime
+433 autonome. Production 432 conservée,
+aucun fournisseur/facture/cycle métier ou chantier global reçu par ce prototype.
+[ADR-0213 Proposed](docs/governance/adr/0213-deferred-production-resumption-and-seals.md).
+
 **6.27.432 livrée, identité par usage reçue** : Connexions étend la publication
 existante aux choix de palette, typographies, poses de mascotte et citation de
 référence, avec copies vérifiées et lecteur vitrine appliquant l’ensemble reçu.

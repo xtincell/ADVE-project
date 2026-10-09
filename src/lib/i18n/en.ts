@@ -1,3 +1,4 @@
+import { productionEn } from "./pages/production";
 import { intakeEntryEn } from "./pages/intake-entry";
 import { scorerEn } from "./pages/scorer";
 import { leaderboardEn } from "./pages/leaderboard";
@@ -10,6 +11,7 @@ import { parisEn } from "./pages/paris";
  * fall back to FR via `t()`.
  */
 export const en = {
+  ...productionEn,
   ...parisEn,
   ...leaderboardEn,
   ...scorerEn,

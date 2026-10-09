@@ -18,6 +18,23 @@ publication/revue/retour natifs locaux producer reçus ; runtime exact et trois
 gestes réels SPAWT v4/v5/v6 reçus, émissions existantes OK. Réception partielle
 C2/C3/C4, pas couverture de tous les writers ou parcours :
 [ADR-0212 Accepted, borné](adr/0212-versioned-public-identity-projection.md).
+
+Prototype 434 : ptah.materializeBrief existant accepte la reprise par taskId,
+résout le brief initial puis passe par PTAH_MATERIALIZE_BRIEF. Deux formes strictes
+reprise/brief nouveau, hybride refusé BAD_REQUEST avant émission/tâche ; COMPLETED
+exige les IDs de versions existantes/scopées. listForges ajoute
+pagination et présentation privée filtrée (secret webhook/réservation exclus).
+operatorProcedure conservé, aucun router/procedure/Intent/droit ajouté. Prérequis
+session 433 relit l’affectation actuelle en base ; marque/reprise même tâche
+DEFERRED HTTP 200/refus reçu altéré HTTP 412 reçus localement. Anciens compteurs
+natifs invalides écartés, nouvelle pagination 20 puis 22 uniques reçue ;
+types/lints/cycles/gouvernance finaux verts après découplage des dates.
+startedAt réel distinct/emittedAt logique, scénario durée/clôture reçu sans SLO
+global. Stress isolé exit 0 borné, 46 HTTP reçus/235 non reçus/0 échec avant les
+dernières gardes et dates. Suite canonique 4 180/399 et PG 270/14 finaux
+post-découplage reçus ; parcours restants
+et livraison en attente.
+[ADR-0213 Proposed](adr/0213-deferred-production-resumption-and-seals.md).
 ---
 
 ## Synthèse globale

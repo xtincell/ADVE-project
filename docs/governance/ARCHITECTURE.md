@@ -88,6 +88,43 @@ documentaire, octets/CDN, facture, Canva/Figma et
 journal restent distincts : [reçu courant](RECEPTION-PTAH-UX.md),
 [reprise interrompue historique 425](RECEPTION-PTAH-ADMISSION.md).
 
+## Prototype 434 — reçu original et sceau versionné, non livré
+
+ADR-0213 Proposed étend Ptah/Intent/tâche existants par une reprise manuelle
+sur brief original : portée/paramètres/sceau relus, gates actuelles puis
+réservation compare-and-set avant réseau. Deux formes tRPC strictes, mélange
+reprise/nouveau brief refusé avant effet ; reçu COMPLETED avec IDs AssetVersion
+existants/scopés non vides. Absence de configuration garde la
+même tâche ; envoi incertain interdit une réémission aveugle. Tracker et page
+existants, layout OperatorSurface conservé, aucun service/router/modèle/droit.
+Le spine commun utilise version existante pour un sceau v2 JSON canonique
+récursif et horodate après verrou ; v1/payloads historiques inchangés. Legacy
+non recalculable non vérifiable, pas altération prouvée. Sceau individuel hors
+ascendance et complétion mutable ; closeEmission best-effort reste distinct.
+Prérequis auth 433 séparé : callback session relit l’affectation en base, sans
+tenant JWT/rôle/droit ajouté, trois rouges/verts. Marque native retrouvée,
+reprise même tâche DEFERRED HTTP 200/refus reçu altéré HTTP 412 reçus ; dirigeant
+sans affectation sans montage du tracker/Reprendre. Anciens compteurs par mauvais
+sélecteurs écartés, nouvelle pagination native 20 puis 22 uniques reçue.
+validationStatus remplace le faux vert ACTIVE,
+pas les défauts confiance S absente à 0 %/validation à 1.0 sans S composé.
+Deux rouges émission/trois rouges reprise, PostgreSQL actuel 270/14/Ptah 47 cas ;
+types/lints/cycles/gouvernance finaux post-découplage exit 0 reçus,
+1620/166 gouvernance.
+CLI 1 002 lignes distingue fenêtre 1 000/--all. Horodatage = ordre logique si
+le prédécesseur est futur, pas preuve d’heure métier/fraîcheur historique.
+startedAt réel séparé après verrou ; horloge future 60 s, un rouge/quatre verts
+puis cinq PostgreSQL verts avec clôture/durée/hash relus, aucun SLO global reçu.
+Stress isolé exit 0 : 46 HTTP reçus/235 non reçus/0 échec, sans native protégée/
+Glory phase 3/fournisseur réel, fixtures nettoyées. Harnais général non réparé,
+heap local 8 192 MiB seulement ; stress antérieur aux dernières gardes et dates.
+Suite canonique 4 180/399 et PG 270/14 finaux post-découplage reçus ; timeout
+concurrent conservé/relance PG seule verte sans cause racine démontrée.
+Parcours restants/CI/runtime non reçus.
+Auth 433 committée séparément, à livrer avec le bundle 434 sans runtime autonome.
+Production 432,
+sept chantiers/dix gates programme non acceptés : [réception candidate](RECEPTION-PTAH-REPRISE.md).
+
 ## Glory tools — outils intriqués
 
 ```mermaid

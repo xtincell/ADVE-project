@@ -81,3 +81,24 @@ Scans UI/vocab et gestes natifs locaux reçus sur fixture ; gauntlet vert.
 Livraison 432 et gestes natifs réels SPAWT publication/revue sans resélection/
 retour reçus, sans validation de marque entière. Réception partielle C2/C3/C4.
 [ADR-0212 Accepted, borné](adr/0212-versioned-public-identity-projection.md).
+
+## Tracker de production existant — prototype 434 (2026-10-09)
+
+`PtahKilnTracker` (`src/components/neteru/ptah-kiln-tracker.tsx`) est monté dans
+la page forge existante, enveloppée par son layout OperatorSurface ; ce layout
+empêche le montage des hooks si canOperate=false. Composition des primitives
+existantes : liste paginée, attente/état incertain/refus, prix persisté ou
+estimation/inconnu, confirmation de reprise ; textes FR/EN/ZH. Aucun nouveau
+composant primitif/page/droit. Premiers gestes natifs locaux : marque retrouvée
+après fix session 433, même tâche DEFERRED HTTP 200/reçu altéré HTTP 412 et
+dirigeant sans affectation sans Reprendre. Anciens sélecteurs de comptage invalides
+écartés ; nouvelle pagination sur production-tracker/[data-task-id] reçue,
+20 puis 22 uniques/sans page suivante. USER sans affectation : tracker/action
+Reprendre non montés ; tracker EN/ZH rendu et FR restauré, aucune traduction
+intégrale de forge déduite. Fixture native nettoyée. Gauntlet final vert après
+découplage des dates startedAt réel/emittedAt logique ; scénario local
+clôture/durée reçu, pas SLO global.
+stress isolé reçu hors native protégée/Glory phase 3/fournisseur réel, avant les
+dernières gardes de contrat et dates. Suite canonique 4 180/399 et PG 270/14
+finaux post-découplage reçus ; parcours restants/livraison à recevoir,
+prototype non livré : [ADR-0213 Proposed](adr/0213-deferred-production-resumption-and-seals.md).

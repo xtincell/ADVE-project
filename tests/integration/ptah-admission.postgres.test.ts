@@ -11,6 +11,8 @@ import * as providerSelection from "@/server/services/ptah/routing/provider-sele
 import type { ForgeBrief } from "@/server/services/ptah/types";
 import { execute } from "@/server/services/artemis/commandant";
 import { POST } from "@/app/api/ptah/webhook/route";
+import { ptahRouter } from "@/server/trpc/routers/ptah";
+import { openEmission } from "@/server/governance/emission-spine";
 
 const brands: string[] = [], operators: string[] = [], users: string[] = [];
 const url = "https://fixture.example.invalid/result.png";
@@ -75,6 +77,179 @@ async function fault(table: "BrandAsset" | "GenerativeTask", expression: string,
 }
 
 describe("Ptah result admission", () => {
+  async function deferredOriginal() {
+    const f = await fixture(), refs = await businessScope(f.strategy.id);
+    const payload = entryPayload(f.strategy.id, refs);
+    const intentId = await openEmission({ kind: "PTAH_MATERIALIZE_BRIEF", strategyId: f.strategy.id,
+      payload: { kind: "PTAH_MATERIALIZE_BRIEF", operatorId, ...payload }, caller: "synthetic-resume" });
+    const selection = deferProvider();
+    const result = await materializeBrief(payload, { operatorId, intentId });
+    return { ...f, refs, payload, result, selection, intentId };
+  }
+
+  it("keeps the same deferred task and original receipt when configuration is still absent", async () => {
+    const f = await deferredOriginal();
+    const resumed = await materializeBrief({ ...f.payload, resumeTaskId: f.result.taskId } as typeof f.payload,
+      { operatorId, intentId: "resume-" + randomUUID() });
+    expect(resumed).toMatchObject({ taskId: f.result.taskId, status: "DEFERRED" });
+    expect(await db.generativeTask.count({ where: { strategyId: f.strategy.id } })).toBe(2);
+    expect((await db.generativeTask.findUniqueOrThrow({ where: { id: resumed.taskId } })).intentId).toBe(f.intentId);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("submits one existing deferred task under concurrent explicit resumptions", async () => {
+    const f = await deferredOriginal();
+    const forge = vi.fn(async () => { await new Promise(resolve => setTimeout(resolve, 80));
+      return { providerTaskId: "resume-provider-id", providerModel: "synthetic", estimatedCostUsd: 0,
+        webhookSecret: "synthetic-provider-receipt" }; });
+    f.selection.mockResolvedValue({ ...getProvider("openai"), sync: false, forge,
+      estimateCost: () => 0, isAvailable: async () => true });
+    const results = await Promise.all(Array.from({ length: 3 }, () => materializeBrief(
+      { ...f.payload, resumeTaskId: f.result.taskId } as typeof f.payload,
+      { operatorId, intentId: "resume-" + randomUUID() })));
+    expect(results.every(r => r.taskId === f.result.taskId)).toBe(true);
+    expect(results.filter(r => r.submissionReserved)).toHaveLength(1);
+    expect(forge).toHaveBeenCalledTimes(1);
+    expect(await db.generativeTask.count({ where: { strategyId: f.strategy.id } })).toBe(2);
+    expect(await db.generativeTask.findUniqueOrThrow({ where: { id: f.result.taskId } })).toMatchObject({
+      ...f.refs, sourceIntentId: f.payload.sourceIntentId, status: "IN_PROGRESS",
+      providerTaskId: "resume-provider-id", intentId: f.intentId,
+    });
+  });
+
+  it("refuses a changed brief on resumption before selecting or calling a provider", async () => {
+    const f = await deferredOriginal(); f.selection.mockClear();
+    await expect(materializeBrief({ ...f.payload, brief: { ...f.payload.brief, briefText: "Different request" },
+      resumeTaskId: f.result.taskId } as typeof f.payload, { operatorId, intentId: "resume-" + randomUUID() })).rejects.toThrow();
+    expect(f.selection).not.toHaveBeenCalled();
+    expect(await db.generativeTask.count({ where: { strategyId: f.strategy.id } })).toBe(2);
+  });
+
+  it("refuses another operator and a missing original receipt before provider work", async () => {
+    const f = await deferredOriginal(); f.selection.mockClear();
+    const payload = { ...f.payload, resumeTaskId: f.result.taskId };
+    await expect(materializeBrief(payload, { operatorId: operators[1]!, intentId: "resume-foreign" })).rejects.toThrow();
+    await db.intentEmission.delete({ where: { id: f.intentId } });
+    await expect(materializeBrief(payload, { operatorId, intentId: "resume-missing" })).rejects.toThrow();
+    expect(f.selection).not.toHaveBeenCalled();
+    expect(await db.generativeTask.count({ where: { strategyId: f.strategy.id } })).toBe(2);
+  });
+
+  it("refuses a changed persisted emission body before provider work", async () => {
+    const f = await deferredOriginal(); f.selection.mockClear();
+    const row = await db.intentEmission.findUniqueOrThrow({ where: { id: f.intentId } });
+    const payload = row.payload as Record<string, unknown>;
+    await db.intentEmission.update({ where: { id: f.intentId }, data: { payload: JSON.parse(JSON.stringify({ ...payload,
+      brief: { ...f.payload.brief, briefText: "Synthetic alteration" } })) } });
+    await expect(materializeBrief({ ...f.payload, resumeTaskId: f.result.taskId },
+      { operatorId, intentId: "resume-altered-seal" })).rejects.toThrow("reçu original");
+    expect(f.selection).not.toHaveBeenCalled();
+    expect(await db.generativeTask.count({ where: { strategyId: f.strategy.id } })).toBe(2);
+  });
+
+  it("rechecks current source and manipulation gates before resubmitting", async () => {
+    const f = await deferredOriginal(); f.selection.mockClear();
+    const payload = { ...f.payload, resumeTaskId: f.result.taskId };
+    await db.brandAsset.update({ where: { id: f.refs.sourceBrandAssetId }, data: { state: "ARCHIVED" } });
+    await expect(materializeBrief(payload, { operatorId, intentId: "resume-source" })).rejects.toThrow();
+    await db.brandAsset.update({ where: { id: f.refs.sourceBrandAssetId }, data: { state: "DRAFT" } });
+    await db.strategy.update({ where: { id: f.strategy.id }, data: { manipulationMix: { entertainer: 0 } } });
+    await expect(materializeBrief(payload, { operatorId, intentId: "resume-mix" })).rejects.toThrow();
+    expect(f.selection).not.toHaveBeenCalled();
+    expect((await db.generativeTask.findUniqueOrThrow({ where: { id: f.result.taskId } })).status).toBe("DEFERRED");
+  });
+
+  it("never resends a submission interrupted before its provider receipt is persisted", async () => {
+    const f = await deferredOriginal(); f.selection.mockClear();
+    await db.generativeTask.update({ where: { id: f.result.taskId }, data: { status: "CREATED",
+      parameters: { _ptahSubmission: { state: "STARTED", startedAt: new Date().toISOString() } } } });
+    const result = await materializeBrief({ ...f.payload, resumeTaskId: f.result.taskId },
+      { operatorId, intentId: "resume-interrupted" });
+    expect(result).toMatchObject({ taskId: f.result.taskId, status: "CREATED", submissionUnknown: true });
+    expect(f.selection).not.toHaveBeenCalled();
+    expect(await db.generativeTask.count({ where: { strategyId: f.strategy.id } })).toBe(2);
+  });
+
+  it("retains a failed submission and refuses an automatic resend after an uncertain response", async () => {
+    const f = await deferredOriginal(); const forge = vi.fn().mockRejectedValue(new Error("synthetic-response-lost"));
+    f.selection.mockResolvedValue({ ...getProvider("openai"), sync: false, forge,
+      estimateCost: () => 0, isAvailable: async () => true });
+    const payload = { ...f.payload, resumeTaskId: f.result.taskId };
+    await expect(materializeBrief(payload, { operatorId, intentId: "resume-lost-response" })).rejects.toThrow();
+    await expect(materializeBrief(payload, { operatorId, intentId: "resume-after-loss" })).rejects.toThrow();
+    expect(forge).toHaveBeenCalledTimes(1);
+    expect(await db.generativeTask.findUniqueOrThrow({ where: { id: f.result.taskId } })).toMatchObject({
+      status: "FAILED", intentId: f.intentId, parameters: { _ptahSubmission: { state: "STARTED" } } });
+    expect(await db.generativeTask.count({ where: { strategyId: f.strategy.id } })).toBe(2);
+  });
+
+  it("refuses altered persisted parameters or a terminal state without material receipt", async () => {
+    const f = await deferredOriginal(); f.selection.mockClear();
+    const payload = { ...f.payload, resumeTaskId: f.result.taskId };
+    await db.generativeTask.update({ where: { id: f.result.taskId }, data: { parameters: { changed: true } } });
+    await expect(materializeBrief(payload, { operatorId, intentId: "resume-params" })).rejects.toThrow();
+    await db.generativeTask.update({ where: { id: f.result.taskId }, data: { parameters: {}, status: "COMPLETED", resultUrls: [url] } });
+    await expect(materializeBrief(payload, { operatorId, intentId: "resume-empty-completed" })).rejects.toThrow();
+    expect(f.selection).not.toHaveBeenCalled();
+  });
+
+  it("replays a completed resumed production without forging, recosting or admitting it again", async () => {
+    const f = await deferredOriginal(), forge = vi.fn().mockResolvedValue({ providerTaskId: url, providerModel: "synthetic", estimatedCostUsd: 0 });
+    f.selection.mockResolvedValue({ ...getProvider("openai"), sync: false, forge,
+      estimateCost: () => 0, isAvailable: async () => true });
+    const payload = { ...f.payload, resumeTaskId: f.result.taskId };
+    await materializeBrief(payload, { operatorId, intentId: "resume-complete" });
+    vi.spyOn(getProvider("openai"), "reconcile").mockResolvedValue({ resultUrls: [url], realisedCostUsd: 0.07, completedAt: new Date() });
+    const admitted = await reconcileTask(f.result.taskId, null);
+    const before = await counts(f.strategy.id);
+    const result = await materializeBrief(payload, { operatorId, intentId: "resume-completed-replay" });
+    expect(result).toMatchObject({ taskId: f.result.taskId, status: "COMPLETED" });
+    expect(result.assetVersionIds).toEqual(admitted.assetVersionIds);
+    expect(await counts(f.strategy.id)).toEqual(before);
+    expect(forge).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a hybrid resumption and changed brief before any new decision or task", async () => {
+    const f = await deferredOriginal(); f.selection.mockClear();
+    const caller = ptahRouter.createCaller({ db, headers: undefined, session: { user: { id: owner, role: "OPERATOR" },
+      expires: new Date(Date.now() + 60_000).toISOString() } });
+    const before = await db.intentEmission.count({ where: { strategyId: f.strategy.id } });
+    const hybrid = { ...f.payload, resumeTaskId: f.result.taskId,
+      brief: { ...f.payload.brief, briefText: "Changed hybrid request" }, overrideMixViolation: true };
+    await expect(caller.materializeBrief(hybrid)).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(f.selection).not.toHaveBeenCalled();
+    expect(await db.generativeTask.count({ where: { strategyId: f.strategy.id } })).toBe(2);
+    expect(await db.intentEmission.count({ where: { strategyId: f.strategy.id } })).toBe(before);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("pages all operator tasks with timestamp ties and never exposes callback secrets or reservation metadata", async () => {
+    const f = await fixture();
+    await db.generativeTask.createMany({ data: Array.from({ length: 21 }, () => ({ intentId: "paged-" + randomUUID(),
+      strategyId: f.strategy.id, operatorId, forgeKind: "image", provider: "openai", providerModel: "synthetic",
+      status: "DEFERRED", promptHash: randomUUID(), parameters: { input: "retained", _ptahSubmission: { state: "STARTED" } },
+      pillarSource: "D", manipulationMode: "entertainer", estimatedCostUsd: 0, webhookSecret: "synthetic-callback-secret",
+      createdAt: new Date("2000-01-01") })) });
+    const caller = ptahRouter.createCaller({ db, headers: undefined, session: { user: { id: owner, role: "OPERATOR" },
+      expires: new Date(Date.now() + 60_000).toISOString() } });
+    const ids: string[] = [];
+    let cursor: { id: string; createdAt: Date } | undefined;
+    for (let page = 0; page < 4; page++) {
+      const rows = await caller.listForges({ strategyId: f.strategy.id, limit: 7, cursor });
+      for (const row of rows) {
+        expect(row).not.toHaveProperty("webhookSecret"); expect(row.parameters).not.toHaveProperty("_ptahSubmission");
+        ids.push(row.id);
+      }
+      if (!rows.length) break;
+      cursor = { id: rows[rows.length - 1]!.id, createdAt: rows[rows.length - 1]!.createdAt };
+    }
+    expect(ids).toHaveLength(22); expect(new Set(ids).size).toBe(22);
+    expect(await caller.listForges({ strategyId: "foreign-or-missing", limit: 7 })).toEqual([]);
+    await db.user.update({ where: { id: owner }, data: { operatorId: null } });
+    try { await expect(caller.listForges({ strategyId: f.strategy.id, limit: 7 })).rejects.toMatchObject({ code: "FORBIDDEN" }); }
+    finally { await db.user.update({ where: { id: owner }, data: { operatorId } }); }
+  });
+
   it("retains business scope through the existing commandant and a selected asynchronous provider", async () => {
     const f = await fixture(), refs = await businessScope(f.strategy.id), payload = entryPayload(f.strategy.id, refs);
     const forge = vi.fn().mockResolvedValue({ providerTaskId: "synthetic-provider-task", providerModel: "synthetic", estimatedCostUsd: 0 });

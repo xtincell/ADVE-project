@@ -295,6 +295,7 @@ export type Intent =
   | {
       kind: "PTAH_MATERIALIZE_BRIEF";
       strategyId: string;
+      resumeTaskId?: string;
       operatorId: string;
       campaignId?: string | null;
       briefId?: string | null;

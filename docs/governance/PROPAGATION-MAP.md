@@ -9,6 +9,36 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Reprise de production — ADR-0213 Proposed, prototype 434 (2026-10-09)
+
+Tâche DEFERRED → reçu original scellé/portée/paramètres concordants → commande
+materializeBrief/Intent existants → gates courantes → réservation même tâche
+avant réseau → reçu fournisseur ou envoi incertain → checkpoint/admission
+existants. Aucun override historique rejoué, nouvelle émission de reprise sans
+remplacer l’autorité du brief initial ; absence de configuration conserve la
+tâche. Formes strictes reprise/brief nouveau, mélange refusé avant émission/tâche ;
+COMPLETED retourne les IDs AssetVersion existants/scopés non vides. Concurrence
+ou envoi incertain ne rendent pas un nouvel appel légitime.
+Sceau v2 canonique/versionné du spine commun, temps après verrou ; v1/historique
+conservés. Vérification individuelle, fenêtre bornée et résultat mutable sont
+des périmètres distincts. Deux rouges émission/trois rouges reprise puis 46
+PostgreSQL ciblés verts, puis 270/14 complets/Ptah 47 cas. Prérequis
+session 433 : affectation courante relue en base sans tenant JWT, marque native
+retrouvée ; même tâche DEFERRED HTTP 200/refus reçu altéré HTTP 412 locaux reçus,
+dirigeant sans affectation sans Reprendre. Anciens compteurs natifs invalides
+écartés, nouvelle pagination 20 puis 22 uniques reçue ; CLI 1 002 lignes
+distingue fenêtre 1 000/--all. emittedAt logique hors preuve d’heure métier ou
+de fraîcheur historique ; startedAt réel séparé après verrou, scénario horloge
+future/clôture/durée/hash reçu sur cinq PostgreSQL après un rouge, pas SLO global.
+Types/lints/cycles/gouvernance finaux verts après découplage, 1620/166 ;
+stress isolé exit 0 : 46 HTTP reçus/235 non reçus/0 échec, hors native protégée/
+Glory phase 3/fournisseur réel, fixtures nettoyées. Ce stress précède les dernières
+gardes et dates ; suite canonique 4 180/399 et PG 270/14 finaux post-découplage
+reçus, parcours restants/CI/runtime non reçus, production 432
+conservée. Fournisseur/facture/provenance/octets/journal
+et sept chantiers/dix gates programme restent ouverts.
+[Contrat candidat](adr/0213-deferred-production-resumption-and-seals.md).
+
 ### Identité publique par usage — ADR-0212 Accepted, reçu partiel 432 (2026-10-09)
 
 Référence consultée → choix explicite actifs/versions/rôles → strategy.update

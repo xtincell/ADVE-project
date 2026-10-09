@@ -1,5 +1,53 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Reprise de production et sceau du brief — prototype 434 (2026-10-09)
+
+ADR-0213 Proposed : demande différée → reçu original vérifié/portée relue →
+gates actuelles → réservation même tâche avant réseau → état connu ou incertain →
+admission existante du résultat. Deux entrées strictes reprise/nouveau brief,
+hybride refusé avant émission/tâche ; COMPLETED exige les IDs AssetVersion
+existants/scopés non vides. Tracker/page/gardes existants, pas de second
+journal ni nouveau service/router/Intent/modèle/permission. Sceau v2 canonique
+et horodatage sous verrou du spine commun ; v1 conservé, historique non
+recalculable non vérifiable, aucun backfill de payload ou de validation.
+Fix session 433 dédié d973f735 avant Ptah/sceau 434, livraison dans le bundle 434
+sans runtime 433 autonome : affectation relue en base par session,
+trois rouges/verts auth et marque native retrouvée, sans tenant JWT/rôle/droit.
+Faux vert ACTIVE corrigé par validationStatus explicite dans forge.
+Deux rouges émission/trois rouges reprise puis garde hybride rouge/verte ;
+PostgreSQL 270/14/Ptah 47 cas reçus. Sceau sans tri réinjecté rouge/restauré,
+cinq PostgreSQL verts ; garde COMPLETED renforcée après rouge tests/unit seul.
+Suite globale exacte npm test -- --run : 4 180/399 verts après ces gardes et
+découplage des dates, PG 270/14 final reçu seul ; timeout concurrent conservé,
+cause non démontrée.
+CLI 1 002 lignes : fenêtre 1 000 bornée, --all détecte
+l’altération hors fenêtre ; legacy non vérifiable/sans sceau refusés.
+Reprise même tâche DEFERRED HTTP 200/refus reçu altéré HTTP 412 et dirigeant sans
+affectation sans montage tracker/Reprendre natifs locaux reçus ; anciens
+compteurs par mauvais sélecteurs invalides, nouvelle pagination 20 puis 22 uniques
+reçue. Types/lints/cycles/gouvernance finaux verts après découplage,
+1620/166 ; tracker EN/ZH reçu,
+FR restauré sans forge intégralement traduite. Horodatage logique après verrou,
+pas preuve d’heure métier/fraîcheur des lignes historiques ; startedAt réel
+distinct après verrou. Horloge future 60 s : un rouge/quatre verts puis cinq
+PostgreSQL verts, clôture/durée/hash relus ; aucun SLO global déduit.
+Stress isolé exit 0 : 46 HTTP reçus/235 non reçus/zéro échec, trois queries
+anonymes/sept kinds et transitions locales, hors native protégée/Glory phase 3/
+fournisseur réel. Wrapper/heap locaux uniquement, harnais général non réparé,
+fixtures nettoyées ; ce stress précède les dernières gardes de contrat et dates.
+Prochaine réception C3/C4/C5/C6 : achever les parcours natifs restants,
+concurrence/interruption/réponse incertaine sans doublon,
+stress des parcours restants/CI/runtime.
+Puis configuration et fournisseur réels, octets,
+provenance et facture ; le sceau ne ferme pas le close best-effort du journal.
+Prochaine passe S/validation avant acceptation C3/C4/C6 : confiance absente
+affichée comme inconnue, validation séparée de la mesure/composition ; éprouver
+confirmation sans S composé, sans fabriquer 1.0. Le faux label ACTIVE seul est
+réparé ici ; [résidu et déclencheur](RESIDUAL-DEBT.md).
+Prototype non livré, production 432 conservée, sept chantiers/dix gates non
+acceptés. [Contrat](adr/0213-deferred-production-resumption-and-seals.md) ·
+[réception bornée](RECEPTION-PTAH-REPRISE.md).
+
 ## Identité projetée par usage — 432 livrée, reçu partiel C2/C3/C4 (2026-10-09)
 
 ADR-0212 Accepted borné étend le circuit reçu du logo et la référence admise : source

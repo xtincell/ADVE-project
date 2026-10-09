@@ -4,6 +4,41 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
+**Prototype 6.27.434 — ADR-0213 Proposed, non livré** : reprise par resumeTaskId
+sur brief/émission initiale, même tâche, gates courantes et réservation avant
+réseau ; tracker existant monté dans forge sous le layout OperatorSurface.
+Sceau v2 JSON canonique/versionné et horodatage sous verrou, v1 conservé ; legacy
+non recalculable non vérifiable, pas une altération prouvée. Deux rouges émission/
+trois rouges reprise puis 46 PostgreSQL ciblés verts reçus, intermédiaires locaux.
+Prérequis séparé 433 : session relit l’affectation opérateur courante en base,
+trois rouges/verts auth, marque native retrouvée ; pas de tenant JWT/rôle/droit
+ajouté. ACTIVE ne vaut plus validation enregistrée dans la page forge.
+270 PostgreSQL/14, Ptah ciblé 47 cas reçus ; entrée hybride refusée avant effet,
+COMPLETED exige les IDs AssetVersion existants/scopés non vides. Reprise
+native même taskId/DEFERRED HTTP 200, refus reçu altéré HTTP 412, dirigeant sans
+affectation sans Reprendre ; anciens compteurs natifs par mauvais sélecteurs
+écartés, nouvelle pagination 20 puis 22/22 uniques reçue avec bons sélecteurs,
+sans page suivante. Tracker EN/ZH rendu/FR restauré, sans traduction intégrale
+de forge reçue. CLI sur 1 002 lignes distingue fenêtre
+1 000/--all et refuse legacy non vérifiable/sans sceau. Confiance S absente à
+0 %/validation à 1.0 sans composition restent planifiées. Types/lints/cycles/
+gouvernance finaux post-découplage exit 0, 1620/166 et 24 warnings
+préexistants. emittedAt reste logique ; startedAt réel distinct capturé après
+verrou évite une durée issue de la date future. Horloge future 60 s : un rouge/
+quatre verts puis cinq PostgreSQL verts, closeEmission/durée/hash relus ; pas SLO global.
+Stress isolé exit 0 : 46 HTTP reçus/235 non reçus/0 échec, sans native protégée/
+Glory phase 3/fournisseur réel. Heap local 8 192 MiB après FETCH_FAILED, aucun
+réglage production ; harnais général non réparé, fixtures nettoyées et ErrorVault
+de test conservé. Ce stress précède les gardes hybride/COMPLETED et les dates.
+Suite canonique 4 180/399 et PG 270/14 finaux post-découplage reçus ; timeout PG
+concurrent conservé, relance complète seule verte, cause non démontrée.
+CI/image/runtime en attente pour le
+bundle 434 comprenant auth 433 (commit d973f735, pas runtime autonome).
+Production 432 ci-dessous
+inchangée. Fournisseur/facture/configuration réelle, provenance, octets/CDN et
+journal ouverts ; sept chantiers/dix gates non acceptés.
+[Reçu candidat borné](docs/governance/RECEPTION-PTAH-REPRISE.md).
+
 **Production 6.27.432 — ADR-0212 Accepted, borné** : choix référence/id/version/
 rôle dans Connexions, identité publique v2 compatible v1, mêmes coffre/stockage/
 transport. Palette, OTF/TTF, poses et citation bornées ; pins privés, copies

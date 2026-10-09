@@ -1,3 +1,4 @@
+import { productionFr } from "./pages/production";
 import { intakeEntryFr } from "./pages/intake-entry";
 import { scorerFr } from "./pages/scorer";
 import { leaderboardFr } from "./pages/leaderboard";
@@ -10,6 +11,7 @@ import { parisFr } from "./pages/paris";
  * components for now (most of the app is FR-only by design).
  */
 export const fr = {
+  ...productionFr,
   ...parisFr,
   ...leaderboardFr,
   ...scorerFr,

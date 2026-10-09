@@ -42,8 +42,10 @@ import type {
 import { PILLAR_KEYS, type PillarKey } from "@/domain";
 import { FORGE_KINDS, MANIPULATION_MODES } from "./types";
 import { assertCampaignHasBrief } from "../campaign-manager/brief-gate";
+import { resolveResumptionPayload, assertUnchangedResumption, hasSubmissionClaim, submissionParameters, providerParameters } from "./resumption";
 
 export { manifest } from "./manifest";
+export { resolveResumptionPayload } from "./resumption";
 
 const WEBHOOK_BASE = process.env.PTAH_WEBHOOK_BASE_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
@@ -63,7 +65,28 @@ export async function materializeBrief(
   payload: MaterializeBriefPayload,
   ctx: { operatorId: string; intentId: string },
 ): Promise<ForgeTaskCreated> {
+  if ("_ptahSubmission" in payload.brief.forgeSpec.parameters) {
+    throw new Error("Ces paramètres contiennent un champ réservé à la réception de production.");
+  }
+  let resumed: GenerativeTask | null = null;
+  if (payload.resumeTaskId) {
+    const original = await resolveResumptionPayload(payload.resumeTaskId, payload.strategyId, ctx.operatorId);
+    assertUnchangedResumption(payload, original.payload);
+    resumed = original.task;
+    await assertTaskScope(db, resumed, payload.strategyId);
+    if (resumed.status !== "DEFERRED") return taskReceipt(resumed);
+    if (hasSubmissionClaim(resumed) || resumed.providerTaskId || resumed.resultUrls !== null) {
+      throw new Error("Un envoi a déjà été réservé. Rapprochez son reçu avant toute nouvelle production.");
+    }
+  }
   await assertBusinessScope(db, { ...payload, operatorId: ctx.operatorId });
+  if (payload.sourceBrandAssetId) {
+    const source = await db.brandAsset.findUnique({ where: { id: payload.sourceBrandAssetId },
+      select: { state: true, staleAt: true } });
+    if (!source || source.staleAt || ["ARCHIVED", "SUPERSEDED", "REJECTED"].includes(source.state)) {
+      throw new Error("La référence de production a été retirée ou corrigée. Relisez le brief avant de produire.");
+    }
+  }
   if (payload.campaignId) await assertCampaignHasBrief(payload.campaignId);
   ensurePillarSource(payload.brief);
   await checkManipulationCoherence(
@@ -94,6 +117,7 @@ export async function materializeBrief(
     provider = await selectProvider(payload.brief);
   } catch (e) {
     if (e instanceof NoAvailableProviderError) {
+      if (resumed) return taskReceipt(resumed);
       const nominal: ProviderName = e.tried[0] ?? "magnific";
       const deferredSecret = generateWebhookSecret();
       const deferredTask = await createGenerativeTask({
@@ -121,6 +145,7 @@ export async function materializeBrief(
         providerModel: payload.brief.forgeSpec.modelHint ?? "default",
         estimatedCostUsd: 0,
         status: "DEFERRED",
+        submissionReserved: false,
         webhookSecret: deferredSecret,
       };
     }
@@ -147,10 +172,34 @@ export async function materializeBrief(
   const promptHashKey = `${payload.brief.forgeSpec.kind}:${payload.brief.manipulationMode}:${payload.brief.pillarSource}:${payload.brief.briefText.slice(0, 100)}`;
   void promptHashKey; // Phase 2 : cache lookup avec proper hash. Phase 1 : skip.
 
-  const webhookSecret = generateWebhookSecret();
+  const webhookSecret = resumed?.webhookSecret ?? generateWebhookSecret();
 
   // Create DB row (status=CREATED)
-  const task = await createGenerativeTask({
+  let task: GenerativeTask;
+  if (resumed) {
+    // Compare-and-set commits the reservation before the external call. Concurrent
+    // retries observe this task; a stopped process never makes it safe to resend.
+    const claim = await db.generativeTask.updateMany({
+      where: { id: resumed.id, operatorId: ctx.operatorId, strategyId: payload.strategyId,
+        status: "DEFERRED", providerTaskId: null, resultUrls: { equals: Prisma.DbNull },
+        promptHash: resumed.promptHash, parameters: { equals: resumed.parameters as Prisma.InputJsonValue },
+        campaignId: resumed.campaignId, briefId: resumed.briefId, sourceBrandAssetId: resumed.sourceBrandAssetId },
+      data: { status: "CREATED", provider: provider.name,
+        providerModel: payload.brief.forgeSpec.modelHint ?? "default", estimatedCostUsd,
+        expectedSuperfans: budgetDecision.expectedSuperfans, errorMessage: null,
+        parameters: submissionParameters(resumed) },
+    });
+    task = await db.generativeTask.findUniqueOrThrow({ where: { id: resumed.id } });
+    if (task.operatorId !== ctx.operatorId || task.strategyId !== payload.strategyId) {
+      throw new Error("Cette production n’est plus accessible dans ce dossier.");
+    }
+    await assertTaskScope(db, task, payload.strategyId);
+    if (!claim.count) {
+      if (task.status === "DEFERRED") throw new Error("Cette production a changé. Relisez son état avant de reprendre.");
+      return taskReceipt(task);
+    }
+  } else {
+    task = await createGenerativeTask({
     intentId: ctx.intentId,
     sourceIntentId: payload.sourceIntentId,
     operatorId: ctx.operatorId,
@@ -165,6 +214,9 @@ export async function materializeBrief(
     expectedSuperfans: budgetDecision.expectedSuperfans,
     webhookSecret,
   });
+    task = await db.generativeTask.update({ where: { id: task.id },
+      data: { parameters: submissionParameters(task) } });
+  }
 
   // NB : le deferral « ship-able sans clés » (ADR-0021) est désormais traité EN
   // AMONT via le catch `NoAvailableProviderError` autour de `selectProvider`
@@ -209,6 +261,7 @@ export async function materializeBrief(
       providerModel: result.providerModel,
       estimatedCostUsd: result.estimatedCostUsd,
       status: "IN_PROGRESS",
+      submissionReserved: true,
       webhookSecret,
     };
   } catch (error) {
@@ -425,7 +478,7 @@ export async function regenerateFadingAsset(
       kind: original.kind as ForgeKind,
       providerHint: original.generativeTask.provider as ProviderName,
       modelHint: original.generativeTask.providerModel ?? undefined,
-      parameters: original.generativeTask.parameters as Record<string, unknown>,
+      parameters: providerParameters(original.generativeTask),
     },
     pillarSource: original.generativeTask.pillarSource as PillarKey,
     manipulationMode: original.generativeTask.manipulationMode as ManipulationMode,
@@ -445,6 +498,24 @@ export async function regenerateFadingAsset(
 }
 
 // ── helpers ─────────────────────────────────────────────────────────
+
+async function taskReceipt(task: GenerativeTask): Promise<ForgeTaskCreated> {
+  if (!["DEFERRED", "CREATED", "IN_PROGRESS", "COMPLETED"].includes(task.status)) {
+    throw new Error("Cette production nécessite une vérification du reçu ; aucun nouvel appel ne sera envoyé.");
+  }
+  const versions = task.status === "COMPLETED" ? await db.assetVersion.findMany({ where: {
+    generativeTaskId: task.id, operatorId: task.operatorId, strategyId: task.strategyId,
+  }, select: { id: true }, orderBy: { id: "asc" } }) : [];
+  if (task.status === "COMPLETED" && !versions.length) {
+    throw new Error("Le résultat de cette production n’est pas reçu. Aucun nouvel appel ne sera envoyé.");
+  }
+  return { taskId: task.id, provider: task.provider as ProviderName, providerModel: task.providerModel,
+    estimatedCostUsd: task.estimatedCostUsd, status: task.status as ForgeTaskCreated["status"],
+    webhookSecret: task.webhookSecret,
+    submissionReserved: false,
+    ...(task.status === "COMPLETED" ? { assetVersionIds: versions.map(version => version.id) } : {}),
+    submissionUnknown: task.status === "CREATED" && !task.providerTaskId && hasSubmissionClaim(task) };
+}
 
 function forgeKindToAssetKind(kind: string): "image" | "video" | "audio" | "icon" {
   switch (kind) {

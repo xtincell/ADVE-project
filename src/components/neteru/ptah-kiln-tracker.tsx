@@ -1,189 +1,93 @@
 "use client";
 
-/**
- * <PtahKilnTracker> — Neteru UI Kit (Layer 5).
- *
- * Vue Mission Control des forges en cours et récentes — cross-strategy.
- * Tableau de bord pour les opérateurs UPgraders.
- */
-
+/** Existing operator tracker, scoped to the selected brand and original production receipts. */
+import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { Hammer, CheckCircle, Loader2, XCircle, Activity } from "lucide-react";
+import { Badge, Button, Card, CardBody, Dialog, DialogFooter, Spinner, Text } from "@/components/primitives";
+import { useT } from "@/lib/i18n/use-t";
 
-export function PtahKilnTracker() {
-  const { data: forges, isLoading } = trpc.ptah.listForges.useQuery({ limit: 50 });
-  const { data: health } = trpc.ptah.listProviderHealth.useQuery();
+const statusKeys: Record<string, string> = { DEFERRED: "deferred", CREATED: "created", IN_PROGRESS: "running",
+  COMPLETED: "completed", FAILED: "failed", VETOED: "vetoed", EXPIRED: "expired" };
+const kindKeys = new Set(["image", "video", "audio", "icon", "refine", "transform", "classify", "stock", "design"]);
 
-  if (isLoading) {
-    return <div className="text-sm text-foreground-secondary">Chargement de la fonderie…</div>;
-  }
-
-  const running = forges?.filter((f) => f.status === "CREATED" || f.status === "IN_PROGRESS") ?? [];
-  const completed = forges?.filter((f) => f.status === "COMPLETED") ?? [];
-  const failed = forges?.filter((f) => f.status === "FAILED" || f.status === "VETOED") ?? [];
-
-  const totalCost = completed.reduce((s, f) => s + (f.realisedCostUsd ?? 0), 0);
-  const totalSuperfans = completed.reduce((s, f) => s + (f.realisedSuperfans ?? 0), 0);
-  const avgCps = totalSuperfans > 0 ? totalCost / totalSuperfans : 0;
-
-  return (
-    <div className="space-y-6">
-      {/* Top stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile icon={Loader2} label="En forge" value={running.length} color="text-amber-300" spin />
-        <StatTile icon={CheckCircle} label="Forgés" value={completed.length} color="text-emerald-300" />
-        <StatTile icon={XCircle} label="Échecs/Vétos" value={failed.length} color="text-error" />
-        <StatTile
-          icon={Activity}
-          label="$ / superfan"
-          value={avgCps > 0 ? `$${avgCps.toFixed(2)}` : "—"}
-          color="text-blue-300"
-        />
+export function PtahKilnTracker({ strategyId }: { strategyId: string }) {
+  const { t, locale } = useT();
+  const [status, setStatus] = useState<"DEFERRED" | undefined>("DEFERRED");
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ message: string; failed: boolean } | null>(null);
+  const tasks = trpc.ptah.listForges.useInfiniteQuery({ strategyId, limit: 20, status }, {
+    getNextPageParam: page => page.length === 20 ? { id: page[page.length - 1]!.id, createdAt: page[page.length - 1]!.createdAt } : undefined,
+    refetchInterval: 10_000,
+  });
+  const services = trpc.ptah.listProviderHealth.useQuery(undefined, { refetchInterval: 30_000 });
+  const resume = trpc.ptah.materializeBrief.useMutation({
+    onSuccess: result => {
+      const message = result.submissionUnknown ? t("production.unknownSubmission")
+        : result.status === "DEFERRED" ? t("production.stillDeferred") : t("production.resumed");
+      setNotice({ message, failed: false }); void tasks.refetch();
+    },
+    onError: error => { setNotice({ message: error.message || t("production.resumeError"), failed: true }); void tasks.refetch(); },
+  });
+  const rows = tasks.data?.pages.flat() ?? [];
+  const money = (amount: number) => new Intl.NumberFormat(locale, { style: "currency", currency: "USD", maximumFractionDigits: 3 }).format(amount);
+  return <Card>
+    <CardBody className="space-y-4" data-testid="production-tracker">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div><h2 className="text-lg font-semibold text-foreground">{t("production.title")}</h2>
+          <Text variant="caption">{t("production.description")}</Text></div>
+        <Button variant="outline" size="sm" loading={tasks.isFetching} onClick={() => void tasks.refetch()}>{t("production.refresh")}</Button>
       </div>
-
-      {/* Provider health */}
-      <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4">
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
-          <Hammer className="h-4 w-4 text-amber-300" />
-          État des providers (circuit breaker)
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {health?.knownProviders.map((p) => {
-            const dbHealth = health.health.find((h) => h.provider === p.provider);
-            return (
-              <ProviderHealthCell
-                key={p.provider}
-                name={p.provider}
-                available={p.available}
-                circuitState={dbHealth?.circuitState ?? "CLOSED"}
-                totalRequests={dbHealth?.totalRequests ?? 0}
-                totalFailures={dbHealth?.totalFailures ?? 0}
-              />
-            );
+      <div className="flex flex-wrap gap-2" role="group" aria-label={t("production.title")}>
+        <Button variant={status ? "primary" : "outline"} size="sm" aria-pressed={Boolean(status)} onClick={() => setStatus("DEFERRED")}>{t("production.waiting")}</Button>
+        <Button variant={!status ? "primary" : "outline"} size="sm" aria-pressed={!status} onClick={() => setStatus(undefined)}>{t("production.all")}</Button>
+      </div>
+      {notice && <Text role="status" tone={notice.failed ? "error" : "warning"} className="break-words">{notice.message}</Text>}
+      {tasks.isLoading ? <div className="flex items-center gap-2"><Spinner size="sm" /><Text>{t("production.loading")}</Text></div>
+        : tasks.isError ? <div role="alert" className="space-y-2"><Text tone="error">{t("production.loadError")}</Text>
+          <Button variant="outline" size="sm" onClick={() => void tasks.refetch()}>{t("production.retry")}</Button></div>
+        : rows.length === 0 ? <Text tone="muted">{t(status ? "production.emptyWaiting" : "production.empty")}</Text> : <div className="space-y-3">
+          {rows.map(task => {
+            const missingReceipt = task.status === "COMPLETED" && task.versions.length === 0;
+            const unknownSubmission = task.submissionUnknown;
+            const tone = missingReceipt || unknownSubmission || task.status === "DEFERRED" ? "warning"
+              : task.status === "COMPLETED" ? "success" : ["FAILED", "VETOED", "EXPIRED"].includes(task.status) ? "error" : "info";
+            return <div key={task.id} data-task-id={task.id} className="rounded-lg border border-border p-3 space-y-2 min-w-0">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0"><Text className="font-medium break-words">{task.briefTitle ?? task.campaignTitle ?? t("production.task")}</Text>
+                  <Text variant="caption">{t("production." + (kindKeys.has(task.forgeKind) ? task.forgeKind : "task"))} · {new Date(task.createdAt).toLocaleString(locale)} · {task.id.slice(-8)}</Text></div>
+                <Badge tone={tone}>{t("production." + (missingReceipt || unknownSubmission ? "unknown" : statusKeys[task.status] ?? "unknown"))}</Badge>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Text variant="caption">{task.provider} · {task.realisedCostUsd !== null ? `${t("production.knownCost")} : ${money(task.realisedCostUsd)}`
+                  : task.status !== "DEFERRED" && task.estimatedCostUsd > 0 ? `${t("production.estimate")} : ${money(task.estimatedCostUsd)}` : t("production.costUnknown")}</Text>
+                {task.status === "DEFERRED" && <Button variant="outline" size="sm" disabled={resume.isPending} onClick={() => { setNotice(null); setConfirmId(task.id); }}>{t("production.resume")}</Button>}
+              </div>
+              {task.status === "DEFERRED" && <Text variant="caption" tone="warning">{t("production.configuration")}</Text>}
+              {unknownSubmission && <Text variant="caption" tone="warning">{t("production.unknownSubmission")}</Text>}
+              {missingReceipt && <Text variant="caption" tone="warning">{t("production.receiptMissing")}</Text>}
+              {task.errorMessage && task.status !== "DEFERRED" && <Text variant="caption" tone="error" className="break-words">{task.errorMessage}</Text>}
+            </div>;
           })}
-        </div>
-      </div>
-
-      {/* Running forges */}
-      {running.length > 0 && (
-        <div>
-          <h3 className="mb-3 text-sm font-semibold">En forge</h3>
-          <div className="space-y-2">
-            {running.map((f) => (
-              <ForgeRow key={f.id} forge={f} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Recent completions */}
-      {completed.length > 0 && (
-        <div>
-          <h3 className="mb-3 text-sm font-semibold">Forgés récemment ({completed.length})</h3>
-          <div className="space-y-2">
-            {completed.slice(0, 10).map((f) => (
-              <ForgeRow key={f.id} forge={f} />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function StatTile({
-  icon: Icon,
-  label,
-  value,
-  color,
-  spin,
-}: {
-  icon: typeof Hammer;
-  label: string;
-  value: number | string;
-  color: string;
-  spin?: boolean;
-}) {
-  return (
-    <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
-      <div className="flex items-center gap-2">
-        <Icon className={`h-4 w-4 ${color} ${spin ? "animate-spin" : ""}`} />
-        <span className="text-xs uppercase tracking-wider text-foreground-tertiary">{label}</span>
-      </div>
-      <div className="mt-2 text-2xl font-bold text-foreground">{value}</div>
-    </div>
-  );
-}
-
-function ProviderHealthCell({
-  name,
-  available,
-  circuitState,
-  totalRequests,
-  totalFailures,
-}: {
-  name: string;
-  available: boolean;
-  circuitState: string;
-  totalRequests: number;
-  totalFailures: number;
-}) {
-  // lafusee:allow-adhoc-completion: Ptah forge kiln progress display (forge tasks ratio, not pillar)
-  const failRate = totalRequests > 0 ? (totalFailures / totalRequests) * 100 : 0;
-  const stateColor =
-    circuitState === "OPEN" ? "text-error" : circuitState === "HALF_OPEN" ? "text-amber-400" : "text-emerald-400";
-  return (
-    <div className="rounded-lg bg-white/[0.03] p-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-wider text-foreground">{name}</span>
-        <span className={`text-[10px] ${stateColor}`}>● {circuitState}</span>
-      </div>
-      <div className="mt-1 text-[10px] text-foreground-secondary">
-        {available ? "✓ disponible" : "⚠ unavailable"}
-      </div>
-      <div className="mt-1 text-[10px] text-foreground-tertiary">
-        {totalRequests} req · {failRate.toFixed(1)}% fail
-      </div>
-    </div>
-  );
-}
-
-interface ForgeRow {
-  id: string;
-  forgeKind: string;
-  provider: string;
-  providerModel: string;
-  pillarSource: string;
-  manipulationMode: string;
-  status: string;
-  estimatedCostUsd: number;
-  realisedCostUsd: number | null;
-  realisedSuperfans: number | null;
-  createdAt: Date;
-}
-
-function ForgeRow({ forge }: { forge: ForgeRow }) {
-  const isRunning = forge.status === "CREATED" || forge.status === "IN_PROGRESS";
-  const isOK = forge.status === "COMPLETED";
-  const Icon = isOK ? CheckCircle : isRunning ? Loader2 : XCircle;
-  const color = isOK ? "text-emerald-400" : isRunning ? "text-amber-400" : "text-error";
-
-  return (
-    <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2 text-xs">
-      <Icon className={`h-3 w-3 ${color} ${isRunning ? "animate-spin" : ""}`} />
-      <span className="font-medium text-foreground">{forge.forgeKind}</span>
-      <span className="text-foreground-tertiary">·</span>
-      <span className="text-foreground-secondary">{forge.provider}/{forge.providerModel}</span>
-      <span className="text-foreground-tertiary">·</span>
-      <span className="text-foreground-secondary">P-{forge.pillarSource}</span>
-      <span className="text-foreground-tertiary">·</span>
-      <span className="text-foreground-secondary">{forge.manipulationMode}</span>
-      <div className="ml-auto flex items-center gap-3">
-        <span className="text-foreground-secondary">${(forge.realisedCostUsd ?? forge.estimatedCostUsd).toFixed(3)}</span>
-        {forge.realisedSuperfans !== null && (
-          <span className="text-emerald-400">{forge.realisedSuperfans} sf</span>
-        )}
-      </div>
-    </div>
-  );
+          {tasks.hasNextPage && <Button variant="outline" loading={tasks.isFetchingNextPage} onClick={() => void tasks.fetchNextPage()}>{t("production.more")}</Button>}
+        </div>}
+      <details className="border-t border-border pt-3">
+        <summary className="cursor-pointer text-sm text-foreground-secondary">{t("production.services")}</summary>
+        {services.isLoading ? <Spinner size="sm" /> : services.isError ? <Text tone="warning">{t("production.healthError")}</Text>
+          : <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 mt-3">{services.data?.knownProviders.map(service => {
+            const health = services.data.health.find(h => h.provider === service.provider);
+            return <div key={service.provider} className="border border-border rounded-lg p-3 space-y-1">
+              <div className="flex flex-wrap gap-2 items-center"><Text className="font-medium">{service.provider}</Text>
+                <Badge tone={service.available ? "info" : "warning"}>{t("production." + (service.available ? "available" : "unavailable"))}</Badge></div>
+              {health && <Text variant="caption">{health.circuitState === "OPEN" ? t("production.circuitOpen") : health.circuitState === "HALF_OPEN" ? t("production.circuitTrial") : ""}
+                {` · ${t("production.requests")} : ${health.totalRequests} · ${t("production.failures")} : ${health.totalFailures}`}</Text>}
+            </div>;
+          })}</div>}
+      </details>
+    </CardBody>
+    <Dialog open={Boolean(confirmId)} onOpenChange={open => { if (!open && !resume.isPending) setConfirmId(null); }}
+      dismissible={!resume.isPending} title={t("production.resumeTitle")} description={t("production.resumeMessage")}>
+      <DialogFooter><Button variant="ghost" disabled={resume.isPending} onClick={() => setConfirmId(null)}>{t("production.cancel")}</Button>
+        <Button loading={resume.isPending} disabled={!confirmId} onClick={() => { if (confirmId) { resume.mutate({ strategyId, resumeTaskId: confirmId }); setConfirmId(null); } }}>{t("production.confirm")}</Button></DialogFooter>
+    </Dialog>
+  </Card>;
 }

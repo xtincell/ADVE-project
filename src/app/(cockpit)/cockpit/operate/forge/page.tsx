@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc/client";
+import { PtahKilnTracker } from "@/components/neteru/ptah-kiln-tracker";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Modal } from "@/components/shared/modal";
@@ -201,7 +202,9 @@ export default function DeliverableForgePage() {
   }
 
   const strategy = strategyQuery.data;
-  const isStrategyValidated = strategy?.status === "VALIDATED" || strategy?.status === "ACTIVE";
+  // ACTIVE is also the schema default; it is not a recorded synthesis approval.
+  const isStrategyValidated = (strategy?.status === "VALIDATED" || strategy?.status === "ACTIVE")
+    && synthesisConfidenceQuery.data?.validationStatus === "VALIDATED";
   const actions = actionsQuery.data ?? [];
   const sConf = synthesisConfidenceQuery.data;
   const confFmt = formatConfidence(sConf?.confidence);
@@ -212,6 +215,8 @@ export default function DeliverableForgePage() {
         title="La Forge"
         description="Le creuset opérationnel de transformation. Validez votre stratégie, générez les projets associés et matérialisez vos livrables."
       />
+
+      <PtahKilnTracker key={strategyId} strategyId={strategyId} />
 
       {/* ── Bannière confiance Pilier S ──────────────────────────────────── */}
       {sConf && !isStrategyValidated && (

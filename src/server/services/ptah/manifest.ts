@@ -23,13 +23,15 @@ const taskCreatedWithProviderId: PostCondition = {
     // Only a successful envelope may expose that task; a failed one stays failed.
     const candidate = envelope.status === "OK" ? envelope.output : output;
     if (!candidate || typeof candidate !== "object") return false;
-    const o = candidate as { taskId?: string; provider?: string; status?: string };
+    const o = candidate as { taskId?: string; provider?: string; status?: string; assetVersionIds?: unknown };
     return (
       typeof o.taskId === "string" &&
       o.taskId.length > 0 &&
       typeof o.provider === "string" &&
       o.provider.length > 0 &&
-      (o.status === "CREATED" || o.status === "IN_PROGRESS" || o.status === "DEFERRED")
+      (o.status === "CREATED" || o.status === "IN_PROGRESS" || o.status === "DEFERRED" ||
+        (o.status === "COMPLETED" && Array.isArray(o.assetVersionIds) && o.assetVersionIds.length > 0 &&
+          o.assetVersionIds.every(id => typeof id === "string" && id.length > 0)))
     );
   },
 };
@@ -55,7 +57,7 @@ const ForgeSpecSchema = z.object({
   parameters: z.record(z.string(), z.unknown()),
 });
 
-const ForgeBriefSchema = z.object({
+export const ForgeBriefSchema = z.object({
   briefText: z.string().min(1),
   forgeSpec: ForgeSpecSchema,
   pillarSource: z.enum(PILLAR_KEYS as readonly [string, ...string[]]),
@@ -84,6 +86,7 @@ export const manifest = defineManifest({
       name: "materializeBrief",
       inputSchema: z.object({
         strategyId: z.string(),
+        resumeTaskId: z.string().min(1).optional(),
         sourceIntentId: z.string(),
         campaignId: z.string().nullish(),
         briefId: z.string().nullish(),
@@ -96,8 +99,12 @@ export const manifest = defineManifest({
         provider: z.string(),
         providerModel: z.string(),
         estimatedCostUsd: z.number(),
-        status: z.enum(["CREATED", "IN_PROGRESS", "DEFERRED"]),
-      }),
+        status: z.enum(["CREATED", "IN_PROGRESS", "DEFERRED", "COMPLETED"]),
+        submissionUnknown: z.boolean().optional(),
+        submissionReserved: z.boolean().optional(),
+        assetVersionIds: z.array(z.string().min(1)).optional(),
+      }).refine(receipt => receipt.status !== "COMPLETED" || Boolean(receipt.assetVersionIds?.length),
+        { message: "A completed task requires retained material receipts." }),
       sideEffects: ["DB_WRITE", "EXTERNAL_API"],
       qualityTier: "A",
       latencyBudgetMs: 5000,

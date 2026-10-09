@@ -102,7 +102,7 @@ function makeMockDb(opts: {
     intentEmission: {
       findFirst: async (args) => {
         calls.findFirstArgs.push(args);
-        return opts.lastSelfHash ? { selfHash: opts.lastSelfHash } : null;
+        return opts.lastSelfHash ? { selfHash: opts.lastSelfHash, emittedAt: new Date(0) } : null;
       },
       create: async (args) => {
         if (opts.failCreate) throw new Error("relation IntentEmission does not exist");
@@ -162,6 +162,7 @@ describe("ADR-0124 — openEmission (Loi 1 : hash-chain, Q1 : trace d'abord)", (
         caller: row.caller as string,
         emittedAt: row.emittedAt as Date,
         prevHash: row.prevHash as string,
+        version: row.version as number,
       });
       expect(row.selfHash).toBe(recomputed);
 

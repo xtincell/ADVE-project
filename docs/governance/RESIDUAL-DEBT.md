@@ -106,6 +106,38 @@ sept chantiers ; les résidus actifs suivent.
   persistant et reprise du même identifiant d’émission, sans deuxième journal ni
   doublon métier. **Déclencheur** : réception C5 d’interruption avant autonomie de
   ces commandes ; effort : un lot spine/réconciliation et recette PostgreSQL.
+- **Sceau du brief et historique vérifiable — prototype 434** : un hash v1
+  sérialise l’ordre imbriqué des clés, que JSONB peut changer ; l’horodatage avant
+  verrou peut aussi rendre l’ordre des nouvelles émissions ambigu. ADR-0213
+  Proposed étend le spine commun par sceau v2 canonique/versionné et temps
+  strictement croissant après verrou, sans réécrire l’historique. Deux rouges
+  émission puis 46 PostgreSQL ciblés verts reçus ; suite finale post-découplage 270/14 et
+  garde tri récursif réinjectée rouge/source restaurée/cinq PostgreSQL verts.
+  CLI sur 1 002 lignes synthétiques réellement reçu : fenêtre
+  1 000 explicitement bornée, altération hors fenêtre refusée par --all,
+  legacy non vérifiable/sans sceau refusés, fixture nettoyée. Refus natif du reçu
+  altéré HTTP 412 reçu localement ; gauntlet final post-découplage vert,
+  1620/166 gouvernance. Suite globale 4 180/399 et PG 270/14 finaux verts après
+  découplage ; runtime et parcours réels à recevoir.
+  Le vérificateur distingue altération
+  v2, legacy non vérifiable, absence de sceau et fenêtre bornée ; le sceau
+  individuel ne certifie ni l’ascendance ni le résultat mutable. emittedAt pris
+  après verrou et forcé après un prédécesseur futur donne un ordre logique,
+  pas une preuve d’heure métier ou de fraîcheur des anciennes lignes.
+  startedAt réel séparé après verrou : horloge future 60 s, un rouge/quatre verts
+  puis cinq PostgreSQL verts avec closeEmission réel/durée non négative/hash
+  vérifiable ; ce reçu borné ne prouve aucun SLO global.
+  **Fermer** par réception image/runtime
+  du chemin éprouvé localement ;
+  contre-exemples, ordre concurrent et contrôle natif du reçu sont déjà reçus
+  sur fixtures. Pour les empreintes
+  historiques irrécupérables, recevoir un rapprochement explicite depuis les
+  preuves disponibles, sans recalcul/hash/payload rétroactif présenté comme
+  ancien reçu. Qualifier l’écart d’horloge et la date métier depuis les sources
+  disponibles, garder l’incertitude lorsque celles-ci manquent. **Déclencheur** :
+  réception 434 en cours, puis ancien timestamp futur ou première demande
+  de reprise dont le reçu legacy est non vérifiable ; effort : contrôle commun
+  et recette bornée par historique concerné. Dette closeEmission distincte.
 - **Projection publique** : l’actif ACTIVE générique reste un usage, pas une
   approbation publique. ADR-0209 ajoute le contrat borné et son choix explicite ;
   son runtime 423 et la consommation des textes/liens SPAWT sont reçus sous
@@ -159,21 +191,65 @@ conservé. Corpus/édition SPAWT et zéro tâche/version de forge inchangés.
 Livraison fermée ; bouton/rôles restent reçus avec préconditions synthétiques locales,
 aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
 
-- **Stress et parcours réel hors fixture** : le stress isolé n’a pas atteint les
+- **Confiance S et décision de validation** : le faux label ACTIVE est corrigé
+  localement dans 434, pas ces défauts distincts. Dans la page forge,
+  operate-config::formatConfidence transforme une confiance absente en 0 % ;
+  strategy.validateSynthesis peut imposer confidence=1.0 après confirmation,
+  sans vérifier que le S est composé. Constat statique, aucune correction ni
+  validation d’un noyau réel reçue. **Fermer** avec les primitives existantes :
+  afficher l’absence comme inconnue, distinguer composition, décision humaine
+  et confiance mesurée, préserver les valeurs fondées et refuser toute mesure
+  fabriquée par confirmation. Recevoir états absent/partiel/composé/validé et
+  confirmation sans S composé sur route et surface natives, puis propagation
+  aux gates courantes. **Déclencheur** : prochaine passe S/validation après le
+  lot 434, avant acceptation C3/C4/C6 ; effort : un lot borné de contrat,
+  présentation et contre-exemples, sans nouveau modèle/service/permission.
+- **Stress et parcours réel hors fixture** : le stress isolé antérieur n’a pas atteint les
   pages/tRPC ; les forges sans credentials sont différées. La livraison et ses
   lectures/refus ne reçoivent pas ces parcours ni un cycle réel SPAWT/Noël.
-  DEFERRED est dit retriable, mais aucune commande ne relance la même tâche après
+  Le chemin reçu avant 434 ne relance pas la même tâche DEFERRED après
   configuration : materializeBrief en crée une nouvelle, reconcileTask ne lance
-  pas forge() et appelle reconcile(providerTaskId ou chaîne vide). Les clés Ptah
+  pas forge() et appelle reconcile(providerTaskId ou chaîne vide). Le prototype
+  434/ADR-0213 Proposed ajoute la reprise par reçu initial, réservation atomique
+  et tracker existant. Prérequis session 433 dédié : affectation opérateur relue
+  en base, trois rouges/verts auth et marque native retrouvée ; aucun tenant JWT
+  ni rôle/droit ajouté. Faux vert ACTIVE corrigé par validationStatus enregistrée.
+  Trois rouges reprise puis hybride rouge/vert : formes strictes reprise/brief
+  nouveau, refus BAD_REQUEST avant émission/tâche. COMPLETED exige IDs AssetVersion
+  existants/scopés non vides ; ancien refus conservé, replay PG renforcé et
+  quatre cas unitaires de références ajoutés. PostgreSQL 270/14/Ptah 47 cas et
+  suite globale exacte npm test -- --run 4 180/399 finaux verts après gardes et
+  découplage des dates.
+  Reprise native locale même tâche DEFERRED HTTP 200, reçu altéré HTTP 412,
+  dirigeant sans affectation sans Reprendre reçus. Anciens compteurs utilisant
+  de mauvais sélecteurs invalides ; nouvelle recette réelle 20 puis 22 lignes,
+  22 uniques/tous identifiants fixture présents/sans page suivante reçue.
+  Tracker EN/ZH reçu/FR restauré, pas forge intégralement traduite. Types/lints/
+  cycles/gouvernance finaux verts après découplage, 1620/166/24 warnings.
+  Stress : base générale refusée SHARED_DATA, puis DB dédiée fraîche/cinq
+  fournisseurs indisponibles et fetch externe réellement refusé sur example.invalid.
+  Deux runs sans HTTP non reçus, puis 23/sept FETCH_FAILED après redémarrage
+  Next dev à 80 % du heap. Dernier stress complet isolé exit 0 : 46 HTTP reçus/
+  235 non reçus/zéro échec, trois queries anonymes/sept kinds/transitions locales,
+  aucune native protégée/Glory phase 3/fournisseur réel reçu. Heap local 8 192 MiB
+  seulement, tests/production inchangés, harnais général non réparé ; ce stress
+  précède les gardes hybride/COMPLETED et le découplage des dates. Avant cleanup 35 DEFERRED et zéro
+  providerTaskId/version/coût/actif/émission, après cleanup stress/native
+  compteurs fixture à zéro, ErrorVault de test conservé. Runtime du
+  bundle 434 comprenant auth 433 non reçus, sans runtime 433 autonome.
+  Une réservation sans réponse doit rester incertaine, sans réémission aveugle.
+  Les clés Ptah
   sont lues dans l’environnement global, sans chemin Connexions reçu.
   **Fermer** en exerçant les surfaces accessibles avec acteur natif, puis le
   parcours réel documenté et ses refus, sans assimiler DEFERRED à une livraison
-  fournisseur ni la fixture locale à un média produit. Recevoir la reprise manuelle
-  d’une même tâche via tâche/Intent existants, portée/coûts et anti-double appel,
-  ainsi que le chemin réel de configuration avant autonomie. Ne promettre ni
+  fournisseur ni la fixture locale à un média produit. La reprise manuelle d’une
+  même tâche est déjà reçue sur fixture ; recevoir le cas configuré/fournisseur
+  réel, portée/coûts/anti-double appel et chemin réel de configuration avant autonomie. Ne promettre ni
   reprise automatique ni lien Connexions efficace ; l’UX peut seulement dire
   qu’aucune production n’est lancée et qu’une configuration est nécessaire.
-  **Déclencheur** : prochaine réception C5 pour reprise/configuration ;
+  **Déclencheur** :
+  livraison 434 en cours pour la reprise,
+  puis C5 pour configuration/réponse incertaine ;
   parcours réel C3/C6 sur serveur joignable et accès
   fournisseur nécessaires au cas réel ; effort : un lot reprise/configuration borné et une recette
   par parcours.
@@ -496,6 +572,17 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
   ni affaiblir sa borne pour masquer l’échec. **Déclencheur atteint** : récidive
   432, qualification temps mur/attentes à reprendre à la prochaine passe stabilité ;
   effort : diagnostic ciblé, sans assimiler corrélation compilation et cause.
+
+  Autre écart de durée de recette 434, cause distincte non démontrée : PG complet
+  lancé avec tsc/suite globale, 269 verts/un rouge ; spawnSync cross-process
+  change-request ETIMEDOUT à 20 s, pas une assertion fonctionnelle. Log conservé,
+  seuil/test inchangés. Relance PG complète seule reçue, 270/14 verte en 24,02 s ;
+  cause du timeout non démontrée. **Plan** : si récidive, mesurer processus
+  enfant/attentes et qualifier le
+  blocage, sans réduire la suite ni relever la borne pour masquer l’échec.
+  **Déclencheur** : prochain ETIMEDOUT du scénario cross-process ; relance requise
+  de la réception 434 déjà reçue verte. Effort : diagnostic ciblé si récidive,
+  aucune suite locale finale encore manquante de ce fait.
 
 - **24 warnings de lint/gouvernance, zéro erreur** : relevés au gauntlet 400 (25 au gauntlet ADR-0196),
   déjà présents avant cette extension. Classes observées : import inter-portails,
@@ -1431,9 +1518,17 @@ Inspection statique du 8 octobre 2026 : `scripts/stress-test.ts` annonce des
 forges « mock », mais sa phase 4 appelle réellement `materializeBrief` avec
 `providerHint: magnific`, sur le premier opérateur et sa stratégie. Aucun
 adaptateur mock ni cible de recette dédiée n’est imposé dans cette phase.
-`stress:full` n’est donc pas une preuve reçue du lot 413 et n’a pas été exécuté.
+`stress:full` n’est donc pas une preuve reçue du lot 413 et n’a pas été exécuté
+lors de ce lot.
 Les lecteurs modifiés sont éprouvés séparément sous session et PostgreSQL
 jetable ; aucune forge ni classification n’est nécessaire à ces lectures.
+
+Complément local 434 : wrapper sur DB dédiée fraîche sans credentials et fetch
+externe refusé ; base générale refusée SHARED_DATA. Stress isolé exit 0,
+46 HTTP reçus/235 non reçus/zéro échec, pas native protégée/Glory phase 3 ou
+fournisseur réel. Heap local 8 192 MiB après redémarrages dev, aucun réglage
+production ; fixtures nettoyées/ErrorVault de test conservé. Le harnais général
+reste non réparé, les dernières gardes de contrat sont postérieures à ce stress.
 
 Plan : imposer une base et une cible jetables, injecter explicitement un
 provider de test et prouver qu’aucun appel réseau sortant n’est possible avant

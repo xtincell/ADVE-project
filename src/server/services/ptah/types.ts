@@ -85,6 +85,8 @@ export interface ForgeBrief {
  */
 export interface MaterializeBriefPayload {
   strategyId: string;
+  /** Existing task only; its original emission remains authoritative. */
+  resumeTaskId?: string;
   campaignId?: string | null;
   briefId?: string | null;
   sourceBrandAssetId?: string | null;
@@ -108,9 +110,15 @@ export interface ForgeTaskCreated {
    * persistée (trace + retry) mais forge() n'est PAS appelé — ship-able sans
    * clés (ADR-0021). L'opérateur saisit les credentials puis relance.
    */
-  status: "CREATED" | "IN_PROGRESS" | "DEFERRED";
+  status: "CREATED" | "IN_PROGRESS" | "DEFERRED" | "COMPLETED";
+  /** A submission was reserved but no provider receipt is persisted; never resend it. */
+  submissionUnknown?: boolean;
   /** Pour webhook providers (Magnific) — secret unique de cette task. */
   webhookSecret: string;
+  /** True only for the invocation that reserved a new external submission. */
+  submissionReserved?: boolean;
+  /** Existing material receipts returned only for an already completed task. */
+  assetVersionIds?: string[];
 }
 
 /**

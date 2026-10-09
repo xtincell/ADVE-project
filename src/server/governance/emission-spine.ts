@@ -68,8 +68,8 @@ export interface EmissionTxLike {
     findFirst(args: {
       where: { strategyId: string; selfHash: { not: null } };
       orderBy: { emittedAt: "desc" };
-      select: { selfHash: true };
-    }): Promise<{ selfHash: string | null } | null>;
+      select: { selfHash: true; emittedAt: true };
+    }): Promise<{ selfHash: string | null; emittedAt: Date } | null>;
     create(args: { data: Record<string, unknown> }): Promise<unknown>;
   };
 }
@@ -120,7 +120,6 @@ export async function openEmission(args: OpenEmissionArgs): Promise<string> {
       ? args.strategyId
       : "(none)";
   const id = cryptoRandomId();
-  const emittedAt = new Date();
 
   try {
     await db.$transaction(async (tx) => {
@@ -138,9 +137,14 @@ export async function openEmission(args: OpenEmissionArgs): Promise<string> {
       const last = await tx.intentEmission.findFirst({
         where: { strategyId, selfHash: { not: null } },
         orderBy: { emittedAt: "desc" },
-        select: { selfHash: true },
+        select: { selfHash: true, emittedAt: true },
       });
       const prevHash = last?.selfHash ?? null;
+      // Assign order AFTER acquiring the lock. Date ties or clock rollback must
+      // not make the next read select an older predecessor and fork new rows.
+      const startedAt = new Date();
+      const emittedAt = new Date(Math.max(startedAt.getTime(), (last?.emittedAt.getTime() ?? 0) + 1));
+      const version = 2;
 
       // Le hash scelle la row À L'ÉMISSION (result: null par définition) —
       // cf. hash-chain.ts : le `result`, mutable à la complétion, est hors
@@ -154,6 +158,7 @@ export async function openEmission(args: OpenEmissionArgs): Promise<string> {
         caller: args.caller,
         emittedAt,
         prevHash,
+        version,
       });
 
       await tx.intentEmission.create({
@@ -166,8 +171,10 @@ export async function openEmission(args: OpenEmissionArgs): Promise<string> {
           emittedAt,
           prevHash,
           selfHash,
+          version,
           status: "PENDING",
-          startedAt: emittedAt,
+          // Actual execution time stays distinct from the journal's logical order.
+          startedAt,
         },
       });
     });

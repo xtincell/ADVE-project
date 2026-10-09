@@ -1647,6 +1647,7 @@ async function ptahMaterialize(
     {
       strategyId: intent.strategyId,
       sourceIntentId: intent.sourceIntentId,
+      resumeTaskId: intent.resumeTaskId,
       campaignId: intent.campaignId,
       briefId: intent.briefId,
       sourceBrandAssetId: intent.sourceBrandAssetId,
@@ -1657,10 +1658,10 @@ async function ptahMaterialize(
   );
   return {
     status: "OK",
-    summary: `Ptah ${intent.brief.forgeSpec.kind} forge created → task=${result.taskId} provider=${result.provider} model=${result.providerModel} estCost=$${result.estimatedCostUsd.toFixed(3)}`,
+    summary: `Ptah task=${result.taskId} status=${result.status} submission=${result.submissionReserved ? "reserved" : "existing or deferred"}`,
     tool: "ptah",
     output: result,
-    estimatedCost: { amount: result.estimatedCostUsd, currency: "USD" },
+    estimatedCost: result.submissionReserved ? { amount: result.estimatedCostUsd, currency: "USD" } : undefined,
   };
 }
 

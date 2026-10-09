@@ -38,6 +38,39 @@ la page native retrouve la marque. Cause : rôle reconnu et portée courante de
 l’équipe étaient assimilés. Réception locale ; livraison avec le bundle 434 à
 recevoir, sans runtime 433 autonome ni élargissement d’accès annoncé.
 
+2026-10-09 · Candidat Ptah 434, local/non livré : ACTIVE (valeur Prisma par défaut)
+affichait « Stratégie Validée » sans validation enregistrée. La page forge exige
+aussi synthesisConfidence.validationStatus=VALIDATED. Cause : état de dossier
+et décision de validation confondus. Aucune validation de marque réelle déduite,
+confiance absente affichée 0 %/validation à 1.0 sans S composé restent dans
+RESIDUAL-DEBT. Contrôles finaux post-découplage : suite canonique 4 180/399,
+270 PostgreSQL/14 et 1 620 gouvernance/166, 24 warnings préexistants.
+Stress isolé reçu avant les dernières gardes ; ses limites, les parcours restants
+et la livraison/runtime demeurent distincts. Timeout PG concurrent conservé,
+relance complète seule verte/cause non démontrée.
+
+2026-10-09 · Correctif local candidat 434, non livré : une émission inchangée
+ne se recalcule pas après lecture JSONB ; l’horodatage pris avant verrou peut
+ordonner les nouvelles lignes avant leur prédécesseur. Spine commun/hash-chain,
+deux rouges observés puis suite ciblée 46 PostgreSQL verte. JSON canonique
+récursif/versionné v2 et temps strictement croissant sous verrou ; v1 et payloads
+historiques conservés, legacy non recalculable dit non vérifiable plutôt
+qu’altéré. Cause bornée : sérialisation et ordre d’écriture n’étaient pas un
+contrat stable de relecture. Tri récursif retiré volontairement : rouge puis
+source restaurée, cinq PostgreSQL verts. Suites canoniques/gauntlet après gardes
+verts après découplage des dates ; commit/parcours restants/
+runtime à recevoir. Contrôle
+individuel hors ascendance/complétion mutable. Le rapprochement historique et
+la fermeture durable restent planifiés dans RESIDUAL-DEBT, aucun journal
+globalement certifié. CLI réellement reçu sur 1 002 lignes synthétiques : fenêtre
+1 000 bornée/--all et refus legacy non vérifiable/sans sceau ; reprise native
+même tâche DEFERRED/refus HTTP 412 reçus localement, pas livraison ou contrôle
+de tout l’historique de production. emittedAt forcé après un prédécesseur futur
+constitue un ordre logique, aucune preuve d’heure métier/fraîcheur historique.
+startedAt est désormais réel et séparé après verrou ; scénario horloge future/
+clôture reçu localement, aucune réception de SLO global.
+[ADR-0213 Proposed](adr/0213-deferred-production-resumption-and-seals.md).
+
 2026-10-08 · Ptah écrivait ses coûts de forge dans un journal zéro-token attribué
 à Anthropic : montant zéro même lorsqu’un résultat persisté portait un autre
 montant/fournisseur. v6.27.425 transmet ces valeurs checkpointées dans la

@@ -1,3 +1,4 @@
+import { productionZh } from "./pages/production";
 import { intakeEntryZh } from "./pages/intake-entry";
 import { scorerZh } from "./pages/scorer";
 import { leaderboardZh } from "./pages/leaderboard";
@@ -11,6 +12,7 @@ import { parisZh } from "./pages/paris";
  * UPgraders, Mestor, Ptah, Overton…) are kept untranslated by design.
  */
 export const zh = {
+  ...productionZh,
   ...parisZh,
   ...leaderboardZh,
   ...scorerZh,

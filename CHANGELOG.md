@@ -1,5 +1,61 @@
 # Changelog — La Fusee
 
+## v6.27.434 — fix(ptah): reprendre une demande différée sur son reçu initial (2026-10-09)
+
+**Le prototype reprend une tâche existante et vérifie son brief ; la livraison reste à recevoir.**
+
+- ADR-0213 Proposed : extension materializeBrief/Intent existant par resumeTaskId,
+  brief initial et portée contrôlés, gates courantes sans replay des overrides.
+  Réservation compare-and-set avant réseau ; attente de configuration, concurrence
+  et réponse incertaine conservent la tâche, sans réémission aveugle.
+- Tracker existant monté dans la page forge sous son layout OperatorSurface :
+  liste paginée, états/prix connu ou inconnu et confirmation de reprise. Aucun
+  service/router/Intent/modèle/permission/page ajouté ; aucune facture déduite.
+- Spine commun : sceau v2 canonique récursif/versionné et horodatage sous verrou,
+  v1 historique conservé, legacy non recalculable non vérifiable. Sceau du brief
+  individuel, complétion mutable/ascendance/fermeture durable hors preuve ; aucun
+  payload historique réécrit. Deux rouges émission/trois rouges reprise puis
+  46 PostgreSQL ciblés verts reçus, contrôles intermédiaires locaux seulement.
+- Gardes finales : entrée hybride reprise/nouveau brief rouge puis refus
+  BAD_REQUEST avant émission/tâche ; deux formes tRPC strictes. Reçu COMPLETED
+  retourne/exige des IDs AssetVersion existants/scopés non vides, ancien refus
+  d’un reçu incomplet conservé. Rouge tests/unit seul 4 137 verts/un rouge,
+  distinct de la suite globale ; quatre cas de références ajoutés, replay PG renforcé.
+  Tri récursif du sceau retiré volontairement : rouge puis source restaurée,
+  cinq PostgreSQL verts.
+- Réception locale finale après découplage des dates : suite canonique npm test -- --run 4 180/399 verte,
+  PostgreSQL 270/14 et Ptah 47 cas ; gauntlet après gardes tous exit 0,
+  1 620/166 gouvernance et 24 warnings préexistants. Reprise native HTTP 200 sur la même tâche DEFERRED,
+  reçu altéré HTTP 412 et dirigeant sans affectation sans action Reprendre.
+  Anciens compteurs natifs par mauvais sélecteurs écartés ; nouvelle pagination
+  20 puis 22/22 uniques reçue avec les bons sélecteurs, sans page suivante.
+  Tracker EN/ZH rendu/FR restauré, sans traduction intégrale de forge déduite.
+  CLI sur 1 002 lignes : fenêtre 1 000 bornée, --all détecte
+  l’altération extérieure à cette fenêtre, legacy non vérifiable/sans sceau refusés.
+- Faux vert « Stratégie Validée » depuis ACTIVE corrigé : validationStatus
+  enregistrée requise. Confiance S absente affichée 0 % et confirmation pouvant
+  imposer 1.0 sans S composé restent planifiées, sans confiance réelle déduite.
+  emittedAt après verrou = ordre logique si l’ancien timestamp est futur,
+  sans preuve de l’heure métier/fraîcheur historique. startedAt réel capturé
+  séparément après verrou : ancien timestamp futur de 60 s, un rouge/quatre verts
+  puis cinq PostgreSQL verts avec closeEmission réel, durée non négative et hash
+  encore vérifiable. Scénario borné, aucun SLO global déduit.
+- Stress complet isolé exit 0 : 46 HTTP reçus/235 non reçus/zéro échec, trois
+  queries anonymes/sept kinds et transitions locales ; pas native protégée,
+  phase 3 Glory ou fournisseur réel reçu. Deux skips HTTP historiques et runs
+  FETCH_FAILED conservés, heap local 8 192 MiB seulement, harnais général non
+  réparé ; fixtures stress/native nettoyées, ErrorVault de test conservé.
+  Ce stress précède les deux dernières gardes et le découplage des dates,
+  aucun stress de la source finale exacte déduit.
+- PG complet post-dates concurrent : 269 verts/un timeout spawnSync 20 s ;
+  relance complète seule 270/14 verte en 24,02 s. Log conservé, aucune cause
+  racine démontrée ni borne affaiblie ; gauntlet post-dates cinq exit 0 reçu.
+- Parcours restants, CI/image/runtime 434 en attente ; production
+  reçue 432 inchangée. Configuration réelle/fournisseur/facture, provenance,
+  octets/CDN et journal restent ouverts. Sept chantiers/dix gates programme
+  non acceptés. [Contrat proposé](docs/governance/adr/0213-deferred-production-resumption-and-seals.md)
+  et [réception en cours](docs/governance/RECEPTION-PTAH-REPRISE.md).
+
 ## v6.27.433 — fix(auth): relire l’affectation de l’opérateur dans la session (2026-10-09)
 
 **Le correctif retrouve les marques affectées ; réception locale, livraison avec 434 à recevoir.**
@@ -10,8 +66,9 @@
 - Trois tests rouges puis trois verts : réaffectation, révocation et base
   indisponible. La page native retrouve la marque ; retrait d’affectation refusé.
   Aucun élargissement de permission ni cycle de marque complet déduit.
-- Correctif dédié avant Ptah 434. Types/lints/cycles/gouvernance locaux verts ;
-  vérifications finales et livraison de l’ensemble en cours. Pas de runtime 433
+- Commit dédié d973f735 avant Ptah 434, non poussé/non livré à ce stade.
+  Contrôles locaux de l’ensemble verts après découplage des dates ; livraison en cours.
+  Pas de runtime 433
   autonome annoncé : le bundle final doit inclure ce prérequis.
 
 ## v6.27.432 — feat(brand): choisir une identité publique par usage (2026-10-09)

@@ -63,7 +63,31 @@ Dépendances satellites : `email`, `oauth-integrations`, `advertis-connectors`, 
 
 ### Ptah — service Phase 9 existant ; code 6.27.428 livré
 
-ADR-0009 décrit la fondation historique. État courant au 2026-10-09 : résultat
+Prototype 434 non livré, ADR-0213 Proposed : helper resumption dans Ptah existant,
+reprise de la même tâche par reçu original vérifié et réservation avant réseau.
+Reprise/brief nouveau stricts au tRPC, hybride refusé avant effet ; reçu COMPLETED
+contient les IDs AssetVersion existants/scopés, exigés non vides par manifest/schema.
+Tracker monté dans la page existante sous son layout opérateur ; configuration
+globale et fournisseur réels restent à recevoir. Sceau v2 canonique/temps sous
+verrou du spine commun, sans second journal ni nouveau service. Deux rouges
+émission/trois rouges reprise, 270/14 PostgreSQL puis Ptah ciblé 47 cas
+verts. Prérequis auth 433 séparé : affectation courante dans la session, trois
+rouges/verts, marque native retrouvée. Types finaux exit 0 ; CLI sur 1 002 lignes
+avec fenêtre 1 000 bornée/--all reçu. Reprise même tâche DEFERRED HTTP 200/refus
+reçu altéré HTTP 412 locaux reçus, dirigeant sans affectation sans Reprendre.
+Anciens compteurs natifs invalides écartés, nouvelle pagination 20 puis 22 uniques
+reçue. Tracker EN/ZH rendu/FR restauré, pas forge intégralement traduite.
+Types/lints/cycles/gouvernance finaux verts après découplage, 1620/166 ; stress isolé exit 0,
+46 HTTP reçus/235 non reçus/0 échec, hors native protégée/Glory phase 3/fournisseur réel,
+fixtures nettoyées. Harnais général non réparé, stress antérieur aux dernières
+gardes et dates ; suite canonique 4 180/399 et PG 270/14 finaux post-découplage
+reçus, parcours restants/CI/runtime
+en attente. emittedAt logique ne prouve pas l’heure métier ou la fraîcheur de
+l’historique. startedAt réel distinct après verrou, horloge future 60 s : cinq
+PostgreSQL verts après un rouge, closeEmission/durée/hash relus, pas SLO global.
+[Réception candidate](RECEPTION-PTAH-REPRISE.md).
+
+ADR-0009 décrit la fondation historique. Réception antérieure au 2026-10-09 : résultat
 checkpointé puis admission atomique versions/coffre/coût/COMPLETED ; webhook et
 sync passent par PTAH_RECONCILE_TASK. Les références campagne/brief/actif source
 traversent les entrées et producteurs jusqu’à la tâche, avec contrôle partagé
@@ -86,6 +110,7 @@ et [admission historique 425](RECEPTION-PTAH-ADMISSION.md). Aucun service ajout�
 src/server/services/ptah/
 ├── manifest.ts             # governor: MESTOR, acceptsIntents: PTAH_MATERIALIZE_BRIEF, PTAH_RECONCILE_TASK, PTAH_REGENERATE_FADING_ASSET
 ├── index.ts                # API forge/réconciliation ; checkpoint et admission transactionnelle
+├── resumption.ts           # candidat 434 : reçu initial/paramètres/réservation, non livré
 ├── governance.ts           # pilier source et cohérence du mode demandé
 ├── types.ts                # ForgeBrief, ForgeSpec, ForgeProvider interface
 ├── pricing.ts              # cost table par modèle × provider

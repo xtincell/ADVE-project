@@ -85,4 +85,27 @@ describe("hash-chain", () => {
     r1.payload = { v: 2 };
     expect(verifyChain([r1]).ok).toBe(false);
   });
+  it("v2 canonicalizes nested keys but preserves array order and seals its version", () => {
+    const row = { id: "v2", intentKind: "X", strategyId: "s", version: 2,
+      payload: { z: { beta: 2, alpha: 1 }, a: [1, 2] }, result: null, caller: "test", emittedAt: new Date(0) };
+    expect(computeSelfHash(row)).toBe(computeSelfHash({ ...row, payload: { a: [1, 2], z: { alpha: 1, beta: 2 } } }));
+    expect(computeSelfHash(row)).not.toBe(computeSelfHash({ ...row, payload: { z: { beta: 2, alpha: 1 }, a: [2, 1] } }));
+    expect(computeSelfHash(row)).not.toBe(computeSelfHash({ ...row, version: 1 }));
+  });
+  it("classifies unrecomputable legacy bytes without a tampering claim", () => {
+    const row = { id: "old", intentKind: "X", strategyId: "s", version: 1,
+      payload: { nested: { z: 1, a: 2 } }, result: null, caller: "test", emittedAt: new Date(0), prevHash: null };
+    const selfHash = computeSelfHash(row);
+    const result = verifyChain([{ ...row, payload: { nested: { a: 2, z: 1 } }, selfHash }]);
+    expect(result).toMatchObject({ ok: false, unverifiableAt: { id: "old", state: "UNVERIFIABLE_LEGACY" } });
+    expect(result.brokenAt).toBeUndefined();
+  });
+  it("verifies a bounded window only with its explicitly supplied anchor", () => {
+    const row = { id: "part", intentKind: "X", strategyId: "s", version: 2,
+      payload: {}, result: null, caller: "test", emittedAt: new Date(0), prevHash: "unverified-anchor" };
+    const selfHash = computeSelfHash(row);
+    expect(verifyChain([{ ...row, selfHash }]).ok).toBe(false);
+    expect(verifyChain([{ ...row, selfHash }], row.prevHash).ok).toBe(true);
+  });
+
 });
