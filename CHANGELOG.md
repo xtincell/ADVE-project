@@ -2,7 +2,7 @@
 
 ## v6.27.430 — fix(brand): résoudre l’origine des logos depuis la configuration serveur (2026-10-09)
 
-**Le candidat corrige la liste de logos vide observée après livraison 429.**
+**430 est livrée : une variante de logo choisie dans Connexions est publiée et rendue sur SPAWT.**
 
 - 429 livré : source 383f5e8a, CI/Chromatic/MissionDrift et image verts, runtime
   exact reçu à 01:22:53 UTC ; corpus et édition SPAWT v1 conservés. Connexions ne
@@ -19,11 +19,23 @@
   Contrôles 430 reçus : types/lints sans erreur, 24 warnings préexistants, zéro
   cycle, 1617 gouvernance/166 fichiers et 4167 unitaires/397 verts. PostgreSQL
   237/13 fichiers puis source-uses 8/1, soit 245/14 verts : gauntlet complet vert.
-  CI/image et choix natif en production restent à recevoir ;
-  cause d’origine encore ouverte jusqu’à ces recettes. Trace native 429 tronquée,
-  aucune conclusion de zéro erreur sur toute sa fenêtre. Octets immuables,
-  univers complet/quiz-app/retour de valeur et sept chantiers restent ouverts.
-  [Livraison bloquée et correctif candidat](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
+- Source 2b9b2fa4, CI 37871315767 (4167 unitaires/237 PostgreSQL), Chromatic et
+  MissionDrift verts ; image 37871326006 reçue après boot/login 200 et lecture
+  d’un PDF fixture deux pages. Déploiement terminé à 02:02:23 UTC ; runtime
+  430/nextjs/index exact/volume privé RW reçus. Neuf helpers compilés conservent
+  AUTH_URL/NEXTAUTH_URL avant le repli de build.
+- Natif réel : 17 variantes proposées, contour horizontal choisi puis une seule
+  publication v1→v2, textes/liens relus inchangés. Deux logos SPAWT et page publique
+  chargés en 4123×1714 ; six questions, aucun compteur. HTTP/CORS trois origines,
+  ETag 304/privé 401/page/image 200 et CSP bornée reçus. Corpus hors éditions
+  inchangé ; seul ajout, l’édition, porte les actifs à 257. Cause d’origine fermée
+  et retirée du registre actif.
+- Fenêtre initiale de rechargement production complète : DOM 702 ms, H1 observé
+  au plus tard à 2674 ms, zéro >=500/exception dans cette seule fenêtre ; aucune
+  promesse SLO ou conclusion sur toute la publication. Traces locale 430 et native
+  429 tronquées conservées. Octets immuables, univers Moka/palette/polices/voix,
+  quiz-app/retour de valeur et sept chantiers restent ouverts.
+  [Livraison, échec 429 et limites](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
 
 ## v6.27.429 — fix(brand): choisir et rendre le logo de l’édition publique (2026-10-09)
 

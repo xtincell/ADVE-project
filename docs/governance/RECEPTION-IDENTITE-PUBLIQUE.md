@@ -1,4 +1,4 @@
-# Identité publique — livraison 429 bloquée et candidat 430
+# Identité publique — échec 429 et logo reçu en production 430
 
 État au 2026-10-09. ADR-0210 reste la décision d’architecture et la recette
 locale historique ; ce reçu distingue livraison et usage réel.
@@ -24,7 +24,7 @@ Le diagnostic lit deux chunks compilés où l’origine du publisher est figée 
 http://localhost:3000, alors que les origines serveur à l’exécution sont HTTPS.
 NEXT_PUBLIC_BASE_URL a été substitué au build avant les replis serveur.
 
-## 430 candidat, cause encore ouverte
+## 430 livré, cause d’origine fermée
 
 resolveBrandDeploymentOrigin étend brand-theme existant : priorité AUTH_URL,
 puis NEXTAUTH_URL, puis NEXT_PUBLIC_BASE_URL en dernier repli. Les URL relatives
@@ -50,9 +50,36 @@ Contrôles 430 reçus : types/lints sans erreur, 24 warnings préexistants, zér
 cycle, 1617 gouvernance/166 fichiers et 4167 unitaires/397 verts. PostgreSQL
 237/13 fichiers sous configuration feedback puis source-uses 8/1 sous
 configuration integration, soit 245/14 verts : gauntlet 430 complet vert.
-CI, image et recette native réelle 430 non reçus.
-Fermer la cause uniquement après inspection de l’image et sélection/
-publication/rendu en production sur le chemin existant.
+CI 37871315767 verte : 4167 unitaires/397 fichiers et 237 PostgreSQL/13.
+Chromatic 37871315716 et MissionDrift 37871315692 verts.
+
+Source livrée 2b9b2fa4520247b06e32a3c18d825a1af8d141fc ; image 37871326006
+verte après boot sur base neuve, login HTTP 200 et lecture d’un PDF fixture de
+deux pages. Index sha256:78cad84df9b217503e089444c47dc624d2b7b223d7e12b3c08c0aef996138aa7.
+Déploiement z12n2ez1xkbaamvdoq9r5jzf terminé à 02:02:23 UTC ; runtime
+6.27.430/nextjs/index exact, volume privé RW conservé. Neuf helpers compilés
+conservent AUTH_URL/NEXTAUTH_URL avant le repli localhost.
+
+Connexions native réelle propose 17 variantes. Contour horizontal SELECTED v1
+choisi, textes v1 relus exactement, puis **une** publication crée l’édition v2.
+Acteur et pins id/version présents en privé, sans identifiants recopiés ici.
+SPAWT charge ses deux logos en 4123×1714 ; page publique chargée de même. Six
+questions, aucun compteur, textes et liens inchangés. HTTP public 200, CORS
+trois origines, ETag 304, privé 401, page/image 200 et CSP images bornée au chemin
+brand reçus. Les octets de l’image correspondent au checkout à cet instant.
+
+Corpus avant/après déploiement inchangé ; après publication, seule l’édition
+ajoute un actif, 256→257. Sources/piliers/usages/fragments/coûts/processus restent
+12/40/2/108/2431/19, digest des actifs hors éditions inchangé. Aucun fournisseur
+appelé par ce raccord.
+
+Fenêtre initiale de rechargement production complète (truncated=false,
+hasMore=false) : DOM 702 ms, H1 observé au plus tard à 2674 ms ; zéro réponse
+>=500/exception **dans cette seule fenêtre initiale**. Ce reçu ne couvre pas
+toute la fenêtre de publication et ne promet aucun SLO. Les limites des traces
+locales et de 429 tronquées restent valables. La cause d’origine inlinée est
+fermée et retirée du registre actif ; aucun nouvel ADR ni redéploiement pour
+le seul commit documentaire n’est nécessaire.
 
 Les pins restent ceux d’un enregistrement, sans preuve d’immutabilité des
 octets. Identité complète, quiz/app, retour de valeur, fournisseurs, cycle réel
@@ -62,5 +89,6 @@ n’est publié par ce reçu.
 Preuves privées : release/preuves-identite-publique-429 et
 release/preuves-origine-marque-430 ; notamment compiled-logo-base-diagnosis.json,
 native-production-blocked.json, runtime.json, origin-red/green.log,
-export-reception.json, native-export.json, native-guidelines-hot/visible.json
-et cleanup.json.
+export-reception.json, native-export.json, native-guidelines-hot/visible.json,
+cleanup.json, compiled-origin.json, native-production-load.json,
+native-choices/published/spawt/public-brand.json et production-http-apres-choix.json.

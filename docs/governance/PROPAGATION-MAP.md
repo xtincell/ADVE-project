@@ -9,20 +9,19 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
-### Variante publique de logo — ADR-0210, 429 livré/430 candidat du 2026-10-09
+### Variante publique de logo — ADR-0210, raccord reçu en 430 le 2026-10-09
 
 Pool resolveBrandIdentity → choix explicite Connexions → strategy.update existant
 → édition publique v1/pins privés → logoUrl absolu → deux emplacements vitrine.
 Variantes finales SELECTED/ACTIVE hors campagne, sources liées courantes,
 révision/édition attendues et restauration contrôlée ; aucune promotion déduite.
 Le consommateur/CSP bornent l’image à powerupgraders.com/brand/, avec repli canon
-local. Choix/publication/retour reçus sur fixture native locale, rendu/CSP dans
-les 33 tests vitrine. Consommateur déployé le 9 octobre à 01:01:57 UTC après CI
-verte ; backend 429 livré, mais choix natif réel bloqué : seul « Sans logo »,
-aucune publication. L’origine publique est figée à localhost dans deux chunks.
-430 factorise sa résolution runtime dans brand-theme, partagée publisher/export ;
-29 PostgreSQL ciblés verts, image/choix natif en production encore à recevoir.
-Gauntlet 429 vert, fixture nettoyée. Fingerprint d’enregistrement et
+local. Après échec du sélecteur 429 (origine inlinée), 430 factorise sa résolution
+runtime dans brand-theme, partagée publisher/export. Image et neuf helpers
+compilés reçus ; choix réel Connexions → une publication SPAWT v2 → deux logos
+vitrine/page publique chargés 4123×1714. Textes/liens, six questions et absence de
+compteur conservés ; HTTP/CORS/CSP reçus. Le corpus hors éditions reste inchangé.
+Gauntlet 430 vert et cause d’origine fermée. Fingerprint d’enregistrement et
 digest JSON ne prouvent pas les octets. Univers/quiz-app/retour de valeur ouverts :
 [ADR-0210](adr/0210-explicit-public-logo-variants.md) et
 [réception courante](RECEPTION-IDENTITE-PUBLIQUE.md).

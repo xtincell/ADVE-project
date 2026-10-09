@@ -24,42 +24,31 @@ historique inventée. Cette réception ne ferme pas l’univers de marque ou les
 sept chantiers ; les résidus actifs suivent.
 
 - **Identité au-delà de la copie v1** : public-brand-v1 ne porte pas tokens de
-  design ni voix structurée. La recette locale 429 reçoit le choix/rendu de
-  logo : pool partagé, sélection sans promotion et pins privés, deux rendus/repli
-  et CSP images bornée ; 27 PostgreSQL ciblés, native Connexions/page publique
-  sur fixture et 33 tests vitrine verts. Les trois causes logo non rendu/choix par
-  id/CSP insuffisante sont retirées des actions locales restantes. Backend 429
-  livré, mais sélecteur réel réduit à « Sans logo » ; aucune publication effectuée,
-  cause d’origine compilée ci-dessous. Cela ne reçoit ni identité complète ni quiz/application.
+  design ni voix structurée. 430 reçoit le choix/rendu réel de logo : pool partagé,
+  sélection sans promotion et pins privés, une publication SPAWT v2 puis deux
+  logos vitrine/page publique chargés ; textes/liens inchangés. Causes du rendu,
+  choix par id, CSP et origine inlinée fermées dans ce périmètre. L’échec 429 et
+  sa correction restent dans le [reçu](RECEPTION-IDENTITE-PUBLIQUE.md).
+  Cela ne reçoit ni identité complète ni quiz/application.
   **Fermer** par comparaison source/usage pour chaque
   destination, sélection explicite et pins dans le contrat existant étendu,
   puis version consommée/refus de périmé/retour reçu pour chaque famille non
-  reçue. Vitrine PR #6 fusionnée/CI verte et déploiement terminé à 01:01:57 UTC ;
-  logo natif en production non reçu, distinct des tests et de la page publique
-  locale. Gauntlet ADVE final vert (4167 unitaires/1617 gouvernance/243 PostgreSQL,
-  types/lints/zéro cycle), fixture nettoyée. Conserver palette,
-  polices et Moka CANON ; ne pas ouvrir toutes les origines ni remplacer la DA.
+  reçue. Gauntlet 430 final vert (4167 unitaires/1617 gouvernance/245 PostgreSQL,
+  types/lints/zéro cycle) et livraison/image/native reçues. Le raccord dynamique
+  de Moka, palette, polices et voix reste à recevoir ; conserver leur CANON,
+  ne pas ouvrir toutes les origines ni remplacer la DA.
   Ne pas résoudre les variantes
   par index ni transporter une charte privée entière. **Déclencheur** : prochain
   raccord C2 des identités après réception de la copie publique ; effort : un lot
   de contrat et recette par famille d’usage, sans nouveau système parallèle.
-- **Origine publique inlinée — défaut livré en 429** : deux chunks du publisher
-  contiennent localhost:3000 malgré AUTH_URL/NEXTAUTH_URL/runtime HTTPS corrects ;
-  les chemins /brand/ ne sont plus proposés. Native réelle : uniquement « Sans
-  logo », aucune publication ; trace tronquée, aucun zéro réseau exhaustif déduit.
-  430 réutilise resolveBrandDeploymentOrigin dans brand-theme pour publisher HTTPS
-  et export compatible HTTP local ; deux rouges/27 verts puis 29 ciblés verts.
-  **Fermer** par inspection de l’image 430, puis choix natif réel, publication et
-  rendu reçus sur le chemin existant. **Déclencheur** : livraison 430 immédiate
-  avant acceptation C2/C3 ; effort : un correctif borné et recette d’image/native.
-  [Échec livré et candidat](RECEPTION-IDENTITE-PUBLIQUE.md). La cause reste ouverte.
 - **Octets derrière les URL /brand/** : les pins du logo en 429 portent
   l’enregistrement, pas les octets servis ; le digest JSON ne prouve pas le hash
   du fichier. **Fermer** par conservation/version et empreinte d’octets sur les
   primitives existantes, puis relecture après publication, changement d’origine
   et restauration sans coffre parallèle. **Déclencheur** : prochain raccord C2/C3
   de conservation avant promesse d’édition immuable ; effort : un lot stockage/
-  version et recette par famille d’actifs. Livraison 429 ne ferme pas ce point.
+  version et recette par famille d’actifs. Le fichier reçu en 430 est identique
+  au checkout à cet instant ; cela ne garantit pas son immutabilité future.
 - **Brouillon après interruption** : la carte conserve révision et contenu pendant
   son ouverture ; leur survie à une fermeture/recharge n’est pas reçue. **Fermer**
   en éprouvant l’interruption et en réutilisant le mécanisme de brouillon existant

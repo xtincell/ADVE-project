@@ -4,15 +4,16 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
-**Production reçue : 6.27.429, choix de logo bloqué sur la marque réelle.**
-Source 383f5e8a2431a25f8d6e28984708fc21564ed553, CI 37868288873, Chromatic
-37868288853, MissionDrift 37868288803 et image 37868294874 verts ; déploiement
-terminé le 9 octobre à 01:22:53 UTC, runtime
+**Production reçue : 6.27.430, variante de logo publiée et rendue sur SPAWT.**
+Source 2b9b2fa4520247b06e32a3c18d825a1af8d141fc, CI 37871315767, Chromatic
+37871315716, MissionDrift 37871315692 et image 37871326006 verts ; déploiement
+terminé le 9 octobre à 02:02:23 UTC, runtime
 nextjs/version/index concordants, volume privé RW conservé. Aucune livraison
-426 isolée. Corpus et édition SPAWT v1 conservés. Aucun nouveau modèle, service,
-Intent ou outil ; ADR-0210 étend l’architecture de publication existante.
+426 isolée. Corpus hors éditions conservé ; une seule publication SPAWT v1→v2.
+Aucun nouveau modèle, service, Intent ou outil ; ADR-0210 étend l’architecture
+de publication existante.
 
-**429 livré, recette métier toujours bornée** : ADR-0210 étend l’édition publique avec
+**Historique 429, recette métier locale bornée** : ADR-0210 étend l’édition publique avec
 pool partagé, choix de variante sans promotion et pins privés ; contrat v1
 inchangé, deux logos vitrine/repli/CSP bornée. PostgreSQL ciblé 27/27, native
 FOUNDER Connexions/publication/restauration/page publique locale reçue sur fixture,
@@ -28,12 +29,21 @@ diagnostic si récidive. Native production 429 : seul choix « Sans logo », auc
 publication ; deux chunks compilés contiennent localhost:3000 à la place de
 l’origine runtime HTTPS. Trace tronquée, pas de conclusion réseau exhaustive.
 
-**Candidat 430** : resolveBrandDeploymentOrigin dans brand-theme privilégie les
+**430 livré** : resolveBrandDeploymentOrigin dans brand-theme privilégie les
 origines serveur runtime, réutilisées par publisher HTTPS et export de charte
 (compatibilité HTTP locale de l’export conservée). Deux rouges/27 verts puis
 29 PostgreSQL ciblés verts. Types/lints sans erreur, 24 warnings préexistants,
-zéro cycle, 1617 gouvernance/166 fichiers et 4167 unitaires/397 reçus. Suite
-PostgreSQL complète encore en cours ; CI/image/native production à recevoir ;
+zéro cycle, 1617 gouvernance/166 fichiers, 4167 unitaires/397 et 245 PostgreSQL/14
+reçus localement ; CI reçoit 4167 unitaires et 237 PostgreSQL. Neuf helpers
+compilés prouvent la priorité des origines serveur avant le repli de build.
+Natif réel : 17 variantes, contour horizontal SELECTED v1 choisi, une seule
+publication v2 ; acteur et pins privés présents. Deux logos SPAWT et page publique
+chargés 4123×1714 ; textes/liens inchangés, six questions/sans compteur. HTTP/CORS
+trois origines/ETag 304/privé 401/CSP et image identique au checkout reçus.
+Actifs 256→257 uniquement par l’édition ; autres données/digest hors éditions
+inchangés. Fenêtre initiale complète de rechargement : DOM 702 ms/H1 <=2674 ms,
+zéro >=500/exception dans cette seule fenêtre, sans SLO ni recette de publication
+entière. Trace locale 430 tronquée maintenue. Cause d’origine fermée ;
 immutabilité des octets, identité complète/quiz-app/retour de valeur et sept
 chantiers ouverts : [reçu et limites](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
 

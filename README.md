@@ -66,27 +66,22 @@ npm run dev                 # → http://localhost:3000
 
 ## État courant borné — 2026-10-09
 
-La dernière livraison de production reçue est **6.27.429**, source 383f5e8a,
-CI 37868288873 et image 37868294874 rapprochées du runtime exact le 9 octobre à
-01:22:53 UTC. Le volume privé, le corpus et l’édition publique SPAWT v1 sont conservés.
-Le raccord SPAWT reçu en production reste limité aux textes/liens ; l’univers complet, les sept
+La dernière livraison de production reçue est **6.27.430**, source 2b9b2fa4,
+CI 37871315767 et image 37871326006 rapprochées du runtime exact le 9 octobre à
+02:02:23 UTC. Le volume privé et le corpus hors éditions sont conservés.
+Le raccord SPAWT reçoit textes/liens et logo choisi ; l’univers complet, les sept
 chantiers Shinkiro et leurs acceptations métier restent ouverts.
 
-**429 livré, choix de logo bloqué en production** : choix d’une variante dans Connexions,
-publication/restauration sur fixture et page publique chargée ; deux logos de
-vitrine/repli/CSP couverts par 33 tests. Vitrine déployée le 9 octobre à 01:01:57 UTC
-(PR #6, CI verte). Connexions en production ne propose que « Sans logo » ; aucune
-publication effectuée. L’origine localhost:3000 reste figée dans le code compilé,
-malgré les origines serveur HTTPS correctes.
-Gauntlet 429 final vert : 4167 unitaires/1617 gouvernance/243 PostgreSQL, types/lints
-sans erreur, 24 warnings préexistants, zéro cycle. Fixture synthétique nettoyée.
-**Candidat 430** : origine résolue depuis la configuration serveur à l’exécution,
-partagée par publication et export de charte. Deux contre-exemples rouges puis
-29 PostgreSQL ciblés verts ; 4167 unitaires/1617 gouvernance, types/lints/zéro
-cycle reçus. Suite PostgreSQL complète, CI/image et choix natif en production
-encore à recevoir.
+**Logo reçu en production 430** : l’origine serveur à l’exécution remplace le
+repli de build qui bloquait le sélecteur en 429. Connexions propose les variantes ;
+un choix explicite publie l’édition v2, sans changer les textes/liens v1. Deux
+logos SPAWT et page publique chargés, six questions et aucun compteur reçus.
+Le corpus reste inchangé, hormis cette unique édition (257 actifs).
+Gauntlet local vert : 4167 unitaires/1617 gouvernance/245 PostgreSQL, types/lints
+sans erreur, 24 warnings préexistants, zéro cycle. Fenêtre initiale de rechargement
+production reçue sans >=500/exception ; aucun SLO ni cycle métier complet déduit.
 Les pins portent l’enregistrement, pas l’immutabilité des octets :
-[reçu 429, blocage et correctif 430](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
+[échec 429, livraison 430 et limites](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
 
 Le code 426+427 transmet campagne/brief/actif source jusqu’à la tâche, contrôle
 leur portée et celle de la tâche historique, puis reconnaît le résultat
