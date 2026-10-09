@@ -26,9 +26,20 @@ sept chantiers ; les résidus actifs suivent.
 - **Identité au-delà de la copie v1** : public-brand-v1 ne porte pas tokens de
   design, voix structurée ni variantes de logo. Le premier consommateur SPAWT est
   limité au hero et aux liens, sans modifier la direction artistique, le quiz
-  ou le moteur de l’app. **Fermer** par comparaison source/usage pour chaque
+  ou le moteur de l’app. Lecture statique C2 du 9 octobre : Layout reçoit
+  logoUrl sans le rendre ; publication::inspect choisit le premier logo ACTIVE/
+  public sûr par id, sans raccorder resolveBrandIdentity qui traite les variantes/
+  ambiguïtés. La CSP limite images/fonts à self : une origine externe ne doit
+  pas être branchée sans rapprocher distribution durable, contrat et rendu.
+  Aucune correction de ces trois points n’est reçue.
+  **Fermer** par comparaison source/usage pour chaque
   destination, sélection explicite et pins dans le contrat existant étendu,
-  puis version consommée/refus de périmé/retour reçu. Ne pas résoudre les variantes
+  puis version consommée/refus de périmé/retour reçu. Factoriser la sélection
+  publique dans le résolveur/coffre existants, expliciter actif/version par
+  destination et recevoir rendu avec repli, CSP bornée à l’origine nécessaire,
+  panne/étranger/invalide/chargement tardif/retour arrière. Conserver palette,
+  polices et Moka CANON ; ne pas ouvrir toutes les origines ni remplacer la DA.
+  Ne pas résoudre les variantes
   par index ni transporter une charte privée entière. **Déclencheur** : prochain
   raccord C2 des identités après réception de la copie publique ; effort : un lot
   de contrat et recette par famille d’usage, sans nouveau système parallèle.
@@ -65,7 +76,7 @@ sept chantiers ; les résidus actifs suivent.
   « Édition publique et surfaces de marque ». Ce contrat ne reçoit pas les autres écrivains,
   les réceptions Ptah restantes ni la fenêtre de fermeture du journal.
 
-## Ptah — limites après livraison commune 426+427 (2026-10-09)
+## Ptah — limites après livraison 428 (2026-10-09)
 
 L’ancienne cause « COMPLETED avant versions/coffre, reprise terminale vide » est
 fermée dans le correctif livré et retirée du registre : checkpoint persistant,
@@ -99,14 +110,17 @@ transport des trois références et du faux 500 sont fermées et retirées des
 actions restantes ; les preuves métier restent synthétiques locales :
 [reçu courant](RECEPTION-PTAH-RESULTAT.md). Aucune acceptation globale n’est reçue.
 
-**Candidat 428 reçu localement** : distinction demande/production et gardes
+**Code 428 livré, recette métier locale** : distinction demande/production et gardes
 opérateur reçues nativement, contexte courant relu avant accès/émission ; staff
-admis et founder refusé sans effet, JWT périmé refusé par test. Neuf tests UI et douze cas
+admis et founder refusé sans effet, rattachement d’équipe JWT périmé refusé par test.
+Neuf tests UI et douze cas
 garde/ownership verts, une tâche DEFERRED/deux émissions sans version/coût.
 Ces causes sont retirées des actions locales restantes ; suites finales
 4 167 unitaires/1 617 gouvernance/230 PostgreSQL, types/lints sans erreur et zéro cycle
-reçus. Fixture nettoyée/Next arrêté ; CI/image/runtime et livraison 428 restent
-ouverts, production 427. Préconditions synthétiques,
+reçus. Fixture nettoyée/Next arrêté ; source cdd9f6c0, CI 37862693091/image
+37862922982 et runtime 428 reçus le 9 octobre à 00:19:53 UTC, volume privé RW
+conservé. Corpus/édition SPAWT et zéro tâche/version de forge inchangés.
+Livraison fermée ; bouton/rôles restent reçus avec préconditions synthétiques locales,
 aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
 
 - **Stress et parcours réel hors fixture** : le stress isolé n’a pas atteint les

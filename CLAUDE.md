@@ -4,9 +4,9 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
-**Production reçue : 6.27.427, livraison commune de la filiation 426 et du contrat de sortie 427.**
-Source 919cebb49fcfc5f5599ccd3dab5101b7b9f62d0e, CI 37856242347 et image
-37856486468 reçues ; déploiement terminé le 8 octobre à 23:06:42 UTC, runtime
+**Production reçue : 6.27.428, état demande/production et accès opérateur Oracle.**
+Source cdd9f6c01423bdfb8b9da37240c5f9fcb8bef5e4, CI 37862693091 et image
+37862922982 reçues ; déploiement terminé le 9 octobre à 00:19:53 UTC, runtime
 nextjs/version/index concordants, volume privé RW conservé. Aucune livraison
 426 isolée. Aucun nouveau modèle, service, Intent, outil ou ADR.
 
@@ -15,8 +15,8 @@ Ptah jusqu’à GenerativeTask ; portée relue avant fournisseur et admission.
 Régénération : concordance propre de la tâche historique et références reprises.
 La post-condition reconnaît le résultat racine ou enveloppé par Intent OK,
 CREATED/IN_PROGRESS/DEFERRED ; les refus ne deviennent pas des succès.
-Suites reçues : 4 151 unitaires/395 fichiers, 230 PostgreSQL/13 fichiers,
-1 610 gouvernance/165 fichiers ; types/lints sans erreur, 24 warnings, zéro cycle.
+Suites finales 428 : 4 167 unitaires/397 fichiers, 230 PostgreSQL/13 fichiers,
+1 617 gouvernance/166 fichiers ; types/lints sans erreur, 24 warnings, zéro cycle.
 Deux rouges/neuf verts puis 11 tests de contrat verts. Oracle HTTP 200/Intent
 OK/DEFERRED après redémarrage, portée et émission enfant vérifiées ; MCP/tRPC et
 replay stables **sur fixtures locales synthétiques**, zéro fournisseur.
@@ -25,11 +25,11 @@ L’admission atomique et la reprise interrompue 425 restent historiques :
 
 Production : version/lecture/refus reçus, corpus et édition SPAWT inchangés ;
 zéro GenerativeTask/AssetVersion avant/après, aucune forge réelle réparée.
-Connexions 427/édition v1 relues après hydratation, note vue puis fermée, aucune
+Connexions 428/édition v1 relues après hydratation, note vue puis fermée, aucune
 saisie/soumission ni métrique réseau native capturée. Le bouton de production
-lui-même n’est pas reçu.
+lui-même n’est pas reçu en production.
 
-**Candidat 428 reçu localement, gauntlet final vert, livraison en attente** :
+**Code 428 livré, bouton/rôles reçus localement sur fixture** :
 PtahForgeButton sépare Intent.status/output.status, DEFERRED ambre/configuration,
 aucune production démarrée, ni coût $0/succès/reprise automatique/lien non reçu.
 Confirmation explicite, états distincts et FR/EN/ZH. OperatorSurface monte le
@@ -45,7 +45,7 @@ validé ni fournisseur/production modifiés. Fixture nettoyée (zéro tâche/act
 aucune donnée de recette conservée et Next local arrêté volontairement.
 Suites finales locales : 4 167 unitaires/397 fichiers, 1 617 gouvernance/166,
 230 PostgreSQL/13 sans clés externes ; types/deux lints sans erreur, 24 warnings,
-zéro cycle. CI/image/runtime 428 non reçus.
+zéro cycle. CI/image/runtime 428 reçus ; aucune production métier soumise en production.
 Note 428 : Oracle, sans réécrire celle de 427. Distinction/garde reçues localement
 ne valent pas acceptation C4/C5/C6 : [reçu UX](docs/governance/RECEPTION-PTAH-UX.md).
 
@@ -60,7 +60,7 @@ réel reçus. Fallbacks d’émission upstream, multisource, sourceDataSourceId/
 invalidation/staleAt, portée/kind/état activeBriefId, parentAssetId/régénération
 complète, Canva/Figma et journal restent ouverts. Aucun univers SPAWT complet,
 cycle Noël, sept chantiers ou acceptation métier globale n’est certifié :
-[reçu livré 427](docs/governance/RECEPTION-PTAH-RESULTAT.md) et
+[reçu courant 428](docs/governance/RECEPTION-PTAH-UX.md) et
 [RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md).
 
 ---

@@ -64,7 +64,7 @@ sequenceDiagram
   end
 ```
 
-**Frontière Ptah, code 6.27.427 livré (réception 2026-10-09)** : le résultat
+**Frontière Ptah, code 6.27.428 livré (réception 2026-10-09)** : le résultat
 checkpointé rejoint versions/coffre/coût déclaré/COMPLETED dans une transaction
 sous verrou partagé du coffre et de la tâche ; reprise stable, archives préservées.
 Le code 426 transmet les références métier existantes jusqu’à la tâche et relit
@@ -72,20 +72,20 @@ leur portée avant fournisseur/admission, ainsi que la tâche historique en
 régénération. Le code 427 reconnaît le résultat racine ou enveloppé par Intent OK,
 avec DEFERRED admis ; les refus restent des refus. Aucun service ajouté.
 
-Suites finales : 4 151 unitaires/230 PostgreSQL/1 610 gouvernance, types/lints sans
+Suites finales : 4 167 unitaires/230 PostgreSQL/1 617 gouvernance, types/lints sans
 erreur, 24 warnings, zéro cycle. HTTP Oracle 200/DEFERRED, portée/émission et
 replay reçus localement sur fixtures synthétiques ; aucun fournisseur réel.
-Source 919cebb4, CI 37856242347/image 37856486468 et runtime 427 reçus le 8 octobre
-à 23:06:42 UTC, volume privé conservé ; aucune livraison 426 isolée. Production :
+Source cdd9f6c0, CI 37862693091/image 37862922982 et runtime 428 reçus le 9 octobre
+à 00:19:53 UTC, volume privé conservé ; aucune livraison 426 isolée. Production :
 lectures/refus, corpus et édition SPAWT inchangés, zéro tâche/version de forge
 avant/après. Ce reçu ne démontre aucun cycle réel.
 
 L’état du bouton et sa garde opérateur sont reçus localement dans le
-[candidat 428](RECEPTION-PTAH-UX.md), gauntlet local vert/livraison en attente :
+[code 428 livré](RECEPTION-PTAH-UX.md), gauntlet local vert :
 contexte courant relu par le chokepoint existant, aucun droit ajouté. Les
 acceptations C4/C5/C6, reprise DEFERRED/configuration, filiation upstream/
 documentaire, octets/CDN, facture, Canva/Figma et
-journal restent distincts : [reçu courant](RECEPTION-PTAH-RESULTAT.md),
+journal restent distincts : [reçu courant](RECEPTION-PTAH-UX.md),
 [reprise interrompue historique 425](RECEPTION-PTAH-ADMISSION.md).
 
 ## Glory tools — outils intriqués

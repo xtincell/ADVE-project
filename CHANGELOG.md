@@ -1,5 +1,25 @@
 # Changelog — La Fusee
 
+## v6.27.428 — docs(governance): recevoir la livraison de l’état de production Oracle (2026-10-09)
+
+**Le correctif est livré ; bouton et rôles restent reçus sur recette locale synthétique.**
+
+- Source cdd9f6c0, CI 37862693091 verte (4 167 unitaires/230 PostgreSQL), image
+  37862922982 reçue après login sur base neuve et lecture PDF fixture deux pages.
+  Déploiement terminé à 00:19:53 UTC ; runtime 428/nextjs/index exact et volume
+  privé RW rapprochés. Gauntlet local entièrement vert, fixture nettoyée.
+- Lectures/refus HTTP 200/400/403, corpus et édition SPAWT v1/digest conservés,
+  CORS trois origines/ETag 304/export privé 401 reçus ; toujours zéro tâche/version
+  de forge en production. Connexions 428/édition v1 rechargées/hydratées, annonce
+  lue puis fermée, aucune saisie ou production métier. Aucun reçu fournisseur,
+  facture, média durable, cycle réel ou reprise de la même tâche DEFERRED.
+- Livraison et cause du contexte opérateur fermées, entrée active purgée ;
+  preuves du bouton/rôles et refus sans effet toujours locales. Lecture C2 :
+  logoUrl non rendu, logo public choisi par id malgré le résolveur existant et
+  CSP images/fonts self restent au plan de raccord, sans correction reçue.
+  Sept chantiers/acceptations inchangés : [reçu courant](docs/governance/RECEPTION-PTAH-UX.md).
+  Aucun code applicatif ni note publiée modifiés dans cette réception documentaire.
+
 ## v6.27.428 — fix(ptah): distinguer demande et production dans l’Oracle (2026-10-09)
 
 **Le candidat rend l’attente de configuration explicite et réserve la commande à l’équipe.**

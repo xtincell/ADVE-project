@@ -66,39 +66,39 @@ npm run dev                 # → http://localhost:3000
 
 ## État courant borné — 2026-10-09
 
-La dernière livraison de production reçue est **6.27.427**, source 919cebb4,
-CI 37856242347 et image 37856486468 rapprochées du runtime exact le 8 octobre à
-23:06:42 UTC. Le volume privé, le corpus et l’édition publique SPAWT sont conservés.
+La dernière livraison de production reçue est **6.27.428**, source cdd9f6c0,
+CI 37862693091 et image 37862922982 rapprochées du runtime exact le 9 octobre à
+00:19:53 UTC. Le volume privé, le corpus et l’édition publique SPAWT sont conservés.
 Le raccord SPAWT reste limité aux textes/liens ; l’univers complet, les sept
 chantiers Shinkiro et leurs acceptations métier restent ouverts.
 
 Le code 426+427 transmet campagne/brief/actif source jusqu’à la tâche, contrôle
 leur portée et celle de la tâche historique, puis reconnaît le résultat
-DEFERRED sans faux 500. Aucune livraison 426 isolée. Suites reçues : 4 151
-unitaires, 230 PostgreSQL, 1 610 gouvernance ; types/lints sans erreur,
+DEFERRED sans faux 500. Aucune livraison 426 isolée. Suites finales 428 : 4 167
+unitaires, 230 PostgreSQL, 1 617 gouvernance ; types/lints sans erreur,
 24 warnings préexistants, zéro cycle. Appel Oracle HTTP 200/Intent OK/DEFERRED,
 portée/émission et replay reçus **localement sur fixtures**, zéro fournisseur.
 L’admission atomique et la reprise après interruption de 425 restent documentées
 [dans leur reçu historique](docs/governance/RECEPTION-PTAH-ADMISSION.md).
 
 En production : lectures/refus et corpus comparé reçus, toujours zéro tâche ou
-version de forge. Connexions 427/édition publique v1 relues nativement sans
+version de forge. Connexions 428/édition publique v1 relues nativement sans
 soumission ; le bouton Oracle en production lui-même n’est pas reçu.
 
-**Candidat 428, réception locale native uniquement** : le bouton distingue
+**Code 428 livré, recette du bouton/rôles locale synthétique** : le bouton distingue
 demande acceptée et production DEFERRED, sans faux succès/coût $0 ; contrôle
 réservé à l’opérateur. Le contexte d’équipe est relu en base : staff non
 propriétaire admis, founder refusé sans effet. Un geste crée une tâche différée
 et deux émissions, aucune version matérielle ni coût ; aucun fournisseur.
 Suites finales locales 4 167 unitaires/1 617 gouvernance/230 PostgreSQL vertes,
-types/lints sans erreur et zéro cycle ; fixture nettoyée/Next arrêté. CI/image/
-runtime et livraison en attente : [reçu UX](docs/governance/RECEPTION-PTAH-UX.md).
+types/lints sans erreur et zéro cycle ; fixture nettoyée/Next arrêté. Livraison
+reçue avec lectures/refus en production : [reçu UX](docs/governance/RECEPTION-PTAH-UX.md).
 La relance de la même tâche après
 configuration n’est pas reçue ; les clés Ptah sont lues dans l’environnement,
 sans chemin Connexions prouvé. Aucun fournisseur, média, facture
 ou cycle réel SPAWT/Noël n’est reçu. Provenance documentaire, sources multiples,
 activeBriefId, octets/CDN, succession de régénération et journal restent ouverts :
-[reçu livré et limites](docs/governance/RECEPTION-PTAH-RESULTAT.md).
+[reçu courant et limites](docs/governance/RECEPTION-PTAH-UX.md).
 
 ## Historique des vérifications — 2026-06-19
 

@@ -1,6 +1,6 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## État de production Oracle — candidat local 428 (2026-10-09)
+## État de production Oracle — code 428 livré (2026-10-09)
 
 Distinction Intent/tâche, DEFERRED ambre sans faux succès/coût $0, confirmation
 explicite, FR/EN/ZH et gardes OperatorSurface/requireOperator reçus localement.
@@ -13,8 +13,10 @@ ownership. Natif : opérateur 403 sans effet puis 200/OK/DEFERRED, une tâche/de
 exception/500 dans les fenêtres, préconditions synthétiques locales uniquement.
 Suites finales 4 167 unitaires/1 617 gouvernance/230 PostgreSQL, types/deux lints
 sans erreur, 24 warnings, zéro cycle reçus ; fixture nettoyée/Next arrêté.
-CI/image/runtime à recevoir, production toujours 427. Distinction
-et garde purgées des actions locales restantes, pas d’acceptation C4/C5/C6.
+Source cdd9f6c0, CI 37862693091/image 37862922982 et runtime 428 reçus à
+00:19:53 UTC ; corpus/édition SPAWT et zéro tâche/version inchangés, volume privé
+RW conservé. Connexions relue/hydratée sans saisie ; bouton/rôles toujours reçus
+localement seulement. Distinction/garde/livraison fermées, pas d’acceptation C4/C5/C6.
 Même tâche DEFERRED/configuration réelle restent à recevoir en C5 ; autres
 résidus et sept chantiers inchangés : [reçu UX](RECEPTION-PTAH-UX.md).
 
@@ -36,7 +38,7 @@ zéro tâche/version de forge en production avant/après. Transport des référe
 et désaccord de sortie fermés ; aucun fournisseur/média/facture/cycle réel reçu.
 Connexions 427/édition v1 relues nativement sans soumission, pas le bouton Oracle
 en production. Distinction/garde et OPERATOR/FOUNDER sont reçus localement dans
-le candidat 428 ci-dessus ; sa livraison reste ouverte. Note 428 précisée Oracle,
+le code 428 livré ci-dessus ; cette recette reste locale. Note 428 précisée Oracle,
 note 427 publiée conservée. Prochaine C5 : relance manuelle de la même tâche DEFERRED via
 tâche/Intent existants, portée/coûts/anti-double appel et configuration réelle
 reçus avant autonomie ; aucun chemin Connexions ni reprise automatique prouvés.

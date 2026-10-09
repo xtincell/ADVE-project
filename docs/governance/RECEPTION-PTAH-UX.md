@@ -1,8 +1,8 @@
 # Ptah — demande et production dans l’Oracle
 
-2026-10-09. **Candidat 6.27.428 reçu localement ; production reçue encore 6.27.427.**
-Le [reçu livré 427](RECEPTION-PTAH-RESULTAT.md) reste distinct. Le gauntlet local
-final est entièrement vert ; CI/image/runtime et livraison 428 restent à recevoir.
+2026-10-09. **Production reçue : 6.27.428 ; bouton/rôles reçus localement sur fixture.**
+Le [reçu historique 427](RECEPTION-PTAH-RESULTAT.md) reste distinct. Gauntlet
+local final, CI/image/runtime et livraison 428 sont reçus.
 
 ## Contrat et garde existants
 
@@ -35,7 +35,7 @@ router/page/Intent/outil/ADR. La note 428 précise Oracle ; la note 427 reste pu
 | Suites finales locales | 4 167 unitaires/397 fichiers, 1 617 gouvernance/166 fichiers incluant DS/vocab, 230 PostgreSQL/13 fichiers ; environnement sans clés externes |
 | Lints/cycles | Deux lints exit 0, 24 warnings préexistants ; zéro cycle sur 1 741 fichiers |
 | Typecheck final | Exit 0, aucun message d’erreur |
-| CI/image/runtime 428 | À recevoir |
+| CI 428 | 37862693091 verte sur cdd9f6c01423bdfb8b9da37240c5f9fcb8bef5e4 ; 4 167 unitaires/230 PostgreSQL |
 | Nettoyage | cleaned:true, zéro tâche/actif de fixture conservé, Next local arrêté volontairement |
 | Vitrine SPAWT native, réception séparée | Deux URL relues sans décompte et avec six questions ; ne reçoit pas un cycle quiz/application |
 
@@ -47,9 +47,27 @@ Preuves privées :
 `release/preuves-ux-forge-428/` (rouge/vert opérateur, founder/refus, captures et
 snapshots avant/après), sans identifiants de fixture propagés dans cette prose.
 
+## Livraison de production
+
+Image 37862922982 reçue : login sur base neuve et lecture d’un PDF fixture de
+deux pages, sans réception d’export PDF. Déploiement `x4psf7p6m4gb84co610yrcrg`
+terminé le 2026-10-09 à 00:19:53 UTC ; runtime 6.27.428/nextjs et volume privé RW
+conservé, index exact :
+`sha256:dd0b929865341017fb3a64ead096b5953f672bbd385051c1998e9b1e2b13f973`.
+
+Production : lectures/refus 200/400/403, corpus privé inchangé, toujours zéro
+GenerativeTask/AssetVersion avant/après. Édition publique SPAWT v1/digest conservés,
+CORS trois origines exactes, ETag 304 et export privé 401 reçus. Connexions
+rechargée puis hydratée : version 428/édition v1, annonce lue puis fermée ; aucune
+saisie ni production métier. Ces reçus ne déplacent pas la recette native du
+bouton/rôles en production : elle reste locale et synthétique.
+
+Reçus privés complémentaires : reception/runtime/deploiement/image-digest/
+production-http/native-connections dans le même dossier de preuves.
+
 ## Limites maintenues
 
-La distinction et la garde sont reçues localement, leur livraison reste ouverte.
+Le code de distinction/garde est livré ; sa recette métier reste locale.
 La même tâche DEFERRED n’est toujours pas relancée après configuration : prochaine
 C5 via tâche/Intent existants, portée/coûts/anti-double appel et chemin de
 configuration réel avant autonomie. Aucune efficacité de Connexions ni reprise

@@ -61,7 +61,7 @@ src/server/services/anubis/
 
 Dépendances satellites : `email`, `oauth-integrations`, `advertis-connectors`, `financial-brain`. **4 nouveaux models Prisma** : `CommsPlan`, `BroadcastJob`, `EmailTemplate`, `SmsTemplate`. Réutilise `Notification`, `NotificationPreference`, `WebhookConfig`, `ExternalConnector` existants. Pages : `/console/anubis/page.tsx` (dashboard) + `/console/anubis/credentials/page.tsx` (Credentials Center). Router tRPC : `anubis.ts`.
 
-### Ptah — service Phase 9 existant ; code 426+427 livré en 6.27.427
+### Ptah — service Phase 9 existant ; code 6.27.428 livré
 
 ADR-0009 décrit la fondation historique. État courant au 2026-10-09 : résultat
 checkpointé puis admission atomique versions/coffre/coût/COMPLETED ; webhook et
@@ -69,17 +69,17 @@ sync passent par PTAH_RECONCILE_TASK. Les références campagne/brief/actif sour
 traversent les entrées et producteurs jusqu’à la tâche, avec contrôle partagé
 avant fournisseur/admission ; tâche historique de régénération contrôlée.
 Le reçu de demande racine ou enveloppé accepte DEFERRED sans faux 500.
-Suites finales : 4 151 unitaires/230 PostgreSQL/1 610 gouvernance vertes,
+Suites finales : 4 167 unitaires/230 PostgreSQL/1 617 gouvernance vertes,
 types/lints sans erreur, 24 warnings préexistants, zéro cycle. MCP/tRPC/Oracle
 HTTP 200/DEFERRED et replay reçus sur fixtures locales synthétiques, zéro fournisseur.
 
-Source 919cebb4, CI 37856242347/image 37856486468 et runtime exact 427 reçus le
-8 octobre à 23:06:42 UTC ; aucune livraison 426 isolée, volume privé conservé.
+Source cdd9f6c0, CI 37862693091/image 37862922982 et runtime exact 428 reçus le
+9 octobre à 00:19:53 UTC ; aucune livraison 426 isolée, volume privé conservé.
 Lectures/refus et corpus/édition SPAWT conservés ; zéro tâche/version de forge
 avant/après, aucune forge réelle réparée. Bouton/garde opérateur reçus localement
-dans le [candidat 428](RECEPTION-PTAH-UX.md), gauntlet local vert/livraison en attente ;
+dans le [code 428 livré](RECEPTION-PTAH-UX.md), gauntlet local vert ;
 reprise DEFERRED/configuration, octets/CDN, Canva/Figma, facture, filiation au-delà des trois
-références et journal restent ouverts : [reçu courant](RECEPTION-PTAH-RESULTAT.md)
+références et journal restent ouverts : [reçu courant](RECEPTION-PTAH-UX.md)
 et [admission historique 425](RECEPTION-PTAH-ADMISSION.md). Aucun service ajouté.
 
 ```
