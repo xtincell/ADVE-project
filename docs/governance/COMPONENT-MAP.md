@@ -82,18 +82,23 @@ Livraison 432 et gestes natifs réels SPAWT publication/revue sans resélection/
 retour reçus, sans validation de marque entière. Réception partielle C2/C3/C4.
 [ADR-0212 Accepted, borné](adr/0212-versioned-public-identity-projection.md).
 
-## Tracker existant — runtime 434 partiel, lecture 435 candidate (2026-10-09)
+## Tracker existant — runtime 435, suivi vide reçu (2026-10-09)
 
 Native réelle 434 : lecture refusée 403 pour compte non affecté, écran non reçu.
-Candidat 435 : canResume dérivé de l’affectation actuelle, sans bouton si absente ;
+435 livré : canResume dérivé de l’affectation actuelle, sans bouton si absente ;
 lecture seule ADMIN du dossier explicitement choisi, aucune reprise ADMIN sans
 affectation ou droit nouveau. Deux rouges/49 verts puis 51 PG ciblés verts. Native
 locale par URL connue sur deux dossiers : chacun sa tâche, lecture seule, zéro
 bouton Reprendre et secret absent ; Actualiser HTTP 200/zéro exception, fenêtre
-complète. Copie FR finale relue, fixture nettoyée. Sélecteur 0/0 non reçu ;
+complète. Copie FR finale relue, fixture nettoyée. Sélecteur local 0/0 historique ;
 gauntlet 435 cinq exit 0/gouvernance 1620/166/24 warnings préexistants, PG complet
-seul 274/14/Ptah 51 inclus reçus. CI/image/runtime 435 à recevoir, sans SLO déduit
-du reload tronqué.
+seul 274/14/Ptah 51 inclus reçus. CI 435 : 4 180/399 unitaires et 274/14 PG/image/runtime reçus.
+Native SPAWT listForges HTTP 200/zéro ligne, 403 disparu ; fenêtre complète : 63 réponses/
+aucune ≥500/zéro exception/log. Liste du sélecteur et passage par son lien vers le
+portefeuille groupe FrieslandCampina non pilotable reçus en lecture seule,
+portée/ambiguïtés rendues, sans métriques isolées de cette navigation.
+Production/reprise réelle non reçue ; reload local tronqué et timings production
+bornés, sans SLO déduit.
 
 `PtahKilnTracker` (`src/components/neteru/ptah-kiln-tracker.tsx`) est monté dans
 la page forge existante, enveloppée par son layout OperatorSurface ; ce layout

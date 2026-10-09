@@ -252,16 +252,21 @@ scénario local durée/clôture reçu sans SLO global. Stress isolé reçoit
 avant les dernières gardes et dates. Suite canonique 4 180/399 et PG 270/14
 finaux post-découplage reçus ; CI/runtime 434 reçus, parcours restants en attente.
 Native production 434 : tracker 403/compte non affecté, écran non reçu, trace
-tronquée sans zéro exhaustif/SLO déduit. Candidat 435 : lecture seule du dossier
+tronquée sans zéro exhaustif/SLO déduit. 435 livré : lecture seule du dossier
 explicitement choisi pour ADMIN effectif, canResume selon affectation actuelle,
 aucun bouton sans celle-ci. Mutations/autres lectures restent strictes, aucun
 droit/équipe/rôle nouveau. 51 PG ciblés verts après deux rouges. Native locale :
 deux dossiers de deux équipes ouverts par URL connue, chacun sa tâche en lecture
 seule/canResume=false, sans bouton ni secret ; Actualiser HTTP 200/zéro exception,
-fenêtre complète. Copie FR finale relue, fixture nettoyée. Sélecteur 0/0 non reçu,
+fenêtre complète. Copie FR finale relue, fixture nettoyée. Sélecteur local 0/0 historique,
 reload tronqué sans SLO. Gauntlet 435 cinq exit 0, gouvernance 1620/166/24 warnings
-préexistants ; PG complet seul 274/14, Ptah 51 inclus reçus. CI/image/runtime 435
-à recevoir.
+préexistants ; PG complet seul 274/14, Ptah 51 inclus reçus. CI 435 : 4 180/399 unitaires et
+274/14 PG/image/runtime reçus. Native SPAWT listForges HTTP 200/zéro ligne, 403 disparu,
+fenêtre complète : 63 réponses/aucune ≥500/zéro exception/log. Liste du sélecteur reçue
+après chargement ; passage par son lien vers le portefeuille groupe
+FrieslandCampina non pilotable reçu en lecture seule, portée/ambiguïtés rendues,
+sans métriques isolées de cette navigation. Production/reprise réelle non reçue ;
+aucun SLO déduit des bornes tardives production.
 [ADR-0213 Proposed](adr/0213-deferred-production-resumption-and-seals.md).
 
 ### 2.4 — Mestor + New + Messages (mixte)

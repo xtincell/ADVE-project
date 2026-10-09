@@ -4,7 +4,7 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
-**Candidat 6.27.435 — lecture de supervision bornée** : après refus natif tracker
+**6.27.435 livré — suivi vide SPAWT reçu, métier partiel** : après refus natif tracker
 403 en 434 pour compte non affecté, listForges seulement résout le dossier choisi
 explicitement pour ADMIN effectif canonique ; canResume selon affectation actuelle,
 lecture seule sans bouton si absente. Mutations/getForge/getAssetVersion restent
@@ -12,12 +12,19 @@ strictes ; aucun droit/équipe/rôle/allowlist nouveau. Deux rouges/49 verts pui
 51 PostgreSQL ciblés verts. Native locale par URL connue : deux dossiers de deux
 équipes, chacun sa tâche en lecture seule, canResume=false, sans bouton ni secret.
 Actualiser HTTP 200/zéro exception, fenêtre complète ; copie FR finale relue.
-Sélecteur 0/0 non reçu, reload tronqué sans SLO ; fixture nettoyée, serveur arrêté.
+Sélecteur local 0/0 historique, reload tronqué sans SLO ; fixture nettoyée, serveur arrêté.
 Gauntlet 435 cinq exit 0, gouvernance 1620/166/24 warnings préexistants ; PG complet
 seul après arrêt Next 274/14 en 41,09 s, Ptah 51 inclus. Suite globale 435 non
-répétée localement, 4180/399 historique 434 ; CI/image/runtime 435 à recevoir.
+répétée localement, 4180/399 local historique 434 ; CI 435 reçue 4180/399 unitaires
+et 274/14 PG. Source d554276e, CI 37913766133/image 37913788756/runtime exact 435
+nextjs/volume privé RW/version publique HTTP 200 reçus. Native SPAWT listForges HTTP 200/zéro
+ligne, 403 disparu ; fenêtre complète : 63 réponses/aucune ≥500/zéro exception/log, sans SLO.
+Liste du sélecteur reçue après chargement : 47/47 marques/19 pilotables, 0/0 initial
+transitoire ; passage vers le portefeuille FrieslandCampina non pilotable reçu en
+lecture seule, portée conservée/ambiguïtés rendues, sans fenêtre métrique isolée.
+Production/reprise réelle, validation S et cycle Noël non reçus.
 
-**Code 6.27.434 livré au runtime — ADR-0213 Proposed, métier partiel** : reprise par resumeTaskId
+**Reçu historique 6.27.434 — ADR-0213 Proposed, métier partiel** : reprise par resumeTaskId
 sur brief/émission initiale, même tâche, gates courantes et réservation avant
 réseau ; tracker existant monté dans forge sous le layout OperatorSurface.
 Sceau v2 JSON canonique/versionné et horodatage sous verrou, v1 conservé ; legacy

@@ -2,7 +2,7 @@
 
 ## v6.27.435 — fix(ptah): lire les productions du dossier sélectionné en supervision (2026-10-09)
 
-**Le candidat permet la lecture ADMIN du dossier choisi ; aucune reprise sans affectation n’est ajoutée.**
+**435 est livré ; le suivi vide SPAWT est reçu en production. La reprise reste réservée à l’équipe affectée.**
 
 - Refus natif 403 en production 434 : le compte non affecté ne peut pas lire
   le tracker. listForges résout seulement le dossier explicitement sélectionné
@@ -24,7 +24,20 @@
 - Gauntlet 435 : cinq exit 0, gouvernance 1 620/166, 24 warnings préexistants/
   zéro erreur. PostgreSQL complet exécuté seul après arrêt Next : 274/14 verts
   en 41,09 s, Ptah 51 inclus. Suite globale non répétée localement en 435 ;
-  4 180/399 reste le reçu historique 434. CI/image/runtime 435 à recevoir ;
+  4 180/399 reste le reçu local historique 434 ; CI 435 reçue : 4 180/399 unitaires
+  et 274/14 PostgreSQL verts, neuf jobs réussis/trois skips réservés aux PR.
+- Source d554276e1258d7251fbdd8319dc8123679abfdcc, CI 37913766133, Chromatic
+  37913766123/MissionDrift 37913766091 et image 37913788756 verts. Déploiement
+  terminé à 10:03:21 UTC ; runtime exact 435/nextjs/volume privé RW/version
+  publique HTTP 200. Index sha256:b96030f310ca535532526460f4bd9e16ee45f1a7b8a84b0db902f795612972f3.
+- Native réelle SPAWT : refus 403 disparu, listForges HTTP 200/zéro ligne et
+  message aucune production à reprendre. Fenêtre complète 63 réponses/zéro
+  ≥500/exception/log, sans troncature ; DOM 1 884,5 ms, H1/tracker seulement
+  bornes supérieures tardives, aucun SLO déduit. Liste du sélecteur reçue après
+  chargement : 47/47 marques, 19 pilotables ; le 0/0 initial était transitoire.
+  Passage par son lien vers le portefeuille groupe FrieslandCampina non pilotable
+  reçu en lecture seule, portée conservée/ambiguïtés signalées ; navigation sans
+  fenêtre de métriques isolée. Production/reprise réelle/cycle Noël non reçus.
   ADR-0213 Proposed, sept chantiers/dix gates programme non acceptés.
 
 ## v6.27.434 — fix(ptah): reprendre une demande différée sur son reçu initial (2026-10-09)

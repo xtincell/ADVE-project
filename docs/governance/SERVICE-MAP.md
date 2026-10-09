@@ -85,17 +85,22 @@ reçus, CI/runtime 434 reçus, parcours restants
 en attente. emittedAt logique ne prouve pas l’heure métier ou la fraîcheur de
 l’historique. startedAt réel distinct après verrou, horloge future 60 s : cinq
 PostgreSQL verts après un rouge, closeEmission/durée/hash relus, pas SLO global.
-Native tracker 434 refusée 403, compte non affecté. Candidat 435 : seul listForges
+Native tracker 434 refusée 403, compte non affecté.435 livré : seul listForges
 réutilise getOperatorContext canonique et le dossier explicitement choisi pour
 ADMIN effectif ; canResume selon affectation actuelle. Mutations/autres lectures
 restent strictes, aucune équipe/droit/rôle nouveau. 51 PG ciblés verts après deux
 rouges. Native locale par URL connue sur deux dossiers/deux équipes : chacun sa
 tâche, canResume=false, lecture seule sans bouton ni secret ; Actualiser HTTP 200/
 zéro exception, fenêtre complète. Copie FR finale relue, fixture nettoyée ;
-sélecteur 0/0 non reçu. Gauntlet 435 cinq exit 0, gouvernance 1620/166/24 warnings
-préexistants et PG complet seul 274/14/Ptah 51 inclus reçus. CI/image/runtime 435
-à recevoir. Reload tronqué sans zéro exhaustif ou SLO déduit.
-[Réception candidate](RECEPTION-PTAH-REPRISE.md).
+sélecteur local 0/0 historique. Gauntlet 435 cinq exit 0, gouvernance 1620/166/24 warnings
+préexistants et PG complet seul 274/14/Ptah 51 inclus reçus. CI 435 : 4 180/399 unitaires et
+274/14 PG/image/runtime reçus. Native SPAWT listForges HTTP 200/zéro ligne, 403 disparu ;
+fenêtre complète : 63 réponses/aucune ≥500/zéro exception/log. Liste du sélecteur reçue après
+chargement ; passage par son lien vers le portefeuille groupe FrieslandCampina
+non pilotable reçu en lecture seule, portée/ambiguïtés rendues, sans métriques
+isolées. Production/reprise réelle non reçue ; reload local tronqué et bornes
+tardives production, sans SLO déduit.
+[Réception partielle](RECEPTION-PTAH-REPRISE.md).
 
 ADR-0009 décrit la fondation historique. Réception antérieure au 2026-10-09 : résultat
 checkpointé puis admission atomique versions/coffre/coût/COMPLETED ; webhook et

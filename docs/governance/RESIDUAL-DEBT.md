@@ -129,14 +129,15 @@ sept chantiers ; les résidus actifs suivent.
   vérifiable ; ce reçu borné ne prouve aucun SLO global.
   Les causes de sérialisation/ordre sont corrigées dans le code livré, pas un
   reçu de toutes les anciennes empreintes. **Fermer les résidus** par parcours
-  réel du reçu initial, après correction de lecture 435 ; contre-exemples,
+  réel du reçu initial ; correction de lecture 435 livrée, mais seul suivi vide
+  reçu en production. Contre-exemples,
   ordre concurrent et contrôle natif du reçu sont déjà reçus
   sur fixtures. Pour les empreintes
   historiques irrécupérables, recevoir un rapprochement explicite depuis les
   preuves disponibles, sans recalcul/hash/payload rétroactif présenté comme
   ancien reçu. Qualifier l’écart d’horloge et la date métier depuis les sources
   disponibles, garder l’incertitude lorsque celles-ci manquent. **Déclencheur** :
-  réception 435 en cours, puis ancien timestamp futur ou première demande
+  première reprise réelle après 435, ancien timestamp futur ou première demande
   de reprise dont le reçu legacy est non vérifiable ; effort : contrôle commun
   et recette bornée par historique concerné. Dette closeEmission distincte.
 - **Projection publique** : l’actif ACTIVE générique reste un usage, pas une
@@ -239,7 +240,7 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   compteurs fixture à zéro, ErrorVault de test conservé. Runtime du bundle 434
   comprenant auth 433 reçu, sans runtime 433 autonome. Native production tracker
   refusée 403 pour compte non affecté, écran non reçu/trace tronquée sans zéro
-  exhaustif ou SLO déduit. Correctif séparé 435 local : listForges seulement
+  exhaustif ou SLO déduit. Correctif séparé 435 livré : listForges seulement
   résout le dossier explicitement choisi pour ADMIN effectif canonique,
   canResume selon affectation actuelle/lecture seule sans bouton si absente.
   Mutations/getForge/getAssetVersion restent strictes ; aucun rôle, droit,
@@ -249,29 +250,42 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   HTTP 200/zéro exception, fenêtre complète ; copie FR finale neutralisée relue.
   Deux DEFERRED/deux émissions, zéro fournisseur/version/coût avant cleanup,
   puis zéro tâche/émission et serveur arrêté. Reload tronqué sans SLO ni zéro
-  exhaustif déduit ; sélecteur ouvert 0/0 non reçu. Gauntlet 435 cinq exit 0,
+  exhaustif déduit ; sélecteur local 0/0 historique. Gauntlet 435 cinq exit 0,
   gouvernance 1620/166/24 warnings préexistants ; PG complet seul après arrêt
-  Next 274/14 en 41,09 s, Ptah 51 inclus. Suite globale 435 non répétée localement,
-  4180/399 reste historique 434 ; CI/image/runtime 435 en attente.
+  Next 274/14 en 41,09 s, Ptah 51 inclus. Suite globale 435 non répétée localement ;
+  CI 435 reçoit 4180/399 unitaires et 274/14 PG, image/runtime exacts reçus.
+  Cause du 403 en supervision fermée : suivi vide SPAWT listForges HTTP 200/zéro
+  ligne, fenêtre complète 63 réponses/aucune ≥500/zéro exception/log. Sélecteur
+  réel reçu après chargement, 47/47 marques/19 pilotables ; 0/0 initial transitoire.
+  **Résidu mineur du sélecteur** : src/components/cockpit/strategy-selector.tsx
+  affiche filtered.length/tiles.length dans le header même en chargement/erreur,
+  alors que le corps traite le chargement. **Fermer** avec compteur inconnu ou
+  état chargement tant que la requête est indisponible ; réserver zéro à une
+  réponse vide effectivement reçue. Recevoir loading/erreur/empty/loaded.
+  **Déclencheur** : prochaine passe sélection/native C4 ; effort : présentation
+  existante et quatre contre-exemples, sans nouvelle permission. Ce résidu ne
+  retire pas le rendu chargé reçu et n’est pas corrigé dans 435.
+  Passage par son lien vers le portefeuille groupe FrieslandCampina non pilotable
+  reçu en lecture seule, portée d’équipe/liens conservée et ambiguïtés explicites ;
+  aucune métrique isolée de cette navigation. Aucun cycle réel ou SLO reçu.
   Une réservation sans réponse doit rester incertaine, sans réémission aveugle.
   Les clés Ptah
   sont lues dans l’environnement global, sans chemin Connexions reçu.
-  **Fermer** en recevant la livraison/lecture 435 exacte, puis le choix de dossier
-  dans le sélecteur existant : dossiers admissibles explicites, portée courante,
-  absence d’équipe par défaut et lecture seule sans capacité de reprise. Le
-  changement reçu par URL connue ne reçoit pas le sélecteur 0/0. Exercer ensuite
-  le parcours réel documenté et ses refus, sans assimiler DEFERRED à une livraison
+  **Fermer** en recevant le suivi natif de productions présentes et une reprise
+  effective avec portée courante, absence d’équipe par défaut et séparation
+  lecture/exécution. Le suivi vide SPAWT et le passage vers le dossier groupe
+  non pilotable ne reçoivent aucune mutation ni cycle réel. Exercer le parcours
+  réel documenté et ses refus, sans assimiler DEFERRED à une livraison
   fournisseur ni la fixture locale à un média produit. La reprise manuelle d’une
   même tâche est déjà reçue sur fixture ; recevoir le cas configuré/fournisseur
   réel, portée/coûts/anti-double appel et chemin réel de configuration avant autonomie. Ne promettre ni
   reprise automatique ni lien Connexions efficace ; l’UX peut seulement dire
   qu’aucune production n’est lancée et qu’une configuration est nécessaire.
-  **Déclencheur** : CI/image/runtime 435 en cours pour la lecture,
-  puis prochaine recette native du sélecteur avant acceptation C3/C4/C5/C6 ;
-  C5 pour configuration/réponse incertaine ;
+  **Déclencheur** : prochaine production/reprise réelle avant acceptation
+  C3/C4/C5/C6 ; C5 pour configuration/réponse incertaine ;
   parcours réel C3/C6 sur serveur joignable et accès
-  fournisseur nécessaires au cas réel ; effort : correctif de lecture 435 puis
-  un lot reprise/configuration borné et une recette
+  fournisseur nécessaires au cas réel ; effort : un lot reprise/configuration
+  borné et une recette
   par parcours.
 - **Conservation des octets et propagation CDN** : `download-archiver.ts` peut
   remplir AssetVersion.cdnUrl après l’admission ; le BrandAsset existant conserve

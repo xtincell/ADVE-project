@@ -1,10 +1,10 @@
 # Ptah — reprise d’une demande différée et sceau du brief
 
 État au 2026-10-09 : fix session 6.27.433 inclus dans le bundle Ptah/sceau
-6.27.434 **livré au runtime, réception métier partielle** ; candidat lecture
-6.27.435 non livré.
-ADR-0213 Proposed ; dossier privé release/preuves-reprise-ptah-434, repère de
-preuve locale et de runtime, sans réception native complète. Production courante 434.
+6.27.434, puis correctif de supervision 6.27.435 **livré au runtime, suivi vide
+SPAWT reçu en production, réception métier partielle**.
+ADR-0213 Proposed ; dossiers privés release/preuves-reprise-ptah-434 et
+release/preuves-lecture-ptah-435, sans reprise réelle reçue. Production courante 435.
 Tous les chantiers et gates
 programme restent non acceptés ; aucun cycle SPAWT/Noël ou fournisseur reçu.
 
@@ -143,7 +143,7 @@ stress-test-2026-10-09T07-57-54.json, stress-cleanup.json, hybrid-input-red/gree
 seal-guard-red/green, completion-guard-green, unit-final.log et clock-red/green.
 Aucun résultat de livraison inféré de ces reçus locaux.
 
-## Runtime 434 partiel et correctif de lecture 435
+## Historique runtime 434 et correctif de lecture 435 livré
 
 Source 24ddb3c85e094a2b211e644d70849512699a4438, CI 37907427545,
 image 37907430453, Chromatic 37907427572 et MissionDrift 37907427786 verts.
@@ -153,7 +153,7 @@ Native réelle : tracker refusé HTTP 403, compte sans affectation, écran de
 production non reçu. Premier wait H1 3 s échoué, H1 seulement borne tardive
 46 310 ms ; événements tronqués, aucun zéro global HTTP/exception ou SLO déduit.
 
-Candidat 435, dossier privé preuves-lecture-ptah-435 : listForges seulement
+435 livré, dossier privé preuves-lecture-ptah-435 : listForges seulement
 résout le dossier explicitement sélectionné pour ADMIN effectif relu par
 getOperatorContext, god-mode canonique existant compris, sans équipe par défaut.
 canResume repose sur l’affectation actuelle ; lecture seule sans bouton si absente.
@@ -164,9 +164,10 @@ choix, dossier absent/sans équipe, portée de deux équipes et refus de mutatio
 sans émission/fournisseur couverts. Gauntlet local final 435 reçu : cinq exit 0,
 gouvernance 1 620/166 et 24 warnings préexistants/zéro erreur. PostgreSQL complet
 exécuté seul après arrêt Next : 274/14 exit 0 en 41,09 s, dont Ptah 51. Suite
-globale non répétée localement en 435 : 4 180/399 est le reçu historique 434,
-pas un reçu unitaire 435. CI/image/runtime 435 restent à recevoir ; aucune reprise
-ADMIN sans affectation annoncée.
+globale non répétée localement en 435 : 4 180/399 est le reçu local historique
+434. La CI 435 reçoit désormais 4 180/399 unitaires et 274/14 PostgreSQL ; cette
+preuve CI reste distincte de la recette locale. Aucune reprise ADMIN sans
+affectation annoncée.
 
 Recette native locale 435 sur fixtures ADMIN sans affectation, deux équipes et
 deux dossiers ouverts par leur URL connue : chaque dossier rend exactement sa
@@ -189,8 +190,48 @@ elle seule le rendu natif des trois langues.
 Avant nettoyage : deux tâches DEFERRED, providerTaskId absent, zéro version/coût
 et deux émissions de fixture ; aucun fournisseur contacté. Cleanup reçu : zéro
 tâche/émission, puis serveur local arrêté volontairement. Aucun enregistrement
-ni secret de fixture n’est reproduit dans cette documentation. Livraison 435 et
-sélecteur natif restent à recevoir ; production courante 434.
+ni secret de fixture n’est reproduit dans cette documentation. Ces preuves
+locales restent distinctes du suivi vide reçu en production ci-dessous.
+
+## Réception de production 435 — suivi vide et navigation bornée
+
+Source d554276e1258d7251fbdd8319dc8123679abfdcc, CI 37913766133 success :
+4 180/399 unitaires, 274/14 PostgreSQL, neuf jobs réussis et trois skips légitimes
+réservés aux PR. Chromatic 37913766123/MissionDrift 37913766091 verts. Image
+37913788756 verte, démarrage sur base neuve/login HTTP 200 et relecture du PDF
+fixture avant publication. Index
+sha256:b96030f310ca535532526460f4bd9e16ee45f1a7b8a84b0db902f795612972f3 ;
+manifest sha256:be7ddef18faa42507b6a3190281ee61a3dd00ee26e6e99d66eb8be48eb75916b.
+Configurations candidate/publiée identiques et registre latest rapproché.
+Déploiement unique terminé à 10:03:21 UTC ; reçu runtime à 10:06:13 UTC : image
+exacte, nextjs 6.27.435, volume privé RW conservé, version publique HTTP 200.
+Le futur commit documentaire se rapporte à cette image source, sans rebuild.
+
+Native réelle SPAWT : refus 403 disparu, ptah.listForges HTTP 200/zéro ligne,
+message « aucune production à reprendre ». Fenêtre complète : 63 réponses,
+aucune ≥500, zéro exception/log observé, truncated=false/hasMore=false. DOM
+1 884,5 ms ; H1 observé seulement borne supérieure 11 399 ms, tracker observé
+seulement borne supérieure tardive 66 548 ms. Aucune latence exacte ni SLO
+n’est déduite de ces bornes. Ce reçu porte sur un suivi vide : aucune production,
+reprise réelle, configuration fournisseur, facture ou validation S n’est reçue.
+
+Le 0/0 initial du sélecteur réel était transitoire au chargement. Son rendu final
+est reçu : 47/47 marques, 19 pilotables ; marques/gammes SPAWT et groupe
+FrieslandCampina visibles. Le compteur du header reste un résidu de présentation
+pendant chargement/erreur, sans correctif dans 435 ; il ne retire pas la liste
+chargée reçue. [Plan et déclencheur](RESIDUAL-DEBT.md).
+Le lien observé du sélecteur vers le portefeuille
+FrieslandCampina non pilotable est exercé en lecture seule : dossier groupe,
+équipe et liens de dossier concordants, marques/campagnes/projets/références/
+actifs rendus et rattachements ambigus explicitement signalés. Aucun identifiant
+privé n’est recopié ici. Cette navigation n’a pas de fenêtre de métriques isolée :
+aucun SLO ni zéro réseau/exception global déduit. Le rendu et ce passage sont
+reçus, sans réception du cycle FrieslandCampina/Noël, d’une production/reprise
+réelle ou de l’intégralité du portefeuille.
+
+Preuves privées : runtime.json, ci.json, image.json, image-digest.json,
+native-production-spawt.json/png, native-production-list-response.json,
+native-production-selector.json/png et native-production-friesland.json/png.
 
 ## Réception restant requise
 
@@ -198,10 +239,10 @@ Achever les refus/gestes restants : étranger/legacy non vérifiable,
 concurrence et reprise sans doublon,
 interruption après réservation et état incertain sans nouvel appel. Puis rôles
 OPERATOR/FOUNDER natifs complets et reçu fournisseur réel de tâche ;
-stress des parcours restants, CI/image/runtime et livraison du correctif 435,
-native de production exacte, puis choix du dossier par le sélecteur existant.
-La lecture locale par URL connue et son actualisation ne ferment pas ce dernier
-parcours.
+stress des parcours restants, suivi natif de productions réellement présentes
+et reprise effective après configuration. CI/image/runtime 435, suivi vide SPAWT,
+rendu du sélecteur et passage vers le portefeuille groupe sont reçus ; ces lectures
+ne ferment pas les parcours de production, les mutations ou le cycle client.
 L’accès à des clés n’est pas une preuve de production ou de facture fournisseur.
 
 Provenance documentaire/invalidation/activeBriefId, filiation complète,

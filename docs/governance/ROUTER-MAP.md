@@ -33,17 +33,21 @@ startedAt réel distinct/emittedAt logique, scénario durée/clôture reçu sans
 global. Stress isolé exit 0 borné, 46 HTTP reçus/235 non reçus/0 échec avant les
 dernières gardes et dates. Suite canonique 4 180/399 et PG 270/14 finaux
 post-découplage reçus ; CI/runtime 434 reçus, parcours restants en attente.
-Native tracker réelle 403 pour compte sans affectation. Candidat 435 : listForges
+Native tracker 434 réelle403 pour compte sans affectation. 435 livré : listForges
 seulement résout le dossier explicitement choisi pour ADMIN effectif canonique,
 sans équipe par défaut ; canResume selon affectation actuelle. Mutations/getForge/
 getAssetVersion restent strictes, aucun droit/rôle/équipe ajouté. Deux rouges/
 49 verts puis 51 PG ciblés verts. listForges authentifié local HTTP 200,
 canResume=false, sans secret ; deux dossiers/deux équipes relus par URL connue,
 chacun sa tâche/lecture seule/zéro bouton. Actualiser fenêtre complète/zéro
-exception ; copie FR finale relue, fixture nettoyée. Sélecteur 0/0 non reçu,
+exception ; copie FR finale relue, fixture nettoyée. Sélecteur local 0/0 historique,
 gauntlet 435 cinq exit 0/gouvernance 1620/166/24 warnings préexistants et PG complet
-seul 274/14/Ptah 51 inclus reçus. CI/image/runtime 435 à recevoir ; reload tronqué
-sans SLO.
+seul 274/14/Ptah 51 inclus reçus. CI 435 : 4 180/399 unitaires et 274/14 PG/image/runtime reçus.
+Native SPAWT listForges HTTP 200/zéro ligne, 403 disparu ; fenêtre complète : 63 réponses/
+aucune ≥500/zéro exception/log. Liste du sélecteur et passage par son lien vers le
+portefeuille groupe FrieslandCampina non pilotable reçus en lecture seule,
+portée/ambiguïtés rendues, sans métriques isolées. Production/reprise réelle non
+reçue ; reload local tronqué et bornes tardives production, sans SLO déduit.
 [ADR-0213 Proposed](adr/0213-deferred-production-resumption-and-seals.md).
 ---
 

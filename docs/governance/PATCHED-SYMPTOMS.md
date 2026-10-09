@@ -30,7 +30,7 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
-2026-10-09 · Candidat 435, local/non livré : tracker réel 403 en 434 pour compte
+2026-10-09 · 435 livré, réception partielle : tracker réel 403 en 434 pour compte
 sans affectation malgré rôle ADMIN effectif. listForges seulement résout le dossier
 explicitement choisi via getOperatorContext canonique ; canResume selon
 affectation actuelle, lecture seule sans bouton si absente. Mutations et autres
@@ -40,10 +40,15 @@ dossier choisi et capacité d’exécuter pour son équipe étaient confondues d
 le même résolveur. Native locale par URL connue sur deux dossiers/deux équipes :
 chacun sa tâche, lecture seule/canResume=false, sans bouton ni secret. Actualiser
 HTTP 200/zéro exception dans une fenêtre complète ; copie FR finale relue,
-fixture nettoyée. Sélecteur 0/0 non reçu ; gauntlet 435 cinq exit 0, gouvernance
+fixture nettoyée. Sélecteur local 0/0 historique ; gauntlet 435 cinq exit 0, gouvernance
 1620/166/24 warnings préexistants, PG complet seul 274/14/Ptah 51 inclus reçus.
-CI/image/runtime 435 à recevoir ; pas de reprise ADMIN annoncée ni SLO déduit du
-reload tronqué. [Bornes](RECEPTION-PTAH-REPRISE.md).
+CI 435 : 4 180/399 unitaires et 274/14 PG/image/runtime reçus. Cause du403 en supervision
+fermée : native SPAWT listForges HTTP 200/zéro ligne, suivi vide reçu ; fenêtre complète
+63 réponses/aucune ≥500/zéro exception/log. Liste du sélecteur reçue après chargement,
+passage par son lien vers le portefeuille groupe FrieslandCampina non pilotable
+reçu en lecture seule, portée/ambiguïtés rendues, sans métriques isolées. Pas de
+reprise réelle/ADMIN sans affectation reçue ni SLO déduit des reloads ou bornes
+tardives production. [Bornes](RECEPTION-PTAH-REPRISE.md).
 
 2026-10-09 · Fix session 433 dédié : OPERATOR/canOperate=true, mais strategy.list
 vide faute d’operatorId dans la session. Callback auth et types existants relisent
@@ -62,7 +67,7 @@ RESIDUAL-DEBT. Contrôles finaux post-découplage : suite canonique 4 180/399,
 270 PostgreSQL/14 et 1 620 gouvernance/166, 24 warnings préexistants.
 Stress isolé reçu avant les dernières gardes ; ses limites, les parcours restants
 et les parcours réels demeurent distincts ; native tracker refusée 403,
-correctif de lecture 435 séparé en cours. Timeout PG concurrent conservé,
+correctif de lecture435 séparé livré, suivi vide SPAWT reçu. Timeout PG concurrent conservé,
 relance complète seule verte/cause non démontrée.
 
 2026-10-09 · Code 434 livré au runtime, preuves locales : une émission inchangée

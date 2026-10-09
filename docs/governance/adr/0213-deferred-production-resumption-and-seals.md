@@ -2,7 +2,7 @@
 
 - **Status** : Proposed
 - **Date** : 2026-10-09
-- **Phase** : Réception partielle Shinkiro C3/C4/C5/C6 — runtime 434, lecture 435 candidate
+- **Phase** : Réception partielle Shinkiro C3/C4/C5/C6 — runtime 435, suivi vide reçu
 - **Depends on** : ADR-0009, ADR-0021, ADR-0124, ADR-0207
 - **Supersedes** : — (extension, aucune réécriture des reçus historiques)
 
@@ -88,10 +88,17 @@ tardive sans zéro exhaustif ou SLO déduit. 435 : deux rouges/49 verts puis 51 
 ciblés verts. Native locale par URL connue sur deux dossiers/deux équipes : chacun
 sa tâche en lecture seule/canResume=false, sans bouton ni secret. Actualiser
 HTTP 200/zéro exception dans une fenêtre complète ; copie FR finale relue, fixture
-nettoyée. Sélecteur 0/0 non reçu. Gauntlet local final 435 cinq exit 0, gouvernance
-1620/166/24 warnings préexistants ; PG complet seul 274/14 en 41,09 s, Ptah 51
-inclus. Suite globale 435 non répétée localement, 4180/399 historique 434 ;
-CI/image/runtime 435 en attente. Reload tronqué sans zéro exhaustif ou SLO déduit.
+nettoyée. Sélecteur local 0/0 historique. Gauntlet local final 435 cinq exit 0,
+gouvernance 1620/166/24 warnings préexistants ; PG complet seul 274/14 en 41,09 s,
+Ptah 51 inclus. Suite globale 435 non répétée localement ; CI 435 reçue
+4180/399 unitaires et 274/14 PG, image/runtime exacts source d554276e reçus.
+Native réelle SPAWT listForges HTTP 200/zéro ligne : refus 403 disparu, suivi
+vide reçu. Fenêtre complète 63 réponses/aucune ≥500/zéro exception/log, sans SLO
+déduit des bornes tardives. Liste réelle du sélecteur reçue après chargement,
+0/0 initial transitoire ; passage par son lien vers le portefeuille groupe
+FrieslandCampina non pilotable reçu en lecture seule, portée et ambiguïtés
+rendues. Cette navigation ne reçoit aucune métrique isolée, production/reprise
+réelle, validation S ou cycle client. Reload local tronqué historique conservé.
 [Bornes et preuves](../RECEPTION-PTAH-REPRISE.md). ADR reste Proposed.
 Réponses fournisseur incertaines, preuves historiques irrécupérables, lineage
 source complet, coût facturé et cycle client intégral restent à recevoir.

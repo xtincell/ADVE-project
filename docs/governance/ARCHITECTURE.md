@@ -88,19 +88,25 @@ documentaire, octets/CDN, facture, Canva/Figma et
 journal restent distincts : [reçu courant](RECEPTION-PTAH-UX.md),
 [reprise interrompue historique 425](RECEPTION-PTAH-ADMISSION.md).
 
-## Code 434 au runtime, lecture 435 candidate — réception métier partielle
+## Runtime 435, suivi vide SPAWT reçu — réception métier partielle
 
 Runtime exact 434/source 24ddb3c8/CI 37907427545/image 37907430453 reçus ; native
 tracker réelle 403 pour compte non affecté, écran non reçu/trace tronquée.
-Candidat 435 : listForges seulement résout le dossier explicitement choisi pour
+435 livré : listForges seulement résout le dossier explicitement choisi pour
 ADMIN effectif canonique, sans équipe par défaut ; canResume selon affectation
 actuelle. Mutations/autres lectures restent strictes, aucun droit ou rôle ajouté.
 Deux rouges/49 verts puis 51 PG ciblés verts. Native locale par URL connue : deux
 dossiers de deux équipes, chacun sa tâche, canResume=false/lecture seule, sans
 bouton ni secret ; Actualiser HTTP 200, fenêtre complète/zéro exception. Sélecteur
-0/0 non reçu, copie FR finale relue, fixture nettoyée. Gauntlet 435 cinq exit 0,
+local 0/0 historique, copie FR finale relue, fixture nettoyée. Gauntlet 435 cinq exit 0,
 gouvernance 1620/166/24 warnings préexistants ; PG complet seul 274/14, Ptah 51
-inclus. CI/image/runtime 435 en attente. Reload tronqué sans zéro exhaustif/SLO déduit.
+inclus. CI 435 reçue : 4 180/399 unitaires et 274/14 PG ; image/runtime exact 435 reçus, source
+d554276e. Native SPAWT listForges HTTP 200/zéro ligne, 403 disparu ; fenêtre complète
+63 réponses/aucune ≥500/zéro exception/log. Liste du sélecteur reçue après chargement,
+passage par son lien vers le portefeuille groupe FrieslandCampina non pilotable
+reçu en lecture seule, portée/ambiguïtés rendues, sans métriques isolées.
+Production/reprise réelle non reçue ; reload local tronqué et timings production
+bornés, sans SLO déduit.
 
 ADR-0213 Proposed étend Ptah/Intent/tâche existants par une reprise manuelle
 sur brief original : portée/paramètres/sceau relus, gates actuelles puis
@@ -133,8 +139,8 @@ heap local 8 192 MiB seulement ; stress antérieur aux dernières gardes et date
 Suite canonique 4 180/399 et PG 270/14 finaux post-découplage reçus ; timeout
 concurrent conservé/relance PG seule verte sans cause racine démontrée.
 Parcours restants non reçus, CI/runtime 434 reçus. Auth 433 committée séparément,
-incluse dans le bundle 434 sans runtime autonome. Production 434,
-sept chantiers/dix gates programme non acceptés : [réception candidate](RECEPTION-PTAH-REPRISE.md).
+incluse dans le bundle 434 sans runtime autonome. Production courante 435,
+sept chantiers/dix gates programme non acceptés : [réception partielle](RECEPTION-PTAH-REPRISE.md).
 
 ## Glory tools — outils intriqués
 

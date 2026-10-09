@@ -66,20 +66,25 @@ npm run dev                 # → http://localhost:3000
 
 ## État courant borné — 2026-10-09
 
-**Candidat 6.27.435, lecture ADMIN du dossier choisi** : listForges seulement
+**6.27.435 livré, suivi vide SPAWT reçu** : listForges seulement
 utilise le rôle effectif canonique et le dossier explicitement sélectionné,
 sans équipe par défaut. Lecture seule sans reprise si affectation absente ;
 mutations/autres lectures restent strictes, aucun droit/équipe/rôle nouveau.
 Deux rouges/49 verts puis 51 PG ciblés verts. Native locale par URL connue sur
 deux dossiers de deux équipes : chacun sa tâche, canResume=false, lecture seule,
 sans bouton ni secret. Actualiser HTTP 200/zéro exception, fenêtre complète ;
-copie FR finale relue, fixture nettoyée/serveur arrêté. Sélecteur 0/0 non reçu,
+copie FR finale relue, fixture nettoyée/serveur arrêté. Sélecteur local 0/0 historique,
 reload tronqué sans SLO. Gauntlet 435 cinq exit 0, gouvernance 1620/166/24 warnings
 préexistants ; PG complet seul après arrêt Next 274/14 en 41,09 s, Ptah 51 inclus.
-Suite globale 435 non répétée localement, 4180/399 historique 434 ; CI/image/
-runtime 435 à recevoir.
+Suite globale 435 non répétée localement ; CI 435 reçue : 4 180/399 unitaires et 274/14 PG.
+Native SPAWT listForges HTTP 200/zéro ligne, 403 disparu ; fenêtre complète : 63 réponses/
+aucune ≥500/zéro exception/log, sans SLO. Liste du sélecteur reçue après chargement
+47/47 marques/19 pilotables, 0/0 initial transitoire ; passage par son lien vers le
+portefeuille groupe FrieslandCampina non pilotable reçu en lecture seule, portée
+conservée/ambiguïtés rendues, sans fenêtre de métriques isolée. Production/reprise
+réelle, validation S et cycle Noël non reçus.
 
-**6.27.434 livré au runtime, réception métier partielle** : reprendre une demande différée depuis son
+**Reçu historique 6.27.434, réception métier partielle** : reprendre une demande différée depuis son
 brief initial dans la page de production existante, conserver la tâche et
 réserver l’envoi avant le réseau. Sceau versionné/état incertain explicite,
 aucune reprise automatique. Fix session 433 séparé, affectation opérateur relue
@@ -116,9 +121,9 @@ Identité complète, autres destinations/quiz-app/retour de valeur, sept chantie
 et dix gates programme restent ouverts.
 [ADR-0212 Accepted, borné](docs/governance/adr/0212-versioned-public-identity-projection.md).
 
-La livraison de runtime courante est **6.27.434**, source 24ddb3c8,
-CI 37907427545/image 37907430453 verts, runtime exact/volume privé RW/API version
-200 reçus ; tracker natif refusé 403, réception métier partielle. L’identité 432
+La livraison de runtime courante est **6.27.435**, source d554276e,
+CI 37913766133/image 37913788756 verts, runtime exact/nextjs/volume privé RW/
+version publique HTTP 200 reçus ; suivi vide natif SPAWT reçu, réception métier partielle. L’identité 432
 et son corpus hors éditions ont leur reçu historique distinct.
 Le raccord SPAWT reçoit textes/liens, logo et familles d’identité choisies ; l’univers complet, les sept
 chantiers Shinkiro et leurs acceptations métier restent ouverts.
