@@ -10,6 +10,22 @@ Source cdd9f6c01423bdfb8b9da37240c5f9fcb8bef5e4, CI 37862693091 et image
 nextjs/version/index concordants, volume privé RW conservé. Aucune livraison
 426 isolée. Aucun nouveau modèle, service, Intent, outil ou ADR.
 
+**Candidat 429, production encore 428** : ADR-0210 étend l’édition publique avec
+pool partagé, choix de variante sans promotion et pins privés ; contrat v1
+inchangé, deux logos vitrine/repli/CSP bornée. PostgreSQL ciblé 27/27, native
+FOUNDER Connexions/publication/restauration/page publique locale reçue sur fixture,
+pas de marque réelle publiée. Six éditions synthétiques reçues, fixture nettoyée
+(zéro actif/stratégie). Gauntlet final : 4167 unitaires/397 fichiers,
+1617 gouvernance/166, 243 PostgreSQL/14, types/lints sans erreur/24 warnings,
+cycles 0. Vitrine 33/33/types/vocab/build verts ; PR #6 fusionnée (3e1f9b8d), CI
+37867539939 verte, déploiement terminé à 01:01:57 UTC ; logo natif en production
+non reçu. Global 4166/4167 au premier passage, timing
+withRetry 93 ms pour une borne de 50 ms pendant compilation ; isolé 36/36 vert sans
+changement ; relance complète après arrêt du serveur verte, cause non démontrée,
+diagnostic si récidive. CI/image/runtime du backend 429 restent à recevoir ;
+immutabilité des octets, identité complète/quiz-app/retour de valeur
+et sept chantiers ouverts : [ADR-0210](docs/governance/adr/0210-explicit-public-logo-variants.md).
+
 campaignId/briefId/sourceBrandAssetId traversent MCP/tRPC, Intent, Artemis et
 Ptah jusqu’à GenerativeTask ; portée relue avant fournisseur et admission.
 Régénération : concordance propre de la tâche historique et références reprises.

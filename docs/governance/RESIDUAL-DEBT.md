@@ -24,25 +24,31 @@ historique inventée. Cette réception ne ferme pas l’univers de marque ou les
 sept chantiers ; les résidus actifs suivent.
 
 - **Identité au-delà de la copie v1** : public-brand-v1 ne porte pas tokens de
-  design, voix structurée ni variantes de logo. Le premier consommateur SPAWT est
-  limité au hero et aux liens, sans modifier la direction artistique, le quiz
-  ou le moteur de l’app. Lecture statique C2 du 9 octobre : Layout reçoit
-  logoUrl sans le rendre ; publication::inspect choisit le premier logo ACTIVE/
-  public sûr par id, sans raccorder resolveBrandIdentity qui traite les variantes/
-  ambiguïtés. La CSP limite images/fonts à self : une origine externe ne doit
-  pas être branchée sans rapprocher distribution durable, contrat et rendu.
-  Aucune correction de ces trois points n’est reçue.
+  design ni voix structurée. Le candidat 429 reçoit localement le choix/rendu de
+  logo : pool partagé, sélection sans promotion et pins privés, deux rendus/repli
+  et CSP images bornée ; 27 PostgreSQL ciblés, native Connexions/page publique
+  sur fixture et 33 tests vitrine verts. Les trois causes logo non rendu/choix par
+  id/CSP insuffisante sont retirées des actions locales restantes, production 429
+  backend encore à recevoir. Cela ne reçoit ni identité complète ni quiz/application.
   **Fermer** par comparaison source/usage pour chaque
   destination, sélection explicite et pins dans le contrat existant étendu,
-  puis version consommée/refus de périmé/retour reçu. Factoriser la sélection
-  publique dans le résolveur/coffre existants, expliciter actif/version par
-  destination et recevoir rendu avec repli, CSP bornée à l’origine nécessaire,
-  panne/étranger/invalide/chargement tardif/retour arrière. Conserver palette,
+  puis version consommée/refus de périmé/retour reçu pour chaque famille non
+  reçue. Vitrine PR #6 fusionnée/CI verte et déploiement terminé à 01:01:57 UTC ;
+  logo natif en production non reçu, distinct des tests et de la page publique
+  locale. Gauntlet ADVE final vert (4167 unitaires/1617 gouvernance/243 PostgreSQL,
+  types/lints/zéro cycle), fixture nettoyée. Conserver palette,
   polices et Moka CANON ; ne pas ouvrir toutes les origines ni remplacer la DA.
   Ne pas résoudre les variantes
   par index ni transporter une charte privée entière. **Déclencheur** : prochain
   raccord C2 des identités après réception de la copie publique ; effort : un lot
   de contrat et recette par famille d’usage, sans nouveau système parallèle.
+- **Octets derrière les URL /brand/** : les pins du logo en 429 portent
+  l’enregistrement, pas les octets servis ; le digest JSON ne prouve pas le hash
+  du fichier. **Fermer** par conservation/version et empreinte d’octets sur les
+  primitives existantes, puis relecture après publication, changement d’origine
+  et restauration sans coffre parallèle. **Déclencheur** : prochain raccord C2/C3
+  de conservation avant promesse d’édition immuable ; effort : un lot stockage/
+  version et recette par famille d’actifs. Livraison 429 ne ferme pas ce point.
 - **Brouillon après interruption** : la carte conserve révision et contenu pendant
   son ouverture ; leur survie à une fermeture/recharge n’est pas reçue. **Fermer**
   en éprouvant l’interruption et en réutilisant le mécanisme de brouillon existant
@@ -448,6 +454,15 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
   un contrôle ; reprise dès droits de configuration GitHub disponibles.
 
 ## Avertissements de lint préexistants — relevé 2026-10-06
+
+- **Timing withRetry à qualifier — 2026-10-09** : premier passage global 429
+  4166/4167 ; tests/unit/services/llm-gateway.test.ts:95 attend Date.now()-start
+  <50 ms, mesure 93 ms observée pendant compilation locale. Contrôle isolé 36/36
+  vert sans modification ; relance complète requise après arrêt du serveur
+  effectuée, 4167/4167 verts. Cause non démontrée. **Fermer** par diagnostic
+  reproductible du temps mur/attentes si l’écart revient ; ne pas ignorer le test
+  ni affaiblir sa borne pour masquer l’échec. **Déclencheur** : récidive au prochain
+  passage stabilité ; effort : diagnostic ciblé uniquement si récidive.
 
 - **24 warnings de lint/gouvernance, zéro erreur** : relevés au gauntlet 400 (25 au gauntlet ADR-0196),
   déjà présents avant cette extension. Classes observées : import inter-portails,

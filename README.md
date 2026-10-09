@@ -69,8 +69,17 @@ npm run dev                 # → http://localhost:3000
 La dernière livraison de production reçue est **6.27.428**, source cdd9f6c0,
 CI 37862693091 et image 37862922982 rapprochées du runtime exact le 9 octobre à
 00:19:53 UTC. Le volume privé, le corpus et l’édition publique SPAWT sont conservés.
-Le raccord SPAWT reste limité aux textes/liens ; l’univers complet, les sept
+Le raccord SPAWT reçu en production reste limité aux textes/liens ; l’univers complet, les sept
 chantiers Shinkiro et leurs acceptations métier restent ouverts.
+
+**Candidat 429, logo reçu localement** : choix d’une variante dans Connexions,
+publication/restauration sur fixture et page publique chargée ; deux logos de
+vitrine/repli/CSP couverts par 33 tests. Vitrine déployée le 9 octobre à 01:01:57 UTC
+(PR #6, CI verte), logo natif en production non reçu ; backend 429 non livré.
+Gauntlet final vert : 4167 unitaires/1617 gouvernance/243 PostgreSQL, types/lints
+sans erreur, 24 warnings préexistants, zéro cycle. Fixture synthétique nettoyée.
+Les pins portent l’enregistrement, pas l’immutabilité des octets :
+[ADR-0210 et bornes](docs/governance/adr/0210-explicit-public-logo-variants.md).
 
 Le code 426+427 transmet campagne/brief/actif source jusqu’à la tâche, contrôle
 leur portée et celle de la tâche historique, puis reconnaît le résultat

@@ -26,6 +26,8 @@ export const PublicBrandPublicationInput = z.object({
   expectedPublishedId: z.string().nullable(),
   content: PublicBrandContent,
   restoreId: z.string().optional(),
+  // Private publication choice; the public v1 content remains unchanged.
+  logoAssetId: z.string().min(1).optional(),
 }).strict();
 
 export const PublicBrandEdition = z.object({

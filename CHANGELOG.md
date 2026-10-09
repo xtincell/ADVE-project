@@ -1,5 +1,32 @@
 # Changelog — La Fusee
 
+## v6.27.429 — fix(brand): choisir et rendre le logo de l’édition publique (2026-10-09)
+
+**Le candidat relie une variante choisie dans le coffre au logo de la vitrine.**
+
+- ADR-0210 étend ADR-0209 : pool partagé resolveBrandIdentity, choix de variante
+  finale SELECTED/ACTIVE de marque sans promotion, aperçu/Select DS dans
+  Connexions. Plusieurs ACTIVE ne désignent plus un logo par ordre technique.
+- Input privé/pins id/version/fileUrl/fingerprint et sources liées courantes,
+  chemins /brand/ absolutisés HTTPS, restauration contrôlée ; public-brand-v1
+  inchangé. Deux logos de vitrine raccordés, lecteur/CSP images limités à
+  powerupgraders.com/brand/, repli canon local ; Moka/polices/palette/quiz conservés.
+- Local : 27 PostgreSQL ciblés verts, dont source liée périmée rouge puis verte ;
+  HTTP authentifié/refus/conflit/restauration reçus. FOUNDER natif choisit et
+  restaure une variante sur fixture ; page publique chargée, zéro 500/exception
+  observé. Six éditions synthétiques reçues ; fixture nettoyée, zéro actif/stratégie
+  restant. Gauntlet final : 4167 unitaires/397 fichiers, 1617 gouvernance/166,
+  243 PostgreSQL/14, types/lints sans erreur, 24 warnings préexistants, zéro cycle.
+- Vitrine 33/33 et types/vocab/build verts ; PR #6 fusionnée (3e1f9b8d), CI
+  37867539939 verte, déploiement terminé à 01:01:57 UTC. Logo natif en production
+  non reçu ; CI/image/production du backend 429 restent en attente, production ADVE 428.
+- Suite globale premier passage 4166/4167 : timing withRetry 93 ms pour une borne
+  de 50 ms pendant compilation locale, cause non démontrée ; isolé 36/36 vert sans
+  modification. Relance complète après arrêt du serveur verte, sans affaiblissement
+  du test ; diagnostic à déclencher si récidive. Trois causes C2 retirées des actions locales restantes,
+  immutabilité des octets/univers/quiz-app/retour de valeur/sept chantiers ouverts.
+  Aucun nouveau modèle/service/router/page/Intent/outil ; [preuves et limites](docs/governance/adr/0210-explicit-public-logo-variants.md).
+
 ## v6.27.428 — docs(governance): recevoir la livraison de l’état de production Oracle (2026-10-09)
 
 **Le correctif est livré ; bouton et rôles restent reçus sur recette locale synthétique.**

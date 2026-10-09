@@ -5,11 +5,12 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { PUBLIC_BRAND_FORMAT, PublicBrandContent, PublicBrandPublicationInput } from "@/domain/public-brand";
 import { isBrandPublicSlug, brandPublicSlugSafe, disambiguateBrandSlug } from "@/domain/brand-slug";
-import { sourceFingerprint, loadBrandSources, assertCurrentSourceReceipts } from "@/server/services/ingestion-pipeline/source-usage";
+import { sourceFingerprint, loadBrandSources, assertCurrentSourceReceipts, assertAssetSourceCurrent } from "@/server/services/ingestion-pipeline/source-usage";
 import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { assertCollaboratorMayEmit } from "@/server/governance/collaborator-firewall";
 import { isGodModeEmail } from "@/lib/auth/god-mode";
 import { z } from "zod";
+import { resolveBrandIdentity } from "@/server/services/brand-theme";
 
 type Client = Prisma.TransactionClient;
 const scope = { kind: "BRAND_GUIDELINES", format: PUBLIC_BRAND_FORMAT, campaignId: null };
@@ -20,22 +21,42 @@ export class PublicBrandError extends Error {
   constructor(public readonly code: "FORBIDDEN" | "CONFLICT" | "PRECONDITION_FAILED", message: string) { super(message); }
 }
 
+/** Only already-public files may leave the vault. A relative /brand/ path
+ * belongs to this deployment, never to the consuming site's origin. */
+function publicLogoUrl(value: string | null): string | null {
+  if (!value || /private-media|\/api\/|token|signature/i.test(value)) return null;
+  if (value.startsWith("/")) {
+    if (!/^\/brand\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.(?:png|webp|jpe?g|svg)$/.test(value)) return null;
+    const base = process.env.NEXT_PUBLIC_BASE_URL || process.env.AUTH_URL || process.env.NEXTAUTH_URL;
+    if (!base || !PublicBrandContent.shape.logoUrl.safeParse(base).success) return null;
+    value = new URL(value, new URL(base).origin).href;
+  }
+  return PublicBrandContent.shape.logoUrl.safeParse(value).success ? value : null;
+}
+const logoFingerprint = (logo: { id: string; version: number; fileUrl: string | null; content: unknown; metadata: unknown }) =>
+  sourceFingerprint({ rawData: { id: logo.id, version: logo.version, fileUrl: logo.fileUrl, content: logo.content, metadata: logo.metadata } });
+
 async function inspect(strategyId: string, tx: Client) {
   const strategy = await tx.strategy.findUniqueOrThrow({ where: { id: strategyId } });
-  const [pillars, sources, logos, networks, editions] = await Promise.all([
+  const [pillars, sources, identity, networks, editions] = await Promise.all([
     tx.pillar.findMany({ where: { strategyId, key: { in: ["a", "d"] } }, orderBy: { key: "asc" } }),
     loadBrandSources(strategyId, {}, tx),
-    tx.brandAsset.findMany({ where: { strategyId, kind: "LOGO_FINAL", state: "ACTIVE", staleAt: null }, orderBy: { id: "asc" } }),
+    resolveBrandIdentity(strategyId, tx),
     tx.followerSnapshot.findMany({ where: { strategyId }, orderBy: [{ capturedAt: "desc" }, { id: "asc" }], take: 40 }),
     tx.brandAsset.findMany({ where: { strategyId, ...scope }, orderBy: [{ version: "desc" }, { id: "asc" }], take: 30 }),
   ]);
   const a = object(pillars.find((p) => p.key === "a")?.content);
   const d = object(pillars.find((p) => p.key === "d")?.content);
-  const safeLogo = logos.find((l) => {
-    const url = l.fileUrl;
-    if (!url || /private-media|\/api\/|token|signature/i.test(url)) return false;
-    return PublicBrandContent.shape.logoUrl.safeParse(url).success;
+  const logos = identity.logos.flatMap((logo) => {
+    const meta = object(logo.metadata);
+    const sourceCurrent = typeof meta.sourceDataSourceId !== "string" || sources.some((source) =>
+      source.id === meta.sourceDataSourceId && source.contentHash === meta.sourceContentHash);
+    const url = sourceCurrent ? publicLogoUrl(logo.fileUrl) : null;
+    return logo.kind === "LOGO_FINAL" && logo.campaignId === null && ["ACTIVE", "SELECTED"].includes(logo.state) && url
+      ? [{ ...logo, url, fingerprint: logoFingerprint(logo) }] : [];
   });
+  const activeLogos = logos.filter((logo) => logo.state === "ACTIVE");
+  const safeLogo = activeLogos.length === 1 ? activeLogos[0] : null;
   const links: PublicBrandContent["links"] = [];
   const hosts: Record<string, [string, string]> = {
     INSTAGRAM: ["Instagram", "https://instagram.com/"], FACEBOOK: ["Facebook", "https://facebook.com/"],
@@ -51,14 +72,14 @@ async function inspect(strategyId: string, tx: Client) {
   }
   const proposed = PublicBrandContent.parse({ name: strategy.name, title: strategy.name,
     tagline: text(a.accroche) || text(object(a.assetsLinguistiques).slogan),
-    description: text(d.positionnement), logoUrl: safeLogo?.fileUrl ?? null, links });
+    description: text(d.positionnement), logoUrl: safeLogo?.url ?? null, links });
   const receipts = sources.map((s) => ({ sourceId: s.id, contentHash: s.contentHash })).sort((x, y) => x.sourceId.localeCompare(y.sourceId));
   const pins = { name: strategy.name, operatorId: strategy.operatorId, status: strategy.status,
     pillars: pillars.map((p) => ({ id: p.id, key: p.key, version: p.currentVersion, content: p.content,
       validationStatus: p.validationStatus, fieldCertainty: p.fieldCertainty, sources: p.sources, staleAt: p.staleAt?.toISOString() ?? null })),
-    sources: receipts, logos: logos.map((l) => ({ id: l.id, content: l.content, fileUrl: l.fileUrl, updatedAt: l.updatedAt.toISOString() })),
+    sources: receipts, logos: logos.map((l) => ({ id: l.id, name: l.name, version: l.version, state: l.state, url: l.url, fingerprint: l.fingerprint })),
     links };
-  return { strategy, proposed, receipts, pins, revision: sourceFingerprint({ rawData: pins }), editions };
+  return { strategy, proposed, receipts, pins, revision: sourceFingerprint({ rawData: pins }), editions, logos };
 }
 
 export async function previewPublicBrand(strategyId: string, actorId?: string) {
@@ -74,7 +95,8 @@ export async function previewPublicBrand(strategyId: string, actorId?: string) {
     }
   }
   return { revision: state.revision, proposed: state.proposed, slug: state.strategy.publicSlug, canPublish,
-    published: active ? { id: active.id, version: active.version, content: PublicBrandContent.parse(active.content),
+    logos: state.logos.map(({ id, name, version, state: assetState, url }) => ({ id, name, version, state: assetState, url })),
+    published: active ? { id: active.id, version: active.version, logoAssetId: text(object(object(active.metadata).logoAsset).id) || null, content: PublicBrandContent.parse(active.content),
       observed: object(active.metadata).publicationOrigin === "OBSERVED_PUBLICATION" } : null,
     previous: state.editions.filter((e) => e.state === "SUPERSEDED").map((e) => ({ id: e.id, version: e.version })),
     warning: "Relisez les textes avant publication. Ce choix ne valide pas l’ensemble de votre stratégie.",
@@ -113,6 +135,8 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
       throw new PublicBrandError("CONFLICT", "La marque ou sa publication a changé. Rechargez l’aperçu avant de publier.");
     }
     let content = requested.content;
+    let chosenLogoId = requested.logoAssetId;
+    let restoredLogo: Record<string, unknown> | null = null;
     if (requested.restoreId) {
       const prior = await tx.brandAsset.findFirst({ where: { id: requested.restoreId, strategyId, ...scope, state: "SUPERSEDED" } });
       if (!prior) throw new PublicBrandError("PRECONDITION_FAILED", "Cette ancienne publication n’est pas disponible.");
@@ -120,8 +144,17 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
         throw new PublicBrandError("PRECONDITION_FAILED", "Cette ancienne publication doit être relue avant réutilisation.");
       }
       content = PublicBrandContent.parse(prior.content);
+      restoredLogo = object(object(prior.metadata).logoAsset);
+      chosenLogoId = text(restoredLogo.id) || undefined;
     }
-    if (content.logoUrl && content.logoUrl !== current.proposed.logoUrl) throw new PublicBrandError("PRECONDITION_FAILED", "Choisissez un logo public actuel de cette marque.");
+    const matches = current.logos.filter((logo) => logo.url === content.logoUrl && (!chosenLogoId || logo.id === chosenLogoId));
+    const chosenLogo = content.logoUrl && matches.length === 1 ? matches[0]! : null;
+    if ((content.logoUrl && !chosenLogo) || (!content.logoUrl && chosenLogoId)
+      || (restoredLogo?.fingerprint && restoredLogo.fingerprint !== chosenLogo?.fingerprint)) {
+      throw new PublicBrandError("PRECONDITION_FAILED", "Choisissez une version actuelle du logo de cette marque, ou publiez sans logo.");
+    }
+    // Eligible source ids are already fenced above in the same lock order.
+    if (chosenLogo) await assertAssetSourceCurrent(tx, { strategyId, metadata: chosenLogo.metadata });
     let slug = current.strategy.publicSlug;
     if (!slug) {
       slug = brandPublicSlugSafe(content.name, strategyId);
@@ -137,7 +170,9 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
       state: "ACTIVE", version, parentBrandAssetId: active?.id, sourceIntentId: intentId,
       selectedAt: new Date(), selectedById: actorId, pillarSource: "A",
       metadata: { publicationOrigin: "EXPLICIT_SELECTION", proposalRevision: current.revision,
-        sourceReceipts: current.receipts, pillarVersions: current.pins.pillars.map((p) => ({ key: p.key, version: p.version })),
+        sourceReceipts: current.receipts,
+        logoAsset: chosenLogo ? { id: chosenLogo.id, version: chosenLogo.version, fileUrl: chosenLogo.fileUrl, fingerprint: chosenLogo.fingerprint } : null,
+        pillarVersions: current.pins.pillars.map((p) => ({ key: p.key, version: p.version })),
         ...(requested.restoreId ? { restoredFromId: requested.restoreId } : {}) },
     } });
     if (active) await tx.brandAsset.update({ where: { id: active.id }, data: { supersededById: edition.id } });

@@ -267,13 +267,13 @@ export function buildBrandTheme(input: {
 /** One selection for cockpit, guidelines and renderers. Never upgrades an asset.
  * Read the eligible pool before ranking: a recent-window limit hid old ACTIVEs.
  */
-export async function resolveBrandIdentity(strategyId: string, client: PrismaClient = defaultDb) {
+export async function resolveBrandIdentity(strategyId: string, client: Pick<PrismaClient, "brandAsset"> = defaultDb) {
   const assets = await client.brandAsset.findMany({
     where: { strategyId, kind: { in: ["CHROMATIC_STRATEGY", "TYPOGRAPHY_SYSTEM", "LOGO_FINAL", "LOGO_IDEA"] },
       state: { notIn: ["SUPERSEDED", "ARCHIVED", "REJECTED"] }, staleAt: null },
     orderBy: [{ createdAt: "desc" }, { id: "asc" }],
     select: { id: true, kind: true, name: true, content: true, fileUrl: true,
-      state: true, version: true, metadata: true, createdAt: true },
+      state: true, version: true, metadata: true, createdAt: true, campaignId: true },
   });
   const byKind = (kind: string) => assets.filter((a) => a.kind === kind);
   const select = <T extends { state: string }>(rows: T[]) => rows.find((a) => a.state === "ACTIVE") ?? rows[0] ?? null;
@@ -283,6 +283,8 @@ export async function resolveBrandIdentity(strategyId: string, client: PrismaCli
   const typographies = byKind("TYPOGRAPHY_SYSTEM");
   return {
     logo: select(finals) ?? select(ideas),
+    // Full pool for explicit destination choices; legacy renderers keep their selection.
+    logos: [...finals, ...ideas],
     chromatic: select(chromatics),
     typography: select(typographies),
     counts: { logos: finals.length + ideas.length, palettes: chromatics.length, typographies: typographies.length },

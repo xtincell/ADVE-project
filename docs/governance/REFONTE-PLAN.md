@@ -1,5 +1,21 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Variante de logo publiée — candidat local 429 (2026-10-09)
+
+ADR-0210 raccorde pool resolveBrandIdentity, choix explicite Connexions/pins
+privés et deux logos de vitrine/CSP bornée/repli, sans promotion ni contrat public
+supplémentaire. 27 PostgreSQL ciblés et native FOUNDER publication/restauration/
+page publique reçus sur fixture, six éditions synthétiques reçues puis fixture
+nettoyée. Gauntlet final vert : 4167 unitaires/397 fichiers, 1617 gouvernance/166,
+243 PostgreSQL/14, types/lints sans erreur, 24 warnings préexistants, zéro cycle.
+Vitrine 33 tests verts, PR #6 fusionnée/CI verte/déploiement reçu à 01:01:57 UTC,
+logo natif en production non reçu. Trois causes C2 retirées des actions locales.
+Après premier passage 4166/4167 et timing 93 ms, isolé 36/36 puis relance complète
+après arrêt du serveur verts ; cause non démontrée, diagnostic si récidive.
+CI/image/livraison backend ouvertes, production ADVE actuelle 428.
+Pins d’enregistrement sans immutabilité d’octets, identité complète/quiz-app/
+retour de valeur/sept chantiers ouverts : [décision et reçus bornés](adr/0210-explicit-public-logo-variants.md).
+
 ## État de production Oracle — code 428 livré (2026-10-09)
 
 Distinction Intent/tâche, DEFERRED ambre sans faux succès/coût $0, confirmation

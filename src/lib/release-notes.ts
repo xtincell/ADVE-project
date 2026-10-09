@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.429", date: "2026-10-09",
+    headline: "Choisissez le logo affiché sur votre site",
+    highlights: [
+      { emoji: "◈", title: "Une variante pour la page publique", body: "Dans Connexions, relisez l’aperçu et choisissez le logo de cette publication, ou publiez sans logo. Les autres variantes de votre marque sont conservées." },
+      { emoji: "↻", title: "Un logo qui suit la publication", body: "Les deux emplacements de logo de la vitrine suivent la publication choisie. Si l’image ne charge pas, le logo local maintient une identité lisible." },
+    ],
+  },
+  {
     version: "6.27.428", date: "2026-10-09",
     headline: "L’Oracle distingue la demande de sa production",
     highlights: [

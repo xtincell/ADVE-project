@@ -9,6 +9,20 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Variante publique de logo — ADR-0210, candidat 429 du 2026-10-09
+
+Pool resolveBrandIdentity → choix explicite Connexions → strategy.update existant
+→ édition publique v1/pins privés → logoUrl absolu → deux emplacements vitrine.
+Variantes finales SELECTED/ACTIVE hors campagne, sources liées courantes,
+révision/édition attendues et restauration contrôlée ; aucune promotion déduite.
+Le consommateur/CSP bornent l’image à powerupgraders.com/brand/, avec repli canon
+local. Choix/publication/retour reçus sur fixture native locale, rendu/CSP dans
+les 33 tests vitrine. Consommateur déployé le 9 octobre à 01:01:57 UTC après CI
+verte ; logo natif en production et backend 429 non reçus. Gauntlet ADVE final
+vert, fixture nettoyée. Fingerprint d’enregistrement et
+digest JSON ne prouvent pas les octets. Univers/quiz-app/retour de valeur ouverts :
+[ADR-0210](adr/0210-explicit-public-logo-variants.md).
+
 ### Identité produit et confirmation — ADR-0205, 2026-10-08
 
 Catalogue V réellement amendé → arbitrage de provenance → ids stables partagés

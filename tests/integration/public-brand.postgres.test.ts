@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 vi.mock("@/lib/auth/config", () => ({ auth: vi.fn() }));
 vi.mock("next-auth", () => ({}));
@@ -11,6 +11,7 @@ import { openEmission, closeEmission } from "@/server/governance/emission-spine"
 import { PublicBrandContent, PublicBrandEdition } from "@/domain/public-brand";
 import { GET } from "@/app/api/export/[strategyId]/route";
 
+afterEach(() => vi.unstubAllEnvs());
 const brands: string[] = [], users: string[] = [], ops: string[] = [];
 beforeAll(async () => {
   const url = new URL(process.env.DATABASE_URL!);
@@ -29,6 +30,7 @@ afterAll(async () => {
   for (const a of assets) await db.brandAsset.delete({ where: { id: a.id } });
   await db.brandDataSource.deleteMany({ where }); await db.pillar.deleteMany({ where });
   await db.intentEmission.deleteMany({ where }); await db.costDecision.deleteMany({ where });
+  await db.campaign.deleteMany({ where });
   await db.strategy.deleteMany({ where: { id: { in: brands } } });
   await db.user.deleteMany({ where: { id: { in: users } } }); await db.operator.deleteMany({ where: { id: { in: ops } } });
   await db.$disconnect();
@@ -112,6 +114,61 @@ describe("Public brand editions", () => {
     await db.brandAsset.create({ data: { strategyId: s.id, name: "Stale logo", kind: "LOGO_FINAL", state: "ACTIVE", fileUrl: "https://example.invalid/logo.png", staleAt: new Date() } });
     await db.brandAsset.create({ data: { strategyId: s.id, name: "Private logo", kind: "LOGO_FINAL", state: "ACTIVE", fileUrl: "https://example.invalid/logo.png?signature=secret" } });
     expect((await caller().publicPage({ id: s.id })).proposed.logoUrl).toBeNull();
+  });
+  it("lists selected variants with versions and never picks the first of several active logos", async () => {
+    const s = await fixture();
+    vi.stubEnv("NEXT_PUBLIC_BASE_URL", "https://powerupgraders.com");
+    const dark = await db.brandAsset.create({ data: { strategyId: s.id, name: "Contour pour fond sombre", kind: "LOGO_FINAL", state: "SELECTED", version: 3, fileUrl: "/brand/fixture/contour.png" } });
+    await db.brandAsset.createMany({ data: ["one", "two"].map((name) => ({ strategyId: s.id, name, kind: "LOGO_FINAL", state: "ACTIVE" as const, fileUrl: `https://example.invalid/${name}.png` })) });
+    const p = await caller().publicPage({ id: s.id });
+    expect(p.proposed.logoUrl).toBeNull();
+    expect(p.logos).toContainEqual({ id: dark.id, name: dark.name, version: 3, state: "SELECTED", url: "https://powerupgraders.com/brand/fixture/contour.png" });
+    await caller().update({ id: s.id, publicPage: { expectedRevision: p.revision, expectedPublishedId: null,
+      content: { ...p.proposed, logoUrl: "https://powerupgraders.com/brand/fixture/contour.png" }, logoAssetId: dark.id } });
+    const e = (await readPublicBrand(s.publicSlug!))!;
+    expect(e.content.logoUrl).toBe("https://powerupgraders.com/brand/fixture/contour.png");
+    const receipt = await db.brandAsset.findUniqueOrThrow({ where: { id: e.edition } });
+    expect(receipt.metadata).toMatchObject({ logoAsset: { id: dark.id, version: 3, fileUrl: dark.fileUrl } });
+    expect(JSON.stringify(e)).not.toContain(dark.id);
+    expect((await db.brandAsset.findUniqueOrThrow({ where: { id: dark.id } })).state).toBe("SELECTED");
+  });
+  it("rejects a foreign variant or an ambiguous address without explicit asset selection", async () => {
+    const s = await fixture(), foreign = await fixture();
+    const outside = await db.brandAsset.create({ data: { strategyId: foreign.id, name: "Other brand", kind: "LOGO_FINAL", state: "ACTIVE", fileUrl: "https://example.invalid/shared.png" } });
+    await db.brandAsset.createMany({ data: ["first", "second"].map((name) => ({ strategyId: s.id, name, kind: "LOGO_FINAL", state: "SELECTED" as const, fileUrl: outside.fileUrl })) });
+    const p = await caller().publicPage({ id: s.id });
+    const input = { expectedRevision: p.revision, expectedPublishedId: null, content: { ...p.proposed, logoUrl: outside.fileUrl } };
+    await expect(caller().update({ id: s.id, publicPage: { ...input, logoAssetId: outside.id } })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    await expect(caller().update({ id: s.id, publicPage: input })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    expect(await readPublicBrand(s.publicSlug!)).toBeNull();
+  });
+  it("fences variant changes and refuses restoration after its selected asset version changed", async () => {
+    const s = await fixture();
+    const logo = await db.brandAsset.create({ data: { strategyId: s.id, name: "Chosen", kind: "LOGO_FINAL", state: "ACTIVE", fileUrl: "https://example.invalid/logo.png" } });
+    await publish(s.id, "One"); const one = (await readPublicBrand(s.publicSlug!))!;
+    const p = await caller().publicPage({ id: s.id });
+    await db.brandAsset.update({ where: { id: logo.id }, data: { version: 2 } });
+    await expect(caller().update({ id: s.id, publicPage: { expectedRevision: p.revision, expectedPublishedId: one.edition, content: p.proposed } })).rejects.toMatchObject({ code: "CONFLICT" });
+    await publish(s.id, "Two"); const fresh = await caller().publicPage({ id: s.id });
+    await expect(caller().update({ id: s.id, publicPage: { expectedRevision: fresh.revision, expectedPublishedId: fresh.published!.id, content: fresh.proposed, restoreId: one.edition } })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    expect((await readPublicBrand(s.publicSlug!))?.content.title).toBe("Two");
+  });
+  it("keeps private, draft, campaign and malformed relative logos out of the publication pool", async () => {
+    const s = await fixture(); vi.stubEnv("NEXT_PUBLIC_BASE_URL", "https://powerupgraders.com");
+    await db.brandAsset.createMany({ data: ["/private-media/logo.png", "/api/logo.png", "/brand/../private-media/logo.png", "//evil.invalid/brand/logo.png", "/brand/%2e%2e/private.png", "https://example.invalid/private-media/logo.png"].map((fileUrl) => ({ strategyId: s.id, name: "Refused", kind: "LOGO_FINAL", state: "ACTIVE" as const, fileUrl })) });
+    await db.brandAsset.create({ data: { strategyId: s.id, name: "Unselected draft", kind: "LOGO_FINAL", state: "DRAFT", fileUrl: "https://example.invalid/draft.png" } });
+    const campaign = await db.campaign.create({ data: { strategyId: s.id, name: "Campaign-only identity" } });
+    await db.brandAsset.create({ data: { strategyId: s.id, campaignId: campaign.id, name: "Campaign lockup", kind: "LOGO_FINAL", state: "ACTIVE", fileUrl: "https://example.invalid/campaign.png" } });
+    expect((await caller().publicPage({ id: s.id })).logos).toEqual([]);
+  });
+  it("does not publish an asset already based on a corrected or unavailable document", async () => {
+    const s = await fixture();
+    const source = await db.brandDataSource.create({ data: { strategyId: s.id, sourceType: "MANUAL_INPUT", rawContent: "Current document", processingStatus: "EXTRACTED" } });
+    const logo = await db.brandAsset.create({ data: { strategyId: s.id, name: "Outdated derivative", kind: "LOGO_FINAL", state: "ACTIVE", fileUrl: "https://example.invalid/outdated.png", metadata: { sourceDataSourceId: source.id, sourceContentHash: "0".repeat(64) } } });
+    const p = await caller().publicPage({ id: s.id });
+    expect(p.logos).toEqual([]);
+    await expect(caller().update({ id: s.id, publicPage: { expectedRevision: p.revision, expectedPublishedId: null, content: { ...p.proposed, logoUrl: logo.fileUrl }, logoAssetId: logo.id } })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    expect(await readPublicBrand(s.publicSlug!)).toBeNull();
   });
   it("serializes two publishers from the same preview", async () => {
     const s = await fixture(), p = await caller().publicPage({ id: s.id });
