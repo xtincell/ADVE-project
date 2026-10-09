@@ -66,9 +66,9 @@ npm run dev                 # → http://localhost:3000
 
 ## État courant borné — 2026-10-09
 
-La dernière livraison de production reçue est **6.27.430**, source 2b9b2fa4,
-CI 37871315767 et image 37871326006 rapprochées du runtime exact le 9 octobre à
-02:02:23 UTC. Le volume privé et le corpus hors éditions sont conservés.
+La dernière livraison de production reçue est **6.27.431**, source 3f104072,
+CI 37876777265 et image 37876782159 rapprochées du runtime exact le 9 octobre à
+03:07:30 UTC. Le volume privé et le corpus hors éditions sont conservés.
 Le raccord SPAWT reçoit textes/liens et logo choisi ; l’univers complet, les sept
 chantiers Shinkiro et leurs acceptations métier restent ouverts.
 
@@ -80,17 +80,20 @@ Le corpus reste inchangé, hormis cette unique édition (257 actifs).
 Gauntlet local vert : 4167 unitaires/1617 gouvernance/245 PostgreSQL, types/lints
 sans erreur, 24 warnings préexistants, zéro cycle. Fenêtre initiale de rechargement
 production reçue sans >=500/exception ; aucun SLO ni cycle métier complet déduit.
-Les pins portent l’enregistrement, pas l’immutabilité des octets :
+En 430, les pins portent l’enregistrement, sans encore conserver les octets :
 [échec 429, livraison 430 et limites](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
 
-**Candidat 431, conservation des octets** : le coffre réutilise le stockage chiffré
-existant et sert une copie vérifiée par édition, sans changer le contrat public
-ou la DA SPAWT. Trois rouges puis 33 PostgreSQL ciblés verts. Gauntlet local vert :
+**431 livré, logo conservé** : le coffre réutilise le stockage chiffré existant et
+sert une copie vérifiée de l’édition SPAWT v3, sans changer le contrat public ou
+la DA. Une seule publication native conserve textes/liens et logo SELECTED ;
+deux logos SPAWT et page publique chargés. Actifs 257→258, seul ajout d’édition.
+Trois rouges puis 33 PostgreSQL ciblés verts. Gauntlet local vert :
 4167 unitaires en trois commandes, 1617 gouvernance/256 PostgreSQL, types/lints
-sans erreur, 24 warnings préexistants et zéro cycle. HTTP/UI locale en cours ;
-CI/image/native/livraison à recevoir. L’édition v2 en production reste celle de
-430, sans backfill automatique. Continuité de marque visée, aucun résultat
-business déduit : [ADR-0211 Proposed](docs/governance/adr/0211-retained-public-logo-bytes.md).
+sans erreur, 24 warnings préexistants et zéro cycle. CI/image/native reçues ;
+corruption/refus/retour restent éprouvés sur fixture locale nettoyée. Anciennes
+éditions sans archive et récupération/disponibilité du stockage restent ouvertes,
+sans backfill. Continuité de marque visée, aucun résultat business ou parcours
+intégral déduit : [ADR-0211 Accepted, borné](docs/governance/adr/0211-retained-public-logo-bytes.md).
 
 Le code 426+427 transmet campagne/brief/actif source jusqu’à la tâche, contrôle
 leur portée et celle de la tâche historique, puis reconnaît le résultat

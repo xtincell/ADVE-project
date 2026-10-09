@@ -2,9 +2,9 @@
 
 ## v6.27.431 — fix(brand): conserver les octets du logo de chaque publication (2026-10-09)
 
-**Le candidat rattache l’image publique à une copie vérifiée de son édition.**
+**431 est livrée : le logo public SPAWT est servi depuis les octets vérifiés de l’édition v3.**
 
-- ADR-0211 Proposed : brand-vault/Sustainment sous MESTOR réutilise le stockage
+- ADR-0211 Accepted dans ce périmètre : brand-vault/Sustainment sous MESTOR réutilise le stockage
   chiffré existant, avec reçu privé metadata.logoArchive et transport public borné
   /brand/editions/[editionId]/[hash.extension]. Aucun modèle/service/router/Intent/
   agent/droit ajouté, contrat JSON v1 et DA/lecteur/CSP SPAWT conservés.
@@ -30,10 +30,22 @@
   Transport HTTP direct/image reçu ; image HTTPS absolue dans la page locale
   non reçue, aucune page publique complète déduite. Fenêtres initiale/gestes
   non tronquées sans >=500/exception, timings dev sans SLO.
-  CI/image/livraison production 431 non reçues.
-  Production reçue 430, SPAWT édition v2. Cause octets encore ouverte jusqu’à
-  recette livrée ; Moka/palette/polices/voix/quiz-app/retour de valeur et sept
-  chantiers restent ouverts. [Décision proposée](docs/governance/adr/0211-retained-public-logo-bytes.md)
+- Source 3f104072, CI 37876777265 (4167 unitaires/248 PostgreSQL), Chromatic et
+  MissionDrift verts ; image 37876782159 reçue après boot/login 200 et lecture PDF
+  fixture deux pages. Déploiement terminé à 03:07:30 UTC, runtime 431/index exact/
+  nextjs/volume privé RW. Publication native réelle unique SPAWT v2→v3, même logo
+  SELECTED sans promotion, textes/liens inchangés ; réouverture relire accepte le
+  logo conservé, annulée sans seconde publication.
+- Copie VOLUME 224112 octets, hash/header/body/checkout concordants ; HTTP 200/304,
+  query 404/privé 401/CORS trois origines/page publique reçus. Deux logos SPAWT et
+  page publique chargés 4123×1714. Corpus hors édition inchangé, actifs 257→258.
+  Cause d’octets des nouvelles éditions fermée ; anciennes éditions sans archive,
+  récupération/disponibilité du stockage et orphelins HTTP_BLOB restent ouverts.
+- Première trace production tronquée ; nouvelle fenêtre chaude complète de
+  rechargement Connexions : document 200, DOM 721 ms, premier titre <=2655 ms,
+  zéro >=500/exception dans cette fenêtre seulement, aucun SLO déduit.
+  Moka/palette/polices/voix/quiz-app/multidestination/retour de valeur et sept
+  chantiers restent ouverts. [Décision reçue](docs/governance/adr/0211-retained-public-logo-bytes.md)
   et [réception bornée](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
 
 ## v6.27.430 — fix(brand): résoudre l’origine des logos depuis la configuration serveur (2026-10-09)

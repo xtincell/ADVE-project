@@ -24,16 +24,17 @@ historique inventée. Cette réception ne ferme pas l’univers de marque ou les
 sept chantiers ; les résidus actifs suivent.
 
 - **Identité au-delà de la copie v1** : public-brand-v1 ne porte pas tokens de
-  design ni voix structurée. 430 reçoit le choix/rendu réel de logo : pool partagé,
-  sélection sans promotion et pins privés, une publication SPAWT v2 puis deux
+  design ni voix structurée. 431 reçoit choix/rendu et octets du logo public :
+  sélection sans promotion, copie VOLUME vérifiée, publication SPAWT v3 puis deux
   logos vitrine/page publique chargés ; textes/liens inchangés. Causes du rendu,
-  choix par id, CSP et origine inlinée fermées dans ce périmètre. L’échec 429 et
+  choix par id, CSP, origine inlinée et octets des nouvelles éditions fermées dans
+  ce périmètre. L’échec 429 et
   sa correction restent dans le [reçu](RECEPTION-IDENTITE-PUBLIQUE.md).
   Cela ne reçoit ni identité complète ni quiz/application.
   **Fermer** par comparaison source/usage pour chaque
   destination, sélection explicite et pins dans le contrat existant étendu,
   puis version consommée/refus de périmé/retour reçu pour chaque famille non
-  reçue. Gauntlet 430 final vert (4167 unitaires/1617 gouvernance/245 PostgreSQL,
+  reçue. Gauntlet 431 final vert (4167 unitaires/1617 gouvernance/256 PostgreSQL,
   types/lints/zéro cycle) et livraison/image/native reçues. Le raccord dynamique
   de Moka, palette, polices et voix reste à recevoir ; conserver leur CANON,
   ne pas ouvrir toutes les origines ni remplacer la DA.
@@ -41,21 +42,21 @@ sept chantiers ; les résidus actifs suivent.
   par index ni transporter une charte privée entière. **Déclencheur** : prochain
   raccord C2 des identités après réception de la copie publique ; effort : un lot
   de contrat et recette par famille d’usage, sans nouveau système parallèle.
-- **Octets derrière les URL /brand/** : les pins du logo en 429 portent
-  l’enregistrement, pas les octets servis ; le digest JSON ne prouve pas le hash
-  du fichier. 431 candidat conserve une copie dans le stockage chiffré existant,
-  reçu privé/URL par édition/hash, intégrité avant 304 et retour sous pins/source
-  courants. Trois rouges puis 33 PostgreSQL ciblés verts ; gauntlet local vert
-  (4167 unitaires en trois commandes/1617 gouvernance/256 PostgreSQL,
-  types/lints/zéro cycle), aucune livraison/native reçue ; production 430/v2
-  reste sans backfill. **Fermer** par image puis parcours
-  natif publication/relecture/refus/retour et corpus comparé. Ancien logo sans
-  reçu exige relecture/republication explicite. Crash précommit : jeune objet
-  orphelin possible ; nettoyage existant après 24 h borné au VOLUME, copies
-  référencées protégées. Balayage HTTP_BLOB non reçu. **Déclencheur** : livraison
-  431 et réception C2/C3 avant promesse d’édition immuable ; effort : lot de
-  conservation/transport et recette, sans coffre parallèle.
-  [ADR-0211 Proposed](adr/0211-retained-public-logo-bytes.md).
+- **Anciennes éditions sans archive d’octets** : 431 ne backfill pas les anciens
+  logos publiés ; leur retour aveugle est refusé. **Fermer** par relecture du logo
+  actuel et republication explicite sur le chemin existant, puis retour reçu,
+  sans réécrire l’édition historique. **Déclencheur** : prochaine demande de retour
+  sur une édition legacy, avant réception C2/C3 de ce parcours ; effort : une
+  adoption et recette par famille concernée. [ADR-0211](adr/0211-retained-public-logo-bytes.md).
+- **Disponibilité/récupération des copies publiées** : la copie VOLUME du logo est
+  reçue, pas la restauration après perte du volume/clé ni une disponibilité SLO.
+  **Fermer** par sauvegarde/reprise qualifiées sur les primitives existantes,
+  relecture/hash et refus sans repli source, puis récupération vérifiée. Crash
+  précommit : jeune orphelin possible, balayage VOLUME après 24 h protège les
+  références. Lifecycle/orphelins HTTP_BLOB restent dans « Archive durable —
+  exploitation cible et lifecycle distant à recevoir », sans réception distante
+  déduite. **Déclencheur** : prochaine recette d’exploitation du stockage avant
+  engagement de disponibilité/migration de backend ; effort : un lot par backend.
 - **Brouillon après interruption** : la carte conserve révision et contenu pendant
   son ouverture ; leur survie à une fermeture/recharge n’est pas reçue. **Fermer**
   en éprouvant l’interruption et en réutilisant le mécanisme de brouillon existant

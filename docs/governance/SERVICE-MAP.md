@@ -231,7 +231,7 @@ Maintiennent la mission viable techniquement. Mémoires long terme, transports, 
 | `sla-tracker/` | SLO/SLA tracking par Intent kind | INFRASTRUCTURE | ✅ existant |
 | `operator-isolation/` | Tenant isolation (default-deny) | INFRASTRUCTURE | ✅ existant |
 | `neteru-shared/` | Governance registry central | INFRASTRUCTURE | manifests des autres |
-| `brand-vault/` | BrandAsset CRUD engine — vault unifié ; conservation d’identité publique par stockage chiffré existant/transport borné ([ADR-0211 Proposed](adr/0211-retained-public-logo-bytes.md), candidat 431) | MESTOR | ✅ existant |
+| `brand-vault/` | BrandAsset CRUD engine — vault unifié ; conservation d’identité publique par stockage chiffré existant/transport borné ([ADR-0211 Accepted](adr/0211-retained-public-logo-bytes.md), 431 livré et logo reçu) | MESTOR | ✅ existant |
 | `strategy-archive/` | 2-phase soft archive + hard purge (`Strategy.archivedAt`) | INFRASTRUCTURE | ✅ existant |
 | `sentinel-handlers/` | Handlers cron `/api/cron/sentinels` — consomme IntentEmission PENDING (Loi 4 maintien orbite) | MESTOR | ✅ existant |
 | `nsp/` | Neteru Streaming Protocol — transport publish/subscribe vers UI | INFRASTRUCTURE | ✅ existant (stub utilitaire) |
@@ -241,7 +241,7 @@ Maintiennent la mission viable techniquement. Mémoires long terme, transports, 
 
 La conservation d’identité publique relève de **Sustainment/MESTOR** dans
 brand-vault existant : continuité de marque, condition de l’accumulation de
-superfans visée. Le candidat 431 ne reçoit aucun résultat business ; stockage
+superfans visée. 431 reçoit le logo public conservé, aucun résultat business ; stockage
 et transport sont des extensions, sans service ni Neteru supplémentaire.
 
 ---

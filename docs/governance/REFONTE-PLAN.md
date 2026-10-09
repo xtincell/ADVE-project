@@ -1,20 +1,24 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## Octets de publication — candidat 431 (2026-10-09)
+## Octets de publication — 431 livré et reçu (2026-10-09)
 
-Le transport d’une copie publique vérifiée manque malgré le stockage chiffré
-existant. ADR-0211 Proposed l’étend depuis brand-vault/Sustainment/MESTOR :
+Le transport d’une copie publique vérifiée complète le stockage chiffré
+existant. ADR-0211 Accepted l’étend depuis brand-vault/Sustainment/MESTOR :
 reçu d’octets privé, conservation/relecture avant commit, URL par édition/hash et
 lecture bornée avec contrôle avant 304. Retour sous pins/source courants, aucun
 backfill des anciennes éditions ; nettoyage volume protège les copies référencées.
 Trois rouges/22 verts puis 25, 32 et 33 PostgreSQL ciblés verts ; gauntlet local
 vert : 4167 unitaires en trois commandes/1617 gouvernance/256 PostgreSQL,
-types/lints sans erreur/24 warnings et zéro cycle. HTTP/UI locale en cours ;
-CI/image/native/livraison encore à recevoir. Prochaine étape : image et parcours
-natif publication/relecture/retour, refus et corpus comparé avant clôture de la
-cause octets. Production 430/édition SPAWT v2 conservée ; continuité de marque
-visée, aucun résultat business ni acceptation globale déduit.
-[Architecture proposée](adr/0211-retained-public-logo-bytes.md) ·
+types/lints sans erreur/24 warnings et zéro cycle. Source 3f104072, CI/image/runtime
+431 reçus le 9 octobre à 03:07:30 UTC. Publication native réelle unique SPAWT v3,
+copie VOLUME vérifiée, logos vitrine/page publique chargés ; textes/liens conservés,
+corpus hors édition inchangé (actifs 257→258). Refus corruption/retour reçus sur
+fixture locale nettoyée ; réouverture relire en production annulée sans publication.
+Cause octets des nouvelles éditions fermée. Prochaine étape : legacy sans archive,
+récupération/disponibilité du stockage, lifecycle HTTP_BLOB et autres familles
+d’identité, avant réception multidestination/quiz-app/retour de valeur. Continuité
+de marque visée, aucun résultat business ni acceptation globale déduit.
+[Architecture reçue, bornée](adr/0211-retained-public-logo-bytes.md) ·
 [reçu courant](RECEPTION-IDENTITE-PUBLIQUE.md).
 
 ## Origine de marque — 430 livré après blocage 429 (2026-10-09)

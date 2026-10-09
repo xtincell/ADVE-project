@@ -4,14 +4,14 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
-**Production reçue : 6.27.430, variante de logo publiée et rendue sur SPAWT.**
-Source 2b9b2fa4520247b06e32a3c18d825a1af8d141fc, CI 37871315767, Chromatic
-37871315716, MissionDrift 37871315692 et image 37871326006 verts ; déploiement
-terminé le 9 octobre à 02:02:23 UTC, runtime
+**Production reçue : 6.27.431, logo SPAWT conservé et rendu depuis l’édition v3.**
+Source 3f1040726620a21ba4d2afcd7fc5ab887d8c2e54, CI 37876777265, Chromatic
+37876777303, MissionDrift 37876777213 et image 37876782159 verts ; déploiement
+terminé le 9 octobre à 03:07:30 UTC, runtime
 nextjs/version/index concordants, volume privé RW conservé. Aucune livraison
-426 isolée. Corpus hors éditions conservé ; une seule publication SPAWT v1→v2.
-Aucun nouveau modèle, service, Intent ou outil ; ADR-0210 étend l’architecture
-de publication existante.
+426 isolée. Corpus hors éditions conservé ; une seule publication SPAWT v2→v3.
+Aucun nouveau modèle, service, Intent ou outil ; ADR-0210 porte le choix de logo,
+ADR-0211 étend la publication existante à la conservation des octets.
 
 **Historique 429, recette métier locale bornée** : ADR-0210 étend l’édition publique avec
 pool partagé, choix de variante sans promotion et pins privés ; contrat v1
@@ -43,11 +43,12 @@ trois origines/ETag 304/privé 401/CSP et image identique au checkout reçus.
 Actifs 256→257 uniquement par l’édition ; autres données/digest hors éditions
 inchangés. Fenêtre initiale complète de rechargement : DOM 702 ms/H1 <=2674 ms,
 zéro >=500/exception dans cette seule fenêtre, sans SLO ni recette de publication
-entière. Trace locale 430 tronquée maintenue. Cause d’origine fermée ;
-immutabilité des octets, identité complète/quiz-app/retour de valeur et sept
+entière. Trace locale 430 tronquée maintenue. Cause d’origine fermée ; conservation
+des octets alors manquante, reçue dans le périmètre 431 ci-dessous. Identité complète/
+quiz-app/retour de valeur et sept
 chantiers ouverts : [reçu et limites](docs/governance/RECEPTION-IDENTITE-PUBLIQUE.md).
 
-**Candidat 431, octets non encore reçus en production** : ADR-0211 Proposed,
+**431 livré, octets de nouvelle édition reçus** : ADR-0211 Accepted borné,
 brand-vault/Sustainment/MESTOR, stockage chiffré existant et reçu privé logoArchive.
 Transport borné /brand/editions/[editionId]/[hash.extension], intégrité à chaque
 lecture avant 304, 503 sans repli source si corruption/absence, 404 hors périmètre.
@@ -58,8 +59,17 @@ précommit peut laisser un jeune orphelin. Trois rouges/22 verts, puis 25, 32 et
 33 PostgreSQL ciblés verts. Gauntlet local : types/lints sans erreur/24 warnings,
 zéro cycle, 1617 gouvernance/166 ; unitaires 4129/395 + src 9/1 + adversarial 29/1,
 soit 4167/397 en trois commandes ; PostgreSQL 248/13 + source-uses 8/1 = 256/14.
-HTTP/UI locale en cours, aucun natif réussi reçu ; CI/image/livraison 431 à recevoir.
-Production 430/édition SPAWT v2 inchangée ; cause octets ouverte.
+CI reçue 4167 unitaires/397 fichiers et 248 PostgreSQL/13. Native locale : texte
+200, corruption 412/refus français/version active préservée, retour 200/successeur,
+fixture nettoyée. Production : unique publication v3, même logo SELECTED sans
+promotion, textes/liens conservés ; copie VOLUME 224112 octets/hash exact, deux
+logos SPAWT et page publique chargés 4123×1714. Relire accepte le logo conservé,
+annulation sans seconde publication. HTTP 200/304/query 404/privé 401/CORS reçus.
+Actifs 257→258 seulement par l’édition, autres données inchangées, aucun fournisseur.
+Première trace prod tronquée ; fenêtre fraîche chaude complète document 200,
+DOM 721 ms/premier titre <=2655 ms, zéro >=500/exception dans cette seule fenêtre,
+sans SLO. Cause octets des nouvelles éditions fermée ; legacy sans archive,
+récupération/disponibilité stockage/HTTP_BLOB et familles non reçues restent ouverts.
 La continuité de marque soutient l’accumulation de superfans visée, sans résultat
 business reçu ni nouveau modèle/service/router/Intent/agent/permission.
 

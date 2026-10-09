@@ -1,4 +1,4 @@
-# Identité publique — logo reçu en 430, conservation candidate 431
+# Identité publique — logo et octets reçus en production 431
 
 État au 2026-10-09. ADR-0210 reste la décision d’architecture et la recette
 locale historique ; ce reçu distingue livraison et usage réel.
@@ -86,10 +86,10 @@ octets. Identité complète, quiz/app, retour de valeur, fournisseurs, cycle ré
 et sept chantiers demeurent ouverts. Aucun contenu privé ni inventaire d’actifs
 n’est publié par ce reçu.
 
-## 431 candidat — copie d’octets, réception locale ciblée
+## 431 — copie d’octets livrée, réceptions locale et production distinctes
 
-Production reçue toujours 430/source 2b9b2fa4/édition SPAWT v2, sans mutation
-ou backfill de ces données par la recette. [ADR-0211 Proposed](adr/0211-retained-public-logo-bytes.md)
+La recette locale ne modifie ni ne backfill la production 430/édition SPAWT v2
+qui la précédait. [ADR-0211 Accepted, borné](adr/0211-retained-public-logo-bytes.md)
 justifie le transport absent malgré le stockage chiffré existant.
 
 brand-vault conserve/décode le fichier admissible, put/get/hash avant commit,
@@ -126,7 +126,7 @@ Gauntlet final local vert : types/lints sans erreur, 24 warnings préexistants,
 zéro cycle et 1617 gouvernance/166 fichiers. Unitaires reçus en trois commandes
 conservées dans les preuves : 4129/395 + src 9/1 + adversarial 29/1 = 4167/397.
 PostgreSQL local : feedback 248/13 + source-uses integration 8/1 = 256/14 ;
-périmètre CI attendu 248/13, sans reçu CI à ce stade.
+périmètre CI reçu 248/13, distinct du total local.
 
 Recette native locale sous vraie session FOUNDER synthétique : Connexions
 HTTP 200, réédition de texte 200, deux refus de corruption 412 (second essai
@@ -141,10 +141,40 @@ Fenêtres initiale et gestes non tronquées : zéro >=500/exception dans ces
 fenêtres. DOM 5790 ms, premier H1 observé au plus tard à 27995 ms en dev local
 avec compilation, sans SLO. L’image HTTPS absolue dans la page locale pointe
 vers l’origine de production et n’est pas reçue ; seuls transport HTTP direct
-et gestes UI le sont, aucune page publique complète déduite. CI/image/livraison
-production 431 restent non reçues ; ADR Proposed et cause octets ouverte.
-La cause octets reste ouverte, ainsi que Moka/palette/polices/voix/quiz-app/
-retour de valeur et les sept chantiers.
+et gestes UI le sont, aucune page publique complète locale déduite. Fixture
+supprimée : zéro actif/stratégie restant, aucune recette synthétique conservée.
+
+### Livraison et publication réelle 431
+
+Source 3f1040726620a21ba4d2afcd7fc5ab887d8c2e54, CI 37876777265 verte
+(4167 unitaires/397 fichiers, 248 PostgreSQL/13), Chromatic 37876777303 et
+MissionDrift 37876777213 verts. Image 37876782159 verte après boot PostgreSQL/
+migrations/login HTTP 200 et lecture d’un PDF fixture de deux pages.
+Index sha256:45fba7bd5026a1ee2eb90d95f64220988b43f1095580465412a9a3c4fdf44376 ;
+déploiement unique jxosnqfcj02fkeic91aza9n2 terminé le 9 octobre à 03:07:30 UTC,
+runtime 431/nextjs/index exact, volume privé RW conservé.
+
+Avant choix, JSON v2 inchangé. Une publication native FOUNDER réelle crée SPAWT
+v3, même logo SELECTED sans promotion, textes/liens identiques. Copie privée
+VOLUME 224112 octets, SHA-256 25a7c390e84fb352a5e433883628f5310460cdf15355e34138e8451ab05ec58c ;
+hash/header/body/checkout concordants. Transport snapshot HTTP 200/304,
+query 404/privé 401/CORS trois origines/page publique 200 reçus. SPAWT charge ses
+logos d’en-tête/pied de page depuis v3, 4123×1714 ; /b/LFA-spawt aussi.
+Réouverture relire : Publier disponible sans resélection, image chargée après
+attente ; annulée sans seconde publication. Aucun retour réel de production ou
+corruption réelle déduit des recettes locales.
+
+Corpus hors édition inchangé : actifs 257→258, 12 sources/40 piliers/2 usages/
+108 fragments/2431 coûts/19 processus inchangés ; aucun fournisseur. Première
+trace production tronquée, aucune conclusion exhaustive de zéro erreur.
+Fenêtre fraîche de rechargement chaud Connexions non tronquée/hasMore=false :
+document 200, DOM 721 ms, premier titre <=2655 ms, zéro >=500/exception observé
+dans cette seule fenêtre. Aucun SLO ni autre parcours reçu par cette mesure.
+
+Cause d’octets des nouvelles éditions /brand/ fermée. Anciennes éditions sans
+archive, disponibilité/récupération du stockage et orphelins HTTP_BLOB restent
+ouverts avec plan/déclencheur au registre. Moka/palette/polices/voix/quiz-app/
+multidestination/retour de valeur et sept chantiers ne sont pas acceptés.
 
 Preuves privées : release/preuves-identite-publique-429 et
 release/preuves-origine-marque-430 ; notamment compiled-logo-base-diagnosis.json,
@@ -156,3 +186,6 @@ native-choices/published/spawt/public-brand.json et production-http-apres-choix.
 apres-initial.log et apres-adversarial.log.
 Complément : republish-avant.log et republish-apres.log.
 Recette native locale : native-local-reception.json et captures locales voisines.
+Livraison 431 : reception.json, runtime.json, production-http-apres-choix.json,
+native-spawt.json, native-public-brand.json, native-reopen.json et
+native-production-fresh-load-summary.json du même dossier privé.

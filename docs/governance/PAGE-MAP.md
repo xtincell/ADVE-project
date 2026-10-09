@@ -223,11 +223,11 @@ Le founder allume des thrusters.
 | `/cockpit/operate/requests/page.tsx` | Propulsion | M | active | Demande manuelle, historique et reçu réel de mission (ADR-0201) |
 
 Transport associé, **hors dénombrement des pages** :
-`GET /brand/editions/[editionId]/[file]` (hash.extension), candidat 431,
+`GET /brand/editions/[editionId]/[file]` (hash.extension), livré et reçu en 431,
 Sustainment/MESTOR via brand-vault existant. Lecture anonyme bornée aux éditions
 publiques admissibles ; intégrité avant 304, absence/corruption 503 sans repli
 source, requête/édition privée/hash faux 404. Aucune nouvelle page ni permission.
-[ADR-0211 Proposed](adr/0211-retained-public-logo-bytes.md).
+[ADR-0211 Accepted, borné](adr/0211-retained-public-logo-bytes.md).
 
 ### 2.4 — Mestor + New + Messages (mixte)
 
