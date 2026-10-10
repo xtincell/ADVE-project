@@ -20,7 +20,7 @@
  * mord qu'une fois des provenances HUMAN/SOURCE réellement tracées.
  */
 
-import { collectNormalizedInitiatives, mapInitiativeEntries, normalizeInitiative } from "@/lib/types/pillar-schemas";
+import { collectInitiatives, collectNormalizedInitiatives, mapInitiativeEntries, normalizeInitiative } from "@/lib/types/pillar-schemas";
 
 import {
   type FieldProvenance,
@@ -182,7 +182,13 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
     if (declared === "HUMAN" && next) { provenance[path] = "HUMAN"; continue; }
     if (!previous || provenance[path] !== "HUMAN") continue;
     const incoming = declared ?? input.incomingFor(path);
-    if (decideOverwrite(incoming, "HUMAN") === "ALLOW") { if (next) provenance[path] = incoming; continue; }
+    const decision = decideOverwrite(incoming, "HUMAN");
+    if (decision === "ALLOW") { if (next) provenance[path] = incoming; continue; }
+    const representations = collectInitiatives(content).map(raw => normalizeInitiative(raw)).filter(init => init.id === id);
+    if (representations.length && representations.every(init => init.status === previous.status)) continue;
+    // Reverting the protected value is a refusal, not a successfully applied
+    // choice. Strict transactions must observe it and roll back all effects.
+    (decision === "DENY" ? denied : challenged).push(path);
     if (next) {
       mapInitiativeEntries(content, raw => normalizeInitiative(raw).id === id
         ? { ...(typeof raw === "object" && raw ? raw : { action: raw }), id, status: previous.status } : raw);
@@ -191,12 +197,12 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
       mapInitiativeEntries(structuredClone(previousContent), raw => { if (normalizeInitiative(raw).id === id && original === undefined) original = raw; return raw; });
       const groups = content.catalogueParCanal;
       if (groups !== undefined && (!groups || typeof groups !== "object" || Array.isArray(groups))) {
-        denied.push(path); warnings.push(`Provenance: choix ${id} non restaurable dans un catalogue de forme invalide.`); continue;
+        warnings.push(`Provenance: choix ${id} non restaurable dans un catalogue de forme invalide.`); continue;
       }
       const catalogue = (groups ?? {}) as Record<string, unknown>;
       const entries = catalogue[previous.channel];
       if (entries !== undefined && !Array.isArray(entries)) {
-        denied.push(path); warnings.push(`Provenance: canal du choix ${id} de forme invalide.`); continue;
+        warnings.push(`Provenance: canal du choix ${id} de forme invalide.`); continue;
       }
       catalogue[previous.channel] = [...(entries as unknown[] ?? []), original];
       content.catalogueParCanal = catalogue;

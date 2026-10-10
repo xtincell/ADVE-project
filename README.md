@@ -16,6 +16,19 @@
 
 ## Quick start
 
+**6.27.446 local en réception** : une proposition Notoria vise une action,
+puis son choix rejoint toutes ses représentations, le plan sauvegardé et la
+projection opérationnelle. Les refus protègent le choix humain ; une échéance
+proposée reste à valider. Recette locale fictive reçue : une proposition, trois
+copies retenues, même action opérationnelle conservée, plan avec une action et
+budget zéro ; refus conservant le choix source reçu aussi sur précondition
+fictive préparée hors écran. Aucune marque réelle modifiée ni coût fournisseur. Suites complètes
+4 288/407 unitaires et 352/18 PostgreSQL vertes. Succès plan partiel et refus humain lisibles reçus dans cette recette ; cinq contrôles finaux verts et fixtures nettoyées, CI/image/runtime 446 non reçus. Runtime livré 445,
+documentation 3abd2be clôturée. Autres chemins du plan, devises/canaux/remap,
+chargement initial et sept chantiers/dix gates restent ouverts.
+[Périmètre et suite](docs/governance/REFONTE-PLAN.md).
+
+
 **6.27.445 livré, réception bornée** : les cadres Oracle concernés utilisent les
 mêmes actions dédupliquées et conservent les échéances à préciser. Budget CORE
 et Deloitte partagent le calcul : zéro déclaré, montant inconnu et devises
@@ -27,8 +40,7 @@ mobile seulement partiellement reçu ; aucune réception de tous les écrans.
 PostgreSQL 347 verts reçus localement puis sur la source finale en CI ;
 image/runtime 445 exacts reçus. SPAWT réelle lue en ADMIN, ancien plan Périmé
 conservé sans recalcul/modification. Fenêtre complète 60 réponses/14annulations,
-aucune réception USER production/parcours complet/SLO. Reçu documentaire distinct
-encore à recevoir.
+aucune réception USER production/parcours complet/SLO. Reçu documentaire 3abd2be distinct reçu/clôturé.
 Devise des estimations, autres chemins du plan, confusion persistante des canaux,
 reconnexion des vraies marques et sept chantiers/dix gates restent ouverts.
 Vitrine live/six questions/sans décompte reçue précédemment, raccord complet et

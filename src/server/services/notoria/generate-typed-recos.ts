@@ -21,12 +21,15 @@ import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
-import { collectInitiatives, INITIATIVE_TIMEFRAMES } from "@/lib/types/pillar-schemas";
-import type { RecommendationPayload } from "@/lib/types/recommendation-payload";
+import { collectInitiatives, collectNormalizedInitiatives, INITIATIVE_TIMEFRAMES } from "@/lib/types/pillar-schemas";
+import { parseRecommendationPayload, type RecommendationPayload } from "@/lib/types/recommendation-payload";
 
 type Blob = Record<string, unknown>;
 type Timeframe = (typeof INITIATIVE_TIMEFRAMES)[number];
 const HIGH_SEVERITY = 67;
+const TIMEFRAME_LABELS: Record<Timeframe, string> = {
+  SPRINT_90: "90 jours", PHASE_1: "première phase", PHASE_2: "deuxième phase", LONG_TERM: "long terme",
+};
 
 function coerceTimeframe(v: unknown): Timeframe {
   return (INITIATIVE_TIMEFRAMES as readonly string[]).includes(v as string) ? (v as Timeframe) : "PHASE_1";
@@ -50,19 +53,23 @@ export function buildTypedRecommendations(pillars: Record<string, Blob | null | 
   const i = pillars.i ?? {};
   const r = pillars.r ?? {};
 
-  const initiatives = collectInitiatives(i) as Blob[];
+  const initiatives = collectNormalizedInitiatives(i);
+  // Risk relationships can differ between the source representations. Keep
+  // their full raw union; only the list of decisions is deduplicated by identity.
+  const rawInitiatives = collectInitiatives(i) as Blob[];
+  const choiceProvenance = (i._fieldProvenance ?? {}) as Blob;
   const matrix = Array.isArray(r.probabilityImpactMatrix) ? (r.probabilityImpactMatrix as Blob[]) : [];
 
   // Rule 1 — promote RECOMMENDED initiatives into the roadmap.
   for (const init of initiatives) {
-    if (init.status === "RECOMMENDED" && typeof init.id === "string") {
+    if (init.status === "RECOMMENDED" && typeof init.id === "string" && choiceProvenance[`initiatives.${init.id}.status`] !== "HUMAN") {
       const timeframe = coerceTimeframe(init.timeframe);
       out.push({
         payload: { kind: "SELECT_INITIATIVE", initiativeId: init.id, timeframe },
         targetPillarKey: "i",
         targetField: "catalogueParCanal",
         operation: "MODIFY",
-        explain: `Promouvoir « ${String(init.action ?? init.id)} » dans la roadmap (${timeframe}).`,
+        explain: `Proposer de retenir « ${init.action} » dans le plan (${TIMEFRAME_LABELS[timeframe]}${init.timeframe ? "" : " — échéance proposée, à valider"}).`,
         confidence: 0.7,
       });
     }
@@ -71,11 +78,13 @@ export function buildTypedRecommendations(pillars: Record<string, Blob | null | 
   // FK set of risk ids mitigated by a SELECTED initiative.
   const mitigatedBySelected = new Set<string>();
   const mitigatedByAny = new Set<string>();
-  for (const init of initiatives) {
+  const selectedIds = new Set(initiatives.filter(init => init.status === "SELECTED_FOR_ROADMAP").map(init => init.id));
+  for (const init of rawInitiatives) {
+    if (!init || typeof init !== "object") continue;
     const ids = Array.isArray(init.mitigatesRiskIds) ? (init.mitigatesRiskIds as string[]) : [];
     for (const id of ids) {
       mitigatedByAny.add(id);
-      if (init.status === "SELECTED_FOR_ROADMAP") mitigatedBySelected.add(id);
+      if (typeof init.id === "string" && selectedIds.has(init.id)) mitigatedBySelected.add(id);
     }
   }
 
@@ -89,7 +98,7 @@ export function buildTypedRecommendations(pillars: Record<string, Blob | null | 
         targetPillarKey: "r",
         targetField: "probabilityImpactMatrix",
         operation: "MODIFY",
-        explain: `Le risque « ${String(risk.risk ?? risk.id)} » est couvert par une initiative retenue — le marquer MITIGATED.`,
+        explain: `Le risque « ${String(risk.risk ?? risk.id)} » est associé à une action retenue. Proposer de le marquer « Atténué ».`,
         confidence: 0.8,
       });
       continue;
@@ -124,7 +133,9 @@ export function buildTypedRecommendations(pillars: Record<string, Blob | null | 
     }
   }
 
-  return out;
+  // Stable read-projection ids are not executable UUIDs. Never manufacture a
+  // source identity or persist a typed proposal that its executor cannot parse.
+  return out.filter(candidate => parseRecommendationPayload(candidate.payload) !== null);
 }
 
 /**
@@ -167,7 +178,7 @@ export async function generateTypedRecommendations(
         operation: c.operation,
         proposedValue: c.payload as unknown as Prisma.InputJsonValue,
         agent: "MESTOR",
-        source: "R+T",
+        source: "CROSS_PILLAR",
         confidence: c.confidence,
         explain: c.explain,
         urgency: "SOON",

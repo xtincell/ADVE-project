@@ -8,6 +8,7 @@
 
 import { describe, it, expect } from "vitest";
 import { applyPayloadToPillars } from "@/server/services/notoria/apply-payload";
+import { collectInitiatives } from "@/lib/types/pillar-schemas";
 
 const INIT = "11111111-1111-4111-8111-111111111111";
 const RISK = "22222222-2222-4222-8222-222222222222";
@@ -24,6 +25,28 @@ function pillarsWithInitiative() {
 }
 
 describe("applyPayloadToPillars (ADR-0088)", () => {
+  it.each(["SELECT_INITIATIVE", "REJECT_INITIATIVE", "LINK_RISK"] as const)("%s reaches every source representation while preserving unrelated attributes and identities", (kind) => {
+    const original = { id: INIT, action: "Une identité", format: "Texte", objectif: "Cohésion", status: "RECOMMENDED", budget: 0 };
+    const other = { ...original, id: "33333333-3333-4333-8333-333333333333", action: "Autre identité" };
+    const p = { i: { catalogueParCanal: { DIGITAL: [{ ...original }, other] }, actionsByDevotionLevel: { ENGAGE: [{ ...original, devotionImpact: "ENGAGE" }] }, actionsByOvertonPhase: [{ phase: "POPULAR", actions: [{ ...original, overtonShift: "Conserver" }] }] } };
+    const payload = kind === "SELECT_INITIATIVE" ? { kind, initiativeId: INIT, timeframe: "SPRINT_90" as const }
+      : kind === "REJECT_INITIATIVE" ? { kind, initiativeId: INIT, reason: "Décision revue" }
+        : { kind, initiativeId: INIT, riskId: RISK };
+    const result = applyPayloadToPillars(p, payload);
+    const copies = (collectInitiatives(p.i) as Record<string, unknown>[]).filter(raw => raw.id === INIT);
+    expect(copies).toHaveLength(3);
+    for (const copy of copies) {
+      if (kind === "SELECT_INITIATIVE") expect(copy).toMatchObject({ status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90", budget: 0 });
+      if (kind === "REJECT_INITIATIVE") expect(copy.status).toBe("REJECTED");
+      if (kind === "LINK_RISK") expect(copy.mitigatesRiskIds).toEqual([RISK]);
+    }
+    expect(p.i.actionsByDevotionLevel.ENGAGE[0]!.devotionImpact).toBe("ENGAGE");
+    expect(p.i.actionsByOvertonPhase[0]!.actions[0]!.overtonShift).toBe("Conserver");
+    expect(p.i.catalogueParCanal.DIGITAL[1]).toEqual(other);
+    expect([...result.changed]).toEqual(["i"]);
+    expect(result.warnings).toEqual([]);
+  });
+
   it("SELECT_INITIATIVE sets status + timeframe by id", () => {
     const p = pillarsWithInitiative();
     const res = applyPayloadToPillars(p, { kind: "SELECT_INITIATIVE", initiativeId: INIT, timeframe: "SPRINT_90" });

@@ -43,6 +43,7 @@ const SCAN_DIRS = [
 // Composants hors components/cockpit mais rendus dans le portail founder,
 // + sources de chaînes rendues au prospect (grille /pricing).
 const EXTRA_FILES = [
+  join(ROOT, "src/server/services/notoria/generate-typed-recos.ts"),
   join(ROOT, "src/lib/strategy/roadmap-routes.ts"),
   join(ROOT, "src/lib/types/field-labels.ts"),
   join(ROOT, "src/domain/field-provenance.ts"),

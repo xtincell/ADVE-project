@@ -9,6 +9,26 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Proposition Notoria → toutes copies I → S versionné → BrandAction — 446 local en réception (2026-10-10)
+
+Lecture normalisée → identité UUID exécutable ; IDs choisis canoniques/FK risques
+union brute. Revue → PHASE_1 proposé si échéance absente. SELECT/REJECT/LINK_RISK
+→ toutes copies des trois collections ; refs mutables/validation intactes.
+Gateway/transaction → huit versions/nulls/pins/sources → S/route/projection
+atomiques. HUMAN DENY/CHALLENGE → refus/rollback sans APPLIED faux. UI existante
+traduit payload/source/avertissements, CROSS_PILLAR correspond à I/R ; zéro
+candidat ne vaut pas cohérence. Native locale USER/TRIAL fictive reçue : une reco/trois
+copies retenues/ligne stable ACCEPTED/S une action-budget zéro, trois Intents,
+zéro tâche/coût. DEFAULT 4 288/407 et PG 352/18 verts ; copie 14/deux verts.
+Gauntlet final cinq sorties 0, gouvernance 1 626/166 ; fixtures nettoyées/Next arrêté ; CI/image/runtime 446 non reçus/runtime 445. Aucun service/route/Intent/
+tool/ADR ; chargement initial C4/autres writers/canaux/devises/remap/cycles et
+sept chantiers/dix gates ouverts. Générateur : retrait HUMAN respecté, un rouge/dix verts puis suite complète ;
+filtre final non exercé dans cette build native antérieure. UI plan partiel/refus
+humain reçue sans Zod brut ; refus HTTP 200/applied 0 conserve lignes/piliers/reco
+ACCEPTED, appliedAt null, seul Intent 3→4. Précondition HUMAN préparée hors UI.
+[Réception et suite](REFONTE-PLAN.md).
+
+
 ### Catalogue I → composites/CORE Oracle → HTML/Markdown/PDF — 445 livré, réception bornée (2026-10-10)
 
 collectNormalizedInitiatives → 7S/ThreeHorizons/Budget dédupliqués ; inconnus →
@@ -30,7 +50,7 @@ runtime 445 exacts reçus. Lecture réelle SPAWT ADMIN seule, S Périmé/mélang
 conservé sans mutation/recalcul ; warm complète 60 réponses/14 ERR_ABORTED, aucun
 zéro global/SLO/cycle. Sonde pure Notoria : doublon/divergence reproduits/non
 réparés 445 ; reprise 446 contrat existant, refs brutes mutables/validation
-préservées ; legacy statique seulement. DocumentSha/CI du reçu encore à recevoir.
+préservées ; legacy statique seulement. DocumentSha 3abd2be/reçu 445 clôturés.
 [Réception et reprise](REFONTE-PLAN.md).
 
 

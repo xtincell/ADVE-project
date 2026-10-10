@@ -1,5 +1,95 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Une proposition, toutes copies source, un plan sauvegardé — 446 local en réception (2026-10-10)
+
+Services existants Notoria/MESTOR/gateway/BrandAction, aucune nouvelle entité,
+page/route/Intent/ADR/tool/provider. Documentation 445 clôturée 3abd2be, dernier
+runtime reçu 6.27.445 ; 446 source locale/non committée, CI/image/runtime non reçus.
+Sept chantiers/dix gates/80 lignées inchangés, global null.
+
+generateTypedRecommendations réutilise collectNormalizedInitiatives pour une
+proposition par identité UUID exécutable ; pas UUID fabriquée depuis un ID de
+projection. FK risques réunies depuis les copies brutes, IDs choisis canoniques
+pour éviter de dépendre du statut périmé d’une copie secondaire. PHASE_1 sans
+échéance source reste « échéance proposée, à valider ». SELECT/REJECT/LINK_RISK
+visite toutes représentations des trois collections via mapInitiativeEntries ;
+refs mutables et validation d’entrée conservées, pas écriture sur copie normalisée.
+
+dispatchTypedRecos utilise withPillarTransaction/gateway : huit versions A/D/V/E/
+R/T/I/S, absences null incluses, pins/reçus sources contrôlés avant écrire.
+recalculateSynthesisInTransaction partagé sauvegarde le contenu S/choix de route
+et syncBrandActionsFromBlob dans la même transaction. Refus HUMAN DENY/CHALLENGE
+et rejectOnProvenanceRefusal annulent l’écriture ; reco refusée ne devient pas
+APPLIED. S sauvegardé ne signifie ni COMPLETE ni approbation ni cycle reçu.
+
+UI Notoria existante : résumé du payload typé lisible, UPDATE_ADVE_FIELD conserve
+sa valeur actuelle ; impact « Moyen » et labels sources traduits. Source existante
+CROSS_PILLAR reflète I/R, zéro candidat ne prétend plus prouver la cohérence.
+Avertissements provenance/source modifiée/plan partiel traduits côté client ;
+réponses brutes et preuves conservées. Relecture native finale
+du plan partiel et du refus humain reçue : sans Zod brut ; aucune nouvelle page/
+capacité ni droit ajouté.
+
+Preuves privées release/preuves-notoria-446 : identité sept rouges/douze verts
+puis 24/trois verts ; provenance trois rouges/seize verts ; writer quatre rouges/
+trente skipped puis 34 cas PG verts ; green-core 43/quatre verts. red-risk-choice
+ajoute deux rouges/huit verts avant réparation des IDs choisis/FK. Suites finales
+unit-final.log DEFAULT 4 288 tests/407 fichiers verts (07:40:54, 95,16 s), postgres-final.log
+352/18 verts (07:45:35, 33,16 s), dont 35 action-decision-flow : reco persistée reste ACCEPTED/
+appliedAt null après contradiction HUMAN refusée. Aucun test annoncé comme supprimé.
+Le filtre final
+générateur respecte le retrait HUMAN : un rouge/dix verts avant correction, puis
+suite DEFAULT complète reçue. La copie client est validée par final-release.log
+14/deux verts. gauntlet.json final après filtre HUMAN : tsc/lint/lint-governance/
+cycles/gouvernance cinq sorties 0, gouvernance 1 626/166 (07:47:45, 40,13 s).
+La passe intermédiaire verte reste un checkpoint antérieur.
+
+Native baseline USER synthétique/auth normale sur 15331789 : trois APPLIED pour
+une identité, seulement première des trois copies retenue, projection PROPOSED/
+non retenue et payload/enums bruts ; zéro tâche/coût, trois Intents. La recette
+finale native-receipt.json USER/TRIAL/auth normale reçoit générer→accepter→appliquer :
+une reco, les trois copies retenues,
+la même ligne opérationnelle selected=true/ACCEPTED, S sauvegardé avec une action
+et budget déclaré zéro. I v2/S v2, une archive chacun ; S absent au snapshot est
+initialisé v1 par gateway, d’où archive vide puis version 2, sans invention d’une
+ancienne source. _sourcePillarVersions reçoit i:2, a/d/e/v:1, r/s/t:null. Trois Intents et zéro
+GenerativeTask/CostDecision après application ; aucune marque réelle SPAWT/
+FrieslandCampina modifiée. Message natif : « Le plan reste partiel. Relisez et
+complétez votre stratégie avant de l’approuver. »
+
+Refus native-refusal-response.json HTTP 200, applied:0/FIELD_PROVENANCE_REFUSED :
+reco reste ACCEPTED/appliedAt null, lignes/piliers/recommandation identiques avant/
+après, Intents seuls 3→4, tâches/coûts restent zéro. Précondition HUMAN préparée
+par helper synthétique hors UI, aucun retrait humain par UI certifié ici. Message
+métier reçu, sans Zod brut. Filtre final du générateur HUMAN reçu en unité/PG,
+non exercé dans cette build native antérieure. Corps verts expirés après reload :
+HTTP/UI/DB reçus, corps du refus reçu avant reload ; limite conservée.
+
+native-final-network.json : fenêtre complète truncated=false/hasMore=false,
+neuf réponses, zéro ≥500/exception observé dans cette fenêtre. DOM ≤526 ms et H1
+≤1 997 ms sont bornes observées à chaud, pas SLO accepté. HMR froid/chargement et
+une génération interrompue sans effet DB conservés. fixture-cleanup.json
+cleaned=true/remaining 0 ; Next isolé arrêté après vérification de sa cible,
+PostgreSQL reste actif. Aucune recette readonly/stress/cycle réel déduite.
+
+**Réception locale 446 reçue** : suites/natif borné/contrôles finaux/nettoyage ;
+source commit/CI/image/runtime restent à recevoir. Les refus stale/LOCKED/HUMAN restent bornés aux preuves réellement exercées, aucune
+acceptation universelle de Notoria. **Observation locale C4** : compilation/HMR
+longue et sélecteur affichant zéro marque pendant chargement. Effort : correction
+bornée via query pending existante, puis recette chargement/vide/erreur et mesure
+à chaud sur fixture appropriée ; déclencheur prochain incrément C4 avant réception
+globale. Aucune régression de production ou SLO établi par cette observation.
+
+**Résidus/trigger avant C3/C4/C6/cycle réel** : producteur S sémantique/canaux
+DEVOTION/OVERTON, ancres qualitatives FCFA→BrandCurrency/BrandAction, autres
+writers/versions/remap et opportunités legacy budgetEstime comme impact (statique
+seulement). Effort : contre-exemples par lecteur/écrivain, contrats faits/absence/
+estimation/canaux/devise puis recette UI ; aucune donnée inventée/gate affaiblie/
+conversion sans taux-source. Vitrine SPAWT live/six questions/sans décompte reçue
+antérieurement ; prochaine publication suit édition de marque reçue, application/
+raccord complet/cycle distincts. [Dette en place](RESIDUAL-DEBT.md).
+
+
 ## Lecteurs composites et budget CORE Oracle → exports fidèles — 445 livré, réception bornée (2026-10-10)
 
 Reprise immédiate 444, source 15331789/runtime exact 6.27.445 reçus. Aucun modèle,
@@ -95,8 +185,8 @@ sha256:e3d6c8ff566901a2d063e6ec69b3d39d055b8589ef28bc650584e44b7544b3ef.
 Déploiement unique tvlp67oof39lq7mwofj8u9ce terminé 2026-10-10 05:41:10 UTC ;
 runtime.json reçu 05:41:38 UTC : 6.27.445/running/nextjs/private-media RW/API
 version 200, conteneur q9b4m57yh93gxbjykj470giy-053945909356/digest exact.
-SourceSha distinct du futur documentSha : contrôle/commit/CI de ce reçu encore
-à recevoir, aucun nouveau déploiement documentaire annoncé.
+SourceSha 15331789 distinct du documentSha 3abd2be reçu/clôturé ; aucun nouveau
+déploiement documentaire annoncé.
 
 native-runtime-receipt.json/capture : SPAWT réelle lue en ADMIN, rôle frais
 visible dans Réglages, connexion normale sans session injectée. Aucune mutation

@@ -315,6 +315,35 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   100 %, ancien S/budgets/roadmap contradictoires ouverts, aucune réception USER
   de production. Timeouts de compilation conservés. Sparse non
   approuvable, contrat strict inchangé.
+  **446 local en réception — contrat Notoria décision/source/plan/projection** :
+  lecture normalisée/UUID exécutables, IDs choisis canoniques/union FK brute ;
+  mutation toutes copies via refs mutables, huit versions/nulls/pins/sources et
+  calcul S/route/projection dans la même transaction gateway. Générateur respecte
+  le retrait HUMAN, prouvé unité/PG ; HUMAN DENY/CHALLENGE
+  refuse strictement, pas APPLIED faux. DEFAULT 4 288/407, PG 352/18 (35 cas de
+  décision) et copie release/vocab 14/deux verts ; gauntlet final cinq
+  sorties 0, gouvernance 1 626/166 ; nettoyage reçu. Native USER/TRIAL fictive finale : une reco/trois copies
+  retenues/ligne stable ACCEPTED/S une action-budget zéro, trois Intents et zéro
+  tâche/coût ; baseline contraire conservée. UI plan partiel/refus humain reçue
+  sans Zod brut. Refus HTTP 200/applied 0 conserve lignes/piliers/reco ACCEPTED
+  (appliedAt null), seul Intent 3→4 ; précondition HUMAN préparée hors UI. Dernier
+  filtre générateur non réexercé dans cette build native antérieure. CI/image/runtime 446 non reçus,
+  runtime 445/doc3abd2be clôturés ; aucune réception du cycle réel.
+  **Réception locale reçue** : contrôles finaux/nettoyage et refus bornés ;
+  source commit/CI/image/runtime restent à recevoir, aucun fournisseur payant. **Observation locale C4** : zéro marque affiché pendant
+  chargement/compilation, pas régression production démontrée. Plan : réutiliser
+  query pending pour distinguer chargement/vide/erreur, recette bornée et mesure
+  à chaud ; effort correctif UI ciblé puis recette, trigger prochain lot C4 avant
+  acceptation globale du chargement.
+  **Restent dans la même dette** : producteur S sémantique/canaux DEVOTION/OVERTON,
+  devises FCFA→BrandCurrency/BrandAction, autres writers/versions/remap UUID,
+  réceptions SPAWT/FrieslandCampina et cycles. Opportunités legacy budgetEstime
+  comme impact : statique seulement, reproduire avant modifier. **Plan/trigger** :
+  prochains incréments avant C3/C4/C6/cycle réel, contre-exemples par lecteur/
+  écrivain puis contrats faits/absences/estimations/canaux/devise et recette UI ;
+  conserver validateur brut, aucune donnée inventée/gate affaiblie/conversion
+  sans taux-source. Sept chantiers/dix gates/80 lignées ouverts, global null.
+
   **445 livré, réception bornée — lecteurs/rendu/budgets campagne reçus localement** :
   7S/3H/Budget réutilisent le collecteur normalisé, inconnus/coverage/dénominateur
   conservés ; agrégat campagne de roadmap-routes partagé mapBudget/CORE/Deloitte,
@@ -350,11 +379,11 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   Autres writers/remap/devise : recevoir contrats et
   versions source avant autre devise/écriture réelle, aucune conversion sans
   taux/source ni contenu/gate affaibli. Sept chantiers/dix gates/80 lignées
-  inchangés, global null. Documentation 444 clôturée ; documentSha/CI du reçu 445 encore à recevoir.
+  inchangés, global null. Documentation 444 clôturée ; documentSha 3abd2be/reçu 445 clôturés.
   CI finale 4 276/407 + PG 347/18/image/runtime 445 exacts reçus ; source 15331789.
   Lecture production SPAWT ADMIN seule, S Périmé/mélangé conservé sans recalcul/
   mutation ; warm complète 60 réponses/14 ERR_ABORTED, initiale tronquée 101/40, aucun
-  zéro global/SLO/cycle. DocumentSha du présent reçu distinct encore attendu.
+  zéro global/SLO/cycle. DocumentSha 3abd2be distinct reçu/clôturé.
 
 
   **444 livré, réception bornée — normalisation/projections bornées** : livraison

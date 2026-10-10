@@ -14,6 +14,10 @@ import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import { composedSynthesis } from "../fixtures/synthesis";
 import { actualizePillar } from "@/server/services/mestor/rtis-cascade";
 import { execute } from "@/server/services/artemis/commandant";
+import { generateTypedRecommendations } from "@/server/services/notoria/generate-typed-recos";
+import { dispatchTypedRecos } from "@/server/services/notoria/apply-payload";
+import { collectInitiatives } from "@/lib/types/pillar-schemas";
+import { acceptRecos, applyRecos } from "@/server/services/notoria/lifecycle";
 
 const brands: string[] = [];
 let owner: string, operatorId: string;
@@ -28,6 +32,7 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   const where = { strategyId: { in: brands } };
+  await db.recommendation.deleteMany({ where }); await db.recommendationBatch.deleteMany({ where });
   await db.brandAction.deleteMany({ where }); await db.intentEmission.deleteMany({ where });
   await db.costDecision.deleteMany({ where }); await db.scoreSnapshot.deleteMany({ where });
   await db.process.deleteMany({ where }); await db.signal.deleteMany({ where });
@@ -58,6 +63,83 @@ const choose = (f: Fixture, selected: boolean) => setBrandActionStatus({ strateg
 const readI = (f: Fixture) => db.pillar.findUniqueOrThrow({ where: { id: f.i.id } });
 
 describe("one operator choice survives the whole existing action path", () => {
+  it("one typed recommendation reconciles all source copies, the operational row and the full saved plan", async () => {
+    const f = await fixture();
+    await db.pillar.update({ where: { id: f.i.id }, data: { content: {
+      catalogueParCanal: { DIGITAL: [f.initiative] }, actionsByDevotionLevel: { ENGAGE: [{ ...f.initiative }] },
+      actionsByOvertonPhase: [{ phase: "POPULAR", actions: [{ ...f.initiative }] }],
+    } } });
+    const generated = await generateTypedRecommendations(f.strategy.id);
+    expect(generated.count).toBe(1);
+    const rows = await db.recommendation.findMany({ where: { strategyId: f.strategy.id } });
+    const result = await dispatchTypedRecos(f.strategy.id, rows.map(r => ({ id: r.id, proposedValue: r.proposedValue })));
+    expect(result.appliedRecoIds).toEqual(rows.map(r => r.id));
+    const i = await readI(f);
+    for (const raw of collectInitiatives(i.content) as Array<Record<string, unknown>>) expect(raw.status).toBe("SELECTED_FOR_ROADMAP");
+    expect(await db.brandAction.findUniqueOrThrow({ where: { id: f.action.id } })).toMatchObject({ selected: true, status: "ACCEPTED" });
+    const s = await db.pillar.findUniqueOrThrow({ where: { id: f.s.id } });
+    expect(s.content).toMatchObject({ selectedFromI: [{ sourceInitiativeId: f.initiative.id }],
+      computed: { selectedInitiativeCount: 1, totalBudget: 1000 }, _sourcePillarVersions: { i: 2, s: 1 } });
+    expect((s.content as any).selectedFromI).toHaveLength(1);
+    expect((s.content as any).roadmap.flatMap((row: any) => row.actions)).toEqual([f.initiative.action]);
+    expect(provider.callLLM).not.toHaveBeenCalled();
+  });
+
+  it("never reports a typed decision as applied after a human source decision is refused", async () => {
+    const f = await fixture(); await choose(f, true);
+    const before = await readI(f);
+    const result = await dispatchTypedRecos(f.strategy.id, [{ id: "synthetic-reject", proposedValue: {
+      kind: "REJECT_INITIATIVE", initiativeId: f.initiative.id, reason: "Synthetic stale recommendation",
+    } }]);
+    expect(result.appliedRecoIds).toEqual([]);
+    expect(result.warnings.join(" ")).toContain("FIELD_PROVENANCE_REFUSED");
+    expect(await readI(f)).toEqual(before);
+    expect(await db.pillarVersion.count({ where: { pillarId: f.s.id } })).toBe(0);
+  });
+
+  it("keeps the persisted recommendation pending application when a later human choice contradicts it", async () => {
+    const f = await fixture();
+    await generateTypedRecommendations(f.strategy.id);
+    const reco = await db.recommendation.findFirstOrThrow({ where: { strategyId: f.strategy.id } });
+    await acceptRecos(f.strategy.id, [reco.id], owner);
+    await choose(f, false);
+    const before = await readI(f);
+    const result = await applyRecos(f.strategy.id, [reco.id]);
+    expect(result.applied).toBe(0);
+    expect(result.warnings.join(" ")).toContain("FIELD_PROVENANCE_REFUSED");
+    expect(await db.recommendation.findUniqueOrThrow({ where: { id: reco.id } })).toMatchObject({ status: "ACCEPTED", appliedAt: null });
+    expect(await readI(f)).toEqual(before);
+    expect(await db.pillarVersion.count({ where: { pillarId: f.s.id } })).toBe(0);
+  });
+
+  it.each(["i", "a"] as const)("refuses the old complete read snapshot when source %s changes before the typed transaction", async key => {
+    const f = await fixture();
+    const added = { ...f.initiative, id: randomUUID(), action: "Concurrent retained source" };
+    const originalFind = db.pillar.findMany.bind(db.pillar);
+    // The awaited test interception is not used as a Prisma batch transaction.
+    const interceptedRead = (async (args: Parameters<typeof originalFind>[0]) => {
+      const rows = await originalFind(args);
+      const write = await writePillarAndScore({ strategyId: f.strategy.id, pillarKey: key,
+        operation: { type: "SET_FIELDS", fields: key === "i"
+          ? [{ path: "catalogueParCanal", value: { DIGITAL: [f.initiative, added] } }]
+          : [{ path: "nomMarque", value: "New source after read" }] },
+        author: { system: "MESTOR", reason: "Synthetic concurrent source change" }, options: { expectedVersion: 1 } });
+      expect(write.success, write.error).toBe(true);
+      return rows;
+    }) as unknown as typeof originalFind;
+    const spy = vi.spyOn(db.pillar, "findMany").mockImplementationOnce(interceptedRead);
+    let result;
+    try { result = await dispatchTypedRecos(f.strategy.id, [{ id: "synthetic-old-snapshot", proposedValue: {
+      kind: "SELECT_INITIATIVE", initiativeId: f.initiative.id, timeframe: "SPRINT_90",
+    } }]); } finally { spy.mockRestore(); }
+    expect(result.appliedRecoIds).toEqual([]);
+    expect(result.warnings.join(" ")).toContain("PILLAR_SOURCE_VERSION_CONFLICT");
+    const i = await readI(f);
+    expect(i.currentVersion).toBe(key === "i" ? 2 : 1);
+    if (key === "i") expect((i.content as any).catalogueParCanal.DIGITAL[1].id).toBe(added.id);
+    expect(await db.pillarVersion.count({ where: { pillarId: f.s.id } })).toBe(0);
+  });
+
   it("keeps a declared zero operational override when the source amount becomes unknown", async () => {
     const f = await fixture();
     await db.brandAction.update({ where: { id: f.action.id }, data: { budgetMin: 0, budgetMax: 0 } });

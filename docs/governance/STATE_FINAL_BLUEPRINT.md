@@ -223,6 +223,26 @@ l’upgrade de verrou. La recherche d’âge normalise S→s. Dans propagateFrom
 les modes autoRecalculate true/false sont reçus localement : Process seulement si auto,
 aucun appel réseau dans la fixture. Cela ne reçoit pas tous les modes/agents.
 
+**446 local en réception — cohérence de décision par identité** : Notoria
+lit le catalogue normalisé/UUID exécutables, FK union brute guidée par IDs choisis
+canoniques ; PHASE_1 proposé si échéance absente. Mutation toutes copies brutes,
+transaction gateway/huit versions/nulls/pins/sources/calcul S/route/projection,
+refus HUMAN strict sans APPLIED faux ni maturité inventée. UI existante traduit
+payload/source/avertissements ; zéro candidat ne prouve pas cohérence. Native
+USER/TRIAL fictive verte : une reco/trois copies/ligne stable ACCEPTED/S une action-budget
+zéro, trois Intents/zéro tâche-coût ; baseline contraire conservée. DEFAULT
+4 288/407 et PG 352/18 verts, copie 14/deux verts ; gauntlet final cinq
+sorties 0, gouvernance 1 626/166 ; nettoyage reçu. CI/image/runtime 446
+non reçus/runtime 445/doc3abd2be clôturés. Aucun modèle/service/router/page/Intent/
+ADR/tool/provider ajouté ; chargement initial C4, autres writers/versions/devises/
+remap/producteur S sémantique/réceptions réelles ouverts. Sept chantiers/dix gates/
+80 lignées inchangés, global null. Générateur : retrait HUMAN respecté, un rouge/dix verts puis suite complète ;
+filtre final non exercé dans cette build native antérieure. UI plan partiel/refus
+humain reçue sans Zod brut ; refus HTTP 200/applied 0 conserve lignes/piliers/reco
+ACCEPTED, appliedAt null, seul Intent 3→4. Précondition HUMAN préparée hors UI.
+[Réception bornée](REFONTE-PLAN.md).
+
+
 **445 livré, réception bornée — Oracle conserve inconnus/devises, recette bornée** :
 7S/3H/Budget utilisent le collecteur normalisé, inconnus dans coverage/unassigned
 et dénominateur ; H2 PHASE_2/LONG_TERM. Agrégat campagne de roadmap-routes partagé
@@ -243,7 +263,7 @@ runtime 445 exacts reçus. Lecture réelle SPAWT ADMIN seule, S Périmé/mélang
 conservé sans mutation/recalcul ; warm complète 60 réponses/14 ERR_ABORTED, aucun
 zéro global/SLO/cycle. Sonde pure Notoria : doublon/divergence reproduits/non
 réparés 445 ; reprise 446 contrat existant, refs brutes mutables/validation
-préservées ; legacy statique seulement. DocumentSha/CI du reçu encore à recevoir.
+préservées ; legacy statique seulement. DocumentSha 3abd2be/reçu 445 clôturés.
 [Réception et résidus](REFONTE-PLAN.md).
 
 

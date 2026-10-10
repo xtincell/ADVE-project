@@ -24,6 +24,8 @@ import { scoreObject } from "@/server/services/advertis-scorer";
 import type { AdvertisVector } from "@/lib/types/advertis-vector";
 import { Prisma } from "@prisma/client";
 import { runMarketIntelligence } from "@/server/services/market-intelligence";
+import type { PillarWriteRequest, PillarWriteResult } from "@/server/services/pillar-gateway";
+import type { RouteKey } from "@/lib/strategy/roadmap-routes";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -388,36 +390,44 @@ export type ActualizeResult = {
   selectedFromICount?: number;
 };
 
-/** Existing S calculation and versioned writer, shared by both entry points. */
-export async function recalculateSynthesis(strategyId: string, context?: {
+type SynthesisRecalculationContext = {
   intentId?: string; userId?: string; selectedActionIds?: string[];
-}): Promise<ActualizeResult> {
+  selectedRouteKey?: RouteKey;
+  writeOptions?: Pick<NonNullable<PillarWriteRequest["options"]>, "sourceReceipts" | "requiredSourceIds" | "expectedPillarVersions">;
+};
+
+/** Same saved calculation for manual refresh and an atomic typed decision. */
+export async function recalculateSynthesisInTransaction(strategyId: string, tx: Prisma.TransactionClient,
+  write: (request: PillarWriteRequest) => Promise<PillarWriteResult>, context?: SynthesisRecalculationContext) {
+  const { executeProtocoleStrategy } = await import("@/server/services/rtis-protocols");
+  const { collectNormalizedInitiatives } = await import("@/lib/types/pillar-schemas");
+  await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${strategyId} FOR UPDATE`;
+  if (context?.selectedActionIds?.length) {
+    const ids = [...new Set(context.selectedActionIds)];
+    const actions = await tx.brandAction.findMany({ where: { strategyId, id: { in: ids } } });
+    const i = await tx.pillar.findUnique({ where: { strategyId_key: { strategyId, key: "i" } } });
+    const chosen = new Set(collectNormalizedInitiatives(i?.content).filter(a => a.status === "SELECTED_FOR_ROADMAP").map(a => a.id));
+    if (actions.length !== ids.length || actions.some(a => !a.selected || !a.sourceInitiativeId || !chosen.has(a.sourceInitiativeId))) {
+      throw new Error("SYNTHESIS_CHOICE_REQUIRED: conservez d’abord ces choix dans le catalogue, puis recalculez.");
+    }
+  }
+  const calculated = await executeProtocoleStrategy(strategyId, tx, context?.selectedRouteKey);
+  if (calculated.error) throw new Error(calculated.error);
+  const sources = calculated.content._sourcePillarVersions as Record<string, number | null>;
+  const persisted = await write({ strategyId, pillarKey: "s",
+    operation: { type: "REPLACE_FULL", content: calculated.content },
+    author: { system: "PROTOCOLE_S", reason: "Recalcul depuis les choix conservés", intentId: context?.intentId, userId: context?.userId },
+    options: { expectedVersion: sources.s ?? 1, expectedPillarVersions: sources, ...context?.writeOptions,
+      targetStatus: "AI_PROPOSED", shapeGate: true, rejectOnProvenanceRefusal: true },
+  });
+  return { calculated, persisted };
+}
+
+/** Existing S calculation and versioned writer, shared by both entry points. */
+export async function recalculateSynthesis(strategyId: string, context?: SynthesisRecalculationContext): Promise<ActualizeResult> {
   try {
     const { withPillarTransaction } = await import("@/server/services/pillar-gateway");
-    const { executeProtocoleStrategy } = await import("@/server/services/rtis-protocols");
-    const { collectNormalizedInitiatives } = await import("@/lib/types/pillar-schemas");
-    const result = await withPillarTransaction(strategyId, async (tx, write) => {
-      await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${strategyId} FOR UPDATE`;
-      if (context?.selectedActionIds?.length) {
-        const ids = [...new Set(context.selectedActionIds)];
-        const actions = await tx.brandAction.findMany({ where: { strategyId, id: { in: ids } } });
-        const i = await tx.pillar.findUnique({ where: { strategyId_key: { strategyId, key: "i" } } });
-        const chosen = new Set(collectNormalizedInitiatives(i?.content).filter(a => a.status === "SELECTED_FOR_ROADMAP").map(a => a.id));
-        if (actions.length !== ids.length || actions.some(a => !a.selected || !a.sourceInitiativeId || !chosen.has(a.sourceInitiativeId))) {
-          throw new Error("SYNTHESIS_CHOICE_REQUIRED: conservez d’abord ces choix dans le catalogue, puis recalculez.");
-        }
-      }
-      const calculated = await executeProtocoleStrategy(strategyId, tx);
-      if (calculated.error) throw new Error(calculated.error);
-      const sources = calculated.content._sourcePillarVersions as Record<string, number | null>;
-      const persisted = await write({ strategyId, pillarKey: "s",
-        operation: { type: "REPLACE_FULL", content: calculated.content },
-        author: { system: "PROTOCOLE_S", reason: "Recalcul depuis les choix conservés", intentId: context?.intentId, userId: context?.userId },
-        options: { expectedVersion: sources.s ?? 1, expectedPillarVersions: sources,
-          targetStatus: "AI_PROPOSED", shapeGate: true, rejectOnProvenanceRefusal: true },
-      });
-      return { calculated, persisted };
-    });
+    const result = await withPillarTransaction(strategyId, (tx, write) => recalculateSynthesisInTransaction(strategyId, tx, write, context));
     const { assessPillar } = await import("@/server/services/pillar-maturity/assessor");
     const assessment = assessPillar("s", result.persisted.newContent);
     return { pillarKey: "S", updated: true, version: result.persisted.version,

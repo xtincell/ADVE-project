@@ -4,6 +4,30 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-10
 
+**6.27.446 local en réception — décision Notoria/source/plan/projection** :
+lecture normalisée/UUID exécutables, FK risques réunies depuis les copies brutes
+avec IDs choisis canoniques ; PHASE_1 proposé si échéance absente. Mutation des
+copies des trois collections via mapInitiativeEntries, snapshot huit versions/
+nulls/pins/sources, calcul S partagé et BrandAction dans une transaction gateway.
+HUMAN DENY/CHALLENGE provoque refus/rollback, pas APPLIED faux. UI existante :
+payload typé lisible, labels/avertissements métier, source CROSS_PILLAR I/R et
+zéro candidat sans affirmation de cohérence. Native locale finale USER/TRIAL synthétique :
+une reco/trois copies retenues, ligne stable selected=true/ACCEPTED, S une action/
+budget zéro, trois Intents et zéro tâche/coût. Baseline contraire conservée.
+DEFAULT 4 288/407, PG 352/18 (35 action-decision-flow), copie release/vocab 14/deux
+verts ; gauntlet final cinq sorties 0, gouvernance 1 626/166 ; fixtures nettoyées/Next arrêté. Source commit/CI/image/runtime 446 non reçus ; runtime
+445/doc3abd2be clôturés. Chargement local présenté comme zéro marque : plan C4
+pending existant/mesure à chaud, aucune régression production établie. Aucun
+modèle/service/router/page/Intent/ADR/tool/provider ; autres writers/versions/
+devises/remap/canaux S et cycles réels restent en dette S existante. Sept chantiers/
+dix gates/80 lignées ouverts, global null.
+Générateur : retrait HUMAN respecté, un rouge/dix verts puis suite complète ;
+filtre final non exercé dans cette build native antérieure. UI plan partiel/refus
+humain reçue sans Zod brut ; refus HTTP 200/applied 0 conserve lignes/piliers/reco
+ACCEPTED, appliedAt null, seul Intent 3→4. Précondition HUMAN préparée hors UI.
+[Preuves et suite](docs/governance/REFONTE-PLAN.md).
+
+
 **6.27.445 livré, réception bornée — Oracle fidèle, réception locale bornée** :
 7S/ThreeHorizons/Budget réutilisent collectNormalizedInitiatives ; doublons
 retirés, inconnus dans unassigned/coverage/dénominateur, H2 PHASE_2/LONG_TERM.
@@ -29,7 +53,7 @@ Runtime exact 445/e3d6c8ff/nextjs/private-media RW/API version 200 reçu. Lectur
 réelle SPAWT ADMIN seulement, rôle Réglages visible, ancien S Périmé non recalculé ;
 60 réponses fenêtre warm complète/zéro ≥500 ou exception observée/14 ERR_ABORTED,
 initiale tronquée 101/40 conservée, aucun SLO/USER production/cycle déduit.
-DocumentSha du présent reçu encore attendu, distinct de la source.
+DocumentSha 3abd2be reçu/clôturé, distinct de la source 15331789.
 Documentation 444 clôturée 640ecbad/trois CI/postmerge reçus. Autres writers/
 versions/remap, devise qualitative FCFA→BrandAction et confusion sémantique des
 canaux encore native restent en dette S. Sonde pure Notoria : une identité/

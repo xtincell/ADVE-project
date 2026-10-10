@@ -21,6 +21,8 @@ import { useCockpitEditStore } from "@/lib/stores/cockpit-edit-store";
 import type { PillarKey } from "@/domain/pillars";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { getFieldLabel } from "@/components/cockpit/field-renderers";
+import { parseRecommendationPayload } from "@/lib/types/recommendation-payload";
+import { ROUTE_SPECS } from "@/lib/strategy/roadmap-routes";
 import { type StepperStep } from "@/components/primitives/stepper";
 import {
   Sparkles, Loader2, CheckCircle, ThumbsUp, ThumbsDown,
@@ -35,8 +37,36 @@ import { getPillarChipStatus, type PillarReadinessProjection } from "./lib/pilla
 
 const PILLAR_LABELS: Record<string, string> = {
   a: "Authenticité", d: "Distinction", v: "Valeur", e: "Engagement",
-  r: "Risk", t: "Track", i: "Potentiel", s: "Stratégie",
+  r: "Risques", t: "Trajectoire", i: "Potentiel", s: "Stratégie",
 };
+
+const IMPACT_LABEL: Record<string, string> = { HIGH: "Fort", MEDIUM: "Moyen", LOW: "Faible" };
+const SOURCE_LABEL: Record<string, string> = {
+  R: "Risques", T: "Trajectoire", "R+T": "Risques et trajectoire", VAULT: "Sources importées",
+  INTAKE: "Brief initial", CROSS_PILLAR: "Analyse croisée", SESHAT: "Observations",
+};
+
+/** Describe an executable decision; keep actual field values visible for amendments. */
+function typedProposalLabel(value: unknown): string | null {
+  const payload = parseRecommendationPayload(value);
+  if (!payload) return null;
+  switch (payload.kind) {
+    case "SELECT_INITIATIVE": return "Retenir l’action dans le plan et appliquer l’échéance proposée.";
+    case "REJECT_INITIATIVE": return `Écarter l’action du plan : ${payload.reason}`;
+    case "ADD_INITIATIVE": return `Ajouter l’action « ${payload.initiative.action} » aux propositions.`;
+    case "LINK_RISK": return "Associer l’action au risque indiqué.";
+    case "SET_RISK_STATUS": return `Marquer le risque « ${{ UNMITIGATED: "Non atténué", MITIGATED: "Atténué", ACCEPTED: "Accepté" }[payload.status]} ».`;
+    case "SELECT_ROADMAP_ROUTE": return `Choisir le scénario « ${ROUTE_SPECS.find(route => route.key === payload.routeKey)!.label} » et recalculer le plan.`;
+    case "UPDATE_ADVE_FIELD": return null;
+  }
+}
+
+function applicationWarningLabel(warning: string): string {
+  if (warning.includes("FIELD_PROVENANCE_REFUSED")) return "Une décision humaine existante empêche ce changement. Relisez le choix conservé avant de modifier l’action.";
+  if (warning.includes("PILLAR_SOURCE_VERSION_CONFLICT")) return "Vos données ont changé depuis cette proposition. Rechargez la stratégie avant de réessayer.";
+  if (warning.startsWith("Validation:") || warning.startsWith("Bible[WARN]:")) return "Le plan reste partiel. Relisez et complétez votre stratégie avant de l’approuver.";
+  return "Un point d’application reste à vérifier dans votre stratégie.";
+}
 
 // Phase 21 F-A.5 (ADR-0069) — `COMPLETION_COLORS` legacy retiré. Le mapping
 // canonique vit dans `lib/pillar-chip-status.ts` qui inclut le statut PÉRIMÉ
@@ -128,7 +158,7 @@ export function NotoriaPage() {
       setApplyFeedback(
         data.count > 0
           ? { type: "success", message: `${data.count} recommandation(s) ciblée(s) générée(s).` }
-          : { type: "warning", message: "Aucune recommandation ciblée à générer (modèle déjà cohérent)." },
+          : { type: "warning", message: "Aucune proposition applicable aux actions et risques disponibles." },
       );
     },
   });
@@ -158,12 +188,13 @@ export function NotoriaPage() {
       recosQuery.refetch();
       dashboardQuery.refetch();
       if (data.applied === 0) {
-        const detail = data.warnings.length > 0 ? ` — ${data.warnings[0]}` : "";
+        const detail = data.warnings.length > 0 ? ` — ${applicationWarningLabel(data.warnings[0]!)}` : "";
         setApplyFeedback({ type: "error", message: `Aucune recommandation appliquée${detail}` });
       } else if (data.warnings.length > 0) {
-        setApplyFeedback({ type: "warning", message: `${data.applied} appliquée(s). Avertissements : ${data.warnings.join(" | ")}` });
+        const details = [...new Set(data.warnings.map(applicationWarningLabel))].join(" ");
+        setApplyFeedback({ type: "warning", message: `${data.applied} recommandation(s) appliquée(s). ${details}` });
       } else {
-        setApplyFeedback({ type: "success", message: `${data.applied} recommandation(s) appliquée(s) au pilier.` });
+        setApplyFeedback({ type: "success", message: `${data.applied} recommandation(s) appliquée(s).` });
       }
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -638,6 +669,7 @@ export function NotoriaPage() {
           <div className="ck-nz__recos">
             {recos.length === 0 && <div className="ck-nz__empty">Aucune recommandation en attente.</div>}
             {recos.map((reco) => {
+              const proposalLabel = typedProposalLabel(reco.proposedValue);
               const isSelected = !!recoQueue[reco.id];
               const isActionable = reco.status === "PENDING" || reco.status === "ACCEPTED";
               const op = OP_RESKIN[reco.operation] ?? { label: reco.operation, c: "blue" };
@@ -656,9 +688,9 @@ export function NotoriaPage() {
                       <span className="ck-nz__op" data-c={op.c}>{op.label}</span>
                       <span className="ck-nz__reco-field">{getFieldLabel(reco.targetField)}</span>
                       <span className="ck-nz__reco-pillar">{PILLAR_LABELS[reco.targetPillarKey] ?? reco.targetPillarKey}</span>
-                      <span className="ck-nz__reco-impact" data-i={reco.impact}>{reco.impact}</span>
+                      <span className="ck-nz__reco-impact" data-i={reco.impact}>{IMPACT_LABEL[reco.impact] ?? "À qualifier"}</span>
                       <span className="ck-nz__reco-urg" data-c={urg.c}>{urg.label}</span>
-                      <span className="ck-nz__reco-src">{reco.source}</span>
+                      <span className="ck-nz__reco-src">{SOURCE_LABEL[reco.source] ?? "Origine à qualifier"}</span>
                       <span className="ck-nz__reco-conf" data-hi={reco.confidence >= 0.7 ? 1 : 0}>{Math.round(reco.confidence * 100)}%</span>
                       {/* ADR-0090 — score pondéré déterministe (ruler + impact + confidence) */}
                       {typeof reco.weightedScore === "number" && (
@@ -687,7 +719,7 @@ export function NotoriaPage() {
                       <div className="ck-nz__reco-diff">
                         <div className="ck-nz__diff-prop">
                           <span className="ck-nz__diff-l ok">{reco.operation === "ADD" ? "À ajouter" : reco.operation === "REMOVE" ? "À supprimer" : "Proposé"}</span>
-                          {typeof reco.proposedValue === "string" ? reco.proposedValue : JSON.stringify(reco.proposedValue, null, 1).slice(0, 200)}
+                          {proposalLabel ?? (typeof reco.proposedValue === "string" ? reco.proposedValue : JSON.stringify(reco.proposedValue, null, 1).slice(0, 200))}
                         </div>
                       </div>
                     )}

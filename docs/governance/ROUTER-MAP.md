@@ -6,6 +6,22 @@ Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts`
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
+**446 local en réception — même APPLY_RECOMMENDATIONS gouverné** : aucune
+route/permission/Intent ajouté. Notoria/choix manuel utilisent le recalcul S
+transactionnel partagé, huit versions/nulls/pins/sources et refus HUMAN strict ;
+source/route/projection atomiques, reco refusée non APPLIED. DEFAULT 4 288/407,
+PG 352/18 verts dont 35 action-decision-flow et reco ACCEPTED/appliedAt null après
+contradiction HUMAN ; copie release/vocab 14/deux verts. Native USER/TRIAL fictive verte
+reçue une reco/trois copies/ligne stable ACCEPTED/S une action-budget zéro, aucune
+marque réelle modifiée. Gauntlet final cinq sorties 0, gouvernance 1 626/166 ; nettoyage reçu ; CI/image/runtime 446 non reçus/runtime 445.
+Autres writers/versions/remap et vraie réception ouverts.
+Générateur : retrait HUMAN respecté, un rouge/dix verts puis suite complète ;
+filtre final non exercé dans cette build native antérieure. UI plan partiel/refus
+humain reçue sans Zod brut ; refus HTTP 200/applied 0 conserve lignes/piliers/reco
+ACCEPTED, appliedAt null, seul Intent 3→4. Précondition HUMAN préparée hors UI.
+[Contrats et réception](REFONTE-PLAN.md).
+
+
 **445 livré, réception bornée — même export, lectures reçues localement** : aucune
 procédure/route/permission/Intent ajouté. EXPORT_ORACLE conserve gates/snapshot/
 historique/idempotence ; lecteurs normalisés et agrégat de campagne partagé
@@ -22,7 +38,7 @@ runtime 445 exacts reçus. Lecture réelle SPAWT ADMIN seule, S Périmé/mélang
 conservé sans mutation/recalcul ; warm complète 60 réponses/14 ERR_ABORTED, aucun
 zéro global/SLO/cycle. Sonde pure Notoria : doublon/divergence reproduits/non
 réparés 445 ; reprise 446 contrat existant, refs brutes mutables/validation
-préservées ; legacy statique seulement. DocumentSha/CI du reçu encore à recevoir.
+préservées ; legacy statique seulement. DocumentSha 3abd2be/reçu 445 clôturés.
 [Périmètre](REFONTE-PLAN.md).
 
 

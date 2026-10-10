@@ -192,12 +192,14 @@ describe("initiative choice provenance follows stable identity", () => {
     expect(result.content).toMatchObject({ catalogueParCanal: { DIGITAL: [{ id: otherId, status: "RECOMMENDED" },
       { id, action: "Updated", status: "SELECTED_FOR_ROADMAP" }] } });
     expect(next).toEqual(before); expect(result.provenance[path]).toBe("HUMAN");
+    expect(result.denied).toEqual([path]);
   });
   it("preserves a chosen source removed by a generator, while admitting its new proposals", () => {
     const result = applyProvenanceGuard({ previousContent: { catalogueParCanal: { DIGITAL: [chosen] } },
       newContent: { catalogueParCanal: { DIGITAL: [{ id: otherId, action: "Added", status: "RECOMMENDED" }] } },
       existingProvenance: { [path]: "HUMAN" }, incomingFor: () => "INFERRED" });
     expect(result.content).toMatchObject({ catalogueParCanal: { DIGITAL: [{ id: otherId }, chosen] } });
+    expect(result.denied).toEqual([path]);
   });
   it("retains a human withdrawal across aliases in all existing collections", () => {
     const withdrawn = { ...chosen, status: "RECOMMENDED" };
@@ -211,5 +213,19 @@ describe("initiative choice provenance follows stable identity", () => {
     const result = applyProvenanceGuard({ previousContent: content, newContent: content, existingProvenance: {}, incomingFor: () => "INFERRED",
       declaredFor: key => key === path ? "HUMAN" : undefined, declaredPaths: [path] });
     expect(result.provenance[path]).toBe("HUMAN"); expect(result.provenance.catalogueParCanal).toBeUndefined();
+  });
+  it("does not refuse an unchanged human choice when only its definition changes", () => {
+    const result = applyProvenanceGuard({ previousContent: { catalogueParCanal: { DIGITAL: [chosen] } },
+      newContent: { catalogueParCanal: { DIGITAL: [{ ...chosen, action: "Updated definition" }] } },
+      existingProvenance: { [path]: "HUMAN" }, incomingFor: () => "INFERRED" });
+    expect(result.denied).toEqual([]); expect(result.challenged).toEqual([]);
+    expect(result.content).toMatchObject({ catalogueParCanal: { DIGITAL: [{ ...chosen, action: "Updated definition" }] } });
+  });
+  it("refuses a contradicted secondary representation even when the canonical choice is unchanged", () => {
+    const result = applyProvenanceGuard({ previousContent: { catalogueParCanal: { DIGITAL: [chosen] } },
+      newContent: { catalogueParCanal: { DIGITAL: [chosen] }, actionsByDevotionLevel: { ENGAGE: [{ ...chosen, status: "REJECTED" }] } },
+      existingProvenance: { [path]: "HUMAN" }, incomingFor: () => "SOURCE" });
+    expect(result.challenged).toEqual([path]);
+    expect(result.content).toMatchObject({ actionsByDevotionLevel: { ENGAGE: [chosen] } });
   });
 });

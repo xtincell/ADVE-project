@@ -191,7 +191,7 @@ export function computePillarS(
 
 // ── Public API ────────────────────────────────────────────────────────
 
-export async function executeProtocoleStrategy(strategyId: string, transaction?: Prisma.TransactionClient): Promise<ProtocoleStrategyResult> {
+export async function executeProtocoleStrategy(strategyId: string, transaction?: Prisma.TransactionClient, selectedRouteKey?: RouteKey): Promise<ProtocoleStrategyResult> {
   try {
     // Load ALL 8 piliers (A through S) — ADR-0089 : le S précédent porte la
     // sélection d'ambition (computed.selectedRouteKey), qui survit aux regens.
@@ -201,6 +201,12 @@ export async function executeProtocoleStrategy(strategyId: string, transaction?:
     const pillars: Record<string, Record<string, unknown> | null> = {};
     for (const p of dbPillars) {
       pillars[p.key] = (p.content ?? null) as Record<string, unknown> | null;
+    }
+    // An explicit route decision is part of this calculation, not a preliminary
+    // persisted S version. Source initiatives remain untouched.
+    if (selectedRouteKey) {
+      const previous = pillars.s ?? {};
+      pillars.s = { ...previous, computed: { ...((previous.computed ?? {}) as Record<string, unknown>), selectedRouteKey } };
     }
 
     const strategyContent = generateStrategy(pillars);

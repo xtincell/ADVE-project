@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.446", date: "2026-10-10",
+    headline: "Une décision qui se transmet jusqu’au plan",
+    highlights: [
+      { emoji: "🧭", title: "Une proposition par action", body: "Les recommandations ciblées reconnaissent les différentes représentations d’une même action. Votre choix met à jour les sources concernées, le suivi opérationnel et le plan recalculé." },
+      { emoji: "◈", title: "Des choix lisibles et protégés", body: "Les propositions ciblées se lisent en clair. Une échéance manquante est présentée comme une proposition à valider. Une décision humaine contraire ou des données modifiées bloquent l’application, et un plan partiel reste signalé avant son approbation." },
+    ],
+  },
+  {
     version: "6.27.445", date: "2026-10-10",
     headline: "Un rapport qui transmet fidèlement vos décisions",
     highlights: [

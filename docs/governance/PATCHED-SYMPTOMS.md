@@ -30,6 +30,28 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-10 · **446 local en réception — Notoria copies et écriture de décision** :
+lecture brute proposait plusieurs SELECT pour une identité ; exécuteur mutait
+seulement la première copie, S/projection dissociés et refus HUMAN masqué par
+warning. Le choix d’une copie secondaire périmée affectait aussi les FK risques.
+Cause : contrats de lecture/mutation et transaction distincts du chemin manuel.
+Correctif local : collecte normalisée, mutation toutes copies, IDs choisis
+canoniques/union FK brute, gateway/calcul S/projection atomiques, refus strict.
+UI existante traduit décisions/sources/avertissements et ne qualifie plus zéro
+proposition de cohérence acquise. DEFAULT 4 288/407, PG 352/18 (35 cas de décision),
+release/vocab 14/deux verts ; gauntlet final cinq sorties 0, gouvernance 1 626/166 ; nettoyage reçu.
+Native USER/TRIAL fictive : une reco/trois copies retenues/ligne stable ACCEPTED/S une
+action-budget zéro, zéro tâche/coût et trois Intents ; baseline trois APPLIED et
+une seule copie conservée. CI/image/runtime 446
+attendus, runtime 445 ; chargement local « zéro marque » repris en dette existante,
+aucune fermeture globale ni régression de production déduite.
+Générateur : retrait HUMAN respecté, un rouge/dix verts puis suite complète ;
+filtre final non exercé dans cette build native antérieure. UI plan partiel/refus
+humain reçue sans Zod brut ; refus HTTP 200/applied 0 conserve lignes/piliers/reco
+ACCEPTED, appliedAt null, seul Intent 3→4. Précondition HUMAN préparée hors UI.
+[Preuves](REFONTE-PLAN.md) · [dette S existante](RESIDUAL-DEBT.md).
+
+
 2026-10-10 · **445 livré, réception bornée — Oracle lecteurs/rendu/budgets CORE** :
 lecteurs bruts créaient doublons/H2 implicite, rendus perdaient labels/locale/
 glyphes ; native CORE conservait total zéro trompeur malgré inconnu et perdait
@@ -44,7 +66,7 @@ PG 347/18 avant derniers lecteurs sans persist changé ; unité DEFAULT finale 4
 Timeouts/reload tronqué conservés, aucune acceptation globale/stress/SLO.
 Source 15331789/CI/image/runtime 445 exacts reçus ; CI finale 4 276/407+347/18.
 Lecture réelle SPAWT ADMIN seule/Périmé sans recalcul ni mutation métier, warm
-complète 60 réponses/14 ERR_ABORTED ; reçu documentaire distinct encore attendu. Autres CORE/ancien S confondent encore DEVOTION/
+complète 60 réponses/14 ERR_ABORTED ; reçu documentaire 3abd2be distinct clôturé. Autres CORE/ancien S confondent encore DEVOTION/
 OVERTON et canaux : dette existante et reprise avant cycle réel, sans annoncer
 réparation de tous lecteurs. [Preuves](REFONTE-PLAN.md) · [dette](RESIDUAL-DEBT.md).
 
