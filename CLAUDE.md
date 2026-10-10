@@ -4,6 +4,22 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-10
 
+**6.27.447 local en réception — écrivains S et état des jobs existants** :
+quick-intake/rtis-draft, hyperviseur PROTOCOLE_S et executeRTISCascade réutilisent
+transaction/calcul S partagé : remplacement full, huit versions/nulls/sources/
+provenance. Les deux protocoles gardent strictSchemaValidation:true, plan partiel
+refusé. Intake retourne contenu sauvegardé/propage refus R/T/I/S, sans +0,05 de
+confiance S ; R/T/I antérieurs peuvent subsister si S refuse. FAILED bloque et ne
+termine pas, RUNNING non terminé, COMPLETED/SKIPPED inchangés, WAITING seul demande
+intervention humaine. Ciblés neuf/deux unitaires et 26/un PG verts après cinq/trois
+rouges respectifs ; DEFAULT 4 297/409 et PG 357/18 verts ; jobs reçus sur DB isolée/modèles R/T/I
+simulés, pas job navigateur/génération live. Gauntlet final cinq sorties 0, gouvernance 1 626/166 reçue ;
+source/CI/image/runtime 447 non reçus. Production 446/doc ce549c0 clôturées ; aucun cycle/SLO/marque réelle
+reçu. Aucun modèle/service/router/Intent/ADR/UI/provider ajouté ; dette de portée
+restreinte en réception, fondations S/canaux/devises/versions R/T/I/remap/univers
+réels ouverts, sept chantiers/dix gates/80 lignées/global null.
+[Preuves et suite](docs/governance/REFONTE-PLAN.md).
+
 **6.27.446 livré — réception bornée décision Notoria/source/plan/projection** :
 lecture normalisée/UUID exécutables/IDs choisis canoniques/FK union brute,
 PHASE_1 proposé si échéance absente et retrait HUMAN respecté. Toutes copies des
@@ -15,7 +31,7 @@ CI source success, 4 288/407 et PG 352/18 ; gauntlet cinq sorties 0, gouvernance
 1 626/166, nettoyage reçu. Source 436975a/image/runtime 446 exacts ; production
 ADMIN lecture seule Stratégie/Recommandations, S v3/91,2 %/AI_PROPOSED/périmée
 inchangée. Aucun recalcul/choix réel/cycle/SLO ; preuve locale ne reçoit pas toute
-Notoria. Documentation/CI de clôture encore à recevoir. Probes purs : ancien
+Notoria. Clôture doc ce549c0 et ses CI reçues. Probes purs : ancien
 budget conservé par fusion et FAILED déclaré complet, non corrigés ; reprise 447
 immédiate dans la dette S existante. Autres writers/versions/canaux/devises/remap/
 chargement et univers réel ouverts ; aucun modèle/service/router/page/Intent/

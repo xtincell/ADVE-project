@@ -1,5 +1,39 @@
 # Changelog — La Fusee
 
+## v6.27.447 — fix(synthese): partager le calcul S et conserver les échecs de pipeline (2026-10-10)
+
+**447 local en réception : trois écrivains S rejoignent le calcul existant ; une étape échouée ne vaut plus parcours terminé.**
+
+- quick-intake/rtis-draft, hyperviseur PROTOCOLE_S et executeRTISCascade utilisent
+  withPillarTransaction/recalculateSynthesisInTransaction : S remplacé intégralement,
+  huit versions/nulls/sources et provenance contrôlées. strictSchemaValidation:true
+  conservé pour les deux protocoles ; un plan partiel y reste refusé.
+- Intake renvoie newContent réellement sauvegardé et propage les refus R/T/I/S,
+  sans gain artificiel de confiance +0,05 pour le calcul S. R/T/I déjà sauvegardés
+  peuvent subsister après refus S : aucune atomicité de cascade complète reçue.
+  Deux imports barrel→leaf évitent un nouveau cycle, pas nouvelle infrastructure.
+- runPipeline : FAILED bloque sans terminer ; RUNNING reste non terminé,
+  COMPLETED/SKIPPED conservés, needsHumanAction seulement pour WAITING.
+- Checkpoints : cinq rouges/quatre verts sur neuf unitaires, trois rouges/
+  vingt-trois verts sur 26 PG ; ciblés neuf/deux unitaires et 26/un PG verts.
+  DEFAULT complète 4 297/409 et PG 357/18 verts ; ciblés finaux neuf/deux et
+  26/un verts après correction de six fixtures sector/market null (typages tests,
+  pas défaut production). Gauntlet final cinq sorties 0, gouvernance 1 626/166 reçue ; source
+  commit/CI/image/runtime 447 non reçus. Source locale 6.27.447, production reçue 446 ; aucune donnée réelle
+  modifiée ni cycle/SLO/global accepté.
+- Jobs réellement appelés sur PG isolé : intake, PROTOCOLE_S et cascade, modèles
+  R/T/I simulés ; S remplace ancien budget, absent conservé, confiance inchangée,
+  retour conforme à DB. Refus HUMAN/LOCKED et strict partiel reçus, sans génération
+  live/natif browserjob. Pas de full stress, marque réelle ou cycle reçu.
+- 446 clôturée : doc ce549c0 et ses trois CI success, cinq contrôles docs à zéro,
+  compteurs inchangés. Causes trois écrivains/faux terminé réparées localement,
+  contrôles finaux reçus, livraison à recevoir avant clôture bornée ; fondations S/canaux/devises/versions R/T/I et univers
+  réels restent ouverts. Sept chantiers/dix gates/80 lignées ouverts, global null.
+  Vitrine publique fraîche sans décompte/six questions et entrée quiz 1/6 reçues,
+  aucune réponse/contact/profil soumis, pas déduction complète.
+  Aucun modèle/service/router/Intent/ADR/UI/provider ajouté ; note client 446
+  conservée pour cet incrément interne. [Réception et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.446 — fix(notoria): relier la décision source au plan et à sa projection (2026-10-10)
 
 **446 livré, réception bornée : une décision Notoria rejoint toutes ses copies source, le plan et sa projection.**
@@ -34,8 +68,7 @@
   restants/calcul partagé/autorités/versions et état d’échec à factoriser.
   Chargement local « zéro marque », canaux/devises/remap/raccord complet restent
   ouverts. Sept chantiers/dix gates/80 lignées ouverts, global null ; aucune entité,
-  route, service, Intent, ADR, outil ou fournisseur ajouté. Commit documentaire et
-  sa CI encore à recevoir. [Réception et reprise](docs/governance/REFONTE-PLAN.md).
+  route, service, Intent, ADR, outil ou fournisseur ajouté. Clôture doc ce549c0 reçue, trois CI success/cinq contrôles à zéro. [Réception et reprise](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.445 — fix(oracle): conserver les inconnus et rendre les exports fidèles (2026-10-10)
 

@@ -223,6 +223,20 @@ l’upgrade de verrou. La recherche d’âge normalise S→s. Dans propagateFrom
 les modes autoRecalculate true/false sont reçus localement : Process seulement si auto,
 aucun appel réseau dans la fixture. Cela ne reçoit pas tous les modes/agents.
 
+**447 local en réception — calcul partagé et résultat d’échec fidèle** :
+les trois écrivains S concernés réutilisent transaction/calcul existants,
+remplacement full/huit versions/nulls/sources/provenance. Protocoles stricts
+inchangés, plan partiel refusé ; intake renvoie sauvegarde/propage refus, pas gain
+artificiel de confiance S. FAILED ne termine pas et bloque, RUNNING non terminé,
+COMPLETED/SKIPPED et WAITING seul vers intervention conservés. Ciblés neuf/deux
+unitaires et 26/un PG verts après rouges ; DEFAULT 4 297/409 et PG 357/18 verts. Jobs
+réels reçus sur DB isolée/modèles R/T/I simulés, pas génération live/navigateur.
+Gauntlet final cinq sorties 0/gouvernance 1 626/166 reçu ; source/CI/image/runtime 447 non reçus. Production 446/doc ce549c0 clôturées, aucune nouvelle
+entité/service/router/Intent/ADR/UI/provider. R/T/I déjà sauvegardés peuvent
+subsister après refus S, pas de cascade atomique ni cycle réel reçu. Fondations
+S/canaux/devises/versions/remap/univers réels et sept chantiers/dix gates/
+80 lignées ouverts/global null. [Réception bornée](REFONTE-PLAN.md).
+
 **446 livré — cohérence de décision par identité, réception bornée** : Notoria
 lit catalogue normalisé/UUID exécutables/FK union brute/IDs choisis canoniques,
 respecte retrait HUMAN et propose échéance à valider. Toutes copies mutées,
@@ -235,8 +249,8 @@ purs ancien budget conservé et FAILED déclaré complet non réparés ; reprise
 immédiate calcul S partagé/remplacement versionné/sources/provenance/strict et
 état d’échec fiable. Aucun modèle/service/router/page/Intent/ADR/tool/provider
 ajouté ; autres writers/canaux/devises/remap/chargement/univers réels restent
-ouverts. Sept chantiers/dix gates/80 lignées ouverts/global null. Commit documentaire
-et sa CI encore à recevoir. [Réception bornée](REFONTE-PLAN.md).
+ouverts. Sept chantiers/dix gates/80 lignées ouverts/global null. Clôture documentaire
+ce549c0/CI reçue. [Réception bornée](REFONTE-PLAN.md).
 
 
 **445 livré, réception bornée — Oracle conserve inconnus/devises, recette bornée** :

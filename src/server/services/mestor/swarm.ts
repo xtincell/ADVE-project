@@ -88,8 +88,8 @@ export async function runPipeline(strategyId: string) {
       waiting,
       failed,
       pending,
-      isBlocked: waiting > 0,
-      isComplete: pending === 0 && waiting === 0,
+      isBlocked: waiting > 0 || failed > 0,
+      isComplete: steps.every(s => s.status === "COMPLETED" || s.status === "SKIPPED"),
       needsHumanAction: waiting > 0 ? steps.find(s => s.status === "WAITING")?.description ?? null : null,
     },
   };

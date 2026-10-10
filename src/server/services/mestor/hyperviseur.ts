@@ -531,24 +531,13 @@ export async function executeNextStep(
       }
 
       case "PROTOCOLE_S": {
-        const { executeProtocoleStrategy } = await import("@/server/services/rtis-protocols");
-        const result = await executeProtocoleStrategy(plan.strategyId);
-        const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
-        if (!result.error && Object.keys(result.content).length > 0) {
-          const writeRes = await writePillarAndScore({
-            strategyId: plan.strategyId,
-            pillarKey: "s",
-            operation: { type: "MERGE_DEEP", patch: result.content },
-            author: { system: "PROTOCOLE_S", reason: "Cascade RTIS — Strategy" },
-            options: { targetStatus: "AI_PROPOSED", confidenceDelta: result.confidence * 0.1, strictSchemaValidation: true },
-          });
-          if (!writeRes.success && writeRes.error) {
-            nextStep.error = writeRes.error;
-          }
-        }
-        nextStep.result = { confidence: result.confidence, selectedFromI: result.selectedFromICount };
-        nextStep.status = (result.error || nextStep.error) ? "FAILED" : "COMPLETED";
-        if (result.error && !nextStep.error) nextStep.error = result.error;
+        const { withPillarTransaction } = await import("@/server/services/pillar-gateway");
+        const { recalculateSynthesisInTransaction } = await import("./rtis-cascade");
+        const result = await withPillarTransaction(plan.strategyId,
+          (tx, write) => recalculateSynthesisInTransaction(plan.strategyId, tx, write,
+            { writeOptions: { strictSchemaValidation: true } }));
+        nextStep.result = { confidence: result.calculated.confidence, selectedFromI: result.calculated.selectedFromICount };
+        nextStep.status = "COMPLETED";
         break;
       }
 

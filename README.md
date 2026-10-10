@@ -16,6 +16,17 @@
 
 ## Quick start
 
+**6.27.447 local en réception** : les trois chemins concernés sauvegardent le
+plan par le même calcul versionné. Un plan partiel reste refusé sur les deux
+protocoles stricts ; un job échoué ne se présente plus comme terminé. Les données
+amont déjà sauvegardées peuvent subsister après refus du plan, sans promesse de
+transaction sur tout le parcours. Ciblés neuf/deux unitaires et 26/un PG verts, suites complètes 4 297/409 et
+357/18 vertes. Jobs réellement exercés sur DB locale avec génération amont simulée ;
+cinq contrôles finaux verts (gouvernance 1 626/166), livraison attendue ; aucun job navigateur/génération live.
+Production 446/documentation ce549c0 clôturée ; aucune marque réelle recalculée
+ou cycle reçu. Devise/canaux/versions et raccord de l’univers SPAWT restent ouverts,
+ainsi que les sept chantiers/dix gates. [Périmètre et suite](docs/governance/REFONTE-PLAN.md).
+
 **6.27.446 livré, réception bornée** : une proposition Notoria vise une action,
 puis son choix rejoint toutes ses représentations, le plan sauvegardé et la
 projection opérationnelle. Les refus protègent le choix humain ; une échéance
@@ -28,7 +39,7 @@ Le plan historique SPAWT reste périmé et inchangé : aucune marque réelle
 recalculée, aucun cycle complet reçu. Des contre-exemples factices sur les autres
 écrivains du plan et leur état d’échec déclenchent la reprise suivante. Devise,
 canaux, raccord de l’univers SPAWT et sept chantiers/dix gates restent ouverts.
-Commit documentaire/CI de clôture attendus. [Périmètre et suite](docs/governance/REFONTE-PLAN.md).
+Clôture doc ce549c0/CI reçue. [Périmètre et suite](docs/governance/REFONTE-PLAN.md).
 
 
 **6.27.445 livré, réception bornée** : les cadres Oracle concernés utilisent les

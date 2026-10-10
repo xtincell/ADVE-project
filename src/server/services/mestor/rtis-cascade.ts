@@ -393,13 +393,13 @@ export type ActualizeResult = {
 type SynthesisRecalculationContext = {
   intentId?: string; userId?: string; selectedActionIds?: string[];
   selectedRouteKey?: RouteKey;
-  writeOptions?: Pick<NonNullable<PillarWriteRequest["options"]>, "sourceReceipts" | "requiredSourceIds" | "expectedPillarVersions">;
+  writeOptions?: Pick<NonNullable<PillarWriteRequest["options"]>, "sourceReceipts" | "requiredSourceIds" | "expectedPillarVersions" | "strictSchemaValidation">;
 };
 
-/** Same saved calculation for manual refresh and an atomic typed decision. */
+/** Same saved calculation for manual refresh, typed decisions and derived S writers. */
 export async function recalculateSynthesisInTransaction(strategyId: string, tx: Prisma.TransactionClient,
   write: (request: PillarWriteRequest) => Promise<PillarWriteResult>, context?: SynthesisRecalculationContext) {
-  const { executeProtocoleStrategy } = await import("@/server/services/rtis-protocols");
+  const { executeProtocoleStrategy } = await import("@/server/services/rtis-protocols/strategy");
   const { collectNormalizedInitiatives } = await import("@/lib/types/pillar-schemas");
   await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${strategyId} FOR UPDATE`;
   if (context?.selectedActionIds?.length) {
@@ -471,7 +471,7 @@ export async function actualizePillar(
 
     } else if (pillarKey === "T") {
       // Step 2 only: Generate T pillar via Protocole Track using prepared Seshat data
-      const { executeProtocoleTrack } = await import("@/server/services/rtis-protocols");
+      const { executeProtocoleTrack } = await import("@/server/services/rtis-protocols/track");
       const tResult = await executeProtocoleTrack(strategyId);
       if (tResult.error || Object.keys(tResult.content).length === 0) {
         throw new Error(`[protocole-track] ${tResult.error ?? "empty content returned"}`);

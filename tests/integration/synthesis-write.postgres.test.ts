@@ -5,6 +5,22 @@ import { Prisma } from "@prisma/client";
 vi.mock("@/lib/auth/config", () => ({ auth: vi.fn() }));
 vi.mock("next-auth", () => ({}));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
+const draftProvider = vi.hoisted(() => ({
+  callLLM: vi.fn(async () => ({ text: "{}" })),
+  innovation: vi.fn(async () => ({ catalogueParCanal: { DIGITAL: [{
+    id: "22222222-2222-4222-8222-222222222222", action: "Budget réellement inconnu",
+    format: "Text", objectif: "Objectif fictif", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90",
+  }] } })),
+}));
+vi.mock("@/server/services/llm-gateway", () => ({ callLLM: draftProvider.callLLM, extractJSON: JSON.parse }));
+vi.mock("@/server/services/seshat/context-store", () => ({
+  getOracleBrandContextByQuery: vi.fn(async () => null), findComparableBrands: vi.fn(async () => []),
+}));
+vi.mock("@/server/services/quick-intake/multi-agent-orchestrator", () => ({ generatePillarIMultiAgent: draftProvider.innovation }));
+// These tests exercise the real S entry points and gateway, with upstream AI disabled.
+vi.mock("@/server/services/rtis-protocols/risk", () => ({ executeProtocoleRisk: vi.fn(async () => ({ pillarKey: "r", content: {}, confidence: 0 })) }));
+vi.mock("@/server/services/rtis-protocols/track", () => ({ executeProtocoleTrack: vi.fn(async () => ({ pillarKey: "t", content: {}, confidence: 0 })) }));
+vi.mock("@/server/services/rtis-protocols/innovation", () => ({ executeProtocoleInnovation: vi.fn(async () => ({ pillarKey: "i", content: {}, confidence: 0 })) }));
 import { db } from "@/lib/db";
 import { writePillar, type PillarWriteRequest } from "@/server/services/pillar-gateway";
 import { transitionPillarStatus } from "@/server/services/pillar-gateway/validation-status";
@@ -13,6 +29,9 @@ import { resolveBrandSource } from "@/server/services/ingestion-pipeline/source-
 import { ingestionRouter } from "@/server/trpc/routers/ingestion";
 import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import { composedSynthesis } from "../fixtures/synthesis";
+import { generateAndPersistRtisDraft } from "@/server/services/quick-intake/rtis-draft";
+import { executeNextStep, type OrchestrationPlan } from "@/server/services/mestor/hyperviseur";
+import { executeRTISCascade } from "@/server/services/rtis-protocols";
 
 const brands: string[] = [];
 let owner: string, operatorId: string;
@@ -32,6 +51,7 @@ afterAll(async () => {
   await db.scoreSnapshot.deleteMany({ where });
   await db.process.deleteMany({ where }); await db.signal.deleteMany({ where });
   await db.variableStoreConfig.deleteMany({ where });
+  await db.brandAction.deleteMany({ where });
   await db.pillar.deleteMany({ where }); await db.strategy.deleteMany({ where: { id: { in: brands } } });
   await db.user.delete({ where: { id: owner } }); await db.operator.delete({ where: { id: operatorId } });
   await db.$disconnect();
@@ -63,6 +83,56 @@ const context = () => ({ db, headers: undefined, session: {
   user: { id: owner, role: "USER" }, expires: new Date(Date.now() + 60_000).toISOString(),
 } });
 describe("the shared S writer conserves snapshots and human review", () => {
+  it("intake replaces the old plan, keeps unknown money absent, and grants no confidence for a pure calculation", async () => {
+    const f = await fixture({ content: { globalBudget: 9000, computed: { totalBudget: 9000, selectedRouteKey: "AMBITIOUS" } } });
+    const before = (await read(f)).s;
+    const result = await generateAndPersistRtisDraft({ strategyId: f.strategy.id, companyName: "Isolated fixture", sector: null, market: null });
+    const current = (await read(f)).s;
+    expect(result.s).toEqual(current.content);
+    expect(current.confidence).toBe(before.confidence);
+    expect(current.content).toMatchObject({ computed: { selectedRouteKey: "AMBITIOUS", budgetSummary: { unknownCount: 1 } },
+      _sourcePillarVersions: { a: null, d: null, v: null, e: null, r: 2, t: 2, i: 2, s: 1 } });
+    expect(current.content).not.toHaveProperty("globalBudget");
+    expect(current.content).not.toHaveProperty("computed.totalBudget");
+    expect(current).toMatchObject({ currentVersion: 2, validationStatus: "AI_PROPOSED", staleAt: null });
+    expect(await db.pillarVersion.count({ where: { pillarId: f.s.id } })).toBe(1);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+  it("intake propagates a human plan refusal without a new S version, retaining already saved source drafts", async () => {
+    const f = await fixture({ content: { syntheseExecutive: "Choix humain fictif", _fieldProvenance: { syntheseExecutive: "HUMAN" } } });
+    await expect(generateAndPersistRtisDraft({ strategyId: f.strategy.id, companyName: "Isolated fixture", sector: null, market: null })).rejects.toThrow("FIELD_PROVENANCE_REFUSED");
+    const current = await read(f);
+    expect(current.s.content).toEqual(f.s.content);
+    expect(current.s).toMatchObject({ currentVersion: 1, confidence: f.s.confidence });
+    expect(current.s.staleAt).toBeInstanceOf(Date);
+    expect(await db.pillarVersion.count({ where: { pillarId: f.s.id } })).toBe(0);
+    expect((await db.pillar.findUniqueOrThrow({ where: { id: f.i.id } })).currentVersion).toBe(2);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+  it("a locked intake source stops downstream writes and cannot yield a persisted success result", async () => {
+    const f = await fixture();
+    const r = await db.pillar.create({ data: { strategyId: f.strategy.id, key: "r", content: { narrative: "Conservé" }, validationStatus: "LOCKED" } });
+    await expect(generateAndPersistRtisDraft({ strategyId: f.strategy.id, companyName: "Isolated fixture", sector: null, market: null })).rejects.toThrow(/LOCKED/i);
+    expect(await db.pillar.findUniqueOrThrow({ where: { id: r.id } })).toEqual(r);
+    expect(await db.pillar.findUnique({ where: { strategyId_key: { strategyId: f.strategy.id, key: "t" } } })).toBeNull();
+    expect((await read(f)).s).toEqual(f.s);
+    expect(await db.pillar.findUniqueOrThrow({ where: { id: f.i.id } })).toEqual(f.i);
+  });
+  it.each(["hyperviseur", "cascade"])("%s keeps its existing strict schema refusal and the old plan intact", async entry => {
+    const f = await fixture({ content: { globalBudget: 9000 } });
+    if (entry === "hyperviseur") {
+      const plan: OrchestrationPlan = { strategyId: f.strategy.id, phase: "BOOT", pillarHealth: [], estimatedAiCalls: 0,
+        createdAt: new Date().toISOString(), steps: [{ id: "s", agent: "PROTOCOLE_S", target: "s", description: "Plan fictif",
+          priority: 1, dependsOn: [], status: "PENDING", retryCount: 0, maxRetries: 0 }] };
+      expect(await executeNextStep(plan)).toMatchObject({ status: "FAILED", error: expect.stringContaining("Strict schema validation failed") });
+    } else {
+      const result = await executeRTISCascade(f.strategy.id);
+      expect(result.errors).toEqual([expect.stringContaining("Strict schema validation failed")]);
+    }
+    expect((await read(f)).s).toEqual(f.s);
+    expect(await db.pillarVersion.count({ where: { pillarId: f.s.id } })).toBe(0);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
   it("replaces generated collections at every depth, preserving untouched fields and previous archives", async () => {
     const f = await fixture({ content: { computed: { selectedRouteKey: "AMBITIOUS", roadmapRoutes: [{ key: "old" }] } } });
     const routes = ["CONSERVATIVE", "TARGET", "AMBITIOUS"].map(key => ({ key, label: key, recommended: key === "TARGET",

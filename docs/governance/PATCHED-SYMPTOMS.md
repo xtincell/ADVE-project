@@ -30,6 +30,20 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-10 · **447 local en réception — écrivains S et résultat d’orchestration** :
+anciens scalaire budget/total conservés par fusion face à nouveau budget absent ;
+FAILED/pending zéro déclaré complet. Causes : trois écrivains S indépendants du
+calcul versionné manuel et résumé fondé sur la seule absence de tâches en attente.
+Correctif candidat : quick-intake/rtis-draft/PROTOCOLE_S/executeRTISCascade vers
+transaction/calcul S partagé/remplacement full/versions/provenance, strict conservé
+sur les protocoles. FAILED bloque sans terminer, RUNNING non terminé ; WAITING
+seul demande intervention. Intake retourne newContent/propage refus, pas +0,05
+pour S ; cascade R/T/I/S complète non atomique. Ciblés neuf/deux unitaires et 26/un
+PG verts après cinq/trois rouges, DEFAULT 4 297/409 et PG 357/18 verts. Jobs réels
+sur DB isolée/génération R/T/I simulée reçus, aucun job navigateur/live ; gauntlet final cinq sorties 0/gouvernance 1 626/166 reçu ; livraison non reçue.
+Production 446/doc ce549c0 reçues. Causes en réception, pas clôture globale.
+[Preuves](REFONTE-PLAN.md) · [dette S existante](RESIDUAL-DEBT.md).
+
 2026-10-10 · **446 livré — Notoria copies et écriture de décision, réception bornée** :
 lecture brute proposait plusieurs SELECT pour une identité ; mutation limitée à
 la première copie, S/projection dissociés et refus HUMAN masqué par warning.
@@ -43,7 +57,7 @@ Native USER/TRIAL fictive décision/refus reçue ; production ADMIN lecture seul
 S historique inchangée. Runtime 446 exact reçu, aucune mutation réelle/cycle/SLO.
 Probes fusion d’ancien budget et FAILED déclaré complet non corrigés dans 446,
 repris immédiatement en 447 dans la dette existante ; « zéro marque » au
-chargement observé localement seulement. Clôture documentaire/CI à recevoir.
+chargement observé localement seulement. Clôture doc ce549c0/CI reçue.
 [Preuves](REFONTE-PLAN.md) · [dette S existante](RESIDUAL-DEBT.md).
 
 

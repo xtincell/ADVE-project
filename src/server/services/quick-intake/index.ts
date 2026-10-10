@@ -935,7 +935,7 @@ export async function complete(token: string) {
         );
       });
 
-      // RTIS draft (R/T/I parallel, S after — see rtis-draft.ts).
+      // RTIS drafts generated and saved sequentially, then the shared S calculation.
       await generateAndPersistRtisDraft({
         strategyId: strategy.id,
         companyName: intake.companyName,

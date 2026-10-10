@@ -315,6 +315,30 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   100 %, ancien S/budgets/roadmap contradictoires ouverts, aucune réception USER
   de production. Timeouts de compilation conservés. Sparse non
   approuvable, contrat strict inchangé.
+  **447 local en réception — trois écrivains S et faux terminé** :
+  quick-intake/rtis-draft, hyperviseur PROTOCOLE_S et executeRTISCascade passent par
+  transaction/calcul S partagé/full replacement/huit versions/nulls/sources/
+  provenance. strictSchemaValidation:true conservé sur les deux protocoles, plan
+  partiel refusé ; intake renvoie contenu sauvegardé/propage refus, sans +0,05 pour
+  S. R/T/I antérieurs peuvent subsister après refus S. FAILED bloque/non terminé,
+  RUNNING non terminé, WAITING seul demande intervention ; COMPLETED/SKIPPED
+  inchangés. Cinq rouges unitaires/trois PG puis ciblés neuf/deux et 26/un verts ; DEFAULT
+  4 297/409 et PG 357/18 reçus. Jobs réellement exercés en DB isolée/gateway réels,
+  frontières modèles R/T/I simulées : budget absent/confiance/retour DB et refus
+  HUMAN/LOCKED/strict reçus, pas génération live ou browserjob. Gauntlet final cinq sorties 0, gouvernance 1 626/166 reçu ; livraison 447 non reçue. Runtime 446/doc ce549c0
+  clôturés ; pas atomicité complète/cycle réel/global accepté.
+  **Plan/effort/trigger avant clôture 447** : causes trois writers/faux terminé
+  réparées localement ; gauntlet final reçu, shipping à recevoir avant clôture bornée,
+  aucune IA/payante requise sur ce périmètre. Plan partiel sous protocole strict,
+  générations/versions sources R/T/I, fondations S/canaux/devises/remap et vraie
+  marque restent en dette : contre-exemples sources puis recette factuelle avant
+  C3/C4/C6, sans abaisser schéma/gates pour fabriquer maturité.
+  **Reprise maintenue avant C3/C4/C6/cycle réel** : contre-exemples producteurs/
+  consommateurs, contrat faits/absence/estimation/canaux/devise et recette bornée.
+  Univers SPAWT reçu→édition choisie→publication/retour vérifié reste ouvert ;
+  aucune fabrication/conversion sans taux-source, sept chantiers/dix gates/
+  80 lignées ouverts/global null.
+
   **446 livré — contrat Notoria décision/source/plan/projection reçu à portée bornée** :
   collecte normalisée/UUID exécutables/IDs choisis canoniques, toutes copies mutées,
   calcul S/route/projection atomiques avec huit versions/nulls/pins/sources et refus
@@ -323,7 +347,7 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   gouvernance 1 626/166, nettoyage reçu. Source 436975a/image/runtime 446 exacts,
   production ADMIN en lecture seule, S réelle v3/91,2 %/AI_PROPOSED/périmée
   inchangée. Pas de choix/recalcul réel/cycle/SLO accepté ; clôture documentaire
-  et sa CI encore à recevoir. Filtre final HUMAN unité/PG, pas cette build native
+  ce549c0/CI reçue. Filtre final HUMAN unité/PG, pas cette build native
   locale antérieure ; autorité de refus préparée hors UI, bornes conservées.
   **Reprise immédiate 447 dans cette même dette** : next-writer-probe.json pur au
   SHA source, aucune DB/provider. Fusion S garde ancien globalBudget/total 9 000

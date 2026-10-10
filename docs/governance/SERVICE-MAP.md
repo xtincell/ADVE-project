@@ -8,6 +8,19 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
+**447 local en réception — réutilisation des services existants** :
+quick-intake/rtis-draft, hyperviseur PROTOCOLE_S et executeRTISCascade délèguent à
+withPillarTransaction/recalculateSynthesisInTransaction : S full replacement,
+huit versions/nulls/sources/provenance ; strictSchemaValidation:true des deux
+protocoles conservé. Intake retourne sauvegarde/propage refus, sans +0,05 de
+confiance S ; R/T/I antérieurs peuvent subsister si S refuse. runPipeline FAILED
+bloque/non terminé, RUNNING non terminé et WAITING seul demande intervention.
+Deux imports barrel→leaf évitent cycle ; aucun service/tool/provider ajouté.
+Ciblés neuf/deux unitaires et 26/un PG verts ; DEFAULT 4 297/409 et PG 357/18
+verts, jobs réellement exercés en DB isolée/modèles R/T/I simulés ; pas navigateur/
+génération live. Gauntlet final cinq sorties 0, gouvernance 1 626/166 reçue ; livraison 447 non reçue, production 446/doc ce549c0 clôturées. Autres producteurs/canaux/
+devises/versions/remap/cycles restent ouverts. [Réception et dette](REFONTE-PLAN.md).
+
 **446 livré — services Notoria/MESTOR existants, réception bornée** : lecture
 normalisée/UUID exécutables/IDs choisis canoniques/FK union brute, mutation toutes
 copies via mapInitiativeEntries, calcul S/route/BrandAction dans la même transaction
@@ -20,7 +33,7 @@ face à absence ; runPipeline FAILED déclaré complet. Non corrigés ; lot 447
 immédiat vers calcul S full partagé/remplacement versionné/sources/provenance/
 strict et summary d’échec fiable. Writers quick-intake/rtis-draft, PROTOCOLE_S,
 rtis-protocols/index restent indépendants ; autres canaux/devises/remap/cycles
-ouverts. Commit documentaire/CI attendus. [Réception et dette](REFONTE-PLAN.md).
+ouverts. Clôture doc ce549c0/CI reçue. [Réception et dette](REFONTE-PLAN.md).
 
 
 **445 livré, réception bornée — lecteurs/export existants reçus localement** :

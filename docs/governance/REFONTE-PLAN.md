@@ -1,10 +1,72 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Calcul S partagé et échec visible du pipeline — 447 local en réception (2026-10-10)
+
+Source locale 6.27.447, dernier runtime reçu 6.27.446. Clôture documentaire 446
+ce549c017f717b7d83dd52be33f14b46f9e3c318 : CI 38033909652/Mission 38033909661/
+Chromatic 38033909664 success, cinq contrôles docs à zéro, postmerge compteurs
+inchangés, image source non reconstruite pour les docs. Aucun service/modèle/router/
+Intent/ADR/UI/provider ajouté ; note client 446 conservée ≤ version 447.
+Sept chantiers/dix gates/80 lignées ouverts, global null.
+
+Trois écrivains existants quick-intake/rtis-draft, hyperviseur PROTOCOLE_S et
+executeRTISCascade utilisent withPillarTransaction/recalculateSynthesisInTransaction :
+S REPLACE_FULL, snapshot huit versions/nulls/sources, provenance et retrait de
+review selon gateway. Les deux protocoles gardent strictSchemaValidation:true,
+plan sparse/partiel toujours refusé ; pas de seuil abaissé pour obtenir un succès.
+Intake renvoie newContent réellement sauvegardé, propage les refus R/T/I/S et
+n’accorde pas +0,05 de confiance au calcul S. R/T/I déjà sauvegardés peuvent
+subsister si S refuse : pas atomicité de cascade complète, ni convergence de tous
+les producteurs R/T/I déduite. Deux imports barrel→leaf dans rtis-cascade préviennent
+le cycle introduit par la réutilisation, sans nouvelle couche.
+
+runPipeline FAILED bloque/ne termine plus, RUNNING n’est pas terminé,
+COMPLETED/SKIPPED gardent leur sens, needsHumanAction réservé au WAITING réel.
+Échec et intervention humaine restent distingués ; pas nouvelle orchestration.
+
+Preuves privées release/preuves-calcul-447 : red-unit.log cinq rouges/quatre verts
+sur neuf (08:18:12), red-postgres.log trois rouges/23 verts sur 26 (08:20:10).
+green-unit.log neuf/deux verts (08:21:18), puis final-target.log neuf/deux
+(08:27:00) et postgres-final.log 26/un (08:27:03) verts. Six appels de fixtures
+oubliaient sector/market requis : corrigés en null dans tests uniquement, aucun
+défaut de production déduit. DEFAULT full 4 297/409 (08:22:47, 108,03 s), PG full
+357/18 (08:23:50, 44,97 s). Gauntlet final cinq sorties 0, gouvernance 1 626/166 reçue. Source commit/CI/image/runtime 447 non reçus.
+
+local-jobs-receipt.json : actual generateAndPersistRtisDraft, executeNextStep
+PROTOCOLE_S et executeRTISCascade réellement appelés sur PostgreSQL isolé avec
+gateway/transactions réels ; frontières modèles R/T/I simulées. Pas qualité de
+génération live, pas job natif depuis navigateur, fetch inutilisé sur ces cas.
+Intake S1→2/archive1, route AMBITIOUS conservée, huit snapshots a/d/v/e:null,
+r/t/i:2,s:1 ; unknownBudgetCount1, globalBudget/computed.totalBudget absents,
+confiance inchangée, retour égal DB. Refus HUMAN : S contenu/version/confiance
+conservés, archive0 ; I déjà sauvegardé v2 subsiste, S stale. Refus R LOCKED : R
+verrouillé inchangé, T absent, I/S inchangés, pas faux succès. Les deux protocoles
+refusent le plan partiel strict et conservent ancien S/archive0. Aucun fournisseur
+live, marque réelle, browserjob/cycle ou full stress reçu.
+
+spawt-public-live.json relu 07:26:09 UTC : vitrine live sans décompte/six questions
+annoncées. spawt-quiz-entry.json à 07:29:22 UTC : /jeu affiche 1/6, entrée seulement ;
+aucune réponse/contact/profil soumis, déduction complète et retour non reçus.
+Aucune nouvelle réparation de vitrine attribuée au correctif interne 447.
+
+**Avant clôture 447** : causes trois writers/faux terminé réparées et reçues
+localement à portée bornée ; contrôles finaux reçus ; source commit/CI/image/runtime à
+recevoir. Purge limitée à ces causes avec réception, aucun effet sur dettes du
+plan partiel sous strict/production R/T/I/fondations/canaux/devise. Effort :
+recevoir shipping et lecture bornée ; trigger avant clôture 447.
+**Résidus/reprise avant C3/C4/C6/cycle réel** : versions/provenance des producteurs
+R/T/I, faits/absence/estimations/canaux sémantiques, devise FCFA/BrandAction/remap
+et réceptions de marque. Contre-exemples par chemin puis factorisation existante
+et recette locale/réelle bornée, aucun fait/UUID/conversion inventé. Univers SPAWT
+reçu→édition choisie→publication et retour vérifié reste ouvert ; site live/sans
+décompte/six questions annoncées déjà reçu, distinct du stade des applications.
+[Dette en place](RESIDUAL-DEBT.md).
+
 ## Une proposition, toutes copies source, un plan sauvegardé — 446 livré, réception bornée (2026-10-10)
 
 Source 436975a362a3260aadaddc7b32fb435e36c31adf, image et runtime 6.27.446 reçus.
-Documentation 445 clôturée 3abd2be ; futur commit documentaire 446 distinct de
-cette source, sa CI/clôture encore à recevoir. Aucun modèle/service/router/page/
+Documentation 445 clôturée 3abd2be ; documentation 446 ce549c0 distincte de
+cette source, clôture/CI reçues (doc-closure/receipt.json). Aucun modèle/service/router/page/
 Intent/ADR/tool/provider ajouté. Sept chantiers/dix gates/80 lignées ouverts,
 wholeJourneyAccepted=false et global null.
 

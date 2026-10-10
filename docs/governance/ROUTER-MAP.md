@@ -6,6 +6,15 @@ Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts`
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
+**447 local en réception — mêmes entrées intake/protocoles/swarm** : aucune
+route/permission/Intent ajouté. Trois écrivains S utilisent calcul transactionnel
+partagé/full replacement/huit versions/nulls/sources/provenance, protocoles stricts
+conservés. Intake propage refus/renvoie sauvegarde ; FAILED bloque sans terminer,
+RUNNING non terminé, WAITING seul demande intervention. Neuf/deux unitaires,
+26/un PG ciblés et DEFAULT 4 297/409/PG 357/18 verts ; jobs réels sur DB isolée avec
+frontières modèles R/T/I simulées reçus, pas navigateur/live. Gauntlet final cinq sorties 0/gouvernance 1 626/166 reçu ; source/CI/image/runtime 447 non reçus. Production 446/doc ce549c0 clôturées ; pas cascade entièrement atomique
+ni parcours réel reçu. [Contrats et réception](REFONTE-PLAN.md).
+
 **446 livré — même APPLY_RECOMMENDATIONS gouverné, réception bornée** : aucune
 route/permission/Intent ajouté. Notoria/choix manuel utilisent calcul S partagé,
 huit versions/nulls/pins/sources, source/route/projection atomiques et refus HUMAN
@@ -14,8 +23,7 @@ PG 352/18, contrôles locaux/nettoyage reçus. Source 436975a/image/runtime 446 
 production ADMIN Stratégie/Recommandations en lecture seule, S ancienne inchangée,
 aucun choix/recalcul réel/cycle/SLO reçu. Probes purs fusion budget et résumé FAILED
 non réparés ici, reprise immédiate 447 dans la dette existante ; autres writers/
-versions/remap et réception réelle ouverts. Commit documentaire/CI de clôture
-attendus. [Contrats et réception](REFONTE-PLAN.md).
+versions/remap et réception réelle ouverts. Clôture doc ce549c0/CI reçue. [Contrats et réception](REFONTE-PLAN.md).
 
 
 **445 livré, réception bornée — même export, lectures reçues localement** : aucune
