@@ -8,7 +8,7 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**442 local en réception — mêmes services, calcul S commun** : SYNTHESIZE_S
+**442 livré — mêmes services, calcul S commun** : SYNTHESIZE_S
 dans artemis/commandant et mestor/rtis-cascade.actualizePillar(S) délèguent à recalculateSynthesis,
 executeProtocoleStrategy avec transaction et writer du pillar-gateway existants.
 Huit versions A/D/V/E/R/T/I/S, absences null comprises, contrôlées avant upsert ;
@@ -20,7 +20,10 @@ inchangées. Renderer « — /100 » sans score/vrai zéro conservé, sept rouge
 treize verts puis vingt verts. Six rouges puis 24 verts, ciblé 70/trois/full PG
 345/18 reçus avant derniers correctifs, cohérence rouge/vert ciblé. Native locale
 synthétique S v4/trois archives/I v2 reçue après reload ; fenêtre recalcul
-complète, reload tronqué. Full/gauntlet finaux et livraison attendus, runtime 441.
+complète, reload tronqué. Finaux 4 210/401 unitaires, 345/18 PG/cinq contrôles
+0/gouvernance 1 624/166 reçus. Source f7f39c23/CI 38012819228/image 38012838924/
+runtime 442 exact reçus ; production ADMIN lue sans recalcul réel, SPAWT Périmé/
+deux 100 %. Stress mock/base, HTTP SKIPPED ; aucune recette USER de production.
 Pas de nouveau service/route/Intent/ADR. Budget/timeframe, roadmap et autres
 chemins S dont rtis-protocols/index.persistViaGateway strict restent en dette :
 aucune unification globale déduite. [Reprise](REFONTE-PLAN.md).

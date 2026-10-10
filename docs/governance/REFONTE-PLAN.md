@@ -1,6 +1,6 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## SYNTHESIZE_S et recalcul S → calcul transactionnel commun — 442 local en réception (2026-10-10)
+## SYNTHESIZE_S et recalcul S → calcul transactionnel commun — 442 livré, réception bornée (2026-10-10)
 
 Les deux entrées existantes délèguent à recalculateSynthesis : executeProtocoleStrategy
 lit les choix conservés dans I sous transaction/verrou Strategy. Le gateway
@@ -28,16 +28,19 @@ green-render-coherence.log vingt verts. Le rendu affiche désormais « — /100 
 sans score et conserve un vrai zéro, sans attribuer un fait à l’absence.
 
 Preuves privées release/preuves-synthese-442 : red.log six contre-exemples rouges
-sur 441/dix-huit verts, green.log checkpoint 24 ciblés verts ; postgres-final.log
-reçu ciblé local 70/trois fichiers, 28 action-decision-flow (dix nouveaux 442),
+sur 441/dix-huit verts, green.log checkpoint 24 ciblés verts ; checkpoint ciblé
+local 70/trois fichiers reçu, 28 action-decision-flow (dix nouveaux 442),
 21 synthesis-write et 21 pillar-compensation. Source apparue après snapshot,
 source versionnée modifiée, absence S, deux recalculs/archives, LOCKED et refus
 de provenance testés. Full PostgreSQL 345/18 verts avant correctifs cohérence/
 libellé ; red-coherence.log un rouge/27 non sélectionnés puis green-coherence.log
 un vert/27 non sélectionnés. Premier gauntlet tsc/lint/lint-governance/cycles 0,
 gouvernance 1 622 verts/deux rouges sur repères des deux exceptions internes
-existantes (722/766→737/781), corrigés sans ajout d’exception. Gauntlet/full
-finaux non reçus.
+existantes (722/766→737/781), corrigés sans ajout d’exception. gauntlet.json final
+cinq sorties 0/gouvernance 1 624/166 ; finaux locaux 4 210/401 unitaires et
+345/18 PostgreSQL après derniers correctifs reçus. Stress exit 0 borné à sept
+forges mock/états DB, pages/tRPC HTTP SKIPPED au port 3323 : aucune réception
+globale UX/performance/provider déduite.
 
 Native synthétique USER/TRIAL, authentification formulaire normale : propriétaire
 choisi, retenir→sync→roadmap→recalcul, trois POST pillar.actualize HTTP 200.
@@ -52,9 +55,27 @@ Fenêtre native-recalc-events.json et suivi sans troncature : POST 200, zéro
 ≥500/exception observé sur ces gestes, corps reçu. Affichages trompeurs 100/IA
 et 0 de la première observation, retards/timeouts de recompilation conservés.
 fixture-cleanup.json scoped cleaned=true/remaining=0 ; Next isolé et onglet 13
-fermés. Full PG et gauntlet finaux encore attendus. CI/image/runtime 442 non
-reçus, runtime reçu 441 ; aucun recalcul de
-vraie marque ni acceptation globale des sept chantiers/dix gates.
+fermés. Aucun recalcul de vraie marque ni acceptation globale déduite de cette
+fixture.
+
+Source f7f39c2395214933fff29d5caf99f43adfa083dc ; CI 38012819228 success,
+ci.log relu 4 210/401 unitaires/345/18 PG ; Mission 38012819206 et Chromatic
+38012819173 success. Image 38012838924 success, candidate/config matched,
+index sha256:9b93806b3b3ee7ce756498ea7aca9135d94ad9e84f02cb9e1c0ec905ff38a6f4.
+Déploiement unique eoxc3odbydloc8k66bl8r7dg terminé 01:33:06 UTC le 10 octobre ;
+runtime 6.27.442 running/nextjs/index exact/volume privé RW, /api/version 200.
+native-runtime-receipt.json : lecture réelle SPAWT ADMIN potentiel→roadmap,
+aucune mutation métier ni recalcul source, aucune réception USER en production.
+Navigation complète truncated=false/hasMore=false : 59 réponses toutes 200,
+zéro ≥500/exception et onze annulations conservées ; reload initial non exhaustif.
+DOM observé ≤1 099 ms/titre ≤12 043 ms, bornes observées, pas premier affichage
+précis/SLO. native-runtime.png inspecté : Périmé avec deux 100 %, ancienne S,
+budgets/roadmap contradictoires conservés. runtime.nativeReceived=false et
+nativeProductionReadReceived=true bornent cette lecture, wholeJourneyAccepted=false.
+Vitrine spawt.online relue indépendamment : six questions, aucun décompte visible,
+« bientôt » concerne les apps ; ces éléments étaient livrés avant 442, aucune
+réception de l’univers/quiz applicatif complet déduite. Sept chantiers/dix gates
+ouverts ; reçu documentaire et sa CI ultérieure distincts de la source livrée.
 
 **Reprise Guidance existante** : normalisation LOW/MEDIUM/HIGH en montants,
 absence→0 et timeframe défaut restent dans collectNormalizedInitiatives ;

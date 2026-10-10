@@ -223,7 +223,7 @@ l’upgrade de verrou. La recherche d’âge normalise S→s. Dans propagateFrom
 les modes autoRecalculate true/false sont reçus localement : Process seulement si auto,
 aucun appel réseau dans la fixture. Cela ne reçoit pas tous les modes/agents.
 
-**442 local en réception — deux entrées S, contrat inchangé** : SYNTHESIZE_S
+**442 livré — deux entrées S, contrat inchangé, réception bornée** : SYNTHESIZE_S
 et actualizePillar(S) partagent calcul transactionnel/gateway ; huit versions
 A/D/V/E/R/T/I/S et absences null contrôlées avant upsert. REPLACE_FULL archive/
 retire revue, refus LOCKED/provenance humaine ; S exclu de post-complétion IA.
@@ -234,8 +234,11 @@ computed.coherenceScore absent ; provenance de champ INFERRED « Déduit — à
 vérifier » couvre calcul ou IA, autorités inchangées. Renderer « — /100 » inconnu/
 vrai zéro conservé, vingt rendus verts après sept rouges. Native USER/TRIAL
 locale relue/rechargée, S v4/trois archives/I v2/draft 35 %/choix/budget 1 000
-conservés ; fenêtre recalcul complète/reload tronqué, full/gauntlet finaux et
-livraison 442 attendus, runtime 441. Normalisation
+conservés ; fenêtre recalcul complète/reload tronqué. Finaux 4 210/401 unitaires/
+345/18 PG/cinq contrôles 0/gouvernance 1 624/166 reçus. Source f7f39c23/
+CI 38012819228/image 38012838924/runtime 442 exact reçus ; production ADMIN lue
+sans mutation/recalcul réel, SPAWT Périmé/deux 100 %, ancien S/budgets/roadmap
+ouverts, aucune réception USER en production. Normalisation
 budget/absence/timeframe, projections et autres chemins S dont protocol index
 strict restent en dette ; compteur/boutons readonly/copie succès ouverts, aucune nouvelle
 entité/route/service/Intent/ADR ni acceptation des sept chantiers/dix gates.

@@ -4,7 +4,7 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-10
 
-**6.27.442 local en réception — synthèse calculée commune** : SYNTHESIZE_S
+**6.27.442 livré — synthèse calculée commune, réception bornée** : SYNTHESIZE_S
 et actualizePillar(S) utilisent recalculateSynthesis, transaction/gateway existants,
 versions des huit sources (S précédent et absences null compris) contrôlées avant
 upsert. REPLACE_FULL archive et retire la revue, refus LOCKED/provenance humaine ;
@@ -18,11 +18,16 @@ Six rouges sur 441 puis 24 ciblés verts ; ciblé final local 70/trois fichiers
 reçu, 28 choix/dix nouveaux 442 + 21 S + 21 compensation ; full PG 345/18 verts
 avant derniers correctifs, cohérence rouge puis vert ciblé. Premier gauntlet
 quatre sorties 0/deux repères de gouvernance corrigés sans nouvelle exception,
-pas final. Native USER/TRIAL locale relue : trois POST actualize 200, S v4/trois
+première passe conservée ; finaux cinq contrôles 0/gouvernance 1 624/166,
+4 210/401 unitaires et 345/18 PG après correctifs reçus. Native USER/TRIAL locale relue : trois POST actualize 200, S v4/trois
 archives/I v2/choix/budget 1 000 conservés, INTAKE 35 %/score inconnu après reload.
 Fenêtre recalcul complète, reload tronqué ; aucun zéro global ni SLO. Fixture
-nettoyée/serveur et onglet fermés ; full/gauntlet finaux et CI/image/runtime 442
-attendus, runtime reçu 441. Timeouts de compilation conservés.
+nettoyée/serveur et onglet fermés. Source f7f39c23/CI 38012819228 et Mission/
+Chromatic/image 38012838924 success, runtime 442 exact/index 9b93806b reçu.
+Lecture réelle SPAWT ADMIN seulement, Périmé/deux 100 %, aucune mutation/recalcul
+ou recette USER en production ; ancien S/budgets/roadmap ouverts. Stress
+mock/base avec HTTP SKIPPED, pas réception globale. Timeouts de compilation
+conservés ; reçu documentaire distinct.
 Normalisation budget qualitatif/absence→0/timeframe défaut, projections roadmap
 et autres écrivains/consommateurs S (protocol index strict notamment) restent à
 réconcilier ; compteur catalogue, boutons readonly et copie du succès ouverts. Aucune nouvelle

@@ -30,7 +30,7 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
-2026-10-10 · **442 local en réception, deux chemins S convergent** : SYNTHESIZE_S
+2026-10-10 · **442 livré, deux chemins S convergent** : SYNTHESIZE_S
 retournait des recommandations Notoria, la cascade S complétait par LLM et la
 sauvegarde ne gardait pas les versions source du calcul. Deux entrées partagent
 désormais calcul transactionnel/gateway, huit versions/absences contrôlées avant
@@ -49,8 +49,11 @@ treize verts→vingt verts, « — /100 » inconnu/vrai zéro conservé. Cause :
 perdue entre calcul et rendu. Native USER/TRIAL relue/rechargée, S v4/trois
 archives/I v2 ; fenêtre recalcul complète/reload tronqué, aucun zéro global/SLO.
 Fixture nettoyée. Premier gauntlet deux repères rouges corrigés sans nouvelle
-exception ; full/gauntlet finaux/livraison 442 non reçus, runtime 441,
-timeouts de compilation conservés et copie succès technique en dette UX.
+exception ; finaux 4 210/401 unitaires/345/18 PG/cinq contrôles 0/gouvernance
+1 624/166 reçus. Source f7f39c23/CI 38012819228/image 38012838924/runtime 442
+exact reçus ; lecture réelle SPAWT ADMIN seulement, aucune mutation/recalcul
+ou réception USER de production. Timeouts conservés, ancien S/budgets/roadmap
+et copie succès technique en dette UX ; aucune acceptation globale.
 Normalisation budget/absence/timeframe, roadmap, protocol index strict et autres
 chemins S en dette Guidance existante ; compteur/boutons readonly ouverts.
 Aucune acceptation globale. [Preuves](REFONTE-PLAN.md) · [dette](RESIDUAL-DEBT.md).

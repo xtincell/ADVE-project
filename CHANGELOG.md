@@ -2,7 +2,7 @@
 
 ## v6.27.442 — fix(guidance): converger la synthèse manuelle et le calcul S versionné (2026-10-10)
 
-**442 local en réception : deux entrées calculent et versionnent le même draft ; livraison et parcours réel non reçus.**
+**442 livré : deux entrées calculent et versionnent le même draft ; mutations locales reçues, production ADMIN lue sans recalcul réel.**
 
 - SYNTHESIZE_S et actualizePillar(S) partagent recalculateSynthesis dans les
   services existants. Transaction/verrou Strategy, versions des huit sources
@@ -27,8 +27,13 @@
   Native USER/TRIAL fictive relue : trois POST actualize 200, S v4/trois archives,
   I v2/choix/budget 1 000 conservés, draft INTAKE 35 %/score inconnu après reload.
   Fenêtre recalcul complète reçue, reload tronqué : aucun zéro réseau global/SLO.
-  Fixture nettoyée/serveur et onglet fermés ; full/gauntlet finaux attendus.
-  CI/image/runtime 442 non reçus, runtime reçu 441 ; aucune marque réelle.
+  Fixture nettoyée/serveur et onglet fermés ; finaux cinq contrôles exit 0,
+  gouvernance 1 624/166, 4 210/401 unitaires et 345/18 PG après correctifs.
+  Source f7f39c23, CI 38012819228/Mission/Chromatic et image 38012838924 success ;
+  runtime 442/index 9b93806b exact reçus, déploiement unique terminé 01:33:06 UTC.
+  Lecture réelle SPAWT ADMIN seulement : Périmé/deux 100 %, ancien plan et budgets
+  inchangés ; aucune mutation/recalcul réel ni réception USER en production.
+  Stress mock/base seulement, HTTP SKIPPED ; reçu documentaire distinct.
   Budget qualitatif/absence→0/timeframe défaut, projections roadmap et autres
   écrivains/consommateurs S restent en dette Guidance, ainsi que compteur et
   boutons readonly et copie technique du succès. Sept chantiers/dix gates non acceptés.

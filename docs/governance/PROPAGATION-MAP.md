@@ -9,7 +9,7 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
-### Choix source → draft S versionné commun — 442 local en réception (2026-10-10)
+### Choix source → draft S versionné commun — 442 livré, réception bornée (2026-10-10)
 
 SYNTHESIZE_S et actualizePillar(S) rejoignent le calcul transactionnel/gateway
 existant : huit versions A/D/V/E/R/T/I/S (absences null comprises) contrôlées
@@ -21,8 +21,10 @@ sans R.coherenceRisks désormais absente et provenance de champ INFERRED
 « Déduit — à vérifier », autorités inchangées. Renderer « — /100 » inconnu/vrai
 zéro conservé, vingt rendus verts après sept rouges. Native locale S v4/trois
 archives/I v2 reçue après reload ; fenêtre recalcul complète/reload tronqué,
-full/gauntlet finaux/livraison attendus,
-runtime 441. Normalisation budget/absence/timeframe, projections et troisième
+finaux 4 210/401 unitaires/345/18 PG/cinq contrôles 0 reçus. Source f7f39c23/
+CI 38012819228/image 38012838924/runtime 442 exact reçus ; production ADMIN
+lue sans recalcul réel, SPAWT Périmé/deux 100 %, aucune recette USER en production.
+Normalisation budget/absence/timeframe, projections et troisième
 chemin protocol index strict restent ouverts : aucune convergence globale
 déduite. Compteur/boutons readonly/copie succès et sept chantiers/dix gates ouverts.
 [Circuit à recevoir et déclencheur](REFONTE-PLAN.md).

@@ -294,7 +294,7 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   36 actions/28 retenues ; USER/TRIAL et ART_DIRECTOR uniquement locaux.
   Ancien S pré-lancement et budgets discordants observés, aucun recalcul réel.
   Aucune clôture globale déduite.
-  **442 local en réception** : SYNTHESIZE_S et actualizePillar(S) convergent vers
+  **442 livré, deux entrées/remplissages bornés fermés** : SYNTHESIZE_S et actualizePillar(S) convergent vers
   recalculateSynthesis transactionnel/gateway ; huit versions A/D/V/E/R/T/I/S,
   absences null comprises, contrôlées avant upsert. REPLACE_FULL/historique/retrait
   de revue, refus LOCKED/provenance humaine ; S exclu du chunk LLM, padding axes/
@@ -309,8 +309,11 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   S v4/trois archives/I v2, choix/budget 1 000 conservés, draft INTAKE 35 %.
   Fenêtre recalcul complète/reload tronqué ; fixture nettoyée, aucun zéro global
   réseau/SLO. Premier gauntlet deux repères rouges corrigés sans nouvelle
-  exception ; full/gauntlet finaux/livraison attendus, runtime 441,
-  timeouts de compilation conservés. Sparse non
+  exception ; finaux 4 210/401 unitaires/345/18 PG/cinq contrôles 0/gouvernance
+  1 624/166 reçus. Source f7f39c23/CI 38012819228/image 38012838924/runtime 442
+  exact reçus ; lecture réelle SPAWT ADMIN sans mutation/recalcul, Périmé/deux
+  100 %, ancien S/budgets/roadmap contradictoires ouverts, aucune réception USER
+  de production. Timeouts de compilation conservés. Sparse non
   approuvable, contrat strict inchangé.
   **Reste à fermer** : collectNormalizedInitiatives normalise LOW/MEDIUM/HIGH
   en montants, absence→0 et timeframe défaut. Projections roadmap/computed et
