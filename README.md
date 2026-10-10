@@ -16,6 +16,16 @@
 
 ## Quick start
 
+**6.27.441 en préparation** : les choix d’actions sont rattachés à leur source
+et à son historique ; le calcul du plan utilise les actions explicitement
+retenues. L’écran actualise l’état après un choix et montre ses refus ; parcours
+local choisir→synchroniser→retirer et refus en lecture seule reçus sur dossiers
+fictifs, sans cycle réel. Suite PostgreSQL et cinq contrôles locaux finaux reçus,
+livraison encore attendue ; runtime reçu
+440. Le bouton de synthèse, les droits visibles et les valeurs par défaut
+demandent encore une réconciliation. Cycle réel et sept chantiers restent ouverts.
+[Périmètre et prochaine étape](docs/governance/REFONTE-PLAN.md).
+
 **6.27.440 livré** : reconstruire les actions requiert désormais
 le droit d’écriture du calendrier. Le refus en lecture seule et l’accès du
 propriétaire sont reçus sur dossiers fictifs ; les choix du propriétaire peuvent

@@ -150,6 +150,18 @@ reçue ; reload local tronqué et bornes tardives production, sans SLO déduit.
 
 ---
 
+441 en préparation sur les mêmes routes : actions.setSelected conserve
+SET_BRAND_ACTION_STATUS et rend les refus du writer I ; SELECT est versionné
+avec BrandAction, sans nouveau droit ou route. Checkpoints PG onze puis treize,
+final complet 335/18 verts (dix-huit choix), provenance 17/17/gateway 25/trois.
+Le panel relaie les refus choix/sync et invalide get/assess/readiness après
+succès. Native locale propriétaire retenir→sync→retirer/refus LOCKED reçue,
+cinq contrôles finaux verts, gouvernance 1 624/166 reçue.
+ART_DIRECTOR ACTIVE d’un autre opérateur reçoit 403/FORBIDDEN avec alerte métier,
+I/versions/archives inchangés ; boutons hors zone visibles en dette UX.
+Livraison attendue ; SYNTHESIZE_S reste Notoria/recommandations.
+[Parcours manuel et limites](REFONTE-PLAN.md).
+
 ## 2. Guidance (19 routers)
 
 | Router | Rôle | Tier | Statut |

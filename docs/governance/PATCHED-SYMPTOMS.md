@@ -30,6 +30,32 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-10 · **441 candidat, choix/projection reçus en PostgreSQL** : SELECT
+modifiait seulement BrandAction, puis le refresh réécrivait le choix/planning
+et le calcul promouvait des propositions. Le choix passe désormais par I
+versionné et BrandAction atomiques, même Intent/contexte ; refus du writer rendu
+au routeur. La matérialisation protège données d’exécution/lignes manuelles ;
+provenance limitée au statut de l’initiative identifiée, sans figer le catalogue.
+Calcul uniquement SELECTED_FOR_ROADMAP, aucune promotion ni LLM implicite.
+Cause bornée : décision, proposition et projection d’exécution confondues ;
+verrouiller toute une collection aurait aussi empêché son renouvellement.
+Onze rouges→onze verts puis régénération un rouge/douze verts→treize verts ;
+PG final 335/18 verts, dix-huit cas de choix, provenance 17/17/gateway 25/trois.
+Transaction partagée withPillarTransaction, deux refus du premier gauntlet
+réparés sans ajouter d’exception. Bump/CODE-MAP effectués, cinq contrôles finaux
+exit 0 (24 avertissements connus), gouvernance 1 624/166 verts. Le panel invalide
+get/assess/readiness après succès, bloque le choix en cours et affiche les refus
+choix/sync en alerte métier ; cause UI bornée : succès/fraîcheur/refus mal relayés.
+La projection suit le statut I dont le gateway conserve le choix humain.
+Budget hérité vide reprenant le montant source 1 000 reçu après un rouge,
+affiché 1k XAF nativement. Native locale USER/TRIAL retenir→sync→retirer/refus
+LOCKED reçus, cache relu ; ART_DIRECTOR ACTIVE d’un autre opérateur refuse
+403/FORBIDDEN avec alerte métier, I/versions/archives inchangés. Stress
+mock/base seulement, pages/tRPC SKIPPED ; CI/image/runtime 441 non reçus,
+runtime 440 reçu. Boutons hors zone/compteur catalogue, SYNTHESIZE_S et remplissages S historiques demeurent dans
+la dette Guidance ; aucune acceptation globale ni nouvelle capacité.
+[Checkpoint et limites](REFONTE-PLAN.md) · [dette liée](RESIDUAL-DEBT.md).
+
 2026-10-09 · **440 livré, garde d’accès reçue localement** : actions.sync
 rematérialisait BrandAction sous la seule appartenance opérateur. Le contrôle
 calendrier existant assertCalendarWrite est désormais appliqué avant le writer,

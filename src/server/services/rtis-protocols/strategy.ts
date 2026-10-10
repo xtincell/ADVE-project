@@ -1,47 +1,26 @@
 /**
- * PROTOCOLE STRATEGY (S) — Agent spécialisé de l'essaim MESTOR
- *
- * Input  : Piliers A, D, V, E, R, T, I (tous les 7 précédents)
- * Output : Pilier S complet (PillarSSchema)
- * Nature : DÉCISION — pioche dans I pour tracer la route vers le superfan
- *
- * S est la COMMANDE — ce qu'on choisit dans le MENU (I).
- * Son unique objectif : déplacer la Fenêtre d'Overton pour accumuler des superfans.
- *
- * Logique hybride :
- *   1. Fenêtre d'Overton (COMPOSE depuis T.overtonPosition + A.prophecy + D.positionnement)
- *   2. Sélection dans I (MESTOR_ASSIST — Commandant arbitre les choix)
- *   3. Roadmap 4 phases orientée Devotion (MESTOR_ASSIST)
- *   4. Sprint 90j (COMPOSE — extraction Phase 1 de la roadmap)
- *   5. KPI Dashboard (CALC — 1 KPI par pilier + North Star)
- *   6. Devotion Funnel + Overton Milestones (COMPOSE)
- *   7. Budget par Devotion (CALC)
- *   8. Synthèse exécutive (MESTOR_ASSIST)
- *
- * Cascade ADVERTIS : S puise dans A + D + V + E + R + T + I
+ * PROTOCOLE STRATEGY (S) — deterministic projection of the chosen I set.
+ * Reads A/D/V/E/R/T/I/S; never chooses, promotes or writes initiatives.
+ * Narrative assistance remains explicit in Notoria. Legacy narrative defaults
+ * are not evidence of maturity (Guidance debt in RESIDUAL-DEBT.md).
  */
 
-import { z } from "zod";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
-import { PillarSSchema, collectNormalizedInitiatives, ROADMAP_ROUTE_KEYS, INITIATIVE_TIMEFRAMES, BUDGET_ESTIME_FCFA } from "@/lib/types/pillar-schemas";
+import { collectNormalizedInitiatives, ROADMAP_ROUTE_KEYS, INITIATIVE_TIMEFRAMES } from "@/lib/types/pillar-schemas";
 import {
   computeRoadmapRoutes,
   routeInitiativeSet,
   aggregateInitiativeSet,
   type RouteKey,
 } from "@/lib/strategy/roadmap-routes";
-import { sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 
 // Re-export for backward compatibility (authoritative server compute).
 export { computeRoadmapRoutes };
 
-// S est désormais MÉCANIQUE (déterministe) : sélection, roadmap, overton, axes,
-// facteurs et budgets sont CALCULÉS depuis I/V/T/R (cf. generateStrategy plus
-// bas). Seule la synthèse exécutive narrative reste 1 appel LLM OPTIONNEL,
-// skippé proprement si indisponible — le squelette ne dépend jamais du LLM.
-const SyntheseLLMSchema = PillarSSchema.pick({ syntheseExecutive: true }).partial();
+// Calculation consumes existing decisions. Narrative assistance belongs to the
+// explicit Notoria path and is never a prerequisite for reading the roadmap.
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -89,69 +68,7 @@ function buildOverton(
   };
 }
 
-// ── Steps 2-3 : Sélection dans I + Roadmap (MESTOR_ASSIST) ───────────
-
-/**
- * Un appel LLM focalisé pour le protocole Strategy : une seule sous-partie du
- * pilier S, validée par son propre sous-schéma. Retourne {} si l'appel ou la
- * validation échoue — un sous-appel raté n'annule jamais les trois autres.
- */
-async function callStrategyJSON(args: {
-  strategyId: string;
-  label: string;
-  schema: z.ZodTypeAny;
-  system: string;
-  prompt: string;
-  maxOutputTokens: number;
-}): Promise<Record<string, unknown>> {
-  // LLM Gateway obligatoire (jamais @ai-sdk/anthropic direct) : circuit breaker
-  // + fallback provider + substitution Ollama locale + budget/cost tracking.
-  const { callLLM } = await import("@/server/services/llm-gateway");
-  const { parseAndValidateLLM } = await import("@/server/services/utils/llm");
-  try {
-    const { text } = await callLLM({
-      caller: `mestor:protocole-strategy:${args.label}`,
-      strategyId: args.strategyId,
-      model: "claude-sonnet-4-20250514",
-      // Contexte 8 piliers + 2-3K de sortie → modèle Ollama rapide à contexte
-      // intermédiaire (16K) plutôt que hermes3-ctx (64K, spill CPU) ou
-      // hermes3:8b (4K, tronque). Inerte sans Ollama (cloud ignore l'option).
-      ollamaModel: process.env.OLLAMA_STRUCTURED_MODEL ?? "hermes3-fast",
-      // Force du JSON valide côté provider (Ollama/OpenAI). Sans ça le 8B local
-      // ajoute des préambules en prose / double les accolades → extractJSON KO.
-      responseFormat: "json_object",
-      // LOT 1e — entrée non fiable neutralisée (anti-injection) : le prompt porte
-      // nom de marque + perceptions + axes dérivés de l'ADVE fondateur
-      // (sanitizeInline côté appelant) → rappel sécurité dans le system.
-      system: `${UNTRUSTED_NOTICE}\n\n${args.system}`,
-      prompt: args.prompt,
-      maxOutputTokens: args.maxOutputTokens,
-    });
-    const result = parseAndValidateLLM(text, args.schema, {
-      context: `protocole-strategy:${args.label}`,
-      mode: "prune",
-    });
-    if (result.partial) {
-      console.warn(
-        `[protocole-strategy:${args.label}] strategy=${args.strategyId} dropped ${result.droppedPaths.length} invalid paths:`,
-        result.droppedPaths.slice(0, 10),
-      );
-    }
-    return (result.data ?? {}) as Record<string, unknown>;
-  } catch (err) {
-    console.warn(
-      `[protocole-strategy:${args.label}] strategy=${args.strategyId} appel/validation échoué:`,
-      err instanceof Error ? err.message : String(err),
-    );
-    return {};
-  }
-}
-
-// ── S MÉCANIQUE — composition déterministe (ADR-0088 étendu) ─────────────────
-// S ne devine plus : il SÉLECTIONNE et ORDONNE le catalogue I de façon
-// déterministe, dans l'enveloppe budgétaire RÉELLE de V, et déplace l'Overton
-// MESURÉ par T. Aucune inférence LLM dans le squelette → zéro souci d'affichage.
-// Seule la prose de syntheseExecutive reste 1 appel LLM OPTIONNEL.
+// ── Deterministic composition from existing choices ────────────────────────
 
 type Tf = (typeof INITIATIVE_TIMEFRAMES)[number];
 const TF_PHASE_LABEL: Record<Tf, string> = { SPRINT_90: "Phase 1", PHASE_1: "Phase 2", PHASE_2: "Phase 3", LONG_TERM: "Phase 4" };
@@ -164,49 +81,17 @@ interface SelectedAction {
   pilierImpact: string | null; budget: number; timeframe: Tf;
 }
 
-/** Sélection DÉTERMINISTE des actions I, dans l'enveloppe budgétaire RÉELLE de V. */
-function selectInitiativesMechanical(
-  iContent: Record<string, unknown>,
-  budgetCom: number | null,
-): { selected: SelectedAction[]; selectedFromI: Array<Record<string, unknown>> } {
-  const cat = (iContent.catalogueParCanal ?? {}) as Record<string, Array<Record<string, unknown>>>;
-  type Cand = { ref: string; channel: string; action: string; objectif: string; pilierImpact: string | null; budget: number; score: number };
-  const cands: Cand[] = [];
-  for (const [channel, arr] of Object.entries(cat)) {
-    if (!Array.isArray(arr)) continue;
-    arr.forEach((a, idx) => {
-      const action = String(a.action ?? "").trim();
-      if (!action) return;
-      const be = (a.budgetEstime === "LOW" || a.budgetEstime === "MEDIUM" || a.budgetEstime === "HIGH") ? a.budgetEstime : "MEDIUM";
-      const pilierImpact = (a.pilierImpact === "A" || a.pilierImpact === "D" || a.pilierImpact === "V" || a.pilierImpact === "E") ? a.pilierImpact : null;
-      let score = 1;
-      if (pilierImpact) score += 2;                                          // fait avancer un pilier ADVE
-      if (typeof a.overtonShift === "string" && a.overtonShift) score += 2;  // déplace l'Overton
-      if (be === "LOW") score += 1;                                          // sobre = priorisé à valeur égale
-      cands.push({ ref: `catalogueParCanal.${channel}[${idx}]`, channel, action, objectif: String(a.objectif ?? ""), pilierImpact, budget: BUDGET_ESTIME_FCFA[be], score });
-    });
-  }
-  // Tri déterministe : score décroissant, budget croissant (moins cher gagne), réf (stable).
-  cands.sort((x, y) => y.score - x.score || x.budget - y.budget || x.ref.localeCompare(y.ref));
-
-  const envelope = budgetCom != null && budgetCom > 0 ? budgetCom : Infinity;
-  const MIN_KEEP = 6, MAX_KEEP = 14;
-  const selectedCands: Cand[] = [];
-  let spent = 0;
-  for (const c of cands) {
-    if (selectedCands.length >= MAX_KEEP) break;
-    if (spent + c.budget > envelope && selectedCands.length >= MIN_KEEP) continue; // garde un socle même si l'enveloppe est petite
-    selectedCands.push(c);
-    spent += c.budget;
-  }
-
-  const N = Math.max(selectedCands.length, 1);
-  const selected: SelectedAction[] = selectedCands.map((c, i) => {
-    const r = i / N;
-    const timeframe: Tf = r < 0.35 ? "SPRINT_90" : r < 0.6 ? "PHASE_1" : r < 0.85 ? "PHASE_2" : "LONG_TERM";
-    return { ref: c.ref, channel: c.channel, action: c.action, objectif: c.objectif, pilierImpact: c.pilierImpact, budget: c.budget, timeframe };
-  });
-  const selectedFromI = selected.map((s, i) => ({ sourceRef: s.ref, action: s.action, phase: TF_PHASE_LABEL[s.timeframe], priority: i + 1 }));
+/** Read the chosen set by stable identity; never promote a proposal here. */
+function selectInitiativesMechanical(iContent: Record<string, unknown>): {
+  selected: SelectedAction[]; selectedFromI: Array<Record<string, unknown>>;
+} {
+  const selected = collectNormalizedInitiatives(iContent).filter(init => init.status === "SELECTED_FOR_ROADMAP")
+    .map(init => ({ ref: init.id, channel: init.channel, action: init.action, objectif: init.objectif,
+      pilierImpact: init.pilierImpact ?? null, budget: init.budget, timeframe: init.timeframe }));
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const selectedFromI = selected.map((init, index) => ({ sourceRef: init.ref,
+    ...(uuid.test(init.ref) ? { sourceInitiativeId: init.ref } : {}),
+    action: init.action, phase: TF_PHASE_LABEL[init.timeframe], priority: index + 1 }));
   return { selected, selectedFromI };
 }
 
@@ -311,25 +196,13 @@ function buildSyntheseTemplate(
   return `${nom} engage une trajectoire en 4 phases (Fondations → Engagement → Accélération → Culte) articulée autour de ${selected.length} actions sélectionnées dans son catalogue de potentiel, pour une enveloppe de ${fcfa}. Le sprint de 90 jours mobilise ${sprint} action(s) prioritaire(s) pour amorcer la conversion des spectateurs en participants. La stratégie active ${covered} levier(s) ADVE et déplace progressivement la Fenêtre d'Overton vers la perception cible, en transformant l'audience en communauté de superfans. Chaque phase est budgétée et reliée à un palier de la Devotion Ladder.`;
 }
 
-/**
- * COMPOSE le pilier S de façon MÉCANIQUE (déterministe). Remplace les 4 appels
- * LLM fragiles (sélection/roadmap/overton/synthèse) par du calcul ancré sur
- * I (catalogue) + V (budget réel) + T (Overton mesuré) + R (risques). Seule la
- * `syntheseExecutive` narrative reste 1 appel LLM OPTIONNEL (fallback templaté)
- * — le squelette ne dépend JAMAIS du LLM, donc plus de souci d'affichage.
- */
+/** Compose the existing chosen set without a provider call or I writeback. */
 async function generateStrategy(
   pillars: Record<string, Record<string, unknown> | null>,
   overton: Record<string, unknown> | null,
-  strategyId: string,
 ): Promise<Record<string, unknown>> {
   const iContent = (pillars.i ?? {}) as Record<string, unknown>;
-  const v = (pillars.v ?? {}) as Record<string, unknown>;
-  const ue = (v.unitEconomics ?? {}) as Record<string, unknown>;
-  const budgetCom = typeof ue.budgetCom === "number" && ue.budgetCom > 0 ? ue.budgetCom : null;
-
-  // 1. Sélection déterministe dans l'enveloppe V.
-  const { selected, selectedFromI } = selectInitiativesMechanical(iContent, budgetCom);
+  const { selected, selectedFromI } = selectInitiativesMechanical(iContent);
 
   // 2-5. Roadmap, sprint, overton, axes, facteurs, budget — tout CALCULÉ.
   const roadmap = buildRoadmapMechanical(selected);
@@ -339,30 +212,7 @@ async function generateStrategy(
   const facteursClesSucces = buildFacteursMechanical(pillars);
   const globalBudget = selected.reduce((s, a) => s + a.budget, 0);
 
-  // 6. Synthèse exécutive — 1 appel LLM OPTIONNEL, fallback templaté déterministe.
-  let syntheseExecutive = buildSyntheseTemplate(pillars, selected, globalBudget);
-  try {
-    // LOT 1e — entrée non fiable neutralisée (anti-injection) : nom de marque,
-    // perceptions Overton et libellés d'axes dérivent du contenu ADVE fondateur
-    // (les axes reprennent le texte des actions du catalogue I). Interpolés au
-    // fil de phrases → sanitizeInline (casse fences/balises de rôle, plafonne).
-    // Les compteurs/budget sont des nombres internes calculés → laissés bruts.
-    const ctx = [
-      `Marque : ${sanitizeInline((pillars.a as Record<string, unknown>)?.nomMarque ?? "", { max: 200 })}`,
-      `Perception actuelle : ${sanitizeInline((overton as Record<string, unknown>)?.perceptionActuelle ?? "?", { max: 600 })}`,
-      `Perception cible : ${sanitizeInline((overton as Record<string, unknown>)?.perceptionCible ?? "?", { max: 600 })}`,
-      `${selected.length} actions retenues, budget ${globalBudget} FCFA`,
-      `Axes : ${sanitizeInline(axesStrategiques.map((a) => a.axe).join("; "), { max: 1000 })}`,
-    ].join("\n");
-    const res = await callStrategyJSON({
-      strategyId, label: "synthese", schema: SyntheseLLMSchema, maxOutputTokens: 1200,
-      system: "Tu es le Protocole Strategy. Rédige une synthèse exécutive narrative (≥400 caractères) en français à partir d'éléments DÉJÀ DÉCIDÉS. N'invente AUCUN chiffre. Réponds en JSON strict.",
-      prompt: `${ctx}\n\nProduis UNIQUEMENT : { "syntheseExecutive": "…synthèse de 400+ caractères…" }`,
-    });
-    if (typeof res.syntheseExecutive === "string" && res.syntheseExecutive.length >= 200) {
-      syntheseExecutive = res.syntheseExecutive;
-    }
-  } catch { /* fallback templaté déjà en place */ }
+  const syntheseExecutive = buildSyntheseTemplate(pillars, selected, globalBudget);
 
   return { selectedFromI, roadmap, sprint90Days, fenetreOverton, axesStrategiques, facteursClesSucces, syntheseExecutive, globalBudget };
 }
@@ -647,11 +497,11 @@ export function promoteSelectedInBlob(
 
 // ── Public API ────────────────────────────────────────────────────────
 
-export async function executeProtocoleStrategy(strategyId: string): Promise<ProtocoleStrategyResult> {
+export async function executeProtocoleStrategy(strategyId: string, transaction?: Prisma.TransactionClient): Promise<ProtocoleStrategyResult> {
   try {
     // Load ALL 8 piliers (A through S) — ADR-0089 : le S précédent porte la
     // sélection d'ambition (computed.selectedRouteKey), qui survit aux regens.
-    const dbPillars = await db.pillar.findMany({
+    const dbPillars = await (transaction ?? db).pillar.findMany({
       where: { strategyId, key: { in: [...PILLAR_STORAGE_KEYS] } },
     });
     const pillars: Record<string, Record<string, unknown> | null> = {};
@@ -663,7 +513,7 @@ export async function executeProtocoleStrategy(strategyId: string): Promise<Prot
     const overton = buildOverton(pillars);
 
     // Steps 2-3: Sélection + Roadmap + Synthèse (MESTOR_ASSIST)
-    const strategyContent = await generateStrategy(pillars, overton, strategyId);
+    const strategyContent = await generateStrategy(pillars, overton);
 
     // Merge Overton base with MESTOR_ASSIST enrichment
     if (overton && strategyContent.fenetreOverton) {
@@ -708,29 +558,8 @@ export async function executeProtocoleStrategy(strategyId: string): Promise<Prot
       companyStage,
     );
 
-    // I→S link (ADR-0088) — persister la sélection sur le blob I AVANT
-    // d'agréger : computePillarS ne compte que les actions SELECTED_FOR_ROADMAP
-    // du blob. On promeut les actions retenues (selectedFromI), on persiste le
-    // blob I (status-only → n'affecte pas le cache completionLevel/D-2), et on
-    // re-matérialise BrandAction pour que le panel reflète la sélection.
-    const selFromI = (strategyContent.selectedFromI ?? []) as Array<Record<string, unknown>>;
-    if (selFromI.length > 0 && pillars.i) {
-      const { content: promotedI, promoted } = promoteSelectedInBlob(pillars.i, selFromI);
-      if (promoted > 0) {
-        pillars.i = promotedI; // computePillarS (ci-dessous) lit pillars.i en mémoire
-        try {
-          await db.pillar.update({
-            where: { strategyId_key: { strategyId, key: "i" } },
-            data: { content: promotedI as unknown as Prisma.InputJsonValue },
-          });
-          const { syncBrandActionsFromBlob } = await import("@/server/services/artemis/action-db/materializer");
-          await syncBrandActionsFromBlob(strategyId);
-        } catch (err) {
-          console.warn("[protocole-S] writeback I / matérialisation échoué:", err instanceof Error ? err.message : err);
-        }
-        console.log(`[protocole-S] ${promoted}/${selFromI.length} action(s) I promues SELECTED_FOR_ROADMAP`);
-      }
-    }
+    // Calculation is read-only with respect to I and the execution projection.
+    strategyContent._sourcePillarVersions = Object.fromEntries(dbPillars.map(p => [p.key, p.currentVersion]));
 
     // Pure computed dashboard (ADR-0088) — aggregations over the relational
     // backbone. Recomputed here and again by the recommendation apply path
@@ -743,11 +572,8 @@ export async function executeProtocoleStrategy(strategyId: string): Promise<Prot
     // Count selectedFromI
     const selectedFromI = (strategyContent.selectedFromI ?? []) as unknown[];
 
-    // Confidence
-    const hasOverton = !!strategyContent.fenetreOverton;
-    const hasRoadmap = Array.isArray(strategyContent.roadmap) && (strategyContent.roadmap as unknown[]).length >= 3;
-    const hasSprint = Array.isArray(strategyContent.sprint90Days) && (strategyContent.sprint90Days as unknown[]).length >= 5;
-    const confidence = Math.min(0.85, 0.3 + (hasOverton ? 0.2 : 0) + (hasRoadmap ? 0.15 : 0) + (hasSprint ? 0.15 : 0) + Math.min(0.1, selectedFromI.length * 0.01));
+    // A deterministic total proves neither strategic quality nor human review.
+    const confidence = 0;
 
     return { pillarKey: "s", content: strategyContent, confidence, selectedFromICount: selectedFromI.length };
   } catch (err) {

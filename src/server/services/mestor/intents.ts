@@ -1383,9 +1383,9 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
       return ["i"];
     case "SYNTHESIZE_S":
       return ["s"];
-    // B2 — édite la PROJECTION BrandAction (selected/timing/status), pas le
-    // blob I-pillar (staleness gérée par la resync du materializer, pas ici).
+    // Selection is versioned in I; timing alone changes the execution projection.
     case "SET_BRAND_ACTION_STATUS":
+      return intent.op.type === "SELECT" ? ["i"] : [];
     // Phase 24 (ADR-0106) — Intention : aval de l'ADVE, ne mute aucun pilier.
     case "CAPTURE_INTENTION":
     case "GENERATE_BRIEF_FROM_INTENTION":

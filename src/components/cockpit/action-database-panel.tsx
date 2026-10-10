@@ -61,6 +61,7 @@ interface Props {
 
 export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
   const [touchpointFilter, setTouchpointFilter] = useState<string | null>(null);
+  const utils = trpc.useUtils();
 
   const summaryQuery = trpc.actions.summary.useQuery({ strategyId }, { enabled: !!strategyId });
   const listQuery = trpc.actions.byStrategy.useQuery(
@@ -73,7 +74,15 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
 
   const refetchAll = () => { summaryQuery.refetch(); listQuery.refetch(); };
   const proposeMutation = trpc.actions.propose.useMutation({ onSuccess: refetchAll });
-  const selectMutation = trpc.actions.setSelected.useMutation({ onSuccess: refetchAll });
+  const selectMutation = trpc.actions.setSelected.useMutation({
+    onSuccess: () => {
+      refetchAll();
+      // A retained action is a versioned choice in I and makes S stale.
+      void utils.pillar.get.invalidate({ strategyId });
+      void utils.pillar.assess.invalidate({ strategyId });
+      void utils.pillar.readiness.invalidate({ strategyId });
+    },
+  });
 
   const [showPropose, setShowPropose] = useState(false);
   const [proposeMode, setProposeMode] = useState<"LLM" | "MANUAL">("LLM");
@@ -123,6 +132,14 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
           ) : null}
         </div>
       </div>
+
+      {selectMutation.isError || syncMutation.isError ? (
+        <p role="alert" className="mb-3 text-xs text-error">
+          {selectMutation.isError
+            ? "Ce choix n’a pas pu être confirmé."
+            : "La synchronisation n’a pas abouti."}
+        </p>
+      ) : null}
 
       {/* Propose actions (Phase 24) — generate-more (IA, brand-aware) or manual */}
       {showPropose ? (
@@ -241,6 +258,7 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
                     <button
                       type="button"
                       onClick={() => selectMutation.mutate({ strategyId, actionId: a.id, selected: !a.selected })}
+                      disabled={selectMutation.isPending}
                       title={a.selected ? "Retirer de la roadmap" : "Retenir pour la roadmap"}
                       className="flex-shrink-0"
                     >

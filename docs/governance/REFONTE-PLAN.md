@@ -1,5 +1,100 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Choix d’action → I versionné → calcul du plan — 441 en préparation (2026-10-10)
+
+Le chemin existant SET_BRAND_ACTION_STATUS/SELECT écrit le statut source dans
+I par writePillar et BrandAction dans la même transaction : expectedVersion,
+PillarVersion, staleness S et contexte intentId conservés. Le refus d’écriture
+remonte au routeur. La provenance humaine vise `initiatives.<id>.status` :
+le choix d’une initiative ne fige pas l’ensemble du catalogue et n’empêche pas
+l’ajout ou la modification d’autres propositions. La matérialisation suit le
+statut I après conservation des choix humains par le gateway ; BrandAction reste
+sa projection d’exécution. Planning, exécution, métadonnées et lignes manuelles
+protégés, avec verrou Strategy commun.
+withPillarTransaction factorise le chemin transactionnel partagé dans le gateway
+existant et réutilisé par writePillarsAtomically. Les deux exceptions internes
+existantes restent exactes, les anciennes exceptions d’écriture directe S/I
+sont supprimées ; aucune nouvelle allowlist ou capacité.
+executeProtocoleStrategy consomme seulement SELECTED_FOR_ROADMAP dans
+catalogueParCanal/actionsByDevotionLevel/actionsByOvertonPhase ; il ne choisit
+pas à la place du dirigeant, ne promeut pas I et ne lance aucun LLM implicitement.
+Extension des chemins existants, sans Neter, Intent, service, modèle, route ou ADR.
+
+ActionDatabasePanel invalide get/assess/readiness des piliers pour la stratégie
+courante après succès d’un choix. Bouton désactivé pendant mutation ; refus de
+choix/synchronisation rendus role=alert en texte métier sans détails internes.
+Réceptions locales propriétaire et lecture seule reçues ci-dessous.
+
+Preuves privées release/preuves-choix-441 : decisions-before/after.log,
+onze contre-exemples PG rouges puis onze verts. regeneration-before.log :
+un rouge/douze verts ; regeneration-after.log : treize verts sur PostgreSQL réel.
+postgres-final.log final actuel après factorisation : 335 tests/18 fichiers
+verts, dont dix-huit action-decision-flow. Proposition manuelle rattachée une
+fois à I, budget calculé
+250 dans la fixture, refresh/choix concurrent et projection du choix source
+versionné inclus. choice-provenance.log : 17/17 verts, quatre ajouts ;
+gateway-final.log : 25 tests/trois fichiers verts.
+empty-budget-before.log : un cas rouge/dix-sept non sélectionnés, puis correctif
+du budget vide hérité repris depuis le montant source réel 1 000, sans estimation
+fabriquée ; nouveau cas inclus dans le complet 335/18.
+Bump atomique 441 effectué aux quatre emplacements, CODE-MAP régénéré par racine
+dans l’état final : 1 825 lignes/139 301 caractères.
+Première passe gauntlet deux violations des gardes, puis factorisation du
+writer existant ci-dessus ; gauntlet.json final cinq sorties 0,
+tsc/lint/lint-governance/cycles reçus et gouvernance 1 624 tests/166 fichiers
+verte à 01:09:46. Aucun changement de code depuis les quatre lignes finales du
+matérialiseur ; 24 avertissements connus. stress:full exit 0 mais
+HTTP http://localhost:3000 injoignable : pages/tRPC SKIPPED, uniquement sept
+forges mock et états DB ; aucun reçu UX ou SLO déduit.
+Native locale USER/TRIAL par authentification formulaire normale, fixture deux
+marques : SELECT 200/updated=1 → I v2/archive1/provenance HUMAN du seul statut ;
+sync 200/upsert1 conserve ID et choix Retenu ; retrait 200/updated=1 → I v3/
+archive2/RECOMMENDED et BrandAction false/PROPOSED visibles sans reload.
+get/assess/readiness effectivement relus ; source LOCKED synthétique refuse
+400/BAD_REQUEST avec alerte métier visible. Budget sync 1k XAF reçu.
+native-select/sync/withdraw/locked-http.json et états native-selected/withdrawn/
+refused.json relus. ART_DIRECTOR ACTIVE d’un autre opérateur : sync 403/FORBIDDEN
+avec alerte métier visible ; I, sources, versions et archives de l’autre marque
+exactement inchangés après comparaison des reçus. native-local-receipt.json :
+synthetic=true, production=false, nativeReadReceived=true,
+nativeMutationsReceived=true, wholeJourneyAccepted=false ; onze sources modifiées
+du manifeste racine/builder aux hashes identiques. Fenêtre fraîche entière
+truncated=false : zéro réponse ≥500 et zéro exception, sans décompte de réponses
+affirmé. Document HTTP 200, DOM 5 515 ms depuis navigation CDP ; titre Potentiel
+observé ≤85 520 ms, borne incluant l’écart entre appels après une première
+attente du titre sans réception. Compilation dev froide incluse ; cette
+borne ne mesure ni le premier affichage ni une performance native précise/SLO.
+
+api-scheduling-receipt.json : appels HTTP locaux indépendants du navigateur,
+credentials ordinaires USER synthétique. setTiming 200/updated=1 sur une
+proposition non retenue conserve PROPOSED ; action absente 400/BAD_REQUEST.
+autoSchedule 200/scheduled=0 sans choix ; autre stratégie ART_DIRECTOR
+403/FORBIDDEN. Corps réels relus, aucune recette calendrier de production ni
+wholeJourney déduit. Les deux passes de fixture sont nettoyées (remaining=0),
+serveur 3322 arrêté et onglet local fermé avant commit.
+
+CI, image et runtime 441 encore attendus. Runtime livré reçu 440. Aucune marque réelle
+modifiée, approuvée ou produite ; sept chantiers/dix gates toujours ouverts.
+Deux écarts UX restent tracés : boutons de mutation visibles en lecture seule,
+et fixture partielle avec une action mais compteur catalogue/footer à zéro.
+Prochain lot UX C3/C7 : lecture canonique des droits calendrier existants pour
+le panel et diagnostic du compteur I sur ses trois collections, sans fabrication.
+[Dettes et déclencheurs](RESIDUAL-DEBT.md).
+
+**Prochaine étape du parcours manuel** : SYNTHESIZE_S appelle encore Notoria
+et retourne des recommandations, sans calcul S versionné convergent. Le calcul
+historique complète les facteurs jusqu’à cinq et garde des valeurs, targets ou
+types par défaut. Le schéma exige notamment trois axes, trois facteurs et cinq
+actions de sprint ; ces exigences de forme ne prouvent pas l’origine métier.
+Factoriser la commande vers le calcul existant et le gateway, avec assistance
+Notoria facultative. Séparer faits sourcés, absence et estimation ; retirer les
+remplissages utilisés comme preuve de complétude sans abaisser le contrat strict.
+Recevoir le parcours choix → refresh sans effacement → calcul versionné → revue
+de la version actuelle, en prouvant les versions des sources et le remap UUID.
+**Déclencheur** : prochain incrément manuel Guidance avant C3/C4/C6 et preuve de
+release ; effort : un lot borné dispatch/calcul/contrat, puis recette locale
+normale et réception transverse. [Dette Guidance existante](RESIDUAL-DEBT.md).
+
 ## Synchronisation d’actions — 440 livré, réception bornée (2026-10-09 UTC)
 
 actions.sync réutilise assertCalendarWrite avant syncBrandActionsFromBlob :

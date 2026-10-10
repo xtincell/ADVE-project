@@ -20,6 +20,8 @@
  * mord qu'une fois des provenances HUMAN/SOURCE réellement tracées.
  */
 
+import { collectNormalizedInitiatives, mapInitiativeEntries, normalizeInitiative } from "@/lib/types/pillar-schemas";
+
 import {
   type FieldProvenance,
   coerceProvenance,
@@ -47,6 +49,8 @@ export interface ProvenanceGuardInput {
    * une provenance déjà tracée.
    */
   declaredFor?: (path: string) => FieldProvenance | undefined;
+  /** Stable I identity paths declared by a constrained human action decision. */
+  declaredPaths?: string[];
 }
 
 export interface ProvenanceGuardResult {
@@ -74,7 +78,7 @@ function jsonEqual(a: unknown, b: unknown): boolean {
 export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGuardResult {
   const { previousContent, newContent, existingProvenance, incomingFor } = input;
 
-  const content: Record<string, unknown> = { ...newContent };
+  const content: Record<string, unknown> = structuredClone(newContent);
   const provenance: Record<string, FieldProvenance> = {};
   // Reprendre la provenance tracée existante (normalisée).
   for (const [k, v] of Object.entries(existingProvenance ?? {})) {
@@ -165,12 +169,50 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
     }
   }
 
+  // Human I choices protect one status by stable identity, not the entire
+  // catalogue. Later generation can add/update proposals without selecting or
+  // deselecting the human's actions. Legacy top-level authority stays intact.
+  const decisionPaths = new Set([...Object.keys(provenance), ...(input.declaredPaths ?? [])]
+    .filter(path => /^initiatives\.[^.]+\.status$/.test(path)));
+  for (const path of decisionPaths) {
+    const id = path.slice("initiatives.".length, -".status".length);
+    const previous = collectNormalizedInitiatives(previousContent).find(init => init.id === id);
+    const next = collectNormalizedInitiatives(content).find(init => init.id === id);
+    const declared = input.declaredFor?.(path);
+    if (declared === "HUMAN" && next) { provenance[path] = "HUMAN"; continue; }
+    if (!previous || provenance[path] !== "HUMAN") continue;
+    const incoming = declared ?? input.incomingFor(path);
+    if (decideOverwrite(incoming, "HUMAN") === "ALLOW") { if (next) provenance[path] = incoming; continue; }
+    if (next) {
+      mapInitiativeEntries(content, raw => normalizeInitiative(raw).id === id
+        ? { ...(typeof raw === "object" && raw ? raw : { action: raw }), id, status: previous.status } : raw);
+    } else {
+      let original: unknown;
+      mapInitiativeEntries(structuredClone(previousContent), raw => { if (normalizeInitiative(raw).id === id && original === undefined) original = raw; return raw; });
+      const groups = content.catalogueParCanal;
+      if (groups !== undefined && (!groups || typeof groups !== "object" || Array.isArray(groups))) {
+        denied.push(path); warnings.push(`Provenance: choix ${id} non restaurable dans un catalogue de forme invalide.`); continue;
+      }
+      const catalogue = (groups ?? {}) as Record<string, unknown>;
+      const entries = catalogue[previous.channel];
+      if (entries !== undefined && !Array.isArray(entries)) {
+        denied.push(path); warnings.push(`Provenance: canal du choix ${id} de forme invalide.`); continue;
+      }
+      catalogue[previous.channel] = [...(entries as unknown[] ?? []), original];
+      content.catalogueParCanal = catalogue;
+    }
+    warnings.push(`Provenance: choix humain de l'initiative ${id} conservé lors de la régénération.`);
+  }
+
   // Purge des entrées de provenance devenues orphelines : sans elle, la carte
   // gardait — et `computeProvenanceBreakdown` NOMMAIT — des champs supprimés
   // depuis longtemps, dans ce qui est présenté comme « la liste de travail de
   // l'opérateur ».
   for (const key of Object.keys(provenance)) {
-    if (!(key in content)) delete provenance[key];
+    if (/^initiatives\.[^.]+\.status$/.test(key)) {
+      const id = key.slice("initiatives.".length, -".status".length);
+      if (!collectNormalizedInitiatives(content).some(init => init.id === id)) delete provenance[key];
+    } else if (!(key in content)) delete provenance[key];
   }
 
   return { content, provenance, denied, challenged, warnings };

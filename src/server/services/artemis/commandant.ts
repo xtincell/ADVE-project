@@ -60,7 +60,7 @@ export async function execute(intent: Intent, context?: { intentId: string }): P
         return wrap({ ...base, ...(await proposeBrandActionsHandler(intent)) });
 
       case "SET_BRAND_ACTION_STATUS":
-        return wrap({ ...base, ...(await setBrandActionStatusHandler(intent)) });
+        return wrap({ ...base, ...(await setBrandActionStatusHandler(intent, context)) });
 
       case "CAPTURE_INTENTION":
         return wrap({ ...base, ...(await captureIntentionHandler(intent)) });
@@ -1044,9 +1044,10 @@ async function proposeBrandActionsHandler(
 // ── B2 (audit 2026-07-22) — décision opérateur sur le rétroplanning ──
 async function setBrandActionStatusHandler(
   intent: Extract<Intent, { kind: "SET_BRAND_ACTION_STATUS" }>,
+  context?: { intentId: string },
 ): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
   const { setBrandActionStatus } = await import("./action-db/set-status");
-  const res = await setBrandActionStatus({ strategyId: intent.strategyId, op: intent.op });
+  const res = await setBrandActionStatus({ strategyId: intent.strategyId, op: intent.op, userId: intent.operatorId, intentId: context?.intentId });
   const summary =
     res.op === "AUTOSCHEDULE"
       ? `${res.updated} action(s) planifiée(s) (${res.protectedPublications ?? 0} publication(s) armée(s) préservée(s))`

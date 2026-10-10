@@ -176,3 +176,40 @@ describe("confirmation d'un champ INCHANGÉ (declaredFor)", () => {
     expect(r.provenance.identite).toBe("INFERRED");
   });
 });
+
+
+describe("initiative choice provenance follows stable identity", () => {
+  const id = "63d161c4-937d-4df4-a9d3-332f279b80cc";
+  const otherId = "a11a7e91-7993-4ddc-897e-25578d34d866";
+  const path = `initiatives.${id}.status`;
+  const chosen = { id, action: "Chosen", status: "SELECTED_FOR_ROADMAP" };
+  it("keeps the choice through reordering without mutating the supplied candidate", () => {
+    const next = { catalogueParCanal: { DIGITAL: [{ id: otherId, action: "Added", status: "RECOMMENDED" },
+      { ...chosen, action: "Updated", status: "RECOMMENDED" }] } };
+    const before = structuredClone(next);
+    const result = applyProvenanceGuard({ previousContent: { catalogueParCanal: { DIGITAL: [chosen] } }, newContent: next,
+      existingProvenance: { [path]: "HUMAN" }, incomingFor: () => "INFERRED" });
+    expect(result.content).toMatchObject({ catalogueParCanal: { DIGITAL: [{ id: otherId, status: "RECOMMENDED" },
+      { id, action: "Updated", status: "SELECTED_FOR_ROADMAP" }] } });
+    expect(next).toEqual(before); expect(result.provenance[path]).toBe("HUMAN");
+  });
+  it("preserves a chosen source removed by a generator, while admitting its new proposals", () => {
+    const result = applyProvenanceGuard({ previousContent: { catalogueParCanal: { DIGITAL: [chosen] } },
+      newContent: { catalogueParCanal: { DIGITAL: [{ id: otherId, action: "Added", status: "RECOMMENDED" }] } },
+      existingProvenance: { [path]: "HUMAN" }, incomingFor: () => "INFERRED" });
+    expect(result.content).toMatchObject({ catalogueParCanal: { DIGITAL: [{ id: otherId }, chosen] } });
+  });
+  it("retains a human withdrawal across aliases in all existing collections", () => {
+    const withdrawn = { ...chosen, status: "RECOMMENDED" };
+    const result = applyProvenanceGuard({ previousContent: { catalogueParCanal: { DIGITAL: [withdrawn] } },
+      newContent: { actionsByDevotionLevel: { PARTICIPANT: [chosen] }, actionsByOvertonPhase: [{ phase: "Phase 1", actions: [chosen] }] },
+      existingProvenance: { [path]: "HUMAN" }, incomingFor: () => "INFERRED" });
+    expect(result.content).toMatchObject({ actionsByDevotionLevel: { PARTICIPANT: [withdrawn] }, actionsByOvertonPhase: [{ actions: [withdrawn] }] });
+  });
+  it("confirms only the explicit choice and leaves the catalogue available for generation", () => {
+    const content = { catalogueParCanal: { DIGITAL: [chosen] } };
+    const result = applyProvenanceGuard({ previousContent: content, newContent: content, existingProvenance: {}, incomingFor: () => "INFERRED",
+      declaredFor: key => key === path ? "HUMAN" : undefined, declaredPaths: [path] });
+    expect(result.provenance[path]).toBe("HUMAN"); expect(result.provenance.catalogueParCanal).toBeUndefined();
+  });
+});

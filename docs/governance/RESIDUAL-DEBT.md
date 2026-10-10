@@ -270,14 +270,43 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   Aucun import, approbation ou production réelle. Réconcilier les contrats,
   budgets et sources du calcul reste la reprise Guidance ci-dessous ; le patch
   d’affichage ne remplit ni ne valide le S réel.
-  **Reste à fermer** : rtis-protocols/strategy.ts sélectionne/planifie/budgète à
-  partir de standards présentés comme décisions ; distinguer proposition,
-  estimation et choix effectif, puis brancher les choix réels. SYNTHESIZE_S
-  manuel appelle encore Notoria batch ; le faire converger avec le calcul existant
-  en gardant une assistance Notoria facultative.
-  Fermer le writeback I direct et sa synchronisation BrandAction choisies par
-  le chemin versionné, coordonner le remap UUID et prouver toutes les versions
-  source au recalcul. **440 livré, contre-exemple local propriétaire reçu** :
+  **441 candidat, checkpoint choix/projection** : SELECT du kind existant écrit
+  I via writePillar dans la transaction BrandAction, avec expectedVersion,
+  historique/staleness S/contexte intentId ; refus remontés. La matérialisation
+  protège planning/exécution/métadonnées/lignes manuelles, provenance humaine
+  limitée à `initiatives.<id>.status`. Le calcul consomme uniquement les choix
+  SELECTED_FOR_ROADMAP des trois collections, sans promotion ni LLM implicite.
+  Onze rouges→onze verts, puis régénération un rouge/douze verts→treize verts PG.
+  PG final 335/18 et dix-huit cas de choix, provenance 17/17/gateway 25/trois verts.
+  withPillarTransaction factorise le writer atomique existant sans nouvelle
+  exception ; panel actualise get/assess/readiness après succès et expose les
+  refus choix/sync en alerte métier. Bump effectué, cinq contrôles finaux exit 0,
+  gouvernance 1 624/166 reçue. Native
+  propriétaire USER/TRIAL locale reçue : retenir→
+  sync→retirer, I v2/v3/historique et cache relus, refus LOCKED visible, budget
+  source 1k XAF. ART_DIRECTOR ACTIVE d’un autre opérateur reçoit 403/FORBIDDEN
+  avec alerte métier ; I/versions/archives inchangés. Stress mock/base seulement, pages/
+  tRPC SKIPPED, aucune réception UX globale. La projection suit
+  le statut I après conservation du choix humain, sans déplacer son autorité.
+  Réception locale reçue, livraison encore attendue ; aucune clôture globale déduite.
+  **Reste à fermer** : SYNTHESIZE_S manuel appelle encore Notoria batch et rend
+  des recommandations plutôt qu’un calcul versionné. rtis-protocols/strategy.ts
+  complète les facteurs jusqu’à cinq et garde valeurs/targets/types par défaut.
+  Le schéma exige notamment 3 axes/3 facteurs/5 actions sprint. **Plan** : converger la
+  commande vers le calcul existant/gateway avec assistance Notoria facultative,
+  distinguer faits sourcés, absence et estimation, retirer les remplissages comme
+  preuve de maturité sans affaiblir le contrat strict. Recevoir choix → refresh
+  préservé → S versionné → nouvelle revue, coordonner le remap UUID et prouver
+  les versions source au recalcul. **Déclencheur** : prochain incrément du
+  parcours manuel Guidance avant C3/C4/C6 et preuve de release ; effort : un lot
+  borné dispatch/calcul/contrat puis recette manuelle transverse.
+  **Compteur catalogue, fixture locale 441** : une action affichée mais compteur
+  I/footer zéro. **Plan** : diagnostiquer le décompte avec collectNormalizedInitiatives
+  et le contrat des trois collections I, confronter contenu, projection et UI ;
+  ne fabriquer ni action ni compte pour masquer l’écart. **Déclencheur** : prochain
+  lot UX C3/C7 avant recette native ; effort : reproduction des trois formes,
+  correction du compteur existant puis lecture native comparative.
+  **440 livré, contre-exemple local propriétaire reçu** :
   actions.sync applique désormais le droit d’écriture calendrier ; la lecture
   seule reçoit 403 sans altération et le propriétaire reçoit 200, mais sa ligne
   choisie/SCHEDULED redevient selected=false/PROPOSED avec le même identifiant.
@@ -1477,8 +1506,18 @@ qui rendent correctement en l'état mais ne sont pas strictement canoniques. Auc
 - **Cartographie kind→zone à étendre** (ADR-0131) : kinds newsletter (zéro catalogué — l'envoi
   reste operatorProcedure par décision ADR-0129 §6) et la quasi-totalité des kinds campagnes (deny
   par défaut = sûr mais restrictif). **Déclencheur** : premier veto de zone injustifié constaté.
-- **Masquage préventif des gestes hors zone** sur surfaces secondaires (campagnes, demandes) via
-  `getMyAccess.writeZones` (le serveur veto déjà proprement). **Déclencheur** : prochaine passe UX cockpit.
+- **Masquage préventif des gestes hors zone** sur surfaces secondaires (campagnes, demandes)
+  et ActionDatabasePanel : en fixture locale 441, la vue lecture seule garde
+  les boutons de mutation visibles ; API protégée par le contrat reçu 440,
+  recette locale 441 ART_DIRECTOR ACTIVE d’un autre opérateur : 403/FORBIDDEN
+  avec alerte métier, I/versions/archives inchangés. Le refus reçu ne masque
+  pas encore ces boutons. **Plan** : réutiliser
+  strategy.getMyAccess/writeZones et les droits calendrier canoniques existants
+  pour un mode lecture sur ce panel, sans nouveau droit ou endpoint ; recevoir
+  propriétaire/lecture seule/révocation sans mutation hors zone. **Déclencheur** :
+  prochain lot UX C3/C7 avant recette native ; effort : un branchement d’accès
+  borné puis réception des états affichés. Les autres surfaces restent dans
+  la prochaine passe UX cockpit.
 - **Sweep light-mode page-par-page** (les 2 dashboards vérifiés ; le reste hérite des tokens).
   **Déclencheur** : à l'occasion, même pattern que la passe responsive.
 - **Pont relevés → pilier E dans l'ÉDITEUR** : afficher le dernier `FollowerSnapshot` en SUGGESTION

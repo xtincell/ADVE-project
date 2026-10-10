@@ -191,6 +191,7 @@ export const actionsRouter = createTRPCRouter({
         },
         { caller: "actions.setSelected" },
       );
+      if (result.status !== "OK") throw new TRPCError({ code: "BAD_REQUEST", message: result.reason ?? result.summary ?? "Décision refusée." });
       return { updated: (result.output as { updated?: number } | undefined)?.updated ?? 0 };
     }),
 
@@ -227,6 +228,7 @@ export const actionsRouter = createTRPCRouter({
         },
         { caller: "actions.setTiming" },
       );
+      if (result.status !== "OK") throw new TRPCError({ code: "BAD_REQUEST", message: result.reason ?? result.summary ?? "Décision refusée." });
       return { updated: (result.output as { updated?: number } | undefined)?.updated ?? 0 };
     }),
 
@@ -265,6 +267,7 @@ export const actionsRouter = createTRPCRouter({
         },
         { caller: "actions.autoSchedule" },
       );
+      if (result.status !== "OK") throw new TRPCError({ code: "BAD_REQUEST", message: result.reason ?? result.summary ?? "Planification refusée." });
       const out = result.output as { updated?: number; protectedPublications?: number } | undefined;
       return { scheduled: out?.updated ?? 0, protectedPublications: out?.protectedPublications ?? 0 };
     }),

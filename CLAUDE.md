@@ -4,6 +4,31 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-09
 
+**6.27.441 en préparation — choix I et projection** : SELECT du kind existant
+SET_BRAND_ACTION_STATUS écrit I par writePillar avec BrandAction dans la même
+transaction, expectedVersion/historique/staleness S et intentId conservés ; refus
+remonté au routeur. Provenance humaine limitée à `initiatives.<id>.status`, autres
+propositions modifiables. La matérialisation protège planning/exécution/métadonnées
+et lignes manuelles. Le calcul lit uniquement les statuts SELECTED_FOR_ROADMAP
+des trois collections I, sans promotion ni LLM implicite. Onze rouges puis onze
+verts ; régénération un rouge/douze verts puis treize verts. PG final 335/18,
+dix-huit cas de choix, provenance 17/17/gateway 25/trois verts. Transaction
+partagée withPillarTransaction sans nouvelle allowlist ; cinq contrôles finaux
+verts, gouvernance 1 624/166 reçue ; 24 avertissements
+connus. ActionDatabasePanel invalide get/assess/readiness
+après succès, bloque le choix en cours et rend refus choix/sync en alerte métier.
+Stress mock/base seulement, pages/tRPC SKIPPED ; bump/CODE-MAP reçus.
+Native locale USER/TRIAL retenir→sync→retirer et refus LOCKED reçus, cache
+réellement relu ; budget source 1k XAF visible. ART_DIRECTOR ACTIVE d’un autre
+opérateur reçoit 403/FORBIDDEN avec alerte métier, I/versions/archives inchangés.
+Boutons hors zone/compteur catalogue en dette UX. CI/image/runtime
+441 attendus, runtime reçu 440 ; pas SLO/cycle réel. Le statut I reste l’autorité du choix.
+SYNTHESIZE_S reste Notoria/recommandations ; schéma notamment 3 axes/3 facteurs/
+5 actions sprint, compositeur complétant les facteurs jusqu’à 5 et autres défauts
+valeurs/targets/types à factoriser vers faits/absence au prochain parcours manuel.
+Aucune nouvelle entité/Intent/ADR, sept chantiers/dix gates ouverts.
+[Plan et limites](docs/governance/REFONTE-PLAN.md).
+
 **6.27.440 livré — garde d’accès à actions.sync** : assertCalendarWrite appliqué
 avant la projection, mêmes autorités ; refus lecture seule/autre opérateur/
 délégation révoquée. NOT_FOUND sur cible absente pour USER, contrôle ADMIN

@@ -9,6 +9,32 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Choix explicite → source I versionnée → projection → calcul — 441 en préparation (2026-10-10)
+
+SET_BRAND_ACTION_STATUS/SELECT conserve son contexte d’intention et écrit I
+via writePillar avec BrandAction dans la même transaction ; expectedVersion,
+historique et staleness S, refus rendus. La provenance humaine ne protège que
+`initiatives.<id>.status`, laissant les autres propositions évoluer. La
+matérialisation suit le statut I dont le gateway conserve le choix humain et
+protège planning/exécution/métadonnées/lignes manuelles ; I reste l’autorité.
+withPillarTransaction partage le writer atomique existant sans nouvelle exception.
+Succès du choix → panel invalide get/assess/readiness sur la stratégie courante ;
+mutation en cours bloque le bouton, refus choix/sync visibles en alerte métier.
+Le calcul S lit SELECTED_FOR_ROADMAP dans les trois collections I ; aucun
+choix automatique ni LLM implicite. Cela ne raccorde pas encore SYNTHESIZE_S,
+qui appelle Notoria et retourne des recommandations. Schéma notamment 3 axes/
+3 facteurs/5 actions sprint, compositeur complétant les facteurs jusqu’à 5 et
+défauts valeurs/targets/types à factoriser vers faits/absence au prochain
+incrément manuel, avant preuve de maturité. Checkpoints PG onze puis treize,
+final 335/18 verts (dix-huit choix)/provenance 17/17/gateway 25/trois ;
+bump et cinq contrôles finaux reçus, gouvernance 1 624/166 verte.
+Native propriétaire locale retenir→sync→retirer et cache relu,
+refus LOCKED/alerte reçus ; ART_DIRECTOR ACTIVE d’un autre opérateur refuse
+403/FORBIDDEN avec alerte métier, I/versions/archives inchangés. Stress mock/base
+seulement, pages/tRPC SKIPPED, aucune réception UX/SLO ;
+livraison attendue, boutons hors zone/compteur catalogue en dette UX ; runtime reçu 440, sept chantiers
+ouverts. [Plan et bornes](REFONTE-PLAN.md).
+
 ### Présence des champs → état actuel → affichage — 439 livré (2026-10-09)
 
 assess mesure la présence ; pillar.readiness rend l’état et les gates de

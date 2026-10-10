@@ -1,5 +1,44 @@
 # Changelog — La Fusee
 
+## v6.27.441 — fix(guidance): versionner les choix d’actions et calculer le plan retenu (2026-10-10)
+
+**441 en préparation : le choix rejoint I et le calcul respecte ce choix ; réception locale reçue, livraison attendue.**
+
+- SET_BRAND_ACTION_STATUS/SELECT écrit I via writePillar dans la transaction
+  BrandAction : expectedVersion, historique et staleness S, contexte d’intention
+  conservé, refus remonté au routeur. Provenance humaine limitée à
+  `initiatives.<id>.status` ; une régénération peut ajouter/modifier les autres
+  propositions sans effacer ce choix.
+- La matérialisation protège planning, exécution, métadonnées et lignes manuelles.
+  executeProtocoleStrategy lit seulement SELECTED_FOR_ROADMAP dans les trois
+  collections I, sans promouvoir une proposition ni appeler implicitement un LLM.
+  La projection suit le statut I après conservation du choix humain par le gateway.
+  Aucun Neter, Intent, service, modèle, route ou ADR ajouté.
+- ActionDatabasePanel relit get/assess/readiness de la stratégie après un choix
+  réussi, bloque le bouton pendant la mutation et affiche les refus choix/sync
+  en alerte métier sans détails internes. Native locale USER/TRIAL reçue :
+  retenir→sync→retirer, historique I et cache réellement relus, refus LOCKED
+  visible ; ART_DIRECTOR ACTIVE d’un autre opérateur reçoit 403/FORBIDDEN et
+  une alerte métier, sans altération de I, des versions ou des archives.
+- Onze contre-exemples PostgreSQL rouges puis onze verts ; régénération du
+  catalogue un rouge/douze verts puis treize verts. Budget source 1 000 repris
+  par projection héritée vide après un rouge, sans estimation fabriquée.
+  Suite PG finale 335/18 verts, dix-huit cas de choix inclus ; provenance 17/17 et gateway 25/trois fichiers
+  verts. Premier gauntlet deux refus de gardes, factorisation du chemin atomique
+  existant sans nouvelle exception ; cinq contrôles finaux exit 0,
+  gouvernance 1 624/166 verts.
+  Bump/CODE-MAP reçus, 24 avertissements connus.
+  Stress exit 0 limité aux forges mock/base, pages/tRPC SKIPPED au port 3000.
+  Natif local borné, pas SLO/cycle réel ; CI/image/runtime 441 attendus, runtime
+  reçu 440. Boutons hors zone et compteur catalogue restent dans la dette UX.
+- SYNTHESIZE_S manuel appelle encore Notoria et retourne des recommandations.
+  Schéma : notamment trois axes, trois facteurs et cinq actions de sprint ;
+  compositeur historique complétant les facteurs jusqu’à cinq, valeurs/targets/
+  types par défaut :
+  prochaines étapes calcul versionné et distinction faits/absence/estimations,
+  avant preuve de release. Sept chantiers/dix gates restent ouverts.
+  [Plan, checkpoints et déclencheur](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.440 — fix(actions): vérifier le droit d’écriture avant synchronisation (2026-10-09)
 
 **440 livré : droit d’écriture contrôlé avant synchronisation ; les choix du propriétaire restent à préserver.**

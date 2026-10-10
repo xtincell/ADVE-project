@@ -1745,6 +1745,23 @@ export function normalizeInitiative(
   };
 }
 
+/** Visit all three existing I collections without fuzzy matching or reordering. */
+export function mapInitiativeEntries(content: Record<string, unknown>, map: (raw: unknown, rootKey: string) => unknown): void {
+  for (const key of ["catalogueParCanal", "actionsByDevotionLevel"]) {
+    const groups = content[key];
+    if (groups && typeof groups === "object" && !Array.isArray(groups)) {
+      for (const [group, entries] of Object.entries(groups)) if (Array.isArray(entries)) {
+        (groups as Record<string, unknown>)[group] = entries.map(raw => map(raw, key));
+      }
+    }
+  }
+  if (Array.isArray(content.actionsByOvertonPhase)) for (const phase of content.actionsByOvertonPhase) {
+    if (phase && typeof phase === "object" && Array.isArray(phase.actions)) {
+      phase.actions = phase.actions.map((raw: unknown) => map(raw, "actionsByOvertonPhase"));
+    }
+  }
+}
+
 /** Aplati + normalise toutes les initiatives de I (dédupliquées par id). */
 export function collectNormalizedInitiatives(iContent: unknown): NormalizedInitiative[] {
   if (!iContent || typeof iContent !== "object") return [];

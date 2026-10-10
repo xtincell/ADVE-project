@@ -508,6 +508,7 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
           // Déclaration EXPLICITE (≠ défaut déduit de l'auteur) — seule voie
           // par laquelle une confirmation d'un champ inchangé pose sa provenance.
           declaredFor: (path) => explicit?.[path],
+          declaredPaths: Object.keys(explicit ?? {}),
         });
         // Le garde rend le contenu ARBITRÉ — c'est lui qui fait foi, pas le
         // candidat.
@@ -711,28 +712,38 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
   }
 }
 
+/** Shared transaction for versioned pillar writes and their existing projections. */
+export async function withPillarTransaction<T>(strategyId: string, perform: (
+  tx: Prisma.TransactionClient, write: (request: PillarWriteRequest) => Promise<PillarWriteResult>,
+) => Promise<T>): Promise<T> {
+  const written: Array<{ request: PillarWriteRequest; result: PillarWriteResult }> = [];
+  const output = await db.$transaction(async tx => perform(tx, async request => {
+    if (request.strategyId !== strategyId) throw new Error("PILLAR_BATCH_STRATEGY_MISMATCH");
+    const result = await writePillar(request, tx);
+    if (!result.success) throw new Error(result.error ?? "Écriture de pilier refusée.");
+    written.push({ request, result });
+    return result;
+  }), { timeout: 30_000, maxWait: 15_000 });
+  if (written.some(({ result }) => !result.noOp)) {
+    await invalidateOracleAfterCommit(strategyId);
+    await postWriteScore(strategyId);
+  }
+  for (const { request, result } of written) if (!result.noOp) await reconcileAndPublishPillar(request);
+  return output;
+}
+
 /** One typed recommendation can touch several pillars: all persist or none do. */
 export async function writePillarsAtomically(requests: PillarWriteRequest[]): Promise<PillarWriteResult[]> {
   if (!requests.length) return [];
   const strategyId = requests[0]!.strategyId;
-  if (requests.some((r) => r.strategyId !== strategyId)) throw new Error("PILLAR_BATCH_STRATEGY_MISMATCH");
-  const results = await db.$transaction(async (tx) => {
-    await assertCurrentSourceReceipts(tx, strategyId, requests.flatMap((r) => r.options?.sourceReceipts ?? []),
-      requests.flatMap((r) => r.options?.requiredSourceIds ?? []), "UPDATE");
-    const written: PillarWriteResult[] = [];
-    for (const request of requests) {
-      const result = await writePillar(request, tx);
-      if (!result.success) throw new Error(result.error ?? "Écriture de pilier refusée.");
-      written.push(result);
-    }
-    return written;
-  }, { timeout: 30_000, maxWait: 15_000 });
-  if (results.some(result => !result.noOp)) {
-    await invalidateOracleAfterCommit(strategyId);
-    await postWriteScore(strategyId);
-  }
-  for (const [index, request] of requests.entries()) if (!results[index]!.noOp) await reconcileAndPublishPillar(request);
-  return results;
+  if (requests.some(r => r.strategyId !== strategyId)) throw new Error("PILLAR_BATCH_STRATEGY_MISMATCH");
+  return withPillarTransaction(strategyId, async (tx, write) => {
+    await assertCurrentSourceReceipts(tx, strategyId, requests.flatMap(r => r.options?.sourceReceipts ?? []),
+      requests.flatMap(r => r.options?.requiredSourceIds ?? []), "UPDATE");
+    const results: PillarWriteResult[] = [];
+    for (const request of requests) results.push(await write(request));
+    return results;
+  });
 }
 
 /**

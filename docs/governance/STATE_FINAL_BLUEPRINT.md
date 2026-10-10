@@ -223,7 +223,32 @@ l’upgrade de verrou. La recherche d’âge normalise S→s. Dans propagateFrom
 les modes autoRecalculate true/false sont reçus localement : Process seulement si auto,
 aucun appel réseau dans la fixture. Cela ne reçoit pas tous les modes/agents.
 
-Ce contrat d’écriture ne certifie pas le choix des actions ou leurs budgets.
+**441 en préparation — décision d’action et projection** : SELECT du kind
+SET_BRAND_ACTION_STATUS conserve le contexte intentId et versionne I par
+writePillar dans la transaction BrandAction, expectedVersion/historique/staleness
+S compris ; refus remontés. Provenance humaine limitée au statut de l’initiative
+identifiée, autres propositions modifiables. Le statut I garde l’autorité du choix
+après conservation humaine par le gateway ; sa matérialisation protège planning,
+exécution, métadonnées et lignes manuelles ; calcul seulement depuis les statuts
+SELECTED_FOR_ROADMAP des trois collections, sans promotion ni LLM implicite.
+Onze rouges puis onze verts, régénération un rouge/douze verts puis treize verts ;
+final PG 335/18 (dix-huit choix)/provenance 17/17/gateway 25/trois verts.
+withPillarTransaction partage le chemin atomique existant sans nouvelle exception.
+Panel invalide get/assess/readiness après succès, choix en cours désactivé,
+refus choix/sync en alerte métier ; native propriétaire locale retenir→sync→
+retirer, cache/historique relus et refus LOCKED reçus. Bump et cinq contrôles
+finaux reçus, gouvernance 1 624/166 verte. ART_DIRECTOR
+ACTIVE d’un autre opérateur reçoit 403/FORBIDDEN avec alerte métier,
+I/versions/archives inchangés ; boutons hors zone et compteur catalogue en dette UX.
+Stress mock/base seulement, pages/tRPC SKIPPED.
+Livraison attendue, runtime reçu 440. Ce checkpoint ne
+prouve ni tous les budgets ni le cycle manuel. SYNTHESIZE_S reste Notoria/recos,
+schéma notamment 3 axes/3 facteurs/5 actions sprint et compositeur complétant
+les facteurs jusqu’à 5, valeurs/targets/types par défaut à factoriser vers faits/absence
+au prochain incrément manuel avant preuve de maturité, sans nouvelle entité/Intent.
+[Plan et limites actuels](REFONTE-PLAN.md).
+
+Le contrat d’écriture 437 ne certifie pas le choix des actions ou leurs budgets.
 Le dispatch manuel SYNTHESIZE_S appelle encore Notoria ; sa convergence avec
 le calcul, la synchronisation I/BrandAction, les identifiants et versions source,
 et le désaccord maturité par présence/schéma strict restent à recevoir dans

@@ -9,50 +9,32 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-  updateMany: vi.fn(),
-  findMany: vi.fn(),
-  update: vi.fn(),
-}));
-
-vi.mock("@/lib/db", () => ({
-  db: {
-    brandAction: {
-      updateMany: mocks.updateMany,
-      findMany: mocks.findMany,
-      update: mocks.update,
-    },
-  },
-}));
-
+const mocks = vi.hoisted(() => ({ findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn(),
+  pillarFind: vi.fn(), write: vi.fn(), finish: vi.fn(), lock: vi.fn() }));
+vi.mock("@/server/services/pillar-gateway", () => {
+  const tx = { $queryRaw: mocks.lock, brandAction: { findFirst: mocks.findFirst, findMany: mocks.findMany, update: mocks.update },
+    pillar: { findUnique: mocks.pillarFind } };
+  return { withPillarTransaction: async (_strategyId: string, run: (tx: unknown, write: unknown) => Promise<unknown>) => run(tx, mocks.write) };
+});
 import { setBrandActionStatus } from "@/server/services/artemis/action-db/set-status";
+beforeEach(() => { vi.resetAllMocks(); mocks.update.mockResolvedValue({}); });
 
-beforeEach(() => vi.clearAllMocks());
-
-describe("setBrandActionStatus — SELECT/TIMING scopés strategyId", () => {
-  it("SELECT écrit selected + status ACCEPTED, scopé strategyId", async () => {
-    mocks.updateMany.mockResolvedValue({ count: 1 });
-    const r = await setBrandActionStatus({
-      strategyId: "s1",
-      op: { type: "SELECT", actionId: "a1", selected: true },
-    });
-    expect(r).toEqual({ op: "SELECT", updated: 1 });
-    expect(mocks.updateMany).toHaveBeenCalledWith({
-      where: { id: "a1", strategyId: "s1" },
-      data: { selected: true, status: "ACCEPTED" },
-    });
+describe("setBrandActionStatus — refusal boundaries", () => {
+  it("refuses an action outside the requested brand instead of reporting zero successful changes", async () => {
+    mocks.findFirst.mockResolvedValue(null);
+    await expect(setBrandActionStatus({ strategyId: "s1", op: { type: "SELECT", actionId: "foreign", selected: true } })).rejects.toThrow(/ACTION_NOT_FOUND/);
+    expect(mocks.findFirst).toHaveBeenCalledWith({ where: { id: "foreign", strategyId: "s1" } });
+    expect(mocks.update).not.toHaveBeenCalled();
   });
-
-  it("TIMING null → désarme (status ACCEPTED)", async () => {
-    mocks.updateMany.mockResolvedValue({ count: 1 });
-    const r = await setBrandActionStatus({
-      strategyId: "s1",
-      op: { type: "TIMING", actionId: "a1", timingStart: null },
-    });
-    expect(r.updated).toBe(1);
-    const arg = mocks.updateMany.mock.calls[0]![0] as { data: { timingStart: unknown; status: string } };
-    expect(arg.data.timingStart).toBeNull();
-    expect(arg.data.status).toBe("ACCEPTED");
+  it.each(["EXECUTED", "CANCELLED"])("does not rearm a %s task", async status => {
+    mocks.findFirst.mockResolvedValue({ id: "a1", status, selected: true });
+    await expect(setBrandActionStatus({ strategyId: "s1", op: { type: "TIMING", actionId: "a1", timingStart: "2026-12-01T00:00:00Z" } })).rejects.toThrow(/ACTION_TERMINAL/);
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+  it("clearing the deadline of an unchosen proposal leaves it unarmed", async () => {
+    mocks.findFirst.mockResolvedValue({ id: "a1", status: "PROPOSED", selected: false });
+    await setBrandActionStatus({ strategyId: "s1", op: { type: "TIMING", actionId: "a1", timingStart: null } });
+    expect(mocks.update).toHaveBeenCalledWith({ where: { id: "a1" }, data: { timingStart: null, status: "PROPOSED" } });
   });
 });
 
