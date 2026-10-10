@@ -8,6 +8,19 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
+**443 local en réception — aucun service ajouté** : le hook frontend
+useBrandWriteAccess du module existant use-can-operate consomme getMyAccess,
+sans déplacer les autorités serveur. PillarPage/ActionDatabasePanel utilisent
+ses droits distincts ; recalcul propriétaire manuel et proposition MANUAL par
+défaut/IA facultative. Compteur source via collectNormalizedInitiatives sur trois
+collections, distinct de la projection synchronisée ; retour de recalcul
+sauvegardé/à relire ou refus métier. Ciblé 34/quatre verts après garde ambition LOCKED (un rouge/quinze verts).
+Unité finale 4 237/404 verte ; native USER/TRIAL fictive et lecture seule/
+LOCKED reçues, propriétaire non opérateur manuel/Sync absent, catalogue trois/
+projection une puis trois ; plan vide sauvegardé sans budget inventé. Fixture
+nettoyée, cinq contrôles finaux à zéro/gouvernance 1 624/166 reçus, runtime reçu 442 ; normalisation budget/horizon et autres
+chemins S ouverts. [Bornes et reprise](REFONTE-PLAN.md).
+
 **442 livré — mêmes services, calcul S commun** : SYNTHESIZE_S
 dans artemis/commandant et mestor/rtis-cascade.actualizePillar(S) délèguent à recalculateSynthesis,
 executeProtocoleStrategy avec transaction et writer du pillar-gateway existants.

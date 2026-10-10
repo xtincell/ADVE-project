@@ -13,7 +13,7 @@
  * par la table requêtable). Ce renderer couvre les champs I complémentaires.
  */
 
-import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
+import { PILLAR_SCHEMAS, collectNormalizedInitiatives } from "@/lib/types/pillar-schemas";
 import {
   Section, ACard, EmptyBody, ObjCard, ProofList,
   isEmpty, asArr, str, makeStatusFor, type Rec,
@@ -75,7 +75,12 @@ export function PillarIFields({ content, certainty }: { content: Rec; certainty:
   const schemaKeys = Object.keys((PILLAR_SCHEMAS.I as { shape?: Record<string, unknown> }).shape ?? {});
   const total = schemaKeys.length;
   const filled = schemaKeys.filter((k) => !isEmpty(v[k])).length;
-  const nbActions = typeof v.totalActions === "number" ? v.totalActions : 0;
+  const hasCatalogue = ["catalogueParCanal", "actionsByDevotionLevel", "actionsByOvertonPhase"]
+    .some(key => key === "actionsByOvertonPhase" ? Array.isArray(v[key])
+      : v[key] !== null && typeof v[key] === "object" && !Array.isArray(v[key]));
+  const nbActions = hasCatalogue ? collectNormalizedInitiatives(v).length : null;
+  const catalogueCount = nbActions === null ? "Nombre d’actions à vérifier"
+    : `${nbActions} action${nbActions === 1 ? "" : "s"} au catalogue`;
 
   return (
     <>
@@ -94,7 +99,7 @@ export function PillarIFields({ content, certainty }: { content: Rec; certainty:
         <div className="ck-a-grid"><Innovations items={v.innovationsProduit} status={st("innovationsProduit")} /></div>
       </Section>
 
-      <Section title="Tests & mitigation" sub={`Actions de test d'hypothèses et de mitigation des risques — le catalogue d'actions complet (${nbActions}) est dans la Base d'actions ci-dessus`}>
+      <Section title="Tests & mitigation" sub={`Actions de test d'hypothèses et de mitigation des risques — ${catalogueCount}. La Base d’actions ci-dessus affiche les actions synchronisées.`}>
         <div className="ck-a-grid">
           <ProofList title="Actions de mitigation des risques" items={v.riskMitigationActions} status={st("riskMitigationActions")}
             cols={[["action", "Action"], ["riskRef", "Risque"], ["canal", "Canal"], ["expectedImpact", "Impact attendu"]]} />
@@ -121,7 +126,7 @@ export function PillarIFields({ content, certainty }: { content: Rec; certainty:
           <ObjCard title="Media plan potentiel" value={v.mediaPlan} status={st("mediaPlan")}
             fields={[["totalBudget", "Budget total"], ["channels", "Canaux"]]} />
         </div>
-        <p className="ck-a-foot">{filled} / {total} champs canoniques renseignés · {nbActions} actions au catalogue · pilier I (généré)</p>
+        <p className="ck-a-foot">{filled} / {total} champs canoniques renseignés · {catalogueCount} · pilier I (généré)</p>
       </Section>
     </>
   );

@@ -223,6 +223,21 @@ l’upgrade de verrou. La recherche d’âge normalise S→s. Dans propagateFrom
 les modes autoRecalculate true/false sont reçus localement : Process seulement si auto,
 aucun appel réseau dans la fixture. Cela ne reçoit pas tous les modes/agents.
 
+**443 local en réception — autorités et lecture du catalogue** : le hook
+useBrandWriteAccess lit strategy.getMyAccess dans le module frontend existant.
+Stratégie/calendrier/sync opérateur distincts, gestes fermés si accès absent/
+en cours/en erreur ; propriétaire garde le recalcul manuel. Panel permissions
+explicites false par défaut, proposition MANUAL/IA facultative. Catalogue I
+compté via trois collections normalisées et identités dédupliquées, absence
+inconnue distincte de zéro explicite ; projection synchronisée séparée. Retour
+S sauvegardé/proposition à relire ou refus métier, sans modifier writer/choix/
+gates. 34 ciblés/quatre verts après garde ambition LOCKED (un rouge/quinze
+verts), unité finale 4 237/404 verte. Native synthétique lecture seule/LOCKED
+reçue, propriétaire non opérateur manuel/Sync absent ; plan vide sauvegardé
+sans budget inventé, fixture nettoyée. Cinq contrôles finaux à zéro/gouvernance 1 624/166 reçus, runtime reçu 442. Aucune nouvelle entité/route/service/Intent/ADR ; budgets,
+horizons, projections/autres chemins S et sept chantiers/dix gates ouverts.
+[Réception et reprise](REFONTE-PLAN.md).
+
 **442 livré — deux entrées S, contrat inchangé, réception bornée** : SYNTHESIZE_S
 et actualizePillar(S) partagent calcul transactionnel/gateway ; huit versions
 A/D/V/E/R/T/I/S et absences null contrôlées avant upsert. REPLACE_FULL archive/

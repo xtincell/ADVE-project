@@ -55,11 +55,13 @@ function fcfa(n: number | null | undefined): string {
 
 interface Props {
   strategyId: string;
-  /** Operator-only projection refresh is available; founders rely on auto-sync. */
+  /** Current brand calendar permission, independently of operator membership. */
+  canWrite?: boolean;
+  /** The server also requires operator membership for projection refresh. */
   canSync?: boolean;
 }
 
-export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
+export function ActionDatabasePanel({ strategyId, canWrite = false, canSync = false }: Props) {
   const [touchpointFilter, setTouchpointFilter] = useState<string | null>(null);
   const utils = trpc.useUtils();
 
@@ -85,7 +87,7 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
   });
 
   const [showPropose, setShowPropose] = useState(false);
-  const [proposeMode, setProposeMode] = useState<"LLM" | "MANUAL">("LLM");
+  const [proposeMode, setProposeMode] = useState<"LLM" | "MANUAL">("MANUAL");
   const [channel, setChannel] = useState("DIGITAL");
   const [count, setCount] = useState(5);
   const [intention, setIntention] = useState("");
@@ -111,14 +113,14 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
           ) : null}
         </div>
         <div className="flex items-center gap-1.5">
-          <button
+          {canWrite ? <button
             type="button"
             onClick={() => setShowPropose((v) => !v)}
             className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-2xs font-medium transition-colors ${showPropose ? "bg-accent/20 text-accent" : "bg-white/5 text-foreground-secondary hover:bg-white/10 hover:text-foreground"}`}
           >
             <Plus className="h-3 w-3" /> Proposer
-          </button>
-          {canSync ? (
+          </button> : null}
+          {canSync && canWrite ? (
             <button
               type="button"
               onClick={() => syncMutation.mutate({ strategyId })}
@@ -142,7 +144,7 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
       ) : null}
 
       {/* Propose actions (Phase 24) — generate-more (IA, brand-aware) or manual */}
-      {showPropose ? (
+      {showPropose && canWrite ? (
         <div className="mb-3 rounded-lg border border-accent/20 bg-accent/[0.04] p-3">
           <div className="mb-2 flex gap-1.5">
             <button type="button" onClick={() => setProposeMode("LLM")} className={`rounded-full px-2.5 py-0.5 text-2xs font-medium transition-colors ${proposeMode === "LLM" ? "bg-accent/20 text-accent" : "bg-white/5 text-foreground-muted hover:bg-white/10"}`}>Générer (IA)</button>
@@ -258,8 +260,8 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
                     <button
                       type="button"
                       onClick={() => selectMutation.mutate({ strategyId, actionId: a.id, selected: !a.selected })}
-                      disabled={selectMutation.isPending}
-                      title={a.selected ? "Retirer de la roadmap" : "Retenir pour la roadmap"}
+                      disabled={!canWrite || selectMutation.isPending}
+                      title={!canWrite ? "Lecture seule sur ces actions" : a.selected ? "Retirer de la roadmap" : "Retenir pour la roadmap"}
                       className="flex-shrink-0"
                     >
                       <Star className={`h-3 w-3 ${a.selected ? "fill-accent text-accent" : "text-foreground-muted hover:text-accent"}`} />

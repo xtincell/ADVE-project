@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { AmendPillarModal } from "@/components/pillars/amend-pillar-modal";
-import { useCanOperate } from "@/components/cockpit/use-can-operate";
+import { useBrandWriteAccess } from "@/components/cockpit/use-can-operate";
 import { RecalculateRtisButton } from "@/components/pillars/recalculate-rtis-button";
 import { ActionDatabasePanel } from "@/components/cockpit/action-database-panel";
 import { BESPOKE_PILLAR_RENDERERS } from "@/components/cockpit/pillars";
@@ -189,7 +189,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   // Founders are not operators: OPERATOR_AMEND_PILLAR is operator-only. Route
   // founders to their working editor (/cockpit/brand/edit) instead of the
   // operator amend modal that would fail on open with FORBIDDEN.
-  const canOperate = useCanOperate();
+  const { canWriteStrategy, canWriteCalendar, canOperateOnBrand: canOperate, canSyncActions } = useBrandWriteAccess(strategyId);
   const [amendOpen, setAmendOpen] = useState(false);
   const [amendField, setAmendField] = useState<string | null>(null);
   const adveKey = config.pillarKey.toUpperCase() as "A" | "D" | "V" | "E";
@@ -563,7 +563,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           <div className="flex items-center gap-2">
             {/* ADR-0023 — manual amend (ADVE only). Operator-only Intent → for
                 founders, link to the founder editor instead of the amend modal. */}
-            {isAdve && strategyId ? (
+            {isAdve && strategyId && canWriteStrategy ? (
               canOperate ? (
                 <button
                   type="button"
@@ -590,6 +590,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               <RecalculateRtisButton
                 strategyId={strategyId}
                 pillarKey={config.pillarKey.toUpperCase() as "R" | "T" | "I" | "S"}
+                canRecalculate={canWriteStrategy && pillar?.validationStatus !== "LOCKED"}
                 onComplete={() => { void refreshPillarState(); }}
               />
             ) : null}
@@ -796,7 +797,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                     </div>
                     <button
                       type="button"
-                      disabled={isSelected || selectRouteMutation.isPending}
+                      disabled={!canWriteStrategy || pillar?.validationStatus === "LOCKED" || isSelected || selectRouteMutation.isPending}
                       onClick={() => selectRouteMutation.mutate({ strategyId, routeKey: key as "CONSERVATIVE" | "TARGET" | "AMBITIOUS" })}
                       className={`mt-2 w-full rounded-md px-2.5 py-1.5 text-2xs font-medium transition-colors ${
                         isSelected
@@ -1295,7 +1296,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             Remplace les collections d'actions hétérogènes du blob par une
             seule table requêtable (projection BrandAction). ─ */}
       {config.pillarKey === "i" && strategyId ? (
-        <ActionDatabasePanel strategyId={strategyId} />
+        <ActionDatabasePanel strategyId={strategyId} canWrite={canWriteCalendar} canSync={canSyncActions} />
       ) : null}
 
       {/* ── Field body — bespoke renderer (design handoff) ou grille générique ── */}

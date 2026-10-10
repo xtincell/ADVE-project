@@ -1,5 +1,45 @@
 # Changelog — La Fusee
 
+## v6.27.443 — fix(cockpit): relier les gestes aux droits de marque et clarifier le plan (2026-10-10)
+
+**443 local en réception : droits, compteur source et retour de recalcul alignés ; runtime reçu 442.**
+
+- Le hook useBrandWriteAccess du module existant lit strategy.getMyAccess et
+  distingue écriture stratégique, calendrier et synchronisation opérateur.
+  PillarPage ferme les gestes en lecture seule, pendant une lecture d’accès
+  absente/en cours/en erreur ; le propriétaire conserve le recalcul manuel.
+  Une permission opérateur sur une autre marque ne déborde pas ce périmètre.
+- ActionDatabasePanel requiert des permissions explicites, false par défaut ;
+  proposition MANUAL par défaut, assistance IA facultative. Le compteur source I
+  lit les trois collections par collectNormalizedInitiatives, déduplique les
+  identités et distingue catalogue absent et catalogue explicitement vide.
+  La Base d’actions synchronisées reste une projection distincte.
+- Le recalcul confirme « Plan recalculé et sauvegardé — proposition à relire »
+  et rend ses refus en termes métier, sans stage brut ; une réponse non mise à
+  jour ne devient pas un succès. Choix, writers et gates serveur inchangés,
+  aucune nouvelle route, permission, entité, service, Intent ou ADR.
+- Treize rouges/huit verts sur 442, huit retours rouges, puis 29/trois et
+  33/quatre verts. Checkpoint unité 4 236/404/premier gauntlet cinq sorties 0,
+  gouvernance 1 624/166, 24 warnings connus. Native LOCKED a révélé une ambition
+  encore active : un rouge/quinze verts, garde corrigée puis 34/quatre verts.
+  Unité finale après cette garde : 4 237/404 verts ; cinq contrôles finaux reçus à zéro,
+  gouvernance 1 624/166 et lint 24 avertissements existants/aucune erreur.
+- Native USER/TRIAL synthétique reçue : catalogue trois/projection initiale une,
+  MANUAL sans soumission IA, choix/sync/recalcul 200 et retour sauvegardé/à relire.
+  Propriétaire non opérateur : choix/recalcul disponibles, Sync absent, retrait
+  du dernier choix puis plan vide sauvegardé sans budget fabriqué. Autre marque
+  ART_DIRECTOR writeZones [] : catalogue chargé/choix désactivé, Proposer/Sync
+  absents, Identité sans Modifier ; recalcul et deux ambitions désactivés.
+  LOCKED final relu : recalcul et ambitions désactivés, aucun geste forcé.
+  I v3/deux archives, S v4/trois archives, zéro tâche/coût génératif, six Intents
+  dont premier refus de fixture invalide conservé. Mobile sans débordement
+  observé ; nettoyage remaining=0, onglet fermé/serveur arrêté volontairement.
+  Compilation froide/timeouts/première fenêtre tronquée conservés, aucun zéro
+  réseau global ni SLO. Calendrier délégué testé, pas de troisième rôle natif.
+  CI/image/runtime 443 non reçus, runtime reçu 442. Budgets/horizons, projections,
+  autres chemins S et sept chantiers/dix gates restent ouverts.
+  [Réception et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.442 — fix(guidance): converger la synthèse manuelle et le calcul S versionné (2026-10-10)
 
 **442 livré : deux entrées calculent et versionnent le même draft ; mutations locales reçues, production ADMIN lue sans recalcul réel.**

@@ -30,6 +30,26 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-10 · **443 local en réception, causes UI bornées** : droits globaux
+opérateur confondus avec l’autorité sur une marque, boutons de mutation visibles
+en lecture seule ; useBrandWriteAccess lit getMyAccess et sépare stratégie/
+calendrier/sync, fermeture en absence/chargement/erreur, propriétaire conserve
+recalcul manuel. Panel permissions false par défaut, proposition MANUAL/IA
+facultative. Compteur I confondait formes du catalogue et projection : même
+collectNormalizedInitiatives sur trois collections/déduplication, absence
+inconnue distincte de zéro. Retour S exposait stage brut ; sauvegarde/proposition
+à relire et refus métier, updated non vrai refusé. Treize rouges/huit verts,
+huit retours rouges, puis 29/trois et 33/quatre verts ; premier checkpoint
+unité/gauntlet reçu. Ambition LOCKED découverte active nativement : un rouge/
+quinze verts puis 34/quatre verts et relecture native reçue. Catalogue source/
+projection distingué, MANUAL sans IA, propriétaire non opérateur garde choix/
+recalcul/Sync absent ; plan vide sauvegardé sans budget fabriqué. Lecture seule
+reçue, fixture nettoyée ; unité finale 4 237/404 verte, cinq contrôles finaux à zéro/
+gouvernance 1 624/166 reçus, runtime reçu 442,
+compilation/timeout conservés. Autorités serveur inchangées ; aucune clôture
+globale des accès, budgets, projections ou autres chemins S.
+[Preuves et bornes](REFONTE-PLAN.md) · [dette en place](RESIDUAL-DEBT.md).
+
 2026-10-10 · **442 livré, deux chemins S convergent** : SYNTHESIZE_S
 retournait des recommandations Notoria, la cascade S complétait par LLM et la
 sauvegarde ne gardait pas les versions source du calcul. Deux entrées partagent

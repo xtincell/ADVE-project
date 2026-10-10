@@ -9,6 +9,22 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Accès de marque → gestes autorisés → retour à relire — 443 local en réception (2026-10-10)
+
+getMyAccess alimente useBrandWriteAccess : stratégie/calendrier/opérateur
+séparés, accès absent/en cours/en erreur fermé. PillarPage et le panel utilisent
+ces permissions explicites ; manuel propriétaire conservé, proposition MANUAL
+par défaut/IA facultative, aucune autorité serveur déplacée. Catalogue I : même
+normalisation des trois collections, identités dédupliquées/absence distincte
+du vide ; projection synchronisée identifiée séparément. Recalcul réussi →
+plan sauvegardé/proposition à relire → relecture get/assess/readiness existante ;
+refus rendu en termes métier, sans approbation implicite. Ciblé 34/quatre verts après garde ambition LOCKED (un rouge/quinze verts),
+unité finale 4 237/404 verte. Native synthétique lecture seule/LOCKED reçue,
+propriétaire non opérateur manuel/Sync absent, catalogue trois/projection une
+puis trois ; plan vide sauvegardé sans budget inventé. Fixture nettoyée,
+cinq contrôles finaux à zéro/gouvernance 1 624/166 reçus, runtime reçu 442 ; aucune réception globale
+C3/C4/C6 ou des sept chantiers/dix gates. [Bornes](REFONTE-PLAN.md).
+
 ### Choix source → draft S versionné commun — 442 livré, réception bornée (2026-10-10)
 
 SYNTHESIZE_S et actualizePillar(S) rejoignent le calcul transactionnel/gateway

@@ -1,5 +1,75 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Droits de marque → catalogue source → proposition à relire — 443 local en réception (2026-10-10)
+
+useBrandWriteAccess dans use-can-operate réutilise strategy.getMyAccess : zone
+stratégique `*`, calendrier `calendar` et capacité opérateur restent distincts.
+Le chargement/rafraîchissement, l’absence de marque ou l’échec d’accès ferment
+les droits ; une capacité opérateur seule n’autorise pas une autre marque.
+PillarPage raccorde ses gestes à ces droits, propriétaire autorisé au recalcul
+manuel ; LOCKED garde son refus. ActionDatabasePanel exige canWrite/canSync
+explicites, false par défaut, et propose MANUAL par défaut avec IA facultative.
+Aucun droit, service, router, page, modèle, Intent, Neter ou ADR ajouté ; choix,
+source I, writers et gates serveur inchangés.
+
+Le compteur du catalogue I utilise collectNormalizedInitiatives sur
+catalogueParCanal/actionsByDevotionLevel/actionsByOvertonPhase, déduplique les
+identités et distingue catalogue absent (« Nombre d’actions à vérifier ») et
+catalogue explicitement vide (zéro). La Base d’actions affiche sa projection
+synchronisée ; son nombre ne remplace pas celui de la source. Le recalcul S
+réussi dit « Plan recalculé et sauvegardé — proposition à relire » ; updated
+non vrai ou erreur rend un refus métier sans code/stage brut dans ce retour.
+Cela ne vaut ni approbation, ni génération de contenu, ni réception de tous les
+messages du cockpit.
+
+Preuves privées release/preuves-guidance-443 : red.log treize rouges/huit verts
+sur 442 ; red-feedback.log huit rouges. green.log 29/trois puis 33/quatre verts,
+dont quatre interactions ActionDatabasePanel. DS/vocab dix/quatre verts ;
+full-unit.log checkpoint 4 236/404, premier gauntlet cinq sorties 0/gouvernance
+1 624/166 et 24 warnings connus, antérieurs à la garde ambition LOCKED. Cette
+ambition encore active a été révélée nativement : red-locked.log un rouge/
+quinze verts, garde du contrôle existant corrigée, green-locked.log 34/quatre
+verts. Unité finale après garde : 4 237/404 verts ; cinq contrôles finaux reçus à zéro,
+  gouvernance 1 624/166 et lint 24 avertissements existants/aucune erreur.
+Gauntlet final : tsc/lint/lint-governance/cycles/gouvernance cinq sorties 0.
+CI/image/runtime 443 non reçus ; dernier runtime reçu 442.
+
+native-local-receipt.json relu : locale USER/TRIAL fictive, connexion normale.
+Catalogue source trois/projection initiale une puis trois après sync ; formulaire
+MANUAL actif sans soumission IA. Propriétaire opérateur : choix/sync/recalcul S
+HTTP 200, updated=true/v2 et message sauvegardé/à relire ; fenêtre de ces gestes
+non tronquée/hasMore=false, zéro exception/loadingFailed dans cette fenêtre.
+Propriétaire USER sans opérateur (canOperate=false/getMyAccess owner[*]) : choix
+et recalcul sauvegardé disponibles, Sync absent ; dernier choix réellement
+retiré par UI puis plan vide sauvegardé, brouillon sans budget fabriqué, pas refus
+ni approbation. État final fixture I v3/deux archives, S v4/trois archives,
+zéro GenerativeTask/CostDecision, six Intents dont premier refus. Ce refus 400
+venait de formats/objectif Overton/FAN hors schéma de la fixture : donnée fictive
+seule corrigée, reçu native-first-refusal.json conservé.
+
+ART_DIRECTOR d’un autre opérateur, canOperate=true mais writeZones [] : catalogue
+une ligne bien chargée/choix désactivé, Proposer et Sync absents. Identité chargée
+sans bouton/lien Modifier ; recalcul/deux ambitions désactivés et Enrichir absent.
+Dernière garde LOCKED relue après HMR/navigation : recalcul et deux ambitions
+désactivés, aucun geste forcé. Mobile demandé 390×844, document/body 384 px,
+message de sauvegarde visible/capture native-mobile-plan-saved.jpg conservée,
+aucun débordement global observé, viewport restauré. Calendrier délégué reçu en
+test seulement, pas de troisième rôle natif.
+
+Compilation froide cockpit 70 s/premier batch 72 s, timeouts Page.navigate/wait
+conservés, même onglet/serveur jusqu’au rendu. Première fenêtre réseau tronquée :
+aucun zéro réseau global ni SLO déduit. fixture-cleanup remaining=0/cleaned=true,
+onglet 15 fermé/session dev arrêtée volontairement (130). Toutes les mutations
+restent fictives/locales, aucune marque réelle modifiée ; wholeJourneyAccepted=false.
+
+**Reprise en place** : source/CI/image/runtime 443 restent à recevoir après
+ces contrôles locaux finaux. Causes locales compteur/droits/retour reçues sur ce
+périmètre ; les autres surfaces de droits/messages restent dans la passe cockpit
+existante. Budget qualitatif, absence→0/horizon défaut, projections roadmap et
+autres écrivains/consommateurs S restent dans le lot Guidance C3/C4/C6 ; pas de
+gate stricte affaiblie ou donnée inventée. Sept chantiers/dix gates ouverts.
+[Dette et déclencheurs](RESIDUAL-DEBT.md).
+
 ## SYNTHESIZE_S et recalcul S → calcul transactionnel commun — 442 livré, réception bornée (2026-10-10)
 
 Les deux entrées existantes délèguent à recalculateSynthesis : executeProtocoleStrategy

@@ -4,6 +4,33 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-10
 
+**6.27.443 local en réception — droits de marque et retours Guidance** :
+useBrandWriteAccess dans use-can-operate lit strategy.getMyAccess ; droits
+stratégiques, calendrier et synchronisation opérateur distincts. Accès absent,
+en cours/en erreur ferme les gestes ; PillarPage conserve le recalcul manuel
+au propriétaire, sans débordement d’un droit opérateur d’une autre marque.
+ActionDatabasePanel permissions false par défaut, proposition MANUAL/IA
+facultative. Compteur I fondé sur collectNormalizedInitiatives/trois collections,
+identités dédupliquées, absence distincte du zéro explicite ; projection Base
+d’actions distinguée. Recalcul : plan sauvegardé/proposition à relire ou refus
+métier, sans stage brut ; updated=false ne vaut pas succès. Serveur/choix/gates
+inchangés, aucune nouvelle entité/route/service/Intent/ADR. Treize rouges/huit
+verts puis huit retours rouges, checkpoints 29/trois et 33/quatre verts.
+Checkpoint unité 4 236/404/premier gauntlet cinq 0/gouvernance 1 624/166 ;
+ambition LOCKED découverte active, un rouge/quinze verts puis 34/quatre verts.
+Native locale USER/TRIAL reçue : catalogue trois/projection une puis trois,
+MANUAL sans IA, choix/sync/recalcul 200 ; propriétaire non opérateur garde choix/
+recalcul, Sync absent et plan vide réellement sauvegardé après retrait du choix.
+ART_DIRECTOR autre opérateur writeZones [] : catalogue chargé/choix désactivé,
+Proposer/Sync/Modifier absents ; recalcul/deux ambitions désactivés, dont LOCKED
+final relu. I v3/S v4/archives 2/3, zéro tâche/coût et six Intents ; fixture
+nettoyée/onglet/serveur fermés. Unité finale après garde 4 237/404 verts, cinq
+contrôles finaux à zéro/gouvernance 1 624/166, lint 24 avertissements/aucune
+erreur reçus. Compilation/timeouts/première fenêtre tronquée/refus
+fixture conservés, aucun zéro global/SLO. CI/image/runtime 443 non reçus,
+runtime reçu 442. Budget/horizon, projections/autres chemins S et sept chantiers/
+dix gates ouverts. [Réception et dettes](docs/governance/REFONTE-PLAN.md).
+
 **6.27.442 livré — synthèse calculée commune, réception bornée** : SYNTHESIZE_S
 et actualizePillar(S) utilisent recalculateSynthesis, transaction/gateway existants,
 versions des huit sources (S précédent et absences null compris) contrôlées avant

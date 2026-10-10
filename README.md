@@ -16,6 +16,21 @@
 
 ## Quick start
 
+**6.27.443 local en réception** : les gestes proposés suivent les droits
+sur la marque consultée ; le propriétaire peut recalculer son plan manuellement.
+Le catalogue indique ses actions source et signale un décompte inconnu plutôt
+qu’un zéro inventé. Proposer une action commence en mode manuel, avec assistance
+facultative. Un recalcul réussi confirme la sauvegarde d’une proposition à
+relire, sans exposer son stade technique. Recette locale reçue sur fixtures : trois
+actions source/une synchronisée puis trois, propriétaire non opérateur peut
+choisir/recalculer, synchronisation absente. Après retrait réel du dernier choix,
+un plan sans action est sauvegardé, sans budget inventé. Lecture seule et
+verrouillage bloquent les gestes concernés ; fixtures nettoyées. 4 237 tests
+unitaires verts, cinq contrôles finaux à zéro reçus, runtime reçu 442 ; CI/image 443
+non reçus, aucun cycle réel/SLO accepté. Budgets, horizons,
+projections et autres chemins du plan restent à réconcilier ; sept chantiers/
+dix gates ouverts. [Périmètre et reprise](docs/governance/REFONTE-PLAN.md).
+
 **6.27.442 livré** : le bouton de synthèse et le recalcul utilisent
 le même plan dérivé des choix conservés, avec contrôle des versions source.
 Le plan incomplet demeure un brouillon non approuvable ; ces deux entrées

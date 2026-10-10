@@ -17,26 +17,44 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { RefreshCw, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { RefreshCw } from "lucide-react";
+import { Button } from "@/components/primitives/button";
+import { Alert } from "@/components/primitives/alert";
 
 type RtisKey = "R" | "T" | "I" | "S";
 
 interface RecalculateRtisButtonProps {
   strategyId: string;
   pillarKey: RtisKey;
+  canRecalculate?: boolean;
   onComplete?: () => void;
 }
 
 const PILLAR_LABELS: Record<RtisKey, string> = {
-  R: "Risk",
-  T: "Track",
+  R: "Diagnostic des risques",
+  T: "Repères du marché",
   I: "Potentiel",
   S: "Stratégie",
 };
 
+function refusalMessage(error: string | undefined, pillarKey: RtisKey): string {
+  const raw = error ?? "";
+  if (raw.includes("readiness/RTIS_CASCADE") || raw.includes("ReadinessVetoError")) {
+    return "Fondations incomplètes — renseignez d’abord votre identité, votre positionnement, votre offre et votre engagement.";
+  }
+  if (raw.includes("SYNTHESIS_CHOICE_REQUIRED")) return "Retenez d’abord vos actions dans le catalogue, puis recalculez le plan.";
+  if (raw.includes("VERSION_CONFLICT")) return "Les sources ont changé. Rechargez la marque, vérifiez vos choix, puis relancez le calcul.";
+  if (raw.includes("LOCKED")) return "Le plan est verrouillé. Faites revoir son verrouillage avant de relancer le calcul.";
+  if (raw.includes("FIELD_PROVENANCE_REFUSED")) return "Une décision humaine protège ces informations. Faites-la revoir avant de relancer le calcul.";
+  if (/FORBIDDEN|lecture seule/i.test(raw)) return "Votre accès à cette marque ne permet pas ce recalcul.";
+  return pillarKey === "S" ? "Le plan n’a pas pu être sauvegardé. Rechargez la marque avant de réessayer."
+    : `${PILLAR_LABELS[pillarKey]} n’a pas pu être actualisé. Rechargez la marque avant de réessayer.`;
+}
+
 export function RecalculateRtisButton({
   strategyId,
   pillarKey,
+  canRecalculate = false,
   onComplete,
 }: RecalculateRtisButtonProps) {
   const [feedback, setFeedback] = useState<{ kind: "ok" | "err"; msg: string } | null>(null);
@@ -46,66 +64,47 @@ export function RecalculateRtisButton({
       // `result` is ActualizeResult from mestor/rtis-cascade.ts
       const updated = (result as { updated?: boolean })?.updated;
       const error = (result as { error?: string })?.error;
-      if (error || updated === false) {
+      if (error || updated !== true) {
         setFeedback({
           kind: "err",
-          msg: error ?? `${PILLAR_LABELS[pillarKey]} n'a pas pu être actualisé.`,
+          msg: refusalMessage(error, pillarKey),
         });
         return;
       }
-      const stage = (result as { maturityStage?: string })?.maturityStage;
-      const pct = (result as { maturityCompletionPct?: number })?.maturityCompletionPct;
-      const stageInfo = stage ? ` · stage ${stage}${pct !== undefined ? ` ${Math.round(pct)}%` : ""}` : "";
       setFeedback({
         kind: "ok",
-        msg: `${PILLAR_LABELS[pillarKey]} actualisé${stageInfo}.`,
+        msg: pillarKey === "S" ? "Plan recalculé et sauvegardé — proposition à relire."
+          : `${PILLAR_LABELS[pillarKey]} actualisé — proposition à relire.`,
       });
       onComplete?.();
     },
     onError: (err) => {
-      // ADR-0030 Axe 3 — gate RTIS_CASCADE friendly error.
-      const raw = err.message ?? "Erreur lors de l'actualisation";
-      const friendly = raw.includes("readiness/RTIS_CASCADE") || raw.includes("ReadinessVetoError")
-        ? "Fondations incomplètes — renseignez d'abord votre identité, votre positionnement, votre offre et votre engagement."
-        : raw;
-      setFeedback({ kind: "err", msg: friendly });
+      setFeedback({ kind: "err", msg: refusalMessage(err.message, pillarKey) });
     },
   });
 
   function handleClick() {
+    if (!canRecalculate || actualize.isPending) return;
     setFeedback(null);
     actualize.mutate({ strategyId, key: pillarKey });
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <button
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <Button
         type="button"
+        variant="subtle"
+        size="sm"
+        loading={actualize.isPending}
         onClick={handleClick}
-        disabled={actualize.isPending}
-        title={pillarKey === "T" ? "Calculer le pilier T sur la base de votre fondation, du diagnostic, de la veille et de vos sources." : `Re-générer ${PILLAR_LABELS[pillarKey]} depuis la fondation${pillarKey !== "R" ? " et les piliers amont" : ""}.`}
-        className="flex items-center gap-1.5 rounded-lg bg-sky-600/20 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-600/30 disabled:opacity-50"
+        disabled={!canRecalculate}
+        title={!canRecalculate ? "Recalcul indisponible avec votre accès ou le verrouillage actuel." : pillarKey === "S" ? "Calculer et sauvegarder le plan depuis vos choix conservés, sans génération assistée." : `Actualiser ${PILLAR_LABELS[pillarKey]} depuis vos fondations et les informations disponibles.`}
       >
-        {actualize.isPending ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        ) : (
-          <RefreshCw className="h-3.5 w-3.5" />
-        )}
-        {pillarKey === "T" ? "Calculer le pilier T" : "Recalculer ce pilier"}
-      </button>
+        {!actualize.isPending ? <RefreshCw className="h-3.5 w-3.5" /> : null}
+        {pillarKey === "S" ? "Recalculer le plan" : `Actualiser ${PILLAR_LABELS[pillarKey]}`}
+      </Button>
       {feedback ? (
-        <span
-          className={`flex items-center gap-1 text-[11px] ${
-            feedback.kind === "ok" ? "text-emerald-300" : "text-error"
-          }`}
-        >
-          {feedback.kind === "ok" ? (
-            <CheckCircle className="h-3 w-3" />
-          ) : (
-            <AlertCircle className="h-3 w-3" />
-          )}
-          {feedback.msg}
-        </span>
+        <Alert tone={feedback.kind === "ok" ? "success" : "error"}>{feedback.msg}</Alert>
       ) : null}
     </div>
   );

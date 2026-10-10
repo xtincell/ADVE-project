@@ -328,18 +328,17 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   données pour le satisfaire. **Déclencheur** : prochain incrément du parcours
   manuel Guidance avant C3/C4/C6 et preuve de release ; effort : un lot borné
   normalisation/projections/écrivains puis recette manuelle transverse.
-  **Compteur catalogue, fixture locale 441** : une action affichée mais compteur
-  I/footer zéro. **Plan** : diagnostiquer le décompte avec collectNormalizedInitiatives
-  et le contrat des trois collections I, confronter contenu, projection et UI ;
-  ne fabriquer ni action ni compte pour masquer l’écart. **Déclencheur** : prochain
-  lot UX C3/C7 avant recette native ; effort : reproduction des trois formes,
-  correction du compteur existant puis lecture native comparative.
-  **Copie succès, fixture locale 442** : « stage INTAKE 35 % » demeure technique,
-  observée sur la capture finale ; pas corrigée dans ce lot. **Plan** : réutiliser
-  état/libellés métier de readiness pour le message existant, recevoir succès et
-  refus nativement sans exposer les détails internes. **Déclencheur** : prochain
-  lot UX C3/C7 avant recette native ; effort : correction de copie bornée,
-  tests rendu et lecture native comparative, sans nouvelle fonction.
+  **443 local en réception — compteur et retour reçus localement** : trois
+  actions source/une projetée puis trois après sync, MANUAL sans soumission IA,
+  choix/sync/recalcul 200 et retour sauvegardé/à relire. Propriétaire non opérateur
+  retire réellement le dernier choix puis sauvegarde un plan vide sans budget
+  fabriqué, pas refus ; I v3/deux archives, S v4/trois archives, zéro tâche/coût
+  génératif/six Intents. Garde ambition LOCKED corrigée après un rouge/quinze
+  verts, 34/quatre verts puis native relue ; unité finale 4 237/404 verts.
+  Fixture nettoyée/remaining=0, onglet/serveur fermés. Les causes bornées compteur/
+  copie sont reçues localement ; cinq contrôles finaux à zéro/gouvernance
+  1 624/166 reçus, CI/image/runtime 443 attendus, runtime reçu 442. Normalisation budget/horizon, projections et
+  autres écrivains S restent dans la reprise ci-dessus, sans clôture globale.
   **440 livré, contre-exemple local propriétaire reçu** :
   actions.sync applique désormais le droit d’écriture calendrier ; la lecture
   seule reçoit 403 sans altération et le propriétaire reçoit 200, mais sa ligne
@@ -1540,18 +1539,17 @@ qui rendent correctement en l'état mais ne sont pas strictement canoniques. Auc
 - **Cartographie kind→zone à étendre** (ADR-0131) : kinds newsletter (zéro catalogué — l'envoi
   reste operatorProcedure par décision ADR-0129 §6) et la quasi-totalité des kinds campagnes (deny
   par défaut = sûr mais restrictif). **Déclencheur** : premier veto de zone injustifié constaté.
-- **Masquage préventif des gestes hors zone** sur surfaces secondaires (campagnes, demandes)
-  et ActionDatabasePanel : en fixture locale 441, la vue lecture seule garde
-  les boutons de mutation visibles ; API protégée par le contrat reçu 440,
-  recette locale 441 ART_DIRECTOR ACTIVE d’un autre opérateur : 403/FORBIDDEN
-  avec alerte métier, I/versions/archives inchangés. Le refus reçu ne masque
-  pas encore ces boutons. **Plan** : réutiliser
-  strategy.getMyAccess/writeZones et les droits calendrier canoniques existants
-  pour un mode lecture sur ce panel, sans nouveau droit ou endpoint ; recevoir
-  propriétaire/lecture seule/révocation sans mutation hors zone. **Déclencheur** :
-  prochain lot UX C3/C7 avant recette native ; effort : un branchement d’accès
-  borné puis réception des états affichés. Les autres surfaces restent dans
-  la prochaine passe UX cockpit.
+- **Masquage préventif des gestes hors zone** : périmètre PillarPage/
+  ActionDatabasePanel reçu localement en 443. Propriétaire USER non opérateur
+  garde choix/recalcul, Sync absent ; ART_DIRECTOR d’un autre opérateur malgré
+  canOperate=true/writeZones [] : catalogue chargé/choix désactivé, Proposer/
+  Sync/Modifier absents, recalcul/deux ambitions désactivés. LOCKED final relu
+  sans geste forcé ; fixture nettoyée. Garde serveur inchangée ; cinq contrôles
+  finaux à zéro/gouvernance 1 624/166 reçus, livraison 443 attendue/runtime reçu 442. **Reste ouvert** : surfaces
+  secondaires campagnes/demandes et autres gestes du cockpit. **Plan** : suivre
+  les mêmes zones/droits existants, recevoir affichage et refus sans mutation
+  hors zone ; aucun nouveau droit/endpoint. **Déclencheur** : prochain lot UX
+  cockpit C3/C7 ; effort : réception bornée de chaque surface restante.
 - **Sweep light-mode page-par-page** (les 2 dashboards vérifiés ; le reste hérite des tokens).
   **Déclencheur** : à l'occasion, même pattern que la passe responsive.
 - **Pont relevés → pilier E dans l'ÉDITEUR** : afficher le dernier `FollowerSnapshot` en SUGGESTION

@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.443", date: "2026-10-10",
+    headline: "Des commandes adaptées à votre accès à la marque",
+    highlights: [
+      { emoji: "🔐", title: "Vos droits restent propres à chaque marque", body: "Les commandes du plan et du catalogue suivent votre accès à la marque affichée. La lecture seule ne propose plus de modification interdite. Vos choix manuels restent disponibles lorsque votre rôle les autorise." },
+      { emoji: "🧭", title: "Un catalogue lisible et un plan à relire", body: "Le nombre d’actions reprend le catalogue enregistré. Un catalogue absent ne devient plus un faux zéro. La proposition d’action s’ouvre en saisie manuelle ; la génération assistée reste un choix explicite. Le recalcul du plan annonce une sauvegarde à relire, séparée de son approbation." },
+    ],
+  },
+  {
     version: "6.27.442", date: "2026-10-10",
     headline: "Un plan recalculé depuis vos choix conservés",
     highlights: [
