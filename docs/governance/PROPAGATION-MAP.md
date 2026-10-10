@@ -9,7 +9,7 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
-### Accès de marque → gestes autorisés → retour à relire — 443 local en réception (2026-10-10)
+### Accès de marque → gestes autorisés → retour à relire — 443 livré, réception bornée (2026-10-10)
 
 getMyAccess alimente useBrandWriteAccess : stratégie/calendrier/opérateur
 séparés, accès absent/en cours/en erreur fermé. PillarPage et le panel utilisent
@@ -22,7 +22,10 @@ refus rendu en termes métier, sans approbation implicite. Ciblé 34/quatre vert
 unité finale 4 237/404 verte. Native synthétique lecture seule/LOCKED reçue,
 propriétaire non opérateur manuel/Sync absent, catalogue trois/projection une
 puis trois ; plan vide sauvegardé sans budget inventé. Fixture nettoyée,
-cinq contrôles finaux à zéro/gouvernance 1 624/166 reçus, runtime reçu 442 ; aucune réception globale
+cinq contrôles finaux à zéro/gouvernance 1 624/166 reçus, source c2a0b0f6/CI 38016938304/image 38017164762/runtime exact 443 reçus.
+Lecture réelle ADMIN seulement, source 15/projection 36/28 retenues, formulaire
+manuel sans soumission/ancien S non recalculé ; aucune mutation réelle ni recette
+USER production ; aucune réception globale
 C3/C4/C6 ou des sept chantiers/dix gates. [Bornes](REFONTE-PLAN.md).
 
 ### Choix source → draft S versionné commun — 442 livré, réception bornée (2026-10-10)

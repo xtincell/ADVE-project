@@ -4,7 +4,7 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-10
 
-**6.27.443 local en réception — droits de marque et retours Guidance** :
+**6.27.443 livré, réception bornée — droits de marque et retours Guidance** :
 useBrandWriteAccess dans use-can-operate lit strategy.getMyAccess ; droits
 stratégiques, calendrier et synchronisation opérateur distincts. Accès absent,
 en cours/en erreur ferme les gestes ; PillarPage conserve le recalcul manuel
@@ -27,9 +27,16 @@ final relu. I v3/S v4/archives 2/3, zéro tâche/coût et six Intents ; fixture
 nettoyée/onglet/serveur fermés. Unité finale après garde 4 237/404 verts, cinq
 contrôles finaux à zéro/gouvernance 1 624/166, lint 24 avertissements/aucune
 erreur reçus. Compilation/timeouts/première fenêtre tronquée/refus
-fixture conservés, aucun zéro global/SLO. CI/image/runtime 443 non reçus,
-runtime reçu 442. Budget/horizon, projections/autres chemins S et sept chantiers/
-dix gates ouverts. [Réception et dettes](docs/governance/REFONTE-PLAN.md).
+fixture conservés, aucun zéro global/SLO. Source c2a0b0f6/CI 38016938304
+(4 237/404 unitaires, 345/18 PG), Mission/Chromatic/image 38017164762 success ;
+runtime 443 exact/index 680962a9/nextjs/private-media RW/API version 200 reçus.
+Lecture réelle SPAWT ADMIN/admin[*] seulement : catalogue source 15/projection
+36/28 retenues, Ajouter manuel ouvert sans soumission et plan Périmé non recalculé.
+Fenêtre bornée complète 16 réponses 200/zéro ≥500 ou exception observée/quatre
+annulations ; reload initial tronqué/retour document final non reçu. Aucune
+mutation réelle ni recette USER production, nativeReceived=false/global false.
+Budget/horizon, projections/autres chemins S et sept chantiers/dix gates ouverts ;
+contrôle/commit/CI de ce reçu documentaire distincts de la source livrée. [Réception et dettes](docs/governance/REFONTE-PLAN.md).
 
 **6.27.442 livré — synthèse calculée commune, réception bornée** : SYNTHESIZE_S
 et actualizePillar(S) utilisent recalculateSynthesis, transaction/gateway existants,

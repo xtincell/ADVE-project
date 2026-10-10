@@ -6,7 +6,7 @@ Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts`
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**443 local en réception — lecture d’accès existante** : useBrandWriteAccess
+**443 livré, réception bornée — lecture d’accès existante** : useBrandWriteAccess
 consomme strategy.getMyAccess/writeZones ; écriture stratégique, calendrier et
 sync opérateur sont distingués côté interface. Pendant accès absent/en cours/
 en erreur, les gestes concernés restent fermés ; propriétaire conserve le
@@ -17,7 +17,11 @@ sauvegardée à relire. Ciblé 34/quatre verts après garde ambition LOCKED (un 
 Unité finale 4 237/404 verte ; native USER/TRIAL fictive et lecture seule/
 LOCKED reçues, propriétaire non opérateur manuel/Sync absent, catalogue trois/
 projection une puis trois ; plan vide sauvegardé sans budget inventé. Fixture
-nettoyée, cinq contrôles finaux à zéro/gouvernance 1 624/166 reçus, runtime reçu 442. [Périmètre et réception](REFONTE-PLAN.md).
+nettoyée, cinq contrôles finaux à zéro/gouvernance 1 624/166 reçus. Source
+c2a0b0f6/CI 38016938304/image 38017164762/runtime exact 443 reçus.
+Lecture réelle ADMIN seulement, source 15/projection 36/28 retenues, formulaire
+manuel sans soumission/ancien S non recalculé ; aucune mutation réelle ni recette
+USER production. [Périmètre et réception](REFONTE-PLAN.md).
 
 **442 livré — deux entrées existantes de S** : SYNTHESIZE_S et
 actualizePillar(S) rejoignent recalculateSynthesis ; même calcul transactionnel,

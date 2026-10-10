@@ -16,7 +16,7 @@
 
 ## Quick start
 
-**6.27.443 local en réception** : les gestes proposés suivent les droits
+**6.27.443 livré, réception bornée** : les gestes proposés suivent les droits
 sur la marque consultée ; le propriétaire peut recalculer son plan manuellement.
 Le catalogue indique ses actions source et signale un décompte inconnu plutôt
 qu’un zéro inventé. Proposer une action commence en mode manuel, avec assistance
@@ -26,9 +26,14 @@ actions source/une synchronisée puis trois, propriétaire non opérateur peut
 choisir/recalculer, synchronisation absente. Après retrait réel du dernier choix,
 un plan sans action est sauvegardé, sans budget inventé. Lecture seule et
 verrouillage bloquent les gestes concernés ; fixtures nettoyées. 4 237 tests
-unitaires verts, cinq contrôles finaux à zéro reçus, runtime reçu 442 ; CI/image 443
-non reçus, aucun cycle réel/SLO accepté. Budgets, horizons,
-projections et autres chemins du plan restent à réconcilier ; sept chantiers/
+unitaires verts, cinq contrôles finaux/CI/image/runtime exact 443 reçus.
+Lecture réelle SPAWT en ADMIN uniquement : catalogue source 15, projection
+36/28 retenues, ajout manuel ouvert sans soumission ; ancien plan Périmé non
+recalculé. Mutations USER reçues sur fixtures locales seulement, aucun cycle réel/
+SLO accepté. La vitrine confirme toujours six questions/sans décompte et apps
+bientôt ; l’identité choisie était déjà reçue, le raccord de l’univers reste ouvert.
+Budgets, horizons, projections et autres chemins du plan restent à réconcilier ;
+sept chantiers/
 dix gates ouverts. [Périmètre et reprise](docs/governance/REFONTE-PLAN.md).
 
 **6.27.442 livré** : le bouton de synthèse et le recalcul utilisent

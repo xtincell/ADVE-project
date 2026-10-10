@@ -328,7 +328,7 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   données pour le satisfaire. **Déclencheur** : prochain incrément du parcours
   manuel Guidance avant C3/C4/C6 et preuve de release ; effort : un lot borné
   normalisation/projections/écrivains puis recette manuelle transverse.
-  **443 local en réception — compteur et retour reçus localement** : trois
+  **443 livré, réception bornée — compteur et retour reçus localement** : trois
   actions source/une projetée puis trois après sync, MANUAL sans soumission IA,
   choix/sync/recalcul 200 et retour sauvegardé/à relire. Propriétaire non opérateur
   retire réellement le dernier choix puis sauvegarde un plan vide sans budget
@@ -337,8 +337,14 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   verts, 34/quatre verts puis native relue ; unité finale 4 237/404 verts.
   Fixture nettoyée/remaining=0, onglet/serveur fermés. Les causes bornées compteur/
   copie sont reçues localement ; cinq contrôles finaux à zéro/gouvernance
-  1 624/166 reçus, CI/image/runtime 443 attendus, runtime reçu 442. Normalisation budget/horizon, projections et
+  1 624/166 reçus. Source c2a0b0f6/CI 38016938304/image 38017164762/runtime
+  exact 443 reçus, 4 237/404 unitaires/345/18 PG. Lecture réelle ADMIN seulement,
+  source 15/projection 36/28 retenues, ancien S non recalculé ; aucune mutation
+  réelle. Normalisation budget/horizon, projections et
   autres écrivains S restent dans la reprise ci-dessus, sans clôture globale.
+  Sondes pures locales absence→0/LONG_TERM, LOW→500k et entrées invalides :
+  diagnostics de normalisation, pas données réelles ni rejet général des
+  politiques ADVE d’estimation ; expliciter origine/absence/estimation.
   **440 livré, contre-exemple local propriétaire reçu** :
   actions.sync applique désormais le droit d’écriture calendrier ; la lecture
   seule reçoit 403 sans altération et le propriétaire reçoit 200, mais sa ligne
@@ -1545,7 +1551,8 @@ qui rendent correctement en l'état mais ne sont pas strictement canoniques. Auc
   canOperate=true/writeZones [] : catalogue chargé/choix désactivé, Proposer/
   Sync/Modifier absents, recalcul/deux ambitions désactivés. LOCKED final relu
   sans geste forcé ; fixture nettoyée. Garde serveur inchangée ; cinq contrôles
-  finaux à zéro/gouvernance 1 624/166 reçus, livraison 443 attendue/runtime reçu 442. **Reste ouvert** : surfaces
+  finaux à zéro/gouvernance 1 624/166 et runtime exact 443 reçus. Lecture réelle
+  ADMIN seulement ; USER/TRIAL/ART_DIRECTOR mutés sur fixtures locales uniquement. **Reste ouvert** : surfaces
   secondaires campagnes/demandes et autres gestes du cockpit. **Plan** : suivre
   les mêmes zones/droits existants, recevoir affichage et refus sans mutation
   hors zone ; aucun nouveau droit/endpoint. **Déclencheur** : prochain lot UX

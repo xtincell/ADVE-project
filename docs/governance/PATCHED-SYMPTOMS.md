@@ -30,7 +30,7 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
-2026-10-10 · **443 local en réception, causes UI bornées** : droits globaux
+2026-10-10 · **443 livré, causes UI reçues au périmètre** : droits globaux
 opérateur confondus avec l’autorité sur une marque, boutons de mutation visibles
 en lecture seule ; useBrandWriteAccess lit getMyAccess et sépare stratégie/
 calendrier/sync, fermeture en absence/chargement/erreur, propriétaire conserve
@@ -45,8 +45,11 @@ quinze verts puis 34/quatre verts et relecture native reçue. Catalogue source/
 projection distingué, MANUAL sans IA, propriétaire non opérateur garde choix/
 recalcul/Sync absent ; plan vide sauvegardé sans budget fabriqué. Lecture seule
 reçue, fixture nettoyée ; unité finale 4 237/404 verte, cinq contrôles finaux à zéro/
-gouvernance 1 624/166 reçus, runtime reçu 442,
-compilation/timeout conservés. Autorités serveur inchangées ; aucune clôture
+gouvernance 1 624/166 reçus ; source c2a0b0f6/CI 38016938304/image
+38017164762/runtime exact 443 reçus.
+Lecture réelle ADMIN seulement, source 15/projection 36/28 retenues, formulaire
+manuel sans soumission/ancien S non recalculé ; aucune mutation réelle ni recette
+USER en production. Compilation/timeout conservés. Autorités serveur inchangées ; aucune clôture
 globale des accès, budgets, projections ou autres chemins S.
 [Preuves et bornes](REFONTE-PLAN.md) · [dette en place](RESIDUAL-DEBT.md).
 

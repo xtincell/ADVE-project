@@ -2,7 +2,7 @@
 
 ## v6.27.443 — fix(cockpit): relier les gestes aux droits de marque et clarifier le plan (2026-10-10)
 
-**443 local en réception : droits, compteur source et retour de recalcul alignés ; runtime reçu 442.**
+**443 livré, réception bornée : droits, compteur source et retour de recalcul alignés ; runtime exact 443 reçu.**
 
 - Le hook useBrandWriteAccess du module existant lit strategy.getMyAccess et
   distingue écriture stratégique, calendrier et synchronisation opérateur.
@@ -36,8 +36,19 @@
   observé ; nettoyage remaining=0, onglet fermé/serveur arrêté volontairement.
   Compilation froide/timeouts/première fenêtre tronquée conservés, aucun zéro
   réseau global ni SLO. Calendrier délégué testé, pas de troisième rôle natif.
-  CI/image/runtime 443 non reçus, runtime reçu 442. Budgets/horizons, projections,
-  autres chemins S et sept chantiers/dix gates restent ouverts.
+- Source c2a0b0f6/CI 38016938304 success : 4 237/404 unitaires et 345/18 PG ;
+  Mission 38016938297/Chromatic 38016938248/image 38017164762 success, smoke
+  migrations/login 200/PDF deux pages reçus. Index 680962a9 exact au runtime
+  443 running/nextjs/private-media RW/API version 200, déploiement unique fini.
+  Lecture réelle SPAWT ADMIN uniquement : catalogue source 15, projection
+  36/28 retenues, formulaire Ajouter manuel actif sans soumission ; ancien plan
+  Périmé non recalculé. Fenêtre bornée complète 16 réponses 200/zéro ≥500 ou
+  exception observée/quatre ERR_ABORTED annulés ; reload initial tronqué et
+  retour document final non reçu, aucun zéro global/SLO/cycle complet.
+  Lecture publique fraîche confirme six questions/sans compteur, stores bientôt ;
+  vitrine et identité choisie reçues antérieurement, aucun raccord global reçu.
+  Budgets/horizons, projections/autres chemins S et sept chantiers/dix gates
+  restent ouverts ; reçu documentaire et sa CI ultérieure distincts.
   [Réception et reprise](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.442 — fix(guidance): converger la synthèse manuelle et le calcul S versionné (2026-10-10)

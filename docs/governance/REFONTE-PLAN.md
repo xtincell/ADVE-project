@@ -1,6 +1,6 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## Droits de marque → catalogue source → proposition à relire — 443 local en réception (2026-10-10)
+## Droits de marque → catalogue source → proposition à relire — 443 livré, réception bornée (2026-10-10)
 
 useBrandWriteAccess dans use-can-operate réutilise strategy.getMyAccess : zone
 stratégique `*`, calendrier `calendar` et capacité opérateur restent distincts.
@@ -30,9 +30,16 @@ full-unit.log checkpoint 4 236/404, premier gauntlet cinq sorties 0/gouvernance
 ambition encore active a été révélée nativement : red-locked.log un rouge/
 quinze verts, garde du contrôle existant corrigée, green-locked.log 34/quatre
 verts. Unité finale après garde : 4 237/404 verts ; cinq contrôles finaux reçus à zéro,
-  gouvernance 1 624/166 et lint 24 avertissements existants/aucune erreur.
+gouvernance 1 624/166 et lint 24 avertissements existants/aucune erreur.
 Gauntlet final : tsc/lint/lint-governance/cycles/gouvernance cinq sorties 0.
-CI/image/runtime 443 non reçus ; dernier runtime reçu 442.
+Source c2a0b0f6fff04f56d2e473cf5ce6747e99eed814 ; CI 38016938304 success,
+ci.log relu 4 237/404 unitaires et 345/18 PostgreSQL. Mission 38016938297 et
+Chromatic 38016938248 success. Image 38017164762 success, smoke boot migrations/
+login 200 et PDF deux pages reçus. Index exact
+sha256:680962a922df960e77df9133a16ac3d1e3db4427862f1d94f867c21f94d37f37.
+Déploiement unique rds2yj62bot2l6ji9ci1mxwf fini, application
+q9b4m57yh93gxbjykj470giy ; runtime 6.27.443 running/nextjs, private-media RW,
+/api/version 200. Source/image/runtime distincts du présent reçu documentaire.
 
 native-local-receipt.json relu : locale USER/TRIAL fictive, connexion normale.
 Catalogue source trois/projection initiale une puis trois après sync ; formulaire
@@ -62,12 +69,34 @@ aucun zéro réseau global ni SLO déduit. fixture-cleanup remaining=0/cleaned=t
 onglet 15 fermé/session dev arrêtée volontairement (130). Toutes les mutations
 restent fictives/locales, aucune marque réelle modifiée ; wholeJourneyAccepted=false.
 
-**Reprise en place** : source/CI/image/runtime 443 restent à recevoir après
-ces contrôles locaux finaux. Causes locales compteur/droits/retour reçues sur ce
-périmètre ; les autres surfaces de droits/messages restent dans la passe cockpit
+native-runtime-receipt.json relu/capture native-runtime.jpg inspectée : lecture
+réelle SPAWT ADMIN, auth.me/getMyAccess admin[*], canOperate=true. Catalogue source
+15 distinct de la projection 36/28 retenues ; formulaire Ajouter manuel actif,
+ouvert/fermé sans soumission. Libellé Recalculer le plan reçu, ancien S Périmé
+non recalculé ; aucune mutation métier, recalcul source, approbation ni recette
+USER de production. Fenêtre bornée après chargement S : navigation stratégie/I,
+formulaire et accès, truncated=false/hasMore=false, 16 réponses toutes 200/zéro
+≥500 ou exception observée, quatre net::ERR_ABORTED canceled=true conservés.
+Reload initial tronqué/attente trois secondes expirée puis page chargée ; retour
+document final sans télémétrie complète. Aucun zéro réseau global/SLO/parcours
+complet ; runtime.nativeReceived=false, nativeProductionReadReceived=true,
+wholeJourneyAccepted=false.
+
+spawt-public-live.json : vitrine fraîche six questions/sans compteur, stores
+bientôt/liens inactifs, aucune soumission ; brandReconnectionReceived=false.
+La vitrine live/décompte retiré et l’[identité choisie reçue en 432](RECEPTION-IDENTITE-PUBLIQUE.md)
+(lot de preuve 433 : édition SPAWT v6, palette/cinq polices/trois usages Moka/
+citation) restent des réceptions antérieures. C2 poursuit l’extension aux autres
+destinations/variantes/quiz/application/retour ; aucun univers intégral reçu.
+
+**Reprise en place** : contrôle/commit/CI du reçu documentaire restent distincts
+et ultérieurs. Causes locales compteur/droits/retour reçues sur ce périmètre ; les autres surfaces de droits/messages restent dans la passe cockpit
 existante. Budget qualitatif, absence→0/horizon défaut, projections roadmap et
 autres écrivains/consommateurs S restent dans le lot Guidance C3/C4/C6 ; pas de
-gate stricte affaiblie ou donnée inventée. Sept chantiers/dix gates ouverts.
+gate stricte affaiblie ou donnée inventée. Les sondes pures locales du
+normaliseur (absence→0/LONG_TERM, LOW→500k, entrées invalides) restent des
+contre-exemples de normalisation, pas des données réelles ni une invalidation
+générale des politiques ADVE d’estimation. Sept chantiers/dix gates ouverts.
 [Dette et déclencheurs](RESIDUAL-DEBT.md).
 
 ## SYNTHESIZE_S et recalcul S → calcul transactionnel commun — 442 livré, réception bornée (2026-10-10)
