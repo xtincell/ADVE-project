@@ -17,7 +17,7 @@ describe("Origine des valeurs de la plateforme de marque", () => {
     const statusFor = makeStatusFor({ doctrine: "DECLARED", mission: "INFERRED" }, "a", {
       doctrine: "INFERRED", mission: "HUMAN", vision: "SOURCE",
     });
-    expect(badge(statusFor("doctrine"))).toContain("Inféré IA");
+    expect(badge(statusFor("doctrine"))).toContain("Déduit — à vérifier");
     expect(badge(statusFor("mission"))).toContain("Saisi par l&#x27;humain");
     expect(badge(statusFor("vision"))).toContain("Issu d&#x27;une source");
     expect(badge(statusFor("vision"))).not.toMatch(/Officiel|Validé|Déclaré/);
@@ -38,7 +38,26 @@ describe("Origine des valeurs de la plateforme de marque", () => {
 
   it("un champ vide reste à saisir quelle que soit sa trace", () => {
     expect(badge("HUMAN", true)).toContain("À saisir");
-    expect(badge("INFERRED", true)).not.toContain("Inféré");
+    expect(badge("INFERRED", true)).not.toContain("Déduit");
+  });
+
+  it.each([undefined, null, "", "inconnu", Number.NaN, Number.POSITIVE_INFINITY])(
+    "ne transforme pas une cohérence absente ou invalide (%s) en score",
+    (score) => {
+      const html = renderToStaticMarkup(createElement(BESPOKE_PILLAR_RENDERERS.s!, {
+        content: { computed: { selectedInitiativeCount: 1, coherenceScore: score } }, certainty: null,
+      }));
+      expect(html).toContain("<span>—<i>/100</i></span>");
+      expect(html).not.toContain("<span>0<i>/100</i></span>");
+    },
+  );
+
+  it("conserve un vrai zéro et sa priorité sur le score calculé", () => {
+    const html = renderToStaticMarkup(createElement(BESPOKE_PILLAR_RENDERERS.s!, {
+      content: { coherenceScore: 0, computed: { coherenceScore: 80 } }, certainty: null,
+    }));
+    expect(html).toContain("<span>0<i>/100</i></span>");
+    expect(html).not.toContain("<span>80<i>/100</i></span>");
   });
 
   it.each([
@@ -49,7 +68,7 @@ describe("Origine des valeurs de la plateforme de marque", () => {
     const content = { [field]: "Valeur conservée", _fieldProvenance: { [field]: "INFERRED" } };
     const html = renderToStaticMarkup(createElement(Renderer, { content, certainty: null }));
     expect(html).toContain("Valeur conservée");
-    expect(html).toContain("Inféré IA");
+    expect(html).toContain("Déduit — à vérifier");
     expect(html).not.toContain(">Déclaré<");
   });
 });

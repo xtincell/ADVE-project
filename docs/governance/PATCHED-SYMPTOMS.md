@@ -30,6 +30,31 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-10 · **442 local en réception, deux chemins S convergent** : SYNTHESIZE_S
+retournait des recommandations Notoria, la cascade S complétait par LLM et la
+sauvegarde ne gardait pas les versions source du calcul. Deux entrées partagent
+désormais calcul transactionnel/gateway, huit versions/absences contrôlées avant
+upsert, REPLACE_FULL/historique/retrait de revue ; LOCKED/provenance refusés,
+S exclu de post-complétion IA. Retrait des paddings et splits non sourcés,
+draft sparse non approuvable selon contrat strict inchangé. Cause bornée :
+calcul, assistance narrative et remplissage de forme confondus, snapshot source
+non transporté au writer. Six rouges sur 441 puis 24 verts ; ciblé local final
+70/trois fichiers reçu, full PG 345/18 avant derniers correctifs. Observation
+locale USER/TRIAL recalcul 200/draft 35 %/budget 1 000 ; incohérences observées
+puis patchées : R.coherenceRisks absent ne vaut plus 100, provenance de champ
+INFERRED « Déduit — à vérifier » pour calcul ou IA, autorités inchangées.
+Cause : absence assimilée à absence de risque et déduction assimilée à IA.
+Cohérence un rouge puis un vert ciblé ; renderer fallback 0 erroné : sept rouges/
+treize verts→vingt verts, « — /100 » inconnu/vrai zéro conservé. Cause : absence
+perdue entre calcul et rendu. Native USER/TRIAL relue/rechargée, S v4/trois
+archives/I v2 ; fenêtre recalcul complète/reload tronqué, aucun zéro global/SLO.
+Fixture nettoyée. Premier gauntlet deux repères rouges corrigés sans nouvelle
+exception ; full/gauntlet finaux/livraison 442 non reçus, runtime 441,
+timeouts de compilation conservés et copie succès technique en dette UX.
+Normalisation budget/absence/timeframe, roadmap, protocol index strict et autres
+chemins S en dette Guidance existante ; compteur/boutons readonly ouverts.
+Aucune acceptation globale. [Preuves](REFONTE-PLAN.md) · [dette](RESIDUAL-DEBT.md).
+
 2026-10-10 · **441 livré, choix/projection reçus localement** : SELECT
 modifiait seulement BrandAction, puis le refresh réécrivait le choix/planning
 et le calcul promouvait des propositions. Le choix passe désormais par I

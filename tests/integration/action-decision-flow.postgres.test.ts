@@ -12,6 +12,8 @@ import { setBrandActionStatus } from "@/server/services/artemis/action-db/set-st
 import { executeProtocoleStrategy } from "@/server/services/rtis-protocols/strategy";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import { composedSynthesis } from "../fixtures/synthesis";
+import { actualizePillar } from "@/server/services/mestor/rtis-cascade";
+import { execute } from "@/server/services/artemis/commandant";
 
 const brands: string[] = [];
 let owner: string, operatorId: string;
@@ -56,6 +58,108 @@ const choose = (f: Fixture, selected: boolean) => setBrandActionStatus({ strateg
 const readI = (f: Fixture) => db.pillar.findUniqueOrThrow({ where: { id: f.i.id } });
 
 describe("one operator choice survives the whole existing action path", () => {
+  it("the manual S command saves the same source choices without an implicit provider", async () => {
+    const f = await fixture(); await choose(f, true);
+    provider.callLLM.mockClear();
+    const beforeI = await readI(f);
+    const result = await execute({ kind: "SYNTHESIZE_S", strategyId: f.strategy.id });
+    expect(result.status, result.summary).toBe("OK");
+    const s = await db.pillar.findUniqueOrThrow({ where: { id: f.s.id } });
+    expect(s).toMatchObject({ currentVersion: 2, validationStatus: "AI_PROPOSED", confidence: null,
+      content: { computed: { selectedInitiativeCount: 1, totalBudget: 1000 },
+        selectedFromI: [{ sourceInitiativeId: f.initiative.id }], _sourcePillarVersions: { i: 2, s: 1 } } });
+    expect(await readI(f)).toEqual(beforeI);
+    expect(provider.callLLM).not.toHaveBeenCalled();
+    expect(await db.pillarVersion.count({ where: { pillarId: f.s.id } })).toBe(1);
+  });
+  it("the individual S refresh also persists without post-completion AI", async () => {
+    const f = await fixture(); await choose(f, true); provider.callLLM.mockClear();
+    const result = await actualizePillar(f.strategy.id, "S");
+    expect(result.updated, result.error).toBe(true);
+    expect(provider.callLLM).not.toHaveBeenCalled();
+    expect(await db.pillar.findUniqueOrThrow({ where: { id: f.s.id } })).toMatchObject({ currentVersion: 2,
+      content: { computed: { selectedInitiativeCount: 1 }, _sourcePillarVersions: { i: 2, s: 1 } } });
+  });
+  it("never treats command IDs as an unrecorded choice", async () => {
+    const f = await fixture();
+    const result = await execute({ kind: "SYNTHESIZE_S", strategyId: f.strategy.id, selectedActionIds: [f.action.id] });
+    expect(result.status).toBe("FAILED"); expect(result.summary).toContain("SYNTHESIS_CHOICE_REQUIRED");
+    expect(await readI(f)).toEqual(f.i);
+    expect(await db.pillarVersion.count({ where: { pillarId: f.s.id } })).toBe(0);
+  });
+  it("refuses stale source versions before saving or archiving a computed plan", async () => {
+    const f = await fixture(); const source = await executeProtocoleStrategy(f.strategy.id);
+    await choose(f, true);
+    const before = await db.pillar.findUniqueOrThrow({ where: { id: f.s.id } });
+    const result = await writePillarAndScore({ strategyId: f.strategy.id, pillarKey: "s",
+      operation: { type: "REPLACE_FULL", content: source.content }, author: { system: "PROTOCOLE_S", reason: "Synthetic old snapshot" },
+      options: { expectedVersion: 1, ...{ expectedPillarVersions: source.content._sourcePillarVersions as Record<string, number | null> } } });
+    expect(result.success).toBe(false); expect(result.error).toContain("PILLAR_SOURCE_VERSION_CONFLICT");
+    expect(await db.pillar.findUniqueOrThrow({ where: { id: f.s.id } })).toEqual(before);
+    expect(await db.pillarVersion.count({ where: { pillarId: f.s.id } })).toBe(0);
+  });
+  it("records missing sources and refuses a source appearing after the snapshot", async () => {
+    const f = await fixture(); const source = await executeProtocoleStrategy(f.strategy.id);
+    expect(source.content._sourcePillarVersions).toMatchObject({ a: null, d: null, v: null, e: null, r: null, t: null });
+    await db.pillar.create({ data: { strategyId: f.strategy.id, key: "a", content: { nomMarque: "Synthetic" } } });
+    const result = await writePillarAndScore({ strategyId: f.strategy.id, pillarKey: "s",
+      operation: { type: "REPLACE_FULL", content: source.content }, author: { system: "PROTOCOLE_S", reason: "Synthetic missing source" },
+      options: { ...{ expectedPillarVersions: source.content._sourcePillarVersions as Record<string, number | null> } } });
+    expect(result.success).toBe(false); expect(result.error).toContain("PILLAR_SOURCE_VERSION_CONFLICT");
+    expect(await db.pillarVersion.count({ where: { pillarId: f.s.id } })).toBe(0);
+  });
+  it("does not pad sparse choices with invented strategic objectives", async () => {
+    const f = await fixture(); await choose(f, true);
+    const result = await executeProtocoleStrategy(f.strategy.id);
+    expect(result.content).toMatchObject({ axesStrategiques: [], facteursClesSucces: [], kpiDashboard: [], devotionFunnel: [], budgetByDevotion: {} });
+    expect(result.content.northStarKPI).toBeUndefined();
+    expect(result.content.computed).not.toHaveProperty("coherenceScore");
+    expect(result.content.roadmap).toHaveLength(1);
+    expect(result.content.sprint90Days).toMatchObject([{ sourceInitiativeId: f.initiative.id }]);
+    expect((result.content.sprint90Days as object[])[0]).not.toHaveProperty("devotionImpact");
+  });
+  it("archives the previous S and withdraws its review without changing measured confidence", async () => {
+    const f = await fixture();
+    const result = await execute({ kind: "SYNTHESIZE_S", strategyId: f.strategy.id });
+    expect(result.status, result.summary).toBe("OK");
+    expect(await db.strategy.findUniqueOrThrow({ where: { id: f.strategy.id } })).toMatchObject({ status: "DRAFT" });
+    expect(await db.pillar.findUniqueOrThrow({ where: { id: f.s.id } })).toMatchObject({ confidence: null, validationStatus: "AI_PROPOSED", currentVersion: 2 });
+    const version = await db.pillarVersion.findFirstOrThrow({ where: { pillarId: f.s.id } });
+    expect(version.content).toEqual(f.s.content);
+  });
+  it("refuses locked or human-protected S without a partial archive or review change", async () => {
+    for (const mode of ["locked", "human"] as const) {
+      const f = await fixture();
+      await db.pillar.update({ where: { id: f.s.id }, data: mode === "locked" ? { validationStatus: "LOCKED" }
+        : { content: { ...composedSynthesis(), syntheseExecutive: "Human synthetic text preserved", _fieldProvenance: { syntheseExecutive: "HUMAN" } } } });
+      const before = await db.pillar.findUniqueOrThrow({ where: { id: f.s.id } });
+      const result = await execute({ kind: "SYNTHESIZE_S", strategyId: f.strategy.id });
+      expect(result.status).toBe("FAILED");
+      expect(result.summary).toContain(mode === "locked" ? "LOCKED" : "FIELD_PROVENANCE_REFUSED");
+      expect(await db.pillar.findUniqueOrThrow({ where: { id: f.s.id } })).toEqual(before);
+      expect(await db.strategy.findUniqueOrThrow({ where: { id: f.strategy.id } })).toMatchObject({ status: "VALIDATED" });
+      expect(await db.pillarVersion.count({ where: { pillarId: f.s.id } })).toBe(0);
+    }
+  });
+  it("serializes two recalculations and replaces current arrays while retaining both archives", async () => {
+    const f = await fixture(); await choose(f, true);
+    const results = await Promise.all([actualizePillar(f.strategy.id, "S"), actualizePillar(f.strategy.id, "S")]);
+    expect(results.every(result => result.updated)).toBe(true);
+    const s = await db.pillar.findUniqueOrThrow({ where: { id: f.s.id } });
+    expect(s.currentVersion).toBe(3);
+    expect((s.content as { selectedFromI: unknown[] }).selectedFromI).toHaveLength(1);
+    expect((s.content as { sprint90Days: unknown[] }).sprint90Days).toHaveLength(1);
+    expect(await db.pillarVersion.count({ where: { pillarId: f.s.id } })).toBe(2);
+  });
+  it("a stale calculation cannot create a ghost S when the target was absent", async () => {
+    const f = await fixture(); await db.pillar.delete({ where: { id: f.s.id } });
+    const source = await executeProtocoleStrategy(f.strategy.id); await choose(f, true);
+    const result = await writePillarAndScore({ strategyId: f.strategy.id, pillarKey: "s",
+      operation: { type: "REPLACE_FULL", content: source.content }, author: { system: "PROTOCOLE_S", reason: "Synthetic absent target" },
+      options: { expectedPillarVersions: source.content._sourcePillarVersions as Record<string, number | null> } });
+    expect(result.success).toBe(false); expect(result.error).toContain("PILLAR_SOURCE_VERSION_CONFLICT");
+    expect(await db.pillar.count({ where: { strategyId: f.strategy.id, key: "s" } })).toBe(0);
+  });
   it("persists selection in a versioned initiative and withdraws the former S review", async () => {
     const f = await fixture(); await choose(f, true);
     expect(await readI(f)).toMatchObject({ currentVersion: 2, content: { catalogueParCanal: { DIGITAL: [

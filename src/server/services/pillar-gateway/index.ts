@@ -67,6 +67,8 @@ type PillarWriteOperation =
 interface PillarWriteOptions {
   /** Version du contenu effectivement relu par l'appelant, contrôlée dans la transaction. */
   expectedVersion?: number;
+  /** Snapshot used by a derived calculation; null means the source was absent. */
+  expectedPillarVersions?: Partial<Record<import("@/domain").PillarStorageKey, number | null>>;
   /** Confirmation humaine : provenance et retrait des marqueurs legacy dans la même écriture. */
   confirmInferredField?: string;
   sourceReceipts?: SourceReceipt[];
@@ -253,15 +255,6 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
       stalePropagated: [], warnings: [], error: "SYNTHESIS_REVIEW_REQUIRED: approuvez la version relue de la synthèse par la transition dédiée." };
   }
 
-  // Single writes keep their historical upsert; an atomic batch includes it in
-  // its transaction. createVersion uses that same transaction, so a refusal
-  // rolls back both content and snapshots. The key upsert remains race-safe.
-  if (operation.type !== "RESTORE_VERSION") await (transaction ?? db).pillar.upsert({
-    where: { strategyId_key: { strategyId, key: pillarKey } },
-    create: { strategyId, key: pillarKey, content: {}, confidence: null, currentVersion: 1 },
-    update: {},
-  });
-
   try {
     const perform = async (tx: Prisma.TransactionClient): Promise<PillarWriteResult> => {
       if (operation.type !== "RESTORE_VERSION") {
@@ -272,6 +265,28 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
         // an edit can keep the Strategy approval of an earlier S version, or
         // deadlock with the reviewer while invalidating that approval.
         await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${strategyId} FOR UPDATE`;
+        // Check the complete read snapshot before even creating an empty target.
+        // All governed content writers share the Strategy lock. Missing rows are
+        // part of the snapshot, so later arrivals cannot silently alter a plan.
+        if (options?.expectedPillarVersions) {
+          const { PILLAR_STORAGE_KEYS } = await import("@/domain");
+          const rows = await tx.pillar.findMany({ where: { strategyId }, select: { key: true, currentVersion: true } });
+          const versions = new Map(rows.map(row => [row.key, row.currentVersion]));
+          for (const [key, expected] of Object.entries(options.expectedPillarVersions)) {
+            if (!(PILLAR_STORAGE_KEYS as readonly string[]).includes(key) ||
+                (expected !== null && (!Number.isSafeInteger(expected) || (expected ?? 0) < 1))) {
+              throw new Error("PILLAR_SOURCE_VERSION_REQUIRED: snapshot de source invalide.");
+            }
+            if ((versions.get(key) ?? null) !== expected) {
+              throw new Error(`PILLAR_SOURCE_VERSION_CONFLICT: source ${key} modifiée — recharger et recalculer.`);
+            }
+          }
+        }
+        await tx.pillar.upsert({
+          where: { strategyId_key: { strategyId, key: pillarKey } },
+          create: { strategyId, key: pillarKey, content: {}, confidence: null, currentVersion: 1 },
+          update: {},
+        });
       }
       // ── Load current pillar ──────────────────────────────────────
       const pillar = await tx.pillar.findUnique({

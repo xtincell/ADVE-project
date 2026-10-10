@@ -43,7 +43,7 @@ describe("Les relations produit parlent le langage du catalogue", () => {
   });
   it("relaie l'origine du champ dans ses six dimensions, sans promotion humaine", () => {
     const html = render(system, catalogue, "INFERRED");
-    expect(html.match(/Inféré IA/g)).toHaveLength(6);
+    expect(html.match(/Déduit — à vérifier/g)).toHaveLength(6);
     expect(html).not.toContain("Origine inconnue");
     expect(html).not.toContain("Déclaré");
     expect(html).not.toContain("Saisi par l");

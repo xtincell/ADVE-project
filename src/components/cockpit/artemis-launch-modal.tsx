@@ -159,7 +159,7 @@ export function ArtemisLaunchModal({
 
   // Decide post-fill phase — needsHuman is never blocking (PR-C ADR-0035).
   // Auto-fill always produces an inferred draft; the human validates afterward
-  // via the "Inféré IA" badge on each cockpit pillar page. We always go to
+  // via the "Déduit — à vérifier" badge on each cockpit pillar page. We always go to
   // READY after a fill completes — if the gate still vetoes server-side, the
   // page's onError handler reopens the modal with the server-side blockers.
   useEffect(() => {
@@ -356,7 +356,7 @@ export function ArtemisLaunchModal({
                 <strong className="text-warning">{inferredMarked} champ{inferredMarked > 1 ? "s" : ""} inféré{inferredMarked > 1 ? "s" : ""}</strong>{" "}
                 par l'IA et marqué{inferredMarked > 1 ? "s" : ""} comme tel{inferredMarked > 1 ? "s" : ""}. Vous pourrez les valider ou les
                 réécrire depuis chaque page de fondation (Authenticité / Distinction / Valeur /
-                Engagement) — un badge « Inféré IA » s'affiche à côté de chaque valeur concernée.
+                Engagement) — un badge « Déduit — à vérifier » s'affiche à côté de chaque valeur concernée.
               </p>
             </div>
           )}

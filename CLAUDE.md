@@ -4,6 +4,31 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-10
 
+**6.27.442 local en réception — synthèse calculée commune** : SYNTHESIZE_S
+et actualizePillar(S) utilisent recalculateSynthesis, transaction/gateway existants,
+versions des huit sources (S précédent et absences null compris) contrôlées avant
+upsert. REPLACE_FULL archive et retire la revue, refus LOCKED/provenance humaine ;
+S exclu de post-complétion IA, draft sans padding axes/facteurs/KPI/funnels ou
+splits non sourcés. Contrat strict inchangé, draft sparse non approuvable.
+Sans R.coherenceRisks, computed.coherenceScore reste absent ; badge de provenance
+de champ INFERRED « Déduit — à vérifier », enum/autorité humaine inchangés.
+Renderer S « — /100 » sans score, vrai zéro conservé ; sept rouges/treize verts
+puis vingt rendus verts.
+Six rouges sur 441 puis 24 ciblés verts ; ciblé final local 70/trois fichiers
+reçu, 28 choix/dix nouveaux 442 + 21 S + 21 compensation ; full PG 345/18 verts
+avant derniers correctifs, cohérence rouge puis vert ciblé. Premier gauntlet
+quatre sorties 0/deux repères de gouvernance corrigés sans nouvelle exception,
+pas final. Native USER/TRIAL locale relue : trois POST actualize 200, S v4/trois
+archives/I v2/choix/budget 1 000 conservés, INTAKE 35 %/score inconnu après reload.
+Fenêtre recalcul complète, reload tronqué ; aucun zéro global ni SLO. Fixture
+nettoyée/serveur et onglet fermés ; full/gauntlet finaux et CI/image/runtime 442
+attendus, runtime reçu 441. Timeouts de compilation conservés.
+Normalisation budget qualitatif/absence→0/timeframe défaut, projections roadmap
+et autres écrivains/consommateurs S (protocol index strict notamment) restent à
+réconcilier ; compteur catalogue, boutons readonly et copie du succès ouverts. Aucune nouvelle
+entité/route/service/Intent/ADR ni acceptation des sept chantiers/dix gates.
+[Plan et dettes actuels](docs/governance/REFONTE-PLAN.md).
+
 **6.27.441 livré — choix I et projection** : SELECT du kind existant
 SET_BRAND_ACTION_STATUS écrit I par writePillar avec BrandAction dans la même
 transaction, expectedVersion/historique/staleness S et intentId conservés ; refus

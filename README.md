@@ -16,6 +16,17 @@
 
 ## Quick start
 
+**6.27.442 local en réception** : le bouton de synthèse et le recalcul utilisent
+le même plan dérivé des choix conservés, avec contrôle des versions source.
+Le plan incomplet demeure un brouillon non approuvable ; ces deux entrées
+n’appellent plus implicitement l’IA. Cohérence inconnue reste absente, badge
+« Déduit — à vérifier » couvre aussi le calcul sans IA ; « — /100 » distingue
+un score inconnu d’un vrai zéro. Tests et recette locale relue/rechargée reçus
+sur dossier fictif ; télémétrie du reload tronquée, contrôles finaux et livraison
+442 attendus, runtime reçu 441. Budgets, autres chemins du plan
+et droits visibles/messages de succès restent à réconcilier ; sept chantiers/dix gates ouverts.
+[Périmètre et suite](docs/governance/REFONTE-PLAN.md).
+
 **6.27.441 livré** : les choix d’actions sont rattachés à leur source
 et à son historique ; le calcul du plan utilise les actions explicitement
 retenues. L’écran actualise l’état après un choix et montre ses refus ; parcours

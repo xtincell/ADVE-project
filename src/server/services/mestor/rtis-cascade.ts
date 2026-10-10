@@ -384,17 +384,61 @@ export type ActualizeResult = {
   maturityCompletionPct?: number;
   maturityMissing?: string[];
   error?: string;
+  version?: number;
+  selectedFromICount?: number;
 };
+
+/** Existing S calculation and versioned writer, shared by both entry points. */
+export async function recalculateSynthesis(strategyId: string, context?: {
+  intentId?: string; userId?: string; selectedActionIds?: string[];
+}): Promise<ActualizeResult> {
+  try {
+    const { withPillarTransaction } = await import("@/server/services/pillar-gateway");
+    const { executeProtocoleStrategy } = await import("@/server/services/rtis-protocols");
+    const { collectNormalizedInitiatives } = await import("@/lib/types/pillar-schemas");
+    const result = await withPillarTransaction(strategyId, async (tx, write) => {
+      await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${strategyId} FOR UPDATE`;
+      if (context?.selectedActionIds?.length) {
+        const ids = [...new Set(context.selectedActionIds)];
+        const actions = await tx.brandAction.findMany({ where: { strategyId, id: { in: ids } } });
+        const i = await tx.pillar.findUnique({ where: { strategyId_key: { strategyId, key: "i" } } });
+        const chosen = new Set(collectNormalizedInitiatives(i?.content).filter(a => a.status === "SELECTED_FOR_ROADMAP").map(a => a.id));
+        if (actions.length !== ids.length || actions.some(a => !a.selected || !a.sourceInitiativeId || !chosen.has(a.sourceInitiativeId))) {
+          throw new Error("SYNTHESIS_CHOICE_REQUIRED: conservez d’abord ces choix dans le catalogue, puis recalculez.");
+        }
+      }
+      const calculated = await executeProtocoleStrategy(strategyId, tx);
+      if (calculated.error) throw new Error(calculated.error);
+      const sources = calculated.content._sourcePillarVersions as Record<string, number | null>;
+      const persisted = await write({ strategyId, pillarKey: "s",
+        operation: { type: "REPLACE_FULL", content: calculated.content },
+        author: { system: "PROTOCOLE_S", reason: "Recalcul depuis les choix conservés", intentId: context?.intentId, userId: context?.userId },
+        options: { expectedVersion: sources.s ?? 1, expectedPillarVersions: sources,
+          targetStatus: "AI_PROPOSED", shapeGate: true, rejectOnProvenanceRefusal: true },
+      });
+      return { calculated, persisted };
+    });
+    const { assessPillar } = await import("@/server/services/pillar-maturity/assessor");
+    const assessment = assessPillar("s", result.persisted.newContent);
+    return { pillarKey: "S", updated: true, version: result.persisted.version,
+      selectedFromICount: result.calculated.selectedFromICount, maturityStage: assessment.currentStage,
+      maturityCompletionPct: assessment.completionPct, maturityMissing: assessment.missing };
+  } catch (err) {
+    return { pillarKey: "S", updated: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
 
 /**
  * Actualize a single pillar via Mestor.
- * For R/T/I/S: generates from other pillars.
+ * S uses the saved calculation; R/T/I generate from other pillars.
  * For A/D/V/E: enriches from R+T recommendations.
  */
 export async function actualizePillar(
   strategyId: string,
   pillarKey: PillarKey,
+  context?: { intentId?: string; userId?: string },
 ): Promise<ActualizeResult> {
+  if (pillarKey === "S") return recalculateSynthesis(strategyId, context);
   try {
     const pillars = await loadPillars(strategyId);
 
@@ -446,20 +490,6 @@ export async function actualizePillar(
       newContent = catalogue as unknown as Record<string, unknown>;
       confidence = 0.70;
 
-    } else if (pillarKey === "S") {
-      // S = pure computed dashboard + generative selection. SINGLE source of
-      // truth (ADR-0088): delegate to executeProtocoleStrategy — same pattern
-      // as T delegating to executeProtocoleTrack above. This removes the
-      // divergent inline LLM generator so S (incl. its `computed` block) is
-      // produced identically regardless of cascade entry point.
-      const { executeProtocoleStrategy } = await import("@/server/services/rtis-protocols");
-      const sResult = await executeProtocoleStrategy(strategyId);
-      if (sResult.error || Object.keys(sResult.content).length === 0) {
-        throw new Error(`[protocole-strategy] ${sResult.error ?? "empty content returned"}`);
-      }
-      newContent = sResult.content;
-      confidence = sResult.confidence;
-
     } else {
       // A, D, V, E — enrichissement via recommandations R+T
       const currentContent = (pillars[pillarKey] ?? {}) as Record<string, unknown>;
@@ -491,15 +521,14 @@ Retourne le pilier ${pillarKey} complet en JSON.`;
       confidence = 0.65;
     }
 
-    // Post-completion (R/T/I/S only) — single-call pillar generation
-    // frequently misses dense fields on I/S (catalogueParCanal,
-    // sprint90Days, roadmap, fenetreOverton) due to maxOutputTokens
+    // Post-completion (R/T/I only) — single-call pillar generation
+    // frequently misses dense fields (such as catalogueParCanal) due to maxOutputTokens
     // truncation. Run a chunked auto-fill pass that targets ONLY the
     // missing derivable fields, distributing them across multiple
     // smaller LLM calls. ADVE branches are excluded — that path does
     // recommendation-driven enrichment and has its own dedicated
     // chunked auto-fill via pillar.autoFill / fillToStage.
-    if (pillarKey === "R" || pillarKey === "T" || pillarKey === "I" || pillarKey === "S") {
+    if (pillarKey === "R" || pillarKey === "T" || pillarKey === "I") {
       try {
         const { assessPillar: assess } = await import("@/server/services/pillar-maturity/assessor");
         const { getContract } = await import("@/server/services/pillar-maturity/contracts-loader");

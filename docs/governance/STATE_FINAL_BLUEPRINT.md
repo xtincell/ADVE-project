@@ -223,6 +223,24 @@ l’upgrade de verrou. La recherche d’âge normalise S→s. Dans propagateFrom
 les modes autoRecalculate true/false sont reçus localement : Process seulement si auto,
 aucun appel réseau dans la fixture. Cela ne reçoit pas tous les modes/agents.
 
+**442 local en réception — deux entrées S, contrat inchangé** : SYNTHESIZE_S
+et actualizePillar(S) partagent calcul transactionnel/gateway ; huit versions
+A/D/V/E/R/T/I/S et absences null contrôlées avant upsert. REPLACE_FULL archive/
+retire revue, refus LOCKED/provenance humaine ; S exclu de post-complétion IA.
+Padding et splits non sourcés supprimés, draft sparse non approuvable selon
+contrat strict inchangé. Six rouges sur 441 puis 24 verts ; ciblé final 70/trois
+reçu et full PG 345/18 avant dernières corrections. Sans R.coherenceRisks,
+computed.coherenceScore absent ; provenance de champ INFERRED « Déduit — à
+vérifier » couvre calcul ou IA, autorités inchangées. Renderer « — /100 » inconnu/
+vrai zéro conservé, vingt rendus verts après sept rouges. Native USER/TRIAL
+locale relue/rechargée, S v4/trois archives/I v2/draft 35 %/choix/budget 1 000
+conservés ; fenêtre recalcul complète/reload tronqué, full/gauntlet finaux et
+livraison 442 attendus, runtime 441. Normalisation
+budget/absence/timeframe, projections et autres chemins S dont protocol index
+strict restent en dette ; compteur/boutons readonly/copie succès ouverts, aucune nouvelle
+entité/route/service/Intent/ADR ni acceptation des sept chantiers/dix gates.
+[Plan actuel](REFONTE-PLAN.md).
+
 **441 livré — décision d’action et projection, réception bornée** : SELECT du kind
 SET_BRAND_ACTION_STATUS conserve le contexte intentId et versionne I par
 writePillar dans la transaction BrandAction, expectedVersion/historique/staleness

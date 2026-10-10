@@ -294,29 +294,49 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   36 actions/28 retenues ; USER/TRIAL et ART_DIRECTOR uniquement locaux.
   Ancien S pré-lancement et budgets discordants observés, aucun recalcul réel.
   Aucune clôture globale déduite.
-  **Reste à fermer** : SYNTHESIZE_S manuel appelle encore Notoria batch et rend
-  des recommandations plutôt qu’un calcul versionné. Lecture statique de
-  rtis-cascade.ts:496–557 : S reste inclus dans la post-complétion LLM par
-  runChunkedFieldGeneration ; le calcul pur 441 ne prouve pas toute la cascade
-  sans IA. savePillar:37–64 sauvegarde sans garde des versions source lues au
-  calcul. rtis-protocols/strategy.ts
-  complète les facteurs jusqu’à cinq et garde valeurs/targets/types par défaut.
-  Le schéma exige notamment 3 axes/3 facteurs/5 actions sprint. **Plan** : converger la
-  commande et cascade S vers le calcul existant/gateway, contrôler les versions
-  source avant sauvegarde et rendre la post-complétion IA explicitement facultative,
-  assistance Notoria comprise ;
-  distinguer faits sourcés, absence et estimation, retirer les remplissages comme
-  preuve de maturité sans affaiblir le contrat strict. Recevoir choix → refresh
-  préservé → S versionné → nouvelle revue, coordonner le remap UUID et prouver
-  les versions source au recalcul. **Déclencheur** : prochain incrément du
-  parcours manuel Guidance avant C3/C4/C6 et preuve de release ; effort : un lot
-  borné dispatch/calcul/contrat puis recette manuelle transverse.
+  **442 local en réception** : SYNTHESIZE_S et actualizePillar(S) convergent vers
+  recalculateSynthesis transactionnel/gateway ; huit versions A/D/V/E/R/T/I/S,
+  absences null comprises, contrôlées avant upsert. REPLACE_FULL/historique/retrait
+  de revue, refus LOCKED/provenance humaine ; S exclu du chunk LLM, padding axes/
+  facteurs/KPI/funnels et splits non sourcés retirés. Six rouges sur 441 puis
+  checkpoint 24 verts ; ciblé final local 70/trois reçu, 28 choix/dix nouveaux
+  442 + 21 S + 21 compensation ; full PG 345/18 avant dernières corrections.
+  Observation locale USER/TRIAL recalcul 200, draft 35 %/choix/budget 1 000
+  conservés. Sans R.coherenceRisks, computed.coherenceScore désormais absent ;
+  provenance de champ INFERRED « Déduit — à vérifier », autorités inchangées.
+  Cohérence rouge puis vert ciblé ; renderer sept rouges/treize verts→vingt verts,
+  « — /100 » inconnu/vrai zéro conservé. Native USER/TRIAL relue/rechargée :
+  S v4/trois archives/I v2, choix/budget 1 000 conservés, draft INTAKE 35 %.
+  Fenêtre recalcul complète/reload tronqué ; fixture nettoyée, aucun zéro global
+  réseau/SLO. Premier gauntlet deux repères rouges corrigés sans nouvelle
+  exception ; full/gauntlet finaux/livraison attendus, runtime 441,
+  timeouts de compilation conservés. Sparse non
+  approuvable, contrat strict inchangé.
+  **Reste à fermer** : collectNormalizedInitiatives normalise LOW/MEDIUM/HIGH
+  en montants, absence→0 et timeframe défaut. Projections roadmap/computed et
+  autres consommateurs/écrivains S restent à recevoir ; executeRTISCascade via
+  rtis-protocols/index.persistViaGateway garde MERGE_DEEP/strictSchemaValidation
+  et refuse le draft sparse : aucune unification globale déduite. **Plan** :
+  distinguer fait sourcé, absence et estimation dès normalisation, vérifier les
+  projections et chaque writer/consommateur, contrôler les versions source et
+  coordonner le remap UUID. Recevoir choix → refresh préservé → S versionné →
+  nouvelle revue ; assistance Notoria explicite facultative, sans affaiblir le
+  contrat strict (notamment 3 axes/3 facteurs/5 actions sprint) ni inventer des
+  données pour le satisfaire. **Déclencheur** : prochain incrément du parcours
+  manuel Guidance avant C3/C4/C6 et preuve de release ; effort : un lot borné
+  normalisation/projections/écrivains puis recette manuelle transverse.
   **Compteur catalogue, fixture locale 441** : une action affichée mais compteur
   I/footer zéro. **Plan** : diagnostiquer le décompte avec collectNormalizedInitiatives
   et le contrat des trois collections I, confronter contenu, projection et UI ;
   ne fabriquer ni action ni compte pour masquer l’écart. **Déclencheur** : prochain
   lot UX C3/C7 avant recette native ; effort : reproduction des trois formes,
   correction du compteur existant puis lecture native comparative.
+  **Copie succès, fixture locale 442** : « stage INTAKE 35 % » demeure technique,
+  observée sur la capture finale ; pas corrigée dans ce lot. **Plan** : réutiliser
+  état/libellés métier de readiness pour le message existant, recevoir succès et
+  refus nativement sans exposer les détails internes. **Déclencheur** : prochain
+  lot UX C3/C7 avant recette native ; effort : correction de copie bornée,
+  tests rendu et lecture native comparative, sans nouvelle fonction.
   **440 livré, contre-exemple local propriétaire reçu** :
   actions.sync applique désormais le droit d’écriture calendrier ; la lecture
   seule reçoit 403 sans altération et le propriétaire reçoit 200, mais sa ligne

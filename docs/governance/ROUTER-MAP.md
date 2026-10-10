@@ -6,6 +6,20 @@ Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts`
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
+**442 local en réception — deux entrées existantes de S** : SYNTHESIZE_S et
+actualizePillar(S) rejoignent recalculateSynthesis ; même calcul transactionnel,
+versions des huit sources y compris absences contrôlées avant upsert,
+REPLACE_FULL/historique/retrait de revue, refus LOCKED/provenance humaine.
+Pas de nouvelle route/droit/Intent, aucune approbation ou IA implicite sur ces
+deux entrées ; sparse reste non approuvable, gate stricte inchangée. Six rouges
+puis 24 verts, ciblé 70/trois/full PG 345/18 reçus avant dernières corrections.
+Native USER/TRIAL locale relue, trois POST pillar.actualize 200/S v4/I v2 ;
+cohérence inconnue rendue « — /100 », vrai zéro conservé, vingt rendus verts ;
+badge de provenance de champ INFERRED « Déduit — à vérifier », droits inchangés.
+Fenêtre recalcul complète, reload tronqué ; gauntlet/full finaux/CI/image/runtime 442 attendus,
+runtime reçu 441. Autres écrivains/consommateurs et budget/timeframe
+restent ouverts, aucune mutation réelle. [Limites et reprise](REFONTE-PLAN.md).
+
 **439 livré, lecture existante seulement** : PillarPage consomme pillar.readiness
 en complément de get/assess ; callbacks et onComplete du recalcul relisent les
 trois queries. Aucun router, procédure ou droit ajouté ; gates serveur inchangées,

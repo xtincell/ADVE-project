@@ -131,7 +131,7 @@ export function decideOverwrite(
 export const FIELD_PROVENANCE_LABEL: Record<FieldProvenance, string> = {
   HUMAN: "Saisi par l'humain",
   SOURCE: "Issu d'une source",
-  INFERRED: "Inféré IA",
+  INFERRED: "Déduit — à vérifier",
   UNKNOWN: "Origine inconnue",
 };
 

@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.442", date: "2026-10-10",
+    headline: "Un plan recalculé depuis vos choix conservés",
+    highlights: [
+      { emoji: "🧭", title: "Recalculez sans assistance obligatoire", body: "Le recalcul du plan reprend les actions que vous avez conservées. Il sauvegarde une nouvelle version à relire et garde le plan précédent dans l’historique. Les objectifs et mesures absents restent à renseigner ; une décision protégée reste protégée." },
+    ],
+  },
+  {
     version: "6.27.439", date: "2026-10-09",
     headline: "Un état de dossier distinct des champs remplis",
     highlights: [

@@ -1,5 +1,39 @@
 # Changelog — La Fusee
 
+## v6.27.442 — fix(guidance): converger la synthèse manuelle et le calcul S versionné (2026-10-10)
+
+**442 local en réception : deux entrées calculent et versionnent le même draft ; livraison et parcours réel non reçus.**
+
+- SYNTHESIZE_S et actualizePillar(S) partagent recalculateSynthesis dans les
+  services existants. Transaction/verrou Strategy, versions des huit sources
+  A/D/V/E/R/T/I/S, absences null comprises, contrôlées avant upsert ; REPLACE_FULL
+  archive le précédent plan et retire sa revue. LOCKED/provenance humaine refusés,
+  contexte d’intention conservé, aucun choix implicite ni post-complétion IA de S.
+- Suppression des axes/facteurs de remplissage, KPI/targets/funnels zéro et
+  répartitions budget/devotion non sourcées. Le draft sparse garde ses absences
+  et reste non approuvable selon le contrat strict inchangé ; aucune maturité
+  artificielle ni nouvelle capacité, service, route, Intent ou ADR.
+- Deux observations locales corrigées : R.coherenceRisks absent ne produit plus
+  computed.coherenceScore=100. Le badge de provenance de champ INFERRED devient
+  « Déduit — à vérifier », couvrant aussi le calcul sans IA ; enum et autorité
+  humaine inchangés, copie modal/tests et scan vocab alignés. Renderer S :
+  « — /100 » sans score, vrai zéro conservé ; sept rouges/treize verts puis
+  vingt tests de rendu verts.
+- Six contre-exemples rouges sur 441, puis checkpoint 24 ciblés verts ; reçu
+  ciblé final local 70/trois fichiers, dont 28 choix (dix nouveaux 442), 21 S et
+  21 compensation ; full PG 345/18 verts avant ces dernières corrections,
+  cohérence un rouge puis un vert ciblé. Premier gauntlet quatre sorties 0,
+  gouvernance 1 622 verts/deux repères rouges corrigés sans nouvelle exception.
+  Native USER/TRIAL fictive relue : trois POST actualize 200, S v4/trois archives,
+  I v2/choix/budget 1 000 conservés, draft INTAKE 35 %/score inconnu après reload.
+  Fenêtre recalcul complète reçue, reload tronqué : aucun zéro réseau global/SLO.
+  Fixture nettoyée/serveur et onglet fermés ; full/gauntlet finaux attendus.
+  CI/image/runtime 442 non reçus, runtime reçu 441 ; aucune marque réelle.
+  Budget qualitatif/absence→0/timeframe défaut, projections roadmap et autres
+  écrivains/consommateurs S restent en dette Guidance, ainsi que compteur et
+  boutons readonly et copie technique du succès. Sept chantiers/dix gates non acceptés.
+  [Plan et déclencheurs](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.441 — fix(guidance): versionner les choix d’actions et calculer le plan retenu (2026-10-10)
 
 **441 livré : le choix rejoint I et le calcul respecte ce choix ; mutations locales reçues, lecture ADMIN en production reçue.**

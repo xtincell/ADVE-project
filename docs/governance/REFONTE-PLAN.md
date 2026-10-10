@@ -1,5 +1,76 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## SYNTHESIZE_S et recalcul S → calcul transactionnel commun — 442 local en réception (2026-10-10)
+
+Les deux entrées existantes délèguent à recalculateSynthesis : executeProtocoleStrategy
+lit les choix conservés dans I sous transaction/verrou Strategy. Le gateway
+contrôle les versions A/D/V/E/R/T/I/S, y compris sources absentes null et S
+précédent, avant tout upsert. REPLACE_FULL archive et retire la revue précédente,
+refus LOCKED/provenance humaine remontés, contexte d’intention conservé. Les IDs
+fournis à la commande doivent déjà correspondre aux choix source/projection ;
+ils ne constituent pas une sélection implicite. S sort de la post-complétion
+runChunkedFieldGeneration par LLM ; assistance narrative reste explicite.
+
+Le composeur retire padding axes/facteurs, KPI/targets/funnels zéro et splits
+budget/devotion non sourcés. Un jeu sparse reste un draft sparse, non approuvable
+selon le contrat strict inchangé ; le writer de brouillon ne vaut pas revue.
+Pas de service, route, Intent, modèle ou ADR ajouté.
+
+Deux observations natives locales ont déclenché un correctif : sans
+R.coherenceRisks, computed.coherenceScore est absent plutôt que 100. Le badge
+de provenance de champ INFERRED devient « Déduit — à vérifier », car il couvre
+aussi des calculs sans IA ; enum/autorités humaines inchangés. Copie du modal
+existant/tests rendu alignés, domaine inclus dans le scan vocab HARD ; ce
+raccord de scan ne constitue pas un reçu HARD final.
+La relecture révélait encore « 0 /100 » dans le renderer malgré l’absence du
+score : red-render-coherence.log sept rouges/treize verts, puis
+green-render-coherence.log vingt verts. Le rendu affiche désormais « — /100 »
+sans score et conserve un vrai zéro, sans attribuer un fait à l’absence.
+
+Preuves privées release/preuves-synthese-442 : red.log six contre-exemples rouges
+sur 441/dix-huit verts, green.log checkpoint 24 ciblés verts ; postgres-final.log
+reçu ciblé local 70/trois fichiers, 28 action-decision-flow (dix nouveaux 442),
+21 synthesis-write et 21 pillar-compensation. Source apparue après snapshot,
+source versionnée modifiée, absence S, deux recalculs/archives, LOCKED et refus
+de provenance testés. Full PostgreSQL 345/18 verts avant correctifs cohérence/
+libellé ; red-coherence.log un rouge/27 non sélectionnés puis green-coherence.log
+un vert/27 non sélectionnés. Premier gauntlet tsc/lint/lint-governance/cycles 0,
+gouvernance 1 622 verts/deux rouges sur repères des deux exceptions internes
+existantes (722/766→737/781), corrigés sans ajout d’exception. Gauntlet/full
+finaux non reçus.
+
+Native synthétique USER/TRIAL, authentification formulaire normale : propriétaire
+choisi, retenir→sync→roadmap→recalcul, trois POST pillar.actualize HTTP 200.
+native-recalc-response.json relu : updated=true/version4/selectedFromICount=1,
+INTAKE 35 %. native-source-final.json : I reste v2, S v4/trois archives,
+choix/budget 1 000 conservés, zéro GenerativeTask et CostDecision/quatre
+IntentEmission dans cette fixture. Badge « Déduit — à vérifier » et score
+inconnu corrects, reload conserve le plan ; native-synthese-final.png inspecté.
+native-final-load.json : DOM observé ≤980 ms/titre ≤5 711 ms, bornes observées,
+télémétrie reload truncated=true ; aucun zéro global ≥500/exception ou SLO déduit.
+Fenêtre native-recalc-events.json et suivi sans troncature : POST 200, zéro
+≥500/exception observé sur ces gestes, corps reçu. Affichages trompeurs 100/IA
+et 0 de la première observation, retards/timeouts de recompilation conservés.
+fixture-cleanup.json scoped cleaned=true/remaining=0 ; Next isolé et onglet 13
+fermés. Full PG et gauntlet finaux encore attendus. CI/image/runtime 442 non
+reçus, runtime reçu 441 ; aucun recalcul de
+vraie marque ni acceptation globale des sept chantiers/dix gates.
+
+**Reprise Guidance existante** : normalisation LOW/MEDIUM/HIGH en montants,
+absence→0 et timeframe défaut restent dans collectNormalizedInitiatives ;
+projections roadmap/computed et autres consommateurs/écrivains S restent à
+recevoir. executeRTISCascade utilise encore rtis-protocols/index.persistViaGateway
+avec MERGE_DEEP/strictSchemaValidation : un sparse y est refusé, ce troisième
+chemin n’est pas déclaré convergent. Préserver faits/absence/estimation dès
+normalisation, puis tracer chaque projection et writer avec ses versions source,
+sans affaiblir le contrat de revue. **Déclencheur** : prochain incrément du parcours
+manuel Guidance avant C3/C4/C6 et preuve de release ; effort : un lot borné
+normalisation/projections/écrivains, puis recette manuelle transverse. Compteur
+catalogue, boutons readonly et copie succès « stage INTAKE 35 % » restent dans
+le prochain lot UX C3/C7 ; réutiliser les libellés métier de readiness, puis
+recevoir succès/refus nativement sans jargon technique dans le message.
+[Dette Guidance en place](RESIDUAL-DEBT.md).
+
 ## Choix d’action → I versionné → calcul du plan — 441 livré, réception bornée (2026-10-10)
 
 Le chemin existant SET_BRAND_ACTION_STATUS/SELECT écrit le statut source dans

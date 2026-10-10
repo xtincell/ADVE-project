@@ -624,7 +624,7 @@ export const pillarRouter = createTRPCRouter({
 
 
   })
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       // ADR-0030 PR-Fix-2 — gate RTIS_CASCADE sur les piliers dérivés.
       // Cohérent avec notoria.actualizeRT (PR-2). Refuse de cascader R/T/I/S
       // si A/D/V/E pas ENRICHED minimum. Pour ADVE keys, pas de gate (on
@@ -634,7 +634,7 @@ export const pillarRouter = createTRPCRouter({
         const { assertReadyFor } = await import("@/server/governance/pillar-readiness");
         await assertReadyFor(input.strategyId, "RTIS_CASCADE");
       }
-      return actualizePillar(input.strategyId, input.key);
+      return actualizePillar(input.strategyId, input.key, { intentId: ctx.intentId, userId: ctx.session.user.id });
     }),
 
   triggerMarketStudy: governedProcedure({
@@ -845,7 +845,7 @@ export const pillarRouter = createTRPCRouter({
    *
    * Inference policy (PR-C, ADR-0035) :
    *   Every auto-filled field is marked INFERRED in `Pillar.fieldCertainty`
-   *   so the cockpit pages render the "Inféré IA — à valider" badge. The
+   *   so the cockpit pages render the "Déduit — à vérifier" badge. The
    *   operator confirms each field via `pillar.confirmInferredField` when
    *   reviewed. This means `needsHuman` is never blocking — we always produce
    *   an inferred draft, the human validates afterward.

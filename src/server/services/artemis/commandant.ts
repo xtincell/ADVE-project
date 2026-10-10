@@ -54,7 +54,7 @@ export async function execute(intent: Intent, context?: { intentId: string }): P
         return wrap({ ...base, ...(await generateIActions(intent)) });
 
       case "SYNTHESIZE_S":
-        return wrap({ ...base, ...(await synthesizeS(intent)) });
+        return wrap({ ...base, ...(await synthesizeS(intent, context)) });
 
       case "PROPOSE_BRAND_ACTIONS":
         return wrap({ ...base, ...(await proposeBrandActionsHandler(intent)) });
@@ -949,63 +949,19 @@ async function generateIActions(
   };
 }
 
-// ── SYNTHESIZE_S — pulls selected BrandActions when available ────────
+// ── SYNTHESIZE_S — same saved calculation as the individual refresh ──
 
 async function synthesizeS(
   intent: Extract<Intent, { kind: "SYNTHESIZE_S" }>,
+  context?: { intentId: string },
 ): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
-  // Read selected BrandActions to ground the synthesis in real planned moves.
-  const { db } = await import("@/lib/db");
-  const selectedActions = await db.brandAction.findMany({
-    where: {
-      strategyId: intent.strategyId,
-      OR: [
-        { selected: true },
-        ...(intent.selectedActionIds && intent.selectedActionIds.length > 0
-          ? [{ id: { in: intent.selectedActionIds } }]
-          : []),
-      ],
-    },
-    take: 50,
-    orderBy: { priority: "asc" },
+  const { recalculateSynthesis } = await import("@/server/services/mestor/rtis-cascade");
+  const result = await recalculateSynthesis(intent.strategyId, {
+    intentId: context?.intentId, selectedActionIds: intent.selectedActionIds,
   });
-
-  // ADR-0159 amendement (lecture inverse du pont RTIS→registre) : la synthèse
-  // S lit le registre des paris — track record résolu + engagements ouverts —
-  // comme intrant de stratégie. Lecture pure, best-effort (le registre absent
-  // n'empêche jamais la synthèse).
-  let pledgeTrackRecord: { open: number; hit: number; miss: number; statements: string[] } | null = null;
-  try {
-    const pledges = await db.predictionRecord.findMany({
-      where: { strategyId: intent.strategyId, kind: { in: ["PLEDGE", "ACTION_EFFECT"] } },
-      select: { status: true, statement: true },
-      orderBy: { horizonAt: "asc" },
-      take: 30,
-    });
-    if (pledges.length > 0) {
-      pledgeTrackRecord = {
-        open: pledges.filter((p) => p.status === "OPEN").length,
-        hit: pledges.filter((p) => p.status === "HIT").length,
-        miss: pledges.filter((p) => p.status === "MISS").length,
-        statements: pledges.filter((p) => p.status === "OPEN").map((p) => p.statement).slice(0, 5),
-      };
-    }
-  } catch {
-    /* registre indisponible → synthèse inchangée */
-  }
-
-  const { generateBatch } = await import("@/server/services/notoria/engine");
-  const batch = await generateBatch({
-    strategyId: intent.strategyId,
-    missionType: "S_SYNTHESIS",
-  });
-
-  return {
-    status: "OK",
-    summary: `S synthesized from ${selectedActions.length} selected actions: ${batch.totalRecos} recos${pledgeTrackRecord ? ` · paris: ${pledgeTrackRecord.hit} tenus / ${pledgeTrackRecord.miss} ratés / ${pledgeTrackRecord.open} ouverts` : ""}`,
-    tool: "notoria:S_SYNTHESIS",
-    output: { batch, selectedActionsCount: selectedActions.length, pledgeTrackRecord },
-  };
+  return { status: result.updated ? "OK" : "FAILED",
+    summary: result.updated ? `Plan recalculé : version ${result.version}, ${result.selectedFromICount} choix conservés. Revue nécessaire.` : result.error ?? "Recalcul refusé.",
+    tool: "protocole:S", output: result };
 }
 
 // ── PROPOSE_BRAND_ACTIONS — additive brand-aware action proposal ─────

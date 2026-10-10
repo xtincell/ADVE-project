@@ -8,6 +8,23 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
+**442 local en réception — mêmes services, calcul S commun** : SYNTHESIZE_S
+dans artemis/commandant et mestor/rtis-cascade.actualizePillar(S) délèguent à recalculateSynthesis,
+executeProtocoleStrategy avec transaction et writer du pillar-gateway existants.
+Huit versions A/D/V/E/R/T/I/S, absences null comprises, contrôlées avant upsert ;
+REPLACE_FULL/historique/retrait de revue, refus LOCKED/provenance humaine.
+S exclu du chunk LLM, suppression du padding et des splits non sourcés ; contrat
+strict inchangé, draft sparse non approuvable. Cohérence sans R.coherenceRisks
+absente ; provenance de champ INFERRED « Déduit — à vérifier », autorités
+inchangées. Renderer « — /100 » sans score/vrai zéro conservé, sept rouges/
+treize verts puis vingt verts. Six rouges puis 24 verts, ciblé 70/trois/full PG
+345/18 reçus avant derniers correctifs, cohérence rouge/vert ciblé. Native locale
+synthétique S v4/trois archives/I v2 reçue après reload ; fenêtre recalcul
+complète, reload tronqué. Full/gauntlet finaux et livraison attendus, runtime 441.
+Pas de nouveau service/route/Intent/ADR. Budget/timeframe, roadmap et autres
+chemins S dont rtis-protocols/index.persistViaGateway strict restent en dette :
+aucune unification globale déduite. [Reprise](REFONTE-PLAN.md).
+
 **439 livré, canon existant** : six descriptions de spawt-canon.ts et la copy
 actuelle alignées sur le quiz livré à six questions/cinq axes. Aucune logique
 de quiz, service ou import réel ajouté. Le lecteur PillarPage réutilise la

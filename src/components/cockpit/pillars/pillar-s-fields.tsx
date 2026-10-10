@@ -187,12 +187,17 @@ function BudgetPanel({ breakdown, byDevotion, total, status }: { breakdown: unkn
 function ComputedBanner({ computed, score }: { computed: unknown; score: unknown }) {
   if (isEmpty(computed)) return null;
   const c = asRec(computed);
-  const pct = Number(score) || Number(c.coherenceScore) || 0;
+  const numericScore = (value: unknown): number | null => {
+    if (isEmpty(value) || (typeof value !== "number" && typeof value !== "string")) return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  };
+  const pct = numericScore(score) ?? numericScore(c.coherenceScore);
   const totalBudget = typeof c.totalBudget === "number" ? c.totalBudget : null;
   return (
     <div className="ck-s-computed">
       <div className="ck-s-computed__score">
-        <div className="ck-s-computed__ring" style={{ "--p": pct } as React.CSSProperties}><div className="ck-s-computed__hole" /><span>{pct}<i>/100</i></span></div>
+        <div className="ck-s-computed__ring" style={{ "--p": pct ?? 0 } as React.CSSProperties}><div className="ck-s-computed__hole" /><span>{pct ?? "—"}<i>/100</i></span></div>
         <span className="ck-s-computed__lbl">Score de cohérence</span>
       </div>
       <div className="ck-s-computed__cells">
