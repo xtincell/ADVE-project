@@ -4,27 +4,22 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-10
 
-**6.27.446 local en réception — décision Notoria/source/plan/projection** :
-lecture normalisée/UUID exécutables, FK risques réunies depuis les copies brutes
-avec IDs choisis canoniques ; PHASE_1 proposé si échéance absente. Mutation des
-copies des trois collections via mapInitiativeEntries, snapshot huit versions/
-nulls/pins/sources, calcul S partagé et BrandAction dans une transaction gateway.
-HUMAN DENY/CHALLENGE provoque refus/rollback, pas APPLIED faux. UI existante :
-payload typé lisible, labels/avertissements métier, source CROSS_PILLAR I/R et
-zéro candidat sans affirmation de cohérence. Native locale finale USER/TRIAL synthétique :
-une reco/trois copies retenues, ligne stable selected=true/ACCEPTED, S une action/
-budget zéro, trois Intents et zéro tâche/coût. Baseline contraire conservée.
-DEFAULT 4 288/407, PG 352/18 (35 action-decision-flow), copie release/vocab 14/deux
-verts ; gauntlet final cinq sorties 0, gouvernance 1 626/166 ; fixtures nettoyées/Next arrêté. Source commit/CI/image/runtime 446 non reçus ; runtime
-445/doc3abd2be clôturés. Chargement local présenté comme zéro marque : plan C4
-pending existant/mesure à chaud, aucune régression production établie. Aucun
-modèle/service/router/page/Intent/ADR/tool/provider ; autres writers/versions/
-devises/remap/canaux S et cycles réels restent en dette S existante. Sept chantiers/
-dix gates/80 lignées ouverts, global null.
-Générateur : retrait HUMAN respecté, un rouge/dix verts puis suite complète ;
-filtre final non exercé dans cette build native antérieure. UI plan partiel/refus
-humain reçue sans Zod brut ; refus HTTP 200/applied 0 conserve lignes/piliers/reco
-ACCEPTED, appliedAt null, seul Intent 3→4. Précondition HUMAN préparée hors UI.
+**6.27.446 livré — réception bornée décision Notoria/source/plan/projection** :
+lecture normalisée/UUID exécutables/IDs choisis canoniques/FK union brute,
+PHASE_1 proposé si échéance absente et retrait HUMAN respecté. Toutes copies des
+collections mutées, huit versions/nulls/pins/sources vérifiés, calcul S/route/
+BrandAction atomiques ; refus HUMAN strict sans APPLIED faux. UI métier reçue
+sur fixture USER/TRIAL, une reco/trois copies/ligne stable ACCEPTED/S une action-
+budget zéro ; refus sans effet hors Intent, pas de marque réelle modifiée.
+CI source success, 4 288/407 et PG 352/18 ; gauntlet cinq sorties 0, gouvernance
+1 626/166, nettoyage reçu. Source 436975a/image/runtime 446 exacts ; production
+ADMIN lecture seule Stratégie/Recommandations, S v3/91,2 %/AI_PROPOSED/périmée
+inchangée. Aucun recalcul/choix réel/cycle/SLO ; preuve locale ne reçoit pas toute
+Notoria. Documentation/CI de clôture encore à recevoir. Probes purs : ancien
+budget conservé par fusion et FAILED déclaré complet, non corrigés ; reprise 447
+immédiate dans la dette S existante. Autres writers/versions/canaux/devises/remap/
+chargement et univers réel ouverts ; aucun modèle/service/router/page/Intent/
+ADR/tool/provider ajouté. Sept chantiers/dix gates/80 lignées ouverts, global null.
 [Preuves et suite](docs/governance/REFONTE-PLAN.md).
 
 

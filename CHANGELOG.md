@@ -2,41 +2,40 @@
 
 ## v6.27.446 — fix(notoria): relier la décision source au plan et à sa projection (2026-10-10)
 
-**446 local en réception : une décision rejoint toutes ses copies source, le plan et sa projection ; runtime reçu 445.**
+**446 livré, réception bornée : une décision Notoria rejoint toutes ses copies source, le plan et sa projection.**
 
-- Notoria lit collectNormalizedInitiatives : une proposition par identité UUID
-  exécutable, union brute des FK risques conservée. Le statut HUMAN d’un retrait
-  est respecté dès le générateur, sans reproposition contraire. Les IDs choisis canoniques
-  déterminent aussi cette union sans dépendre du statut périmé d’une copie.
-  PHASE_1 sans échéance source est proposé/à valider, aucun fait temporel imposé.
-- SELECT/REJECT/LINK_RISK mutent toutes les copies des trois collections via
-  mapInitiativeEntries ; références mutables/validateur brut préservés.
-  withPillarTransaction/gateway vérifient huit versions/nulls/pins/sources puis
-  sauvegardent S/route et BrandAction dans la même transaction. Refus HUMAN
-  DENY/CHALLENGE : rollback strict, aucune reco APPLIED après refus masqué.
-- UI Notoria existante : décisions typées lisibles, impact/source traduits,
-  avertissements métier sans Zod brut ; UPDATE_ADVE_FIELD conserve sa valeur.
-  Source CROSS_PILLAR existante fidèle aux entrées I/R ; zéro proposition ne
-  prétend plus prouver la cohérence. Succès plan partiel/refus humain reçus en UI native, sans Zod brut.
-- Checkpoints rouges conservés : identité sept, provenance trois, writer quatre,
-  puis deux cas risques et un cas générateur HUMAN (un rouge/dix verts). Suite DEFAULT 4 288/407 et PostgreSQL 352/18 verts,
-  dont 35 action-decision-flow ; reco persistée ACCEPTED/appliedAt null après
-  contradiction HUMAN refusée. Copie finale release/vocab 14/deux verts après
-  suites. Cinq contrôles finaux à zéro après filtre HUMAN ; gouvernance 1 626/166 verte.
-- Native locale finale USER/TRIAL synthétique/auth normale : baseline trois APPLIED/une
-  identité/une copie retenue ; après correction une reco, trois copies retenues,
-  même ligne opérationnelle selected=true/ACCEPTED, S sauvegardé avec une action
-  et budget zéro. Refus HTTP 200/applied 0 reçu, reco ACCEPTED/appliedAt null et
-  lignes/piliers conservés ; autorité HUMAN préparée hors UI. Trois puis quatre
-  Intents, zéro tâche/coût. Dernier filtre générateur prouvé unité/PG, pas dans
-  cette build native antérieure ; aucun dossier réel modifié.
-- Fixtures nettoyées (remaining 0), Next isolé arrêté. Source commit/CI/image/
-  runtime 446 non reçus. « Zéro marque » pendant chargement observé localement : reprise C4
-  via état pending existant puis mesure à chaud, aucune régression prod déduite.
-  Runtime 445/doc3abd2be clôturés ; autres writers/versions/devises/remap/canaux S,
-  sept chantiers/dix gates/80 lignées ouverts, global null. Aucune nouvelle entité,
-  route, service, Intent, ADR, outil ou fournisseur.
-  [Réception et reprise](docs/governance/REFONTE-PLAN.md).
+- Lecture normalisée/UUID exécutables, IDs choisis canoniques/FK risques réunies
+  depuis les copies brutes. PHASE_1 sans échéance source reste proposé/à valider ;
+  statut HUMAN d’un retrait respecté dès le générateur, sans reproposition contraire.
+- SELECT/REJECT/LINK_RISK mutent toutes les copies des trois collections ; refs
+  mutables/validation brute conservées. Huit versions/nulls/pins/sources vérifiés,
+  S/route/BrandAction dans la même transaction gateway. Refus HUMAN strict :
+  rollback, aucune reco APPLIED après un refus masqué par warning.
+- UI Notoria existante : décisions/impact/sources lisibles, avertissements métier
+  sans Zod brut ; source CROSS_PILLAR fidèle à I/R. Zéro candidat ne prouve plus
+  la cohérence. Relecture locale USER/TRIAL fictive reçue : une reco/trois copies
+  retenues/ligne stable selected=true/ACCEPTED/S une action-budget zéro. Refus
+  HTTP 200/applied 0 conserve lignes/piliers/reco, seul Intent 3→4 ; autorité HUMAN
+  préparée hors UI. Aucun choix de vraie marque ni coût fournisseur.
+- Rouges historiques identité/provenance/writer/risques/HUMAN conservés. CI source
+  38032361718, Mission 38032361762, Chromatic 38032361750 success ; 4 288/407
+  unitaires, 352/18 PG (35 action-decision-flow). Cinq contrôles locaux à zéro,
+  gouvernance 1 626/166, fixtures nettoyées/Next arrêté. Filtre HUMAN final reçu
+  unité/PG, pas dans la build native locale antérieure ; corps verts expirés après
+  reload, HTTP/UI/DB et corps du refus reçus. Aucun stress/cycle/SLO accepté.
+- Source 436975a, image 38032369928 et runtime exact 6.27.446 reçus. Production
+  ADMIN en lecture : Stratégie/Recommandations/note client/footer 446 ; S réelle
+  v3/91,2 %/AI_PROPOSED/périmée inchangée, aucune mutation/recalcul/publication.
+  Fenêtres complètes roadmap 61 réponses/10 ERR_ABORTED et Notoria cinq réponses,
+  zéro ≥500/exception observé sur ces fenêtres ; aucun SLO déduit des attentes.
+- Probes factices sans DB/provider : fusion S conserve ancien budget/total 9 000
+  malgré nouveau budget absent, et pipeline avec une étape FAILED déclare complet.
+  Non corrigés ici ; reprise immédiate 447 dans la dette S existante, writers
+  restants/calcul partagé/autorités/versions et état d’échec à factoriser.
+  Chargement local « zéro marque », canaux/devises/remap/raccord complet restent
+  ouverts. Sept chantiers/dix gates/80 lignées ouverts, global null ; aucune entité,
+  route, service, Intent, ADR, outil ou fournisseur ajouté. Commit documentaire et
+  sa CI encore à recevoir. [Réception et reprise](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.445 — fix(oracle): conserver les inconnus et rendre les exports fidèles (2026-10-10)
 

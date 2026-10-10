@@ -8,22 +8,19 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**446 local en réception — services Notoria/MESTOR existants** : lecteur
-normalisé/UUID exécutables/IDs choisis canoniques/FK union brute ; mutation toutes
-copies via mapInitiativeEntries. dispatchTypedRecos/withPillarTransaction/gateway
-et recalculateSynthesisInTransaction partagent huit versions/nulls/pins/sources,
-S/route et syncBrandActionsFromBlob dans une transaction. Refus HUMAN strict,
-pas APPLIED à tort ; source CROSS_PILLAR reflète les entrées I/R. Aucun service/
-modèle/tool ajouté. DEFAULT 4 288/407 et PG 352/18 verts (35 cas de décision),
-copie 14/deux verts ; native USER/TRIAL fictive une reco/trois copies retenues/ligne
-stable ACCEPTED/S une action-budget zéro, trois Intents/zéro tâche-coût.
-Gauntlet final cinq sorties 0, gouvernance 1 626/166 ; fixtures nettoyées/Next arrêté ; CI/image/runtime 446 non reçus/runtime 445. Autres écrivains/versions/
-canaux/devises/remap/cycles ouverts, pas convergence universelle.
-Générateur : retrait HUMAN respecté, un rouge/dix verts puis suite complète ;
-filtre final non exercé dans cette build native antérieure. UI plan partiel/refus
-humain reçue sans Zod brut ; refus HTTP 200/applied 0 conserve lignes/piliers/reco
-ACCEPTED, appliedAt null, seul Intent 3→4. Précondition HUMAN préparée hors UI.
-[Réception et dette](REFONTE-PLAN.md).
+**446 livré — services Notoria/MESTOR existants, réception bornée** : lecture
+normalisée/UUID exécutables/IDs choisis canoniques/FK union brute, mutation toutes
+copies via mapInitiativeEntries, calcul S/route/BrandAction dans la même transaction
+gateway/huit versions/nulls/pins/sources. Refus HUMAN strict et retrait humain
+respecté au générateur ; CROSS_PILLAR correspond à I/R. Aucun service/modèle/tool
+ajouté. CI 4 288/407 et PG 352/18, contrôles/natif local/nettoyage reçus ; source
+436975a/image/runtime 446 exacts, production ADMIN lecture seule S inchangée.
+Aucune mutation réelle/cycle/SLO. Probes purs : deepMerge conserve ancien budget
+face à absence ; runPipeline FAILED déclaré complet. Non corrigés ; lot 447
+immédiat vers calcul S full partagé/remplacement versionné/sources/provenance/
+strict et summary d’échec fiable. Writers quick-intake/rtis-draft, PROTOCOLE_S,
+rtis-protocols/index restent indépendants ; autres canaux/devises/remap/cycles
+ouverts. Commit documentaire/CI attendus. [Réception et dette](REFONTE-PLAN.md).
 
 
 **445 livré, réception bornée — lecteurs/export existants reçus localement** :

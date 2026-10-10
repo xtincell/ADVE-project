@@ -315,34 +315,36 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   100 %, ancien S/budgets/roadmap contradictoires ouverts, aucune réception USER
   de production. Timeouts de compilation conservés. Sparse non
   approuvable, contrat strict inchangé.
-  **446 local en réception — contrat Notoria décision/source/plan/projection** :
-  lecture normalisée/UUID exécutables, IDs choisis canoniques/union FK brute ;
-  mutation toutes copies via refs mutables, huit versions/nulls/pins/sources et
-  calcul S/route/projection dans la même transaction gateway. Générateur respecte
-  le retrait HUMAN, prouvé unité/PG ; HUMAN DENY/CHALLENGE
-  refuse strictement, pas APPLIED faux. DEFAULT 4 288/407, PG 352/18 (35 cas de
-  décision) et copie release/vocab 14/deux verts ; gauntlet final cinq
-  sorties 0, gouvernance 1 626/166 ; nettoyage reçu. Native USER/TRIAL fictive finale : une reco/trois copies
-  retenues/ligne stable ACCEPTED/S une action-budget zéro, trois Intents et zéro
-  tâche/coût ; baseline contraire conservée. UI plan partiel/refus humain reçue
-  sans Zod brut. Refus HTTP 200/applied 0 conserve lignes/piliers/reco ACCEPTED
-  (appliedAt null), seul Intent 3→4 ; précondition HUMAN préparée hors UI. Dernier
-  filtre générateur non réexercé dans cette build native antérieure. CI/image/runtime 446 non reçus,
-  runtime 445/doc3abd2be clôturés ; aucune réception du cycle réel.
-  **Réception locale reçue** : contrôles finaux/nettoyage et refus bornés ;
-  source commit/CI/image/runtime restent à recevoir, aucun fournisseur payant. **Observation locale C4** : zéro marque affiché pendant
-  chargement/compilation, pas régression production démontrée. Plan : réutiliser
-  query pending pour distinguer chargement/vide/erreur, recette bornée et mesure
-  à chaud ; effort correctif UI ciblé puis recette, trigger prochain lot C4 avant
-  acceptation globale du chargement.
+  **446 livré — contrat Notoria décision/source/plan/projection reçu à portée bornée** :
+  collecte normalisée/UUID exécutables/IDs choisis canoniques, toutes copies mutées,
+  calcul S/route/projection atomiques avec huit versions/nulls/pins/sources et refus
+  HUMAN strict. UI métier et décision/refus reçus localement USER/TRIAL fictifs ;
+  CI 4 288/407, PG 352/18 (35 cas décision), gauntlet final cinq sorties 0/
+  gouvernance 1 626/166, nettoyage reçu. Source 436975a/image/runtime 446 exacts,
+  production ADMIN en lecture seule, S réelle v3/91,2 %/AI_PROPOSED/périmée
+  inchangée. Pas de choix/recalcul réel/cycle/SLO accepté ; clôture documentaire
+  et sa CI encore à recevoir. Filtre final HUMAN unité/PG, pas cette build native
+  locale antérieure ; autorité de refus préparée hors UI, bornes conservées.
+  **Reprise immédiate 447 dans cette même dette** : next-writer-probe.json pur au
+  SHA source, aucune DB/provider. Fusion S garde ancien globalBudget/total 9 000
+  malgré nouveau budget absent/unknownCount 1 ; pipeline factice FAILED 1/pending 0
+  déclare isComplete true/isBlocked false. Reproduits, pas corrigés ni reçus en
+  persistance/production. Plan : quick-intake/rtis-draft, hyperviseur PROTOCOLE_S,
+  rtis-protocols/index vers calcul full S existant/remplacement versionné/sources/
+  strict/provenance conservés ; agrégat FAILED explicite. Effort : contre-exemples
+  PG/unitaires, factorisation existante et recette locale ; déclencheur lot 447
+  immédiat avant C3/C4/C6/cycle réel, sans pipeline/service supplémentaire.
   **Restent dans la même dette** : producteur S sémantique/canaux DEVOTION/OVERTON,
-  devises FCFA→BrandCurrency/BrandAction, autres writers/versions/remap UUID,
-  réceptions SPAWT/FrieslandCampina et cycles. Opportunités legacy budgetEstime
-  comme impact : statique seulement, reproduire avant modifier. **Plan/trigger** :
-  prochains incréments avant C3/C4/C6/cycle réel, contre-exemples par lecteur/
-  écrivain puis contrats faits/absences/estimations/canaux/devise et recette UI ;
-  conserver validateur brut, aucune donnée inventée/gate affaiblie/conversion
-  sans taux-source. Sept chantiers/dix gates/80 lignées ouverts, global null.
+  ancres qualitatives FCFA→BrandCurrency/BrandAction, autres writers/versions/remap
+  UUID, réception des univers SPAWT/FrieslandCampina et cycles. Legacy budgetEstime
+  comme impact : statique seulement, reproduire avant modifier. Plan/effort :
+  contre-exemples par lecteur/écrivain puis contrat faits/absence/estimation/canaux/
+  devise et recette UI, sans fabrication/conversion sans taux-source ; trigger
+  prochains incréments avant C3/C4/C6. « Zéro marque » au chargement local : lot C4
+  réutiliser query pending/distinguer vide-erreur/mesurer chaud, aucune régression
+  production démontrée. Vitrine finale après univers reçu→édition choisie→publication
+  et retour vérifié, sans décompte. Sept chantiers/dix gates/80 lignées ouverts,
+  global null.
 
   **445 livré, réception bornée — lecteurs/rendu/budgets campagne reçus localement** :
   7S/3H/Budget réutilisent le collecteur normalisé, inconnus/coverage/dénominateur

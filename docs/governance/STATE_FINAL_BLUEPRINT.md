@@ -223,24 +223,20 @@ l’upgrade de verrou. La recherche d’âge normalise S→s. Dans propagateFrom
 les modes autoRecalculate true/false sont reçus localement : Process seulement si auto,
 aucun appel réseau dans la fixture. Cela ne reçoit pas tous les modes/agents.
 
-**446 local en réception — cohérence de décision par identité** : Notoria
-lit le catalogue normalisé/UUID exécutables, FK union brute guidée par IDs choisis
-canoniques ; PHASE_1 proposé si échéance absente. Mutation toutes copies brutes,
+**446 livré — cohérence de décision par identité, réception bornée** : Notoria
+lit catalogue normalisé/UUID exécutables/FK union brute/IDs choisis canoniques,
+respecte retrait HUMAN et propose échéance à valider. Toutes copies mutées,
 transaction gateway/huit versions/nulls/pins/sources/calcul S/route/projection,
-refus HUMAN strict sans APPLIED faux ni maturité inventée. UI existante traduit
-payload/source/avertissements ; zéro candidat ne prouve pas cohérence. Native
-USER/TRIAL fictive verte : une reco/trois copies/ligne stable ACCEPTED/S une action-budget
-zéro, trois Intents/zéro tâche-coût ; baseline contraire conservée. DEFAULT
-4 288/407 et PG 352/18 verts, copie 14/deux verts ; gauntlet final cinq
-sorties 0, gouvernance 1 626/166 ; nettoyage reçu. CI/image/runtime 446
-non reçus/runtime 445/doc3abd2be clôturés. Aucun modèle/service/router/page/Intent/
-ADR/tool/provider ajouté ; chargement initial C4, autres writers/versions/devises/
-remap/producteur S sémantique/réceptions réelles ouverts. Sept chantiers/dix gates/
-80 lignées inchangés, global null. Générateur : retrait HUMAN respecté, un rouge/dix verts puis suite complète ;
-filtre final non exercé dans cette build native antérieure. UI plan partiel/refus
-humain reçue sans Zod brut ; refus HTTP 200/applied 0 conserve lignes/piliers/reco
-ACCEPTED, appliedAt null, seul Intent 3→4. Précondition HUMAN préparée hors UI.
-[Réception bornée](REFONTE-PLAN.md).
+refus strict sans APPLIED faux ou maturité inventée. UI métier/natif USER/TRIAL
+fictif/CI 4 288/407 et PG 352/18/contrôles finaux/nettoyage reçus. Source 436975a/
+image/runtime 446 exacts ; production ADMIN lecture seule, S réelle v3/91,2 %/
+AI_PROPOSED/périmée inchangée. Aucun choix/recalcul réel/cycle/SLO reçu. Probes
+purs ancien budget conservé et FAILED déclaré complet non réparés ; reprise 447
+immédiate calcul S partagé/remplacement versionné/sources/provenance/strict et
+état d’échec fiable. Aucun modèle/service/router/page/Intent/ADR/tool/provider
+ajouté ; autres writers/canaux/devises/remap/chargement/univers réels restent
+ouverts. Sept chantiers/dix gates/80 lignées ouverts/global null. Commit documentaire
+et sa CI encore à recevoir. [Réception bornée](REFONTE-PLAN.md).
 
 
 **445 livré, réception bornée — Oracle conserve inconnus/devises, recette bornée** :

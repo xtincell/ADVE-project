@@ -6,20 +6,16 @@ Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts`
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**446 local en réception — même APPLY_RECOMMENDATIONS gouverné** : aucune
-route/permission/Intent ajouté. Notoria/choix manuel utilisent le recalcul S
-transactionnel partagé, huit versions/nulls/pins/sources et refus HUMAN strict ;
-source/route/projection atomiques, reco refusée non APPLIED. DEFAULT 4 288/407,
-PG 352/18 verts dont 35 action-decision-flow et reco ACCEPTED/appliedAt null après
-contradiction HUMAN ; copie release/vocab 14/deux verts. Native USER/TRIAL fictive verte
-reçue une reco/trois copies/ligne stable ACCEPTED/S une action-budget zéro, aucune
-marque réelle modifiée. Gauntlet final cinq sorties 0, gouvernance 1 626/166 ; nettoyage reçu ; CI/image/runtime 446 non reçus/runtime 445.
-Autres writers/versions/remap et vraie réception ouverts.
-Générateur : retrait HUMAN respecté, un rouge/dix verts puis suite complète ;
-filtre final non exercé dans cette build native antérieure. UI plan partiel/refus
-humain reçue sans Zod brut ; refus HTTP 200/applied 0 conserve lignes/piliers/reco
-ACCEPTED, appliedAt null, seul Intent 3→4. Précondition HUMAN préparée hors UI.
-[Contrats et réception](REFONTE-PLAN.md).
+**446 livré — même APPLY_RECOMMENDATIONS gouverné, réception bornée** : aucune
+route/permission/Intent ajouté. Notoria/choix manuel utilisent calcul S partagé,
+huit versions/nulls/pins/sources, source/route/projection atomiques et refus HUMAN
+strict sans APPLIED faux. UI métier reçue sur USER/TRIAL fictif ; CI 4 288/407,
+PG 352/18, contrôles locaux/nettoyage reçus. Source 436975a/image/runtime 446 exacts ;
+production ADMIN Stratégie/Recommandations en lecture seule, S ancienne inchangée,
+aucun choix/recalcul réel/cycle/SLO reçu. Probes purs fusion budget et résumé FAILED
+non réparés ici, reprise immédiate 447 dans la dette existante ; autres writers/
+versions/remap et réception réelle ouverts. Commit documentaire/CI de clôture
+attendus. [Contrats et réception](REFONTE-PLAN.md).
 
 
 **445 livré, réception bornée — même export, lectures reçues localement** : aucune

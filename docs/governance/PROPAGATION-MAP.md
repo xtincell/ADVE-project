@@ -9,24 +9,21 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
-### Proposition Notoria → toutes copies I → S versionné → BrandAction — 446 local en réception (2026-10-10)
+### Proposition Notoria → toutes copies I → S versionné → BrandAction — 446 livré, réception bornée (2026-10-10)
 
-Lecture normalisée → identité UUID exécutable ; IDs choisis canoniques/FK risques
-union brute. Revue → PHASE_1 proposé si échéance absente. SELECT/REJECT/LINK_RISK
-→ toutes copies des trois collections ; refs mutables/validation intactes.
-Gateway/transaction → huit versions/nulls/pins/sources → S/route/projection
-atomiques. HUMAN DENY/CHALLENGE → refus/rollback sans APPLIED faux. UI existante
-traduit payload/source/avertissements, CROSS_PILLAR correspond à I/R ; zéro
-candidat ne vaut pas cohérence. Native locale USER/TRIAL fictive reçue : une reco/trois
-copies retenues/ligne stable ACCEPTED/S une action-budget zéro, trois Intents,
-zéro tâche/coût. DEFAULT 4 288/407 et PG 352/18 verts ; copie 14/deux verts.
-Gauntlet final cinq sorties 0, gouvernance 1 626/166 ; fixtures nettoyées/Next arrêté ; CI/image/runtime 446 non reçus/runtime 445. Aucun service/route/Intent/
-tool/ADR ; chargement initial C4/autres writers/canaux/devises/remap/cycles et
-sept chantiers/dix gates ouverts. Générateur : retrait HUMAN respecté, un rouge/dix verts puis suite complète ;
-filtre final non exercé dans cette build native antérieure. UI plan partiel/refus
-humain reçue sans Zod brut ; refus HTTP 200/applied 0 conserve lignes/piliers/reco
-ACCEPTED, appliedAt null, seul Intent 3→4. Précondition HUMAN préparée hors UI.
-[Réception et suite](REFONTE-PLAN.md).
+Lecture normalisée → identité UUID exécutable/IDs choisis canoniques/FK union brute.
+Revue → échéance proposée à valider/retrait HUMAN respecté. Mutation toutes copies
+→ huit versions/nulls/pins/sources → S/route/projection atomiques. Refus HUMAN →
+rollback sans APPLIED faux. UI métier reçue sur fixture USER/TRIAL ; CI 4 288/407
+et PG 352/18, gauntlet final/nettoyage reçus. Source 436975a/image/runtime 446
+exacts ; production ADMIN Stratégie/Recommandations en lecture, S ancienne v3/
+91,2 %/AI_PROPOSED/périmée inchangée. Aucun choix/recalcul réel ou cycle/SLO reçu.
+Autres writers indépendants : probe pure fusion conserve budget 9 000 face à
+absence, probe pipeline FAILED déclaré complet ; aucun reçu persisté/prod de ces
+probes. Reprise 447 immédiate vers calcul partagé/remplacement/version/autorité et
+état d’échec fiable. Canaux/devises/remap/chargement/raccord complet et sept
+chantiers/dix gates restent ouverts. Aucune entité/route/service/Intent/ADR ajouté ;
+commit documentaire/CI de clôture attendus. [Réception et suite](REFONTE-PLAN.md).
 
 
 ### Catalogue I → composites/CORE Oracle → HTML/Markdown/PDF — 445 livré, réception bornée (2026-10-10)

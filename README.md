@@ -16,17 +16,19 @@
 
 ## Quick start
 
-**6.27.446 local en réception** : une proposition Notoria vise une action,
+**6.27.446 livré, réception bornée** : une proposition Notoria vise une action,
 puis son choix rejoint toutes ses représentations, le plan sauvegardé et la
 projection opérationnelle. Les refus protègent le choix humain ; une échéance
-proposée reste à valider. Recette locale fictive reçue : une proposition, trois
-copies retenues, même action opérationnelle conservée, plan avec une action et
-budget zéro ; refus conservant le choix source reçu aussi sur précondition
-fictive préparée hors écran. Aucune marque réelle modifiée ni coût fournisseur. Suites complètes
-4 288/407 unitaires et 352/18 PostgreSQL vertes. Succès plan partiel et refus humain lisibles reçus dans cette recette ; cinq contrôles finaux verts et fixtures nettoyées, CI/image/runtime 446 non reçus. Runtime livré 445,
-documentation 3abd2be clôturée. Autres chemins du plan, devises/canaux/remap,
-chargement initial et sept chantiers/dix gates restent ouverts.
-[Périmètre et suite](docs/governance/REFONTE-PLAN.md).
+proposée reste à valider. Recette locale fictive reçue : une proposition/trois
+copies retenues/même action opérationnelle/plan avec une action et budget zéro,
+ainsi qu’un refus conservant les données. Suites CI 4 288/407 unitaires et 352/18
+PostgreSQL vertes ; contrôles locaux et nettoyage reçus.
+Runtime 446 et lecture de Stratégie/Recommandations reçus en production ADMIN.
+Le plan historique SPAWT reste périmé et inchangé : aucune marque réelle
+recalculée, aucun cycle complet reçu. Des contre-exemples factices sur les autres
+écrivains du plan et leur état d’échec déclenchent la reprise suivante. Devise,
+canaux, raccord de l’univers SPAWT et sept chantiers/dix gates restent ouverts.
+Commit documentaire/CI de clôture attendus. [Périmètre et suite](docs/governance/REFONTE-PLAN.md).
 
 
 **6.27.445 livré, réception bornée** : les cadres Oracle concernés utilisent les
