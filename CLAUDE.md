@@ -2,9 +2,9 @@
 
 This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/code). It briefs any agent picking up work on this repo.
 
-## Réception courante — 2026-10-09
+## Réception courante — 2026-10-10
 
-**6.27.441 en préparation — choix I et projection** : SELECT du kind existant
+**6.27.441 livré — choix I et projection** : SELECT du kind existant
 SET_BRAND_ACTION_STATUS écrit I par writePillar avec BrandAction dans la même
 transaction, expectedVersion/historique/staleness S et intentId conservés ; refus
 remonté au routeur. Provenance humaine limitée à `initiatives.<id>.status`, autres
@@ -21,11 +21,18 @@ Stress mock/base seulement, pages/tRPC SKIPPED ; bump/CODE-MAP reçus.
 Native locale USER/TRIAL retenir→sync→retirer et refus LOCKED reçus, cache
 réellement relu ; budget source 1k XAF visible. ART_DIRECTOR ACTIVE d’un autre
 opérateur reçoit 403/FORBIDDEN avec alerte métier, I/versions/archives inchangés.
-Boutons hors zone/compteur catalogue en dette UX. CI/image/runtime
-441 attendus, runtime reçu 440 ; pas SLO/cycle réel. Le statut I reste l’autorité du choix.
+Boutons hors zone/compteur catalogue en dette UX. Source 3a8a2c97/CI 38008417812
+success, 4 203/401 unitaires et 335/18 PG ; Mission/Chromatic success.
+Image 38008635901/runtime 441 exact reçus, index 5d95a400, déploiement unique
+terminé 00:32:40 UTC le 10 octobre. Lecture réelle SPAWT ADMIN seulement,
+36 actions/28 retenues ; USER/TRIAL et ART_DIRECTOR reçus uniquement localement.
+Aucune mutation de vraie marque, pas SLO/cycle réel ; ancien S/budgets ouverts.
+Le statut I reste l’autorité du choix.
 SYNTHESIZE_S reste Notoria/recommandations ; schéma notamment 3 axes/3 facteurs/
 5 actions sprint, compositeur complétant les facteurs jusqu’à 5 et autres défauts
 valeurs/targets/types à factoriser vers faits/absence au prochain parcours manuel.
+Cascade S post-complétée par LLM et sauvegarde sans garde des versions source :
+converger vers calcul/gateway, contrôle de ces versions et assistance facultative.
 Aucune nouvelle entité/Intent/ADR, sept chantiers/dix gates ouverts.
 [Plan et limites](docs/governance/REFONTE-PLAN.md).
 

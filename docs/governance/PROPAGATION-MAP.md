@@ -9,7 +9,7 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
-### Choix explicite → source I versionnée → projection → calcul — 441 en préparation (2026-10-10)
+### Choix explicite → source I versionnée → projection → calcul — 441 livré, réception bornée (2026-10-10)
 
 SET_BRAND_ACTION_STATUS/SELECT conserve son contexte d’intention et écrit I
 via writePillar avec BrandAction dans la même transaction ; expectedVersion,
@@ -22,7 +22,9 @@ Succès du choix → panel invalide get/assess/readiness sur la stratégie coura
 mutation en cours bloque le bouton, refus choix/sync visibles en alerte métier.
 Le calcul S lit SELECTED_FOR_ROADMAP dans les trois collections I ; aucun
 choix automatique ni LLM implicite. Cela ne raccorde pas encore SYNTHESIZE_S,
-qui appelle Notoria et retourne des recommandations. Schéma notamment 3 axes/
+qui appelle Notoria et retourne des recommandations. La cascade S post-complète
+encore par LLM sans garde des versions source du calcul à la sauvegarde :
+convergence et assistance facultative restent à recevoir. Schéma notamment 3 axes/
 3 facteurs/5 actions sprint, compositeur complétant les facteurs jusqu’à 5 et
 défauts valeurs/targets/types à factoriser vers faits/absence au prochain
 incrément manuel, avant preuve de maturité. Checkpoints PG onze puis treize,
@@ -32,8 +34,11 @@ Native propriétaire locale retenir→sync→retirer et cache relu,
 refus LOCKED/alerte reçus ; ART_DIRECTOR ACTIVE d’un autre opérateur refuse
 403/FORBIDDEN avec alerte métier, I/versions/archives inchangés. Stress mock/base
 seulement, pages/tRPC SKIPPED, aucune réception UX/SLO ;
-livraison attendue, boutons hors zone/compteur catalogue en dette UX ; runtime reçu 440, sept chantiers
-ouverts. [Plan et bornes](REFONTE-PLAN.md).
+source 3a8a2c97/CI 38008417812 success, 4 203/401 unitaires et 335/18 PG ;
+image 38008635901/runtime 441 exact reçus. Lecture réelle SPAWT ADMIN seulement,
+36 actions/28 retenues, aucune mutation ; USER/TRIAL et ART_DIRECTOR uniquement
+locaux. Ancien S/budgets et boutons hors zone/compteur catalogue en dette UX,
+sept chantiers/dix gates ouverts. [Plan et bornes](REFONTE-PLAN.md).
 
 ### Présence des champs → état actuel → affichage — 439 livré (2026-10-09)
 

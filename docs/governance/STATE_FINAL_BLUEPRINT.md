@@ -223,7 +223,7 @@ l’upgrade de verrou. La recherche d’âge normalise S→s. Dans propagateFrom
 les modes autoRecalculate true/false sont reçus localement : Process seulement si auto,
 aucun appel réseau dans la fixture. Cela ne reçoit pas tous les modes/agents.
 
-**441 en préparation — décision d’action et projection** : SELECT du kind
+**441 livré — décision d’action et projection, réception bornée** : SELECT du kind
 SET_BRAND_ACTION_STATUS conserve le contexte intentId et versionne I par
 writePillar dans la transaction BrandAction, expectedVersion/historique/staleness
 S compris ; refus remontés. Provenance humaine limitée au statut de l’initiative
@@ -241,9 +241,14 @@ finaux reçus, gouvernance 1 624/166 verte. ART_DIRECTOR
 ACTIVE d’un autre opérateur reçoit 403/FORBIDDEN avec alerte métier,
 I/versions/archives inchangés ; boutons hors zone et compteur catalogue en dette UX.
 Stress mock/base seulement, pages/tRPC SKIPPED.
-Livraison attendue, runtime reçu 440. Ce checkpoint ne
-prouve ni tous les budgets ni le cycle manuel. SYNTHESIZE_S reste Notoria/recos,
-schéma notamment 3 axes/3 facteurs/5 actions sprint et compositeur complétant
+Source 3a8a2c97/CI 38008417812 success, 4 203/401 unitaires et 335/18 PG ;
+image 38008635901/runtime 441 exact reçus. Lecture réelle SPAWT ADMIN sans
+mutation, 36 actions/28 retenues ; USER/TRIAL et ART_DIRECTOR uniquement locaux.
+Ancien S pré-lancement et budgets discordants restent ouverts. Ce reçu ne
+prouve ni tous les budgets ni le cycle manuel. SYNTHESIZE_S reste Notoria/recos ;
+cascade S encore post-complétée par LLM, sauvegarde sans garde des versions
+source lues au calcul : convergence calcul/gateway et assistance facultative ouvertes.
+Schéma notamment 3 axes/3 facteurs/5 actions sprint et compositeur complétant
 les facteurs jusqu’à 5, valeurs/targets/types par défaut à factoriser vers faits/absence
 au prochain incrément manuel avant preuve de maturité, sans nouvelle entité/Intent.
 [Plan et limites actuels](REFONTE-PLAN.md).

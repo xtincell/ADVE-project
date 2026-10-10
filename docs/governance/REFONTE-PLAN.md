@@ -1,6 +1,6 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## Choix d’action → I versionné → calcul du plan — 441 en préparation (2026-10-10)
+## Choix d’action → I versionné → calcul du plan — 441 livré, réception bornée (2026-10-10)
 
 Le chemin existant SET_BRAND_ACTION_STATUS/SELECT écrit le statut source dans
 I par writePillar et BrandAction dans la même transaction : expectedVersion,
@@ -73,8 +73,28 @@ autoSchedule 200/scheduled=0 sans choix ; autre stratégie ART_DIRECTOR
 wholeJourney déduit. Les deux passes de fixture sont nettoyées (remaining=0),
 serveur 3322 arrêté et onglet local fermé avant commit.
 
-CI, image et runtime 441 encore attendus. Runtime livré reçu 440. Aucune marque réelle
-modifiée, approuvée ou produite ; sept chantiers/dix gates toujours ouverts.
+Source 3a8a2c9732dab7a0fb27092ca56f41451ee60849 poussée. CI 38008417812,
+Mission 38008417796 et Chromatic 38008417809 success ; ci.log relu : 4 203
+unitaires/401 fichiers et 335 PostgreSQL/18 fichiers. Image 38008635901 success,
+image-digest.json relu : index
+sha256:5d95a400f4f483bb75547ad28d6abe2bb483c26a29c44a15254cade543c48a28,
+manifest sha256:b14f5774c365b9eb95dd43fc8d3bbcd319527fbd19226cf3567c0f07c2be5e1d,
+config candidate/publication et registre latest concordants. Déploiement unique
+sjm9z0o3prx8yspf46dlp34o terminé 2026-10-10T00:32:40Z ; runtime.json reçu :
+441 running, user nextjs, index exact, volume privé RW, /api/version HTTP 200.
+
+Lecture native réelle SPAWT le 10 octobre, native-runtime-receipt.json/DOM/
+body actions et capture inspectés : 36 actions/28 retenues. Session préexistante
+sans injection, /api/auth/session relu : rôle ADMIN ; aucune réception USER en
+production. USER/TRIAL et ART_DIRECTOR ACTIVE sont uniquement les fixtures
+locales reçues ci-dessus. Fenêtre fraîche non tronquée : 61 réponses toutes 200,
+zéro ≥500 et zéro exception, neuf ERR_ABORTED tous canceled=true conservés.
+Document HTTP 200, DOM 655 ms depuis le départ de requête au DOMContentLoaded,
+pas temps de page utilisable/premier affichage/SLO. Première fenêtre tronquée et
+attente Synchroniser échouée avant chargement conservées dans les preuves.
+Aucune mutation de vraie marque, approbation, recalcul ou production métier ;
+S historique pré-lancement et budgets discordants observés restent ouverts.
+wholeJourneyAccepted=false ; sept chantiers/dix gates toujours ouverts.
 Deux écarts UX restent tracés : boutons de mutation visibles en lecture seule,
 et fixture partielle avec une action mais compteur catalogue/footer à zéro.
 Prochain lot UX C3/C7 : lecture canonique des droits calendrier existants pour
@@ -82,12 +102,18 @@ le panel et diagnostic du compteur I sur ses trois collections, sans fabrication
 [Dettes et déclencheurs](RESIDUAL-DEBT.md).
 
 **Prochaine étape du parcours manuel** : SYNTHESIZE_S appelle encore Notoria
-et retourne des recommandations, sans calcul S versionné convergent. Le calcul
+et retourne des recommandations, sans calcul S versionné convergent. Lecture
+statique de rtis-cascade.ts:496–557 : S reste inclus dans la post-complétion
+runChunkedFieldGeneration par LLM ; savePillar:37–64 sauvegarde sans garde des
+versions source du calcul. Le calcul pur 441 ne garantit donc pas toute la
+cascade S sans IA. Le calcul
 historique complète les facteurs jusqu’à cinq et garde des valeurs, targets ou
 types par défaut. Le schéma exige notamment trois axes, trois facteurs et cinq
 actions de sprint ; ces exigences de forme ne prouvent pas l’origine métier.
-Factoriser la commande vers le calcul existant et le gateway, avec assistance
-Notoria facultative. Séparer faits sourcés, absence et estimation ; retirer les
+Factoriser commande et cascade S vers le calcul existant et le gateway,
+contrôler les versions source avant sauvegarde, rendre la post-complétion IA
+explicitement facultative, assistance Notoria comprise. Séparer faits sourcés,
+absence et estimation ; retirer les
 remplissages utilisés comme preuve de complétude sans abaisser le contrat strict.
 Recevoir le parcours choix → refresh sans effacement → calcul versionné → revue
 de la version actuelle, en prouvant les versions des sources et le remap UUID.

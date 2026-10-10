@@ -30,7 +30,7 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
-2026-10-10 · **441 candidat, choix/projection reçus en PostgreSQL** : SELECT
+2026-10-10 · **441 livré, choix/projection reçus localement** : SELECT
 modifiait seulement BrandAction, puis le refresh réécrivait le choix/planning
 et le calcul promouvait des propositions. Le choix passe désormais par I
 versionné et BrandAction atomiques, même Intent/contexte ; refus du writer rendu
@@ -51,8 +51,12 @@ Budget hérité vide reprenant le montant source 1 000 reçu après un rouge,
 affiché 1k XAF nativement. Native locale USER/TRIAL retenir→sync→retirer/refus
 LOCKED reçus, cache relu ; ART_DIRECTOR ACTIVE d’un autre opérateur refuse
 403/FORBIDDEN avec alerte métier, I/versions/archives inchangés. Stress
-mock/base seulement, pages/tRPC SKIPPED ; CI/image/runtime 441 non reçus,
-runtime 440 reçu. Boutons hors zone/compteur catalogue, SYNTHESIZE_S et remplissages S historiques demeurent dans
+mock/base seulement, pages/tRPC SKIPPED ; source 3a8a2c97/CI 38008417812
+success (4 203/401 unitaires, 335/18 PG), Mission/Chromatic success ;
+image 38008635901/runtime 441 exact reçus, index 5d95a400. Lecture réelle SPAWT
+ADMIN reçue sans mutation ; USER/TRIAL et ART_DIRECTOR uniquement locaux.
+Ancien S/budgets, boutons hors zone/compteur catalogue,
+SYNTHESIZE_S, post-complétion IA et versions source de la cascade, remplissages S historiques demeurent dans
 la dette Guidance ; aucune acceptation globale ni nouvelle capacité.
 [Checkpoint et limites](REFONTE-PLAN.md) · [dette liée](RESIDUAL-DEBT.md).
 

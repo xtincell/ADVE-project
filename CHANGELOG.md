@@ -2,7 +2,7 @@
 
 ## v6.27.441 — fix(guidance): versionner les choix d’actions et calculer le plan retenu (2026-10-10)
 
-**441 en préparation : le choix rejoint I et le calcul respecte ce choix ; réception locale reçue, livraison attendue.**
+**441 livré : le choix rejoint I et le calcul respecte ce choix ; mutations locales reçues, lecture ADMIN en production reçue.**
 
 - SET_BRAND_ACTION_STATUS/SELECT écrit I via writePillar dans la transaction
   BrandAction : expectedVersion, historique et staleness S, contexte d’intention
@@ -29,9 +29,18 @@
   gouvernance 1 624/166 verts.
   Bump/CODE-MAP reçus, 24 avertissements connus.
   Stress exit 0 limité aux forges mock/base, pages/tRPC SKIPPED au port 3000.
-  Natif local borné, pas SLO/cycle réel ; CI/image/runtime 441 attendus, runtime
-  reçu 440. Boutons hors zone et compteur catalogue restent dans la dette UX.
+  Natif local borné, pas SLO/cycle réel. Source 3a8a2c97 poussée,
+  CI 38008417812 success (4 203/401 unitaires, 335/18 PG), Mission/Chromatic
+  success ; image 38008635901/runtime 441 exact reçus, index 5d95a400 et
+  déploiement unique terminé le 10 octobre à 00:32:40 UTC. Lecture réelle SPAWT
+  ADMIN reçue, 36 actions/28 retenues, aucune mutation de vraie marque ; USER/
+  TRIAL et ART_DIRECTOR reçus uniquement localement. Ancien S, budgets,
+  boutons hors zone et compteur catalogue restent ouverts.
 - SYNTHESIZE_S manuel appelle encore Notoria et retourne des recommandations.
+  La post-complétion de la cascade S garde aussi des appels LLM et savePillar
+  n’impose pas les versions source du calcul ; le calcul pur ne reçoit pas tous
+  ces chemins. Leur convergence et l’assistance explicitement facultative
+  restent dans le plan Guidance.
   Schéma : notamment trois axes, trois facteurs et cinq actions de sprint ;
   compositeur historique complétant les facteurs jusqu’à cinq, valeurs/targets/
   types par défaut :

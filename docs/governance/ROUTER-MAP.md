@@ -150,7 +150,7 @@ reçue ; reload local tronqué et bornes tardives production, sans SLO déduit.
 
 ---
 
-441 en préparation sur les mêmes routes : actions.setSelected conserve
+441 livré sur les mêmes routes : actions.setSelected conserve
 SET_BRAND_ACTION_STATUS et rend les refus du writer I ; SELECT est versionné
 avec BrandAction, sans nouveau droit ou route. Checkpoints PG onze puis treize,
 final complet 335/18 verts (dix-huit choix), provenance 17/17/gateway 25/trois.
@@ -159,7 +159,10 @@ succès. Native locale propriétaire retenir→sync→retirer/refus LOCKED reçu
 cinq contrôles finaux verts, gouvernance 1 624/166 reçue.
 ART_DIRECTOR ACTIVE d’un autre opérateur reçoit 403/FORBIDDEN avec alerte métier,
 I/versions/archives inchangés ; boutons hors zone visibles en dette UX.
-Livraison attendue ; SYNTHESIZE_S reste Notoria/recommandations.
+Source 3a8a2c97/CI 38008417812 success ; image 38008635901/runtime 441 exact
+reçus. Lecture réelle SPAWT ADMIN sans mutation ; USER/TRIAL et ART_DIRECTOR
+reçus uniquement localement. SYNTHESIZE_S reste Notoria/recommandations ; cascade S et
+garde des versions source restent à réconcilier.
 [Parcours manuel et limites](REFONTE-PLAN.md).
 
 ## 2. Guidance (19 routers)

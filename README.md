@@ -16,13 +16,15 @@
 
 ## Quick start
 
-**6.27.441 en préparation** : les choix d’actions sont rattachés à leur source
+**6.27.441 livré** : les choix d’actions sont rattachés à leur source
 et à son historique ; le calcul du plan utilise les actions explicitement
 retenues. L’écran actualise l’état après un choix et montre ses refus ; parcours
 local choisir→synchroniser→retirer et refus en lecture seule reçus sur dossiers
-fictifs, sans cycle réel. Suite PostgreSQL et cinq contrôles locaux finaux reçus,
-livraison encore attendue ; runtime reçu
-440. Le bouton de synthèse, les droits visibles et les valeurs par défaut
+fictifs, sans cycle réel. Suite PostgreSQL, cinq contrôles locaux finaux et CI
+reçus ; image et runtime 441 exact reçus. La lecture réelle SPAWT utilise une
+session ADMIN, sans mutation de la marque ; parcours USER/TRIAL et lecture seule
+ART_DIRECTOR reçus uniquement localement.
+Le bouton de synthèse, l’assistance de complétion, les droits visibles et les valeurs par défaut
 demandent encore une réconciliation. Cycle réel et sept chantiers restent ouverts.
 [Périmètre et prochaine étape](docs/governance/REFONTE-PLAN.md).
 

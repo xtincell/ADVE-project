@@ -270,7 +270,7 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   Aucun import, approbation ou production réelle. Réconcilier les contrats,
   budgets et sources du calcul reste la reprise Guidance ci-dessous ; le patch
   d’affichage ne remplit ni ne valide le S réel.
-  **441 candidat, checkpoint choix/projection** : SELECT du kind existant écrit
+  **441 livré, réception bornée choix/projection** : SELECT du kind existant écrit
   I via writePillar dans la transaction BrandAction, avec expectedVersion,
   historique/staleness S/contexte intentId ; refus remontés. La matérialisation
   protège planning/exécution/métadonnées/lignes manuelles, provenance humaine
@@ -288,12 +288,23 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   avec alerte métier ; I/versions/archives inchangés. Stress mock/base seulement, pages/
   tRPC SKIPPED, aucune réception UX globale. La projection suit
   le statut I après conservation du choix humain, sans déplacer son autorité.
-  Réception locale reçue, livraison encore attendue ; aucune clôture globale déduite.
+  Réception locale et source 3a8a2c97/CI 38008417812 success reçues (4 203/401
+  unitaires, 335/18 PG), Mission/Chromatic success ; image 38008635901/runtime
+  441 exact reçus, index 5d95a400. Lecture réelle SPAWT ADMIN sans mutation,
+  36 actions/28 retenues ; USER/TRIAL et ART_DIRECTOR uniquement locaux.
+  Ancien S pré-lancement et budgets discordants observés, aucun recalcul réel.
+  Aucune clôture globale déduite.
   **Reste à fermer** : SYNTHESIZE_S manuel appelle encore Notoria batch et rend
-  des recommandations plutôt qu’un calcul versionné. rtis-protocols/strategy.ts
+  des recommandations plutôt qu’un calcul versionné. Lecture statique de
+  rtis-cascade.ts:496–557 : S reste inclus dans la post-complétion LLM par
+  runChunkedFieldGeneration ; le calcul pur 441 ne prouve pas toute la cascade
+  sans IA. savePillar:37–64 sauvegarde sans garde des versions source lues au
+  calcul. rtis-protocols/strategy.ts
   complète les facteurs jusqu’à cinq et garde valeurs/targets/types par défaut.
   Le schéma exige notamment 3 axes/3 facteurs/5 actions sprint. **Plan** : converger la
-  commande vers le calcul existant/gateway avec assistance Notoria facultative,
+  commande et cascade S vers le calcul existant/gateway, contrôler les versions
+  source avant sauvegarde et rendre la post-complétion IA explicitement facultative,
+  assistance Notoria comprise ;
   distinguer faits sourcés, absence et estimation, retirer les remplissages comme
   preuve de maturité sans affaiblir le contrat strict. Recevoir choix → refresh
   préservé → S versionné → nouvelle revue, coordonner le remap UUID et prouver
