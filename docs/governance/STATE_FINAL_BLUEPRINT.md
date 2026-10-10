@@ -223,6 +223,34 @@ l’upgrade de verrou. La recherche d’âge normalise S→s. Dans propagateFrom
 les modes autoRecalculate true/false sont reçus localement : Process seulement si auto,
 aucun appel réseau dans la fixture. Cela ne reçoit pas tous les modes/agents.
 
+**444 local en réception — faits, absences et estimations de budget** :
+normaliseur commun conserve zéro déclaré et montant absent, origine DECLARED/
+QUALITATIVE_ESTIMATE/UNKNOWN ; ancres FCFA de la méthode conservées comme
+estimations, horizon inconnu absent. Entrées sans texte écartées de projection,
+source brute conservée ; agrégations exposent sous-total/couverture sans total
+complet si montant manque. S/BrandAction/Oracle/cockpit/proposition créative
+transportent ces états, zéro opérationnel/overrides conservés. Scénarios et
+formules inchangés, baselines 30/60 explicitement transportées/rendues. Helper
+sans appel promoteSelectedInBlob retiré ; partialRecord des phases des routes
+conserve clés/valeurs contrôlées et seuils stricts S 3 axes/3 facteurs/5 sprint.
+Onze rouges puis 47/cinq ciblés verts, unité 4 253/406 en deux passages et
+PG 347/18 verts reçus ; native locale bornée/cinq contrôles finaux reçus, runtime reçu 443. Pas de nouvelle entité/route/service/Intent/ADR/provider ; devise des
+ancres/autres chemins S/projection-remap/marque réelle et sept chantiers/dix
+gates ouverts.
+Base d’actions native locale relue absent/0 XAF/Estimation · 500 k XAF après
+formatter (trois rouges/quatre verts→sept verts), trois choix USER/TRIAL 200.
+Origine estimée limitée à projection QUAL/budgetMin=projectedBudget ; overrides
+opérationnels distincts. Premier gauntlet tsc 2/autres quatre 0, type roadmap
+corrigé ; unité 4 256/406 reçue avant CSS mobiles, PG 347/18 inchangé/UI 38/quatre.
+Native S total absent/sous-total 500 000/inconnus conservés et aperçu créatif
+partiel/hypothèses 30/60 reçus, ouvrir/Annuler sans création/IA ; header/grille
+mobiles corrigés/reçus. Desktop/Oracle HTML/PDF 18 pages reçus, données fidèles
+mais finition PDF non reçue ; cinq contrôles finaux après CSS 0/gouvernance
+1 624/166, fixture nettoyée. Compteurs uniquement avant créatif/PDF. Doublons/
+horizons des composeurs, locale SSR/client et finition PDF en reprise 445 dans
+dette S existante ; aucune réception globale déduite.
+[Réception et reprise](REFONTE-PLAN.md).
+
 **443 livré, réception bornée — autorités et lecture du catalogue** : le hook
 useBrandWriteAccess lit strategy.getMyAccess dans le module frontend existant.
 Stratégie/calendrier/sync opérateur distincts, gestes fermés si accès absent/

@@ -16,6 +16,24 @@
 
 ## Quick start
 
+**6.27.444 local en réception** : le plan distingue un budget inconnu,
+un zéro déclaré et une estimation de la méthode. Un chiffrage partiel indique
+ce qui est connu et ce qui reste à préciser ; une échéance inconnue reste
+inconnue. Les projections concernées partagent ces états, et les scénarios
+explicitent leurs hypothèses. Onze contre-exemples rouges reçus avant correction ;
+47 tests ciblés verts, 4 253 unitaires verts en deux passages et PostgreSQL
+347 tests verts reçus avant le dernier ajustement d’affichage. La Base d’actions
+locale montre maintenant budget à préciser, zéro et estimation nommée ; trois
+choix manuels reçus sur fixture. Le plan garde le sous-total de 500 000 et ses
+budgets/échéances à préciser ; aperçu créatif partiel et mobile relus sans création.
+4 256 unitaires verts reçus avant ajustements mobiles, aperçu ordinateur/Oracle
+local et cinq contrôles finaux reçus ; runtime reçu 443. Le PDF conserve ces
+données mais sa finition reste à reprendre, ainsi que certains cadres dérivés.
+Fixture nettoyée, aucune marque réelle corrigée ou réception globale déduite. Aucune correction
+des budgets réels ni réception de tout le parcours ; devise des estimations,
+autres chemins du plan et sept chantiers/dix gates restent ouverts.
+[Périmètre et reprise](docs/governance/REFONTE-PLAN.md).
+
 **6.27.443 livré, réception bornée** : les gestes proposés suivent les droits
 sur la marque consultée ; le propriétaire peut recalculer son plan manuellement.
 Le catalogue indique ses actions source et signale un décompte inconnu plutôt

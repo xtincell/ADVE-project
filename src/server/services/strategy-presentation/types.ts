@@ -648,7 +648,7 @@ export interface FenetreOvertonSection {
   perceptionCible: string | null;
   ecart: string | null;
   strategieDeplacment: Array<{ etape: string; action: string; canal: string; horizon: string }>;
-  roadmap: Array<{ phase: string; objectif: string; livrables: string[]; budget: number | null; duree: string }>;
+  roadmap: Array<{ phase: string; objectif: string; livrables: string[]; budget: number | null; budgetSummary?: import("@/lib/types/pillar-schemas").InitiativeBudgetSummary; duree: string }>;
   jalons: Array<{ date: string; milestone: string; critereSucces: string }>;
   // ADR-0088 — 3 trajectoires de roadmap pure-computed (S.computed.roadmapRoutes)
   // ADR-0089 — chaque route porte son jeu de stratégie calculé + état sélectionné
@@ -657,12 +657,14 @@ export interface FenetreOvertonSection {
     label: string;
     recommended: boolean;
     selected: boolean;
-    projectedGrowthPct: number;
+    projectedGrowthPct: number | null;
     projectedRevenue: number | null;
-    targetCultIndex: number;
+    targetCultIndex: number | null;
     description: string;
     initiativeCount: number | null;
     totalBudget: number | null;
+    budgetSummary?: import("@/lib/types/pillar-schemas").InitiativeBudgetSummary;
+    projectionAssumptions?: { riskCoverage?: number; baseCultIndex?: number };
     riskCoverage: number | null;
   }>;
   // ADR-0089 — ambition retenue (S.computed.selectedRouteKey, default TARGET)
@@ -670,6 +672,7 @@ export interface FenetreOvertonSection {
   // ADR-0088 — tableau de bord calculé de S (S.computed agrégations)
   computedDashboard: {
     totalBudget: number | null;
+    budgetSummary?: import("@/lib/types/pillar-schemas").InitiativeBudgetSummary;
     riskCoverage: number | null;
     selectedInitiativeCount: number | null;
     coherenceScore: number | null;

@@ -315,19 +315,53 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   100 %, ancien S/budgets/roadmap contradictoires ouverts, aucune réception USER
   de production. Timeouts de compilation conservés. Sparse non
   approuvable, contrat strict inchangé.
-  **Reste à fermer** : collectNormalizedInitiatives normalise LOW/MEDIUM/HIGH
-  en montants, absence→0 et timeframe défaut. Projections roadmap/computed et
-  autres consommateurs/écrivains S restent à recevoir ; executeRTISCascade via
-  rtis-protocols/index.persistViaGateway garde MERGE_DEEP/strictSchemaValidation
-  et refuse le draft sparse : aucune unification globale déduite. **Plan** :
-  distinguer fait sourcé, absence et estimation dès normalisation, vérifier les
-  projections et chaque writer/consommateur, contrôler les versions source et
-  coordonner le remap UUID. Recevoir choix → refresh préservé → S versionné →
-  nouvelle revue ; assistance Notoria explicite facultative, sans affaiblir le
-  contrat strict (notamment 3 axes/3 facteurs/5 actions sprint) ni inventer des
-  données pour le satisfaire. **Déclencheur** : prochain incrément du parcours
-  manuel Guidance avant C3/C4/C6 et preuve de release ; effort : un lot borné
-  normalisation/projections/écrivains puis recette manuelle transverse.
+  **444 local en réception — normalisation/projections bornées** : candidat
+  conserve budget absent/zéro déclaré/origine DECLARED/QUALITATIVE_ESTIMATE/
+  UNKNOWN et échéance absente ; ancres FCFA de la méthode conservées comme
+  estimations, entrées sans texte écartées de projection sans effacer la source.
+  Sous-total connu/couverture et total complet seulement si chiffrage complet
+  rejoignent S/BrandAction/Oracle/cockpit/proposition créative ; overrides/zéro
+  opérationnel conservés, scénarios/formules et baselines 30/60 explicitées.
+  Helper inutilisé de promotion floue retiré, partialRecord des phases des routes
+  sans baisse des seuils S. Onze rouges puis 47/cinq ciblés verts, unité
+  4 253/406 en deux passages et PG 347/18 verts (trente action-decision) reçus.
+  Contre-exemples bornés reçus en tests avant dernière correction. Native locale
+  USER/TRIAL : trois choix 200 ; Base d’actions absent/zéro/estimation nommée relue
+  après trois rouges/quatre verts puis sept verts. Origine estimée seulement si
+  projection QUAL et budgetMin=projectedBudget, overrides distingués. Premier
+  gauntlet tsc 2/autres quatre 0/type roadmap corrigé ; unité 4 256/406 reçue avant
+  deux CSS mobiles, UI 38/quatre après header. Native S total absent/sous-total
+  500 000/un inconnu/trois échéances inconnues reçue ; aperçu créatif partiel et
+  hypothèses 30/60 relus sans création/IA. Header S écrasé/grille créative serrée
+  corrigés puis desktop/mobile reçus ; Oracle HTML §12/PDF 18 pages reçus,
+  données fidèles mais finition PDF non reçue. Cinq contrôles finaux après CSS
+  0/gouvernance 1 624/166, fixture nettoyée/remaining=0, runtime reçu 443.
+  Compteurs zéro tâches/coûts/quatre Intents uniquement AVANT créatif/PDF,
+  lecture finale rejetée avant sérialisation, pas de compteur postérieur. Aucune vraie marque/fidélité
+  globale déduite de ces gestes.
+  **Reste à fermer** : devise FCFA des ancres versus devise de marque, autres
+  consommateurs/écrivains S (executeRTISCascade via rtis-protocols/index.
+  persistViaGateway strict notamment), projection opérationnelle/remap et vraie
+  réception de marque. Contre-exemples reproduits : deterministic-composers
+  McKinsey7S quatre initiatives contre trois normalisées (duplicate id raw),
+  ThreeHorizons inconnues→H2/100 % et doublon ; section 04 Oracle toLocaleString
+  implicite hydrate 350,000 vs 350 000. PDF conserve les données partielles mais
+  finition non reçue (noms anglais techniques/# bruts/flèches abîmées).
+  **Reprise 445** : même normaliseur chez composeurs/déduplication, horizon
+  inconnu distinct d’un H2 décidé/dénominateurs reçus ; locale montants explicite
+  SSR/client identique, libellés métier PDF et glyphes/police compatibles puis
+  rendu inspecté. **Déclencheur précis** : incrément immédiat 445 après reçus
+  CI/image/runtime 444, avant cycle réel/C3/C4/C6 ; effort : contre-exemples ciblés
+  puis HTML/PDF desktop/mobile. Non classé représenté sans catégorie métier inventée.
+  Ne pas abolir les politiques ADVE d’estimation. **Plan restant** : expliciter
+  devise/origine avant autre devise, aucune conversion sans taux/source ; recevoir chaque
+  projection/writer avec ses versions source, coordonner remap UUID ; choix →
+  refresh préservé → S versionné → nouvelle revue. Assistance Notoria explicite
+  facultative, pas de gate affaiblie ni données fabriquées pour satisfaire les
+  seuils S trois axes/trois facteurs/cinq actions sprint. **Déclencheur** : suite
+  de cet incrément manuel puis C3/C4/C6 avant preuve de release ; effort : contrat
+  de devise explicite et recette transverse des projections restantes. Aucune
+  correction des budgets historiques réels ni acceptation globale déduite.
   **443 livré, réception bornée — compteur et retour reçus localement** : trois
   actions source/une projetée puis trois après sync, MANUAL sans soumission IA,
   choix/sync/recalcul 200 et retour sauvegardé/à relire. Propriétaire non opérateur

@@ -75,6 +75,17 @@ describe("creative-proposal — toRouteInitiative + jeu de route (ADR-0089)", ()
 });
 
 describe("creative-proposal — summarizeExecutionLevels (preview Voie A déterministe)", () => {
+  it("keeps missing operational amounts distinct from zero and carries estimate coverage", () => {
+    const initiatives = [
+      { id: "unknown", status: "SELECTED_FOR_ROADMAP" },
+      { id: "zero", status: "SELECTED_FOR_ROADMAP" },
+      { id: "estimated", status: "SELECTED_FOR_ROADMAP", budgetBasis: "QUALITATIVE_ESTIMATE" },
+    ];
+    const levels = summarizeExecutionLevels(initiatives, new Map([["zero", 0], ["estimated", 500_000]]), new Map());
+    expect(levels[1]).toMatchObject({ totalBudget: null, actionCount: 3,
+      budgetSummary: { knownSubtotal: 500_000, declaredCount: 1, estimatedCount: 1, unknownCount: 1 } });
+    expect(levels[0]).toMatchObject({ totalBudget: 0, actionCount: 0 });
+  });
   it("compte + budgète les actions par niveau + passe le growth stocké", () => {
     const initiatives = [
       { id: "short", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90" },

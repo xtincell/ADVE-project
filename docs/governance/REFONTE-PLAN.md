@@ -1,5 +1,132 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Budget source → chiffrage connu/estimé/inconnu → projections — 444 local en réception (2026-10-10)
+
+Normaliseur commun normalizeInitiative/collectNormalizedInitiatives : un montant
+numérique fini non négatif, zéro compris, garde l’origine DECLARED. Une ancre
+LOW/MEDIUM/HIGH conserve les montants FCFA de la méthode et porte l’origine
+QUALITATIVE_ESTIMATE ; absence ou valeur invalide sans ancre garde UNKNOWN et
+aucun montant. Échéance inconnue absente, pas LONG_TERM implicite. Les entrées
+sans texte sont écartées de la projection de lecture, source brute intacte ;
+identités/choix ne sont pas reconstruits par appariement flou. L’ancien helper
+promoteSelectedInBlob, sans appel source/tests, est retiré.
+
+aggregateInitiativeSet expose sous-total connu, sous-totaux/comptes déclarés et
+estimés, nombre de budgets inconnus et échéances non attribuées. Total complet
+seulement si aucun budget inconnu ; phase contenant un budget inconnu sans
+montant complet, zéro déclaré conservé. S/globalBudget/roadmap/computed, projection
+BrandAction, catalogue Oracle, cockpit et proposition créative transportent
+ces états. Le matérialiseur distingue sa précédente projection d’un override
+opérationnel et conserve ce dernier, zéro compris. Cela ne réconcilie pas les
+budgets historiques des dossiers réels ni toutes les projections secondaires.
+
+Scénarios/ensembles d’actions/formules existants conservés ; hypothèses de
+couverture des risques 30 et indice actuel 60 transportées lorsqu’elles sont
+utilisées et rendues explicitement. Ces hypothèses restent une politique de
+projection, pas une observation réelle ; les ancres qualitatives de la méthode
+ne sont pas supprimées. Zod 4 partialRecord pour roadmapRoutes.budgetByPhase
+permet une phase absente avec clés/valeurs contrôlées ; aucun seuil de composition
+S abaissé (notamment trois axes/trois facteurs/cinq actions sprint).
+
+Preuves privées release/preuves-guidance-444 : red-fidelity.log onze rouges
+avant correction (absence, zéro prioritaire sur estimation, origine de l’ancre,
+valeurs invalides, texte absent, horizon absent, total partiel, hypothèses et
+Oracle). fidelity-final.log 47/cinq fichiers verts ; commande ciblée comportait
+un chemin roadmap erroné, ce test est couvert par la suite unitaire complète.
+unit-final.log 4 215/404 et remaining-unit-final.log 38/deux (scorer adversarial/
+domaine), soit 4 253/406 verts en deux passages ; postgres-final.log complet
+347/18 verts, trente cas action-decision. Les trois rouges initiaux du nouveau
+test UI venaient de pollution de fixture content : reset beforeEach corrige
+l’isolation, aucune garde affaiblie. Bump officiel 6.27.444/release-notes/CODE-MAP
+reçus côté root ; aucun changement généré par ce travail documentaire.
+Ces checkpoints précèdent la dernière correction du formatter. Native locale
+USER/TRIAL propriétaire : trois choix manuels HTTP 200. La Base d’actions
+montrait encore « — XAF » pour zéro et un montant estimé non nommé :
+red-action-budget.log trois rouges/quatre verts, green-action-budget.log sept/
+un vert. Formatter garde absence distincte de zéro ; « Estimation » seulement
+si metadata QUALITATIVE_ESTIMATE et budgetMin égal projectedBudget, sans attribuer
+cette origine à un override opérationnel. Relecture reçue : « Budget à préciser »,
+« 0 XAF », « Estimation · 500 k XAF » ; la suite native est bornée ci-dessous.
+
+checkpoint-gauntlet.json : premier tsc 2/autres quatre contrôles 0 ; type inféré
+roadmap imposait budgetSummary aux replis. Annotation existante
+FenetreOvertonSection['roadmap'] corrige ce type sans garde/schéma affaibli.
+all-unit-final.log ensuite 4 256/406 verts après formatter, avant les deux
+corrections CSS mobiles ; PG 347/18 inchangé. before-mobile-gauntlet.json cinq
+sorties 0/gouvernance 1 624/166 ; gauntlet.json final après toutes CSS cinq
+sorties 0/gouvernance 1 624/166 reçu. Aucune CI/image/runtime 444, dernier runtime reçu 443. Aucun modèle,
+router, service, Intent, ADR ou provider ajouté ; aucune mutation/réconciliation
+de marque réelle ou acceptation du cycle/global. Sept chantiers/dix gates ouverts.
+
+Native S reçue USER/TRIAL locale : trois choix manuels puis pillar.actualize
+HTTP 200, message plan sauvegardé/proposition à relire. native-plan.json relu :
+total complet absent, sous-total 500 000 ; un déclaré zéro, une estimation LOW
+500 000, un inconnu, trois échéances inconnues/budgetByPhase {}. S v2/une archive ;
+zéro tâche/coût et quatre Intents dans le snapshot avant aperçu créatif. Capture
+mobile 390×844 demandée/document 384 sans overflow ; titre écrasé par le feedback
+constaté, header responsive corrigé et visuellement relu. ui-final.log 38/quatre
+verts après ce header, sans déduire un SLO ni une réception globale des écrans.
+
+native-local-receipt.json final relu : les trois actions.setSelected 200 sont
+confirmés par le journal serveur. Fenêtres choix/S complètes, 11/22 réponses
+toutes 200, truncated=false/hasMore=false ; cold initial tronqué et attentes
+compilation expirées conservés, aucun zéro global d’erreurs/SLO. Reçu USER/TRIAL
+normal local seulement, aucune marque réelle mutée ou cycle global accepté.
+
+Aperçu créatif natif : CONSERVATIVE jeu vide zéro, TARGET/AMBITIOUS trois actions/
+chiffrage partiel 500 000/une estimation/un inconnu, hypothèses 30/60/scénario ;
+source LAGUILDE_HUMAN/instruction manuelle/IA facultative. Ouvrir/Annuler desktop
+1 280×900 et mobile 390×844 reçus, aucune création/validation/préfill/génération.
+Helper existant seedAxesIfEmpty réellement trois appels HTTP 200 en no-op
+sans frames, pas nouvel agent/provider. Grille mobile serrée corrigée en empilement/reçue,
+document 384 à viewport 390 ; capture desktop mal cadrée remplacée et inspectée,
+document 1 274 à viewport 1 280. Header S mobile corrigé/reçu. ui-final.log
+38/quatre reçu avant dernière copie/grille créative, unité 4 256/406 avant les
+deux CSS mobiles ; gauntlet final couvre le code après ces changements.
+
+Oracle HTML §12 desktop 1 280/mobile 390 reçus. Export natif PDF route 200,
+dix-huit pages parsées ; pages 8/9/10 rendues-inspectées : sous-total 500 000/
+zéro/inconnu/hypothèses 30/60 fidèles. Premier événement download expiré mais
+fichier reçu par lien natif ; finition client PDF NON reçue : noms techniques
+anglais, # bruts et glyphes flèches abîmés. Aucune acceptation de tout Oracle
+ou de tous consommateurs S déduite de cet export.
+
+Autres contre-exemples reproduits : deterministic-composers McKinsey7S compte
+quatre initiatives contre trois normalisées (duplicate id raw) ; ThreeHorizons
+met inconnues en H2/100 % et transporte le doublon. Section 04 proposition-valeur
+hydrate « 350,000 » serveur contre « 350 000 » client via toLocaleString implicite.
+**Reprise 445, dans dette S existante** : réutiliser collectNormalizedInitiatives
+chez ces composeurs, dédupliquer les IDs, garder horizon inconnu distinct d’un
+H2 décidé et recevoir leurs dénominateurs. Locale explicite identique SSR/client
+pour les montants concernés ; libellés PDF métier, retrait # bruts et caractères/
+police couvrant flèches, puis PDF rendu inspecté. **Déclencheur** : prochain
+incrément immédiat 445 après reçus CI/image/runtime 444, avant cycle réel/C3/C4/C6 ;
+effort : contre-exemples ciblés puis
+recette HTML/PDF desktop/mobile, sans abolir les politiques d’estimation ADVE.
+
+Mesures serveur locales : setSelected 527/486/537 ms ; actualize S 16,5 s,
+dont 14,8 s de compilation et phase application mesurée 1 116 ms. Ces mesures
+ne constituent pas un SLO production. Warm reload campagnes fictives : borne
+observée 4 075 ms vers heading, événements
+DOM/load reçus ; mesure locale bornée, pas latence applicative précise/SLO prod.
+Fixture nettoyée/remaining=0, onglet fermé/devserver arrêté. Dernière lecture
+fixture rejetée pour extension de fichier avant sérialisation, cleanup ensuite
+effectué : AUCUN compteur post-créatif/PDF reçu. Les seuls zéro GenerativeTask/
+CostDecision et quatre Intents sont le snapshot AVANT créatif/PDF ; pas de bilan
+final inventé. WholeJourneyAccepted=false/sept chantiers non acceptés/global null.
+
+**Reprise Guidance en place** : source/CI/image/runtime 444 non reçus, dernier
+runtime 443. Devise FCFA des ancres versus devise de marque, autres écrivains/
+consommateurs S dont protocol index strict, projection opérationnelle/remap et
+parcours de vraie marque ouverts. **Déclencheur** : incréments suivants avant
+C3/C4/C6/preuve de release ; effort : contrat de devise explicite et réception
+transverse restante, sans contenu inventé ni gate affaiblie ; contrat de devise
+reçu avant autre devise, aucune conversion sans taux/source. Reprise privée
+détaillée dans release/preuves-guidance-444/guidance-reprise.md. Contrôle/commit/CI
+ultérieurs de cette documentation restent distincts du reçu source local.
+[Dette en place](RESIDUAL-DEBT.md).
+
+
 ## Droits de marque → catalogue source → proposition à relire — 443 livré, réception bornée (2026-10-10)
 
 useBrandWriteAccess dans use-can-operate réutilise strategy.getMyAccess : zone

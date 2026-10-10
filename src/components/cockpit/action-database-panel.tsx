@@ -47,7 +47,7 @@ const INPUT_CLS =
   "rounded-lg border border-white/10 bg-background px-2 py-1 text-xs text-foreground placeholder:text-foreground-muted focus:border-accent/40 focus:outline-none";
 
 function fcfa(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n) || n <= 0) return "—";
+  if (n == null || !Number.isFinite(n) || n < 0) return "Budget à préciser";
   if (n >= 1_000_000) return `${(n / 1_000_000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} M`;
   if (n >= 1_000) return `${Math.round(n / 1_000)} k`;
   return String(Math.round(n));
@@ -248,6 +248,8 @@ export function ActionDatabasePanel({ strategyId, canWrite = false, canSync = fa
           {actions.map((a) => {
             const meta = (a.metadata ?? {}) as Record<string, unknown>;
             const channel = typeof meta.channel === "string" ? meta.channel : null;
+            const hasBudget = typeof a.budgetMin === "number" && Number.isFinite(a.budgetMin) && a.budgetMin >= 0;
+            const estimatedBudget = hasBudget && meta.budgetBasis === "QUALITATIVE_ESTIMATE" && meta.projectedBudget === a.budgetMin;
             return (
               <div
                 key={a.id}
@@ -291,7 +293,7 @@ export function ActionDatabasePanel({ strategyId, canWrite = false, canSync = fa
                   </div>
                 </div>
                 <div className="flex flex-shrink-0 flex-col items-end gap-1">
-                  <span className="text-2xs font-semibold text-foreground">{fcfa(a.budgetMin)}<span className="text-[9px] font-normal text-foreground-muted"> {a.budgetCurrency ?? ""}</span></span>
+                  <span className="text-2xs font-semibold text-foreground">{estimatedBudget ? "Estimation · " : ""}{fcfa(a.budgetMin)}{hasBudget ? <span className="text-[9px] font-normal text-foreground-muted"> {a.budgetCurrency ?? ""}</span> : null}</span>
                   <div className="flex items-center gap-1">
                     <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">{a.priority}</span>
                     <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">{STATUS_LABELS[a.status] ?? a.status}</span>

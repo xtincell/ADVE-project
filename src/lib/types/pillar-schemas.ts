@@ -1155,6 +1155,18 @@ export const INITIATIVE_TIMEFRAMES = ["SPRINT_90", "PHASE_1", "PHASE_2", "LONG_T
 // backbone ; only genuinely generative content (narrative) may invoke an LLM.
 export const ROADMAP_ROUTE_KEYS = ["CONSERVATIVE", "TARGET", "AMBITIOUS"] as const;
 
+/** Derived coverage of existing initiative budgets, never a measured expense. */
+export const InitiativeBudgetSummarySchema = z.object({
+  knownSubtotal: currency,
+  declaredSubtotal: currency,
+  estimatedSubtotal: currency,
+  declaredCount: z.number().int().min(0),
+  estimatedCount: z.number().int().min(0),
+  unknownCount: z.number().int().min(0),
+  unassignedTimeframeCount: z.number().int().min(0),
+});
+export type InitiativeBudgetSummary = z.infer<typeof InitiativeBudgetSummarySchema>;
+
 /** N2 — Action Potentielle / Initiative (catalogue, pas planifiee) */
 const PotentialActionSchema = z.object({
   action: z.string().min(1),
@@ -1365,6 +1377,7 @@ export const PillarSSchema = z.object({
     objectifDevotion: z.string().min(1).optional(),          // Ex: "spectateur → intéressé"
     actions: z.array(textShort).optional(),
     budget: currency.optional(),
+    budgetSummary: InitiativeBudgetSummarySchema.optional(),
     duree: textShort.optional(),
   })).min(3).optional(),
 
@@ -1444,7 +1457,8 @@ export const PillarSSchema = z.object({
   // Every field here is derived from A/D/V/E/R/T/I — see variable-bible BIBLE_S
   // (each carries `derivedFrom`, keeping listEditableFields("s") === []).
   computed: z.object({
-    totalBudget: currency.optional(),                        // Σ budget des initiatives status=SELECTED_FOR_ROADMAP
+    totalBudget: currency.optional(),                        // complete sum only; absent when a budget is unknown
+    budgetSummary: InitiativeBudgetSummarySchema.optional(),
     budgetByPhase: z.union([z.record(z.enum(INITIATIVE_TIMEFRAMES), currency), z.record(z.string(), z.unknown()), z.array(z.unknown())]).optional(), // record (computed) OU formes héritées (canon S stale, ADR-0172)
     riskCoverage: percentage.optional(),                     // % risques R couverts par une initiative sélectionnée
     mitigatedRiskIds: z.array(entityId).optional(),          // union des mitigatesRiskIds des initiatives sélectionnées
@@ -1480,11 +1494,16 @@ export const PillarSSchema = z.object({
       projectedRevenue: currency.optional(),                 // CA projeté 12 mois (si baseRevenue connu)
       targetCultIndex: percentage,                           // Cult Index cible 0-100
       description: z.string().min(1),                         // résumé court (template déterministe)
+      projectionAssumptions: z.object({
+        riskCoverage: percentage.optional(),
+        baseCultIndex: percentage.optional(),
+      }).optional(),                                        // absent baselines used by the existing scenario policy
       // ── Jeu de stratégie par route (ADR-0089, pure-computed) ──
       initiativeIds: z.array(entityId).optional(),           // initiatives du jeu (FK → I PotentialAction.id)
       initiativeCount: z.number().int().min(0).optional(),
       totalBudget: currency.optional(),                      // Σ budget du jeu
-      budgetByPhase: z.record(z.enum(INITIATIVE_TIMEFRAMES), currency).optional(),
+      budgetSummary: InitiativeBudgetSummarySchema.optional(),
+      budgetByPhase: z.partialRecord(z.enum(INITIATIVE_TIMEFRAMES), currency).optional(), // absent phase is not zero
       riskCoverage: percentage.optional(),                   // % risques R couverts par le jeu
     })).length(3).optional(),
     // ADR-0089 — ambition retenue (sélection opérateur via Intent gouverné
@@ -1673,8 +1692,9 @@ export interface NormalizedInitiative {
   objectif: string;
   channel: string;
   status: (typeof INITIATIVE_STATUSES)[number];
-  timeframe: (typeof INITIATIVE_TIMEFRAMES)[number];
-  budget: number;
+  timeframe?: (typeof INITIATIVE_TIMEFRAMES)[number];
+  budget?: number;
+  budgetBasis: "DECLARED" | "QUALITATIVE_ESTIMATE" | "UNKNOWN";
   budgetEstime?: "LOW" | "MEDIUM" | "HIGH";
   pilierImpact?: (typeof ADVE_KEYS)[number];
   devotionImpact?: string;
@@ -1709,17 +1729,19 @@ export function normalizeInitiative(
       ? o.budgetEstime
       : undefined;
   const budget =
-    typeof o.budget === "number" && Number.isFinite(o.budget)
+    typeof o.budget === "number" && Number.isFinite(o.budget) && o.budget >= 0
       ? o.budget
       : budgetEstime
         ? BUDGET_ESTIME_FCFA[budgetEstime]
-        : 0;
+        : undefined;
+  const budgetBasis = typeof o.budget === "number" && Number.isFinite(o.budget) && o.budget >= 0
+    ? "DECLARED" : budgetEstime ? "QUALITATIVE_ESTIMATE" : "UNKNOWN";
   const status = (INITIATIVE_STATUSES as readonly string[]).includes(o.status as string)
     ? (o.status as NormalizedInitiative["status"])
     : "DRAFT";
   const timeframe = (INITIATIVE_TIMEFRAMES as readonly string[]).includes(o.timeframe as string)
     ? (o.timeframe as NormalizedInitiative["timeframe"])
-    : "LONG_TERM";
+    : undefined;
   const channel = isNonEmptyStr(o.channel)
     ? o.channel
     : ctx.channel ?? (ctx.devotionLevel ? "DEVOTION" : ctx.overtonPhase ? "OVERTON" : "GENERAL");
@@ -1734,6 +1756,7 @@ export function normalizeInitiative(
     status,
     timeframe,
     budget,
+    budgetBasis,
     ...(budgetEstime ? { budgetEstime } : {}),
     ...(isNonEmptyStr(o.pilierImpact) ? { pilierImpact: o.pilierImpact as NormalizedInitiative["pilierImpact"] } : {}),
     ...(devotionImpact ? { devotionImpact } : {}),
@@ -1769,6 +1792,7 @@ export function collectNormalizedInitiatives(iContent: unknown): NormalizedIniti
   const byId = new Map<string, NormalizedInitiative>();
   const add = (raw: unknown, ctx: Parameters<typeof normalizeInitiative>[1]) => {
     const n = normalizeInitiative(raw, ctx);
+    if (!n.action.trim()) return; // Read projection skips invalid entries; the original source stays intact.
     if (!byId.has(n.id)) byId.set(n.id, n); // catalogue d'abord → le canal réel gagne
   };
   const cat = (c.catalogueParCanal as Record<string, unknown>) ?? {};

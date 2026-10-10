@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.444", date: "2026-10-10",
+    headline: "Un plan qui distingue les montants connus des estimations",
+    highlights: [
+      { emoji: "◈", title: "Les informations manquantes restent visibles", body: "Un budget absent demande une précision ; un zéro déclaré reste zéro. Le plan affiche le montant connu et les estimations, sans présenter un total incomplet comme un budget complet. Les échéances manquantes restent à préciser." },
+      { emoji: "🧭", title: "Des scénarios à interpréter clairement", body: "Les ambitions du plan et les niveaux de proposition créative indiquent leurs hypothèses. Les projections restent des scénarios de travail à relire, séparés des résultats mesurés." },
+    ],
+  },
+  {
     version: "6.27.443", date: "2026-10-10",
     headline: "Des commandes adaptées à votre accès à la marque",
     highlights: [

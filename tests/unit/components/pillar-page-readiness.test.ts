@@ -62,11 +62,21 @@ beforeEach(() => {
   fixture.access.isError = false;
   fixture.access.isFetching = false;
   fixture.canOperate = false;
+  fixture.get.data.pillar.content = {};
   fixture.get.data.pillar.validationStatus = "VALIDATED";
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("PillarPage — current state differs from field population", () => {
+  it("does not turn a missing historical projection into zero growth", () => {
+    fixture.get.data.pillar.content = { computed: { roadmapRoutes: [
+      { key: "TARGET", label: "Cible", recommended: true },
+    ] } };
+    render(React.createElement(PillarPage, { pageKey: "roadmap" }));
+    expect(screen.getByText("Projection à préciser")).toBeTruthy();
+    expect(screen.queryByText("+0%")).toBeNull();
+    expect(screen.getByText(/hypothèses de travail/)).toBeTruthy();
+  });
   it("shows a stale complete pillar as stale, even with a stored approval and 100% fields", () => {
     fixture.readiness.data = current(true);
     render(React.createElement(PillarPage, { pageKey: "roadmap" }));

@@ -9,6 +9,34 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Montant/échéance source → projection fidèle — 444 local en réception (2026-10-10)
+
+Trois collections I → normaliseur partagé : absent/zéro déclaré/estimation FCFA
+et origine distincts, horizon inconnu absent, texte absent écarté de projection
+sans effacer la source. Agrégation → sous-total connu/couverture, total complet
+seulement sans budget inconnu ; S, BrandAction, Oracle, cockpit et proposition
+créative consomment ces états, overrides opérationnels conservés. Scénarios
+existants gardent leurs formules avec hypothèses 30/60 explicites ; aucun choix
+flou dans l’ancien helper inutilisé retiré. Contrat strict S inchangé, aucun
+nouveau writer/route/service/Intent/ADR. Onze rouges puis 47/cinq ciblés verts,
+unité 4 253/406 en deux passages/PG 347/18 verts reçus ; native locale bornée/cinq contrôles finaux reçus,
+runtime reçu 443. Devise/consommateurs secondaires/
+projection-remap/réception réelle et sept chantiers/dix gates ouverts.
+
+Base d’actions native locale relue absent/0 XAF/Estimation · 500 k XAF après
+formatter (trois rouges/quatre verts→sept verts), trois choix USER/TRIAL 200.
+Origine estimée limitée à projection QUAL/budgetMin=projectedBudget ; overrides
+opérationnels distincts. Premier gauntlet tsc 2/autres quatre 0, type roadmap
+corrigé ; unité 4 256/406 reçue avant CSS mobiles, PG 347/18 inchangé/UI 38/quatre.
+Native S total absent/sous-total 500 000/inconnus conservés et aperçu créatif
+partiel/hypothèses 30/60 reçus, ouvrir/Annuler sans création/IA ; header/grille
+mobiles corrigés/reçus. Desktop/Oracle HTML/PDF 18 pages reçus, données fidèles
+mais finition PDF non reçue ; cinq contrôles finaux après CSS 0/gouvernance
+1 624/166, fixture nettoyée. Compteurs uniquement avant créatif/PDF. Doublons/
+horizons des composeurs, locale SSR/client et finition PDF en reprise 445 dans
+dette S existante ; aucune réception globale déduite.
+[Contrats et preuve à recevoir](REFONTE-PLAN.md).
+
 ### Accès de marque → gestes autorisés → retour à relire — 443 livré, réception bornée (2026-10-10)
 
 getMyAccess alimente useBrandWriteAccess : stratégie/calendrier/opérateur

@@ -12,6 +12,8 @@ import { resolveCultIndexTier } from "@/domain/cult-index-tier";
 import { cataloguePriceLabel, productLadderPriceLabel } from "@/domain/product-catalog";
 import { TIER_MIN_DEPTH } from "@/domain/superfan-conditions";
 import { collectNormalizedInitiatives, type NormalizedInitiative } from "@/lib/types/pillar-schemas";
+import { InitiativeBudgetSummarySchema } from "@/lib/types/pillar-schemas";
+import { roadmapAssumptionsLabel } from "@/lib/strategy/roadmap-routes";
 // section-defaults n'est plus consommé par les mappers (audit galileo) : les
 // modules dévorent les vraies données ADVERTIS (multi-clés + sources
 // alternatives) et n'inventent plus de contenu generique. Cf. ADR-0095.
@@ -1303,12 +1305,11 @@ const BUDGET_ESTIME_LABEL: Record<string, string> = { LOW: "Faible", MEDIUM: "Mo
 
 /** Pure cost label for an initiative — numeric FCFA if known, else the qualitative estimate, else null. */
 function initiativeCost(init: NormalizedInitiative): string | null {
-  if (init.budget > 0) {
-    if (init.budget >= 1_000_000) return `${(init.budget / 1_000_000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} M FCFA`;
-    if (init.budget >= 1_000) return `${Math.round(init.budget / 1_000)} k FCFA`;
-    return `${Math.round(init.budget)} FCFA`;
-  }
-  return init.budgetEstime ? (BUDGET_ESTIME_LABEL[init.budgetEstime] ?? init.budgetEstime) : null;
+  if (init.budget === undefined) return null;
+  const cost = init.budget >= 1_000_000 ? `${(init.budget / 1_000_000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} M FCFA`
+    : init.budget >= 1_000 ? `${Math.round(init.budget / 1_000)} k FCFA` : `${Math.round(init.budget)} FCFA`;
+  return init.budgetBasis === "QUALITATIVE_ESTIMATE" && init.budgetEstime
+    ? `Estimation ${BUDGET_ESTIME_LABEL[init.budgetEstime]!.toLowerCase()} · ${cost}` : cost;
 }
 
 export function mapCatalogueActions(strategy: any): CatalogueActionsSection {
@@ -1395,10 +1396,12 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
   // Roadmap : S.roadmap → calendrier annuel I (chaque entrée = phase réelle avec
   // budget/objectif/drivers) → axes stratégiques S. Plus de roadmap 7-phases
   // générique (defaultRoadmap "Phase 1 — Fondations").
-  let roadmap = arr(sContent?.roadmap).map((r: any) => ({
+  let roadmap: FenetreOvertonSection["roadmap"] = arr(sContent?.roadmap).map((r: any) => ({
     phase: str(r.phase), objectif: str(r.objectif ?? r.objective),
     livrables: arr(r.livrables ?? r.deliverables).map(str).filter(Boolean),
-    budget: typeof r.budget === "number" ? r.budget : null, duree: str(r.duree ?? r.duration),
+    budget: typeof r.budget === "number" ? r.budget : null,
+    budgetSummary: InitiativeBudgetSummarySchema.safeParse(r.budgetSummary).success ? r.budgetSummary : undefined,
+    duree: str(r.duree ?? r.duration),
   })).filter((r: any) => r.phase || r.objectif);
   if (roadmap.length === 0) {
     roadmap = arr(iContent?.annualCalendar).map((e: any) => ({
@@ -1430,23 +1433,27 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
   // ADR-0089 — ambition retenue + jeu de stratégie par route.
   const computed = sContent?.computed as any;
   const num = (v: unknown) => (typeof v === "number" ? v : null);
+  const summary = (v: unknown) => { const parsed = InitiativeBudgetSummarySchema.safeParse(v); return parsed.success ? parsed.data : undefined; };
   const selectedRouteKey = typeof computed?.selectedRouteKey === "string" ? computed.selectedRouteKey : null;
   const roadmapRoutes = arr(computed?.roadmapRoutes).map((r: any) => ({
     key: str(r.key),
     label: str(r.label),
     recommended: Boolean(r.recommended),
     selected: typeof r.selected === "boolean" ? r.selected : (selectedRouteKey !== null && str(r.key) === selectedRouteKey),
-    projectedGrowthPct: typeof r.projectedGrowthPct === "number" ? r.projectedGrowthPct : 0,
+    projectedGrowthPct: num(r.projectedGrowthPct),
     projectedRevenue: typeof r.projectedRevenue === "number" ? r.projectedRevenue : null,
-    targetCultIndex: typeof r.targetCultIndex === "number" ? r.targetCultIndex : 0,
+    targetCultIndex: num(r.targetCultIndex),
     description: str(r.description),
     initiativeCount: num(r.initiativeCount),
     totalBudget: num(r.totalBudget),
+    budgetSummary: summary(r.budgetSummary),
+    projectionAssumptions: r.projectionAssumptions && typeof r.projectionAssumptions === "object" ? r.projectionAssumptions : undefined,
     riskCoverage: num(r.riskCoverage),
   }));
   const computedDashboard = computed
     ? {
         totalBudget: num(computed.totalBudget),
+        budgetSummary: summary(computed.budgetSummary),
         riskCoverage: num(computed.riskCoverage),
         selectedInitiativeCount: num(computed.selectedInitiativeCount),
         coherenceScore: num(computed.coherenceScore),
@@ -1611,7 +1618,7 @@ export function mapCroissanceEvolution(strategy: any): CroissanceEvolutionSectio
   // catégories réelles du catalogue V. Plus de pivots/extensions génériques.
   const computed = (sContent?.computed ?? {}) as any;
   const routeScenarios = arr(computed.roadmapRoutes).map((r: any) =>
-    `${str(r.label)}${r.selected ? " (retenue)" : r.recommended ? " (recommandée)" : ""} — +${r.projectedGrowthPct}% de croissance projetée, Cult Index cible ${r.targetCultIndex}/100. ${str(r.description)}`,
+    `${str(r.label)}${r.selected ? " (retenue)" : r.recommended ? " (recommandée)" : ""} — scénario hypothétique : ${typeof r.projectedGrowthPct === "number" ? `+${r.projectedGrowthPct}% de croissance projetée` : "croissance à préciser"}, indice d’attachement cible ${typeof r.targetCultIndex === "number" ? `${r.targetCultIndex}/100` : "à préciser"}. ${str(r.description)} ${roadmapAssumptionsLabel(r.projectionAssumptions) ?? ""}`,
   ).filter(Boolean);
   const recoScenarios = arr(sContent?.recommandationsPrioritaires)
     .map((r: any) => str(r.recommendation ?? r.reco ?? r.action)).filter(Boolean);

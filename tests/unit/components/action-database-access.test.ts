@@ -4,21 +4,40 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ActionDatabasePanel } from "@/components/cockpit/action-database-panel";
 
-const fixture = vi.hoisted(() => ({ select: vi.fn(), sync: vi.fn(), propose: vi.fn() }));
+const fixture = vi.hoisted(() => ({ select: vi.fn(), sync: vi.fn(), propose: vi.fn(), budget: undefined as number | null | undefined, metadata: undefined as any }));
 vi.mock("@/lib/trpc/client", () => ({ trpc: {
   useUtils: () => ({ pillar: { get: { invalidate: vi.fn() }, assess: { invalidate: vi.fn() }, readiness: { invalidate: vi.fn() } } }),
   actions: {
     summary: { useQuery: () => ({ data: { total: 1, selectedCount: 0, byTouchpoint: {} }, refetch: vi.fn() }) },
-    byStrategy: { useQuery: () => ({ data: [{ id: "one", title: "Action existante", selected: false, status: "PROPOSED" }], refetch: vi.fn() }) },
+    byStrategy: { useQuery: () => ({ data: [{ id: "one", title: "Action existante", selected: false, status: "PROPOSED", budgetMin: fixture.budget, budgetCurrency: "XAF", metadata: fixture.metadata }], refetch: vi.fn() }) },
     sync: { useMutation: () => ({ mutate: fixture.sync, isPending: false }) },
     setSelected: { useMutation: () => ({ mutate: fixture.select, isPending: false }) },
     propose: { useMutation: () => ({ mutate: fixture.propose, isPending: false }) },
   },
 } }));
-beforeEach(() => { vi.clearAllMocks(); vi.stubGlobal("React", React); });
+beforeEach(() => { vi.clearAllMocks(); vi.stubGlobal("React", React); fixture.budget = undefined; fixture.metadata = undefined; });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("action catalogue — visible calendar permission", () => {
+  it("shows a declared zero rather than an absent amount", () => {
+    fixture.budget = 0;
+    render(React.createElement(ActionDatabasePanel, { strategyId: "fixture" }));
+    expect(screen.getByText(/^0/).textContent).toBe("0 XAF");
+  });
+  it("asks for an absent budget rather than showing a dash", () => {
+    render(React.createElement(ActionDatabasePanel, { strategyId: "fixture" }));
+    expect(screen.getByText("Budget à préciser")).toBeTruthy();
+  });
+  it("labels a projected qualitative estimate separately from an operational override", () => {
+    fixture.budget = 500000;
+    fixture.metadata = { budgetBasis: "QUALITATIVE_ESTIMATE", projectedBudget: 500000 };
+    const view = render(React.createElement(ActionDatabasePanel, { strategyId: "fixture" }));
+    expect(screen.getByText(/Estimation · 500 k/)).toBeTruthy();
+    fixture.budget = 0;
+    view.rerender(React.createElement(ActionDatabasePanel, { strategyId: "fixture" }));
+    expect(screen.queryByText(/Estimation ·/)).toBeNull();
+    expect(screen.getByText(/^0/).textContent).toBe("0 XAF");
+  });
   it("keeps reads available and makes no write gesture without received permissions", () => {
     render(React.createElement(ActionDatabasePanel, { strategyId: "fixture" }));
     expect(screen.getByText("Action existante")).toBeTruthy();

@@ -25,10 +25,10 @@ describe("normalizeInitiative", () => {
     expect(n.budget).toBe(1234);
   });
 
-  it("defaults status/timeframe and carries the container channel", () => {
+  it("defaults only the draft status and preserves the missing timeframe", () => {
     const n = normalizeInitiative({ action: "Y" }, { devotionLevel: "AMBASSADEUR" });
     expect(n.status).toBe("DRAFT");
-    expect(n.timeframe).toBe("LONG_TERM");
+    expect(n.timeframe).toBeUndefined();
     expect(n.channel).toBe("DEVOTION");
     expect(n.devotionImpact).toBe("AMBASSADEUR");
     expect(n._normalized).toBe(true);
@@ -46,18 +46,18 @@ describe("normalizeInitiative", () => {
   });
 });
 
-describe("canon I — qualitative budgets now flow into a numeric plan", () => {
-  it("UPgraders catalogue normalizes to a non-zero total budget", () => {
+describe("canon I — qualitative anchors remain estimates", () => {
+  it("UPgraders catalogue retains a non-zero known subtotal and its missing amounts", () => {
     const iPillar = UPGRADERS_CANON_PILLARS.find((p) => p.key === "i")!;
     const list = collectNormalizedInitiatives(iPillar.content);
     expect(list.length).toBeGreaterThanOrEqual(8);
-    const total = list.reduce((s, a) => s + a.budget, 0);
+    const total = list.reduce((s, a) => s + (a.budget ?? 0), 0);
     expect(total).toBeGreaterThan(0);
-    // every record is uniform: has channel + numeric budget + status
+    // A shared shape does not make an absent amount numeric.
     for (const a of list) {
       expect(typeof a.channel).toBe("string");
-      expect(typeof a.budget).toBe("number");
-      expect(Number.isFinite(a.budget)).toBe(true);
+      if (a.budgetBasis === "UNKNOWN") expect(a.budget).toBeUndefined();
+      else { expect(typeof a.budget).toBe("number"); expect(Number.isFinite(a.budget)).toBe(true); }
       expect(a.status).toBeTruthy();
     }
   });

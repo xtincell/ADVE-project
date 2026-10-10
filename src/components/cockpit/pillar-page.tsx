@@ -19,7 +19,7 @@ import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import type { PillarKey as PillarStorageKey } from "@/lib/types/advertis-vector";
 import type { PillarKey } from "@/domain/pillars";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
-import { computeRoadmapRoutes } from "@/lib/strategy/roadmap-routes";
+import { computeRoadmapRoutes, initiativeBudgetLabel, roadmapAssumptionsLabel } from "@/lib/strategy/roadmap-routes";
 import {
   AutoField, FocusModal, isInlineField, InlineBadge, getFieldLabel,
 } from "./field-renderers";
@@ -556,11 +556,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
       {/* ── Header — 3-level scoring ─────────────────────────────── */}
       <div className="rounded-lg border border-white/5 bg-surface-raised px-4 py-3">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex shrink-0 items-center gap-3 min-w-0">
             <h1 className={`text-lg font-bold ${config.accent} truncate`}>{config.title}</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
             {/* ADR-0023 — manual amend (ADVE only). Operator-only Intent → for
                 founders, link to the founder editor instead of the amend modal. */}
             {isAdve && strategyId && canWriteStrategy ? (
@@ -764,14 +764,14 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             <div className="mb-3">
               <div className="text-sm font-semibold text-foreground">Ambition stratégique</div>
               <p className="mt-1 text-2xs text-foreground-muted">
-                3 trajectoires calculées depuis le même backbone (initiatives + risques). Retenir une ambition recalcule le dashboard S sur son jeu de stratégie.
+                Trois scénarios selon vos actions et vos risques. Les projections sont des hypothèses de travail, pas des résultats mesurés. Retenir une ambition recalcule votre plan.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               {routes.map((r) => {
                 const key = String(r.key ?? "");
                 const isSelected = key === selectedKey;
-                const growth = typeof r.projectedGrowthPct === "number" ? r.projectedGrowthPct : 0;
+                const growth = typeof r.projectedGrowthPct === "number" ? r.projectedGrowthPct : null;
                 const cult = typeof r.targetCultIndex === "number" ? r.targetCultIndex : null;
                 const count = typeof r.initiativeCount === "number" ? r.initiativeCount : null;
                 const budget = typeof r.totalBudget === "number" ? r.totalBudget : null;
@@ -789,10 +789,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                       </span>
                     ) : null}
                     <div className="text-xs font-semibold text-foreground">{String(r.label ?? key)}</div>
-                    <div className={`mt-1 text-2xl font-extrabold ${isSelected ? "text-accent" : "text-foreground"}`}>+{growth}%</div>
+                    <div className={`mt-1 text-2xl font-extrabold ${isSelected ? "text-accent" : "text-foreground"}`}>{growth !== null ? `+${growth}%` : "Projection à préciser"}</div>
                     <div className="mt-1 space-y-0.5 text-2xs text-foreground-muted">
                       {cult != null ? <div>Indice d'attachement cible : <span className="font-bold text-foreground">{cult}/100</span></div> : null}
-                      {count != null ? <div>{count} initiative{count > 1 ? "s" : ""}{budget != null && budget > 0 ? ` · ${(budget / 1_000_000).toLocaleString()} M F` : ""}</div> : null}
+                      {count != null ? <div>{count} initiative{count > 1 ? "s" : ""} · {initiativeBudgetLabel(budget, r.budgetSummary)}</div> : null}
+                      {roadmapAssumptionsLabel(r.projectionAssumptions) ? <div>{roadmapAssumptionsLabel(r.projectionAssumptions)}</div> : null}
                       {coverage != null ? <div>{coverage}% des risques couverts</div> : null}
                     </div>
                     <button

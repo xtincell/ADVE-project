@@ -4,6 +4,40 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-10
 
+**6.27.444 local en réception — fidélité budget/échéance** : le normaliseur
+commun garde budget absent, zéro déclaré et origine DECLARED/QUALITATIVE_ESTIMATE/
+UNKNOWN ; ancres FCFA existantes conservées comme estimations. Échéance inconnue
+absente, entrées sans texte exclues de la projection sans effacer la source.
+S/BrandAction/Oracle/cockpit/proposition créative transportent sous-total connu,
+couverture et total complet seulement si tous les montants sont connus ; phases
+incomplètes sans montant complet, zéro opérationnel/overrides conservés.
+Scénarios/formules inchangés, hypothèses 30/60 explicites ; helper sans appel
+promoteSelectedInBlob supprimé, pas de choix fuzzy/horizon faux conservé dans
+ce helper. partialRecord Zod 4 sur budgets de phases des routes, clés/valeurs
+contrôlées, seuils S 3 axes/3 facteurs/5 actions sprint inchangés. Onze rouges
+avant correction reçus puis ciblé 47/cinq verts, unité 4 253/406 en deux
+passages et PG 347/18 verts (trente action-decision). Trois rouges UI de fixture
+partagée corrigés par beforeEach, aucune garde affaiblie ; chemin ciblé roadmap
+erroné conservé/couvert par suite complète. Native partielle USER/TRIAL : trois
+choix 200, Base d’actions absent/0 XAF/Estimation · 500 k XAF relue après trois
+rouges/quatre verts puis sept verts ; estimation seulement sur projection QUAL
+budgetMin=projectedBudget, overrides distincts. Premier gauntlet tsc 2/autres
+quatre 0, annotation type roadmap corrigée. Unité complète 4 256/406 reçue avant deux CSS mobiles, PG 347/18 inchangé,
+UI 38/quatre après header S. Native S trois choix→actualize 200/sous-total
+500 000/un budget inconnu/trois échéances inconnues, total absent/S v2/une archive ;
+zéro tâche/coût/quatre Intents avant créatif. Header mobile écrasé corrigé/relu ;
+aperçu créatif partiel/hypothèses 30/60/LAGUILDE_HUMAN, ouvrir/Annuler sans IA ni
+création, grille mobile empilée/reçue. Desktop recapturé/Oracle HTML et PDF 18 pages reçus (données fidèles,
+finition PDF non reçue), cinq contrôles finaux après CSS 0/gouvernance 1 624/166.
+Fixture nettoyée ; compteurs zéro tâches/coûts/quatre Intents AVANT créatif/PDF
+seulement, lecture finale rejetée avant sérialisation, aucun compteur final.
+McKinsey7S/ThreeHorizons doublons/horizons et locale hydratation Oracle reproduits,
+plan 445 lié à dette S existante avant cycle réel. Runtime reçu
+443, aucune CI/image/runtime 444. Devise ancres/marque, autres chemins S,
+projection opérationnelle/remap et vraie marque à recevoir ; aucune nouvelle
+entité/route/service/Intent/ADR/provider ni acceptation des sept chantiers/dix gates.
+[Preuves et résidus](docs/governance/REFONTE-PLAN.md).
+
 **6.27.443 livré, réception bornée — droits de marque et retours Guidance** :
 useBrandWriteAccess dans use-can-operate lit strategy.getMyAccess ; droits
 stratégiques, calendrier et synchronisation opérateur distincts. Accès absent,

@@ -11,7 +11,7 @@
  * Re-exported by the server strategy protocol for the authoritative compute.
  */
 
-import { ROADMAP_ROUTE_KEYS } from "@/lib/types/pillar-schemas";
+import { ROADMAP_ROUTE_KEYS, INITIATIVE_TIMEFRAMES, type InitiativeBudgetSummary } from "@/lib/types/pillar-schemas";
 
 export type RouteKey = (typeof ROADMAP_ROUTE_KEYS)[number];
 
@@ -59,18 +59,36 @@ export function aggregateInitiativeSet(
 ): {
   initiativeIds: string[];
   initiativeCount: number;
-  totalBudget: number;
+  totalBudget?: number;
+  budgetSummary: InitiativeBudgetSummary;
   budgetByPhase: Record<string, number>;
   mitigatedRiskIds: string[];
   riskCoverage?: number;
 } {
-  const budgetOf = (a: Record<string, unknown>) => (typeof a.budget === "number" ? a.budget : 0);
-  const totalBudget = set.reduce((sum, a) => sum + budgetOf(a), 0);
+  const budgetOf = (a: Record<string, unknown>) => typeof a.budget === "number" && Number.isFinite(a.budget) && a.budget >= 0 ? a.budget : undefined;
+  const budgetSummary: InitiativeBudgetSummary = { knownSubtotal: 0, declaredSubtotal: 0, estimatedSubtotal: 0,
+    declaredCount: 0, estimatedCount: 0, unknownCount: 0, unassignedTimeframeCount: 0 };
   const budgetByPhase: Record<string, number> = {};
+  const unknownPhases = new Set<string>();
   for (const a of set) {
-    const tf = typeof a.timeframe === "string" ? a.timeframe : "LONG_TERM";
-    budgetByPhase[tf] = (budgetByPhase[tf] ?? 0) + budgetOf(a);
+    const budget = budgetOf(a);
+    const tf = typeof a.timeframe === "string" && (INITIATIVE_TIMEFRAMES as readonly string[]).includes(a.timeframe) ? a.timeframe : undefined;
+    if (!tf) budgetSummary.unassignedTimeframeCount++;
+    if (budget === undefined) {
+      budgetSummary.unknownCount++;
+      if (tf) unknownPhases.add(tf);
+      continue;
+    }
+    budgetSummary.knownSubtotal += budget;
+    if (a.budgetBasis === "QUALITATIVE_ESTIMATE") {
+      budgetSummary.estimatedCount++; budgetSummary.estimatedSubtotal += budget;
+    } else {
+      budgetSummary.declaredCount++; budgetSummary.declaredSubtotal += budget;
+    }
+    if (tf) budgetByPhase[tf] = (budgetByPhase[tf] ?? 0) + budget;
   }
+  for (const phase of unknownPhases) delete budgetByPhase[phase];
+  const totalBudget = budgetSummary.unknownCount === 0 ? budgetSummary.knownSubtotal : undefined;
   const initiativeIds = set
     .map((a) => a.id)
     .filter((id): id is string => typeof id === "string");
@@ -84,7 +102,28 @@ export function aggregateInitiativeSet(
           riskMatrix.length) * 100,
       )
     : undefined;
-  return { initiativeIds, initiativeCount: set.length, totalBudget, budgetByPhase, mitigatedRiskIds, riskCoverage };
+  return { initiativeIds, initiativeCount: set.length, ...(totalBudget !== undefined ? { totalBudget } : {}), budgetSummary, budgetByPhase, mitigatedRiskIds, riskCoverage };
+}
+
+/** Shared client wording for complete/partial amounts and qualitative estimates. */
+export function initiativeBudgetLabel(total: unknown, summary: unknown): string {
+  const s = summary && typeof summary === "object" ? summary as Partial<InitiativeBudgetSummary> : undefined;
+  const amount = typeof total === "number" && Number.isFinite(total) ? total
+    : typeof s?.knownSubtotal === "number" && (s.declaredCount ?? 0) + (s.estimatedCount ?? 0) > 0 ? s.knownSubtotal : undefined;
+  const parts = amount !== undefined ? [`${new Intl.NumberFormat("fr-FR").format(amount)} F${(s?.unknownCount ?? 0) > 0 ? " chiffrés" : ""}`]
+    : (s?.unknownCount ?? 0) > 0 ? [] : ["Budget à préciser"];
+  if ((s?.unknownCount ?? 0) > 0) parts.push(`${s!.unknownCount} budget${s!.unknownCount! > 1 ? "s" : ""} à préciser`);
+  if ((s?.estimatedCount ?? 0) > 0) parts.push(`${s!.estimatedCount} estimation${s!.estimatedCount! > 1 ? "s" : ""}`);
+  return parts.join(" · ");
+}
+
+export function roadmapAssumptionsLabel(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+  const assumptions = value as Record<string, unknown>;
+  const parts: string[] = [];
+  if (typeof assumptions.riskCoverage === "number") parts.push(`Couverture des risques supposée : ${assumptions.riskCoverage} %`);
+  if (typeof assumptions.baseCultIndex === "number") parts.push(`Indice actuel supposé : ${assumptions.baseCultIndex}/100`);
+  return parts.length ? parts.join(" · ") : null;
 }
 
 export function computeRoadmapRoutes(input: {
@@ -113,6 +152,10 @@ export function computeRoadmapRoutes(input: {
       projectedGrowthPct,
       targetCultIndex,
       description: r.description,
+      projectionAssumptions: {
+        ...(input.riskCoverage === undefined ? { riskCoverage: 30 } : {}),
+        ...(input.baseCultIndex === undefined ? { baseCultIndex: 60 } : {}),
+      },
     };
     if (typeof input.baseRevenue === "number" && input.baseRevenue > 0) {
       route.projectedRevenue = Math.round(input.baseRevenue * (1 + projectedGrowthPct / 100));
@@ -125,7 +168,8 @@ export function computeRoadmapRoutes(input: {
       const agg = aggregateInitiativeSet(set, input.riskMatrix ?? []);
       route.initiativeIds = agg.initiativeIds;
       route.initiativeCount = agg.initiativeCount;
-      route.totalBudget = agg.totalBudget;
+      if (agg.totalBudget !== undefined) route.totalBudget = agg.totalBudget;
+      route.budgetSummary = agg.budgetSummary;
       route.budgetByPhase = agg.budgetByPhase;
       if (agg.riskCoverage !== undefined) route.riskCoverage = agg.riskCoverage;
     }

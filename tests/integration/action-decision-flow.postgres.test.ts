@@ -58,6 +58,41 @@ const choose = (f: Fixture, selected: boolean) => setBrandActionStatus({ strateg
 const readI = (f: Fixture) => db.pillar.findUniqueOrThrow({ where: { id: f.i.id } });
 
 describe("one operator choice survives the whole existing action path", () => {
+  it("keeps a declared zero operational override when the source amount becomes unknown", async () => {
+    const f = await fixture();
+    await db.brandAction.update({ where: { id: f.action.id }, data: { budgetMin: 0, budgetMax: 0 } });
+    const { budget: _budget, ...unknown } = f.initiative;
+    await db.pillar.update({ where: { id: f.i.id }, data: { content: { catalogueParCanal: { DIGITAL: [unknown] } } } });
+    await syncBrandActionsFromBlob(f.strategy.id);
+    expect(await db.brandAction.findUniqueOrThrow({ where: { id: f.action.id } })).toMatchObject({ budgetMin: 0, budgetMax: 0,
+      metadata: { projectedBudget: null, budgetBasis: "UNKNOWN" } });
+  });
+  it("preserves unknown budgets and horizons through projection and the saved S draft", async () => {
+    const f = await fixture();
+    const { budget: _budget, timeframe: _timeframe, ...unknown } = f.initiative;
+    const zero = { ...unknown, id: randomUUID(), action: "Declared zero", budget: 0 };
+    const estimate = { ...unknown, id: randomUUID(), action: "Qualitative estimate", budgetEstime: "LOW" };
+    await db.pillar.update({ where: { id: f.i.id }, data: { content: { catalogueParCanal: { DIGITAL: [unknown, zero, estimate] } } } });
+    await syncBrandActionsFromBlob(f.strategy.id);
+    const actions = await db.brandAction.findMany({ where: { strategyId: f.strategy.id } });
+    expect(actions.find(a => a.sourceInitiativeId === unknown.id)).toMatchObject({ budgetMin: null, budgetMax: null,
+      metadata: { budgetBasis: "UNKNOWN", timeframe: null, projectedBudget: null } });
+    expect(actions.find(a => a.sourceInitiativeId === zero.id)).toMatchObject({ budgetMin: 0, budgetMax: 0,
+      priority: null, metadata: { budgetBasis: "DECLARED", timeframe: null, projectedBudget: 0 } });
+    expect(actions.find(a => a.sourceInitiativeId === estimate.id)).toMatchObject({ budgetMin: 500_000, budgetMax: 500_000,
+      priority: null, metadata: { budgetBasis: "QUALITATIVE_ESTIMATE", projectedBudget: 500_000 } });
+    for (const a of actions) await setBrandActionStatus({ strategyId: f.strategy.id, op: { type: "SELECT", actionId: a.id, selected: true } });
+    const result = await actualizePillar(f.strategy.id, "S");
+    expect(result.updated, result.error).toBe(true);
+    const s = (await db.pillar.findUniqueOrThrow({ where: { id: f.s.id } })).content as any;
+    expect(s.globalBudget).toBeUndefined(); expect(s.computed.totalBudget).toBeUndefined();
+    expect(s.computed.budgetSummary).toMatchObject({ unknownCount: 1, declaredCount: 1, estimatedCount: 1, knownSubtotal: 500_000 });
+    expect(s.roadmap).toHaveLength(1); expect(s.roadmap[0].phase).toBe("Échéance à préciser");
+    expect(s.roadmap[0].budget).toBeUndefined();
+    expect(s.selectedFromI.every((a: any) => a.phase === undefined)).toBe(true);
+    expect(s.fenetreOverton.strategieDeplacement.every((a: any) => a.horizon === undefined)).toBe(true);
+    expect(provider.callLLM).not.toHaveBeenCalled();
+  });
   it("the manual S command saves the same source choices without an implicit provider", async () => {
     const f = await fixture(); await choose(f, true);
     provider.callLLM.mockClear();

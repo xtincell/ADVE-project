@@ -1,5 +1,7 @@
 "use client";
 
+import { initiativeBudgetLabel } from "@/lib/strategy/roadmap-routes";
+
 /**
  * Pilier S (Stratégie) — renderer bespoke.
  * Porté du handoff claude.ai/design (pillar-s.jsx). Régime DASHBOARD CALCULÉ :
@@ -91,7 +93,7 @@ function Roadmap({ items, status }: { items: unknown; status?: string }) {
               {!isEmpty(p.objectif) ? <p className="ck-s-phase__obj">{str(p.objectif)}</p> : null}
               <div className="ck-s-phase__meta">
                 {!isEmpty(p.objectifDevotion) ? <span className="ck-fc__tag" data-tone="pink">→ {str(p.objectifDevotion)}</span> : null}
-                {!isEmpty(p.budget) ? <span className="ck-s-phase__budget">{str(p.budget)}</span> : null}
+                {!isEmpty(p.budget) || !isEmpty(p.budgetSummary) ? <span className="ck-s-phase__budget">{initiativeBudgetLabel(p.budget, p.budgetSummary)}</span> : null}
               </div>
               {!isEmpty(p.actions) ? <div className="ck-s-phase__acts">{(Array.isArray(p.actions) ? p.actions : []).map((a, j) => <span className="ck-s-phase__a" key={j}>{str(a)}</span>)}</div> : null}
             </div>
@@ -203,7 +205,8 @@ function ComputedBanner({ computed, score }: { computed: unknown; score: unknown
       <div className="ck-s-computed__cells">
         <div className="ck-s-computed__c"><span>Ambition retenue</span><b>{str(c.selectedRouteKey) || "—"}</b></div>
         <div className="ck-s-computed__c"><span>Initiatives</span><b>{isEmpty(c.selectedInitiativeCount) ? "—" : str(c.selectedInitiativeCount)}</b></div>
-        <div className="ck-s-computed__c"><span>Budget total</span><b>{totalBudget ? `${new Intl.NumberFormat("fr-FR").format(totalBudget)} F` : "—"}</b></div>
+        <div className="ck-s-computed__c"><span>Budget du plan</span><b>{initiativeBudgetLabel(totalBudget, c.budgetSummary)}</b></div>
+        {typeof asRec(c.budgetSummary).unassignedTimeframeCount === "number" && Number(asRec(c.budgetSummary).unassignedTimeframeCount) > 0 ? <div className="ck-s-computed__c"><span>Échéances à préciser</span><b>{str(asRec(c.budgetSummary).unassignedTimeframeCount)}</b></div> : null}
         <div className="ck-s-computed__c"><span>Couverture risques</span><b>{isEmpty(c.riskCoverage) ? "—" : `${str(c.riskCoverage)} %`}</b></div>
       </div>
     </div>

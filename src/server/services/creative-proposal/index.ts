@@ -21,7 +21,7 @@ import {
   type CreativeProposalContract,
   type CreativeDirectionDraft,
 } from "@/lib/types/creative-proposal";
-import { routeInitiativeSet, ROUTE_SPECS, type RouteKey } from "@/lib/strategy/roadmap-routes";
+import { routeInitiativeSet, aggregateInitiativeSet, ROUTE_SPECS, type RouteKey } from "@/lib/strategy/roadmap-routes";
 import { canonTypeForTimeframe } from "@/server/services/campaign-canon/plan";
 import { executeStructuredLLMCall } from "@/server/services/utils/llm-structured";
 
@@ -196,7 +196,9 @@ export interface ExecutionLevel {
   /** Nombre d'actions que la validation de ce niveau rattacherait aux frames. */
   actionCount: number;
   /** Budget total des actions de ce niveau (somme budgetMax ?? budgetMin). */
-  totalBudget: number;
+  totalBudget: number | null;
+  budgetSummary?: import("@/lib/types/pillar-schemas").InitiativeBudgetSummary;
+  projectionAssumptions?: { riskCoverage?: number; baseCultIndex?: number };
 }
 
 /**
@@ -206,12 +208,12 @@ export interface ExecutionLevel {
  */
 export function summarizeExecutionLevels(
   initiatives: Array<Record<string, unknown>>,
-  budgetById: Map<string, number>,
+  budgetById: Map<string, number | undefined>,
   storedByKey: Map<string, Record<string, unknown>>,
 ): ExecutionLevel[] {
   return ROUTE_SPECS.map((spec) => {
-    const ids = routeInitiativeSet(spec.key, initiatives).map((r) => r.id as string);
-    const totalBudget = ids.reduce((sum, id) => sum + (budgetById.get(id) ?? 0), 0);
+    const set = routeInitiativeSet(spec.key, initiatives).map(r => ({ ...r, budget: budgetById.get(r.id as string) }));
+    const aggregate = aggregateInitiativeSet(set, []);
     const stored = storedByKey.get(spec.key);
     return {
       key: spec.key,
@@ -219,8 +221,10 @@ export function summarizeExecutionLevels(
       recommended: spec.recommended,
       selected: stored?.selected === true,
       projectedGrowthPct: stored && typeof stored.projectedGrowthPct === "number" ? (stored.projectedGrowthPct as number) : null,
-      actionCount: ids.length,
-      totalBudget,
+      actionCount: set.length,
+      totalBudget: aggregate.totalBudget ?? null,
+      budgetSummary: aggregate.budgetSummary,
+      projectionAssumptions: stored?.projectionAssumptions as ExecutionLevel["projectionAssumptions"],
     };
   });
 }
@@ -237,8 +241,13 @@ export async function getExecutionLevels(strategyId: string): Promise<ExecutionL
   const computed = ((sPillar?.content as Record<string, unknown> | null)?.computed ?? {}) as Record<string, unknown>;
   const storedRoutes = Array.isArray(computed.roadmapRoutes) ? (computed.roadmapRoutes as Array<Record<string, unknown>>) : [];
   const storedByKey = new Map<string, Record<string, unknown>>(storedRoutes.map((r) => [String(r.key), r]));
-  const budgetById = new Map<string, number>(actions.map((a) => [a.id, (a.budgetMax ?? a.budgetMin ?? 0) || 0]));
-  const initiatives = actions.map(toRouteInitiative);
+  const budgetById = new Map<string, number | undefined>(actions.map((a) => [a.id, a.budgetMax ?? a.budgetMin ?? undefined]));
+  const initiatives = actions.map(a => {
+    const metadata = a.metadata as Record<string, unknown> | null;
+    const amount = budgetById.get(a.id);
+    return { ...toRouteInitiative(a), budgetBasis: metadata?.budgetBasis === "QUALITATIVE_ESTIMATE"
+      && amount === metadata.projectedBudget ? "QUALITATIVE_ESTIMATE" : "DECLARED" };
+  });
   return summarizeExecutionLevels(initiatives, budgetById, storedByKey);
 }
 

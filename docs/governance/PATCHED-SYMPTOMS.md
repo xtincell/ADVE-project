@@ -30,6 +30,38 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-10 · **444 local en réception, fidélité des projections** : le même
+normaliseur transformait absence de budget en zéro et échéance inconnue en
+LONG_TERM, perdait l’origine qualitative et projetait des entrées sans texte ;
+agrégations présentaient un total partiel comme complet. Cause : normalisation,
+estimation de méthode et fait déclaré confondus, états perdus chez consommateurs.
+Candidate conserve absent/zéro/DECLARED/QUALITATIVE_ESTIMATE/UNKNOWN, sous-total/
+couverture et horizon absent ; source brute intacte, overrides opérationnels
+conservés. Scénarios/formules conservés, baselines 30/60 explicitées ; helper
+inutilisé de promotion floue retiré. partialRecord sur phases des routes sans
+modifier seuils S. Onze rouges puis 47/cinq ciblés verts, unité 4 253/406 en
+deux passages/PG 347/18 verts reçus. Trois rouges UI dus à pollution de fixture,
+isolée par beforeEach, aucune garde affaiblie ; chemin ciblé roadmap erroné
+conservé/couvert par suite complète. Native locale a révélé Base d’actions zéro
+rendu « — XAF »/estimation non nommée : formatter falsy et origine non rendue.
+Trois rouges/quatre verts puis sept verts ; relecture Budget à préciser/0 XAF/
+Estimation · 500 k XAF reçue, trois choix USER/TRIAL 200. Estimation seulement
+sur metadata QUAL/budgetMin=projectedBudget, pas sur override opérationnel.
+Premier gauntlet tsc 2/autres quatre 0, annotation type roadmap corrigée ; unité
+4 256/406 ensuite verte avant deux CSS mobiles, PG 347/18 inchangé. Native S
+200/chiffrage partiel fidèle reçue ; titre écrasé par feedback et grille créative
+serrée à 390 corrigés par header responsive/empilement puis visuellement relus.
+UI 38/quatre verts après header ; aperçu créatif partiel/hypothèses 30/60 reçu,
+ouvrir/Annuler sans création/IA. Desktop recapturé/Oracle HTML et PDF 18 pages reçus, données fidèles mais
+finition PDF non reçue ; cinq contrôles finaux après CSS 0/gouvernance 1 624/166,
+fixture nettoyée, runtime reçu 443. Compteurs reçus seulement avant créatif/PDF.
+Doublons McKinsey7S/ThreeHorizons, inconnus assimilés H2/100 %, locale SSR/client
+Oracle et libellés/glyphes PDF non réparés dans 444 : plan/reprise 445 dans la
+dette S existante, avant cycle réel. Aucune nouvelle entité/route/service/
+Intent/ADR/provider, ni correction des budgets réels ou réception globale.
+Devise des ancres, autres chemins S et projection/remap restent en dette.
+[Preuves](REFONTE-PLAN.md) · [dette](RESIDUAL-DEBT.md).
+
 2026-10-10 · **443 livré, causes UI reçues au périmètre** : droits globaux
 opérateur confondus avec l’autorité sur une marque, boutons de mutation visibles
 en lecture seule ; useBrandWriteAccess lit getMyAccess et sépare stratégie/

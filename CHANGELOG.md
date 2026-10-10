@@ -1,5 +1,59 @@
 # Changelog — La Fusee
 
+## v6.27.444 — fix(guidance): préserver budget inconnu, zéro déclaré et estimation (2026-10-10)
+
+**444 local en réception : fidélité des montants/échéances dans les projections concernées ; runtime reçu 443.**
+
+- Normaliseur commun : montant absent conservé, zéro numérique déclaré conservé,
+  origine DECLARED/QUALITATIVE_ESTIMATE/UNKNOWN transportée. Ancres LOW/MEDIUM/HIGH
+  FCFA existantes conservées et signalées comme estimations ; échéance inconnue
+  absente. Entrées sans texte exclues de la projection, source brute conservée.
+- Agrégations existantes : sous-total connu, couverture déclarée/estimée/inconnue,
+  total complet omis si un montant manque, phase sans montant complet omise.
+  Ces états rejoignent S, BrandAction, Oracle, cockpit et proposition créative ;
+  zéro opérationnel et overrides préservés dans le matérialiseur existant.
+- Scénarios/formules existants conservés ; baselines supposées couverture des
+  risques 30/indice actuel 60 transportées et rendues explicitement. Helper
+  inutilisé promoteSelectedInBlob retiré (ancien choix fuzzy/LONG_TERM faux).
+  budgetByPhase des routes utilise Zod 4 partialRecord : clés/valeurs contrôlées,
+  aucune baisse des seuils S trois axes/trois facteurs/cinq actions sprint.
+- red-fidelity.log : onze contre-exemples rouges avant correction ; ciblé
+  fidelity-final 47/cinq fichiers verts. Unitaires reçus en deux passages
+  4 215/404 + 38/deux, soit 4 253/406 ; PostgreSQL complet 347/18 verts,
+  dont trente action-decision. Trois rouges UI dus à pollution de fixture
+  corrigée par reset beforeEach, aucune garde affaiblie ; chemin roadmap erroné
+  de la commande ciblée conservé, couvert par la suite unitaire complète.
+  Bump/release-notes/CODE-MAP reçus côté root. Checkpoints antérieurs au dernier
+  formatter ; unité complète ensuite reçue 4 256/406, avant corrections CSS mobiles.
+- Native locale USER/TRIAL : trois choix manuels 200 ; Base d’actions révélait
+  encore zéro rendu « — XAF » et estimation non nommée. Trois rouges/quatre verts
+  puis sept verts après formatter absent/zéro et estimation uniquement si
+  metadata QUALITATIVE_ESTIMATE/budgetMin égal projectedBudget. Relecture reçue :
+  « Budget à préciser », « 0 XAF », « Estimation · 500 k XAF ». Premier gauntlet tsc 2/autres quatre contrôles 0,
+  type de roadmap annoté FenetreOvertonSection['roadmap'], sans gate affaiblie.
+- Native S reçue : trois choix→actualize 200→sauvegardé/à relire, total absent,
+  sous-total 500 000/un déclaré zéro/un estimé LOW/un inconnu et trois échéances
+  inconnues, phases {} ; S v2/une archive, zéro tâche/coût/quatre Intents avant
+  aperçu créatif. Mobile 390 demandé/384 mesuré, titre écrasé par feedback puis
+  header responsive corrigé/relu ; UI 38/quatre verts après header.
+  Aperçu créatif natif : trois niveaux/chiffrage partiel/hypothèses 30/60/scénario,
+  LAGUILDE_HUMAN, ouvrir/Annuler seulement, aucune création/validation/IA.
+  Grille mobile serrée corrigée/reçue ; premier cadrage écarté, desktop 1 280
+  recapturé/inspecté. Oracle HTML §12 desktop/mobile et export PDF 200/
+  dix-huit pages reçus, pages 8/9/10 rendues-inspectées : données fidèles,
+  finition PDF non reçue (anglais technique, # bruts, flèches abîmées).
+  gauntlet.json final après CSS cinq sorties 0/gouvernance 1 624/166 ; nettoyage
+  remaining=0/onglet/serveur fermés. Compteurs zéro/quatre Intents reçus AVANT
+  créatif/PDF seulement, lecture finale rejetée avant sérialisation puis cleanup.
+  Aucune native globale/CI/image/runtime 444 reçue. McKinsey7S/ThreeHorizons
+  doublons/horizons inconnus et locale d’hydratation Oracle reproduits restent
+  en dette S existante, reprise 445 avant cycle réel.
+  Aucun modèle/service/router/Intent/ADR/provider ajouté, aucun budget historique
+  réel réparé ou cycle réel reçu. Devise FCFA des ancres versus devise de marque,
+  écrivains/consommateurs secondaires S, projection opérationnelle/remap et
+  réception réelle restent ouverts ; sept chantiers/dix gates non acceptés.
+  [Réception et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.443 — fix(cockpit): relier les gestes aux droits de marque et clarifier le plan (2026-10-10)
 
 **443 livré, réception bornée : droits, compteur source et retour de recalcul alignés ; runtime exact 443 reçu.**

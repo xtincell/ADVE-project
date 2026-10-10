@@ -89,12 +89,12 @@ function mapStatus(init: NormalizedInitiative): { status: string; selected: bool
   }
 }
 
-function mapPriority(init: NormalizedInitiative): string {
+function mapPriority(init: NormalizedInitiative): string | null {
   // SELECTED_FOR_ROADMAP + SPRINT_90 = most urgent; long-term = lowest.
   if (init.timeframe === "SPRINT_90") return init.status === "SELECTED_FOR_ROADMAP" ? "P0" : "P1";
   if (init.timeframe === "PHASE_1") return "P1";
   if (init.timeframe === "PHASE_2") return "P2";
-  return "P3";
+  return init.timeframe === "LONG_TERM" ? "P3" : null;
 }
 
 export interface MaterializeResult {
@@ -150,14 +150,16 @@ export async function syncBrandActionsFromBlob(strategyId: string, transaction?:
         overtonPhase: init.overtonPhase ?? null,
         overtonShift: init.overtonShift ?? null,
         budgetEstime: init.budgetEstime ?? null,
-        timeframe: init.timeframe,
+        budgetBasis: init.budgetBasis,
+        timeframe: init.timeframe ?? null,
         initiativeStatus: init.status,
         mitigatesRiskIds: init.mitigatesRiskIds,
         targetsPersonaIds: init.targetsPersonaIds,
         materializedFrom: "I_BLOB",
         // Projection baseline, never an authority: lets a later source budget
         // refresh distinguish its own old estimate from an operational override.
-        projectedBudget: init.budget,
+        projectedBudget: init.budget ?? null,
+        projectedPriority: mapPriority(init),
       } satisfies Record<string, unknown>;
 
       const data = {
@@ -165,8 +167,8 @@ export async function syncBrandActionsFromBlob(strategyId: string, transaction?:
         description: init.objectif || null,
         touchpoint: mapTouchpoint(init),
         aarrrIntent: inferAarrr(init),
-        budgetMin: init.budget > 0 ? init.budget : null,
-        budgetMax: init.budget > 0 ? init.budget : null,
+        budgetMin: init.budget ?? null,
+        budgetMax: init.budget ?? null,
         budgetCurrency: currency,
         priority: mapPriority(init),
         selected,
@@ -184,7 +186,7 @@ export async function syncBrandActionsFromBlob(strategyId: string, transaction?:
         ...data,
         selected: data.selected,
         status: ["SCHEDULED", "EXECUTED", "CANCELLED"].includes(previous.status) ? previous.status : data.status,
-        priority: previous.priority,
+        priority: previous.priority === null || previousMetadata.projectedPriority === previous.priority ? data.priority : previous.priority,
         budgetMin: emptyBudget || previousMetadata.projectedBudget === previous.budgetMin ? data.budgetMin : previous.budgetMin,
         budgetMax: emptyBudget || previousMetadata.projectedBudget === previous.budgetMax ? data.budgetMax : previous.budgetMax,
         budgetCurrency: previous.budgetCurrency,

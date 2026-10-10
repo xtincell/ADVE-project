@@ -42,10 +42,13 @@ function generateStrategy(pillars: Record<string, Record<string, unknown> | null
   const selected = collectNormalizedInitiatives(pillars.i).filter(a => a.status === "SELECTED_FOR_ROADMAP");
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const identity = (id: string) => ({ sourceRef: id, ...(uuid.test(id) ? { sourceInitiativeId: id } : {}) });
-  const roadmap = INITIATIVE_TIMEFRAMES.flatMap(tf => {
+  const aggregate = (actions: typeof selected) => aggregateInitiativeSet(actions as unknown as Array<Record<string, unknown>>, []);
+  const selectedBudget = aggregate(selected);
+  const roadmap = [...INITIATIVE_TIMEFRAMES, undefined].flatMap(tf => {
     const actions = selected.filter(a => a.timeframe === tf);
-    return actions.length ? [{ phase: TF_PHASE_LABEL[tf], objectif: actions.map(a => a.objectif).filter(Boolean).join(" ; ").slice(0, 200),
-      actions: actions.map(a => a.action), budget: actions.reduce((sum, a) => sum + a.budget, 0) }] : [];
+    const amounts = aggregate(actions);
+    return actions.length ? [{ phase: tf ? TF_PHASE_LABEL[tf] : "Échéance à préciser", objectif: actions.map(a => a.objectif).filter(Boolean).join(" ; ").slice(0, 200),
+      actions: actions.map(a => a.action), ...(amounts.totalBudget !== undefined ? { budget: amounts.totalBudget } : {}), budgetSummary: amounts.budgetSummary }] : [];
   });
   const axesStrategiques = [...new Set(selected.map(a => a.pilierImpact).filter(Boolean))].map(key => ({
     axe: `Activer ${PILLAR_LABEL[key!] ?? key}`, pillarsLinked: [key, "S"],
@@ -64,25 +67,25 @@ function generateStrategy(pillars: Record<string, Record<string, unknown> | null
     ...(typeof target === "string" && target.trim() ? { perceptionCible: target } : {}),
     ...(typeof gap?.gapDescription === "string" && gap.gapDescription.trim() ? { ecart: gap.gapDescription } : {}),
     strategieDeplacement: selected.map((a, index) => ({ etape: `Étape ${index + 1}`, action: a.action, canal: a.channel,
-      horizon: TF_PHASE_LABEL[a.timeframe], ...(a.devotionImpact ? { devotionTarget: a.devotionImpact } : {}) })),
+      ...(a.timeframe ? { horizon: TF_PHASE_LABEL[a.timeframe] } : {}), ...(a.devotionImpact ? { devotionTarget: a.devotionImpact } : {}) })),
   };
-  const globalBudget = selected.reduce((sum, a) => sum + a.budget, 0);
   // Only an actual declared level assigns money. Unknown is not acquisition;
   // action counts are not currency, nor are unobserved audience counts zero.
   const buckets: Record<string, string> = { SPECTATEUR: "acquisition", INTERESSE: "acquisition", PARTICIPANT: "conversion",
     ENGAGE: "retention", AMBASSADEUR: "evangelisation", EVANGELISTE: "evangelisation" };
   const budgetByDevotion: Record<string, number> = {};
-  for (const action of selected) {
-    const bucket = action.devotionImpact ? buckets[action.devotionImpact] : undefined;
-    if (bucket) budgetByDevotion[bucket] = (budgetByDevotion[bucket] ?? 0) + action.budget;
+  for (const bucket of new Set(Object.values(buckets))) {
+    const actions = selected.filter(a => a.devotionImpact && buckets[a.devotionImpact] === bucket);
+    const amount = aggregate(actions).totalBudget;
+    if (actions.length && amount !== undefined) budgetByDevotion[bucket] = amount;
   }
   return {
-    selectedFromI: selected.map((a, index) => ({ ...identity(a.id), action: a.action, phase: TF_PHASE_LABEL[a.timeframe], priority: index + 1 })),
+    selectedFromI: selected.map((a, index) => ({ ...identity(a.id), action: a.action, ...(a.timeframe ? { phase: TF_PHASE_LABEL[a.timeframe] } : {}), priority: index + 1 })),
     roadmap,
     sprint90Days: selected.filter(a => a.timeframe === "SPRINT_90").map((a, index) => ({ ...identity(a.id), action: a.action,
       ...(a.objectif ? { kpi: a.objectif } : {}), priority: index + 1, ...(a.devotionImpact ? { devotionImpact: a.devotionImpact } : {}) })),
-    fenetreOverton, axesStrategiques, facteursClesSucces, globalBudget, budgetByDevotion,
-    syntheseExecutive: `${selected.length} action(s) conservée(s) dans le catalogue. Somme des budgets calculés : ${globalBudget}. Ce montant conserve les estimations du catalogue ; il ne constitue pas une dépense mesurée.`,
+    fenetreOverton, axesStrategiques, facteursClesSucces, ...(selectedBudget.totalBudget !== undefined ? { globalBudget: selectedBudget.totalBudget } : {}), budgetByDevotion,
+    syntheseExecutive: `${selected.length} action(s) conservée(s) dans le catalogue. Montants chiffrés : ${selectedBudget.budgetSummary.knownSubtotal}, dont ${selectedBudget.budgetSummary.estimatedCount} estimation(s). ${selectedBudget.budgetSummary.unknownCount} budget(s) et ${selectedBudget.budgetSummary.unassignedTimeframeCount} échéance(s) à préciser. Ces montants ne constituent pas une dépense mesurée.`,
     kpiDashboard: [], devotionFunnel: [], overtonMilestones: [],
   };
 }
@@ -171,7 +174,8 @@ export function computePillarS(
   });
 
   return {
-    totalBudget: agg.totalBudget,
+    ...(agg.totalBudget !== undefined ? { totalBudget: agg.totalBudget } : {}),
+    budgetSummary: agg.budgetSummary,
     budgetByPhase: agg.budgetByPhase,
     ...(agg.riskCoverage !== undefined ? { riskCoverage: agg.riskCoverage } : {}),
     mitigatedRiskIds: agg.mitigatedRiskIds,
@@ -183,71 +187,6 @@ export function computePillarS(
     selectedRouteKey,
     computedAt: new Date().toISOString(),
   };
-}
-
-// ── I→S link : persister la sélection S sur le blob I (ADR-0088) ──────────
-//
-// computePillarS n'agrège QUE les initiatives du blob I en status
-// SELECTED_FOR_ROADMAP. Or les actions GÉNÉRÉES sont RECOMMENDED (proposées).
-// La sélection du protocole S (`selectedFromI`) doit donc être réinjectée sur
-// le blob I, sinon S voit 0 initiative (cas générique). Le canon (écrit main)
-// porte déjà SELECTED_FOR_ROADMAP, d'où sa cohérence — cette étape donne la
-// même cohérence au contenu généré.
-
-/** Phase de roadmap (libellé libre LLM) → timeframe INITIATIVE canonique. */
-function phaseToTimeframe(phase: unknown): (typeof INITIATIVE_TIMEFRAMES)[number] {
-  const p = String(phase ?? "").toLowerCase();
-  if (p.includes("sprint") || p.includes("90") || /phase\s*1\b/.test(p) || p.includes("fondation")) return "SPRINT_90";
-  if (/phase\s*2\b/.test(p) || p.includes("engagement")) return "PHASE_1";
-  if (/phase\s*3\b/.test(p) || p.includes("accel") || p.includes("accél")) return "PHASE_2";
-  return "LONG_TERM";
-}
-
-const normLoose = (s: unknown) => String(s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
-
-/**
- * Marque en SELECTED_FOR_ROADMAP (+ timeframe dérivé de la phase) les actions
- * du blob I retenues par `selectedFromI`. Match : sourceRef
- * `catalogueParCanal.CANAL[idx]` d'abord, repli sur le texte d'action. PURE —
- * retourne une copie du blob + le nombre promu (0 = rien à persister).
- */
-export function promoteSelectedInBlob(
-  iContent: Record<string, unknown> | null,
-  selectedFromI: Array<Record<string, unknown>>,
-): { content: Record<string, unknown>; promoted: number } {
-  const content = (iContent ? JSON.parse(JSON.stringify(iContent)) : {}) as Record<string, unknown>;
-  const cat = (content.catalogueParCanal ?? {}) as Record<string, Array<Record<string, unknown>>>;
-  let promoted = 0;
-  const mark = (a: Record<string, unknown>, phase: unknown): boolean => {
-    if (a.status === "SELECTED_FOR_ROADMAP") return false; // déjà retenue
-    a.status = "SELECTED_FOR_ROADMAP";
-    a.timeframe = phaseToTimeframe(phase);
-    return true;
-  };
-  for (const sel of selectedFromI) {
-    let done = false;
-    const m = /catalogueParCanal\.([A-Za-z_]+)\s*\[\s*(\d+)\s*\]/.exec(String(sel.sourceRef ?? ""));
-    if (m) {
-      const arr = cat[m[1]!];
-      const idx = Number(m[2]);
-      if (Array.isArray(arr) && arr[idx]) done = mark(arr[idx]!, sel.phase);
-    }
-    if (!done) {
-      const target = normLoose(sel.action);
-      if (target) {
-        outer: for (const arr of Object.values(cat)) {
-          if (!Array.isArray(arr)) continue;
-          for (const a of arr) {
-            const at = normLoose(a.action);
-            if (at && (at === target || at.includes(target) || target.includes(at))) { done = mark(a, sel.phase); if (done) break outer; }
-          }
-        }
-      }
-    }
-    if (done) promoted++;
-  }
-  content.catalogueParCanal = cat;
-  return { content, promoted };
 }
 
 // ── Public API ────────────────────────────────────────────────────────
