@@ -9,6 +9,23 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Catalogue I → composites/CORE Oracle → HTML/Markdown/PDF — 445 local en réception (2026-10-10)
+
+collectNormalizedInitiatives → 7S/ThreeHorizons/Budget dédupliqués ; inconnus →
+unassigned/coverage/dénominateur, H2 PHASE_2/LONG_TERM. Campagnes → agrégat
+aggregateCampaignBudgets/campaignBudgetLabel de roadmap-routes → mapBudget/CORE/
+Deloitte : devises séparées/zéro/inconnu, scalaire null incomplet/multidevise,
+lignes distinctes des enveloppes. getFieldLabel contexte mix/typo → HTML/
+Markdown/PDF, locale fr-FR/texte Helvetica compatible ; source/snapshot intacts.
+Native USER/TRIAL locale/HTML/PDF 19 reçus à portée bornée, mobile partiel ;
+canaux physiques7S reçus mais DEVOTION/OVERTON encore dans autres CORE/ancien S,
+aucune convergence globale. Ciblé 73/six/cinq contrôles 0 reçus, PG 347/18 avant
+lectures finales sans persist changé ; unité DEFAULT finale 4 276/407 verte reçue, source non committée/
+CI/image/runtime 445 non reçus, runtime 444. Aucun writer/route/service/Intent/
+ADR ajouté ; devise qualitative/remap/cycles réels/sept chantiers/dix gates
+ouverts. [Réception et reprise](REFONTE-PLAN.md).
+
+
 ### Montant/échéance source → projection fidèle — 444 livré, réception bornée (2026-10-10)
 
 Trois collections I → normaliseur partagé : absent/zéro déclaré/estimation FCFA

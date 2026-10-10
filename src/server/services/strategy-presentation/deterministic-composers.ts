@@ -22,7 +22,8 @@
  */
 
 import { db } from "@/lib/db";
-import { collectInitiatives } from "@/lib/types/pillar-schemas";
+import { collectNormalizedInitiatives } from "@/lib/types/pillar-schemas";
+import { aggregateCampaignBudgets, campaignBudgetLabel } from "@/lib/strategy/roadmap-routes";
 import { resolveCultIndexTier } from "@/domain/cult-index-tier";
 import type { SectionMeta } from "./types";
 // Import depuis section-writeback (module feuille) : cassait le cycle
@@ -84,6 +85,7 @@ interface ComposerContext {
   campaigns: Array<{
     name: string;
     budget: unknown;
+    budgetCurrency?: string;
     status: string;
     budgetLines: Array<{ category: string; planned: unknown; currency: string }>;
   }>;
@@ -151,6 +153,7 @@ export async function loadComposerContext(strategyId: string): Promise<ComposerC
         select: {
           name: true,
           budget: true,
+          budgetCurrency: true,
           status: true,
           budgetLines: { select: { category: true, planned: true, currency: true } },
         },
@@ -243,10 +246,10 @@ function compose7S(ctx: ComposerContext): Blob {
   const valeurs = names(arr(a.valeurs));
   const ton = (d.tonDeVoix ?? null) as Blob | null;
   const personnalite = ton ? names(arr(ton.personnalite)).join(", ") : null;
-  const canaux = i.catalogueParCanal && typeof i.catalogueParCanal === "object"
-    ? Object.keys(i.catalogueParCanal as Blob)
-    : [];
-  const initiatives = collectInitiatives(i) as Blob[];
+  const initiatives = collectNormalizedInitiatives(i);
+  // Semantic group fallbacks are not physical distribution channels.
+  const canaux = [...new Set(initiatives.map((it) => it.channel)
+    .filter((channel) => !["DEVOTION", "OVERTON", "GENERAL"].includes(channel)))];
   const competences = equipe.flatMap((m) => names(arr((m as Blob)?.competences ?? (m as Blob)?.skills)));
 
   const dim = (state: string | null, sources: Array<unknown>, gapLabel: string, reco: string) => {
@@ -274,7 +277,8 @@ function compose7S(ctx: ComposerContext): Blob {
         "Renseignez votre équipe dirigeante dans le pilier Authenticité",
       ),
       systems: dim(
-        canaux.length > 0 ? `${initiatives.length} initiative(s) sur ${canaux.length} canal/canaux : ${canaux.slice(0, 5).join(", ")}` : null,
+        initiatives.length > 0 ? `${initiatives.length} initiative(s)` +
+          (canaux.length > 0 ? ` sur ${canaux.length} canal/canaux : ${canaux.slice(0, 5).join(", ")}` : " — Canaux à préciser") : null,
         [canaux.length > 0 ? canaux : null, ctx.campaigns.length > 0 ? ctx.campaigns : null],
         "Catalogue d'actions vide ou aucune campagne",
         "Générez votre catalogue d'actions depuis le plan d'actions",
@@ -412,18 +416,20 @@ function composeGreenhouse(ctx: ComposerContext): Blob {
 function compose3Horizons(ctx: ComposerContext): Blob {
   const i = ctx.pillars.i ?? {};
   const s = ctx.pillars.s ?? {};
-  const initiatives = collectInitiatives(i) as Blob[];
+  const initiatives = collectNormalizedInitiatives(i);
 
-  const isShort = (it: Blob) => it.timeframe === "SPRINT_90" || it.timeframe === "PHASE_1";
+  const isShort = (it: (typeof initiatives)[number]) => it.timeframe === "SPRINT_90" || it.timeframe === "PHASE_1";
   const selected = initiatives.filter((it) => it.status === "SELECTED_FOR_ROADMAP");
   const h1 = names(selected.filter(isShort), ["action", "titre", "title", "nom"]);
-  const h2 = names(selected.filter((it) => !isShort(it)), ["action", "titre", "title", "nom"]);
+  const h2 = names(selected.filter((it) => it.timeframe === "PHASE_2" || it.timeframe === "LONG_TERM"), ["action", "titre", "title", "nom"]);
+  const unassigned = names(selected.filter((it) => it.timeframe === undefined), ["action"]);
   const h3 = [
     ...names(arr(i.innovationsProduit)),
     ...(str(s.visionStrategique, 200) ? [str(s.visionStrategique, 200)!] : []),
   ];
 
-  const total = h1.length + h2.length + h3.length;
+  const classified = h1.length + h2.length + h3.length;
+  const total = classified + unassigned.length;
   if (total === 0) return {};
   // lafusee:allow-adhoc-completion — répartition McKinsey 3-Horizons (h1/h2/h3), pas de la complétion pillaire
   const pct = (n: number) => Math.round((n / total) * 100);
@@ -434,6 +440,8 @@ function compose3Horizons(ctx: ComposerContext): Blob {
       h2: { label: "Émergent — phases suivantes de la roadmap", items: h2 },
       h3: { label: "Transformationnel — innovations + vision", items: h3 },
       allocation: { h1: pct(h1.length), h2: pct(h2.length), h3: pct(h3.length) },
+      unassigned: { label: "Échéances à préciser", items: unassigned },
+      coverage: { totalCount: total, classifiedCount: classified, unassignedCount: unassigned.length },
     },
   };
 }
@@ -477,19 +485,20 @@ function composeStrategyPalette(ctx: ComposerContext): Blob {
 
 function composeBudget(ctx: ComposerContext): Blob {
   const i = ctx.pillars.i ?? {};
-  const initiatives = collectInitiatives(i) as Blob[];
+  const initiatives = collectNormalizedInitiatives(i);
 
-  let total = 0;
-  let currency = "FCFA";
+  const campaignBudgetSummary = aggregateCampaignBudgets(ctx.campaigns);
+  let unknownLineCurrencyCount = 0;
   const byCategory: Record<string, number> = {};
   for (const c of ctx.campaigns) {
-    const b = num(c.budget);
-    if (b) total += b;
     for (const line of c.budgetLines) {
       const planned = num(line.planned);
-      if (planned) {
-        byCategory[line.category] = (byCategory[line.category] ?? 0) + planned;
-        currency = line.currency || currency;
+      if (planned !== null && planned >= 0) {
+        // Campaign envelopes and their lines are separate views, never added
+        // together. A line's currency cannot relabel a campaign envelope.
+        const lineCurrency = str(line.currency);
+        const category = `${line.category} (${lineCurrency ?? `devise à préciser · ligne ${++unknownLineCurrencyCount}`})`;
+        byCategory[category] = (byCategory[category] ?? 0) + planned;
       }
     }
   }
@@ -501,15 +510,15 @@ function composeBudget(ctx: ComposerContext): Blob {
   }
   const economiques = names(initiatives.filter((it) => it.budgetEstime === "LOW"), ["action", "titre", "nom"]).slice(0, 5);
 
-  if (total === 0 && Object.keys(byCategory).length === 0 && initiatives.length === 0) return {};
+  if (ctx.campaigns.length === 0 && initiatives.length === 0) return {};
 
   return {
     deloitteBudget: {
-      total_budget: total > 0 ? `${total.toLocaleString("fr-FR")} ${currency}` : "Aucun budget campagne engagé à date",
+      total_budget: campaignBudgetLabel(campaignBudgetSummary),
       allocation_par_categorie: byCategory,
       repartition_initiatives_par_intensite: histo,
       alternatives_economiques: economiques.length > 0 ? economiques : ["Aucune initiative LOW-budget cataloguée"],
-      methodologie: "Consolidation déterministe : budgets campagnes + lignes budgétaires réelles + intensités déclarées du catalogue I.",
+      methodologie: "Budgets déclarés des campagnes, séparés par devise. Ventilation des lignes présentée séparément, sans double comptage ni conversion. Intensités du catalogue sur les mêmes actions dédupliquées.",
     },
   };
 }

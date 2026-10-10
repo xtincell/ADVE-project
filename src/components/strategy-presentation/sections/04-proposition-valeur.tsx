@@ -50,8 +50,8 @@ export function PropositionValeur({ data }: Props) {
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Unit Economics</h3>
           <div className="grid gap-4 sm:grid-cols-3">
-            <MetricCard label="CAC" value={data.unitEconomics.cac != null ? `${data.unitEconomics.cac.toLocaleString()} FCFA` : "—"} />
-            <MetricCard label="LTV" value={data.unitEconomics.ltv != null ? `${data.unitEconomics.ltv.toLocaleString()} FCFA` : "—"} />
+            <MetricCard label="CAC" value={data.unitEconomics.cac != null ? `${data.unitEconomics.cac.toLocaleString("fr-FR")} FCFA` : "—"} />
+            <MetricCard label="LTV" value={data.unitEconomics.ltv != null ? `${data.unitEconomics.ltv.toLocaleString("fr-FR")} FCFA` : "—"} />
             <MetricCard label="LTV/CAC" value={data.unitEconomics.ltvCacRatio != null ? `${data.unitEconomics.ltvCacRatio.toFixed(1)}x` : "—"} />
           </div>
         </div>

@@ -15,6 +15,44 @@ import { ROADMAP_ROUTE_KEYS, INITIATIVE_TIMEFRAMES, type InitiativeBudgetSummary
 
 export type RouteKey = (typeof ROADMAP_ROUTE_KEYS)[number];
 
+/** Campaign envelopes are declared amounts, distinct from initiative estimates
+ * and campaign line items. Never add different or unknown monetary units. */
+export interface CampaignBudgetSummary {
+  totalsByCurrency: Record<string, number>;
+  unknownBudgetCount: number;
+  unknownCurrencyCount: number;
+  totalBudget: number | null;
+}
+
+export function aggregateCampaignBudgets(
+  campaigns: ReadonlyArray<{ budget: unknown; budgetCurrency?: unknown }>,
+): CampaignBudgetSummary {
+  const totals = new Map<string, number>();
+  let unknownBudgetCount = 0;
+  let unknownCurrencyCount = 0;
+  for (const campaign of campaigns) {
+    const amount = campaign.budget;
+    const currency = typeof campaign.budgetCurrency === "string" ? campaign.budgetCurrency.trim() : "";
+    if (typeof amount !== "number" || !Number.isFinite(amount) || amount < 0) unknownBudgetCount++;
+    else if (!currency) unknownCurrencyCount++;
+    else totals.set(currency, (totals.get(currency) ?? 0) + amount);
+  }
+  return {
+    totalsByCurrency: Object.fromEntries(totals), unknownBudgetCount, unknownCurrencyCount,
+    totalBudget: totals.size === 1 && unknownBudgetCount === 0 && unknownCurrencyCount === 0
+      ? [...totals.values()][0]! : null,
+  };
+}
+
+export function campaignBudgetLabel(summary: CampaignBudgetSummary): string {
+  const partial = summary.unknownBudgetCount > 0 || summary.unknownCurrencyCount > 0;
+  const fragments = Object.entries(summary.totalsByCurrency)
+    .map(([currency, value]) => `${value.toLocaleString("fr-FR")} ${currency}${partial ? " chiffrés" : ""}`);
+  if (summary.unknownBudgetCount > 0) fragments.push(`${summary.unknownBudgetCount} budget${summary.unknownBudgetCount > 1 ? "s" : ""} à préciser`);
+  if (summary.unknownCurrencyCount > 0) fragments.push(`${summary.unknownCurrencyCount} devise${summary.unknownCurrencyCount > 1 ? "s" : ""} à préciser`);
+  return fragments.join(" · ") || "Aucun budget de campagne déclaré";
+}
+
 interface RouteSpec {
   key: RouteKey;
   label: string;

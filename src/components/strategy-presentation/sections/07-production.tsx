@@ -16,7 +16,7 @@ export function ProductionLivrables({ data }: Props) {
             headers={["Titre", "Statut", "Mode", "Driver", "Budget", "Livrables"]}
             rows={data.missions.slice(0, 15).map((m) => [
               m.title, m.status, m.mode, m.driverName ?? "—",
-              m.budget ? `${m.budget.toLocaleString()} XAF` : "—",
+              m.budget != null ? `${m.budget.toLocaleString("fr-FR")} XAF` : "—",
               m.deliverables.length.toString(),
             ])}
             compact

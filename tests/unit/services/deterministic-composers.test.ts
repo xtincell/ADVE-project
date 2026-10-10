@@ -159,6 +159,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 import {
+  composeSectionContent,
   composeSectionDeterministic,
   hasDeterministicComposer,
   isAnyLLMProviderConfigured,
@@ -166,6 +167,12 @@ import {
 import { SECTION_REGISTRY } from "@/server/services/strategy-presentation/types";
 
 const PHASE13_IDS = SECTION_REGISTRY.filter((s) => Number(s.number) >= 22).map((s) => s.id);
+
+function pureContext(i: Record<string, unknown>, s: Record<string, unknown> = {}) {
+  return { strategy: { id: "pure", name: "Recette", businessContext: null, manipulationMix: null },
+    pillars: { i, s }, cultSnapshot: null, devotionSnapshot: null, superfanCount: 0,
+    signals: [], campaigns: [] };
+}
 
 function metaFor(id: string) {
   const meta = SECTION_REGISTRY.find((s) => s.id === id);
@@ -185,6 +192,113 @@ beforeEach(() => {
   });
   brandAssetFindFirst.mockResolvedValue(null);
   brandAssetCreate.mockResolvedValue({ id: "asset-1" });
+});
+
+describe("Oracle composites preserve the same initiative identities and unknown horizons", () => {
+  const duplicate = { id: "one", action: "Action unique", status: "SELECTED_FOR_ROADMAP", budgetEstime: "LOW" };
+  const source = { catalogueParCanal: { DIGITAL: [duplicate, "Action compacte"] },
+    actionsByDevotionLevel: { engage: [duplicate, { id: "two", action: "Relation", status: "SELECTED_FOR_ROADMAP" }] },
+    actionsByOvertonPhase: [{ phase: "ACCEPTABLE", actions: [{ id: "three", action: "Preuve", status: "SELECTED_FOR_ROADMAP" }] }] };
+
+  it("7S counts unique identities, compact entries and only declared physical channels", async () => {
+    const result = await composeSectionContent(pureContext(source), metaFor("mckinsey-7s"));
+    const text = (result!.content.mckinsey7s as { systems: { state: string } }).systems.state;
+    expect(text).toContain("4 initiative(s)");
+    expect(text).toContain("1 canal");
+    expect(text).not.toMatch(/DEVOTION|OVERTON/);
+    expect(brandAssetCreate).not.toHaveBeenCalled();
+  });
+
+  it("7S keeps devotion/Overton actions visible without claiming a physical channel", async () => {
+    const result = await composeSectionContent(pureContext({ actionsByDevotionLevel: source.actionsByDevotionLevel }), metaFor("mckinsey-7s"));
+    const text = (result!.content.mckinsey7s as { systems: { state: string } }).systems.state;
+    expect(text).toContain("2 initiative(s)");
+    expect(text).toContain("Canaux à préciser");
+    expect(text).not.toContain("DEVOTION");
+  });
+
+  it("unknown horizons remain unassigned, never H2 or a fictitious 100% allocation", async () => {
+    const original = structuredClone(source);
+    const result = await composeSectionContent(pureContext(source), metaFor("mckinsey-3-horizons"));
+    const data = result!.content.mckinsey3Horizons as { h2: { items: string[] }; allocation: Record<string, number>;
+      unassigned: { items: string[] }; coverage: { totalCount: number; classifiedCount: number; unassignedCount: number } };
+    expect(data.h2.items).toEqual([]);
+    expect(data.unassigned.items).toEqual(["Action unique", "Relation", "Preuve"]);
+    expect(data.allocation).toEqual({ h1: 0, h2: 0, h3: 0 });
+    expect(data.coverage).toEqual({ totalCount: 3, classifiedCount: 0, unassignedCount: 3 });
+    expect(source).toEqual(original);
+  });
+
+  it("explicit horizon policy survives; unassigned actions stay in the allocation denominator", async () => {
+    const result = await composeSectionContent(pureContext({ catalogueParCanal: { DIGITAL: [
+      { id: "h1", action: "Sprint", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90" },
+      { id: "h2", action: "Suite", status: "SELECTED_FOR_ROADMAP", timeframe: "PHASE_2" },
+      { id: "later", action: "Long terme", status: "SELECTED_FOR_ROADMAP", timeframe: "LONG_TERM" },
+      { id: "unknown", action: "À planifier", status: "SELECTED_FOR_ROADMAP" },
+      { id: "draft", action: "Pas retenue", status: "DRAFT", timeframe: "PHASE_1" },
+    ] } }), metaFor("mckinsey-3-horizons"));
+    const data = result!.content.mckinsey3Horizons as { h1: { items: string[] }; h2: { items: string[] };
+      allocation: Record<string, number>; coverage: { totalCount: number; classifiedCount: number; unassignedCount: number } };
+    expect(data.h1.items).toEqual(["Sprint"]);
+    expect(data.h2.items).toEqual(["Suite", "Long terme"]);
+    expect(data.allocation).toEqual({ h1: 25, h2: 50, h3: 0 });
+    expect(data.coverage).toEqual({ totalCount: 4, classifiedCount: 3, unassignedCount: 1 });
+  });
+
+  it("Budget intensity and economic alternatives never count a duplicate id twice", async () => {
+    const result = await composeSectionContent(pureContext(source), metaFor("deloitte-budget"));
+    const data = result!.content.deloitteBudget as { repartition_initiatives_par_intensite: Record<string, number>; alternatives_economiques: string[] };
+    expect(data.repartition_initiatives_par_intensite).toEqual({ LOW: 1, MEDIUM: 0, HIGH: 0 });
+    expect(data.alternatives_economiques).toEqual(["Action unique"]);
+  });
+
+  it("campaign amounts retain zero, unknown budgets and their own currency", async () => {
+    const ctx = { ...pureContext({}), campaigns: [
+      { name: "Gratuite", budget: 0, budgetCurrency: "XAF", status: "DRAFT", budgetLines: [] },
+      { name: "À chiffrer", budget: null, budgetCurrency: "XAF", status: "DRAFT", budgetLines: [] },
+    ] };
+    const result = await composeSectionContent(ctx, metaFor("deloitte-budget"));
+    const data = result!.content.deloitteBudget as { total_budget: string };
+    expect(data.total_budget).toContain("0 XAF chiffrés");
+    expect(data.total_budget).toContain("1 budget à préciser");
+    expect(data.total_budget).not.toContain("engagé");
+  });
+
+  it("different campaign and line currencies are neither summed together nor relabelled", async () => {
+    const ctx = { ...pureContext({}), campaigns: [
+      { name: "Locale", budget: 1_000, budgetCurrency: "XAF", status: "DRAFT", budgetLines: [{ category: "MEDIA", planned: 500, currency: "XAF" }] },
+      { name: "Étrangère", budget: 20, budgetCurrency: "EUR", status: "DRAFT", budgetLines: [{ category: "MEDIA", planned: 5, currency: "EUR" }] },
+    ] };
+    const result = await composeSectionContent(ctx, metaFor("deloitte-budget"));
+    const data = result!.content.deloitteBudget as { total_budget: string; allocation_par_categorie: Record<string, number> };
+    expect(data.total_budget).toBe("1 000 XAF · 20 EUR");
+    expect(data.allocation_par_categorie).toEqual({ "MEDIA (XAF)": 500, "MEDIA (EUR)": 5 });
+    expect(data.total_budget).not.toContain("1 020");
+  });
+
+  it("a legacy missing campaign currency is not assigned a currency from another line", async () => {
+    const ctx = { ...pureContext({}), campaigns: [
+      { name: "Ancienne", budget: 35_000, status: "DRAFT", budgetLines: [{ category: "MEDIA", planned: 0, currency: "EUR" }] },
+    ] };
+    const result = await composeSectionContent(ctx, metaFor("deloitte-budget"));
+    const data = result!.content.deloitteBudget as { total_budget: string; allocation_par_categorie: Record<string, number> };
+    expect(data.total_budget).toContain("1 devise à préciser");
+    expect(data.total_budget).not.toContain("35 000 EUR");
+    expect(data.allocation_par_categorie).toEqual({ "MEDIA (EUR)": 0 });
+  });
+
+  it("lines with unknown currencies stay separate rather than being summed as a common unit", async () => {
+    const ctx = { ...pureContext({}), campaigns: [
+      { name: "Legacy", budget: null, status: "DRAFT", budgetLines: [
+        { category: "MEDIA", planned: 15, currency: "" },
+        { category: "MEDIA", planned: 350, currency: "" },
+      ] },
+    ] };
+    const result = await composeSectionContent(ctx, metaFor("deloitte-budget"));
+    const data = result!.content.deloitteBudget as { allocation_par_categorie: Record<string, number> };
+    expect(Object.values(data.allocation_par_categorie)).toEqual([15, 350]);
+    expect(Object.keys(data.allocation_par_categorie).every(key => key.includes("devise à préciser"))).toBe(true);
+  });
 });
 
 describe("composers déterministes — couverture 22-35", () => {

@@ -470,9 +470,11 @@ export interface BudgetSection {
   campaignBudgets: Array<{
     name: string;
     budget: number | null;
+    budgetCurrency?: string;
     status: string;
   }>;
-  totalBudget: number;
+  totalBudget: number | null;
+  campaignBudgetSummary?: import("@/lib/strategy/roadmap-routes").CampaignBudgetSummary;
   /**
    * Phase 18 (ADR-0043) — Budget annuel/stratégique global, lu depuis
    * `pillarS.globalBudget`. Permet à une marque BOOT (sans Campaign

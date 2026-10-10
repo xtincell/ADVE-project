@@ -8,6 +8,20 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
+**445 local en réception — lecteurs/export existants reçus localement** :
+deterministic-composers réutilise collectNormalizedInitiatives pour 7S/3H/Budget ;
+inconnus/coverage conservés. aggregateCampaignBudgets/campaignBudgetLabel dans
+roadmap-routes existant, partagé mapBudget/CORE/Deloitte : zéro/inconnu/devises,
+scalaire null si incomplet/multidevise ; lignes séparées des enveloppes.
+getFieldLabel helper pur extrait/ré-exporté, contextes mix/typo et HTML/Markdown/
+PDF partagés ; source/snapshot inchangés. Aucun service du registre ajouté.
+Ciblé final 73/six/cinq contrôles 0 reçus, PG 347/18 avant dernières lectures sans
+schéma/persist changé ; unité DEFAULT finale 4 276/407 verte reçue. Native USER/TRIAL/HTML/PDF 19 reçus
+à portée bornée, pas 35 sections/global/SLO/stress. Source non committée/runtime 444,
+CI/image/runtime 445 attendus. Autres writers/versions/remap/devise qualitative/
+canaux legacy/cycles réels ouverts. [Réception et dette](REFONTE-PLAN.md).
+
+
 **444 livré, réception bornée — services existants, données distinguées** :
 normaliseur partagé de pillar-schemas et agrégations roadmap-routes transportent
 budget absent/zéro déclaré/estimation FCFA, échéance absente et couverture du

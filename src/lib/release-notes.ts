@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.445", date: "2026-10-10",
+    headline: "Un rapport qui transmet fidèlement vos décisions",
+    highlights: [
+      { emoji: "🧭", title: "Les horizons restent à décider", body: "Les synthèses concernées reprennent les mêmes actions, comptées une seule fois. Une échéance inconnue reste à préciser ; elle ne devient plus une décision de moyen terme." },
+      { emoji: "◈", title: "Des montants et des libellés cohérents", body: "Les écrans du rapport et ses exports partagent leurs libellés. Les montants gardent le même format, et un zéro déclaré reste visible. Le récapitulatif budgétaire distingue les devises des campagnes et indique ce qui reste à chiffrer." },
+    ],
+  },
+  {
     version: "6.27.444", date: "2026-10-10",
     headline: "Un plan qui distingue les montants connus des estimations",
     highlights: [

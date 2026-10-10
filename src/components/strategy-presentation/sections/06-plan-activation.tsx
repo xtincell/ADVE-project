@@ -22,11 +22,11 @@ export function PlanActivation({ data }: Props) {
                 <h4 className="font-semibold text-foreground">{c.name}</h4>
                 <span className="rounded-full bg-background px-2 py-0.5 text-xs text-foreground-secondary">{c.status}</span>
               </div>
-              {(c.startDate || c.budget) && (
+              {(c.startDate || c.budget != null) && (
                 <div className="mt-2 flex gap-4 text-xs text-foreground-muted">
                   {c.startDate && <span>Debut: {new Date(c.startDate).toLocaleDateString("fr")}</span>}
                   {c.endDate && <span>Fin: {new Date(c.endDate).toLocaleDateString("fr")}</span>}
-                  {c.budget && <span>Budget: {c.budget.toLocaleString()} XAF</span>}
+                  {c.budget != null && <span>Budget: {c.budget.toLocaleString("fr-FR")} XAF</span>}
                 </div>
               )}
               {c.actions.length > 0 && (
@@ -37,7 +37,7 @@ export function PlanActivation({ data }: Props) {
                       a.name,
                       a.category,
                       a.actionType,
-                      a.budget ? `${a.budget.toLocaleString()} XAF` : "—",
+                      a.budget != null ? `${a.budget.toLocaleString("fr-FR")} XAF` : "—",
                       a.aarrStage ?? "—",
                     ])}
                     compact

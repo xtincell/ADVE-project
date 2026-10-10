@@ -1,5 +1,46 @@
 # Changelog — La Fusee
 
+## v6.27.445 — fix(oracle): conserver les inconnus et rendre les exports fidèles (2026-10-10)
+
+**445 local en réception : lecteurs composites et rendu Oracle reçus sur fixture ; source non committée/runtime 444.**
+
+- Trois lecteurs (7S/ThreeHorizons/Budget) réutilisent collectNormalizedInitiatives :
+  doublons retirés, canaux physiques distincts de Devotion/Overton. H2 seulement
+  PHASE_2/LONG_TERM ; inconnus dans unassigned/coverage et dénominateur conservé.
+- Même carte getFieldLabel extraite pure/ré-export compatible, HTML/Markdown/PDF
+  partagés. Contexte : weight du mix « Part du mix », typographie « Graisse » ;
+  fallback conserve acronymes et humanise snake_case. Locale fr-FR/zéro conservés.
+  PDF Helvetica : flèches verbalisées, espaces/titres/indentation/pagination
+  compatibles, source/Markdown/snapshot intacts ; scan HARD étendu.
+- Native a révélé CORE « Total: 0 XAF » pour zéro+inconnu et perte de devise.
+  aggregateCampaignBudgets/campaignBudgetLabel factorisés dans roadmap-routes
+  existant, partagés mapBudget/CORE/Deloitte : montants par devise, scalaire null
+  si incomplet ou multidevise, lignes séparées des enveloppes sans conversion/
+  faux engagé. Deux lignes sans devise ne sont pas agrégées comme même unité.
+- Chronologie : cinq rouges lecteurs/cinq rouges rendu, 55/cinq puis 56/cinq
+  verts, unité 4 270/407 avant derniers CORE/contextes ; devises trois rouges
+  puis un rouge/vingt-trois verts→vert, CORE quatre rouges/quatorze verts,
+  contextes deux rouges/neuf verts. Ciblé final 73/six verts, cinq contrôles
+  finaux tous 0 ; PG 347/18 avant derniers changements purs de lecture, sans
+  modification schéma/persist ensuite. Suite unitaire DEFAULT finale 4 276/407 verts reçue.
+- Native USER/TRIAL locale, connexion normale/recalcul 200 : S v2/une archive,
+  I inchangé, zéro tâche/coût et un Intent final. HTML CORE/Deloitte « 0 XAF
+  chiffrés + un inconnu », 7S trois identités/un canal physique, 3H zéro sur trois
+  classés/allocation 0/0/0/trois hors horizon. Desktop inspecté ; mobile reçu
+  seulement sur première partie des cartes/DOM, aucune acceptation 35 sections.
+  PDF natif final dix-neuf pages/contact sheet et pages 16/17 inspectés, ni ##
+  ni glyphes de remplacement, Part du mix reçu. Cold timeouts/export retry
+  conservés ; reload tronqué, aucun zéro réseau global/SLO ; fixtures nettoyées/
+  serveur arrêté. Pas de stress complet ni nouvelle infrastructure.
+- CI/image/runtime 445 non reçus. Ancres FCFA→BrandCurrency/BrandAction, autres
+  writers/versions/remap, Notoria/legacy statiques, confusion DEVOTION/OVERTON
+  encore native dans catalogue/ancien S et cycles réels en dette S existante.
+  Vitrine live/six questions/sans décompte déjà reçue 444 ; raccord global et
+  déduction quiz E2E non reçus. Sept chantiers/dix gates/80 lignées inchangés,
+  global null ; aucun modèle/service/router/page/Intent/ADR/provider ajouté.
+  [Réception et reprise](docs/governance/REFONTE-PLAN.md).
+
+
 ## v6.27.444 — fix(guidance): préserver budget inconnu, zéro déclaré et estimation (2026-10-10)
 
 **444 livré, réception bornée : fidélité des montants/échéances dans les projections concernées ; runtime exact 444 reçu.**
@@ -62,7 +103,7 @@
   attentes de titre expirées puis DOM reçu : aucun timing production/SLO reçu.
   Vitrine fraîche six questions/sans décompte, déjà reçue avant ce lot ; raccord
   complet et quiz déductif E2E non reçus, mise à jour finale après raccord requise.
-  Contrôle/commit/CI du reçu documentaire encore distincts du code livré.
+  Reçu documentaire 444 clôturé : 640ecbad, CI/Mission/Chromatic success.
   [Réception et reprise](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.443 — fix(cockpit): relier les gestes aux droits de marque et clarifier le plan (2026-10-10)

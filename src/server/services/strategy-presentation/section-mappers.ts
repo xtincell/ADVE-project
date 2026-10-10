@@ -13,7 +13,7 @@ import { cataloguePriceLabel, productLadderPriceLabel } from "@/domain/product-c
 import { TIER_MIN_DEPTH } from "@/domain/superfan-conditions";
 import { collectNormalizedInitiatives, type NormalizedInitiative } from "@/lib/types/pillar-schemas";
 import { InitiativeBudgetSummarySchema } from "@/lib/types/pillar-schemas";
-import { roadmapAssumptionsLabel } from "@/lib/strategy/roadmap-routes";
+import { aggregateCampaignBudgets, roadmapAssumptionsLabel } from "@/lib/strategy/roadmap-routes";
 // section-defaults n'est plus consommé par les mappers (audit galileo) : les
 // modules dévorent les vraies données ADVERTIS (multi-clés + sources
 // alternatives) et n'inventent plus de contenu generique. Cf. ADR-0095.
@@ -614,10 +614,11 @@ export function mapBudget(strategy: any): BudgetSection {
   const campaignBudgets = strategy.campaigns.map((c: any) => ({
     name: c.name,
     budget: c.budget,
+    budgetCurrency: c.budgetCurrency,
     status: c.status,
   }));
 
-  const totalBudget = campaignBudgets.reduce((sum: number, c: any) => sum + (c.budget ?? 0), 0);
+  const campaignBudgetSummary = aggregateCampaignBudgets(campaignBudgets);
 
   // Enveloppe globale + ventilation : pilier S canonique → pilier I (certaines
   // marques y stockent globalBudget/budgetBreakdown, ex. CIMENCAM). Audit
@@ -652,7 +653,8 @@ export function mapBudget(strategy: any): BudgetSection {
         }
       : null,
     campaignBudgets,
-    totalBudget,
+    totalBudget: campaignBudgetSummary.totalBudget,
+    campaignBudgetSummary,
     globalBudget,
     budgetBreakdown,
   };

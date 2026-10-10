@@ -1,5 +1,92 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Lecteurs composites et budget CORE Oracle → exports fidèles — 445 local en réception (2026-10-10)
+
+Reprise immédiate 444, source non committée/runtime reçu 6.27.444. Aucun modèle,
+service/router/page/Intent/ADR/provider ou infrastructure ajouté ; sept chantiers
+false/dix gates ouverts/audit 80 lignées inchangés/global null. Documentation 444
+clôturée 640ecbadfa85eb242a963240e77e8f4eb467a89d, CI 38024303442/Mission 38024303437/
+Chromatic 38024303464/postmerge/closing-receipt reçus.
+
+Trois lecteurs deterministic-composers (7S/ThreeHorizons/Budget) réutilisent
+collectNormalizedInitiatives, sans doublons. Validation brute/références mutables
+apply-payload préservées. H2 seulement PHASE_2/LONG_TERM ; horizons inconnus dans
+unassigned/coverage/dénominateur, UI « Échéances à préciser ». Canaux physiques
+7S distincts des regroupements Devotion/Overton/GENERAL. Cette réparation ne
+reçoit pas tous les lecteurs CORE ou les valeurs d’un ancien S.
+
+Même getFieldLabel/carte existante extrait pur/ré-export compatible dans
+lib/types/field-labels ; HTML/Markdown/PDF partagent la source. Contexte weight
+manipulationMatrix.evaluations « Part du mix », fontweight « Graisse » ; fallback
+conserve acronymes et humanise snake_case. Locale fr-FR explicite/zéro conservé
+dans les composants concernés, scan HARD étendu. PDF Helvetica existant : flèches
+verbalisées/espaces compatibles/titres/indentation/pagination traités, sans
+réécrire source/Markdown/snapshot/historique/idempotence/gates ni imposer une
+police SPAWT aux autres marques.
+
+Native HTML a révélé le budget CORE affichant « Total:0 XAF » pour campagne 0 +
+campagne inconnue ; mapBudget perdait budgetCurrency et additionnait les devises.
+Factorisation aggregateCampaignBudgets/campaignBudgetLabel dans roadmap-routes
+pur existant, partagé mapBudget/CORE/Deloitte : vrai zéro, budgets/devises à
+préciser, sous-totaux séparés par devise, total scalaire null si incomplet ou
+multidevise. Lignes séparées des enveloppes, deux lignes sans devise jamais
+agrégées comme une même unité ; aucune conversion ni faux engagé.
+
+**Tests chronologiques** : cinq rouges lecteurs/quinze verts ; rendu quatre
+rouges/huit verts puis cinq rouges/sept verts. Checkpoints 55/cinq puis56/cinq
+verts, all-unit.log 4 270/407 verts, 95,41 s avant derniers CORE/contextes. Devises
+trois rouges/vingt verts puis un rouge/vingt-trois verts→vert. red-core-campaign-
+budget.log quatre rouges/quatorze verts ; red-label-context.log deux rouges/neuf
+verts. targeted-received.log FINAL73/six fichiers verts ; gauntlet.json cinq
+sorties0. PG 347/18 verts avant dernières modifications pure lecture CORE/
+contextes ; aucun schéma/persist changé ensuite. Recontrôle filtré tests/unit/ : 4 238/405 verts, sélection excluant
+src/domain/__tests__/pillars.test.ts et tests/adversarial/scorer-brands.test.ts ;
+aucun test supprimé. all-unit-default-final.log reçu : 4 276 tests/407 fichiers
+verts, 91,80 s, les deux fichiers hors tests/unit/ inclus. Le run filtré est un
+sous-ensemble vert, sans suppression de test ; sélection DEFAULT finale reçue. Pas de stress complet : périmètre
+lecture/factorisation/rendu, aucun résultat stress annoncé. CI/image/runtime 445
+non reçus, source non committée ; aucun budget/décision réel corrigé.
+
+**Native locale bornée** : native-local-receipt.json, connexion formulaire normale
+USER/TRIAL synthétique, Recalculer 200/S v2/une archive/source I inchangée. Compteurs
+avant0 tâche/0 coût/0 Intent, finaux0/0/1 Intent ; aucun fournisseur payant ni marque
+réelle. HTML CORE+Deloitte 0 XAF chiffrés+un budget inconnu ;7S trois identités/un
+canal physique ;3H zéro sur trois classés, allocation 0/0/0/trois hors horizon. Desktop Budget/
+Horizons inspectés. Mobile390×844 : seulement première partie des cartes empilées,
+faits hors horizon reçus dans DOM ; pas acceptation mobile de toutes35 sections.
+
+Export natif final oracle-native-final.pdf 19 pages,
+sha256:250391e5d7a84c9d4aefcdf965a6441228b09e661f47e15978742a8d411a21c9.
+Contact sheet 19 pages et pages 16/17 pleine résolution inspectés : ni ## ni glyphe
+de remplacement, « Part du mix », budgets absents/horizons inconnus/acronymes
+reçus. Finition reçue à ces surfaces/contrôles, pas acceptation générale35 sections.
+Premier PDF 29,9 s HTTP 200 mais limite outil 30 s/reset, retry reçu, PDF final 40,26 s reçu.
+Plusieurs coldnavigate/focus/title timeouts conservés ; compilation froide et
+fast-refresh n’établissent aucun SLO production. Warmreload DOM+titre borne
+10 301 ms locale après compilation, pas temps de page utilisable/SLO. Fenêtre
+warm 21 réponses mais truncated=true ; aucun zéro global réseau/exception.
+Actualisation et relire get/assess/readiness 200 dans deux batchs complets
+(truncated=false/hasMore=false), native-local-receipt.json fait foi. Fixtures
+nettoyées/cleaned=true/remaining=0, serveur isolé arrêté avant la suite unitaire
+finale reçue.
+
+**Résidu S existant et reprise avant cycle réel** : autres CORE/catalogue et
+ancien S montrent encore DEVOTION/OVERTON comme canaux/étapes, confirmé natif.
+Classifier canaux physiques versus niveaux sémantiques selon contrat de chaque
+lecteur, recevoir source→projection→UI avec contre-exemples, sans catégorie
+inventée. Devise qualitative FCFA→BrandCurrency/BrandAction, autres écrivains/
+versions source/remap UUID restent ouverts. Notoria brut/PHASE_1 et opportunités
+legacy budgetEstime comme impact : statique daté du 10 octobre seulement, pas défaut
+reproduit/corrigé. **Déclencheur** : prochains incréments après final 445 et avant
+C3/C4/C6/cycles, tests puis recette transverse du lecteur/writer existant ;
+effort : contrats faits/absences/estimations/devise et versions, pas de contenu
+inventé/gate affaiblie/conversion sans taux-source. Réception réelle SPAWT/
+FrieslandCampina encore à faire, ancien mix pré-lancement réel non recalculé.
+Vitrine SPAWT live/six questions/sans décompte déjà reçue 444 ; raccord complet,
+quiz déductif E2E et mise à jour finale après raccord non reçus. WholeJourney=false/
+sept chantiers=false/global=null. [Dette en place](RESIDUAL-DEBT.md).
+
+
 ## Budget source → chiffrage connu/estimé/inconnu → projections — 444 livré, réception bornée (2026-10-10)
 
 Normaliseur commun normalizeInitiative/collectNormalizedInitiatives : un montant
@@ -160,8 +247,9 @@ parcours de vraie marque ouverts. **Déclencheur** : incréments suivants avant
 C3/C4/C6/preuve de release ; effort : contrat de devise explicite et réception
 transverse restante, sans contenu inventé ni gate affaiblie ; contrat de devise
 reçu avant autre devise, aucune conversion sans taux/source. Reprise privée
-détaillée dans release/preuves-guidance-444/guidance-reprise.md. Contrôle/commit/CI
-ultérieurs de cette documentation restent distincts du reçu source livré.
+détaillée dans release/preuves-guidance-444/guidance-reprise.md. Reçu documentaire
+640ecbad/CI 38024303442, Mission 38024303437, Chromatic 38024303464 et postmerge
+clôturés ; aucun nouveau déploiement pour ces Markdown.
 [Dette en place](RESIDUAL-DEBT.md).
 
 

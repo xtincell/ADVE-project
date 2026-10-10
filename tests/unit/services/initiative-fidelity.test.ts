@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { collectNormalizedInitiatives, normalizeInitiative, PillarSSchema } from "@/lib/types/pillar-schemas";
 import { aggregateInitiativeSet, computeRoadmapRoutes } from "@/lib/strategy/roadmap-routes";
 import { computePillarS } from "@/server/services/rtis-protocols/strategy";
-import { mapCatalogueActions } from "@/server/services/strategy-presentation/section-mappers";
+import { mapBudget, mapCatalogueActions } from "@/server/services/strategy-presentation/section-mappers";
 
 const items = [
   { id: "11111111-1111-4111-8111-111111111111", action: "Unknown", status: "SELECTED_FOR_ROADMAP" },
@@ -12,6 +12,24 @@ const items = [
 const content = { catalogueParCanal: { DIGITAL: items } };
 
 describe("initiative facts survive their existing consumers", () => {
+  it("does not make an unknown campaign budget zero in the core Oracle total", () => {
+    const result = mapBudget({ pillars: [], campaigns: [
+      { name: "Zero", budget: 0, budgetCurrency: "XAF", status: "DRAFT" },
+      { name: "Unknown", budget: null, budgetCurrency: "XAF", status: "DRAFT" },
+    ] });
+    expect(result.totalBudget).toBeNull();
+    expect(result.campaignBudgetSummary).toMatchObject({ totalsByCurrency: { XAF: 0 }, unknownBudgetCount: 1 });
+    expect(result.campaignBudgets[0]?.budgetCurrency).toBe("XAF");
+  });
+  it("never adds different or absent campaign currencies into a core Oracle total", () => {
+    const result = mapBudget({ pillars: [], campaigns: [
+      { name: "Francs", budget: 1_000, budgetCurrency: "XAF", status: "DRAFT" },
+      { name: "Euros", budget: 20, budgetCurrency: "EUR", status: "DRAFT" },
+      { name: "No currency", budget: 5, status: "DRAFT" },
+    ] });
+    expect(result.totalBudget).toBeNull();
+    expect(result.campaignBudgetSummary).toMatchObject({ totalsByCurrency: { XAF: 1_000, EUR: 20 }, unknownCurrencyCount: 1 });
+  });
   it("keeps an absent amount and horizon absent", () => {
     expect(normalizeInitiative(items[0])).toMatchObject({ budgetBasis: "UNKNOWN" });
     expect(normalizeInitiative(items[0]).budget).toBeUndefined();

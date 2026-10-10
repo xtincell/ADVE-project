@@ -223,6 +223,23 @@ l’upgrade de verrou. La recherche d’âge normalise S→s. Dans propagateFrom
 les modes autoRecalculate true/false sont reçus localement : Process seulement si auto,
 aucun appel réseau dans la fixture. Cela ne reçoit pas tous les modes/agents.
 
+**445 local en réception — Oracle conserve inconnus/devises, recette bornée** :
+7S/3H/Budget utilisent le collecteur normalisé, inconnus dans coverage/unassigned
+et dénominateur ; H2 PHASE_2/LONG_TERM. Agrégat campagne de roadmap-routes partagé
+mapBudget/CORE/Deloitte, zéro/inconnus/devises séparés, total scalaire null si
+incomplet/multidevise. Lignes/enveloppes distinctes, pas conversion/faux engagé.
+Même getFieldLabel contextuel mix/typo extrait pur/ré-exporté, locale fr-FR,
+PDF Helvetica traité, source/snapshot/Markdown intacts. Native USER/TRIAL locale
+et PDF 19 reçus à portée bornée ; zéro tâche/coût/un Intent, S v2/une archive/I inchangé,
+mobile partiel/pas 35 sections/global/SLO/stress. Ciblé 73/six/cinq contrôles 0 reçus,
+PG 347/18 avant dernières lectures sans persist modifié, unité DEFAULT finale 4 276/407 verte reçue.
+Source non committée/CI/image/runtime 445 non reçus/runtime 444 ; aucun modèle/
+service/router/page/Intent/ADR/provider. Devise qualitative→BrandAction/autres
+writers/versions/remap et canaux sémantiques legacy/cycles réels en dette S ;
+sept chantiers/dix gates/80 lignées inchangés/global null.
+[Réception et résidus](REFONTE-PLAN.md).
+
+
 **444 livré, réception bornée — faits, absences et estimations de budget** :
 normaliseur commun conserve zéro déclaré et montant absent, origine DECLARED/
 QUALITATIVE_ESTIMATE/UNKNOWN ; ancres FCFA de la méthode conservées comme

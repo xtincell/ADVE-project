@@ -40,6 +40,7 @@ import {
 } from "@/components/primitives";
 import { PtahForgeButton } from "@/components/neteru/ptah-forge-button";
 import { DevotionPyramid } from "../shared/devotion-pyramid";
+import { getFieldLabel } from "@/lib/types/field-labels";
 
 // ─── Variants section tier (CVA — DS Phase 11 obligatoire) ──────────────────
 
@@ -124,10 +125,7 @@ function KeyValueGrid({ entries }: { entries: Array<[string, React.ReactNode]> }
 
 /** Format snake/camelCase storage keys to human labels: `seven_s_map` →
  * `Seven s map`, `riskScore` → `Risk score`. */
-function humanizeKey(key: string): string {
-  const spaced = key.replace(/_/g, " ").replace(/([A-Z])/g, " $1").trim();
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase();
-}
+const humanizeKey = getFieldLabel;
 
 /** Recursive structured renderer — replaces `JSON.stringify` placeholders.
  * Strips `_*` debug keys, renders arrays as bullets, scalars inline,
@@ -138,7 +136,7 @@ function StructuredValue({ value, depth = 0 }: { value: unknown; depth?: number 
     return <Text variant="caption" tone="muted">—</Text>;
   }
   if (typeof value === "string") return <Text variant="body">{value}</Text>;
-  if (typeof value === "number") return <Text variant="body">{value.toLocaleString()}</Text>;
+  if (typeof value === "number") return <Text variant="body">{value.toLocaleString("fr-FR")}</Text>;
   if (typeof value === "boolean") return <Text variant="body">{value ? "Oui" : "Non"}</Text>;
   if (Array.isArray(value)) {
     if (value.length === 0) return <Text variant="caption" tone="muted">—</Text>;
@@ -425,7 +423,9 @@ export function DeloitteGreenhouse({ data }: Props) {
 }
 
 export function Mckinsey3Horizons({ data, strategyId }: Props) {
-  const m3h = data.mckinsey3Horizons as { h1?: unknown; h2?: unknown; h3?: unknown; allocation?: Record<string, number> } | null;
+  const m3h = data.mckinsey3Horizons as { h1?: unknown; h2?: unknown; h3?: unknown; allocation?: Record<string, number>;
+    unassigned?: { label?: string; items?: string[] };
+    coverage?: { totalCount: number; classifiedCount: number; unassignedCount: number } } | null;
   return (
     <SectionShell
       tier="BIG4_BASELINE"
@@ -434,6 +434,12 @@ export function Mckinsey3Horizons({ data, strategyId }: Props) {
     >
       {m3h ? (
         <Stack direction="col" gap={3}>
+          {m3h.coverage ? (
+            <Text variant="caption" tone="muted">
+              {m3h.coverage.classifiedCount} sur {m3h.coverage.totalCount} éléments classés.
+              Les pourcentages incluent les éléments dont l’échéance reste à préciser.
+            </Text>
+          ) : null}
           {m3h.allocation ? (
             <Stack direction="row" align="center" gap={3}>
               {Object.entries(m3h.allocation).map(([k, v]) => (
@@ -455,6 +461,12 @@ export function Mckinsey3Horizons({ data, strategyId }: Props) {
               </Card>
             ))}
           </Grid>
+          {m3h.unassigned?.items && m3h.unassigned.items.length > 0 ? (
+            <Stack direction="col" gap={2}>
+              <Heading level={5}>Échéances à préciser</Heading>
+              <StructuredValue value={m3h.unassigned.items} />
+            </Stack>
+          ) : null}
         </Stack>
       ) : (
         <EmptyState message="Trois Horizons non encore cartographiés — déclarer les initiatives (pilier I) et la vision stratégique (pilier S)." />
@@ -564,7 +576,7 @@ export function DeloitteBudget({ data }: Props) {
         <Stack direction="col" gap={3}>
           {total ? (
             <Stack direction="row" align="center" gap={2}>
-              <Text variant="caption" tone="muted">Budget total engagé</Text>
+              <Text variant="caption" tone="muted">Budgets des campagnes</Text>
               <Badge tone="accent">{total}</Badge>
             </Stack>
           ) : null}

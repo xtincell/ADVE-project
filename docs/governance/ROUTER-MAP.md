@@ -6,6 +6,18 @@ Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts`
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
+**445 local en réception — même export, lectures reçues localement** : aucune
+procédure/route/permission/Intent ajouté. EXPORT_ORACLE conserve gates/snapshot/
+historique/idempotence ; lecteurs normalisés et agrégat de campagne partagé
+mapBudget/CORE/Deloitte transportent inconnus/zéro/devises. Libellés contextualisés
+et rendu PDF ne réécrivent ni source/Markdown ni approbation. Native USER/TRIAL
+locale : recalcul 200/S v2/une archive/I inchangé ; export PDF 19 reçu/inspecté à portée
+bornée, aucune marque réelle ni 35 sections reçues. Ciblé 73/six et cinq contrôles 0,
+PG 347/18 avant dernières lectures sans persist changé ; unité DEFAULT finale 4 276/407 verte reçue.
+Source non committée/runtime 444, CI/image/runtime 445 attendus ; autres writers/
+versions/remap et vraie réception ouverts. [Périmètre](REFONTE-PLAN.md).
+
+
 **444 livré, réception bornée — mêmes procédures, projections fidèles** : lectures
 existantes de S/Oracle/niveaux de proposition créative transportent sous-total
 connu/couverture et hypothèses de scénario ; montant complet absent si chiffrage

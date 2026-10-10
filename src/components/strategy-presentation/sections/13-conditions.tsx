@@ -23,7 +23,7 @@ export function ConditionsEtapes({ data }: Props) {
             headers={["Titre", "Type", "Statut", "Valeur", "Debut", "Fin", "Signe"]}
             rows={data.contracts.map((c) => [
               c.title, c.contractType, c.status,
-              c.value ? `${c.value.toLocaleString()} XAF` : "—",
+              c.value != null ? `${c.value.toLocaleString("fr-FR")} XAF` : "—",
               c.startDate ? new Date(c.startDate).toLocaleDateString("fr") : "—",
               c.endDate ? new Date(c.endDate).toLocaleDateString("fr") : "—",
               c.signedAt ? new Date(c.signedAt).toLocaleDateString("fr") : "Non signe",

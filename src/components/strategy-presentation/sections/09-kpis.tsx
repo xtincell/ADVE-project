@@ -77,7 +77,7 @@ export function KpisMesure({ data }: Props) {
             headers={["Plateforme", "Taille", "Engagement", "Croissance"]}
             rows={data.communitySnapshots.map((cs) => [
               cs.platform,
-              cs.size.toLocaleString(),
+              cs.size.toLocaleString("fr-FR"),
               cs.engagement?.toFixed(2) ?? "—",
               cs.growth?.toFixed(2) ?? "—",
             ])}

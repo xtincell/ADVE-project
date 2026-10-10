@@ -315,6 +315,35 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   100 %, ancien S/budgets/roadmap contradictoires ouverts, aucune réception USER
   de production. Timeouts de compilation conservés. Sparse non
   approuvable, contrat strict inchangé.
+  **445 local en réception — lecteurs/rendu/budgets campagne reçus localement** :
+  7S/3H/Budget réutilisent le collecteur normalisé, inconnus/coverage/dénominateur
+  conservés ; agrégat campagne de roadmap-routes partagé mapBudget/CORE/Deloitte,
+  devises/zéro/inconnu sans conversion/double comptage. Native CORE a révélé
+  total 0 malgré inconnu/perte devise, quatre rouges/quatorze verts ; labels
+  contextuels mix/typo deux rouges/neuf verts. Final ciblé 73/six/cinq contrôles 0,
+  PG 347/18 avant dernières lectures sans schéma/persist changé ; unité DEFAULT finale
+  4 276/407 verte reçue. Native locale USER/TRIAL S v2/une archive/I inchangé/zéro tâche/coût/un
+  Intent, HTML CORE/Deloitte/7S/3H reçus ; PDF 19/contact sheet/pages 16/17 inspectés,
+  mobile partiel/pas 35 sections. Fixtures nettoyées/serveur arrêté, cold timeouts/
+  reload tronqué conservés ; aucun zéro global/stress/SLO. Source non committée/
+  CI/image/runtime 445 attendus, runtime 444. Causes réparées à cette portée locale,
+  aucune correction des dossiers historiques réels déduite.
+  **Reste à fermer** : devise qualitative FCFA→BrandCurrency/BrandAction, autres
+  writers/consommateurs S/versions source, projection opérationnelle/remap UUID,
+  vraie réception SPAWT/FrieslandCampina et cycles. Catalogue CORE/ancien S montre
+  encore DEVOTION/OVERTON comme canaux/étapes, confirmé natif : **plan** classifier
+  canaux physiques versus niveaux sémantiques selon contrat de chaque lecteur,
+  contre-exemples source→UI avant modifier, sans inventer une catégorie métier.
+  **Déclencheur** : prochain incrément avant C3/C4/C6/cycle réel, après final 445 ;
+  effort : tests ciblés et recette des mêmes surfaces, puis réception transverse.
+  Notoria brut/PHASE_1 défaut et opportunités legacy budgetEstime comme impact :
+  lecture statique datée du 10 octobre, défaut ni reproduit ni corrigé ; même
+  déclencheur d’audit avant cycles, établir règles faits/absence/estimations/
+  versions avant modifier. Autres writers/remap/devise : recevoir contrats et
+  versions source avant autre devise/écriture réelle, aucune conversion sans
+  taux/source ni contenu/gate affaibli. Sept chantiers/dix gates/80 lignées
+  inchangés, global null. Documentation 444 clôturée,445 non livré.
+
   **444 livré, réception bornée — normalisation/projections bornées** : livraison
   conserve budget absent/zéro déclaré/origine DECLARED/QUALITATIVE_ESTIMATE/
   UNKNOWN et échéance absente ; ancres FCFA de la méthode conservées comme
@@ -339,7 +368,7 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   4 256/406 et 347/18 PG verts ; image/runtime 444 exacts reçus. Lecture SPAWT
   ADMIN passive seulement, S toujours Périmé, aucune mutation/recalcul réel ;
   fenêtre complète sept réponses 200/trois annulations, pas de timing prod/SLO.
-  Reçu documentaire/CI ultérieurs distincts.
+  Reçu documentaire 444 clôturé (640ecbad/CI, Mission, Chromatic success).
   Compteurs zéro tâches/coûts/quatre Intents uniquement AVANT créatif/PDF,
   lecture finale rejetée avant sérialisation, pas de compteur postérieur. Aucune vraie marque/fidélité
   globale déduite de ces gestes.

@@ -4,6 +4,34 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-10
 
+**6.27.445 local en réception — Oracle fidèle, réception locale bornée** :
+7S/ThreeHorizons/Budget réutilisent collectNormalizedInitiatives ; doublons
+retirés, inconnus dans unassigned/coverage/dénominateur, H2 PHASE_2/LONG_TERM.
+getFieldLabel/carte existante extraite pure/ré-exportée : HTML/Markdown/PDF,
+« Part du mix » distinct de « Graisse », fallback acronymes/snake_case ; locale
+fr-FR/zéro. PDF Helvetica compatible, source/Markdown/snapshot intacts.
+Native CORE a révélé zéro total trompeur/perte devise : aggregateCampaignBudgets/
+campaignBudgetLabel dans roadmap-routes, partagé mapBudget/CORE/Deloitte ;
+montants par devise, total scalaire null si incomplet/multidevise, lignes séparées,
+pas conversion/faux engagé. Checkpoints 55/cinq→56/cinq ciblés/unité 4 270/407,
+CORE quatre rouges/quatorze verts/contextes deux rouges/neuf verts ; final ciblé
+73/six verts, cinq contrôles 0. PG 347/18 avant dernières lectures/contextes,
+aucun schéma/persist changé ensuite ; unité DEFAULT finale 4 276/407 verte reçue.
+Native locale USER/TRIAL normale : recalcul 200/S v2/une archive/I inchangé,
+zéro tâche/coût/un Intent ; budgets CORE/Deloitte zéro partiel+inconnu, 7S trois
+identités/un canal, 3H zéro sur trois classés/trois hors horizon. PDF 19/contact
+sheet/pages 16/17 inspectés, pas ##/glyphes remplacement ; mobile seulement
+première partie/DOM, pas réception de toutes sections. Timeouts froids/export
+retry/reload tronqué conservés, pas zéro global/SLO ni stress complet ; cleanup 0/
+serveur arrêté. Source non committée, CI/image/runtime 445 attendus/runtime 444.
+Documentation 444 clôturée 640ecbad/trois CI/postmerge reçus. Autres writers/
+versions/remap, devise qualitative FCFA→BrandAction et confusion sémantique des
+canaux encore native restent en dette S ; Notoria/legacy lecture statique
+seulement, audits avant cycles. Aucun modèle/service/router/page/Intent/ADR/
+provider ajouté ; sept chantiers/dix gates/80 lignées inchangés/global null.
+[Réception et reprise](docs/governance/REFONTE-PLAN.md).
+
+
 **6.27.444 livré, réception bornée — fidélité budget/échéance** : le normaliseur
 commun garde budget absent, zéro déclaré et origine DECLARED/QUALITATIVE_ESTIMATE/
 UNKNOWN ; ancres FCFA existantes conservées comme estimations. Échéance inconnue
@@ -41,8 +69,7 @@ et image 38022755104 success ; CI après toutes CSS : 4 256/406 unitaires et
 API version 200 reçu. Lecture réelle SPAWT ADMIN seulement : ancien S Périmé,
 aucun choix/recalcul/mutation métier. Fenêtre passive complète : sept réponses
 200/zéro ≥500 ou exception observée/trois ERR_ABORTED ; reload initial tronqué,
-aucun zéro global ni timing production/SLO reçu. Reçu documentaire et sa CI
-ultérieure restent distincts. Sept chantiers/dix gates ouverts.
+aucun zéro global ni timing production/SLO reçu. Reçu documentaire 444 clôturé : 640ecbad/CI, Mission, Chromatic success. Sept chantiers/dix gates ouverts.
 [Preuves et résidus](docs/governance/REFONTE-PLAN.md).
 
 **6.27.443 livré, réception bornée — droits de marque et retours Guidance** :

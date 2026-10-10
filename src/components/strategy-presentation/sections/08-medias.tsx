@@ -41,7 +41,7 @@ export function MediasDistribution({ data }: Props) {
           <DataTable
             headers={["Action", "Categorie", "Budget"]}
             rows={data.mediaActions.map((a) => [
-              a.name, a.category, a.budget ? `${a.budget.toLocaleString()} XAF` : "—",
+              a.name, a.category, a.budget != null ? `${a.budget.toLocaleString("fr-FR")} XAF` : "—",
             ])}
             compact
           />
