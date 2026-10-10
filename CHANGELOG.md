@@ -2,7 +2,7 @@
 
 ## v6.27.445 — fix(oracle): conserver les inconnus et rendre les exports fidèles (2026-10-10)
 
-**445 local en réception : lecteurs composites et rendu Oracle reçus sur fixture ; source non committée/runtime 444.**
+**445 livré, réception bornée : lecteurs composites et rendu Oracle reçus sur fixture ; source 15331789/runtime exact 445 reçus.**
 
 - Trois lecteurs (7S/ThreeHorizons/Budget) réutilisent collectNormalizedInitiatives :
   doublons retirés, canaux physiques distincts de Devotion/Overton. H2 seulement
@@ -32,8 +32,21 @@
   ni glyphes de remplacement, Part du mix reçu. Cold timeouts/export retry
   conservés ; reload tronqué, aucun zéro réseau global/SLO ; fixtures nettoyées/
   serveur arrêté. Pas de stress complet ni nouvelle infrastructure.
-- CI/image/runtime 445 non reçus. Ancres FCFA→BrandCurrency/BrandAction, autres
-  writers/versions/remap, Notoria/legacy statiques, confusion DEVOTION/OVERTON
+- Source 15331789/CI 38027502462/Mission 38027502466/Chromatic 38027502453
+  et image 38027689427 success ; CI finale 4 276/407 unitaires et 347/18 PG.
+  Index e3d6c8ff exact/runtime 445/nextjs/private-media RW/API version 200,
+  déploiement unique terminé 05:41:10 UTC. Lecture réelle SPAWT ADMIN (rôle
+  visible Réglages), ancien S Périmé sans recalcul/mutation métier. Fenêtre warm
+  complète 60 réponses/zéro ≥500 ou exception observée/14 ERR_ABORTED ; initiale
+  tronquée 101/40 annulations, H1 deadline puis DOM visible conservés, aucun SLO.
+  Source/documentSha distincts, reçu documentaire encore à recevoir.
+- Sonde pure next-writer-probe : une identité/deux copies brutes → deux SELECT
+  Notoria, choix ne modifie que première copie ; doublon/divergence reproduits,
+  non réparés 445. PHASE_1 reste politique de proposition à qualifier, pas un fait
+  déclaré corrompu ; lot 446 immédiat contrat lecture normalisée/écriture toutes
+  références par identité/pins, refs mutables et validation brute conservées.
+  Ancres FCFA→BrandCurrency/BrandAction, autres writers/versions/remap, legacy
+  statique, confusion DEVOTION/OVERTON
   encore native dans catalogue/ancien S et cycles réels en dette S existante.
   Vitrine live/six questions/sans décompte déjà reçue 444 ; raccord global et
   déduction quiz E2E non reçus. Sept chantiers/dix gates/80 lignées inchangés,

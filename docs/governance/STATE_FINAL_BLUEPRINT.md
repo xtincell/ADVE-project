@@ -223,7 +223,7 @@ l’upgrade de verrou. La recherche d’âge normalise S→s. Dans propagateFrom
 les modes autoRecalculate true/false sont reçus localement : Process seulement si auto,
 aucun appel réseau dans la fixture. Cela ne reçoit pas tous les modes/agents.
 
-**445 local en réception — Oracle conserve inconnus/devises, recette bornée** :
+**445 livré, réception bornée — Oracle conserve inconnus/devises, recette bornée** :
 7S/3H/Budget utilisent le collecteur normalisé, inconnus dans coverage/unassigned
 et dénominateur ; H2 PHASE_2/LONG_TERM. Agrégat campagne de roadmap-routes partagé
 mapBudget/CORE/Deloitte, zéro/inconnus/devises séparés, total scalaire null si
@@ -233,10 +233,17 @@ PDF Helvetica traité, source/snapshot/Markdown intacts. Native USER/TRIAL local
 et PDF 19 reçus à portée bornée ; zéro tâche/coût/un Intent, S v2/une archive/I inchangé,
 mobile partiel/pas 35 sections/global/SLO/stress. Ciblé 73/six/cinq contrôles 0 reçus,
 PG 347/18 avant dernières lectures sans persist modifié, unité DEFAULT finale 4 276/407 verte reçue.
-Source non committée/CI/image/runtime 445 non reçus/runtime 444 ; aucun modèle/
+Source 15331789 livrée/CI/image/runtime 445 reçus/runtime 445 ; aucun modèle/
 service/router/page/Intent/ADR/provider. Devise qualitative→BrandAction/autres
 writers/versions/remap et canaux sémantiques legacy/cycles réels en dette S ;
 sept chantiers/dix gates/80 lignées inchangés/global null.
+
+CI finale 4 276/407 unitaires+347/18 PG sur source 15331789 ; image 38027689427/
+runtime 445 exacts reçus. Lecture réelle SPAWT ADMIN seule, S Périmé/mélangé
+conservé sans mutation/recalcul ; warm complète 60 réponses/14 ERR_ABORTED, aucun
+zéro global/SLO/cycle. Sonde pure Notoria : doublon/divergence reproduits/non
+réparés 445 ; reprise 446 contrat existant, refs brutes mutables/validation
+préservées ; legacy statique seulement. DocumentSha/CI du reçu encore à recevoir.
 [Réception et résidus](REFONTE-PLAN.md).
 
 

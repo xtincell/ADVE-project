@@ -9,7 +9,7 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
-### Catalogue I → composites/CORE Oracle → HTML/Markdown/PDF — 445 local en réception (2026-10-10)
+### Catalogue I → composites/CORE Oracle → HTML/Markdown/PDF — 445 livré, réception bornée (2026-10-10)
 
 collectNormalizedInitiatives → 7S/ThreeHorizons/Budget dédupliqués ; inconnus →
 unassigned/coverage/dénominateur, H2 PHASE_2/LONG_TERM. Campagnes → agrégat
@@ -18,12 +18,20 @@ Deloitte : devises séparées/zéro/inconnu, scalaire null incomplet/multidevise
 lignes distinctes des enveloppes. getFieldLabel contexte mix/typo → HTML/
 Markdown/PDF, locale fr-FR/texte Helvetica compatible ; source/snapshot intacts.
 Native USER/TRIAL locale/HTML/PDF 19 reçus à portée bornée, mobile partiel ;
-canaux physiques7S reçus mais DEVOTION/OVERTON encore dans autres CORE/ancien S,
+canaux physiques 7S reçus mais DEVOTION/OVERTON encore dans autres CORE/ancien S,
 aucune convergence globale. Ciblé 73/six/cinq contrôles 0 reçus, PG 347/18 avant
-lectures finales sans persist changé ; unité DEFAULT finale 4 276/407 verte reçue, source non committée/
-CI/image/runtime 445 non reçus, runtime 444. Aucun writer/route/service/Intent/
+lectures finales sans persist changé ; unité DEFAULT finale 4 276/407 verte reçue, source 15331789 livrée/
+CI/image/runtime 445 reçus, runtime 445. Aucun writer/route/service/Intent/
 ADR ajouté ; devise qualitative/remap/cycles réels/sept chantiers/dix gates
-ouverts. [Réception et reprise](REFONTE-PLAN.md).
+ouverts.
+
+CI finale 4 276/407 unitaires+347/18 PG sur source 15331789 ; image 38027689427/
+runtime 445 exacts reçus. Lecture réelle SPAWT ADMIN seule, S Périmé/mélangé
+conservé sans mutation/recalcul ; warm complète 60 réponses/14 ERR_ABORTED, aucun
+zéro global/SLO/cycle. Sonde pure Notoria : doublon/divergence reproduits/non
+réparés 445 ; reprise 446 contrat existant, refs brutes mutables/validation
+préservées ; legacy statique seulement. DocumentSha/CI du reçu encore à recevoir.
+[Réception et reprise](REFONTE-PLAN.md).
 
 
 ### Montant/échéance source → projection fidèle — 444 livré, réception bornée (2026-10-10)

@@ -30,7 +30,7 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
-2026-10-10 · **445 local en réception — Oracle lecteurs/rendu/budgets CORE** :
+2026-10-10 · **445 livré, réception bornée — Oracle lecteurs/rendu/budgets CORE** :
 lecteurs bruts créaient doublons/H2 implicite, rendus perdaient labels/locale/
 glyphes ; native CORE conservait total zéro trompeur malgré inconnu et perdait
 budgetCurrency. Causes : collecteurs/rendus/agrégations concurrents. Normaliseur
@@ -41,8 +41,10 @@ neuf verts, ciblé final 73/six verts et cinq contrôles 0. Native USER/TRIAL lo
 CORE/Deloitte zéro partiel+inconnu,7S trois identités/un canal,3H zéro sur trois classés ; PDF 19/contact
 sheet/pages 16/17 sans ##/glyphes remplacement reçus, mobile partiel seulement.
 PG 347/18 avant derniers lecteurs sans persist changé ; unité DEFAULT finale 4 276/407 verte reçue.
-Timeouts/reload tronqué conservés, aucune acceptation globale/stress/SLO/livraison ;
-source non committée/runtime 444. Autres CORE/ancien S confondent encore DEVOTION/
+Timeouts/reload tronqué conservés, aucune acceptation globale/stress/SLO.
+Source 15331789/CI/image/runtime 445 exacts reçus ; CI finale 4 276/407+347/18.
+Lecture réelle SPAWT ADMIN seule/Périmé sans recalcul ni mutation métier, warm
+complète 60 réponses/14 ERR_ABORTED ; reçu documentaire distinct encore attendu. Autres CORE/ancien S confondent encore DEVOTION/
 OVERTON et canaux : dette existante et reprise avant cycle réel, sans annoncer
 réparation de tous lecteurs. [Preuves](REFONTE-PLAN.md) · [dette](RESIDUAL-DEBT.md).
 

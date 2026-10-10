@@ -16,7 +16,7 @@
 
 ## Quick start
 
-**6.27.445 local en réception** : les cadres Oracle concernés utilisent les
+**6.27.445 livré, réception bornée** : les cadres Oracle concernés utilisent les
 mêmes actions dédupliquées et conservent les échéances à préciser. Budget CORE
 et Deloitte partagent le calcul : zéro déclaré, montant inconnu et devises
 distinctes, sans ajouter les lignes aux enveloppes. Libellés, nombres et PDF
@@ -24,8 +24,11 @@ reçus sur dossier fictif : trois actions, trois horizons inconnus, budget zéro
 partiel avec un montant à préciser. PDF 19 pages inspecté à portée bornée,
 mobile seulement partiellement reçu ; aucune réception de tous les écrans.
 73 tests ciblés verts et cinq contrôles finaux reçus ; unité DEFAULT finale 4 276/407 verte reçue,
-PostgreSQL 347 verts avant derniers ajustements de lecture, sans écriture changée.
-Source non committée, version livrée toujours 444, aucune vraie marque recalculée.
+PostgreSQL 347 verts reçus localement puis sur la source finale en CI ;
+image/runtime 445 exacts reçus. SPAWT réelle lue en ADMIN, ancien plan Périmé
+conservé sans recalcul/modification. Fenêtre complète 60 réponses/14annulations,
+aucune réception USER production/parcours complet/SLO. Reçu documentaire distinct
+encore à recevoir.
 Devise des estimations, autres chemins du plan, confusion persistante des canaux,
 reconnexion des vraies marques et sept chantiers/dix gates restent ouverts.
 Vitrine live/six questions/sans décompte reçue précédemment, raccord complet et

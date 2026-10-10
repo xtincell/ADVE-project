@@ -4,7 +4,7 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-10
 
-**6.27.445 local en réception — Oracle fidèle, réception locale bornée** :
+**6.27.445 livré, réception bornée — Oracle fidèle, réception locale bornée** :
 7S/ThreeHorizons/Budget réutilisent collectNormalizedInitiatives ; doublons
 retirés, inconnus dans unassigned/coverage/dénominateur, H2 PHASE_2/LONG_TERM.
 getFieldLabel/carte existante extraite pure/ré-exportée : HTML/Markdown/PDF,
@@ -23,11 +23,20 @@ identités/un canal, 3H zéro sur trois classés/trois hors horizon. PDF 19/cont
 sheet/pages 16/17 inspectés, pas ##/glyphes remplacement ; mobile seulement
 première partie/DOM, pas réception de toutes sections. Timeouts froids/export
 retry/reload tronqué conservés, pas zéro global/SLO ni stress complet ; cleanup 0/
-serveur arrêté. Source non committée, CI/image/runtime 445 attendus/runtime 444.
+serveur arrêté. Source 15331789/CI 38027502462 et Mission/Chromatic/image
+38027689427 success ; CI 4 276/407 et PG 347/18 reçoivent la source finale.
+Runtime exact 445/e3d6c8ff/nextjs/private-media RW/API version 200 reçu. Lecture
+réelle SPAWT ADMIN seulement, rôle Réglages visible, ancien S Périmé non recalculé ;
+60 réponses fenêtre warm complète/zéro ≥500 ou exception observée/14 ERR_ABORTED,
+initiale tronquée 101/40 conservée, aucun SLO/USER production/cycle déduit.
+DocumentSha du présent reçu encore attendu, distinct de la source.
 Documentation 444 clôturée 640ecbad/trois CI/postmerge reçus. Autres writers/
 versions/remap, devise qualitative FCFA→BrandAction et confusion sémantique des
-canaux encore native restent en dette S ; Notoria/legacy lecture statique
-seulement, audits avant cycles. Aucun modèle/service/router/page/Intent/ADR/
+canaux encore native restent en dette S. Sonde pure Notoria : une identité/
+deux copies → deux SELECT, exécuteur ne change que première copie, reproduit/non
+réparé445 ; PHASE_1 proposition à qualifier, legacy statique seulement. Lot446
+immédiat lecture normalisée/écriture toutes refs par identité/pins, refs brutes
+mutables et validation conservées avant cycle. Aucun modèle/service/router/page/Intent/ADR/
 provider ajouté ; sept chantiers/dix gates/80 lignées inchangés/global null.
 [Réception et reprise](docs/governance/REFONTE-PLAN.md).
 

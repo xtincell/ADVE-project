@@ -315,7 +315,7 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   100 %, ancien S/budgets/roadmap contradictoires ouverts, aucune réception USER
   de production. Timeouts de compilation conservés. Sparse non
   approuvable, contrat strict inchangé.
-  **445 local en réception — lecteurs/rendu/budgets campagne reçus localement** :
+  **445 livré, réception bornée — lecteurs/rendu/budgets campagne reçus localement** :
   7S/3H/Budget réutilisent le collecteur normalisé, inconnus/coverage/dénominateur
   conservés ; agrégat campagne de roadmap-routes partagé mapBudget/CORE/Deloitte,
   devises/zéro/inconnu sans conversion/double comptage. Native CORE a révélé
@@ -325,8 +325,8 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   4 276/407 verte reçue. Native locale USER/TRIAL S v2/une archive/I inchangé/zéro tâche/coût/un
   Intent, HTML CORE/Deloitte/7S/3H reçus ; PDF 19/contact sheet/pages 16/17 inspectés,
   mobile partiel/pas 35 sections. Fixtures nettoyées/serveur arrêté, cold timeouts/
-  reload tronqué conservés ; aucun zéro global/stress/SLO. Source non committée/
-  CI/image/runtime 445 attendus, runtime 444. Causes réparées à cette portée locale,
+  reload tronqué conservés ; aucun zéro global/stress/SLO. Source 15331789 livrée/
+  CI/image/runtime 445 reçus, runtime 445. Causes réparées à cette portée locale,
   aucune correction des dossiers historiques réels déduite.
   **Reste à fermer** : devise qualitative FCFA→BrandCurrency/BrandAction, autres
   writers/consommateurs S/versions source, projection opérationnelle/remap UUID,
@@ -336,13 +336,26 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   contre-exemples source→UI avant modifier, sans inventer une catégorie métier.
   **Déclencheur** : prochain incrément avant C3/C4/C6/cycle réel, après final 445 ;
   effort : tests ciblés et recette des mêmes surfaces, puis réception transverse.
-  Notoria brut/PHASE_1 défaut et opportunités legacy budgetEstime comme impact :
-  lecture statique datée du 10 octobre, défaut ni reproduit ni corrigé ; même
-  déclencheur d’audit avant cycles, établir règles faits/absence/estimations/
-  versions avant modifier. Autres writers/remap/devise : recevoir contrats et
+  Sonde next-writer-probe.json pure/source 15331789 sans DB/API/writeprod :
+  une identité/deux copies brutes → deux SELECT Notoria ; choix SPRINT_90 ne
+  change que première copie, autre RECOMMENDED/horizon absent sans warning.
+  Doublon/divergence reproduits, NON réparés 445 ; PHASE_1 reste politique de
+  proposition à qualifier via UI, pas fait déclaré corrompu. **Reprise immédiate
+  446 avant cycle** : contrat existant mapInitiativeEntries par identité/pins,
+  lecteur normalisé/écrivain toutes refs brutes ; garder refs mutables/validation
+  par entrée, contrat manuel déjà reçu. Effort : tests source→proposition→choix
+  puis recette UI, sans nouvelle ligne dette/pipeline. Opportunités legacy
+  budgetEstime comme impact : statique daté 10 octobre seulement, ni reproduit
+  ni corrigé ; même audit avant cycles, règles faits/absence/estimations/versions.
+  Autres writers/remap/devise : recevoir contrats et
   versions source avant autre devise/écriture réelle, aucune conversion sans
   taux/source ni contenu/gate affaibli. Sept chantiers/dix gates/80 lignées
-  inchangés, global null. Documentation 444 clôturée,445 non livré.
+  inchangés, global null. Documentation 444 clôturée ; documentSha/CI du reçu 445 encore à recevoir.
+  CI finale 4 276/407 + PG 347/18/image/runtime 445 exacts reçus ; source 15331789.
+  Lecture production SPAWT ADMIN seule, S Périmé/mélangé conservé sans recalcul/
+  mutation ; warm complète 60 réponses/14 ERR_ABORTED, initiale tronquée 101/40, aucun
+  zéro global/SLO/cycle. DocumentSha du présent reçu distinct encore attendu.
+
 
   **444 livré, réception bornée — normalisation/projections bornées** : livraison
   conserve budget absent/zéro déclaré/origine DECLARED/QUALITATIVE_ESTIMATE/

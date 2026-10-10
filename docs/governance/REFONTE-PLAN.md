@@ -1,8 +1,8 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## Lecteurs composites et budget CORE Oracle → exports fidèles — 445 local en réception (2026-10-10)
+## Lecteurs composites et budget CORE Oracle → exports fidèles — 445 livré, réception bornée (2026-10-10)
 
-Reprise immédiate 444, source non committée/runtime reçu 6.27.444. Aucun modèle,
+Reprise immédiate 444, source 15331789/runtime exact 6.27.445 reçus. Aucun modèle,
 service/router/page/Intent/ADR/provider ou infrastructure ajouté ; sept chantiers
 false/dix gates ouverts/audit 80 lignées inchangés/global null. Documentation 444
 clôturée 640ecbadfa85eb242a963240e77e8f4eb467a89d, CI 38024303442/Mission 38024303437/
@@ -33,33 +33,32 @@ multidevise. Lignes séparées des enveloppes, deux lignes sans devise jamais
 agrégées comme une même unité ; aucune conversion ni faux engagé.
 
 **Tests chronologiques** : cinq rouges lecteurs/quinze verts ; rendu quatre
-rouges/huit verts puis cinq rouges/sept verts. Checkpoints 55/cinq puis56/cinq
+rouges/huit verts puis cinq rouges/sept verts. Checkpoints 55/cinq puis 56/cinq
 verts, all-unit.log 4 270/407 verts, 95,41 s avant derniers CORE/contextes. Devises
 trois rouges/vingt verts puis un rouge/vingt-trois verts→vert. red-core-campaign-
 budget.log quatre rouges/quatorze verts ; red-label-context.log deux rouges/neuf
-verts. targeted-received.log FINAL73/six fichiers verts ; gauntlet.json cinq
-sorties0. PG 347/18 verts avant dernières modifications pure lecture CORE/
+verts. targeted-received.log FINAL 73/six fichiers verts ; gauntlet.json cinq
+sorties 0. PG 347/18 verts avant dernières modifications pure lecture CORE/
 contextes ; aucun schéma/persist changé ensuite. Recontrôle filtré tests/unit/ : 4 238/405 verts, sélection excluant
 src/domain/__tests__/pillars.test.ts et tests/adversarial/scorer-brands.test.ts ;
 aucun test supprimé. all-unit-default-final.log reçu : 4 276 tests/407 fichiers
 verts, 91,80 s, les deux fichiers hors tests/unit/ inclus. Le run filtré est un
 sous-ensemble vert, sans suppression de test ; sélection DEFAULT finale reçue. Pas de stress complet : périmètre
-lecture/factorisation/rendu, aucun résultat stress annoncé. CI/image/runtime 445
-non reçus, source non committée ; aucun budget/décision réel corrigé.
+lecture/factorisation/rendu, aucun résultat stress annoncé. CI/image/runtime 445 reçus, source 15331789 livrée ; aucun budget/décision réel corrigé.
 
 **Native locale bornée** : native-local-receipt.json, connexion formulaire normale
 USER/TRIAL synthétique, Recalculer 200/S v2/une archive/source I inchangée. Compteurs
-avant0 tâche/0 coût/0 Intent, finaux0/0/1 Intent ; aucun fournisseur payant ni marque
-réelle. HTML CORE+Deloitte 0 XAF chiffrés+un budget inconnu ;7S trois identités/un
-canal physique ;3H zéro sur trois classés, allocation 0/0/0/trois hors horizon. Desktop Budget/
-Horizons inspectés. Mobile390×844 : seulement première partie des cartes empilées,
-faits hors horizon reçus dans DOM ; pas acceptation mobile de toutes35 sections.
+avant 0 tâche/0 coût/0 Intent, finaux 0/0/1 Intent ; aucun fournisseur payant ni marque
+réelle. HTML CORE+Deloitte 0 XAF chiffrés+un budget inconnu ; 7S trois identités/un
+canal physique ; 3H zéro sur trois classés, allocation 0/0/0/trois hors horizon. Desktop Budget/
+Horizons inspectés. Mobile 390×844 : seulement première partie des cartes empilées,
+faits hors horizon reçus dans DOM ; pas acceptation mobile de toutes 35 sections.
 
 Export natif final oracle-native-final.pdf 19 pages,
 sha256:250391e5d7a84c9d4aefcdf965a6441228b09e661f47e15978742a8d411a21c9.
 Contact sheet 19 pages et pages 16/17 pleine résolution inspectés : ni ## ni glyphe
 de remplacement, « Part du mix », budgets absents/horizons inconnus/acronymes
-reçus. Finition reçue à ces surfaces/contrôles, pas acceptation générale35 sections.
+reçus. Finition reçue à ces surfaces/contrôles, pas acceptation générale 35 sections.
 Premier PDF 29,9 s HTTP 200 mais limite outil 30 s/reset, retry reçu, PDF final 40,26 s reçu.
 Plusieurs coldnavigate/focus/title timeouts conservés ; compilation froide et
 fast-refresh n’établissent aucun SLO production. Warmreload DOM+titre borne
@@ -75,16 +74,55 @@ ancien S montrent encore DEVOTION/OVERTON comme canaux/étapes, confirmé natif.
 Classifier canaux physiques versus niveaux sémantiques selon contrat de chaque
 lecteur, recevoir source→projection→UI avec contre-exemples, sans catégorie
 inventée. Devise qualitative FCFA→BrandCurrency/BrandAction, autres écrivains/
-versions source/remap UUID restent ouverts. Notoria brut/PHASE_1 et opportunités
-legacy budgetEstime comme impact : statique daté du 10 octobre seulement, pas défaut
-reproduit/corrigé. **Déclencheur** : prochains incréments après final 445 et avant
+versions source/remap UUID restent ouverts. Opportunités legacy budgetEstime
+comme impact : lecture statique datée du 10 octobre seulement, non reproduite/
+non corrigée. Notoria doublon/divergence reproduits par sonde pure ci-dessous ;
+sa politique PHASE_1 reste à qualifier. **Déclencheur** : lot 446 immédiat avant
 C3/C4/C6/cycles, tests puis recette transverse du lecteur/writer existant ;
 effort : contrats faits/absences/estimations/devise et versions, pas de contenu
 inventé/gate affaiblie/conversion sans taux-source. Réception réelle SPAWT/
 FrieslandCampina encore à faire, ancien mix pré-lancement réel non recalculé.
 Vitrine SPAWT live/six questions/sans décompte déjà reçue 444 ; raccord complet,
 quiz déductif E2E et mise à jour finale après raccord non reçus. WholeJourney=false/
-sept chantiers=false/global=null. [Dette en place](RESIDUAL-DEBT.md).
+sept chantiers=false/global=null.
+
+**Livraison 445 reçue** : source
+1533178947542a3eead72d0266c724757a69d040 ; CI 38027502462/Mission 38027502466/
+Chromatic 38027502453 success. ci-tests-receipt.json confirme 4 276/407 unitaires
+et 347/18 PostgreSQL sur source finale, après dernières lectures/contextes.
+Image 38027689427 success, boot migrations/login 200 ; index exact
+sha256:e3d6c8ff566901a2d063e6ec69b3d39d055b8589ef28bc650584e44b7544b3ef.
+Déploiement unique tvlp67oof39lq7mwofj8u9ce terminé 2026-10-10 05:41:10 UTC ;
+runtime.json reçu 05:41:38 UTC : 6.27.445/running/nextjs/private-media RW/API
+version 200, conteneur q9b4m57yh93gxbjykj470giy-053945909356/digest exact.
+SourceSha distinct du futur documentSha : contrôle/commit/CI de ce reçu encore
+à recevoir, aucun nouveau déploiement documentaire annoncé.
+
+native-runtime-receipt.json/capture : SPAWT réelle lue en ADMIN, rôle frais
+visible dans Réglages, connexion normale sans session injectée. Aucune mutation
+métier/choix/recalcul source/exécution agent/publication/USER production/cycle
+réel reçu. Note « Quoi de neuf » acquittée normalement : marqueur local de
+version seulement. H1 Stratégie/version 445/Périmé reçus ; ancien S mélangé
+conservé : scénarios 10/10/13 à 705 000 chacun, computed 5/4 000 000, narratif
+7/8 000 000. Fenêtre warm complète (truncated=false/hasMore=false) : 60 réponses,
+zéro ≥500 ou exception observée, 14 net::ERR_ABORTED ; initiale tronquée 101/
+40 annulations conservée, aucun zéro global. Attente H1 deadline conservée puis
+DOM contenant Stratégie/isVisible confirmé. Statut Périmé observé ≤5 009 ms,
+borne supérieure seule, aucune mesure précise de page utilisable/SLO production.
+
+next-writer-probe.json, pure fixture/source 15331789 sans DB/API/writeprod : une
+identité canonique/deux copies brutes → deux propositions SELECT Notoria. SELECT
+explicite SPRINT_90 modifie seulement première copie, l’autre reste RECOMMENDED/
+horizon absent sans warning. Doublon de proposition/divergence des copies
+REPRODUITS, non réparés 445. PHASE_1 des propositions quand source sans échéance
+reste politique de proposition à qualifier via UI, pas fait déclaré corrompu.
+**Reprise immédiate 446 avant cycle** : contrat lecteur/écrivain existant
+mapInitiativeEntries par identité/pins ; lecture normalisée, mutation de toutes
+références brutes correspondantes, préserver rawcollector mutable/validation de
+chaque entrée, pas remplacer par copies normalisées. Réutiliser contrat manuel
+déjà reçu, contre-exemples source→proposition→choix→projection et recette UI ;
+effort : tests puis réception native, aucune nouvelle ligne dette/pipeline/ADR.
+[Dette en place](RESIDUAL-DEBT.md).
 
 
 ## Budget source → chiffrage connu/estimé/inconnu → projections — 444 livré, réception bornée (2026-10-10)

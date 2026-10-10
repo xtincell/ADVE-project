@@ -8,7 +8,7 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**445 local en réception — lecteurs/export existants reçus localement** :
+**445 livré, réception bornée — lecteurs/export existants reçus localement** :
 deterministic-composers réutilise collectNormalizedInitiatives pour 7S/3H/Budget ;
 inconnus/coverage conservés. aggregateCampaignBudgets/campaignBudgetLabel dans
 roadmap-routes existant, partagé mapBudget/CORE/Deloitte : zéro/inconnu/devises,
@@ -17,9 +17,17 @@ getFieldLabel helper pur extrait/ré-exporté, contextes mix/typo et HTML/Markdo
 PDF partagés ; source/snapshot inchangés. Aucun service du registre ajouté.
 Ciblé final 73/six/cinq contrôles 0 reçus, PG 347/18 avant dernières lectures sans
 schéma/persist changé ; unité DEFAULT finale 4 276/407 verte reçue. Native USER/TRIAL/HTML/PDF 19 reçus
-à portée bornée, pas 35 sections/global/SLO/stress. Source non committée/runtime 444,
-CI/image/runtime 445 attendus. Autres writers/versions/remap/devise qualitative/
-canaux legacy/cycles réels ouverts. [Réception et dette](REFONTE-PLAN.md).
+à portée bornée, pas 35 sections/global/SLO/stress. Source 15331789 livrée/runtime 445,
+CI/image/runtime 445 reçus. Autres writers/versions/remap/devise qualitative/
+canaux legacy/cycles réels ouverts.
+
+CI finale 4 276/407 unitaires+347/18 PG sur source 15331789 ; image 38027689427/
+runtime 445 exacts reçus. Lecture réelle SPAWT ADMIN seule, S Périmé/mélangé
+conservé sans mutation/recalcul ; warm complète 60 réponses/14 ERR_ABORTED, aucun
+zéro global/SLO/cycle. Sonde pure Notoria : doublon/divergence reproduits/non
+réparés 445 ; reprise 446 contrat existant, refs brutes mutables/validation
+préservées ; legacy statique seulement. DocumentSha/CI du reçu encore à recevoir.
+[Réception et dette](REFONTE-PLAN.md).
 
 
 **444 livré, réception bornée — services existants, données distinguées** :
