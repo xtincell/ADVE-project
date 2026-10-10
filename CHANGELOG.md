@@ -2,7 +2,7 @@
 
 ## v6.27.444 — fix(guidance): préserver budget inconnu, zéro déclaré et estimation (2026-10-10)
 
-**444 local en réception : fidélité des montants/échéances dans les projections concernées ; runtime reçu 443.**
+**444 livré, réception bornée : fidélité des montants/échéances dans les projections concernées ; runtime exact 444 reçu.**
 
 - Normaliseur commun : montant absent conservé, zéro numérique déclaré conservé,
   origine DECLARED/QUALITATIVE_ESTIMATE/UNKNOWN transportée. Ancres LOW/MEDIUM/HIGH
@@ -45,13 +45,24 @@
   gauntlet.json final après CSS cinq sorties 0/gouvernance 1 624/166 ; nettoyage
   remaining=0/onglet/serveur fermés. Compteurs zéro/quatre Intents reçus AVANT
   créatif/PDF seulement, lecture finale rejetée avant sérialisation puis cleanup.
-  Aucune native globale/CI/image/runtime 444 reçue. McKinsey7S/ThreeHorizons
+  Aucune réception native globale déduite. McKinsey7S/ThreeHorizons
   doublons/horizons inconnus et locale d’hydratation Oracle reproduits restent
   en dette S existante, reprise 445 avant cycle réel.
   Aucun modèle/service/router/Intent/ADR/provider ajouté, aucun budget historique
   réel réparé ou cycle réel reçu. Devise FCFA des ancres versus devise de marque,
   écrivains/consommateurs secondaires S, projection opérationnelle/remap et
   réception réelle restent ouverts ; sept chantiers/dix gates non acceptés.
+- Source ceeef9d0/CI 38022605092, Mission 38022605103, Chromatic 38022605091
+  et image 38022755104 success ; CI après toutes CSS : 4 256/406 unitaires et
+  347/18 PG verts. Index 5ce2da82 exact au runtime 444/nextjs/private-media RW/
+  API version 200, déploiement unique fini. Lecture SPAWT réelle ADMIN seulement :
+  ancien plan Périmé, aucun choix/recalcul/mutation métier ; popup fermé par son
+  bouton. Fenêtre passive complète : sept réponses 200/zéro ≥500 ou exception
+  observée/trois ERR_ABORTED non fatals. Reload initial tronqué/dix-huit annulations,
+  attentes de titre expirées puis DOM reçu : aucun timing production/SLO reçu.
+  Vitrine fraîche six questions/sans décompte, déjà reçue avant ce lot ; raccord
+  complet et quiz déductif E2E non reçus, mise à jour finale après raccord requise.
+  Contrôle/commit/CI du reçu documentaire encore distincts du code livré.
   [Réception et reprise](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.443 — fix(cockpit): relier les gestes aux droits de marque et clarifier le plan (2026-10-10)

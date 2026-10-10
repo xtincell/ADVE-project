@@ -1,6 +1,6 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## Budget source → chiffrage connu/estimé/inconnu → projections — 444 local en réception (2026-10-10)
+## Budget source → chiffrage connu/estimé/inconnu → projections — 444 livré, réception bornée (2026-10-10)
 
 Normaliseur commun normalizeInitiative/collectNormalizedInitiatives : un montant
 numérique fini non négatif, zéro compris, garde l’origine DECLARED. Une ancre
@@ -54,7 +54,8 @@ FenetreOvertonSection['roadmap'] corrige ce type sans garde/schéma affaibli.
 all-unit-final.log ensuite 4 256/406 verts après formatter, avant les deux
 corrections CSS mobiles ; PG 347/18 inchangé. before-mobile-gauntlet.json cinq
 sorties 0/gouvernance 1 624/166 ; gauntlet.json final après toutes CSS cinq
-sorties 0/gouvernance 1 624/166 reçu. Aucune CI/image/runtime 444, dernier runtime reçu 443. Aucun modèle,
+sorties 0/gouvernance 1 624/166 reçu. Ces checkpoints locaux sont suivis de la
+réception de livraison ci-dessous. Aucun modèle,
 router, service, Intent, ADR ou provider ajouté ; aucune mutation/réconciliation
 de marque réelle ou acceptation du cycle/global. Sept chantiers/dix gates ouverts.
 
@@ -97,10 +98,13 @@ met inconnues en H2/100 % et transporte le doublon. Section 04 proposition-valeu
 hydrate « 350,000 » serveur contre « 350 000 » client via toLocaleString implicite.
 **Reprise 445, dans dette S existante** : réutiliser collectNormalizedInitiatives
 chez ces composeurs, dédupliquer les IDs, garder horizon inconnu distinct d’un
-H2 décidé et recevoir leurs dénominateurs. Locale explicite identique SSR/client
+H2 décidé et recevoir leurs dénominateurs. Classifier les canaux physiques
+séparément des regroupements Devotion/Overton, sans confondre leurs sémantiques.
+Locale explicite identique SSR/client
 pour les montants concernés ; libellés PDF métier, retrait # bruts et caractères/
 police couvrant flèches, puis PDF rendu inspecté. **Déclencheur** : prochain
-incrément immédiat 445 après reçus CI/image/runtime 444, avant cycle réel/C3/C4/C6 ;
+incrément immédiat 445, maintenant que CI/image/runtime 444 sont reçus,
+avant cycle réel/C3/C4/C6 ;
 effort : contre-exemples ciblés puis
 recette HTML/PDF desktop/mobile, sans abolir les politiques d’estimation ADVE.
 
@@ -115,15 +119,49 @@ effectué : AUCUN compteur post-créatif/PDF reçu. Les seuls zéro GenerativeTa
 CostDecision et quatre Intents sont le snapshot AVANT créatif/PDF ; pas de bilan
 final inventé. WholeJourneyAccepted=false/sept chantiers non acceptés/global null.
 
-**Reprise Guidance en place** : source/CI/image/runtime 444 non reçus, dernier
-runtime 443. Devise FCFA des ancres versus devise de marque, autres écrivains/
+**Livraison 444 reçue, bornée** : source
+ceeef9d0efa5f72dc252b84af092dd203a4a9040 poussée ; CI 38022605092,
+Mission 38022605103/Chromatic 38022605091 success. ci-tests-receipt.json confirme
+4 256/406 unitaires et 347/18 PostgreSQL après tous les changements source/CSS.
+Image 38022755104 success : smoke migrations/login 200/PDF autonome deux pages
+avec textes présents ; notify_coolify=false, configuration candidate/publiée
+concordante. Index exact
+sha256:5ce2da822b377f41f204ee8dcb633429f425cdd9440ef93983a2bb3477e9f45b.
+Déploiement unique c5oq32dn97qj0dw06sjrmba6 de l’application
+q9b4m57yh93gxbjykj470giy finished ; runtime.json reçu 2026-10-10 04:16 UTC :
+6.27.444/running/nextjs/private-media RW et API version 200, digest exact.
+
+native-runtime-receipt.json : SPAWT réelle lue en ADMIN, rôle relu par auth.me ;
+version 444/titre Stratégie reçus, ancien S toujours Périmé. Aucun choix,
+recalcul, écriture métier réelle ou réception USER production. Seule interaction :
+fermeture normale de la note de livraison par « J’ai compris ». Fenêtre passive
+complète (truncated=false/hasMore=false) : sept réponses toutes 200, zéro ≥500
+ou exception observée, trois ERR_ABORTED non fatals. Premier reload tronqué avec
+dix-huit annulations conservé ; trois locators de titre expirés vers trois
+secondes malgré vingt-cinq demandées, puis titre reçu dans le DOM. Aucun timing
+DOM/titre de production, zéro réseau global ou SLO déduit. Screenshot
+native-runtime.jpg reçu/inspecté ; wholeJourneyAccepted=false.
+
+spawt-public-live.json/capture 1 280 fraîche : vitrine live, décompte absent,
+six questions annoncées, stores bientôt. Cette réception publique et l’identité
+choisie 432 (reçu lot 433) précèdent 444. Raccord complet aux autres destinations/
+variantes/quiz/app/retour et déduction du quiz E2E non reçus ; mise à jour finale
+de la vitrine depuis l’édition choisie toujours requise après ce raccord.
+
+secondary-consumers-probe.json, sonde pure sans DB/writeback : trois initiatives
+normalisées/trois horizons inconnus contre quatre brutes chez McKinsey7S et
+ThreeHorizons (doublon/H2 100 %). Ce reçu reproduit la dette et ne la corrige pas ;
+reprise immédiate 445 décrite ci-dessus et dans guidance-reprise.md, notamment
+canaux physiques distincts des regroupements Devotion/Overton.
+
+**Reprise Guidance en place** : Devise FCFA des ancres versus devise de marque, autres écrivains/
 consommateurs S dont protocol index strict, projection opérationnelle/remap et
 parcours de vraie marque ouverts. **Déclencheur** : incréments suivants avant
 C3/C4/C6/preuve de release ; effort : contrat de devise explicite et réception
 transverse restante, sans contenu inventé ni gate affaiblie ; contrat de devise
 reçu avant autre devise, aucune conversion sans taux/source. Reprise privée
 détaillée dans release/preuves-guidance-444/guidance-reprise.md. Contrôle/commit/CI
-ultérieurs de cette documentation restent distincts du reçu source local.
+ultérieurs de cette documentation restent distincts du reçu source livré.
 [Dette en place](RESIDUAL-DEBT.md).
 
 

@@ -16,7 +16,7 @@
 
 ## Quick start
 
-**6.27.444 local en réception** : le plan distingue un budget inconnu,
+**6.27.444 livré, réception bornée** : le plan distingue un budget inconnu,
 un zéro déclaré et une estimation de la méthode. Un chiffrage partiel indique
 ce qui est connu et ce qui reste à préciser ; une échéance inconnue reste
 inconnue. Les projections concernées partagent ces états, et les scénarios
@@ -27,11 +27,18 @@ locale montre maintenant budget à préciser, zéro et estimation nommée ; troi
 choix manuels reçus sur fixture. Le plan garde le sous-total de 500 000 et ses
 budgets/échéances à préciser ; aperçu créatif partiel et mobile relus sans création.
 4 256 unitaires verts reçus avant ajustements mobiles, aperçu ordinateur/Oracle
-local et cinq contrôles finaux reçus ; runtime reçu 443. Le PDF conserve ces
+local et cinq contrôles finaux reçus ; runtime exact 444 reçu. Le PDF conserve ces
 données mais sa finition reste à reprendre, ainsi que certains cadres dérivés.
 Fixture nettoyée, aucune marque réelle corrigée ou réception globale déduite. Aucune correction
 des budgets réels ni réception de tout le parcours ; devise des estimations,
 autres chemins du plan et sept chantiers/dix gates restent ouverts.
+CI après tous les ajustements : 4 256 tests unitaires et 347 PostgreSQL verts ;
+image/runtime 444 exacts reçus. SPAWT réelle lue en ADMIN, ancien plan toujours
+Périmé sans recalcul ni modification. Fenêtre passive complète : sept réponses
+200, trois annulations ; aucune mesure de délai production ou réception globale.
+La vitrine reste live, six questions annoncées/sans décompte ; son raccord complet
+et le quiz de déduction de bout en bout restent à recevoir. Mise à jour finale
+après raccord requise ; réception antérieure de l’identité choisie conservée.
 [Périmètre et reprise](docs/governance/REFONTE-PLAN.md).
 
 **6.27.443 livré, réception bornée** : les gestes proposés suivent les droits

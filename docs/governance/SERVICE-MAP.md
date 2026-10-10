@@ -8,7 +8,7 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**444 local en réception — services existants, données distinguées** :
+**444 livré, réception bornée — services existants, données distinguées** :
 normaliseur partagé de pillar-schemas et agrégations roadmap-routes transportent
 budget absent/zéro déclaré/estimation FCFA, échéance absente et couverture du
 chiffrage. rtis-protocols/strategy, artemis/action-db/materializer,
@@ -17,7 +17,7 @@ service. Overrides/zéro opérationnel conservés, scénarios/formules existants
 hypothèses 30/60 rendues explicites. Ancien helper inutilisé de promotion retiré,
 contrat S strict inchangé. Onze rouges puis 47/cinq ciblés verts, unité
 4 253/406 en deux passages et PG 347/18 verts reçus ; native locale bornée/cinq contrôles finaux reçus,
-runtime reçu 443. Devise des ancres, autres writers/consommateurs S
+runtime exact 444 reçu. Devise des ancres, autres writers/consommateurs S
 et vraie réception restent ouverts.
 Base d’actions native locale relue absent/0 XAF/Estimation · 500 k XAF après
 formatter (trois rouges/quatre verts→sept verts), trois choix USER/TRIAL 200.
@@ -31,6 +31,9 @@ mais finition PDF non reçue ; cinq contrôles finaux après CSS 0/gouvernance
 1 624/166, fixture nettoyée. Compteurs uniquement avant créatif/PDF. Doublons/
 horizons des composeurs, locale SSR/client et finition PDF en reprise 445 dans
 dette S existante ; aucune réception globale déduite.
+CI après toutes CSS 4 256/406 unitaires et 347/18 PG verts, image/runtime 444
+exacts reçus ; SPAWT réelle lue en ADMIN sans choix/recalcul/mutation métier,
+ancien plan Périmé. Réception passive bornée seulement, aucun cycle/global/SLO.
 [Périmètre](REFONTE-PLAN.md).
 
 **443 livré, réception bornée — aucun service ajouté** : le hook frontend

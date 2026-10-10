@@ -315,7 +315,7 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   100 %, ancien S/budgets/roadmap contradictoires ouverts, aucune réception USER
   de production. Timeouts de compilation conservés. Sparse non
   approuvable, contrat strict inchangé.
-  **444 local en réception — normalisation/projections bornées** : candidat
+  **444 livré, réception bornée — normalisation/projections bornées** : livraison
   conserve budget absent/zéro déclaré/origine DECLARED/QUALITATIVE_ESTIMATE/
   UNKNOWN et échéance absente ; ancres FCFA de la méthode conservées comme
   estimations, entrées sans texte écartées de projection sans effacer la source.
@@ -335,7 +335,11 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   hypothèses 30/60 relus sans création/IA. Header S écrasé/grille créative serrée
   corrigés puis desktop/mobile reçus ; Oracle HTML §12/PDF 18 pages reçus,
   données fidèles mais finition PDF non reçue. Cinq contrôles finaux après CSS
-  0/gouvernance 1 624/166, fixture nettoyée/remaining=0, runtime reçu 443.
+  0/gouvernance 1 624/166, fixture nettoyée/remaining=0. CI après toutes CSS
+  4 256/406 et 347/18 PG verts ; image/runtime 444 exacts reçus. Lecture SPAWT
+  ADMIN passive seulement, S toujours Périmé, aucune mutation/recalcul réel ;
+  fenêtre complète sept réponses 200/trois annulations, pas de timing prod/SLO.
+  Reçu documentaire/CI ultérieurs distincts.
   Compteurs zéro tâches/coûts/quatre Intents uniquement AVANT créatif/PDF,
   lecture finale rejetée avant sérialisation, pas de compteur postérieur. Aucune vraie marque/fidélité
   globale déduite de ces gestes.
@@ -344,14 +348,17 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   persistViaGateway strict notamment), projection opérationnelle/remap et vraie
   réception de marque. Contre-exemples reproduits : deterministic-composers
   McKinsey7S quatre initiatives contre trois normalisées (duplicate id raw),
-  ThreeHorizons inconnues→H2/100 % et doublon ; section 04 Oracle toLocaleString
+  ThreeHorizons inconnues→H2/100 % et doublon ; sonde pure sans DB/writeback
+  secondary-consumers-probe.json confirme trois normalisées/horizons inconnus
+  versus quatre brutes/H2 100 %. Section 04 Oracle toLocaleString
   implicite hydrate 350,000 vs 350 000. PDF conserve les données partielles mais
   finition non reçue (noms anglais techniques/# bruts/flèches abîmées).
   **Reprise 445** : même normaliseur chez composeurs/déduplication, horizon
-  inconnu distinct d’un H2 décidé/dénominateurs reçus ; locale montants explicite
+  inconnu distinct d’un H2 décidé/dénominateurs reçus ; compter les canaux
+  physiques séparément des regroupements Devotion/Overton ; locale montants explicite
   SSR/client identique, libellés métier PDF et glyphes/police compatibles puis
-  rendu inspecté. **Déclencheur précis** : incrément immédiat 445 après reçus
-  CI/image/runtime 444, avant cycle réel/C3/C4/C6 ; effort : contre-exemples ciblés
+  rendu inspecté. **Déclencheur précis** : incrément immédiat 445,
+  CI/image/runtime 444 désormais reçus, avant cycle réel/C3/C4/C6 ; effort : contre-exemples ciblés
   puis HTML/PDF desktop/mobile. Non classé représenté sans catégorie métier inventée.
   Ne pas abolir les politiques ADVE d’estimation. **Plan restant** : expliciter
   devise/origine avant autre devise, aucune conversion sans taux/source ; recevoir chaque

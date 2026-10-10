@@ -9,7 +9,7 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
-### Montant/échéance source → projection fidèle — 444 local en réception (2026-10-10)
+### Montant/échéance source → projection fidèle — 444 livré, réception bornée (2026-10-10)
 
 Trois collections I → normaliseur partagé : absent/zéro déclaré/estimation FCFA
 et origine distincts, horizon inconnu absent, texte absent écarté de projection
@@ -20,7 +20,7 @@ existants gardent leurs formules avec hypothèses 30/60 explicites ; aucun choix
 flou dans l’ancien helper inutilisé retiré. Contrat strict S inchangé, aucun
 nouveau writer/route/service/Intent/ADR. Onze rouges puis 47/cinq ciblés verts,
 unité 4 253/406 en deux passages/PG 347/18 verts reçus ; native locale bornée/cinq contrôles finaux reçus,
-runtime reçu 443. Devise/consommateurs secondaires/
+runtime exact 444 reçu. Devise/consommateurs secondaires/
 projection-remap/réception réelle et sept chantiers/dix gates ouverts.
 
 Base d’actions native locale relue absent/0 XAF/Estimation · 500 k XAF après
@@ -35,7 +35,10 @@ mais finition PDF non reçue ; cinq contrôles finaux après CSS 0/gouvernance
 1 624/166, fixture nettoyée. Compteurs uniquement avant créatif/PDF. Doublons/
 horizons des composeurs, locale SSR/client et finition PDF en reprise 445 dans
 dette S existante ; aucune réception globale déduite.
-[Contrats et preuve à recevoir](REFONTE-PLAN.md).
+CI après toutes CSS 4 256/406 unitaires et 347/18 PG verts, image/runtime 444
+exacts reçus ; SPAWT réelle lue en ADMIN sans choix/recalcul/mutation métier,
+ancien plan Périmé. Réception passive bornée seulement, aucun cycle/global/SLO.
+[Contrats, réception et reprise](REFONTE-PLAN.md).
 
 ### Accès de marque → gestes autorisés → retour à relire — 443 livré, réception bornée (2026-10-10)
 

@@ -30,12 +30,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
-2026-10-10 · **444 local en réception, fidélité des projections** : le même
+2026-10-10 · **444 livré, réception bornée, fidélité des projections** : le même
 normaliseur transformait absence de budget en zéro et échéance inconnue en
 LONG_TERM, perdait l’origine qualitative et projetait des entrées sans texte ;
 agrégations présentaient un total partiel comme complet. Cause : normalisation,
 estimation de méthode et fait déclaré confondus, états perdus chez consommateurs.
-Candidate conserve absent/zéro/DECLARED/QUALITATIVE_ESTIMATE/UNKNOWN, sous-total/
+Correctif conserve absent/zéro/DECLARED/QUALITATIVE_ESTIMATE/UNKNOWN, sous-total/
 couverture et horizon absent ; source brute intacte, overrides opérationnels
 conservés. Scénarios/formules conservés, baselines 30/60 explicitées ; helper
 inutilisé de promotion floue retiré. partialRecord sur phases des routes sans
@@ -54,7 +54,10 @@ serrée à 390 corrigés par header responsive/empilement puis visuellement relu
 UI 38/quatre verts après header ; aperçu créatif partiel/hypothèses 30/60 reçu,
 ouvrir/Annuler sans création/IA. Desktop recapturé/Oracle HTML et PDF 18 pages reçus, données fidèles mais
 finition PDF non reçue ; cinq contrôles finaux après CSS 0/gouvernance 1 624/166,
-fixture nettoyée, runtime reçu 443. Compteurs reçus seulement avant créatif/PDF.
+fixture nettoyée. CI après toutes CSS 4 256/406 et 347/18 PG verts ;
+image/runtime 444 exacts reçus. Lecture réelle SPAWT ADMIN passive seulement,
+S toujours Périmé, aucune mutation/recalcul réel ; sept réponses 200/trois
+annulations dans la fenêtre complète, aucune mesure production/SLO reçue. Compteurs reçus seulement avant créatif/PDF.
 Doublons McKinsey7S/ThreeHorizons, inconnus assimilés H2/100 %, locale SSR/client
 Oracle et libellés/glyphes PDF non réparés dans 444 : plan/reprise 445 dans la
 dette S existante, avant cycle réel. Aucune nouvelle entité/route/service/

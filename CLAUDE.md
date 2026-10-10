@@ -4,7 +4,7 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-10
 
-**6.27.444 local en réception — fidélité budget/échéance** : le normaliseur
+**6.27.444 livré, réception bornée — fidélité budget/échéance** : le normaliseur
 commun garde budget absent, zéro déclaré et origine DECLARED/QUALITATIVE_ESTIMATE/
 UNKNOWN ; ancres FCFA existantes conservées comme estimations. Échéance inconnue
 absente, entrées sans texte exclues de la projection sans effacer la source.
@@ -32,10 +32,17 @@ finition PDF non reçue), cinq contrôles finaux après CSS 0/gouvernance 1 624/
 Fixture nettoyée ; compteurs zéro tâches/coûts/quatre Intents AVANT créatif/PDF
 seulement, lecture finale rejetée avant sérialisation, aucun compteur final.
 McKinsey7S/ThreeHorizons doublons/horizons et locale hydratation Oracle reproduits,
-plan 445 lié à dette S existante avant cycle réel. Runtime reçu
-443, aucune CI/image/runtime 444. Devise ancres/marque, autres chemins S,
+plan 445 lié à dette S existante avant cycle réel. Runtime exact 444 reçu. Devise ancres/marque, autres chemins S,
 projection opérationnelle/remap et vraie marque à recevoir ; aucune nouvelle
 entité/route/service/Intent/ADR/provider ni acceptation des sept chantiers/dix gates.
+Source ceeef9d0/CI 38022605092, Mission 38022605103, Chromatic 38022605091
+et image 38022755104 success ; CI après toutes CSS : 4 256/406 unitaires et
+347/18 PostgreSQL verts. Runtime 444 exact/index 5ce2da82/nextjs/private-media RW/
+API version 200 reçu. Lecture réelle SPAWT ADMIN seulement : ancien S Périmé,
+aucun choix/recalcul/mutation métier. Fenêtre passive complète : sept réponses
+200/zéro ≥500 ou exception observée/trois ERR_ABORTED ; reload initial tronqué,
+aucun zéro global ni timing production/SLO reçu. Reçu documentaire et sa CI
+ultérieure restent distincts. Sept chantiers/dix gates ouverts.
 [Preuves et résidus](docs/governance/REFONTE-PLAN.md).
 
 **6.27.443 livré, réception bornée — droits de marque et retours Guidance** :

@@ -6,15 +6,14 @@ Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts`
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**444 local en réception — mêmes procédures, projections fidèles** : lectures
+**444 livré, réception bornée — mêmes procédures, projections fidèles** : lectures
 existantes de S/Oracle/niveaux de proposition créative transportent sous-total
 connu/couverture et hypothèses de scénario ; montant complet absent si chiffrage
 incomplet. Le matérialiseur conserve zéro opérationnel/overrides et origine du
 budget source. Aucun router/procédure/droit/Intent ajouté, choix et gates serveur
 inchangés ; seuils S inchangés, partialRecord Zod 4 seulement pour budgets de
 phases des routes. Onze rouges puis 47/cinq ciblés verts, unité 4 253/406 en
-deux passages/PG 347/18 verts reçus ; native locale/finaux reçus, livraison 444 attendue,
-runtime reçu 443. Autres chemins S/réception
+deux passages/PG 347/18 verts reçus ; native locale/finaux reçus, image/runtime exacts 444 reçus. Autres chemins S/réception
 réelle ouverts.
 Base d’actions native locale relue absent/0 XAF/Estimation · 500 k XAF après
 formatter (trois rouges/quatre verts→sept verts), trois choix USER/TRIAL 200.
@@ -28,6 +27,9 @@ mais finition PDF non reçue ; cinq contrôles finaux après CSS 0/gouvernance
 1 624/166, fixture nettoyée. Compteurs uniquement avant créatif/PDF. Doublons/
 horizons des composeurs, locale SSR/client et finition PDF en reprise 445 dans
 dette S existante ; aucune réception globale déduite.
+CI après toutes CSS 4 256/406 unitaires et 347/18 PG verts, image/runtime 444
+exacts reçus ; SPAWT réelle lue en ADMIN sans choix/recalcul/mutation métier,
+ancien plan Périmé. Réception passive bornée seulement, aucun cycle/global/SLO.
 [Contrats et reprise](REFONTE-PLAN.md).
 
 **443 livré, réception bornée — lecture d’accès existante** : useBrandWriteAccess
