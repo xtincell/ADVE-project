@@ -9,6 +9,19 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### ANUBIS Comms/MCP → refus fidèle et droits de découverte conservés — 448 candidate locale reçue (2026-10-12)
+
+Enveloppe explicite ok:false/error → résultat/provenance conservés/ERROR et isError
+RPC ; pas réinterprétation des absences/DEFERRED. scopeMcpParams commun → serveur/
+marque/DENIED sans dispatch/double journal. Auth agrégée accepte la clé de serveur,
+scopeServer filtre tools/list/catalogue/GET, garde invoke conserve droits stockés.
+Usage OK+ERROR inchangé, DENIED hors usage/tarif brut conservé, découverte hors
+metering/best effort. Treize cas HTTP/SDK/PG fictifs reçus, sept journaux 4 ERROR/
+3 DENIED, tests 4 318/410/ciblés 44/3/contrôles verts. Source/CI/image/runtime 448 non
+reçus, aucun modèle/dossier réel/activation Galahad facultative/cycle reçu. Preuves
+447 conservées et livraison en attente réseau/hPanel ; sept chantiers/R01–R10/
+80 lignées ouverts/global null. [Réception et suite](REFONTE-PLAN.md).
+
 ### Écrivains S → calcul partagé ; jobs → échec conservé — 447 source/CI/image reçues, livraison en attente (2026-10-12)
 
 Trois écrivains → transaction/calcul S existant/full remplacement/huit versions/

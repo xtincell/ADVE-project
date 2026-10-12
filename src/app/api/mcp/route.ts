@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   // Manifest = découverte, lecture seule → session ADMIN OU x-api-key valide.
   const gate = await authenticateMcpRequest(request, "*");
   if (!gate.ok) return gate.response!;
-  const manifest = await buildAggregatedManifest();
+  const manifest = await buildAggregatedManifest(gate.scopeServer);
   return NextResponse.json(manifest);
 }
 

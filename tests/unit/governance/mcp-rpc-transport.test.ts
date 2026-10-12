@@ -14,13 +14,19 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CURATED_MCP_TOOLS, mcpToolName } from "@/server/services/anubis/mcp-curated";
-import { loadAllServers } from "@/server/services/anubis/mcp-server";
+import { buildAggregatedManifest, loadAllServers } from "@/server/services/anubis/mcp-server";
 
 const ROOT = process.cwd();
 const src = (rel: string) => readFileSync(join(ROOT, rel), "utf8");
 const TOOL_NAME_RE = /^[a-zA-Z0-9_-]{1,128}$/;
 
 describe("ADR-0182 — registre curé bien formé", () => {
+  it("server-restricted discovery only describes that server", async () => {
+    const manifest = await buildAggregatedManifest("council");
+    expect(manifest.servers.map(server => server.name)).toEqual(["council"]);
+    expect(manifest.servers[0]?.tools.map(tool => tool.name)).toEqual(expect.arrayContaining(["ask", "deliberate"]));
+  });
+
   it("chaque nom MCP plat respecte la regex MCP (pas de points)", () => {
     for (const { server, tool } of CURATED_MCP_TOOLS) {
       expect(mcpToolName(server, tool)).toMatch(TOOL_NAME_RE);

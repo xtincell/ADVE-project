@@ -8,6 +8,17 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
+**448 candidate locale reçue — ANUBIS Comms/MCP existant** :
+mcp-billing/transport partagent outcome explicite et scopeMcpParams, résultat/
+provenance conservés avec ERROR/isError ou DENIED sans double journal. scopeServer
+conserve droits stockés/filtre découverte ; parité d’authentification/découverte,
+REST autre serveur 401/wildcard/ADMIN/OAuth conservés. Facturation OK+ERROR,
+DENIED hors usage/rawrate fixture conservé, découverte non métrée/best effort.
+Treize cas HTTP/SDK/PG et DEFAULT 4 318/410/ciblés 44/3/gouvernance 1 627/166/cinq
+contrôles 0 reçus, aucun modèle/service/provider ajouté. Source/CI/image/runtime 448
+non reçus, preuve 447 valable/livraison pendante. Galahad raccord facultatif non
+activé live ; autres branches/cycle réel ouverts. [Réception et dette](REFONTE-PLAN.md).
+
 **447 source/CI/image reçues — services existants, livraison en attente** :
 quick-intake/rtis-draft, PROTOCOLE_S et executeRTISCascade utilisent transaction/
 calcul S partagé/full S/huit versions/nulls/sources/provenance, strict conservé.

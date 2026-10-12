@@ -315,6 +315,24 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   100 %, ancien S/budgets/roadmap contradictoires ouverts, aucune réception USER
   de production. Timeouts de compilation conservés. Sparse non
   approuvable, contrat strict inchangé.
+  **448 candidate locale reçue — racine refus MCP/découverte** :
+  Anubis Comms partage mcpResultFailed/scopeMcpParams : ERROR/isError aux refus
+  métier, DENIED commun serveur/marque sans double journal. Authentification/
+  découverte alignées avec scopeServer/droits stockés conservés, catalogues filtrés,
+  autre serveur REST 401 préservé. Treize cas HTTP/SDK/PG sur fixture et tests 4 318/410,
+  ciblés 44/3/gouvernance 1 627/166/cinq contrôles 0 reçus. Sept journaux 4 ERROR/3 DENIED,
+  aucun modèle/Strategy/Pillar/Intent/AICostLog/Statement créé. Facturation OK+ERROR
+  conservée/DENIED hors usage mais tarif brut fixture 0,002, découverte hors metering
+  et best effort sans durabilité promise. Services fixture arrêtés seuls/données
+  conservées ; aucune activation Galahad facultative/cycle réel reçu.
+  **Plan/effort/trigger** : recevoir source/CI/image exacte puis cible/runtime/MCP
+  borné après retour accès/hPanel humain, avant clôture 448/C7 ; aucune purge des
+  autres causes/branches ni activation de fournisseur/droit/tarif. Source/image 447
+  restent preuves valables, livraison antérieure en attente ; trois HTTPS expirés
+  à 13:00 UTC, état prod inconnu. Journaux best effort/ADMIN-OAuth non reçus dans
+  toutes branches : conserver limites, tests ciblés puis recette au raccord
+  facultatif réel. Sept chantiers/R01–R10/80 lignées ouverts/global null.
+
   **447 source/CI/image reçues — livraison en attente le 12 octobre** :
   trois écrivains S vers calcul transactionnel/full S/huit versions/nulls/sources/
   provenance ; strict des deux protocoles conservé, intake sauvegarde/refus et

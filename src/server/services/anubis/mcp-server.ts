@@ -13,6 +13,7 @@
 
 import type { z } from "zod";
 import { db } from "@/lib/db";
+import { isMcpServerAllowed } from "@/server/services/anubis/mcp-scope-kind";
 
 /**
  * Portée d'un tool vis-à-vis des marques.
@@ -114,8 +115,8 @@ export async function loadAllServers(): Promise<McpServerModule[]> {
   return cached;
 }
 
-export async function buildAggregatedManifest(): Promise<McpAggregatedManifest> {
-  const servers = await loadAllServers();
+export async function buildAggregatedManifest(scopeServer?: string): Promise<McpAggregatedManifest> {
+  const servers = (await loadAllServers()).filter(mod => isMcpServerAllowed(scopeServer, mod.serverName));
   return {
     protocol: PROTOCOL,
     version: VERSION,

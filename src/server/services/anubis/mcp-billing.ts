@@ -24,7 +24,7 @@ import { createHash, randomBytes } from "crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/config";
-import { normalizeScopeKind } from "@/server/services/anubis/mcp-scope-kind";
+import { isMcpServerAllowed, normalizeScopeKind } from "@/server/services/anubis/mcp-scope-kind";
 
 // ── Auth ───────────────────────────────────────────────────────────────
 
@@ -41,6 +41,8 @@ export interface McpAuthResult {
   scopeKind?: "SYSTEM" | "BRAND";
   /** Si scopeKind=BRAND : la seule stratégie touchable (sinon null/absent). */
   scopeStrategyId?: string | null;
+  /** API-key server restriction, retained during aggregate discovery. */
+  scopeServer?: string;
 }
 
 /**
@@ -84,7 +86,8 @@ export async function authenticateMcpRequest(
     if (
       record &&
       record.isActive &&
-      (record.server === serverName || record.server === "*") &&
+      (record.server === serverName || record.server === "*" ||
+        (serverName === "*" && record.server.trim().length > 0)) &&
       (!record.expiresAt || record.expiresAt > new Date())
     ) {
       db.mcpApiKey
@@ -96,6 +99,7 @@ export async function authenticateMcpRequest(
         ratePerCallUsd: record.ratePerCallUsd,
         scopeKind: normalizeScopeKind(record.scopeKind),
         scopeStrategyId: record.scopeStrategyId,
+        scopeServer: record.server,
       };
     }
   }
@@ -134,24 +138,28 @@ export function scopeMcpParams(
   tool: string,
   rawParams: Record<string, unknown>,
 ): { denied: NextResponse; params?: undefined } | { denied?: undefined; params: Record<string, unknown> } {
+  let deniedDetail = isMcpServerAllowed(gate.scopeServer, server) ? null : "Cette clé est limitée à un autre serveur.";
   if (gate.scopeKind === "BRAND") {
     const requested = typeof rawParams.strategyId === "string" ? rawParams.strategyId : null;
     if (requested && requested !== gate.scopeStrategyId) {
-      recordMcpCall({
-        apiKeyId: gate.apiKeyId,
-        userId: gate.userId,
-        ratePerCallUsd: gate.ratePerCallUsd,
-        server,
-        tool,
-        status: "DENIED",
-      }).catch(() => {});
-      return {
-        denied: NextResponse.json(
-          { error: "SCOPE_DENIED", detail: "Ce token est limité à une autre marque." },
-          { status: 403 },
-        ),
-      };
+      deniedDetail = "Ce token est limité à une autre marque.";
     }
+  }
+  if (deniedDetail) {
+    recordMcpCall({
+      apiKeyId: gate.apiKeyId,
+      userId: gate.userId,
+      ratePerCallUsd: gate.ratePerCallUsd,
+      server,
+      tool,
+      status: "DENIED",
+    }).catch(() => {});
+    return {
+      denied: NextResponse.json(
+        { error: "SCOPE_DENIED", detail: deniedDetail },
+        { status: 403 },
+      ),
+    };
   }
   return {
     params: {
@@ -200,6 +208,15 @@ export async function recordMcpCall(input: RecordMcpCallInput): Promise<void> {
   });
 }
 
+/** Shared REST/RPC outcome for existing explicit failure envelopes.
+ * Do not inspect nested business data or reinterpret DEFERRED/missing values.
+ * ERROR remains in the existing billable OK+ERROR aggregate. */
+export function mcpResultFailed(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const result = value as Record<string, unknown>;
+  return result.ok === false || (typeof result.error === "string" && result.error.trim().length > 0);
+}
+
 /**
  * Exécute + mètre un call MCP déjà authentifié (succès comme échec) et retourne
  * la VALEUR brute (ou relance l'erreur). Cœur partagé entre la voie REST
@@ -223,7 +240,7 @@ export async function meterMcp<T>(
       ratePerCallUsd: gate.ratePerCallUsd,
       server,
       tool,
-      status: "OK",
+      status: mcpResultFailed(result) ? "ERROR" : "OK",
       durationMs: Date.now() - started,
     }).catch((err) => console.warn("[mcp-billing] metering failed:", err instanceof Error ? err.message : err));
     return result;

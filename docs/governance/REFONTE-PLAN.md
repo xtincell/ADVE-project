@@ -1,5 +1,66 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Refus MCP et découverte limitée aux droits — 448 candidate locale reçue, livraison en attente (2026-10-12)
+
+Candidate non committée sur base 92e693591da7311940d67e3ebc8d09929c46a604. Source/CI/
+image/déploiement/runtime 448 non reçus ; source 10b1c05/image 447 antérieures restent
+valides, aucun runtime actuel certifié. Trois HTTPS connect-timeouts à 13:00 UTC,
+hPanel humain en attente, aucune déduction serveur éteint/données défaillantes.
+Sept chantiers/R01–R10/80 lignées ouverts/global null. Aucun modèle/service/route/
+schéma/dépendance/Intent/Neter/provider/UI ajouté, aucune note client nouvelle.
+ANUBIS Comms/MCP sert le raccord Galahad facultatif ; pas activation live reçue.
+
+mcpResultFailed partage la lecture des seuls résultats explicites ok:false/error
+texte non vide : journal ERROR au retour métier, isError RPC sans transformer la
+valeur/provenance. Donnée imbriquée/absence/DEFERRED non réinterprétée. RPC appelle
+scopeMcpParams pour serveur/marque/injection auth/DENIED ; refus avant dispatch,
+aucun second journal. Parité d’authentification et découverte : clé active limitée
+server=council reconnue à l’agrégat, gate.scopeServer conservé ; tools/list,
+lafusee_catalog et GET /api/mcp filtrés au serveur autorisé, invoke garde serveur/
+marque. Droits stockés conservés, wildcard/ADMIN/OAuth gardent branches existantes,
+REST autre serveur 401 ; pas « authentification inchangée » ni droit supplémentaire.
+
+Contrat facturation conservé : OK+ERROR comptés, DENIED exclu de getCurrentUsage ;
+la ligne brute DENIED de la fixture porte encore rate 0,002. Pas refus globalement
+« gratuit »/tarif nul promis, aucune modification tarif/franchise/relevé/paiement.
+Manifest/catalogue de découverte hors metering. Journaux best effort, aucune
+présomption de durabilité ; pas de nouvelle mesure SLO ou activation de fournisseur.
+
+Preuves release/preuves-refus-mcp-448/local-tests-receipt.json : initial red.log
+huit rouges/dix verts sur 18, server-scope-red.log trois rouges/27 verts sur 30.
+Même clé council réelle mais fictive REST 200/RPC 401 reçue en HTTP avant correction.
+Après : targeted 44/3, DEFAULT 4 318/410 et gouvernance 1 627/166 verts ; gauntlet cinq
+sorties 0 ; lint/lint-governance chacun zéro erreur/24 avertissements existants.
+CODE-MAP régénéré sans diff, aucun HARD affaibli. Reçus locaux du 12 octobre,
+pas CI du futur commit ; les contrôles complets ne reçoivent pas toutes branches.
+
+native-server-scope-receipt.json : treize cas HTTP réels+SDK+PostgreSQL, handlers
+métiers réels sur données fictives. tools/list 200 reçoit council_ask/council_deliberate/
+lafusee_catalog/lafusee_invoke, catalogues RPC et GET REST council seulement.
+Refus logique 200 avec isError et contenu error conservé pour outil dédié/invoke/wildcard ;
+autre serveur/marque RPC 200 isError DENIED, REST autre marque 403/autre serveur 401.
+Wildcard liste/manifest/refus reçus. ADMIN/OAuth contrats conservés, aucune recette
+native nouvelle de toutes leurs branches déduite. Aucun modèle/provider appelé.
+
+Delta sept McpApiCall : quatre ERROR/trois DENIED ; clé restreinte six = trois ERROR/
+trois DENIED. ERROR toujours dans usage, DENIED exclu, rawrate fictif 0,002 conservé.
+Aucune Strategy/Pillar/Intent/AICostLog/Statement créée. native-source-hashes.json
+confirme cinq fichiers API/services identiques à la candidate racine. fixture-cleanup
+arrête uniquement Next 3348 et PG 55449 après vérification de cible, preuves/données/
+fichiers conservés, aucun processus prod touché ; pas « données effacées » affirmé.
+Schema push de fixture ne reçoit pas migrations/vector/restauration. HTTP local
+n’est ni production ni job/provider live ni cycle réel/Galahad activé/SLO accepté.
+
+**Réception suivante** : source commit→CI exacte→image/digest→cible/runtime→lecture
+MCP bornée après retour réseau/hPanel humain. Effort : contrôles source/édition doc
+puis reçus d’exécution exacts ; déclencheur avant clôture 448/C7, sans nouveau tarif,
+paiement, outil, auth privilégiée ou activation de fournisseur. Causes de cette
+racine reçues localement seulement, ne pas purger autres lecteurs/writers/dettes
+sans preuve. Best effort et branches non exercées restent bornés, activation
+Galahad facultative et univers de marque/raccord/édition choisie/publication/retour
+vérifié ouverts ; source S/canaux/devises/versions et cycle réel restent à recevoir.
+[Dette en place](RESIDUAL-DEBT.md).
+
 ## Calcul S partagé et échec de pipeline — 447 source/CI/image reçues, livraison en attente (2026-10-12)
 
 Source 10b1c05bc51f38523a33d739ff05846bf1c8e107. CI 38035027922/Mission

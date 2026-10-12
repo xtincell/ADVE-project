@@ -16,6 +16,16 @@
 
 ## Quick start
 
+**6.27.448 candidate locale reçue ; livraison en attente.**
+Les clients MCP distinguent désormais un refus métier d’un succès, et une clé
+limitée à un serveur découvre ses seuls outils. Les droits stockés et le calcul de
+facturation restent conservés. Treize cas réels HTTP/SDK/base locale reçus sur
+clés/données fictives ; tests 4 318/410 et contrôles verts, aucun modèle appelé.
+Source/CI/image/runtime 448 restent à recevoir ; preuves antérieures 447 valables,
+état de production non confirmé aujourd’hui. Le raccord des agents Galahad reste
+facultatif et son activation live n’est pas reçue. Sept chantiers/R01–R10 ouverts,
+aucun cycle de marque réel accepté. [Périmètre et suite](docs/governance/REFONTE-PLAN.md).
+
 **6.27.447 : source, CI et image reçues ; livraison en attente au 12 octobre.**
 Les trois chemins concernés sauvegardent le plan par le même calcul versionné,
 conservent les refus stricts et l’état d’échec d’un job. Les données amont déjà

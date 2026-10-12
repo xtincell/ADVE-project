@@ -1,5 +1,37 @@
 # Changelog — La Fusee
 
+## v6.27.448 — fix(mcp): partager les refus et respecter la découverte par serveur (2026-10-12)
+
+**448 candidate locale reçue : un refus métier est signalé comme tel ; une clé ne découvre que ses droits. Livraison en attente.**
+
+- mcpResultFailed partage la lecture des enveloppes explicites ok:false/error
+  texte non vide entre metering REST/RPC ; résultat/provenance conservés,
+  journal ERROR et isError RPC. Ni donnée imbriquée, absence ni DEFERRED réinterprété.
+- RPC réutilise scopeMcpParams : garde serveur/marque et journal DENIED communs,
+  aucun dispatch ou second journal au refus. Parité d’authentification/découverte :
+  clé stockée server=council reconnue dans l’agrégat, scopeServer conservé ;
+  tools/list/catalogue/GET filtrés. Droits stockés, wildcard/ADMIN/OAuth conservés,
+  REST autre serveur reste 401 ; aucune nouvelle permission ou gratuité annoncée.
+- Facturation inchangée : usage OK+ERROR, DENIED exclu ; tarif brut fictif 0,002
+  conservé sur ses lignes DENIED, découverte hors metering. Journaux best effort,
+  pas de durabilité garantie, aucun tarif/franchise/paiement/provider nouveau.
+- Initial huit rouges/dix verts puis scope trois rouges/27 verts ; ciblés 44/trois,
+  DEFAULT 4 318/410 et gouvernance 1 627/166 verts, cinq contrôles à zéro. CODE-MAP
+  régénéré sans diff ; lint/lint-governance : zéro erreur, 24 avertissements existants
+  chacun, aucun verrou HARD affaibli. Treize cas HTTP/SDK/PG réels sur
+  clés/données fictives : RPC initial 401 devient tools/list 200/quatre outils council,
+  refus logique isError, autre serveur/marque DENIED, wildcard/REST préservés.
+- Delta journal sept (quatre ERROR/trois DENIED), aucun Strategy/Pillar/Intent/
+  AICostLog/Statement créé ni modèle appelé. Cinq fichiers fixture identiques à la
+  candidate ; seuls Next 3348/PG 55449 arrêtés, preuves/données conservées. Aucun
+  job/provider live, cycle, SLO ou activation Galahad reçu.
+- Source commit/CI/image/déploiement/runtime 448 non reçus. Source/image 447 restent
+  preuves antérieures valables, livraison encore pendante ; aucun runtime actuel
+  certifié. Trois HTTPS connect-timeouts à 13:00 UTC, hPanel humain en attente.
+  Reprise bornée ANUBIS Comms/MCP/raccord Galahad facultatif, sans nouvelle UI/
+  entité/schéma/dépendance/Intent/Neter. Sept chantiers/R01–R10/80 lignées ouverts,
+  global null. [Réception et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.447 — fix(synthese): partager le calcul S et conserver les échecs de pipeline (2026-10-10)
 
 **447 source/CI/image reçues ; livraison en attente au 12 octobre, aucun runtime 447 reçu.**

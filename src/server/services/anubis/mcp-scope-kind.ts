@@ -18,3 +18,8 @@
 export function normalizeScopeKind(raw: unknown): "BRAND" | "SYSTEM" {
   return raw === "SYSTEM" ? "SYSTEM" : "BRAND";
 }
+
+/** ADMIN/OAuth have no server restriction; API keys retain their stored server. */
+export function isMcpServerAllowed(scopeServer: string | undefined, server: string): boolean {
+  return scopeServer === undefined || scopeServer === "*" || scopeServer === server;
+}
