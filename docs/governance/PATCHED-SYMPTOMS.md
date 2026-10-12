@@ -30,19 +30,17 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
-2026-10-10 · **447 local en réception — écrivains S et résultat d’orchestration** :
-anciens scalaire budget/total conservés par fusion face à nouveau budget absent ;
-FAILED/pending zéro déclaré complet. Causes : trois écrivains S indépendants du
-calcul versionné manuel et résumé fondé sur la seule absence de tâches en attente.
-Correctif candidat : quick-intake/rtis-draft/PROTOCOLE_S/executeRTISCascade vers
-transaction/calcul S partagé/remplacement full/versions/provenance, strict conservé
-sur les protocoles. FAILED bloque sans terminer, RUNNING non terminé ; WAITING
-seul demande intervention. Intake retourne newContent/propage refus, pas +0,05
-pour S ; cascade R/T/I/S complète non atomique. Ciblés neuf/deux unitaires et 26/un
-PG verts après cinq/trois rouges, DEFAULT 4 297/409 et PG 357/18 verts. Jobs réels
-sur DB isolée/génération R/T/I simulée reçus, aucun job navigateur/live ; gauntlet final cinq sorties 0/gouvernance 1 626/166 reçu ; livraison non reçue.
-Production 446/doc ce549c0 reçues. Causes en réception, pas clôture globale.
-[Preuves](REFONTE-PLAN.md) · [dette S existante](RESIDUAL-DEBT.md).
+2026-10-12 · **447 source/CI/image reçues — écrivains S et échec de pipeline, livraison en attente** :
+ancien budget conservé par fusion face à absence et FAILED déclaré complet.
+Correctif trois écrivains vers calcul transactionnel/remplacement S/sources/
+provenance/strict, intake sauvegarde/refus/confiance S fidèle et summary d’échec
+reçus localement. CI exacte 4 297/409/PG 357/18, image/registre reçus. Pas génération
+live/job navigateur/cascade entière atomique ni runtime 447. Dernier reçu 446
+le 10 octobre non reconfirmé le 12 : accès distants expirés, état serveur inconnu.
+Preflight .env manquant ; scheduled-ops vert no-op, SLO vert avec ECONNREFUSED :
+limites ops reprises dans dette existante, aucune cause purgée ou santé globale
+certifiée. [Preuves](REFONTE-PLAN.md) · [dette S existante](RESIDUAL-DEBT.md).
+
 
 2026-10-10 · **446 livré — Notoria copies et écriture de décision, réception bornée** :
 lecture brute proposait plusieurs SELECT pour une identité ; mutation limitée à

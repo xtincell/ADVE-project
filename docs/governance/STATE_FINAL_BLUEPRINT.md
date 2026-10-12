@@ -223,19 +223,19 @@ l’upgrade de verrou. La recherche d’âge normalise S→s. Dans propagateFrom
 les modes autoRecalculate true/false sont reçus localement : Process seulement si auto,
 aucun appel réseau dans la fixture. Cela ne reçoit pas tous les modes/agents.
 
-**447 local en réception — calcul partagé et résultat d’échec fidèle** :
-les trois écrivains S concernés réutilisent transaction/calcul existants,
-remplacement full/huit versions/nulls/sources/provenance. Protocoles stricts
-inchangés, plan partiel refusé ; intake renvoie sauvegarde/propage refus, pas gain
-artificiel de confiance S. FAILED ne termine pas et bloque, RUNNING non terminé,
-COMPLETED/SKIPPED et WAITING seul vers intervention conservés. Ciblés neuf/deux
-unitaires et 26/un PG verts après rouges ; DEFAULT 4 297/409 et PG 357/18 verts. Jobs
-réels reçus sur DB isolée/modèles R/T/I simulés, pas génération live/navigateur.
-Gauntlet final cinq sorties 0/gouvernance 1 626/166 reçu ; source/CI/image/runtime 447 non reçus. Production 446/doc ce549c0 clôturées, aucune nouvelle
-entité/service/router/Intent/ADR/UI/provider. R/T/I déjà sauvegardés peuvent
-subsister après refus S, pas de cascade atomique ni cycle réel reçu. Fondations
+**447 source/CI/image reçues — livraison en attente le 12 octobre** : trois
+écrivains S vers calcul transactionnel/full S/huit versions/nulls/sources/
+provenance, strict conservé et intake fidèle à sauvegarde/refus/confiance.
+FAILED/RUNNING non terminés, WAITING seul demande intervention. CI exacte
+4 297/409/PG 357/18 et image/registre reçus, jobs locaux R/T/I simulés ; aucun
+runtime/natif 447 ou génération live/cycle reçu, aucune demande de déploiement.
+Dernier runtime reçu 446 le 10 octobre non reconfirmé le 12 ; accès distants
+expirés/workflows ops no-op ou mesure échouée, aucune santé actuelle déduite.
+Reprise cible/runtime/configuration/effets réels avant livraison/C7, sans purge
+prématurée. Aucun modèle/service/router/Intent/ADR/UI/provider ajouté ; fondations
 S/canaux/devises/versions/remap/univers réels et sept chantiers/dix gates/
 80 lignées ouverts/global null. [Réception bornée](REFONTE-PLAN.md).
+
 
 **446 livré — cohérence de décision par identité, réception bornée** : Notoria
 lit catalogue normalisé/UUID exécutables/FK union brute/IDs choisis canoniques,

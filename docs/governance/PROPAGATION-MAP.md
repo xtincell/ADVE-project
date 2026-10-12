@@ -9,20 +9,19 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
-### Écrivains S → calcul transactionnel existant ; jobs → état d’échec conservé — 447 local en réception (2026-10-10)
+### Écrivains S → calcul partagé ; jobs → échec conservé — 447 source/CI/image reçues, livraison en attente (2026-10-12)
 
-quick-intake/rtis-draft, PROTOCOLE_S et executeRTISCascade → withPillarTransaction/
-recalculateSynthesisInTransaction → full S/huit versions/nulls/sources/provenance.
-Protocoles stricts : plan partiel refusé. Intake → newContent sauvegardé/refus
-propagé/sans +0,05 de confiance S ; R/T/I déjà sauvegardés peuvent subsister.
-Pipeline FAILED → bloqué/non terminé ; RUNNING non terminé, COMPLETED/SKIPPED
-inchangés et WAITING seul vers needsHumanAction. Neuf/deux unitaires, 26/un PG
-ciblés verts ; DEFAULT 4 297/409 et PG 357/18 verts. Jobs exercés en DB isolée avec
-modèles R/T/I simulés, aucun job navigateur/live ; gauntlet final cinq sorties 0/gouvernance 1 626/166 reçu ; source/CI/image/runtime 447 attendus.
-Production 446/doc ce549c0 clôturées ; aucune atomicité globale/cycle/SLO reçue.
-Aucune nouvelle entité/route/service/Intent/ADR ; autres sources/canaux/devises/
-remap/univers réels et sept chantiers/dix gates restent ouverts.
-[Réception et suite](REFONTE-PLAN.md).
+Trois écrivains → transaction/calcul S existant/full remplacement/huit versions/
+nulls/sources/provenance ; protocoles stricts conservés. Intake sauvegarde/refus/
+sans confiance S artificielle, R/T/I peuvent subsister si S refuse. FAILED bloque,
+RUNNING non terminé, WAITING seul demande intervention. CI source 10b1c05 success
+4 297/409 et PG 357/18, image/registre exacts ; jobs DB isolée avec R/T/I simulés.
+Aucun déploiement/runtime/natif 447 reçu ; dernier 446 reçu le 10 octobre, non
+reconfirmé le 12. Accès distants expirés et ops no-op/échec interne imposent reprise
+cible→runtime→déploiement exact→lecture native avant C7 ; pas santé/cycle/SLO déduit.
+Aucune entité/route/service/Intent/ADR ajouté ; autres sources/canaux/devises/remap/
+univers réels et sept chantiers/dix gates restent ouverts. [Réception et suite](REFONTE-PLAN.md).
+
 
 ### Proposition Notoria → toutes copies I → S versionné → BrandAction — 446 livré, réception bornée (2026-10-10)
 

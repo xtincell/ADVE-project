@@ -315,29 +315,29 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   100 %, ancien S/budgets/roadmap contradictoires ouverts, aucune réception USER
   de production. Timeouts de compilation conservés. Sparse non
   approuvable, contrat strict inchangé.
-  **447 local en réception — trois écrivains S et faux terminé** :
-  quick-intake/rtis-draft, hyperviseur PROTOCOLE_S et executeRTISCascade passent par
-  transaction/calcul S partagé/full replacement/huit versions/nulls/sources/
-  provenance. strictSchemaValidation:true conservé sur les deux protocoles, plan
-  partiel refusé ; intake renvoie contenu sauvegardé/propage refus, sans +0,05 pour
-  S. R/T/I antérieurs peuvent subsister après refus S. FAILED bloque/non terminé,
-  RUNNING non terminé, WAITING seul demande intervention ; COMPLETED/SKIPPED
-  inchangés. Cinq rouges unitaires/trois PG puis ciblés neuf/deux et 26/un verts ; DEFAULT
-  4 297/409 et PG 357/18 reçus. Jobs réellement exercés en DB isolée/gateway réels,
-  frontières modèles R/T/I simulées : budget absent/confiance/retour DB et refus
-  HUMAN/LOCKED/strict reçus, pas génération live ou browserjob. Gauntlet final cinq sorties 0, gouvernance 1 626/166 reçu ; livraison 447 non reçue. Runtime 446/doc ce549c0
-  clôturés ; pas atomicité complète/cycle réel/global accepté.
-  **Plan/effort/trigger avant clôture 447** : causes trois writers/faux terminé
-  réparées localement ; gauntlet final reçu, shipping à recevoir avant clôture bornée,
-  aucune IA/payante requise sur ce périmètre. Plan partiel sous protocole strict,
-  générations/versions sources R/T/I, fondations S/canaux/devises/remap et vraie
-  marque restent en dette : contre-exemples sources puis recette factuelle avant
-  C3/C4/C6, sans abaisser schéma/gates pour fabriquer maturité.
-  **Reprise maintenue avant C3/C4/C6/cycle réel** : contre-exemples producteurs/
-  consommateurs, contrat faits/absence/estimation/canaux/devise et recette bornée.
-  Univers SPAWT reçu→édition choisie→publication/retour vérifié reste ouvert ;
-  aucune fabrication/conversion sans taux-source, sept chantiers/dix gates/
-  80 lignées ouverts/global null.
+  **447 source/CI/image reçues — livraison en attente le 12 octobre** :
+  trois écrivains S vers calcul transactionnel/full S/huit versions/nulls/sources/
+  provenance ; strict des deux protocoles conservé, intake sauvegarde/refus et
+  confiance S fidèle. FAILED bloque/non terminé, RUNNING non terminé, WAITING
+  seul demande intervention. CI exacte 4 297/409 et PG 357/18, image/registre exacts,
+  jobs réels DB isolée/modèles R/T/I simulés. Pas génération live/browserjob/
+  cascade atomique ou cycle réel. Aucune demande 447, runtime non reçu ; dernier
+  reçu 446 date du 10 octobre, non reconfirmé aujourd’hui. Causes non purgées.
+  **Reprise livraison/ops dans cette même dette** : accès FABLE/SSH/HTTP/CUA expirés
+  depuis ce poste, sans conclusion serveur/données. Preflight 38139149996 .env
+  manquant ; scheduled-ops 38201453154 vert no-op/PROD_BASE_URL absent ;
+  SLO 38197211921 vert avec check-slos exit 2/ECONNREFUSED, aucun service/SLO reçu.
+  Plan/effort : lire cible/conteneur/runtime lorsque accessibles puis déployer
+  même image exacte une seule fois/recevoir runtime et lecture native ; qualifier
+  env/config des checks/topologie scheduler existante et mesurer effets réels,
+  cas no-op/DB injoignable avant activation. Trigger retour d’accès avant 447/C7,
+  aucun pipeline/fonction supplémentaire ni purge/gate sans preuve.
+  Fondations S/canaux/devises/remap/versions/générations R/T/I et vraie marque
+  restent : contre-exemples sources/consommateurs puis contrat faits/absence/
+  estimation et recette bornée avant C3/C4/C6. Univers SPAWT reçu→édition choisie→
+  publication/retour vérifié reste ouvert ; aucune fabrication/conversion sans
+  taux-source, sept chantiers/dix gates/80 lignées ouverts/global null.
+
 
   **446 livré — contrat Notoria décision/source/plan/projection reçu à portée bornée** :
   collecte normalisée/UUID exécutables/IDs choisis canoniques, toutes copies mutées,

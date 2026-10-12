@@ -1,66 +1,70 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## Calcul S partagé et échec visible du pipeline — 447 local en réception (2026-10-10)
+## Calcul S partagé et échec de pipeline — 447 source/CI/image reçues, livraison en attente (2026-10-12)
 
-Source locale 6.27.447, dernier runtime reçu 6.27.446. Clôture documentaire 446
-ce549c017f717b7d83dd52be33f14b46f9e3c318 : CI 38033909652/Mission 38033909661/
-Chromatic 38033909664 success, cinq contrôles docs à zéro, postmerge compteurs
-inchangés, image source non reconstruite pour les docs. Aucun service/modèle/router/
-Intent/ADR/UI/provider ajouté ; note client 446 conservée ≤ version 447.
+Source 10b1c05bc51f38523a33d739ff05846bf1c8e107. CI 38035027922/Mission
+38035027907/Chromatic 38035027938 success au même SHA ; ci.log relu confirme
+4 297/409 unitaires et PostgreSQL 357/18. Image 38035028789 success,
+image-digest.json : index sha256:e0b957debcd02f2b6e44359392fc5df039f06b08113f43a9efadc4a5a3ef4476,
+manifest 3dfd05ad63a949fa058affd1bfacf339093abcaddcbcc3be59fb347ced702619,
+configuration candidate/publiée concordante. registre-avant-deploiement.json
+12 octobre 08:11:33 UTC : latest exact matched. Aucun déploiement 447 demandé,
+runtime/native 447 non reçus. Dernier runtime reçu 446 le 10 octobre, pas état
+actuel certifié le 12. 446 doc ce549c0/CI clôturée, source image non reconstruite
+pour les docs. Aucun modèle/service/router/Intent/ADR/UI/provider/note client ajouté.
 Sept chantiers/dix gates/80 lignées ouverts, global null.
 
-Trois écrivains existants quick-intake/rtis-draft, hyperviseur PROTOCOLE_S et
+Trois écrivains quick-intake/rtis-draft, hyperviseur PROTOCOLE_S et
 executeRTISCascade utilisent withPillarTransaction/recalculateSynthesisInTransaction :
-S REPLACE_FULL, snapshot huit versions/nulls/sources, provenance et retrait de
-review selon gateway. Les deux protocoles gardent strictSchemaValidation:true,
-plan sparse/partiel toujours refusé ; pas de seuil abaissé pour obtenir un succès.
-Intake renvoie newContent réellement sauvegardé, propage les refus R/T/I/S et
-n’accorde pas +0,05 de confiance au calcul S. R/T/I déjà sauvegardés peuvent
-subsister si S refuse : pas atomicité de cascade complète, ni convergence de tous
-les producteurs R/T/I déduite. Deux imports barrel→leaf dans rtis-cascade préviennent
-le cycle introduit par la réutilisation, sans nouvelle couche.
+S REPLACE_FULL/huit versions/nulls/sources/provenance. strictSchemaValidation:true
+conservé pour les deux protocoles, plan sparse/partiel refusé sans seuil abaissé.
+Intake retourne newContent réellement sauvegardé/propage refus R/T/I/S, pas +0,05
+pour calcul S. R/T/I déjà sauvegardés peuvent subsister si S refuse : pas cascade
+atomique ni convergence complète de producteurs. Deux imports leaf évitent cycle.
+runPipeline FAILED bloque/ne termine pas, RUNNING non terminé ; COMPLETED/SKIPPED
+inchangés et needsHumanAction seulement WAITING, pas nouvelle orchestration.
 
-runPipeline FAILED bloque/ne termine plus, RUNNING n’est pas terminé,
-COMPLETED/SKIPPED gardent leur sens, needsHumanAction réservé au WAITING réel.
-Échec et intervention humaine restent distingués ; pas nouvelle orchestration.
+Preuves locales du 10 octobre : cinq rouges/quatre verts sur neuf unitaires,
+trois rouges/23 verts sur 26 PG ; ciblés finaux neuf/deux et 26/un verts.
+DEFAULT 4 297/409 et PG 357/18, gauntlet cinq sorties 0/gouvernance 1 626/166.
+Paramètres null de fixtures corrigés, aucun bug production déduit. local-tests-receipt.json conserve son attente CI historique, supersédée ici par CI exacte reçue.
+local-jobs-receipt.json : jobs/gateway/transactions réellement appelés sur PG isolé,
+frontières modèles R/T/I simulées, fetch inutilisé ; pas qualité de génération
+live, job depuis navigateur ou full stress. Intake S1→2/archive1, route AMBITIOUS,
+snapshot a/d/v/e:null,r/t/i:2,s:1 ; unknownBudgetCount1/globalBudget/total absents,
+confiance inchangée, retour égal DB. Refus HUMAN conserve S/version/confiance,
+archive0 ; I sauvegardé v2 subsiste/S stale. R LOCKED inchangé/T absent/I/S
+inchangés, pas faux succès. Deux protocoles refusent partiel strict/S et archive
+inchangés. Aucune mutation réelle SPAWT/FrieslandCampina/cycle/SLO reçu.
 
-Preuves privées release/preuves-calcul-447 : red-unit.log cinq rouges/quatre verts
-sur neuf (08:18:12), red-postgres.log trois rouges/23 verts sur 26 (08:20:10).
-green-unit.log neuf/deux verts (08:21:18), puis final-target.log neuf/deux
-(08:27:00) et postgres-final.log 26/un (08:27:03) verts. Six appels de fixtures
-oubliaient sector/market requis : corrigés en null dans tests uniquement, aucun
-défaut de production déduit. DEFAULT full 4 297/409 (08:22:47, 108,03 s), PG full
-357/18 (08:23:50, 44,97 s). Gauntlet final cinq sorties 0, gouvernance 1 626/166 reçue. Source commit/CI/image/runtime 447 non reçus.
+**Livraison pendante au 12 octobre** : delivery-pending.json 08:13:08 UTC :
+FABLE applications read timeout, SSH Operation timed out, HTTPS curl(28) connect
+timeout et CUA Page.navigate timeout. Ancien onglet absent/nouvelle navigation
+expirée ; aucune réception native actuelle. Défaillance d’accès observée depuis
+ce poste, pas preuve de serveur éteint ni état des données. Aucune demande de
+déploiement faite, pas de réparation/restart/rollback inféré.
 
-local-jobs-receipt.json : actual generateAndPersistRtisDraft, executeNextStep
-PROTOCOLE_S et executeRTISCascade réellement appelés sur PostgreSQL isolé avec
-gateway/transactions réels ; frontières modèles R/T/I simulées. Pas qualité de
-génération live, pas job natif depuis navigateur, fetch inutilisé sur ces cas.
-Intake S1→2/archive1, route AMBITIOUS conservée, huit snapshots a/d/v/e:null,
-r/t/i:2,s:1 ; unknownBudgetCount1, globalBudget/computed.totalBudget absents,
-confiance inchangée, retour égal DB. Refus HUMAN : S contenu/version/confiance
-conservés, archive0 ; I déjà sauvegardé v2 subsiste, S stale. Refus R LOCKED : R
-verrouillé inchangé, T absent, I/S inchangés, pas faux succès. Les deux protocoles
-refusent le plan partiel strict et conservent ancien S/archive0. Aucun fournisseur
-live, marque réelle, browserjob/cycle ou full stress reçu.
+**Opérations à qualifier dans la reprise existante** : preflight 38139149996
+échoue « .env manquant » ; scheduled-ops 38201453154 success mais log indique
+PROD_BASE_URL non configuré/tick ignoré no-op ; SLO 38197211921 success mais
+check-slos exit 2/ECONNREFUSED sur IntentEmission. Workflow vert ne signifie ni
+service vivant ni mesure SLO reçue. Preuves preflight-weekly-failed.log,
+scheduled-ops-latest.log et slo-latest.log relues, aucun secret reproduit.
+Plan/effort : au rétablissement des accès, lire même cible FABLE/conteneur/runtime
+et état actuel ; déployer l’image existante exacte une seule fois après cible
+vérifiée puis recevoir version/digest/volume/auth/lecture native. Qualifier
+configuration/env des checks et mesure effective, préserver topologie scheduler
+existante avant activation ; contre-exemples no-op/DB injoignable puis exécution
+observée. Déclencheur avant livraison 447/C7 ; aucune nouvelle fonction/pipeline,
+aucune purge des causes locales ou acceptation de gate faute de runtime reçu.
 
-spawt-public-live.json relu 07:26:09 UTC : vitrine live sans décompte/six questions
-annoncées. spawt-quiz-entry.json à 07:29:22 UTC : /jeu affiche 1/6, entrée seulement ;
-aucune réponse/contact/profil soumis, déduction complète et retour non reçus.
-Aucune nouvelle réparation de vitrine attribuée au correctif interne 447.
+Vitrine/quiz reçus seulement le 10 octobre : sans décompte/six questions, entrée
+1/6 sans réponse/contact/profil, déduction complète/retour non reçus. Univers
+SPAWT reçu→édition choisie→publication et retour vérifié restent ouverts ; site
+live distinct du stade application. Fondations S/canaux/devise/versions R/T/I/
+remap/générations live et vraie marque en reprise avant C3/C4/C6, aucun fait ou
+conversion inventé. [Dette en place](RESIDUAL-DEBT.md).
 
-**Avant clôture 447** : causes trois writers/faux terminé réparées et reçues
-localement à portée bornée ; contrôles finaux reçus ; source commit/CI/image/runtime à
-recevoir. Purge limitée à ces causes avec réception, aucun effet sur dettes du
-plan partiel sous strict/production R/T/I/fondations/canaux/devise. Effort :
-recevoir shipping et lecture bornée ; trigger avant clôture 447.
-**Résidus/reprise avant C3/C4/C6/cycle réel** : versions/provenance des producteurs
-R/T/I, faits/absence/estimations/canaux sémantiques, devise FCFA/BrandAction/remap
-et réceptions de marque. Contre-exemples par chemin puis factorisation existante
-et recette locale/réelle bornée, aucun fait/UUID/conversion inventé. Univers SPAWT
-reçu→édition choisie→publication et retour vérifié reste ouvert ; site live/sans
-décompte/six questions annoncées déjà reçu, distinct du stade des applications.
-[Dette en place](RESIDUAL-DEBT.md).
 
 ## Une proposition, toutes copies source, un plan sauvegardé — 446 livré, réception bornée (2026-10-10)
 

@@ -6,14 +6,15 @@ Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts`
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**447 local en réception — mêmes entrées intake/protocoles/swarm** : aucune
-route/permission/Intent ajouté. Trois écrivains S utilisent calcul transactionnel
-partagé/full replacement/huit versions/nulls/sources/provenance, protocoles stricts
-conservés. Intake propage refus/renvoie sauvegarde ; FAILED bloque sans terminer,
-RUNNING non terminé, WAITING seul demande intervention. Neuf/deux unitaires,
-26/un PG ciblés et DEFAULT 4 297/409/PG 357/18 verts ; jobs réels sur DB isolée avec
-frontières modèles R/T/I simulées reçus, pas navigateur/live. Gauntlet final cinq sorties 0/gouvernance 1 626/166 reçu ; source/CI/image/runtime 447 non reçus. Production 446/doc ce549c0 clôturées ; pas cascade entièrement atomique
-ni parcours réel reçu. [Contrats et réception](REFONTE-PLAN.md).
+**447 source/CI/image reçues — mêmes entrées, livraison en attente** : aucune
+route/permission/Intent ajouté. Trois écrivains S vers calcul partagé/full S/
+huit versions/nulls/sources/provenance, strict conservé ; intake sauvegarde/refus,
+FAILED/RUNNING/WAIT distingués. CI source 10b1c05 4 297/409 et PG 357/18, jobs locaux
+DB isolée/modèles R/T/I simulés reçus, pas navigateur/live/cascade atomique entière.
+Aucun déploiement/runtime 447 reçu ; dernier 446 daté du 10 octobre non reconfirmé
+le 12. Accès distants expirés et workflows ops sans réception de santé, reprise
+cible/runtime avant livraison/C7. [Contrats et réception](REFONTE-PLAN.md).
+
 
 **446 livré — même APPLY_RECOMMENDATIONS gouverné, réception bornée** : aucune
 route/permission/Intent ajouté. Notoria/choix manuel utilisent calcul S partagé,

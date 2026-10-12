@@ -4,21 +4,22 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-10
 
-**6.27.447 local en réception — écrivains S et état des jobs existants** :
-quick-intake/rtis-draft, hyperviseur PROTOCOLE_S et executeRTISCascade réutilisent
-transaction/calcul S partagé : remplacement full, huit versions/nulls/sources/
-provenance. Les deux protocoles gardent strictSchemaValidation:true, plan partiel
-refusé. Intake retourne contenu sauvegardé/propage refus R/T/I/S, sans +0,05 de
-confiance S ; R/T/I antérieurs peuvent subsister si S refuse. FAILED bloque et ne
-termine pas, RUNNING non terminé, COMPLETED/SKIPPED inchangés, WAITING seul demande
-intervention humaine. Ciblés neuf/deux unitaires et 26/un PG verts après cinq/trois
-rouges respectifs ; DEFAULT 4 297/409 et PG 357/18 verts ; jobs reçus sur DB isolée/modèles R/T/I
-simulés, pas job navigateur/génération live. Gauntlet final cinq sorties 0, gouvernance 1 626/166 reçue ;
-source/CI/image/runtime 447 non reçus. Production 446/doc ce549c0 clôturées ; aucun cycle/SLO/marque réelle
-reçu. Aucun modèle/service/router/Intent/ADR/UI/provider ajouté ; dette de portée
-restreinte en réception, fondations S/canaux/devises/versions R/T/I/remap/univers
-réels ouverts, sept chantiers/dix gates/80 lignées/global null.
-[Preuves et suite](docs/governance/REFONTE-PLAN.md).
+**6.27.447 source/CI/image reçues — livraison en attente (12 octobre)** :
+les trois écrivains S utilisent transaction/calcul existant/full S/huit versions/
+nulls/sources/provenance. Strict des deux protocoles conservé, plan partiel refusé ;
+intake retourne sauvegarde/propage refus sans confiance S artificielle, R/T/I
+antérieurs peuvent subsister. FAILED bloque/non terminé, RUNNING non terminé et
+WAITING seul vers intervention. Source 10b1c05, CI/Mission/Chromatic et image
+success, registre exact ; CI 4 297/409 et PG 357/18. Jobs réels reçus sur DB isolée/
+modèles R/T/I simulés, pas génération live/natif navigateur/cycle/SLO. Aucun
+447 demandé ou runtime reçu ; dernier 446 reçu le 10 octobre, non reconfirmé le
+12, accès FABLE/SSH/HTTP expirés depuis ce poste. Ops verts ne prouvent pas santé :
+cron no-op sans base URL, check SLO ECONNREFUSED ; preflight .env manquant. Reprise
+avant déploiement/C7 dans dette existante, aucune cause purgée prématurément.
+Aucun modèle/service/router/Intent/ADR/UI/provider ajouté ; fondations S/canaux/
+devises/versions R/T/I/remap/univers réels et sept chantiers/dix gates/80 lignées
+ouverts, global null. [Preuves et suite](docs/governance/REFONTE-PLAN.md).
+
 
 **6.27.446 livré — réception bornée décision Notoria/source/plan/projection** :
 lecture normalisée/UUID exécutables/IDs choisis canoniques/FK union brute,

@@ -16,16 +16,18 @@
 
 ## Quick start
 
-**6.27.447 local en réception** : les trois chemins concernés sauvegardent le
-plan par le même calcul versionné. Un plan partiel reste refusé sur les deux
-protocoles stricts ; un job échoué ne se présente plus comme terminé. Les données
-amont déjà sauvegardées peuvent subsister après refus du plan, sans promesse de
-transaction sur tout le parcours. Ciblés neuf/deux unitaires et 26/un PG verts, suites complètes 4 297/409 et
-357/18 vertes. Jobs réellement exercés sur DB locale avec génération amont simulée ;
-cinq contrôles finaux verts (gouvernance 1 626/166), livraison attendue ; aucun job navigateur/génération live.
-Production 446/documentation ce549c0 clôturée ; aucune marque réelle recalculée
-ou cycle reçu. Devise/canaux/versions et raccord de l’univers SPAWT restent ouverts,
-ainsi que les sept chantiers/dix gates. [Périmètre et suite](docs/governance/REFONTE-PLAN.md).
+**6.27.447 : source, CI et image reçues ; livraison en attente au 12 octobre.**
+Les trois chemins concernés sauvegardent le plan par le même calcul versionné,
+conservent les refus stricts et l’état d’échec d’un job. Les données amont déjà
+sauvegardées peuvent subsister après refus du plan, sans transaction sur tout le
+parcours. CI 4 297/409 unitaires et 357/18 PostgreSQL vertes ; recette des jobs sur
+DB isolée avec génération amont simulée, aucun cycle de vraie marque reçu.
+Aucun déploiement 447 demandé. Dernier runtime reçu : 446 le 10 octobre, non
+reconfirmé aujourd’hui ; les accès distants expirent depuis le poste de contrôle.
+La livraison exige encore lecture de la cible, runtime et recette après déploiement.
+Devise/canaux/versions, raccord SPAWT et sept chantiers/dix gates restent ouverts.
+[Périmètre et suite](docs/governance/REFONTE-PLAN.md).
+
 
 **6.27.446 livré, réception bornée** : une proposition Notoria vise une action,
 puis son choix rejoint toutes ses représentations, le plan sauvegardé et la
