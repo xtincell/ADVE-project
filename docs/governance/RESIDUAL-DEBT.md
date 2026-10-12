@@ -49,7 +49,7 @@ sept chantiers ; les résidus actifs suivent.
   aucune fermeture C2/C3/C4 ou acceptation des sept chantiers/dix gates programme.
   Le retour du harness local interrompu reste historique. Corpus hors trois
   éditions inchangé ; stockage complet et autres destinations non reçus.
-  **449 transport CORS reçu localement, livraison attendue** : omission de l’origine quiz et
+  **449 source/CI/image reçues — transport CORS, livraison attendue** : omission de l’origine quiz et
   allowlists dupliquées factorisées au domaine public-brand existant ; quatrième
   origine exacte, sans credential/auth privée/publication nouvelle. Deux rouges/
   onze verts puis 16/2 verts, PG17 isolée 39/1 et 19 vrais HTTP sur fichiers chiffrés
@@ -57,8 +57,11 @@ sept chantiers ; les résidus actifs suivent.
   Origin. Transport CORS local reçu ; aucun consumer navigateur quiz,
   vraie marque, production ou cycle reçu. DEFAULT 4 331/411/gouvernance 1 627/166
   et cinq contrôles finaux à zéro ; Next fixture arrêté/données conservées.
-  **Plan/effort/trigger** : source commit/CI/image/runtime 449 encore attendus,
-  prochain raccord C2 du lecteur existant à
+  Source 5a7f11a…, CI exacte 4 331/411 + PG 358/18 et image/registre 449 reçus ;
+  notify_coolify=false/redeploy SKIPPED, runtime/consumer/production non reçus.
+  **Plan/effort/trigger** : relire FABLE/application q9b4m57yh93gxbjykj470giy dès
+  accès rétabli, déployer une fois l’image disponible puis recevoir runtime/HTTP ;
+  pas de nouveau build pour les seuls MD. Prochain raccord C2 du lecteur existant à
   l’édition choisie, usages et retour reçus ; lot transport borné puis consumer,
   avant acceptation multidestination. Univers et autres destinations restent
   ouverts ; pas nouvelle ligne/service ni fermeture des sept chantiers/R01–R10.

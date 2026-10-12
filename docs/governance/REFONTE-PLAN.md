@@ -1,9 +1,10 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## CORS partagé de l’édition publique — 449 reçue localement, livraison en attente (2026-10-12)
+## CORS partagé de l’édition publique — 449 source/CI/image reçues, livraison en attente (2026-10-12)
 
-449 source locale non committée/non livrée. Le domaine public-brand existant
-factorise publicBrandCorsHeaders pour l’export public v1/v2 et les fichiers retenus ;
+449 source 5a7f11a01bbcdd73c9ed069b304dd83a6a09735f committée/poussée, CI/image
+reçues, aucun déploiement demandé/runtime/consumer quiz reçu. Le domaine
+public-brand existant factorise publicBrandCorsHeaders pour l’export public v1/v2 et les fichiers retenus ;
 https://quiz.spawt.online rejoint les trois origines exactes antérieures. Aucun
 credential, accès privé/auth/isolation, publication/stockage/schéma ou compte canon
 modifié ; aucun nouveau service/router/page/Intent/ADR/provider ou note client.
@@ -15,8 +16,8 @@ choisie/digest/fonts/hash, matrice quatre origines et lectures conditionnelles.
 local-tests-receipt.json/receipt.json : DEFAULT 4 331/411 et gouvernance 1 627/166
 verts ; gauntlet tsc/lint/lint-governance/cycles/governance cinq sorties zéro,
 CODE-MAP régénéré sans diff. Ciblés 16/2 et PG 39/1 restent des réceptions bornées ;
-aucun full PG implicite. Source commit/CI/image/runtime 449 non reçus, aucune
-réception du cycle ou des autres lecteurs déduite.
+aucun full PG local implicite. CI source reçue ensuite : 4 331/411 et PG 358/18.
+Aucune réception du cycle ou des autres lecteurs déduite.
 
 native-baseline-receipt.json : trois HTTP réels sur édition/fonts chiffrés fictifs,
 quiz manifeste/font 200 sans ACAO, vitrine 200 autorisée. native-green-receipt.json :
@@ -31,8 +32,8 @@ physiques ; get_all('Vary') les reçoit et exige Origin sur les réponses publiq
 Le reçu rectifié porte allVaryLinesRead/varyOriginReceivedOnPublicResponses=true.
 Le relevé incomplet reste dans native-green-initial-receipt.json ; aucun code
 applicatif changé pour ce diagnostic, aucune dette Next/cache déduite. Export
-privé isolé 403 couvert en unité,
-pas nouvelle recette HTTP 403 déduite de ces 19 cas.
+privé isolé 403 couvert en unité ; aucune nouvelle recette HTTP 403 déduite de
+ces 19 cas.
 
 Publication/spine existants ont créé la fixture fictive avant mesure ; deltas
 Strategy/assets/emissions/modelLogs/metering zéro pendant lectures, aucun provider.
@@ -44,8 +45,28 @@ conservés, aucun processus de production touché ; pas « lignes fixture suppri
 affirmé. Les 19 lectures relues conservent readDeltaZero ; toutes les lignes Vary
 sont lues, et leurs dimensions comprennent Origin pour chaque réponse publique.
 
-**Plan/effort/trigger C2** : recevoir source/CI/image/
-runtime exactement ; poursuivre le lecteur du quiz sur l’édition
+**Source/CI/image reçues** : receipt.json et ci.log confirment CI 38261909042,
+Mission 38261908970 et Chromatic 38261908776 success exactes sur 5a7f11a… ;
+4 331/411 unitaires et vraie PG 358/18. Image 38262032363 success sur le même SHA,
+boot migrations/login 200 et PDF standalone deux pages/deux textes reçus.
+image-digest.json : SHA/version/latest concordent au 12 octobre 14:45 UTC sur
+l’index OCI sha256:be065eaddf449f58cc9498ac8f2a7c718bf1ae650a0a645b1c930cef03598d80.
+notify_coolify=false, redeploy SKIPPED ; runtime/consumer quiz/production non reçus.
+Source/image distinctes du futur commit documentaire et de ses CI ; aucune nouvelle
+image pour ces seuls MD. Dernier runtime reçu 446 du 10 octobre ne certifie pas la
+production actuelle ; cible FABLE/application à relire après retour d’accès.
+
+**Qualification postmerge au 12 octobre** : postmerge-scan.json porte 5a7f11a…,
+92 matches de compteurs/30 transitions/un terme public, sémantiquement identiques
+au rescan 448. postmerge-registry.json : 633 Intent kinds, 56 CORE/153 registry,
+94 séquences dont 91 DRAFT/28 frameworks ; 127 fichiers routers (124 + 3 helpers),
+123 dossiers services (122 + utils) et 215 ADR inchangés. Aucun drift actuel nouveau
+identifié ; snapshots datés/Phases et enums PLANNED conservés, unique commentaire
+ADR non rendu, aucun taux de maturité inféré.
+
+**Plan/effort/trigger C2** : relire cible/application
+q9b4m57yh93gxbjykj470giy dès accès rétabli, déploiement unique de l’image disponible
+puis runtime/HTTP bornés ; poursuivre le lecteur du quiz sur l’édition
 explicitement choisie, ses usages palette/fonts/mascotte/voix et retours de déduction.
 La recette consumer locale peut avancer sans présumer la production. Un lot
 transport borné puis lot consumer existant distinct ; déclencheur au prochain

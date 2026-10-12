@@ -16,12 +16,13 @@
 
 ## Quick start
 
-**6.27.449 reçue localement ; livraison en attente.** Les deux transports de l’édition publique
+**6.27.449 source, CI et image reçues ; livraison en attente.** Les deux transports de l’édition publique
 partagent leur politique CORS et autorisent aussi https://quiz.spawt.online,
 sans accès privé ni credential. Tests ciblés et 19 lectures HTTP locales reçus
 sur données fictives ; le lecteur navigateur du quiz reste à raccorder/recevoir.
 Transport local, suite complète 4 331/411 et cinq contrôles finaux reçus ;
-commit/CI/image/runtime 449 attendus, univers de marque et cycle
+source/CI exacte 4 331/411 + PG 358/18 et image/registre reçus, déploiement non
+demandé/runtime 449 non reçu. Univers de marque et cycle
 réel non acceptés. [Périmètre](docs/governance/REFONTE-PLAN.md).
 
 **6.27.448 source/CI/image reçues ; livraison en attente.**
