@@ -1,5 +1,28 @@
 # Changelog — La Fusee
 
+## v6.27.449 — fix(public-brand): partager les origines de lecture des éditions publiques (2026-10-12)
+
+**449 reçue localement : l’origine du quiz rejoint la politique CORS publique commune. Livraison en attente.**
+
+- Export public v1/v2 et fichiers retenus réutilisent publicBrandCorsHeaders du
+  domaine public-brand existant ; quatrième origine exacte https://quiz.spawt.online,
+  trois origines antérieures conservées, aucune credential ou autorité privée donnée.
+- Deux rouges/onze verts puis 16/2 verts ; vraie PG17 isolée 39/1 verts avec matrice
+  quatre origines/édition choisie/digest/fonts/304. Baseline trois vrais HTTP : quiz
+  manifeste/font 200 sans ACAO, vitrine autorisée ; après correction 19 lectures
+  HTTP reçues, origines/304/refus privés/absence/query conservés, deltas DB zéro.
+- Recette API/PG/fichiers chiffrés fictifs, trois fichiers source identiques racine ;
+  aucun provider. Ni navigateur consumer quiz, marque réelle, univers complet,
+  cycle, SLO ou production reçu. DEFAULT 4 331/411 et gouvernance 1 627/166 verts,
+  cinq contrôles finaux à zéro/CODE-MAP sans diff ; Next possédé arrêté, fichiers/
+  base fixture conservés. Source commit/CI/image/runtime 449 non reçus ; aucune
+  nouvelle page/service/
+  route/Intent/ADR/schéma ou publication ajoutée, pas de note client transport.
+- Checkpoint documentaire 448 5fc17ebf/CI 38257073924, Mission 38257073969 et
+  Chromatic 38257073962 reçus ; source/image 448 fdc759…/a583b… conservées sans build
+  MD. Sept chantiers/R01–R10/80 lignées ouverts, global null.
+  [Réception et suite](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.448 — fix(mcp): partager les refus et respecter la découverte par serveur (2026-10-12)
 
 **448 source/CI/image reçues : un refus métier est signalé comme tel ; une clé ne découvre que ses droits. Livraison en attente.**

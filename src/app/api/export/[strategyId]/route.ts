@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/config";
 import { exportStrategyData, exportAsCsv, exportPublicBrand } from "@/server/services/data-export";
 import { canAccessStrategy } from "@/server/services/operator-isolation";
+import { publicBrandCorsHeaders } from "@/domain/public-brand";
 
 export async function GET(
   request: Request,
@@ -12,12 +13,9 @@ export async function GET(
   const { strategyId } = await params;
   if (["public-brand", "public-brand-v2"].includes(url.searchParams.get("format") ?? "")) {
     const edition = await exportPublicBrand(strategyId, url.searchParams.get("format") === "public-brand-v2");
-    const origin = request.headers.get("origin");
-    const allowed = origin === "https://spawt.online" || origin === "https://www.spawt.online" || origin === "https://portail.spawt.online";
     const headers = {
       "Cache-Control": "public, max-age=0, s-maxage=30",
-      "Vary": "Origin",
-      ...(allowed ? { "Access-Control-Allow-Origin": origin } : {}),
+      ...publicBrandCorsHeaders(request.headers.get("origin")),
     };
     if (!edition) return NextResponse.json({ error: "Publication introuvable" }, { status: 404, headers });
     const etag = `"${edition.edition}-${edition.digest}"`;

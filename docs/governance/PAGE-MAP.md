@@ -254,6 +254,20 @@ nouvelle lecture. Source 80e2122f/CI/image/runtime 436 reçus, lecture réelle S
 S existant à 91 %/AI_PROPOSED v3/bouton désactivé reçue ; aucune approbation de
 marque réelle. Contrats de composition à réconcilier : [réception](RECEPTION-VALIDATION-SYNTHESE.md).
 
+**449 reçue localement — transport public partagé, aucune page ajoutée** :
+GET /api/export/[strategyId]?format=public-brand-v2 (branche publique v1 conservée)
+et GET /brand/editions/[editionId]/[file] réutilisent publicBrandCorsHeaders du
+domaine public-brand existant. Quatre origines exactes : https://spawt.online,
+https://www.spawt.online, https://portail.spawt.online, https://quiz.spawt.online ;
+aucune credential. Origine étrangère/absente : HTTP public peut rester 200 sans
+ACAO ; le privé garde son auth/isolation. Publication/stockage/ETag/CSP conservés.
+Ciblés 16/2, PG isolée 39/1 et 19 vrais HTTP reçus sur édition/fichiers fictifs ;
+DEFAULT 4 331/411/gouvernance 1 627/166 et cinq contrôles finaux à zéro. Aucun
+consumer navigateur quiz ou runtime 449 reçu, commit/CI/image encore attendus.
+Vary inclut Origin sur les réponses publiques reçues ; transport CORS local reçu.
+Les trois origines du reçu historique 432 ci-dessous restent historiques.
+[Réception et limite](REFONTE-PLAN.md).
+
 Transport associé, **hors dénombrement des pages** :
 `GET /brand/editions/[editionId]/[file]` (hash.extension), livré et reçu en 431,
 Sustainment/MESTOR via brand-vault existant. Lecture anonyme bornée aux éditions

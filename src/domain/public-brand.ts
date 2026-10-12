@@ -2,6 +2,15 @@ import { z } from "zod";
 
 /** A public edition of existing brand guidelines, never a strategy export. */
 export const PUBLIC_BRAND_FORMAT = "public-brand-v1";
+/** Read-only public consumers; this never grants authentication or private exports. */
+const PUBLIC_BRAND_ORIGINS = new Set([
+  "https://spawt.online", "https://www.spawt.online",
+  "https://portail.spawt.online", "https://quiz.spawt.online",
+]);
+export function publicBrandCorsHeaders(origin: string | null): Record<string, string> {
+  return { Vary: "Origin", ...(origin && PUBLIC_BRAND_ORIGINS.has(origin)
+    ? { "Access-Control-Allow-Origin": origin } : {}) };
+}
 export const PublicWebUrl = z.string().max(2048).refine((value) => {
   try {
     const url = new URL(value);

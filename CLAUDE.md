@@ -4,6 +4,17 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-12
 
+**6.27.449 reçue localement — CORS de l’édition publique partagé** : export
+public et fichiers retenus réutilisent le domaine public-brand, quatrième origine
+exacte https://quiz.spawt.online sans credential/accès privé/publication nouvelle.
+Ciblés 16/2 et vraie PG isolée 39/1 verts ; baseline trois HTTP puis 19 lectures
+API/fichiers fictifs reçues, deltas DB zéro/aucun provider. Consumer navigateur
+quiz/production non reçus ; DEFAULT 4 331/411/gouvernance 1 627/166 et cinq
+contrôles finaux à zéro, fixture Next arrêté/données conservées,
+source commit/CI/image/runtime 449 non reçus. Univers→édition choisie→publication/
+retour, sept chantiers/R01–R10/80 lignées/global null ouverts.
+[Preuves et reprise](docs/governance/REFONTE-PLAN.md).
+
 **6.27.448 source/CI/image reçues — ANUBIS Comms/MCP, livraison en attente** :
 enveloppes explicites ok:false/error texte classées ERROR, isError RPC et résultat/
 provenance conservés. scopeMcpParams partagé : serveur/marque/DENIED sans double

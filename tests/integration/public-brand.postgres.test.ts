@@ -116,6 +116,21 @@ async function identityFixture() {
   return { s, source, palette, typography, display, body, mascot, choice, submit, mascotUrl, bodyUrl };
 }
 describe("Public brand editions", () => {
+  it("irrigates every owned SPAWT origin from the same chosen edition and retained bytes", async () => {
+    const f = await identityFixture(); await f.submit();
+    const edition = PublicBrandEditionV2.parse(await readPublicBrand(f.s.publicSlug!, true));
+    const file = edition.content.identity!.typography!.body.faces[0]!.file;
+    for (const origin of ["https://spawt.online", "https://www.spawt.online", "https://portail.spawt.online", "https://quiz.spawt.online"]) {
+      const response = await GET(new Request(`https://example.invalid/api/export/${f.s.publicSlug}?format=public-brand-v2`, { headers: { Origin: origin } }), { params: Promise.resolve({ strategyId: f.s.publicSlug! }) });
+      expect(response.status).toBe(200); expect(response.headers.get("access-control-allow-origin")).toBe(origin);
+      expect(PublicBrandEditionV2.parse(await response.json()).digest).toBe(edition.digest);
+      const bytes = await imageResponse(file.url, { Origin: origin });
+      expect(bytes.headers.get("access-control-allow-origin")).toBe(origin);
+      expect(digestBytes(Buffer.from(await bytes.arrayBuffer()))).toBe(file.hash);
+      const conditional = await imageResponse(file.url, { Origin: origin, "If-None-Match": bytes.headers.get("etag")! });
+      expect(conditional.status).toBe(304); expect(conditional.headers.get("access-control-allow-origin")).toBe(origin);
+    }
+  });
   it("publishes selected palette, font roles, mascot and exact voice without exporting private references", async () => {
     const f = await identityFixture(); await f.submit();
     const edition = PublicBrandEditionV2.parse(await readPublicBrand(f.s.publicSlug!, true));

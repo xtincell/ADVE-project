@@ -1,5 +1,61 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## CORS partagé de l’édition publique — 449 reçue localement, livraison en attente (2026-10-12)
+
+449 source locale non committée/non livrée. Le domaine public-brand existant
+factorise publicBrandCorsHeaders pour l’export public v1/v2 et les fichiers retenus ;
+https://quiz.spawt.online rejoint les trois origines exactes antérieures. Aucun
+credential, accès privé/auth/isolation, publication/stockage/schéma ou compte canon
+modifié ; aucun nouveau service/router/page/Intent/ADR/provider ou note client.
+
+Preuves release/preuves-irrigation-publique-449 : cors-red.log deux rouges/onze
+verts sur treize ; cors-green.log 16/2 verts (treize routes + trois domaine).
+public-brand-postgres.log 39/1 verts sur PG17 loopback shinkiro_verify : édition
+choisie/digest/fonts/hash, matrice quatre origines et lectures conditionnelles.
+local-tests-receipt.json/receipt.json : DEFAULT 4 331/411 et gouvernance 1 627/166
+verts ; gauntlet tsc/lint/lint-governance/cycles/governance cinq sorties zéro,
+CODE-MAP régénéré sans diff. Ciblés 16/2 et PG 39/1 restent des réceptions bornées ;
+aucun full PG implicite. Source commit/CI/image/runtime 449 non reçus, aucune
+réception du cycle ou des autres lecteurs déduite.
+
+native-baseline-receipt.json : trois HTTP réels sur édition/fonts chiffrés fictifs,
+quiz manifeste/font 200 sans ACAO, vitrine 200 autorisée. native-green-receipt.json :
+19 lectures toutes reçues — quatre origines sur manifeste/font, deux 304, deux
+origines étrangères 200 sans ACAO, query 404, marque absente 404, hash non publié
+404, export privé anonyme 401 sans ACAO, édition inconnue 404, deux lectures sans
+origine 200. Aucun Access-Control-Allow-Credentials ; la permission CORS exacte
+ne transforme pas une ressource publique en endpoint privé. Vary applicatif
+reçu inclut Origin et les dimensions RSC. header-measurement.json rectifie une
+mesure initiale : headers.get('Vary') ne lisait que la première des deux lignes
+physiques ; get_all('Vary') les reçoit et exige Origin sur les réponses publiques.
+Le reçu rectifié porte allVaryLinesRead/varyOriginReceivedOnPublicResponses=true.
+Le relevé incomplet reste dans native-green-initial-receipt.json ; aucun code
+applicatif changé pour ce diagnostic, aucune dette Next/cache déduite. Export
+privé isolé 403 couvert en unité,
+pas nouvelle recette HTTP 403 déduite de ces 19 cas.
+
+Publication/spine existants ont créé la fixture fictive avant mesure ; deltas
+Strategy/assets/emissions/modelLogs/metering zéro pendant lectures, aucun provider.
+native-source-hashes.json reçoit trois fichiers domaine/routes byte-identiques
+racine. Recette API/PG/fichiers chiffrés ; aucun navigateur consumer quiz, vraie
+marque, publication réelle, production, déduction de six réponses ou SLO reçu.
+fixture-cleanup.json : Next possédé arrêté après CWD vérifié, fichiers/base
+conservés, aucun processus de production touché ; pas « lignes fixture supprimées »
+affirmé. Les 19 lectures relues conservent readDeltaZero ; toutes les lignes Vary
+sont lues, et leurs dimensions comprennent Origin pour chaque réponse publique.
+
+**Plan/effort/trigger C2** : recevoir source/CI/image/
+runtime exactement ; poursuivre le lecteur du quiz sur l’édition
+explicitement choisie, ses usages palette/fonts/mascotte/voix et retours de déduction.
+La recette consumer locale peut avancer sans présumer la production. Un lot
+transport borné puis lot consumer existant distinct ; déclencheur au prochain
+raccord C2, avant acceptation de l’identité multidestination. Préserver corpus,
+compatibilité v1 et reçus historiques des trois origines, sans publication implicite
+ni nouveau registre/service. Vitrine live/six questions/décompte retiré reçus
+antérieurement ne ferment pas univers→édition choisie→publication→retour vérifié.
+Sept chantiers/R01–R10/80 lignées ouverts, global null.
+[Dette C2 en place](RESIDUAL-DEBT.md).
+
 ## Refus MCP et découverte limitée aux droits — 448 source/CI/image reçues, livraison en attente (2026-10-12)
 
 Source fdc7591991965b75087919507b62f7b22d4facfb committée/poussée, CI et image
@@ -61,8 +117,10 @@ image.log reçoit migrations→login 200 et PDF standalone deux pages/deux texte
 image-digest.json : latest/version/SHA concordent à 13:24 UTC sur l’index
 sha256:a583b77331c88bf4b1653263b2ca1013fb1bab5d9805d427cd30dabc8425b5b8.
 notify_coolify=false, étape redeploy SKIPPED ; receipt.json conserve delivery/
-runtime/native production non reçus. Le commit documentaire et ses CI restent
-à recevoir ; aucune nouvelle image nécessaire pour ces seules modifications MD.
+runtime/native production non reçus. Checkpoint documentaire 448
+5fc17ebf90bfc10c27863552d0d9775d92b8e49e reçu : CI 38257073924 (4 318/410 + PG 357/18),
+Mission 38257073969 et Chromatic 38257073962 success ; documentation-receipt.json.
+Source/image 448 fdc759…/index a583b… inchangées, aucune nouvelle image pour MD.
 
 **Qualification postmerge bornée** : 633 Intent kinds/56 CORE/153 registry,
 94 séquences dont 91 DRAFT/28 frameworks ; 127 fichiers routers (124 + 3 helpers),

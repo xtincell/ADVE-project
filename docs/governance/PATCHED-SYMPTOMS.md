@@ -30,6 +30,19 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-12 · **449 reçue localement — CORS public-brand, livraison attendue** :
+quiz manifeste/font HTTP 200 sans ACAO, alors que la vitrine avait ACAO. Deux
+allowlists dupliquées omettaient l’origine possédée du quiz ; politique factorisée
+au domaine existant/deux lecteurs, quatrième origine exacte. Deux rouges/onze
+verts→16/2 verts, PG isolée 39/1 et 19 vrais HTTP reçus, origine étrangère 200 sans
+ACAO/privé 401 sans ACAO/304/gardes conservés. Ni auth ni publication élargie,
+aucun provider/delta DB pendant lectures. Vary inclut Origin sur les réponses
+publiques reçues. DEFAULT 4 331/411/gouvernance 1 627/166 et cinq contrôles finaux
+à zéro ; données fixture conservées après arrêt du Next possédé. Pas réception
+du consumer navigateur, d’une vraie marque ou de la production ; commit/CI/image/
+runtime 449 non reçus.
+[Preuves](REFONTE-PLAN.md) · [résidus C2](RESIDUAL-DEBT.md).
+
 2026-10-12 · **448 source/CI/image reçues — refus MCP et découverte par serveur** :
 réponses métier error journalisées OK/sans isError RPC ; refus BRAND RPC sans
 journal, scoping REST séparé ; même clé council REST 200/RPC 401 à l’agrégat. Cause :
