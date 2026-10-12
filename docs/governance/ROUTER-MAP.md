@@ -6,15 +6,16 @@ Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts`
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**448 candidate locale reçue — endpoints MCP existants, livraison en attente** :
+**448 source/CI/image reçues — endpoints MCP existants, livraison en attente** :
 auth agrégée de clés de serveur avec scopeServer conservé ; GET /api/mcp,
 lafusee_catalog et méthode RPC tools/list filtrés. invoke garde serveur/marque via
 scopeMcpParams commun/DENIED.
 Refus métier résultat conservé/ERROR/isError RPC, REST autre serveur 401 intact.
 Usage OK+ERROR/découverte hors metering/best effort inchangés, aucun nouveau droit/
 route/Intent. Treize cas HTTP/SDK/PG fictifs et tests 4 318/410/44/3/contrôles reçus,
-source/CI/image/runtime 448 non reçus ; preuve 447 conservée, activation live et
-R01–R10/sept chantiers ouverts. [Contrats et réception](REFONTE-PLAN.md).
+source fdc759…, CI exacte 4 318/410 + PG 357/18 et image/registre 448 reçus.
+Déploiement SKIPPED, runtime/native prod non reçus ; preuve 447 conservée,
+activation live et R01–R10/sept chantiers ouverts. [Contrats et réception](REFONTE-PLAN.md).
 
 **447 source/CI/image reçues — mêmes entrées, livraison en attente** : aucune
 route/permission/Intent ajouté. Trois écrivains S vers calcul partagé/full S/

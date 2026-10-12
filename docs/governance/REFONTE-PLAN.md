@@ -1,11 +1,13 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## Refus MCP et découverte limitée aux droits — 448 candidate locale reçue, livraison en attente (2026-10-12)
+## Refus MCP et découverte limitée aux droits — 448 source/CI/image reçues, livraison en attente (2026-10-12)
 
-Candidate non committée sur base 92e693591da7311940d67e3ebc8d09929c46a604. Source/CI/
-image/déploiement/runtime 448 non reçus ; source 10b1c05/image 447 antérieures restent
-valides, aucun runtime actuel certifié. Trois HTTPS connect-timeouts à 13:00 UTC,
-hPanel humain en attente, aucune déduction serveur éteint/données défaillantes.
+Source fdc7591991965b75087919507b62f7b22d4facfb committée/poussée, CI et image
+reçues ; aucun déploiement demandé/runtime/native prod reçu. 448 est la nouvelle
+image connue, la preuve source/image 447 antérieure reste conservée. Aucun runtime
+actuel certifié ; dernier reçu 446 du 10 octobre ne prouve pas l’état du 12 octobre.
+Trois HTTPS connect-timeouts à 13:00 UTC, hPanel humain en attente ; aucune déduction
+serveur éteint/données défaillantes.
 Sept chantiers/R01–R10/80 lignées ouverts/global null. Aucun modèle/service/route/
 schéma/dépendance/Intent/Neter/provider/UI ajouté, aucune note client nouvelle.
 ANUBIS Comms/MCP sert le raccord Galahad facultatif ; pas activation live reçue.
@@ -32,7 +34,8 @@ Même clé council réelle mais fictive REST 200/RPC 401 reçue en HTTP avant co
 Après : targeted 44/3, DEFAULT 4 318/410 et gouvernance 1 627/166 verts ; gauntlet cinq
 sorties 0 ; lint/lint-governance chacun zéro erreur/24 avertissements existants.
 CODE-MAP régénéré sans diff, aucun HARD affaibli. Reçus locaux du 12 octobre,
-pas CI du futur commit ; les contrôles complets ne reçoivent pas toutes branches.
+CI source exacte reçue ensuite ; les contrôles complets ne reçoivent pas toutes
+branches et ne valent pas reçu de livraison ou du futur commit documentaire.
 
 native-server-scope-receipt.json : treize cas HTTP réels+SDK+PostgreSQL, handlers
 métiers réels sur données fictives. tools/list 200 reçoit council_ask/council_deliberate/
@@ -45,20 +48,39 @@ native nouvelle de toutes leurs branches déduite. Aucun modèle/provider appel�
 Delta sept McpApiCall : quatre ERROR/trois DENIED ; clé restreinte six = trois ERROR/
 trois DENIED. ERROR toujours dans usage, DENIED exclu, rawrate fictif 0,002 conservé.
 Aucune Strategy/Pillar/Intent/AICostLog/Statement créée. native-source-hashes.json
-confirme cinq fichiers API/services identiques à la candidate racine. fixture-cleanup
+confirme cinq fichiers API/services identiques à la source racine. fixture-cleanup
 arrête uniquement Next 3348 et PG 55449 après vérification de cible, preuves/données/
 fichiers conservés, aucun processus prod touché ; pas « données effacées » affirmé.
 Schema push de fixture ne reçoit pas migrations/vector/restauration. HTTP local
 n’est ni production ni job/provider live ni cycle réel/Galahad activé/SLO accepté.
 
-**Réception suivante** : source commit→CI exacte→image/digest→cible/runtime→lecture
-MCP bornée après retour réseau/hPanel humain. Effort : contrôles source/édition doc
-puis reçus d’exécution exacts ; déclencheur avant clôture 448/C7, sans nouveau tarif,
-paiement, outil, auth privilégiée ou activation de fournisseur. Causes de cette
-racine reçues localement seulement, ne pas purger autres lecteurs/writers/dettes
-sans preuve. Best effort et branches non exercées restent bornés, activation
-Galahad facultative et univers de marque/raccord/édition choisie/publication/retour
-vérifié ouverts ; source S/canaux/devises/versions et cycle réel restent à recevoir.
+**Source/CI/image reçues** : ci-tests-receipt.json relit CI 38254283911, Mission
+38254283886 et Chromatic 38254283908 success sur fdc759… ; ci.log confirme 4 318/410
+unitaires et 357/18 PostgreSQL. Image 38254365514 success sur le même SHA :
+image.log reçoit migrations→login 200 et PDF standalone deux pages/deux textes.
+image-digest.json : latest/version/SHA concordent à 13:24 UTC sur l’index
+sha256:a583b77331c88bf4b1653263b2ca1013fb1bab5d9805d427cd30dabc8425b5b8.
+notify_coolify=false, étape redeploy SKIPPED ; receipt.json conserve delivery/
+runtime/native production non reçus. Le commit documentaire et ses CI restent
+à recevoir ; aucune nouvelle image nécessaire pour ces seules modifications MD.
+
+**Qualification postmerge bornée** : 633 Intent kinds/56 CORE/153 registry,
+94 séquences dont 91 DRAFT/28 frameworks ; 127 fichiers routers (124 + 3 helpers),
+123 dossiers services (122 + utils) et 215 ADR inchangés. Les 92 matches de compteurs/
+30 transitions du rescan contiennent des snapshots datés et enums métier ; aucune
+incohérence courante nouvelle identifiée. L’unique jargon est un commentaire non
+rendu. Historiques Phase/dates conservés, aucun taux de maturité déduit.
+
+**Réception suivante — plan/effort/trigger** : après retour réseau/hPanel humain,
+relire FABLE et l’application q9b4m57yh93gxbjykj470giy avant une demande unique sur
+l’image disponible ; recevoir digest/runtime puis appels MCP bornés, avant clôture
+448/C7. Ne pas refaire un build pour les seuls MD. Aucun nouveau tarif/paiement/
+outil/privilège/fournisseur ; pas purge des autres lecteurs/writers/dettes sans
+preuve. Best effort/branches non exercées restent bornés, Galahad facultatif et
+univers de marque→édition choisie→publication→retour vérifié ouverts. Vitrine SPAWT
+live/six questions/décompte absent sont des reçus antérieurs ; ils ne reçoivent ni
+raccord d’univers ni déduction quiz de bout en bout. Source S/canaux/devises/versions
+et cycle réel restent à recevoir.
 [Dette en place](RESIDUAL-DEBT.md).
 
 ## Calcul S partagé et échec de pipeline — 447 source/CI/image reçues, livraison en attente (2026-10-12)

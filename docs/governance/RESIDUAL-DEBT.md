@@ -315,7 +315,7 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   100 %, ancien S/budgets/roadmap contradictoires ouverts, aucune réception USER
   de production. Timeouts de compilation conservés. Sparse non
   approuvable, contrat strict inchangé.
-  **448 candidate locale reçue — racine refus MCP/découverte** :
+  **448 source/CI/image reçues — racine refus MCP/découverte** :
   Anubis Comms partage mcpResultFailed/scopeMcpParams : ERROR/isError aux refus
   métier, DENIED commun serveur/marque sans double journal. Authentification/
   découverte alignées avec scopeServer/droits stockés conservés, catalogues filtrés,
@@ -325,11 +325,14 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   conservée/DENIED hors usage mais tarif brut fixture 0,002, découverte hors metering
   et best effort sans durabilité promise. Services fixture arrêtés seuls/données
   conservées ; aucune activation Galahad facultative/cycle réel reçu.
-  **Plan/effort/trigger** : recevoir source/CI/image exacte puis cible/runtime/MCP
-  borné après retour accès/hPanel humain, avant clôture 448/C7 ; aucune purge des
-  autres causes/branches ni activation de fournisseur/droit/tarif. Source/image 447
-  restent preuves valables, livraison antérieure en attente ; trois HTTPS expirés
-  à 13:00 UTC, état prod inconnu. Journaux best effort/ADMIN-OAuth non reçus dans
+  Source fdc759…, CI/Mission/Chromatic exactes (4 318/410 + PG 357/18) et image/
+  registre 448 reçus ; notify_coolify=false, redeploy SKIPPED, livraison/runtime/
+  native prod non reçus. Image disponible, preuve 447 antérieure conservée.
+  **Plan/effort/trigger** : après retour accès/hPanel humain, relire FABLE/application
+  q9b4m57yh93gxbjykj470giy avant déploiement unique de cette image puis runtime/MCP
+  borné, avant clôture 448/C7 ; pas nouveau build pour MD ni purge autres causes/
+  branches, activation de fournisseur/droit/tarif. Trois HTTPS expirés à 13:00 UTC,
+  état prod inconnu. Journaux best effort/ADMIN-OAuth non reçus dans
   toutes branches : conserver limites, tests ciblés puis recette au raccord
   facultatif réel. Sept chantiers/R01–R10/80 lignées ouverts/global null.
 

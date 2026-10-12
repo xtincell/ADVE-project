@@ -223,15 +223,16 @@ l’upgrade de verrou. La recherche d’âge normalise S→s. Dans propagateFrom
 les modes autoRecalculate true/false sont reçus localement : Process seulement si auto,
 aucun appel réseau dans la fixture. Cela ne reçoit pas tous les modes/agents.
 
-**448 candidate locale reçue — refus fidèle et droits MCP de découverte** :
+**448 source/CI/image reçues — refus fidèle et droits MCP de découverte** :
 ANUBIS Comms/MCP conserve résultat/provenance mais marque refus métier ERROR/isError,
 partage scopeMcpParams serveur/marque/DENIED et scopeServer/découverte filtrée.
 Parité d’authentification modifiée, droits stockés/wildcard/ADMIN/OAuth conservés ;
 usage OK+ERROR sans tarif/paiement nouveau, DENIED exclu malgré rawrate fixture,
 découverte non métrée/journal best effort. Treize cas HTTP/SDK/PG fictifs/tests
 4 318/410/44/3/gouvernance 1 627/166/contrôles reçus, aucun modèle/dossier réel ou
-activation Galahad facultative. Source/CI/image/runtime 448 non reçus, preuve 447
-antérieure valide/livraison réseau-hPanel en attente. Aucun modèle/service/route/
+activation Galahad facultative. Source fdc759…, CI exacte 4 318/410 + PG 357/18 et
+image/registre 448 reçus ; redeploy SKIPPED, livraison/runtime/native prod non reçus.
+Preuve 447 conservée, cible FABLE à relire après retour réseau/hPanel. Aucun modèle/service/route/
 schéma/dépendance/Intent/Neter/provider/UI ajouté ; sept chantiers/R01–R10/
 80 lignées ouverts/global null. [Réception bornée](REFONTE-PLAN.md).
 

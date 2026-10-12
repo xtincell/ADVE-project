@@ -30,7 +30,7 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
-2026-10-12 · **448 candidate locale reçue — refus MCP et découverte par serveur** :
+2026-10-12 · **448 source/CI/image reçues — refus MCP et découverte par serveur** :
 réponses métier error journalisées OK/sans isError RPC ; refus BRAND RPC sans
 journal, scoping REST séparé ; même clé council REST 200/RPC 401 à l’agrégat. Cause :
 lecture du résultat limitée aux exceptions, gardes dupliquées et serveur demandé
@@ -40,8 +40,9 @@ découverte changées vers parité, droits stockés conservés. Initial huit rou
 dix verts et scope trois rouges/27 verts puis ciblés 44/3/DEFAULT 4 318/410/gouvernance
 1 627/166 verts/cinq contrôles 0 ; treize cas HTTP/SDK/PG fixture reçus. Facturation
 OK+ERROR inchangée, DENIED exclu usage mais tarif brut conservé, best effort.
-Source/CI/image/runtime 448 non reçus, pas activation live/cycle/SLO ou purge des
-autres branches. [Preuves](REFONTE-PLAN.md) · [dette existante](RESIDUAL-DEBT.md).
+Source fdc759…, CI exacte 4 318/410 + PG 357/18 et image/registre 448 reçus ;
+déploiement SKIPPED, livraison/runtime/native prod non reçus. Pas activation live/
+cycle/SLO ou purge des autres branches. [Preuves](REFONTE-PLAN.md) · [dette existante](RESIDUAL-DEBT.md).
 
 2026-10-12 · **447 source/CI/image reçues — écrivains S et échec de pipeline, livraison en attente** :
 ancien budget conservé par fusion face à absence et FAILED déclaré complet.

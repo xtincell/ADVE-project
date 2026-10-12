@@ -4,7 +4,7 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-12
 
-**6.27.448 candidate locale reçue — ANUBIS Comms/MCP, livraison en attente** :
+**6.27.448 source/CI/image reçues — ANUBIS Comms/MCP, livraison en attente** :
 enveloppes explicites ok:false/error texte classées ERROR, isError RPC et résultat/
 provenance conservés. scopeMcpParams partagé : serveur/marque/DENIED sans double
 journal. Parité d’authentification/découverte avec scopeServer/droits stockés
@@ -13,9 +13,10 @@ autre serveur 401 conservés. Facturation OK+ERROR inchangée, DENIED hors usage
 tarif brut fixture 0,002 conservé ; découverte non métrée/journal best effort.
 DEFAULT 4 318/410, ciblés 44/3, gouvernance 1 627/166/cinq contrôles 0 ; treize cas
 HTTP/SDK/PG réels sur fixture, sept journaux 4 ERROR/3 DENIED, aucun modèle/donnée métier
-ou relevé créé. Services fixture arrêtés seuls/données conservées. Source/CI/image/
-runtime 448 non reçus ; preuves 447 antérieures conservées, production actuelle non
-certifiée et hPanel humain pendant. Aucun schéma/dépendance/Intent/Neter/provider/
+ou relevé créé. Services fixture arrêtés seuls/données conservées. Source fdc759…,
+CI/Mission/Chromatic exactes et image 448/registre reçus ; CI 4 318/410 + PG 357/18.
+notify_coolify=false, aucune livraison/runtime/native prod reçue. Preuves 447
+conservées ; cible FABLE à relire après retour d’accès/hPanel humain en attente. Aucun schéma/dépendance/Intent/Neter/provider/
 UI ajouté ; Galahad facultatif non activé par cette recette, sept chantiers/R01–R10/
 80 lignées/global null ouverts. [Preuves et suite](docs/governance/REFONTE-PLAN.md).
 
