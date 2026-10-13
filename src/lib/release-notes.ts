@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.455", date: "2026-10-13",
+    headline: "Des mesures qui gardent leur origine",
+    highlights: [
+      { emoji: "📊", title: "Savoir de quand date une mesure", body: "Les mesures reçues indiquent leur source, leur version et leur date lorsqu’elles sont connues. Le suivi distingue le jour de réception de celui de l’observation et signale une date inconnue ou ancienne." },
+      { emoji: "🎯", title: "Conserver vos objectifs", body: "Une remontée qui ne fournit pas de nouvel objectif conserve celui déjà saisi. La nouvelle livraison d’une même observation reconnue retrouve son reçu sans réécrire les mesures." },
+    ],
+  },
+  {
     version: "6.27.452", date: "2026-10-13",
     headline: "Un statut documentaire explicite",
     highlights: [

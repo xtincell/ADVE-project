@@ -5,7 +5,7 @@
  *   - le kind est enregistré (governor ANUBIS, handler anubis) + SLO pairé ;
  *   - le contrat d'entrée est agnostique (schéma de l'endpoint) : strategyId +
  *     sourceType requis, metrics non vide, stage borné ;
- *   - le routage par cellule est correct : upsert AARRR IDEMPOTENT (findFirst
+ *   - le routage par cellule est correct : point AARRR non ambigu (findMany
  *     → update sinon create), KPI d'activité GARDÉ par portée, provenance
  *     TOUJOURS écrite, garde anti-cross-brand sur campaignId ;
  *   - la voie de dispatch existe (commandant).
@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 
 // ── DB mock ─────────────────────────────────────────────────────────────
 const campaignFindUnique = vi.fn();
-const aarrFindFirst = vi.fn();
+const aarrFindMany = vi.fn();
 const aarrUpdate = vi.fn();
 const aarrCreate = vi.fn();
 const activityFindUnique = vi.fn();
@@ -25,9 +25,16 @@ const signalCreate = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   db: {
+    $transaction: async (run: (client: unknown) => unknown) => run({
+      $executeRaw: vi.fn(),
+      campaign: { findUnique: campaignFindUnique },
+      campaignAARRMetric: { findMany: aarrFindMany, update: aarrUpdate, create: aarrCreate },
+      missionActivity: { findUnique: activityFindUnique, update: activityUpdate },
+      signal: { findMany: async () => [], findFirst: async () => null, create: signalCreate },
+    }),
     campaign: { findUnique: (...a: unknown[]) => campaignFindUnique(...a) },
     campaignAARRMetric: {
-      findFirst: (...a: unknown[]) => aarrFindFirst(...a),
+      findMany: (...a: unknown[]) => aarrFindMany(...a),
       update: (...a: unknown[]) => aarrUpdate(...a),
       create: (...a: unknown[]) => aarrCreate(...a),
     },
@@ -66,6 +73,8 @@ function intent(over: Partial<IngestIntent> = {}): IngestIntent {
 afterEach(() => {
   vi.clearAllMocks();
   signalCreate.mockResolvedValue({ id: "sig-1" });
+  aarrCreate.mockResolvedValue({ id: "new-metric" });
+  aarrUpdate.mockResolvedValue({ id: "existing-metric" });
 });
 
 describe("ADR-0146 — registration", () => {
@@ -121,7 +130,7 @@ describe("ADR-0146 — cell routing", () => {
   it("upserts CampaignAARRMetric idempotently: existing → update, absent → create", async () => {
     campaignFindUnique.mockResolvedValue({ strategyId: STRAT });
     // existing row → update
-    aarrFindFirst.mockResolvedValueOnce({ id: "m-1" });
+    aarrFindMany.mockResolvedValueOnce([{ id: "m-1" }]);
     const r1 = await ingestExternalMetric(intent());
     expect(aarrUpdate).toHaveBeenCalledTimes(1);
     expect(aarrCreate).not.toHaveBeenCalled();
@@ -130,7 +139,7 @@ describe("ADR-0146 — cell routing", () => {
     vi.clearAllMocks();
     signalCreate.mockResolvedValue({ id: "sig-2" });
     campaignFindUnique.mockResolvedValue({ strategyId: STRAT });
-    aarrFindFirst.mockResolvedValueOnce(null);
+    aarrFindMany.mockResolvedValueOnce([]);
     await ingestExternalMetric(intent());
     expect(aarrCreate).toHaveBeenCalledTimes(1);
     expect(aarrUpdate).not.toHaveBeenCalled();

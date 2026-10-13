@@ -47,6 +47,8 @@ const EXTRA_FILES = [
   join(ROOT, "src/lib/strategy/roadmap-routes.ts"),
   join(ROOT, "src/lib/types/field-labels.ts"),
   join(ROOT, "src/domain/field-provenance.ts"),
+  join(ROOT, "src/domain/signal-observation.ts"),
+  join(ROOT, "src/lib/release-notes.ts"),
   join(ROOT, "src/lib/operate-config.ts"),
   join(ROOT, "src/components/brand/source-preparation-option.tsx"),
   join(ROOT, "src/components/brand/source-read-dialog.tsx"),

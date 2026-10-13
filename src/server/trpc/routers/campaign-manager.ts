@@ -43,6 +43,7 @@ import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as cm from "@/server/services/campaign-manager";
 import { canAccessStrategy, canAccessCampaign, getOperatorContext, scopeCampaigns } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { metricObservationTime } from "@/domain/external-metric";
 /* lafusee:governed-active */
 
 /** Helper to enforce strategy access or throw FORBIDDEN */
@@ -2024,8 +2025,10 @@ export const campaignManagerRouter = createTRPCRouter({
       await enforceCampaignAccess(ctx, input.campaignId);
       const mission = await ctx.db.mission.findUniqueOrThrow({
         where: { id: input.missionId },
-        select: { id: true, strategyId: true },
+        select: { id: true, strategyId: true, campaignId: true },
       });
+      if (mission.campaignId !== input.campaignId) throw new TRPCError({ code: "NOT_FOUND", message: "Mission introuvable dans cette campagne" });
+      await enforceStrategyAccess(ctx, mission.strategyId);
       // Récence RÉELLE des remontées externes (ADR-0146) : une source est dite
       // « connectée » si elle a poussé une métrique dans les 30 derniers jours,
       // jamais un « bientôt » figé ni un zéro fabriqué.
@@ -2061,14 +2064,16 @@ export const campaignManagerRouter = createTRPCRouter({
       );
       const done = tasks.filter((t) => t.status === "EXECUTED").length;
       // Dernière remontée par type de source (la plus récente en tête).
-      const pushedByType = new Map<string, Date>();
+      const pushedByType = new Map<string, { receivedAt: Date; observedAt: Date | null }>();
       for (const s of externalSignals) {
         const st = (s.data as Record<string, unknown> | null)?.sourceType;
-        if (typeof st === "string" && !pushedByType.has(st)) pushedByType.set(st, s.createdAt);
+        if (typeof st === "string" && !pushedByType.has(st)) pushedByType.set(st, { receivedAt: s.createdAt, observedAt: metricObservationTime(s.data) });
       }
       const lastPush = (key: string): string | null => {
         const d = pushedByType.get(key);
-        return d ? `Dernière remontée le ${d.toLocaleDateString("fr-FR")}.` : null;
+        return d ? `Dernière réception le ${d.receivedAt.toLocaleDateString("fr-FR")}. ${d.observedAt
+          ? `Observation du ${d.observedAt.toLocaleDateString("fr-FR")}${d.observedAt < since ? " — antérieure à 30 jours" : ""}.`
+          : "Date d'observation inconnue."}` : null;
       };
       const emailConnected = email?.status === "ACTIVE" || pushedByType.has("EMAIL");
       const sources = [

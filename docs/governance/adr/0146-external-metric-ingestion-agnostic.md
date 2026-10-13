@@ -84,3 +84,24 @@ l'Intent** (spine ADR-0124 + cost-gate + audit).
   Brevo, un CRM) reste à câbler par connecteur (le motif push est prêt ; un cron
   `verifyCronSecret` peut pousser en interne) ; l'**exposition de l'ingestion comme outil
   MCP scopé** (au lieu de l'endpoint brut) suit le même chemin qu'ADR-0145 §4.
+
+## Amendement du 2026-10-13 — contrat 455 candidat, réception locale bornée
+
+### Contexte de l’amendement
+
+Le contrat historique ci-dessus est conservé. La sonde 453 sur copie reçoit deux Signaux pour une observation identique, identité/version/temps observé éliminés et mois 2026-99 accepté ; aucune donnée joueur réelle. Le writer 454 laisse une mesure malgré l’échec du reçu, reproduit sur PostgreSQL isolé. Cet amendement précise la primitive existante ; il remplace pour le writer 455 l’hypothèse historique qu’une réémission crée toujours une nouvelle provenance ou qu’une clé logique seule reçoit l’idempotence atomique. Aucun modèle, migration, service, route, Intent kind, outil ou fournisseur ajouté.
+
+### Décision amendée
+
+- Le contrat partagé `domain/external-metric.ts`, ré-exporté par l’API, accepte le trio `observationId/sourceVersion/observedAt` complet ou aucun de ces champs pour une source legacy inconnue. Date ISO avec offset, mois 01–12, objets stricts et destinations non dupliquées. Date observée et réception sont distinctes ; legacy sans date reste inconnu.
+- `Signal.data` conserve payload normalisé, SHA256 après tri des cellules par comparaison de chaînes sans locale, date de réception, destinations réellement écrites et outcome immutable. Identité scoped marque/sourceType/observationId : rejeu exact retourne le même Signal/outcome sans effet sur mesures ou KPI ; payload différent sous cette identité est VETOED/HTTP 409 au contrat. SourceVersion fait partie du payload, aucune modification silencieuse de l’observation retenue.
+- Écritures AARRR/KPI et reçu sont dans la même transaction avec verrou advisory par marque. Une erreur du reçu annule les effets. L’objectif omis est conservé ; observation ancienne ou legacy sans date ne supplante pas une mesure datée. Ambiguïté historique ou conflit de mesure conservés/non écrits, sans purge ou arbitrage fabriqué.
+- Authentification, scopes et `meterMcp` existants restent en place ; l’idempotence des données ne signifie pas gratuité du transport. Gazette rend mesures/origine/version/date, `getMissionCockpit` distingue réception/date observée inconnue ou ancienne et refuse mission d’une autre campagne. Ces projections sont candidates, réception écran encore attendue.
+
+### Conséquences et bornes de réception
+
+Contrat initial 14 rouges/un succès, puis ciblés 40 tests / 5 fichiers verts ; 13 vrais tests PG 17.9 isolés verts après contre-exemple du writer 454. Deux rouges de CODE-MAP sont corrigés par la régénération officielle. Checkpoints antérieurs : ciblés 39 / 5, DEFAULT 4 404 / 420 et cinq contrôles verts. Après dernier tri, ciblés 40 / 5, DEFAULT final 4 405 tests / 420 fichiers et cinq contrôles finaux reçus, sortie zéro. HTTP local réel 455 : admission/rejeu 200 même Signal, conflit 409 OBSERVATION_CONFLICT, mois invalide 400 et intermarque 403. Anonyme initial 200 par fallback cron de développement existant sans secret, 401 après configuration de recette encore non reçu ; timeouts conservés, aucune faille production ou SLO déduit. Premier full PG refusé par garde HARD locale de port, fixture déplacée sans changement de garde ; full PostgreSQL 17.9 avant ce dernier tri reçu 371 / 19 sans skip au port 55439 et cinq contrôles finaux à zéro (gouvernance 1 627 / 166, deux lints 24 avertissements existants/zéro erreur). Écran/source/CI/image et production 455 attendus. Aucun résultat joueur ou cycle complet inventé.
+
+`native-data.json` reçoit un Signal/un point AARRR valeur 6/KPI 6 malgré rejeu/conflit, sourceVersion/date conservés. Trois appels MCP (2 OK/1 ERROR) et quatre émissions restent distincts des effets métier ; zéro Pillar de fixture et tarif de recette nul seulement. HTTP/data portent une cellule inchangée par le tri ; ordre multi-cellules/rejeu reçu au ciblé. Récepteurs Next arrêtés, données conservées et next-env restauré. Aucun refus anonyme 401 ou écran reçu.
+
+Legacy sans identité/date ne peut pas recevoir le même contrat de rejeu qu’une observation identifiée. Les ambiguïtés historiques et l’écrivain manuel AARRR restent à auditer : le verrou du writer ANUBIS ne démontre pas que tous les écrivains sont coordonnés. **Plan, effort et déclencheur C3-02/C3-03** : un lot de vraie route, projections, concurrence/rejeu/refus sur copie puis image exacte avant branchement réel ; préserver les originaux, qualifier le manuel et les historiques, sans migration ou nouveau pipeline présumé. [Dette observations conservée](../RESIDUAL-DEBT.md), [réception candidate](../REFONTE-PLAN.md). Onze reçus bornés inchangés ; aucun chantier, gate, parcours, lignée ou cycle entier reçu.

@@ -664,6 +664,10 @@ export type Intent =
       sourceType: "QUIZ" | "APP" | "CRM" | "EMAIL" | "FIELD" | "WEBHOOK" | "MANUAL";
       /** Étiquette libre lisible (ex. "quizz.spawt.online"). */
       sourceLabel?: string | null;
+      /** Immutable producer receipt: all three fields together, or legacy unknown. */
+      observationId?: string;
+      sourceVersion?: string;
+      observedAt?: string;
       /** Cible AARRR : requis pour écrire une CampaignAARRMetric. */
       campaignId?: string | null;
       /** Cible KPI d'activité de mission (garde de portée sur strategyId). */

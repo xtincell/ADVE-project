@@ -21,7 +21,7 @@ import { NextResponse } from "next/server";
 import { verifyCronSecret } from "@/lib/cron-auth";
 import {
   authenticateMcpRequest,
-  meterAndRun,
+  meterMcp,
   type McpAuthResult,
 } from "@/server/services/anubis/mcp-billing";
 import { IngestSchema } from "./schema";
@@ -68,35 +68,27 @@ export async function POST(request: Request) {
 
   // 4) Émission gouvernée (spine + cost-gate + audit). Metering si clé API.
   const emit = async () => {
-    const { emitIntentTyped } = await import("@/server/services/mestor/intents");
-    return emitIntentTyped(
+    const { emitIntent } = await import("@/server/services/mestor/intents");
+    const result = await emitIntent(
       {
+        ...body,
         kind: "INGEST_EXTERNAL_METRIC",
-        strategyId: body.strategyId,
         operatorId,
-        sourceType: body.sourceType,
-        sourceLabel: body.sourceLabel ?? null,
-        campaignId: body.campaignId ?? null,
-        missionId: body.missionId ?? null,
-        period: body.period ?? null,
-        metrics: body.metrics.map((m) => ({
-          stage: m.stage ?? null,
-          metric: m.metric,
-          value: m.value,
-          target: m.target ?? null,
-          kpiActivityId: m.kpiActivityId ?? null,
-        })),
       },
       { caller: "api:ingest:metrics" },
     );
+    if (result.status !== "OK") return {
+      httpStatus: result.status === "VETOED" ? 409 : 500,
+      error: result.reason ?? result.status, detail: result.summary,
+    };
+    return { httpStatus: 200, result: result.output };
   };
 
-  if (gate?.apiKeyId) {
-    return meterAndRun(gate, "ingest", "metrics", emit);
-  }
   try {
-    const result = await emit();
-    return NextResponse.json({ result });
+    const { httpStatus, ...result } = gate?.apiKeyId
+      ? await meterMcp(gate, "ingest", "metrics", emit)
+      : await emit();
+    return NextResponse.json(result, { status: httpStatus });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : String(err) },

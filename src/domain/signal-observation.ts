@@ -3,12 +3,28 @@
  * Une variation du score calculé ne démontre pas un résultat commercial.
  */
 import { PILLAR_STORAGE_KEYS } from "./pillars";
+import { metricObservationTime } from "./external-metric";
 export function signalObservation(signal: { type: string; data: unknown }): { title: string; observation: string } {
   const data = record(signal.data);
   const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
   const title = text(data.title) || text(data.thesis);
   const observation = [data.content, data.thesis, data.brandImpact, data.recommendedAction]
     .map(text).filter(Boolean).join("\n\n");
+  if (signal.type === "EXTERNAL_METRIC") {
+    const cells = (Array.isArray(data.metrics) ? data.metrics : []).map(record)
+      .filter((cell) => typeof cell.metric === "string" && typeof cell.value === "number" && Number.isFinite(cell.value))
+      .map((cell) => `${cell.metric} : ${cell.value}${typeof cell.target === "number" && Number.isFinite(cell.target) ? ` (objectif : ${cell.target})` : ""}.`);
+    const date = metricObservationTime(data);
+    const origin = text(data.sourceLabel) || text(data.sourceType) || "Source inconnue";
+    const receipt = [
+      `Source : ${origin}.`,
+      text(data.sourceVersion) ? `Version : ${text(data.sourceVersion)}.` : "Version de source inconnue.",
+      date ? `Observation : ${date.toISOString()}.` : "Date d'observation inconnue.",
+      text(data.observationId) ? `Référence : ${text(data.observationId)}.` : "Référence de source inconnue.",
+      ...cells,
+    ];
+    return { title: title || `Mesures reçues · ${origin}`, observation: [observation, ...receipt].filter(Boolean).join("\n") };
+  }
   if (signal.type !== "SCORE_DECLINE" && signal.type !== "SCORE_IMPROVEMENT") {
     return { title: title || `Signal ${signal.type}`, observation: [text(data.title), observation].filter(Boolean).join("\n\n") };
   }
