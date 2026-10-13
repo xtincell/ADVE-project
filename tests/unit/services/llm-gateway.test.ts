@@ -87,12 +87,18 @@ describe("extractJSON", () => {
 
 describe("withRetry", () => {
   it("returns immediately on first-try success without sleeping", async () => {
-    const fn = vi.fn().mockResolvedValue("ok");
-    const start = Date.now();
-    const result = await withRetry(fn, { maxRetries: 3, baseDelayMs: 1000 });
-    expect(result).toBe("ok");
-    expect(fn).toHaveBeenCalledTimes(1);
-    expect(Date.now() - start).toBeLessThan(50);
+    vi.useFakeTimers();
+    try {
+      const fn = vi.fn().mockResolvedValue("ok");
+      const start = Date.now();
+      const result = withRetry(fn, { maxRetries: 3, baseDelayMs: 1000 });
+      await vi.runAllTimersAsync();
+      expect(await result).toBe("ok");
+      expect(fn).toHaveBeenCalledTimes(1);
+      expect(Date.now() - start).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("retries the configured number of times then throws the last error", async () => {
@@ -117,15 +123,21 @@ describe("withRetry", () => {
   });
 
   it("respects maxDelayMs cap on backoff growth", async () => {
-    // Force several failures with a small cap; total should be bounded
-    const fn = vi.fn().mockRejectedValue(new Error("boom"));
-    const start = Date.now();
-    await expect(
-      withRetry(fn, { maxRetries: 3, baseDelayMs: 5, maxDelayMs: 10 }),
-    ).rejects.toThrow();
-    const elapsed = Date.now() - start;
-    // 3 retries at <= 10ms each + scheduling slack — well under 200ms
-    expect(elapsed).toBeLessThan(200);
+    vi.useFakeTimers();
+    try {
+      const fn = vi.fn().mockRejectedValue(new Error("boom"));
+      const start = Date.now();
+      const result = expect(
+        withRetry(fn, { maxRetries: 3, baseDelayMs: 5, maxDelayMs: 10 }),
+      ).rejects.toThrow("boom");
+      await vi.runAllTimersAsync();
+      await result;
+      expect(fn).toHaveBeenCalledTimes(4);
+      // Contract: 5 ms, then two retries capped at 10 ms each.
+      expect(Date.now() - start).toBe(25);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("uses default options when none provided (maxRetries=2)", async () => {

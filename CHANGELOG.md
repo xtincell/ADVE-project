@@ -2,6 +2,14 @@
 
 ## v6.27.449 — fix(public-brand): partager les origines de lecture des éditions publiques (2026-10-12)
 
+**13 octobre — fix(tests) séparé : retry vérifié par horloge virtuelle.**
+
+- llm-gateway.test.ts : deux tests retry quittent le temps réel après un échec sous
+  charge (150 ms pour un seuil de 50 ms). Horloge virtuelle vérifie succès 0 ms et
+  plafond 5+10+10 ms ; 36/1 ciblés et DEFAULT 4 342/413 du candidat verts reçus,
+  tsc après correction à zéro, aucun code LLM changé ; correction de test séparée,
+  aucun bump/note client.
+
 **449 runtime et lecteur public SPAWT reçus le 13 octobre, au périmètre vérifié.**
 
 - 13 octobre : connexion humaine hPanel/running reçus, accès d’hébergement rétabli.
