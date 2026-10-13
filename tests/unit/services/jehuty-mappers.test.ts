@@ -86,3 +86,14 @@ describe("mapExternalArticleToFeedItem — « Le monde dehors »", () => {
     expect(item.createdAt).toContain("2026-07-18");
   });
 });
+
+describe("external observations remain readable beyond the editorial excerpt",()=>{
+ it("retains the six-question measurements and uses the human source label",()=>{
+  const sourceLabel="Quiz Palais — déclarations retenues";
+  const item=mapSignalToFeedItem({id:"external-quiz",strategyId:"s1",type:"EXTERNAL_METRIC",createdAt:new Date(),data:{sourceType:"QUIZ",sourceLabel,observationId:"receipt:"+"x".repeat(150),sourceVersion:"palais-6-radar-v1",observedAt:"2026-10-13T23:00:00.000Z",metrics:[{metric:"Q6 · Ton radar · Personne ne connaît encore",value:1}]}},undefined);
+  expect(item.summary.length).toBeLessThanOrEqual(300);
+  expect(item).toHaveProperty("observation",expect.stringContaining("Q6 · Ton radar · Personne ne connaît encore : 1."));
+  expect(item.source).toBe(sourceLabel);expect(item.confidence).toBeNull();
+  expect(item.category).toBe("MARKET_SIGNAL");
+ });
+});

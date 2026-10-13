@@ -600,6 +600,10 @@ interface LeadStoryProps {
   isApplyPending?: boolean;
 }
 
+function ReceivedObservation({ text }: { text: string }) {
+  return <details className="mt-5 rounded-lg border border-border-subtle p-4"><summary className="cursor-pointer text-sm text-foreground-secondary focus-visible:outline-2 focus-visible:outline-accent">Consulter l’observation complète</summary><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground-secondary">{text}</p></details>;
+}
+
 function LeadStory({
   item, isExpanded, mode, onToggleExpand,
   onPin, onUnpin, onDismiss, onNotoria, isNotoriaPending, onApply, isApplyPending,
@@ -662,6 +666,7 @@ function LeadStory({
             {restSummary}
           </p>
         )}
+        {item.observation && <ReceivedObservation text={item.observation} />}
 
         <div className="mt-6 flex items-center gap-6 flex-wrap">
           <DispatchActions
@@ -814,6 +819,7 @@ function Dispatch({
       <p className="font-serif text-foreground-secondary leading-snug text-base flex-1" style={{ fontSize: "var(--text-base)" }}>
         {item.summary}
       </p>
+      {item.observation && <ReceivedObservation text={item.observation} />}
 
       {hasDetails && (
         <button

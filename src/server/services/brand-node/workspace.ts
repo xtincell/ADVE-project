@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { listBrandSourceSummaries } from "@/server/services/ingestion-pipeline/source-usage";
 import { inspectPortfolioReferences, portfolioReferenceKey } from "@/domain/portfolio-reference";
 import { BARRE_ORIGIN, projectBarreWorkspace, type BarreWorkspace } from "@/domain/portfolio-barre";
+import { signalObservation } from "@/domain/signal-observation";
+import { metricObservationTime } from "@/domain/external-metric";
 
 /** Short, process-local read cache. A failed refresh is surfaced, never an empty portfolio. */
 let cache: { data: unknown; fetchedAt: number } | undefined;
@@ -71,6 +73,18 @@ export async function getPortfolioWorkspace(root: BrandNode, options: { allowBar
       shared: source.shared, ownerBrandName: source.ownerBrandName, ownerStrategyId: source.ownerStrategyId,
     })),
   })));
+  // These are the existing receipts, not a copied portfolio truth. Apply the
+  // readable dossier IDs before LIMIT; a linked source is never an access grant.
+  const signals = accessibleIds.length ? await db.signal.findMany({
+    where: { strategyId: { in: accessibleIds }, type: "EXTERNAL_METRIC" },
+    orderBy: { createdAt: "desc" }, take: 10,
+    select: { id: true, strategyId: true, type: true, data: true, createdAt: true },
+  }) : [];
+  const observations = signals.map((signal) => ({
+    id: signal.id, strategyId: signal.strategyId,
+    strategyName: strategyRows.find((strategy) => strategy.id === signal.strategyId)?.name ?? "Dossier associé",
+    ...signalObservation(signal), observedAt: metricObservationTime(signal.data), receivedAt: signal.createdAt,
+  }));
   let barre: BarreWorkspace | null = null;
   let sourceStatus: "LIVE" | "UNAVAILABLE" | "NOT_CONNECTED" = "NOT_CONNECTED";
   let sourceError: string | null = null, fetchedAt: string | null = null;
@@ -85,6 +99,6 @@ export async function getPortfolioWorkspace(root: BrandNode, options: { allowBar
       sourceError = error instanceof Error ? error.message : "La Barre est momentanément indisponible.";
     }
   }
-  return { root, nodes, strategies, referenceIssues, inheritedFrom: inheritedFrom ? { name: inheritedFrom.name, strategyId: inheritedFrom.strategyId } : null, barre, sourceStatus, sourceError, fetchedAt };
+  return { root, nodes, strategies, observations, referenceIssues, inheritedFrom: inheritedFrom ? { name: inheritedFrom.name, strategyId: inheritedFrom.strategyId } : null, barre, sourceStatus, sourceError, fetchedAt };
 }
 export type PortfolioWorkspace = Awaited<ReturnType<typeof getPortfolioWorkspace>>;

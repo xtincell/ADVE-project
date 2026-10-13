@@ -28,7 +28,7 @@ import { knowledgeStrategyScope } from "@/server/services/operator-isolation/kno
 
 const SIGNAL_TYPES_FOR_FEED = [
   "MARKET_SIGNAL", "WEAK_SIGNAL_ALERT", "SCORE_IMPROVEMENT", "SCORE_DECLINE",
-  "NOTORIA_BATCH_READY", "STRONG", "WEAK", "METRIC",
+  "NOTORIA_BATCH_READY", "STRONG", "WEAK", "METRIC", "EXTERNAL_METRIC",
 ];
 
 const categoryEnum = z.enum([

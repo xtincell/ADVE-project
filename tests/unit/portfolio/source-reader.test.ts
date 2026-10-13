@@ -22,7 +22,7 @@ beforeEach(() => {
   vi.stubGlobal("React", React);
   transport.inputs = []; transport.retry = undefined; transport.denied = false; transport.checking = false; transport.setStrategyId.mockClear();
   const root = { id: "node", name: "Marque de recette", operatorId: "team", strategyId: "owner", sourceRefs: [] };
-  transport.data = { root, nodes: [root], barre: null, inheritedFrom: null, referenceIssues: [], sourceStatus: "NOT_CONNECTED",
+  transport.data = { root, nodes: [root], barre: null, inheritedFrom: null, referenceIssues: [], sourceStatus: "NOT_CONNECTED", observations: [],
     strategies: ["owner", "consumer"].map((id) => ({ id, name: id === "owner" ? "Dossier propriétaire" : "Dossier consommateur",
       pillars: [], brandAssets: [], campaigns: [], dataSources: [{ id: "canonical-source", fileName: "Brief partagé", certainty: "DECLARED",
         shared: id === "consumer", ownerBrandName: "Dossier propriétaire", processingStatus: "EXTRACTED", updatedAt: new Date("2026-10-08T00:00:00Z") }],

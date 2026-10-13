@@ -40,6 +40,7 @@ const SIGNAL_TYPE_TO_CATEGORY: Record<string, JehutyCategory> = {
   STRONG: "EXTERNAL_SIGNAL",
   WEAK: "WEAK_SIGNAL",
   METRIC: "MARKET_SIGNAL",
+  EXTERNAL_METRIC: "MARKET_SIGNAL",
 };
 
 export function mapSignalToFeedItem(
@@ -68,6 +69,7 @@ export function mapSignalToFeedItem(
     category,
     title: title.slice(0, 120),
     summary: summary.slice(0, 300),
+    ...(signal.type === "EXTERNAL_METRIC" ? { observation: summary } : {}),
     pillarKey: (data.relatedPillars as string[] | undefined)?.[0] ?? (data.pillar as string) ?? undefined,
     strategyId: signal.strategyId,
     strategyName,
@@ -79,7 +81,9 @@ export function mapSignalToFeedItem(
     disadvantages: (data.disadvantages as string[]) ?? undefined,
     curation: curation ? { action: curation.action as JehutyCurationAction, note: curation.note ?? undefined } : undefined,
     createdAt: signal.createdAt.toISOString(),
-    source: signal.type,
+    source: signal.type === "EXTERNAL_METRIC"
+      ? typeof data.sourceLabel === "string" && data.sourceLabel.trim() ? data.sourceLabel.trim() : "Mesures reçues"
+      : signal.type,
   };
 }
 

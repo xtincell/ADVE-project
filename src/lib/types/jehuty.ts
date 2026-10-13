@@ -27,6 +27,8 @@ export interface JehutyFeedItem {
   // Content
   title: string;
   summary: string;
+  /** Complete measured observation; the editorial excerpt is not its receipt. */
+  observation?: string;
   pillarKey?: string;
   strategyId: string;
   strategyName?: string;

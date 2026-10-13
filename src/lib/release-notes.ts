@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.456", date: "2026-10-14",
+    headline: "Retrouver les mesures reçues dans votre dossier",
+    highlights: [
+      { emoji: "📊", title: "Des observations consultables", body: "Le dossier de marque présente les dernières observations reçues dans les dossiers accessibles, avec leur origine et leurs dates. Vous pouvez déplier leurs mesures complètes." },
+      { emoji: "📄", title: "Lire au-delà de l’extrait", body: "La Gazette permet de consulter l’observation mesurée complète. Une date ou une qualification manquante reste indiquée comme inconnue." },
+    ],
+  },
+  {
     version: "6.27.455", date: "2026-10-13",
     headline: "Des mesures qui gardent leur origine",
     highlights: [
