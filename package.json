@@ -1,6 +1,6 @@
 {
   "name": "lafusee",
-  "version": "6.27.452",
+  "version": "6.27.453",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",

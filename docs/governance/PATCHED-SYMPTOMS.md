@@ -30,17 +30,17 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
-2026-10-13 · **452 candidate — API/contextes et inconnu HTML reçus localement** :
-contrôle documentaire commun et citations avant champs longs, référence/certitude
-conservées aux contextes/RPC ; legacy inconnu→null/non renseigné reçu quatre volets
-HTML, label invalide non rendu. Legacy SOURCE_CHUNK cité sous même garde. Lecture
-sans index/préparation embeddings documentaires ; embed(query) sémantique possible
-avec provider configuré, non configuré sur receivers reçus. DEFAULT 4 370/416/
-ciblés 66/7/gouvernance 1 627/166/code+ship tous 0 et note+bible 21/2 verts, checkpoints
-rouges antérieurs conservés. CDP tronqué : zéros seulement observés ; Galahad 452
-REST deux timeouts 20 s/reprise non reçus, pas SLO. BibleCitation sans contentHash,
-PDF sans id/empreinte/statut reste en dette C3/C4 ; aucune propagation intégrale
-livre/export ou source/CI/image/production 452 reçue. [Reprise](RESIDUAL-DEBT.md).
+2026-10-13 · **453 candidate — présence documentaire corrigée, contexte reçu sur copie** : `sourcesSeen` distingue texte avec références et `ragUsed` hybride ; sept rouges puis 15 tests / 3 fichiers verts, cinq contrôles finaux à zéro, gouvernance 1 627 / 166. Le bundle 453 dans l’OCI 452 reçoit les cas avec et sans sources, sans image 453. Préflight `deliberate UNAVAILABLE` reçu ; l’import `ai` échoué relève du harnais CLI, pas d’un défaut Next ou fournisseur. Vraie route ask, source, CI, image et production 453 attendues ; aucune réponse modèle ou SLO déduit. [Reprise](RESIDUAL-DEBT.md).
+
+2026-10-13 · **452 source/CI/image et lecture OCI privée reçus** : statut source/
+empreinte/ID arrivé à REST 3x4/reprise 1x4 et RPC 25/3x4, refus et six populations
+inchangées/40 appels coût 0 recette ; source e36c9d28/image 25c189…/OCI privé 36f296e.
+HTML inconnu local reçu seulement, CDP tronqué et timeouts historiques conservés.
+Null OCI non reçu (zéro candidat non-doc), public 450 conservé/nonlivraison452 ;
+BibleCitation contentHash/PDF id-empreinte-statut restent en C4. Query embed permis
+avec provider configuré, aucun index/embedding documentaire préparé en lecture,
+provider absent des receivers. Onze unités bornées, aucun entier/SLO/décision modèle.
+[Reprise](RESIDUAL-DEBT.md).
 
 2026-10-13 · **450 livré au périmètre de préparation documentaire** : RAG initial
 0/77 BRAND_SOURCE sans empreinte malgré neuf EXTRACTED sur copie. Writer existant/

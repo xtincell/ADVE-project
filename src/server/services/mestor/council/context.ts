@@ -45,6 +45,8 @@ export interface AssistantContextResult {
   contextBlock: string;
   /** True si le contexte documentaire hybride a réellement contribué. */
   ragUsed: boolean;
+  /** True si des références documentaires accompagnent le texte injecté. */
+  sourcesSeen: boolean;
 }
 
 /** Contexte d'un expert + ce qu'il a réellement pu lire. */
@@ -129,7 +131,11 @@ export async function buildAssistantContext(
 
   sections.push(communityBlock);
 
-  return { contextBlock: sections.join("\n\n"), ragUsed: !!rag?.text };
+  return {
+    contextBlock: sections.join("\n\n"),
+    ragUsed: !!rag?.text,
+    sourcesSeen: !!rag?.text && (rag.sourceReferences?.length ?? 0) > 0,
+  };
 }
 
 /**

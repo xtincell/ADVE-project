@@ -16,16 +16,16 @@
 
 ## Quick start
 
-**452 candidate prête localement ; livraison source/CI/image/production 452 attendue.**
-La certitude arrive aux contextes et API locaux ; l’inconnu est reçu en HTML sans
-label inventé. Les citations du livre/export restent partielles : contentHash absent
-du type BibleCitation et id/empreinte/statut non affichés au PDF. La lecture ne
-prépare aucun index ou embedding documentaire ; les requêtes sémantiques existantes
-peuvent embed(query) avec provider configuré, non configuré sur les receivers reçus.
-Contrôles locaux et ship verts ; Galahad 452 REST/reprise ont encore expiré sur dev,
-recette sur image isolée après CI prévue. Aucun conseil modèle/parcours complet/SLO
-reçu, runtime public 450 et dix reçus bornés conservés, tous sept chantiers ouverts.
-[État et limites](docs/governance/REFONTE-PLAN.md).
+**453 candidate : contexte et contrôles reçus sur copie, livraison attendue.** Le conseil distingue les documents cités de la récupération hybride. La réception utilise un bundle candidat dans l’OCI 452, sans image 453 ni réponse modèle. Le préflight `deliberate UNAVAILABLE` est reçu ; la vraie route ask reste à exercer après CI, l’appel CLI ayant échoué dans le harnais externe. [Reprise et limites](docs/governance/REFONTE-PLAN.md).
+
+**452 source/CI/image et lecture OCI privée reçues ; runtime public 450 conservé.**
+Galahad REST et JSON-RPC conservent source/empreinte/certitude sur corpus restauré,
+avec reprise/refus et invariance reçus. Cela ne livre pas452 en production et ne
+reçoit pas le cas null OCI. HTML inconnu reçu localement ; livre/PDF restent partiels
+(contentHash perdu, id/empreinte/statut non affichés au PDF). Lecture sans indexation/
+préparation d’embeddings documentaires, query embed possible avec provider configuré,
+absent des receivers reçus. Onze unités bornées, aucun chantier/gate/lignée/cycle
+complet, pas SLO ni réponse modèle. Futur reçu documentaire distinct de source/image.
 
 **451 source et CI reçues ; runtime public 450 conservé.** Le contrôle compare la
 base PostgreSQL 16.15 réellement migrée au schéma courant ; aucune différence reçue

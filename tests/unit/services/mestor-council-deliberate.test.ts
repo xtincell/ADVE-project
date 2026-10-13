@@ -20,7 +20,7 @@ vi.mock("@/server/services/llm-gateway", async (importOriginal) => {
 });
 
 vi.mock("@/server/services/mestor/council/context", () => ({
-  buildAssistantContext: vi.fn(async () => ({ contextBlock: "CTX", ragUsed: false })),
+  buildAssistantContext: vi.fn(async () => ({ contextBlock: "CTX", ragUsed: false, sourcesSeen: false })),
   buildExpertContext: vi.fn(async () => "EXPERT CTX"),
 }));
 

@@ -53,16 +53,14 @@ export interface AskCouncilInput {
 }
 
 /**
- * `ragUsed` était calculé par `buildAssistantContext` puis **jeté** : sans
- * fournisseur d'embeddings, le bloc de recherche vaut `null` et personne
- * n'apprenait que le conseil avait répondu sans consulter la documentation. Le
- * signal descend désormais dans le prompt : le coordinateur sait ce qu'il n'a
- * pas lu, et doit le dire au lieu de le laisser croire.
+ * La contribution hybride peut ne contenir que des champs précis. La présence
+ * de documents dépend des références accompagnant le texte réellement injecté,
+ * pas de `ragUsed` ni de la disponibilité d'un fournisseur d'embeddings.
  */
-function buildCoordinatorSystem(contextBlock: string, ragUsed: boolean): string {
-  const grounding = ragUsed
-    ? "ANCRAGE — Des extraits de la documentation de la marque figurent dans ton dossier. Quand tu t'appuies dessus, cite le document."
-    : "ANCRAGE — La recherche documentaire n'a rien remonté sur ce dossier (aucun document indexé, ou recherche sémantique indisponible). Tu réponds donc sur les piliers et les mesures fournis. N'affirme pas qu'un point est confirmé par la documentation de la marque.";
+function buildCoordinatorSystem(contextBlock: string, sourcesSeen: boolean): string {
+  const grounding = sourcesSeen
+    ? "ANCRAGE — Des extraits de la documentation de la marque figurent dans ton dossier avec leur certitude déclarée. Cite le document et son statut quand tu t'appuies dessus. Leur récupération ne prouve ni validation humaine, ni capacité déployée ; une source DECLARED, INFERRED ou ARBITRARY ne devient pas OFFICIAL parce qu'elle est récupérée."
+    : "ANCRAGE — Aucun extrait documentaire n'est injecté dans ce dossier. Tu réponds sur les piliers et les mesures fournis. La conformité aux documents n'est pas vérifiée ; n'affirme pas qu'un point est confirmé par la documentation de la marque.";
   return [COUNCIL_PERSONAS.coordinator.systemPrompt, UNTRUSTED_NOTICE, contextBlock, grounding].join(
     "\n\n",
   );
@@ -70,9 +68,9 @@ function buildCoordinatorSystem(contextBlock: string, ragUsed: boolean): string 
 
 /** Tour de chat : le coordinateur répond en streaming avec le dossier complet. */
 export async function askCouncilStream(input: AskCouncilInput): Promise<StreamChatResult> {
-  const { contextBlock, ragUsed } = await buildAssistantContext(input.strategyId, input.question);
+  const { contextBlock, sourcesSeen } = await buildAssistantContext(input.strategyId, input.question);
   return streamChatText({
-    system: buildCoordinatorSystem(contextBlock, ragUsed),
+    system: buildCoordinatorSystem(contextBlock, sourcesSeen),
     messages: [...input.history, { role: "user", content: input.question }],
     caller: "mestor:council:coordinator",
     strategyId: input.strategyId,
@@ -114,7 +112,7 @@ export type CouncilDeliberation =
        * — l'opérateur doit pouvoir faire la différence sans deviner.
        */
       grounding: {
-        /** La recherche sémantique a contribué au dossier du coordinateur. */
+        /** Le contexte hybride a contribué au dossier du coordinateur. */
         ragUsed: boolean;
         /** Experts ayant réellement vu des documents de la marque. */
         expertsWithSources: FounderPillarKey[];
@@ -146,8 +144,8 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
   }
 
   let llmCalls = 0;
-  const { contextBlock, ragUsed } = await buildAssistantContext(input.strategyId, input.topic);
-  const coordinatorSystem = buildCoordinatorSystem(contextBlock, ragUsed);
+  const { contextBlock, ragUsed, sourcesSeen } = await buildAssistantContext(input.strategyId, input.topic);
+  const coordinatorSystem = buildCoordinatorSystem(contextBlock, sourcesSeen);
 
   // ── 1. Draft du coordinateur (skippé si une position est fournie) ──────
   let draft: CouncilDraft;

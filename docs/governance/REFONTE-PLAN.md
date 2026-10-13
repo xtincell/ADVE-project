@@ -1,62 +1,58 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## Certitude documentaire jusqu’aux lecteurs — 452 réception locale consolidée (2026-10-13)
+## Présence documentaire au conseil — 453 candidate, contexte reçu sur copie (2026-10-13)
 
-currentDocumentNodes partagé avec Oracle : même source autorisée/empreinte/certitude,
-orphelins exclus, inconnu préservé ; source-rag supprime sa seconde lecture.
-MCP/Oracle/SourceReference gardent références et certitude, legacy SOURCE_CHUNK
-reste cité via le même contrôle. Sources citées avant grandes valeurs précises,
-preciseFields complets et modes/calculs/repli conservés ; conseil distingue
-panne/absence, sans DECLARED→OFFICIAL. Aucune indexation ni préparation des embeddings
-documentaires pendant la lecture ; embed(query) des requêtes sémantiques existantes
-reste possible avec provider configuré. Provider non configuré sur receivers reçus,
-aucune activation implicite ; aucun nouvel acteur/service/route/Intent/UI/provider.
+Le constat 452 confondait `ragUsed`, métrique hybride, avec des documents vus dans `buildCoordinatorSystem`. `AssistantContextResult.sourcesSeen = !!rag.text && references.length > 0` reçoit désormais cette présence ; `askCouncilStream` et `deliberate` l’utilisent. La notice sans documents ne conclut plus à l’absence d’index ou d’embeddings ; les documents et leur statut ne prouvent ni validation humaine ni capacité déployée. Sept vrais échecs après correction du harnais, puis 15 tests / 3 fichiers verts ; la première erreur du harnais reste conservée. `coordinator-453-checks.json` reçoit les cinq contrôles finaux à zéro : tsc, lint, lint-governance, cycles et gouvernance (1 627 tests / 166 fichiers). Les deux lints gardent chacun 24 avertissements existants. Aucun ajout d’entité, service, fournisseur, gateway, DTO public ou note client.
 
-final-code-checks.json : DEFAULT 4 370/416, ciblés 66/7, gouvernance 1 627/166 verts,
-tsc/lint/lint-governance/cycles/gouvernance tous 0. ship-checks.json après note client
-également cinq zéros ; note+bible 21/2 verts. DEFAULT/ciblés avant note purement
-textuelle, code final autrement identique  ; 24 avertissements existants conservés.
-Rouges 6/4,8/6,4/1, borne 147/140, nullabilité de tests, deux Notoria/deux legacy et
-checkpoints 59/7→64/7/DEFAULT 4 368/416 antérieurs restent historiques. Note client
-ajoutée par la racine sur le bénéfice HTML reçu. Source/CI/image/production 452 attendus.
+`context-453-internal.json` reçoit le bundle compilé depuis la source locale 453 dans l’OCI 452 privée déjà reçue, sur copie réelle et réseau interne. SPAWT : `ragUsed=true/sourcesSeen=true` ; cas préexistant sans sources : `ragUsed=true/sourcesSeen=false`. Quatre experts et six populations métier inchangées, aucun corpus inventé. Cette réception ne constitue pas une image ou un runtime 453. `isTextLLMAvailable=false` ; le vrai préflight `deliberate` retourne `UNAVAILABLE`, sans réponse ou délibération métier ni modèle.
 
-context-cutoff-red.json : Oracle.text 230 224 caractères, six références dont premier
-marqueur 219 426 ; contexte 31 345 sans certitude. context-live-452.json reçoit vraie
-DB/copie/code local : six références/171 champs, coordinateur et quatre experts avec
-statut documentaire, sans provider, six populations/empreintes inchangées. Assemblage
-seulement, aucune réponse/délibération/décision modèle. rpc-live-452.json reçoit
-JSON-RPC 25 outils/3x4 hits OFFICIAL/DECLARED/refus ; premier tools/list expiré 55 s,
-Next 200 à 56 s (compile 31,6+23,9 s) conservé, pas SLO.
+`council-error-453.json` reçoit le message de l’appel ask via bundle CLI : « Cannot find package 'ai' imported from /app/[stdin] ». Il s’agit du harnais externe dans le standalone 452, sans preuve d’erreur fournisseur ni de défaut Next ou de packaging produit. Ask reste non reçu au-delà du contexte ; sa véritable route sur l’image 453 doit être exercée après CI. Le premier pont stdio a bloqué sur `PG ClientWrite` plus de trois minutes puis a été arrêté, erreur conservée ; l’essai SSH direct `P1001` a été arrêté sans réception. Le bundle interne reçoit les données, sans conclusion de performance, SLO ou causalité globale. Seuls les forwards 88915 et 89432 ont été arrêtés ; aucune dette générique d’infrastructure créée.
 
-bible-native-452.json/.txt/.png et bible-native-452-warm.json : ADMIN de recette,
-fixture séparée « RECETTE locale — certitude inconnue », label « certitude non
-renseignée » reçu quatre volets, legacy-custom-label non rendu. Première navigation
-CDP expirée 21 s puis rendu réel ; froid serveur 86 s. Titres observés bornes supérieures
-290 517 puis 104 079 ms, aucune première latence exacte. Fenêtres CDP truncated=true :
-zéro 500/exception/chargement défaillant seulement OBSERVÉ, jamais absence globale/SLO.
-unknown-bible-cleanup.json : deux lignes de fixture seules retirées, aucun nœud index
-créé, originaux/agents actifs/production inchangés. Next 3352 possédé arrêté,
-next-env propre restauré, tsc après restauration 0.
+**Plan, effort et déclencheur C3/C5** : recevoir source, CI et image 453, puis la vraie route du conseil sur cette image isolée avant conseil utile ou déploiement. Exercer absence, lecture indisponible, sources injectées, modes, refus, fraîcheur et invariance dans la recette existante C3-02. Contexte et préflight ne reçoivent ni réponse métier, mandat, job, lignée ou chantier complet. Onze reçus bornés inchangés et progression globale non calculée ; BibleCitation/PDF à recevoir en C4 et cas null OCI restent ouverts.
 
-Galahad 452 REST local a expiré deux fois 20 s, garde moteur maintenue ; http/fetch/
-api-version ont aussi expiré 5/55 s sur dev. Next local 146 % CPU/~6 Go/Swap 13 Go observés,
-causalité complète non reçue. Aucun succès/reprise Galahad 452 déduit de ces échecs.
-La baseline Galahad 450 REST/reprise reste sur copie, anchors comparatifs DB ;
-JSON-RPC 452 reçu ne substitue pas une recette du consommateur ou une lecture prod.
+## Certitude documentaire aux lecteurs — 452 reçue sur OCI privé (2026-10-13)
 
-**Reprise C3/C5** : native Galahad 452 et reprise sur image isolée/réseau interne
-après CI, même corpus/acteur/scopes/guards et provider non configuré ; recevoir
-source/CI/image/runtime exacts sans étendre les délais à l’aveugle. Effort : recette
-existante avant acceptation de lignée, garder refus/fraîcheur/invariance et échecs.
-**Reprise C3/C4 livre/export** : BibleCitation conserve sourceId/fileName/certitude/
-extrait mais perd contentHash de SourceExcerpt ; PDF renderComposedSection ne
-consomme que fileName/excerpt, sans id/empreinte/statut explicites. Propagation
-intégrale du triplet non reçue au livre/export. Étendre ces projections/citations
-existantes, recevoir HTML+PDF pour OFFICIAL/DECLARED/null/legacy avec rendu inspecté
-au lot d’export C4 avant release ; aucune nouvelle entité ni PDF 452 inventé.
-Dix réceptions bornées inchangées ; conseil/mandat/job/MCP production/calibration et
-C7/R09/tous sept chantiers/gates/parcours/lignées restent ouverts, cap 7/7/global null.
-[Dette en place](RESIDUAL-DEBT.md).
+Source e36c9d281b967c814100cd775ebd9364bb47189e, CI 38438713925/Mission 38438713257/
+Chromatic 38438713196 success : DEFAULT 4 370/416 et PG 16 358/18, 101 migrations/diff
+sans différence au périmètre Prisma. Image 38439617953 index
+sha256:25c189d884401706336ab6df7347bf9b99b8d58f51d8c4df4a31d625e19b2fcb reçue sans
+notifyCoolify. application-oci-452-receipt.json : récepteur privé 36f296e,452/API 200,
+réseau interne/aucun port public/aucun média monté,28 empreintes moteur Gal conformes
+au canon b8ad0ad ; cela ne prétend pas l’identité de tout le checkout Gal local.
+Production publique 450/200 encore reçue 18:14 UTC, aucune livraison publique 452.
+
+native-oci-452-first/resume.json : REST trois recherches de quatre hits puis nouveau
+processus/reprise 1x4, mêmes digests/sourceId/sourceContentHash/certitudes actuelles,
+9 sources/129 nœuds. Consentement/paramètres refusés avant réseau et intermarque403,
+six populations/empreintes identiques après toutes lectures, 40 appels clé coût 0 de
+recette (final-oci-read-452.json). rpc-oci-452.json reçu 18:11 UTC :25 outils,
+3x4 hits OFFICIAL/DECLARED/refus ; mêmes données REST/RPC. Non-doc SPAWT zéro candidat :
+cas null natif OCI non reçu, aucune panne d’index/writer inférée d’un résultat vide.
+Réception sans modèle/canal, pas réponse/délibération, mandat/job/lignée ou MCP public.
+Aucune indexation/préparation d’embeddings documentaires en lecture ; embed(query)
+sémantique existant possible avec provider configuré, absent des receivers reçus.
+
+Historiques locaux conservés : rouges 6/4,8/6,4/1, borne 147/140, nullabilité et legacy ;
+DEFAULT 4 370/416/ciblés 66/7/gauntlet 1 627/166 puis ship cinq zéros/note+bible 21/2.
+Contextes six références/171 champs/coordinateur/quatre experts sans provider reçus,
+cutoff Oracle 230 224/premier marqueur 219 426/contexte 31 345 réparé au périmètre.
+HTML inconnu local ADMIN quatre volets reçu, label invalide non rendu ; CDP tronqué,
+zéros seulement observés. Timeouts outils 55 s/Galahad 20 s/HTTP 5-55 s sur dev conservés,
+CPU 146 %/~6 Go/Swap 13 Go corrélation seulement, aucun SLO/causalité globale déduits.
+Deux lignes inconnues retirées/noIndexNodesCreated/originaux inchangés/Next arrêté/
+next-env restauré/tsc 0 ; forward 81552 seul arrêté après identité vérifiée, OCI reste privé.
+
+**Reprise C3/C4 livre/export** : BibleCitation garde sourceId/fileName/certitude/extrait
+mais perd contentHash de SourceExcerpt ; PDF renderComposedSection fileName/excerpt
+seulement, sans id/empreinte/statut. Triplet intégral livre/export non reçu. Étendre
+projections/citations existantes et recevoir HTML+PDF OFFICIAL/DECLARED/null/legacy
+avec rendu inspecté au lot d’export C4 avant release ; pas nouvelle entité/PDF inventé.
+
+receipt.json/measurement-receipt.json : une seule unité 13OCT-SOURCE-CERTAINTY-DESTINATION,
+dix→onze à 18:17:58 UTC, mesure idempotente/faux reçu/faux lot/lot inconnu refusés.
+Aucun crédit additionnel source/CI/image/futur commit MD. Prochain C3-02, queues
+conseil/retour quiz/conflits Friesland ; tous chantiers/gates/lignées/cycles entiers 0,
+global null, cap 7/7 et comptes canoniques conservés. [Dette restante](RESIDUAL-DEBT.md).
 
 ## Comparaison schéma/migrations — 451 source/CI reçues au périmètre (2026-10-13)
 

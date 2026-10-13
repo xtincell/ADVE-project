@@ -1,33 +1,36 @@
 # Changelog — La Fusee
 
+## v6.27.453 — fix(council): distinguer documents vus et récupération hybride (2026-10-13)
+
+**453 candidate : contexte compilé et cinq contrôles reçus ; source, CI, image et production 453 attendues. Hôte OCI 452 uniquement.**
+
+- `AssistantContextResult.sourcesSeen = !!rag.text && references.length > 0` distingue les documents cités de `ragUsed`, métrique hybride conservée. `askCouncilStream` et `deliberate` utilisent cette présence ; la notice ne déduit ni état d’index ni validation humaine ou capacité déployée.
+- Sept vrais contre-exemples rouges après correction du harnais, puis 15 tests / 3 fichiers verts. Les cinq contrôles finaux terminent à zéro ; gouvernance 1 627 / 166, 24 avertissements existants par lint (`coordinator-453-checks.json`).
+- Le bundle candidat 453 reçoit, dans l’OCI 452 privée, SPAWT avec sources et le cas préexistant sans sources malgré `ragUsed=true` ; quatre experts et six populations métier inchangées. Le préflight `deliberate` retourne réellement `UNAVAILABLE`, sans réponse modèle. L’appel ask par CLI échoue sur l’import `ai` du harnais externe ; la vraie route sur l’image 453 reste à recevoir après CI. Tentatives stdio/SSH conservées, sans défaut Next ou fournisseur déduit, dette d’infrastructure générique ou SLO. Aucune note client. [Réception et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.452 — fix(sources): conserver certitude et fraîcheur jusqu’aux lecteurs existants (2026-10-13)
 
-**452 candidate prête au périmètre local : HTML/API/contextes et contrôles reçus. Source/CI/image/production 452 attendus.**
+**452 source/CI/image et récepteur OCI privé reçus ; production publique 450 conservée, pas de livraison publique 452.**
 
-- currentDocumentNodes partagé avec Oracle, même source autorisée/empreinte/certitude,
-  orphelins exclus et inconnu préservé ; MCP/Oracle/SourceReference conservent les
-  références. Legacy SOURCE_CHUNK reste cité via le même contrôle. Lecture sans
-  indexation ni préparation d’embeddings documentaires ; embed(query) sémantique
-  existant reste possible avec provider configuré, absent des receivers reçus.
-- Sources avant valeurs longues, preciseFields complets et modes/calculs conservés.
-  Conseil distingue panne/absence sans DECLARED→OFFICIAL ; assemblage six références/
-  171 champs/coordinateur/quatre experts reçu sans provider, pas réponse modèle.
-  JSON-RPC local 25 outils/3x4 hits OFFICIAL/DECLARED et refus reçus sur copie.
-- HTML réel ADMIN de recette : « certitude non renseignée » visible quatre volets,
-  legacy-custom-label non rendu. BibleCitation nullable reçoit l’inconnu en HTML,
-  mais perd contentHash ; PDF composé ne montre pas id/empreinte/statut. Plan C4
-  des citations existantes conservé, aucune propagation intégrale livre/export reçue.
-- Rouges et checkpoints précédents conservés ; DEFAULT final 4 370/416, ciblés 66/7,
-  gouvernance 1 627/166 verts, cinq contrôles code puis ship après note client à zéro,
-  note+bible 21/2 verts. DEFAULT/ciblés précèdent la note purement textuelle, code
-  identique ; 24 avertissements existants conservés. Note client ajoutée par la racine.
-- Navigations froides/attentes reçues avec fenêtres CDP tronquées : zéro 500/exception
-  seulement observé, pas global/SLO. Galahad 452 REST deux timeouts 20 s conservés,
-  garde maintenue ; prochains essais sur image isolée après CI, aucune reprise 452
-  reçue. Fixture inconnue deux lignes retirées, aucun nœud index créé/originaux
-  inchangés, Next possédé arrêté/next-env restauré/tsc 0. Dix réceptions bornées,
-  tous sept chantiers/gates/parcours/lignées complets ouverts.
-  [Réception locale et limites](docs/governance/REFONTE-PLAN.md).
+- Source e36c9d281b967c814100cd775ebd9364bb47189e, CI 38438713925/Mission 38438713257/
+  Chromatic 38438713196 success : DEFAULT 4 370/416, PostgreSQL 16 358/18, 101 migrations/
+  diff sans différence au périmètre Prisma. Image 38439617953/index 25c189… reçue,
+  sans notifyCoolify. Récepteur privé 36f296e/API 200/6.27.452, 28 empreintes moteur Gal
+  conformes au canon b8ad0ad, aucun modèle/canal activé.
+- Native REST trois recherches de quatre hits puis nouveau processus/reprise 1x4 identiques,
+  sourceId/sourceContentHash/certitudes courants reçus, 9 sources/129 nœuds ; refus
+  consentement/paramètres/403, six populations/empreintes inchangées, 40 appels clé
+  coût 0 de recette. JSON-RPC OCI 25 outils/3x4/refus reçu 18:11 UTC. Non-doc SPAWT0
+  candidat : null natif OCI non reçu, aucun bug d’index/writer déduit d’un résultat vide.
+- HTML inconnu reçu localement, CDP tronqué et timeouts dev/Galahad 20 s conservés,
+  pas SLO. Query embed(query) reste possible avec provider configuré ; lecture sans
+  indexation/préparation d’embeddings documentaires, provider absent de ces receivers.
+- BibleCitation perd contentHash ; PDF sans id/empreinte/statut explicites reste
+  C4, triplet intégral livre/export non reçu. Source-documentaire au coordinateur
+  corrigée au code 453 seulement, réponse métier/mandat/lignée non reçus.
+  Une seule unité 13OCT-SOURCE-CERTAINTY-DESTINATION : dix→onze, aucun crédit pour
+  futur commit documentaire distinct ; chantiers/gates/lignées/cycles entiers 0/global null.
+  Historiques, défauts et reprises : [reçu](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.451 — fix(ci): mesurer le schéma sur la base PostgreSQL déjà migrée (2026-10-13)
 

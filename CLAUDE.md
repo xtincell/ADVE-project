@@ -4,20 +4,18 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-13
 
-**452 candidate prête au périmètre local, source/CI/image/production 452 attendus** :
-contrôle documentaire commun, références/certitude et repli/modes conservés ; aucun
-index ou embedding documentaire préparé en lecture. embed(query) sémantique reste
-possible avec provider configuré ; receivers actuels sans provider configuré.
-Contextes six références/171 champs/coordinateur+quatre experts sans modèle et RPC
-25 outils/3x4 hits reçus sur copie. HTML ADMIN fixture : label inconnu quatre volets,
-legacy-custom-label absent, fenêtres CDP tronquées donc zéros seulement observés.
-BibleCitation perd encore contentHash ; PDF id/empreinte/statut non reçus, plan C4.
-Galahad 452 REST/reprise non reçus, deux timeouts 20 s conservés, essai image isolée
-après CI. DEFAULT 4 370/416/ciblés 66/7 avant note textuelle, note+bible 21/2,
-gouvernance 1 627/166/code+ship cinq zéros, 24 warnings conservés. Fixture deux lignes
-retirées/noIndexNodesCreated/originaux inchangés ; Next arrêté/next-env restauré/tsc 0.
-Runtime public 450 et dix réceptions bornées conservés ; C7/R09/tous sept chantiers/
-parcours/lignées ouverts, aucun crédit nouveau. [Bornage](docs/governance/REFONTE-PLAN.md).
+**453 candidate, contexte compilé et cinq contrôles reçus au périmètre** : `sourcesSeen` distingue texte avec références et `ragUsed` hybride. Sept rouges puis 15 tests / 3 fichiers verts ; contrôles finaux à zéro, gouvernance 1 627 / 166 et 24 avertissements par lint. Le bundle 453 dans l’OCI 452 reçoit les cas avec et sans sources, quatre experts et six populations inchangées. Préflight `deliberate UNAVAILABLE` reçu, aucune réponse modèle ; l’import `ai` échoué appartient au harnais CLI, la vraie route ask reste non reçue. Source, CI, image et production 453 attendues ; aucun nouveau service, fournisseur, DTO public ou chantier accepté. [Reprise et limites](docs/governance/REFONTE-PLAN.md).
+
+**452 source/CI/image/OCI privé reçus** : source e36c9d28, CI 38438713925/Mission/
+Chromatic success, DEFAULT 4 370/416/PG 16 358/18/diff réel sans différence. Image 38439617953/
+index 25c189… et récepteur 36f296e/452/200, 28 hashes moteur Gal b8ad conformes. REST 3x4+
+reprise 1x4 mêmes données/certitudes, RPC 25/3x4/refus,9 sources/129 nœuds, six populations
+inchangées/40 appels coût 0 recette. Null OCI non reçu (zéro candidat non-doc), HTML
+inconnu local seulement ; BibleCitation/PDF id/empreinte/statut restent ouverts C4.
+Lecture sans indexation/préparation embeddings documentaires, embed(query) possible
+avec provider configuré, absent ici. Public450/200 reçu ; aucune production452/453,
+réponse modèle/mandat/lignée. Onze reçus, zéro entier/global null, futur reçu MD distinct.
+[Bornage](docs/governance/REFONTE-PLAN.md).
 
 **451 source/CI reçues, infrastructure seulement** : source 0d6ad096, CI 38421544109/
 Mission 38421544175/Chromatic 38421544198 success. Diff dans feedback-postgres après

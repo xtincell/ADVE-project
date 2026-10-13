@@ -254,16 +254,15 @@ nouvelle lecture. Source 80e2122f/CI/image/runtime 436 reçus, lecture réelle S
 S existant à 91 %/AI_PROPOSED v3/bouton désactivé reçue ; aucune approbation de
 marque réelle. Contrats de composition à réconcilier : [réception](RECEPTION-VALIDATION-SYNTHESE.md).
 
-**452 candidate — HTML reçu, aucune nouvelle page** : ADMIN fixture locale voit
-« certitude non renseignée » dans quatre volets, legacy-custom-label non rendu.
-BibleCitation nullable reçu en HTML seulement ; contentHash absent du type et
-PDF composé limité fileName/excerpt, id/empreinte/statut encore à recevoir en C4.
-Contextes/RPC locaux reçus sur copie, aucun modèle/délibération reçu. Lecture sans
-indexation/préparation d’embeddings documentaires, requêtes sémantiques avec provider
-configuré restent possibles ; provider non configuré sur receivers reçus.
-CDP tronqué, zéros seulement observés, pas global/SLO ; Galahad 452 REST timeouts
-conservés, prochain essai sur image isolée après CI. Code+ship contrôles verts,
-nettoyage reçu ; source/CI/image/production 452 attendus. [Bornage](REFONTE-PLAN.md).
+**453 candidate — notice interne, aucune page nouvelle** : `sourcesSeen` distingue les références réellement présentes de `ragUsed` hybride. Quinze tests / 3 fichiers et les cinq contrôles finaux sont verts. Le contexte avec et sans sources est reçu par bundle 453 dans l’OCI 452 ; le préflight `deliberate UNAVAILABLE` est reçu sans réponse modèle. L’échec d’import `ai` relève du harnais CLI ; la vraie route ask, la CI, l’image et la production 453 restent attendues. [Réception et reprise](REFONTE-PLAN.md).
+
+**452 source/CI/image/lecture OCI privée reçus** : Galahad REST 3x4/reprise 1x4 et
+RPC 25/3x4 gardent source/empreinte/certitude, refus/invariance sur copie reçus.
+Public450 conservé, production452 absente ; null natif OCI non reçu (aucun candidat
+non-doc). Label inconnu HTML local reçu, CDP tronqué donc zéros observés seulement ;
+BibleCitation sans contentHash/PDF sans id/empreinte/statut restent C4. Aucun index
+ou embedding documentaire préparé en lecture ; embed(query) sémantique reste possible
+avec provider configuré, absent des receivers reçus. [Bornage](REFONTE-PLAN.md).
 
 **451 source/CI reçues — contrôle infrastructure, aucune surface ajoutée** :
 feedback-postgres reçoit le diff de sa vraie base PostgreSQL 16.15 après migrations,
