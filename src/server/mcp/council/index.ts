@@ -14,7 +14,8 @@
  */
 
 import { z } from "zod";
-import { askCouncilOnce, deliberate } from "@/server/services/mestor/council";
+import { askCouncilOnce, deliberate, COUNCIL_UNAVAILABLE } from "@/server/services/mestor/council";
+import { isTextLLMAvailable } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
 import { checkPaidTier } from "@/server/services/glory-tools/tier-gate";
 import {
@@ -40,7 +41,7 @@ import {
 async function assertCouncilAffordable(
   strategyId: string,
   kind: "ask" | "deliberate",
-): Promise<{ error: string } | null> {
+): Promise<{ error: string } | typeof COUNCIL_UNAVAILABLE | null> {
   const strategy = await db.strategy.findUnique({
     where: { id: strategyId },
     select: { operatorId: true },
@@ -54,6 +55,9 @@ async function assertCouncilAffordable(
       error: `TIER_GATE_DENIED: ${gate.reason ?? "abonnement payant requis pour le conseil de marque."}`,
     };
   }
+  // Le transport conserve ses gardes et son metering. Sans fournisseur, aucun
+  // appel de génération ni quota de conseil n'est consommé pour une impossibilité.
+  if (!isTextLLMAvailable()) return COUNCIL_UNAVAILABLE;
   const ok =
     kind === "deliberate"
       ? await consumeDeliberationBudget(`mcp:${strategyId}`)

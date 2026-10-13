@@ -16,7 +16,9 @@
 
 ## Quick start
 
-**453 candidate : contexte et contrôles reçus sur copie, livraison attendue.** Le conseil distingue les documents cités de la récupération hybride. La réception utilise un bundle candidat dans l’OCI 452, sans image 453 ni réponse modèle. Le préflight `deliberate UNAVAILABLE` est reçu ; la vraie route ask reste à exercer après CI, l’appel CLI ayant échoué dans le harnais externe. [Reprise et limites](docs/governance/REFONTE-PLAN.md).
+**454 candidate locale : refus explicite sans fournisseur, réception finale attendue.** Les 23 tests ciblés sont verts ; la garde évite la consommation du quota interne du conseil lorsque le modèle est indisponible. Authentification, scopes et metering MCP restent en place. Les handlers compilés sur copie dans l’OCI 453 reçoivent UNAVAILABLE et quota interne inchangé ; transport HTTP, authentification et image 454 ne sont pas reçus. Les cinq contrôles finaux sont verts ; la livraison 454 et la recette du transport restent attendues. Le retour quiz reste à recevoir : la sonde sur copie crée deux Signaux pour une observation, perd identité/version/date observée et accepte une période invalide ; reprise C3-02/C3-03 avant branchement, sans résultat joueur réel. [Reprise C3 et limites](docs/governance/REFONTE-PLAN.md).
+
+**453 source, CI, image et lecture OCI privée reçues.** Galahad conserve les sources, empreintes et certitudes après reprise. La vraie route du conseil sans fournisseur a cependant reçu ask HTTP 500, contre deliberate HTTP 200/UNAVAILABLE : correctif local 454 en réception. Aucune réponse métier ou livraison publique 453 ; onze unités bornées, aucun chantier, gate, lignée ou cycle complet.
 
 **452 source/CI/image et lecture OCI privée reçues ; runtime public 450 conservé.**
 Galahad REST et JSON-RPC conservent source/empreinte/certitude sur corpus restauré,

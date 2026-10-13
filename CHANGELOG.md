@@ -1,12 +1,21 @@
 # Changelog — La Fusee
 
+## v6.27.454 — fix(council): refuser explicitement le conseil sans fournisseur (2026-10-13)
+
+**454 candidate locale : 23 tests / 4 fichiers verts, handlers compilés et cinq contrôles finaux reçus ; transport HTTP, source, CI, image et production 454 attendus.**
+
+- La vraie route sur l’OCI 453 sans fournisseur recevait `council.ask` HTTP 500 et `deliberate` HTTP 200/`UNAVAILABLE`, après consommation du quota interne. `COUNCIL_UNAVAILABLE` est désormais partagé ; `assertCouncilAffordable` vérifie la disponibilité après marque/abonnement et avant les quotas internes ask/deliberate.
+- Deux contre-exemples rouges avec six succès, puis 23 tests / 4 fichiers verts. Les cinq contrôles finaux terminent à zéro : gouvernance 1 627 / 166, 24 avertissements existants par lint et zéro cycle. Scopes, authentification, metering du transport et contrat de réponse avec modèle conservés. L’absence de consommation concerne le quota interne du conseil, sans promesse de gratuité MCP. Aucune note client ni nouvelle entité.
+- `availability-454-internal.json` reçoit les vrais handlers candidats compilés dans l’OCI 453 sur copie DB : ask/deliberate `UNAVAILABLE`, quota interne 2→2. Aucun HTTP, authentification du transport ou image 454 reçu, aucune réponse modèle.
+- Admission quiz sur OCI 453/copie : deux POST identiques ont créé deux Signaux ; identité/version/temps observé éliminés, période `2026-99` acceptée par un troisième POST. Écarts reçus sur métriques fictives, non corrigés en 454 ; concurrence AARRR encore statique. Provenance/fraîcheur/rejeu/atomicité à recevoir avant branchement C3-02/C3-03, sans nouveau pont ni écriture ADVE automatique. [Réception et reprise C3](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.453 — fix(council): distinguer documents vus et récupération hybride (2026-10-13)
 
-**453 candidate : contexte compilé et cinq contrôles reçus ; source, CI, image et production 453 attendues. Hôte OCI 452 uniquement.**
+**453 source, CI, image et lectures sur OCI privée reçues ; aucune livraison publique 453 ni réponse modèle reçue.**
 
-- `AssistantContextResult.sourcesSeen = !!rag.text && references.length > 0` distingue les documents cités de `ragUsed`, métrique hybride conservée. `askCouncilStream` et `deliberate` utilisent cette présence ; la notice ne déduit ni état d’index ni validation humaine ou capacité déployée.
-- Sept vrais contre-exemples rouges après correction du harnais, puis 15 tests / 3 fichiers verts. Les cinq contrôles finaux terminent à zéro ; gouvernance 1 627 / 166, 24 avertissements existants par lint (`coordinator-453-checks.json`).
-- Le bundle candidat 453 reçoit, dans l’OCI 452 privée, SPAWT avec sources et le cas préexistant sans sources malgré `ragUsed=true` ; quatre experts et six populations métier inchangées. Le préflight `deliberate` retourne réellement `UNAVAILABLE`, sans réponse modèle. L’appel ask par CLI échoue sur l’import `ai` du harnais externe ; la vraie route sur l’image 453 reste à recevoir après CI. Tentatives stdio/SSH conservées, sans défaut Next ou fournisseur déduit, dette d’infrastructure générique ou SLO. Aucune note client. [Réception et reprise](docs/governance/REFONTE-PLAN.md).
+- `AssistantContextResult.sourcesSeen = !!rag.text && references.length > 0` distingue documents cités et `ragUsed` hybride. Sept vrais rouges puis 15 tests / 3 fichiers verts, cinq contrôles locaux à zéro. Source `2135ded7fa19d09d1969db873fea84b263190d57` ; CI 38450143032, Chromatic 38450143034, Mission 38450143241 success : DEFAULT 4 376 / 417, PostgreSQL 16 358 / 18, 101 migrations et diff sans différence au périmètre Prisma.
+- Image 38451816621/index `ad6970…` reçue sans notifyCoolify ; OCI privée `3c4fad3`, version 453/API 200, 28 empreintes moteur Gal conformes. Galahad REST trois recherches de quatre hits et nouveau processus/reprise 1×4 reçoivent mêmes digests, ID, empreintes et certitudes ; six populations métier inchangées.
+- La vraie route ask reçoit HTTP 500/« L'outil council.ask a échoué côté serveur. Le détail est journalisé. », log `stream empty before first byte`. `deliberate` reçoit HTTP 200/`UNAVAILABLE`. L’erreur d’import `ai` du harnais CLI antérieur n’est pas reproduite par cette route ; historique conservé. Aucun modèle/canal configuré ni réponse utile, SLO ou cycle reçu ; onze reçus bornés inchangés. [Limites et correctif 454](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.452 — fix(sources): conserver certitude et fraîcheur jusqu’aux lecteurs existants (2026-10-13)
 

@@ -39,6 +39,12 @@ import {
 
 export type FounderPillarKey = "a" | "d" | "v" | "e";
 
+/** Même refus explicite pour les transports et la délibération sans fournisseur. */
+export const COUNCIL_UNAVAILABLE = {
+  status: "UNAVAILABLE",
+  reason: "Aucun fournisseur d'intelligence disponible — réessayez plus tard.",
+} as const;
+
 const EXPERT_TIMEOUT_MS = 90_000;
 const EXPERT_MAX_TOKENS = 1_500;
 const SYNTHESIS_MAX_TOKENS = 2_500;
@@ -137,10 +143,7 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 
 export async function deliberate(input: DeliberateInput): Promise<CouncilDeliberation> {
   if (!isTextLLMAvailable()) {
-    return {
-      status: "UNAVAILABLE",
-      reason: "Aucun fournisseur d'intelligence disponible — réessayez plus tard.",
-    };
+    return COUNCIL_UNAVAILABLE;
   }
 
   let llmCalls = 0;
