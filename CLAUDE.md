@@ -4,6 +4,16 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-13
 
+**451 candidate infrastructure** : diff dans feedback-postgres après migrations,
+ancienne comparaison impossible/fallback retirés, datasource réelle sans deuxième
+shadow. Bloc exact du workflow reçu sur PostgreSQL 17 local : égalité 0/divergence 2/
+restauration 0/erreur d’authentification : 1 ; 101 migrations, schéma restauré/table
+probe absente, aucun changement production. Cinq contrôles finaux à zéro,
+gouvernance 1 627/166 verte et 24 avertissements existants conservés. Source 451/
+CI PostgreSQL 16 attendues ; dette C7 non close, C7/R09/cap 7/7/parcours inchangés.
+Production reste450, aucun modèle/service/route/Intent/migration/note client ajouté.
+[Reprise C7](docs/governance/REFONTE-PLAN.md).
+
 **450 livré au périmètre le 13 octobre** : source 6f38b4b5, CI/Mission/Chromatic
 success, image 38410420071/index 153170… et runtime 6.27.450 exacts ; nextjs,
 private-media RW/API 200. INDEX_BRAND_SOURCE/prepareSourceIndex explicite sans

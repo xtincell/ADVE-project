@@ -1040,11 +1040,18 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
   datasource.shadowDatabaseUrl ; comparaison non exécutée, erreur de configuration
   transformée par le workflow en « schema.prisma is ahead of migrations ». Aucune
   divergence établie, aucune migration manquante ou gate HARD affaiblie déduite.
-  **Fermer** : fournir une instance/shadow DB jetable isolée, comparer réellement
-  migrations et schéma, puis distinguer drift et impossibilité de mesurer dans
-  le reçu CI en conservant les gates requises. Ne créer aucune migration depuis
-  ce faux warning. **Déclencheur** : prochaine recette C7 de base et déploiement,
-  avant acceptation du contrat de release ; effort : un lot CI/base isolé.
+  **451 candidate locale** : contrôle déplacé dans feedback-postgres après migrations,
+  --from-config-datasource → schéma courant, fallback retiré. Bloc shell exact reçu
+  sur PostgreSQL 17 isolé : 0/2/0/1, 101 migrations, empreinte restaurée/table probe
+  absente, production 450 inchangée. Cinq contrôles finaux à zéro/gouvernance
+  1 627/166 verte, 24 avertissements existants conservés. Source 451/CI PostgreSQL 16
+  non reçues : dette non close.
+  **Fermer** : recevoir le diff réel sur la base PostgreSQL 16 déjà migrée du job
+  existant, sans seconde instance shadow, avec divergence/impossibilité refusées.
+  Garder les gates, ne créer aucune migration depuis le faux warning historique.
+  **Déclencheur** : prochaine CI 451, avant acceptation du contrat de release C7/R09 ;
+  effort : une passe du job existant. Les autres trous C7/R09, cap 7/7 et critères de
+  suivi restent inchangés. Preuve privée controls-result.json, reçu local borné.
   Preuve privée ci-schema-diff-unreceived.json ; dette checkout Git ci-dessus
   conservée séparément, aucun doublon ou suppression de référence.
 - **Workflow de déploiement legacy sans script — préexistant** :

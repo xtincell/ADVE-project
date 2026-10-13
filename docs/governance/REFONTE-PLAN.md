@@ -1,5 +1,37 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Comparaison schéma/migrations — 451 candidate infrastructure (2026-10-13)
+
+Le contrôle existant passe dans feedback-postgres après application des migrations.
+Prisma diff --from-config-datasource → schéma courant compare la vraie base déjà
+migrée ; aucune seconde instance shadow nécessaire. Retrait du contrôle impossible
+au job de validation syntaxique et de son fallback : l’erreur de configuration ne
+peut plus être présentée comme un succès ou une divergence non mesurée.
+
+Preuves release/preuves-schema-migrations-20261013/gap.md et controls-result.json :
+bloc shell exact du workflow exécuté sur PostgreSQL 17 isolé après 101 migrations.
+Égalité0, divergence sur une seule table vide de fixture : 2, restauration 0,
+authentification refusée P1000/1. Empreinte avant/après
+943eef52951b6d652b9289b3ba07040424c2a9040ca47dff574a95199520ffb8 identique,
+table probe absente et production inchangée. Aucune nouvelle migration ou entité,
+aucune note client ; aucune correction de production déduite de la fixture.
+owned-runtime-cleanup.json : fixture possédée arrêtée après restauration du
+schéma, aucune base partagée ou production modifiée. Cette preuve locale ne reçoit
+pas la cible CI PostgreSQL 16.
+
+Cinq contrôles finaux reçus : tsc/lint/lint-governance/cycles/gouvernance exit 0,
+gouvernance 1 627/166 verte et 24 avertissements existants conservés. Ces résultats
+ne remplacent ni le futur commit source ni la CI PostgreSQL 16.
+
+**Plan/effort/trigger** : recevoir la source 451 puis le diff
+réel dans CI PostgreSQL 16 déjà migrée ; fermer uniquement la dette de comparaison
+une fois ce reçu exact obtenu. Une passe du job existant, avant acceptation C7/R09 ;
+les autres trous C7/restauration/contrat de release demeurent ouverts. Si le diff
+révèle un écart, qualifier chaque changement avant toute correction, sans migration
+aveugle ni baisse d’une gate HARD. Production 450/cap 7/7/comptes canoniques et
+7/R01–R10/80/global null inchangés ; aucun crédit de suivi ajouté.
+[Dette en place](RESIDUAL-DEBT.md).
+
 ## Recherche documentaire et Galahad manuel — 450 livré au périmètre (2026-10-13)
 
 Source 6f38b4b580117c45350ec598703a74b30038f121 publiée. CI 38409881780,

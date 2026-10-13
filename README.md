@@ -16,6 +16,15 @@
 
 ## Quick start
 
+**451 candidate infrastructure ; production 450 conservée.** Le contrôle CI du
+schéma compare la base PostgreSQL déjà migrée au schéma courant. Égalité, divergence
+et panne sont reçues distinctement sur fixture locale ; la CI PostgreSQL 16 reste
+à recevoir avant fermeture de cette dette. Aucun ajout client ni note de livraison
+client pour ce contrôle ; les autres parcours et sept chantiers restent ouverts.
+Cinq contrôles finaux à zéro, gouvernance 1 627/166 verte et 24 avertissements
+existants conservés ; source 451/CI PostgreSQL 16 non reçues.
+[État C7](docs/governance/REFONTE-PLAN.md).
+
 **450 livré au périmètre : préparation documentaire SPAWT reçue en production.**
 Les neuf sources ont été préparées par des commandes humaines, sans embeddings ;
 129 fragments restent visibles après reload et la lecture ne relance aucune

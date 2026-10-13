@@ -1,5 +1,24 @@
 # Changelog — La Fusee
 
+## v6.27.451 — fix(ci): mesurer le schéma sur la base PostgreSQL déjà migrée (2026-10-13)
+
+**451 candidate infrastructure ; contrôles locaux reçus, CI PostgreSQL 16 encore attendue. Production 450 conservée.**
+
+- Diff déplacé dans feedback-postgres après les migrations ; comparaison de la
+  datasource vers le schéma courant, sans seconde instance shadow. Ancien contrôle
+  impossible et fallback transformant toute erreur en warning retirés. Égalité,
+  divergence et impossibilité de mesurer restent distinctes ; aucun faux succès.
+- Bloc shell réel sur PostgreSQL 17 isolé après 101 migrations : égalité 0,
+  divergence sur une table vide de fixture : 2, restauration 0, authentification
+  refusée P1000/1. Empreinte du schéma identique avant/après, table probe absente,
+  production inchangée. Ce reçu local ne remplace pas la vraie CI PostgreSQL 16.
+- Cinq contrôles finaux reçus à zéro (tsc/lint/lint-governance/cycles/gouvernance),
+  gouvernance 1 627/166 verte, 24 avertissements existants conservés. Source/CI 451
+  encore attendues ; dette de comparaison C7 non
+  close, autres trous C7/R09 et 7/R01–R10/80/global null ouverts. Aucun schéma,
+  migration, service, route, Intent ou fonction client ajouté ; aucune note client.
+  [Bornage et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.450 — fix(sources): préparer la recherche par le writer documentaire existant (2026-10-13)
 
 **450 livré : runtime exact et neuf préparations documentaires SPAWT reçus en production au périmètre vérifié.**
