@@ -150,6 +150,8 @@ export type Intent =
       kind: "INDEX_BRAND_SOURCE";
       strategyId: string;
       sourceId: string;
+      /** Explicit deterministic reconciliation can skip vector preparation. */
+      prepareEmbeddings?: boolean;
     }
   // ── Seshat market study ingestion (ADR-0037 PR-I) ──────────────────
   | {

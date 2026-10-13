@@ -73,6 +73,34 @@ beforeEach(() => {
 });
 
 describe("one complete, current document index", () => {
+  it("repairs legacy text explicitly without requesting a vector provider, and is repeatable", async () => {
+    harness.state.nodes.push({
+      id: "legacy-brand-source", strategyId: "brand-a", sourceId: "source-a",
+      kind: "BRAND_SOURCE", field: "chunk_0", payload: { text: "ancienne projection" },
+    });
+    const originalSource = structuredClone(source());
+    const first = await indexBrandSource("source-a", "brand-a", { prepareEmbeddings: false });
+    expect(first.chunks).toBeGreaterThan(1);
+    expect(harness.embed).not.toHaveBeenCalled();
+    expect(first.embeddingRequested).toBe(false);
+    expect(ownNodes().every((n) => typeof n.payload.sourceContentHash === "string")).toBe(true);
+    expect(ownNodes().find((n) => n.id === "legacy-brand-source")).toBeUndefined();
+    const prepared = structuredClone(ownNodes());
+    const second = await indexBrandSource("source-a", "brand-a", { prepareEmbeddings: false });
+    expect(second.alreadyFresh).toBe(true);
+    expect(second.embeddingRequested).toBe(false);
+    expect(ownNodes()).toEqual(prepared);
+    expect(source()).toEqual(originalSource);
+    expect(harness.embed).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unrelated consumer before changing its or the owner's index", async () => {
+    const before = structuredClone(harness.state.nodes);
+    await expect(indexBrandSource("source-a", "brand-b", { prepareEmbeddings: false })).rejects.toThrow();
+    expect(harness.state.nodes).toEqual(before);
+    expect(harness.embed).not.toHaveBeenCalled();
+  });
+
   it("detects a correction after an unchanged first chunk, with the same chunk count", async () => {
     await indexBrandSource("source-a");
     const before = structuredClone(ownNodes());
@@ -97,6 +125,7 @@ describe("one complete, current document index", () => {
     expect(ownNodes()).toEqual(before);
     expect(harness.embed).toHaveBeenCalledTimes(1);
     expect(harness.embed).toHaveBeenCalledWith("brand-a");
+    expect(result.embeddingRequested).toBe(true);
   });
 
   it("rolls back the replacement and reports failure instead of a partial success", async () => {

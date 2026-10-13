@@ -20,7 +20,7 @@ import { useState, useEffect } from "react";
 
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
-import { useCanOperate } from "@/components/cockpit/use-can-operate";
+import { useCanOperate, useBrandWriteAccess } from "@/components/cockpit/use-can-operate";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Modal } from "@/components/shared/modal";
 import { SourceReadDialog } from "@/components/brand/source-read-dialog";
@@ -868,6 +868,7 @@ function BrandBookIngestModal({
 
 export default function SourcesPage() {
   const strategyId = useCurrentStrategyId();
+  const { canOperateOnBrand } = useBrandWriteAccess(strategyId);
   // Founder = lecture (liste + certitude) ; édition/purge/suppression =
   // gestes opérateur (lot 12, audit 2026-07-11 [M05-05]).
   const canOperate = useCanOperate();
@@ -917,6 +918,10 @@ export default function SourcesPage() {
   // PR-A (ADR-0032) — operator can flip certainty inline. Triggers refetch
   // on success so the badge color updates without a manual reload.
   const updateSourceMutation = trpc.ingestion.updateSource.useMutation({
+    onSuccess: () => sourcesQuery.refetch(),
+  });
+
+  const prepareSourceIndex = trpc.ingestion.prepareSourceIndex.useMutation({
     onSuccess: () => sourcesQuery.refetch(),
   });
 
@@ -1173,6 +1178,28 @@ export default function SourcesPage() {
                           </p>
                         ) : null
                       ) : null}
+                      {canOperateOnBrand && typeof source.id === "string" &&
+                        (source.processingStatus === "EXTRACTED" || source.processingStatus === "PROCESSED") &&
+                        source.indexedChunks === 0 ? (
+                          <div className="mt-2 space-y-1">
+                            <button
+                              type="button"
+                              disabled={prepareSourceIndex.isPending}
+                              onClick={() => prepareSourceIndex.mutate({ strategyId: strategyId!, sourceId: source.id as string })}
+                              className="inline-flex items-center gap-1 rounded border border-accent/30 px-2 py-1 text-xs text-accent hover:bg-accent/10 disabled:opacity-50"
+                            >
+                              {prepareSourceIndex.isPending && prepareSourceIndex.variables?.sourceId === source.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                              {prepareSourceIndex.isPending && prepareSourceIndex.variables?.sourceId === source.id ? "Préparation en cours…" : "Préparer le texte pour les recherches"}
+                            </button>
+                            <p className="text-2xs text-foreground-muted">Reprend le texte déjà extrait, sans analyse automatique ni modification de votre marque.</p>
+                            {prepareSourceIndex.error && prepareSourceIndex.variables?.sourceId === source.id ? (
+                              <p role="alert" className="text-xs text-error">{prepareSourceIndex.error.message}</p>
+                            ) : null}
+                            {prepareSourceIndex.isSuccess && prepareSourceIndex.variables?.sourceId === source.id && prepareSourceIndex.data?.chunks === 0 ? (
+                              <p className="text-2xs text-warning">Aucun texte utilisable. Consultez le document pour reprendre sa lecture.</p>
+                            ) : null}
+                          </div>
+                        ) : null}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

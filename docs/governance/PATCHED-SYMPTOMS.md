@@ -30,6 +30,23 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-13 · **450 reçu localement : préparation/recherche/UI, cinq contrôles et DEFAULT bornés reçus, livraison attendue** : RAG
+initial 0/77 BRAND_SOURCE sans empreinte malgré neuf EXTRACTED. Writer existant/
+Sources explicite false conservé au reçu/rejeu, operatorId réel/absence≠panne DB,
+IDs/scopes/lecture pure préservés. 129 fragments courants/huit ancrages vérifiés,
+26 HTTP/repeat/refus et SELECT métier identiques ; ciblés 48/6 verts. Query finale 8→8
+après préparations antérieures, baseline initiale 0 ; pas attribution causale erronée.
+UI finale ADMIN locale : neuf badges/129 fragments/aucun bouton de préparation,
+51 événements complets sans ≥500/exception observés. UI initiale tronquée avec
+Notoria 500 et tentative vide non reçue conservées, pas zéro global/SLO/UX complète.
+Cinq contrôles finaux à zéro/gouvernance 1 627/166, 24 warnings inchangés par lint.
+Premier DEFAULT final : 4 341 verts/un échec retry de timing sur 413 fichiers ;
+deux tests sous horloge virtuelle, ciblé 36/1 puis DEFAULT final 4 342/413 verts reçus,
+tsc après correction à zéro sans code LLM modifié. Commit/CI/image/prod 450 attendus,
+aucun conseil/mandat utile reçu. Commit de tests local 684e040e80af523ed802c98a7b38b5276b78e5d0 reçu (test+note449, hooks passés) ;
+commit applicatif 450/CI/image/production attendus.
+[Reprise en dette existante](RESIDUAL-DEBT.md).
+
 2026-10-13 · **449 runtime/lecteur public reçus au périmètre** : hPanel
 humain/running puis source/index/version exacts et private-media RW reçus.
 Blocage d’accès levé ; cause réseau non reçue/token API Hostinger non revalidé.

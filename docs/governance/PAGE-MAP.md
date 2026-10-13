@@ -254,6 +254,22 @@ nouvelle lecture. Source 80e2122f/CI/image/runtime 436 reçus, lecture réelle S
 S existant à 91 %/AI_PROPOSED v3/bouton désactivé reçue ; aucune approbation de
 marque réelle. Contrats de composition à réconcilier : [réception](RECEPTION-VALIDATION-SYNTHESE.md).
 
+**450 candidate locale — Sources existant, UI finale reçue au périmètre** : préparation
+explicite via INDEX_BRAND_SOURCE/prepareSourceIndex dans ingestion, opérateur et
+écriture marque, literal(false).default(false) au reçu/rejeu. Aucun read n’indexe,
+IDs MCP/ranker conservés ; pas nouvelle page. 26 HTTP sur copie SPAWT reçus,
+129 fragments actuels/huit ancrages vérifiés/refus/repeat sans embeddings et
+SELECT métier inchangés. Ciblés 48/6 verts. ADMIN local reçoit neuf badges totalisant
+129 fragments et aucun bouton de préparation restant ; note 450 visible.
+La fenêtre finale complète de 51 événements n’observe aucun ≥500/exception.
+UI initiale tronquée avec Notoria 500 et tentative vide non reçue restent historiques,
+sans zéro global/stabilité/SLO. Cinq contrôles finaux reçus à zéro ; premier DEFAULT
+final avec un échec retry de timing (4 341 verts/413 fichiers), deux tests corrigés
+par horloge virtuelle/ciblé 36/1 puis DEFAULT final 4 342/413 verts, tsc après
+correction à zéro. Source commit/CI/image/prod 450 attendus. Commit de tests local 684e040e80af523ed802c98a7b38b5276b78e5d0 reçu (test+note449, hooks passés) ;
+commit applicatif 450/CI/image/production attendus.
+[Bornage](REFONTE-PLAN.md).
+
 **13 octobre — runtime publisher 449 et lecteur public reçus, aucune page ajoutée** : source
 5a7f11a…/index be065e…/version 6.27.449, nextjs/private-media RW et API/version 200
 reçus après accès rétabli. Quiz Node exact 557a915/PR30/health DB/cible préservée,

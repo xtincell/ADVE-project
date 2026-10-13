@@ -1,5 +1,79 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Recherche documentaire et Galahad manuel — 450 local reçu au périmètre, livraison attendue (2026-10-13)
+
+Candidate locale sous diff source figé fc47e7c… ; aucun commit source 450/CI/image/
+runtime production reçu. Reçu Galahad distinct release/preuves-galahad-runtime-20261013/receipt.json : 0.1.4/b8ad0ad (PR6, 43 local/CI), bibliothèque manuelle HTTP
+réelle contre image449/corpus SPAWT/acteur et clé de recette. Carte/huit piliers/
+versions, refus intermarque et NOT_FOUND→ERROR/reprise de lecteur sous fenêtre
+renouvelée reçus. Ancienne fenêtre expirée conservée, pas Telegram/modèle/job/
+mandat complet/council utile reçu. Copie de base pré449 restaurée : 235 tables/
+57 105 lignes identiques, application reçue ; ACL/owners/médias/SI/Day Zero/TPE
+non reçus. Aucun changement production ou checkout original Galahad déduit.
+
+INDEX_BRAND_SOURCE existant via prepareSourceIndex dans ingestion, UI requiert
+opérateur et écriture marque. Ce geste sans embeddings/classification porte
+prepareEmbeddings literal(false).default(false), décision conservée dans le reçu
+gouverné/rejeu ; défaut ancien du writer ailleurs conservé. Aucun read n’indexe,
+operatorId réel via getOperatorContext, absence source NOT_FOUND sans masquer
+une panne DB ; sources/validations/piliers/scopes conservés. MCP transmet id/sourceId
+du ranker en vectoriel/déterministe ; réception réelle ci-dessous déterministe,
+pas embeddings/vectoriel réel déduit. Aucun nouveau service/router/Intent/provider.
+
+Preuves release/preuves-reconciliation-sources-450 : quatre rouges/huit verts HEAD,
+42/5 verts puis source-green-final.log 48/6 verts. DEFAULT antérieure 4 336/412 avant
+six tests adaptateur ajoutés. Premier DEFAULT final : 4 341 verts/un échec sur
+413 fichiers ; llm-gateway retry mesurait l’horloge réelle (150 ms sous charge, seuil
+50 ms). Deux tests seulement utilisent désormais une horloge virtuelle : succès
+0 ms et cap 5+10+10 ms, ciblé 36/1 vert, sans changement du code LLM. DEFAULT après
+correction reçu : unit-release-final.log, 4 342 tests/413 fichiers verts ; tsc après
+correction à zéro. Cinq contrôles finaux à
+zéro, gouvernance 1 627/166, lints 24 warnings chacun inchangés ; CODE-MAP sans diff.
+Le rouge de timing reste historique, aucune réception de future CI déduite.
+
+http-before.json/database-before.json : neuf sources SPAWT EXTRACTED, 77 anciens
+BRAND_SOURCE sans sourceContentHash, zéro fragment actuel/résultat utile. Après
+préparation : 129 fragments courants, sourceFingerprint canonique vérifiée sur tous
+et huit ancrages MCP. Empreintes SELECT sourceRows/pillars/assets/uses/strategy
+identiques entre database-before/after ; l’index dérivé change, pas les lignes
+canoniques comparées. 26 appels HTTP reçus : tools/list 25 et tools/call réels,
+neuf préparations puis repeat embeddingRequested:false/alreadyFresh, lecteur 403,
+source étrangère 404, override embeddings true 400, RPC intermarque isError.
+Query SPAWT rend huit extraits déterministes attribuables. Baseline initiale 0 ;
+http-after.search.before=8/after=8 car préparations partielles antérieures au run
+final. Ne pas réécrire cette chronologie en « run final 0→8 ». Conseil utile/mandat
+complet toujours non reçus, pas qualité de toutes requêtes ou calibration déduite.
+
+native-admin-final.json reçoit le 13 octobre à 13:39 UTC une navigation ADMIN sur
+la copie locale : neuf sources, neuf badges totalisant 129 fragments, aucun bouton
+de préparation restant. Fenêtre complète de 51 événements, truncated=false/
+hasMore=false, zéro statut ≥500/exception observé sur cette fenêtre. Note 450
+réellement vue (native-release-note.png). native-admin-initial.json conserve
+l’UI partielle neuf→huit boutons/premier document 25 fragments et un Notoria 500 ;
+native-admin-empty-attempt.json conserve la tentative vide non reçue. Leurs zéros
+ne prouvent aucun zéro global ; la relecture finale sans 500 n’établit pas une
+réparation générale de Notoria. Borne du titre observé 135 793 ms incluant les
+écarts entre gestes/outils, aucune latence exacte, stabilité répétée ou SLO reçu.
+receipt.json réunit ce périmètre local, sans réception production/CI/image.
+
+Turbopack/tunnel TCP Docker locaux instables conservés ; webpack/socket privée
+0600 via SSH reçus. Qualification séparée : lien direct VPS 30 ms, socket 9 ms,
+nouveau tunnel SSH sans multiplexage trois SELECT 1 réussis 1 626/1 555/1 768 ms.
+Pool 15/connexion 30 s uniquement fixture, aucune prod/agent touché ; ces mesures
+ne sont pas la latence UI/cible ou un réglage production reçu.
+
+**Plan/effort/trigger** : UI finale et invariance après préparation reçues au
+périmètre, DEFAULT final et cinq finals reçus ; recevoir maintenant source commit/
+CI/image/runtime exacts. Réconciliation legacy locale/recherche attribuable reçues, sans
+acceptation de toute lignée. Conseil utile sous mandat/reprise complète et coût
+autorisé restent distincts du lecteur manuel. Déclencheur : incrément 450 en cours,
+avant acceptation de lignée ; effort : recette par parcours/contrat existant, sans
+nouvelle couche ni purge canonique. ACL/owners/médias/restauration intégrale/TPE et
+7/R01–R10/80/global null ouverts. Attendre les reçus source/livraison de la racine
+avant clôture de ce reçu. Commit de tests local 684e040e80af523ed802c98a7b38b5276b78e5d0 reçu (test+note449, hooks passés) ;
+commit applicatif 450/CI/image/production attendus.
+[Dette d’ancrage en place](RESIDUAL-DEBT.md).
+
 ## Hébergement, runtime 449 et lecteur public SPAWT — réception bornée du 13 octobre
 
 Preuves release/preuves-acces-hebergement-20261013 : hpanel-receipt.json reçoit

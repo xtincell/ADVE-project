@@ -1,5 +1,39 @@
 # Changelog — La Fusee
 
+## v6.27.450 — fix(sources): préparer la recherche par le writer documentaire existant (2026-10-13)
+
+**450 candidate locale : préparation, recherche attribuable, UI et cinq contrôles finaux/DEFAULT reçus ; livraison attendue.**
+
+- INDEX_BRAND_SOURCE existant via prepareSourceIndex dans ingestion : Sources
+  requiert opérateur/écriture marque, sans embeddings/classification implicites.
+  prepareEmbeddings literal(false).default(false) conserve cette décision dans le
+  reçu/rejeu, ancien défaut du writer conservé ailleurs. Aucun read n’indexe ;
+  operatorId réel/getOperatorContext et id/sourceId du ranker conservés, absence
+  NOT_FOUND distincte d’une panne DB. Aucun nouveau service/router/Intent/provider.
+- Quatre rouges/huit verts puis ciblés finaux 48/6 verts. DEFAULT antérieure
+  4 336/412 avant six nouveaux tests adaptateur. Premier DEFAULT final : 4 341 verts/
+  un échec de timing retry sous charge sur 413 fichiers ; correction de deux tests
+  par horloge virtuelle, ciblé 36/1 vert puis DEFAULT final 4 342/413 verts reçu.
+  Cinq contrôles finaux à zéro/gouvernance 1 627/166, 24 warnings inchangés par lint ;
+  tsc après correction à zéro, aucun code LLM modifié pour cette correction de test.
+- Copie restaurée/SPAWT réel : neuf EXTRACTED, 77 anciens fragments sans empreinte
+  puis 129 courants tous vérifiés et huit ancrages MCP canoniques. 26 HTTP reçus,
+  neuf préparations/repeat alreadyFresh sans embedding, refus 403/404/400/isError ;
+  SELECT sources/piliers/assets/usages/strategy identiques. Query SPAWT : huit
+  extraits déterministes, baseline initiale zéro ; run final huit avant/après après
+  préparations antérieures, pas faux zéro→huit attribué à ce seul run.
+- UI finale ADMIN locale reçue le 13 octobre à 13:39 UTC : neuf sources/badges,
+  129 fragments, aucun bouton de préparation restant et note 450 visible.
+  Fenêtre complète de 51 événements, zéro statut ≥500/exception observé au périmètre.
+  Tentative vide non reçue et UI initiale tronquée avec Notoria 500 conservées ; ni zéro
+  global, ni stabilité répétée, ni SLO déduits.
+- Commit de tests local 684e040e80af523ed802c98a7b38b5276b78e5d0 reçu : test+note449 uniquement,
+  hooks passés ; code applicatif 450/CI/image/production encore attendus.
+- Galahad manuel/restauration données reçus au périmètre, ni conseil utile ni
+  mandat complet. Tunnel/socket qualifiés sur fixture seulement, aucune prod/agent
+  touché. Source commit/CI/image/runtime prod 450 attendus ;
+  7/R01–R10/80/global null ouverts. [Réception bornée](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.449 — fix(public-brand): partager les origines de lecture des éditions publiques (2026-10-12)
 
 **13 octobre — fix(tests) séparé : retry vérifié par horloge virtuelle.**
@@ -9,6 +43,7 @@
   plafond 5+10+10 ms ; 36/1 ciblés et DEFAULT 4 342/413 du candidat verts reçus,
   tsc après correction à zéro, aucun code LLM changé ; correction de test séparée,
   aucun bump/note client.
+  Commit local 684e040e80af523ed802c98a7b38b5276b78e5d0 : deux fichiers (test+note449), hooks passés.
 
 **449 runtime et lecteur public SPAWT reçus le 13 octobre, au périmètre vérifié.**
 

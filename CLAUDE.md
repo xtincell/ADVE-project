@@ -4,6 +4,25 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-13
 
+**450 candidate locale, réception bornée** : writer INDEX_BRAND_SOURCE via
+prepareSourceIndex, literal(false).default(false)/reçu/rejeu et opérateur réel ;
+lecture pure/scopes/IDs préservés. Ciblés 48/6 verts, DEFAULT 4 336/412 antérieure à
+six tests ajoutés. Premier DEFAULT final : 4 341 verts/un échec retry de timing sur
+413 fichiers ; deux tests passés à l’horloge virtuelle, ciblé 36/1 vert puis
+DEFAULT final 4 342/413 verts reçu, tsc après correction à zéro. Sur copie restaurée : neuf sources SPAWT,
+129 fragments courants/huit ancrages vérifiés, 26 HTTP avec préparation sans
+embedding/repeat/refus ; SELECT métier comparés identiques. Huit extraits
+attribuables déterministes, baseline initiale 0 puis run final 8→8 après préps.
+UI finale ADMIN locale reçue : neuf badges/129 fragments/aucun bouton de préparation,
+51 événements complets sans ≥500/exception observés ; tentative vide non reçue et
+Notoria 500 initial conservés, pas zéro global/SLO. Cinq contrôles finaux reçus à zéro,
+gouvernance 1 627/166 et 24 warnings inchangés par lint ; commit/CI/image/prod 450
+attendus. Galahad bibliothèque manuelle et restauration
+235/57 105 reçus, ACL/owners/médias/mandat/council utile/global non reçus.
+Commit de tests local 684e040e80af523ed802c98a7b38b5276b78e5d0 reçu (test+note449, hooks passés) ;
+commit applicatif 450/CI/image/production attendus.
+[Bornage](docs/governance/REFONTE-PLAN.md).
+
 **13 octobre — runtime 6.27.449 et lecteur public SPAWT reçus au périmètre** :
 connexion humaine hPanel/running et accès rétabli ; deux sauvegardes privées
 serveur/hash/archive reçus, restauration non reçue. Source 5a7f11a…/index be065e…,

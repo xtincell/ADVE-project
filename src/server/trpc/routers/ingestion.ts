@@ -121,6 +121,39 @@ export const ingestionRouter = createTRPCRouter({
       return listBrandSourceSummaries(input.strategyId, ctx.db);
     }),
 
+  // Reuse extracted text through the canonical writer; no new extraction,
+  // classifier, pillar amendment or implicit embedding authorization.
+  prepareSourceIndex: governedProcedure({
+    kind: "INDEX_BRAND_SOURCE",
+    requireOperator: true,
+    inputSchema: z.object({
+      strategyId: z.string(), sourceId: z.string(),
+      // The governed receipt must retain the same no-vector choice as the bus.
+      prepareEmbeddings: z.literal(false).default(false),
+    }),
+    caller: "ingestion:prepareSourceIndex",
+  }).mutation(async ({ ctx, input }) => {
+    const { source } = await resolveBrandSource(input.sourceId, input.strategyId, ctx.db).catch((error: unknown) => {
+      if (error instanceof Error && error.message.startsWith("SOURCE_UNAVAILABLE:")) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Ce document n’est plus accessible dans ce dossier." });
+      }
+      throw error;
+    });
+    if (!["EXTRACTED", "PROCESSED"].includes(source.processingStatus)) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le texte de ce document doit être extrait avant sa préparation." });
+    }
+    const { emitIntent } = await import("@/server/services/mestor/intents");
+    const operator = await getOperatorContext(ctx.session.user.id, ctx.db);
+    const result = await emitIntent({
+      kind: "INDEX_BRAND_SOURCE", strategyId: input.strategyId,
+      sourceId: input.sourceId, prepareEmbeddings: input.prepareEmbeddings,
+    }, { caller: "ingestion:prepareSourceIndex", operatorId: operator.operatorId ?? undefined });
+    if (result.status !== "OK") {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "La préparation n’a pas abouti. Vous pouvez réessayer." });
+    }
+    return result.output as { sourceId: string; strategyId: string; chunks: number; alreadyFresh?: boolean; embeddingRequested: boolean };
+  }),
+
   // Get ONE source with its raw content (lazy — listSources omits rawContent
   // car volumineux). Consommé par le panneau d'édition de source du cockpit.
   getSource: protectedProcedure

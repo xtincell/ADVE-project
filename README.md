@@ -16,6 +16,19 @@
 
 ## Quick start
 
+**450 candidate locale ; contrôles et DEFAULT reçus, livraison attendue.** La préparation
+des textes réutilise le writer existant sans embeddings/classification implicites,
+et la lecture ne lance aucune indexation. Sur copie du corpus réel SPAWT : huit
+extraits attribuables et données métier comparées inchangées. L’UI locale finale
+reçoit neuf sources, 129 fragments et aucun bouton de préparation restant ; cette
+navigation ne mesure ni stabilité répétée ni SLO. Tests ciblés 48 verts et cinq
+contrôles finaux reçus à zéro. Un échec de timing retry de la première suite complète
+a conduit à deux tests sous horloge virtuelle ; DEFAULT final 4 342/413 verts reçu. Galahad reste reçu en bibliothèque manuelle,
+conseil/mandat complet, autres parcours et restauration complète encore ouverts.
+Commit de tests local 684e040e80af523ed802c98a7b38b5276b78e5d0 reçu (test+note449, hooks passés) ;
+commit applicatif 450/CI/image/production attendus.
+[État et limites](docs/governance/REFONTE-PLAN.md).
+
 **13 octobre : runtime 6.27.449 et première lecture publique SPAWT reçus.**
 Vitrine, landing et jeu consomment l’édition réelle conservée, ses cinq polices/
 trois usages Moka. Six questions parcourues jusqu’à l’inscription, sans contact

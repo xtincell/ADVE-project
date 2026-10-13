@@ -149,6 +149,8 @@ export const tools: ToolDefinition[] = [
           query,
           usedVectorSearch: true,
           results: vectorHits.map((h) => ({
+            id: h.id,
+            sourceId: h.sourceId,
             kind: h.kind,
             pillarKey: h.pillarKey,
             field: h.field,
@@ -180,6 +182,8 @@ export const tools: ToolDefinition[] = [
         query,
         usedVectorSearch: false,
         results: ranked.map((r) => ({
+          id: r.c.id,
+          sourceId: r.c.sourceId,
           kind: r.c.kind,
           pillarKey: r.c.pillarKey,
           field: r.c.field,

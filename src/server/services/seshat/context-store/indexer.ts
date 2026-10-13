@@ -305,19 +305,26 @@ export interface BrandSourceIndexResult {
   durationMs: number;
   /**
    * Vrai quand l'index était déjà à jour pour ce contenu — rien n'a été
-   * réécrit, rien n'a été ré-embeddé. Ce qui rend l'appel sûr en boucle.
+   * réécrit. Un worker optionnel peut encore reprendre les vecteurs absents.
    */
   alreadyFresh?: boolean;
+  /** Whether the optional vector worker was requested, not its completion. */
+  embeddingRequested: boolean;
 }
 
 /**
  * Prepare one source using the same writer as full context preparation.
  * Text persistence is atomic; optional embedding starts only after commit.
  */
-export async function indexBrandSource(sourceId: string, strategyId?: string): Promise<BrandSourceIndexResult> {
+export async function indexBrandSource(
+  sourceId: string,
+  strategyId?: string,
+  options: { prepareEmbeddings?: boolean } = {},
+): Promise<BrandSourceIndexResult> {
   const t0 = Date.now();
   const source = await writeSourceIndex(sourceId, strategyId);
-  if (source.chunks > 0) {
+  const embeddingRequested = source.chunks > 0 && options.prepareEmbeddings !== false;
+  if (embeddingRequested) {
     // Even unchanged text can lack vectors after a provider outage. The worker
     // only processes missing vectors; preserve existing ids and embeddings.
     void embedBrandContext(source.strategyId).catch((err) => {
@@ -332,6 +339,7 @@ export async function indexBrandSource(sourceId: string, strategyId?: string): P
     strategyId: source.strategyId,
     chunks: source.chunks,
     durationMs: Date.now() - t0,
+    embeddingRequested,
     ...(source.reused ? { alreadyFresh: true } : {}),
   };
 }

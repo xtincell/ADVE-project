@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.450", date: "2026-10-13",
+    headline: "Retrouver vos documents sans analyse assistée",
+    highlights: [
+      { emoji: "📄", title: "Préparer le texte déjà lu", body: "Les personnes autorisées peuvent préparer un document depuis Sources pour le retrouver dans les recherches. Cette préparation conserve vos documents et vos informations de marque, sans lancer d’analyse assistée." },
+      { emoji: "🔎", title: "Retrouver l’origine d’un extrait", body: "Les extraits transmis aux analyses conservent la référence du document dont ils proviennent. Vous pouvez ainsi retrouver leur origine." },
+    ],
+  },
+  {
     version: "6.27.446", date: "2026-10-10",
     headline: "Une décision qui se transmet jusqu’au plan",
     highlights: [

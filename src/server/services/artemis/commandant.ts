@@ -1145,7 +1145,9 @@ async function indexBrandSource(
     const { indexBrandSource: runIndex } = await import(
       "@/server/services/seshat/context-store"
     );
-    const result = await runIndex(intent.sourceId, intent.strategyId);
+    const result = await runIndex(intent.sourceId, intent.strategyId, {
+      prepareEmbeddings: intent.prepareEmbeddings,
+    });
     return {
       status: "OK",
       summary: `Brand source ${intent.sourceId} indexed: ${result.chunks} chunks in ${result.durationMs}ms`,
