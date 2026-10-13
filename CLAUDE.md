@@ -4,6 +4,21 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-13
 
+**452 candidate prête au périmètre local, source/CI/image/production 452 attendus** :
+contrôle documentaire commun, références/certitude et repli/modes conservés ; aucun
+index ou embedding documentaire préparé en lecture. embed(query) sémantique reste
+possible avec provider configuré ; receivers actuels sans provider configuré.
+Contextes six références/171 champs/coordinateur+quatre experts sans modèle et RPC
+25 outils/3x4 hits reçus sur copie. HTML ADMIN fixture : label inconnu quatre volets,
+legacy-custom-label absent, fenêtres CDP tronquées donc zéros seulement observés.
+BibleCitation perd encore contentHash ; PDF id/empreinte/statut non reçus, plan C4.
+Galahad 452 REST/reprise non reçus, deux timeouts 20 s conservés, essai image isolée
+après CI. DEFAULT 4 370/416/ciblés 66/7 avant note textuelle, note+bible 21/2,
+gouvernance 1 627/166/code+ship cinq zéros, 24 warnings conservés. Fixture deux lignes
+retirées/noIndexNodesCreated/originaux inchangés ; Next arrêté/next-env restauré/tsc 0.
+Runtime public 450 et dix réceptions bornées conservés ; C7/R09/tous sept chantiers/
+parcours/lignées ouverts, aucun crédit nouveau. [Bornage](docs/governance/REFONTE-PLAN.md).
+
 **451 source/CI reçues, infrastructure seulement** : source 0d6ad096, CI 38421544109/
 Mission 38421544175/Chromatic 38421544198 success. Diff dans feedback-postgres après
 101 migrations sur PostgreSQL 16.15 : égalité dans le périmètre Prisma migrate diff,

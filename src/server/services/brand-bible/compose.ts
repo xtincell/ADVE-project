@@ -60,7 +60,7 @@ export interface BibleEntry {
 export interface BibleCitation {
   sourceId: string;
   fileName: string;
-  certainty: SourceCertainty;
+  certainty: SourceCertainty | null;
   excerpt: string;
 }
 

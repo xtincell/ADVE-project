@@ -1,5 +1,34 @@
 # Changelog — La Fusee
 
+## v6.27.452 — fix(sources): conserver certitude et fraîcheur jusqu’aux lecteurs existants (2026-10-13)
+
+**452 candidate prête au périmètre local : HTML/API/contextes et contrôles reçus. Source/CI/image/production 452 attendus.**
+
+- currentDocumentNodes partagé avec Oracle, même source autorisée/empreinte/certitude,
+  orphelins exclus et inconnu préservé ; MCP/Oracle/SourceReference conservent les
+  références. Legacy SOURCE_CHUNK reste cité via le même contrôle. Lecture sans
+  indexation ni préparation d’embeddings documentaires ; embed(query) sémantique
+  existant reste possible avec provider configuré, absent des receivers reçus.
+- Sources avant valeurs longues, preciseFields complets et modes/calculs conservés.
+  Conseil distingue panne/absence sans DECLARED→OFFICIAL ; assemblage six références/
+  171 champs/coordinateur/quatre experts reçu sans provider, pas réponse modèle.
+  JSON-RPC local 25 outils/3x4 hits OFFICIAL/DECLARED et refus reçus sur copie.
+- HTML réel ADMIN de recette : « certitude non renseignée » visible quatre volets,
+  legacy-custom-label non rendu. BibleCitation nullable reçoit l’inconnu en HTML,
+  mais perd contentHash ; PDF composé ne montre pas id/empreinte/statut. Plan C4
+  des citations existantes conservé, aucune propagation intégrale livre/export reçue.
+- Rouges et checkpoints précédents conservés ; DEFAULT final 4 370/416, ciblés 66/7,
+  gouvernance 1 627/166 verts, cinq contrôles code puis ship après note client à zéro,
+  note+bible 21/2 verts. DEFAULT/ciblés précèdent la note purement textuelle, code
+  identique ; 24 avertissements existants conservés. Note client ajoutée par la racine.
+- Navigations froides/attentes reçues avec fenêtres CDP tronquées : zéro 500/exception
+  seulement observé, pas global/SLO. Galahad 452 REST deux timeouts 20 s conservés,
+  garde maintenue ; prochains essais sur image isolée après CI, aucune reprise 452
+  reçue. Fixture inconnue deux lignes retirées, aucun nœud index créé/originaux
+  inchangés, Next possédé arrêté/next-env restauré/tsc 0. Dix réceptions bornées,
+  tous sept chantiers/gates/parcours/lignées complets ouverts.
+  [Réception locale et limites](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.451 — fix(ci): mesurer le schéma sur la base PostgreSQL déjà migrée (2026-10-13)
 
 **451 source et CI reçues au périmètre du contrôle infrastructure ; runtime public 450 conservé.**

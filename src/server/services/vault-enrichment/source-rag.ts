@@ -91,17 +91,6 @@ export interface SourceContextHit {
   similarity: number;
 }
 
-/** Hydrate la certitude des documents cités (absente du payload des chunks). */
-async function loadCertainties(ids: string[]): Promise<Map<string, SourceCertainty>> {
-  const unique = Array.from(new Set(ids));
-  if (unique.length === 0) return new Map();
-  const rows = await db.brandDataSource.findMany({
-    where: { id: { in: unique } },
-    select: { id: true, certainty: true },
-  });
-  return new Map(rows.map((r) => [r.id, r.certainty as SourceCertainty]));
-}
-
 /**
  * Récupère, pour une requête (typiquement « label champ + valeur actuelle »),
  * les `topK` chunks de source les plus pertinents par similarité sémantique.
@@ -118,7 +107,7 @@ export async function retrieveSourceChunksForField(
     topK,
   });
 
-  const mapped = hits
+  return hits
     .map((h) => {
       const p = (h.payload ?? {}) as Record<string, unknown>;
       return {
@@ -126,7 +115,7 @@ export async function retrieveSourceChunksForField(
         contentHash: typeof p.sourceContentHash === "string" ? p.sourceContentHash : undefined,
         text: typeof p.text === "string" ? p.text : "",
         fileName: typeof p.fileName === "string" ? p.fileName : "source",
-        certainty: null as SourceCertainty | null,
+        certainty: h.sourceCertainty ?? null,
         chunkIndex: typeof p.chunkIndex === "number" ? p.chunkIndex : null,
         charStart: typeof p.charStart === "number" ? p.charStart : null,
         similarity: h.similarity ?? 0,
@@ -134,13 +123,6 @@ export async function retrieveSourceChunksForField(
     })
     .filter((h) => h.text.length > 0);
 
-  const certainties = await loadCertainties(
-    mapped.map((h) => h.sourceId).filter((id): id is string => Boolean(id)),
-  );
-  for (const h of mapped) {
-    if (h.sourceId) h.certainty = certainties.get(h.sourceId) ?? null;
-  }
-  return mapped;
 }
 
 /**
@@ -159,6 +141,7 @@ export async function buildRetrievedSourceBrief(
 
   const seen = new Set<string>();
   const blocks: string[] = [];
+  const separator = "\n\n---\n\n";
   let totalChars = 0;
 
   for (const { field, query } of fieldQueries) {
@@ -167,13 +150,14 @@ export async function buildRetrievedSourceBrief(
       const key = `${h.fileName}::${h.text.slice(0, 60)}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      const block = `[${field} ← ${h.fileName}] ${h.text}`;
-      if (totalChars + block.length > maxChars) continue;
+      const block = `[${field} ← ${h.fileName}, source:${h.sourceId}, certitude:${h.certainty ?? "non renseignée"}] ${h.text}`;
+      const addedChars = block.length + (blocks.length > 0 ? separator.length : 0);
+      if (totalChars + addedChars > maxChars) continue;
       blocks.push(block);
       if (h.sourceId && h.contentHash) opts.sourceReceipts?.push({ sourceId: h.sourceId, contentHash: h.contentHash });
-      totalChars += block.length;
+      totalChars += addedChars;
     }
   }
 
-  return blocks.join("\n\n---\n\n");
+  return blocks.join(separator);
 }

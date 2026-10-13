@@ -228,7 +228,7 @@ export default function BrandBiblePage() {
               {section.citations.map((c) => (
                 <div key={c.sourceId}>
                   <p className="text-2xs text-foreground-muted">
-                    {c.fileName} — {c.certainty}
+                    {c.fileName} — {c.certainty ?? "certitude non renseignée"}
                   </p>
                   <p className="whitespace-pre-wrap text-xs text-foreground-secondary">
                     {c.excerpt.slice(0, 700)}

@@ -151,6 +151,7 @@ export const tools: ToolDefinition[] = [
           results: vectorHits.map((h) => ({
             id: h.id,
             sourceId: h.sourceId,
+            sourceCertainty: h.sourceCertainty,
             kind: h.kind,
             pillarKey: h.pillarKey,
             field: h.field,
@@ -184,6 +185,7 @@ export const tools: ToolDefinition[] = [
         results: ranked.map((r) => ({
           id: r.c.id,
           sourceId: r.c.sourceId,
+          sourceCertainty: r.c.sourceCertainty,
           kind: r.c.kind,
           pillarKey: r.c.pillarKey,
           field: r.c.field,

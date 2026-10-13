@@ -254,6 +254,17 @@ nouvelle lecture. Source 80e2122f/CI/image/runtime 436 reçus, lecture réelle S
 S existant à 91 %/AI_PROPOSED v3/bouton désactivé reçue ; aucune approbation de
 marque réelle. Contrats de composition à réconcilier : [réception](RECEPTION-VALIDATION-SYNTHESE.md).
 
+**452 candidate — HTML reçu, aucune nouvelle page** : ADMIN fixture locale voit
+« certitude non renseignée » dans quatre volets, legacy-custom-label non rendu.
+BibleCitation nullable reçu en HTML seulement ; contentHash absent du type et
+PDF composé limité fileName/excerpt, id/empreinte/statut encore à recevoir en C4.
+Contextes/RPC locaux reçus sur copie, aucun modèle/délibération reçu. Lecture sans
+indexation/préparation d’embeddings documentaires, requêtes sémantiques avec provider
+configuré restent possibles ; provider non configuré sur receivers reçus.
+CDP tronqué, zéros seulement observés, pas global/SLO ; Galahad 452 REST timeouts
+conservés, prochain essai sur image isolée après CI. Code+ship contrôles verts,
+nettoyage reçu ; source/CI/image/production 452 attendus. [Bornage](REFONTE-PLAN.md).
+
 **451 source/CI reçues — contrôle infrastructure, aucune surface ajoutée** :
 feedback-postgres reçoit le diff de sa vraie base PostgreSQL 16.15 après migrations,
 sans différence au périmètre Prisma migrate diff et sans fallback. Négatifs 0/2/0/1 reçus sur PostgreSQL 17.9 local seulement.

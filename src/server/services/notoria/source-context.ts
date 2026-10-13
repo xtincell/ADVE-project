@@ -30,7 +30,7 @@
 
 import { db } from "@/lib/db";
 import { sourceScope, sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
-import { compareCertainty, type SourceCertainty } from "@/domain/source-certainty";
+import { compareCertainty, isSourceCertainty, type SourceCertainty } from "@/domain/source-certainty";
 import {
   ensureSourcesIndexed,
   retrieveSourceChunksForField,
@@ -41,7 +41,7 @@ export type SourceExcerpt = {
   sourceId: string;
   contentHash?: string;
   fileName: string;
-  certainty: SourceCertainty;
+  certainty: SourceCertainty | null;
   /** Position du début de l'extrait dans `rawContent` — rend l'extrait retrouvable. */
   offset: number;
   text: string;
@@ -199,8 +199,8 @@ async function retrieveSemantic(
   // une note ARBITRAIRE même si cette dernière colle mieux à la requête.
   const ordered = [...hits].sort((a, b) => {
     const c = compareCertainty(
-      (b.certainty ?? "ARBITRARY") as SourceCertainty,
-      (a.certainty ?? "ARBITRARY") as SourceCertainty,
+      b.certainty ?? "ARBITRARY",
+      a.certainty ?? "ARBITRARY",
     );
     if (c !== 0) return c;
     return b.similarity - a.similarity;
@@ -220,7 +220,7 @@ async function retrieveSemantic(
       sourceId: h.sourceId,
       contentHash: h.contentHash,
       fileName: h.fileName,
-      certainty: (h.certainty ?? "INFERRED") as SourceCertainty,
+      certainty: h.certainty,
       offset: h.charStart ?? 0,
       text,
     });
@@ -274,7 +274,10 @@ export async function loadBrandSourceContext(
   // obtenir « le plus fiable d'abord » — sans ce signe, on servait au modèle les
   // notes ARBITRAIRES avant les pièces OFFICIELLES.
   usable.sort((a, b) => {
-    const c = compareCertainty(b.certainty as SourceCertainty, a.certainty as SourceCertainty);
+    const c = compareCertainty(
+      isSourceCertainty(b.certainty) ? b.certainty : "ARBITRARY",
+      isSourceCertainty(a.certainty) ? a.certainty : "ARBITRARY",
+    );
     if (c !== 0) return c;
     return b.updatedAt.getTime() - a.updatedAt.getTime();
   });
@@ -328,7 +331,7 @@ export async function loadBrandSourceContext(
       sourceId: row.id,
       contentHash: sourceFingerprint(row),
       fileName: row.fileName ?? "(sans nom)",
-      certainty: row.certainty as SourceCertainty,
+      certainty: isSourceCertainty(row.certainty) ? row.certainty : null,
       offset,
       text,
     });
@@ -355,7 +358,7 @@ export async function loadBrandSourceContext(
 export function renderSourceContext(ctx: BrandSourceContext): string {
   if (ctx.empty) return "";
   const parts = ctx.excerpts.map(
-    (e) => `[source:${e.sourceId} | ${e.fileName} | certitude:${e.certainty} | offset:${e.offset}]\n${e.text}`,
+    (e) => `[source:${e.sourceId} | ${e.fileName} | certitude:${e.certainty ?? "non renseignée"} | offset:${e.offset}]\n${e.text}`,
   );
   const skipped =
     ctx.documentsSkipped > 0

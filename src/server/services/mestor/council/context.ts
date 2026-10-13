@@ -43,14 +43,14 @@ function capBlock(text: string, max: number): string {
 export interface AssistantContextResult {
   /** Bloc de contexte complet, chaque section déjà wrapUntrusted. */
   contextBlock: string;
-  /** True si la recherche sémantique a réellement contribué. */
+  /** True si le contexte documentaire hybride a réellement contribué. */
   ragUsed: boolean;
 }
 
 /** Contexte d'un expert + ce qu'il a réellement pu lire. */
 export interface ExpertContextResult {
   contextBlock: string;
-  /** True si des extraits sémantiques ont contribué. */
+  /** True si le contexte documentaire hybride a réellement contribué. */
   ragUsed: boolean;
   /**
    * True si au moins un document de la marque figure dans le contexte. Un
@@ -67,15 +67,15 @@ export async function buildAssistantContext(
   strategyId: string,
   question: string,
 ): Promise<AssistantContextResult> {
-  const [base, pillars, ragBlock, communityBlock] = await Promise.all([
+  let ragUnavailable = false;
+  const [base, pillars, rag, communityBlock] = await Promise.all([
     loadStrategyContextForFramework(strategyId),
     db.pillar.findMany({
       where: { strategyId },
       select: { key: true, content: true, updatedAt: true },
     }),
     getOracleBrandContextByQuery(strategyId, question, { limit: 8, includeSources: true })
-      .then((r) => r?.text ?? null)
-      .catch(() => null),
+      .catch(() => { ragUnavailable = true; return null; }),
     buildCommunityBlock(strategyId),
   ]);
 
@@ -115,18 +115,21 @@ export async function buildAssistantContext(
     );
   }
 
-  // Recherche sémantique ciblée sur la question (peut légitimement être absente).
-  if (ragBlock) {
+  // The metadata fallback contributes without pretending to be a semantic match.
+  if (rag?.text) {
     sections.push(
-      wrapUntrusted("extraits pertinents (recherche sémantique)", capBlock(ragBlock, RAG_BLOCK_MAX), {
+      wrapUntrusted(rag.usedVectorSearch
+        ? "extraits pertinents (recherche sémantique)"
+        : "contexte disponible (sélection par métadonnées)", capBlock(rag.text, RAG_BLOCK_MAX), {
         max: RAG_BLOCK_MAX + 200,
       }),
     );
   }
+  if (ragUnavailable) sections.push("[Documentation] lecture documentaire indisponible — conformité aux sources non vérifiée.");
 
   sections.push(communityBlock);
 
-  return { contextBlock: sections.join("\n\n"), ragUsed: !!ragBlock };
+  return { contextBlock: sections.join("\n\n"), ragUsed: !!rag?.text };
 }
 
 /**
@@ -146,6 +149,7 @@ export async function buildExpertContext(
   pillarKey: "a" | "d" | "v" | "e",
   topic: string,
 ): Promise<ExpertContextResult> {
+  let ragUnavailable = false;
   const [pillar, rag, communityBlock] = await Promise.all([
     db.pillar.findFirst({
       where: { strategyId, key: { in: [pillarKey, pillarKey.toUpperCase()] } },
@@ -156,8 +160,7 @@ export async function buildExpertContext(
       limit: 6,
       includeSources: true,
     })
-      .then((r) => r ?? null)
-      .catch(() => null),
+      .catch(() => { ragUnavailable = true; return null; }),
     // L'expert Engagement juge sur la communauté RÉELLE ; les autres l'ignorent.
     pillarKey === "e" ? buildCommunityBlock(strategyId) : Promise.resolve(null),
   ]);
@@ -179,7 +182,9 @@ export async function buildExpertContext(
   }
   if (rag?.text) {
     sections.push(
-      wrapUntrusted("extraits pertinents du pilier", capBlock(rag.text, RAG_BLOCK_MAX), {
+      wrapUntrusted(rag.usedVectorSearch
+        ? "extraits pertinents du pilier (recherche sémantique)"
+        : "contexte du pilier (sélection par métadonnées)", capBlock(rag.text, RAG_BLOCK_MAX), {
         max: RAG_BLOCK_MAX + 200,
       }),
     );
@@ -189,9 +194,11 @@ export async function buildExpertContext(
   // Dit à l'expert ce qu'il a — et surtout ce qu'il n'a pas. Une critique sans
   // documentation reste recevable ; se prétendre vérifié sans elle, non.
   sections.push(
-    sourcesSeen
-      ? "[Documentation] Des extraits de la documentation officielle de la marque figurent ci-dessus. Une affirmation qu'ils contredisent est une erreur factuelle, pas une divergence d'opinion — cite l'extrait."
-      : "[Documentation] AUCUN document de la marque n'est disponible sur ce sujet. Ta critique porte donc sur la cohérence interne, pas sur la conformité aux sources — dis-le explicitement plutôt que d'affirmer qu'un point est vérifié.",
+    ragUnavailable
+      ? "[Documentation] lecture documentaire indisponible — ta critique porte sur la cohérence interne ; la conformité aux sources n'a pas pu être vérifiée."
+      : sourcesSeen
+        ? "[Documentation] Des extraits des documents de la marque figurent ci-dessus avec leur certitude déclarée. Cite l'extrait et son statut pour signaler une contradiction ; n'en déduis ni validation humaine, ni capacité déployée. Une source DECLARED, INFERRED ou ARBITRARY ne devient pas OFFICIAL parce qu'elle est récupérée."
+        : "[Documentation] AUCUN document de la marque n'a été retrouvé par cette sélection. Ta critique porte donc sur la cohérence interne, pas sur la conformité aux sources — dis-le explicitement plutôt que d'affirmer qu'un point est vérifié.",
   );
 
   return { contextBlock: sections.join("\n\n"), ragUsed: !!rag?.text, sourcesSeen };

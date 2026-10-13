@@ -43,4 +43,18 @@ describe("MCP excerpts remain attributable and read only", () => {
     expect(result).toMatchObject({ results: [], usedVectorSearch: false });
     expect(harness.index).not.toHaveBeenCalled();
   });
+
+  it.each([true, false])("keeps documentary certainty distinct from retrieved text (vector=%s)", async (vector) => {
+    const mixed = [
+      { ...hit, sourceCertainty: "OFFICIAL" },
+      { ...hit, id: "chunk-declared", sourceId: "source-declared", sourceCertainty: "DECLARED" },
+      { ...hit, id: "pillar-field", sourceId: null, kind: "PILLAR_FIELD", sourceCertainty: null },
+    ];
+    if (vector) harness.vector.mockResolvedValue(mixed);
+    else harness.metadata.mockResolvedValue(mixed);
+    const result = await rag.handler({ strategyId: "brand-a", query: "SPAWT", topK: 8 }) as any;
+    expect(result.results.map((r: any) => ({ sourceId: r.sourceId, sourceCertainty: r.sourceCertainty })))
+      .toEqual(mixed.map((r) => ({ sourceId: r.sourceId, sourceCertainty: r.sourceCertainty })));
+    expect(harness.index).not.toHaveBeenCalled();
+  });
 });

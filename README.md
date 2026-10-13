@@ -16,6 +16,17 @@
 
 ## Quick start
 
+**452 candidate prête localement ; livraison source/CI/image/production 452 attendue.**
+La certitude arrive aux contextes et API locaux ; l’inconnu est reçu en HTML sans
+label inventé. Les citations du livre/export restent partielles : contentHash absent
+du type BibleCitation et id/empreinte/statut non affichés au PDF. La lecture ne
+prépare aucun index ou embedding documentaire ; les requêtes sémantiques existantes
+peuvent embed(query) avec provider configuré, non configuré sur les receivers reçus.
+Contrôles locaux et ship verts ; Galahad 452 REST/reprise ont encore expiré sur dev,
+recette sur image isolée après CI prévue. Aucun conseil modèle/parcours complet/SLO
+reçu, runtime public 450 et dix reçus bornés conservés, tous sept chantiers ouverts.
+[État et limites](docs/governance/REFONTE-PLAN.md).
+
 **451 source et CI reçues ; runtime public 450 conservé.** Le contrôle compare la
 base PostgreSQL 16.15 réellement migrée au schéma courant ; aucune différence reçue
 dans le périmètre représenté par Prisma migrate diff.

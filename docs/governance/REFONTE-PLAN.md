@@ -1,5 +1,63 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Certitude documentaire jusqu’aux lecteurs — 452 réception locale consolidée (2026-10-13)
+
+currentDocumentNodes partagé avec Oracle : même source autorisée/empreinte/certitude,
+orphelins exclus, inconnu préservé ; source-rag supprime sa seconde lecture.
+MCP/Oracle/SourceReference gardent références et certitude, legacy SOURCE_CHUNK
+reste cité via le même contrôle. Sources citées avant grandes valeurs précises,
+preciseFields complets et modes/calculs/repli conservés ; conseil distingue
+panne/absence, sans DECLARED→OFFICIAL. Aucune indexation ni préparation des embeddings
+documentaires pendant la lecture ; embed(query) des requêtes sémantiques existantes
+reste possible avec provider configuré. Provider non configuré sur receivers reçus,
+aucune activation implicite ; aucun nouvel acteur/service/route/Intent/UI/provider.
+
+final-code-checks.json : DEFAULT 4 370/416, ciblés 66/7, gouvernance 1 627/166 verts,
+tsc/lint/lint-governance/cycles/gouvernance tous 0. ship-checks.json après note client
+également cinq zéros ; note+bible 21/2 verts. DEFAULT/ciblés avant note purement
+textuelle, code final autrement identique  ; 24 avertissements existants conservés.
+Rouges 6/4,8/6,4/1, borne 147/140, nullabilité de tests, deux Notoria/deux legacy et
+checkpoints 59/7→64/7/DEFAULT 4 368/416 antérieurs restent historiques. Note client
+ajoutée par la racine sur le bénéfice HTML reçu. Source/CI/image/production 452 attendus.
+
+context-cutoff-red.json : Oracle.text 230 224 caractères, six références dont premier
+marqueur 219 426 ; contexte 31 345 sans certitude. context-live-452.json reçoit vraie
+DB/copie/code local : six références/171 champs, coordinateur et quatre experts avec
+statut documentaire, sans provider, six populations/empreintes inchangées. Assemblage
+seulement, aucune réponse/délibération/décision modèle. rpc-live-452.json reçoit
+JSON-RPC 25 outils/3x4 hits OFFICIAL/DECLARED/refus ; premier tools/list expiré 55 s,
+Next 200 à 56 s (compile 31,6+23,9 s) conservé, pas SLO.
+
+bible-native-452.json/.txt/.png et bible-native-452-warm.json : ADMIN de recette,
+fixture séparée « RECETTE locale — certitude inconnue », label « certitude non
+renseignée » reçu quatre volets, legacy-custom-label non rendu. Première navigation
+CDP expirée 21 s puis rendu réel ; froid serveur 86 s. Titres observés bornes supérieures
+290 517 puis 104 079 ms, aucune première latence exacte. Fenêtres CDP truncated=true :
+zéro 500/exception/chargement défaillant seulement OBSERVÉ, jamais absence globale/SLO.
+unknown-bible-cleanup.json : deux lignes de fixture seules retirées, aucun nœud index
+créé, originaux/agents actifs/production inchangés. Next 3352 possédé arrêté,
+next-env propre restauré, tsc après restauration 0.
+
+Galahad 452 REST local a expiré deux fois 20 s, garde moteur maintenue ; http/fetch/
+api-version ont aussi expiré 5/55 s sur dev. Next local 146 % CPU/~6 Go/Swap 13 Go observés,
+causalité complète non reçue. Aucun succès/reprise Galahad 452 déduit de ces échecs.
+La baseline Galahad 450 REST/reprise reste sur copie, anchors comparatifs DB ;
+JSON-RPC 452 reçu ne substitue pas une recette du consommateur ou une lecture prod.
+
+**Reprise C3/C5** : native Galahad 452 et reprise sur image isolée/réseau interne
+après CI, même corpus/acteur/scopes/guards et provider non configuré ; recevoir
+source/CI/image/runtime exacts sans étendre les délais à l’aveugle. Effort : recette
+existante avant acceptation de lignée, garder refus/fraîcheur/invariance et échecs.
+**Reprise C3/C4 livre/export** : BibleCitation conserve sourceId/fileName/certitude/
+extrait mais perd contentHash de SourceExcerpt ; PDF renderComposedSection ne
+consomme que fileName/excerpt, sans id/empreinte/statut explicites. Propagation
+intégrale du triplet non reçue au livre/export. Étendre ces projections/citations
+existantes, recevoir HTML+PDF pour OFFICIAL/DECLARED/null/legacy avec rendu inspecté
+au lot d’export C4 avant release ; aucune nouvelle entité ni PDF 452 inventé.
+Dix réceptions bornées inchangées ; conseil/mandat/job/MCP production/calibration et
+C7/R09/tous sept chantiers/gates/parcours/lignées restent ouverts, cap 7/7/global null.
+[Dette en place](RESIDUAL-DEBT.md).
+
 ## Comparaison schéma/migrations — 451 source/CI reçues au périmètre (2026-10-13)
 
 Source 0d6ad09646f8542fa0101c7e95342f0fa8355401, CI 38421544109/

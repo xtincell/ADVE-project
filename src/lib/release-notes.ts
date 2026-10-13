@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.452", date: "2026-10-13",
+    headline: "Un statut documentaire explicite",
+    highlights: [
+      { emoji: "📄", title: "Une certitude manquante reste visible", body: "Le livre de marque signale les documents dont le niveau de certitude n’est pas renseigné, sans leur attribuer un statut inventé." },
+    ],
+  },
+  {
     version: "6.27.450", date: "2026-10-13",
     headline: "Retrouver vos documents sans analyse assistée",
     highlights: [

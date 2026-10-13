@@ -1354,6 +1354,28 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
 - **`/api/chat` — routage LLM Gateway (budget/coût/rate)** — 🟢 **CLOS (2026-07-26, ADR-0179)** : surface streaming `streamChatText` bâtie dans le Gateway (`llm-gateway/streaming.ts`) — cascade providers, parité Sonnet 5 partagée (`parity.ts`), budget Thot, circuit breaker, cost tracking. `/api/chat` réécrite pour passer par le conseil de marque (`askCouncilStream`) → plus aucun appel provider direct. Pre-flight `isTextLLMAvailable` + rate-limit par user + historique persisté (ADR-0181). Le mismatch de protocole de stream (client v3/v4 vs route texte brut) qui cassait le chat est réparé.
 - **Lecture d'image — refus honnête, pas capacité (2026-07-28)** : `extractImage` fabriquait (200 caractères d'en-tête base64 envoyés à un modèle **texte**, description « détaillée » inventée puis stockée en `rawContent`). Remplacé par un refus explicite avec le geste à faire. **Rétablir une vraie lecture d'image demande une surface vision au LLM Gateway** (`callLLM` ne transporte pas d'image) + un provider qui la supporte : c'est un chantier Gateway, pas un correctif. **Déclencheur** : besoin réel d'ingérer des chartes en image (aujourd'hui le PDF couvre le cas). Effort ~1 session + vérification provider. En attendant, le refus est la bonne réponse — mieux vaut ne rien écrire qu'inventer une description qui deviendrait ensuite une « source » citable.
 - **Ancrage documentaire — déférés (2026-07-28, [ADR-0184](adr/0184-source-grounding-measured-not-claimed.md))** : la mesure d'ancrage est posée et **advisory** (elle informe, elle ne refuse pas — doctrine ADR-0085). Restent : (1) **passage en BLOCK** après période d'observation (même trajectoire que la gate C6 brief↔ADVE, ADR-0103 — une reco `UNGROUNDED` sur une marque documentée serait refusée, avec override opérateur explicite) ; (2) **rang 2 de la cascade d'ancrage** — 🟢 **BÂTI** ([ADR-0185](adr/0185-composed-brand-bible-rank-2-anchor.md), v6.27.358) : le livre de marque composé existe (vue HTML + PDF, déterministe). Reste à le *consommer* comme repli explicite dans la mesure d'ancrage elle-même — aujourd'hui il fait référence pour le lecteur humain, pas encore pour `computeRecoGrounding` ; (3) **purge des nœuds `SOURCE_CHUNK` legacy** — plus aucun écrivain, encore lus en récupération ; une purge est possible une fois toutes les sources ré-indexées en `BRAND_SOURCE` (sans urgence : le double stockage ne fausse rien, il coûte). **Déclencheur** : (1) après ~2 semaines d'observation en prod ; (2) chantier Brand Book ; (3) hygiène base. Effort ~½ session chacun.
+  **452 candidate — API/contextes et inconnu HTML reçus localement** : contrôle
+  documentaire commun, six références/171 champs/contextes coordinateur/quatre experts
+  sans réponse modèle, RPC 25 outils/3x4 hits/refus reçus sur copie/code local. Inconnu
+  HTML quatre volets reçu, label invalide non rendu ; legacy SOURCE_CHUNK sous même
+  garde. Lecture sans indexation/préparation d’embeddings documentaires ; requêtes
+  sémantiques peuvent embed(query) avec provider configuré, absent des receivers.
+  DEFAULT 4 370/416/ciblés 66/7/gouvernance 1 627/166/code+ship tous 0, note+bible 21/2,
+  24 warnings et rouges/checkpoints antérieurs conservés. CDP tronqué, zéros observés
+  seulement ; Galahad 452 REST deux timeouts 20 s, aucune reprise 452 reçue. Nettoyage
+  deux lignes inconnu/noIndexNodesCreated/originaux inchangés, Next arrêté/next-env
+  restauré/tsc 0 ; source/CI/image/production 452 attendus.
+  **Plan/effort/trigger C3/C5** : native/reprise Galahad 452 sur image isolée/réseau
+  interne après CI, mêmes corpus/acteur/scopes/guards sans provider configuré,
+  fraîcheur/refus/invariance ; une recette existante avant lignée, aucun délai
+  élargi à l’aveugle ni modèle/mandat déduit de l’assemblage.
+  **Plan/effort/trigger C3/C4** : BibleCitation sourceId/fileName/certitude/extrait
+  perd contentHash de SourceExcerpt ; PDF renderComposedSection n’affiche que
+  fileName/excerpt, sans id/empreinte/statut. Étendre projections/citations existantes
+  et recevoir HTML+PDF OFFICIAL/DECLARED/null/legacy avec rendu inspecté au prochain
+  lot d’export C4 avant release, sans nouvelle entité. Triplet intégral livre/export
+  et PDF 452 non reçus ; conseil utile/mandat/job/MCP prod/calibration/coûts/legacy
+  global restent ouverts, dix réceptions bornées/C7/R09/tous sept chantiers/global null inchangés.
   **450 livré au périmètre — neuf préparations UI SPAWT/runtime exact reçus** :
   source 6f38b4b5/CI/image 38410420071/index 153170…/runtime 450 reçus le 13 octobre.
   Production : neuf commandes embeddingRequested:false, 129 fragments, IDs/certitudes

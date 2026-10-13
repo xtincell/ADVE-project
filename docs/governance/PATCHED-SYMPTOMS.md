@@ -30,6 +30,18 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
+2026-10-13 · **452 candidate — API/contextes et inconnu HTML reçus localement** :
+contrôle documentaire commun et citations avant champs longs, référence/certitude
+conservées aux contextes/RPC ; legacy inconnu→null/non renseigné reçu quatre volets
+HTML, label invalide non rendu. Legacy SOURCE_CHUNK cité sous même garde. Lecture
+sans index/préparation embeddings documentaires ; embed(query) sémantique possible
+avec provider configuré, non configuré sur receivers reçus. DEFAULT 4 370/416/
+ciblés 66/7/gouvernance 1 627/166/code+ship tous 0 et note+bible 21/2 verts, checkpoints
+rouges antérieurs conservés. CDP tronqué : zéros seulement observés ; Galahad 452
+REST deux timeouts 20 s/reprise non reçus, pas SLO. BibleCitation sans contentHash,
+PDF sans id/empreinte/statut reste en dette C3/C4 ; aucune propagation intégrale
+livre/export ou source/CI/image/production 452 reçue. [Reprise](RESIDUAL-DEBT.md).
+
 2026-10-13 · **450 livré au périmètre de préparation documentaire** : RAG initial
 0/77 BRAND_SOURCE sans empreinte malgré neuf EXTRACTED sur copie. Writer existant/
 Sources explicite false au reçu/rejeu, operatorId réel/absence≠panne DB, IDs/scopes/

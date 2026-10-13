@@ -27,21 +27,32 @@ import type { Prisma } from "@prisma/client";
 import { embed } from "@/server/services/llm-gateway";
 import { cosineSimilarity } from "./embedder";
 import { sourceScope, sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
+import { isSourceCertainty, type SourceCertainty } from "@/domain/source-certainty";
 
 /** A saved fragment is a cache, never an access grant or current proof. */
-async function currentDocumentNodes<T extends { kind: string; sourceId: string | null; payload: unknown }>(nodes: T[], filter: RankerFilter): Promise<T[]> {
+export async function currentDocumentNodes<T extends { kind: string; sourceId: string | null; payload: unknown }>(nodes: T[], filter: RankerFilter): Promise<(T & { sourceCertainty: SourceCertainty | null })[]> {
   const isDocument = (n: T) => n.kind === "BRAND_SOURCE" || n.kind === "SOURCE_CHUNK";
+  const withoutDocument = (n: T): T & { sourceCertainty: SourceCertainty | null } => ({ ...n, sourceCertainty: null });
   const documentIds = nodes.filter(isDocument).flatMap((n) => n.sourceId ? [n.sourceId] : []);
-  if (!documentIds.length) return nodes;
+  // An orphan document is not a non-document node. It cannot prove an origin.
+  if (!documentIds.length) return nodes.filter((n) => !isDocument(n)).map(withoutDocument);
   // Comparables cannot turn a private document into global training context.
-  if (!filter.strategyId || filter.excludeStrategyId) return nodes.filter((n) => !isDocument(n));
+  if (!filter.strategyId || filter.excludeStrategyId) return nodes.filter((n) => !isDocument(n)).map(withoutDocument);
   const sources = await db.brandDataSource.findMany({ where: {
     AND: [await sourceScope(filter.strategyId)], id: { in: documentIds },
     processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
   } });
-  const hashes = new Map(sources.map((s) => [s.id, sourceFingerprint(s)]));
-  return nodes.filter((n) => !isDocument(n) || Boolean(n.sourceId && hashes.has(n.sourceId)
-    && (n.payload as Record<string, unknown> | null)?.sourceContentHash === hashes.get(n.sourceId)));
+  const current = new Map(sources.map((s) => [s.id, {
+    hash: sourceFingerprint(s), certainty: isSourceCertainty(s.certainty) ? s.certainty : null,
+  }]));
+  return nodes.flatMap((n) => {
+    if (!isDocument(n)) return [withoutDocument(n)];
+    const source = n.sourceId ? current.get(n.sourceId) : undefined;
+    if (!source || (n.payload as Record<string, unknown> | null)?.sourceContentHash !== source.hash) return [];
+    // Resolve trust from the same authorized, current source as the fingerprint.
+    // Never promote a cache label or infer validation from a retrieved fragment.
+    return [{ ...n, sourceCertainty: source.certainty }];
+  });
 }
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -58,6 +69,8 @@ export interface RankedNode {
    * son document : aucune citation, donc aucune vérification possible en aval.
    */
   sourceId: string | null;
+  /** Canonical document certainty; null for context without a document. */
+  sourceCertainty: SourceCertainty | null;
   payload: unknown;
   metadata: unknown;
   similarity: number;
@@ -186,6 +199,7 @@ export async function searchByQuery(
       pillarKey: c.pillarKey,
       field: c.field,
       sourceId: c.sourceId,
+      sourceCertainty: c.sourceCertainty,
       payload: c.payload,
       metadata: c.metadata,
       similarity: cosineSimilarity(qVec, c.embedding ?? []),
