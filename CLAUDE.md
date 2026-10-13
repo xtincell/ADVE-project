@@ -4,23 +4,20 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-13
 
-**450 candidate locale, réception bornée** : writer INDEX_BRAND_SOURCE via
-prepareSourceIndex, literal(false).default(false)/reçu/rejeu et opérateur réel ;
-lecture pure/scopes/IDs préservés. Ciblés 48/6 verts, DEFAULT 4 336/412 antérieure à
-six tests ajoutés. Premier DEFAULT final : 4 341 verts/un échec retry de timing sur
-413 fichiers ; deux tests passés à l’horloge virtuelle, ciblé 36/1 vert puis
-DEFAULT final 4 342/413 verts reçu, tsc après correction à zéro. Sur copie restaurée : neuf sources SPAWT,
-129 fragments courants/huit ancrages vérifiés, 26 HTTP avec préparation sans
-embedding/repeat/refus ; SELECT métier comparés identiques. Huit extraits
-attribuables déterministes, baseline initiale 0 puis run final 8→8 après préps.
-UI finale ADMIN locale reçue : neuf badges/129 fragments/aucun bouton de préparation,
-51 événements complets sans ≥500/exception observés ; tentative vide non reçue et
-Notoria 500 initial conservés, pas zéro global/SLO. Cinq contrôles finaux reçus à zéro,
-gouvernance 1 627/166 et 24 warnings inchangés par lint ; commit/CI/image/prod 450
-attendus. Galahad bibliothèque manuelle et restauration
-235/57 105 reçus, ACL/owners/médias/mandat/council utile/global non reçus.
-Commit de tests local 684e040e80af523ed802c98a7b38b5276b78e5d0 reçu (test+note449, hooks passés) ;
-commit applicatif 450/CI/image/production attendus.
+**450 livré au périmètre le 13 octobre** : source 6f38b4b5, CI/Mission/Chromatic
+success, image 38410420071/index 153170… et runtime 6.27.450 exacts ; nextjs,
+private-media RW/API 200. INDEX_BRAND_SOURCE/prepareSourceIndex explicite sans
+embeddings, opérateur/écriture marque et lecture pure conservés. Production : neuf
+commandes humaines, 129 fragments, IDs/certitudes visibles inchangés ; reload
+neuf sources/129 fragments/aucun bouton/zéro préparation par lecture, 120 événements
+complets sans ≥500/exception observés au périmètre, attente initiale expirée conservée.
+Ciblés 48/6, DEFAULT 4 342/413, CI PostgreSQL 358/18 et cinq finals verts
+(gouvernance 1 627/166, 24 warnings par lint). Échec retry initial/commit de tests
+684e040e80af523ed802c98a7b38b5276b78e5d0 conservés, aucun code LLM modifié.
+Empreintes complètes/refus/rejeu/huit extraits MCP reçus sur copie seulement ;
+MCP production/conseil/mandat/SLO non reçus. Galahad manuel/restauration 235/57 105
+reçus au périmètre, ACL/owners/médias/TPE/C7 et 7/R01–R10/80/global null ouverts.
+Futur commit documentaire distinct, aucun build MD requis.
 [Bornage](docs/governance/REFONTE-PLAN.md).
 
 **13 octobre — runtime 6.27.449 et lecteur public SPAWT reçus au périmètre** :

@@ -2,7 +2,7 @@
 
 ## v6.27.450 — fix(sources): préparer la recherche par le writer documentaire existant (2026-10-13)
 
-**450 candidate locale : préparation, recherche attribuable, UI et cinq contrôles finaux/DEFAULT reçus ; livraison attendue.**
+**450 livré : runtime exact et neuf préparations documentaires SPAWT reçus en production au périmètre vérifié.**
 
 - INDEX_BRAND_SOURCE existant via prepareSourceIndex dans ingestion : Sources
   requiert opérateur/écriture marque, sans embeddings/classification implicites.
@@ -11,28 +11,30 @@
   operatorId réel/getOperatorContext et id/sourceId du ranker conservés, absence
   NOT_FOUND distincte d’une panne DB. Aucun nouveau service/router/Intent/provider.
 - Quatre rouges/huit verts puis ciblés finaux 48/6 verts. DEFAULT antérieure
-  4 336/412 avant six nouveaux tests adaptateur. Premier DEFAULT final : 4 341 verts/
-  un échec de timing retry sous charge sur 413 fichiers ; correction de deux tests
-  par horloge virtuelle, ciblé 36/1 vert puis DEFAULT final 4 342/413 verts reçu.
-  Cinq contrôles finaux à zéro/gouvernance 1 627/166, 24 warnings inchangés par lint ;
-  tsc après correction à zéro, aucun code LLM modifié pour cette correction de test.
-- Copie restaurée/SPAWT réel : neuf EXTRACTED, 77 anciens fragments sans empreinte
-  puis 129 courants tous vérifiés et huit ancrages MCP canoniques. 26 HTTP reçus,
-  neuf préparations/repeat alreadyFresh sans embedding, refus 403/404/400/isError ;
-  SELECT sources/piliers/assets/usages/strategy identiques. Query SPAWT : huit
-  extraits déterministes, baseline initiale zéro ; run final huit avant/après après
-  préparations antérieures, pas faux zéro→huit attribué à ce seul run.
-- UI finale ADMIN locale reçue le 13 octobre à 13:39 UTC : neuf sources/badges,
-  129 fragments, aucun bouton de préparation restant et note 450 visible.
-  Fenêtre complète de 51 événements, zéro statut ≥500/exception observé au périmètre.
-  Tentative vide non reçue et UI initiale tronquée avec Notoria 500 conservées ; ni zéro
-  global, ni stabilité répétée, ni SLO déduits.
-- Commit de tests local 684e040e80af523ed802c98a7b38b5276b78e5d0 reçu : test+note449 uniquement,
-  hooks passés ; code applicatif 450/CI/image/production encore attendus.
-- Galahad manuel/restauration données reçus au périmètre, ni conseil utile ni
-  mandat complet. Tunnel/socket qualifiés sur fixture seulement, aucune prod/agent
-  touché. Source commit/CI/image/runtime prod 450 attendus ;
-  7/R01–R10/80/global null ouverts. [Réception bornée](docs/governance/REFONTE-PLAN.md).
+  4 336/412 avant six tests adaptateur ; première finale 4 341 verts/un échec de
+  timing retry sur 413 fichiers conservée. Deux tests sous horloge virtuelle,
+  commit 684e040e (test+note449), ciblé 36/1 puis DEFAULT 4 342/413 verts reçus,
+  sans changement du code LLM. Cinq contrôles finaux à zéro/gouvernance 1 627/166,
+  24 warnings inchangés par lint. CI exacte : 4 342/413 et PostgreSQL 358/18 verts.
+- Sur copie restaurée seulement : neuf EXTRACTED/77 anciens sans empreinte puis
+  129 fragments courants vérifiés, huit ancrages MCP/26 HTTP, refus/rejeu et
+  empreintes complètes sourceRows/piliers/assets/usages/strategy reçus. Huit extraits
+  déterministes ; baseline initiale 0 puis run final 8→8 après préparations antérieures.
+  UI locale finale reçue ; Notoria 500 initial/tentative vide non reçue conservés.
+- Source 6f38b4b580117c45350ec598703a74b30038f121 ; CI 38409881780,
+  Mission 38409882232 et Chromatic 38409882511 success. Image 38410420071 reçue :
+  base neuve/migrations/login 200/PDF deux pages/deux textes. Déploiement unique
+  jh97flidpwz7k0g5welioifj terminé à 14:19:21 UTC ; runtime exact 450/index 153170…
+  à 14:20:26 UTC, nextjs/private-media RW/API 200. Comparaison schema/migrations CI
+  non exécutée faute de shadowDatabaseUrl ; C7 ouverte, aucune divergence déduite.
+- Neuf commandes humaines UI en production, toutes embeddingRequested:false,
+  129 fragments et IDs/certitudes visibles conservés. Reload : neuf sources/129
+  fragments/aucun bouton et zéro préparation déclenchée par lecture ; fenêtre
+  complète de 120 événements sans ≥500/exception observés. Attente initiale du
+  sélecteur expirée conservée ; pas SLO. MCP production/conseil/mandat/lignée et
+  7/R01–R10/80/global null ouverts, neuf réceptions bornées sans nouveau crédit.
+  Futur reçu documentaire distinct de la source/image, aucun nouveau build MD.
+  [Réception et limites](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.449 — fix(public-brand): partager les origines de lecture des éditions publiques (2026-10-12)
 

@@ -16,17 +16,16 @@
 
 ## Quick start
 
-**450 candidate locale ; contrôles et DEFAULT reçus, livraison attendue.** La préparation
-des textes réutilise le writer existant sans embeddings/classification implicites,
-et la lecture ne lance aucune indexation. Sur copie du corpus réel SPAWT : huit
-extraits attribuables et données métier comparées inchangées. L’UI locale finale
-reçoit neuf sources, 129 fragments et aucun bouton de préparation restant ; cette
-navigation ne mesure ni stabilité répétée ni SLO. Tests ciblés 48 verts et cinq
-contrôles finaux reçus à zéro. Un échec de timing retry de la première suite complète
-a conduit à deux tests sous horloge virtuelle ; DEFAULT final 4 342/413 verts reçu. Galahad reste reçu en bibliothèque manuelle,
-conseil/mandat complet, autres parcours et restauration complète encore ouverts.
-Commit de tests local 684e040e80af523ed802c98a7b38b5276b78e5d0 reçu (test+note449, hooks passés) ;
-commit applicatif 450/CI/image/production attendus.
+**450 livré au périmètre : préparation documentaire SPAWT reçue en production.**
+Les neuf sources ont été préparées par des commandes humaines, sans embeddings ;
+129 fragments restent visibles après reload et la lecture ne relance aucune
+préparation. Le runtime exact 450/source 6f38b4b5/image 38410420071 est reçu.
+DEFAULT 4 342/413, CI PostgreSQL 358/18 et cinq contrôles finaux verts ; échec de
+timing initial/correction de deux tests conservés (commit de tests local
+684e040e80af523ed802c98a7b38b5276b78e5d0, aucun code LLM modifié).
+Huit extraits attribuables, invariance complète et refus/rejeu sont reçus sur copie ;
+lecteur MCP en production, conseil/mandat, restauration complète et autres parcours
+restent ouverts. Aucun SLO ou cycle complet déduit ; sept chantiers restent ouverts.
 [État et limites](docs/governance/REFONTE-PLAN.md).
 
 **13 octobre : runtime 6.27.449 et première lecture publique SPAWT reçus.**
