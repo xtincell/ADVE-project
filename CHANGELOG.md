@@ -2,7 +2,25 @@
 
 ## v6.27.449 — fix(public-brand): partager les origines de lecture des éditions publiques (2026-10-12)
 
-**449 source/CI/image reçues : l’origine du quiz rejoint la politique CORS publique commune. Livraison en attente.**
+**449 runtime et lecteur public SPAWT reçus le 13 octobre, au périmètre vérifié.**
+
+- 13 octobre : connexion humaine hPanel/running reçus, accès d’hébergement rétabli.
+  Deux sauvegardes privées serveur publisher/quiz, hashes et lectures d’archives
+  reçus ; aucune restauration éprouvée. Publisher exact 6.27.449/source 5a7f11a…/
+  index be065e… à 08:29 UTC, nextjs/private-media RW et API/version 200 reçus.
+  Quiz Node exact 557a915/PR30, six fichiers publics identiques source, health DB
+  ok/cible conservée. Édition réelle v6 du 9 octobre conservée, sans nouveau choix/
+  publication ; manifeste et huit fichiers/CORS/types/bytes/SHA reçus. Vitrine/
+  landing/jeu inter-domaines : cinq FontFace/trois usages Moka reçus.
+- Six questions natives jusqu’à l’inscription sans contact/pseudo/numéro soumis ;
+  PNG/GIF reçus du mode aperçu existant, aucun parcours de visiteur inscrit reçu.
+  Mobile 390 sans overflow, menu/images reçus ; zéro erreur console observée, pas
+  mesure indépendante pageerror/latence/SLO. Empreintes SELECT avant/après identiques.
+  Accès/runtime et première lecture réelle clos à ce périmètre ; cause réseau/
+  token Hostinger/coûts/restauration/TPE/autres IP/profils/retours/7/R01–R10/80/
+  global null restent ouverts, sans nouveau build pour ces seuls MD.
+
+**Historique du 12 octobre — source/CI/image reçues, livraison alors en attente.**
 
 - Export public v1/v2 et fichiers retenus réutilisent publicBrandCorsHeaders du
   domaine public-brand existant ; quatrième origine exacte https://quiz.spawt.online,

@@ -49,7 +49,23 @@ sept chantiers ; les résidus actifs suivent.
   aucune fermeture C2/C3/C4 ou acceptation des sept chantiers/dix gates programme.
   Le retour du harness local interrompu reste historique. Corpus hors trois
   éditions inchangé ; stockage complet et autres destinations non reçus.
-  **449 source/CI/image reçues — transport CORS, livraison attendue** : omission de l’origine quiz et
+  **13 octobre — accès/runtime et lecteur public reçus au périmètre** :
+  connexion humaine hPanel/running, source 5a7f11a…/index be065e…/version 449 et
+  nextjs/private-media RW/API-version 200 exacts reçus. Blocage d’accès levé,
+  cause réseau/token API Hostinger non revalidé conservés. Deux sauvegardes privées
+  serveur terminées/hash/archive reçus, aucune restauration/TPE/cycle éprouvé.
+  Quiz Node exact 557a915/PR30/health DB/cible et six sources publiques identiques
+  reçus ; v6 réelle du 9 octobre conservée sans nouveau choix/publication, reader
+  vitrine/landing/jeu cinq FontFace/trois Moka reçu. Six questions jusqu’à gate sans
+  contact soumis ; exports seulement du mode aperçu existant, pas cycle inscrit.
+  SELECT comparés identiques. **Plan/effort/trigger actuel** : première lecture réelle
+  close au périmètre, ne pas laisser accès/reader/publication choisie comme bloqués.
+  Recentrer le prochain lot sur autres décisions/parcours IP/familles/destinations,
+  calibration/tous profils/résultat inscrit et retour de valeur, avant cycle C2/C3/
+  C4/C6 ; effort : rapprochement des contrats existants/recette par parcours.
+  Restauration éprouvée/coûts/TPE restent distincts ; aucun univers complet ou
+  parcours universel/7/R01–R10/80/global null accepté.
+  **Historique du 12 octobre — 449 source/CI/image reçues, livraison alors attendue** : omission de l’origine quiz et
   allowlists dupliquées factorisées au domaine public-brand existant ; quatrième
   origine exacte, sans credential/auth privée/publication nouvelle. Deux rouges/
   onze verts puis 16/2 verts, PG17 isolée 39/1 et 19 vrais HTTP sur fichiers chiffrés
@@ -75,7 +91,8 @@ sept chantiers ; les résidus actifs suivent.
   rôles et filiation avant d’appliquer chaque famille atomiquement dans le lecteur
   existant ; styles app/web adaptés à leur usage, sans transplanter une échelle.
   Dernier reçu client après fermeture de page, voix au-delà d’un extrait,
-  autres poses/destinations, quiz/application et retour de valeur restent ouverts.
+  autres poses/destinations/applications, calibration/tous profils/parcours inscrit
+  et retour de valeur restent ouverts ; première lecture quiz reçue le 13 octobre.
   **Déclencheur** : prochaine destination/famille ou recette d’interruption client,
   avant acceptation de l’identité multidestination ;
   effort : un lot de contrat/conservation/consommation et recette par famille,

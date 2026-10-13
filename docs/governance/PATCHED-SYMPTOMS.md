@@ -30,7 +30,18 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
-2026-10-12 · **449 source/CI/image reçues — CORS public-brand, livraison attendue** :
+2026-10-13 · **449 runtime/lecteur public reçus au périmètre** : hPanel
+humain/running puis source/index/version exacts et private-media RW reçus.
+Blocage d’accès levé ; cause réseau non reçue/token API Hostinger non revalidé.
+Deux sauvegardes privées serveur/hash/archive reçus, aucune restauration reçue.
+Quiz 557a915/PR30 exact, six sources publiques identiques/health DB/cible reçus ;
+lecture native vitrine/landing/jeu de la v6 réelle conservée, cinq fonts/trois Moka
+reçus sans nouveau choix/publication. Six questions jusqu’à inscription sans contact,
+exports mode aperçu reçus, SELECT avant/après identiques ; reader/accès reçus.
+Ne clôt pas incident réseau/token, restauration/coûts/TPE/univers/retours/cycle inscrit.
+[Preuves et reprise](REFONTE-PLAN.md).
+
+2026-10-12 · **449 source/CI/image reçues — CORS public-brand, livraison alors attendue** :
 quiz manifeste/font HTTP 200 sans ACAO, alors que la vitrine avait ACAO. Deux
 allowlists dupliquées omettaient l’origine possédée du quiz ; politique factorisée
 au domaine existant/deux lecteurs, quatrième origine exacte. Deux rouges/onze

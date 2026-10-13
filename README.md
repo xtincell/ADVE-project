@@ -16,7 +16,15 @@
 
 ## Quick start
 
-**6.27.449 source, CI et image reçues ; livraison en attente.** Les deux transports de l’édition publique
+**13 octobre : runtime 6.27.449 et première lecture publique SPAWT reçus.**
+Vitrine, landing et jeu consomment l’édition réelle conservée, ses cinq polices/
+trois usages Moka. Six questions parcourues jusqu’à l’inscription, sans contact
+soumis ; exports du mode aperçu existant reçus. L’accès est rétabli, sauvegardes
+serveur reçues, restauration non éprouvée. Univers complet/autres IP/profils/
+retour résultats/cycle inscrit/TPE non acceptés.
+[Périmètre actuel](docs/governance/REFONTE-PLAN.md).
+
+**Historique du 12 octobre — 6.27.449 source, CI et image reçues ; livraison alors en attente.** Les deux transports de l’édition publique
 partagent leur politique CORS et autorisent aussi https://quiz.spawt.online,
 sans accès privé ni credential. Tests ciblés et 19 lectures HTTP locales reçus
 sur données fictives ; le lecteur navigateur du quiz reste à raccorder/recevoir.

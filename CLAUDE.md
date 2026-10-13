@@ -2,9 +2,20 @@
 
 This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/code). It briefs any agent picking up work on this repo.
 
-## Réception courante — 2026-10-12
+## Réception courante — 2026-10-13
 
-**6.27.449 source/CI/image reçues — CORS de l’édition publique partagé** : export
+**13 octobre — runtime 6.27.449 et lecteur public SPAWT reçus au périmètre** :
+connexion humaine hPanel/running et accès rétabli ; deux sauvegardes privées
+serveur/hash/archive reçus, restauration non reçue. Source 5a7f11a…/index be065e…,
+nextjs/private-media RW/API-version 200 exacts. Quiz 557a915/PR30 reçu sans
+inscription/contact soumis. Runtime Node exact 557a915/PR30/health DB/cible reçus,
+édition v6 choisie du 9 conservée sans publication nouvelle, vitrine/landing/jeu
+inter-domaines avec cinq fonts/trois Moka reçus. Six questions jusqu’à la gate,
+exports du mode aperçu existant ; aucun cycle inscrit/retour résultats universel.
+Incident réseau/token Hostinger/coûts/restauration/TPE/autres IP/profils/7/R01–R10/
+80/global null ouverts. Checkpoint doc 21f78acf du 12 distinct, pas image MD.
+
+**Historique du 12 octobre — 6.27.449 source/CI/image reçues, CORS partagé** : export
 public et fichiers retenus réutilisent le domaine public-brand, quatrième origine
 exacte https://quiz.spawt.online sans credential/accès privé/publication nouvelle.
 Ciblés 16/2 et vraie PG isolée 39/1 verts ; baseline trois HTTP puis 19 lectures

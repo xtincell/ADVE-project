@@ -254,7 +254,16 @@ nouvelle lecture. Source 80e2122f/CI/image/runtime 436 reçus, lecture réelle S
 S existant à 91 %/AI_PROPOSED v3/bouton désactivé reçue ; aucune approbation de
 marque réelle. Contrats de composition à réconcilier : [réception](RECEPTION-VALIDATION-SYNTHESE.md).
 
-**449 source/CI/image reçues — transport public partagé, aucune page ajoutée** :
+**13 octobre — runtime publisher 449 et lecteur public reçus, aucune page ajoutée** : source
+5a7f11a…/index be065e…/version 6.27.449, nextjs/private-media RW et API/version 200
+reçus après accès rétabli. Quiz Node exact 557a915/PR30/health DB/cible préservée,
+six sources publiques identiques ; vitrine/landing/jeu inter-domaines consomment
+la v6 réelle conservée avec cinq FontFace/trois usages Moka. Six questions natives
+jusqu’à inscription sans contact, mode aperçu PNG/GIF reçu, mobile 390 sans overflow.
+Première réception réelle de ce reader close au périmètre ; univers/autres familles/
+profils/retours/cycle inscrit restent ouverts. [Réception courante](REFONTE-PLAN.md).
+
+**Historique du 12 octobre — 449 source/CI/image reçues, transport public partagé** :
 GET /api/export/[strategyId]?format=public-brand-v2 (branche publique v1 conservée)
 et GET /brand/editions/[editionId]/[file] réutilisent publicBrandCorsHeaders du
 domaine public-brand existant. Quatre origines exactes : https://spawt.online,

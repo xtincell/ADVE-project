@@ -1,6 +1,87 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Hébergement, runtime 449 et lecteur public SPAWT — réception bornée du 13 octobre
+
+Preuves release/preuves-acces-hebergement-20261013 : hpanel-receipt.json reçoit
+la connexion humaine hPanel et VPS running à 08:22 UTC, échéance au 1er novembre,
+sans configuration/achat/reboot ou mutation provider.
+Blocage d’accès effectivement levé ; cause de l’incident réseau non reçue,
+validité du token API Hostinger non recontrôlée. Aucune conclusion sur une cause,
+un reboot ou une réparation provider à partir de la seule reconnexion.
+
+backup-before.json/backup-archive-receipt.json : deux sauvegardes privées serveur
+publisher et quiz terminées, mode 0600, tailles/hashes et lectures d’archives reçus.
+restorationReceived/restoreTestReceived=false : aucune restauration, récupération
+après perte ou portabilité Day Zero/TPE éprouvée ; ces chantiers restent ouverts.
+Aucun dump privé recopié dans le dépôt ou publié par cette documentation.
+
+publisher-runtime.json à 08:29:25 UTC : source
+5a7f11a01bbcdd73c9ed069b304dd83a6a09735f, version/publicVersion 6.27.449,
+status running/user nextjs, private-media RW préservé, API/version 200 et repoDigest
+sha256:be065eaddf449f58cc9498ac8f2a7c718bf1ae650a0a645b1c930cef03598d80 exacts.
+Réception de ce runtime ; pas réception de toutes les routes, usages, agents ou SLO.
+receipt.json reçoit le quiz Node exact merge
+557a9158e093b6a7f8e197d3d927ec271a20e57d (PR30), six fichiers publics byte-identiques
+source, /api/health DB ok et cible DB conservée. Édition réelle déjà publiée du
+9 octobre cmv0icxy8000201rypskqf5l0 v6/digest
+1e5c24237d15c95f288d8565cc448484efb25e42a481b6aac97ff749fcc6f7d2 conservée ;
+aucun nouveau choix/publication ou amendement du noyau de marque.
+
+Manifeste et huit fichiers publics : CORS HTTP/types/bytes/SHA reçus ; navigateur
+inter-domaines réel vitrine/landing/jeu reçu avec cinq FontFace/trois usages Moka
+(greeting/curious/guide). Dataset édition exact landing/jeu, fonts/hash et trois
+data-images vitrine concordants. Six questions natives jusqu’à la gate, aucun
+contact/pseudo/numéro saisi, formulaire envoyé ou nouveau lead créé. Ces gestes
+reçoivent l’entrée et le lecteur ; pas calibration empirique/tous profils/résultats
+d’un visiteur inscrit ou retour de valeur reçus.
+
+quiz-public-exports.json : PNG 1 080×3 180 et GIF 480×666, 22 frames/2 120 ms reçus
+du mode aperçu existant ?demo=pisteur ; fichiers relus et rendu PNG inspecté.
+Aucun parcours inscrit déduit du mode démo. Mobile 390 sans overflow horizontal ;
+menu titre 18,75 px/sous-titre 15,398 px, trois images web 1 280 px et trois vignettes
+390 px chargées. Zéro erreur console observée ; aucune mesure indépendante
+pageerror ou latence/temps utilisable/SLO. Première capture mobile au mauvais
+ratio conservée pour trace, aucun défaut produit déduit de son cadrage.
+
+business-before/after/comparison : empreintes des SELECT comparés identiques —
+Strategy 64/BrandAsset 261/BrandSourceUse 2, inscrits 27/Spawts 9/file Brevo 7.
+Aucune suppression de ces données, inscription ou message email/social lancé ;
+politique pixel live existante conservée, aucun provider nouvellement activé.
+Cette réception ne mesure pas tous les écrivains/consommateurs ou modèles du système.
+
+Lecture native du portefeuille FrieslandCampina après 449 sous la session existante :
+arbre de huit marques, 26 campagnes/46 projets/101 références/177 assets et conflits
+explicites conservés (deux rattachements non propagés/35 références produit à
+qualifier). Zéro erreur console observée sur cette lecture ; aucune validation de
+ces contenus ou nouveau choix de plateforme déduit. Les médias du menu aperçu
+sont reçus chargés ; l’ancien rectangle capturé avant chargement/navigation ne
+représente pas un défaut produit.
+
+449 documentation-receipt.json historique du 12 octobre : checkpoint
+21f78acf5fad41b08c33d46bbf13e71562fe8595, CI 38273369961/Mission 38273369964/
+Chromatic 38273370002 success, 4 331/411 + PG 358/18 et cinq contrôles à zéro.
+Source 5a7f11a…/image be065e… distinctes de ce SHA documentaire ; aucun build MD.
+Les compteurs/rescans qualifiés du 12 sont conservés, pas nouveau recompte du 13.
+
+**Périmètre reçu et reprise** : accès/runtime et première réception réelle du
+lecteur public de cette v6 sur vitrine/landing/jeu sont clos au périmètre. Ne pas
+relancer leur raccord ni demander un nouveau choix/publication ou build MD. Le
+prochain incrément se recentre sur les décisions et parcours des autres IP ouverts,
+notamment les rattachements/références FrieslandCampina déjà signalés, et les
+familles/destinations/profils encore non reçus. Résultat inscrit/calibration/
+retour de valeur, univers complet et modes universels restent à recevoir. Déclencheur :
+prochaine décision/parcours C2/C3/C4/C6, avant réception du cycle ; effort : rapprochement
+des sources/contrats existants puis recette bornée par parcours, sans nouvelle couche.
+Sauvegardes→restauration éprouvée et coûts/TPE sont des recettes distinctes ; cause
+réseau/token Hostinger non revalidé ne sont pas purgés. Sept chantiers/R01–R10/80
+lignées/global null ouverts. Nouveau checkpoint doc/contrôles/CI encore à recevoir,
+source/images/runtime exacts du publisher et quiz conservés sans nouveau build MD.
+[Dette C2 en place](RESIDUAL-DEBT.md).
+
 ## CORS partagé de l’édition publique — 449 source/CI/image reçues, livraison en attente (2026-10-12)
+
+Les états d’attente ci-dessous décrivent le 12 octobre, supersédés seulement pour
+l’accès et le runtime publisher par les reçus datés du 13 ci-dessus.
 
 449 source 5a7f11a01bbcdd73c9ed069b304dd83a6a09735f committée/poussée, CI/image
 reçues, aucun déploiement demandé/runtime/consumer quiz reçu. Le domaine
