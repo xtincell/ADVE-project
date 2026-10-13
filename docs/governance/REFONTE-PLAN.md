@@ -1,36 +1,41 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
-## Comparaison schéma/migrations — 451 candidate infrastructure (2026-10-13)
+## Comparaison schéma/migrations — 451 source/CI reçues au périmètre (2026-10-13)
 
-Le contrôle existant passe dans feedback-postgres après application des migrations.
-Prisma diff --from-config-datasource → schéma courant compare la vraie base déjà
-migrée ; aucune seconde instance shadow nécessaire. Retrait du contrôle impossible
-au job de validation syntaxique et de son fallback : l’erreur de configuration ne
-peut plus être présentée comme un succès ou une divergence non mesurée.
+Source 0d6ad09646f8542fa0101c7e95342f0fa8355401, CI 38421544109/
+Mission 38421544175/Chromatic 38421544198 success exactes, tous jobs applicables verts.
+Preuves release/preuves-schema-migrations-20261013/receipt.json et source-ci-receipt.json :
+PostgreSQL 16.15 réel, 101 migrations appliquées, diff depuis datasource vers schéma
+courant sous /usr/bin/bash -e sans fallback ni pipeline : « No difference detected. ».
+CI 4 342 tests/413 fichiers unitaires et 358/18 PostgreSQL verts. Égalité au seul
+périmètre représenté par Prisma migrate diff : les guards/policies SQL bruts,
+propriétaires/ACL et données métier ne sont pas tous reçus par cette comparaison.
+Le contrôle impossible du job syntaxique et son faux warning sont retirés ; aucune
+seconde instance shadow, nouvelle migration ou entité nécessaire.
 
-Preuves release/preuves-schema-migrations-20261013/gap.md et controls-result.json :
-bloc shell exact du workflow exécuté sur PostgreSQL 17 isolé après 101 migrations.
-Égalité0, divergence sur une seule table vide de fixture : 2, restauration 0,
-authentification refusée P1000/1. Empreinte avant/après
+controls-result.json : bloc exact sur PostgreSQL 17.9 local, égalité 0/divergence 2/
+restauration 0/authentification refusée P1000/1. Empreinte du schéma avant/après
 943eef52951b6d652b9289b3ba07040424c2a9040ca47dff574a95199520ffb8 identique,
-table probe absente et production inchangée. Aucune nouvelle migration ou entité,
-aucune note client ; aucune correction de production déduite de la fixture.
-owned-runtime-cleanup.json : fixture possédée arrêtée après restauration du
-schéma, aucune base partagée ou production modifiée. Cette preuve locale ne reçoit
-pas la cible CI PostgreSQL 16.
+table probe absente et fixture possédée arrêtée après restauration. Ces négatifs
+restent locaux et ne constituent pas des négatifs exécutés sur CI PostgreSQL 16.
+Cinq contrôles locaux finaux à zéro, gouvernance 1 627/166 verte et 24 avertissements
+existants conservés. Registres/versions vérifiés, comptes canoniques inchangés.
 
-Cinq contrôles finaux reçus : tsc/lint/lint-governance/cycles/gouvernance exit 0,
-gouvernance 1 627/166 verte et 24 avertissements existants conservés. Ces résultats
-ne remplacent ni le futur commit source ni la CI PostgreSQL 16.
+La seule dette de comparaison non exécutée/faux warning et son symptôme sont
+purgés après réception réelle. Les anciens reçus 436/450 conservent l’historique du
+trou et de son diagnostic ; ils ne prétendaient pas avoir mesuré une divergence.
+Production publique 450/HTTP 200 reçue, aucun build/image/runtime 451 demandé ou reçu.
+Futur commit/CI documentaire distincts de la source 0d6ad096 et de ses checks,
+aucun nouveau build MD nécessaire, aucune note client.
 
-**Plan/effort/trigger** : recevoir la source 451 puis le diff
-réel dans CI PostgreSQL 16 déjà migrée ; fermer uniquement la dette de comparaison
-une fois ce reçu exact obtenu. Une passe du job existant, avant acceptation C7/R09 ;
-les autres trous C7/restauration/contrat de release demeurent ouverts. Si le diff
-révèle un écart, qualifier chaque changement avant toute correction, sans migration
-aveugle ni baisse d’une gate HARD. Production 450/cap 7/7/comptes canoniques et
-7/R01–R10/80/global null inchangés ; aucun crédit de suivi ajouté.
-[Dette en place](RESIDUAL-DEBT.md).
+**Reprise restante** : autres trous C7/R09 — owners/ACL/médias/restauration métier/
+isolation/coûts récurrents et parcours complets — conservent leurs plans existants.
+Déclencheur : avant acceptation C7/R09/contrat de release, recevoir ces parcours
+séparément ; effort par contrat existant, sans nouvelle couche ni baisse HARD.
+Le suivi reçoit un seul 13OCT-SCHEMA-MIGRATIONS : neuf→dix reçus bornés ; renfort
+documentaire du même reçu, sans onzième crédit. 0/7 chantiers, 0/10 gates, 0/80
+lignées et global null restent inchangés ; cap 7/7/comptes canoniques conservés.
+[Dettes restantes](RESIDUAL-DEBT.md).
 
 ## Recherche documentaire et Galahad manuel — 450 livré au périmètre (2026-10-13)
 

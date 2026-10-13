@@ -1032,28 +1032,6 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
   Effort : un lot de maintenance documentaire Git ; déclencheur : prochaine
   maintenance des workflows ou actualisation de cette référence. Aucun fichier
   documentaire supprimé pour masquer cet avertissement non bloquant.
-- **Comparaison schéma/migrations CI non mesurée — C7** : run 37979818869 success,
-  étape `.github/workflows/ci.yml` « Schema diff vs migrations » incapable de
-  mesurer faute de datasource.shadowDatabaseUrl ; le warning schema-ahead est
-  trompeur et ne prouve aucun drift. Le lot 436 ne change ni schéma ni migration.
-  13 octobre, CI 38409881780/lot450 : ci-schema.log reconfirme l’absence de
-  datasource.shadowDatabaseUrl ; comparaison non exécutée, erreur de configuration
-  transformée par le workflow en « schema.prisma is ahead of migrations ». Aucune
-  divergence établie, aucune migration manquante ou gate HARD affaiblie déduite.
-  **451 candidate locale** : contrôle déplacé dans feedback-postgres après migrations,
-  --from-config-datasource → schéma courant, fallback retiré. Bloc shell exact reçu
-  sur PostgreSQL 17 isolé : 0/2/0/1, 101 migrations, empreinte restaurée/table probe
-  absente, production 450 inchangée. Cinq contrôles finaux à zéro/gouvernance
-  1 627/166 verte, 24 avertissements existants conservés. Source 451/CI PostgreSQL 16
-  non reçues : dette non close.
-  **Fermer** : recevoir le diff réel sur la base PostgreSQL 16 déjà migrée du job
-  existant, sans seconde instance shadow, avec divergence/impossibilité refusées.
-  Garder les gates, ne créer aucune migration depuis le faux warning historique.
-  **Déclencheur** : prochaine CI 451, avant acceptation du contrat de release C7/R09 ;
-  effort : une passe du job existant. Les autres trous C7/R09, cap 7/7 et critères de
-  suivi restent inchangés. Preuve privée controls-result.json, reçu local borné.
-  Preuve privée ci-schema-diff-unreceived.json ; dette checkout Git ci-dessus
-  conservée séparément, aucun doublon ou suppression de référence.
 - **Workflow de déploiement legacy sans script — préexistant** :
   `.github/workflows/deploy.yml` appelle `scripts/deploy-coolify.sh`, absent.
   La voie canonique `build-image.yml` est utilisée ; le workflow legacy n'est
@@ -1389,10 +1367,11 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
   **Plan/effort/trigger** : lecteur MCP/conseil utile/mandat/reprise job en production
   puis invariance complète/refus/rejeu à recevoir, prochains parcours existants
   avant acceptation de lignée, sans purge sources/validations/piliers. Garder
-  legacy/restauration ACL/owners/médias/SI/TPE/coûts et C7 : comparaison non
-  exécutée faute de base shadow CI, à configurer puis mesurer avant release ;
-  aucune divergence déduite (dette de comparaison CI existante ci-dessus). Futur reçu MD distinct, aucun build MD ;
-  neuf réceptions bornées sans crédit supplémentaire, 7/R01–R10/80/global null ouverts.
+  legacy/restauration ACL/owners/médias/SI/TPE/coûts et autres trous C7/R09,
+  guards/policies SQL bruts non reçus par Prisma migrate diff inclus.
+  Comparaison réelle reçue par CI 451/source 0d6ad096 : seule dette du faux diff
+  purgée ; empreintes/refus/rejeu/MCP production restent à recevoir. Futur reçu MD distinct, aucun build MD ;
+  renfort documentaire sans crédit doublé, 7/R01–R10/80/global null ouverts.
 
 - **Conseil de marque — déférés (2026-07-26, ADR-0180)** : (1) **minutes de délibération persistées** — `deliberate()` retourne le résultat mais ne persiste rien ; un `BrandAsset kind=COUNCIL_MINUTES` via Intent MESTOR permettrait de garder la trace des analyses. (2) **UI cockpit « Analyse approfondie »** — la délibération n'est exposée qu'en `operatorProcedure` + tool MCP ; une surface cockpit founder avec progression NSP (pattern `oracle-section/stream-events`) reste à bâtir. (3) **consultation d'experts dans le tour interactif** — v1 = coordinateur seul en chat (latence) ; un mode « chat profond » consultant les experts est déféré. **Déclencheur** : demande opérateur d'archiver les délibérations, ou passe UX cockpit conseil. Effort ~1 session chacun.
 - **MCP — resources[] (2026-07-26, ADR-0182)** : les **28 `resources[]`** déclarées dans les modules MCP (ex. `intelligence://pillars/{strategyId}`) ne sont câblées à AUCUN transport — le scoping BRAND des URIs de resource n'est pas trivial (pas de champ `strategyId` structuré comme sur les tools). Câblage = mapper chaque URI → une lecture scopée + exposer via `resources/list`+`resources/read` du serveur MCP. **Déclencheur** : besoin d'exposer des ressources en lecture pure côté client MCP. Effort ~1 session. *(L'OAuth 2.1 pour claude.ai — anciennement listé ici — est **CLOS** : ADR-0183, serveur d'autorisation complet livré 2026-07-26.)*

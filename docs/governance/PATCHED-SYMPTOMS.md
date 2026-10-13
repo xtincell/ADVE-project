@@ -30,17 +30,6 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ## Entrées actives
 
-2026-10-13 · **451 candidate — faux warning schéma traité localement, CI PostgreSQL 16 attendue** :
-le contrôle --from-migrations sans shadow échouait puis annonçait schema-ahead,
-sans comparaison réelle. Diff déplacé dans feedback-postgres déjà migré, fallback
-retiré ; bloc exact sur PostgreSQL 17 local reçoit 0/2/0/1 (égalité/divergence/
-restauration/auth refusée), schéma restauré et table probe absente. Aucune migration
-manquante déduite, aucune gate affaiblie ; dette C7 demeure ouverte jusqu’à CI PostgreSQL 16,
-autres trous C7/R09 conservés, production 450 inchangée.
-Cinq contrôles finaux à zéro, gouvernance 1 627/166 verte et 24 avertissements
-existants conservés ; source 451/CI PostgreSQL 16 non reçues.
-[Dette de comparaison existante](RESIDUAL-DEBT.md).
-
 2026-10-13 · **450 livré au périmètre de préparation documentaire** : RAG initial
 0/77 BRAND_SOURCE sans empreinte malgré neuf EXTRACTED sur copie. Writer existant/
 Sources explicite false au reçu/rejeu, operatorId réel/absence≠panne DB, IDs/scopes/

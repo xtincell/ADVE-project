@@ -254,14 +254,12 @@ nouvelle lecture. Source 80e2122f/CI/image/runtime 436 reçus, lecture réelle S
 S existant à 91 %/AI_PROPOSED v3/bouton désactivé reçue ; aucune approbation de
 marque réelle. Contrats de composition à réconcilier : [réception](RECEPTION-VALIDATION-SYNTHESE.md).
 
-**451 candidate — contrôle CI, aucune surface ajoutée** : feedback-postgres compare
-sa base déjà migrée au schéma, sans shadow supplémentaire ni nouveau geste utilisateur.
-Le bloc du workflow est reçu sur PostgreSQL 17 isolé (0/2/0/1, schéma restauré),
-CI PostgreSQL 16 et réception 451 encore attendues ; production 450 et Sources reçus
-ci-dessous conservés, aucune gate C7/R09 ou parcours IP fermé par ce seul contrôle.
-Cinq contrôles finaux à zéro, gouvernance 1 627/166 verte et 24 avertissements
-existants conservés ; source 451/CI PostgreSQL 16 non reçues.
-[Bornage infrastructure](REFONTE-PLAN.md).
+**451 source/CI reçues — contrôle infrastructure, aucune surface ajoutée** :
+feedback-postgres reçoit le diff de sa vraie base PostgreSQL 16.15 après migrations,
+sans différence au périmètre Prisma migrate diff et sans fallback. Négatifs 0/2/0/1 reçus sur PostgreSQL 17.9 local seulement.
+Dette du faux diff/symptôme refermée ; autres trous C7/R09 et parcours IP ouverts.
+Runtime public 450 conservé, aucun build/image/runtime 451 ni geste utilisateur
+nouveau. Futur reçu documentaire distinct. [Bornage](REFONTE-PLAN.md).
 
 **450 livré — Sources existant reçu au périmètre production** : préparation
 explicite via INDEX_BRAND_SOURCE/prepareSourceIndex dans ingestion, opérateur et

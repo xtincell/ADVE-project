@@ -2,22 +2,26 @@
 
 ## v6.27.451 — fix(ci): mesurer le schéma sur la base PostgreSQL déjà migrée (2026-10-13)
 
-**451 candidate infrastructure ; contrôles locaux reçus, CI PostgreSQL 16 encore attendue. Production 450 conservée.**
+**451 source et CI reçues au périmètre du contrôle infrastructure ; runtime public 450 conservé.**
 
-- Diff déplacé dans feedback-postgres après les migrations ; comparaison de la
-  datasource vers le schéma courant, sans seconde instance shadow. Ancien contrôle
-  impossible et fallback transformant toute erreur en warning retirés. Égalité,
-  divergence et impossibilité de mesurer restent distinctes ; aucun faux succès.
-- Bloc shell réel sur PostgreSQL 17 isolé après 101 migrations : égalité 0,
-  divergence sur une table vide de fixture : 2, restauration 0, authentification
-  refusée P1000/1. Empreinte du schéma identique avant/après, table probe absente,
-  production inchangée. Ce reçu local ne remplace pas la vraie CI PostgreSQL 16.
-- Cinq contrôles finaux reçus à zéro (tsc/lint/lint-governance/cycles/gouvernance),
-  gouvernance 1 627/166 verte, 24 avertissements existants conservés. Source/CI 451
-  encore attendues ; dette de comparaison C7 non
-  close, autres trous C7/R09 et 7/R01–R10/80/global null ouverts. Aucun schéma,
-  migration, service, route, Intent ou fonction client ajouté ; aucune note client.
-  [Bornage et reprise](docs/governance/REFONTE-PLAN.md).
+- Diff déplacé dans feedback-postgres après migrations, datasource réelle vers
+  schéma courant sans seconde instance shadow. Ancien contrôle impossible et
+  fallback supprimés ; égalité, divergence et impossibilité ne sont plus confondues.
+- Bloc shell réel sur PostgreSQL 17.9 local : égalité 0/divergence 2/restauration 0/
+  authentification refusée P1000/1 ; 101 migrations, schéma restauré/table probe
+  absente/fixture possédée arrêtée. Ces négatifs restent locaux, pas reçus en CI PostgreSQL 16.
+- Source 0d6ad09646f8542fa0101c7e95342f0fa8355401 ; CI 38421544109,
+  Mission 38421544175 et Chromatic 38421544198 success exactes. PostgreSQL 16.15
+  réel après 101 migrations : « No difference detected. » au périmètre représenté
+  par Prisma migrate diff, commande sans fallback
+  sous /usr/bin/bash -e. CI 4 342/413 unitaires et 358/18 PostgreSQL verts. Cinq
+  contrôles locaux à zéro/gouvernance 1 627/166, 24 avertissements existants conservés.
+- Dette du faux diff et symptôme correspondant purgés au périmètre reçu ; autres
+  trous C7/R09, cap 7/7, critères et 7/R01–R10/80/global null restent ouverts.
+  Aucun schéma/migration/service/route/Intent/fonction client/note client ajouté.
+  Aucun build/image/runtime 451, production 450/HTTP 200 reçue. Futur commit/reçu
+  documentaire distinct de la source/CI, aucun nouveau build MD nécessaire.
+  [Réception et limites](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.450 — fix(sources): préparer la recherche par le writer documentaire existant (2026-10-13)
 
