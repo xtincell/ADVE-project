@@ -262,10 +262,10 @@ async function attemptStream(
           inputTokens: usage?.inputTokens ?? 0,
           outputTokens: usage?.outputTokens ?? 0,
         };
-        // Même règle de facturation que callLLM : nom Anthropic sur les chemins
-        // payants, nom du modèle servi sur les chemins gratuits.
+        // Même reçu que callLLM : fournisseur/modèle servis, estimation token
+        // explicitement distincte d'un coût rapporté par le fournisseur.
         const billedModel = provider === "ollama" || provider === "openrouter" ? servedModel : anthropicModel;
-        void trackCost({ strategyId: opts.strategyId, caller: opts.caller }, gatewayUsage, billedModel);
+        void trackCost({ strategyId: opts.strategyId, caller: opts.caller }, gatewayUsage, billedModel, undefined, provider);
         // Parité callLLM : PostgreSQL jsonb refuse U+0000 — purge à la source.
         const cleanText = text.split(String.fromCharCode(0)).join("").replace(/\\u0000/g, "");
         return { text: cleanText, ...gatewayUsage, provider, model: servedModel };

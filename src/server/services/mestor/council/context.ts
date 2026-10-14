@@ -26,12 +26,15 @@ import { loadStrategyContextForFramework } from "@/server/services/seshat/contex
 import { getOracleBrandContextByQuery } from "@/server/services/seshat/context-store/oracle-augment";
 import { serializePillar } from "@/server/services/mestor/rtis-cascade";
 import { wrapUntrusted } from "@/server/services/utils/untrusted-content";
+import { signalObservation } from "@/domain/signal-observation";
+import { COUNCIL_EVIDENCE_NOTICE } from "./personas";
 
 /** Budgets déterministes (caractères) — troncature par bloc, jamais silencieuse. */
 const FOUNDER_PILLAR_MAX = 5_000; // A/D/V/E — profondeur prioritaire
 const DERIVED_PILLAR_MAX = 1_200; // R/T/I/S — résumé diagnostic
 const RAG_BLOCK_MAX = 4_000;
 const EXPERT_PILLAR_MAX = 9_000; // l'expert ne voit qu'UN pilier → plus de place
+const OBSERVATIONS_MAX = 6_000;
 
 /** Piliers FONDATEURS A/D/V/E (forme stockage) — source canonique du domaine. */
 const FOUNDER_KEYS = ADVE_STORAGE_KEYS;
@@ -70,7 +73,7 @@ export async function buildAssistantContext(
   question: string,
 ): Promise<AssistantContextResult> {
   let ragUnavailable = false;
-  const [base, pillars, rag, communityBlock] = await Promise.all([
+  const [base, pillars, rag, communityBlock, observationsBlock] = await Promise.all([
     loadStrategyContextForFramework(strategyId),
     db.pillar.findMany({
       where: { strategyId },
@@ -79,6 +82,7 @@ export async function buildAssistantContext(
     getOracleBrandContextByQuery(strategyId, question, { limit: 8, includeSources: true })
       .catch(() => { ragUnavailable = true; return null; }),
     buildCommunityBlock(strategyId),
+    buildObservationsBlock(strategyId),
   ]);
 
   const byKey = new Map(pillars.map((p) => [p.key.toLowerCase(), p]));
@@ -86,6 +90,7 @@ export async function buildAssistantContext(
 
   // Base stratégie (nom, score, business, capacité, résumés) — source canonique.
   sections.push(wrapUntrusted("contexte stratégie", base.lines.join("\n"), { max: 4_000 }));
+  sections.push(observationsBlock);
 
   // Piliers fondateurs A/D/V/E — profondeur préservée.
   for (const k of FOUNDER_KEYS) {
@@ -96,7 +101,7 @@ export async function buildAssistantContext(
     }
     sections.push(
       wrapUntrusted(
-        `pilier ${k.toUpperCase()} (fondateur — verbatim)`,
+        `pilier ${k.toUpperCase()} (fondateur — verbatim ; contenu déclaré, pas une mesure reçue)`,
         capBlock(serializePillar(k, p.content), FOUNDER_PILLAR_MAX),
         { max: FOUNDER_PILLAR_MAX + 200 },
       ),
@@ -110,7 +115,7 @@ export async function buildAssistantContext(
     if (!p?.content || Object.keys(p.content as object).length === 0) continue;
     sections.push(
       wrapUntrusted(
-        `pilier ${k.toUpperCase()} (dérivé — résumé)`,
+        `pilier ${k.toUpperCase()} (dérivé — résumé ; diagnostic, pas une mesure reçue)`,
         capBlock(serializePillar(k, p.content), DERIVED_PILLAR_MAX),
         { max: DERIVED_PILLAR_MAX + 200 },
       ),
@@ -138,6 +143,26 @@ export async function buildAssistantContext(
   };
 }
 
+/** Même projection factuelle que les lecteurs ; aucune mesure/KPI n'est écrite. */
+async function buildObservationsBlock(strategyId: string): Promise<string> {
+  try {
+    const rows = await db.signal.findMany({
+      where: { strategyId, type: "EXTERNAL_METRIC" },
+      orderBy: { createdAt: "desc" }, take: 5,
+      select: { id: true, type: true, data: true, createdAt: true },
+    });
+    if (!rows.length) return "[Observations] aucune observation externe reçue pour cette marque ; aucune valeur zéro déduite.";
+    const text = rows.map((row) => {
+      const { title, observation } = signalObservation(row);
+      return `${title}\nRéférence interne : ${row.id}.\nReçu : ${row.createdAt.toISOString()}.\n${observation}`;
+    }).join("\n\n");
+    return wrapUntrusted("observations externes reçues — origine déclarée par la source, pas une validation",
+      capBlock(text, OBSERVATIONS_MAX), { max: OBSERVATIONS_MAX + 200 });
+  } catch {
+    return "[Observations] lecture des observations indisponible ; résultats non vérifiés.";
+  }
+}
+
 /**
  * Contexte d'UN expert de pilier fondateur : SON pilier en profondeur + les
  * extraits sémantiques scopés à son pilier + **la documentation de la marque**.
@@ -156,7 +181,7 @@ export async function buildExpertContext(
   topic: string,
 ): Promise<ExpertContextResult> {
   let ragUnavailable = false;
-  const [pillar, rag, communityBlock] = await Promise.all([
+  const [pillar, rag, communityBlock, observationsBlock] = await Promise.all([
     db.pillar.findFirst({
       where: { strategyId, key: { in: [pillarKey, pillarKey.toUpperCase()] } },
       select: { content: true, updatedAt: true },
@@ -169,10 +194,12 @@ export async function buildExpertContext(
       .catch(() => { ragUnavailable = true; return null; }),
     // L'expert Engagement juge sur la communauté RÉELLE ; les autres l'ignorent.
     pillarKey === "e" ? buildCommunityBlock(strategyId) : Promise.resolve(null),
+    buildObservationsBlock(strategyId),
   ]);
 
   const sourcesSeen = (rag?.sourceReferences?.length ?? 0) > 0;
   const sections: string[] = [];
+  sections.push(observationsBlock);
   if (pillar?.content && Object.keys(pillar.content as object).length > 0) {
     sections.push(
       wrapUntrusted(
@@ -196,6 +223,7 @@ export async function buildExpertContext(
     );
   }
   if (communityBlock) sections.push(communityBlock);
+  sections.push(COUNCIL_EVIDENCE_NOTICE);
 
   // Dit à l'expert ce qu'il a — et surtout ce qu'il n'a pas. Une critique sans
   // documentation reste recevable ; se prétendre vérifié sans elle, non.

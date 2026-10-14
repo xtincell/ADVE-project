@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.457", date: "2026-10-14",
+    headline: "Des conseils qui retrouvent les observations reçues",
+    highlights: [
+      { emoji: "📊", title: "Des résultats dans le contexte", body: "L’assistant reçoit les dernières observations de votre marque avec leurs références et leurs dates. Il distingue ces observations des déclarations et objectifs du dossier." },
+    ],
+  },
+  {
     version: "6.27.456", date: "2026-10-14",
     headline: "Retrouver les mesures reçues dans votre dossier",
     highlights: [

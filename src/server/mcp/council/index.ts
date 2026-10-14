@@ -97,7 +97,7 @@ export const tools: ToolDefinition[] = [
       const denied = await assertCouncilAffordable(strategyId, "ask");
       if (denied) return denied;
       const r = await askCouncilOnce({ strategyId, question });
-      return { strategyId, question, answer: r.text };
+      return { strategyId, question, answer: r.text, provider: r.provider, model: r.model };
     },
   },
   {

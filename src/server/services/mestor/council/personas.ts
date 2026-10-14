@@ -17,6 +17,10 @@
  * jamais « Mestor », « Neteru », « RAG », « Intent » dans une réponse.
  */
 
+export const COUNCIL_EVIDENCE_NOTICE = "PREUVES — Les contenus des piliers sont des déclarations et diagnostics ; leurs chiffres peuvent être des objectifs, hypothèses ou affirmations anciennes. Cite leur origine sans les transformer en résultats mesurés. N'invente aucun statut OFFICIAL absent des métadonnées documentaires, ni une autre qualification de source. Distingue les observations reçues des assertions éditoriales, leurs dates et leurs populations ; ne compare pas des populations différentes comme si elles étaient identiques. Une observation reçue ne valide ni la méthode du producteur, ni une décision client. Une valeur zéro ne vaut que pour l'indicateur et la population nommés ; des historiques sans questionnaire vérifiable ne deviennent ni zéro utilisateur ni zéro réponse totale. Ne déduis aucune panne de collecte ou de transmission d'une absence de données vérifiables : un incident exige sa propre preuve. Signale les contradictions et les preuves manquantes avant de recommander une validation.";
+
+export const COUNCIL_SIMPLE_REPLY_NOTICE = "MODE RÉEL — Cette réponse simple est produite par le coordinateur seul ; aucun des quatre experts n'a été consulté pour ce tour. Le conseil dispose d'une analyse approfondie facultative qui sollicite les experts et synthétise leurs critiques. Cette capacité appartient au fonctionnement du service, pas au contenu du dossier de marque. Ne nie pas son existence parce que la marque ne la mentionne pas et ne prétends jamais que des experts ont participé à cette réponse simple.";
+
 export type CouncilPersonaId = "coordinator" | "expert-a" | "expert-d" | "expert-v" | "expert-e";
 
 export interface CouncilPersona {

@@ -15,6 +15,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // streamText est consommé dynamiquement par streaming.ts — le mock du module
 // "ai" intercepte aussi les imports dynamiques.
 const streamTextMock = vi.fn();
+const costCreate = vi.hoisted(() => vi.fn(async (_args: unknown) => ({ id: "receipt" })));
+vi.mock("@/lib/db", () => ({ db: {
+  aICostLog: { create: costCreate }, modelPolicy: { findUnique: vi.fn(async () => null) },
+} }));
+vi.mock("@/server/services/ai-cost-tracker", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/server/services/ai-cost-tracker")>(),
+  checkBudget: vi.fn(async () => ({ allowed: true, remaining: 100, utilization: 0, alertLevel: "none" })),
+}));
 vi.mock("ai", async (importOriginal) => {
   const actual = await importOriginal<typeof import("ai")>();
   return { ...actual, streamText: (...args: unknown[]) => streamTextMock(...args) };
@@ -62,6 +70,7 @@ async function drain(stream: ReadableStream<string>): Promise<string> {
 describe("streamChatText — fallback pré-premier-octet", () => {
   beforeEach(() => {
     streamTextMock.mockReset();
+    costCreate.mockClear();
     // openrouter en tête (premium OFF, pas d'ollama) puis anthropic en repli.
     _resetProvidersForTest({
       anthropic: { available: true },
@@ -71,10 +80,26 @@ describe("streamChatText — fallback pré-premier-octet", () => {
     });
     delete process.env.LLM_PRIMARY_PROVIDER;
     delete process.env.LLM_PREMIUM_MODE;
+    delete process.env.OLLAMA_MODEL;
   });
 
   afterEach(() => {
     _resetProvidersForTest();
+    delete process.env.OLLAMA_MODEL;
+  });
+
+  it("the provider chosen by streaming also owns the cost receipt", async () => {
+    _resetProvidersForTest({ anthropic: { available: false }, openai: { available: false },
+      ollama: { available: true }, openrouter: { available: false } });
+    process.env.OLLAMA_MODEL = "gemma4:31b";
+    streamTextMock.mockReturnValueOnce(mockStreamResult(textStreamOf(["Avis" ]), "Avis"));
+    const result = await streamChatText({ system: "s", messages: [{ role: "user", content: "Quiz ?" }],
+      caller: "mestor:council:coordinator", strategyId: "brand-a" });
+    await drain(result.textStream); await result.finished;
+    await vi.waitFor(() => expect(costCreate).toHaveBeenCalledOnce());
+    expect(costCreate.mock.calls[0]![0]).toMatchObject({ data: {
+      provider: "ollama", model: "gemma4:31b", context: "mestor:council:coordinator:estimated-cost",
+    } });
   });
 
   it("provider 1 échoue au premier read → provider 2 sert le flux entier", async () => {

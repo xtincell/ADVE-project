@@ -152,8 +152,6 @@ export const FALLBACK_POLICY: Record<GatewayPurpose, {
 };
 
 // Pricing per 1M tokens (Sonnet 5 — sticker $3/$15, inchangé vs Sonnet 4.x)
-const INPUT_PRICE_PER_M = 3;
-const OUTPUT_PRICE_PER_M = 15;
 
 // v4 — Model priority for budget downgrade (cheaper = higher index)
 export const MODEL_PRIORITY = ["claude-opus-4-6", "claude-opus-4-20250514", "claude-sonnet-5", "claude-haiku-4-5", "claude-haiku-4-5-20251001"];
@@ -651,22 +649,22 @@ export async function trackCost(
   usage: { inputTokens: number; outputTokens: number },
   model: string,
   billing?: { provider: string; costUsd: number; estimated: boolean },
+  provider: LLMProvider = "anthropic",
 ): Promise<void> {
   if (!options.strategyId) return;
 
   try {
     const { db } = await import("@/lib/db");
+    const { calculateCost } = await import("@/server/services/ai-cost-tracker");
     await db.aICostLog.create({
       data: {
         strategyId: options.strategyId,
-        provider: billing?.provider ?? "anthropic",
+        provider: billing?.provider ?? provider,
         model,
         inputTokens: usage.inputTokens,
         outputTokens: usage.outputTokens,
-        cost: billing?.costUsd ?? (
-          (usage.inputTokens / 1_000_000) * INPUT_PRICE_PER_M +
-          (usage.outputTokens / 1_000_000) * OUTPUT_PRICE_PER_M),
-        context: options.caller + (billing?.estimated ? ":estimated-cost" : ""),
+        cost: billing?.costUsd ?? calculateCost(model, usage.inputTokens, usage.outputTokens),
+        context: options.caller + (!billing || billing.estimated ? ":estimated-cost" : ""),
       },
     });
   } catch {
@@ -883,8 +881,8 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
 
         // Non-blocking cost tracking. Use the actually-served model name
         // (anthropic name when on Anthropic/OpenAI, ollama name when free).
-        const billedModel = provider === "ollama" || options.video ? servedModel : anthropicModel;
-        trackCost(options, gatewayUsage, billedModel, nativeBilling);
+        const billedModel = provider === "ollama" || provider === "openrouter" || options.video ? servedModel : anthropicModel;
+        trackCost(options, gatewayUsage, billedModel, nativeBilling, provider);
 
         // PostgreSQL jsonb refuse le null byte U+0000 ("unsupported Unicode escape
         // sequence") — un modèle peut en émettre un (brut, ou un littéral qui le devient

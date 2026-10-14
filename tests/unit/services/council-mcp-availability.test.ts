@@ -60,7 +60,8 @@ describe("council MCP availability with real handlers and fixture dependencies",
   it("preserves the existing answer contract and quota when a provider exists", async () => {
     state.available = true;
     state.ask.mockResolvedValue({ text: "Réponse de recette", provider: "fixture", model: "fixture" });
-    expect(await invoke("ask")).toEqual({ strategyId: "brand-a", question: "Question", answer: "Réponse de recette" });
+    expect(await invoke("ask")).toEqual({ strategyId: "brand-a", question: "Question", answer: "Réponse de recette",
+      provider: "fixture", model: "fixture" });
     expect(state.assistantBudget).toHaveBeenCalledOnce();
     expect(state.ask).toHaveBeenCalledOnce();
   });

@@ -28,6 +28,24 @@ beforeEach(() => {
 });
 
 describe("coordinator document presence — real orchestration, fixture gateways", () => {
+  it("describes this actual simple reply separately from the available expert mode", async () => {
+    await askCouncilStream({ strategyId: "brand-a", question: "Qui répond ?", history: [] });
+    const system = (state.stream.mock.calls[0] as unknown as [{ system: string }])[0].system;
+    expect(system).toContain("aucun des quatre experts n'a été consulté pour ce tour");
+    expect(system).toContain("analyse approfondie facultative");
+    expect(system).toContain("pas au contenu du dossier de marque");
+    expect(state.structured).not.toHaveBeenCalled();
+  });
+  it("does not certify old editorial traction claims as measured outcomes", async () => {
+    state.contextBlock = "Pilier T : 1 200 inscrits déclarés. Observation du quiz : 21 historiques sans questionnaire.";
+    await askCouncilStream({ strategyId: "brand-a", question: "Quiz ?", history: [] });
+    const system = (state.stream.mock.calls[0] as unknown as [{ system: string }])[0].system;
+    expect(notice(system)).toContain("déclarations");
+    expect(notice(system)).toContain("objectifs");
+    expect(notice(system)).toContain("populations");
+    expect(notice(system)).toContain("N'invente aucun statut OFFICIAL");
+    expect(system).toContain("21 historiques sans questionnaire");
+  });
   it("does not call precise fields documentary excerpts in the streamed chat", async () => {
     await askCouncilStream({ strategyId: "brand-a", question: "Question", history: [] });
     const system = (state.stream.mock.calls[0] as unknown as [{ system: string }])[0].system;

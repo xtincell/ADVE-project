@@ -19,6 +19,11 @@ interface CostEntry {
 
 // Pricing per 1M tokens (USD)
 const PRICING: Record<string, { input: number; output: number }> = {
+  // Ollama cloud public token rates, checked 2026-10-14:
+  // https://ollama.com/pricing — uncached upper estimate, not an invoice.
+  "gemma4:31b": { input: 0.14, output: 0.40 },
+  // Peak, uncached upper estimate; off-peak/cache discounts remain unverified.
+  "deepseek-v4.1-flash": { input: 0.30, output: 1.20 },
   "claude-sonnet-4-6": { input: 3.0, output: 15.0 },
   "claude-opus-4-6": { input: 15.0, output: 75.0 },
   "claude-haiku-4-5": { input: 0.80, output: 4.0 },

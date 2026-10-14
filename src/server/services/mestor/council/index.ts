@@ -27,7 +27,7 @@ import { executeStructuredLLMCall } from "@/server/services/utils/llm-structured
 import { UNTRUSTED_NOTICE, wrapUntrusted } from "@/server/services/utils/untrusted-content";
 import { assessAllPillarsHealth } from "@/server/services/neteru-shared/pillar-directors";
 import { buildAssistantContext, buildExpertContext } from "./context";
-import { COUNCIL_EXPERTS, COUNCIL_PERSONAS } from "./personas";
+import { COUNCIL_EXPERTS, COUNCIL_PERSONAS, COUNCIL_EVIDENCE_NOTICE, COUNCIL_SIMPLE_REPLY_NOTICE } from "./personas";
 import {
   councilDraftSchema,
   councilSynthesisSchema,
@@ -67,7 +67,7 @@ function buildCoordinatorSystem(contextBlock: string, sourcesSeen: boolean): str
   const grounding = sourcesSeen
     ? "ANCRAGE — Des extraits de la documentation de la marque figurent dans ton dossier avec leur certitude déclarée. Cite le document et son statut quand tu t'appuies dessus. Leur récupération ne prouve ni validation humaine, ni capacité déployée ; une source DECLARED, INFERRED ou ARBITRARY ne devient pas OFFICIAL parce qu'elle est récupérée."
     : "ANCRAGE — Aucun extrait documentaire n'est injecté dans ce dossier. Tu réponds sur les piliers et les mesures fournis. La conformité aux documents n'est pas vérifiée ; n'affirme pas qu'un point est confirmé par la documentation de la marque.";
-  return [COUNCIL_PERSONAS.coordinator.systemPrompt, UNTRUSTED_NOTICE, contextBlock, grounding].join(
+  return [COUNCIL_PERSONAS.coordinator.systemPrompt, UNTRUSTED_NOTICE, contextBlock, grounding + "\n" + COUNCIL_EVIDENCE_NOTICE].join(
     "\n\n",
   );
 }
@@ -76,7 +76,7 @@ function buildCoordinatorSystem(contextBlock: string, sourcesSeen: boolean): str
 export async function askCouncilStream(input: AskCouncilInput): Promise<StreamChatResult> {
   const { contextBlock, sourcesSeen } = await buildAssistantContext(input.strategyId, input.question);
   return streamChatText({
-    system: buildCoordinatorSystem(contextBlock, sourcesSeen),
+    system: buildCoordinatorSystem(contextBlock, sourcesSeen) + "\n" + COUNCIL_SIMPLE_REPLY_NOTICE,
     messages: [...input.history, { role: "user", content: input.question }],
     caller: "mestor:council:coordinator",
     strategyId: input.strategyId,
