@@ -6,6 +6,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { projectForContext, serializePillar } from "@/server/services/mestor/rtis-cascade";
+import { fieldStatusFor } from "@/domain/field-provenance";
 
 describe("projectForContext — prose capée, structure intacte", () => {
   it("cape une string longue (feuille), garde les courtes", () => {
@@ -26,6 +27,42 @@ describe("projectForContext — prose capée, structure intacte", () => {
 });
 
 describe("serializePillar — la matrice profonde n'est plus tronquée (Phase 4)", () => {
+  it("attaches each value to its own canonical origin, without promoting an unknown legacy value", () => {
+    const content = { rituel: [{ description: "5 questions, 5 axes" }], kpis: ["1 200 inscrits"],
+      décision: "Six questions", source: "Document importé", _fieldProvenance: {
+        rituel: "INFERRED", décision: "HUMAN", source: "SOURCE",
+      } };
+    const out = serializePillar("e", content, fieldStatusFor({ décision: "INFERRED" }, "e", content._fieldProvenance));
+    const payload = JSON.parse(out.slice(out.indexOf("\n") + 1, out.lastIndexOf("\n")));
+    expect(payload.rituel).toEqual({ statut: "INFERRED", origine: "Déduit — à vérifier",
+      valeur: [{ description: "5 questions, 5 axes" }] });
+    expect(payload.kpis).toEqual({ statut: "UNKNOWN", origine: "Origine inconnue", valeur: ["1 200 inscrits"] });
+    expect(payload.décision.statut).toBe("HUMAN");
+    expect(payload.source.statut).toBe("SOURCE");
+    expect(content.rituel).toEqual([{ description: "5 questions, 5 axes" }]);
+    expect(content._fieldProvenance).not.toHaveProperty("kpis");
+    expect(payload).not.toHaveProperty("_fieldProvenance");
+  });
+
+  it("qualified projection retains every catalogue item and empty value", () => {
+    const content = { catalogue: Array.from({ length: 12 }, (_, i) => ({ nom: `Produit-${i}`,
+      prose: "détail ".repeat(120), gain: `gain ${i}` })), absent: null, zéro: 0 };
+    const out = serializePillar("v", content, () => "SOURCE");
+    const payload = JSON.parse(out.slice(out.indexOf("\n") + 1, out.lastIndexOf("\n")));
+    expect(payload.catalogue.valeur).toHaveLength(12);
+    expect(payload.catalogue.valeur[11].gain).toBe("gain 11");
+    expect(payload.catalogue.valeur[11].prose).toHaveLength(401);
+    expect(payload.absent.valeur).toBeNull();
+    expect(payload.zéro.valeur).toBe(0);
+  });
+
+  it("a legacy source certainty is retained without inventing a field provenance", () => {
+    const out = serializePillar("a", { preuve: "Assertion héritée" }, () => "OFFICIAL");
+    const payload = JSON.parse(out.slice(out.indexOf("\n") + 1, out.lastIndexOf("\n")));
+    expect(payload.preuve.statut).toBe("OFFICIAL");
+    expect(payload.preuve.origine).toBe("Qualification héritée — provenance de champ non établie");
+    expect(payload.preuve.valeur).toBe("Assertion héritée");
+  });
   it("garde TOUS les produits d'un gros catalogue (l'ex-cap 8000 coupait la queue)", () => {
     const produitsCatalogue = Array.from({ length: 12 }, (_, i) => ({
       nom: `Produit-${i}`,

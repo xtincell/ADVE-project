@@ -53,7 +53,8 @@ describe("coordinator document presence — real orchestration, fixture gateways
     state.contextBlock = "Pilier T : 1 200 inscrits déclarés. Observation du quiz : 21 historiques sans questionnaire.";
     await askCouncilStream({ strategyId: "brand-a", question: "Quiz ?", history: [] });
     const system = (state.stream.mock.calls[0] as unknown as [{ system: string }])[0].system;
-    expect(notice(system)).toContain("déclarations");
+    expect(notice(system)).toContain("UNKNOWN = origine inconnue");
+    expect(notice(system)).not.toContain("Les contenus des piliers sont des déclarations");
     expect(notice(system)).toContain("objectifs");
     expect(notice(system)).toContain("populations");
     expect(notice(system)).toContain("N'invente aucun statut OFFICIAL");

@@ -22,9 +22,6 @@ vi.mock("@/lib/db", () => ({ db: {
 vi.mock("@/server/services/seshat/context-store/strategy-context", () => ({
   loadStrategyContextForFramework: vi.fn(async () => ({ lines: ["Marque réelle"] })),
 }));
-vi.mock("@/server/services/mestor/rtis-cascade", () => ({
-  serializePillar: (_key: string, content: unknown) => JSON.stringify(content),
-}));
 vi.mock("@/server/services/seshat/context-store/oracle-augment", () => ({
   getOracleBrandContextByQuery: vi.fn(async () => {
     if (state.unavailable) throw new Error("document store unavailable");
@@ -45,6 +42,18 @@ beforeEach(() => {
 });
 
 describe("the council reports the evidence it actually received", () => {
+  it.each(["coordinator", "expert"])("does not declare all founder fields when their origins differ (%s)", async (role) => {
+    state.pillars = [{ key: "a", content: { doctrine: "Une idée générée", origine: "Récit du dirigeant",
+      _fieldProvenance: { doctrine: "INFERRED", origine: "HUMAN" } } }];
+    const result = role === "expert"
+      ? await buildExpertContext("brand-a", "a", "Que sait-on ?")
+      : await buildAssistantContext("brand-a", "Que sait-on ?");
+    expect(result.contextBlock).not.toContain("contenu déclaré");
+    expect(result.contextBlock).toContain('"statut": "INFERRED"');
+    expect(result.contextBlock).toContain('"valeur": "Une idée générée"');
+    expect(result.contextBlock).toContain('"statut": "HUMAN"');
+    expect(result.contextBlock).toContain('"valeur": "Récit du dirigeant"');
+  });
   it.each(["coordinator", "expert"])("retains the field origin and editing date without certifying a measure (%s)", async (role) => {
     state.pillars = [{ key: role === "expert" ? "a" : "t",
       content: { preuvesTraction: "Bêta de 50 personnes, complétion supérieure à 80 %" },

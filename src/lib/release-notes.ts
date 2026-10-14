@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.462", date: "2026-10-14",
+    headline: "Des informations mieux qualifiées",
+    highlights: [
+      { emoji: "🔎", title: "Conserver l’origine des informations", body: "Le conseil dispose de l’origine associée à chaque valeur : saisie humaine, source, déduction ou origine inconnue. Ces qualifications restent distinctes des résultats mesurés." },
+    ],
+  },
+  {
     version: "6.27.461", date: "2026-10-14",
     headline: "Respecter la cadence des appels",
     highlights: [

@@ -26,6 +26,7 @@ import { Prisma } from "@prisma/client";
 import { runMarketIntelligence } from "@/server/services/market-intelligence";
 import type { PillarWriteRequest, PillarWriteResult } from "@/server/services/pillar-gateway";
 import type { RouteKey } from "@/lib/strategy/roadmap-routes";
+import { FIELD_PROVENANCE_LABEL, isFieldProvenance } from "@/domain/field-provenance";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -109,12 +110,33 @@ export function projectForContext(value: unknown, leafMax: number): unknown {
   return value;
 }
 
-export function serializePillar(key: string, content: unknown): string {
+export function serializePillar(
+  key: string,
+  content: unknown,
+  fieldStatus?: (field: string) => string | undefined,
+): string {
   if (!content || typeof content !== "object") return `[${key}] Vide`;
   // Projection profondeur-préservante : cap prose par feuille (400), garde toute
   // la structure. Backstop total généreux (24000, ex-8000) — après projection, un
   // pilier réaliste tient largement ; seul un pilier pathologique est encore capé.
-  const json = JSON.stringify(projectForContext(content, 400), null, 2);
+  const projected = projectForContext(content, 400);
+  // Conseil : l'autorité suit sa valeur, au lieu d'une table distante que le
+  // modèle peut attribuer à un autre champ. Même grain que pillar-gateway.
+  // Les autres lecteurs gardent strictement leur projection historique.
+  const qualified = fieldStatus && !Array.isArray(projected)
+    ? Object.fromEntries(Object.entries(projected as Record<string, unknown>)
+      .filter(([field]) => !field.startsWith("_"))
+      .map(([field, valeur]) => {
+        const statut = fieldStatus(field) ?? "UNKNOWN";
+        return [field, {
+          statut,
+          origine: isFieldProvenance(statut) ? FIELD_PROVENANCE_LABEL[statut]
+            : "Qualification héritée — provenance de champ non établie",
+          valeur,
+        }];
+      }))
+    : projected;
+  const json = JSON.stringify(qualified, null, 2);
   // LOT 1b — contenu pilier (donnée non fiable) balisé anti-injection.
   return wrapUntrusted(`PILIER ${key}`, json, { max: 24000 });
 }

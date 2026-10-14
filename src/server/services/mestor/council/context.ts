@@ -61,7 +61,7 @@ function qualifiedPillar(key: string, pillar: {
     `Pilier ${key.toUpperCase()} — ${date} (date d’édition, pas une date de mesure).`,
     "Qualification des champs : origine/autorité d’édition, pas une mesure ni une validation du résultat.",
     fields,
-    serializePillar(key, pillar.content),
+    serializePillar(key, pillar.content, status),
   ].join("\n"), max);
 }
 
@@ -123,7 +123,7 @@ export async function buildAssistantContext(
     }
     sections.push(
       wrapUntrusted(
-        `pilier ${k.toUpperCase()} (fondateur — verbatim ; contenu déclaré, pas une mesure reçue)`,
+        `pilier ${k.toUpperCase()} (fondateur — valeurs avec leur origine ; pas une mesure reçue)`,
         qualifiedPillar(k, p, FOUNDER_PILLAR_MAX),
         { max: FOUNDER_PILLAR_MAX + 200 },
       ),

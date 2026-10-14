@@ -1,5 +1,17 @@
 # Changelog — La Fusee
 
+## v6.27.462 — fix(council): qualifier les champs sans les promouvoir en déclarations humaines (2026-10-14)
+
+**462 candidat : contexte et fil sur copie reçus, qualité refusée ; source/CI/image/livraison encore attendues.**
+
+- Source du défaut C5-02 : wrapper « contenu déclaré » et notice globale qualifiaient tous les piliers comme déclarés ; type fondateur ne prouve pas auteur humain. serializePillar existant reçoit une option par champ (statut, label canon FIELD_PROVENANCE_LABEL, valeur), projection récursive conservée ; seuls les lecteurs du conseil activent fieldStatusFor canonique. Qualification legacy non-provenance explicitement héritée, sans promotion.
+- Cinq nouveaux rouges sur baseline (cinq échecs/24 verts), cible source 57 / 5 verte incluant vrai serializer, historique/coordinateur seuls et conseil gateway. Aucun manager/schema/router/Intent/Neter ou écriture de pilier ajouté ; aucun comportement reçu de tous les autres lecteurs.
+- Quiz réellement relu : six questions palais-6-radar-v1, toujours cinq axes ; Q6 « Ton radar » seule mesure Foule↔Secret. Ne pas convertir les mentions cinq axes en six, aucune nouvelle calibration ou validation empirique reçue.
+- Contexte réel sur copie : huit dates/27 341 ms sans modèle, E.rituels INFERRED/E.kpis UNKNOWN/V.mvp HUMAN-six questions liés aux valeurs pour coordinateur et experts. API AUTH ADMIN dummy existant 200/113 474 ms en dev dont 57 s de compilation ; une invocation OAuth/Luna, 12 465 entrée-705 sortie/0,003339 USD API équivalent, estimation distincte d’une facture. Huit empreintes métier conservées/deux messages/un coût. Qualité refusée : UNKNOWN encore nommé « Objectif déclaré », historique cinq questions non réconcilié avec six/citations ID-version-date incomplètes. COPIE synthétique 1+0 du 13 octobre distincte du réel 0/21, jamais utilisateurs prod. [Bornage](docs/governance/REFONTE-PLAN.md).
+
+- Reçu visuel Chrome sur copie : Assistant 462/SPAWT, trois échanges de chat (trois questions/trois réponses) conservés, dernière réponse 2 203 caractères identique au HTTP. Aucun modèle appelé par navigateur ; reload huit hashes/six messages/348 coûts identiques. Markdown brut visible, C4 ouvert ; IAB absent puis Chrome reçu, première navigation CDP expirée 10 s pendant compile puis page chargée, premier titre non mesuré/SLO non reçu. Warmup curl 30 s/bridge CLI timeouts conservés. Note client origine associée à valeur préparée par racine, pas garantie de qualité.
+- DEFAULT local 4 452 / 423 et cinq contrôles finaux zéro/gouvernance 1 627 / 166/24 warnings lint reçus ; premier TS2532 dans assertion test réparé par égalité entière du tableau, aucun invariant affaibli. Sourcecommit/CI/image/runtime 462 attendus, production 461/460 qualité refusée conservés ; seize résultats bornés inchangés, aucun entier crédité.
+
 ## v6.27.461 — fix(rate): refuser une file expirée sans dépasser les limites locales (2026-10-14)
 
 **461 livré : refus de file expirée réparé au périmètre source/API ; réserve visuelle et charge restent ouvertes.**
