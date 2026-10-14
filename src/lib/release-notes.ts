@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.459", date: "2026-10-14",
+    headline: "Des appels gratuits mieux estimés",
+    highlights: [
+      { emoji: "💶", title: "Un coût adapté au modèle", body: "Le suivi estime à zéro les jetons des deux modèles gratuits OpenRouter retenus. Ces montants restent identifiés comme des estimations." },
+    ],
+  },
+  {
     version: "6.27.458", date: "2026-10-14",
     headline: "Des références produit et des aperçus mieux distingués",
     highlights: [

@@ -1,8 +1,16 @@
 # Changelog — La Fusee
 
+## v6.27.459 — fix(cost): estimer à zéro les deux modèles OpenRouter Free sélectionnés (2026-10-14)
+
+**459 candidat : connexion, journal sur copie, neuf tests ciblés et cinq contrôles reçus ; livraison attendue, production 457 conservée.**
+
+- Clé Free dédiée reçue privé, plafond de dépense zéro/quota 1 000 appels par jour. Gateway synthétique CONNEXION_OK en 3 144 ms/37 jetons entrée/25 sortie, sans données marque ou strategyId ; modèle unique Nemotron Super routé, métadonnées provider/modèle non renvoyées par gateway, aucun rapport fournisseur inventé. Premier harnais aux arguments incorrects échoue avant fournisseur, pas panne OpenRouter démontrée.
+- Deux variantes du catalogue officiel à coût jeton zéro utilisaient le tarif Sonnet de repli ; deux vrais rouges/trois verts. Mapping existant ai-cost-tracker/trackCost étendu aux deux entrées, caractère estimé conservé ; cible 9 / 2 et cinq contrôles zéro reçus. TrackCost existant sur copie : coût zéro/OpenRouter/modèle routé Nemotron/37 entrée-25 sortie/estimated-cost, sans génération ou production. Note client estimations des deux Free ajoutée par racine ; aucune facture ou coût global nul déduit. Aucun nouveau modèle/service/route/Intent/Neter/provider ; scope Ground Operations/THOT GROUND_INFRASTRUCTURE.
+- Source/CI/image 458 reçus, public encore 457, aucun environnement provider prod configuré. Audit C1 de calculateCost/effets DB_READ/DB_WRITE déclarés pour fonction pure à recevoir, aucun verdict sur invoke non exercé. C2-02/neuf aliases, C5 conseil utile refusé et C7 coût entier inconnu ouverts ; quinze résultats bornés, aucun entier fermé. [Preuves et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.458 — fix(portfolio): qualifier les références produit et restaurer les dossiers archivés (2026-10-14)
 
-**458 candidat : archivage et restauration UI reçus sur copie, identité conservée ; livraison et neuf aliases réels encore ouverts.**
+**458 source/CI/image reçus : archivage et restauration UI sur copie, identité conservée ; public encore 457, neuf aliases réels ouverts.**
 
 - Source réelle FrieslandCampina : neuf compositions reclassées en assets avec anciennes fiches SKU archivées/conservées, 26 vues individuelles qualifiées et les 195 IDs SKU préservés. Autres collections, champs client et approbations inchangés ; droits inconnus restent inconnus, masters privés non exposés. Cette mutation source ne reçoit pas l’onboarding entier ou la ventilation native.
 - Projection existante : saveur/contenant distingués dans les caractéristiques, provenance et droits non renseignés lisibles, aperçus/revues légères désignés par la source ; une référence de master privé ne devient pas un lien public. Deux tests de réception baseline rouges/13 verts, puis checkpoint 126 tests / 15 fichiers verts avant nouveaux tests archive.
@@ -10,6 +18,8 @@
 - HTTP/UI ADMIN de test sur copie : assets/produits/provenance reçus, archive 200 puis restauration par formulaire/lecture 200, même ID/slug/parent/type/nature/références et champs d’origine conservés, état DRAFT/nouvelle version. Formulaire montrait Groupe au lieu du SKU enregistré : options d’édition corrigées au code existant, libellés français Référence produit/Produit et reprise À achever. Note client de restauration ajoutée par racine ; aucun effet production ou livraison 458, incidents locaux/limites de durée conservés.
 - Directive fournisseur Free : OpenRouter déjà intégré/clé runtime absente, catalogue API Nemotron Super/Gemma 4:free à coût zéro. Connexion humaine reçue ; une clé ancienne existe, sans attribution de ses usages à La Fusée. Clé dédiée Free sans achat demandée à l’utilisateur, création/raccord encore attendus ; aucun plan Free actif, appel OpenRouter, qualité conseil ou coût global nul reçu.
 - Aucun nouveau modèle, service, route, Intent, Neter ou ADR. C2-02 reste ouvert ; aucun reçu supplémentaire, chantier/lot/cas complet accepté. [Preuves et reprise](docs/governance/REFONTE-PLAN.md).
+
+- Checkpoint après source : bd8a3a4b0da167aaf34a0ec19f3c6b14c5cf043e, trois CI success 38541954529/38541954778/38541954642 et image 38542614817 success/index 4618df0c… au registre. Livraison/runtime public 458 non reçus, production 457 conservée ; attentes source des checkpoints locaux ci-dessus historiques, aucun crédit supplémentaire.
 
 ## v6.27.457 — fix(council): ancrer les observations et attribuer le coût au modèle servi (2026-10-14)
 

@@ -19,6 +19,10 @@ interface CostEntry {
 
 // Pricing per 1M tokens (USD)
 const PRICING: Record<string, { input: number; output: number }> = {
+  // Selected OpenRouter free variants, catalogue checked 2026-10-14:
+  // https://openrouter.ai/api/v1/models — token estimate, not an invoice.
+  "nvidia/nemotron-3-super-120b-a12b:free": { input: 0, output: 0 },
+  "google/gemma-4-26b-a4b-it:free": { input: 0, output: 0 },
   // Ollama cloud public token rates, checked 2026-10-14:
   // https://ollama.com/pricing — uncached upper estimate, not an invoice.
   "gemma4:31b": { input: 0.14, output: 0.40 },

@@ -6,6 +6,16 @@ import { trackCost } from "@/server/services/llm-gateway";
 
 beforeEach(() => { create.mockClear(); });
 describe("actual text provider and estimated cost receipt", () => {
+  it.each(["nvidia/nemotron-3-super-120b-a12b:free", "google/gemma-4-26b-a4b-it:free"])
+    ("records the catalogue's zero token estimate for %s without borrowing Sonnet pricing", async (model) => {
+      await trackCost({ strategyId: "brand-a", caller: "mestor:council:coordinator" },
+        { inputTokens: 37, outputTokens: 25 }, model, undefined, "openrouter");
+      expect(create.mock.calls[0]![0].data).toMatchObject({
+        provider: "openrouter", model, inputTokens: 37, outputTokens: 25, cost: 0,
+        context: "mestor:council:coordinator:estimated-cost",
+      });
+    });
+
   it("does not bill a served Gemma answer as Anthropic Sonnet", async () => {
     await trackCost({ strategyId: "brand-a", caller: "mestor:council:coordinator" },
       { inputTokens: 10_299, outputTokens: 545 }, "gemma4:31b", undefined, "ollama");

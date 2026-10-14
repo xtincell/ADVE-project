@@ -16,7 +16,9 @@
 
 ## Quick start
 
-**458 candidat : archivage et restauration reçus sur copie.** Même identité/références conservées, reprise À achever et type produit correctement affiché ; droits inconnus/masters privés inchangés. Tsc final reçu à zéro, aliases réels non archivés, aucune livraison ou clôture C2-02. Connexion OpenRouter humaine reçue, clé Free dédiée encore à créer/raccorder ; aucune qualité conseil ou gratuité globale reçue. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
+**459 candidat : coût estimé des modèles Free en correction.** Connexion synthétique reçue sans données marque, plafond de dépense zéro/quota 1 000 par jour ; mapping des deux modèles reçu par neuf tests ciblés/deux fichiers et cinq contrôles verts ; journal existant exercé sur copie à coût estimé zéro sans génération. Aucun raccord prod ou conseil utile reçu. Source/CI/image 458 disponibles, public encore 457 ; C2-02/neuf aliases, qualité C5 et coût complet C7 restent ouverts. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
+
+**458 source/CI/image reçus : archivage et restauration sur copie.** Même identité/références conservées, reprise À achever et type produit correctement affiché ; droits inconnus/masters privés inchangés. Tsc final reçu à zéro, aliases réels non archivés, aucune livraison ou clôture C2-02. Connexion OpenRouter reçue ; attente de clé du checkpoint local supersédée par le test synthétique 459, raccord production absent ; aucune qualité conseil ou gratuité globale reçue. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
 
 **457 livré ; le conseil utile est refusé au périmètre reçu.** MCP public, fil ADMIN et recharge sans génération reçus, données conservées et fournisseur/coût estimé correctement attribués. La réponse promeut encore un diagnostic en preuve et recommande un quiz obligatoire sans justification ; analyse approfondie facultative non appelée, Markdown brut à finir via le renderer existant. Qualité, factures et coût mensuel restent ouverts ; quinze résultats bornés, aucun entier fermé, SPAWT 5/6. [Preuves et reprises](docs/governance/REFONTE-PLAN.md).
 
