@@ -34,6 +34,16 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.458", date: "2026-10-14",
+    headline: "Des références produit et des aperçus mieux distingués",
+    highlights: [
+      { emoji: "📦", title: "Des variantes conservées", body: "Le portefeuille tient compte des saveurs et des contenants renseignés pour distinguer les références. Les fichiers et leurs versions restent séparés." },
+      { emoji: "🖼️", title: "Ouvrir la revue disponible", body: "Les fiches ouvrent le fichier de revue disponible. Un master de production privé reste signalé comme une référence à retrouver dans sa source." },
+      { emoji: "📄", title: "Une provenance lisible", body: "Les éléments de marque conservent leurs notes et leur source même lorsque les droits d’usage restent à renseigner." },
+      { emoji: "↩️", title: "Reprendre un dossier archivé", body: "Vous pouvez restaurer un dossier depuis son formulaire en choisissant son état de reprise. Ses liens, son identité et son historique sont conservés." },
+    ],
+  },
+  {
     version: "6.27.457", date: "2026-10-14",
     headline: "Des conseils qui retrouvent les observations reçues",
     highlights: [

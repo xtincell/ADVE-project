@@ -249,9 +249,26 @@ export async function updateBrandNode(
   if ("sourceRefs" in patches && (!expectedUpdatedAt || !Number.isFinite(Date.parse(expectedUpdatedAt)))) {
     throw new BrandNodeUpdateConflictError("Relisez les raccordements avant de les enregistrer : leur version est requise.");
   }
-  const node = await db.brandNode.findUnique({ where: { id: nodeId }, select: { id: true, archivedAt: true } });
+  const node = await db.brandNode.findUnique({ where: { id: nodeId }, select: { id: true, archivedAt: true, parentNodeId: true } });
   if (!node) throw new Error(`BrandNode ${nodeId} not found`);
-  if (node.archivedAt) throw new Error(`BrandNode ${nodeId} is archived — restore before update`);
+  const restoring = Boolean(node.archivedAt && patches.lifecycle && patches.lifecycle !== "ARCHIVED");
+  if (node.archivedAt && !restoring) throw new Error(`BrandNode ${nodeId} is archived — restore before update`);
+  if (patches.lifecycle && !["ACTIVE", "DRAFT", "ARCHIVED", "DEPRECATED"].includes(patches.lifecycle)) {
+    throw new Error("État du dossier inconnu.");
+  }
+  if (restoring) {
+    if (!expectedUpdatedAt || !Number.isFinite(Date.parse(expectedUpdatedAt))) {
+      throw new BrandNodeUpdateConflictError("Relisez le dossier archivé avant de le restaurer : sa version est requise.");
+    }
+    if (node.parentNodeId) {
+      const parent = await db.brandNode.findUnique({ where: { id: node.parentNodeId }, select: { archivedAt: true } });
+      if (parent?.archivedAt) throw new Error("Restaurez le dossier parent avant son élément.");
+    }
+  }
+  if (patches.lifecycle === "ARCHIVED") {
+    const descendants = await db.brandNode.count({ where: { parentNodeId: nodeId, archivedAt: null } });
+    if (descendants) throw new Error("Archivez d’abord les descendants du dossier.");
+  }
 
   // Whitelist : nodeKind + nodeNature sont immutables (utiliser MOVE pour position structurelle).
   const allowedKeys = [
@@ -259,6 +276,8 @@ export async function updateBrandNode(
     "nodeRole", "lifecycle", "inheritanceLocked", "pillarOverrides", "sourceRefs",
   ];
   const data: Prisma.BrandNodeUpdateInput = {};
+  if (restoring) data.archivedAt = null;
+  else if (patches.lifecycle === "ARCHIVED") data.archivedAt = new Date();
   let pillarOverridesChanged = false;
   for (const [key, value] of Object.entries(patches)) {
     if (!allowedKeys.includes(key)) {
@@ -273,7 +292,7 @@ export async function updateBrandNode(
   try {
     // Even two writes in the same millisecond must consume distinct versions.
     if (expectedUpdatedAt) data.updatedAt = new Date(Math.max(Date.now(), Date.parse(expectedUpdatedAt) + 1));
-    updated = await db.brandNode.update({ where: { id: nodeId, archivedAt: null,
+    updated = await db.brandNode.update({ where: { id: nodeId, archivedAt: node.archivedAt,
       ...(expectedUpdatedAt ? { updatedAt: new Date(expectedUpdatedAt) } : {}),
     }, data });
   } catch (error) {

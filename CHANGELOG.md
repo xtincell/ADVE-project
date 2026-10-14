@@ -1,5 +1,16 @@
 # Changelog — La Fusee
 
+## v6.27.458 — fix(portfolio): qualifier les références produit et restaurer les dossiers archivés (2026-10-14)
+
+**458 candidat : archivage et restauration UI reçus sur copie, identité conservée ; livraison et neuf aliases réels encore ouverts.**
+
+- Source réelle FrieslandCampina : neuf compositions reclassées en assets avec anciennes fiches SKU archivées/conservées, 26 vues individuelles qualifiées et les 195 IDs SKU préservés. Autres collections, champs client et approbations inchangés ; droits inconnus restent inconnus, masters privés non exposés. Cette mutation source ne reçoit pas l’onboarding entier ou la ventilation native.
+- Projection existante : saveur/contenant distingués dans les caractéristiques, provenance et droits non renseignés lisibles, aperçus/revues légères désignés par la source ; une référence de master privé ne devient pas un lien public. Deux tests de réception baseline rouges/13 verts, puis checkpoint 126 tests / 15 fichiers verts avant nouveaux tests archive.
+- Trou de restauration : update refusait tout dossier archivé, sans chemin de reprise. Candidat dans les services/formulaire existants : état/version relue/parent actif, lecture directe sans réintroduire les descendants archivés. PostgreSQL après 101 migrations : 10/10 verts ; baseline six verts/quatre rouges dont trois refus ciblés et une expiration SSH 5 s, distincte du bug. Portefeuille 126 / 15, premier tsc zéro ; après dernier correctif de libellés, deux lints/cycles zéro et gouvernance finale 1 627 / 166 reçus, tsc final reçu à zéro.
+- HTTP/UI ADMIN de test sur copie : assets/produits/provenance reçus, archive 200 puis restauration par formulaire/lecture 200, même ID/slug/parent/type/nature/références et champs d’origine conservés, état DRAFT/nouvelle version. Formulaire montrait Groupe au lieu du SKU enregistré : options d’édition corrigées au code existant, libellés français Référence produit/Produit et reprise À achever. Note client de restauration ajoutée par racine ; aucun effet production ou livraison 458, incidents locaux/limites de durée conservés.
+- Directive fournisseur Free : OpenRouter déjà intégré/clé runtime absente, catalogue API Nemotron Super/Gemma 4:free à coût zéro. Connexion humaine reçue ; une clé ancienne existe, sans attribution de ses usages à La Fusée. Clé dédiée Free sans achat demandée à l’utilisateur, création/raccord encore attendus ; aucun plan Free actif, appel OpenRouter, qualité conseil ou coût global nul reçu.
+- Aucun nouveau modèle, service, route, Intent, Neter ou ADR. C2-02 reste ouvert ; aucun reçu supplémentaire, chantier/lot/cas complet accepté. [Preuves et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.457 — fix(council): ancrer les observations et attribuer le coût au modèle servi (2026-10-14)
 
 **457 livré : transport public, fil conservé et attribution du coût estimé reçus ; conseil utile refusé, finition Markdown ouverte.**
@@ -1199,7 +1210,7 @@
   24 warnings préexistants, zéro cycle. MCP réel discovery/catalogue et appels,
   tRPC sous session OPERATOR, refus étranger et replay de checkpoint reçus sur
   fixture, sans fournisseur réel. Suite complète : 4 144 unitaires/1 610
-  gouvernance verts ; stress isolé et tsc final en cours, livraison à recevoir.
+  gouvernance verts ; stress isolé et tsc final reçu à zéro, livraison à recevoir.
   Production reçue encore 425. Fallbacks
   d’émission upstream, sources multiples, provenance documentaire, octets/CDN,
   parentAssetId, facture et journal restent ouverts ; aucun cycle réel SPAWT/Noël

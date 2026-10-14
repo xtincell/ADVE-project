@@ -16,6 +16,8 @@
 
 ## Quick start
 
+**458 candidat : archivage et restauration reçus sur copie.** Même identité/références conservées, reprise À achever et type produit correctement affiché ; droits inconnus/masters privés inchangés. Tsc final reçu à zéro, aliases réels non archivés, aucune livraison ou clôture C2-02. Connexion OpenRouter humaine reçue, clé Free dédiée encore à créer/raccorder ; aucune qualité conseil ou gratuité globale reçue. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
+
 **457 livré ; le conseil utile est refusé au périmètre reçu.** MCP public, fil ADMIN et recharge sans génération reçus, données conservées et fournisseur/coût estimé correctement attribués. La réponse promeut encore un diagnostic en preuve et recommande un quiz obligatoire sans justification ; analyse approfondie facultative non appelée, Markdown brut à finir via le renderer existant. Qualité, factures et coût mensuel restent ouverts ; quinze résultats bornés, aucun entier fermé, SPAWT 5/6. [Preuves et reprises](docs/governance/REFONTE-PLAN.md).
 
 **456 livré : le quiz transmet désormais une observation durable au dossier SPAWT.** PR31 fusionnée et image quiz réelle déployée ; portefeuille public déplié/Q6, origine, version, référence et dates reçus. Les données indiquent zéro carte vérifiable et 21 historiques sans questionnaire ; aucun inscrit synthétique ajouté en production ni contact transféré. Même reçu retrouvé après reprise, données métier conservées. Gazette publique et filtre marché reçus sans action IA ; usage/révision gouvernée, autres rôles, SLO, calibration et cycle visiteur restent ouverts. Quatorze résultats bornés, aucun entier fermé. [Réception et limites](docs/governance/REFONTE-PLAN.md).

@@ -8,6 +8,8 @@ import { db } from "@/lib/db";
 import { getPortfolioWorkspace } from "@/server/services/brand-node/workspace";
 import { setSourceUse, resolveBrandSource } from "@/server/services/ingestion-pipeline/source-usage";
 import { ingestionRouter } from "@/server/trpc/routers/ingestion";
+import { archiveBrandNode, updateBrandNode } from "@/server/services/brand-node";
+import { brandNodeRouter } from "@/server/trpc/routers/brand-node";
 let operatorId: string, userId: string, foreignUserId: string;
 const strategies: string[] = [], nodes: string[] = [];
 beforeAll(async () => {
@@ -119,5 +121,60 @@ describe("dernière écriture dans le dossier de marque", () => {
     await db.pillar.create({ data: { strategyId: own.id, key: "d", validationStatus: "VALIDATED" } });
     const view = await getPortfolioWorkspace(node, { allowBarre: false, actor: { userId, operatorId, role: "USER" } });
     expect(view.strategies[0]!.pillars.find((p) => p.key === "d")?.versions).toEqual([]);
+  });
+});
+
+describe("archivage réversible du dossier", () => {
+  const actor = () => ({ userId, operatorId, role: "USER" as const });
+  it("restaure le même dossier, ses sources et son historique, avec une nouvelle version", async () => {
+    const { node } = await fixture();
+    const archived = await archiveBrandNode(node.id);
+    const before = await getPortfolioWorkspace(archived, { allowBarre: false, actor: actor() });
+    expect(before.nodes.map((n) => n.id)).toContain(node.id);
+    expect(before.strategies[0]!.pillars[0]!.versions[0]!.version).toBe(3);
+    const restored = await updateBrandNode(node.id, { lifecycle: "DRAFT" }, archived.updatedAt.toISOString());
+    expect(restored).toMatchObject({ id: node.id, slug: node.slug, lifecycle: "DRAFT", archivedAt: null,
+      strategyId: node.strategyId, sourceRefs: node.sourceRefs });
+    expect(restored.updatedAt.getTime()).toBeGreaterThan(archived.updatedAt.getTime());
+    expect((await getPortfolioWorkspace(restored, { allowBarre: false, actor: actor() })).strategies)
+      .toEqual(before.strategies);
+  });
+  it("refuse une restauration sans version ou sur une version périmée", async () => {
+    const { node } = await fixture();
+    const archived = await archiveBrandNode(node.id);
+    await expect(updateBrandNode(node.id, { lifecycle: "ACTIVE" })).rejects.toThrow("version est requise");
+    await expect(updateBrandNode(node.id, { lifecycle: "ACTIVE" }, new Date(0).toISOString()))
+      .rejects.toThrow("Ce dossier a changé");
+    expect((await db.brandNode.findUniqueOrThrow({ where: { id: node.id } })).archivedAt).toEqual(archived.archivedAt);
+  });
+  it("garde les archives hors du parent actif et exige de restaurer le parent avant son enfant", async () => {
+    const { node } = await fixture();
+    const child = await db.brandNode.create({ data: { operatorId, parentNodeId: node.id, name: "Vue de recette",
+      slug: `view-${randomUUID()}`, nodeKind: "SKU", nodeNature: "PRODUCT", lifecycle: "DRAFT" } });
+    nodes.push(child.id);
+    await expect(updateBrandNode(node.id, { lifecycle: "ARCHIVED" }, node.updatedAt.toISOString()))
+      .rejects.toThrow("descendants");
+    const archivedChild = await archiveBrandNode(child.id);
+    expect((await getPortfolioWorkspace(node, { allowBarre: false, actor: actor() })).nodes.map((n) => n.id))
+      .not.toContain(child.id);
+    const archivedParent = await archiveBrandNode(node.id);
+    await expect(updateBrandNode(child.id, { lifecycle: "DRAFT" }, archivedChild.updatedAt.toISOString()))
+      .rejects.toThrow("dossier parent");
+    await updateBrandNode(node.id, { lifecycle: "ACTIVE" }, archivedParent.updatedAt.toISOString());
+    await updateBrandNode(child.id, { lifecycle: "DRAFT" }, archivedChild.updatedAt.toISOString());
+    expect((await getPortfolioWorkspace(node, { allowBarre: false, actor: actor() })).nodes.map((n) => n.id))
+      .toContain(child.id);
+  });
+  it("ne donne aucun accès à un utilisateur extérieur lorsqu’un dossier est archivé", async () => {
+    const { node } = await fixture();
+    const archived = await archiveBrandNode(node.id);
+    const caller = brandNodeRouter.createCaller({ db, headers: undefined, session: {
+      user: { id: foreignUserId, role: "USER" }, expires: new Date(Date.now() + 60_000).toISOString(),
+    } });
+    await expect(caller.getBySlug({ operatorId, slug: node.slug })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.update({ operatorId, strategyId: node.strategyId!, nodeId: node.id,
+      patches: { lifecycle: "ACTIVE" }, expectedUpdatedAt: archived.updatedAt.toISOString() }))
+      .rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect((await db.brandNode.findUniqueOrThrow({ where: { id: node.id } })).archivedAt).toEqual(archived.archivedAt);
   });
 });

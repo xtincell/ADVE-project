@@ -91,6 +91,12 @@ export function portfolioFileUrl(value: string | null | undefined): string | nul
   } catch { return null; }
 }
 
+export const PORTFOLIO_NATURE_LABELS: Record<string, string> = {
+  PRODUCT: "Produit", SERVICE: "Service", CHARACTER_IP: "Personnage", FESTIVAL_IP: "Festival",
+  MEDIA_IP: "Média", RETAIL_SPACE: "Commerce", PLATFORM: "Plateforme", INSTITUTION: "Institution",
+  PERSONAL: "Marque personnelle",
+};
+
 export const PORTFOLIO_KIND_LABELS: Record<string, string> = {
   CORPORATE: "Groupe", MASTER_BRAND: "Marque", STANDALONE_BRAND: "Marque",
   REGIONAL_CLUSTER: "Région", REGIONAL_BRAND: "Marché", PRODUCT_LINE: "Gamme",

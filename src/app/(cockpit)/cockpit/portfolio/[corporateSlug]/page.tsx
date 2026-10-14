@@ -47,7 +47,7 @@ export default function PortfolioNodeDetailPage() {
   const archiveMutation = trpc.brandNode.delete.useMutation({
     onSuccess: () => {
       utils.brandNode.invalidate();
-      router.push("/cockpit/portfolio");
+      router.push(`/cockpit/portfolio?operator=${encodeURIComponent(operator?.id ?? "")}`);
     },
   });
 

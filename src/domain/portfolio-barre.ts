@@ -15,6 +15,8 @@ export function barreFileUrl(value: unknown): string | null {
   const path = asText(value);
   // Never turn a source's filesystem path, protocol or host into an active link.
   if (!/^(assets|corpus)\//.test(path) || path.split("/").includes("..")) return null;
+  // La Barre keeps production masters on the holder's machine, not its public host.
+  if (path.startsWith("assets/production/")) return null;
   return new URL(path.split("/").map(encodeURIComponent).join("/"), `${BARRE_ORIGIN}/`).href;
 }
 
@@ -55,6 +57,11 @@ export function projectBarreWorkspace(raw: unknown, references: PortfolioReferen
   if (!["marques", "clients", "campagnes", "projets", "sku", "assets"].every((key) => Array.isArray(data[key]))) {
     throw new Error("Le dépôt La Barre ne respecte pas le format attendu.");
   }
+  const proxies = asRow(data.proxys);
+  const reviewUrl = (value: unknown) => {
+    const path = asText(value);
+    return barreFileUrl(proxies[path]) || barreFileUrl(path);
+  };
   const refs = references.filter((r) => r.system === "LA_BARRE");
   const clientIds = new Set(refs.filter((r) => r.kind === "client").map((r) => r.id));
   const explicitBrands = new Set(refs.filter((r) => r.kind === "brand").map((r) => r.id));
@@ -121,14 +128,24 @@ export function projectBarreWorkspace(raw: unknown, references: PortfolioReferen
   }
   const skus = allSkus.filter((s) => skuIds.size && !clientIds.size && !explicitBrands.size && !rangeRefs.length ? skuIds.has(asText(s.id)) : brandIds.has(asText(s.marque)) &&
     (!rangeRefs.length || explicitBrands.size > 0 || clientIds.size > 0 || rangeRefs.some((r) => r.brandId === s.marque && r.range === s.categorie)));
-  const assets: WorkspaceAsset[] = asRows(data.assets).filter((a) => brandIds.has(asText(a.marque))).map((a) => ({
+  const assets: WorkspaceAsset[] = asRows(data.assets).filter((a) => brandIds.has(asText(a.marque))).map((a) => {
+    const rights = a.droits && typeof a.droits === "object" && !Array.isArray(a.droits)
+      ? readableValue(Object.fromEntries(Object.entries(asRow(a.droits)).filter(([, value]) => readableValue(value).trim())))
+      : readableValue(a.droits);
+    return {
     id: `barre:${asText(a.id)}`, name: asText(a.nom), brand: names.get(asText(a.marque)) ?? "", kind: asText(a.role),
-    state: a.archive ? "Archivé" : "Référencé", preview: barreFileUrl(a.vignette),
-    url: barreFileUrl(a.review) || barreFileUrl(a.vignette), source: "La Barre", note: readableValue(a.droits) || asText(a.note),
-  }));
+    state: a.archive ? "Archivé" : a.aQualifier ? "À qualifier" : "Référencé", preview: reviewUrl(a.vignette),
+    url: reviewUrl(a.review) || reviewUrl(a.vignette), source: "La Barre", note: [
+      asText(a.source) ? `Source : ${asText(a.source)}` : "Source non renseignée.",
+      asText(a.note),
+      rights ? `Droits déclarés : ${rights}` : "Droits d’usage non renseignés.",
+      asText(a.master) ? "Master de production référencé dans La Barre · accès privé à vérifier." : "",
+    ].filter(Boolean).join("\n\n"),
+    };
+  });
   for (const b of brands) for (const v of asRows(b.visuels)) {
     assets.push({ id: `barre:${asText(v.id)}`, name: `${asText(v.campagne)} · ${asText(v.annee)}`, brand: asText(b.nom), kind: "Visuel de campagne",
-      state: asText(v.statut) || "Référencé", preview: barreFileUrl(v.vignette), url: barreFileUrl(v.vignette), source: "La Barre", note: asText(v.origine) });
+      state: asText(v.statut) || "Référencé", preview: reviewUrl(v.vignette), url: reviewUrl(v.vignette), source: "La Barre", note: asText(v.origine) });
   }
   for (const ref of refs) {
     const found = ref.kind === "client" ? asRows(data.clients).some((c) => c.id === ref.id)
@@ -141,7 +158,7 @@ export function projectBarreWorkspace(raw: unknown, references: PortfolioReferen
   }
   const signatures = new Map<string, Row[]>();
   for (const sku of skus.filter((s) => !s.archive)) {
-    const key = [sku.marque, sku.categorie, sku.format, sku.variante, sku.langue, sku.promo, asStrings(sku.marches).sort().join(",")].map(readableValue).join("|");
+    const key = [sku.marque, sku.categorie, sku.format, sku.variante, sku.saveur, sku.contenant, sku.langue, sku.promo, asStrings(sku.marches).sort().join(",")].map(readableValue).join("|");
     const group = signatures.get(key) ?? []; group.push(sku); signatures.set(key, group);
   }
   const duplicateIds = new Set([...signatures.values()].filter((group) => group.length > 1).flatMap((group) => group.map((s) => asText(s.id))));
@@ -154,7 +171,8 @@ export function projectBarreWorkspace(raw: unknown, references: PortfolioReferen
       projects: projects.filter((p) => p.campaignId === c.id).map((p) => p.id),
     })),
     products: skus.map((s) => ({ id: asText(s.id), name: asText(s.nom), brand: names.get(asText(s.marque)) ?? "", range: asText(s.categorie), format: asText(s.format),
-      language: asText(s.langue), archived: Boolean(s.archive), needsQualification: Boolean(s.aQualifier), possibleDuplicate: duplicateIds.has(asText(s.id)), preview: barreFileUrl(s.vignette), url: barreFileUrl(s.production),
+      language: asText(s.langue), archived: Boolean(s.archive), needsQualification: Boolean(s.aQualifier), possibleDuplicate: duplicateIds.has(asText(s.id)), preview: reviewUrl(s.vignette), url: reviewUrl(s.review) || reviewUrl(s.vignette),
+      hasProductionReference: Boolean(asText(s.production) || asText(s.chemin) || asText(s.master)),
       markets: asStrings(s.marches), archiveReason: readableValue(asRow(s.archive).motif),
     })),
   };

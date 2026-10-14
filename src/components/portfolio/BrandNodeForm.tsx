@@ -20,6 +20,7 @@ import {
   getValidChildKinds,
 } from "@/domain/brand-nature-archetypes";
 import type { BrandNature } from "@prisma/client";
+import { PORTFOLIO_KIND_LABELS, PORTFOLIO_LIFECYCLE_LABELS, PORTFOLIO_NATURE_LABELS } from "@/domain/portfolio-reference";
 
 export interface BrandNodeFormProps {
   /** Si fourni : mode édition. Sinon : mode création. */
@@ -47,6 +48,7 @@ interface FormState {
   clusterTag: string | null;
   nodeRole: string[];
   attachStrategyId: string | null;
+  lifecycle: string;
 }
 
 const INITIAL_STATE: FormState = {
@@ -58,6 +60,7 @@ const INITIAL_STATE: FormState = {
   clusterTag: null,
   nodeRole: [],
   attachStrategyId: null,
+  lifecycle: "ACTIVE",
 };
 
 function slugify(name: string): string {
@@ -108,6 +111,7 @@ export function BrandNodeForm({
         clusterTag: existingNode.clusterTag,
         nodeRole: existingNode.nodeRole,
         attachStrategyId: existingNode.strategyId,
+        lifecycle: existingNode.lifecycle,
       });
       setAutoSlug(false);
     }
@@ -133,26 +137,30 @@ export function BrandNodeForm({
     onError: (err) => setError(err.message),
   });
 
-  const validKinds = getValidChildKinds(parent?.nodeKind ?? null, state.nodeNature);
+  // Editing cannot change the kind. Display the recorded kind even when the
+  // parent is not supplied, rather than the first allowed root option.
+  const validKinds = isEdit ? [state.nodeKind] : getValidChildKinds(parent?.nodeKind ?? null, state.nodeNature);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!state.name.trim()) return setError("Name requis");
-    if (!state.slug.trim()) return setError("Slug requis");
-    if (!state.nodeKind) return setError("nodeKind requis");
+    if (!state.name.trim()) return setError("Nom requis");
+    if (!state.slug.trim()) return setError("Adresse du dossier requise");
+    if (!state.nodeKind) return setError("Type de dossier requis");
 
     if (isEdit && nodeId) {
       await updateMutation.mutateAsync({
         strategyId,
         operatorId,
         nodeId,
+        expectedUpdatedAt: existingNode?.updatedAt.toISOString(),
         patches: {
           name: state.name,
           slug: state.slug,
           countryCode: state.countryCode,
           clusterTag: state.clusterTag,
           nodeRole: state.nodeRole,
+          ...(state.lifecycle !== existingNode?.lifecycle ? { lifecycle: state.lifecycle } : {}),
         },
       });
     } else {
@@ -174,7 +182,7 @@ export function BrandNodeForm({
   };
 
   if (isEdit && existingLoading) {
-    return <div className="text-foreground-secondary">Loading…</div>;
+    return <div className="text-foreground-secondary">Chargement…</div>;
   }
 
   const isPending = createMutation.isPending || updateMutation.isPending;
@@ -182,14 +190,14 @@ export function BrandNodeForm({
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4 p-4">
       <h2 className="text-lg font-semibold">
-        {isEdit ? "Éditer BrandNode" : `Nouveau BrandNode${parent ? ` sous "${parent.name}"` : " (racine)"}`}
+        {isEdit ? "Modifier le dossier" : `Nouveau dossier${parent ? ` sous « ${parent.name} »` : " (racine)"}`}
       </h2>
 
       {error && <div className="rounded bg-error/15 p-2 text-sm text-error">{error}</div>}
 
       {/* Name + Slug */}
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium">Name</span>
+        <span className="font-medium">Nom</span>
         <input
           type="text"
           required
@@ -208,7 +216,7 @@ export function BrandNodeForm({
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium">Slug (unique par operator)</span>
+        <span className="font-medium">Adresse du dossier (unique dans cette équipe)</span>
         <input
           type="text"
           required
@@ -223,10 +231,19 @@ export function BrandNodeForm({
         />
       </label>
 
+      {isEdit && <label className="flex flex-col gap-1 text-sm">
+        <span className="font-medium">État du dossier</span>
+        <select value={state.lifecycle} onChange={(e) => setState((s) => ({ ...s, lifecycle: e.target.value }))} className="rounded border border-border bg-surface-raised px-2 py-1.5">
+          {!PORTFOLIO_LIFECYCLE_LABELS[state.lifecycle] && <option value={state.lifecycle}>État historique à préciser</option>}
+          {Object.entries(PORTFOLIO_LIFECYCLE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+        <span className="text-xs text-foreground-secondary">Un dossier archivé se restaure en choisissant son état de reprise. Son historique et ses liens sont conservés.</span>
+      </label>}
+
       {/* Nature + Kind */}
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Brand Nature</span>
+          <span className="font-medium">Nature de la marque</span>
           <select
             value={state.nodeNature}
             disabled={isEdit /* nodeNature immutable post-création (utiliser MOVE) */}
@@ -242,13 +259,13 @@ export function BrandNodeForm({
             className="rounded border border-border bg-surface-raised px-2 py-1.5 disabled:opacity-50"
           >
             {ALL_BRAND_NATURES.map((n) => (
-              <option key={n} value={n}>{n}</option>
+              <option key={n} value={n}>{PORTFOLIO_NATURE_LABELS[n] ?? "Nature à préciser"}</option>
             ))}
           </select>
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Node Kind</span>
+          <span className="font-medium">Type de dossier</span>
           <select
             value={state.nodeKind}
             disabled={isEdit /* immutable post-création */}
@@ -259,13 +276,13 @@ export function BrandNodeForm({
               <option value="">— pas de transition valide —</option>
             ) : (
               validKinds.map((k) => (
-                <option key={k} value={k}>{k}</option>
+                <option key={k} value={k}>{PORTFOLIO_KIND_LABELS[k] ?? k}</option>
               ))
             )}
           </select>
           {parent && (
             <span className="text-xs text-foreground-secondary">
-              Cascades valides depuis {parent.nodeKind} : {validKinds.join(", ") || "(aucune — feuille)"}
+              Types disponibles sous {parent.name} : {validKinds.map((k) => PORTFOLIO_KIND_LABELS[k] ?? k).join(", ") || "aucun sous-dossier"}
             </span>
           )}
         </label>
@@ -274,7 +291,7 @@ export function BrandNodeForm({
       {/* Geo */}
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Country Code (ISO-2)</span>
+          <span className="font-medium">Pays (code à deux lettres)</span>
           <input
             type="text"
             maxLength={2}
@@ -291,7 +308,7 @@ export function BrandNodeForm({
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Cluster Tag</span>
+          <span className="font-medium">Regroupement</span>
           <input
             type="text"
             value={state.clusterTag ?? ""}
@@ -306,7 +323,7 @@ export function BrandNodeForm({
 
       {/* Tags nodeRole */}
       <fieldset className="flex flex-col gap-2 text-sm">
-        <legend className="font-medium">Tags orthogonaux (nodeRole)</legend>
+        <legend className="font-medium">Rôles complémentaires</legend>
         <div className="flex flex-wrap gap-1">
           {state.nodeRole.map((r) => (
             <span
@@ -356,7 +373,7 @@ export function BrandNodeForm({
         <button
           type="submit"
           disabled={isPending}
-          className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/80 disabled:opacity-50"
+          className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-background hover:bg-accent/80 disabled:opacity-50"
         >
           {isPending ? "Enregistrement…" : isEdit ? "Enregistrer" : "Créer"}
         </button>

@@ -27,15 +27,18 @@ async function readBarre() {
 }
 
 export async function getPortfolioWorkspace(root: BrandNode, options: { allowBarre: boolean; actor: Parameters<typeof canAccessStrategy>[1] }) {
-  const allNodes = await db.brandNode.findMany({ where: { operatorId: root.operatorId, archivedAt: null }, orderBy: { name: "asc" } });
+  const allNodes = await db.brandNode.findMany({ where: { operatorId: root.operatorId }, orderBy: { name: "asc" } });
+  // A directly opened archived dossier remains readable and restorable;
+  // active parents do not silently regain their archived descendants.
+  const availableNodes = allNodes.filter((node) => !node.archivedAt || node.id === root.id);
   const ids = new Set([root.id]);
   // Bounded fixed point; corrupt cycles cannot hang a read.
   for (let i = 0; i < allNodes.length; i++) {
     const before = ids.size;
-    for (const node of allNodes) if (node.parentNodeId && ids.has(node.parentNodeId)) ids.add(node.id);
+    for (const node of availableNodes) if (node.parentNodeId && ids.has(node.parentNodeId)) ids.add(node.id);
     if (before === ids.size) break;
   }
-  const nodes = allNodes.filter((n) => ids.has(n.id));
+  const nodes = availableNodes.filter((n) => ids.has(n.id));
   const ancestors: BrandNode[] = [];
   let parentId = root.parentNodeId;
   while (parentId && ancestors.length < allNodes.length) {
