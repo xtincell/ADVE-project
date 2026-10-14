@@ -41,7 +41,7 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
 import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { indexBrandContext } from "@/server/services/seshat/context-store";
-import { getOracleBrandContext } from "@/server/services/seshat/context-store";
+import { getOracleBrandContext, formatPreciseFields, type PreciseField } from "@/server/services/seshat/context-store";
 import type { NarrativeReport } from "./narrative-report";
 
 interface V2Input {
@@ -63,17 +63,18 @@ const PILLARS = ADVE_STORAGE_KEYS;
  */
 async function synthesizeBrief(
   input: V2Input,
-  contextByPillar: Record<string, { narrative: string; preciseFieldsCount: number }>,
+  contextByPillar: Record<string, { narrative: string; preciseFields: PreciseField[] }>,
 ): Promise<{
   perPillar: Record<string, { keyFacts: string[]; tensions: string[]; quotableAnchors: string[] }>;
   overallTension: string;
 }> {
   // LOT 1e — entrée non fiable neutralisée (anti-injection). Le narratif compact
-  // par pilier provient du RAG Seshat (contenu founder/externe indexé) → balisé en
-  // bloc « donnée » ; le compteur de champs précis est interne (non balisé).
+  // par pilier provient du RAG Seshat (contenu founder/externe indexé) → balisé.
+  // Les valeurs qualifiées précèdent l'orientation ; un compteur seul ne permet
+  // ni de citer les champs ni de distinguer leur origine.
   const ctxLines = PILLARS.map(
     (p) =>
-      `[${p.toUpperCase()}]\n  ${wrapUntrusted("Narrative compact", contextByPillar[p]?.narrative.slice(0, 600) ?? "(vide)", { max: 800 })}\n  Precise fields available: ${contextByPillar[p]?.preciseFieldsCount ?? 0}`,
+      `[${p.toUpperCase()}]\n  Precise fields available: ${contextByPillar[p]?.preciseFields.length ?? 0}\n  ${wrapUntrusted("Valeurs structurées qualifiées", formatPreciseFields(contextByPillar[p]?.preciseFields ?? []), { max: 2400 })}\n  ${wrapUntrusted("Narrative compact — orientation seulement", contextByPillar[p]?.narrative.slice(0, 600) ?? "(vide)", { max: 800 })}`,
   ).join("\n");
 
   const prompt = `MARQUE: ${sanitizeInline(input.companyName, { max: 120 })}
@@ -91,6 +92,10 @@ SCORES /25 :
 - E: ${(input.vector.e ?? 0).toFixed(1)}
 
 Travail demandé : produire un BRIEF STRUCTURÉ qui servira d'input à un agent de rédaction final (Opus).
+Les extraits fournis sont bornés : ne cite pas une valeur tronquée ou absente.
+Conserve référence, version d’édition et origine pour toute valeur utilisée. INFERRED est une déduction,
+UNKNOWN une origine inconnue : ni l'un ni l'autre n'est une déclaration attribuable au fondateur.
+Un objectif stocké n'est pas un résultat mesuré ; le narratif compressé sert seulement d'orientation.
 Pour chaque pilier ADVE, identifier :
 - 2-4 keyFacts : faits saillants extraits du contexte (à citer dans le rapport)
 - 1-2 tensions : tensions identifiables (gap entre intention et exécution, asymétries, paradoxes)
@@ -111,6 +116,7 @@ Réponds UNIQUEMENT avec ce JSON :
 
   const { text } = await callLLM({
     caller: "quick-intake:narrative-v2:brief",
+    strategyId: input.strategyId,
     purpose: "extraction",
     system: `${UNTRUSTED_NOTICE}\n\nTu es un analyste stratégique. Tu produis des briefs structurés en JSON, jamais de paragraphes.`,
     prompt,
@@ -178,6 +184,7 @@ Réponds UNIQUEMENT avec ce JSON :
 
   const { text } = await callLLM({
     caller: "quick-intake:narrative-v2:final",
+    strategyId: input.strategyId,
     purpose: "final-report",
     system: `${UNTRUSTED_NOTICE}\n\nTu es Mestor, le directeur stratégique de La Fusée. Tu écris des rapports denses, concrets, ancrés sur des sources verbatim. Tu ne paraphrases JAMAIS un chiffre ou un nom. Tu ne génères pas de copie générique.`,
     prompt,
@@ -211,13 +218,13 @@ export async function generateNarrativeReportV2(input: V2Input): Promise<Narrati
 
   // 2. Hybrid retrieval per pillar — narrative + precise verbatim.
   const hybridContextByPillar: Record<string, string> = {};
-  const briefMaterialByPillar: Record<string, { narrative: string; preciseFieldsCount: number }> = {};
+  const briefMaterialByPillar: Record<string, { narrative: string; preciseFields: PreciseField[] }> = {};
   for (const p of PILLARS) {
     const ctx = await getOracleBrandContext(input.strategyId, p, { limit: 12 }).catch(() => null);
     hybridContextByPillar[p] = ctx?.text ?? "(aucun contexte indexé pour ce pilier)";
     briefMaterialByPillar[p] = {
       narrative: ctx?.narrativeBlock ?? "",
-      preciseFieldsCount: ctx?.preciseFields.length ?? 0,
+      preciseFields: ctx?.preciseFields ?? [],
     };
   }
 

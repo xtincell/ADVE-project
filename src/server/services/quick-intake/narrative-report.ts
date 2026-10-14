@@ -113,6 +113,8 @@ Tu produis aussi un "framing" de 2-3 phrases qui pose le cadre strategique RTIS.
 ${SYSTEM_STYLE}`;
 
 export async function generateNarrativeReport(input: {
+  /** Existing brand for cost attribution; unbranded benchmarks have none. */
+  strategyId?: string;
   companyName: string;
   sector: string | null;
   country: string | null;
@@ -251,6 +253,7 @@ Produis le JSON avec cette forme exacte :
       system: `${UNTRUSTED_NOTICE}\n\n${SYSTEM_PROMPT_ADVE}`,
       prompt: advePrompt,
       caller: "quick-intake:narrative-report:adve",
+      strategyId: input.strategyId,
       purpose: "final-report",
       model: "claude-sonnet-4-20250514",
       maxOutputTokens: 2048,
@@ -259,6 +262,7 @@ Produis le JSON avec cette forme exacte :
       system: `${UNTRUSTED_NOTICE}\n\n${SYSTEM_PROMPT_RTIS}`,
       prompt: rtisPrompt,
       caller: "quick-intake:narrative-report:rtis",
+      strategyId: input.strategyId,
       purpose: "final-report",
       maxOutputTokens: 2048,
     }).then(({ text }) => extractJSON(text) as Partial<{ framing: string; pillars: RtisPillarReport[] }>),

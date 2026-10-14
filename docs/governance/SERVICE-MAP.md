@@ -440,7 +440,9 @@ Observent, mesurent, archivent. **27 répertoires** (recompte 2026-10-06) ; la t
 
 ---
 
-**466 candidat UI — présentation MESTOR/Guidance existante (2026-10-14)** : conversation keyed stratégie/états et PageHeader factorisés, aucun service/manager/route ou circuit ajouté. Copie switch BR une→SPAWT quatre→BR une reçue sans génération ; conservation finale et cinq contrôles zéro/DEFAULT 4 490 / 428 reçus ; erreurs natives/livraison attendues. Backend 465 livré, qualité C5/seize résultats inchangés. [Bornage](REFONTE-PLAN.md).
+**467 candidat backend — consommateurs Seshat/ARTEMIS/quick-intake existants (2026-10-14)** : formatter existant réutilisé, valeurs qualifiées avant orientation/brief et strategyId au ledger ; pas service/manager/transport nouveau. Première passe avant extension V1 56 / 4/DEFAULT 4 496 / 430/cinq contrôles verts, dix-neuf fichiers chaîne inchangés ; V1 final-report actif reçu/extension des appelants strategyId implémentée sans activation V2, cible finale 59 / 5 verte ; finals après V1 DEFAULT 4 499 / 431/six contrôles zéro/CODE-MAP sans diff reçus ; livraison/sorties utiles/journalisation réelle/coût attendus, registre natif V1 lu sans édition distinct du routage effectif, production 466/seize inchangés. [Bornage](REFONTE-PLAN.md).
+
+**466 livré UI — présentation MESTOR/Guidance existante (2026-10-14)** : conversation/états par marque et chargement reçus en production, source bee09383/CI-image-runtime exacts ; switch/reload sans modèle/sept empreintes conservés. Copies distinctes/erreurs natives/qualité C4 entière-C5 non reçues, aucun service/manager/circuit ajouté et seize inchangés. [Bornage](REFONTE-PLAN.md).
 
 **465 livré backend — Seshat context-store existant (2026-10-14)** : source 046ed251/CI-image-runtime exacts, PreciseField partagé/réception interne 169 champs et conservation sans génération reçus ; dix-sept fichiers circuit inchangés, aucun service/manager/transport ou écriture ajouté. Consommateurs framework/rapport/citations de sortie et héritage BrandTree non reçus, seize résultats conservés. [Bornage](REFONTE-PLAN.md).
 

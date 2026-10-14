@@ -16,7 +16,9 @@
 
 ## Quick start
 
-**466 candidat : chaque marque garde sa conversation.** Bascule et chargement reçus sur copie, sans génération ou effacement ; conservation et cinq contrôles finaux reçus ; erreurs natives et livraison attendues. Les états de lecture ne prétendent plus zéro marque pendant une attente. Production 465, qualité du conseil refusée et seize résultats inchangés. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
+**467 candidat backend : valeurs qualifiées avant les résumés.** Consommateurs existants raccordés au code, première passe verte puis V1 actif raccordé/cible 59 / 5 verte ; suite complète après V1 reçue 4 499 / 431/six contrôles verts ; livraison, citations de sortie, rapport utile et coût réel restent attendus. Production 466, seize résultats inchangés. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
+
+**466 livré : chaque marque garde sa conversation.** Bascule/recharge et chargement reçus en production sans génération/effacement, copie et production distinctes. Erreurs natives et qualité du conseil restent ouvertes ; seize résultats inchangés. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 
 **465 livré backend : champs précis mieux qualifiés.** Références/versions/origine reçues en interne sur copie, source/image/runtime exacts et données conservées sans génération. Cela ne valide ni sorties framework/rapport, citations du conseil ou onboarding entier ; coût complet et capacité restent ouverts. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 

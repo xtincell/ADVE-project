@@ -982,6 +982,7 @@ export async function complete(token: string) {
       });
     } else {
       narrativeReport = await generateNarrativeReport({
+        strategyId: strategy.id,
         companyName: intake.companyName,
         sector: intake.sector,
         country: intake.country,
@@ -1491,6 +1492,7 @@ export async function regenerateAnalysis(
 
     const { generateNarrativeReport } = await import("./narrative-report");
     narrativeReport = await generateNarrativeReport({
+      strategyId: strategy.id,
       companyName: intake.companyName,
       sector: intake.sector,
       country: intake.country,

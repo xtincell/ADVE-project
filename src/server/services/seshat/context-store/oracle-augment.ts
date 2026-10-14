@@ -190,7 +190,7 @@ async function loadPreciseFields(
   return out;
 }
 
-function formatPreciseFields(fields: PreciseField[]): string {
+export function formatPreciseFields(fields: PreciseField[]): string {
   if (fields.length === 0) return "(aucune valeur structurée disponible)";
   const lines = fields.map((f) => {
     const valStr =
