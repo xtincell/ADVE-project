@@ -4,7 +4,10 @@ vi.mock("ai", () => ({ generateText: mocks.generate }));
 vi.mock("@ai-sdk/openai", () => ({ createOpenAI: () => mocks.model }));
 vi.mock("@/server/services/model-policy", () => ({ resolvePolicy: async () => ({ anthropicModel: "text-model", ollamaModel: "text-only", allowOllamaSubstitution: true }) }));
 vi.mock("@/server/services/llm-gateway/headroom", () => ({ applyHeadroom: async (system: string, prompt: string) => ({ system, prompt, applied: false }) }));
-vi.mock("@/server/services/llm-gateway/rate-policy", () => ({ acquireSlot: async () => "fixture-slot", releaseSlot: vi.fn() }));
+vi.mock("@/server/services/llm-gateway/rate-policy", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/server/services/llm-gateway/rate-policy")>(),
+  acquireSlot: async () => "fixture-slot", releaseSlot: vi.fn(),
+}));
 import { callLLM, _resetProvidersForTest } from "@/server/services/llm-gateway";
 const images = [{ mediaType: "image/jpeg" as const, bytes: new Uint8Array([255, 216, 255, 0]) }];
 describe("explicit vision route through the real Gateway", () => {

@@ -16,7 +16,7 @@
 
 ## Quick start
 
-**461 candidat vérifié localement, production 460.** Refus HTTP 429 authentifié reçu sur copie sans génération, coût ou faux tour ; premier 401 de session expirée conservé. Cible 17 / 3/cinq contrôles verts, pas suite DEFAULT/unit entière. Erreur UI non reçue visuellement, durée de bout en bout en environnement chargé sans SLO ; source/CI/image/runtime attendus. Qualité conseil refusée/seize résultats inchangés, aucune garantie de quota fournisseur/multi-instance. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
+**461 candidat, production 460.** Premier refus CI dû au mock conservé, correction de test uniquement sans changer produit/invariants ; DEFAULT 4 447 / 423 et cinq contrôles locaux verts reçus. HTTP 429/conservation acquis, premier 401/réserve visuelle sans SLO conservés. Build annulé confirmé, CI corrigée/image/runtime attendus ; qualité conseil refusée/seize résultats inchangés. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
 
 **460 livré au périmètre transport ; conseil utile refusé.** Runtime exact Luna OAuth sans OpenRouter, fil ADMIN réel et reprise sans génération reçus. Zéro questionnaire vérifiable à six réponses/21 historiques conservé, pas zéro utilisateur ; qualité encore refusée sur certitudes attribuées au fondateur et cinq questions historiques non réconciliées avec six. Statut Luna public reçu, aucun SLO/santé globale ou facture déduit. Copie 1/0/premiers refus préservés ; DPA/opt-out, régulation et coûts réels ouverts, seize résultats sans entier fermé. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
 
