@@ -7,6 +7,7 @@ import { AiBadge } from "@/components/shared/ai-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { CouncilDeliberationPanel } from "@/components/cockpit/council-deliberation-panel";
+import { MarkdownContent } from "@/components/shared/markdown-content";
 import {
   Bot,
   Send,
@@ -80,6 +81,7 @@ export default function MestorPage() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copyFailed, setCopyFailed] = useState(false);
   const [streamError, setStreamError] = useState<{ failedContent: string } | null>(null);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -235,10 +237,16 @@ export default function MestorPage() {
     }
   };
 
-  const handleCopy = (id: string, content: string) => {
-    navigator.clipboard.writeText(content);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+  const handleCopy = async (id: string, content: string) => {
+    setCopyFailed(false);
+    setCopiedId(null);
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      setCopyFailed(true);
+    }
   };
 
   // La réponse que les quatre experts vont réellement contester (passée en
@@ -252,6 +260,8 @@ export default function MestorPage() {
     setMessages([]);
     setInput("");
     setStreamError(null);
+    setCopyFailed(false);
+    setCopiedId(null);
     // Efface aussi le fil persisté — « Nouvelle conversation » = vraie remise à zéro.
     clearMutation.mutate({ strategyId });
   };
@@ -277,6 +287,10 @@ export default function MestorPage() {
           </button>
         )}
       </PageHeader>
+
+      {copyFailed && <p role="alert" className="text-sm text-error">
+        La réponse n’a pas pu être copiée. Sélectionnez le texte pour la copier.
+      </p>}
 
       {/* Analyse approfondie — convoque les quatre experts contradictoires sur
           la dernière réponse. Placée dans le CORPS de page et non dans le slot
@@ -349,15 +363,15 @@ export default function MestorPage() {
                   )}
 
                   <div
-                    className={`group relative max-w-[75%] rounded-2xl px-4 py-3 ${
+                    className={`group relative min-w-0 max-w-[75%] rounded-2xl px-4 py-3 ${
                       msg.role === "user"
                         ? "bg-accent text-white"
                         : "bg-background text-foreground"
                     }`}
                   >
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                      {msg.content}
-                    </div>
+                    {msg.role === "assistant" && !msg.isError
+                      ? <MarkdownContent>{msg.content}</MarkdownContent>
+                      : <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">{msg.content}</div>}
                     <div className="mt-1 flex items-center justify-between gap-2">
                       <span
                         className={`text-2xs ${
@@ -372,7 +386,8 @@ export default function MestorPage() {
                       {msg.role === "assistant" && (
                         <button
                           onClick={() => handleCopy(msg.id, msg.content)}
-                          className="opacity-0 transition-opacity group-hover:opacity-100"
+                          aria-label={copiedId === msg.id ? "Réponse copiée" : "Copier la réponse"}
+                          className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                         >
                           {copiedId === msg.id ? (
                             <Check className="h-3 w-3 text-success" />

@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.463 — fix(council): rendre les réponses et critiques lisibles sans changer leur source (2026-10-14)
+
+**463 candidat local : lecture native et copie exacte reçues sur copie ; contrôles finaux reçus, recharge navigateur et livraison attendus. Production reçue 462, qualité C5 refusée.**
+
+- Page coordinateur et panneau approfondi existants partagent MarkdownContent, parser upstream react-markdown 10.1.0/remark-gfm 4.0.1 verrouillés. Titres/listes/tableaux/code/notes rendus, URL via transformation sûre existante, HTML brut ignoré, médias nommés sans téléchargement, notes/ARIA isolées par message. Texte stocké/copié original ; utilisateur et erreur restent littéraux.
+- Angles manquants/amendements et explications des critiques retenues/écartées désormais projetés ; dissents/actions conservés. APPROVE devient « Appuie », disponibilité d’extraits ne signifie plus « Vérifiée ». Copie après succès du presse-papier, erreur explicite et label accessible ; aucune validation du conseil ou des sources déduite.
+- Quatre rouges réels puis quatre verts, cible initiale 38 tests / 8 fichiers verte ; cible finale 18 / 6, deux chemins de service incorrects non sélectionnés. Les 20 / 2 tests d’honnêteté sont reçus en gouvernance/DEFAULT et relancés sous leurs vrais chemins gouvernance. Lecture native ADMIN sur copie : trois anciennes réponses, dix titres/cinq listes, aucune image main ou overflow horizontal ; presse-papier CDP 2 203/2 203 caractères identiques avec ack. Première méthode tab.clipboard vide/copyExact=false conservée, reçu CDP exact ultérieur distinct. Huit empreintes/fils/six messages/348 coûts inchangés sans modèle. DEFAULT final 4 460 / 425 et cinq contrôles zéro/gouvernance 1 627 / 166, 24 warnings préexistants par lint ; CODE-MAP régénérée sans diff. Reload DB huit empreintes/fils/six messages/348 coûts exacts ; serveur 200/1 992 ms seulement, recharge native/premier titre/SLO non reçus. Source/CI/image/runtime attendus. Experts reçus via fixture jsdom seulement, pas natif réel. Aucun transport, fournisseur, manager, route, schéma métier, Intent ou Neter ajouté ; seize résultats bornés inchangés, aucun entier reçu.
+- Deux widgets MESTOR dormants, sans appel de rendu trouvé statiquement, restent en une seule dette avant réactivation. Audit npm baseline/candidat identiques : 51 (7 low/16 moderate/20 high/8 critical), aucun paquet vulnérable/advisory nouveau ou changé, aucune dette sécurité fermée ou audit fix automatique. [Bornage et reprises](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.462 — fix(council): qualifier les champs sans les promouvoir en déclarations humaines (2026-10-14)
 
 **462 livré au périmètre code/runtime : copie reçue et qualité refusée ; réponse modèle/natif production 462 non reçus.**

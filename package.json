@@ -1,6 +1,6 @@
 {
   "name": "lafusee",
-  "version": "6.27.462",
+  "version": "6.27.463",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -129,7 +129,9 @@
     "puppeteer": "^25.2.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-markdown": "10.1.0",
     "recharts": "^3.8.1",
+    "remark-gfm": "4.0.1",
     "superjson": "^2.2.2",
     "tailwind-merge": "^3.0.0",
     "web-push": "^3.6.7",

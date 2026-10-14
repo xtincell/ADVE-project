@@ -19,6 +19,7 @@
 import { useState } from "react";
 import { Scale, Loader2, AlertTriangle, ShieldQuestion } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
+import { MarkdownContent } from "@/components/shared/markdown-content";
 
 const PILLAR_LABEL: Record<string, string> = {
   a: "Authenticité",
@@ -28,7 +29,7 @@ const PILLAR_LABEL: Record<string, string> = {
 };
 
 const VERDICT_LABEL: Record<string, string> = {
-  APPROVE: "Valide",
+  APPROVE: "Appuie",
   CHALLENGE: "Conteste",
   REJECT: "Rejette",
 };
@@ -182,7 +183,7 @@ export function CouncilDeliberationPanel({
           cohérence, pas une vérification — le dire est la moitié de sa valeur. */}
       {d.grounding.expertsWithSources.length > 0 ? (
         <p className="text-xs text-foreground-secondary">
-          Vérifiée contre vos documents pour :{" "}
+          Extraits documentaires disponibles pour :{" "}
           {d.grounding.expertsWithSources.map((k) => PILLAR_LABEL[k] ?? k.toUpperCase()).join(", ")}.
         </p>
       ) : (
@@ -198,7 +199,7 @@ export function CouncilDeliberationPanel({
 
       <section>
         <h5 className="text-sm font-medium text-foreground-secondary">Position soumise</h5>
-        <p className="mt-1 text-sm text-foreground">{d.draft.position}</p>
+        <MarkdownContent className="mt-1 text-foreground">{d.draft.position}</MarkdownContent>
       </section>
 
       {critiques.length > 0 && (
@@ -229,11 +230,21 @@ export function CouncilDeliberationPanel({
                       key={i}
                       className={`border-l-2 pl-3 text-sm ${SEVERITY_CLASS[k.severity] ?? SEVERITY_CLASS.LOW}`}
                     >
-                      <span className="text-foreground">{k.claim}</span>
-                      <span className="block text-xs text-foreground-secondary">{k.evidence}</span>
+                      <MarkdownContent className="text-foreground">{k.claim}</MarkdownContent>
+                      <MarkdownContent className="text-xs text-foreground-secondary">{k.evidence}</MarkdownContent>
                     </li>
                   ))}
                 </ul>
+                {c.missingAngles.length > 0 && <div className="mt-3 space-y-2">
+                  <h6 className="text-sm font-medium text-foreground-secondary">Angles à examiner</h6>
+                  <ul className="list-disc space-y-2 pl-5">{c.missingAngles.map((text, i) =>
+                    <li key={i}><MarkdownContent>{text}</MarkdownContent></li>)}</ul>
+                </div>}
+                {c.amendments.length > 0 && <div className="mt-3 space-y-2">
+                  <h6 className="text-sm font-medium text-foreground-secondary">Modifications proposées</h6>
+                  <ul className="list-disc space-y-2 pl-5">{c.amendments.map((text, i) =>
+                    <li key={i}><MarkdownContent>{text}</MarkdownContent></li>)}</ul>
+                </div>}
               </div>
             );
           })}
@@ -262,12 +273,29 @@ export function CouncilDeliberationPanel({
       {d.synthesis && (
         <section className="space-y-3">
           <h5 className="text-sm font-medium text-foreground-secondary">Position retenue</h5>
-          <p className="text-sm text-foreground">{d.synthesis.finalPosition}</p>
+          <MarkdownContent className="text-foreground">{d.synthesis.finalPosition}</MarkdownContent>
+
+          {d.synthesis.acceptedCritiques.length > 0 && <div className="space-y-2">
+            <h6 className="text-sm font-medium text-foreground-secondary">Contestations retenues</h6>
+            {d.synthesis.acceptedCritiques.map((item, i) => <div key={i} className="space-y-1 border-l-2 border-border pl-3">
+              <p className="text-xs text-foreground-secondary">{PILLAR_LABEL[item.from] ?? item.from}</p>
+              <MarkdownContent>{item.claim}</MarkdownContent>
+              <MarkdownContent className="text-foreground-secondary">{item.resolution}</MarkdownContent>
+            </div>)}
+          </div>}
+          {d.synthesis.rejectedCritiques.length > 0 && <div className="space-y-2">
+            <h6 className="text-sm font-medium text-foreground-secondary">Contestations écartées</h6>
+            {d.synthesis.rejectedCritiques.map((item, i) => <div key={i} className="space-y-1 border-l-2 border-border pl-3">
+              <p className="text-xs text-foreground-secondary">{PILLAR_LABEL[item.from] ?? item.from}</p>
+              <MarkdownContent>{item.claim}</MarkdownContent>
+              <MarkdownContent className="text-foreground-secondary">{item.reason}</MarkdownContent>
+            </div>)}
+          </div>}
 
           {d.synthesis.actionItems.length > 0 && (
             <ul className="list-disc space-y-1 pl-5 text-sm text-foreground">
               {d.synthesis.actionItems.map((a, i) => (
-                <li key={i}>{a}</li>
+                <li key={i}><MarkdownContent>{a}</MarkdownContent></li>
               ))}
             </ul>
           )}
@@ -279,7 +307,7 @@ export function CouncilDeliberationPanel({
               <p className="text-sm font-medium text-warning">Désaccords non résolus</p>
               <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-foreground-secondary">
                 {d.synthesis.dissent.map((x, i) => (
-                  <li key={i}>{x}</li>
+                  <li key={i}><MarkdownContent>{x}</MarkdownContent></li>
                 ))}
               </ul>
             </div>

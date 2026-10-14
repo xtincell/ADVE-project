@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.463", date: "2026-10-14",
+    headline: "Des conseils plus lisibles",
+    highlights: [
+      { emoji: "📖", title: "Lire une réponse structurée", body: "Les réponses affichent leurs titres, listes et tableaux. La copie conserve le texte original et confirme sa réussite." },
+      { emoji: "💬", title: "Comprendre les avis des experts", body: "L’analyse approfondie affiche les angles à examiner, les modifications proposées et les raisons des contestations retenues ou écartées." },
+    ],
+  },
+  {
     version: "6.27.462", date: "2026-10-14",
     headline: "Des informations mieux qualifiées",
     highlights: [
