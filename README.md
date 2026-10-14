@@ -16,7 +16,7 @@
 
 ## Quick start
 
-**456 livré : les lecteurs sont reçus, le producteur quiz reste à raccorder.** Portefeuille et Gazette affichent l’observation complète/Q6, origine, dates et inconnus sur copie privée ; image exacte et refus 401 reçus. Source, CI et runtime public 456 sont vérifiés. Le dossier SPAWT public affiche un état vide réel sous session existante, faute de producteur branché ; PR31 reste draft et le quiz public 557a915 inchangé. Quatorze résultats bornés, sans entier fermé ; autres rôles, SLO, vrai joueur et calibration restent non reçus. [Réception et limites](docs/governance/REFONTE-PLAN.md).
+**456 livré : le quiz transmet désormais une observation durable au dossier SPAWT.** PR31 fusionnée et image quiz réelle déployée ; portefeuille public déplié/Q6, origine, version, référence et dates reçus. Les données indiquent zéro carte vérifiable et 21 historiques sans questionnaire ; aucun inscrit synthétique ajouté en production ni contact transféré. Même reçu retrouvé après reprise, données métier conservées. Gazette publique et filtre marché reçus sans action IA ; usage/révision gouvernée, autres rôles, SLO, calibration et cycle visiteur restent ouverts. Quatorze résultats bornés, aucun entier fermé. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 
 **455 livré au périmètre de l’admission.** Source, CI, image et runtime public exact sont reçus ; réception privée/rejeu dans un nouveau processus conservent une observation unique et sa provenance. Refus 401/403/409 reçus, dont anonyme public 401. Neuf tables Fusée/trois quiz identiques ; cela ne reçoit ni interface, vrai résultat joueur ou parcours complet. [Limites restantes](docs/governance/REFONTE-PLAN.md).
 
