@@ -16,7 +16,7 @@
 
 ## Quick start
 
-**467 candidat backend : valeurs qualifiées avant les résumés.** Consommateurs existants raccordés au code, première passe verte puis V1 actif raccordé/cible 59 / 5 verte ; suite complète après V1 reçue 4 499 / 431/six contrôles verts ; livraison, citations de sortie, rapport utile et coût réel restent attendus. Production 466, seize résultats inchangés. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
+**467 livré backend : valeurs qualifiées avant les résumés.** Code/runtime et reprise du fil existant reçus sans génération, données conservées. La réception d’entrée sur snapshot avec dépendances simulées reste bornée ; citations de sortie, rapport utile, ledger et coût complet non reçus. Seize résultats inchangés, aucun chantier entier fermé. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 
 **466 livré : chaque marque garde sa conversation.** Bascule/recharge et chargement reçus en production sans génération/effacement, copie et production distinctes. Erreurs natives et qualité du conseil restent ouvertes ; seize résultats inchangés. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 

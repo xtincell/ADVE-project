@@ -440,7 +440,7 @@ Observent, mesurent, archivent. **27 répertoires** (recompte 2026-10-06) ; la t
 
 ---
 
-**467 candidat backend — consommateurs Seshat/ARTEMIS/quick-intake existants (2026-10-14)** : formatter existant réutilisé, valeurs qualifiées avant orientation/brief et strategyId au ledger ; pas service/manager/transport nouveau. Première passe avant extension V1 56 / 4/DEFAULT 4 496 / 430/cinq contrôles verts, dix-neuf fichiers chaîne inchangés ; V1 final-report actif reçu/extension des appelants strategyId implémentée sans activation V2, cible finale 59 / 5 verte ; finals après V1 DEFAULT 4 499 / 431/six contrôles zéro/CODE-MAP sans diff reçus ; livraison/sorties utiles/journalisation réelle/coût attendus, registre natif V1 lu sans édition distinct du routage effectif, production 466/seize inchangés. [Bornage](REFONTE-PLAN.md).
+**467 livré backend — consommateurs Seshat/ARTEMIS/quick-intake existants (2026-10-14)** : formatter/ledger/circuit réutilisés, V1 actif sans nouvelle pipeline, source 18d62990/CI-image-runtime exacts reçus. Reprise native/conservation sans modèle, snapshot copie 465 avec dépendances simulées transmet valeurs bornées, pas nouvelle DB/output/ledger réel reçu. Dix-neuf fichiers audités inchangés, C4/C5/C7/coût complet ouverts et seize résultats inchangés. [Bornage](REFONTE-PLAN.md).
 
 **466 livré UI — présentation MESTOR/Guidance existante (2026-10-14)** : conversation/états par marque et chargement reçus en production, source bee09383/CI-image-runtime exacts ; switch/reload sans modèle/sept empreintes conservés. Copies distinctes/erreurs natives/qualité C4 entière-C5 non reçues, aucun service/manager/circuit ajouté et seize inchangés. [Bornage](REFONTE-PLAN.md).
 
