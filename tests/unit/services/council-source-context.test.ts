@@ -3,11 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({ vector: false, unavailable: false, documents: true,
   observationUnavailable: false, observations: [] as Array<Record<string, unknown>>,
   observationRead: vi.fn(),
+  pillars: [] as Array<Record<string, unknown>>,
 }));
 vi.mock("@/lib/db", () => ({ db: {
   pillar: {
-    findMany: vi.fn(async () => [{ key: "a", content: { nom: "Nom exact" } }]),
-    findFirst: vi.fn(async () => ({ content: { nom: "Nom exact" } })),
+    findMany: vi.fn(async ({ select }: { select: Record<string, boolean> }) =>
+      state.pillars.map((row) => Object.fromEntries(Object.entries(row).filter(([key]) => select[key])))),
+    findFirst: vi.fn(async ({ select }: { select: Record<string, boolean> }) =>
+      Object.fromEntries(Object.entries(state.pillars[0] ?? {}).filter(([key]) => select[key]))),
   },
   communitySnapshot: { findMany: vi.fn(async () => []) },
   signal: { findMany: vi.fn(async (query: unknown) => {
@@ -38,9 +41,44 @@ import { buildAssistantContext, buildExpertContext } from "@/server/services/mes
 beforeEach(() => {
   state.vector = false; state.unavailable = false; state.documents = true;
   state.observationUnavailable = false; state.observations = []; state.observationRead.mockClear();
+  state.pillars = [{ key: "a", content: { nom: "Nom exact" } }];
 });
 
 describe("the council reports the evidence it actually received", () => {
+  it.each(["coordinator", "expert"])("retains the field origin and editing date without certifying a measure (%s)", async (role) => {
+    state.pillars = [{ key: role === "expert" ? "a" : "t",
+      content: { preuvesTraction: "Bêta de 50 personnes, complétion supérieure à 80 %" },
+      fieldCertainty: { preuvesTraction: "INFERRED" },
+      updatedAt: new Date("2026-10-08T08:00:00Z") }];
+    const result = role === "expert"
+      ? await buildExpertContext("brand-a", "a", "Que sait-on ?")
+      : await buildAssistantContext("brand-a", "Que sait-on ?");
+    expect(result.contextBlock).toContain("preuvesTraction : INFERRED");
+    expect(result.contextBlock).toContain("2026-10-08T08:00:00.000Z");
+    expect(result.contextBlock).toContain("date d’édition");
+    expect(result.contextBlock).not.toContain("mesuré le 2026-10-08");
+  });
+
+  it("preserves canonical human field origin over an old inferred label without approving a result", async () => {
+    state.pillars = [{ key: "t", content: { preuvesTraction: "50 participants déclarés",
+      _fieldProvenance: { preuvesTraction: "HUMAN" } },
+      fieldCertainty: { preuvesTraction: "INFERRED" },
+      updatedAt: new Date("2026-10-08T08:00:00Z") }];
+    const result = await buildAssistantContext("brand-a", "Que sait-on ?");
+    expect(result.contextBlock).toContain("preuvesTraction : HUMAN");
+    expect(result.contextBlock).not.toContain("preuvesTraction : INFERRED");
+    expect(result.contextBlock).toContain("pas une mesure");
+  });
+
+  it("keeps missing legacy origin unknown even when the field calls itself a proof", async () => {
+    state.pillars = [{ key: "t", content: { preuvesTraction: "1 200 inscrits" },
+      updatedAt: new Date("2026-10-08T08:00:00Z") }];
+    const result = await buildAssistantContext("brand-a", "Que sait-on ?");
+    expect(result.contextBlock).toContain("preuvesTraction : UNKNOWN");
+    expect(result.contextBlock).toContain("1 200 inscrits");
+    expect(result.contextBlock).not.toContain("preuvesTraction : HUMAN");
+  });
+
   it("reads the actual brand receipt without the question supplying its counts", async () => {
     state.observations = [{ id: "receipt-palais", type: "EXTERNAL_METRIC",
       createdAt: new Date("2026-10-14T02:00:00Z"), data: {

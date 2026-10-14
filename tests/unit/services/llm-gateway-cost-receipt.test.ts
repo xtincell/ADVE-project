@@ -1,11 +1,21 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const create = vi.hoisted(() => vi.fn(async (_args: { data: Record<string, unknown> }) => ({ id: "cost-receipt" })));
 vi.mock("@/lib/db", () => ({ db: { aICostLog: { create } } }));
 import { trackCost } from "@/server/services/llm-gateway";
 
 beforeEach(() => { create.mockClear(); });
+afterEach(() => { vi.unstubAllEnvs(); });
 describe("actual text provider and estimated cost receipt", () => {
+  it("separates subscription quota from an API-priced estimate for OAuth Luna", async () => {
+    vi.stubEnv("OPENAI_TEXT_RELAY_URL", "http://127.0.0.1:8646/v1");
+    vi.stubEnv("OPENAI_TEXT_RELAY_TOKEN", "local-test-access");
+    await trackCost({ strategyId: "brand-a", caller: "mestor:council:coordinator" },
+      { inputTokens: 10000, outputTokens: 500 }, "gpt-5.6-luna", undefined, "openai");
+    expect(create.mock.calls[0]![0].data).toMatchObject({ provider: "openai-codex-oauth",
+      model: "gpt-5.6-luna", cost: 0.0026,
+      context: "mestor:council:coordinator:subscription-quota:api-equivalent-estimate" });
+  });
   it.each(["nvidia/nemotron-3-super-120b-a12b:free", "google/gemma-4-26b-a4b-it:free"])
     ("records the catalogue's zero token estimate for %s without borrowing Sonnet pricing", async (model) => {
       await trackCost({ strategyId: "brand-a", caller: "mestor:council:coordinator" },

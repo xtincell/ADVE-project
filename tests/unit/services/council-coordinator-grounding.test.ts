@@ -28,6 +28,19 @@ beforeEach(() => {
 });
 
 describe("coordinator document presence — real orchestration, fixture gateways", () => {
+  it("keeps human turns and stored history while qualifying generated history as unvalidated data", async () => {
+    const history = [{ role: "user" as const, content: "Ma priorité reste le Palais." },
+      { role: "assistant" as const, content: "La bêta a 50 utilisateurs et 80 % de rétention." }];
+    const before = structuredClone(history);
+    await askCouncilStream({ strategyId: "brand-a", question: "Quelle preuve actuelle ?", history });
+    const request = (state.stream.mock.calls[0] as unknown as [{ messages: Array<{ role: string; content: string }> }])[0];
+    expect(request.messages[0]).toEqual(history[0]);
+    expect(request.messages[1]!.role).toBe("user");
+    expect(request.messages[1]!.content).toContain("sortie générée non validée");
+    expect(request.messages[1]!.content).toContain(history[1]!.content);
+    expect(request.messages[2]).toEqual({ role: "user", content: "Quelle preuve actuelle ?" });
+    expect(history).toEqual(before);
+  });
   it("describes this actual simple reply separately from the available expert mode", async () => {
     await askCouncilStream({ strategyId: "brand-a", question: "Qui répond ?", history: [] });
     const system = (state.stream.mock.calls[0] as unknown as [{ system: string }])[0].system;

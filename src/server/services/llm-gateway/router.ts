@@ -32,7 +32,8 @@ export interface ModelChoice {
   /** Approximate cost per 1M input tokens (USD). */
   readonly costPerMTokensUsd: number;
   /** Typical p50 latency for a 2k-token prompt (ms). */
-  readonly typicalLatencyMs: number;
+  readonly typicalLatencyMs: number | null;
+  readonly subscriptionQuota?: boolean;
   /** Whether the model is currently available (configured + health-checked). */
   readonly available: boolean;
 }
@@ -49,6 +50,14 @@ function hasEnv(key: string): boolean {
  */
 function catalog(): ModelChoice[] {
   return [
+    {
+      provider: "openai-codex-oauth",
+      model: "gpt-5.6-luna",
+      costPerMTokensUsd: 0.20, // API equivalent; subscription quota is distinct.
+      typicalLatencyMs: null,
+      subscriptionQuota: true,
+      available: hasEnv("OPENAI_TEXT_RELAY_URL") && hasEnv("OPENAI_TEXT_RELAY_TOKEN"),
+    },
     {
       provider: "ollama",
       model: process.env.OLLAMA_MODEL ?? "(défini par OLLAMA_MODEL)",
@@ -72,8 +81,7 @@ function catalog(): ModelChoice[] {
     },
     {
       provider: "openai",
-      // Réservé aux embeddings (directive opérateur 2026-06-24) — jamais dans
-      // les candidats texte, cf. `buildTextProviderCandidates`.
+      // Static API key for embeddings, independent of the OAuth text relay.
       model: "text-embedding-3-small",
       costPerMTokensUsd: 0.02,
       typicalLatencyMs: 400,

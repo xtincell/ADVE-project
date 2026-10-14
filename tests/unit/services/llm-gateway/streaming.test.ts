@@ -84,6 +84,7 @@ describe("streamChatText — fallback pré-premier-octet", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     _resetProvidersForTest();
     delete process.env.OLLAMA_MODEL;
   });
@@ -100,6 +101,37 @@ describe("streamChatText — fallback pré-premier-octet", () => {
     expect(costCreate.mock.calls[0]![0]).toMatchObject({ data: {
       provider: "ollama", model: "gemma4:31b", context: "mestor:council:coordinator:estimated-cost",
     } });
+  });
+
+  it("routes the explicit OAuth Luna through streaming and journals its actual identity", async () => {
+    vi.stubEnv("OPENAI_TEXT_RELAY_URL", "http://127.0.0.1:8646/v1");
+    vi.stubEnv("OPENAI_TEXT_RELAY_TOKEN", "local-test-access");
+    vi.stubEnv("LLM_PRIMARY_PROVIDER", "openai");
+    _resetProvidersForTest({ openai: { available: true }, anthropic: { available: true },
+      ollama: { available: true }, openrouter: { available: true } });
+    streamTextMock.mockReturnValueOnce(mockStreamResult(textStreamOf(["Avis Luna"]), "Avis Luna"));
+    const result = await streamChatText({ system: "s", messages: [{ role: "user", content: "Quiz ?" }],
+      caller: "mestor:council:coordinator", strategyId: "brand-a" });
+    expect(await drain(result.textStream)).toBe("Avis Luna");
+    expect(await result.finished).toMatchObject({ provider: "openai", model: "gpt-5.6-luna" });
+    await vi.waitFor(() => expect(costCreate).toHaveBeenCalledOnce());
+    expect(costCreate.mock.calls[0]![0]).toMatchObject({ data: { provider: "openai-codex-oauth",
+      model: "gpt-5.6-luna", context: "mestor:council:coordinator:subscription-quota:api-equivalent-estimate" } });
+    vi.unstubAllEnvs();
+  });
+
+  it("does not change model or provider when the explicit OAuth relay fails", async () => {
+    vi.stubEnv("OPENAI_TEXT_RELAY_URL", "http://127.0.0.1:8646/v1");
+    vi.stubEnv("OPENAI_TEXT_RELAY_TOKEN", "local-test-access");
+    vi.stubEnv("LLM_PRIMARY_PROVIDER", "openai");
+    _resetProvidersForTest({ openai: { available: true }, anthropic: { available: true },
+      ollama: { available: true }, openrouter: { available: true } });
+    streamTextMock.mockReturnValue(mockStreamResult(erroringStream("OAuth quota exhausted"), ""));
+    await expect(streamChatText({ system: "s", messages: [{ role: "user", content: "Quiz ?" }],
+      caller: "receipt" })).rejects.toThrow();
+    expect(streamTextMock).toHaveBeenCalledOnce();
+    expect(costCreate).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
   });
 
   it("provider 1 échoue au premier read → provider 2 sert le flux entier", async () => {

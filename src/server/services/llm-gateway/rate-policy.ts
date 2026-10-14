@@ -55,6 +55,13 @@ function defaultPolicy(): ModelRatePolicy {
  */
 function buildRegistry(): Record<string, ModelRatePolicy> {
   return {
+    // Local operator guardrails for included subscription usage; these are
+    // not advertised OpenAI quotas. The existing queue owns all Luna calls.
+    "gpt-5.6-luna": {
+      rpm: envInt("LUNA_RPM", 12),
+      maxConcurrent: envInt("LUNA_CONCURRENCY", 1),
+      minIntervalMs: envInt("LUNA_MIN_INTERVAL_MS", 1000),
+    },
     // owl-alpha (OpenRouter preview) — limites strictes par défaut, ajustables.
     "owl-alpha": {
       rpm: envInt("OWL_ALPHA_RPM", 20),

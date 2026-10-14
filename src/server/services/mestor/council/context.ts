@@ -28,6 +28,7 @@ import { serializePillar } from "@/server/services/mestor/rtis-cascade";
 import { wrapUntrusted } from "@/server/services/utils/untrusted-content";
 import { signalObservation } from "@/domain/signal-observation";
 import { COUNCIL_EVIDENCE_NOTICE } from "./personas";
+import { coerceProvenance, fieldStatusFor } from "@/domain/field-provenance";
 
 /** Budgets déterministes (caractères) — troncature par bloc, jamais silencieuse. */
 const FOUNDER_PILLAR_MAX = 5_000; // A/D/V/E — profondeur prioritaire
@@ -41,6 +42,27 @@ const FOUNDER_KEYS = ADVE_STORAGE_KEYS;
 
 function capBlock(text: string, max: number): string {
   return text.length > max ? text.slice(0, max) + "\n…[tronqué — budget de contexte]" : text;
+}
+
+/** Carry the existing field authority before the prose can consume its budget. */
+function qualifiedPillar(key: string, pillar: {
+  content: unknown; fieldCertainty?: unknown; updatedAt?: Date;
+}, max: number): string {
+  const content = pillar.content && typeof pillar.content === "object" && !Array.isArray(pillar.content)
+    ? pillar.content as Record<string, unknown> : {};
+  const certainty = pillar.fieldCertainty && typeof pillar.fieldCertainty === "object" && !Array.isArray(pillar.fieldCertainty)
+    ? Object.fromEntries(Object.entries(pillar.fieldCertainty).filter((entry): entry is [string, string] => typeof entry[1] === "string"))
+    : null;
+  const status = fieldStatusFor(certainty, key, content._fieldProvenance);
+  const fields = Object.keys(content).filter((field) => !field.startsWith("_"))
+    .map((field) => `${field} : ${status(field) ?? coerceProvenance(undefined)}`).join("\n");
+  const date = pillar.updatedAt?.toISOString() ?? "non renseignée";
+  return capBlock([
+    `Pilier ${key.toUpperCase()} — ${date} (date d’édition, pas une date de mesure).`,
+    "Qualification des champs : origine/autorité d’édition, pas une mesure ni une validation du résultat.",
+    fields,
+    serializePillar(key, pillar.content),
+  ].join("\n"), max);
 }
 
 export interface AssistantContextResult {
@@ -77,7 +99,7 @@ export async function buildAssistantContext(
     loadStrategyContextForFramework(strategyId),
     db.pillar.findMany({
       where: { strategyId },
-      select: { key: true, content: true, updatedAt: true },
+      select: { key: true, content: true, fieldCertainty: true, updatedAt: true },
     }),
     getOracleBrandContextByQuery(strategyId, question, { limit: 8, includeSources: true })
       .catch(() => { ragUnavailable = true; return null; }),
@@ -102,7 +124,7 @@ export async function buildAssistantContext(
     sections.push(
       wrapUntrusted(
         `pilier ${k.toUpperCase()} (fondateur — verbatim ; contenu déclaré, pas une mesure reçue)`,
-        capBlock(serializePillar(k, p.content), FOUNDER_PILLAR_MAX),
+        qualifiedPillar(k, p, FOUNDER_PILLAR_MAX),
         { max: FOUNDER_PILLAR_MAX + 200 },
       ),
     );
@@ -116,7 +138,7 @@ export async function buildAssistantContext(
     sections.push(
       wrapUntrusted(
         `pilier ${k.toUpperCase()} (dérivé — résumé ; diagnostic, pas une mesure reçue)`,
-        capBlock(serializePillar(k, p.content), DERIVED_PILLAR_MAX),
+        qualifiedPillar(k, p, DERIVED_PILLAR_MAX),
         { max: DERIVED_PILLAR_MAX + 200 },
       ),
     );
@@ -184,7 +206,7 @@ export async function buildExpertContext(
   const [pillar, rag, communityBlock, observationsBlock] = await Promise.all([
     db.pillar.findFirst({
       where: { strategyId, key: { in: [pillarKey, pillarKey.toUpperCase()] } },
-      select: { content: true, updatedAt: true },
+      select: { content: true, fieldCertainty: true, updatedAt: true },
     }),
     getOracleBrandContextByQuery(strategyId, topic, {
       pillarKey,
@@ -204,7 +226,7 @@ export async function buildExpertContext(
     sections.push(
       wrapUntrusted(
         `pilier ${pillarKey.toUpperCase()} (verbatim complet)`,
-        capBlock(serializePillar(pillarKey, pillar.content), EXPERT_PILLAR_MAX),
+        qualifiedPillar(pillarKey, pillar, EXPERT_PILLAR_MAX),
         { max: EXPERT_PILLAR_MAX + 200 },
       ),
     );

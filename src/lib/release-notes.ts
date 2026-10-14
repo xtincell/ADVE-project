@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.460", date: "2026-10-14",
+    headline: "Identifier votre accès par abonnement",
+    highlights: [
+      { emoji: "🔎", title: "Un accès visible dans le statut", body: "La page de statut distingue le modèle raccordé par abonnement et son quota des autres connexions configurées." },
+    ],
+  },
+  {
     version: "6.27.459", date: "2026-10-14",
     headline: "Des appels gratuits mieux estimés",
     highlights: [

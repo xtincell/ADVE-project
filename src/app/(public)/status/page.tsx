@@ -127,7 +127,7 @@ export default async function StatusPage() {
               {s.models.map((m) => (
                 <li key={`${m.provider}-${m.model}`} className="flex items-center justify-between">
                   <span className="font-mono text-zinc-300">{m.provider}:{m.model}</span>
-                  <span className="text-2xs text-zinc-500">~{m.typicalLatencyMs}ms</span>
+                  <span className="text-2xs text-zinc-500">{m.subscriptionQuota ? "Abonnement · quota" : m.typicalLatencyMs == null ? "Latence à mesurer" : `~${m.typicalLatencyMs}ms`}</span>
                 </li>
               ))}
             </ul>

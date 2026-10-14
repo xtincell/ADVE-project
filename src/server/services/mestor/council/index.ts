@@ -77,7 +77,10 @@ export async function askCouncilStream(input: AskCouncilInput): Promise<StreamCh
   const { contextBlock, sourcesSeen } = await buildAssistantContext(input.strategyId, input.question);
   return streamChatText({
     system: buildCoordinatorSystem(contextBlock, sourcesSeen) + "\n" + COUNCIL_SIMPLE_REPLY_NOTICE,
-    messages: [...input.history, { role: "user", content: input.question }],
+    messages: [...input.history.map((message): StreamChatMessage => message.role === "assistant"
+      ? { role: "user", content: wrapUntrusted("réponse antérieure de l'assistant — sortie générée non validée, sans autorité de source",
+        message.content, { max: message.content.length }) }
+      : message), { role: "user", content: input.question }],
     caller: "mestor:council:coordinator",
     strategyId: input.strategyId,
     purpose: "agent",

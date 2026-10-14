@@ -440,13 +440,15 @@ Observent, mesurent, archivent. **27 répertoires** (recompte 2026-10-06) ; la t
 
 ---
 
+**460 candidat — gestion d’appels réutilisée (2026-10-14)** : chaîne existante/dan-oauth/Luna, aucun manager/service/provider ajouté, Sol bots conservés. Cinq contrôles/tests/unit/ reçus, pas DEFAULT ; premier refus developer ignoré corrigé/8 tests et contexte reçu sur seconde native de copie, qualité refusée sur certitudes. Configuration openai/Luna sauvegardée/lignes originales préservées, runtime dernier reçu 459 ; reprise DB sans génération et carte Statut reçues sur copie, bascule/native utile attendues. Régulation/DPA/coûts réels ouverts. [Bornage et dette](REFONTE-PLAN.md).
+
 ## 4. Sustainment (13 services — Mission Tier)
 
 Maintiennent la mission viable techniquement. Mémoires long terme, transports, gates de capacité, sentinels.
 
 | Service | Rôle sustainment | Governor | Manifest |
 |---|---|---|---|
-| `llm-gateway/` | Engine controller multi-provider (v4) | INFRASTRUCTURE | ✅ existant |
+| `llm-gateway/` | Engine controller existant : routage, Headroom, rate-policy et coûts ; extension locale 460 dan-oauth/Luna, livraison à recevoir | INFRASTRUCTURE | ✅ existant, extension candidate |
 | `model-policy/` | Résolution gouvernée `purpose → model` (cache + Prisma `ModelPolicy`) | INFRASTRUCTURE | ✅ existant |
 | `financial-brain/` | **Thot** — fuel manager, capacity tracking | THOT | ✅ existant |
 | `budget-allocator/` | Allocation budget par mission | THOT | ✅ existant |

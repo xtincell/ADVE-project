@@ -160,6 +160,12 @@ export const MODEL_PRIORITY = ["claude-opus-4-6", "claude-opus-4-20250514", "cla
 
 export type LLMProvider = "anthropic" | "openai" | "ollama" | "openrouter";
 
+// Operator-authorized subscription transport, separate from the API key used
+// for embeddings. This access token belongs to the private relay, not OpenAI.
+function hasOpenAiTextRelay(): boolean {
+  return !!process.env.OPENAI_TEXT_RELAY_URL && !!process.env.OPENAI_TEXT_RELAY_TOKEN;
+}
+
 interface ProviderState {
   available: boolean;
   priority: number;
@@ -178,7 +184,7 @@ const providerStates: Record<LLMProvider, ProviderState> = {
     circuitOpenUntil: 0,
   },
   openai: {
-    available: !!process.env.OPENAI_API_KEY,
+    available: !!process.env.OPENAI_API_KEY || hasOpenAiTextRelay(),
     priority: 2,
     failureCount: 0,
     circuitOpenUntil: 0,
@@ -202,9 +208,9 @@ const providerStates: Record<LLMProvider, ProviderState> = {
 function selectProvider(): LLMProvider | null {
   const now = Date.now();
   const candidates = (Object.entries(providerStates) as [LLMProvider, ProviderState][])
-    // OpenAI/GPT exclu de la génération de texte — réservé aux embeddings
-    // (directive opérateur). Le texte reste Anthropic → Ollama → OpenRouter.
-    .filter(([p]) => p !== "openai")
+    // A static OpenAI API key remains reserved for embeddings. Text access
+    // requires the operator-authorized independent subscription relay.
+    .filter(([p]) => p !== "openai" || hasOpenAiTextRelay())
     .filter(([, s]) => s.available && (s.circuitOpenUntil === 0 || s.circuitOpenUntil < now))
     .sort((a, b) => a[1].priority - b[1].priority);
 
@@ -226,7 +232,7 @@ export function isProviderHealthy(p: LLMProvider): boolean {
  * Signal canonique « le step LLM vaut-il la peine d'être tenté ? ».
  *
  * Renvoie `true` ssi AU MOINS un provider de **texte** est sain (clé présente +
- * circuit fermé). OpenAI est exclu (réservé aux embeddings, cf. selectProvider).
+ * circuit fermé). OpenAI texte exige le relais OAuth explicitement raccordé.
  *
  * C'est le seul point où le reste de La Fusée décide de **sauter** l'étage LLM
  * proprement, sans partir à l'aveugle et se prendre une exception. Toute
@@ -234,6 +240,7 @@ export function isProviderHealthy(p: LLMProvider): boolean {
  * Knowledge Gateway de Seshat — s'appuie là-dessus.
  */
 export function isTextLLMAvailable(): boolean {
+  if (hasOpenAiTextRelay() && process.env.LLM_PRIMARY_PROVIDER === "openai") return isProviderHealthy("openai");
   return (["anthropic", "ollama", "openrouter"] as const).some((p) => isProviderHealthy(p));
 }
 
@@ -260,7 +267,7 @@ export function recordProviderSuccess(provider: LLMProvider): void {
 export function _resetProvidersForTest(overrides?: Partial<Record<LLMProvider, Partial<ProviderState>>>): void {
   const defaults: Record<LLMProvider, ProviderState> = {
     anthropic:  { available: !!process.env.ANTHROPIC_API_KEY,  priority: 1, failureCount: 0, circuitOpenUntil: 0 },
-    openai:     { available: !!process.env.OPENAI_API_KEY,     priority: 2, failureCount: 0, circuitOpenUntil: 0 },
+    openai:     { available: !!process.env.OPENAI_API_KEY || hasOpenAiTextRelay(), priority: 2, failureCount: 0, circuitOpenUntil: 0 },
     ollama:     { available: !!process.env.OLLAMA_BASE_URL,    priority: 3, failureCount: 0, circuitOpenUntil: 0 },
     openrouter: { available: !!process.env.OPENROUTER_API_KEY, priority: 4, failureCount: 0, circuitOpenUntil: 0 },
   };
@@ -354,6 +361,12 @@ export async function buildProviderModel(
   }
   if (provider === "openai") {
     const { openai, createOpenAI } = await import("@ai-sdk/openai");
+    if (hasOpenAiTextRelay()) {
+      const servedModel = "gpt-5.6-luna";
+      const relay = createOpenAI({ baseURL: process.env.OPENAI_TEXT_RELAY_URL,
+        apiKey: process.env.OPENAI_TEXT_RELAY_TOKEN });
+      return { aiModel: relay.chat(servedModel), servedModel, orFallback: null };
+    }
     const openaiModel = OPENAI_MODEL_MAP[anthropicModel] ?? "gpt-4o";
     const aiModel = process.env.HEADROOM_PROXY_URL
       ? createOpenAI({ baseURL: process.env.HEADROOM_PROXY_URL })(openaiModel)
@@ -400,12 +413,16 @@ export async function buildProviderModel(
 
 /**
  * Candidats providers texte dans l'ordre structurel (avant resolveTextProviderOrder).
- * Extraction ADR-0179 — partagée callLLM/streaming. OpenAI volontairement exclu
- * (réservé aux embeddings, directive opérateur 2026-06-24).
+ * Extraction ADR-0179 — partagée callLLM/streaming. La clé API OpenAI reste
+ * réservée aux embeddings ; le raccord texte OAuth est distinct.
  * Export intra-Gateway uniquement.
  */
 export function buildTextProviderCandidates(ollamaPreferred: boolean): LLMProvider[] {
+  // An explicit subscription choice must fail visibly rather than switch to
+  // paid API credits, another model, or the retired OpenRouter connection.
+  if (hasOpenAiTextRelay() && process.env.LLM_PRIMARY_PROVIDER === "openai") return isProviderHealthy("openai") ? ["openai"] : [];
   const providersToTry: LLMProvider[] = [];
+  if (hasOpenAiTextRelay() && isProviderHealthy("openai")) providersToTry.push("openai");
   if (ollamaPreferred && isProviderHealthy("ollama")) providersToTry.push("ollama");
   if (isProviderHealthy("anthropic")) providersToTry.push("anthropic");
   if (isProviderHealthy("openrouter")) providersToTry.push("openrouter");
@@ -656,15 +673,17 @@ export async function trackCost(
   try {
     const { db } = await import("@/lib/db");
     const { calculateCost } = await import("@/server/services/ai-cost-tracker");
+    const subscription = provider === "openai" && hasOpenAiTextRelay() && !billing;
     await db.aICostLog.create({
       data: {
         strategyId: options.strategyId,
-        provider: billing?.provider ?? provider,
+        provider: subscription ? "openai-codex-oauth" : billing?.provider ?? provider,
         model,
         inputTokens: usage.inputTokens,
         outputTokens: usage.outputTokens,
         cost: billing?.costUsd ?? calculateCost(model, usage.inputTokens, usage.outputTokens),
-        context: options.caller + (!billing || billing.estimated ? ":estimated-cost" : ""),
+        context: options.caller + (subscription ? ":subscription-quota:api-equivalent-estimate"
+          : !billing || billing.estimated ? ":estimated-cost" : ""),
       },
     });
   } catch {
@@ -881,7 +900,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
 
         // Non-blocking cost tracking. Use the actually-served model name
         // (anthropic name when on Anthropic/OpenAI, ollama name when free).
-        const billedModel = provider === "ollama" || provider === "openrouter" || options.video ? servedModel : anthropicModel;
+        const billedModel = provider === "ollama" || provider === "openrouter" || provider === "openai" || options.video ? servedModel : anthropicModel;
         trackCost(options, gatewayUsage, billedModel, nativeBilling, provider);
 
         // PostgreSQL jsonb refuse le null byte U+0000 ("unsupported Unicode escape

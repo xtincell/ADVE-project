@@ -19,6 +19,9 @@ interface CostEntry {
 
 // Pricing per 1M tokens (USD)
 const PRICING: Record<string, { input: number; output: number }> = {
+  // API-equivalent uncached estimate, checked 2026-10-14; OAuth uses subscription
+  // quota, not this invoice: https://developers.openai.com/api/docs/models/gpt-5.6-luna
+  "gpt-5.6-luna": { input: 0.20, output: 1.20 },
   // Selected OpenRouter free variants, catalogue checked 2026-10-14:
   // https://openrouter.ai/api/v1/models — token estimate, not an invoice.
   "nvidia/nemotron-3-super-120b-a12b:free": { input: 0, output: 0 },
