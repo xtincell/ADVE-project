@@ -1,5 +1,15 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Régulation LLM — candidat 461, file expirée refusée au code (2026-10-14)
+
+Correction de rate-policy existant, sous-système Sustainment/governance INFRASTRUCTURE, sans nouvelle entité, manager, service/router/Intent/Neter. `preuves-friesland-produits-20261014/rate-wait-red.log` reçoit quatre vrais échecs/trois succès : timeout concurrence/RPM/intervalle admettait encore un départ malgré les limites. Le défaut historique reste tracé ; source candidate, pas réception de production.
+
+LlmRateWaitExceededError à expiration sans incrément de départ, sommeil borné à l’échéance ; withRetry/callLLM arrêtent sans panne fournisseur/repli. Streaming nettoie le listener à l’échec de file ; /api/chat 429 RATE_LIMITED avant premier octet via UX existante, sans faux tour persisté. Cible finale 17 / 3 (`rate-wait-final-contracts.log`), cinq contrôles zéro/gouvernance 1 627 / 166/24 warnings lint préexistants et release/vocab verts (`rate-wait-validation.json`). Aucun DEFAULT ou tests/unit/ entier 461 reçu ; source/CI/image/runtime restent à recevoir, production 460/qualité refusée conservées.
+
+`rate-wait-http-receipt.json` conserve le premier 401 : session dummy expirée, garde non atteinte/aucun fournisseur. Refresh normal de la même session ADMIN/isDummy ; `rate-wait-http-v2-receipt.json` reçoit le vrai POST authentifié 429 RATE_LIMITED. 38 877,5 ms de bout en bout en environnement chargé, pas durée de la garde/SLO. Une place Luna tenue uniquement dans la copie pour la recette, contrôle retiré après appel et jamais dans le code produit. `rate-wait-conservation.json` reçoit mêmes quatre messages/347 logs de coût/fil/huit empreintes métier, aucune génération/coût/faux tour. IAB disparu après timeout : aucune erreur native visuellement reçue, aucune UX déduite du HTTP.
+
+**Plan, effort et déclencheur C7** : cible/contrôles et refus authentifié/conservation reçus sur copie ; recevoir source/CI/image/runtime et erreur UI via la surface existante avant fermeture de cette seule cause. Ne pas confondre 401 de session et garde 429 ; préserver les contre-exemples rouges et la limite visuelle. Régulation process-local, sans quota fournisseur/distribué ; charge/multi-instance/quota compte/coûts/opt-out restent à recevoir avant TPE bankable. Seize résultats inchangés/aucun entier fermé, C5 toujours ouvert. [Dette](RESIDUAL-DEBT.md).
+
 ## Conseil Luna OAuth — 460 livré, qualité refusée (2026-10-14)
 
 Demande gpt-5.6-luna OAuth exact servie dans la chaîne existante llm-gateway/model-policy/Headroom/rate-policy/cost tracker, dan-oauth/Galahad étendu avec credential distinct et bind privé, Sol bots conservés. Aucun nouveau manager/service/router/provider/modèle métier/Intent/Neter. Runtime primaire OpenAI/OAuth, token hors build/clé OpenRouter absente/aucun repli texte autre provider ; transport reçu, aucune garantie de conseil utile.

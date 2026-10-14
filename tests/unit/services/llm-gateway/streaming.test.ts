@@ -28,8 +28,9 @@ vi.mock("ai", async (importOriginal) => {
   return { ...actual, streamText: (...args: unknown[]) => streamTextMock(...args) };
 });
 
-import { _resetProvidersForTest } from "@/server/services/llm-gateway";
+import { _resetProvidersForTest, _getProviderStateForTest, callLLM, withRetry } from "@/server/services/llm-gateway";
 import { streamChatText } from "@/server/services/llm-gateway/streaming";
+import * as ratePolicy from "@/server/services/llm-gateway/rate-policy";
 
 function textStreamOf(chunks: string[]): ReadableStream<string> {
   let i = 0;
@@ -84,9 +85,44 @@ describe("streamChatText — fallback pré-premier-octet", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllEnvs();
     _resetProvidersForTest();
     delete process.env.OLLAMA_MODEL;
+  });
+
+  it("local queue expiry does not start, bill or mark an OAuth provider as failed", async () => {
+    vi.stubEnv("OPENAI_TEXT_RELAY_URL", "http://localhost:8646/v1");
+    vi.stubEnv("OPENAI_TEXT_RELAY_TOKEN", "fixture-only");
+    vi.stubEnv("LLM_PRIMARY_PROVIDER", "openai"); vi.stubEnv("HEADROOM_DISABLED", "1");
+    _resetProvidersForTest({ anthropic: { available: false }, openai: { available: true },
+      ollama: { available: false }, openrouter: { available: false } });
+    const acquire = vi.spyOn(ratePolicy, "acquireSlot")
+      .mockRejectedValue(new ratePolicy.LlmRateWaitExceededError("gpt-5.6-luna"));
+    const signal = new AbortController().signal;
+    const listener = vi.spyOn(signal, "addEventListener");
+    const removeListener = vi.spyOn(signal, "removeEventListener");
+    await expect(streamChatText({ system: "s", messages: [{ role: "user", content: "Quiz ?" }],
+      caller: "mestor:council:coordinator", strategyId: "brand-a", signal,
+    })).rejects.toBeInstanceOf(ratePolicy.LlmRateWaitExceededError);
+    expect(acquire).toHaveBeenCalledOnce(); expect(streamTextMock).not.toHaveBeenCalled();
+    expect(listener).toHaveBeenCalledOnce(); expect(removeListener).toHaveBeenCalledOnce();
+    expect(removeListener.mock.calls[0]?.[1]).toBe(listener.mock.calls[0]?.[1]);
+    expect(costCreate).not.toHaveBeenCalled();
+    expect(_getProviderStateForTest("openai").failureCount).toBe(0);
+    acquire.mockClear();
+    await expect(callLLM({ system: "s", prompt: "Quiz ?", caller: "fixture" }))
+      .rejects.toBeInstanceOf(ratePolicy.LlmRateWaitExceededError);
+    expect(acquire).toHaveBeenCalledOnce();
+    expect(_getProviderStateForTest("openai").failureCount).toBe(0);
+    expect(costCreate).not.toHaveBeenCalled();
+  });
+
+  it("retry never restarts an expired local queue", async () => {
+    const work = vi.fn(async () => { throw new ratePolicy.LlmRateWaitExceededError("guarded"); });
+    await expect(withRetry(work, { baseDelayMs: 1 }))
+      .rejects.toBeInstanceOf(ratePolicy.LlmRateWaitExceededError);
+    expect(work).toHaveBeenCalledOnce();
   });
 
   it("the provider chosen by streaming also owns the cost receipt", async () => {

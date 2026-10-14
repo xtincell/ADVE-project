@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.461 — fix(rate): refuser une file expirée sans dépasser les limites locales (2026-10-14)
+
+**461 candidat vérifié localement : refus HTTP 429 et conservation reçus sur copie, UX visuelle et livraison encore attendues.**
+
+- Défaut réel de rate-policy : délai maximal expiré, concurrence/RPM/intervalle dépassés mais départ quand même admis. `rate-wait-red.log` reçoit quatre échecs/trois succès sur baseline. Correction dans le gestionnaire existant, Sustainment/INFRASTRUCTURE ; aucune entité, manager, service, route, Intent ou Neter ajouté.
+- Candidat : LlmRateWaitExceededError à expiration sans compter un départ, sommeil borné à l’échéance ; withRetry et callLLM arrêtent sans marquer une panne fournisseur ou tenter un repli. Streaming retire le listener lors de l’échec de file ; /api/chat renvoie 429 RATE_LIMITED avant premier octet via UX existante, sans faux tour persisté.
+- Réception locale : cible finale 17 / 3 et cinq contrôles zéro/gouvernance 1 627 / 166, 24 warnings lint existants ; release/vocab verts. Aucun DEFAULT ou tests/unit/ entier 461 reçu. Premier HTTP 401/token dummy expiré ne touche pas la garde/fournisseur ; même session ADMIN rafraîchie normalement, vrai POST authentifié 429 RATE_LIMITED. Bout en bout 38 877,5 ms en environnement chargé, ni durée de garde ni SLO. Place Luna tenue dans la copie seule puis contrôle retiré, jamais dans le produit ; mêmes quatre messages/347 logs de coût/fil/huit empreintes, aucune génération/coût/faux tour. IAB disparu après timeout, erreur native non reçue visuellement ; HTTP ne reçoit pas UX. Source/CI/image/runtime 461 attendus, production 460/qualité refusée/seize résultats inchangés. Charge/multi-instance/coûts/opt-out ouverts. [Bornage](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.460 — fix(council): servir Luna OAuth exact et qualifier le contexte avec la chaîne existante (2026-10-14)
 
 **460 livré : route Luna OAuth, fil conservé et coût API équivalent estimé reçus ; qualité du conseil refusée.**

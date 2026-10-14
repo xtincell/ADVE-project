@@ -188,7 +188,13 @@ async function attemptStream(
   const onCallerAbort = () => attemptAbort.abort();
   opts.signal?.addEventListener("abort", onCallerAbort, { once: true });
 
-  const slotKey = await acquireSlot(servedModel);
+  let slotKey: string;
+  try {
+    slotKey = await acquireSlot(servedModel);
+  } catch (error) {
+    opts.signal?.removeEventListener("abort", onCallerAbort);
+    throw error;
+  }
   let slotReleased = false;
   const releaseOnce = () => {
     if (!slotReleased) {

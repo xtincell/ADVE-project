@@ -33,6 +33,7 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import { isTextLLMAvailable } from "@/server/services/llm-gateway";
+import { LlmRateWaitExceededError } from "@/server/services/llm-gateway/rate-policy";
 import { askCouncilStream } from "@/server/services/mestor/council";
 import { consumeAssistantBudget } from "@/server/services/mestor/council/rate-limit";
 import type { StreamChatMessage } from "@/server/services/llm-gateway/streaming";
@@ -151,6 +152,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof LlmRateWaitExceededError) return jsonError(429, "RATE_LIMITED");
     // Tous les échecs arrivent AVANT le premier octet (contrat streamChatText)
     // → on peut encore répondre un statut honnête. Budget Thot dépassé et
     // cascade épuisée se présentent pareil au client : service indisponible.

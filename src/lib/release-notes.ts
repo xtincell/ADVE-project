@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.461", date: "2026-10-14",
+    headline: "Respecter la cadence des appels",
+    highlights: [
+      { emoji: "⏳", title: "Une attente limitée", body: "Lorsque la limite d’appels reste atteinte, l’assistant vous invite à réessayer plus tard. L’attente ne déclenche plus une génération supplémentaire à son expiration." },
+    ],
+  },
+  {
     version: "6.27.460", date: "2026-10-14",
     headline: "Identifier votre accès par abonnement",
     highlights: [

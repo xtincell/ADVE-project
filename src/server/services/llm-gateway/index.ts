@@ -16,6 +16,7 @@
  */
 
 import { applySonnet5Parity } from "./parity";
+import { LlmRateWaitExceededError } from "./rate-policy";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -536,6 +537,7 @@ export async function withRetry<T>(
       return await fn();
     } catch (err) {
       lastError = err;
+      if (err instanceof LlmRateWaitExceededError) throw err;
       const errStr = String(err instanceof Error ? err.message : err).toLowerCase();
       // An aborted call (caller's bounded timeout fired) fails fast — no backoff,
       // no point retrying an already-cancelled signal.
@@ -915,6 +917,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
       recordProviderSuccess(provider);
       return result;
     } catch (err) {
+      if (err instanceof LlmRateWaitExceededError) throw err;
       lastError = err;
       const errStr = String(err instanceof Error ? err.message : err).toLowerCase();
       const isHardFailure = errStr.includes("credit balance") || errStr.includes("insufficient_quota") || errStr.includes("429");

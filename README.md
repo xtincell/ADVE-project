@@ -16,6 +16,8 @@
 
 ## Quick start
 
+**461 candidat vérifié localement, production 460.** Refus HTTP 429 authentifié reçu sur copie sans génération, coût ou faux tour ; premier 401 de session expirée conservé. Cible 17 / 3/cinq contrôles verts, pas suite DEFAULT/unit entière. Erreur UI non reçue visuellement, durée de bout en bout en environnement chargé sans SLO ; source/CI/image/runtime attendus. Qualité conseil refusée/seize résultats inchangés, aucune garantie de quota fournisseur/multi-instance. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
+
 **460 livré au périmètre transport ; conseil utile refusé.** Runtime exact Luna OAuth sans OpenRouter, fil ADMIN réel et reprise sans génération reçus. Zéro questionnaire vérifiable à six réponses/21 historiques conservé, pas zéro utilisateur ; qualité encore refusée sur certitudes attribuées au fondateur et cinq questions historiques non réconciliées avec six. Statut Luna public reçu, aucun SLO/santé globale ou facture déduit. Copie 1/0/premiers refus préservés ; DPA/opt-out, régulation et coûts réels ouverts, seize résultats sans entier fermé. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
 
 **459 livré au périmètre reçu.** OpenRouter/Nemotron Free réellement servi et journalisé à zéro estimé ; fil repris sans génération, aucune facture ou gratuité globale déduite. Friesland : 26 vues/neuf assets lisibles, neuf aliases archivés, restauration puis réarchivage reçus sans perte d’identité. Noms/versions/droits/masters, C1 effets, conseil utile C5 et coût entier C7 restent ouverts. Seize résultats bornés, aucun entier fermé. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
