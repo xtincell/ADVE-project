@@ -16,7 +16,7 @@
 
 ## Quick start
 
-**456 candidate : portefeuille et Gazette reçus sur copie privée.** Mesures/Q6, origine, dates et inconnus lisibles sous ADMIN de recette ; filtre Signaux marché 11 dépêches reçu, IA facultative décochée sans action lancée. Contrôles après correction verts (4 410 / 421). Source, CI, image et publication attendues, autres rôles et SLO non reçus. Producteur sur inscription synthétique/overlay, quiz public inchangé, pas joueur réel/calibration ou cycle entier ; treize unités inchangées. [Réception et limites](docs/governance/REFONTE-PLAN.md).
+**456 livré : les lecteurs sont reçus, le producteur quiz reste à raccorder.** Portefeuille et Gazette affichent l’observation complète/Q6, origine, dates et inconnus sur copie privée ; image exacte et refus 401 reçus. Source, CI et runtime public 456 sont vérifiés. Le dossier SPAWT public affiche un état vide réel sous session existante, faute de producteur branché ; PR31 reste draft et le quiz public 557a915 inchangé. Quatorze résultats bornés, sans entier fermé ; autres rôles, SLO, vrai joueur et calibration restent non reçus. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 
 **455 livré au périmètre de l’admission.** Source, CI, image et runtime public exact sont reçus ; réception privée/rejeu dans un nouveau processus conservent une observation unique et sa provenance. Refus 401/403/409 reçus, dont anonyme public 401. Neuf tables Fusée/trois quiz identiques ; cela ne reçoit ni interface, vrai résultat joueur ou parcours complet. [Limites restantes](docs/governance/REFONTE-PLAN.md).
 
