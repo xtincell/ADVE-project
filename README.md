@@ -16,7 +16,7 @@
 
 ## Quick start
 
-**464 candidat : références transmises, réponse encore insuffisante.** Contexte/HTTP et fil natif sur copie reçus, copie visible exacte/recharge sans génération. Accueil corrigé/note accueil seule reçus, fenêtre fresh complète sans génération ; qualité refusée pour citations de sortie et écart cinq→six. DEFAULT 4 467 / 425/cinq contrôles verts, livraison encore attendue ; production 463 et seize résultats inchangés. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
+**464 livré : références transmises et accueil borné.** Runtime exact et accueil réel/recharge reçus sans nouveau conseil généré ; données conservées avant/après déploiement et après lecture native, copie et production distinctes. La réponse sur copie reste refusée pour citations et écart historique cinq→six ; autres rôles/experts/C4/C7 restent ouverts, seize résultats inchangés. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 
 **463 livré : réponses lisibles et texte original copiable.** Le fil réel ADMIN est reçu avec titres/listes, copie exacte et recharge sans génération. Texte stocké conservé, utilisateurs/erreurs littéraux ; circuit d’appel et données métier inchangés. Experts natifs, formules legacy et qualité du conseil restent ouverts ; la recette locale et la production sont distinctes, seize résultats sans chantier entier fermé. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 
