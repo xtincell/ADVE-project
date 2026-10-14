@@ -46,7 +46,7 @@ function capBlock(text: string, max: number): string {
 
 /** Carry the existing field authority before the prose can consume its budget. */
 function qualifiedPillar(key: string, pillar: {
-  content: unknown; fieldCertainty?: unknown; updatedAt?: Date;
+  id?: string; currentVersion?: number; content: unknown; fieldCertainty?: unknown; updatedAt?: Date;
 }, max: number): string {
   const content = pillar.content && typeof pillar.content === "object" && !Array.isArray(pillar.content)
     ? pillar.content as Record<string, unknown> : {};
@@ -59,6 +59,7 @@ function qualifiedPillar(key: string, pillar: {
   const date = pillar.updatedAt?.toISOString() ?? "non renseignée";
   return capBlock([
     `Pilier ${key.toUpperCase()} — ${date} (date d’édition, pas une date de mesure).`,
+    `Référence du pilier : ${pillar.id || "non renseignée"}. Version d’édition : ${pillar.currentVersion ?? "inconnue"}.`,
     "Qualification des champs : origine/autorité d’édition, pas une mesure ni une validation du résultat.",
     fields,
     serializePillar(key, pillar.content, status),
@@ -88,7 +89,7 @@ export interface ExpertContextResult {
 }
 
 /**
- * Contexte du COORDINATEUR (chat interactif + délibération) : dossier complet.
+ * Contexte du COORDINATEUR : extraits bornés du dossier réellement sélectionné.
  */
 export async function buildAssistantContext(
   strategyId: string,
@@ -99,7 +100,7 @@ export async function buildAssistantContext(
     loadStrategyContextForFramework(strategyId),
     db.pillar.findMany({
       where: { strategyId },
-      select: { key: true, content: true, fieldCertainty: true, updatedAt: true },
+      select: { id: true, key: true, currentVersion: true, content: true, fieldCertainty: true, updatedAt: true },
     }),
     getOracleBrandContextByQuery(strategyId, question, { limit: 8, includeSources: true })
       .catch(() => { ragUnavailable = true; return null; }),
@@ -186,7 +187,7 @@ async function buildObservationsBlock(strategyId: string): Promise<string> {
 }
 
 /**
- * Contexte d'UN expert de pilier fondateur : SON pilier en profondeur + les
+ * Contexte d'UN expert de pilier fondateur : extrait borné de SON pilier + les
  * extraits sémantiques scopés à son pilier + **la documentation de la marque**.
  * Il ne voit PAS les autres piliers (indépendance des critiques — c'est le
  * coordinateur qui arbitre).
@@ -206,7 +207,7 @@ export async function buildExpertContext(
   const [pillar, rag, communityBlock, observationsBlock] = await Promise.all([
     db.pillar.findFirst({
       where: { strategyId, key: { in: [pillarKey, pillarKey.toUpperCase()] } },
-      select: { content: true, fieldCertainty: true, updatedAt: true },
+      select: { id: true, currentVersion: true, content: true, fieldCertainty: true, updatedAt: true },
     }),
     getOracleBrandContextByQuery(strategyId, topic, {
       pillarKey,
@@ -225,7 +226,7 @@ export async function buildExpertContext(
   if (pillar?.content && Object.keys(pillar.content as object).length > 0) {
     sections.push(
       wrapUntrusted(
-        `pilier ${pillarKey.toUpperCase()} (verbatim complet)`,
+        `pilier ${pillarKey.toUpperCase()} (extrait verbatim borné)`,
         qualifiedPillar(pillarKey, pillar, EXPERT_PILLAR_MAX),
         { max: EXPERT_PILLAR_MAX + 200 },
       ),

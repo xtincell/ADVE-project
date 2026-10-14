@@ -320,7 +320,7 @@ export default function MestorPage() {
                 Bienvenue sur votre assistant
               </h3>
               <p className="mt-1 max-w-sm text-center text-sm text-foreground-secondary">
-                Je suis votre assistant de marque. Je connais votre dossier complet — posez-moi vos
+                Je suis votre assistant de marque. Je m’appuie sur les informations disponibles du dossier — posez-moi vos
                 questions sur{strategyName ? ` ${strategyName},` : ""} votre stratégie, ou demandez un
                 diagnostic.
               </p>

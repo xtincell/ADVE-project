@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.464", date: "2026-10-14",
+    headline: "Un accueil plus précis pour le conseil",
+    highlights: [
+      { emoji: "💬", title: "Connaître le contexte du conseil", body: "L’accueil précise que le conseil s’appuie sur les informations disponibles de votre dossier." },
+    ],
+  },
+  {
     version: "6.27.463", date: "2026-10-14",
     headline: "Des conseils plus lisibles",
     highlights: [

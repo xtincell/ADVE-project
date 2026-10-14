@@ -28,6 +28,14 @@ beforeEach(() => {
 });
 
 describe("coordinator document presence — real orchestration, fixture gateways", () => {
+  it("does not promise an exhaustive dossier and requires edition-aware citations", async () => {
+    await askCouncilStream({ strategyId: "brand-a", question: "Question", history: [] });
+    const system = (state.stream.mock.calls[0] as unknown as [{ system: string }])[0].system;
+    expect(system).not.toContain("dossier COMPLET");
+    expect(system).toContain("extraits effectivement fournis");
+    expect(system).toContain("référence du pilier, sa version d’édition");
+    expect(system).toContain("UNKNOWN ne devient pas « déclaré »");
+  });
   it("keeps human turns and stored history while qualifying generated history as unvalidated data", async () => {
     const history = [{ role: "user" as const, content: "Ma priorité reste le Palais." },
       { role: "assistant" as const, content: "La bêta a 50 utilisateurs et 80 % de rétention." }];

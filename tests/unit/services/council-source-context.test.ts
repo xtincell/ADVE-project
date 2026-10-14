@@ -42,6 +42,51 @@ beforeEach(() => {
 });
 
 describe("the council reports the evidence it actually received", () => {
+  it.each(["coordinator", "expert"])("carries the selected pillar identity and edition version (%s)", async (role) => {
+    state.pillars = [{ id: "pillar-engagement-real", key: "e", currentVersion: 3,
+      content: { rituels: "5 questions = 5 axes", kpis: "Complétion ≥ 60 %" },
+      fieldCertainty: { rituels: "INFERRED", kpis: "UNKNOWN" },
+      updatedAt: new Date("2026-07-24T09:00:00Z") }];
+    const before = structuredClone(state.pillars);
+    const result = role === "expert"
+      ? await buildExpertContext("brand-a", "e", "Quiz ?")
+      : await buildAssistantContext("brand-a", "Quiz ?");
+    expect(result.contextBlock).toContain("Référence du pilier : pillar-engagement-real");
+    expect(result.contextBlock).toContain("Version d’édition : 3");
+    expect(result.contextBlock).toContain("2026-07-24T09:00:00.000Z");
+    expect(result.contextBlock).toContain('"statut": "UNKNOWN"');
+    expect(result.contextBlock).toContain("5 questions = 5 axes");
+    expect(state.pillars).toEqual(before);
+  });
+
+  it("preserves a stored zero edition rather than inventing version one", async () => {
+    state.pillars = [{ id: "pillar-zero", key: "a", currentVersion: 0, content: { nom: "Nom" } }];
+    const result = await buildAssistantContext("brand-a", "Question");
+    expect(result.contextBlock).toContain("Version d’édition : 0");
+    expect(result.contextBlock).not.toContain("Version d’édition : 1");
+  });
+
+  it("keeps absent legacy identity and version explicitly unknown", async () => {
+    const result = await buildExpertContext("brand-a", "a", "Question");
+    expect(result.contextBlock).toContain("Référence du pilier : non renseignée");
+    expect(result.contextBlock).toContain("Version d’édition : inconnue");
+    expect(result.contextBlock).not.toContain("Version d’édition : 1");
+  });
+
+  it.each(["coordinator", "expert"])("keeps the citation envelope before a bounded excerpt (%s)", async (role) => {
+    state.pillars = [{ id: "pillar-long", key: "a", currentVersion: 17,
+      content: Object.fromEntries(Array.from({ length: 30 }, (_, i) =>
+        [`histoire${i}`, "Récit ancien. ".repeat(1500)])),
+      updatedAt: new Date("2026-07-24T09:00:00Z") }];
+    const result = role === "expert"
+      ? await buildExpertContext("brand-a", "a", "Question")
+      : await buildAssistantContext("brand-a", "Question");
+    expect(result.contextBlock).toContain("Référence du pilier : pillar-long");
+    expect(result.contextBlock).toContain("Version d’édition : 17");
+    expect(result.contextBlock).toContain("[tronqué — budget de contexte]");
+    expect(result.contextBlock).not.toContain("verbatim complet");
+  });
+
   it.each(["coordinator", "expert"])("does not declare all founder fields when their origins differ (%s)", async (role) => {
     state.pillars = [{ key: "a", content: { doctrine: "Une idée générée", origine: "Récit du dirigeant",
       _fieldProvenance: { doctrine: "INFERRED", origine: "HUMAN" } } }];
