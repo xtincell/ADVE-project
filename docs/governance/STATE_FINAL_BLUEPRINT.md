@@ -3244,7 +3244,7 @@ Tout ce qui empêche la mission de s'éteindre en plein vol. Layer 2.
 |---|---|
 | **Thot** | Fuel manager — connaît le propellant restant par operator/brand, alerte avant flame-out. |
 | **Cost gate** (à venir, P3) | Abort logic — refuse une combustion qui mettrait la mission en faillite. |
-| **LLM Gateway** | Engine controller existant — routing/model-policy, Headroom, rate-policy et coût ; 464 code/runtime reçus, qualité conseil refusée. Apport Seshat candidat 465 : PreciseField Oracle/framework partagé, 169 champs exacts reçus en interne sur copie sans modèle/embedding/écriture, circuit inchangé. DEFAULT 4 480 / 426/contrôles reçus, cinq contrôles finaux verts, livraison attendue ; contrats de sortie C5/C4/C7 et héritage BrandTree restent ouverts ([bornage](REFONTE-PLAN.md)). |
+| **LLM Gateway** | Engine controller existant — routing/model-policy, Headroom, rate-policy et coût ; 465 backend Seshat/source-runtime reçus, qualité conseil refusée. C4 candidat 466 : conversation/états isolés par marque sur page actuelle, switch natif sur copie reçu sans génération, conservation finale et cinq contrôles zéro/DEFAULT 4 490 / 428 reçus, livraison attendue. Dix-sept fichiers circuit inchangés ; consommateurs C5/C4 restant/C7 coût complet-charge ouverts, seize résultats sans crédit ajouté ([bornage](REFONTE-PLAN.md)). |
 | **SLOs** | Performance envelope — limites opérationnelles par Intent kind. Breach = alerte. |
 | **Post-conditions** (à venir) | After-burn checks — vérifient que la combustion a produit l'effet déclaré, sinon rollback. |
 | **Compensating intents** | Reverse maneuvers — annuler une manœuvre si elle mettait la trajectoire en péril. |

@@ -5,7 +5,9 @@ import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { AiBadge } from "@/components/shared/ai-badge";
 import { EmptyState } from "@/components/shared/empty-state";
-import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { useStrategy } from "@/components/cockpit/strategy-context";
+import { SkeletonList } from "@/components/shared/loading-skeleton";
+import { FriendlyError } from "@/components/shared/friendly-error";
 import { CouncilDeliberationPanel } from "@/components/cockpit/council-deliberation-panel";
 import { MarkdownContent } from "@/components/shared/markdown-content";
 import {
@@ -75,8 +77,33 @@ function errorMessageFor(status: number): string {
   return "Désolé, une erreur est survenue lors de la génération de la réponse.";
 }
 
+function AssistantPageHeader({ children }: { children?: React.ReactNode }) {
+  return <PageHeader title="Assistant" description="Votre assistant de marque intelligent."
+    badge={<AiBadge />} breadcrumbs={[{ label: "Cockpit", href: "/cockpit" }, { label: "Assistant" }]}>
+    {children}
+  </PageHeader>;
+}
+
+function AssistantReadState({ loading, error }: { loading: string; error?: string }) {
+  return <div className="space-y-6">
+    <AssistantPageHeader />
+    {error ? <FriendlyError error={new Error(error)} /> : <div role="status" aria-label={loading}>
+      <p className="mb-3 text-sm text-foreground-secondary">{loading}</p>
+      <SkeletonList items={3} />
+    </div>}
+  </div>;
+}
+
 export default function MestorPage() {
-  const strategyId = useCurrentStrategyId();
+  const { strategyId, isLoading, isError } = useStrategy();
+  if (isLoading || isError) return <AssistantReadState loading="Chargement de vos marques…"
+    error={isError ? "Impossible de charger les marques disponibles. Actualisez la page pour réessayer." : undefined} />;
+  // A conversation's state (history, draft, errors, expert panel) belongs to
+  // one strategy. Switching context remounts it; stored threads are untouched.
+  return <MestorConversation key={strategyId ?? "unselected"} strategyId={strategyId} />;
+}
+
+function MestorConversation({ strategyId }: { strategyId: string | null }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -92,7 +119,7 @@ export default function MestorPage() {
     { enabled: !!strategyId },
   );
 
-  // Historique persisté (ADR-0181) — chargé au montage, une seule fois.
+  // Historique persisté (ADR-0181) — une hydratation par marque sélectionnée.
   const historyQuery = trpc.mestor.assistantHistory.useQuery(
     { strategyId: strategyId! },
     { enabled: !!strategyId, refetchOnWindowFocus: false },
@@ -119,12 +146,7 @@ export default function MestorPage() {
   if (!strategyId) {
     return (
       <div className="space-y-6">
-        <PageHeader
-          title="Assistant"
-          description="Votre assistant de marque intelligent."
-          badge={<AiBadge />}
-          breadcrumbs={[{ label: "Cockpit", href: "/cockpit" }, { label: "Assistant" }]}
-        />
+        <AssistantPageHeader />
         <EmptyState
           icon={CloudOff}
           title="Aucune marque sélectionnée"
@@ -133,6 +155,10 @@ export default function MestorPage() {
       </div>
     );
   }
+
+  if (historyQuery.isLoading || historyQuery.error) return <AssistantReadState
+    loading="Chargement de votre conversation…"
+    error={historyQuery.error ? "Impossible de lire votre conversation. Actualisez la page pour réessayer." : undefined} />;
 
   const strategy = strategyQuery.data;
   const strategyName = strategy?.name ?? "votre marque";
@@ -268,15 +294,7 @@ export default function MestorPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Assistant"
-        description="Votre assistant de marque intelligent."
-        badge={<AiBadge />}
-        breadcrumbs={[
-          { label: "Cockpit", href: "/cockpit" },
-          { label: "Assistant" },
-        ]}
-      >
+      <AssistantPageHeader>
         {messages.length > 0 && (
           <button
             onClick={handleReset}
@@ -286,7 +304,7 @@ export default function MestorPage() {
             Nouvelle conversation
           </button>
         )}
-      </PageHeader>
+      </AssistantPageHeader>
 
       {copyFailed && <p role="alert" className="text-sm text-error">
         La réponse n’a pas pu être copiée. Sélectionnez le texte pour la copier.

@@ -15,7 +15,7 @@ vi.mock("@/lib/trpc/client", () => ({ trpc: {
     } },
   },
 } }));
-vi.mock("@/components/cockpit/strategy-context", () => ({ useCurrentStrategyId: () => "fixture" }));
+vi.mock("@/components/cockpit/strategy-context", () => ({ useStrategy: () => ({ strategyId: "fixture", isLoading: false, isError: false }) }));
 vi.mock("@/components/shared/page-header", () => ({ PageHeader: ({ title, children }: { title: string; children: React.ReactNode }) =>
   React.createElement("header", null, React.createElement("h1", null, title), children) }));
 vi.mock("@/components/shared/ai-badge", () => ({ AiBadge: () => null }));

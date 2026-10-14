@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.466", date: "2026-10-14",
+    headline: "Une conversation propre à chaque marque",
+    highlights: [
+      { emoji: "💬", title: "Retrouver le bon échange", body: "Quand vous changez de marque, le conseil retrouve la conversation de la marque choisie. Les réponses et le brouillon de la précédente ne restent plus à l’écran." },
+      { emoji: "⏳", title: "Identifier une lecture en cours", body: "Le chargement des marques et de la conversation est indiqué avant l’affichage de leur contenu." },
+    ],
+  },
+  {
     version: "6.27.464", date: "2026-10-14",
     headline: "Un accueil plus précis pour le conseil",
     highlights: [

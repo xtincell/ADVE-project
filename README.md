@@ -16,7 +16,9 @@
 
 ## Quick start
 
-**465 candidat interne : champs précis mieux qualifiés.** Oracle/framework conservent références, versions et origine sans promouvoir l’inconnu en fait. Réception sur copie sans génération/écriture et contrôles reçus ; cinq contrôles finaux verts, livraison attendue. Production 464, qualité du conseil refusée et seize résultats inchangés, aucun onboarding entier déduit. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
+**466 candidat : chaque marque garde sa conversation.** Bascule et chargement reçus sur copie, sans génération ou effacement ; conservation et cinq contrôles finaux reçus ; erreurs natives et livraison attendues. Les états de lecture ne prétendent plus zéro marque pendant une attente. Production 465, qualité du conseil refusée et seize résultats inchangés. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
+
+**465 livré backend : champs précis mieux qualifiés.** Références/versions/origine reçues en interne sur copie, source/image/runtime exacts et données conservées sans génération. Cela ne valide ni sorties framework/rapport, citations du conseil ou onboarding entier ; coût complet et capacité restent ouverts. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 
 **464 livré : références transmises et accueil borné.** Runtime exact et accueil réel/recharge reçus sans nouveau conseil généré ; données conservées avant/après déploiement et après lecture native, copie et production distinctes. La réponse sur copie reste refusée pour citations et écart historique cinq→six ; autres rôles/experts/C4/C7 restent ouverts, seize résultats inchangés. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 

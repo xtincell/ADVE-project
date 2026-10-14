@@ -440,7 +440,9 @@ Observent, mesurent, archivent. **27 répertoires** (recompte 2026-10-06) ; la t
 
 ---
 
-**465 candidat interne — Seshat context-store existant (2026-10-14)** : PreciseField partagé Oracle/framework transporte identité/version/provenance et valeurs intactes, aucune nouvelle entité/service/route/manager. DB copie quatre stratégies/169 champs exacts sans modèle/embedding/écriture reçue, dix-sept fichiers circuit inchangés ; cible 70 / 5/DEFAULT 4 480 / 426/contrôles reçus, cinq contrôles finaux verts, livraison attendue. Narrative orientation/qualité conseil/héritage BrandTree restent non reçus, production 464/seize résultats conservés. [Bornage](REFONTE-PLAN.md).
+**466 candidat UI — présentation MESTOR/Guidance existante (2026-10-14)** : conversation keyed stratégie/états et PageHeader factorisés, aucun service/manager/route ou circuit ajouté. Copie switch BR une→SPAWT quatre→BR une reçue sans génération ; conservation finale et cinq contrôles zéro/DEFAULT 4 490 / 428 reçus ; erreurs natives/livraison attendues. Backend 465 livré, qualité C5/seize résultats inchangés. [Bornage](REFONTE-PLAN.md).
+
+**465 livré backend — Seshat context-store existant (2026-10-14)** : source 046ed251/CI-image-runtime exacts, PreciseField partagé/réception interne 169 champs et conservation sans génération reçus ; dix-sept fichiers circuit inchangés, aucun service/manager/transport ou écriture ajouté. Consommateurs framework/rapport/citations de sortie et héritage BrandTree non reçus, seize résultats conservés. [Bornage](REFONTE-PLAN.md).
 
 **464 livré — conseil MESTOR/Guidance existant (2026-10-14)** : projection référence/version/date et accueil borné, source e6897302/CI-image-runtime exacts reçus. Six fichiers circuit inchangés, aucun nouveau service/manager/transport ou écriture métier ; accueil ADMIN production/recharge sans modèle reçus, données before/after et après lecture native conservées sans modèle, réception finale acquise. Copie contexte/HTTP/native distincte et qualité citations/cinq→six refusée ; prochaine qualification Council/Gateway/Seshat/Notoria existants, seize résultats inchangés. [Bornage](REFONTE-PLAN.md).
 
