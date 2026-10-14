@@ -16,7 +16,7 @@
 
 ## Quick start
 
-**462 candidat, qualité refusée sur copie ; production 461.** Contexte qualifié/API et fil Chrome reçus sans génération navigateur, données/messages/coûts conservés ; UNKNOWN encore appelé déclaré, historique cinq→six et citations incomplets. Six questions/cinq axes, aucune calibration ou carte de copie comptée comme utilisateur prod. DEFAULT 4 452 / 423/cinq contrôles locaux reçus ; Markdown brut/C4 ouvert, premiers timeouts conservés sans SLO. Note client origine-valeur préparée, pas garantie qualité/livraison ; seize résultats inchangés. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
+**462 livré au périmètre code/runtime ; qualité refusée sur copie.** Runtime exact/CI/image et conservation sans génération reçus ; réponse modèle/natif production 462 non reçus, copie synthétique distincte du réel 0/21. UNKNOWN/historique cinq→six/citations et Markdown brut restent ouverts. Aucun renderer Markdown installé : plan C4 corrigé vers bibliothèque standard sécurisée réutilisable, pas parser maison, non implémenté. Historiques/tests locaux/seize résultats conservés, aucune capacité TPE/quota backend ou facture déduite. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
 
 **461 livré au périmètre source/API.** File expirée refusée sans départ/faux tour, code et image exacts en production ; données/messages/coûts conservés sans génération au déploiement. Premiers refus CI/401 et build annulé gardés ; erreur visuelle, charge/multi-instance/plafond OAuth/coûts/opt-out restent à recevoir, qualité conseil refusée. Seize résultats inchangés, aucun chantier entier fermé. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
 
