@@ -11,10 +11,12 @@
  *      "their narrative emphasizes X").
  *   2. `preciseFields` — exact values pulled DIRECTLY from Postgres tables
  *      (Pillar.content, Strategy.financialCapacity, MarketBenchmark, etc.).
- *      Use these for verbatim citations, numbers, calculations.
+ *      Stored values keep their editing authority, identity and edition.
+ *      Verbatim storage is not proof of a measured or validated outcome.
  *
  * The LLM prompt MUST reference both: "Use NARRATIVE for context, but cite
- * PRECISE FIELDS verbatim and never rephrase numbers."
+ * PRECISE FIELDS with their origin and edition; never rephrase numbers or
+ * promote objectives/derived assertions into measured outcomes."
  *
  * This eliminates the "lossy summary used as ground truth" failure mode
  * that pure-vector RAG suffers from.
@@ -25,6 +27,7 @@ import { embed } from "@/server/services/llm-gateway";
 import { cosineSimilarity } from "./embedder";
 import { currentDocumentNodes } from "./ranker";
 import type { SourceCertainty } from "@/domain/source-certainty";
+import { coerceProvenance, fieldStatusFor, type FieldProvenance } from "@/domain/field-provenance";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -35,7 +38,13 @@ export interface PreciseField {
   field: string;
   /** EXACT value as stored — string, number, object, never paraphrased */
   value: unknown;
-  /** When this exact value was last written (for staleness checks) */
+  /** Stored Pillar/Strategy identity, not a generated citation identifier. */
+  sourceId: string | null;
+  /** Pillar edition; null for unversioned Strategy fields or legacy records. */
+  sourceVersion: number | null;
+  /** Editing authority, never proof that the stored claim is measured/true. */
+  provenance: FieldProvenance;
+  /** Source record edit time, not a field-specific change or measurement time. */
   lastWrittenAt?: Date | null;
 }
 
@@ -98,6 +107,34 @@ function nodeToLine(node: {
 
 // ── Precise field loaders (DIRECT DB reads, lossless) ────────────────
 
+/** Shared projection for Oracle and framework consumers; no IO or inference. */
+export function pillarPreciseFields(pillar: {
+  id?: string; key: string; currentVersion?: number; content: unknown;
+  fieldCertainty?: unknown; updatedAt?: Date;
+}): PreciseField[] {
+  const content = pillar.content && typeof pillar.content === "object" && !Array.isArray(pillar.content)
+    ? pillar.content as Record<string, unknown> : {};
+  const certainty = pillar.fieldCertainty && typeof pillar.fieldCertainty === "object" && !Array.isArray(pillar.fieldCertainty)
+    ? Object.fromEntries(Object.entries(pillar.fieldCertainty).filter((entry): entry is [string, string] => typeof entry[1] === "string"))
+    : null;
+  const status = fieldStatusFor(certainty, pillar.key, content._fieldProvenance);
+  return Object.entries(content)
+    .filter(([field, value]) => !field.startsWith("_") && value !== null && value !== undefined && value !== ""
+      && !(Array.isArray(value) && value.length === 0))
+    .map(([field, value]) => ({
+      source: pillar.key, field, value, sourceId: pillar.id ?? null,
+      sourceVersion: pillar.currentVersion ?? null,
+      provenance: coerceProvenance(status(field)), lastWrittenAt: pillar.updatedAt,
+    }));
+}
+
+/** Strategy has no per-field author/edition contract: do not invent either. */
+export function strategyPreciseField(strategyId: string, source: string, field: string,
+  value: unknown, updatedAt?: Date): PreciseField {
+  return { source, field, value, sourceId: strategyId, sourceVersion: null,
+    provenance: "UNKNOWN", lastWrittenAt: updatedAt };
+}
+
 /**
  * Load EXACT values from authoritative tables for a strategy.
  * These bypass embeddings entirely — for citation and calculation.
@@ -114,20 +151,10 @@ async function loadPreciseFields(
       strategyId,
       ...(pillarKey ? { key: pillarKey } : {}),
     },
-    select: { key: true, content: true, updatedAt: true },
+    select: { id: true, key: true, currentVersion: true, content: true, fieldCertainty: true, updatedAt: true },
   });
   for (const p of pillars) {
-    const content = (p.content as Record<string, unknown> | null) ?? {};
-    for (const [field, value] of Object.entries(content)) {
-      if (value === null || value === undefined || value === "") continue;
-      if (Array.isArray(value) && value.length === 0) continue;
-      out.push({
-        source: p.key,
-        field,
-        value,
-        lastWrittenAt: p.updatedAt,
-      });
-    }
+    out.push(...pillarPreciseFields(p));
   }
 
   // 2. Strategy-level structured fields (financialCapacity, businessContext, score)
@@ -144,42 +171,19 @@ async function loadPreciseFields(
   });
   if (strategy) {
     if (strategy.financialCapacity) {
-      out.push({
-        source: "thot",
-        field: "financialCapacity",
-        value: strategy.financialCapacity,
-        lastWrittenAt: strategy.updatedAt,
-      });
+      out.push(strategyPreciseField(strategyId, "thot", "financialCapacity", strategy.financialCapacity, strategy.updatedAt));
     }
     if (strategy.businessContext) {
-      out.push({
-        source: "biz",
-        field: "businessContext",
-        value: strategy.businessContext,
-        lastWrittenAt: strategy.updatedAt,
-      });
+      out.push(strategyPreciseField(strategyId, "biz", "businessContext", strategy.businessContext, strategy.updatedAt));
     }
     if (strategy.advertis_vector) {
-      out.push({
-        source: "score",
-        field: "advertisVector",
-        value: strategy.advertis_vector,
-        lastWrittenAt: strategy.updatedAt,
-      });
+      out.push(strategyPreciseField(strategyId, "score", "advertisVector", strategy.advertis_vector, strategy.updatedAt));
     }
     if (strategy.brandNature) {
-      out.push({
-        source: "biz",
-        field: "brandNature",
-        value: strategy.brandNature,
-      });
+      out.push(strategyPreciseField(strategyId, "biz", "brandNature", strategy.brandNature, strategy.updatedAt));
     }
     if (strategy.primaryChannel) {
-      out.push({
-        source: "biz",
-        field: "primaryChannel",
-        value: strategy.primaryChannel,
-      });
+      out.push(strategyPreciseField(strategyId, "biz", "primaryChannel", strategy.primaryChannel, strategy.updatedAt));
     }
   }
 
@@ -194,7 +198,10 @@ function formatPreciseFields(fields: PreciseField[]): string {
         ? f.value
         : JSON.stringify(f.value);
     // No truncation here — verbatim is the whole point
-    return `  ${f.source}.${f.field} = ${valStr}`;
+    const reference = f.sourceId ?? "inconnue";
+    const version = f.sourceVersion ?? "inconnue";
+    const date = f.lastWrittenAt?.toISOString() ?? "inconnue";
+    return `  ${f.source}.${f.field} [référence: ${reference} ; version d’édition: ${version} ; origine: ${f.provenance} ; édité le: ${date} (pas une date de mesure)] = ${valStr}`;
   });
   return lines.join("\n");
 }
@@ -235,7 +242,8 @@ function nodeToSourceReference(node: {
 const HYBRID_HEADER = `--- CONTEXTE MARQUE (Seshat — RAG hybride) ---
 RÈGLE D'USAGE :
   • NARRATIF = orientation sémantique uniquement (compressé). Ne le cite jamais verbatim.
-  • PRÉCIS  = sources de vérité directes. Cite verbatim. Calcule sur ces nombres.`;
+  • PRÉCIS  = valeur stockée exacte ≠ résultat validé. Cite avec référence, version, champ et origine ; une édition n'est pas une mesure.
+  • UNKNOWN = origine inconnue ; INFERRED = déduction ; HUMAN/SOURCE = autorité d'édition, pas une validation de résultat.`;
 
 /**
  * Build a HYBRID context block for a given pillar:
@@ -309,7 +317,7 @@ ${formatSourceReferences(sourceReferences)}`
 NARRATIF (sémantique, compressé) :
 ${narrativeBlock}
 
-PRÉCIS (verbatim, source de vérité — citer/calculer dessus) :
+PRÉCIS (valeurs stockées avec leur origine — distinguer objectifs et mesures) :
 ${formatPreciseFields(precise)}
 
 --- FIN CONTEXTE ---`;
@@ -439,7 +447,7 @@ ${formatSourceReferences(sourceReferences)}`
 NARRATIF pertinent pour "${query.slice(0, 80)}" (sémantique, compressé) :
 ${narrativeBlock}
 
-PRÉCIS (verbatim, source de vérité — citer/calculer dessus) :
+PRÉCIS (valeurs stockées avec leur origine — distinguer objectifs et mesures) :
 ${formatPreciseFields(precise)}
 
 --- FIN CONTEXTE ---`;

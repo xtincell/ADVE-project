@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.465 — fix(seshat): préserver identité, version et origine des champs précis (2026-10-14)
+
+**465 candidat interne : projections et réception DB sur copie reçues, cinq contrôles finaux reçus, source/CI/image/runtime attendus ; production 464, qualité du conseil toujours refusée.**
+
+- Oracle et framework perdaient identité/version/provenance dans PreciseField. Contrat existant étendu, pillarPreciseFields/strategyPreciseField partagés dans oracle-augment puis réutilisés par strategy-context ; FieldProvenance canonique/HUMAN prioritaire sur ancien INFERRED, UNKNOWN inconnu. Valeurs zéro/false/version zéro/objets intacts, champs internes _ exclus ; dates d’édition distinctes des mesures, Strategy non versionnée/autorité absente restent inconnues.
+- Treize nouveaux tests tous rouges sur baseline réelle, cible 70 / 5 verte. Réception interne copie : quatre stratégies/32 piliers, 169 champs exacts pour les deux lecteurs ; SPAWT 160, Belle Hollandaise un, Bonnet Rouge quatre, Peak quatre. Aucun modèle, embedding ou écriture ; peu de champs directs enfants ne conclut pas leur onboarding sans audit BrandTree/héritage. Les lignes narratives du framework restent orientation, pas preuves qualifiées.
+- DEFAULT 4 480 / 426/gouvernance 1 627 / 166/lint-lintgov zéro erreurs et 24 warnings préexistants/cycles zéro/CODE-MAP sans diff reçus, tsc final zéro reçu, cinq contrôles finaux verts. Conservation copie huit empreintes/fils/huit messages/349 coûts identiques ; dix-sept fichiers du circuit byte-identiques fe996d11, périmètre incluant ai-cost-tracker ; aucune modification de cette chaîne. Aucun manager/route/service/entité/Intent/Neter/modèle/transport/écriture métier ajouté, aucune nouvelle surface native/API à recevoir pour ce correctif interne. Source/CI/image/runtime 465 attendus ; plomberie sans note client, seize résultats inchangés/aucun entier fermé. Transport fidèle ne reçoit pas citations de sortie ou contradiction cinq→six du conseil réel 464. [Bornage et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.464 — fix(council): transmettre les références d’édition et borner le dossier fourni (2026-10-14)
 
 **464 livré au périmètre code/runtime et accueil réel : copie contexte/réponse reçue mais qualité refusée ; aucun conseil généré en production 464.**
