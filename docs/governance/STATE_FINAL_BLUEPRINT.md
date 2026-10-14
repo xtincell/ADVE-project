@@ -3244,7 +3244,7 @@ Tout ce qui empêche la mission de s'éteindre en plein vol. Layer 2.
 |---|---|
 | **Thot** | Fuel manager — connaît le propellant restant par operator/brand, alerte avant flame-out. |
 | **Cost gate** (à venir, P3) | Abort logic — refuse une combustion qui mettrait la mission en faillite. |
-| **LLM Gateway** | Engine controller existant — routing/model-policy, Headroom, rate-policy et coût ; Luna 460 qualité refusée/refus de file 461 livré, 462 code/runtime livrés. C4 candidat 463 : page/panneau existants et MarkdownContent upstream partagé, source/copie conservées ; cible initiale 38 / 8/finale 18 / 6, DEFAULT 4 460 / 425/cinq contrôles zéro reçus ; lecture/copie exacte et reload DB sur copie sans modèle, recharge native/experts natifs/livraison attendus. Production reçue 462/qualité C5 refusée, aucun nouveau manager/transport ([bornage](REFONTE-PLAN.md)). |
+| **LLM Gateway** | Engine controller existant — routing/model-policy, Headroom, rate-policy et coût ; Luna 460 qualité refusée/refus de file 461 livré, 462 qualification puis 463 présentation livrées. Lecture/copie exacte/reload ADMIN production sans modèle reçus, circuit inchangé ; recette locale distincte/échecs conservés. Experts natifs/formules et qualité C5 refusée restent ouverts, aucun nouveau manager/transport ([bornage](REFONTE-PLAN.md)). |
 | **SLOs** | Performance envelope — limites opérationnelles par Intent kind. Breach = alerte. |
 | **Post-conditions** (à venir) | After-burn checks — vérifient que la combustion a produit l'effet déclaré, sinon rollback. |
 | **Compensating intents** | Reverse maneuvers — annuler une manœuvre si elle mettait la trajectoire en péril. |
