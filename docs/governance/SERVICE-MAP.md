@@ -440,7 +440,7 @@ Observent, mesurent, archivent. **27 répertoires** (recompte 2026-10-06) ; la t
 
 ---
 
-**461 candidat — régulation existante, Sustainment/INFRASTRUCTURE (2026-10-14)** : cible locale/429-conservation reçus, premier refus CI du mock conservé ; correction de test uniquement/importOriginal sans changement produit/invariants, DEFAULT 4 447 / 423/cinq contrôles verts reçus. Build cancelled confirmé/aucun deploy, CI corrigée/image/runtime et UX visuelle attendus ; charge/multi-instance/plafond OAuth/coûts/opt-out ouverts, public 460/qualité refusée/seize inchangés. Aucun nouveau manager/service. [Bornage](REFONTE-PLAN.md).
+**461 livré — régulation existante, Sustainment/INFRASTRUCTURE (2026-10-14)** : source/API/CI finale/image e1ee22b2…/runtime exact et invariance sans génération reçus. Premiers refus CI/401/rouges et build cancelled conservés, mock réparé sans produit changé ; cause fail-open livrée au périmètre, UI visuelle/charge/multi-instance/plafond OAuth/coûts/opt-out ouverts. Aucun manager/service ajouté, qualité conseil refusée/seize résultats inchangés. [Bornage](REFONTE-PLAN.md).
 
 **460 livré — gestion d’appels réutilisée (2026-10-14)** : chaîne existante/dan-oauth/Luna exact, Sol conservés, aucun manager/service/provider ajouté. Source ffab0f93/trois CI/image f36dfd55…/runtime exact/clé OpenRouter absente/token hors build, aucun repli texte autre provider. Relais/UFW privé bornés, santé/auth refus sans inférence reçus. Fil ADMIN réel/reprise sans génération/ledger estimé reçus, copie et premiers échecs conservés ; qualité refusée sur certitudes et cinq→six questions. Statut public ne reçoit pas santé/SLO/qualité ; régulation/opt-out/DPA/coûts réels ouverts, seize résultats inchangés. [Bornage et dette](REFONTE-PLAN.md).
 
@@ -450,7 +450,7 @@ Maintiennent la mission viable techniquement. Mémoires long terme, transports, 
 
 | Service | Rôle sustainment | Governor | Manifest |
 |---|---|---|---|
-| `llm-gateway/` | Engine controller existant : routage, Headroom, rate-policy et coûts ; extension 460 reçue, candidat 461 refuse la file expirée sans dépasser les limites locales | INFRASTRUCTURE | ✅ existant ; correction 461 en réception |
+| `llm-gateway/` | Engine controller existant : routage, Headroom, rate-policy et coûts ; extension Luna 460 et refus à expiration 461 reçus au périmètre source/API, réserve UI/charge restante | INFRASTRUCTURE | ✅ existant, correction livrée au périmètre |
 | `model-policy/` | Résolution gouvernée `purpose → model` (cache + Prisma `ModelPolicy`) | INFRASTRUCTURE | ✅ existant |
 | `financial-brain/` | **Thot** — fuel manager, capacity tracking | THOT | ✅ existant |
 | `budget-allocator/` | Allocation budget par mission | THOT | ✅ existant |
