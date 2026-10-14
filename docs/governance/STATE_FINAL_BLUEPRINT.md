@@ -3244,7 +3244,7 @@ Tout ce qui empêche la mission de s'éteindre en plein vol. Layer 2.
 |---|---|
 | **Thot** | Fuel manager — connaît le propellant restant par operator/brand, alerte avant flame-out. |
 | **Cost gate** (à venir, P3) | Abort logic — refuse une combustion qui mettrait la mission en faillite. |
-| **LLM Gateway** | Engine controller existant — routing/model-policy, Headroom, rate-policy et coût. Candidat 460 (2026-10-14) : dan-oauth/Luna exact, contrôles reçus ; contexte arrivé sur copie après correction system+developer, qualité refusée sur certitudes. Configuration sauvegardée, reprise DB de copie sans génération reçue, production/qualité à recevoir ; régulation locale sans garantie globale ou confidentialité OAuth ([bornage](REFONTE-PLAN.md)). |
+| **LLM Gateway** | Engine controller existant — routing/model-policy, Headroom, rate-policy et coût. 460 livré (2026-10-14) : dan-oauth/Luna exact et fil/reprise/ledger estimé reçus, sans manager parallèle ; qualité refusée sur certitudes/contenu historique. Régulation locale/opt-out/coûts réels restent ouverts, Statut n’est pas preuve de santé ou SLO ([bornage](REFONTE-PLAN.md)). |
 | **SLOs** | Performance envelope — limites opérationnelles par Intent kind. Breach = alerte. |
 | **Post-conditions** (à venir) | After-burn checks — vérifient que la combustion a produit l'effet déclaré, sinon rollback. |
 | **Compensating intents** | Reverse maneuvers — annuler une manœuvre si elle mettait la trajectoire en péril. |

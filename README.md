@@ -16,7 +16,7 @@
 
 ## Quick start
 
-**460 candidat, production non basculée.** Contrôles locaux reçus ; première native refusée conservée et contexte arrivé à Luna après correction sur copie. Qualité encore refusée : certitudes INFERRED/UNKNOWN présentées comme déclarées ; corpus copie 1/0 distinct du réel 0/21. Configuration openai/Luna sauvegardée, runtime dernier reçu 459. Reload UI/DB conserve quatre messages/coûts/populations sans génération ; carte Statut OAuth/Luna reçue sur copie. DPA/privacy, régulation et coûts réels restent ouverts ; seize résultats bornés, aucun entier fermé. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
+**460 livré au périmètre transport ; conseil utile refusé.** Runtime exact Luna OAuth sans OpenRouter, fil ADMIN réel et reprise sans génération reçus. Zéro questionnaire vérifiable à six réponses/21 historiques conservé, pas zéro utilisateur ; qualité encore refusée sur certitudes attribuées au fondateur et cinq questions historiques non réconciliées avec six. Statut Luna public reçu, aucun SLO/santé globale ou facture déduit. Copie 1/0/premiers refus préservés ; DPA/opt-out, régulation et coûts réels ouverts, seize résultats sans entier fermé. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
 
 **459 livré au périmètre reçu.** OpenRouter/Nemotron Free réellement servi et journalisé à zéro estimé ; fil repris sans génération, aucune facture ou gratuité globale déduite. Friesland : 26 vues/neuf assets lisibles, neuf aliases archivés, restauration puis réarchivage reçus sans perte d’identité. Noms/versions/droits/masters, C1 effets, conseil utile C5 et coût entier C7 restent ouverts. Seize résultats bornés, aucun entier fermé. [Preuves et limites](docs/governance/REFONTE-PLAN.md).
 

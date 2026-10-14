@@ -440,7 +440,7 @@ Observent, mesurent, archivent. **27 répertoires** (recompte 2026-10-06) ; la t
 
 ---
 
-**460 candidat — gestion d’appels réutilisée (2026-10-14)** : chaîne existante/dan-oauth/Luna, aucun manager/service/provider ajouté, Sol bots conservés. Cinq contrôles/tests/unit/ reçus, pas DEFAULT ; premier refus developer ignoré corrigé/8 tests et contexte reçu sur seconde native de copie, qualité refusée sur certitudes. Configuration openai/Luna sauvegardée/lignes originales préservées, runtime dernier reçu 459 ; reprise DB sans génération et carte Statut reçues sur copie, bascule/native utile attendues. Régulation/DPA/coûts réels ouverts. [Bornage et dette](REFONTE-PLAN.md).
+**460 livré — gestion d’appels réutilisée (2026-10-14)** : chaîne existante/dan-oauth/Luna exact, Sol conservés, aucun manager/service/provider ajouté. Source ffab0f93/trois CI/image f36dfd55…/runtime exact/clé OpenRouter absente/token hors build, aucun repli texte autre provider. Relais/UFW privé bornés, santé/auth refus sans inférence reçus. Fil ADMIN réel/reprise sans génération/ledger estimé reçus, copie et premiers échecs conservés ; qualité refusée sur certitudes et cinq→six questions. Statut public ne reçoit pas santé/SLO/qualité ; régulation/opt-out/DPA/coûts réels ouverts, seize résultats inchangés. [Bornage et dette](REFONTE-PLAN.md).
 
 ## 4. Sustainment (13 services — Mission Tier)
 
@@ -448,7 +448,7 @@ Maintiennent la mission viable techniquement. Mémoires long terme, transports, 
 
 | Service | Rôle sustainment | Governor | Manifest |
 |---|---|---|---|
-| `llm-gateway/` | Engine controller existant : routage, Headroom, rate-policy et coûts ; extension locale 460 dan-oauth/Luna, livraison à recevoir | INFRASTRUCTURE | ✅ existant, extension candidate |
+| `llm-gateway/` | Engine controller existant : routage, Headroom, rate-policy et coûts ; extension dan-oauth/Luna 460 livrée, qualité et garanties de régulation ouvertes | INFRASTRUCTURE | ✅ existant, extension reçue au périmètre |
 | `model-policy/` | Résolution gouvernée `purpose → model` (cache + Prisma `ModelPolicy`) | INFRASTRUCTURE | ✅ existant |
 | `financial-brain/` | **Thot** — fuel manager, capacity tracking | THOT | ✅ existant |
 | `budget-allocator/` | Allocation budget par mission | THOT | ✅ existant |
