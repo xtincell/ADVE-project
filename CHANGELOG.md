@@ -1,11 +1,20 @@
 # Changelog — La Fusee
 
+## v6.27.476 — fix(governance): raccorder créatif et inférence au gestionnaire existant (2026-10-16)
+
+**476 candidat : deux wrappers structurés, refus sur copie et contrôles de l’arbre final reçus.**
+
+- Deux chemins via `executeStructuredLLMCall`, forme objet/reprises zéro ; parseur/fallback créatif retiré, non-JSON refusé. Seul le gestionnaire tient les coûts.
+- Cible finale 23 / 3 verte ; MCP-v4 et service d’inférence en refus, quatorze tables conservées, aucune génération utile.
+- DEFAULT 4 650 / 440, gouvernance 1 646 / 167/sept commandes zéro ; premiers refus conservés. Complément de test dédié à venir, aucun commit/CI/image/production 476 reçu ; C3/C7/seize réceptions inchangés. [Bornage](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.475 — fix(ui): aligner l’édition opérateur sur l’amendement gouverné (2026-10-15)
 
-**475 candidat non livré : source 87601d88 reçue en CI, complément de droits non committé.**
+**475 livré : éditeur partagé et veto délégué reçus au périmètre, production en lecture/annulation seulement.**
 
 - Éditeur factorisé sur `PillarPage`/`AmendPillarModal`, amendement fictif/reprise sur copie reçus ; audit des autres mutations manuelles ouvert.
-- **Complément `fix(governance)` candidat** : collaborateur en lecture seule refusé avant effets via `assertCollaboratorMayEmit` existant ; deux rouges puis 78 / 5 verts, DEFAULT 4 638 / 439 et cinq contrôles zéro. Veto de concurrence reçu sur copie ; nouvelle source/CI/image/production attendues, C3/C4/seize réceptions inchangés. [Bornage et reprise](docs/governance/REFONTE-PLAN.md).
+- Source 837616a7/CI/image/runtime exacts ; ADMIN SPAWT/huit vues/focus/placeholder générique reçus, annulations sans POST/modèle, données conservées.
+- Causes ancien éditeur/CIMENCAM/veto précis purgées des registres actifs ; autres API/rôles/vocabulaire C4 restent ouverts. DEFAULT 4 638 / 439/cible 78 / 5 acquis, seize réceptions inchangées. [Bornage](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.474 — fix(sources): joindre la version lue à l’amendement opérateur (2026-10-15)
 

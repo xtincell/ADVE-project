@@ -27,6 +27,9 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+import ts from "typescript";
 import {
   _resolveTextProviderOrderForTest as resolveOrder,
   isPremiumMode,
@@ -80,6 +83,33 @@ describe("cascade providers — l'opérateur garde la main", () => {
 });
 
 describe("aucune matrice de routage concurrente ne renaît", () => {
+  it("les imports du SDK texte restent dans le gateway existant", () => {
+    const violations: string[] = [];
+    const root = path.resolve("src/server");
+    const gateway = path.join(root, "services/llm-gateway") + path.sep;
+    const generators = new Set(["generateText", "streamText", "generateObject", "streamObject"]);
+    const walk = (directory: string) => {
+      for (const entry of readdirSync(directory, { withFileTypes: true })) {
+        const file = path.join(directory, entry.name);
+        if (entry.isDirectory()) { if (!file.startsWith(gateway)) walk(file); continue; }
+        if (!file.endsWith(".ts") || file.startsWith(gateway)) continue;
+        const source = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest);
+        for (const node of source.statements) {
+          if (!ts.isImportDeclaration(node) || !ts.isStringLiteral(node.moduleSpecifier)) continue;
+          const clause = node.importClause;
+          if (!clause || clause.isTypeOnly) continue;
+          const module = node.moduleSpecifier.text;
+          if (module === "@ai-sdk/anthropic") violations.push(path.relative(root, file));
+          if (module !== "ai" || !clause.namedBindings) continue;
+          if (ts.isNamespaceImport(clause.namedBindings) || clause.namedBindings.elements.some(
+            item => !item.isTypeOnly && generators.has((item.propertyName ?? item.name).text),
+          )) violations.push(path.relative(root, file));
+        }
+      }
+    };
+    walk(root);
+    expect(violations).toEqual([]);
+  });
   it("`llm-gateway/router` ne ré-expose pas de sélecteur de modèle", async () => {
     const mod = await import("@/server/services/llm-gateway/router");
     // Le module est un CATALOGUE d'affichage (page /status), pas un routeur.

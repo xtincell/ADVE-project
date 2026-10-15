@@ -34,6 +34,16 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.476",
+    date: "2026-10-16",
+    headline: "Des réglages communs pour l’assistance",
+    highlights: [{
+      emoji: "⚙️",
+      title: "Retrouver vos choix d’assistance",
+      body: "Les outils créatifs et l’aide à la préparation de marque utilisent les réglages communs d’assistance. Un refus du service conserve les informations déjà saisies.",
+    }],
+  },
+  {
     version: "6.27.475",
     date: "2026-10-15",
     headline: "Une révision de marque cohérente",

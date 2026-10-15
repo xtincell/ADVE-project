@@ -10,6 +10,8 @@ Statut : `active` (page substantive), `redirect` (legacy renommée — redirige)
 
 Source de vérité : `find src/app -name 'page.tsx'`. Mis à jour avec [APOGEE.md](APOGEE.md) §4.
 
+**476 candidat — aucun ajout de page** : deux wrappers structurés, cible 23 / 3 verte ; MCP-v4/inférence en refus sur copie, sans génération utile, HTTP activateBrand non exercé. Arbre final DEFAULT 4 650 / 440/gouvernance 1 646 / 167/sept commandes zéro ; premiers refus conservés. Raccord applicatif puis complément de test dédiés à committer, CI/image/production non reçues. 475 livré, aucune validation sémantique déduite. [Bornage](REFONTE-PLAN.md).
+
 **439 livré — huit pages de marque existantes** : identity, positioning,
 offer, engagement, diagnostic, market, potential et roadmap réutilisent
 PillarPage. Son état vient désormais de pillar.readiness dans un seul Badge ;
@@ -193,7 +195,7 @@ Le founder édite et consulte tous les aspects de sa fusée.
 | `/cockpit/brand/market/page.tsx` | Telemetry | M | active | Pillar T (track) |
 | `/cockpit/brand/potential/page.tsx` | Guidance | M | active | Pillar I (innovation) |
 | `/cockpit/brand/roadmap/page.tsx` | Guidance | M | active | Pillar S (strategy) |
-| `/cockpit/brand/edit/page.tsx` | Guidance | M | active | Candidat 475 raccordé à PillarPage/AmendPillarModal, huit vues/focus ; amendement fictif/recharge sur copie et source 87601d88 en CI reçus ; veto collaborateur testé, conflit de version reçu sur API de copie ; nouvelle source/CI/image/production attendues, aucun droit fondateur élargi |
+| `/cockpit/brand/edit/page.tsx` | Guidance | M | active | 475 livré, PillarPage/AmendPillarModal/huit vues/focus ; amendement fictif sur copie distinct de la production ADMIN en lecture/annulation, placeholder générique reçu, aucun POST/modèle ; autres rôles/API à recevoir, aucun droit fondateur élargi |
 | `/cockpit/brand/assets/page.tsx` | Propulsion | M | active | Vault assets brand |
 | `/cockpit/brand/deliverables/page.tsx` | Propulsion | M | active | Liste livrables |
 | `/cockpit/brand/deliverables/[key]/page.tsx` | Propulsion | M | active | Livrable détail |

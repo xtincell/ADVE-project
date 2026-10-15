@@ -28,7 +28,7 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
  * The pass:
  *   1. Reads QuickIntake (responses + companyName + sector + country +
  *      businessModel + positioning + rawText).
- *   2. Calls Claude Sonnet 4 with a structured prompt that returns strict JSON.
+ *   2. Uses the existing structured text gateway with the extraction policy.
  *   3. Validates the response shape (defensive — LLM can drift).
  *   4. Merges into the 3 affected Pillar.content rows (a, d, v) and writes
  *      Pillar.fieldCertainty = { <path>: "INFERRED" } for each filled field.
@@ -43,14 +43,16 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
  *     from BrandDataSource extraction).
  */
 
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { z } from "zod";
+import { executeStructuredLLMCall } from "@/server/services/utils/llm-structured";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { writePillar } from "@/server/services/pillar-gateway";
 
-const MODEL = "claude-sonnet-4-20250514";
 const TIMEOUT_MS = 45_000;
+// Preserve the existing partial-object contract; this is not semantic validation
+// of the proposed fields. Pillar validation and review remain downstream.
+const inferredResponseSchema = z.record(z.string(), z.unknown());
 
 /**
  * Benchmarks sectoriels DÉTERMINISTES (PR-K3-ter — dé-LLM des chiffrés).
@@ -444,23 +446,21 @@ export async function inferNeedsHumanFields(intakeId: string): Promise<Inference
 
   let parsed: InferredAdveFields;
   try {
-    const result = await generateText({
-      model: anthropic(MODEL),
+    const result = await executeStructuredLLMCall({
+      caller: "quick-intake:infer-needs-human-fields",
+      purpose: "extraction",
+      strategyId,
+      schema: inferredResponseSchema,
+      retries: 0,
       system: SYSTEM_PROMPT,
       prompt: buildUserPrompt(intake),
       maxOutputTokens: 1500,
       temperature: 0.4,
-      abortSignal: controller.signal,
+      signal: controller.signal,
     });
     clearTimeout(timer);
 
-    // Strip any accidental markdown fence the model may add despite instructions.
-    const raw = result.text.trim()
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/\s*```\s*$/i, "")
-      .trim();
-
-    const obj: unknown = JSON.parse(raw);
+    const obj: unknown = result.data;
     if (!isValidInferredFields(obj)) {
       return { ok: false, fieldsInferred: 0, error: "invalid_llm_response_shape" };
     }
