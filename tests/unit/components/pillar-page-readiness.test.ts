@@ -170,6 +170,14 @@ describe("PillarPage — current state differs from field population", () => {
     expect(screen.queryByRole("button", { name: "Modifier" })).toBeNull();
   });
 
+  it("does not promise a founder an edit link to an operator-only page", () => {
+    fixture.assess.data.needsHuman = ["citationFondatrice"];
+    render(React.createElement(PillarPage, { pageKey: "identity" }));
+    expect(screen.getByText("Révision prise en charge par votre équipe")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Modifier|Compléter/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Modifier" })).toBeNull();
+  });
+
   it("closes route selection as well as recalculation when the plan is locked", () => {
     fixture.get.data.pillar.validationStatus = "LOCKED";
     fixture.canOperate = true;

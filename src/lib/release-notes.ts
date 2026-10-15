@@ -34,6 +34,16 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.475",
+    date: "2026-10-15",
+    headline: "Une révision de marque cohérente",
+    highlights: [{
+      emoji: "✏️",
+      title: "Un même parcours pour votre équipe",
+      body: "Votre équipe retrouve les champs à revoir dans les vues de marque existantes. Les corrections conservent leur version et leurs références, et un brouillon annulé reste sans effet.",
+    }],
+  },
+  {
     version: "6.27.471", date: "2026-10-15",
     headline: "Vos documents récents dans le conseil",
     highlights: [

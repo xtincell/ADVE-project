@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.475 — fix(ui): aligner l’édition opérateur sur l’amendement gouverné (2026-10-15)
+
+**475 candidat recetté sur copie isolée, non livré : amendement fictif et reprise reçus.**
+
+- `brand/edit` réutilise `PillarPage`/`AmendPillarModal` ; huit vues/focus, variables ADVE non dérivées, RTIS explicite.
+- DEFAULT 4 632 / 439, gouvernance 1 645 / 167, cible 60 / 4 verts ; cinq contrôles zéro. Correction fictive versionnée/référencée conservée après recharge, données originales préservées.
+- `updatePartial` backend sans consommateur UI `src` actuel, audit API ouvert ; source/CI/image/production attendues. C3-02/seize réceptions inchangés. [Bornage et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.474 — fix(sources): joindre la version lue à l’amendement opérateur (2026-10-15)
 
 **Complément CI reçu — 15 octobre** : source 811c4eb8, CI 38805315500/Mission 38805315461/Chromatic 38805315601 verts au premier essai ; DEFAULT 4 613 / 437, PG 375 / 19/diff sans différence. CI réelle via ECR primaire ; repli Docker Hub reçu seulement en simulation/identité manifeste. Ancien refus 38801540158 conservé, supersédé sans relance ; cause pull avant steps/sans repli fermée, dette/symptôme précis purgés. Quotas externes/C7 restent ouverts ; production 474/source 6e117414 inchangées, aucun build/déploiement/modèle.

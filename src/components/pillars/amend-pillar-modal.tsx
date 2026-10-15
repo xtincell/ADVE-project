@@ -361,7 +361,7 @@ function AmendPillarEditor({
                   rows={5}
                   value={proposedValue}
                   onChange={(e) => { previewRevision.current++; setProposedValue(e.target.value); }}
-                  placeholder={selectedFieldEntry?.spec.examples?.[0] ?? ""}
+                  placeholder="Saisir la valeur de ce champ"
                 />
               )}
               {selectedFieldEntry?.spec.maxLength && !usesStructured ? (

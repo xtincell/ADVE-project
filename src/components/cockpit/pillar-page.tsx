@@ -14,6 +14,7 @@ import { inferredFieldPaths } from "@/domain/field-provenance";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { resolvePillarPath } from "@/lib/pillar-path";
+import { listEditableFields } from "@/lib/types/variable-bible";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import type { PillarKey as PillarStorageKey } from "@/lib/types/advertis-vector";
@@ -34,6 +35,7 @@ import { RecalculateRtisButton } from "@/components/pillars/recalculate-rtis-but
 import { ActionDatabasePanel } from "@/components/cockpit/action-database-panel";
 import { BESPOKE_PILLAR_RENDERERS } from "@/components/cockpit/pillars";
 import { Badge } from "@/components/primitives/badge";
+import { Button } from "@/components/primitives/button";
 
 // ── Pillar config ─────────────────────────────────────────────────────
 
@@ -174,9 +176,9 @@ function RecoValueFull({ value, depth = 0 }: { value: unknown; depth?: number })
 
 // ── Component ─────────────────────────────────────────────────────────
 
-interface PillarPageProps { pageKey: keyof typeof PILLAR_CONFIG }
+interface PillarPageProps { pageKey: keyof typeof PILLAR_CONFIG; focusPaths?: string[] }
 
-export function PillarPage({ pageKey }: PillarPageProps) {
+export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
   const config = PILLAR_CONFIG[pageKey]!;
   const strategyId = useCurrentStrategyId();
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -186,9 +188,8 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const utils = trpc.useUtils();
 
   const isAdve = config.type === "adve";
-  // Founders are not operators: OPERATOR_AMEND_PILLAR is operator-only. Route
-  // founders to their working editor (/cockpit/brand/edit) instead of the
-  // operator amend modal that would fail on open with FORBIDDEN.
+  // Manual amendment remains operator-only. A founder sees the same content
+  // without a misleading link to the operator-gated legacy entry point.
   const { canWriteStrategy, canWriteCalendar, canOperateOnBrand: canOperate, canSyncActions } = useBrandWriteAccess(strategyId);
   const [amendOpen, setAmendOpen] = useState(false);
   const [amendField, setAmendField] = useState<string | null>(null);
@@ -197,7 +198,13 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
   // ── ADR-0030 — open amend modal pre-targeted on a specific field ──
   function openAmendOnField(fieldPath: string) {
-    setAmendField(fieldPath);
+    const entry = listEditableFields(config.pillarKey).find(f =>
+      fieldPath === f.field || fieldPath.startsWith(`${f.field}.`) || fieldPath.startsWith(`${f.field}[`));
+    if (!entry) {
+      setEnrichResult({ type: "warning", message: "Ce champ est calculé ou non éditable. Révisez les informations de départ." });
+      return;
+    }
+    setAmendField(entry.field);
     setAmendOpen(true);
   }
   function openAmendBlank() {
@@ -319,6 +326,8 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const pillar = pillarQuery.data?.pillar;
   const content = (pillar?.content ?? {}) as Record<string, unknown>;
   const isFilled = (v: unknown) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0);
+  const editableFields = listEditableFields(config.pillarKey);
+  const focusedPaths = focusPaths.filter(path => path.split(".")[0]?.toLowerCase() === config.pillarKey);
 
   // Schema keys = source of truth. Filter:
   //   1. dot-notation artifacts (LLM résidu de path imbriqués)
@@ -554,6 +563,27 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         {isAdve ? "Fondation" : "Stratégie"}
       </Link>
 
+      {focusedPaths.length ? (
+        <section aria-label="Champs à revoir" className="space-y-2 rounded-lg border border-warning/30 bg-warning/10 p-4">
+          <h2 className="text-sm font-semibold text-warning">Champs à revoir</h2>
+          <p className="text-xs text-foreground-secondary">Une valeur présente reste à relire ; elle ne vaut pas validation de la marque.</p>
+          {focusedPaths.map(path => {
+            const fieldPath = path.slice(path.indexOf(".") + 1);
+            const entry = editableFields.find(f => fieldPath === f.field || fieldPath.startsWith(`${f.field}.`) || fieldPath.startsWith(`${f.field}[`));
+            const present = isFilled(resolvePillarPath(content, fieldPath));
+            return (
+              <div key={path} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border p-3">
+                <div className="min-w-0">
+                  <p className="break-words text-sm text-foreground">{getFieldLabel(fieldPath)}</p>
+                  <p className="text-xs text-foreground-secondary">{present ? "Valeur présente" : "Valeur absente"} · {entry ? "Révision manuelle" : "Champ calculé ou non éditable"}</p>
+                </div>
+                {entry && canOperate ? <Button size="sm" variant="outline" onClick={() => openAmendOnField(entry.field)}>Revoir {getFieldLabel(fieldPath)}</Button> : null}
+              </div>
+            );
+          })}
+        </section>
+      ) : null}
+
       {/* ── Header — 3-level scoring ─────────────────────────────── */}
       <div className="rounded-lg border border-white/5 bg-surface-raised px-4 py-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -561,8 +591,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             <h1 className={`text-lg font-bold ${config.accent} truncate`}>{config.title}</h1>
           </div>
           <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
-            {/* ADR-0023 — manual amend (ADVE only). Operator-only Intent → for
-                founders, link to the founder editor instead of the amend modal. */}
+            {/* Both entry points use the same operator-only amendment. */}
             {isAdve && strategyId && canWriteStrategy ? (
               canOperate ? (
                 <button
@@ -575,14 +604,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                   Modifier
                 </button>
               ) : (
-                <Link
-                  href="/cockpit/brand/edit"
-                  className="flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-foreground-secondary transition-colors hover:bg-white/10 hover:text-foreground"
-                  title="Modifier votre fiche de marque"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Modifier
-                </Link>
+                <span className="text-xs text-foreground-secondary">Révision prise en charge par votre équipe</span>
               )
             ) : null}
             {/* RTIS recalculation goes through ENRICH_*, never manual edit. */}
@@ -837,7 +859,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                     : <>Les piliers stratégiques se dérivent de votre fondation. <strong>Enrichir</strong> ci-dessus pour générer ce pilier depuis ADVE (nécessite ADVE complété au préalable).</>
                 ) : (
                   isAdve
-                    ? <>Répondez aux champs ci-dessous — chaque réponse renforce votre socle de marque.</>
+                    ? <>Votre équipe vous accompagne pour compléter et réviser les informations de marque.</>
                     : <>Ce pilier se construit automatiquement à partir de votre fondation — complétez d&apos;abord vos 4 piliers de base.</>
                 )}
               </p>
@@ -893,15 +915,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                         <Pencil className="h-3 w-3" />
                         Saisir
                       </button>
-                    ) : (
-                      <Link
-                        href="/cockpit/brand/edit"
-                        className="flex items-center gap-1 rounded-md bg-warning/15 px-2.5 py-1 text-2xs font-medium text-warning transition-colors hover:bg-warning/25"
-                      >
-                        <Pencil className="h-3 w-3" />
-                        Compléter
-                      </Link>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}
@@ -968,16 +982,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                           <Pencil className="h-3 w-3" />
                           Saisir
                         </button>
-                      ) : (
-                        <Link
-                          href="/cockpit/brand/edit"
-                          className="flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-2xs text-foreground-muted transition-colors hover:border-warning/40 hover:text-warning"
-                          title="Réécrire ce champ dans votre éditeur"
-                        >
-                          <Pencil className="h-3 w-3" />
-                          Compléter
-                        </Link>
-                      )}
+                      ) : null}
                       <button
                         type="button"
                         disabled={pending || !strategyId}

@@ -55,9 +55,11 @@ export function StrategyProvider({ children }: { children: ReactNode }) {
   // cassé). Lu côté client (pas `useSearchParams` → évite le bail-out
   // CSR/Suspense au prerender) au montage du Cockpit.
   useEffect(() => {
-    const fromUrl = new URLSearchParams(window.location.search).get("strategy");
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get("strategy") || params.get("strategyId");
     if (fromUrl) {
       setSelectedId(fromUrl);
+      setExplicitSelection(true);
       localStorage.setItem(ACTIVE_STRATEGY_STORAGE_KEY, fromUrl);
       return;
     }
@@ -89,8 +91,9 @@ export function StrategyProvider({ children }: { children: ReactNode }) {
     setExplicitSelection(true);
     localStorage.setItem(ACTIVE_STRATEGY_STORAGE_KEY, id);
     const url = new URL(window.location.href);
-    if (url.searchParams.has("strategy")) {
+    if (url.searchParams.has("strategy") || url.searchParams.has("strategyId")) {
       url.searchParams.set("strategy", id);
+      url.searchParams.delete("strategyId");
       router.replace(`${url.pathname}${url.search}${url.hash}`, { scroll: false });
     }
     // The picker has its own fresh query. A newly created brand can be absent
