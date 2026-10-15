@@ -2,12 +2,12 @@
 
 ## v6.27.470 — fix(llm): finaliser le journal avant de terminer l’appel (2026-10-15)
 
-**470 candidate : gestionnaire existant prolongé, recettes sur copie reçues ; production 469 inchangée.**
+**470 livré : journal réparé ; utilisation utile de la source SPAWT refusée après un appel distinct du déploiement.**
 
-- Attente du journal avant retour/fin du flux ; créneau libéré avant cette attente, erreur ledger non fatale sans nouvelle génération.
-- Baseline deux rouges/deux verts, prototype simulé 15/4 vert ; deux appels réels sur copie distincts, conservation/recharge reçues.
-- DEFAULT 4 550/434, cible 62/5, cinq contrôles verts/CODE-MAP sans diff reçus ; commit/CI/image/runtime 470 attendus, aucune note client.
-- C4/C7, seize réceptions/zéro chantier sur sept et progression globale non calculée inchangés. [Bornage](docs/governance/REFONTE-PLAN.md).
+- Deux fichiers Gateway prolongés, créneau libéré avant attente ledger, erreur non fatale sans régénération ; runtime/conservation reçus.
+- Source descriptive Quiz Palais six questions/cinq axes déposée/indexée sans modèle/embedding, marquée Déclaré.
+- Après dépôt, un appel production HTTP 200/sixième réponse ; source non citée, Q6/Taste Reveal mal qualifiés. C3 réouvert, aucun crédit.
+- C4/C7/seize réceptions inchangés ; clôture documentaire distincte sans bump/image/note client. [Bornage](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.469 — fix(council): conserver les entrées et lire la décision en premier (2026-10-15)
 
