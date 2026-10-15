@@ -2,11 +2,11 @@
 
 ## v6.27.474 — fix(sources): joindre la version lue à l’amendement opérateur (2026-10-15)
 
-**474 candidate : référence explicite et amendement persisté reçus sur dossier fictif, livraison attendue.**
+**474 livré : référence/version et garde opérateur raccordées ; production reçue en lecture/annulation seulement.**
 
-- Quatre fichiers existants raccordés ; empreinte/version lues transmises, lecteur partagé et droits fondateur conservés.
-- DEFAULT 4 607 / 436, gouvernance 1 639 / 166, cible 41 / 3 et quatre contrôles zéro reçus ; huit cas PG avec un rejeu de préparation.
-- ADMIN fictif : lecture sans citation conserve le brouillon, puis une référence/un amendement HTTP 200, v2/recharge reçus sans modèle. Source/CI/image/runtime attendus, production 473/C3/seize réceptions inchangés. [Bornage](docs/governance/REFONTE-PLAN.md).
+- Source 6e117414/CI/image/runtime exacts reçus ; local DEFAULT 4 607 / 436 et gouvernance 1 639 / 166, CI PostgreSQL 375 / 19.
+- ADMIN SPAWT : source actuelle lue, référence jointe au seul brouillon puis annulée ; aucun amendement réel/modèle, données conservées. Amendement fictif v2 distinct.
+- Causes ciblées fermées ; C3/parité legacy/fondateur, C2/C4/C7 et seize réceptions inchangés. Refus ECR conservé ; clôture documentaire distincte sans bump/build/note client. [Bornage](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.473 — fix(console): distinguer le routage prévu des politiques enregistrées (2026-10-15)
 
