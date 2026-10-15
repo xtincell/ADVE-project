@@ -22,32 +22,41 @@ type Scenario = "primary" | "fallback" | "both-fail" | "unhealthy" | "delayed";
 
 function exercise(scenario: Scenario) {
   const dir = mkdtempSync(join(tmpdir(), "shinkiro-ci-postgres-"));
-  const logPath = join(dir, "docker.jsonl");
+  const logPath = join(dir, "docker.argv");
   try {
-    writeFileSync(join(dir, "docker"), `#!${process.execPath}\n` + String.raw`
-const fs = require("node:fs");
-const args = process.argv.slice(2);
-const log = process.env.PG_FIXTURE_LOG;
-const previous = fs.existsSync(log)
-  ? fs.readFileSync(log, "utf8").trim().split("\n").filter(Boolean).map(JSON.parse)
-  : [];
-fs.appendFileSync(log, JSON.stringify(args) + "\n");
-const scenario = process.env.PG_FIXTURE_SCENARIO;
-if (args[0] === "pull") {
-  const refused = scenario === "both-fail" ||
-    (scenario === "fallback" && args[1].startsWith("public.ecr.aws/"));
-  if (refused) {
-    process.stderr.write("toomanyrequests: Data limit exceeded\n");
-    process.exit(1);
-  }
+    // Keep the real shell and its ten readiness probes. The mock uses shell
+    // functions so a loaded runner does not spend the outer deadline starting
+    // a process for every mock command. NUL framing preserves argv exactly.
+    const fixture = join(dir, "mock-commands.sh");
+    writeFileSync(fixture, String.raw`
+docker() {
+printf '%s\0' "$#" "$@" >> "$PG_FIXTURE_LOG"
+if [ "$1" = "pull" ]; then
+  refused=0
+  if [ "$PG_FIXTURE_SCENARIO" = "both-fail" ]; then refused=1; fi
+  if [ "$PG_FIXTURE_SCENARIO" = "fallback" ]; then
+    case "$2" in public.ecr.aws/*) refused=1 ;; esac
+  fi
+  if [ "$refused" = "1" ]; then
+    printf 'toomanyrequests: Data limit exceeded\n' >&2
+    return 1
+  fi
+fi
+if [ "$1" = "exec" ]; then
+  if [ "$PG_FIXTURE_SCENARIO" = "unhealthy" ]; then return 1; fi
+  if [ "$PG_FIXTURE_SCENARIO" = "delayed" ]; then
+    previous=0
+    if [ -f "$PG_FIXTURE_LOG.execs" ]; then read -r previous < "$PG_FIXTURE_LOG.execs"; fi
+    attempt=$((previous + 1))
+    printf '%s\n' "$attempt" > "$PG_FIXTURE_LOG.execs"
+    if [ "$attempt" -lt 3 ]; then return 1; fi
+  fi
+fi
+return 0
 }
-if (args[0] === "exec" && (scenario === "unhealthy" ||
-  (scenario === "delayed" && previous.filter((entry) => entry[0] === "exec").length < 2))) {
-  process.exit(1);
-}
-`, { mode: 0o700 });
-    writeFileSync(join(dir, "sleep"), "#!/bin/sh\nexit 0\n", { mode: 0o700 });
-    const result = spawnSync("/bin/bash", ["-c", startupScript()], {
+sleep() { return 0; }
+`, { mode: 0o600 });
+    const result = spawnSync("/bin/bash", ["-c", '. "$1"\n' + startupScript(), "postgres-fixture", fixture], {
       encoding: "utf8",
       timeout: 10_000,
       env: {
@@ -57,8 +66,15 @@ if (args[0] === "exec" && (scenario === "unhealthy" ||
         PG_FIXTURE_SCENARIO: scenario,
       },
     });
-    const calls: string[][] = readFileSync(logPath, "utf8").trim().split("\n")
-      .map((line) => JSON.parse(line) as string[]);
+    const framed = readFileSync(logPath, "utf8").split("\0");
+    expect(framed.pop()).toBe("");
+    const calls: string[][] = [];
+    for (let cursor = 0; cursor < framed.length;) {
+      const count = Number(framed[cursor++]);
+      expect(Number.isSafeInteger(count) && count > 0 && cursor + count <= framed.length).toBe(true);
+      calls.push(framed.slice(cursor, cursor + count));
+      cursor += count;
+    }
     return { ...result, calls };
   } finally {
     rmSync(dir, { recursive: true, force: true });
