@@ -9,25 +9,19 @@
  */
 
 import { useState } from "react";
-import { trpc } from "@/lib/trpc/client";
+import { trpc, type RouterOutputs } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Modal } from "@/components/shared/modal";
 import { FormField } from "@/components/shared/form-field";
+import { FriendlyError } from "@/components/shared/friendly-error";
+import { Badge } from "@/components/primitives/badge";
+import { Button } from "@/components/primitives/button";
 import { Edit3, RefreshCw, AlertCircle } from "lucide-react";
 
-type Purpose = "final-report" | "agent" | "intermediate" | "intake-followup" | "extraction";
-type PipelineVersion = "V1" | "V2" | "V3";
-
-interface PolicyRow {
-  purpose: Purpose;
-  anthropicModel: string;
-  ollamaModel: string | null;
-  allowOllamaSubstitution: boolean;
-  pipelineVersion: PipelineVersion;
-  version: number;
-  notes: string | null;
-}
+type PolicyRow = RouterOutputs["governance"]["modelPolicyList"][number];
+type Purpose = PolicyRow["purpose"];
+type PipelineVersion = PolicyRow["pipelineVersion"];
 
 const PURPOSE_LABEL: Record<Purpose, string> = {
   "final-report": "Final report",
@@ -56,34 +50,62 @@ export default function ModelPolicyPage() {
   const [editing, setEditing] = useState<PolicyRow | null>(null);
 
   if (policies.isLoading) return <SkeletonPage />;
+  const routing = policies.isError ? undefined : policies.data?.[0]?.routing;
 
   return (
     <div className="space-y-6 p-6">
       <PageHeader
         title="Model Policy"
-        description="Registre gouverné — purpose → modèle Anthropic / Ollama. Chaque modification crée un IntentEmission UPDATE_MODEL_POLICY hash-chained."
+        description="Routage texte du Gateway et réglages enregistrés par usage. La lecture ne lance aucun appel de modèle."
       />
 
       <div className="flex items-center justify-end">
-        <button
+        <Button
           type="button"
           onClick={() => policies.refetch()}
-          className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground hover:border-border"
+          variant="outline"
+          size="sm"
+          loading={policies.isFetching}
         >
           <RefreshCw className="h-3 w-3" /> Rafraîchir
-        </button>
+        </Button>
       </div>
 
+      <FriendlyError error={policies.error} />
+      {routing && (
+        <div className="space-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm">
+          <p className="font-medium text-foreground">
+            Priorité du déploiement : {routing.explicitPrimary ?? "ordre par défaut"}
+            {routing.premium ? " · mode premium activé" : " · mode premium désactivé"}
+          </p>
+          {routing.subscriptionOnly && (
+            <p className="text-foreground-secondary">
+              Abonnement OpenAI exclusivement choisi. Les réglages Anthropic et Ollama restent
+              enregistrés ; leur édition ne remplace pas ce raccord. S’il est incomplet ou
+              bloqué, aucun autre fournisseur n’est tenté.
+            </p>
+          )}
+          <p className="text-xs text-foreground-muted">
+            Instantané de ce processus : tentative texte par défaut, avant overrides par appel,
+            budget de marque et régulation du débit ; hors vision et vidéo. Configuration et
+            circuit ne prouvent ni validité des accès, quota disponible, facture ou santé globale.
+            Le pipeline de final-report règle le rapport d’intake, indépendamment du modèle.
+          </p>
+        </div>
+      )}
+
+      {!policies.isError && (
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="min-w-full text-xs">
           <thead className="bg-background">
             <tr className="text-left text-[10px] uppercase tracking-wider text-foreground-muted">
               <th className="px-3 py-2">Purpose</th>
-              <th className="px-3 py-2">Anthropic model</th>
-              <th className="px-3 py-2">Ollama substitute</th>
-              <th className="px-3 py-2">Pipeline</th>
+              <th className="px-3 py-2">Routage texte prévu</th>
+              <th className="px-3 py-2">Anthropic enregistré</th>
+              <th className="px-3 py-2">Ollama enregistré</th>
+              <th className="px-3 py-2">Pipeline enregistré</th>
               <th className="px-3 py-2">Version</th>
-              <th className="px-3 py-2">Notes</th>
+              <th className="px-3 py-2">Notes enregistrées</th>
               <th className="px-3 py-2 text-right">Action</th>
             </tr>
           </thead>
@@ -92,60 +114,76 @@ export default function ModelPolicyPage() {
               <tr key={p.purpose} className="border-t border-border">
                 <td className="px-3 py-2">
                   <div className="font-mono text-foreground">{p.purpose}</div>
-                  <div className="text-[10px] text-foreground-muted">{PURPOSE_DESC[p.purpose as Purpose]}</div>
+                  <div className="text-[10px] text-foreground-muted">{PURPOSE_DESC[p.purpose]}</div>
+                </td>
+                <td className="min-w-56 px-3 py-2">
+                  {p.routing.attempts.length ? (
+                    <ol className="list-inside list-decimal space-y-2">
+                      {p.routing.attempts.map((attempt) => (
+                        <li key={attempt.provider}>
+                          <span className="font-mono text-foreground">{attempt.provider} / {attempt.model}</span>
+                          <div className="text-foreground-muted">
+                            {attempt.eligible ? "Configuration / circuit autorisent la tentative"
+                              : "Configuration absente ou circuit bloqué"}
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="text-warning">Aucun candidat : raccord incomplet ou circuit bloqué.</p>
+                  )}
+                  <p className="mt-2 text-foreground-muted">Politique lue v{p.routing.policyVersion}</p>
                 </td>
                 <td className="px-3 py-2 font-mono text-[11px] text-foreground-secondary">{p.anthropicModel}</td>
                 <td className="px-3 py-2 font-mono text-[11px]">
                   {p.ollamaModel ? (
-                    <span className={p.allowOllamaSubstitution ? "text-emerald-400" : "text-foreground-muted line-through"}>
+                    <span>
                       {p.ollamaModel}
+                      <span className="block text-foreground-muted">
+                        {p.allowOllamaSubstitution ? "Substitution autorisée" : "Substitution désactivée"}
+                      </span>
                     </span>
                   ) : (
                     <span className="text-foreground-muted">—</span>
                   )}
                 </td>
                 <td className="px-3 py-2">
-                  <span
-                    className={
-                      "inline-flex rounded border px-1.5 py-0.5 text-[10px] font-medium " +
-                      (p.pipelineVersion === "V3"
-                        ? "border-emerald-700/60 bg-emerald-950/30 text-emerald-300"
-                        : p.pipelineVersion === "V2"
-                          ? "border-amber-700/60 bg-amber-950/30 text-amber-300"
-                          : "border-border bg-background text-foreground-secondary")
-                    }
-                  >
-                    {p.pipelineVersion}
-                  </span>
+                  <Badge tone="neutral">{p.pipelineVersion}</Badge>
                 </td>
                 <td className="px-3 py-2 font-mono text-[10px] text-foreground-muted">v{p.version}</td>
                 <td className="px-3 py-2 max-w-[260px] text-[11px] text-foreground-muted">
                   <span className="line-clamp-2">{p.notes ?? "—"}</span>
+                  <span className="block">Historique saisi, pas un état du routage.</span>
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <button
+                  <Button
                     type="button"
-                    onClick={() => setEditing(p as PolicyRow)}
-                    className="inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-0.5 text-[10px] text-foreground-secondary hover:border-border"
+                    onClick={() => setEditing(p)}
+                    variant="outline"
+                    size="sm"
+                    aria-label={`Modifier les réglages ${p.purpose}`}
                   >
-                    <Edit3 className="h-3 w-3" /> Édit
-                  </button>
+                    <Edit3 className="h-3 w-3" /> Modifier
+                  </Button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      )}
 
       <p className="text-[10px] text-foreground-muted">
         Les modifications passent par <code>UPDATE_MODEL_POLICY</code> (Mestor → Artemis →
-        model-policy.updatePolicy). Cache LLM Gateway invalidé automatiquement.
+        model-policy.updatePolicy). Cache invalidé dans le processus écrivain ; lecture
+        des autres processus sous 60 secondes. Le rapport d’intake consulte le pipeline
+        de final-report ; les autres valeurs de pipeline sont seulement enregistrées.
       </p>
 
       <Modal
         open={!!editing}
         onClose={() => setEditing(null)}
-        title={editing ? `Édit policy — ${PURPOSE_LABEL[editing.purpose]}` : ""}
+        title={editing ? `Réglages enregistrés — ${PURPOSE_LABEL[editing.purpose]}` : ""}
         size="lg"
       >
         {editing && (
@@ -193,9 +231,16 @@ function PolicyEditor({
       <p className="text-xs text-foreground-muted">
         {PURPOSE_DESC[initial.purpose]}
       </p>
+      {initial.routing.explicitPrimary && (
+        <p className="rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
+          Priorité du déploiement : {initial.routing.explicitPrimary}. Ces champs enregistrent
+          la politique ; ils ne changent pas cette priorité.
+        </p>
+      )}
 
       <FormField label="Modèle Anthropic">
         <input
+          aria-label="Modèle Anthropic"
           value={anthropicModel}
           onChange={(e) => setAnthropicModel(e.target.value)}
           placeholder="claude-sonnet-4-20250514"
@@ -205,6 +250,7 @@ function PolicyEditor({
 
       <FormField label="Modèle Ollama (vide = pas de substitution possible)">
         <input
+          aria-label="Modèle Ollama"
           value={ollamaModel}
           onChange={(e) => setOllamaModel(e.target.value)}
           placeholder="llama3.1:70b"
@@ -220,29 +266,31 @@ function PolicyEditor({
             onChange={(e) => setAllow(e.target.checked)}
             disabled={!ollamaModel.trim()}
           />
-          Quand <code>OLLAMA_BASE_URL</code> est configuré, utiliser Ollama au lieu d'Anthropic
+          Autoriser la substitution selon les règles du Gateway ; le choix de déploiement reste prioritaire.
         </label>
       </FormField>
 
       <FormField label="Pipeline version">
         <select
+          aria-label="Pipeline version"
           value={pipelineVersion}
           onChange={(e) => setPipelineVersion(e.target.value as PipelineVersion)}
           className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
         >
-          <option value="V1">V1 — direct Sonnet (legacy, ADVE-anchored)</option>
-          <option value="V2">V2 — RAG-augmented Sonnet→Opus (deprecated, kept for parity)</option>
-          <option value="V3">V3 — RTIS-first: 4× RTIS draft + tension synth + Opus diagnostic+reco</option>
+          <option value="V1">V1 — narration ancrée dans l’ADVE</option>
+          <option value="V2">V2 — narration avec recherche documentaire (historique)</option>
+          <option value="V3">V3 — dérivations stratégiques, tensions, diagnostic et recommandations</option>
         </select>
         <p className="mt-1 text-[10px] text-foreground-muted">
-          V3 emits BOTH a diagnostic block (ADVE verbatim + RTIS RAG-grounded)
-          AND an autonomous Opus recommendation (strategicMove + 3-5 actions +
-          90-day roadmap). Cost ~5× V1. Use the bench script before switching.
+          Seul final-report sélectionne actuellement le pipeline du rapport d’intake.
+          Il décrit les étapes, pas un modèle garanti ni un multiplicateur de coût mesuré.
+          La consommation dépend des appels effectivement exécutés.
         </p>
       </FormField>
 
       <FormField label="Notes (audit)">
         <textarea
+          aria-label="Notes (audit)"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
@@ -251,20 +299,21 @@ function PolicyEditor({
       </FormField>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-md border border-red-900/60 bg-error/30 p-2 text-[11px] text-error">
+        <div role="alert" className="flex items-center gap-2 rounded-md border border-error/30 bg-error/10 p-2 text-[11px] text-error">
           <AlertCircle className="h-3 w-3" /> {error}
         </div>
       )}
 
       <div className="flex gap-2 pt-2">
-        <button
+        <Button
           type="button"
           onClick={onCancel}
-          className="rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground hover:border-border"
+          variant="outline"
+          size="sm"
         >
           Annuler
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           disabled={isPending || !anthropicModel.trim()}
           onClick={() =>
@@ -277,10 +326,11 @@ function PolicyEditor({
               notes: notes.trim() || null,
             })
           }
-          className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-black hover:bg-amber-500 disabled:opacity-50"
+          className="ml-auto"
+          size="sm"
         >
-          {isPending ? "Émission UPDATE_MODEL_POLICY…" : "Appliquer (governed)"}
-        </button>
+          {isPending ? "Enregistrement…" : "Enregistrer la politique"}
+        </Button>
       </div>
     </div>
   );

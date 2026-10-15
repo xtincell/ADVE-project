@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.473 — fix(console): distinguer le routage prévu des politiques enregistrées (2026-10-15)
+
+**473 candidate : lecture de la console reçue sur copie, livraison encore attendue.**
+
+- Cinq fichiers existants étendus ; routage prévu distinct des réglages/notes historiques, aucune mutation ni génération.
+- DEFAULT 4 583 / 435, gouvernance 1 627 / 166 et quatre contrôles finaux zéro reçus ; 24 avertissements antérieurs par lint.
+- Copie : cinq lignes Luna, politiques intactes, éditeur ouvert/annulé deux fois, anonyme 401. Premiers délais conservés ; source/CI/image/runtime 473 attendus. Production 472/C7/seize réceptions inchangés. [Bornage](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.472 — fix(llm): respecter le relais choisi même si sa configuration est incomplète (2026-10-15)
 
 **472 livré : le choix explicite du relais ne retombe plus sur un ancien fournisseur.**

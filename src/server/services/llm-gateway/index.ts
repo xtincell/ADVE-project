@@ -17,6 +17,7 @@
 
 import { applySonnet5Parity } from "./parity";
 import { LlmRateWaitExceededError } from "./rate-policy";
+import type { ResolvedPolicy } from "@/server/services/model-policy";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,13 +25,13 @@ import { LlmRateWaitExceededError } from "./rate-policy";
  * The *purpose* of an LLM call — drives the exact model + provider chosen.
  *
  * The mental model is "fixed model per scenario", not abstract quality tiers:
- * each entry below corresponds to a concrete production scenario and resolves
- * to a specific Anthropic model name (and optionally an Ollama substitute
- * when the local server is configured).
+ * each entry provides defaults from the governed registry. Deployment pins,
+ * provider order and call overrides can change the model actually constructed
+ * by buildProviderModel; the saved Anthropic name is not a serving guarantee.
  *
  *   - "final-report"
- *       Final written deliverable handed to the founder/client. Always Opus,
- *       never substituted. This is what the operator has paid for.
+ *       Final written deliverable handed to the founder/client. Its historical
+ *       fallback names Opus; the selected deployment transport still wins.
  *
  *   - "agent" / "intermediate"
  *       Background reasoning — recommendation generation, narrative section
@@ -340,6 +341,25 @@ function resolveOpenRouterModel(_policyModel: string): string {
 // provider est UNIQUE — la dupliquer dans streaming.ts aurait créé un drift
 // silencieux (ex. le pin OLLAMA_MODEL qui gagne sur les overrides par-appel).
 
+interface ProviderModelOptions {
+  policyOllamaModel?: string | null;
+  ollamaCallOverride?: string;
+  exactModel?: string;
+}
+
+// One name resolver for SDK construction and the existing admin projection.
+// Reading a route must never construct an SDK, send a request or expose secrets.
+function resolveProviderModelName(
+  provider: LLMProvider, anthropicModel: string, opts: ProviderModelOptions = {},
+): string {
+  if (provider === "anthropic") return anthropicModel;
+  if (provider === "openai") {
+    return hasOpenAiTextRelay() ? "gpt-5.6-luna" : OPENAI_MODEL_MAP[anthropicModel] ?? "gpt-4o";
+  }
+  if (provider === "openrouter") return opts.exactModel ?? resolveOpenRouterModel(anthropicModel);
+  return opts.exactModel ?? process.env.OLLAMA_MODEL ?? opts.ollamaCallOverride ?? opts.policyOllamaModel ?? anthropicModel;
+}
+
 export interface BuiltProviderModel {
   /** Instance de modèle AI-SDK prête pour generateText/streamText. */
   aiModel: unknown;
@@ -353,28 +373,27 @@ export interface BuiltProviderModel {
 export async function buildProviderModel(
   provider: LLMProvider,
   anthropicModel: string,
-  opts: { policyOllamaModel?: string | null; ollamaCallOverride?: string; exactModel?: string } = {},
+  opts: ProviderModelOptions = {},
 ): Promise<BuiltProviderModel> {
+  const servedModel = resolveProviderModelName(provider, anthropicModel, opts);
   if (provider === "anthropic") {
     const { anthropic, createAnthropic } = await import("@ai-sdk/anthropic");
     const aiModel = process.env.HEADROOM_PROXY_URL
-      ? createAnthropic({ baseURL: process.env.HEADROOM_PROXY_URL })(anthropicModel)
-      : anthropic(anthropicModel);
-    return { aiModel, servedModel: anthropicModel, orFallback: null };
+      ? createAnthropic({ baseURL: process.env.HEADROOM_PROXY_URL })(servedModel)
+      : anthropic(servedModel);
+    return { aiModel, servedModel, orFallback: null };
   }
   if (provider === "openai") {
     const { openai, createOpenAI } = await import("@ai-sdk/openai");
     if (hasOpenAiTextRelay()) {
-      const servedModel = "gpt-5.6-luna";
       const relay = createOpenAI({ baseURL: process.env.OPENAI_TEXT_RELAY_URL,
         apiKey: process.env.OPENAI_TEXT_RELAY_TOKEN });
       return { aiModel: relay.chat(servedModel), servedModel, orFallback: null };
     }
-    const openaiModel = OPENAI_MODEL_MAP[anthropicModel] ?? "gpt-4o";
     const aiModel = process.env.HEADROOM_PROXY_URL
-      ? createOpenAI({ baseURL: process.env.HEADROOM_PROXY_URL })(openaiModel)
-      : openai(openaiModel);
-    return { aiModel, servedModel: openaiModel, orFallback: null };
+      ? createOpenAI({ baseURL: process.env.HEADROOM_PROXY_URL })(servedModel)
+      : openai(servedModel);
+    return { aiModel, servedModel, orFallback: null };
   }
   if (provider === "openrouter") {
     // OpenRouter via its OpenAI-compatible endpoint. Model slug is
@@ -389,7 +408,6 @@ export async function buildProviderModel(
         "X-Title": "La Fusee",
       },
     });
-    const servedModel = opts.exactModel ?? resolveOpenRouterModel(anthropicModel);
     return {
       aiModel: openrouter(servedModel),
       servedModel,
@@ -409,8 +427,6 @@ export async function buildProviderModel(
     baseURL: process.env.OLLAMA_BASE_URL,
     apiKey: process.env.OLLAMA_API_KEY ?? "ollama",
   });
-  const servedModel =
-    opts.exactModel ?? process.env.OLLAMA_MODEL ?? opts.ollamaCallOverride ?? opts.policyOllamaModel ?? anthropicModel;
   return { aiModel: ollama(servedModel), servedModel, orFallback: null };
 }
 
@@ -509,6 +525,33 @@ export function resolveTextProviderOrder(
     ...tail.filter((p) => !PAID_TEXT_PROVIDERS.includes(p)),
     ...tail.filter((p) => PAID_TEXT_PROVIDERS.includes(p)),
   ];
+}
+
+/**
+ * Read-only snapshot for the existing ModelPolicy admin screen. Uses the SAME
+ * candidate/order/model functions as generation, without calling any provider.
+ * Default plain text only: no call override, strategy budget, vision, rate-slot,
+ * credential validation or subscription quota is exercised by this projection.
+ * Circuit state is local to this process, not a fleet-wide health measurement.
+ */
+export function describeTextRouting(policy: Pick<ResolvedPolicy,
+  "anthropicModel" | "ollamaModel" | "allowOllamaSubstitution" | "version"
+>) {
+  const explicitPrimary = process.env.LLM_PRIMARY_PROVIDER || null;
+  const premium = isPremiumMode();
+  const ollamaPreferred = policy.allowOllamaSubstitution && isProviderHealthy("ollama") && !!policy.ollamaModel;
+  const order = resolveTextProviderOrder(buildTextProviderCandidates(ollamaPreferred), {
+    premium, explicitPrimary: explicitPrimary as LLMProvider | undefined,
+  });
+  return {
+    explicitPrimary, premium, subscriptionOnly: explicitPrimary === "openai",
+    policyVersion: policy.version,
+    attempts: order.map((provider) => ({
+      provider,
+      model: resolveProviderModelName(provider, policy.anthropicModel, { policyOllamaModel: policy.ollamaModel }),
+      eligible: isProviderHealthy(provider),
+    })),
+  };
 }
 
 /** Test-only string-typed wrapper around `resolveTextProviderOrder`. */
@@ -700,7 +743,7 @@ export async function trackCost(
 // ── callLLM — Raw text response ─────────────────────────────────────────────
 
 /**
- * Call Claude and return the raw text + usage.
+ * Call the selected text provider and return the raw text + usage.
  * Use this when you need to parse the response yourself.
  */
 export async function callLLM(options: GatewayCallOptions): Promise<GatewayResult> {
@@ -750,16 +793,10 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
   }
   let lastError: unknown;
 
-  // Build the provider try-order from the policy.
-  //   - When Ollama is both available AND the policy allows substitution,
-  //     it's first (free local compute).
-  //   - Anthropic is the canonical text-generation provider (Opus pour les
-  //     grosses opérations, Sonnet pour le reste — cf. FALLBACK_POLICY).
-  //   - OpenAI/GPT est VOLONTAIREMENT EXCLU de la génération de texte
-  //     (directive opérateur 2026-06-24) : GPT est réservé aux EMBEDDINGS
-  //     (cf. `embed()` / `selectEmbedProvider`). On ne convertit/génère jamais
-  //     de texte avec ChatGPT — le texte reste Anthropic, avec Ollama (local)
-  //     et OpenRouter (qui sert du Claude) comme seuls replis.
+  // Existing shared admission and order: an explicit OpenAI subscription
+  // selection stays exclusive, including when its relay is incomplete.
+  // The static OpenAI API key remains reserved for embeddings. Otherwise,
+  // policy substitution, explicit priority and premium mode retain their rules.
   const providersToTry: LLMProvider[] = buildTextProviderCandidates(ollamaPreferred);
 
   // ── Ordre des providers texte — Ollama Cloud primaire, premium opt-in ─────

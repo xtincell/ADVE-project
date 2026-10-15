@@ -1,9 +1,9 @@
 /**
- * Manifest — LLM Gateway (multi-provider, routing matrix, cost tracking, embeddings).
+ * Manifest — LLM Gateway (text cascade, cost tracking, embeddings).
  *
- * Engine controller multi-provider (v5) avec circuit breaker, cost tracking,
- * routing matrix par tier qualité/latence/coût. Expose call complète + parse JSON
- * + embeddings (Ollama/OpenAI/no-op).
+ * Existing engine controller: governed purpose defaults, deployment pins,
+ * shared finite/streaming cascade, circuit, rate control and cost tracking.
+ * The model catalogue is display-only, not a competing routing authority.
  */
 import { z } from "zod";
 import { defineManifest } from "@/server/governance/manifest";
@@ -104,7 +104,7 @@ export const manifest = defineManifest({
   dependencies: [],
   docs: {
     summary:
-      "Multi-provider gateway with circuit breaker, cost tracking, and Phase-5 routing matrix that picks model from quality/latency/cost tiers per Intent kind. Embeddings via Ollama → OpenAI → no-op fallback chain.",
+      "Text gateway with governed purpose defaults, deployment pins, shared finite/streaming cascade, circuit breaker, rate control and cost tracking. Embeddings use their separate provider selection.",
   },
   missionContribution: "GROUND_INFRASTRUCTURE",
   groundJustification: "Without LLM Gateway, no GLORY tool nor Mestor deliberation works; the entire propulsion stack is silent.",

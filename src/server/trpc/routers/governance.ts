@@ -171,8 +171,15 @@ export const governanceRouter = createTRPCRouter({
   // creates a hash-chained IntentEmission row. Artemis Commandant routes
   // the intent to model-policy.updatePolicy.
   modelPolicyList: adminProcedure.query(async () => {
-    const { listAllPolicies } = await import("@/server/services/model-policy");
-    return listAllPolicies();
+    const { listAllPolicies, resolvePolicy } = await import("@/server/services/model-policy");
+    const { describeTextRouting } = await import("@/server/services/llm-gateway");
+    const rows = await listAllPolicies();
+    // listAllPolicies deduplicates purposes. These reads touch distinct cache
+    // keys, so they can resolve together without serial database round trips.
+    // Stored and cached policy can differ briefly across processes (TTL 60s).
+    return Promise.all(rows.map(async (row) => ({
+      ...row, routing: describeTextRouting(await resolvePolicy(row.purpose)),
+    })));
   }),
 
   modelPolicyUpdate: governedProcedure({
