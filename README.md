@@ -16,7 +16,7 @@
 
 ## Quick start
 
-**472 candidate : conserver le choix du relais.** Si son adresse ou son jeton manque, le Gateway refuse la génération au lieu de revenir à un ancien fournisseur. La clé d’embeddings ne vaut pas configuration du texte. Cible 94 / 8 et quatre processus de fixture reçus ; aucun appel de modèle ni panne de production injectée. DEFAULT 4 571 / 434, gouvernance 1 627 / 166 et cinq contrôles zéro reçus ; livraison 472 attendue, production 471. C7 et les seize réceptions restent inchangés. [Réception et limites](docs/governance/REFONTE-PLAN.md).
+**472 livré : conserver le choix du relais.** Une configuration incomplète refuse le texte, sans repli sur un ancien fournisseur ni confusion avec la clé embeddings. Source c92abbc6/CI/image/runtime et contrôles reçus : DEFAULT 4 571 / 434, PG 375 / 19. Quatre processus de fixture éprouvent l’admission ; aucune panne de production injectée. Reprise des sept réponses sans nouvelle génération, données conservées. Registre/routage, facture, quota, charge et pont manuel des sources restent ouverts ; seize réceptions inchangées. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 
 **471 livré : retrouver les passages utiles des sources courantes.** Lecture autorisée et extraits exacts sous budget explicite. Code/image/runtime reçus ; après déploiement sans génération, un appel production distinct reçoit une réponse courte utile citant le document actuel, Q6 et Taste Reveal. Ce cas ne valide ni qualité générale, onboarding ou calibration. La transmission manuelle d’une référence source reste à raccorder dans les surfaces existantes ; C3/C5/C4/C7 ouverts. Seize réceptions/zéro chantier sur sept/progression globale non calculée inchangés. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 

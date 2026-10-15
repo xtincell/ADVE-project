@@ -2,11 +2,11 @@
 
 ## v6.27.472 — fix(llm): respecter le relais choisi même si sa configuration est incomplète (2026-10-15)
 
-**472 candidate : refus explicite du texte si le relais choisi est incomplet ; production 471 conservée.**
+**472 livré : le choix explicite du relais ne retombe plus sur un ancien fournisseur.**
 
-- Deux conditions du Gateway existant corrigées : disponibilité fausse/candidats vides, sans repli sur d’anciens providers ni confusion avec la clé embeddings.
-- Baseline cinq rouges/neuf verts ; cible 94 tests / 8 fichiers verte, quatre processus de fixture reçus sans modèle/réseau/DB.
-- DEFAULT 4 571 / 434, gouvernance 1 627 / 166 et cinq contrôles zéro reçus ; livraison 472 attendue, seize réceptions inchangées. [Bornage](docs/governance/REFONTE-PLAN.md).
+- Deux conditions du Gateway existant corrigées ; clé embeddings distincte du texte, aucun nouveau gestionnaire.
+- Source c92abbc6/CI/image/runtime exacts reçus ; DEFAULT 4 571 / 434, PG 375 / 19, cible 94 / 8 et quatre processus de fixture verts.
+- Reprise native des sept réponses sans génération ; conservation reçue, réserves transport/C7/C3 maintenues. Seize réceptions inchangées ; clôture documentaire distincte sans bump/build/note client. [Bornage](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.471 — fix(seshat): lire les sources courantes et cibler les extraits bornés (2026-10-15)
 
