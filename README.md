@@ -16,6 +16,8 @@
 
 ## Quick start
 
+**468 candidat, non committé/non déployé : citations reliées aux extraits fournis.** Le panneau existant permet de les déplier ; la correspondance contrôlée ne certifie pas la qualité de l’avis. Chat rendu sur copie avec références et écart historique cinq→six explicites ; quatre contextes copiés reçus sans fournisseur. L’analyse a rencontré un GET 431 ; correction POST tRPC limitée au conseil éprouvée par deux tests réels, POST natif reçu ensuite mais quatre experts expirés, aucune synthèse ; annulation caller/contrat Zod et état de conformité corrigés, Conseil complet corrigé encore attendu. Checkpoint DEFAULT 4 516/433 reçu ; cible 51/4 verte après ces corrections, DEFAULT final 4 519/433 et cinq contrôles zéro reçus, CODE-MAP inchangée. Un diagnostic isolé sur copie reçoit cinq citations conformes, pas la qualité sémantique ou le Conseil complet. Aucun résultat de production 468. Production reçue 467, seize résultats inchangés, aucun chantier entier fermé. [Réception et limites](docs/governance/REFONTE-PLAN.md).
+
 **467 livré backend : valeurs qualifiées avant les résumés.** Code/runtime et reprise du fil existant reçus sans génération, données conservées. La réception d’entrée sur snapshot avec dépendances simulées reste bornée ; citations de sortie, rapport utile, ledger et coût complet non reçus. Seize résultats inchangés, aucun chantier entier fermé. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 
 **466 livré : chaque marque garde sa conversation.** Bascule/recharge et chargement reçus en production sans génération/effacement, copie et production distinctes. Erreurs natives et qualité du conseil restent ouvertes ; seize résultats inchangés. [Réception et limites](docs/governance/REFONTE-PLAN.md).

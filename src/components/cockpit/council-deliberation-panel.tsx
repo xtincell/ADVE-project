@@ -20,6 +20,10 @@ import { useState } from "react";
 import { Scale, Loader2, AlertTriangle, ShieldQuestion } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { MarkdownContent } from "@/components/shared/markdown-content";
+import { FIELD_PROVENANCE_LABEL } from "@/domain/field-provenance";
+import { SOURCE_CERTAINTY_LABEL } from "@/domain/source-certainty";
+import { getFieldLabel } from "@/lib/types/field-labels";
+import type { CouncilCitation } from "@/server/services/mestor/council/schemas";
 
 const PILLAR_LABEL: Record<string, string> = {
   a: "Authenticité",
@@ -52,6 +56,32 @@ const SEVERITY_CLASS: Record<string, string> = {
 /** Bornes du schéma tRPC — tronquer ici évite un refus serveur silencieux. */
 const TOPIC_MAX = 2_000;
 const DRAFT_MAX = 8_000;
+
+function CouncilCitations({ citations }: { citations: CouncilCitation[] | undefined }) {
+  if (!citations?.length) return <p className="mt-2 text-xs text-foreground-secondary">
+    {citations ? "Aucun extrait cité." : "Références non renseignées pour cette position."}
+  </p>;
+  return <details className="mt-3 rounded-lg border border-border p-3 text-xs text-foreground-secondary">
+    <summary className="cursor-pointer font-medium">Extraits cités</summary>
+    <p className="mt-2">Ces extraits proviennent du dossier consulté. L’avis reste une interprétation.</p>
+    <ul className="mt-2 space-y-3">
+      {citations.map((citation, index) => <li key={index} className="space-y-1">
+        {citation.kind === "FIELD" ? <p>
+          {getFieldLabel(citation.field, citation.source.toUpperCase())} · {FIELD_PROVENANCE_LABEL[citation.provenance]} ·{" "}
+          {citation.sourceVersion === null ? "Édition inconnue" : `Édition ${citation.sourceVersion}`} ·{" "}
+          {citation.editedAt ? `Édité le ${citation.editedAt}` : "Date d’édition inconnue"}
+        </p> : citation.kind === "DOCUMENT" ? <p>
+          Document · {citation.certainty ? SOURCE_CERTAINTY_LABEL[citation.certainty] : "Statut inconnu"}
+        </p> : <p>
+          Observation reçue · {citation.sourceVersion ?? "Version inconnue"} ·{" "}
+          {citation.observedAt ? `Observé le ${citation.observedAt}` : "Date d’observation inconnue"}
+        </p>}
+        <blockquote className="whitespace-pre-wrap border-l-2 border-border pl-3 text-foreground">{citation.quote}</blockquote>
+        <p className="break-all">Référence : {citation.sourceId}{citation.kind === "DOCUMENT" ? ` · Empreinte ${citation.contentHash}` : ""}</p>
+      </li>)}
+    </ul>
+  </details>;
+}
 
 export function CouncilDeliberationPanel({
   strategyId,
@@ -181,7 +211,11 @@ export function CouncilDeliberationPanel({
 
       {/* Sur quoi l'analyse s'appuie. Un avis rendu sans document est un avis de
           cohérence, pas une vérification — le dire est la moitié de sa valeur. */}
-      {d.grounding.expertsWithSources.length > 0 ? (
+      {!d.deliberated ? (
+        <p className="text-xs text-foreground-secondary">
+          Aucun avis expert exploitable n’a été reçu ; la conformité aux documents n’est pas évaluée.
+        </p>
+      ) : d.grounding.expertsWithSources.length > 0 ? (
         <p className="text-xs text-foreground-secondary">
           Extraits documentaires disponibles pour :{" "}
           {d.grounding.expertsWithSources.map((k) => PILLAR_LABEL[k] ?? k.toUpperCase()).join(", ")}.
@@ -200,6 +234,7 @@ export function CouncilDeliberationPanel({
       <section>
         <h5 className="text-sm font-medium text-foreground-secondary">Position soumise</h5>
         <MarkdownContent className="mt-1 text-foreground">{d.draft.position}</MarkdownContent>
+        <CouncilCitations citations={d.draft.citations} />
       </section>
 
       {critiques.length > 0 && (
@@ -245,6 +280,7 @@ export function CouncilDeliberationPanel({
                   <ul className="list-disc space-y-2 pl-5">{c.amendments.map((text, i) =>
                     <li key={i}><MarkdownContent>{text}</MarkdownContent></li>)}</ul>
                 </div>}
+                <CouncilCitations citations={c.citations} />
               </div>
             );
           })}
@@ -259,7 +295,7 @@ export function CouncilDeliberationPanel({
           <ShieldQuestion className="h-4 w-4 shrink-0" />
           <span>
             Les experts se sont prononcés, mais la synthèse n&apos;a pas abouti — il n&apos;y a
-            pas de position retenue à afficher. Les critiques ci-dessus restent valables.
+            pas de position retenue à afficher. Les critiques ci-dessus restent consultables.
           </span>
         </div>
       )}
@@ -274,6 +310,7 @@ export function CouncilDeliberationPanel({
         <section className="space-y-3">
           <h5 className="text-sm font-medium text-foreground-secondary">Position retenue</h5>
           <MarkdownContent className="text-foreground">{d.synthesis.finalPosition}</MarkdownContent>
+          <CouncilCitations citations={d.synthesis.citations} />
 
           {d.synthesis.acceptedCritiques.length > 0 && <div className="space-y-2">
             <h6 className="text-sm font-medium text-foreground-secondary">Contestations retenues</h6>

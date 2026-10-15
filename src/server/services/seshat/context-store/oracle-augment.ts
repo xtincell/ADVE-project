@@ -206,7 +206,7 @@ export function formatPreciseFields(fields: PreciseField[]): string {
   return lines.join("\n");
 }
 
-function formatSourceReferences(refs: SourceReference[]): string {
+export function formatSourceReferences(refs: SourceReference[]): string {
   if (refs.length === 0) return "";
   const blocks = refs.map((r) => {
     const head = `[${r.sourceType ?? "SRC"}: ${r.fileName ?? r.sourceId}#${r.chunkIndex ?? 0}, source:${r.sourceId}, certitude:${r.certainty ?? "non renseignée"}, empreinte:${r.contentHash}${

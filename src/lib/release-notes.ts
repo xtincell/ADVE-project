@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.468", date: "2026-10-15",
+    headline: "Retrouver les extraits cités par les experts",
+    highlights: [
+      { emoji: "📖", title: "Consulter les références", body: "Les nouvelles analyses approfondies permettent de lire les extraits cités, leur version et leur origine. Ces références aident à examiner l’avis sans transformer une hypothèse en résultat validé." },
+    ],
+  },
+  {
     version: "6.27.466", date: "2026-10-14",
     headline: "Une conversation propre à chaque marque",
     highlights: [

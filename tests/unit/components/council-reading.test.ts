@@ -49,6 +49,30 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("conseil — lecture fidèle sans génération supplémentaire", () => {
+  it("does not turn failed experts into a claim that no document was supplied", () => {
+    state.result.deliberated = false; state.result.synthesis = null;
+    state.result.grounding = { ragUsed: true, expertsWithSources: [] };
+    state.result.critiques = { e: { failed: "expert-e: timeout" } };
+    render(React.createElement(CouncilDeliberationPanel, { strategyId: "fixture", answer }));
+    fireEvent.click(screen.getByRole("button", { name: "Analyse approfondie" }));
+    expect(screen.queryByText(/Aucun document de votre marque n’a pu être consulté|Aucun document de votre marque n'a pu être consulté/)).toBeNull();
+    expect(screen.getByText(/la conformité aux documents n’est pas évaluée/)).toBeTruthy();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it("shows the quoted edition and unknown origin without certifying the interpretation", () => {
+    const citation = { kind: "FIELD", sourceId: "pillar-spawt-e", sourceVersion: 0,
+      source: "e", field: "rituels", provenance: "UNKNOWN", editedAt: "2026-07-24T09:00:00.000Z",
+      quote: "5 questions = 5 axes" };
+    (state.result.synthesis as Record<string, unknown>).citations = [citation];
+    render(React.createElement(CouncilDeliberationPanel, { strategyId: "fixture", answer }));
+    fireEvent.click(screen.getByRole("button", { name: "Analyse approfondie" }));
+    expect(screen.getByText("Extraits cités")).toBeTruthy();
+    expect(screen.getByText(/Origine inconnue/)).toBeTruthy();
+    expect(screen.getByText(/Édition 0/)).toBeTruthy();
+    expect(screen.getByText("5 questions = 5 axes")).toBeTruthy();
+    expect(screen.getByText(/L’avis reste une interprétation/)).toBeTruthy();
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it("renders stored assistant structure while retaining literal human input and inactive experts", async () => {
     render(React.createElement(MestorPage));
     expect(await screen.findByRole("heading", { name: "Décision" })).toBeTruthy();

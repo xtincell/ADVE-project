@@ -19,6 +19,10 @@ const handler = (req: Request) =>
   fetchRequestHandler({
     endpoint: "/api/trpc",
     req,
+    // Only this advisory query carries an answer large enough to exceed URL
+    // limits. Authentication, brand scope and paid/budget gates stay in place.
+    allowMethodOverride: req.method === "POST"
+      && new URL(req.url).pathname === "/api/trpc/mestor.councilDeliberate",
     router: appRouter,
     createContext: () => createContext({ headers: req.headers }),
   });

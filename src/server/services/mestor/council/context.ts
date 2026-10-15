@@ -23,12 +23,15 @@
 import { db } from "@/lib/db";
 import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 import { loadStrategyContextForFramework } from "@/server/services/seshat/context-store/strategy-context";
-import { getOracleBrandContextByQuery } from "@/server/services/seshat/context-store/oracle-augment";
+import { getOracleBrandContextByQuery, formatSourceReferences, type OracleContextBlock } from "@/server/services/seshat/context-store/oracle-augment";
 import { serializePillar } from "@/server/services/mestor/rtis-cascade";
-import { wrapUntrusted } from "@/server/services/utils/untrusted-content";
+import { untrustedContentBody, wrapUntrusted } from "@/server/services/utils/untrusted-content";
 import { signalObservation } from "@/domain/signal-observation";
+import { metricObservationTime } from "@/domain/external-metric";
+import { SourceReceiptSchema } from "@/domain/source-certainty";
 import { COUNCIL_EVIDENCE_NOTICE } from "./personas";
 import { coerceProvenance, fieldStatusFor } from "@/domain/field-provenance";
+import type { CouncilEvidenceExcerpt } from "./schemas";
 
 /** Budgets déterministes (caractères) — troncature par bloc, jamais silencieuse. */
 const FOUNDER_PILLAR_MAX = 5_000; // A/D/V/E — profondeur prioritaire
@@ -44,26 +47,75 @@ function capBlock(text: string, max: number): string {
   return text.length > max ? text.slice(0, max) + "\n…[tronqué — budget de contexte]" : text;
 }
 
+/** Membership is about this supplied block, after the shared security wrapper. */
+function includedEvidence(contextBlock: string, evidence: CouncilEvidenceExcerpt[]) {
+  return evidence.filter((item) => contextBlock.includes(item.text)
+    && contextBlock.includes(JSON.stringify(item.reference)));
+}
+
 /** Carry the existing field authority before the prose can consume its budget. */
 function qualifiedPillar(key: string, pillar: {
   id?: string; currentVersion?: number; content: unknown; fieldCertainty?: unknown; updatedAt?: Date;
-}, max: number): string {
+}, max: number): { text: string; evidence: CouncilEvidenceExcerpt[] } {
   const content = pillar.content && typeof pillar.content === "object" && !Array.isArray(pillar.content)
     ? pillar.content as Record<string, unknown> : {};
   const certainty = pillar.fieldCertainty && typeof pillar.fieldCertainty === "object" && !Array.isArray(pillar.fieldCertainty)
     ? Object.fromEntries(Object.entries(pillar.fieldCertainty).filter((entry): entry is [string, string] => typeof entry[1] === "string"))
     : null;
   const status = fieldStatusFor(certainty, key, content._fieldProvenance);
-  const fields = Object.keys(content).filter((field) => !field.startsWith("_"))
-    .map((field) => `${field} : ${status(field) ?? coerceProvenance(undefined)}`).join("\n");
   const date = pillar.updatedAt?.toISOString() ?? "non renseignée";
-  return capBlock([
+  const lines = [
     `Pilier ${key.toUpperCase()} — ${date} (date d’édition, pas une date de mesure).`,
     `Référence du pilier : ${pillar.id || "non renseignée"}. Version d’édition : ${pillar.currentVersion ?? "inconnue"}.`,
     "Qualification des champs : origine/autorité d’édition, pas une mesure ni une validation du résultat.",
-    fields,
-    serializePillar(key, pillar.content, status),
-  ].join("\n"), max);
+  ];
+  const evidence: CouncilEvidenceExcerpt[] = [];
+  let remaining = max - lines.join("\n").length;
+  let omitted = 0;
+  for (const [field, value] of Object.entries(content).filter(([field]) => !field.startsWith("_"))) {
+    const provenance = coerceProvenance(status(field));
+    const reference = { kind: "FIELD" as const, sourceId: pillar.id ?? "",
+      sourceVersion: pillar.currentVersion ?? null, source: key, field, provenance,
+      editedAt: pillar.updatedAt?.toISOString() ?? null };
+    // Keep each field packet atomic. A clipped leaf/absent packet cannot be
+    // cited as an entire original field, and a status table must not eat the
+    // whole excerpt budget before any values have reached the caller.
+    const serialized = serializePillar(key, { [field]: value }, (path) => coerceProvenance(status(path)));
+    const packet = `${field} : ${provenance}\nRéférence de citation : ${JSON.stringify(reference)}\n${serialized}`;
+    if (packet.length + 1 > remaining) { omitted++; continue; }
+    remaining -= packet.length + 1;
+    lines.push(packet);
+    if (pillar.id) {
+      // The serializer already produced the actual JSON excerpt between its
+      // two framing lines. Keep that exact body, including its leaf clipping.
+      const body = serialized.slice(serialized.indexOf("\n") + 1, serialized.lastIndexOf("\n"));
+      evidence.push({ reference, text: untrustedContentBody(body, { max: body.length }) });
+    }
+  }
+  if (omitted) lines.push(`…[tronqué — budget de contexte] ${omitted} champ(s) non fourni(s), aucune absence métier déduite.`);
+  return { text: lines.join("\n"), evidence };
+}
+
+/** Source packets and citations share the same bounded, sanitized excerpt. */
+function qualifiedRag(rag: OracleContextBlock | null): { text: string; evidence: CouncilEvidenceExcerpt[] } {
+  if (!rag) return { text: "", evidence: [] };
+  const blocks: string[] = [];
+  const evidence: CouncilEvidenceExcerpt[] = [];
+  let remaining = RAG_BLOCK_MAX;
+  for (const ref of rag.sourceReferences ?? []) {
+    if (!SourceReceiptSchema.safeParse(ref).success || typeof ref.text !== "string" || !ref.text.trim()) continue;
+    const reference = { kind: "DOCUMENT" as const, sourceId: ref.sourceId, contentHash: ref.contentHash,
+      certainty: ref.certainty, chunkIndex: ref.chunkIndex };
+    const header = `Référence de citation : ${JSON.stringify(reference)}\n${formatSourceReferences([{ ...ref, text: "" }])}\n`;
+    if (remaining <= header.length + 60) break;
+    const text = untrustedContentBody(capBlock(ref.text, remaining - header.length - 50), { max: remaining });
+    const block = `${header}${text}`;
+    blocks.push(block); remaining -= block.length + 2;
+    evidence.push({ reference, text });
+  }
+  // Orientation remains advisory. It never authorizes a documentary citation.
+  if (remaining > 60 && rag.text) blocks.push(capBlock(rag.narrativeBlock || rag.text, remaining - 50));
+  return { text: blocks.join("\n\n"), evidence };
 }
 
 export interface AssistantContextResult {
@@ -73,6 +125,8 @@ export interface AssistantContextResult {
   ragUsed: boolean;
   /** True si des références documentaires accompagnent le texte injecté. */
   sourcesSeen: boolean;
+  /** Only the excerpts actually supplied, never the full selected records. */
+  evidence: CouncilEvidenceExcerpt[];
 }
 
 /** Contexte d'un expert + ce qu'il a réellement pu lire. */
@@ -86,6 +140,7 @@ export interface ExpertContextResult {
    * opinion pour une vérification.
    */
   sourcesSeen: boolean;
+  evidence: CouncilEvidenceExcerpt[];
 }
 
 /**
@@ -110,10 +165,11 @@ export async function buildAssistantContext(
 
   const byKey = new Map(pillars.map((p) => [p.key.toLowerCase(), p]));
   const sections: string[] = [];
+  const evidence: CouncilEvidenceExcerpt[] = [...observationsBlock.evidence];
 
   // Base stratégie (nom, score, business, capacité, résumés) — source canonique.
   sections.push(wrapUntrusted("contexte stratégie", base.lines.join("\n"), { max: 4_000 }));
-  sections.push(observationsBlock);
+  sections.push(observationsBlock.text);
 
   // Piliers fondateurs A/D/V/E — profondeur préservée.
   for (const k of FOUNDER_KEYS) {
@@ -122,10 +178,12 @@ export async function buildAssistantContext(
       sections.push(`[Pilier ${k.toUpperCase()}] non renseigné.`);
       continue;
     }
+    const qualified = qualifiedPillar(k, p, FOUNDER_PILLAR_MAX);
+    evidence.push(...qualified.evidence);
     sections.push(
       wrapUntrusted(
         `pilier ${k.toUpperCase()} (fondateur — valeurs avec leur origine ; pas une mesure reçue)`,
-        qualifiedPillar(k, p, FOUNDER_PILLAR_MAX),
+        qualified.text,
         { max: FOUNDER_PILLAR_MAX + 200 },
       ),
     );
@@ -136,21 +194,25 @@ export async function buildAssistantContext(
   for (const k of [...PILLAR_STORAGE_KEYS].filter((k) => !founderSet.includes(k))) {
     const p = byKey.get(k);
     if (!p?.content || Object.keys(p.content as object).length === 0) continue;
+    const qualified = qualifiedPillar(k, p, DERIVED_PILLAR_MAX);
+    evidence.push(...qualified.evidence);
     sections.push(
       wrapUntrusted(
         `pilier ${k.toUpperCase()} (dérivé — résumé ; diagnostic, pas une mesure reçue)`,
-        qualifiedPillar(k, p, DERIVED_PILLAR_MAX),
+        qualified.text,
         { max: DERIVED_PILLAR_MAX + 200 },
       ),
     );
   }
 
   // The metadata fallback contributes without pretending to be a semantic match.
-  if (rag?.text) {
+  const qualified = qualifiedRag(rag);
+  evidence.push(...qualified.evidence);
+  if (qualified.text) {
     sections.push(
-      wrapUntrusted(rag.usedVectorSearch
+      wrapUntrusted(rag?.usedVectorSearch
         ? "extraits pertinents (recherche sémantique)"
-        : "contexte disponible (sélection par métadonnées)", capBlock(rag.text, RAG_BLOCK_MAX), {
+        : "contexte disponible (sélection par métadonnées)", qualified.text, {
         max: RAG_BLOCK_MAX + 200,
       }),
     );
@@ -159,30 +221,46 @@ export async function buildAssistantContext(
 
   sections.push(communityBlock);
 
+  const contextBlock = sections.join("\n\n");
+  const supplied = includedEvidence(contextBlock, evidence);
   return {
-    contextBlock: sections.join("\n\n"),
-    ragUsed: !!rag?.text,
-    sourcesSeen: !!rag?.text && (rag.sourceReferences?.length ?? 0) > 0,
+    contextBlock,
+    ragUsed: !!qualified.text,
+    sourcesSeen: supplied.some((item) => item.reference.kind === "DOCUMENT"),
+    evidence: supplied,
   };
 }
 
 /** Même projection factuelle que les lecteurs ; aucune mesure/KPI n'est écrite. */
-async function buildObservationsBlock(strategyId: string): Promise<string> {
+async function buildObservationsBlock(strategyId: string): Promise<{ text: string; evidence: CouncilEvidenceExcerpt[] }> {
   try {
     const rows = await db.signal.findMany({
       where: { strategyId, type: "EXTERNAL_METRIC" },
       orderBy: { createdAt: "desc" }, take: 5,
       select: { id: true, type: true, data: true, createdAt: true },
     });
-    if (!rows.length) return "[Observations] aucune observation externe reçue pour cette marque ; aucune valeur zéro déduite.";
-    const text = rows.map((row) => {
+    if (!rows.length) return { text: "[Observations] aucune observation externe reçue pour cette marque ; aucune valeur zéro déduite.", evidence: [] };
+    const evidence: CouncilEvidenceExcerpt[] = [];
+    const blocks: string[] = [];
+    let remaining = OBSERVATIONS_MAX;
+    for (const row of rows) {
       const { title, observation } = signalObservation(row);
-      return `${title}\nRéférence interne : ${row.id}.\nReçu : ${row.createdAt.toISOString()}.\n${observation}`;
-    }).join("\n\n");
-    return wrapUntrusted("observations externes reçues — origine déclarée par la source, pas une validation",
-      capBlock(text, OBSERVATIONS_MAX), { max: OBSERVATIONS_MAX + 200 });
+      const data = row.data && typeof row.data === "object" && !Array.isArray(row.data)
+        ? row.data as Record<string, unknown> : {};
+      const reference = { kind: "OBSERVATION" as const, sourceId: row.id,
+        sourceVersion: typeof data.sourceVersion === "string" ? data.sourceVersion : null,
+        observationId: typeof data.observationId === "string" ? data.observationId : null,
+        observedAt: metricObservationTime(data)?.toISOString() ?? null };
+      const header = `${title}\nRéférence interne : ${row.id}.\nReçu : ${row.createdAt.toISOString()}.\nRéférence de citation : ${JSON.stringify(reference)}\n`;
+      if (remaining <= header.length + 60) break;
+      const text = untrustedContentBody(capBlock(observation, remaining - header.length - 50), { max: remaining });
+      blocks.push(`${header}${text}`); remaining -= header.length + text.length + 2;
+      evidence.push({ reference, text });
+    }
+    return { text: wrapUntrusted("observations externes reçues — origine déclarée par la source, pas une validation",
+      blocks.join("\n\n"), { max: OBSERVATIONS_MAX + 200 }), evidence };
   } catch {
-    return "[Observations] lecture des observations indisponible ; résultats non vérifiés.";
+    return { text: "[Observations] lecture des observations indisponible ; résultats non vérifiés.", evidence: [] };
   }
 }
 
@@ -220,14 +298,18 @@ export async function buildExpertContext(
     buildObservationsBlock(strategyId),
   ]);
 
-  const sourcesSeen = (rag?.sourceReferences?.length ?? 0) > 0;
+  const qualified = qualifiedRag(rag);
+  const sourcesSeen = qualified.evidence.length > 0;
   const sections: string[] = [];
-  sections.push(observationsBlock);
+  const evidence = [...observationsBlock.evidence, ...qualified.evidence];
+  sections.push(observationsBlock.text);
   if (pillar?.content && Object.keys(pillar.content as object).length > 0) {
+    const qualified = qualifiedPillar(pillarKey, pillar, EXPERT_PILLAR_MAX);
+    evidence.push(...qualified.evidence);
     sections.push(
       wrapUntrusted(
         `pilier ${pillarKey.toUpperCase()} (extrait verbatim borné)`,
-        qualifiedPillar(pillarKey, pillar, EXPERT_PILLAR_MAX),
+        qualified.text,
         { max: EXPERT_PILLAR_MAX + 200 },
       ),
     );
@@ -236,11 +318,11 @@ export async function buildExpertContext(
       `[Pilier ${pillarKey.toUpperCase()}] NON RENSEIGNÉ — c'est en soi une information critique pour ta critique.`,
     );
   }
-  if (rag?.text) {
+  if (qualified.text) {
     sections.push(
-      wrapUntrusted(rag.usedVectorSearch
+      wrapUntrusted(rag?.usedVectorSearch
         ? "extraits pertinents du pilier (recherche sémantique)"
-        : "contexte du pilier (sélection par métadonnées)", capBlock(rag.text, RAG_BLOCK_MAX), {
+        : "contexte du pilier (sélection par métadonnées)", qualified.text, {
         max: RAG_BLOCK_MAX + 200,
       }),
     );
@@ -258,7 +340,10 @@ export async function buildExpertContext(
         : "[Documentation] AUCUN document de la marque n'a été retrouvé par cette sélection. Ta critique porte donc sur la cohérence interne, pas sur la conformité aux sources — dis-le explicitement plutôt que d'affirmer qu'un point est vérifié.",
   );
 
-  return { contextBlock: sections.join("\n\n"), ragUsed: !!rag?.text, sourcesSeen };
+  const contextBlock = sections.join("\n\n");
+  const supplied = includedEvidence(contextBlock, evidence);
+  return { contextBlock, ragUsed: !!qualified.text,
+    sourcesSeen: supplied.some((item) => item.reference.kind === "DOCUMENT"), evidence: supplied };
 }
 
 /**

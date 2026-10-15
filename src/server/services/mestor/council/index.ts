@@ -32,6 +32,8 @@ import {
   councilDraftSchema,
   councilSynthesisSchema,
   expertCritiqueSchema,
+  withCouncilCitations,
+  type CouncilEvidenceExcerpt,
   type CouncilDraft,
   type CouncilSynthesis,
   type ExpertCritique,
@@ -113,7 +115,7 @@ export type CouncilDeliberation =
       draft: CouncilDraft;
       critiques: Partial<Record<FounderPillarKey, ExpertCritique | { failed: string }>>;
       synthesis: CouncilSynthesis | null;
-      /** Nombre d'appels LLM réellement effectués (transparence coût). */
+      /** Étapes structurées lancées, hors reprises du Gateway ; coûts dans AICostLog. */
       llmCalls: number;
       /**
        * Sur quoi la délibération s'est réellement appuyée. Une critique rendue
@@ -150,7 +152,7 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
   }
 
   let llmCalls = 0;
-  const { contextBlock, ragUsed, sourcesSeen } = await buildAssistantContext(input.strategyId, input.topic);
+  const { contextBlock, ragUsed, sourcesSeen, evidence = [] } = await buildAssistantContext(input.strategyId, input.topic);
   const coordinatorSystem = buildCoordinatorSystem(contextBlock, sourcesSeen);
 
   // ── 1. Draft du coordinateur (skippé si une position est fournie) ──────
@@ -180,7 +182,8 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
       // éditable par le fondateur. Tout le reste du fichier est ceinturé
       // (`draft`, contexte) ; ce point d'entrée-ci ne l'était pas.
       prompt: `${wrapUntrusted("sujet soumis par l'utilisateur", input.topic)}\n\nRédige la POSITION stratégique initiale du conseil sur ce sujet (position, arguments ancrés dans le dossier, risques identifiés).`,
-      schema: councilDraftSchema,
+      schema: withCouncilCitations(councilDraftSchema, evidence),
+      formatInstructions: "citations est obligatoire : copie les métadonnées d'une Référence de citation fournie et un extrait exact. Une référence contrôle la citation, pas la vérité de l'interprétation. N'invente aucune preuve ; une liste vide exige qu'aucun extrait citable ne soit fourni.",
       caller: "mestor:council:draft",
       strategyId: input.strategyId,
       maxOutputTokens: 2_000,
@@ -197,7 +200,7 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
   const settled = await Promise.allSettled(
     COUNCIL_EXPERTS.map(async (expert) => {
       const pillarKey = expert.pillarKey as FounderPillarKey;
-      const { contextBlock: expertContext, sourcesSeen } = await buildExpertContext(
+      const { contextBlock: expertContext, sourcesSeen, evidence: expertEvidence = [] } = await buildExpertContext(
         input.strategyId,
         pillarKey,
         input.topic,
@@ -211,26 +214,34 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
         executeStructuredLLMCall({
           system: [expert.systemPrompt, UNTRUSTED_NOTICE, expertContext].join("\n\n"),
           prompt: `${healthLine}\n\n${wrapUntrusted("position soumise au conseil", JSON.stringify(draft))}\n\nCHALLENGE cette position au nom de ton pilier.`,
-          schema: expertCritiqueSchema,
+          schema: withCouncilCitations(expertCritiqueSchema, expertEvidence),
+          formatInstructions: "citations est obligatoire : utilise seulement les Références de citation de TON contexte et un extrait exact. Les citations du draft ne sont pas une preuve indépendante. Une citation correcte ne valide ni une assertion éditoriale, ni ton interprétation.",
           caller: `mestor:council:expert-${pillarKey}`,
           strategyId: input.strategyId,
           maxOutputTokens: EXPERT_MAX_TOKENS,
+          signal: AbortSignal.timeout(EXPERT_TIMEOUT_MS),
         }),
         EXPERT_TIMEOUT_MS,
         `expert-${pillarKey}`,
       );
-      return { pillarKey, critique: res.data, sourcesSeen };
+      return { pillarKey, critique: res.data, sourcesSeen, evidence: expertEvidence };
     }),
   );
 
   const critiques: Partial<Record<FounderPillarKey, ExpertCritique | { failed: string }>> = {};
   const succeeded: Array<{ pillarKey: FounderPillarKey; critique: ExpertCritique }> = [];
   const expertsWithSources: FounderPillarKey[] = [];
+  const synthesisEvidence: CouncilEvidenceExcerpt[] = [...evidence];
   settled.forEach((s, i) => {
     const pillarKey = COUNCIL_EXPERTS[i]!.pillarKey as FounderPillarKey;
     if (s.status === "fulfilled") {
       critiques[pillarKey] = s.value.critique;
       succeeded.push({ pillarKey: s.value.pillarKey, critique: s.value.critique });
+      // Only quotations actually carried by successful critiques reach the
+      // synthesis prompt; don't authorize every unseen expert excerpt there.
+      for (const citation of s.value.critique.citations ?? []) {
+        synthesisEvidence.push({ reference: citation, text: citation.quote });
+      }
       if (s.value.sourcesSeen) expertsWithSources.push(pillarKey);
     } else {
       critiques[pillarKey] = {
@@ -270,7 +281,8 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
         ),
         "Arbitre : synthèse finale du conseil. Chaque critique est ACCEPTÉE (avec résolution) ou REJETÉE (avec raison). Les désaccords non tranchés vont dans `dissent` — ne les gomme pas.",
       ].join("\n\n"),
-      schema: councilSynthesisSchema,
+      schema: withCouncilCitations(councilSynthesisSchema, synthesisEvidence),
+      formatInstructions: "citations est obligatoire : cite le dossier fourni ou une citation exacte des critiques reçues. Conserve version/origine/date, distingue interprétation et fait. Une citation correspondante ne valide pas l'affirmation stratégique.",
       caller: "mestor:council:synthesis",
       strategyId: input.strategyId,
       maxOutputTokens: SYNTHESIS_MAX_TOKENS,
