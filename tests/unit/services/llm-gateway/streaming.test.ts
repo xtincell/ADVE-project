@@ -69,6 +69,23 @@ async function drain(stream: ReadableStream<string>): Promise<string> {
 }
 
 describe("streamChatText — fallback pré-premier-octet", () => {
+  it("does not turn a caller cancellation into a provider failure or circuit opening", async () => {
+    vi.stubEnv("OPENAI_TEXT_RELAY_URL", "http://127.0.0.1:8646/v1");
+    vi.stubEnv("OPENAI_TEXT_RELAY_TOKEN", "local-test-access");
+    vi.stubEnv("LLM_PRIMARY_PROVIDER", "openai");
+    _resetProvidersForTest({ openai: { available: true, failureCount: 2 },
+      anthropic: { available: false }, ollama: { available: false }, openrouter: { available: false } });
+    const controller = new AbortController();
+    const acquire = vi.spyOn(ratePolicy, "acquireSlot").mockImplementation(async () => {
+      controller.abort(new DOMException("Caller aborted", "AbortError"));
+      throw controller.signal.reason;
+    });
+    await expect(callLLM({ system: "s", prompt: "Avis ?", caller: "fixture", signal: controller.signal }))
+      .rejects.toMatchObject({ name: "AbortError" });
+    expect(acquire).toHaveBeenCalledOnce();
+    expect(_getProviderStateForTest("openai")).toMatchObject({ failureCount: 2, circuitOpenUntil: 0 });
+    expect(costCreate).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     streamTextMock.mockReset();
     costCreate.mockClear();

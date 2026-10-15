@@ -918,6 +918,8 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
       return result;
     } catch (err) {
       if (err instanceof LlmRateWaitExceededError) throw err;
+      // A caller deadline is not an outage of the shared provider.
+      if (options.signal?.aborted) throw err;
       lastError = err;
       const errStr = String(err instanceof Error ? err.message : err).toLowerCase();
       const isHardFailure = errStr.includes("credit balance") || errStr.includes("insufficient_quota") || errStr.includes("429");

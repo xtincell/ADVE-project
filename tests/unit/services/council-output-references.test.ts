@@ -38,6 +38,90 @@ beforeEach(() => {
 });
 
 describe("Council references — actual structured validator, model fixture only", () => {
+  it("shows the model the exact offered claims as a closed output choice", async () => {
+    state.call.mockImplementation(async ({ caller }: { caller: string }) => ({ text: JSON.stringify(
+      caller.includes(":expert-") ? { ...critique, critiques: [{ claim: "Argument exact à conserver",
+        evidence: "Champ", severity: "LOW" }] } : synthesis),
+    }));
+    await deliberate({ strategyId: "spawt", topic: "Question", draft: "Position" });
+    const system = state.call.mock.calls.find(([options]) => options.caller.includes(":synthesis"))![0].system;
+    expect(system).toContain('"enum"');
+    expect(system).toContain("Argument exact à conserver");
+  });
+
+  it("lets the existing queue finish its allowed wait before aborting an expert", async () => {
+    vi.useFakeTimers();
+    try {
+      state.call.mockImplementation(({ caller }: { caller: string }) => caller.includes(":expert-")
+        ? new Promise(resolve => setTimeout(() => resolve({ text: JSON.stringify(critique) }), 100_000))
+        : Promise.resolve({ text: JSON.stringify(synthesis) }));
+      const pending = deliberate({ strategyId: "spawt", topic: "Question", draft: "Position" });
+      await vi.advanceTimersByTimeAsync(100_000);
+      const result = await pending;
+      expect(result.status).toBe("OK");
+      if (result.status === "OK") {
+        expect(result.deliberated).toBe(true);
+        for (const key of ["a", "d", "v", "e"] as const) expect(result.critiques[key]).not.toHaveProperty("failed");
+      }
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("supplies the entire bounded submitted position to each expert and synthesis", async () => {
+    const position = "Contexte détaillé. ".repeat(300) + "DÉCISION_FINALE_À_CONFRONTER";
+    await deliberate({ strategyId: "spawt", topic: "Question", draft: position });
+    expect(state.call).toHaveBeenCalledTimes(5);
+    for (const [options] of state.call.mock.calls) expect(options.prompt).toContain("DÉCISION_FINALE_À_CONFRONTER");
+  });
+  it.each(["invented claim", "wrong expert"])("does not attribute an %s to an expert in the synthesis", async (fault) => {
+    state.call.mockImplementation(async ({ caller }: { caller: string }) => ({ text: JSON.stringify(
+      caller.includes(":draft") ? draft : caller.includes(":expert-") ? {
+        ...critique, critiques: [{ claim: caller.includes(":expert-a") ? "Argument réel A" : "Autre argument",
+          evidence: "Champ", severity: "LOW" }],
+      } : { ...synthesis, acceptedCritiques: [{ from: fault === "wrong expert" ? "V" : "A",
+        claim: fault === "invented claim" ? "Argument jamais formulé" : "Argument réel A", resolution: "Explication" }] }),
+    }));
+    const result = await deliberate({ strategyId: "spawt", topic: "Question" });
+    expect(result.status).toBe("OK");
+    if (result.status === "OK") {
+      expect(result.synthesis).toBeNull();
+      expect(result.critiques.a).toHaveProperty("citations", [citation]);
+    }
+  });
+
+  it("retains an exact received claim and its expert in the synthesis", async () => {
+    state.call.mockImplementation(async ({ caller }: { caller: string }) => ({ text: JSON.stringify(
+      caller.includes(":draft") ? draft : caller.includes(":expert-") ? {
+        ...critique, critiques: [{ claim: "Argument réel", evidence: "Champ", severity: "LOW" }],
+      } : { ...synthesis, acceptedCritiques: [{ from: "A", claim: "Argument réel", resolution: "Explication" }] }),
+    }));
+    const result = await deliberate({ strategyId: "spawt", topic: "Question" });
+    if (result.status !== "OK") throw new Error("Council unavailable");
+    expect(result.synthesis?.acceptedCritiques[0]?.claim).toBe("Argument réel");
+  });
+
+  it("actually supplies all four received critiques instead of cutting the synthesis JSON", async () => {
+    state.call.mockImplementation(async ({ caller }: { caller: string }) => ({ text: JSON.stringify(
+      caller.includes(":draft") ? draft : caller.includes(":expert-") ? {
+        ...critique, critiques: [{ claim: caller, evidence: "Élément détaillé. ".repeat(900), severity: "LOW" }],
+      } : synthesis),
+    }));
+    await deliberate({ strategyId: "spawt", topic: "Question" });
+    const input = state.call.mock.calls.find(([options]) => options.caller.includes(":synthesis"))![0].prompt;
+    for (const key of ["a", "d", "v", "e"]) expect(input).toContain(`mestor:council:expert-${key}:struct`);
+    expect(input).not.toContain("…[tronqué]");
+  });
+  it("uses the existing retry feedback to repair stitched quotations without accepting them", async () => {
+    state.call.mockImplementation(async ({ caller }: { caller: string }) => ({ text: JSON.stringify(
+      caller.includes(":draft") ? { ...draft, citations: [{ ...citation,
+        quote: caller.includes(":retry1") ? citation.quote : "5 questions ... 5 axes" }] }
+        : caller.includes(":expert-") ? critique : synthesis),
+    }));
+    const result = await deliberate({ strategyId: "spawt", topic: "Quiz ?" });
+    expect(result.status).toBe("OK");
+    expect(state.call.mock.calls[1]![0].prompt).toContain("passage continu");
+    if (result.status === "OK") expect(result.draft.citations).toEqual([citation]);
+    expect(state.call).toHaveBeenCalledTimes(7);
+  });
   it("gives the model one compatible object contract for both its opinion and citations", () => {
     const schema = deriveJsonSchemaFromZod(withCouncilCitations(expertCritiqueSchema, [])) as {
       type: string; properties: Record<string, unknown>; required: string[];
@@ -64,6 +148,8 @@ describe("Council references — actual structured validator, model fixture only
       await vi.advanceTimersByTimeAsync(0);
       expect(signals).toHaveLength(4);
       await vi.advanceTimersByTimeAsync(90_000);
+      expect(signals.every(signal => !signal?.aborted)).toBe(true);
+      await vi.advanceTimersByTimeAsync(120_000);
       const result = await pending;
       expect(result.status).toBe("OK");
       if (result.status === "OK") expect(result.deliberated).toBe(false);

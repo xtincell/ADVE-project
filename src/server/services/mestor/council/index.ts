@@ -17,6 +17,7 @@
  * — budget Thot + cascade providers + parité Sonnet 5 inclus.
  */
 
+import { z } from "zod";
 import { isTextLLMAvailable } from "@/server/services/llm-gateway";
 import {
   streamChatText,
@@ -47,7 +48,9 @@ export const COUNCIL_UNAVAILABLE = {
   reason: "Aucun fournisseur d'intelligence disponible — réessayez plus tard.",
 } as const;
 
-const EXPERT_TIMEOUT_MS = 90_000;
+// The existing queue allows 120s by default. Reserve another 90s for expert
+// work/repairs; a 90s total deadline killed requests still waiting their turn.
+const EXPERT_TIMEOUT_MS = 120_000 + 90_000;
 const EXPERT_MAX_TOKENS = 1_500;
 const SYNTHESIS_MAX_TOKENS = 2_500;
 
@@ -191,6 +194,11 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
     draft = res.data;
   }
 
+  const draftText = JSON.stringify(draft);
+  const draftBlock = wrapUntrusted("position soumise au conseil", draftText, {
+    max: draftText.length,
+  });
+
   // ── 2. Critiques adversariales A/D/V/E en parallèle ────────────────────
   // État déterministe des piliers (complétude, gaps) fourni à chaque expert
   // en plus de son pilier verbatim — la critique s'ancre sur du mesuré.
@@ -213,7 +221,7 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
       const res = await withTimeout(
         executeStructuredLLMCall({
           system: [expert.systemPrompt, UNTRUSTED_NOTICE, expertContext].join("\n\n"),
-          prompt: `${healthLine}\n\n${wrapUntrusted("position soumise au conseil", JSON.stringify(draft))}\n\nCHALLENGE cette position au nom de ton pilier.`,
+          prompt: `${healthLine}\n\n${draftBlock}\n\nCHALLENGE cette position au nom de ton pilier.`,
           schema: withCouncilCitations(expertCritiqueSchema, expertEvidence),
           formatInstructions: "citations est obligatoire : utilise seulement les Références de citation de TON contexte et un extrait exact. Les citations du draft ne sont pas une preuve indépendante. Une citation correcte ne valide ni une assertion éditoriale, ni ton interprétation.",
           caller: `mestor:council:expert-${pillarKey}`,
@@ -268,21 +276,49 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
   llmCalls++;
   let synthesis: CouncilSynthesis | null = null;
   try {
+    const critiquesText = JSON.stringify(
+      succeeded.map((c) => ({ pillar: c.pillarKey.toUpperCase(), ...c.critique })),
+    );
+    const offeredClaims = [...new Set(succeeded.flatMap(c => c.critique.critiques.map(x => x.claim)))];
+    const attribution = offeredClaims.length ? {
+      from: z.enum(succeeded.map(c => c.pillarKey.toUpperCase())),
+      claim: z.enum(offeredClaims),
+    } : null;
+    const attributedSchema = councilSynthesisSchema.extend({
+      acceptedCritiques: attribution
+        ? z.array(councilSynthesisSchema.shape.acceptedCritiques.element.extend(attribution))
+        : councilSynthesisSchema.shape.acceptedCritiques.max(0),
+      rejectedCritiques: attribution
+        ? z.array(councilSynthesisSchema.shape.rejectedCritiques.element.extend(attribution))
+        : councilSynthesisSchema.shape.rejectedCritiques.max(0),
+    });
+    const synthesisSchema = withCouncilCitations(attributedSchema, synthesisEvidence)
+      .superRefine((data, ctx) => {
+        for (const kind of ["acceptedCritiques", "rejectedCritiques"] as const) {
+          for (const [index, item] of data[kind].entries()) {
+            const offered = succeeded.find(c => c.pillarKey === item.from.trim().toLowerCase());
+            if (!offered?.critique.critiques.some(c => c.claim === item.claim)) {
+              ctx.addIssue({ code: "custom", path: [kind, index, "claim"],
+                message: "Reprends mot pour mot une claim réellement fournie par l’expert indiqué ; n’invente ni critique ni attribution." });
+            }
+          }
+        }
+      });
     const res = await executeStructuredLLMCall({
       system: coordinatorSystem,
       prompt: [
-        wrapUntrusted("position initiale", JSON.stringify(draft)),
+        draftBlock,
         wrapUntrusted(
           "critiques des experts",
-          JSON.stringify(
-            succeeded.map((c) => ({ pillar: c.pillarKey.toUpperCase(), ...c.critique })),
-          ),
-          { max: 12_000 },
+          critiquesText,
+          // Four already bounded expert outputs; let the existing Gateway's
+          // headroom handle model context instead of dropping later experts.
+          { max: critiquesText.length },
         ),
         "Arbitre : synthèse finale du conseil. Chaque critique est ACCEPTÉE (avec résolution) ou REJETÉE (avec raison). Les désaccords non tranchés vont dans `dissent` — ne les gomme pas.",
       ].join("\n\n"),
-      schema: withCouncilCitations(councilSynthesisSchema, synthesisEvidence),
-      formatInstructions: "citations est obligatoire : cite le dossier fourni ou une citation exacte des critiques reçues. Conserve version/origine/date, distingue interprétation et fait. Une citation correspondante ne valide pas l'affirmation stratégique.",
+      schema: synthesisSchema,
+      formatInstructions: "citations est obligatoire : cite le dossier fourni ou une citation exacte des critiques reçues. Toute critique acceptée/rejetée reprend mot pour mot une claim de l’expert indiqué, sans en inventer ni réattribuer. Conserve version/origine/date, distingue interprétation et fait. Une citation correspondante ne valide pas l'affirmation stratégique.",
       caller: "mestor:council:synthesis",
       strategyId: input.strategyId,
       maxOutputTokens: SYNTHESIS_MAX_TOKENS,

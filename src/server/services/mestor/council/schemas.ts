@@ -32,7 +32,9 @@ const councilReferenceSchema = z.discriminatedUnion("kind", [
 export type CouncilReference = z.infer<typeof councilReferenceSchema>;
 /** Non-persisted excerpt actually supplied to this call, not a truth assessment. */
 export interface CouncilEvidenceExcerpt { reference: CouncilReference; text: string }
-const quotation = z.string().trim().min(1);
+const quotation = z.string().trim().min(1).describe(
+  "Un seul passage continu recopié caractère par caractère depuis l’extrait fourni, sans guillemets ajoutés, ellipse, raccord ou paraphrase. Pour deux passages distincts, fournir deux citations.",
+);
 export const councilCitationSchema = z.discriminatedUnion("kind", [
   fieldReferenceSchema.extend({ quote: quotation }),
   documentReferenceSchema.extend({ quote: quotation }),
@@ -56,11 +58,14 @@ export function withCouncilCitations<T extends z.ZodRawShape>(
     }
     for (const [index, citation] of citations.entries()) {
       const reference = JSON.stringify(councilReferenceSchema.parse(citation));
-      const found = evidence.some((item) =>
-        JSON.stringify(councilReferenceSchema.parse(item.reference)) === reference
-        && item.text.includes(citation.quote));
-      if (!found) ctx.addIssue({ code: "custom", path: ["citations", index],
-        message: "Référence, version, champ, origine/date ou citation absents des extraits fournis à cet appel." });
+      const excerpts = evidence.filter((item) =>
+        JSON.stringify(councilReferenceSchema.parse(item.reference)) === reference);
+      if (excerpts.length === 0) ctx.addIssue({ code: "custom", path: ["citations", index],
+        message: "Référence, version, champ ou origine/date absents des extraits fournis à cet appel." });
+      else if (!excerpts.some(item => item.text.includes(citation.quote))) {
+        ctx.addIssue({ code: "custom", path: ["citations", index, "quote"],
+          message: "Recopie un seul passage continu de l’extrait fourni, sans guillemets ajoutés, ellipse, raccord ou paraphrase. Utilise deux citations pour deux passages distincts." });
+      }
     }
   });
 }
@@ -97,10 +102,12 @@ export type ExpertCritique = z.infer<typeof expertCritiqueSchema>;
 export const councilSynthesisSchema = z.object({
   finalPosition: z.string().min(1),
   acceptedCritiques: z.array(
-    z.object({ from: z.string(), claim: z.string(), resolution: z.string() }),
+      z.object({ from: z.string().describe("Code de l’expert : A, D, V ou E."),
+        claim: z.string().describe("Texte exact d’une claim réellement fournie par cet expert."), resolution: z.string() }),
   ),
   rejectedCritiques: z.array(
-    z.object({ from: z.string(), claim: z.string(), reason: z.string() }),
+      z.object({ from: z.string().describe("Code de l’expert : A, D, V ou E."),
+        claim: z.string().describe("Texte exact d’une claim réellement fournie par cet expert."), reason: z.string() }),
   ),
   actionItems: z.array(z.string()),
   /** Désaccords non résolus — livrés au lecteur, jamais gommés. */
