@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.472 — fix(llm): respecter le relais choisi même si sa configuration est incomplète (2026-10-15)
+
+**472 candidate : refus explicite du texte si le relais choisi est incomplet ; production 471 conservée.**
+
+- Deux conditions du Gateway existant corrigées : disponibilité fausse/candidats vides, sans repli sur d’anciens providers ni confusion avec la clé embeddings.
+- Baseline cinq rouges/neuf verts ; cible 94 tests / 8 fichiers verte, quatre processus de fixture reçus sans modèle/réseau/DB.
+- DEFAULT 4 571 / 434, gouvernance 1 627 / 166 et cinq contrôles zéro reçus ; livraison 472 attendue, seize réceptions inchangées. [Bornage](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.471 — fix(seshat): lire les sources courantes et cibler les extraits bornés (2026-10-15)
 
 **471 livré : lecture documentaire et usage court reçus en production ; raccord manuel des sources encore ouvert.**

@@ -241,7 +241,9 @@ export function isProviderHealthy(p: LLMProvider): boolean {
  * Knowledge Gateway de Seshat — s'appuie là-dessus.
  */
 export function isTextLLMAvailable(): boolean {
-  if (hasOpenAiTextRelay() && process.env.LLM_PRIMARY_PROVIDER === "openai") return isProviderHealthy("openai");
+  if (process.env.LLM_PRIMARY_PROVIDER === "openai") {
+    return hasOpenAiTextRelay() && isProviderHealthy("openai");
+  }
   return (["anthropic", "ollama", "openrouter"] as const).some((p) => isProviderHealthy(p));
 }
 
@@ -421,7 +423,9 @@ export async function buildProviderModel(
 export function buildTextProviderCandidates(ollamaPreferred: boolean): LLMProvider[] {
   // An explicit subscription choice must fail visibly rather than switch to
   // paid API credits, another model, or the retired OpenRouter connection.
-  if (hasOpenAiTextRelay() && process.env.LLM_PRIMARY_PROVIDER === "openai") return isProviderHealthy("openai") ? ["openai"] : [];
+  if (process.env.LLM_PRIMARY_PROVIDER === "openai") {
+    return hasOpenAiTextRelay() && isProviderHealthy("openai") ? ["openai"] : [];
+  }
   const providersToTry: LLMProvider[] = [];
   if (hasOpenAiTextRelay() && isProviderHealthy("openai")) providersToTry.push("openai");
   if (ollamaPreferred && isProviderHealthy("ollama")) providersToTry.push("ollama");

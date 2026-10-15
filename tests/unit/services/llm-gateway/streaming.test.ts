@@ -28,7 +28,10 @@ vi.mock("ai", async (importOriginal) => {
   return { ...actual, streamText: (...args: unknown[]) => streamTextMock(...args) };
 });
 
-import { _resetProvidersForTest, _getProviderStateForTest, callLLM, withRetry } from "@/server/services/llm-gateway";
+import {
+  _resetProvidersForTest, _getProviderStateForTest, callLLM, withRetry,
+  buildTextProviderCandidates, isTextLLMAvailable,
+} from "@/server/services/llm-gateway";
 import { streamChatText } from "@/server/services/llm-gateway/streaming";
 import * as ratePolicy from "@/server/services/llm-gateway/rate-policy";
 
@@ -106,6 +109,51 @@ describe("streamChatText — fallback pré-premier-octet", () => {
     vi.unstubAllEnvs();
     _resetProvidersForTest();
     delete process.env.OLLAMA_MODEL;
+  });
+
+  it.each([
+    { url: "", token: "fixture-only" },
+    { url: "http://127.0.0.1:8646/v1", token: "" },
+    { url: "", token: "" },
+  ])("keeps the explicit subscription closed when relay configuration is incomplete: %j", ({ url, token }) => {
+    vi.stubEnv("OPENAI_TEXT_RELAY_URL", url);
+    vi.stubEnv("OPENAI_TEXT_RELAY_TOKEN", token);
+    vi.stubEnv("OPENAI_API_KEY", "embedding-fixture-only");
+    vi.stubEnv("LLM_PRIMARY_PROVIDER", "openai");
+    _resetProvidersForTest({ openai: { available: true }, anthropic: { available: true },
+      ollama: { available: true }, openrouter: { available: true } });
+
+    expect(isTextLLMAvailable()).toBe(false);
+    expect(buildTextProviderCandidates(true)).toEqual([]);
+    expect(buildTextProviderCandidates(false)).toEqual([]);
+  });
+
+  it.each(["finite", "stream"] as const)("%s does not start another provider when the selected relay loses its credential", async (surface) => {
+    vi.stubEnv("OPENAI_TEXT_RELAY_URL", "http://127.0.0.1:8646/v1");
+    vi.stubEnv("OPENAI_TEXT_RELAY_TOKEN", "");
+    vi.stubEnv("OPENAI_API_KEY", "embedding-fixture-only");
+    vi.stubEnv("LLM_PRIMARY_PROVIDER", "openai");
+    vi.stubEnv("HEADROOM_DISABLED", "1");
+    _resetProvidersForTest({ openai: { available: true }, anthropic: { available: true },
+      ollama: { available: true }, openrouter: { available: true } });
+    // Stop before provider work even on the old, incorrect fallback path.
+    const acquire = vi.spyOn(ratePolicy, "acquireSlot")
+      .mockRejectedValue(new ratePolicy.LlmRateWaitExceededError("fixture-tripwire"));
+
+    if (surface === "finite") {
+      await expect(callLLM({ system: "s", prompt: "Avis ?", caller: "fixture" }))
+        .rejects.toThrow("All LLM providers failed");
+    } else {
+      await expect(streamChatText({ system: "s", messages: [{ role: "user", content: "Avis ?" }],
+        caller: "fixture" })).rejects.toThrow("All LLM providers failed before first byte");
+    }
+
+    expect(acquire).not.toHaveBeenCalled();
+    expect(streamTextMock).not.toHaveBeenCalled();
+    expect(costCreate).not.toHaveBeenCalled();
+    for (const provider of ["openai", "anthropic", "ollama", "openrouter"] as const) {
+      expect(_getProviderStateForTest(provider)).toMatchObject({ failureCount: 0, circuitOpenUntil: 0 });
+    }
   });
 
   it("local queue expiry does not start, bill or mark an OAuth provider as failed", async () => {
