@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.470 — fix(llm): finaliser le journal avant de terminer l’appel (2026-10-15)
+
+**470 candidate : gestionnaire existant prolongé, recettes sur copie reçues ; production 469 inchangée.**
+
+- Attente du journal avant retour/fin du flux ; créneau libéré avant cette attente, erreur ledger non fatale sans nouvelle génération.
+- Baseline deux rouges/deux verts, prototype simulé 15/4 vert ; deux appels réels sur copie distincts, conservation/recharge reçues.
+- DEFAULT 4 550/434, cible 62/5, cinq contrôles verts/CODE-MAP sans diff reçus ; commit/CI/image/runtime 470 attendus, aucune note client.
+- C4/C7, seize réceptions/zéro chantier sur sept et progression globale non calculée inchangés. [Bornage](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.469 — fix(council): conserver les entrées et lire la décision en premier (2026-10-15)
 
 **469 livré : entrées entières/lecture réparées, production relue sans génération ; qualification stratégique seulement sur copie.**

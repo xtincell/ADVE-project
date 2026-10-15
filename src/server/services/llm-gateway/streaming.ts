@@ -271,7 +271,9 @@ async function attemptStream(
         // Même reçu que callLLM : fournisseur/modèle servis, estimation token
         // explicitement distincte d'un coût rapporté par le fournisseur.
         const billedModel = provider === "ollama" || provider === "openrouter" || provider === "openai" ? servedModel : anthropicModel;
-        void trackCost({ strategyId: opts.strategyId, caller: opts.caller }, gatewayUsage, billedModel, undefined, provider);
+        // Generation has ended: release its slot before awaiting the receipt.
+        releaseOnce();
+        await trackCost({ strategyId: opts.strategyId, caller: opts.caller }, gatewayUsage, billedModel, undefined, provider);
         // Parité callLLM : PostgreSQL jsonb refuse U+0000 — purge à la source.
         const cleanText = text.split(String.fromCharCode(0)).join("").replace(/\\u0000/g, "");
         return { text: cleanText, ...gatewayUsage, provider, model: servedModel };

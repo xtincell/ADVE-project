@@ -900,10 +900,11 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           outputTokens: usage?.outputTokens ?? 0,
         };
 
-        // Non-blocking cost tracking. Use the actually-served model name
-        // (anthropic name when on Anthropic/OpenAI, ollama name when free).
+        // Finish the existing receipt before returning to a finite caller.
+        // A ledger failure remains non-fatal inside trackCost; never regenerate.
+        // Use the actually-served model and provider.
         const billedModel = provider === "ollama" || provider === "openrouter" || provider === "openai" || options.video ? servedModel : anthropicModel;
-        trackCost(options, gatewayUsage, billedModel, nativeBilling, provider);
+        await trackCost(options, gatewayUsage, billedModel, nativeBilling, provider);
 
         // PostgreSQL jsonb refuse le null byte U+0000 ("unsupported Unicode escape
         // sequence") — un modèle peut en émettre un (brut, ou un littéral qui le devient
