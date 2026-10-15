@@ -18,6 +18,10 @@ import { Modal } from "@/components/shared/modal";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { StructuredFieldControl } from "@/components/shared/smart-field-editor";
 import { hasFieldDef } from "@/lib/types/field-registry";
+import { SourceReadDialog } from "@/components/brand/source-read-dialog";
+import { Button } from "@/components/primitives/button";
+import { FriendlyError } from "@/components/shared/friendly-error";
+import type { SourceReceipt } from "@/domain/source-certainty";
 import { Sparkles, AlertTriangle, Loader2, Send, Lock } from "lucide-react";
 
 type AdveKey = "A" | "D" | "V" | "E";
@@ -83,6 +87,12 @@ function AmendPillarEditor({
   // Brouillon structuré (éditeur récursif) — utilisé en PATCH_DIRECT quand le
   // champ a une shape déclarée au registre (matrices, objets imbriqués).
   const [structuredDraft, setStructuredDraft] = useState<unknown>(null);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [readingSource, setReadingSource] = useState<{ id: string; label: string } | null>(null);
+  const [references, setReferences] = useState<Array<SourceReceipt & { label: string }>>([]);
+  const sources = trpc.ingestion.listSources.useQuery({ strategyId }, {
+    enabled: sourcesOpen && Boolean(field), staleTime: 0, refetchOnMount: "always",
+  });
 
   const latestEditable = trpc.pillar.listEditableFields.useQuery(
     { strategyId, pillarKey },
@@ -170,6 +180,9 @@ function AmendPillarEditor({
         reason,
         overrideLocked: isLocked ? overrideLocked : undefined,
         expectedVersion: editable.data?.version,
+        // Keep the fingerprint actually read, even after a refetch. The
+        // existing writer rejects changed/revoked documents and stale pillars.
+        sourceReceipts: references.length ? references.map(({ sourceId, contentHash }) => ({ sourceId, contentHash })) : undefined,
       },
       {
         onSuccess: (res) => {
@@ -199,7 +212,7 @@ function AmendPillarEditor({
 
   return (
     <>
-      <Modal open={open} onClose={onClose} size="xl" title={`Amender pilier ${pillarKey}`}>
+      <Modal open={open && !readingSource} onClose={onClose} size="xl" title={`Amender pilier ${pillarKey}`}>
         <div className="space-y-4">
           {/* Header status */}
           <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-surface-raised px-3 py-2 text-xs">
@@ -228,6 +241,7 @@ function AmendPillarEditor({
           </div>
 
           {/* Field selector */}
+          <FriendlyError error={latestEditable.error} />
           <div className="space-y-1">
             <label htmlFor={`${inputId}-field`} className="block text-xs font-medium text-foreground-secondary">Variable à amender</label>
             <select
@@ -379,6 +393,26 @@ function AmendPillarEditor({
           ) : null}
 
           {/* STRATEGIC_REWRITE warning */}
+          {field && <section aria-label="Documents de référence" className="space-y-3 rounded-lg border border-border p-3 text-sm">
+            <p className="font-medium">Documents de référence · facultatif</p>
+            <p className="text-foreground-secondary">Consultez un document pour joindre sa version à cette correction. La saisie manuelle reste disponible sans document ni assistance.</p>
+            {references.length > 0 && <ul className="space-y-2">{references.map(reference => <li key={reference.sourceId} className="flex flex-wrap items-center justify-between gap-2">
+              <span>{reference.label}</span>
+              <Button variant="ghost" size="sm" aria-label={`Retirer la référence ${reference.label}`}
+                onClick={() => setReferences(current => current.filter(item => item.sourceId !== reference.sourceId))}>Retirer</Button>
+            </li>)}</ul>}
+            <Button variant="outline" size="sm" onClick={() => setSourcesOpen(value => !value)}>{sourcesOpen ? "Masquer les documents" : "Ajouter un document"}</Button>
+            {sourcesOpen && <div className="space-y-2">
+              {(sources.isLoading || sources.isFetching) ? <p role="status">Chargement des documents…</p> : sources.error ? <FriendlyError error={sources.error} /> :
+                !sources.data?.length ? <p className="text-foreground-secondary">Aucun document accessible dans ce dossier.</p> :
+                  <ul className="max-h-48 space-y-2 overflow-y-auto">{sources.data.map(source => {
+                    const label = source.fileName || "Document sans titre";
+                    return <li key={source.id}><Button variant="ghost" size="sm" aria-label={`Consulter ${label}`}
+                      onClick={() => setReadingSource({ id: source.id, label })}>{label}</Button></li>;
+                  })}</ul>}
+            </div>}
+          </section>}
+
           {mode === "STRATEGIC_REWRITE" ? (
             <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
@@ -390,6 +424,8 @@ function AmendPillarEditor({
           ) : null}
 
           {/* Backend errors */}
+          <FriendlyError error={amendMutation.error} />
+          <FriendlyError error={previewMutation.error} />
           {amendMutation.data && amendMutation.data.status !== "OK" ? (
             <div className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs text-error">
               {amendMutation.data.summary}
@@ -421,6 +457,14 @@ function AmendPillarEditor({
           </div>
         </div>
       </Modal>
+
+      {readingSource && <SourceReadDialog sourceId={readingSource.id} strategyId={strategyId}
+        onClose={() => setReadingSource(null)} onCite={receipt => {
+          if (!active.current || receipt.sourceId !== readingSource.id) return;
+          setReferences(current => [...current.filter(reference => reference.sourceId !== receipt.sourceId), { ...receipt, label: readingSource.label }]);
+          setReadingSource(null);
+          setSourcesOpen(false);
+        }} />}
 
       <ConfirmDialog
         open={confirmOpen}

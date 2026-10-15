@@ -16,6 +16,8 @@
 
 ## Quick start
 
+**474 candidate : joindre une référence consultée à une correction.** Sur dossier fictif, lecture/fermeture conservent la proposition sans citation ; choix explicite d’une version puis amendement unique et valeur après recharge reçus. Aucun modèle ou validation d’un projet réel. DEFAULT 4 607 / 436, gouvernance 1 639 / 166 et quatre contrôles zéro reçus ; huit cas PG avec un rejeu. Source/CI/image/runtime attendus, production 473. Second éditeur legacy et droits/parcours fondateur restent à auditer ; C3/seize réceptions inchangés. [Bornage](docs/governance/REFONTE-PLAN.md).
+
 **473 livré : distinguer routage et réglages historiques.** La console existante affiche le routage prévu sans réécrire les politiques ni appeler de modèle. Source 80f5def3/CI/image/runtime reçus ; DEFAULT 4 583 / 435, PG 375 / 19. Lecture ADMIN réelle : cinq lignes Luna, éditeur ouvert/annulé et sept réponses reprises, données conservées. Cause de présentation fermée ; annulations et délais restent bornés, aucun SLO reçu. Factures/quota/charge/coût complet et pont manuel des sources ouverts ; seize réceptions inchangées. [Bornage](docs/governance/REFONTE-PLAN.md).
 
 **472 livré : conserver le choix du relais.** Une configuration incomplète refuse le texte, sans repli sur un ancien fournisseur ni confusion avec la clé embeddings. Source c92abbc6/CI/image/runtime et contrôles reçus : DEFAULT 4 571 / 434, PG 375 / 19. Quatre processus de fixture éprouvent l’admission ; aucune panne de production injectée. Reprise des sept réponses sans nouvelle génération, données conservées. Registre/routage, facture, quota, charge et pont manuel des sources restent ouverts ; seize réceptions inchangées. [Réception et limites](docs/governance/REFONTE-PLAN.md).

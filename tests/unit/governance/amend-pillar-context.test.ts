@@ -11,11 +11,17 @@ const transport = vi.hoisted(() => ({
   },
   writes: [] as Array<{ input: Record<string, unknown>; callbacks: { onSuccess: (out: unknown) => void } }>,
   previews: [] as Array<{ input: Record<string, unknown>; callbacks: { onSuccess: (out: { proposedValue: string }) => void } }>,
+  sourceHash: "a".repeat(64), sourceChecking: false, sourceDenied: false, sourceText: "Six questions prévues",
 }));
 vi.mock("@/lib/trpc/client", () => ({ trpc: { pillar: {
   listEditableFields: { useQuery: () => ({ data: transport.data, isLoading: !transport.data }) },
   amend: { useMutation: () => ({ isPending: false, mutate: (input: Record<string, unknown>, callbacks: typeof transport.writes[number]["callbacks"]) => transport.writes.push({ input, callbacks }) }) },
   previewAmend: { useMutation: () => ({ isPending: false, mutate: (input: Record<string, unknown>, callbacks: typeof transport.previews[number]["callbacks"]) => transport.previews.push({ input, callbacks }) }) },
+}, ingestion: {
+  listSources: { useQuery: () => ({ data: [{ id: "document-a", fileName: "Brief de recette" }], isLoading: false, isFetching: false }) },
+  getSource: { useQuery: () => ({ isLoading: false, isFetching: transport.sourceChecking,
+    error: transport.sourceDenied ? { message: "Document retiré de ce dossier" } : null,
+    data: { id: "document-a", fileName: "Brief de recette", rawContent: transport.sourceText, contentHash: transport.sourceHash } }) },
 } } }));
 vi.mock("@/components/shared/modal", () => ({ Modal: ({ open, children }: { open: boolean; children: React.ReactNode }) => open ? React.createElement("div", { role: "dialog" }, children) : null }));
 vi.mock("@/components/shared/confirm-dialog", () => ({ ConfirmDialog: () => null }));
@@ -47,6 +53,78 @@ beforeEach(() => {
     { field: "unitEconomics", mode: "PATCH_DIRECT", currentValue: { budgetCom: 10 }, spec: {} },
   ] };
   transport.writes = []; transport.previews = []; props.onClose.mockClear();
+  transport.sourceHash = "a".repeat(64); transport.sourceChecking = false; transport.sourceDenied = false;
+  transport.sourceText = "Six questions prévues";
+});
+
+const readDocument = () => {
+  fireEvent.click(screen.getByRole("button", { name: "Ajouter un document" }));
+  fireEvent.click(screen.getByRole("button", { name: "Consulter Brief de recette" }));
+};
+const citeDocument = () => {
+  readDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Utiliser cette version comme référence" }));
+};
+describe("manual documentary references stay with the draft actually read", () => {
+  it("only an explicit citation attaches the exact reader fingerprint to the existing amendment", () => {
+    render(view()); choose("mvp"); fill(); citeDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Appliquer" }));
+    expect(transport.writes[0]!.input).toMatchObject({ expectedVersion: 12,
+      sourceReceipts: [{ sourceId: "document-a", contentHash: "a".repeat(64) }] });
+    expect(transport.previews).toHaveLength(0);
+  });
+  it("consulting then closing does not attach a reference or lose the manual draft", () => {
+    render(view()); choose("mvp"); fill(); readDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Fermer" }));
+    fireEvent.click(screen.getByRole("button", { name: "Appliquer" }));
+    expect(transport.writes[0]!.input.proposedValue).toEqual({ features: ["six questions"] });
+    expect(transport.writes[0]!.input.sourceReceipts).toBeUndefined();
+  });
+  it.each(["checking", "denied"])("does not cite cached content while access is %s", (state) => {
+    render(view()); choose("mvp"); fill();
+    transport.sourceChecking = state === "checking"; transport.sourceDenied = state === "denied";
+    readDocument();
+    expect((screen.getByRole("button", { name: "Utiliser cette version comme référence" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole("textbox", { name: "Texte de référence" })).toBeNull();
+    expect(transport.writes).toHaveLength(0);
+  });
+  it("a refetch never replaces the cited source or pillar version under an existing draft", () => {
+    const page = render(view()); choose("mvp"); fill(); citeDocument();
+    transport.sourceHash = "b".repeat(64); transport.data = { ...transport.data!, version: 13 };
+    page.rerender(view()); fireEvent.click(screen.getByRole("button", { name: "Appliquer" }));
+    expect(transport.writes[0]!.input).toMatchObject({ expectedVersion: 12,
+      sourceReceipts: [{ sourceId: "document-a", contentHash: "a".repeat(64) }] });
+  });
+  it("removing a reference is explicit and does not discard the correction", () => {
+    render(view()); choose("mvp"); fill(); citeDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retirer la référence Brief de recette" }));
+    fireEvent.click(screen.getByRole("button", { name: "Appliquer" }));
+    expect(transport.writes[0]!.input.sourceReceipts).toBeUndefined();
+    expect(transport.writes[0]!.input.proposedValue).toEqual({ features: ["six questions"] });
+  });
+  it("does not cite a document with no readable text", () => {
+    render(view()); choose("mvp"); transport.sourceText = "   "; readDocument();
+    expect((screen.getByRole("button", { name: "Utiliser cette version comme référence" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(transport.writes).toHaveLength(0);
+  });
+  it("only an explicit second reading replaces an old citation, without duplicating it", () => {
+    render(view()); choose("mvp"); fill(); citeDocument();
+    transport.sourceHash = "b".repeat(64); citeDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Appliquer" }));
+    expect(transport.writes[0]!.input.sourceReceipts).toEqual([{ sourceId: "document-a", contentHash: "b".repeat(64) }]);
+  });
+  it.each(["field", "brand", "mode", "reopen"])("a %s change does not reuse a documentary reference", (context) => {
+    const page = render(view()); choose("mvp"); fill(); citeDocument();
+    if (context === "field") choose("packagingExperience");
+    if (context === "brand") { page.rerender(view({ strategyId: "fictional-other" })); choose("mvp"); }
+    if (context === "mode") {
+      fireEvent.click(screen.getByRole("button", { name: "llm rephrase" }));
+      fireEvent.click(screen.getByRole("button", { name: /patch direct/ }));
+    }
+    if (context === "reopen") { page.rerender(view({ open: false })); page.rerender(view()); choose("mvp"); }
+    fill(); fireEvent.click(screen.getByRole("button", { name: "Appliquer" }));
+    expect(transport.writes[0]!.input.sourceReceipts).toBeUndefined();
+  });
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 

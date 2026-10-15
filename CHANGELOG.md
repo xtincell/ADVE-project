@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.474 — fix(sources): joindre la version lue à l’amendement opérateur (2026-10-15)
+
+**474 candidate : référence explicite et amendement persisté reçus sur dossier fictif, livraison attendue.**
+
+- Quatre fichiers existants raccordés ; empreinte/version lues transmises, lecteur partagé et droits fondateur conservés.
+- DEFAULT 4 607 / 436, gouvernance 1 639 / 166, cible 41 / 3 et quatre contrôles zéro reçus ; huit cas PG avec un rejeu de préparation.
+- ADMIN fictif : lecture sans citation conserve le brouillon, puis une référence/un amendement HTTP 200, v2/recharge reçus sans modèle. Source/CI/image/runtime attendus, production 473/C3/seize réceptions inchangés. [Bornage](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.473 — fix(console): distinguer le routage prévu des politiques enregistrées (2026-10-15)
 
 **473 livré : la console distingue le routage prévu des réglages historiques, sans les modifier.**

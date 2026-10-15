@@ -32,6 +32,7 @@ import { SourceReceiptSchema } from "@/domain/source-certainty";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
+import { assertStrategyRead } from "./_strategy-read-guard";
 import { validatePillarContent, validatePillarPartial, type PillarKey } from "@/lib/types/pillar-schemas";
 import { validateCrossReferences, getCrossRefSummary } from "@/server/services/cross-validator";
 import * as pillarVersioning from "@/server/services/pillar-versioning";
@@ -1053,6 +1054,7 @@ export const pillarRouter = createTRPCRouter({
   listEditableFields: operatorProcedure
     .input(z.object({ strategyId: z.string(), pillarKey: adveKeyEnum }))
     .query(async ({ input, ctx }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
       const { listEditableFields, getEditableMode } = await import(
         "@/lib/types/variable-bible"
       );
@@ -1092,6 +1094,7 @@ export const pillarRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
       const pillarKeyLower = input.pillarKey.toLowerCase();
       const pillar = await ctx.db.pillar.findUnique({
         where: { strategyId_key: { strategyId: input.strategyId, key: pillarKeyLower } },
@@ -1222,6 +1225,7 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
       const operatorId = ctx.session.user.id;
       const { emitIntent } = await import("@/server/services/mestor/intents");
       const result = await emitIntent(

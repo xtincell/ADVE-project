@@ -159,14 +159,14 @@ export const ingestionRouter = createTRPCRouter({
   getSource: protectedProcedure
     .input(z.object({ id: z.string(), strategyId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
-      const { source, consumerStrategyId } = await resolveBrandSource(input.id, input.strategyId, ctx.db).catch((error: unknown) => {
+      const { source, consumerStrategyId, contentHash } = await resolveBrandSource(input.id, input.strategyId, ctx.db).catch((error: unknown) => {
         if (error instanceof Error && error.message.startsWith("SOURCE_UNAVAILABLE:")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Ce document n’est plus accessible dans ce dossier." });
         }
         throw error;
       });
       await assertStrategyRead(ctx.session.user.id, consumerStrategyId);
-      return { id: source.id, fileName: source.fileName, rawContent: source.rawContent,
+      return { id: source.id, contentHash, fileName: source.fileName, rawContent: source.rawContent,
         certainty: source.certainty, sourceType: source.sourceType, origin: source.origin };
     }),
 
