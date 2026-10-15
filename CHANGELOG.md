@@ -2,7 +2,9 @@
 
 ## v6.27.474 — fix(sources): joindre la version lue à l’amendement opérateur (2026-10-15)
 
-**Complément CI candidat — 15 octobre** : la CI documentaire 38801540158 échoue avant tests sur quota PostgreSQL ECR. Repli explicite vers Docker Hub officiel au même digest vérifié, dans le job existant ; base/tests/diff inchangés, nettoyage prévu sous `always`. Cible 27 / 2 et gouvernance 1 645 / 167 vertes, script exercé avec Docker/délais simulés ; Tsc initial refusé sur env de test puis corrigé ; cinq contrôles finaux à zéro, CI réelle attendue. Deux registres refusés restent un échec. Aucun effet produit, production 474 inchangée.
+**Complément CI reçu — 15 octobre** : source 811c4eb8, CI 38805315500/Mission 38805315461/Chromatic 38805315601 verts au premier essai ; DEFAULT 4 613 / 437, PG 375 / 19/diff sans différence. CI réelle via ECR primaire ; repli Docker Hub reçu seulement en simulation/identité manifeste. Ancien refus 38801540158 conservé, supersédé sans relance ; cause pull avant steps/sans repli fermée, dette/symptôme précis purgés. Quotas externes/C7 restent ouverts ; production 474/source 6e117414 inchangées, aucun build/déploiement/modèle.
+
+**C2, réception bornée — 15 octobre** : 21 aperçus relus puis document 036 reclassé corporate/relié au BTS existant, épreuve 038 privée ; native finale 89 vues actives/191 assets/sept collections exactes. Un seul maître IMP sur trois vu au navigateur, formulaire annulé sans choix ; les trois liens sont reçus en JSON. Maître sans fichier livré, droits/accord client non reçus malgré « ok ». Noms/codes/versions/masters et Noël 2026 global ouverts ; réserves C4 tracées, seize réceptions inchangées. [Bornage](docs/governance/REFONTE-PLAN.md).
 
 **474 livré : référence/version et garde opérateur raccordées ; production reçue en lecture/annulation seulement.**
 
