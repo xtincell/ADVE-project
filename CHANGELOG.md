@@ -2,13 +2,12 @@
 
 ## v6.27.476 — fix(governance): raccorder créatif et inférence au gestionnaire existant (2026-10-16)
 
-**476 candidat : deux wrappers structurés, refus sur copie et contrôles de l’arbre final reçus.**
+**476 livré : deux appels hérités raccordés au gestionnaire, refus seuls reçus sur copie.**
 
-- Deux chemins via `executeStructuredLLMCall`, forme objet/reprises zéro ; parseur/fallback créatif retiré, non-JSON refusé. Seul le gestionnaire tient les coûts.
-- Cible finale 23 / 3 verte ; MCP-v4 et service d’inférence en refus, quatorze tables conservées, aucune génération utile.
-- DEFAULT 4 650 / 440, gouvernance 1 646 / 167/sept commandes zéro ; premiers refus conservés. CI/image/production 476 non reçues ; C3/C7/seize réceptions inchangés. [Bornage](docs/governance/REFONTE-PLAN.md).
+- Wrapper structuré partagé, objet exigé/non-JSON refusé ; source cec5a163/CI/image/runtime exacts reçus.
+- ADMIN en lecture sans modèle/POST, données conservées ; annulations réseau sans cause établie. Causes ciblées purgées, activation/provenance/qualité/coûts/quota/charge ouverts ; seize réceptions inchangées. [Bornage](docs/governance/REFONTE-PLAN.md).
 
-**Complément `test(governance)` à committer** : premier commit applicatif b4517346 local, non poussé. Le mock Node/processus par commande est remplacé par deux fonctions `docker`/`sleep` chargées dans le vrai Bash ; trace argv NUL, dix sondes et délai parent 10 s inchangés. Six cas verts en 123 ms/451 ms au total ; deux premiers rouges sous charge conservés, arbre final vérifié ci-dessus. Aucun workflow, limite produit ou runtime changé par ce complément de test.
+**Complément `test(governance)` reçu** : b4517346 applicatif/cec5a163 fixture poussés ; fonctions Bash `docker`/`sleep`, trace NUL/dix sondes/10 s inchangés, six cas 123 ms/451 ms. DEFAULT 4 650 / 440/gouvernance 1 646 / 167/sept commandes zéro, premiers rouges conservés. Clôture MD distincte, sans nouveau build/bump/modèle.
 
 ## v6.27.475 — fix(ui): aligner l’édition opérateur sur l’amendement gouverné (2026-10-15)
 

@@ -10,7 +10,7 @@ Statut : `active` (page substantive), `redirect` (legacy renommée — redirige)
 
 Source de vérité : `find src/app -name 'page.tsx'`. Mis à jour avec [APOGEE.md](APOGEE.md) §4.
 
-**476 candidat — aucun ajout de page** : deux wrappers structurés, cible 23 / 3 verte ; MCP-v4/inférence en refus sur copie, sans génération utile, HTTP activateBrand non exercé. Arbre final DEFAULT 4 650 / 440/gouvernance 1 646 / 167/sept commandes zéro ; premiers refus conservés. Raccord applicatif puis complément de test dédiés à committer, CI/image/production non reçues. 475 livré, aucune validation sémantique déduite. [Bornage](REFONTE-PLAN.md).
+**476 livré — aucun ajout de page** : source cec5a163/CI/image/runtime exacts reçus. ADMIN lit cinq usages prévus Luna sans modèle/POST, données conservées ; 130 événements/56 réponses complets, zéro ≥500/exception mais 18 annulations, cause inconnue/pas SLO. Wrappers/cible 23 / 3 et refus sur copie reçus ; HTTP activateBrand/qualité utile/provenance/opt-out/coût complet restent ouverts, seize réceptions inchangées. [Bornage](REFONTE-PLAN.md).
 
 **439 livré — huit pages de marque existantes** : identity, positioning,
 offer, engagement, diagnostic, market, potential et roadmap réutilisent
