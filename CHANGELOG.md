@@ -2,12 +2,12 @@
 
 ## v6.27.468 — fix(council): relier question, preuves et arbitrages (2026-10-15)
 
-**Candidate : contrôles locaux reçus, qualification acceptée pour une seule question SPAWT sur copie ; CI du complément attendue.**
+**468 livré : code/image/runtime et lecture production reçus ; qualification stratégique limitée à une question SPAWT sur copie.**
 
-- Question réelle, citations liées et arbitrages partitionnés via contrats existants ; aucun nouveau gestionnaire.
-- Natif complet reçu pour ce cas ; stratégie générale, UX entière, usage client et SLO non reçus.
-- C4 : réponse bornée/lecture prioritaire à reprendre ; réserve ledger C7 distincte.
-- Aucun build/déploiement 468 demandé, production 467 ; seize réceptions/zéro chantier sur sept inchangés. [Réception](docs/governance/REFONTE-PLAN.md).
+- Question, références et arbitrages réparés dans les contrats existants ; aucun nouveau gestionnaire.
+- Production ADMIN : reprise conservée sans nouveau modèle ; erreurs de première fenêtre préservées, pas zéro global/SLO.
+- C4 plein texte/priorités et réserve ledger/registre C7 restent ouverts, sans réception d’UX entière ou usage client.
+- Réception documentaire sans bump/build : SHA docs distinct, CI de clôture attendue. Seize réceptions/zéro chantier sur sept inchangés. [Bornage](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.467 — fix(context): transmettre les valeurs qualifiées aux consommateurs existants (2026-10-14)
 

@@ -16,7 +16,7 @@
 
 ## Quick start
 
-**468 candidate : question, citations et arbitrages reçus pour un cas SPAWT sur copie.** Quatre experts/synthèse, attributions fidèles, trois actions ; qualification acceptée uniquement pour cette question, pas stratégie générale ou usage client. Contrôles locaux reçus, CI du complément attendue. Réponse originale encore bornée et décision placée après les longs avis : reprise C4 planifiée dans le panneau existant. Réserve de journalisation C7 distincte ; aucun build/déploiement 468 demandé. Production 467/seize réceptions bornées/zéro chantier sur sept inchangés. [Réception et limites](docs/governance/REFONTE-PLAN.md).
+**468 livré : question, citations et arbitrages reliés dans les contrats existants.** Code/image/runtime et lecture production reçus sans nouveau conseil généré. Qualification acceptée uniquement pour une question SPAWT sur copie, pas stratégie générale ou usage client. Réponse originale encore bornée/décision après longs avis : reprise C4 dans le panneau existant ; réserve ledger/registre C7 distincte. Erreurs de première fenêtre conservées, aucun SLO déduit. Seize réceptions bornées/zéro chantier sur sept inchangés ; clôture documentaire distincte du code/image. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 
 **467 livré backend : valeurs qualifiées avant les résumés.** Code/runtime et reprise du fil existant reçus sans génération, données conservées. La réception d’entrée sur snapshot avec dépendances simulées reste bornée ; citations de sortie, rapport utile, ledger et coût complet non reçus. Seize résultats inchangés, aucun chantier entier fermé. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 
