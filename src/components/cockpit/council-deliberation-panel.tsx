@@ -23,6 +23,7 @@ import { MarkdownContent } from "@/components/shared/markdown-content";
 import { FIELD_PROVENANCE_LABEL } from "@/domain/field-provenance";
 import { SOURCE_CERTAINTY_LABEL } from "@/domain/source-certainty";
 import { getFieldLabel } from "@/lib/types/field-labels";
+import { councilDeliberateInputSchema, COUNCIL_TOPIC_MAX, COUNCIL_DRAFT_MAX } from "@/domain/council-input";
 import type { CouncilCitation } from "@/server/services/mestor/council/schemas";
 
 const PILLAR_LABEL: Record<string, string> = {
@@ -52,10 +53,6 @@ const SEVERITY_CLASS: Record<string, string> = {
   MEDIUM: "border-warning text-warning",
   LOW: "border-border text-foreground-secondary",
 };
-
-/** Bornes du schéma tRPC — tronquer ici évite un refus serveur silencieux. */
-const TOPIC_MAX = 2_000;
-const DRAFT_MAX = 8_000;
 
 function CouncilCitations({ citations }: { citations: CouncilCitation[] | undefined }) {
   if (!citations?.length) return <p className="mt-2 text-xs text-foreground-secondary">
@@ -102,9 +99,13 @@ export function CouncilDeliberationPanel({
   // NEUVE que les experts attaquent ensuite : la réponse affichée à l'écran
   // n'était jamais soumise à personne, alors que le bouton promettait de la
   // soumettre. Le champ existait déjà côté serveur — il n'était pas branché.
-  const draft = answer.slice(0, DRAFT_MAX);
-  const topic = (question ?? answer).slice(0, TOPIC_MAX);
-  const truncated = answer.length > DRAFT_MAX;
+  const draft = answer;
+  // Only a legacy caller without the original question uses a bounded search
+  // topic from the reply. The position itself is always submitted in full.
+  const topic = question ?? answer.slice(0, COUNCIL_TOPIC_MAX);
+  const inputValid = topic.trim().length >= 3 &&
+    councilDeliberateInputSchema.safeParse({ strategyId, topic, draft }).success;
+  const tooLong = topic.length > COUNCIL_TOPIC_MAX || draft.length > COUNCIL_DRAFT_MAX;
 
   // Une délibération coûte 5 appels LLM sur le budget de la marque : elle ne
   // doit partir QUE sur un clic. `refetchOnWindowFocus: false` et `retry: false`
@@ -118,7 +119,7 @@ export function CouncilDeliberationPanel({
   const query = trpc.mestor.councilDeliberate.useQuery(
     { strategyId, topic, draft },
     {
-      enabled: requested && topic.trim().length >= 3,
+      enabled: requested && inputValid,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,
@@ -129,15 +130,21 @@ export function CouncilDeliberationPanel({
 
   if (!requested) {
     return (
-      <button
-        onClick={() => setRequested(true)}
-        disabled={topic.trim().length < 3}
-        className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground-secondary hover:bg-surface-raised disabled:opacity-50"
-        title="Soumet la dernière réponse aux quatre experts, dont le mandat est de la contester"
-      >
-        <Scale className="h-4 w-4" />
-        Analyse approfondie
-      </button>
+      <div className="space-y-2">
+        <button
+          onClick={() => setRequested(true)}
+          disabled={!inputValid}
+          className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground-secondary hover:bg-surface-raised disabled:opacity-50"
+          title="Soumet la dernière réponse aux quatre experts, dont le mandat est de la contester"
+        >
+          <Scale className="h-4 w-4" />
+          Analyse approfondie
+        </button>
+        {tooLong && <p role="alert" className="text-sm text-warning">
+          {topic.length > COUNCIL_TOPIC_MAX ? "La question est trop longue" : "La réponse est trop longue"}
+          {" pour cette analyse. Aucun texte n’a été coupé et l’analyse n’a pas été lancée."}
+        </p>}
+      </div>
     );
   }
 
@@ -234,17 +241,83 @@ export function CouncilDeliberationPanel({
         </div>
       )}
 
-      <section>
-        <h5 className="text-sm font-medium text-foreground-secondary">Position soumise</h5>
+      {/* `deliberated: true` + `synthesis: null` = l'arbitrage a échoué APRÈS
+          les critiques. Faire disparaître le bloc en silence serait le mensonge
+          par omission symétrique de celui qu'on corrige juste au-dessus. */}
+      {d.deliberated && !d.synthesis && (
+        <div className="flex items-start gap-2 rounded-lg border border-warning p-3 text-sm text-warning">
+          <ShieldQuestion className="h-4 w-4 shrink-0" />
+          <span>
+            Les experts se sont prononcés, mais la synthèse n&apos;a pas abouti — il n&apos;y a
+            pas de position retenue à afficher. Les critiques restent consultables dans le détail
+            des consultations ci-dessous.
+          </span>
+        </div>
+      )}
+
+      {d.synthesis && (
+        <section className="space-y-3">
+          <h5 className="text-sm font-medium text-foreground-secondary">Position retenue</h5>
+          <MarkdownContent className="text-foreground">{d.synthesis.finalPosition}</MarkdownContent>
+          <CouncilCitations citations={d.synthesis.citations} />
+
+          {d.synthesis.actionItems.length > 0 && (
+            <div className="space-y-2">
+              <h6 className="text-sm font-medium text-foreground">Priorités</h6>
+              <ol className="list-decimal space-y-2 pl-5 text-sm text-foreground">
+                {d.synthesis.actionItems.map((a, i) => (
+                  <li key={i}><MarkdownContent>{a}</MarkdownContent></li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {/* Les désaccords non résolus sont livrés tels quels — un consensus
+              fabriqué vaudrait moins que la mention du désaccord. */}
+          {d.synthesis.dissent.length > 0 && (
+            <div className="rounded-lg border border-warning p-3">
+              <p className="text-sm font-medium text-warning">Désaccords non résolus</p>
+              <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-foreground-secondary">
+                {d.synthesis.dissent.map((x, i) => (
+                  <li key={i}><MarkdownContent>{x}</MarkdownContent></li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <details className="rounded-lg border border-border p-3">
+            <summary className="cursor-pointer text-sm font-medium text-foreground-secondary">Détail des arbitrages</summary>
+            <div className="mt-3 space-y-4">
+              {d.synthesis.acceptedCritiques.length > 0 && <div className="space-y-2">
+                <h6 className="text-sm font-medium text-foreground-secondary">Contestations retenues</h6>
+                {d.synthesis.acceptedCritiques.map((item, i) => <div key={i} className="space-y-1 border-l-2 border-border pl-3">
+                  <p className="text-xs text-foreground-secondary">{PILLAR_LABEL[item.from.toLowerCase()] ?? item.from}</p>
+                  <MarkdownContent>{item.claim}</MarkdownContent>
+                  <MarkdownContent className="text-foreground-secondary">{item.resolution}</MarkdownContent>
+                </div>)}
+              </div>}
+              {d.synthesis.rejectedCritiques.length > 0 && <div className="space-y-2">
+                <h6 className="text-sm font-medium text-foreground-secondary">Contestations écartées</h6>
+                {d.synthesis.rejectedCritiques.map((item, i) => <div key={i} className="space-y-1 border-l-2 border-border pl-3">
+                  <p className="text-xs text-foreground-secondary">{PILLAR_LABEL[item.from.toLowerCase()] ?? item.from}</p>
+                  <MarkdownContent>{item.claim}</MarkdownContent>
+                  <MarkdownContent className="text-foreground-secondary">{item.reason}</MarkdownContent>
+                </div>)}
+              </div>}
+            </div>
+          </details>
+        </section>
+      )}
+      <details className="rounded-lg border border-border p-3">
+        <summary className="cursor-pointer text-sm font-medium text-foreground-secondary">Position soumise</summary>
         <MarkdownContent className="mt-1 text-foreground">{d.draft.position}</MarkdownContent>
         <CouncilCitations citations={d.draft.citations} />
-      </section>
+      </details>
 
       {critiques.length > 0 && (
-        <section className="space-y-3">
-          <h5 className="text-sm font-medium text-foreground-secondary">
-            Ce que les experts contestent
-          </h5>
+        <details className="space-y-3 rounded-lg border border-border p-3">
+          <summary className="cursor-pointer text-sm font-medium text-foreground-secondary">
+            Consultations des experts
+          </summary>
           {critiques.map(([key, c]) => {
             const label = PILLAR_LABEL[key] ?? key.toUpperCase();
             if ("failed" in c) {
@@ -287,73 +360,9 @@ export function CouncilDeliberationPanel({
               </div>
             );
           })}
-        </section>
+        </details>
       )}
 
-      {/* `deliberated: true` + `synthesis: null` = l'arbitrage a échoué APRÈS
-          les critiques. Faire disparaître le bloc en silence serait le mensonge
-          par omission symétrique de celui qu'on corrige juste au-dessus. */}
-      {d.deliberated && !d.synthesis && (
-        <div className="flex items-start gap-2 rounded-lg border border-warning p-3 text-sm text-warning">
-          <ShieldQuestion className="h-4 w-4 shrink-0" />
-          <span>
-            Les experts se sont prononcés, mais la synthèse n&apos;a pas abouti — il n&apos;y a
-            pas de position retenue à afficher. Les critiques ci-dessus restent consultables.
-          </span>
-        </div>
-      )}
-
-      {truncated && (
-        <p className="text-xs text-foreground-secondary">
-          La réponse analysée a été tronquée à {DRAFT_MAX.toLocaleString("fr-FR")} caractères.
-        </p>
-      )}
-
-      {d.synthesis && (
-        <section className="space-y-3">
-          <h5 className="text-sm font-medium text-foreground-secondary">Position retenue</h5>
-          <MarkdownContent className="text-foreground">{d.synthesis.finalPosition}</MarkdownContent>
-          <CouncilCitations citations={d.synthesis.citations} />
-
-          {d.synthesis.acceptedCritiques.length > 0 && <div className="space-y-2">
-            <h6 className="text-sm font-medium text-foreground-secondary">Contestations retenues</h6>
-            {d.synthesis.acceptedCritiques.map((item, i) => <div key={i} className="space-y-1 border-l-2 border-border pl-3">
-              <p className="text-xs text-foreground-secondary">{PILLAR_LABEL[item.from] ?? item.from}</p>
-              <MarkdownContent>{item.claim}</MarkdownContent>
-              <MarkdownContent className="text-foreground-secondary">{item.resolution}</MarkdownContent>
-            </div>)}
-          </div>}
-          {d.synthesis.rejectedCritiques.length > 0 && <div className="space-y-2">
-            <h6 className="text-sm font-medium text-foreground-secondary">Contestations écartées</h6>
-            {d.synthesis.rejectedCritiques.map((item, i) => <div key={i} className="space-y-1 border-l-2 border-border pl-3">
-              <p className="text-xs text-foreground-secondary">{PILLAR_LABEL[item.from] ?? item.from}</p>
-              <MarkdownContent>{item.claim}</MarkdownContent>
-              <MarkdownContent className="text-foreground-secondary">{item.reason}</MarkdownContent>
-            </div>)}
-          </div>}
-
-          {d.synthesis.actionItems.length > 0 && (
-            <ul className="list-disc space-y-1 pl-5 text-sm text-foreground">
-              {d.synthesis.actionItems.map((a, i) => (
-                <li key={i}><MarkdownContent>{a}</MarkdownContent></li>
-              ))}
-            </ul>
-          )}
-
-          {/* Les désaccords non résolus sont livrés tels quels — un consensus
-              fabriqué vaudrait moins que la mention du désaccord. */}
-          {d.synthesis.dissent.length > 0 && (
-            <div className="rounded-lg border border-warning p-3">
-              <p className="text-sm font-medium text-warning">Désaccords non résolus</p>
-              <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-foreground-secondary">
-                {d.synthesis.dissent.map((x, i) => (
-                  <li key={i}><MarkdownContent>{x}</MarkdownContent></li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
-      )}
     </div>
   );
 }

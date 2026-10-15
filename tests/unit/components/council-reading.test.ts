@@ -51,6 +51,49 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("conseil — lecture fidèle sans génération supplémentaire", () => {
+  it("submits the entire reply beyond the former8000-character cut", () => {
+    const complete = "Contexte. ".repeat(925) + "DÉCISION_FINALE";
+    render(React.createElement(CouncilDeliberationPanel, {
+      strategyId: "fixture", answer: complete, question: "Quelle décision prendre ?",
+    }));
+    fireEvent.click(screen.getByRole("button", { name: "Analyse approfondie" }));
+    expect(state.inputs.at(-1)?.draft).toBe(complete);
+    expect(screen.queryByText(/tronquée/)).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("keeps a question accepted by the chat intact beyond2000 characters", () => {
+    const question = "Question précise. ".repeat(190) + "CHOIX_FINAL";
+    render(React.createElement(CouncilDeliberationPanel, { strategyId: "fixture", answer, question }));
+    fireEvent.click(screen.getByRole("button", { name: "Analyse approfondie" }));
+    expect(state.inputs.at(-1)?.topic).toBe(question);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("puts priorities before closed expert details while keeping dissent visible", () => {
+    render(React.createElement(CouncilDeliberationPanel, { strategyId: "fixture", answer }));
+    fireEvent.click(screen.getByRole("button", { name: "Analyse approfondie" }));
+    const action = screen.getByText("Action 1");
+    const critique = screen.getByText("Thèse a");
+    expect(action.compareDocumentPosition(critique) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(action.closest("details")).toBeNull();
+    expect(critique.closest("details")?.open).toBe(false);
+    expect(screen.getByText("Critique retenue").closest("details")?.open).toBe(false);
+    expect(screen.getByText("Désaccord 1").closest("details")).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("refuses an oversized submission before any call without silently replacing its text", () => {
+    render(React.createElement(CouncilDeliberationPanel, {
+      strategyId: "fixture", answer: "x".repeat(50_001), question: "Quelle décision prendre ?",
+    }));
+    expect((screen.getByRole("button", { name: "Analyse approfondie" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(state.inputs.at(-1)?.draft).toHaveLength(50_001);
+    expect(state.query.mock.calls.every(([options]) => !options.enabled)).toBe(true);
+    expect(screen.getByText(/trop longue/)).toBeTruthy();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("passes the question preceding the challenged reply, even if a later user message exists", () => {
     state.messages.push({ id: "later", role: "user", content: "Autre question sans réponse", createdAt: new Date(2) });
     render(React.createElement(MestorPage));

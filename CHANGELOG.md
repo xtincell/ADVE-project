@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.469 — fix(council): conserver les entrées et lire la décision en premier (2026-10-15)
+
+**469 candidate : texte entier et lecture reçus sur copie, contrôles locaux verts ; production 468 inchangée.**
+
+- Position/priorités/désaccords avant avis et arbitrages dépliables ; réponse entière transmise ou avertissement avant envoi hors borne.
+- DEFAULT 4 546/433, cible 51/4, gouvernance 1 627/166 et cinq contrôles zéro. Dix-neuf fichiers du gestionnaire/Conseil inchangés.
+- Fil repris sans génération ; analyse non persistée. Qualification limitée à cette question SPAWT sur copie.
+- Source/CI/image/runtime 469 attendus ; C4/C7 et seize réceptions/zéro chantier sur sept inchangés. [Bornage](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.468 — fix(council): relier question, preuves et arbitrages (2026-10-15)
 
 **468 livré : code/image/runtime et lecture production reçus ; qualification stratégique limitée à une question SPAWT sur copie.**

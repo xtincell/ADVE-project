@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 48 modules (src/domain, cœur métier pur)
+## Domain — 49 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
@@ -69,6 +69,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **classification-coherence** — Domain helper — invariants APOGEE de cohérence Classification ↔ Superfans ↔ Cult Tier.
 - **collaborator-access** — ADR-0131 — Zones d'accès des collaborateurs délégués par marque.
 - **connector-result** — ConnectorResult<T> — discriminated union returned by every external connector
+- **council-input**
 - **creative-intelligence**
 - **creative-media**
 - **creative-models**

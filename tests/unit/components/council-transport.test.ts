@@ -4,14 +4,14 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { initTRPC } from "@trpc/server";
 import superjson from "superjson";
-import { z } from "zod";
+import { councilDeliberateInputSchema } from "@/domain/council-input";
 
-const fixture = vi.hoisted(() => ({ calls: 0, draft: "" }));
+const fixture = vi.hoisted(() => ({ calls: 0, draft: "", topic: "" }));
 vi.mock("@/server/trpc/router", () => {
   const t = initTRPC.create({ transformer: superjson });
   return { appRouter: t.router({ mestor: t.router({
-    councilDeliberate: t.procedure.input(z.object({ draft: z.string() })).query(({ input }) => {
-      fixture.calls++; fixture.draft = input.draft;
+    councilDeliberate: t.procedure.input(councilDeliberateInputSchema).query(({ input }) => {
+      fixture.calls++; fixture.draft = input.draft ?? ""; fixture.topic = input.topic;
       return { status: "UNAVAILABLE", reason: "Réponse longue reçue intégralement." };
     }),
     assistantHistory: t.procedure.query(() => ({ messages: [] })),
@@ -33,14 +33,16 @@ it("delivers a long French answer in a POST body, once per explicit click", asyn
     return POST(request);
   }));
   const answer = "Référence : édition inconnue — six questions. ".repeat(180);
+  const question = "Confronte les sources. ".repeat(150) + "QUESTION_FINALE";
   render(React.createElement(TRPCProvider, null,
-    React.createElement(CouncilDeliberationPanel, { strategyId: "fixture", answer })));
+    React.createElement(CouncilDeliberationPanel, { strategyId: "fixture", answer, question })));
   expect(requests).toHaveLength(0);
   fireEvent.click(screen.getByRole("button", { name: "Analyse approfondie" }));
   expect(await screen.findByText("Réponse longue reçue intégralement.")).toBeTruthy();
   expect(requests).toHaveLength(1);
   expect(requests[0]).toEqual({ method: "POST", url: "http://localhost/api/trpc/mestor.councilDeliberate?batch=1" });
-  expect(fixture.draft).toBe(answer.slice(0, 8000));
+  expect(fixture.draft).toBe(answer);
+  expect(fixture.topic).toBe(question);
   expect(fixture.calls).toBe(1);
 });
 

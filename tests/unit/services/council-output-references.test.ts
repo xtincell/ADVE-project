@@ -19,6 +19,7 @@ vi.mock("@/server/services/neteru-shared/pillar-directors", () => ({
 import { deliberate } from "@/server/services/mestor/council";
 import { expertCritiqueSchema, withCouncilCitations } from "@/server/services/mestor/council/schemas";
 import { deriveJsonSchemaFromZod } from "@/server/services/utils/zod-to-json-schema";
+import { councilDeliberateInputSchema } from "@/domain/council-input";
 const reference = { kind: "FIELD", sourceId: "pillar-spawt-e", sourceVersion: 0,
   source: "e", field: "rituels", provenance: "UNKNOWN", editedAt: "2026-07-24T09:00:00.000Z" };
 const citation = { ...reference, quote: "5 questions = 5 axes" };
@@ -152,10 +153,23 @@ describe("Council references — actual structured validator, model fixture only
   });
 
   it("supplies the entire bounded submitted position to each expert and synthesis", async () => {
-    const position = "Contexte détaillé. ".repeat(300) + "DÉCISION_FINALE_À_CONFRONTER";
-    await deliberate({ strategyId: "spawt", topic: "Question", draft: position });
+    const position = "Contexte détaillé. ".repeat(550) + "DÉCISION_FINALE_À_CONFRONTER";
+    const topic = "Question précise. ".repeat(190) + "QUESTION_FINALE";
+    const input = councilDeliberateInputSchema.parse({ strategyId: "spawt", topic, draft: position });
+    await deliberate(input);
     expect(state.call).toHaveBeenCalledTimes(5);
-    for (const [options] of state.call.mock.calls) expect(options.prompt).toContain("DÉCISION_FINALE_À_CONFRONTER");
+    for (const [options] of state.call.mock.calls) {
+      expect(options.prompt).toContain("DÉCISION_FINALE_À_CONFRONTER");
+      expect(options.prompt).toContain("QUESTION_FINALE");
+    }
+  });
+
+  it.each([
+    { topic: "q".repeat(4_001), draft: "Position" },
+    { topic: "Question", draft: "p".repeat(50_001) },
+  ])("refuses an oversized Council input before calling the manager", (fields) => {
+    expect(councilDeliberateInputSchema.safeParse({ strategyId: "spawt", ...fields }).success).toBe(false);
+    expect(state.call).not.toHaveBeenCalled();
   });
   it.each(["invented claim", "wrong expert"])("does not attribute an %s to an expert in the synthesis", async (fault) => {
     state.call.mockImplementation(async ({ caller }: { caller: string }) => ({ text: JSON.stringify(

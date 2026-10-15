@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.469", date: "2026-10-15",
+    headline: "Lire les priorités avant les détails",
+    highlights: [
+      { emoji: "🎯", title: "Repérer l’essentiel", body: "La position retenue, les priorités et les désaccords apparaissent avant les avis détaillés. Vous pouvez déplier les consultations et les arbitrages pour examiner leur contenu." },
+      { emoji: "📄", title: "Transmettre la réponse entière", body: "Votre réponse est transmise sans coupe silencieuse. Si elle est trop longue, un avertissement vous invite à la raccourcir avant tout envoi." },
+    ],
+  },
+  {
     version: "6.27.468", date: "2026-10-15",
     headline: "Retrouver les extraits cités par les experts",
     highlights: [

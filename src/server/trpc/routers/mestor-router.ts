@@ -5,6 +5,7 @@ import { generateInsights } from "@/server/services/mestor/insights";
 import * as mestor from "@/server/services/mestor";
 import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
+import { councilDeliberateInputSchema } from "@/domain/council-input";
 /* lafusee:governed-active */
 
 // ── ADR-0181 — fil Assistant : clear = mutation user-owned advisory, voie
@@ -84,13 +85,7 @@ export const mestorRouter = createTRPCRouter({
    * (ADR-0180).
    */
   councilDeliberate: strategyScopedProcedure
-    .input(
-      z.object({
-        strategyId: z.string(),
-        topic: z.string().min(3).max(2_000),
-        draft: z.string().max(8_000).optional(),
-      }),
-    )
+    .input(councilDeliberateInputSchema)
     .query(async ({ ctx, input }) => {
       const { checkPaidTier } = await import("@/server/services/glory-tools/tier-gate");
       const gate = await checkPaidTier(ctx.session.user.id, undefined, input.strategyId);

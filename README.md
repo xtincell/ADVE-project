@@ -16,6 +16,8 @@
 
 ## Quick start
 
+**469 candidate : réponse entière et décision lisible reçues sur copie.** Position, priorités et désaccords précèdent les avis/arbitrages dépliables ; auteurs nommés. Le fil reprend sans génération, l’analyse n’est pas persistée. DEFAULT 4 546/433, cible 51/4 et cinq contrôles verts. Qualification limitée à cette question SPAWT sur copie ; aucune réception client, SLO ou UX entière. Production 468 inchangée ; source/CI/image/runtime 469 attendus, C4/C7 ouverts. Seize réceptions/zéro chantier sur sept et progression globale non calculée conservés. [Réception et limites](docs/governance/REFONTE-PLAN.md).
+
 **468 livré : question, citations et arbitrages reliés dans les contrats existants.** Code/image/runtime et lecture production reçus sans nouveau conseil généré. Qualification acceptée uniquement pour une question SPAWT sur copie, pas stratégie générale ou usage client. Réponse originale encore bornée/décision après longs avis : reprise C4 dans le panneau existant ; réserve ledger/registre C7 distincte. Erreurs de première fenêtre conservées, aucun SLO déduit. Seize réceptions bornées/zéro chantier sur sept inchangés ; clôture documentaire distincte du code/image. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 
 **467 livré backend : valeurs qualifiées avant les résumés.** Code/runtime et reprise du fil existant reçus sans génération, données conservées. La réception d’entrée sur snapshot avec dépendances simulées reste bornée ; citations de sortie, rapport utile, ledger et coût complet non reçus. Seize résultats inchangés, aucun chantier entier fermé. [Réception et limites](docs/governance/REFONTE-PLAN.md).
