@@ -2,11 +2,10 @@
 
 ## v6.27.475 — fix(ui): aligner l’édition opérateur sur l’amendement gouverné (2026-10-15)
 
-**475 candidat recetté sur copie isolée, non livré : amendement fictif et reprise reçus.**
+**475 candidat non livré : source 87601d88 reçue en CI, complément de droits non committé.**
 
-- `brand/edit` réutilise `PillarPage`/`AmendPillarModal` ; huit vues/focus, variables ADVE non dérivées, RTIS explicite.
-- DEFAULT 4 632 / 439, gouvernance 1 645 / 167, cible 60 / 4 verts ; cinq contrôles zéro. Correction fictive versionnée/référencée conservée après recharge, données originales préservées.
-- `updatePartial` backend sans consommateur UI `src` actuel, audit API ouvert ; source/CI/image/production attendues. C3-02/seize réceptions inchangés. [Bornage et reprise](docs/governance/REFONTE-PLAN.md).
+- Éditeur factorisé sur `PillarPage`/`AmendPillarModal`, amendement fictif/reprise sur copie reçus ; audit des autres mutations manuelles ouvert.
+- **Complément `fix(governance)` candidat** : collaborateur en lecture seule refusé avant effets via `assertCollaboratorMayEmit` existant ; deux rouges puis 78 / 5 verts, DEFAULT 4 638 / 439 et cinq contrôles zéro. Veto de concurrence reçu sur copie ; nouvelle source/CI/image/production attendues, C3/C4/seize réceptions inchangés. [Bornage et reprise](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.474 — fix(sources): joindre la version lue à l’amendement opérateur (2026-10-15)
 

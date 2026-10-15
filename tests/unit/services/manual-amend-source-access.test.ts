@@ -67,6 +67,26 @@ describe("manual amendments preserve operator and document access", () => {
     await expect(operations[operation]()).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(h.db.pillar.findUnique).not.toHaveBeenCalled(); expect(h.emit).not.toHaveBeenCalled();
   });
+  it.each(["preview", "amend"] as const)("does not turn a foreign operator's read-only collaboration into %s authority", async (operation) => {
+    h.user.operatorId = "operator-b";
+    h.db.strategyCollaborator.findUnique.mockResolvedValue({ status: "ACTIVE", role: "ART_DIRECTOR" });
+    await expect(operations[operation]()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(h.preview).not.toHaveBeenCalled(); expect(h.emit).not.toHaveBeenCalled();
+    expect(h.db.pillar.findUnique).not.toHaveBeenCalled();
+  });
+  it("preserves a read-only operator collaborator's existing field reading", async () => {
+    h.user.operatorId = "operator-b";
+    h.db.strategyCollaborator.findUnique.mockResolvedValue({ status: "ACTIVE", role: "ART_DIRECTOR" });
+    expect((await operations.fields()).fields.find(f => f.field === "nomMarque")?.currentValue).toBe("Valeur privée");
+    expect(h.preview).not.toHaveBeenCalled(); expect(h.emit).not.toHaveBeenCalled();
+  });
+  it.each(["same-operator", "owner", "admin"])("preserves preview and explicit amendment for the authorized %s", async (role) => {
+    if (role === "owner") h.db.strategy.findUnique.mockResolvedValue({ userId: h.user.id, operatorId: "operator-b" });
+    if (role === "admin") { h.user.role = "ADMIN"; h.user.operatorId = null; }
+    await expect(operations.preview()).resolves.toMatchObject({ source: "llm_rephrase" });
+    await expect(operations.amend()).resolves.toMatchObject({ status: "OK" });
+    expect(h.emit).toHaveBeenCalledOnce(); expect(h.preview).toHaveBeenCalledOnce();
+  });
   it.each(["same-operator", "owner", "admin"])("preserves the existing authorized %s read", async (role) => {
     if (role === "owner") h.db.strategy.findUnique.mockResolvedValue({ userId: h.user.id, operatorId: "operator-b" });
     if (role === "admin") { h.user.role = "ADMIN"; h.user.operatorId = null; }

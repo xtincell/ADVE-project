@@ -30,6 +30,7 @@ import { TRPCError } from "@trpc/server";
 import { inferredFieldPaths, provenanceTopKey } from "@/domain/field-provenance";
 import { SourceReceiptSchema } from "@/domain/source-certainty";
 import type { Prisma } from "@prisma/client";
+import type { Context } from "../context";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { assertStrategyRead } from "./_strategy-read-guard";
@@ -38,6 +39,7 @@ import { validateCrossReferences, getCrossRefSummary } from "@/server/services/c
 import * as pillarVersioning from "@/server/services/pillar-versioning";
 import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import { getStrategyReadiness } from "@/server/governance/pillar-readiness";
+import { assertCollaboratorMayEmit, CollaboratorWriteVetoError } from "@/server/governance/collaborator-firewall";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import { transitionPillarStatus } from "@/server/services/pillar-gateway/validation-status";
@@ -56,6 +58,24 @@ import { auditedProcedure, governedProcedure } from "@/server/governance/governe
 /* lafusee:governed-active */
 
 const pillarKeyEnum = PillarKeySchema;
+
+// A global operator can be only a reader of this particular brand. Apply the
+// existing delegation firewall before preview cost or manual intent emission,
+// just as governedProcedure does; reading the brand alone is not write access.
+async function assertManualAmendAccess(
+  user: { id: string; role?: string }, strategyId: string, client: Context["db"],
+): Promise<void> {
+  await assertStrategyRead(user.id, strategyId);
+  try {
+    await assertCollaboratorMayEmit({ userId: user.id, role: user.role, strategyId,
+      kind: "OPERATOR_AMEND_PILLAR" }, client);
+  } catch (err) {
+    if (err instanceof CollaboratorWriteVetoError) {
+      throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+    }
+    throw err;
+  }
+}
 const adveKeyEnum = AdveKeySchema;
 
 export const pillarRouter = createTRPCRouter({
@@ -1094,7 +1114,7 @@ export const pillarRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      await assertStrategyRead(ctx.session.user.id, input.strategyId);
+      await assertManualAmendAccess(ctx.session.user, input.strategyId, ctx.db);
       const pillarKeyLower = input.pillarKey.toLowerCase();
       const pillar = await ctx.db.pillar.findUnique({
         where: { strategyId_key: { strategyId: input.strategyId, key: pillarKeyLower } },
@@ -1225,7 +1245,7 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      await assertStrategyRead(ctx.session.user.id, input.strategyId);
+      await assertManualAmendAccess(ctx.session.user, input.strategyId, ctx.db);
       const operatorId = ctx.session.user.id;
       const { emitIntent } = await import("@/server/services/mestor/intents");
       const result = await emitIntent(

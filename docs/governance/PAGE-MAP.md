@@ -193,7 +193,7 @@ Le founder édite et consulte tous les aspects de sa fusée.
 | `/cockpit/brand/market/page.tsx` | Telemetry | M | active | Pillar T (track) |
 | `/cockpit/brand/potential/page.tsx` | Guidance | M | active | Pillar I (innovation) |
 | `/cockpit/brand/roadmap/page.tsx` | Guidance | M | active | Pillar S (strategy) |
-| `/cockpit/brand/edit/page.tsx` | Guidance | M | active | Candidat 475 raccordé à PillarPage/AmendPillarModal, huit vues/focus ; opérateur (OperatorSurface), fondateur lecture/équipe sans lien inaccessible ; amendement fictif et recharge reçus sur copie isolée, livraison attendue |
+| `/cockpit/brand/edit/page.tsx` | Guidance | M | active | Candidat 475 raccordé à PillarPage/AmendPillarModal, huit vues/focus ; amendement fictif/recharge sur copie et source 87601d88 en CI reçus ; veto collaborateur testé, conflit de version reçu sur API de copie ; nouvelle source/CI/image/production attendues, aucun droit fondateur élargi |
 | `/cockpit/brand/assets/page.tsx` | Propulsion | M | active | Vault assets brand |
 | `/cockpit/brand/deliverables/page.tsx` | Propulsion | M | active | Liste livrables |
 | `/cockpit/brand/deliverables/[key]/page.tsx` | Propulsion | M | active | Livrable détail |
