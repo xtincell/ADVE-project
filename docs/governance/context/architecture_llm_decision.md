@@ -11,26 +11,36 @@ type: feedback
 - Commandant = lead DÉCISIONNEL du swarm Mestor, pas gate technique
 - Tous les services passent par le Gateway pour les appels LLM
 
-## Cascade de providers texte (canon 2026-07-16, réaffirmé 2026-07-27)
+## Routage texte courant — choix opérateur Luna (2026-10-15)
 
-**Ollama Cloud est le provider PRIMAIRE** (modèle piloté par `OLLAMA_MODEL`),
-**OpenRouter le repli**, **Anthropic le dernier recours**. Le chemin nominal ne
-consomme aucun crédit payant — c'est le cœur de « la Fusée non-dépendante du LLM ».
+L’autorisation humaine de basculer sur `gpt-5.6-luna` remplace l’ancienne interdiction de texte OpenAI. Le transport OAuth passe par un **relais privé**, avec un accès distinct de la clé API OpenAI réservée aux embeddings ; cette clé API n’autorise pas le texte par elle-même.
 
-- `LLM_PREMIUM_MODE=1` → inverse : Anthropic promu en tête (une fois les crédits chargés).
-- `LLM_PRIMARY_PROVIDER` → gagne sur les deux (l'opérateur tranche).
-- **OpenAI est HORS des candidats texte** (directive opérateur 2026-06-24) : il est
-  réservé aux **embeddings**. On ne génère jamais de texte avec GPT.
+Dans le code courant 51019356, relais configuré et `LLM_PRIMARY_PROVIDER=openai` donnent un candidat texte unique : `openai` si son circuit est disponible, sinon aucun candidat. Ce raccord ne bascule pas vers OpenRouter, un autre modèle ou des crédits API. Les autres branches historiques du Gateway ne décrivent pas le routage effectivement choisi.
 
-Ordre résolu par `resolveTextProviderOrder` + `buildTextProviderCandidates`
-(`src/server/services/llm-gateway/index.ts`) — les deux seules fonctions qui
-décident. Gardées par `tests/unit/governance/llm-routing.test.ts`.
+Budgets, Headroom, rate-policy, validation structurée et ledger restent dans le gestionnaire existant. `buildTextProviderCandidates` et `resolveTextProviderOrder` définissent le routage ; les lignes legacy de `ModelPolicy` ne prouvent pas le fournisseur/modèle effectivement servi. Le ledger qualifie le transport d’abonnement `openai-codex-oauth` et son estimation API équivalente ; celle-ci reste distincte d’une facture, du quota d’abonnement et d’une capacité de charge reçue. Cette correction documentaire ne reçoit ni nouvelle CI, image, livraison, qualité ou SLO. [Bornage C7](../REFONTE-PLAN.md).
 
-> ⚠️ Formulation périmée à ne plus reprendre : « cascade Anthropic→OpenAI→Ollama→OpenRouter ».
-> Elle décrivait l'état de PR #258 (juin 2026) et fut corrigée le 2026-07-16 ; elle a
-> survécu dans plusieurs index de docs jusqu'au 2026-07-27, où elle a induit une
-> session en erreur (elle place le provider payant en tête et fait croire que GPT
-> génère du texte).
+## Historique — décisions de juin/juillet 2026
+
+Les décisions ci-dessous sont conservées comme historique ; elles ne sont plus la politique du raccord texte Luna autorisé. Leurs affirmations économiques ne constituent pas des coûts, factures ou quotas actuels reçus.
+
+> **Ollama Cloud est le provider PRIMAIRE** (modèle piloté par `OLLAMA_MODEL`),
+> **OpenRouter le repli**, **Anthropic le dernier recours**. Le chemin nominal ne
+> consomme aucun crédit payant — c'est le cœur de « la Fusée non-dépendante du LLM ».
+>
+> - `LLM_PREMIUM_MODE=1` → inverse : Anthropic promu en tête (une fois les crédits chargés).
+> - `LLM_PRIMARY_PROVIDER` → gagne sur les deux (l'opérateur tranche).
+> - **OpenAI est HORS des candidats texte** (directive opérateur 2026-06-24) : il est
+>   réservé aux **embeddings**. On ne génère jamais de texte avec GPT.
+>
+> Ordre résolu par `resolveTextProviderOrder` + `buildTextProviderCandidates`
+> (`src/server/services/llm-gateway/index.ts`) — les deux seules fonctions qui
+> décident. Gardées par `tests/unit/governance/llm-routing.test.ts`.
+>
+> > ⚠️ Formulation périmée à ne plus reprendre : « cascade Anthropic→OpenAI→Ollama→OpenRouter ».
+> > Elle décrivait l'état de PR #258 (juin 2026) et fut corrigée le 2026-07-16 ; elle a
+> > survécu dans plusieurs index de docs jusqu'au 2026-07-27, où elle a induit une
+> > session en erreur (elle place le provider payant en tête et fait croire que GPT
+> > génère du texte).
 
 ## GLORY Tools — Exécution déterministe
 
