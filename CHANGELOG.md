@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.471 — fix(seshat): lire les sources courantes et cibler les extraits bornés (2026-10-15)
+
+**471 candidate : correction courte et conservation reçues sur copie, contrôles locaux verts ; production 470 inchangée.**
+
+- Quatre fichiers existants étendus, lecture autorisée et extraits exacts sous budget explicite ; aucun nouveau gestionnaire.
+- Cible 96 / 4, DEFAULT 4 566 / 434 et cinq contrôles verts.
+- Un appel Luna copie, recharge sans renvoi et SQL conservée ; réseau recharge tronqué, aucune qualité générale reçue.
+- CI/image/production 471 attendues ; seize réceptions/zéro chantier sur sept/progression globale non calculée inchangés. [Bornage](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.470 — fix(llm): finaliser le journal avant de terminer l’appel (2026-10-15)
 
 **470 livré : journal réparé ; utilisation utile de la source SPAWT refusée après un appel distinct du déploiement.**

@@ -16,6 +16,34 @@ export interface SourceChunk {
 }
 
 /**
+ * Bound an already selected chunk around the question's words. This only
+ * chooses a contiguous verbatim excerpt; it neither ranks documents nor
+ * changes the persisted index, source authority or citation identity.
+ */
+export function excerptForQuery(text: string, query: string, max: number): string {
+  const budget = Math.max(0, Math.floor(max));
+  if (text.length <= budget) return text;
+  const normalize = (word: string) => word.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+  const terms = new Set((query.match(/[\p{L}\p{N}]+/gu) ?? [])
+    .map(normalize).filter(word => word.length > 3 || /\d/.test(word)).slice(0, 64));
+  const hits = [...text.matchAll(/[\p{L}\p{N}]+/gu)]
+    .filter(match => terms.has(normalize(match[0])))
+    .map(match => ({ word: normalize(match[0]), index: match.index }));
+  let bestStart = 0;
+  let bestScore = 0;
+  for (const hit of hits) {
+    const start = Math.max(0, Math.min(hit.index - Math.floor(budget / 4), text.length - budget));
+    const words = new Set(hits.filter(other => other.index >= start && other.index < start + budget)
+      .map(other => other.word));
+    // A requested identifier (Q9, SKU42…) is more specific than incidental
+    // prose words in an introduction. This is lexical selection, not meaning.
+    const score = [...words].reduce((sum, word) => sum + (/\p{L}/u.test(word) && /\d/.test(word) ? 3 : 1), 0);
+    if (score > bestScore) { bestStart = start; bestScore = score; }
+  }
+  return text.slice(bestStart, bestStart + budget);
+}
+
+/**
  * Split text on paragraph boundaries first; if a paragraph exceeds
  * MAX_CHARS_PER_CHUNK, fall back to sentence boundaries; if a sentence
  * still exceeds, hard-cut at the limit. Whitespace-only chunks are dropped.

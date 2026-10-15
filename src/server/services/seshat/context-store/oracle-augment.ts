@@ -25,7 +25,7 @@
 import { db } from "@/lib/db";
 import { embed } from "@/server/services/llm-gateway";
 import { cosineSimilarity } from "./embedder";
-import { currentDocumentNodes } from "./ranker";
+import { currentDocumentNodes, listByMetadata } from "./ranker";
 import type { SourceCertainty } from "@/domain/source-certainty";
 import { coerceProvenance, fieldStatusFor, type FieldProvenance } from "@/domain/field-provenance";
 
@@ -416,11 +416,19 @@ export async function getOracleBrandContextByQuery(
   const narrativeScored = scored
     .filter((s: ScoredCandidate) => s.kind !== "BRAND_SOURCE" && s.kind !== "SOURCE_CHUNK")
     .slice(0, limit);
+  // Indexing without embeddings is an explicit supported choice, not a
+  // reason to make a current source disappear when older vectors succeed.
+  const metadataSources = options.includeSources
+    ? await listByMetadata({ strategyId, kinds: ["BRAND_SOURCE", "SOURCE_CHUNK"], candidateLimit: sourcesLimit }, {
+      incompatibleEmbedding: { dimension: queryDim, model: embedResult.model },
+    })
+    : [];
   const sourceReferences: SourceReference[] = options.includeSources
-    ? scored
-        .filter((s: ScoredCandidate) => s.kind === "BRAND_SOURCE" || s.kind === "SOURCE_CHUNK")
-        .slice(0, sourcesLimit)
-        .map((s: ScoredCandidate) => nodeToSourceReference(s))
+    ? [...new Map([
+      ...metadataSources.map(nodeToSourceReference),
+      ...scored.filter((s: ScoredCandidate) => s.kind === "BRAND_SOURCE" || s.kind === "SOURCE_CHUNK")
+        .map(nodeToSourceReference),
+    ].map((ref) => [`${ref.sourceId}:${ref.contentHash}:${ref.chunkIndex}`, ref])).values()].slice(0, sourcesLimit)
     : [];
 
   if (narrativeScored.length === 0 && sourceReferences.length === 0) return metadataContext();
@@ -438,7 +446,7 @@ export async function getOracleBrandContextByQuery(
     sourceReferences.length > 0
       ? `
 
-SOURCES OPÉRATEUR pertinentes pour "${query.slice(0, 80)}" (citer textuellement avec [fileName#chunk]) :
+SOURCES OPÉRATEUR courantes pour "${query.slice(0, 80)}" (sélection par métadonnées et/ou similarité ; citer avec [fileName#chunk]) :
 ${formatSourceReferences(sourceReferences)}`
       : "";
 

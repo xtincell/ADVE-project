@@ -274,8 +274,18 @@ export async function topKWithinStrategy(
  */
 export async function listByMetadata(
   filter: RankerFilter,
+  options: { incompatibleEmbedding?: { dimension: number; model?: string | null } } = {},
 ): Promise<Omit<RankedNode, "similarity" | "embeddingModel">[]> {
-  const where = buildWhere(filter, /*mustHaveEmbedding*/ false);
+  const baseWhere = buildWhere(filter, /*mustHaveEmbedding*/ false);
+  const geometry = options.incompatibleEmbedding;
+  // A document can be current and readable without a vector in this space.
+  // Keep scope and the canonical source/fingerprint guard on this read too.
+  const where = geometry ? { AND: [baseWhere, { OR: [
+    { embeddedAt: null },
+    { embeddingDim: null },
+    { embeddingDim: { not: geometry.dimension } },
+    ...(geometry.model ? [{ embeddingModel: null }, { embeddingModel: { not: geometry.model } }] : []),
+  ] }] } : baseWhere;
   const rows = await db.brandContextNode.findMany({
     where: where as Prisma.BrandContextNodeWhereInput,
     take: filter.candidateLimit ?? 100,

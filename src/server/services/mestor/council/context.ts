@@ -29,6 +29,7 @@ import { untrustedContentBody, wrapUntrusted } from "@/server/services/utils/unt
 import { signalObservation } from "@/domain/signal-observation";
 import { metricObservationTime } from "@/domain/external-metric";
 import { SourceReceiptSchema } from "@/domain/source-certainty";
+import { excerptForQuery } from "@/server/services/seshat/context-store/chunker";
 import { COUNCIL_EVIDENCE_NOTICE } from "./personas";
 import { coerceProvenance, fieldStatusFor } from "@/domain/field-provenance";
 import type { CouncilEvidenceExcerpt } from "./schemas";
@@ -36,7 +37,8 @@ import type { CouncilEvidenceExcerpt } from "./schemas";
 /** Budgets déterministes (caractères) — troncature par bloc, jamais silencieuse. */
 const FOUNDER_PILLAR_MAX = 5_000; // A/D/V/E — profondeur prioritaire
 const DERIVED_PILLAR_MAX = 1_200; // R/T/I/S — résumé diagnostic
-const RAG_BLOCK_MAX = 4_000;
+// Two canonical 2,500-character chunks plus their qualified citation packets.
+const RAG_BLOCK_MAX = 6_000;
 const EXPERT_PILLAR_MAX = 9_000; // l'expert ne voit qu'UN pilier → plus de place
 const OBSERVATIONS_MAX = 6_000;
 
@@ -97,22 +99,31 @@ function qualifiedPillar(key: string, pillar: {
 }
 
 /** Source packets and citations share the same bounded, sanitized excerpt. */
-function qualifiedRag(rag: OracleContextBlock | null): { text: string; evidence: CouncilEvidenceExcerpt[] } {
+function qualifiedRag(rag: OracleContextBlock | null, query: string): { text: string; evidence: CouncilEvidenceExcerpt[] } {
   if (!rag) return { text: "", evidence: [] };
   const blocks: string[] = [];
   const evidence: CouncilEvidenceExcerpt[] = [];
   let remaining = RAG_BLOCK_MAX;
-  for (const ref of rag.sourceReferences ?? []) {
-    if (!SourceReceiptSchema.safeParse(ref).success || typeof ref.text !== "string" || !ref.text.trim()) continue;
+  const validRefs = (rag.sourceReferences ?? []).filter(ref => SourceReceiptSchema.safeParse(ref).success
+    && typeof ref.text === "string" && ref.text.trim());
+  let supplied = 0;
+  for (const ref of validRefs) {
     const reference = { kind: "DOCUMENT" as const, sourceId: ref.sourceId, contentHash: ref.contentHash,
       certainty: ref.certainty, chunkIndex: ref.chunkIndex };
     const header = `Référence de citation : ${JSON.stringify(reference)}\n${formatSourceReferences([{ ...ref, text: "" }])}\n`;
-    if (remaining <= header.length + 60) break;
-    const text = untrustedContentBody(capBlock(ref.text, remaining - header.length - 50), { max: remaining });
-    const block = `${header}${text}`;
+    // Preserve complete selected chunks when they fit. Reserving an envelope
+    // for every candidate leaves only unusably short lines beside each one.
+    const budget = remaining - header.length - 80;
+    if (budget < 60) break;
+    const body = untrustedContentBody(ref.text, { max: ref.text.length });
+    const text = excerptForQuery(body, query, budget);
+    const omitted = text.length < body.length ? "\n…[extrait borné — reste du fragment non fourni]" : "";
+    const block = `${header}${text}${omitted}`;
     blocks.push(block); remaining -= block.length + 2;
     evidence.push({ reference, text });
+    supplied++;
   }
+  if (validRefs.length > supplied) blocks.push("[Budget documentaire] Autres fragments sélectionnés non fournis ; aucune lecture complète déduite.");
   // Orientation remains advisory. It never authorizes a documentary citation.
   if (remaining > 60 && rag.text) blocks.push(capBlock(rag.narrativeBlock || rag.text, remaining - 50));
   return { text: blocks.join("\n\n"), evidence };
@@ -206,12 +217,12 @@ export async function buildAssistantContext(
   }
 
   // The metadata fallback contributes without pretending to be a semantic match.
-  const qualified = qualifiedRag(rag);
+  const qualified = qualifiedRag(rag, question);
   evidence.push(...qualified.evidence);
   if (qualified.text) {
     sections.push(
       wrapUntrusted(rag?.usedVectorSearch
-        ? "extraits pertinents (recherche sémantique)"
+        ? "contexte hybride (recherche sémantique et sélection par métadonnées)"
         : "contexte disponible (sélection par métadonnées)", qualified.text, {
         max: RAG_BLOCK_MAX + 200,
       }),
@@ -298,7 +309,7 @@ export async function buildExpertContext(
     buildObservationsBlock(strategyId),
   ]);
 
-  const qualified = qualifiedRag(rag);
+  const qualified = qualifiedRag(rag, topic);
   const sourcesSeen = qualified.evidence.length > 0;
   const sections: string[] = [];
   const evidence = [...observationsBlock.evidence, ...qualified.evidence];
@@ -321,7 +332,7 @@ export async function buildExpertContext(
   if (qualified.text) {
     sections.push(
       wrapUntrusted(rag?.usedVectorSearch
-        ? "extraits pertinents du pilier (recherche sémantique)"
+        ? "contexte hybride du pilier (recherche sémantique et sélection par métadonnées)"
         : "contexte du pilier (sélection par métadonnées)", qualified.text, {
         max: RAG_BLOCK_MAX + 200,
       }),

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { chunkText } from "@/server/services/seshat/context-store/chunker";
+import { chunkText, excerptForQuery } from "@/server/services/seshat/context-store/chunker";
 
 describe("SESHAT — chunkText (BRAND_SOURCE chunking)", () => {
   it("returns empty array for empty / whitespace input", () => {
@@ -60,5 +60,33 @@ describe("SESHAT — chunkText (BRAND_SOURCE chunking)", () => {
     for (let i = 1; i < chunks.length; i++) {
       expect(chunks[i]!.charStart).toBeGreaterThanOrEqual(chunks[i - 1]!.charStart);
     }
+  });
+});
+
+
+describe("SESHAT — bound already selected excerpts without another index", () => {
+  it("preserves short text exactly", () => {
+    expect(excerptForQuery("Texte exact.  ", "Texte", 100)).toBe("Texte exact.  ");
+  });
+  it("finds late accented words and short question identifiers without rewriting", () => {
+    const text = "Ancienne introduction. ".repeat(100) + "\nQ9 : préférence de découverte. Aucune calibration reçue.";
+    const excerpt = excerptForQuery(text, "Q9 preference calibration", 180);
+    expect(excerpt).toContain("Q9 : préférence de découverte.");
+    expect(excerpt).toContain("Aucune calibration reçue.");
+    expect(text).toContain(excerpt);
+    expect(excerpt.length).toBeLessThanOrEqual(180);
+  });
+  it("uses the original head when no requested word matches", () => {
+    const text = "Le texte conservé. ".repeat(30);
+    expect(excerptForQuery(text, "inconnu", 80)).toBe(text.slice(0, 80));
+  });
+  it("keeps the requested identifier ahead of incidental introduction words", () => {
+    const text = "Sixième question. Fichier taste.mjs. " + "Contexte général. ".repeat(120)
+      + "RÔLE DE Q9 — RADAR\nQ9 mesure directement la découverte.";
+    expect(excerptForQuery(text, "Rôle de la sixième question Q9 radar et Taste Reveal", 300))
+      .toContain("Q9 mesure directement la découverte.");
+  });
+  it("does not expand an empty budget", () => {
+    expect(excerptForQuery("Document", "Document", 0)).toBe("");
   });
 });

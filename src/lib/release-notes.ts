@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.471", date: "2026-10-15",
+    headline: "Vos documents récents dans le conseil",
+    highlights: [
+      { emoji: "📖", title: "Croiser vos sources", body: "Le conseil peut aussi utiliser les documents ajoutés sans préparation IA. Les passages transmis conservent leur référence et leur statut ; les coupes sont signalées." },
+    ],
+  },
+  {
     version: "6.27.469", date: "2026-10-15",
     headline: "Lire les priorités avant les détails",
     highlights: [

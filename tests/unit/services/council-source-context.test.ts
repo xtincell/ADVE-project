@@ -59,6 +59,46 @@ describe("the council reports the evidence it actually received", () => {
       .toMatchObject({ sourceId: "pillar-e", sourceVersion: 0, provenance: "UNKNOWN" });
   });
 
+  it.each(["coordinator", "expert"])("keeps a late requested passage and both exact source packets (%s)", async (role) => {
+    const { getOracleBrandContextByQuery } = await import("@/server/services/seshat/context-store/oracle-augment");
+    const texts = ["Ancienne introduction. ".repeat(110),
+      "Contexte général. ".repeat(110) + "\nQ9 mesure directement la préférence de découverte.\nAucune calibration reçue."];
+    vi.mocked(getOracleBrandContextByQuery).mockResolvedValueOnce({ text: "Orientation", narrativeBlock: "Orientation",
+      preciseFields: [], usedVectorSearch: false, nodeCount: 2,
+      sourceReferences: texts.map((text, chunkIndex) => ({ sourceId: "instrument-actuel", contentHash: "b".repeat(64),
+        certainty: "DECLARED", text, fileName: "Instrument", fileType: null, sourceType: "NOTE", chunkIndex })) });
+    const result = role === "expert" ? await buildExpertContext("brand-a", "a", "Explique Q9 et sa calibration")
+      : await buildAssistantContext("brand-a", "Explique Q9 et sa calibration");
+    expect(result.contextBlock).toContain("Q9 mesure directement la préférence de découverte.");
+    expect(result.contextBlock).toContain("Aucune calibration reçue.");
+    const documents = result.evidence.filter(e => e.reference.kind === "DOCUMENT");
+    expect(documents).toHaveLength(2);
+    for (const doc of documents) {
+      expect(texts[doc.reference.kind === "DOCUMENT" ? doc.reference.chunkIndex! : 0]).toContain(doc.text);
+      expect(result.contextBlock).toContain(doc.text);
+      expect(doc.reference).toMatchObject({ contentHash: "b".repeat(64), certainty: "DECLARED" });
+    }
+  });
+
+  it("reserves actual text beside a bounded subset of many citation envelopes", async () => {
+    const { getOracleBrandContextByQuery } = await import("@/server/services/seshat/context-store/oracle-augment");
+    const texts = ["Sixième question. Fichier taste.mjs. " + "Contexte général. ".repeat(110)
+      + "RÔLE DE Q9 — RADAR\nQ9 mesure directement la découverte.",
+      "Profil déclaré. ".repeat(90) + "Taste Reveal décrit des contributions reçues.",
+      ...Array.from({length: 4}, () => "Table des matières. ".repeat(120))];
+    vi.mocked(getOracleBrandContextByQuery).mockResolvedValueOnce({ text: "Orientation", narrativeBlock: "Orientation",
+      preciseFields: [], usedVectorSearch: false, nodeCount: 6,
+      sourceReferences: texts.map((text, chunkIndex) => ({ sourceId: "instrument-courant" + "x".repeat(15), contentHash: "b".repeat(64),
+        certainty: "DECLARED", text, fileName: "Instrument actuel six questions et cinq axes — version-courante-v1",
+        fileType: null, sourceType: "MANUAL_INPUT", chunkIndex })) });
+    const result = await buildAssistantContext("brand-a", "Explique le rôle de la 9e question du quiz, son lien aux axes et au Taste Reveal, son statut et sa date.");
+    expect(result.contextBlock).toContain("Q9 mesure directement la découverte.");
+    expect(result.contextBlock).toContain("Taste Reveal décrit des contributions reçues.");
+    expect(result.contextBlock).toContain("Autres fragments sélectionnés non fournis");
+    expect(result.evidence.filter(e => e.reference.kind === "DOCUMENT").length).toBeGreaterThanOrEqual(2);
+    for (const evidence of result.evidence) expect(result.contextBlock).toContain(evidence.text);
+  });
+
   it("does not advertise a document when the selected reference has no supplied excerpt", async () => {
     state.pillars = [];
     const { getOracleBrandContextByQuery } = await import("@/server/services/seshat/context-store/oracle-augment");
