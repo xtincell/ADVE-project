@@ -71,18 +71,6 @@ jobs:
   feedback-postgres:
     name: Brand-local drift and portfolio (PostgreSQL)
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        # Same Docker Official Image, pinned; avoids anonymous Docker Hub pull quota.
-        image: public.ecr.aws/docker/library/postgres:16@sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: receipt-ci
-          POSTGRES_DB: shinkiro_verify
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres -d shinkiro_verify"
-          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       DATABASE_URL: postgresql://postgres:receipt-ci@127.0.0.1:5432/shinkiro_verify
     steps:
@@ -93,9 +81,35 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx prisma generate
+      # A service-container pull fails before any step can handle a registry quota.
+      # Both registries serve the identical pinned Docker Official Image.
+      - name: Start pinned PostgreSQL (official registry fallback)
+        run: |
+          set -euo pipefail
+          pg_ci_digest=sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d
+          pg_ci_image="public.ecr.aws/docker/library/postgres:16@$pg_ci_digest"
+          if ! docker pull "$pg_ci_image"; then
+            pg_ci_image="docker.io/library/postgres:16@$pg_ci_digest"
+            docker pull "$pg_ci_image"
+          fi
+          docker run --detach --name shinkiro-ci-postgres \
+            --publish 127.0.0.1:5432:5432 \
+            --env POSTGRES_USER=postgres --env POSTGRES_PASSWORD=receipt-ci \
+            --env POSTGRES_DB=shinkiro_verify \
+            --health-cmd "pg_isready -U postgres -d shinkiro_verify" \
+            --health-interval 5s --health-timeout 5s --health-retries 10 \
+            "$pg_ci_image"
+          for attempt in $(seq 1 10); do
+            if docker exec shinkiro-ci-postgres pg_isready -U postgres -d shinkiro_verify; then
+              exit 0
+            fi
+            sleep 5
+          done
+          docker logs shinkiro-ci-postgres
+          exit 1
       - run: npx prisma migrate deploy
       - name: Schema diff vs migrations
-        # The existing service is fresh and has just applied every migration.
+        # The database is fresh and has just applied every migration.
         # Compare its actual schema; a migrations-directory diff needs a shadow
         # database, which the syntax-only validation job does not provide.
         run: |
@@ -104,6 +118,9 @@ jobs:
             --to-schema prisma/schema.prisma \
             --exit-code
       - run: npx vitest run --config vitest.feedback-postgres.config.mts
+      - name: Remove the isolated PostgreSQL container
+        if: always()
+        run: docker rm --force shinkiro-ci-postgres >/dev/null 2>&1 || true
 
   prisma-validate:
     name: Prisma schema validate

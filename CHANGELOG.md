@@ -2,6 +2,8 @@
 
 ## v6.27.474 — fix(sources): joindre la version lue à l’amendement opérateur (2026-10-15)
 
+**Complément CI candidat — 15 octobre** : la CI documentaire 38801540158 échoue avant tests sur quota PostgreSQL ECR. Repli explicite vers Docker Hub officiel au même digest vérifié, dans le job existant ; base/tests/diff inchangés, nettoyage prévu sous `always`. Cible 27 / 2 et gouvernance 1 645 / 167 vertes, script exercé avec Docker/délais simulés ; Tsc initial refusé sur env de test puis corrigé ; cinq contrôles finaux à zéro, CI réelle attendue. Deux registres refusés restent un échec. Aucun effet produit, production 474 inchangée.
+
 **474 livré : référence/version et garde opérateur raccordées ; production reçue en lecture/annulation seulement.**
 
 - Source 6e117414/CI/image/runtime exacts reçus ; local DEFAULT 4 607 / 436 et gouvernance 1 639 / 166, CI PostgreSQL 375 / 19.
