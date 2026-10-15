@@ -4,14 +4,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const state = vi.hoisted(() => ({ messages: [] as Array<Record<string, unknown>>,
-  query: vi.fn(), clear: vi.fn(), result: {} as Record<string, unknown> }));
+  query: vi.fn(), inputs: [] as Array<{ topic: string; draft: string }>,
+  clear: vi.fn(), result: {} as Record<string, unknown> }));
 vi.mock("@/lib/trpc/client", () => ({ trpc: {
   strategy: { getWithScore: { useQuery: () => ({ data: { name: "Marque test" } }) } },
   mestor: {
     assistantHistory: { useQuery: () => ({ data: { messages: state.messages } }) },
     assistantClear: { useMutation: () => ({ mutate: state.clear }) },
-    councilDeliberate: { useQuery: (_input: unknown, options: unknown) => {
-      state.query(options); return { data: state.result, isLoading: false, error: null };
+    councilDeliberate: { useQuery: (input: { topic: string; draft: string }, options: unknown) => {
+      state.inputs.push(input); state.query(options); return { data: state.result, isLoading: false, error: null };
     } },
   },
 } }));
@@ -31,6 +32,7 @@ beforeEach(() => {
   vi.stubGlobal("navigator", { clipboard: { writeText: copy } });
   Element.prototype.scrollIntoView = vi.fn();
   state.query.mockClear(); state.clear.mockClear();
+  state.inputs = [];
   state.messages = [{ id: "u", role: "user", content: "**Texte humain**\n# Littéral", createdAt: new Date(0) },
     { id: "a", role: "assistant", content: answer, createdAt: new Date(1) }];
   state.result = { status: "OK", deliberated: true,
@@ -49,6 +51,15 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("conseil — lecture fidèle sans génération supplémentaire", () => {
+  it("passes the question preceding the challenged reply, even if a later user message exists", () => {
+    state.messages.push({ id: "later", role: "user", content: "Autre question sans réponse", createdAt: new Date(2) });
+    render(React.createElement(MestorPage));
+    const input = state.inputs.at(-1);
+    expect(input?.topic).toBe("**Texte humain**\n# Littéral");
+    expect(input?.draft).toBe(answer);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("does not turn failed experts into a claim that no document was supplied", () => {
     state.result.deliberated = false; state.result.synthesis = null;
     state.result.grounding = { ragUsed: true, expertsWithSources: [] };

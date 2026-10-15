@@ -1,13 +1,13 @@
 # Changelog — La Fusee
 
-## v6.27.468 — fix(council): relier les citations aux extraits effectivement fournis (2026-10-15)
+## v6.27.468 — fix(council): relier question, preuves et arbitrages (2026-10-15)
 
-**Source candidate 468 : contrôles locaux reçus, CI du complément attendue. Quatre experts reçus sur copie, synthèse native absente ; production maintenue en 467.**
+**Candidate : contrôles locaux reçus, qualification acceptée pour une seule question SPAWT sur copie ; CI du complément attendue.**
 
-- Contrats Council Zod/structured-call et primitives de provenance existants réutilisés : citations continues liées aux extraits livrés, codes experts/claims reçues en enums fermées et attribution exacte conservée. Sorties déjà bornées et position intégralement transmises, contexte sous budgets explicites ; une citation conforme ne prouve pas la vérité stratégique. Panneau existant dépliable, conformité non évaluée après échec, historiques préservés.
-- Correctifs du transport tRPC Council standard/annulation caller dans le Gateway existant, sans nouveau gestionnaire/parser/route/Intent/entité/Neter. Enveloppe 210 s intégrant attente du gestionnaire 120 s et travail/reprises 90 s, aucune nouvelle file/concurrence ou limite de compte publiée. Audit dix-neuf fichiers : dix-sept inchangés, Gateway et consommateur Council modifiés. Contrôles finaux : DEFAULT 4 528/433, cible 34/3, gouvernance 1 627/166, tsc/deux lints/cycles zéro ; 24 warnings préexistants par lint, 1 752 fichiers au graphe/CODE-MAP sans diff.
-- Native sur copie avec onze overlays exacts/footer de base 464, pas image 468 : HTTP 200, A dix citations/six claims, D neuf/cinq, V six/six, E sept/cinq ; quatre experts reçus, synthèse nulle après trois tentatives. Cinq étapes logiques/sept appels effectifs, 0,0455906 USD API équivalent estimé distinct d’une facture ou d’un quota ; huit empreintes métier/seize messages inchangés.
-- Diagnostic isolé réutilisant les quatre critiques et un contexte coordinateur snapshot copié : un appel/30,677 s/sept citations/22 claims acceptées attribuées exactement/zéro rejetée. L’identité avec le contexte coordinateur natif n’est pas vérifiée ; cela ne reçoit ni synthèse native ni qualité stratégique. Reprise limitée à l’historique d’échec structuré et à l’entrée coordinatrice exacte via mécanismes existants, puis synthèse seule sur les quatre avis conservés avant parcours natif complet. Aucun autre appel modèle, build ou déploiement 468 prévu à ce checkpoint ; barrière de production maintenue tant que synthèse native non reçue. Seize réceptions bornées et zéro chantier sur sept inchangés. [Bornage et reprise](docs/governance/REFONTE-PLAN.md).
+- Question réelle, citations liées et arbitrages partitionnés via contrats existants ; aucun nouveau gestionnaire.
+- Natif complet reçu pour ce cas ; stratégie générale, UX entière, usage client et SLO non reçus.
+- C4 : réponse bornée/lecture prioritaire à reprendre ; réserve ledger C7 distincte.
+- Aucun build/déploiement 468 demandé, production 467 ; seize réceptions/zéro chantier sur sept inchangés. [Réception](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.467 — fix(context): transmettre les valeurs qualifiées aux consommateurs existants (2026-10-14)
 

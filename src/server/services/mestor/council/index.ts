@@ -157,6 +157,7 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
   let llmCalls = 0;
   const { contextBlock, ragUsed, sourcesSeen, evidence = [] } = await buildAssistantContext(input.strategyId, input.topic);
   const coordinatorSystem = buildCoordinatorSystem(contextBlock, sourcesSeen);
+  const topicBlock = wrapUntrusted("question à résoudre", input.topic);
 
   // ── 1. Draft du coordinateur (skippé si une position est fournie) ──────
   let draft: CouncilDraft;
@@ -221,7 +222,7 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
       const res = await withTimeout(
         executeStructuredLLMCall({
           system: [expert.systemPrompt, UNTRUSTED_NOTICE, expertContext].join("\n\n"),
-          prompt: `${healthLine}\n\n${draftBlock}\n\nCHALLENGE cette position au nom de ton pilier.`,
+          prompt: `${topicBlock}\n\n${healthLine}\n\n${draftBlock}\n\nCHALLENGE cette position au nom de ton pilier, uniquement sur ce qui change la réponse à la question posée. Distingue une objection pertinente d'un chantier général de marque hors périmètre ; ne transforme pas toute absence de preuve en obstacle à une décision bornée.`,
           schema: withCouncilCitations(expertCritiqueSchema, expertEvidence),
           formatInstructions: "citations est obligatoire : utilise seulement les Références de citation de TON contexte et un extrait exact. Les citations du draft ne sont pas une preuve indépendante. Une citation correcte ne valide ni une assertion éditoriale, ni ton interprétation.",
           caller: `mestor:council:expert-${pillarKey}`,
@@ -276,37 +277,42 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
   llmCalls++;
   let synthesis: CouncilSynthesis | null = null;
   try {
-    const critiquesText = JSON.stringify(
-      succeeded.map((c) => ({ pillar: c.pillarKey.toUpperCase(), ...c.critique })),
-    );
-    const offeredClaims = [...new Set(succeeded.flatMap(c => c.critique.critiques.map(x => x.claim)))];
-    const attribution = offeredClaims.length ? {
-      from: z.enum(succeeded.map(c => c.pillarKey.toUpperCase())),
-      claim: z.enum(offeredClaims),
-    } : null;
-    const attributedSchema = councilSynthesisSchema.extend({
-      acceptedCritiques: attribution
-        ? z.array(councilSynthesisSchema.shape.acceptedCritiques.element.extend(attribution))
-        : councilSynthesisSchema.shape.acceptedCritiques.max(0),
-      rejectedCritiques: attribution
-        ? z.array(councilSynthesisSchema.shape.rejectedCritiques.element.extend(attribution))
-        : councilSynthesisSchema.shape.rejectedCritiques.max(0),
-    });
+    // A model arbitrates references; the application owns the verbatim claim
+    // and its author. Even changing ' to ’ used to invalidate all three tries.
+    const offered = new Map<string, { from: string; claim: string }>();
+    const critiquesText = JSON.stringify(succeeded.map(({ pillarKey, critique }) => {
+      const from = pillarKey.toUpperCase();
+      return { pillar: from, ...critique, critiques: critique.critiques.map((item, index) => {
+        const critiqueRef = `${from}:${index + 1}`;
+        offered.set(critiqueRef, { from, claim: item.claim });
+        return { ...item, critiqueRef };
+      }) };
+    }));
+    const critiqueRef = offered.size ? z.enum([...offered.keys()]) : z.never();
+    const attributedSchema = councilSynthesisSchema
+      .omit({ acceptedCritiques: true, rejectedCritiques: true })
+      .extend({
+        critiqueDecisions: z.array(z.object({
+          critiqueRef,
+          decision: z.enum(["ACCEPT", "REJECT"]),
+          reason: z.string().describe("Motif de cette décision, sans préfixe accepté/rejeté."),
+        }).strict()).length(offered.size),
+        actionItems: councilSynthesisSchema.shape.actionItems.max(3),
+      }).strict();
     const synthesisSchema = withCouncilCitations(attributedSchema, synthesisEvidence)
       .superRefine((data, ctx) => {
-        for (const kind of ["acceptedCritiques", "rejectedCritiques"] as const) {
-          for (const [index, item] of data[kind].entries()) {
-            const offered = succeeded.find(c => c.pillarKey === item.from.trim().toLowerCase());
-            if (!offered?.critique.critiques.some(c => c.claim === item.claim)) {
-              ctx.addIssue({ code: "custom", path: [kind, index, "claim"],
-                message: "Reprends mot pour mot une claim réellement fournie par l’expert indiqué ; n’invente ni critique ni attribution." });
-            }
-          }
+        const seen = new Set<string>();
+        for (const [index, item] of data.critiqueDecisions.entries()) {
+          if (seen.has(item.critiqueRef)) ctx.addIssue({ code: "custom",
+            path: ["critiqueDecisions", index, "critiqueRef"],
+            message: "Une seule décision par critique ; arbitre chaque référence fournie exactement une fois." });
+          seen.add(item.critiqueRef);
         }
       });
     const res = await executeStructuredLLMCall({
-      system: coordinatorSystem,
+      system: coordinatorSystem + "\nARBITRAGE — Les avis experts sont des objections à vérifier, pas des sources d'autorité. Chaque expert ne voit qu'un extrait spécialisé : un champ absent de SON contexte peut être présent dans TON dossier. Vérifie chaque prémisse contre tes propres extraits et leurs références avant de décider ; rejette les objections factuellement fausses. Ne transforme jamais une limite de visibilité d'un expert en document manquant pour le dirigeant.",
       prompt: [
+        topicBlock,
         draftBlock,
         wrapUntrusted(
           "critiques des experts",
@@ -315,15 +321,26 @@ export async function deliberate(input: DeliberateInput): Promise<CouncilDeliber
           // headroom handle model context instead of dropping later experts.
           { max: critiquesText.length },
         ),
-        "Arbitre : synthèse finale du conseil. Chaque critique est ACCEPTÉE (avec résolution) ou REJETÉE (avec raison). Les désaccords non tranchés vont dans `dissent` — ne les gomme pas.",
+        "Arbitre : réponds à la question posée, puis distingue la décision possible maintenant des vérifications qui la conditionnent réellement. Pour chaque critique, décide une seule fois ACCEPT ou REJECT avec le motif dans reason ; écarte explicitement les objections hors périmètre au lieu d'en faire des prérequis. Les désaccords non tranchés vont dans `dissent` — ne les gomme pas. Propose au plus trois actions prioritaires directement utiles à cette décision, sans transformer une demande bornée en refonte globale de la marque.",
       ].join("\n\n"),
       schema: synthesisSchema,
-      formatInstructions: "citations est obligatoire : cite le dossier fourni ou une citation exacte des critiques reçues. Toute critique acceptée/rejetée reprend mot pour mot une claim de l’expert indiqué, sans en inventer ni réattribuer. Conserve version/origine/date, distingue interprétation et fait. Une citation correspondante ne valide pas l'affirmation stratégique.",
+      formatInstructions: "citations est obligatoire : cite le dossier fourni ou une citation exacte des critiques reçues. critiqueDecisions contient chaque critiqueRef fournie exactement une fois, avec decision ACCEPT ou REJECT et reason. Ne produis ni acceptedCritiques ni rejectedCritiques : l'application classe les décisions et restitue les auteurs et textes originaux. Le motif explique la décision choisie sans préfixe accepté/rejeté. Conserve version/origine/date, distingue interprétation et fait. Une citation correspondante ne valide pas l'affirmation stratégique.",
       caller: "mestor:council:synthesis",
       strategyId: input.strategyId,
       maxOutputTokens: SYNTHESIS_MAX_TOKENS,
     });
-    synthesis = res.data;
+    const { critiqueDecisions, ...position } = res.data;
+    synthesis = councilSynthesisSchema.parse({
+      ...position,
+      acceptedCritiques: critiqueDecisions.filter(item => item.decision === "ACCEPT")
+        .map(({ critiqueRef, reason }) => ({
+        ...offered.get(critiqueRef)!, resolution: reason,
+      })),
+      rejectedCritiques: critiqueDecisions.filter(item => item.decision === "REJECT")
+        .map(({ critiqueRef, reason }) => ({
+        ...offered.get(critiqueRef)!, reason,
+      })),
+    });
   } catch {
     synthesis = null; // les critiques restent livrées telles quelles
   }

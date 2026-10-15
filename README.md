@@ -16,7 +16,7 @@
 
 ## Quick start
 
-**468 candidate : quatre experts reçus sur copie, synthèse native non reçue.** Les citations sont reliées aux extraits fournis, sans certification stratégique. Contrôles locaux reçus (DEFAULT 4 528/433, cible 34/3, cinq contrôles verts), CI du complément attendue. Le diagnostic isolé emploie un snapshot coordinateur non vérifié identique au natif. La reprise conserve l’entrée exacte et rejoue uniquement la synthèse sur les quatre avis déjà reçus. Aucun build/déploiement 468 demandé ; production 467, seize réceptions bornées/zéro chantier sur sept inchangés. [Réception et limites](docs/governance/REFONTE-PLAN.md).
+**468 candidate : question, citations et arbitrages reçus pour un cas SPAWT sur copie.** Quatre experts/synthèse, attributions fidèles, trois actions ; qualification acceptée uniquement pour cette question, pas stratégie générale ou usage client. Contrôles locaux reçus, CI du complément attendue. Réponse originale encore bornée et décision placée après les longs avis : reprise C4 planifiée dans le panneau existant. Réserve de journalisation C7 distincte ; aucun build/déploiement 468 demandé. Production 467/seize réceptions bornées/zéro chantier sur sept inchangés. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 
 **467 livré backend : valeurs qualifiées avant les résumés.** Code/runtime et reprise du fil existant reçus sans génération, données conservées. La réception d’entrée sur snapshot avec dépendances simulées reste bornée ; citations de sortie, rapport utile, ledger et coût complet non reçus. Seize résultats inchangés, aucun chantier entier fermé. [Réception et limites](docs/governance/REFONTE-PLAN.md).
 

@@ -281,6 +281,10 @@ function MestorConversation({ strategyId }: { strategyId: string | null }) {
   const lastAssistantMessage =
     [...messages].reverse().find((m) => m.role === "assistant" && !m.isError && m.content.trim()) ??
     null;
+  const councilQuestion = lastAssistantMessage
+    ? messages.slice(0, messages.indexOf(lastAssistantMessage)).reverse()
+      .find((m) => m.role === "user")?.content
+    : undefined;
 
   const handleReset = () => {
     setMessages([]);
@@ -319,6 +323,7 @@ function MestorConversation({ strategyId }: { strategyId: string | null }) {
           key={lastAssistantMessage.id}
           strategyId={strategyId}
           answer={lastAssistantMessage.content}
+          question={councilQuestion}
         />
       )}
 

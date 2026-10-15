@@ -26,7 +26,7 @@ const draft = { position: "Il reste à confronter la description aux observation
   arguments: ["Description historique", "Résultat à vérifier"], risks: [], citations: [citation] };
 const critique = { verdict: "CHALLENGE", critiques: [], missingAngles: [], amendments: [], citations: [citation] };
 const synthesis = { finalPosition: "Réconcilier les versions sans transformer un objectif en mesure.",
-  acceptedCritiques: [], rejectedCritiques: [], actionItems: [], dissent: [], citations: [citation] };
+  critiqueDecisions: [], actionItems: [], dissent: [], citations: [citation] };
 
 beforeEach(() => {
   state.evidence = [{ reference, text: "5 questions = 5 axes" }];
@@ -38,15 +38,100 @@ beforeEach(() => {
 });
 
 describe("Council references — actual structured validator, model fixture only", () => {
-  it("shows the model the exact offered claims as a closed output choice", async () => {
+  it("partitions explicit decisions once, keeping rejected objections out of the accepted list", async () => {
+    state.call.mockImplementation(async ({ caller }: { caller: string }) => ({ text: JSON.stringify(
+      caller.includes(":expert-") ? { ...critique, critiques: [{
+        claim: "Argument fourni", evidence: "Champ", severity: "LOW",
+      }] } : { ...synthesis, critiqueDecisions: [
+        { critiqueRef: "A:1", decision: "ACCEPT", reason: "Précise la décision" },
+        { critiqueRef: "D:1", decision: "REJECT", reason: "Hors du sujet demandé" },
+        { critiqueRef: "V:1", decision: "ACCEPT", reason: "Corrige une hypothèse" },
+        { critiqueRef: "E:1", decision: "REJECT", reason: "Hors du sujet demandé" },
+      ] }),
+    }));
+    const result = await deliberate({ strategyId: "spawt", topic: "Question", draft: "Position" });
+    if (result.status !== "OK") throw new Error("Council unavailable");
+    expect(result.synthesis?.acceptedCritiques.map(x => x.from)).toEqual(["A", "V"]);
+    expect(result.synthesis?.rejectedCritiques.map(x => x.from)).toEqual(["D", "E"]);
+    expect(result.synthesis).not.toHaveProperty("critiqueDecisions");
+  });
+
+  it("keeps the actual question distinct from the answer in all four critiques and the synthesis", async () => {
+    const topic = "Quelle décision précise prendre sur les six questions du quiz ?";
+    await deliberate({ strategyId: "spawt", topic, draft: "Position à challenger, pas la question." });
+    expect(state.call).toHaveBeenCalledTimes(5);
+    for (const [options] of state.call.mock.calls) expect(options.prompt).toContain(topic);
+  });
+
+  it.each(["acceptedCritiques", "rejectedCritiques"] as const)(
+    "resolves %s by reference while preserving the received author's exact apostrophes", async (kind) => {
+      const original = "La position ne confronte pas l'architecture gratuite et payante.";
+      state.call.mockImplementation(async ({ caller }: { caller: string }) => ({ text: JSON.stringify(
+        caller.includes(":expert-") ? { ...critique, critiques: [{
+          claim: caller.includes(":expert-v") ? original : "Autre argument",
+          evidence: "Champ", severity: "LOW",
+        }] } : { ...synthesis, critiqueDecisions: [
+          { critiqueRef: "V:1", decision: kind === "acceptedCritiques" ? "ACCEPT" : "REJECT", reason: "À vérifier" },
+          ...["A:1", "D:1", "E:1"].map(critiqueRef => ({ critiqueRef, decision: "ACCEPT", reason: "Précision" })),
+        ] }),
+      }));
+      const result = await deliberate({ strategyId: "spawt", topic: "Question", draft: "Position" });
+      if (result.status !== "OK") throw new Error("Council unavailable");
+      expect(result.synthesis?.[kind][0]).toMatchObject({ from: "V", claim: original });
+      expect(result.synthesis?.[kind][0]).not.toHaveProperty("critiqueRef");
+    },
+  );
+
+  it.each([
+    { critiqueRef: "Z:1", decision: "ACCEPT", reason: "Inconnu" },
+    { critiqueRef: "V:99", decision: "ACCEPT", reason: "Absent" },
+    { critiqueRef: "A:1", decision: "ACCEPT", from: "V", claim: "Auteur ou texte substitué", reason: "Refusé" },
+  ])("rejects unknown references and model-supplied replacements: %j", async (decision) => {
+    state.call.mockImplementation(async ({ caller }: { caller: string }) => ({ text: JSON.stringify(
+      caller.includes(":expert-") ? { ...critique, critiques: [{
+        claim: "Argument fourni", evidence: "Champ", severity: "LOW",
+      }] } : { ...synthesis, critiqueDecisions: [decision,
+        ...["D:1", "V:1", "E:1"].map(critiqueRef => ({ critiqueRef, decision: "ACCEPT", reason: "Motif" }))] }),
+    }));
+    const result = await deliberate({ strategyId: "spawt", topic: "Question", draft: "Position" });
+    if (result.status !== "OK") throw new Error("Council unavailable");
+    expect(result.synthesis).toBeNull();
+    expect(result.critiques.a).toHaveProperty("verdict", "CHALLENGE");
+  });
+
+  it.each(["omitted", "duplicate", "unknown decision", "too many actions"])(
+    "rejects an incomplete or contradictory decision contract: %s", async (fault) => {
+      const decisions = ["A:1", "D:1", "V:1", "E:1"].map(critiqueRef => ({
+        critiqueRef, decision: "ACCEPT", reason: "Motif",
+      }));
+      if (fault === "omitted") decisions.pop();
+      if (fault === "duplicate") decisions[3]!.critiqueRef = "A:1";
+      if (fault === "unknown decision") decisions[0]!.decision = "MAYBE";
+      state.call.mockImplementation(async ({ caller }: { caller: string }) => ({ text: JSON.stringify(
+        caller.includes(":expert-") ? { ...critique, critiques: [{
+          claim: "Argument fourni", evidence: "Champ", severity: "LOW",
+        }] } : { ...synthesis, critiqueDecisions: decisions,
+          actionItems: fault === "too many actions" ? ["1", "2", "3", "4"] : [] }),
+      }));
+      const result = await deliberate({ strategyId: "spawt", topic: "Question", draft: "Position" });
+      if (result.status !== "OK") throw new Error("Council unavailable");
+      expect(result.synthesis).toBeNull();
+      expect(result.critiques.a).toHaveProperty("verdict", "CHALLENGE");
+    },
+  );
+
+  it("shows only supplied critique references as closed output choices, with full claims in the input", async () => {
     state.call.mockImplementation(async ({ caller }: { caller: string }) => ({ text: JSON.stringify(
       caller.includes(":expert-") ? { ...critique, critiques: [{ claim: "Argument exact à conserver",
         evidence: "Champ", severity: "LOW" }] } : synthesis),
     }));
     await deliberate({ strategyId: "spawt", topic: "Question", draft: "Position" });
     const system = state.call.mock.calls.find(([options]) => options.caller.includes(":synthesis"))![0].system;
+    const prompt = state.call.mock.calls.find(([options]) => options.caller.includes(":synthesis"))![0].prompt;
     expect(system).toContain('"enum"');
-    expect(system).toContain("Argument exact à conserver");
+    expect(system).toContain('"critiqueRef"');
+    for (const code of ["A:1", "D:1", "V:1", "E:1"]) expect(system).toContain(code);
+    expect(prompt).toContain("Argument exact à conserver");
   });
 
   it("lets the existing queue finish its allowed wait before aborting an expert", async () => {
@@ -92,7 +177,9 @@ describe("Council references — actual structured validator, model fixture only
     state.call.mockImplementation(async ({ caller }: { caller: string }) => ({ text: JSON.stringify(
       caller.includes(":draft") ? draft : caller.includes(":expert-") ? {
         ...critique, critiques: [{ claim: "Argument réel", evidence: "Champ", severity: "LOW" }],
-      } : { ...synthesis, acceptedCritiques: [{ from: "A", claim: "Argument réel", resolution: "Explication" }] }),
+      } : { ...synthesis, critiqueDecisions: ["A:1", "D:1", "V:1", "E:1"].map(critiqueRef => ({
+        critiqueRef, decision: "ACCEPT", reason: "Explication",
+      })) }),
     }));
     const result = await deliberate({ strategyId: "spawt", topic: "Question" });
     if (result.status !== "OK") throw new Error("Council unavailable");

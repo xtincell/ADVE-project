@@ -86,10 +86,13 @@ function CouncilCitations({ citations }: { citations: CouncilCitation[] | undefi
 export function CouncilDeliberationPanel({
   strategyId,
   answer,
+  question,
 }: {
   strategyId: string;
   /** La réponse de l'assistant que les experts doivent contester. */
   answer: string;
+  /** Question à laquelle répond cette position, quand elle existe dans le fil. */
+  question?: string;
 }) {
   const [requested, setRequested] = useState(false);
 
@@ -100,7 +103,7 @@ export function CouncilDeliberationPanel({
   // n'était jamais soumise à personne, alors que le bouton promettait de la
   // soumettre. Le champ existait déjà côté serveur — il n'était pas branché.
   const draft = answer.slice(0, DRAFT_MAX);
-  const topic = answer.slice(0, TOPIC_MAX);
+  const topic = (question ?? answer).slice(0, TOPIC_MAX);
   const truncated = answer.length > DRAFT_MAX;
 
   // Une délibération coûte 5 appels LLM sur le budget de la marque : elle ne
