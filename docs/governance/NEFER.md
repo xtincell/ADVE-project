@@ -328,7 +328,7 @@ Module **`src/server/services/auto-promotion/`** qui automatise les transitions 
 | `architecture_console_levels.md` | 4 portails | Auto-loaded |
 | `adve_rtis_pillars.md` | I=Innovation, S=Strategy | Auto-loaded |
 | `philosophy_adve_rtis.md` | Superfan + Overton | Auto-loaded |
-| `architecture_llm_decision.md` | LLM Gateway central — cascade **Ollama Cloud primaire → OpenRouter → Anthropic dernier recours** (OpenAI = embeddings seulement) | Auto-loaded |
+| `architecture_llm_decision.md` | Gateway existant : relais texte privé choisi, distinct de la clé API embeddings ; priorité explicite sans repli fournisseur sur ce choix, branches historiques conservées. Politiques/affichage/configuration ne prouvent ni facture, ni quota, ni santé. [Routage courant et historique](context/architecture_llm_decision.md). | Auto-loaded |
 | `feedback_root_cause_no_shortcuts.md` | Pas de bandaids | Auto-loaded |
 | `project_resume_context_*.md` | Résumés de session | Auto-loaded |
 

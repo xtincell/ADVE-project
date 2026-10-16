@@ -2,7 +2,11 @@
 
 This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/code). It briefs any agent picking up work on this repo.
 
-## Réception courante — 2026-10-15
+## Réception courante — 2026-10-16
+
+**478 livré — reprises bornées dans le gestionnaire existant.** Source 1edc02f8/trois CI/image/runtime exacts reçus ; deux fichiers prolongés/dix-sept conservés. ADMIN lit cinq lignes Luna, rafraîchissement complet limité à un GET 200 sans POST/exception/échec ; première fenêtre tronquée/seize annulations conservées, pas SLO. Sept populations/cinq politiques/fils/quatorze messages/quatorze coûts inchangés, zéro modèle/édition de politique. Causes SDK/reprises closes ; refus silencieux du modal, streaming, C2/C3/C4/C7 et seize réceptions/zéro chantier sur sept/global null conservés. [Bornage](docs/governance/REFONTE-PLAN.md).
+
+## Checkpoints antérieurs — 2026-10-15
 
 **474 livré — référence source et amendement existants.** Source 6e117414/CI/image/runtime reçus ; quatre fichiers prolongés, dix-neuf fichiers d’appels identiques. Local DEFAULT 4 607 / 436, gouvernance 1 639 / 166 ; CI PG 375 / 19. ADMIN production : source actuelle lue, référence au brouillon puis annulation, aucun amendement réel/modèle ; sept empreintes/cinq politiques/fils/quatorze messages/quatorze coûts conservés. Fixture v2 distincte. Causes ciblées fermées ; C3/second éditeur legacy/parité/granularité/tonDeVoix/fondateur, C4/C7 et seize réceptions/zéro chantier sur sept/progression globale non calculée inchangés. [Bornage](docs/governance/REFONTE-PLAN.md).
 
@@ -1107,7 +1111,7 @@ protocole opérationnel : skill `nefer-ops` TEMPS 2).
 
 ## Stack
 
-Next.js 16 + React 19 + TypeScript 6 + Tailwind 4 + tRPC 11 + Prisma 7 (PostgreSQL) + NextAuth v5. LLM Gateway central (multi-provider — **Ollama Cloud primaire → OpenRouter repli → Anthropic dernier recours** ; `LLM_PREMIUM_MODE=1` promeut Anthropic, `LLM_PRIMARY_PROVIDER` gagne sur tout ; **OpenAI exclu du texte, réservé aux embeddings** ; circuit breaker, cost tracking, headroom) in `src/server/services/llm-gateway/`. Hybrid RAG + multi-provider embeddings (Ollama → OpenAI → no-op) since V5.2. Vitest 4 + Playwright 1.59 for tests. CVA 0.7 for design-system variants. ESLint 10 + madge 8 enforce the layering cascade.
+Next.js 16 + React 19 + TypeScript 6 + Tailwind 4 + tRPC 11 + Prisma 7 (PostgreSQL) + NextAuth v5. LLM Gateway central (relais texte privé explicitement choisi, distinct de la clé API embeddings ; priorité explicite sans repli fournisseur sur ce choix ; branches historiques multi-provider/premium conservées ; circuit breaker, cost tracking, headroom) in `src/server/services/llm-gateway/`. Politiques historiques, affichage et configuration ne prouvent ni facture, ni quota, ni santé ; [routage courant et historique](docs/governance/context/architecture_llm_decision.md). Hybrid RAG + multi-provider embeddings (Ollama → OpenAI → no-op) since V5.2. Vitest 4 + Playwright 1.59 for tests. CVA 0.7 for design-system variants. ESLint 10 + madge 8 enforce the layering cascade.
 
 ## Conventions (already enforced or in flight via refonte)
 

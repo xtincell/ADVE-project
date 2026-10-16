@@ -2,10 +2,12 @@
 
 ## v6.27.478 — fix(governance): borner les reprises aux erreurs réessayables (2026-10-16)
 
-**478 candidat, non livré ; production 477 inchangée.**
+**478 livré : reprises bornées dans le gestionnaire existant.**
 
-- Deux fichiers du gestionnaire existant prolongés : refus non réessayables respectés, reprises SDK désactivées pour conserver le budget du Gateway ; aucun nouveau gestionnaire, droit ou fournisseur.
-- Cible 119 / 9, DEFAULT 4 690 / 443, gouvernance 1 650 / 167/six commandes à zéro ; conservation de copie reçue avec compensation/versionnement/péremption, aucun modèle. Refus silencieux du modal et statut perdu/flux vide streaming ouverts ; source/CI/image/runtime attendus, seize réceptions inchangées. [Bornage et reprise](docs/governance/REFONTE-PLAN.md).
+- Source 1edc02f8/trois CI/image/runtime exacts reçus ; deux fichiers prolongés/dix-sept conservés, aucun nouveau gestionnaire, droit ou fournisseur.
+- ADMIN lit cinq lignes dans le module existant sans modèle/édition, données conservées ; première fenêtre tronquée/annulations préservées, pas SLO.
+
+Cible 119 / 9, DEFAULT 4 690 / 443, gouvernance 1 650 / 167/six contrôles locaux reçus. Causes SDK/reprises purgées des registres actifs ; refus silencieux du modal, streaming et C7 entier ouverts, seize réceptions inchangées. Clôture MD distincte, sans bump/build. [Bornage et reprise](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.477 — fix(governance): rendre l’assistance facultative à la création et à l’activation (2026-10-16)
 
