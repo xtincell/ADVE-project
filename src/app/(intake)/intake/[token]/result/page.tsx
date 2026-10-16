@@ -38,6 +38,7 @@ import { AdvertisRadar } from "@/components/shared/advertis-radar";
 import { PILLAR_KEYS } from "@/lib/types/advertis-vector";
 import { HIDDEN_FIELDS, humanizeValue } from "@/server/services/quick-intake/report-composer";
 import { useT } from "@/lib/i18n/use-t";
+import { SourcePreparationOption } from "@/components/brand/source-preparation-option";
 
 // ── Types matching the narrative-report service ────────────────────
 interface AdvePillarReport {
@@ -314,6 +315,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [activated, setActivated] = useState<{ clientName: string; userEmail: string } | null>(null);
+  const [prepareAssistance, setPrepareAssistance] = useState(false);
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
 
   const { data: me } = trpc.auth.me.useQuery();
@@ -1659,9 +1661,19 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               </li>
             </ul>
 
+            <div className="mt-5">
+              <SourcePreparationOption
+                checked={prepareAssistance}
+                onChange={setPrepareAssistance}
+                disabled={activateMutation.isPending}
+                label={t("intakeResult.activate.assistanceTitle")}
+                description={t("intakeResult.activate.assistanceDescription")}
+              />
+            </div>
+
             <button
               type="button"
-              onClick={() => activateMutation.mutate({ token })}
+              onClick={() => activateMutation.mutate({ token, inferMissingFields: prepareAssistance })}
               disabled={activateMutation.isPending}
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >

@@ -6,6 +6,8 @@ import { useSession } from "next-auth/react";
 import { trpc } from "@/lib/trpc/client";
 import { INTAKE_SECTORS, INTAKE_COUNTRIES } from "@/lib/constants/intake-options";
 import { PageHeader } from "@/components/shared/page-header";
+import { SourcePreparationOption } from "@/components/brand/source-preparation-option";
+import { useT } from "@/lib/i18n/use-t";
 import {
   Rocket, Building2, Globe, DollarSign, Users, ArrowRight,
   ArrowLeft, Check, Sparkles, ShoppingBag, Radio, Zap,
@@ -72,6 +74,8 @@ const COUNTRIES = INTAKE_COUNTRIES;
 
 export default function NewBrandPage() {
   const router = useRouter();
+  const { t } = useT();
+  const [prepareAssistance, setPrepareAssistance] = useState(false);
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -185,8 +189,8 @@ export default function NewBrandPage() {
 
       setCreatedId(result.id);
 
-      // Auto-launch Boot Sequence
-      try {
+      // The dossier is usable manually; assisted questions require an opt-in.
+      if (prepareAssistance) try {
         await startBoot.mutateAsync({ strategyId: result.id });
       } catch (bootErr) {
         // L'initialisation a échoué — mais LA MARQUE EXISTE. On le dit, et on
@@ -226,6 +230,14 @@ export default function NewBrandPage() {
         ]}
       />
 
+      <SourcePreparationOption
+        checked={prepareAssistance}
+        onChange={setPrepareAssistance}
+        disabled={isSubmitting || activateBrand.isPending}
+        label={t("intakeResult.activate.assistanceTitle")}
+        description={t("intakeResult.activate.assistanceDescription")}
+      />
+
       {/* Diagnostic intake détecté : activation complète en un clic (piliers
           extraits + diagnostic + empreinte inclus) au lieu de repartir de zéro. */}
       {intakeData && intakeMatchesSession ? (
@@ -241,7 +253,7 @@ export default function NewBrandPage() {
           <button
             type="button"
             disabled={activateBrand.isPending}
-            onClick={() => intakeToken && activateBrand.mutate({ token: intakeToken })}
+            onClick={() => intakeToken && activateBrand.mutate({ token: intakeToken, inferMissingFields: prepareAssistance })}
             className="mt-3 inline-flex items-center gap-2 rounded-lg bg-success px-4 py-2 text-sm font-semibold text-background hover:opacity-90 disabled:opacity-50"
           >
             {activateBrand.isPending ? "Activation…" : "Activer ma marque diagnostiquée"}

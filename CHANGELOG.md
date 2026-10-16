@@ -1,5 +1,13 @@
 # Changelog — La Fusee
 
+## v6.27.477 — fix(governance): rendre l’assistance facultative à la création et à l’activation (2026-10-16)
+
+**477 candidat, phase A : assistance sur choix explicite, aucun nouveau gestionnaire ni livraison.**
+
+- Création : option UI décochée, `BootSequence.start` seulement sur choix explicite ; `activateBrand` reçoit `inferMissingFields=false` par défaut. Option partagée FR/EN/ZH, strategyId au Gateway depuis BootSequence.
+- Production 476 inchangée, aucun modèle réel reçu ; contrôle complet/recette finale/CI/image/production 477 attendus.
+- Phase B continuité/marché/registre séparée, candidate non livrée ; tests de l’arbre mixte ne valent pas réception indépendante de A. Dettes de fond/seize réceptions inchangées. [Bornage](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.476 — fix(governance): raccorder créatif et inférence au gestionnaire existant (2026-10-16)
 
 **476 livré : deux appels hérités raccordés au gestionnaire, refus seuls reçus sur copie.**

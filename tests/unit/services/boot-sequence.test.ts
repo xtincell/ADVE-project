@@ -74,6 +74,7 @@ vi.mock("@/server/services/notoria", () => ({
 import { db } from "@/lib/db";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { classifyBrand } from "@/lib/types/advertis-vector";
+import { callLLM } from "@/server/services/llm-gateway";
 import { start, advance, complete } from "@/server/services/boot-sequence";
 
 const mockDb = db as unknown as {
@@ -100,6 +101,12 @@ describe("Boot Sequence", () => {
   });
 
   describe("start", () => {
+    it("attributes assisted questions to the current brand through the existing manager", async () => {
+      await start("strat-scope-fixture");
+      expect(callLLM).toHaveBeenCalledWith(expect.objectContaining({
+        strategyId: "strat-scope-fixture", caller: "boot-sequence:generate-questions",
+      }));
+    });
     it("retourne un BootState initial avec step 0", async () => {
       const state = await start("strat-1");
 

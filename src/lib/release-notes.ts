@@ -34,6 +34,16 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.477",
+    date: "2026-10-16",
+    headline: "Créer votre marque avec ou sans assistance",
+    highlights: [{
+      emoji: "✍️",
+      title: "Choisir votre aide à la préparation",
+      body: "La création et l’activation conservent vos informations. L’assistance pour compléter votre marque démarre uniquement si vous la demandez.",
+    }],
+  },
+  {
     version: "6.27.476",
     date: "2026-10-16",
     headline: "Des réglages communs pour l’assistance",

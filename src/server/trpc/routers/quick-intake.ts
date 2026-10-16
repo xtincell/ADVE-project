@@ -723,7 +723,7 @@ export const quickIntakeRouter = createTRPCRouter({
     }),
 
   activateBrand: publicProcedure
-    .input(z.object({ token: z.string().min(1) }))
+    .input(z.object({ token: z.string().min(1), inferMissingFields: z.boolean().default(false) }))
     .mutation(async ({ ctx, input }) => {
       const intake = await ctx.db.quickIntake.findUnique({
         where: { shareToken: input.token },
@@ -922,13 +922,9 @@ export const quickIntakeRouter = createTRPCRouter({
         }).catch(() => undefined); // Non-fatal — l'activation prime.
       }
 
-      // ── PR-C (ADR-0035) — LLM inference of the 7 needsHuman ADVE fields ──
-      // Fire-and-forget: never block activation on a slow LLM call. The
-      // operator can refresh the cockpit pillar pages a few seconds after
-      // landing on them and see the inferred values populated. Failures are
-      // logged server-side; the operator just sees the original empty fields
-      // and can fill them manually as before.
-      void (async () => {
+      // Activation preserves the dossier without requiring model assistance.
+      // Only an explicit choice starts the existing non-blocking inference.
+      if (input.inferMissingFields) void (async () => {
         try {
           const { inferNeedsHumanFields } = await import("@/server/services/quick-intake/infer-needs-human-fields");
           const result = await inferNeedsHumanFields(intake.id);

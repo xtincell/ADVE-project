@@ -10,6 +10,8 @@ Statut : `active` (page substantive), `redirect` (legacy renommée — redirige)
 
 Source de vérité : `find src/app -name 'page.tsx'`. Mis à jour avec [APOGEE.md](APOGEE.md) §4.
 
+**477 candidat, phase A — pages existantes** : `SourcePreparationOption` partagé étendu FR/EN/ZH ; option UI de création décochée, `BootSequence.start` séparé si choix explicite, `activateBrand` seul reçoit `inferMissingFields=false` par défaut ; BootSequence porte strategyId au gestionnaire existant. Aucun ajout de page, permission ou gestionnaire. Phase B continuité/sélection/marché/registre candidate et recette finale en cours, sans réception indépendante de A déduite des tests mixtes. Production 476 inchangée, aucune livraison 477 ; seize réceptions inchangées. [Bornage](REFONTE-PLAN.md).
+
 **476 livré — aucun ajout de page** : source cec5a163/CI/image/runtime exacts reçus. ADMIN lit cinq usages prévus Luna sans modèle/POST, données conservées ; 130 événements/56 réponses complets, zéro ≥500/exception mais 18 annulations, cause inconnue/pas SLO. Wrappers/cible 23 / 3 et refus sur copie reçus ; HTTP activateBrand/qualité utile/provenance/opt-out/coût complet restent ouverts, seize réceptions inchangées. [Bornage](REFONTE-PLAN.md).
 
 **439 livré — huit pages de marque existantes** : identity, positioning,

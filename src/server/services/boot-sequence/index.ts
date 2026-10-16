@@ -54,6 +54,7 @@ const BOOT_STEPS = [
 async function generateQuestions(
   pillarKey: string,
   existingContent: Record<string, unknown>,
+  strategyId: string,
 ): Promise<GeneratedQuestion[]> {
   const schemaKey = pillarKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
   const schema = PILLAR_SCHEMAS[schemaKey];
@@ -85,6 +86,7 @@ Chaque question: { "key": "<field_key>", "label": "<question en francais>", "hin
 Si le type n'est pas "select", omets "options".
 Retourne un JSON array pur, sans markdown.`,
     caller: "boot-sequence:generate-questions",
+    strategyId,
     maxOutputTokens: 2000,
   });
 
@@ -130,7 +132,7 @@ export async function getState(strategyId: string): Promise<BootState | null> {
 
 export async function start(strategyId: string): Promise<BootState> {
   const firstPillar = BOOT_STEPS[0]!.pillar;
-  const questions = await generateQuestions(firstPillar, {});
+  const questions = await generateQuestions(firstPillar, {}, strategyId);
 
   const state: BootState = {
     strategyId,
@@ -177,7 +179,7 @@ export async function advance(
       select: { content: true },
     });
     const existing = (pillarRow?.content as Record<string, unknown>) ?? {};
-    questions = await generateQuestions(nextPillar, existing);
+    questions = await generateQuestions(nextPillar, existing, strategyId);
   }
 
   const state: BootState = {
