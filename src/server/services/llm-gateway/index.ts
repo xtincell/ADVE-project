@@ -585,6 +585,17 @@ export async function withRetry<T>(
     } catch (err) {
       lastError = err;
       if (err instanceof LlmRateWaitExceededError) throw err;
+      const apiError = typeof err === "object" && err !== null
+        ? err as { isRetryable?: unknown; statusCode?: unknown } : {};
+      const statusCode = typeof apiError.statusCode === "number" ? apiError.statusCode : 0;
+      // Honour the SDK's refusal classification. Retrying the same invalid
+      // request or access denial cannot repair it; 408/409 can be transient.
+      // Rate limits retain the existing fast-fail policy, even without "429"
+      // in the provider's human-readable message.
+      if (apiError.isRetryable === false ||
+        (statusCode >= 400 && statusCode < 500 && statusCode !== 408 && statusCode !== 409)) {
+        throw err;
+      }
       const errStr = String(err instanceof Error ? err.message : err).toLowerCase();
       // An aborted call (caller's bounded timeout fired) fails fast — no backoff,
       // no point retrying an already-cancelled signal.
@@ -873,6 +884,9 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         // sur OpenRouter) ; attend si la limite RPM/concurrence/RPS est atteinte
         // plutôt que de partir et de se prendre un 429. Local au process.
         const callParams = {
+          // The Gateway owns retries and reacquires a rate slot per attempt.
+          // SDK retries would multiply this budget behind a single slot.
+          maxRetries: 0,
           system: hr.system,
           ...(options.images ? { messages: [{ role: "user" as const, content: [{ type: "text" as const, text: hr.prompt }, ...options.images.map(i => ({ type: "image" as const, image: i.bytes, mediaType: i.mediaType }))] }] } : { prompt: hr.prompt }),
           maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_TOKENS,

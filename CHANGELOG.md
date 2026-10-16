@@ -1,5 +1,12 @@
 # Changelog — La Fusee
 
+## v6.27.478 — fix(governance): borner les reprises aux erreurs réessayables (2026-10-16)
+
+**478 candidat, non livré ; production 477 inchangée.**
+
+- Deux fichiers du gestionnaire existant prolongés : refus non réessayables respectés, reprises SDK désactivées pour conserver le budget du Gateway ; aucun nouveau gestionnaire, droit ou fournisseur.
+- Cible 119 / 9, DEFAULT 4 690 / 443, gouvernance 1 650 / 167/six commandes à zéro ; conservation de copie reçue avec compensation/versionnement/péremption, aucun modèle. Refus silencieux du modal et statut perdu/flux vide streaming ouverts ; source/CI/image/runtime attendus, seize réceptions inchangées. [Bornage et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.477 — fix(governance): rendre l’assistance facultative à la création et à l’activation (2026-10-16)
 
 **477 livré : assistance facultative et continuité de marque reçues au périmètre.**

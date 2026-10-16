@@ -206,6 +206,8 @@ async function attemptStream(
 
   try {
     const result = streamText({
+      // One transport attempt before the existing pre-first-byte fallback.
+      maxRetries: 0,
       model: aiModel as Parameters<typeof streamText>[0]["model"],
       system: hr.system,
       messages: opts.messages.map((m) => ({ role: m.role, content: m.content })),

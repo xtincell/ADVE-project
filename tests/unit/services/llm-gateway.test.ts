@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { APICallError } from "ai";
 import {
   extractJSON,
   withRetry,
@@ -86,6 +87,33 @@ describe("extractJSON", () => {
 // ---------------------------------------------------------------------------
 
 describe("withRetry", () => {
+  it.each([400, 401, 403, 404, 422, 429])(
+    "does not repeat a terminal HTTP %i refusal even without a status in its message",
+    async (statusCode) => {
+      const error = new APICallError({ message: "Request refused", statusCode,
+        url: "http://127.0.0.1/refusal-only", requestBodyValues: {} });
+      const fn = vi.fn().mockRejectedValue(error);
+      await expect(withRetry(fn, { baseDelayMs: 1 })).rejects.toBe(error);
+      expect(fn).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("honours an explicit non-retryable error even for HTTP 503", async () => {
+    const error = new APICallError({ message: "Request refused", statusCode: 503,
+      isRetryable: false, url: "http://127.0.0.1/refusal-only", requestBodyValues: {} });
+    const fn = vi.fn().mockRejectedValue(error);
+    await expect(withRetry(fn, { baseDelayMs: 1 })).rejects.toBe(error);
+    expect(fn).toHaveBeenCalledOnce();
+  });
+
+  it.each([408, 409, 503])("preserves bounded retries for transient HTTP %i", async (statusCode) => {
+    const error = new APICallError({ message: "Temporarily unavailable", statusCode,
+      url: "http://127.0.0.1/refusal-only", requestBodyValues: {} });
+    const fn = vi.fn().mockRejectedValue(error);
+    await expect(withRetry(fn, { baseDelayMs: 1, maxDelayMs: 1 })).rejects.toBe(error);
+    expect(fn).toHaveBeenCalledTimes(3);
+  });
+
   it("returns immediately on first-try success without sleeping", async () => {
     vi.useFakeTimers();
     try {
