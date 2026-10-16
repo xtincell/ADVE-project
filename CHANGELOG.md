@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.480 — fix(privacy): distinguer les conditions des accès IA (2026-10-16)
+
+**Le texte public cesse de confondre abonnement ChatGPT et garanties API.**
+
+- Trois pages existantes corrigées : privacy, DPA et Trust Center ; source et mode d’accès distingués, déclaration humaine du contrôle désactivé datée du 16 octobre. Pas de contrat API, rétention, résidence ou conformité globale déduits.
+- Suppression des assertions de repli implicite vers un autre fournisseur et du taux sans mesure de 95 %. Le gestionnaire ModelPolicy/Gateway, les comptes et leurs réglages restent inchangés ; aucun appel modèle par cette correction.
+- Typage, lint sans erreur (24 avertissements préexistants), cycles et 1 658 tests de gouvernance/167 suites verts. Trois routes locales chargées et captures inspectées : 93 réponses, zéro ≥500/exception/chargement échoué sur les fenêtres finales complètes. Premières expirations et fenêtre tronquée conservées ; pas SLO. CI, image et version servie restent à recevoir. Les autres engagements juridiques et le registre par déploiement restent ouverts dans la dette existante. Seize réceptions bornées, zéro chantier sur sept et progression globale non calculée conservés.
+
+[Bornage et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.479 — fix(ui): préserver le brouillon après une reformulation refusée (2026-10-16)
 
 **479 livré : le repli brut ne remplace plus le brouillon.**

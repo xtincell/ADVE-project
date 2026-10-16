@@ -16,7 +16,7 @@ export default function TrustCenterPage() {
   return (
     <LegalShell
       title="Trust Center"
-      updated="12 juin 2026"
+      updated="16 octobre 2026"
       intro={
         <>
           Cette page documente les mécanismes par lesquels La Fusée tient ses engagements à l&apos;échelle.
@@ -43,8 +43,9 @@ export default function TrustCenterPage() {
             protégées par verrou daté — pas de double exécution concurrente, pas de verrou orphelin.
           </li>
           <li>
-            <strong>Disjoncteurs LLM</strong> : la passerelle IA surveille chaque fournisseur (circuit breaker),
-            bascule automatiquement (Anthropic → OpenAI → local) et dégrade proprement.
+            <strong>Reprises des appels IA</strong> : la passerelle existante borne les tentatives et les
+            replis selon la politique activée. Un fournisseur explicitement choisi n&apos;autorise pas une
+            bascule implicite vers un autre. Ces mécanismes ne garantissent pas la disponibilité du service.
           </li>
           <li>
             <strong>Fallback déterministe intégral</strong> : la compilation de l&apos;Oracle (35/35 sections)
@@ -66,9 +67,9 @@ export default function TrustCenterPage() {
             objectifs de latence/coût (SLO) déclarés.
           </li>
           <li>
-            <strong>Déterminisme massif</strong> : ~95 % des traitements (scoring /200, pricing par zone, gates,
-            compilation, facturation API) sont des fonctions pures reproductibles — variance zéro, auditables
-            ligne à ligne.
+            <strong>Calculs déterministes</strong> : les fonctions de score, de prix et de compilation
+            peuvent être vérifiées sans génération IA. Aucun pourcentage global ni niveau de disponibilité
+            n&apos;est déduit de cette propriété.
           </li>
           <li>
             <strong>Anti-drift continu</strong> : plus de 1 900 tests automatisés dont des suites de gouvernance
@@ -112,8 +113,8 @@ export default function TrustCenterPage() {
       <LegalSection title="5. Conformité">
         <p>
           RGPD / Convention de Malabo / cadres nationaux : voir le{" "}
-          <a href="/dpa" className="text-accent hover:underline">DPA</a> (classes de données, non-entraînement
-          des LLM, sous-traitants, violations) et la{" "}
+          <a href="/dpa" className="text-accent hover:underline">DPA</a> (classes de données, conditions des
+          services IA, sous-traitants, violations) et la{" "}
           <a href="/privacy" className="text-accent hover:underline">politique de confidentialité</a>. Engagements
           de délais : <a href="/sla" className="text-accent hover:underline">SLA</a>. Cadre contractuel :{" "}
           <a href="/cgv" className="text-accent hover:underline">CGV</a> · <a href="/cgu" className="text-accent hover:underline">CGU</a>.

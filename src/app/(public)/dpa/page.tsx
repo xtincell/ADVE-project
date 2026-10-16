@@ -1,7 +1,7 @@
 /**
  * /dpa — Accord de traitement des données (Vague 6 — conformité B2B).
  * Transposition de la doctrine de données du Cahier des charges Ch.2 :
- * classes de données, isolation default-deny, non-entraînement des LLM,
+ * classes de données, isolation default-deny, conditions des services IA,
  * chiffrement, hash-chain vs effacement, signal pool opt-in k≥5.
  */
 import { LegalShell, LegalSection, LegalTable } from "@/components/legal/legal-shell";
@@ -9,14 +9,14 @@ import { LegalShell, LegalSection, LegalTable } from "@/components/legal/legal-s
 export const metadata = {
   title: "DPA — La Fusée",
   description:
-    "Accord de traitement des données La Fusée — ingestion, isolation, non-entraînement des LLM, chiffrement, sous-traitants.",
+    "Accord de traitement des données La Fusée — ingestion, isolation, services IA, chiffrement, sous-traitants.",
 };
 
 export default function DpaPage() {
   return (
     <LegalShell
       title="Accord de traitement des données (DPA)"
-      updated="12 juin 2026"
+      updated="16 octobre 2026"
       intro={
         <>
           Le présent accord encadre les traitements opérés par UPgraders / La Fusée SARL pour le compte de ses
@@ -59,19 +59,32 @@ export default function DpaPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="4. LLM — non-entraînement garanti">
+      <LegalSection title="4. Services IA et utilisation des données">
         <ul>
           <li>
-            <strong>Aucune donnée client n&apos;est utilisée pour entraîner ou affiner des modèles d&apos;IA</strong> —
-            ni par UPgraders, ni par ses fournisseurs de modèles.
+            Les conditions de traitement dépendent du service utilisé et des réglages du compte.
+            <strong> Un abonnement ChatGPT et un accès API ne portent pas automatiquement les mêmes garanties.</strong>
           </li>
           <li>
-            Les appels aux fournisseurs LLM (Anthropic, OpenAI) sont effectués via API avec les garanties
-            contractuelles de ces fournisseurs : les données soumises par API <strong>ne servent pas à
-            l&apos;entraînement</strong> de leurs modèles et sont soumises à des durées de rétention limitées.
+            Cette instance utilise OpenAI par abonnement ChatGPT. Son administrateur a confirmé le
+            16 octobre 2026 que le contrôle « Améliorer le modèle pour tous » est désactivé. Cette
+            déclaration n&apos;a pas été vérifiée indépendamment dans l&apos;interface du compte.
           </li>
-          <li>La plateforme minimise la surface : ~95 % des traitements (scores, prix, gates, compilation) sont déterministes et n&apos;envoient <strong>rien</strong> à un LLM ; le LLM est réservé à la génération créative explicite.</li>
-          <li>Sortie structurée validée par schéma : les réponses LLM non conformes sont rejetées, jamais persistées silencieusement.</li>
+          <li>
+            Selon les <a href="https://help.openai.com/en/articles/7730893-data-controls-in-chatgpt" className="text-accent hover:underline">contrôles de données OpenAI</a>,
+            cette désactivation exclut les nouvelles conversations et tâches Codex de l&apos;entraînement.
+            Le partage volontaire de retours et le réglage distinct des environnements Codex ont leurs
+            propres conditions ; ils ne sont pas couverts par la seule confirmation ci-dessus.
+          </li>
+          <li>
+            Pour l&apos;<a href="https://developers.openai.com/api/docs/guides/your-data" className="text-accent hover:underline">API OpenAI</a>,
+            les données sont exclues de l&apos;entraînement par défaut, sauf partage volontaire.
+            Cette règle API ne constitue pas le contrat de l&apos;accès par abonnement de cette instance.
+            Le <a href="https://learn.chatgpt.com/docs/auth" className="text-accent hover:underline">mode d&apos;authentification</a>{" "}
+            détermine les politiques applicables. L&apos;exclusion de l&apos;entraînement ne signifie ni absence de
+            conservation, ni résidence garantie dans un pays.
+          </li>
+          <li>Les calculs déterministes de scores, de prix et de compilation ne nécessitent pas de modèle. Aucun pourcentage global de traitements sans IA n&apos;est établi ici.</li>
         </ul>
       </LegalSection>
 
@@ -101,12 +114,12 @@ export default function DpaPage() {
           rows={[
             ["Vercel", "Hébergement applicatif", "UE/US (CDN mondial)"],
             ["Supabase (PostgreSQL managé)", "Base de données", "Région contractuelle du projet"],
-            ["Anthropic / OpenAI", "Génération LLM (API, sans entraînement)", "US — données minimisées"],
+            ["OpenAI", "Service IA de cette instance : abonnement ChatGPT — conditions §4", "Localisation et conservation à qualifier au contrat"],
             ["CinetPay / Stripe / PayPal", "Paiements", "Selon prestataire — aucune donnée carte chez UPgraders"],
             ["Mailgun / fournisseurs SMS", "Messages transactionnels", "UE/US"],
           ]}
         />
-        <p>Toute évolution de cette liste est notifiée aux clients sous DPA signé avec faculté d&apos;objection motivée.</p>
+        <p>Le registre, les services effectivement activés et leur localisation sont à confirmer pour chaque déploiement. Les services d&apos;hébergement, de paiement et de messagerie effectivement utilisés restent à documenter pour cette instance. Toute évolution de la liste contractuelle est notifiée aux clients sous DPA signé avec faculté d&apos;objection motivée.</p>
       </LegalSection>
 
       <LegalSection title="8. Durées, portabilité, restitution">

@@ -25,7 +25,7 @@ export default function PrivacyPage() {
         Confidentialité
       </h1>
       <p className="text-foreground-secondary mb-10">
-        Mise à jour : 7 mai 2026. UPgraders / La Fusée SARL traite tes données pour faire fonctionner l&apos;Industry OS et te livrer le diagnostic ADVE-RTIS. Pas de revente. Pas de tracking publicitaire tiers.
+        Mise à jour : 16 octobre 2026. UPgraders / La Fusée SARL traite tes données pour faire fonctionner l&apos;Industry OS et te livrer le diagnostic ADVE-RTIS. Pas de revente. Pas de tracking publicitaire tiers.
       </p>
 
       <section className="space-y-8 text-foreground-secondary">
@@ -70,12 +70,14 @@ export default function PrivacyPage() {
         </div>
 
         <div>
-          <h2 className="text-foreground text-xl font-semibold mb-3">IA — non-entraînement garanti</h2>
+          <h2 className="text-foreground text-xl font-semibold mb-3">IA et utilisation des données</h2>
           <p>
-            Aucune de tes données n&apos;est utilisée pour entraîner des modèles d&apos;IA — ni par La Fusée, ni par ses
-            fournisseurs (appels API Anthropic/OpenAI sous garanties contractuelles de non-entraînement). La majorité
-            des traitements (scores, prix, compilation) sont déterministes et n&apos;envoient rien à un LLM. Détail
-            complet dans le <Link href="/dpa" className="text-accent hover:underline">DPA</Link> (§4).
+            Les fonctionnalités IA transmettent le contexte utile au service activé. Ses conditions et les
+            réglages du compte déterminent l&apos;utilisation et la conservation de ces données. Cette instance
+            utilise un accès OpenAI par abonnement ChatGPT ; son administrateur a confirmé le 16 octobre 2026
+            que le partage pour l&apos;amélioration des modèles est désactivé. Cette confirmation ne vaut pas
+            garantie contractuelle API, absence de conservation ou localisation des données. Détail et
+            sources dans le <Link href="/dpa" className="text-accent hover:underline">DPA</Link> (§4).
           </p>
         </div>
 
@@ -90,7 +92,7 @@ export default function PrivacyPage() {
 
         <div>
           <h2 className="text-foreground text-xl font-semibold mb-3">Sous-traitants</h2>
-          <p>Hébergement (Vercel), base de données (Supabase / hébergeur autorisé), email transactionnel (Mailgun), LLM (Anthropic, OpenAI — API sans entraînement). Liste détaillée et actualisée dans le <Link href="/dpa" className="text-accent hover:underline">DPA</Link> (§7).</p>
+          <p>Les prestataires dépendent des services activés pour ton espace. Le traitement IA de cette instance utilise OpenAI par abonnement ChatGPT, avec les conditions décrites dans le <Link href="/dpa" className="text-accent hover:underline">DPA</Link> (§4). Le registre des sous-traitants (§7) reste à confirmer pour chaque déploiement.</p>
         </div>
 
         <div>

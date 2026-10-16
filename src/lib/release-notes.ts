@@ -34,6 +34,16 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.480",
+    date: "2026-10-16",
+    headline: "Comprendre le traitement de vos données par l’assistance",
+    highlights: [{
+      emoji: "📄",
+      title: "Distinguer les conditions applicables",
+      body: "Les pages de confidentialité précisent le mode d’accès au service IA et le réglage déclaré pour l’entraînement. Elles distinguent ces informations des engagements de conservation et de localisation qui restent à confirmer.",
+    }],
+  },
+  {
     version: "6.27.479",
     date: "2026-10-16",
     headline: "Garder la main après un échec de reformulation",
