@@ -20,7 +20,7 @@ import { StructuredFieldControl } from "@/components/shared/smart-field-editor";
 import { hasFieldDef } from "@/lib/types/field-registry";
 import { SourceReadDialog } from "@/components/brand/source-read-dialog";
 import { Button } from "@/components/primitives/button";
-import { FriendlyError } from "@/components/shared/friendly-error";
+import { FriendlyError, FriendlyWarnings } from "@/components/shared/friendly-error";
 import type { SourceReceipt } from "@/domain/source-certainty";
 import { Sparkles, AlertTriangle, Loader2, Send, Lock } from "lucide-react";
 
@@ -81,6 +81,7 @@ function AmendPillarEditor({
   }, []);
   const [proposedValue, setProposedValue] = useState<string>("");
   const [rephrasePrompt, setRephrasePrompt] = useState<string>("");
+  const [previewWarning, setPreviewWarning] = useState<string | null>(null);
   const [reason, setReason] = useState<string>("");
   const [overrideLocked, setOverrideLocked] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -139,11 +140,19 @@ function AmendPillarEditor({
   function handlePreview() {
     if (!field || !rephrasePrompt) return;
     const revision = ++previewRevision.current;
+    setPreviewWarning(null);
     previewMutation.mutate(
       { strategyId, pillarKey, field, rephrasePrompt },
       {
         onSuccess: (out) => {
           if (!active.current || previewRevision.current !== revision) return;
+          // Un repli contient la consigne brute, jamais une reformulation reçue.
+          if (out.source !== "llm_rephrase") {
+            setPreviewWarning(out.source === "passthrough_no_schema"
+              ? "La reformulation n’est pas disponible pour ce champ. Votre saisie est conservée ; vous pouvez la compléter et l’appliquer manuellement."
+              : "La reformulation n’a pas abouti. Votre saisie est conservée ; vous pouvez réessayer ou la compléter et l’appliquer manuellement.");
+            return;
+          }
           if (typeof out.proposedValue === "string") setProposedValue(out.proposedValue);
           else if (out.proposedValue != null) setProposedValue(JSON.stringify(out.proposedValue, null, 2));
         },
@@ -328,6 +337,7 @@ function AmendPillarEditor({
                 )}
                 Prévisualiser
               </button>
+              <FriendlyWarnings warnings={previewWarning ? [previewWarning] : null} />
             </div>
           ) : null}
 

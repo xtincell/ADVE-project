@@ -34,6 +34,16 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.479",
+    date: "2026-10-16",
+    headline: "Garder la main après un échec de reformulation",
+    highlights: [{
+      emoji: "✍️",
+      title: "Conserver votre saisie",
+      body: "Si la reformulation n’aboutit pas, un avertissement apparaît et votre saisie reste intacte. Vous pouvez la compléter et l’appliquer manuellement, ou relancer la prévisualisation.",
+    }],
+  },
+  {
     version: "6.27.477",
     date: "2026-10-16",
     headline: "Créer votre marque avec ou sans assistance",

@@ -1,5 +1,14 @@
 # Changelog — La Fusee
 
+## v6.27.479 — fix(ui): préserver le brouillon après une reformulation refusée (2026-10-16)
+
+**479 candidat, non livré ; production 478 inchangée.**
+
+- `AmendPillarModal` réutilise source/FriendlyWarnings existants : repli signalé, saisie conservée, nouvelle tentative explicite ; seul succès remplit, sans application automatique.
+- Baseline quatre rouges/28 verts, cible 42 / 5 verte ; succès généré en simulation seulement. Copie : deux refus 400, warning/brouillon conservé, dix-huit tables identiques/zéro modèle/apply.
+
+DEFAULT 4 698 / 443, gouvernance 1 658 / 167/six commandes à zéro reçus. Source/CI/image/runtime 479 attendus, cause modal active ; streaming/C4/C7 et seize réceptions inchangés. Clôture MD 478/trois CI reçues sans rebuild. [Bornage](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.478 — fix(governance): borner les reprises aux erreurs réessayables (2026-10-16)
 
 **478 livré : reprises bornées dans le gestionnaire existant.**

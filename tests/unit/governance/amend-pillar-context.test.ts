@@ -10,7 +10,11 @@ const transport = vi.hoisted(() => ({
     fields: Array<{ field: string; mode: string; currentValue: unknown; spec: object }>;
   },
   writes: [] as Array<{ input: Record<string, unknown>; callbacks: { onSuccess: (out: unknown) => void } }>,
-  previews: [] as Array<{ input: Record<string, unknown>; callbacks: { onSuccess: (out: { proposedValue: string }) => void } }>,
+  previews: [] as Array<{ input: Record<string, unknown>; callbacks: { onSuccess: (out: {
+    proposedValue: unknown;
+    source: "llm_rephrase" | "passthrough_no_schema" | "passthrough_zod_failed";
+    warning?: string;
+  }) => void } }>,
   sourceHash: "a".repeat(64), sourceChecking: false, sourceDenied: false, sourceText: "Six questions prévues",
 }));
 vi.mock("@/lib/trpc/client", () => ({ trpc: { pillar: {
@@ -152,20 +156,20 @@ describe("amendement : un brouillon ne change jamais de destinataire", () => {
   });
   it("ignore une reformulation arrivée après un changement de champ", () => {
     render(view()); choose("mvp"); enterPreview(); choose("packagingExperience");
-    act(() => transport.previews[0]!.callbacks.onSuccess({ proposedValue: "MVP tardif" }));
+    act(() => transport.previews[0]!.callbacks.onSuccess({ proposedValue: "MVP tardif", source: "llm_rephrase" }));
     expect(screen.getAllByRole("textbox").map(el => (el as HTMLTextAreaElement).value)).toEqual(["", "", ""]);
   });
   it("ignore une reformulation de la précédente ouverture", () => {
     const page = render(view()); choose("mvp"); enterPreview();
     page.rerender(view({ open: false })); page.rerender(view()); choose("mvp");
-    act(() => transport.previews[0]!.callbacks.onSuccess({ proposedValue: "ancienne ouverture" }));
+    act(() => transport.previews[0]!.callbacks.onSuccess({ proposedValue: "ancienne ouverture", source: "llm_rephrase" }));
     expect(raw().value).toBe("");
   });
   it("la réponse assistée ne remplace pas une proposition saisie entre-temps", () => {
     render(view()); choose("mvp"); enterPreview();
     const proposed = screen.getAllByRole("textbox")[1]!;
     fireEvent.change(proposed, { target: { value: "ma décision manuelle" } });
-    act(() => transport.previews[0]!.callbacks.onSuccess({ proposedValue: "réponse tardive" }));
+    act(() => transport.previews[0]!.callbacks.onSuccess({ proposedValue: "réponse tardive", source: "llm_rephrase" }));
     expect((screen.getAllByRole("textbox")[1] as HTMLTextAreaElement).value).toBe("ma décision manuelle");
   });
   it("garde la version de départ du brouillon lors d’une actualisation de lecture", () => {
@@ -191,5 +195,59 @@ describe("amendement : un brouillon ne change jamais de destinataire", () => {
     render(view()); choose("mvp"); fill(); fireEvent.click(screen.getByRole("button", { name: "Appliquer" }));
     expect(transport.writes).toHaveLength(1);
     expect(transport.writes[0]!.input).toMatchObject({ strategyId: "fictional-spawt", pillarKey: "V", field: "mvp", mode: "PATCH_DIRECT", expectedVersion: 12, proposedValue: { features: ["six questions"] } });
+  });
+});
+
+describe("la prévisualisation distingue une reformulation d'un repli brut", () => {
+  const refuse = (source: "passthrough_no_schema" | "passthrough_zod_failed", index = 0) => {
+    act(() => transport.previews[index]!.callbacks.onSuccess({
+      source, proposedValue: "Proposition pour ce champ", warning: "Fixture transport refused: no model executed",
+    }));
+  };
+
+  it.each(["passthrough_no_schema", "passthrough_zod_failed"] as const)("signale %s sans remplir ni appliquer une consigne brute", (source) => {
+    render(view()); choose("mvp"); enterPreview(); refuse(source);
+    expect(screen.getByRole("alert").textContent).toMatch(/reformulation/i);
+    expect(screen.getByRole("alert").textContent).toMatch(/saisie.*conservée/i);
+    expect(screen.getByRole("alert").textContent).not.toMatch(/Fixture|passthrough|schema|Zod/i);
+    expect((screen.getByLabelText("Valeur proposée") as HTMLTextAreaElement).value).toBe("");
+    expect((screen.getByRole("button", { name: "Appliquer" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(transport.writes).toHaveLength(0);
+  });
+
+  it("préserve la décision manuelle après échec et la laisse appliquer sans autre preview", () => {
+    render(view()); choose("mvp");
+    fireEvent.click(screen.getByRole("button", { name: "llm rephrase" }));
+    fireEvent.change(screen.getByLabelText("Valeur proposée"), { target: { value: '{"features":["décision humaine"]}' } });
+    fireEvent.change(reason(), { target: { value: "Décision manuelle conservée" } });
+    enterPreview(); refuse("passthrough_zod_failed");
+    expect((screen.getByLabelText("Valeur proposée") as HTMLTextAreaElement).value).toBe('{"features":["décision humaine"]}');
+    expect(screen.getByRole("alert")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Appliquer" }));
+    expect(transport.previews).toHaveLength(1);
+    expect(transport.writes).toHaveLength(1);
+    expect(transport.writes[0]!.input).toMatchObject({ expectedVersion: 12, proposedValue: { features: ["décision humaine"] } });
+  });
+
+  it("reprend explicitement après refus et ne remplit qu'un résultat généré sans l'appliquer", () => {
+    render(view()); choose("mvp"); enterPreview(); refuse("passthrough_zod_failed");
+    expect(screen.getByRole("alert")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Prévisualiser" }));
+    expect(screen.queryByRole("alert")).toBeNull();
+    act(() => transport.previews[1]!.callbacks.onSuccess({ source: "llm_rephrase", proposedValue: { features: ["résultat reçu"] } }));
+    expect((screen.getByLabelText("Valeur proposée") as HTMLTextAreaElement).value).toBe(JSON.stringify({ features: ["résultat reçu"] }, null, 2));
+    expect(transport.writes).toHaveLength(0);
+  });
+
+  it.each(["field", "brand", "mode", "reopen"])("ignore un refus arrivé dans le précédent contexte %s", (context) => {
+    const page = render(view()); choose("mvp"); enterPreview();
+    if (context === "field") choose("packagingExperience");
+    if (context === "brand") { page.rerender(view({ strategyId: "fictional-other" })); choose("mvp"); }
+    if (context === "mode") fireEvent.click(screen.getByRole("button", { name: /patch direct/ }));
+    if (context === "reopen") { page.rerender(view({ open: false })); page.rerender(view()); choose("mvp"); }
+    refuse("passthrough_zod_failed");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(transport.writes).toHaveLength(0);
+    expect((screen.getByLabelText("Valeur proposée") as HTMLTextAreaElement).value).toBe("");
   });
 });
