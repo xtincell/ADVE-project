@@ -10,6 +10,10 @@
 
 [Bornage et reprise](docs/governance/REFONTE-PLAN.md).
 
+**480 livré — clôture de réception (16 octobre)** : source f2e9ebe3/trois CI vertes, neuf jobs CI applicables et trois contrôles PR hors contexte ; build 38908944319/index 7181b458/image/runtime exacts et API publique 480 reçus. Trois pages natives de production : 66 réponses, zéro ≥500/exception dans les fenêtres finales, deux annulations de cause non reçue ; captures inspectées. Un HTTP 502 pendant la bascule reste conservé, puis service rétabli 200 : pas SLO. Sept populations/cinq politiques/un fil/14 messages/18 coûts conservés entre 13:32 et 13:52, zéro modèle pour la correction ; lecture intermédiaire chevauchant l’intention de 1,976 s non utilisée comme borne d’avant, premier assemblage refusé conservé. Cause de la promesse absolue fermée pour ces textes seulement ; autres clauses/contrat/rétention/résidence et continuité TPE ouverts. SHA documentaire distinct sans bump/build. Seize réceptions/zéro chantier sur sept/global null inchangés.
+
+**C3 — contrat persona/reférences qualifié sans écriture** : quatre portraits courants mêlent identités/alias et portent des rangs/enums non conformes ; huit profils documentaires passent individuellement mais le plafond de cinq refuse l’ensemble. L’ordre documentaire n’est pas une priorité. Vingt-trois références et quatre produits ne résolvent pas dans le snapshot ; huit champs I de persona sont legacy, aucun ID D. Le report volontaire des pools ID absents n’est pas une preuve de résolution. Huit rôles préservés, aucune sélection stratégique ou personne fictive enregistrée ; backfill existant non lancé avant rapprochement des identités. C3 reste ouvert au [bornage](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.479 — fix(ui): préserver le brouillon après une reformulation refusée (2026-10-16)
 
 **479 livré : le repli brut ne remplace plus le brouillon.**
