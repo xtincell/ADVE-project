@@ -85,6 +85,13 @@ export const sourceClassifierRouter = createTRPCRouter({
         },
         { caller: "source-classifier:proposeFromSource" },
       );
+      if (result.status !== "OK") {
+        const sourceConflict = /^SOURCE_(CHANGED|RECEIPT_MISSING|UNAVAILABLE|NOT_READY|CITATION_INVALID):/.test(result.reason ?? "");
+        throw new TRPCError({
+          code: sourceConflict ? "CONFLICT" : "BAD_GATEWAY",
+          message: "Analyse non terminée. Le document et les propositions existantes sont conservés ; vous pouvez réessayer.",
+        });
+      }
       return result.output ?? { brandAssetIds: [] };
     }),
 

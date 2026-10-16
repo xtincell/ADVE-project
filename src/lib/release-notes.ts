@@ -34,6 +34,23 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.483",
+    date: "2026-10-16",
+    headline: "Préserver les profils distincts et vos choix",
+    highlights: [
+      {
+        emoji: "📄",
+        title: "Garder des propositions séparées",
+        body: "Lors de la préparation d’un document, des profils distincts restent dans des propositions séparées, même lorsqu’ils sont du même type. Vos choix déjà validés sont conservés.",
+      },
+      {
+        emoji: "🛡️",
+        title: "Conserver l’existant en cas d’échec",
+        body: "Une analyse incomplète ou un passage cité introuvable ne remplace plus vos propositions existantes. Vous pouvez réessayer.",
+      },
+    ],
+  },
+  {
     version: "6.27.481",
     date: "2026-10-16",
     headline: "Distinguer les liens vérifiés des liens à rapprocher",

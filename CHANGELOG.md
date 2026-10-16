@@ -1,5 +1,16 @@
 # Changelog — La Fusee
 
+## v6.27.483 — fix(sources): préserver les sections distinctes et refuser les analyses incomplètes (2026-10-16)
+
+**Une analyse incomplète préserve les propositions existantes ; les profils distincts restent séparés.**
+
+- Classificateur/chaîne structurée/Gateway/gardes/writer existants étendus : document entier en une soumission, réponse complète/non vide et citations littérales uniques, offsets UTF-16 calculés dans l’original. Sections distinctes de même kind conservées, lot atomique complet/versionné, prélecture avant modèle/revalidation sous verrou ; nouveaux assets à l’opérateur de la marque consommatrice, décisions existantes préservées. Aucun nouveau manager, worker, identité, entité, Intent ou fournisseur privé.
+- Contrôles locaux finaux verts : cible 36/2 dont 25 nouveaux, DEFAULT 4 735/445, gouvernance 1 658/167, typage/deux lints/cycles zéro, 24 avertissements préexistants par lint. Recette réelle route/Gateway/gouvernance sur copie avec fournisseur HTTP simulé : incomplet 502/citation invalide 409/succès 200/rejeu 200/anonyme 401 ; neuf DRAFT dont huit profils documentaires aux citations exactes, six anciens DRAFT attendus supersédés, autres actifs/champs conservés. Rejeu mêmes IDs/champs sans appel, coût ou retag supplémentaire.
+- Dix tables métier complètes inchangées, 9 988 émissions et 2 517 coûts historiques globaux de copie exacts ; quatre nouveaux coûts simulés et douze émissions attendues pour six POST authentifiés, aucune émission anonyme. Aucun coût réel, qualité Luna ou onboarding reçu. Échecs intermédiaires/rollback et réception détaillée dans le bornage ; recette possédée arrêtée et ports fermés.
+- Candidate non poussée, CI/image/runtime 483 non reçus, dernière production 482 ; causes ciblées encore actives avant livraison. C3 entier/réindex production/reprise manuelle/identités-rangs-rôles/actifs legacy/durabilité ouverts ; seize réceptions/zéro chantier sur sept/zéro parcours sur 116/zéro lignée sur 80/un passage sur sept/global null inchangés. Note client limitée aux effets éprouvés ; clôture MD 482 a872aad6437f4052e92cb7627b32827d6b08220e/trois CI vertes reçues sans rebuild/déploiement.
+
+[Bornage et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.482 — fix(seshat): conserver les extraits et leurs positions dans la source (2026-10-16)
 
 **Le découpage canonique conserve le texte non blanc et ses positions d’origine.**

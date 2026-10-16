@@ -1202,9 +1202,9 @@ async function proposeVaultFromSource(
     const result = await proposeBrandAssetsFromSource(intent.sourceId, intent.operatorId, intent.strategyId);
     return {
       status: "OK",
-      summary: `Vault proposals persisted: ${result.brandAssetIds.length} BrandAsset DRAFTs from source ${intent.sourceId}`,
+      summary: `${result.alreadyFresh ? "Current vault batch reused" : "Vault proposals persisted"}: ${result.brandAssetIds.length} assets from source ${intent.sourceId}`,
       tool: "source-classifier:propose",
-      output: { brandAssetIds: result.brandAssetIds, durationMs: result.durationMs },
+      output: { brandAssetIds: result.brandAssetIds, durationMs: result.durationMs, alreadyFresh: result.alreadyFresh },
     };
   } catch (err) {
     return {
