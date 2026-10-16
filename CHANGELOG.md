@@ -1,5 +1,16 @@
 # Changelog — La Fusee
 
+## v6.27.485 — fix(portfolio): réunir les suivis et les états réels du travail (2026-10-16)
+
+**Un dossier retrouve ses suivis Radar et distingue les clôtures de son ancien statut de production.**
+
+- `portfolioProjectFollowUps` et `BrandWorkspace` existants présentent les suivis sans projet La Barre dans la vue d’ensemble et la rubrique projets. Identités dédoublonnées par instance/id, comptes de projets et de suivis distincts ; même rendu pour les suivis déjà associés au projet exact. Aucun état Radar recopié ni fetch implicite.
+- `projectBarreWorkspace` projette la clôture consignée par La Barre : date, caractère inféré, motif, origine et bilan. Les deux vues lisent ce même état ; une clôture inférée reste à confirmer ou rouvrir dans la source. Aucune clôture déduite d’une échéance ni statut source modifié.
+- Trois fichiers existants prolongés, quatre régressions rouges puis cible 27/2, portefeuille 134/16, DEFAULT 4 747/445 et gouvernance 1 663/167 verts ; tsc final, deux lints (24 avertissements préexistants chacun) et cycles (1 753 fichiers, zéro cycle) verts. Copie ADMIN fictive reçue : trois suivis/recherche/clôture SPAWT et un projet Noël/trois marques/un suivi. Connexions/transactions de base expirées pendant chargement et recharge conservées, récupération reçue sans SLO ; fenêtre CDP tronquée, pas de promesse de chargement sans erreur. Pas de nouveau module, service, schéma, Intent, modèle ou gestionnaire d’appels. CI/image et production à recevoir avant de déclarer la livraison.
+- Les raccordements de données précédents restent conservés : A11/D29/E8 et V36 SPAWT, trois suivis existants, archive XC-119 et projet Noël commun à trois marques. Les dossiers complets, les autres IP, droits, rôles, cycles et exploitation restent soumis à leur réception.
+
+[Bornage et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.484 — fix(brand): permettre la correction manuelle des synthèses du socle (2026-10-16)
 
 **Quinze synthèses qualitatives ADVE deviennent explicitement corrigibles dans le contrat existant.**

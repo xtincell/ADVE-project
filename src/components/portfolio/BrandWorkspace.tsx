@@ -7,7 +7,7 @@ import { trpc } from "@/lib/trpc/client";
 import { useStrategy } from "@/components/cockpit/strategy-context";
 import { PORTFOLIO_KIND_LABELS, PORTFOLIO_LIFECYCLE_LABELS, portfolioFileUrl, readPortfolioReferences, portfolioProjectFollowUps, type PortfolioReference } from "@/domain/portfolio-reference";
 import type { PortfolioWorkspace } from "@/server/services/brand-node/workspace";
-import { groupWorkspaceAssets, type WorkspaceAsset } from "@/domain/portfolio-barre";
+import { groupWorkspaceAssets, type WorkspaceAsset, type BarreWorkspace } from "@/domain/portfolio-barre";
 import { AssetContent } from "./AssetContent";
 import { WorkspaceAssets, WorkspaceAssetMedia } from "./WorkspaceAssets";
 import { PortfolioReferencesForm } from "./PortfolioReferencesForm";
@@ -19,6 +19,9 @@ const STATE_LABELS: Record<string, string> = { creation: "En création", livre: 
 const label = (s: string) => STATE_LABELS[s] ?? s;
 const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const dateLabel = (s: string) => { const d = new Date(s); return Number.isNaN(d.getTime()) ? s : d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }); };
+const projectState = (project: BarreWorkspace["projects"][number]) => project.closure
+  ? project.closure.inferred ? "Clos · clôture à confirmer" : "Clos"
+  : label(project.status);
 
 /** Write provenance, deliberately independent from the recorded approval status. */
 export function writeOrigin(author: string | null) {
@@ -69,9 +72,14 @@ function WorkspaceContent({ data, refresh, refreshing }: { data: PortfolioWorksp
   const assetCount = groupWorkspaceAssets(assets).length;
 
   const refs = data.nodes.flatMap((n) => readPortfolioReferences(n.sourceRefs).map((r) => ({ ...r, node: n.name })));
+  const followUps = portfolioProjectFollowUps(refs);
+  const separateFollowUps = followUps.filter((r) => !r.project || !barre?.projects.some((p) => p.id === r.project?.id));
+  const matchingFollowUps = separateFollowUps.filter((r) => match(`${r.label ?? ""} ${r.id} ${r.instance ?? ""}`));
   const links = refs.filter((r) => r.system === "WEB" || r.system === "GITHUB");
   const sourceProductNodes = new Map(data.nodes.flatMap((n) => readPortfolioReferences(n.sourceRefs).filter((r) => r.system === "LA_BARRE" && r.kind === "sku").map((r) => [r.id, n.slug] as const)));
-  const counts: Partial<Record<Section, number>> = { projects: barre?.projects.length, products: (barre?.products.filter((p) => !p.archived).length || ownChildren.length), assets: assetCount, identity: barre?.knowledge.length };
+  const counts: Partial<Record<Section, number | string>> = { projects: followUps.length
+    ? `${barre?.projects.length ?? "—"} projet${barre?.projects.length === 1 ? "" : "s"} · ${followUps.length} suivi${followUps.length === 1 ? "" : "s"}`
+    : barre?.projects.length, products: (barre?.products.filter((p) => !p.archived).length || ownChildren.length), assets: assetCount, identity: barre?.knowledge.length };
 
   return <section aria-label={`Dossier ${data.root.name}`} className="min-w-0 space-y-6">
     <div className="flex flex-wrap items-center justify-between gap-3 border-y border-border py-3 text-xs text-foreground-secondary">
@@ -102,18 +110,20 @@ function WorkspaceContent({ data, refresh, refreshing }: { data: PortfolioWorksp
             <p className="mt-4 whitespace-pre-wrap break-words border-t border-border pt-4 text-xs leading-relaxed text-foreground-secondary">{item.observation}</p>
           </details>) : <Empty>Aucune observation reçue dans les dossiers accessibles.</Empty>}
         </div>
-        {projects.length > 0 && <div><h3 className="mb-2 text-sm font-medium">À retrouver rapidement</h3>{[...projects].sort((a, b) => b.deadline.localeCompare(a.deadline)).slice(0, 4).map((p) => <a key={p.id} href={p.sourceUrl} target="_blank" rel="noreferrer" className="flex items-start gap-3 border-b border-border py-3 text-sm hover:text-accent"><FolderOpen className="mt-1 h-4 w-4 shrink-0 text-foreground-secondary" /><span className="min-w-0 flex-1">{p.name}<span className="mt-1 block text-xs text-foreground-secondary">{label(p.status)}{p.deadline ? ` · ${dateLabel(p.deadline)}` : ""}</span></span><ArrowUpRight className="h-4 w-4 shrink-0" /></a>)}</div>}
+        {separateFollowUps.length > 0 && <div><h3 className="mb-3 text-sm font-medium">Suivis dans Radar</h3><FollowUpLinks references={separateFollowUps} /></div>}
+        {projects.length > 0 && <div><h3 className="mb-2 text-sm font-medium">À retrouver rapidement</h3>{[...projects].sort((a, b) => b.deadline.localeCompare(a.deadline)).slice(0, 4).map((p) => <a key={p.id} href={p.sourceUrl} target="_blank" rel="noreferrer" className="flex items-start gap-3 border-b border-border py-3 text-sm hover:text-accent"><FolderOpen className="mt-1 h-4 w-4 shrink-0 text-foreground-secondary" /><span className="min-w-0 flex-1">{p.name}<span className="mt-1 block text-xs text-foreground-secondary">{projectState(p)}{p.deadline ? ` · ${dateLabel(p.deadline)}` : ""}</span></span><ArrowUpRight className="h-4 w-4 shrink-0" /></a>)}</div>}
         {(barre?.issues.length ?? 0) > 0 && <div className="rounded-xl border border-warning/30 bg-warning/10 p-4"><h3 className="flex gap-2 text-sm font-medium text-warning"><AlertCircle className="h-4 w-4" />Rattachements à clarifier</h3><ul className="mt-3 space-y-2 text-xs leading-relaxed text-foreground-secondary">{barre!.issues.map((i) => <li key={i}>{i}</li>)}</ul></div>}
       </div>
     </div>}
     {section === "projects" && <div className="space-y-6">
       <p className="text-sm text-foreground-secondary">Les campagnes regroupent les projets. Un projet multimarque est présenté une seule fois, avec toutes ses marques.</p>
+      {matchingFollowUps.length > 0 && <div className="rounded-xl border border-border p-4 sm:p-6"><h2 className="mb-3 font-display text-xl">Suivis dans Radar</h2><FollowUpLinks references={matchingFollowUps} /></div>}
       {(barre?.campaigns ?? []).filter((c) => match(`${c.name} ${c.brands.join(" ")}`) || projects.some((p) => p.campaignId === c.id)).map((c) => <article key={c.id} className="rounded-xl border border-border p-4 sm:p-6"><header className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><p className="mb-1 text-xs text-accent">{c.brands.join(" · ")}</p><h2 className="font-display text-xl">{c.name}</h2></div>{c.start && <p className="text-xs text-foreground-secondary">{dateLabel(c.start)} → {dateLabel(c.end)}{c.inferredDates ? " · dates inférées" : ""}</p>}</header>
         <div className="space-y-2">{projects.filter((p) => p.campaignId === c.id).map((p) => <ProjectRow key={p.id} project={p} followUps={portfolioProjectFollowUps(refs, p.id)} />)}</div>
         {!projects.some((p) => p.campaignId === c.id) && <p className="text-xs text-foreground-secondary">Aucun projet correspondant à cette recherche.</p>}
       </article>)}
       {projects.filter((p) => !barre?.campaigns.some((c) => c.id === p.campaignId)).map((p) => <ProjectRow key={p.id} project={p} followUps={portfolioProjectFollowUps(refs, p.id)} />)}
-      {!projects.length && <Empty>Aucun projet correspondant dans la source disponible.</Empty>}
+      {!projects.length && !matchingFollowUps.length && <Empty>Aucun projet ou suivi correspondant dans les sources disponibles.</Empty>}
       {data.strategies.some((s) => s.campaigns.length) && <div className="border-t border-border pt-5"><h3 className="mb-3 font-medium">Dossiers présents dans La Fusée</h3>{data.strategies.flatMap((s) => s.campaigns.map((c) => <p key={c.id} className="py-2 text-sm">{c.name} <span className="text-foreground-secondary">· {s.name} · {label(c.status)}</span></p>))}</div>}
     </div>}
     {section === "products" && <div className="space-y-4">
@@ -150,11 +160,16 @@ function WorkspaceContent({ data, refresh, refreshing }: { data: PortfolioWorksp
   </section>;
 }
 
+function FollowUpLinks({ references }: { references: PortfolioReference[] }) {
+  return <><ul className="space-y-3">{references.map((r) => <li key={`${r.instance}:${r.id}`} className="text-sm">{r.url ? <a href={r.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-accent">Ouvrir {r.label ?? `le dossier ${r.id}`} dans Radar <ArrowUpRight className="h-4 w-4 shrink-0" /></a> : <span>{r.label ?? r.id} · lien d’accès à compléter</span>}<span className="ml-2 text-xs text-foreground-secondary">{r.instance}</span></li>)}</ul><p className="mt-3 text-xs text-foreground-secondary">Le suivi reste dans son outil. Un lien ne confirme ni une validation, ni une livraison.</p></>;
+}
+
 function ProjectRow({ project: p, followUps }: { project: NonNullable<PortfolioWorkspace["barre"]>["projects"][number]; followUps: PortfolioReference[] }) {
-  return <details className="rounded-lg bg-surface-raised p-4"><summary className="cursor-pointer list-none"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs text-foreground-secondary">{p.code} · {label(p.status)}{p.structure ? ` · ${p.structure}` : ""}</p><h3 className="mt-1 text-sm font-medium">{p.name}</h3><p className="mt-1 text-xs text-foreground-secondary">{p.brands.join(" · ")}{p.deadline ? ` · ${dateLabel(p.deadline)}` : ""}</p></div><Layers3 className="mt-1 h-4 w-4 shrink-0 text-foreground-secondary" /></div></summary><div className="mt-4 space-y-4 border-t border-border pt-4 text-sm leading-relaxed">
+  return <details className="rounded-lg bg-surface-raised p-4"><summary className="cursor-pointer list-none"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs text-foreground-secondary">{p.code} · {projectState(p)}{p.structure ? ` · ${p.structure}` : ""}</p><h3 className="mt-1 text-sm font-medium">{p.name}</h3><p className="mt-1 text-xs text-foreground-secondary">{p.brands.join(" · ")}{p.deadline ? ` · ${dateLabel(p.deadline)}` : ""}</p></div><Layers3 className="mt-1 h-4 w-4 shrink-0 text-foreground-secondary" /></div></summary><div className="mt-4 space-y-4 border-t border-border pt-4 text-sm leading-relaxed">
+    {p.closure && <div className="rounded-lg border border-border p-4"><h4 className="mb-2 font-medium">{p.closure.inferred ? "Clôture inférée · à confirmer" : "Clôture consignée"}</h4><p>{dateLabel(p.closure.date)}{p.closure.origin ? ` · ${p.closure.origin}` : ""}</p>{p.closure.reason && <p className="mt-2">{p.closure.reason}</p>}{p.closure.report ? <p className="mt-2 whitespace-pre-line">{p.closure.report}</p> : <p className="mt-2 text-foreground-secondary">Aucun bilan consigné.</p>}{p.closure.inferred && <p className="mt-2 text-foreground-secondary">À confirmer ou rouvrir dans La Barre ; aucune validation n’est déduite de cette hypothèse.</p>}</div>}
     {p.objective && <p>{p.objective}</p>}{p.constraints && <div><h4 className="mb-1 font-medium">Contraintes</h4><p className="whitespace-pre-line">{p.constraints}</p></div>}{p.brief && <div><h4 className="mb-1 font-medium">Brief reçu</h4><p className="whitespace-pre-line">{p.brief}</p></div>}{p.deliverables && <div><h4 className="mb-1 font-medium">Livrables attendus</h4><p className="whitespace-pre-line">{p.deliverables}</p></div>}{p.schedule && <div><h4 className="mb-1 font-medium">Calendrier</h4><p className="whitespace-pre-line">{p.schedule}</p></div>}
     <p className="text-xs text-foreground-secondary">Marchés renseignés : {p.markets.join(", ") || "à préciser"}{p.inferredPerimeter ? " · périmètre inféré" : ""}. Budget : {p.budget == null ? "non renseigné" : p.budget.toLocaleString("fr-FR")}.</p>
-    {followUps.length > 0 && <div><h4 className="mb-2 font-medium">Suivi du projet</h4><ul className="space-y-2">{followUps.map((r) => <li key={`${r.instance}:${r.id}`} className="text-sm">{r.url ? <a href={r.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-accent">Ouvrir {r.label ?? `le dossier ${r.id}`} dans Radar <ArrowUpRight className="h-4 w-4" /></a> : <span>{r.label ?? r.id} · lien d’accès à compléter</span>}<span className="ml-2 text-xs text-foreground-secondary">{r.instance}</span></li>)}</ul><p className="mt-2 text-xs text-foreground-secondary">Le suivi reste dans son outil. Un lien ne confirme ni la réception, ni une validation, ni la livraison.</p></div>}
+    {followUps.length > 0 && <div><h4 className="mb-2 font-medium">Suivi du projet</h4><FollowUpLinks references={followUps} /></div>}
     <a href={p.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-accent">Travailler ce projet dans La Barre <ArrowUpRight className="h-4 w-4" /></a>
   </div></details>;
 }

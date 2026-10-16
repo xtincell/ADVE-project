@@ -34,6 +34,16 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.485",
+    date: "2026-10-16",
+    headline: "Retrouver vos suivis et vos dossiers clos",
+    highlights: [{
+      emoji: "📂",
+      title: "Reprendre le travail au bon endroit",
+      body: "Les suivis Radar reliés à la marque sont visibles avec ses projets, même sans campagne associée. Les clôtures indiquées par La Barre restent distinctes du statut de production ; les clôtures proposées sont signalées comme telles, avec leur origine et leur bilan disponible.",
+    }],
+  },
+  {
     version: "6.27.484",
     date: "2026-10-16",
     headline: "Corriger vos profils et votre offre sans assistant",

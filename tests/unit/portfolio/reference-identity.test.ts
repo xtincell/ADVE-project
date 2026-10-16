@@ -26,6 +26,15 @@ describe("identités des raccordements du portefeuille", () => {
     expect(portfolioProjectFollowUps(rows, "PRJ-INCONNU")).toEqual([]);
     expect(PortfolioReferencesSchema.safeParse([{ ...radar, status: "Livré" }]).success).toBe(false);
   });
+  it("retrouve aussi les suivis sans projet La Barre, sans créer de faux projets", () => {
+    const standalone = { system: "RADAR" as const, kind: "brief" as const, instance: "radar-perso", id: "8", label: "SPAWT-001" };
+    const refs = [standalone, radar, { ...standalone, instance: "radar-matanga" }, standalone,
+      { system: "WEB" as const, kind: "site" as const, id: "site", url: "https://example.test" }];
+    expect(portfolioProjectFollowUps(refs)).toEqual([standalone, radar, { ...standalone, instance: "radar-matanga" }]);
+    expect(portfolioProjectFollowUps(refs, "PRJ-EOTY26")).toEqual([radar]);
+    expect(standalone).not.toHaveProperty("project");
+    expect(standalone).not.toHaveProperty("status");
+  });
   it("ne lit pas une autre instance Barre dans le dépôt Matanga fixe", () => {
     expect(PortfolioReferencesSchema.safeParse([{ ...radar, project: { ...project, instance: "autre-barre" } }]).success).toBe(false);
     expect(PortfolioReferencesSchema.safeParse([{ system: "LA_BARRE", instance: "autre-barre", kind: "project", id: "PRJ-EOTY26" }]).success).toBe(false);

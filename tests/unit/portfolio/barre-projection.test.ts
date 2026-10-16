@@ -16,6 +16,32 @@ describe("ventilation fidèle aux identités sources", () => {
     expect(r.projects[0]?.budget).toBeNull(); expect(r.projects[0]?.markets).toEqual(["CI"]);
     expect(r.issues).toHaveLength(1); expect(r.issues[0]).toContain("Belles Tomates");
   });
+  it("conserve une clôture inférée et son motif sans valider le statut source", () => {
+    const project = { ...data.projets[0], statut: "creation", cloture: {
+      le: "2026-09-22", bilan: "", releve: "Historique de production", infere: { pourquoi: "À confirmer par le titulaire" },
+    } };
+    const input = { ...data, projets: [project] }, before = JSON.stringify(input);
+    const result = projectBarreWorkspace(input, [{ system: "LA_BARRE", kind: "brand", id: "br" }]);
+    expect(result.projects[0]).toMatchObject({ status: "creation", closure: {
+      date: "2026-09-22", inferred: true, reason: "À confirmer par le titulaire", origin: "Historique de production", report: "",
+    } });
+    expect(JSON.stringify(input)).toBe(before);
+  });
+  it("garde le bilan et l’origine d’une clôture consignée", () => {
+    const result = projectBarreWorkspace({ ...data, projets: [{ ...data.projets[0], cloture: {
+      le: "2026-10-01", bilan: "Retour documenté", releve: "décidé à la main",
+    } }] }, [{ system: "LA_BARRE", kind: "brand", id: "br" }]);
+    expect(result.projects[0]).toHaveProperty("closure", { date: "2026-10-01", inferred: false,
+      reason: "", origin: "décidé à la main", report: "Retour documenté" });
+  });
+  it("ne ferme ni une échéance passée ni un dossier rouvert", () => {
+    for (const extra of [{}, { cloture: { bilan: "incomplet" } }, { cloturesPassees: [{ le: "2026-01-01" }] }]) {
+      const result = projectBarreWorkspace({ ...data, projets: [{ ...data.projets[0], ...extra,
+        sections: { ...data.projets[0]!.sections, identite: { ...data.projets[0]!.sections!.identite, echeance: "2020-01-01" } },
+      }] }, [{ system: "LA_BARRE", kind: "brand", id: "br" }]);
+      expect(result.projects[0]).toHaveProperty("closure", null);
+    }
+  });
   it("ne confond pas mention de source et validation d’une inférence", () => {
     const r = projectBarreWorkspace(data, [{ system: "LA_BARRE", kind: "brand", id: "br" }]);
     expect(r.knowledge[0]?.certainty).toBe("INFERRED"); expect(r.knowledge[0]?.evidence).toBe("Proposition");

@@ -93,12 +93,15 @@ export function projectBarreWorkspace(raw: unknown, references: PortfolioReferen
   }).map((p) => {
     const sections = asRow(p.sections), identity = asRow(sections.identite), brief = asRow(sections.brief);
     const perimeter = asRow(p.perimetre);
+    const closure = asRow(p.cloture);
     const markets = asStrings(perimeter.marches).map((id) => {
       const market = asRows(data.marches).find((m) => m.id === id);
       return asText(market?.nom) || id.replace(/^M-/, "");
     });
     return {
       id: asText(p.id), name: asText(p.nom), code: asText(p.ref), status: asText(p.statut),
+      closure: asText(closure.le) ? { date: asText(closure.le), inferred: Boolean(closure.infere),
+        reason: asText(asRow(closure.infere).pourquoi), origin: asText(closure.releve), report: asText(closure.bilan) } : null,
       campaignId: asText(p.campagneId), brands: asStrings(identity.marqueIds).map((id) => names.get(id) ?? id),
       structure: asText(asRows(data.structures).find((s) => s.id === p.structure)?.nom) || asText(p.structure),
       deadline: asText(identity.echeance), markets, budget: typeof identity.budget === "number" ? identity.budget : null,

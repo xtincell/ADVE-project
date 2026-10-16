@@ -71,9 +71,10 @@ export function readPortfolioReferences(value: unknown): PortfolioReference[] {
 }
 
 /** One shared follow-up appears once per project, even across several brand nodes. */
-export function portfolioProjectFollowUps(references: PortfolioReference[], projectId: string): PortfolioReference[] {
-  return [...new Map(references.filter((r) => r.system === "RADAR" && r.project?.id === projectId &&
-    r.project.instance === PORTFOLIO_BARRE_INSTANCE).map((r) => [portfolioReferenceKey(r), r])).values()];
+export function portfolioProjectFollowUps(references: PortfolioReference[], projectId?: string): PortfolioReference[] {
+  return [...new Map(references.filter((r) => r.system === "RADAR" && (projectId === undefined ||
+    (r.project?.id === projectId && r.project.instance === PORTFOLIO_BARRE_INSTANCE)))
+    .map((r) => [portfolioReferenceKey(r), r])).values()];
 }
 
 /** Browser links to native files may be root-relative. Never accept credentials,
