@@ -2,12 +2,12 @@
 
 ## v6.27.477 — fix(governance): rendre l’assistance facultative à la création et à l’activation (2026-10-16)
 
-**477 candidat : A committé localement, B en préparation finale ; production 476 inchangée.**
+**477 livré : assistance facultative et continuité de marque reçues au périmètre.**
 
-- Création : option UI décochée, `BootSequence.start` seulement sur choix explicite ; `activateBrand` reçoit `inferMissingFields=false` par défaut. Option partagée FR/EN/ZH, strategyId au Gateway depuis BootSequence.
-- A indépendant : 4 659 / 441, gouvernance 1 646 / 167/sept commandes zéro ; commit 824a11f5 non poussé.
+- Création UI sans assistance par défaut, BootSequence séparé si choisi ; seul `activateBrand` reçoit `inferMissingFields=false`.
+- Source c4bc1882 (A 824a11f5 + B), CI/image/runtime exacts reçus ; ADMIN `/cockpit/new` en lecture sans POST/modèle, données conservées.
 
-**Complément `fix(governance)` B candidat** : sélection/reprise sans doublon, métadonnées marché/devise/secteur et registre partiel reçus sur copie ; B 4 670 / 442, gouvernance 1 650 / 167/cible 58 / 9/sept commandes zéro, aucun modèle réel. Source finale/CI/image/production attendues, causes non purgées ; dettes de fond/seize réceptions inchangées. [Bornage](docs/governance/REFONTE-PLAN.md).
+**Complément `fix(governance)` B livré** : sélection/reprise/marché et registre partiel corrigés, recettes sur copie conservées. DEFAULT 4 670 / 442, cible 58 / 9 ; causes ciblées purgées, dettes C3/C4/C7 et seize réceptions inchangées. Annulations réseau sans cause établie, aucun SLO. [Bornage](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.476 — fix(governance): raccorder créatif et inférence au gestionnaire existant (2026-10-16)
 
