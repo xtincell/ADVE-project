@@ -9,7 +9,7 @@
 
 Cible 42 / 5, DEFAULT 4 698 / 443/gouvernance 1 658 / 167 reçus. Cause ciblée purgée ; parité d’édition, streaming/qualité/C7 et seize réceptions inchangés. Refus Saisir conforme à la politique actuelle, pas régression 479. Clôture MD distincte sans bump/build. [Bornage](docs/governance/REFONTE-PLAN.md).
 
-**Audit C7 — 16 octobre** : clôture MD 479 08b93786/trois CI reçues. Ancien dump Fusée restauré/235 tables lisibles en isolation, trois digests historiques exacts par calcul à collation originale ; aucun service repris. Deux refus quiz conservés. Incident JWT dans une sortie outil consigné, usage actuel confirmé ; inventaire incomplet/rotation à préparer, aucune rotation faite. Pas RPO/RTO service, clôture C7 ou crédit nouveau ; parité C2/C4 toujours ouverte. [Bornage et reprise](docs/governance/REFONTE-PLAN.md).
+**Audit C7 — 16 octobre** : bases isolées Fusée et quiz restaurées, digests historiques exacts ; quiz/1 563 éléments dans une transaction, puis répétition froide depuis namespace vierge en une commande. Auth/REST reçus sur copie avec clés synthétiques : 23 HTTP, ancien accès public conservé, anciennes signatures privilégiées refusées, renouvellement/déconnexion et 145 politiques RLS conservées. Incident de secret JWT toujours ouvert, aucune clé réelle changée ; autres clients, application/fichiers et RPO/RTO service non reçus. Fenêtre 05:36→06:36 avec projection modifiée/embedding distincte de la conservation finale exacte 06:36→06:44. Aucun nouveau gestionnaire, aucune mutation production ou clôture C7 ; seize réceptions/parité C2/C4 inchangées. [Bornage et reprise](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.478 — fix(governance): borner les reprises aux erreurs réessayables (2026-10-16)
 
