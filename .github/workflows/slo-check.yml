@@ -6,8 +6,14 @@ on:
   workflow_dispatch:
 
 # Reads rolling-7d IntentEmission metrics from prod DB and compares
-# against SLOs declared in src/server/governance/slos.ts. Failure opens
-# an issue with the breached metric.
+# against SLOs declared in src/server/governance/slos.ts.
+#
+# Three outcomes, deliberately distinguished:
+#   ok          — measured, within SLO. Nothing happens.
+#   breach      — measured, out of SLO. One issue, updated in place.
+#   unreachable — could NOT measure. The job fails loudly; no issue.
+#
+# A monitor that cannot measure must look broken, not silently report breaches.
 
 permissions:
   contents: read
@@ -25,29 +31,83 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx prisma generate
+
       - name: Run SLO audit
         id: slo
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          if [ -f scripts/check-slos.ts ]; then
-            npx tsx scripts/check-slos.ts --rolling-days 7 --report > slo-report.md
-          else
-            echo "::warning::scripts/check-slos.ts not yet present — placeholder run."
-            echo "SLO check pending implementation (P6 of REFONTE-PLAN)" > slo-report.md
+          if [ ! -f scripts/check-slos.ts ]; then
+            echo "::error::scripts/check-slos.ts absent — le contrôle SLO ne peut pas s'exécuter."
+            echo "status=unreachable" >> "$GITHUB_OUTPUT"
+            echo "Script de contrôle absent." > slo-report.md
+            exit 0
           fi
-        continue-on-error: true
+
+          set +e
+          npx tsx scripts/check-slos.ts --rolling-days 7 --report > slo-report.md 2> slo-error.log
+          code=$?
+          set -e
+
+          if [ "$code" -eq 0 ]; then
+            echo "status=ok" >> "$GITHUB_OUTPUT"
+          elif grep -qiE 'ECONNREFUSED|ETIMEDOUT|ENOTFOUND|P1001|P1002|Can.t reach database' slo-error.log; then
+            # Base injoignable depuis le runner : problème d'infrastructure, pas de dépassement.
+            echo "status=unreachable" >> "$GITHUB_OUTPUT"
+            cat slo-error.log
+          else
+            echo "status=breach" >> "$GITHUB_OUTPUT"
+            cat slo-error.log >> slo-report.md
+          fi
+
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: slo-report
-          path: slo-report.md
+          path: |
+            slo-report.md
+            slo-error.log
           retention-days: 14
-      - name: Open issue on breach
-        if: steps.slo.outcome == 'failure'
-        uses: peter-evans/create-issue-from-file@v6
-        with:
-          title: "SLO breach detected — ${{ github.run_id }}"
-          content-filepath: slo-report.md
-          labels: governance, slo, automated
+          if-no-files-found: ignore
+
+      # Une seule issue, mise à jour en place. Le titre est stable : pas de run_id,
+      # donc pas de prolifération.
+      - name: Open or update the breach issue
+        if: steps.slo.outputs.status == 'breach'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: 'SLO breach — rolling 7d'
+        run: |
+          NUM=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --label slo \
+                  --search "$TITLE in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$NUM" ]; then
+            echo "Issue #$NUM déjà ouverte — ajout du rapport."
+            gh issue comment "$NUM" -R "$GITHUB_REPOSITORY" -F slo-report.md
+          else
+            gh issue create -R "$GITHUB_REPOSITORY" \
+              --title "$TITLE" --body-file slo-report.md \
+              --label governance --label slo --label automated
+          fi
+
+      # Le dépassement est résorbé : on referme l'issue au lieu de la laisser traîner.
+      - name: Close the breach issue when back within SLO
+        if: steps.slo.outputs.status == 'ok'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: 'SLO breach — rolling 7d'
+        run: |
+          NUM=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --label slo \
+                  --search "$TITLE in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$NUM" ]; then
+            gh issue close "$NUM" -R "$GITHUB_REPOSITORY" \
+              --comment "Retour dans les SLO sur la fenêtre glissante de 7 jours."
+          fi
+
+      # Aucune issue : un moniteur aveugle doit se voir en rouge.
+      - name: Fail when SLOs could not be measured
+        if: steps.slo.outputs.status == 'unreachable'
+        run: |
+          echo "::error::SLO non mesurables — la base n'est pas joignable depuis le runner."
+          echo "Vérifier le secret DATABASE_URL et l'accès réseau du VPS depuis GitHub Actions."
+          exit 1
