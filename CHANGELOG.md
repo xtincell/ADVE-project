@@ -9,6 +9,8 @@
 
 **Complément `fix(governance)` B livré** : sélection/reprise/marché et registre partiel corrigés, recettes sur copie conservées. DEFAULT 4 670 / 442, cible 58 / 9 ; causes ciblées purgées, dettes C3/C4/C7 et seize réceptions inchangées. Annulations réseau sans cause établie, aucun SLO. [Bornage](docs/governance/REFONTE-PLAN.md).
 
+**Audit documentaire C2/C3/C7 — 16 octobre** : proposition de réconciliation refusée pour production sur critères sémantiques ; copie MESTOR : 24 amendements OK/25, dernier refus avant dispatch sans mutation ni retry. Identités héritées et contrat de profils restent à rapprocher dans les structures existantes ; aucun nouveau défaut du moteur établi. Aucun amendement de production, modèle ou crédit ajouté. [Diagnostic et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.476 — fix(governance): raccorder créatif et inférence au gestionnaire existant (2026-10-16)
 
 **476 livré : deux appels hérités raccordés au gestionnaire, refus seuls reçus sur copie.**
