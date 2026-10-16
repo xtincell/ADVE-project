@@ -4,6 +4,10 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ## Réception courante — 2026-10-16
 
+**479 livré — repli signalé, brouillon préservé.** Source dcf12e66/trois CI/image/runtime exacts reçus, dix-neuf fichiers gestionnaire inchangés. ADMIN production : cinq lignes, éditeur/brouillon annulé sans preview/apply ; sept populations/cinq politiques/fils/quatorze messages/quatorze coûts conservés/zéro modèle. Warning reçu sur copie seulement, succès généré simulé ; cause ciblée purgée. Saisir des profils reçoit le refus de la politique actuelle, pas un clic défaillant. Parité d’édition, streaming/qualité/C2/C3/C4/C7 et seize réceptions/global null restent ouverts/inchangés ; pas SLO. [Bornage](docs/governance/REFONTE-PLAN.md).
+
+## Checkpoint antérieur — 2026-10-16
+
 **478 livré — reprises bornées dans le gestionnaire existant.** Source 1edc02f8/trois CI/image/runtime exacts reçus ; deux fichiers prolongés/dix-sept conservés. ADMIN lit cinq lignes Luna, rafraîchissement complet limité à un GET 200 sans POST/exception/échec ; première fenêtre tronquée/seize annulations conservées, pas SLO. Sept populations/cinq politiques/fils/quatorze messages/quatorze coûts inchangés, zéro modèle/édition de politique. Causes SDK/reprises closes ; refus silencieux du modal, streaming, C2/C3/C4/C7 et seize réceptions/zéro chantier sur sept/global null conservés. [Bornage](docs/governance/REFONTE-PLAN.md).
 
 ## Checkpoints antérieurs — 2026-10-15

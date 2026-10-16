@@ -2,12 +2,12 @@
 
 ## v6.27.479 — fix(ui): préserver le brouillon après une reformulation refusée (2026-10-16)
 
-**479 candidat, non livré ; production 478 inchangée.**
+**479 livré : le repli brut ne remplace plus le brouillon.**
 
-- `AmendPillarModal` réutilise source/FriendlyWarnings existants : repli signalé, saisie conservée, nouvelle tentative explicite ; seul succès remplit, sans application automatique.
-- Baseline quatre rouges/28 verts, cible 42 / 5 verte ; succès généré en simulation seulement. Copie : deux refus 400, warning/brouillon conservé, dix-huit tables identiques/zéro modèle/apply.
+- Source dcf12e66/trois CI/image/runtime reçus ; ADMIN lit le module existant et annule un brouillon sans preview/apply, données conservées/zéro modèle.
+- Warning reçu sur copie seulement : deux refus 400, saisie conservée/dix-huit tables identiques ; succès généré uniquement simulé.
 
-DEFAULT 4 698 / 443, gouvernance 1 658 / 167/six commandes à zéro reçus. Source/CI/image/runtime 479 attendus, cause modal active ; streaming/C4/C7 et seize réceptions inchangés. Clôture MD 478/trois CI reçues sans rebuild. [Bornage](docs/governance/REFONTE-PLAN.md).
+Cible 42 / 5, DEFAULT 4 698 / 443/gouvernance 1 658 / 167 reçus. Cause ciblée purgée ; parité d’édition, streaming/qualité/C7 et seize réceptions inchangés. Refus Saisir conforme à la politique actuelle, pas régression 479. Clôture MD distincte sans bump/build. [Bornage](docs/governance/REFONTE-PLAN.md).
 
 ## v6.27.478 — fix(governance): borner les reprises aux erreurs réessayables (2026-10-16)
 
