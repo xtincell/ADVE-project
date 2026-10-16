@@ -34,6 +34,16 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.481",
+    date: "2026-10-16",
+    headline: "Distinguer les liens vérifiés des liens à rapprocher",
+    highlights: [{
+      emoji: "🔎",
+      title: "Évaluer la cohérence avec les preuves disponibles",
+      body: "Le contrôle de cohérence signale quand un lien reste impossible à vérifier faute d’identifiant ou de format exploitable. Il conserve les erreurs établies et ne présente plus une absence de preuve comme une validation.",
+    }],
+  },
+  {
     version: "6.27.480",
     date: "2026-10-16",
     headline: "Comprendre le traitement de vos données par l’assistance",

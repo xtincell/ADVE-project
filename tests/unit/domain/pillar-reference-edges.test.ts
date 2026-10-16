@@ -3,7 +3,7 @@
  * (ADR-0174, Lot 3). Généralise le motif produit (rule 31) aux liens par nom + FK UUID.
  */
 import { describe, it, expect } from "vitest";
-import { findDanglingReferences } from "@/domain/pillar-reference-edges";
+import { assessPillarReferences, findDanglingReferences } from "@/domain/pillar-reference-edges";
 
 describe("pillar-reference-edges — liens par nom (persona)", () => {
   it("personaSegmentMap.personaName qui ne matche aucun persona = dangle", () => {
@@ -26,6 +26,46 @@ describe("pillar-reference-edges — liens par nom (persona)", () => {
       E: { superfanPortrait: { personaRef: "inconnu" } },
     });
     expect(d.some((r) => r.source === "E.superfanPortrait.personaRef")).toBe(true);
+  });
+});
+
+describe("Reference coverage — missing evidence stays separate from broken links", () => {
+  it("keeps the legacy empty-pool deferral but exposes its coverage", () => {
+    const bag = { I: { catalogueParCanal: { WEB: [{ mitigatesRiskIds: ["risk-x"], targetsPersonaIds: ["persona-x"], hypothesisId: "hyp-x" }] } } };
+    const assessed = assessPillarReferences(bag);
+    expect(findDanglingReferences(bag)).toEqual([]);
+    expect(assessed.checkedCount).toBe(0);
+    expect(assessed.deferred.map(row => row.ref)).toEqual(["risk-x", "persona-x", "hyp-x"]);
+    expect(assessed.deferred.every(row => row.reason === "TARGET_IDS_MISSING")).toBe(true);
+  });
+
+  it("preserves strict synthesis checks for absent targets and sprint references", () => {
+    const bag = { S: {
+      selectedFromI: [{ sourceInitiativeId: "action-a" }],
+      rejectedFromI: [{ sourceInitiativeId: "action-b" }],
+      sprint90Days: [{ sourceInitiativeId: "action-c" }],
+      fenetreOverton: { strategieDeplacement: [{ riskId: "blocker-x", hypothesisId: "hyp-x" }] },
+    } };
+    const tolerant = assessPillarReferences(bag);
+    expect(tolerant.dangling).toEqual([]);
+    expect(tolerant.deferred.map(row => row.ref)).toEqual(["action-a", "action-b", "blocker-x"]);
+    const strict = assessPillarReferences(bag, { strictS: true });
+    expect(strict.deferred).toEqual([]);
+    expect(strict.checkedCount).toBe(5);
+    expect(strict.dangling.map(row => row.ref)).toEqual(["action-a", "action-b", "action-c", "blocker-x", "hyp-x"]);
+    expect(findDanglingReferences(bag, { strictS: true })).toEqual(strict.dangling);
+  });
+
+  it("does not silently discard malformed array elements or rewrite the input", () => {
+    const bag = { D: { personas: [{ id: "persona-a" }] },
+      I: { actionsByDevotionLevel: { ENGAGE: [{ targetsPersonaIds: ["persona-a", 42, ""] }] } } };
+    const before = structuredClone(bag);
+    const assessed = assessPillarReferences(bag);
+    expect(assessed.checkedCount).toBe(1);
+    expect(assessed.dangling).toEqual([]);
+    expect(assessed.deferred).toHaveLength(2);
+    expect(assessed.deferred.every(row => row.reason === "INVALID_REFERENCE_SHAPE")).toBe(true);
+    expect(bag).toEqual(before);
   });
 });
 

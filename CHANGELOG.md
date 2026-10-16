@@ -1,5 +1,15 @@
 # Changelog — La Fusee
 
+## v6.27.481 — fix(governance): distinguer les liens vérifiés des références différées (2026-10-16)
+
+**Un identifiant manquant ne vaut plus preuve de cohérence.**
+
+- Le contrôle existant des références expose les liens non vérifiables sans inventer de cibles ni convertir les anciennes chaînes. La règle 32 conserve les erreurs établies, diffère la validation si la couverture manque et ne valide plus un dossier sans référence.
+- Une seule traversée, vue historique des liens cassés et garde stricte de synthèse conservées ; aucun nouveau service, gestionnaire d’appels, droit, identifiant ou choix de cible. Identités, rangs et rôles SPAWT restent à rapprocher dans C3 ; aucune mutation des données métier ni appel de modèle.
+- Six régressions rouges sur l’ancienne implémentation puis verts ; ciblés 59/4, DEFAULT 4 707/444 et gouvernance 1 658/167 verts, typage/deux lints sans erreur, 24 avertissements préexistants et zéro cycle. Requête réelle sur copie/ADMIN fictif : SPAWT 200/INVALID avec couverture différée, dossier sans lien 200/SKIPPED, absence de session 401 ; trois GET, treize tables exactement conservées, zéro modèle. Première requête froide 94 634 ms côté réception, pas SLO. Source/CI/image/runtime 481 encore à recevoir. Sept chantiers et seize réceptions bornées conservés.
+
+[Bornage et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.480 — fix(privacy): distinguer les conditions des accès IA (2026-10-16)
 
 **Le texte public cesse de confondre abonnement ChatGPT et garanties API.**

@@ -377,7 +377,7 @@ Dirigent la trajectoire. Décisions, validations, plans.
 | `pillar-normalizer/` | Normalisation inputs avant write | MESTOR | ✅ existant |
 | `rtis-protocols/` | Protocoles cascade R-T-I-S | MESTOR | ✅ existant |
 | `diagnostic-engine/` | Moteur de diagnostic substantiel | MESTOR | ✅ existant |
-| `cross-validator/` | Validation cross-pillar cohérence | MESTOR | ✅ existant |
+| `cross-validator/` | Validation cross-pillar cohérence ; règle 32/module pur `pillar-reference-edges` existants étendus en candidate 481 : couverture différée distincte de liens cassés/occurrences vérifiées, contrôles/snapshot et route authentifiée sur copie reçus sans mutation ; source poussée/CI/livraison production encore attendues ([bornage](REFONTE-PLAN.md)) | MESTOR | ✅ existant |
 | `vault-enrichment/` | Enrichissement strategy depuis vault | MESTOR | ✅ existant |
 | `strategy-presentation/` | Assemblage Oracle 21 sections + catalogue `OracleError` (ADR-0022) | MESTOR | ✅ existant |
 | `prompt-registry/` | Registre prompts LLM versionnés | MESTOR | ✅ existant |

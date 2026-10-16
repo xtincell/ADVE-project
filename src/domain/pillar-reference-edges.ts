@@ -16,7 +16,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Rec = Record<string, unknown>;
 const arr = (v: unknown): Rec[] => (Array.isArray(v) ? (v as Rec[]).filter((x) => x && typeof x === "object") : []);
-const strArr = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.length > 0) : []);
 const asStr = (v: unknown): string => (typeof v === "string" ? v : typeof v === "number" ? String(v) : "");
 /** Clé de nom normalisée (accents/casse/espaces) pour un matching tolérant. */
 const nameKey = (v: unknown): string => asStr(v).normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
@@ -25,6 +24,17 @@ export interface DanglingReference {
   edge: string;   // libellé de l'arête (« I.mitigatesRiskIds → R.risks[].id »)
   source: string; // chemin de la référence
   ref: string;    // valeur non résolue
+}
+
+export interface DeferredReference extends DanglingReference {
+  reason: "TARGET_IDS_MISSING" | "INVALID_REFERENCE_SHAPE";
+}
+
+export interface ReferenceAssessment {
+  dangling: DanglingReference[];
+  deferred: DeferredReference[];
+  /** Resolved and broken links that could actually be checked. */
+  checkedCount: number;
 }
 
 /** Rassemble toutes les actions I depuis ses conteneurs (par palier / par phase / plat). */
@@ -46,14 +56,37 @@ function collectActions(i: Rec): Rec[] {
 export type PillarBag = Partial<Record<"A" | "D" | "V" | "E" | "R" | "T" | "I" | "S", Rec | null | undefined>>;
 
 /**
- * Retourne toutes les références qui ne résolvent PAS vers leur cible. Une arête
- * n'est vérifiée que si la cible existe (sinon on ne peut pas juger — pool vide toléré,
- * cf. `pool.size` gardé) SAUF pour les liens par nom, où l'absence de cible EST le dangle.
+ * One traversal distinguishes broken links from links that cannot yet be checked.
+ * Missing ID pools keep the ADR-0174 deferral; legacy malformed references are not
+ * guessed or silently counted as resolved. No references means no evidence either.
+ * strictS keeps the existing stricter synthesis checks, including empty targets.
  */
-export function findDanglingReferences(p: PillarBag, options: { strictS?: boolean } = {}): DanglingReference[] {
+export function assessPillarReferences(p: PillarBag, options: { strictS?: boolean } = {}): ReferenceAssessment {
   const D = (p.D ?? {}) as Rec, V = (p.V ?? {}) as Rec, E = (p.E ?? {}) as Rec;
   const R = (p.R ?? {}) as Rec, T = (p.T ?? {}) as Rec, I = (p.I ?? {}) as Rec, S = (p.S ?? {}) as Rec;
-  const out: DanglingReference[] = [];
+  const result: ReferenceAssessment = { dangling: [], deferred: [], checkedCount: 0 };
+  const check = (edge: string, source: string, ref: string, pool: Set<string>, deferEmpty = true) => {
+    if (!pool.size && deferEmpty) {
+      result.deferred.push({ edge, source, ref, reason: "TARGET_IDS_MISSING" });
+      return;
+    }
+    result.checkedCount++;
+    if (!pool.has(ref)) result.dangling.push({ edge, source, ref });
+  };
+  const checkArray = (edge: string, source: string, value: unknown, pool: Set<string>) => {
+    if (value == null) return;
+    if (!Array.isArray(value)) {
+      result.deferred.push({ edge, source, ref: asStr(value), reason: "INVALID_REFERENCE_SHAPE" });
+      return;
+    }
+    for (const ref of value) {
+      if (typeof ref !== "string" || !ref.trim()) {
+        result.deferred.push({ edge, source, ref: asStr(ref), reason: "INVALID_REFERENCE_SHAPE" });
+      } else {
+        check(edge, source, ref, pool);
+      }
+    }
+  };
 
   // ── Pools de cibles ──
   const personaNames = new Set(arr(D.personas).map((x) => nameKey(x.name ?? x.nom)).filter(Boolean));
@@ -67,51 +100,55 @@ export function findDanglingReferences(p: PillarBag, options: { strictS?: boolea
   // ── Liens par NOM (dangles LIVE confirmés à l'audit) ──
   arr(V.personaSegmentMap).forEach((m, i) => {
     const nk = nameKey(m.personaName);
-    if (nk && !personaNames.has(nk)) out.push({ edge: "V.personaSegmentMap.personaName → D.personas[].name", source: `V.personaSegmentMap[${i}].personaName`, ref: asStr(m.personaName) });
+    if (nk) {
+      result.checkedCount++;
+      if (!personaNames.has(nk)) result.dangling.push({ edge: "V.personaSegmentMap.personaName → D.personas[].name", source: `V.personaSegmentMap[${i}].personaName`, ref: asStr(m.personaName) });
+    }
   });
   const sp = (E.superfanPortrait ?? {}) as Rec;
   if (sp.personaRef) {
+    result.checkedCount++;
     const nk = nameKey(sp.personaRef);
     if (!personaNames.has(nk) && !personaIds.has(asStr(sp.personaRef))) {
-      out.push({ edge: "E.superfanPortrait.personaRef → D.personas[].name", source: "E.superfanPortrait.personaRef", ref: asStr(sp.personaRef) });
+      result.dangling.push({ edge: "E.superfanPortrait.personaRef → D.personas[].name", source: "E.superfanPortrait.personaRef", ref: asStr(sp.personaRef) });
     }
   }
 
   // ── FK UUID : actions I → R / D / T ──
   actions.forEach((a, i) => {
-    if (riskIds.size) strArr(a.mitigatesRiskIds).forEach((ref) => { if (!riskIds.has(ref)) out.push({ edge: "I.mitigatesRiskIds → R.probabilityImpactMatrix[].id", source: `I.actions[${i}].mitigatesRiskIds`, ref }); });
-    if (personaIds.size) strArr(a.targetsPersonaIds).forEach((ref) => { if (!personaIds.has(ref)) out.push({ edge: "I.targetsPersonaIds → D.personas[].id", source: `I.actions[${i}].targetsPersonaIds`, ref }); });
-    if (hypothesisIds.size && a.hypothesisId && !hypothesisIds.has(asStr(a.hypothesisId))) out.push({ edge: "I.hypothesisId → T.hypothesisValidation[].id", source: `I.actions[${i}].hypothesisId`, ref: asStr(a.hypothesisId) });
+    checkArray("I.mitigatesRiskIds → R.probabilityImpactMatrix[].id", `I.actions[${i}].mitigatesRiskIds`, a.mitigatesRiskIds, riskIds);
+    checkArray("I.targetsPersonaIds → D.personas[].id", `I.actions[${i}].targetsPersonaIds`, a.targetsPersonaIds, personaIds);
+    if (a.hypothesisId) check("I.hypothesisId → T.hypothesisValidation[].id", `I.actions[${i}].hypothesisId`, asStr(a.hypothesisId), hypothesisIds);
   });
 
   // ── FK UUID : S → I / R ──
   for (const key of options.strictS ? ["selectedFromI", "rejectedFromI", "sprint90Days"] : ["selectedFromI", "rejectedFromI"]) {
     arr(S[key]).forEach((s, i) => {
-      if ((actionIds.size || options.strictS) && s.sourceInitiativeId && !actionIds.has(asStr(s.sourceInitiativeId))) {
-        out.push({ edge: `S.${key}.sourceInitiativeId → I.actions[].id`, source: `S.${key}[${i}].sourceInitiativeId`, ref: asStr(s.sourceInitiativeId) });
+      if (s.sourceInitiativeId) {
+        check(`S.${key}.sourceInitiativeId → I.actions[].id`, `S.${key}[${i}].sourceInitiativeId`, asStr(s.sourceInitiativeId), actionIds, !options.strictS);
       }
     });
   }
   // S.fenetreOverton.strategieDeplacement est un ARRAY d'étapes {riskId} (schéma:1320) —
   // PAS un objet à `S.strategieDeplacement` (toujours undefined). L'arête ne se déclenchait
   // JAMAIS (false negative — le but même de l' id ADR-0174). Corrigé : chemin + itération.
-  if (blockerIds.size || options.strictS) {
-    const fenetreOverton = (S.fenetreOverton ?? {}) as Rec;
-    arr(fenetreOverton.strategieDeplacement).forEach((step, i) => {
-      if (step.riskId && !blockerIds.has(asStr(step.riskId))) {
-        out.push({
-          edge: "S.fenetreOverton.strategieDeplacement[].riskId → R.overtonBlockers[].id",
-          source: `S.fenetreOverton.strategieDeplacement[${i}].riskId`,
-          ref: asStr(step.riskId),
-        });
-      }
-      if (options.strictS && step.hypothesisId && !hypothesisIds.has(asStr(step.hypothesisId))) {
-        out.push({ edge: "S.fenetreOverton.strategieDeplacement[].hypothesisId → T.hypothesisValidation[].id",
-          source: `S.fenetreOverton.strategieDeplacement[${i}].hypothesisId`, ref: asStr(step.hypothesisId) });
-      }
-    });
-  }
+  const fenetreOverton = (S.fenetreOverton ?? {}) as Rec;
+  arr(fenetreOverton.strategieDeplacement).forEach((step, i) => {
+    if (step.riskId) {
+      check("S.fenetreOverton.strategieDeplacement[].riskId → R.overtonBlockers[].id",
+        `S.fenetreOverton.strategieDeplacement[${i}].riskId`, asStr(step.riskId), blockerIds, !options.strictS);
+    }
+    if (options.strictS && step.hypothesisId) {
+      check("S.fenetreOverton.strategieDeplacement[].hypothesisId → T.hypothesisValidation[].id",
+        `S.fenetreOverton.strategieDeplacement[${i}].hypothesisId`, asStr(step.hypothesisId), hypothesisIds, false);
+    }
+  });
 
-  return out;
+  return result;
+}
+
+/** Backward-compatible dangling-only view. Deferred is never a broken-link assertion. */
+export function findDanglingReferences(p: PillarBag, options: { strictS?: boolean } = {}): DanglingReference[] {
+  return assessPillarReferences(p, options).dangling;
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

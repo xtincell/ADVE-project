@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { SCHWARTZ_VALUES } from "@/lib/types/taxonomies";
 import { catalogueReferencePrice, danglingProductRefs } from "@/domain/product-catalog";
-import { findDanglingReferences, type PillarBag } from "@/domain/pillar-reference-edges";
+import { assessPillarReferences, type PillarBag } from "@/domain/pillar-reference-edges";
 
 export interface CrossRefValidation {
   rule: string;
@@ -368,12 +368,21 @@ export async function validateCrossReferences(
   // ── 32. Intégrité des arêtes de référence inter-piliers (ADR-0174) ──
   // Généralise rule 31 : liens par nom (persona) + FK UUID (risque/persona/hypothèse/
   // action) résolvent-ils vers leur cible ? Détection seulement (scoring, jamais bloquant).
-  const danglingRefs = findDanglingReferences(p as PillarBag);
-  if (danglingRefs.length === 0) {
-    results.push({ rule: "Arêtes de référence résolvent vers leur cible", ruleId: 32, from: "I/S/V/E refs", to: "R/D/T/I ids & noms", status: "VALID", message: "Toutes les références inter-piliers résolvent" });
-  } else {
+  const assessment = assessPillarReferences(p as PillarBag);
+  const danglingRefs = assessment.dangling;
+  const missingIds = assessment.deferred.filter(ref => ref.reason === "TARGET_IDS_MISSING").length;
+  const malformed = assessment.deferred.filter(ref => ref.reason === "INVALID_REFERENCE_SHAPE").length;
+  const deferredDetail = [
+    missingIds ? `${missingIds} lien(s) non vérifiable(s) : identifiants cibles absents` : "",
+    malformed ? `${malformed} champ(s) non vérifiable(s) : format de référence à rapprocher` : "",
+  ].filter(Boolean).join(" · ");
+  if (danglingRefs.length > 0) {
     const detail = danglingRefs.slice(0, 5).map((d) => `${d.source} → « ${d.ref} »`).join(" · ");
-    results.push({ rule: "Arêtes de référence résolvent vers leur cible", ruleId: 32, from: "I/S/V/E refs", to: "R/D/T/I ids & noms", status: "INVALID", message: `${danglingRefs.length} référence(s) fantôme(s) : ${detail}${danglingRefs.length > 5 ? " …" : ""}` });
+    results.push({ rule: "Arêtes de référence résolvent vers leur cible", ruleId: 32, from: "I/S/V/E refs", to: "R/D/T/I ids & noms", status: "INVALID", message: `${danglingRefs.length} référence(s) fantôme(s) : ${detail}${danglingRefs.length > 5 ? " …" : ""}${deferredDetail ? ` · ${deferredDetail}` : ""}` });
+  } else if (assessment.deferred.length || assessment.checkedCount === 0) {
+    results.push({ rule: "Arêtes de référence résolvent vers leur cible", ruleId: 32, from: "I/S/V/E refs", to: "R/D/T/I ids & noms", status: "SKIPPED", message: deferredDetail || "Aucune référence inter-piliers à vérifier dans ce dossier" });
+  } else {
+    results.push({ rule: "Arêtes de référence résolvent vers leur cible", ruleId: 32, from: "I/S/V/E refs", to: "R/D/T/I ids & noms", status: "VALID", message: `${assessment.checkedCount} référence(s) inter-piliers vérifiée(s) et résolue(s)` });
   }
 
   return results;
