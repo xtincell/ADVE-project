@@ -1,6 +1,6 @@
 # ADR-0217 — Références de marque et partage d’une pièce La Barre
 
-Status: Proposed — candidat 487, contrôles et réception en cours
+Status: Accepted — code/transport 487 livré, gestes manuels production ouverts
 Date: 2026-10-16
 Phase: Shinkiro C3/C4/C6 — Ground / Console-Admin
 Depends on: ADR-0216, contrats BrandNode/Pillar et compilateur natif La Barre
@@ -8,7 +8,7 @@ Supersedes: None — étend le raccord ADR-0216
 
 ## Contexte
 
-486 reçoit l’ouverture des deux dossiers dans la session existante et la fermeture du corpus public. Le VAULT et les documents natifs lisent encore des valeurs locales de plateforme ; les différences de représentation ne prouvent pas un conflit de fond. Une gamme garde ses spécialisations locales. Les anciens jetons Noël exposés avec le dépôt ne peuvent pas être promus en secrets ; les anciens liens demandent maintenant une session autorisée.
+486 reçoit l’ouverture des deux dossiers dans la session existante et la fermeture du corpus public. Avant 487, le VAULT et les documents natifs lisent les valeurs locales de plateforme ; les différences de représentation ne prouvent pas un conflit de fond. Une gamme garde ses spécialisations locales. Les anciens jetons Noël exposés avec le dépôt ne peuvent pas être promus en secrets ; les anciens liens demandent maintenant une session autorisée.
 
 BrandNode/sourceRefs/strategyId, canAccessStrategy, pillarPreciseFields, VAULT.CHAMPS/herite/pourDossier, COMPILATEUR et PARTAGE existent. Les étendre évite une seconde plateforme, un outil de production parallèle ou un nouveau formulaire de marque.
 
@@ -24,7 +24,9 @@ L’édition datée contient HTML assaini, médias autorisés et versions des r�
 
 Ground / Console-Admin porte transport/confidentialité ; Seshat/Pillar garde l’autorité des références et La Barre celle de la publication. Aucune nouvelle identité, migration, Intent, IA, embedding, provider, gestionnaire d’appels ou service permanent. Le paquet publié est un export demandé, pas une validation client.
 
-Contrôles locaux reçus : cible 33/2, DEFAULT 4 780/447, gouvernance 1 663/167, tsc/lint/cycles verts (24 avertissements existants), 94 tests natifs dans six suites. Sur copie uniquement : quatre pièces/rejeu identique, 113 requêtes de ressources (90 médias/neuf styles/huit polices), vidéo 206/PDF refusé aux trois autres pièces, vrai clic natif de partage/source et publication 200, présentation 30 pages et bouton d’impression visibles. Révocation par PUT conditionnel reçue avec huit GET/HEAD 404 ; geste UI Révoquer non reçu, dialogue IAB bloquant. Reprise du publisher de copie reçue (même édition/date/rejeu/document 200) ; runtime natif production e06af7e sain/mêmes volumes/source de 171 projets aux octets identiques/index privé 200 reçu, publisher encore 486. Source applicative 3401123c/trois CI source vertes ; image refusée deux fois avant compilation sur ECR Node 429, correction de registre au même digest candidate. Aucune image publisher 487 publiée ni production 487 reçue ; geste UI Révoquer encore ouvert. Reçus copy-recovery-received.json/native-runtime-received.json, bornage CI dans REFONTE-PLAN.
+Contrôles locaux conservés : cible 33/2, DEFAULT 4 780/447, gouvernance 1 663/167, tsc/lint/cycles verts (24 avertissements), 94 tests natifs. Quatre pièces/publication/rejeu/reprise/médias/révocation conditionnelle reçus sur copie seulement ; geste UI Révoquer non reçu.
+
+Livraison code/transport : source 247c555f/trois CI/build 38982266098 avec smoke JSDOM-VM-PDF/index 94badc63/runtime exacts/mêmes volumes reçus, API 200/487 après 502 de remplacement conservé, source native de 171 projets/hash 831ea25c identique. Deux échecs ECR 429 historiques avant le repli de registre au même digest livré. ADMIN existant/contexte 200 : quatre pilotes exacts à la copie actuelle, SPAWT A11/D29/V36/E8, cinq correspondances dont MQ-dl/issues vide ; corpus 401/quatre anciens jetons 404, aucun grant client créé. Ressources/marques rendu par navigation, panneau de champ/éditeur et remise client production non reçus : modal d’un onglet de recette bloquant le contrôle des inputs, pas un défaut produit établi. Reçus publisher-runtime-received.json/production-context-received.json, détail et historique dans REFONTE-PLAN.
 
 La sauvegarde native du geste modifie 232 chemins de copie : présentation recalculée 3→30 pages, lectures/blocages dérivés et quatre grants synthétiques. Ne pas annoncer la source identique après ce geste ; zéro écriture production. Reçus privés `release/preuves-noyau-partage-20261016/`, bornage détaillé dans REFONTE-PLAN.
 
