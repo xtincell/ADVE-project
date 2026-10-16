@@ -59,12 +59,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Choisir la base Node officielle disponible (digest conservé)
+        id: node_base
+        run: |
+          set -euo pipefail
+          node_digest=sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392
+          node_image="public.ecr.aws/docker/library/node:22-bookworm-slim@$node_digest"
+          if ! docker buildx imagetools inspect "$node_image" >/dev/null; then
+            node_image="docker.io/library/node:22-bookworm-slim@$node_digest"
+            docker buildx imagetools inspect "$node_image" >/dev/null
+          fi
+          echo "image=$node_image" >> "$GITHUB_OUTPUT"
+
       # 1) Build + chargement LOCAL (pas encore poussé) avec cache gha.
       - name: Build (load local)
         uses: docker/build-push-action@v6
         with:
           context: .
           load: true
+          build-args: NODE_IMAGE=${{ steps.node_base.outputs.image }}
           tags: lafusee:candidate
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -76,9 +89,15 @@ jobs:
         run: |
           set -euo pipefail
           docker network create lf-smoke
+          pg_digest=sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+          pg_image="public.ecr.aws/docker/library/postgres:16-alpine@$pg_digest"
+          if ! docker pull "$pg_image"; then
+            pg_image="docker.io/library/postgres:16-alpine@$pg_digest"
+            docker pull "$pg_image"
+          fi
           docker run -d --name pg --network lf-smoke \
             -e POSTGRES_USER=lafusee -e POSTGRES_PASSWORD=lafusee -e POSTGRES_DB=lafusee \
-            public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+            "$pg_image"
           echo "Attente Postgres…"
           for i in $(seq 1 30); do
             if docker exec pg pg_isready -U lafusee >/dev/null 2>&1; then break; fi
@@ -143,6 +162,7 @@ jobs:
         with:
           context: .
           push: true
+          build-args: NODE_IMAGE=${{ steps.node_base.outputs.image }}
           tags: |
             ${{ steps.img.outputs.ref }}:latest
             ${{ steps.img.outputs.ref }}:v${{ steps.ver.outputs.v }}
