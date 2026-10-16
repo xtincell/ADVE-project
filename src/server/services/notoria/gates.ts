@@ -10,6 +10,8 @@ import type { ValidationContext } from "@/server/services/financial-brain/types"
 import type { ApplyPolicy, QualityGateResult, RawLLMReco } from "./types";
 import { db } from "@/lib/db";
 import * as auditTrail from "@/server/services/audit-trail";
+import { getVariableSpec } from "@/lib/types/variable-bible";
+import { provenanceTopKey } from "@/domain/field-provenance";
 
 // ── Destructive markers (cross-pillar) ────────────────────────────────
 
@@ -26,7 +28,11 @@ const DESTRUCTIVE_FIELDS = new Set<string>([
 ]);
 
 function isDestructiveField(pillarKey: string, field: string): boolean {
-  return DESTRUCTIVE_FIELDS.has(`${pillarKey.toLowerCase()}.${field}`);
+  const key = pillarKey.toLowerCase();
+  // The editor and writer read the same policy, including a nested leaf of
+  // a strategic collection. No separate exception list per dossier or UI.
+  return DESTRUCTIVE_FIELDS.has(`${key}.${field}`) ||
+    getVariableSpec(key, provenanceTopKey(field, key))?.editableMode === "STRATEGIC_REWRITE";
 }
 
 // ── Financial field patterns ──────────────────────────────────────

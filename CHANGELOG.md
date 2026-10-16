@@ -1,5 +1,16 @@
 # Changelog — La Fusee
 
+## v6.27.484 — fix(brand): permettre la correction manuelle des synthèses du socle (2026-10-16)
+
+**Quinze synthèses qualitatives ADVE deviennent explicitement corrigibles dans le contrat existant.**
+
+- `variable-bible` déclare `STRATEGIC_REWRITE` pour quinze synthèses D/V/E, dont personas et ton de voix, modèle d’activité et correspondances produit, expérience et portrait du superfan. Leur filiation `derivedFrom` est conservée ; calculs et RTIS restent exclus de l’édition manuelle.
+- Même voie `OPERATOR_AMEND_PILLAR`, endpoints, Gateway et droits ; gate raccordée au mode explicite du registre et aux sous-chemins via `provenanceTopKey`, refus de `PATCH_DIRECT` avant effet. Modal existant : mode requis sélectionné/autres choix désactivés, éditeur structuré utilisable en réécriture manuelle, IA facultative. ADR-0023 clarifié ; aucun nouveau module, composant, route, manager ou schéma, identités/rangs/plafond cinq/références/personas inchangés.
+- Contrôles locaux finaux verts : cible 82/5, DEFAULT 4 743/445, gouvernance 1 663/167, typage/deux lints/cycles zéro, 24 avertissements historiques par lint ; CODE-MAP sans diff. Sur copie, GET D/V/E et source fictive DECLARED reçus ; PATCH_DIRECT sur V.businessModel VETOED/DESTRUCTIVE_REQUIRES_STRATEGIC_REWRITE, réécriture stratégique v1→v2 OK puis valeur sauvegardée relue conforme, aucun modèle externe demandé.
+- Échecs de compilation/trace/tunnel et reprise explicite conservés au bornage, pas SLO. Natif copie reçu : source lue/citée, mode stratégique imposé, un POST 200/OK à 22 301 ms et v2→v3 relu ; autres piliers/coûts inchangés. Source/CI/image/native production 484 encore à recevoir, production 483 HTTP 200. Aucun dossier entier, grant métier réel ou onboarding reçu ; identités/rangs/cap cinq/références/personas et C2/C5 entiers ouverts, seize réceptions/zéro chantier sur sept/zéro parcours sur 116/zéro lignée sur 80/un passage sur sept/global null inchangés.
+
+[Bornage](docs/governance/REFONTE-PLAN.md), [ADR-0023 amendé](docs/governance/adr/0023-operator-amend-pillar.md).
+
 ## v6.27.483 — fix(sources): préserver les sections distinctes et refuser les analyses incomplètes (2026-10-16)
 
 **Une analyse incomplète préserve les propositions existantes ; les profils distincts restent séparés.**

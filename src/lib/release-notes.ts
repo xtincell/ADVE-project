@@ -34,6 +34,16 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.484",
+    date: "2026-10-16",
+    headline: "Corriger vos profils et votre offre sans assistant",
+    highlights: [{
+      emoji: "✍️",
+      title: "Garder la main sur vos décisions",
+      body: "Les profils types, le modèle économique et les liens entre produits et expérience sont accessibles dans l’éditeur existant. Vous pouvez les réécrire avec une raison et des documents de référence, sans lancer une génération.",
+    }],
+  },
+  {
     version: "6.27.483",
     date: "2026-10-16",
     headline: "Préserver les profils distincts et vos choix",

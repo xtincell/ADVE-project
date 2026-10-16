@@ -324,14 +324,14 @@ export const BIBLE_D: Record<string, VariableSpec> = {
     description: "Les 2-5 profils types de clients de la marque",
     format: "Array d'objets { name, age, csp, location, motivations (texte), fears (texte), hiddenDesire, jobsToBeDone[], devotionPotential (enum Devotion), rank }",
     rules: ["2 minimum, 5 maximum", "Rank 1 = persona principal", "Chaque persona doit avoir motivations + fears minimum"],
-    derivedFrom: "a.publicCible",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "a.publicCible",
     feedsInto: ["v.personaSegmentMap", "e.superfanPortrait"],
   },
   tonDeVoix: {
     description: "Le ton et la personnalité verbale de la marque",
     format: "Objet { personnalite (5-7 adjectifs), onDit (3+ phrases qu'on utilise), onNeditPas (2+ phrases qu'on n'utilise jamais) }",
     rules: ["personnalite = adjectifs, pas des phrases", "onDit et onNeditPas = exemples concrets de formulations"],
-    derivedFrom: "a.archetype",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "a.archetype",
   },
   paysageConcurrentiel: {
     description: "Les 3+ concurrents directs avec forces/faiblesses",
@@ -342,7 +342,7 @@ export const BIBLE_D: Record<string, VariableSpec> = {
   archetypalExpression: {
     description: "Comment l archetype A se traduit en expression visuelle et verbale",
     format: "Objet { visualTranslation (description visuelle), verbalTranslation (ton verbal), emotionalRegister (registre émotionnel) }",
-    derivedFrom: "a.archetype",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "a.archetype",
     feedsInto: ["d.directionArtistique"],
   },
   sousPromesses: {
@@ -449,28 +449,28 @@ export const BIBLE_V: Record<string, VariableSpec> = {
   businessModel: {
     description: "Le modèle d'affaires fondamental",
     format: "String enum : PRODUCTION, DISTRIBUTION, SERVICES, ABONNEMENT, PLATEFORME, FREEMIUM_AD, LICENSING_IP, etc.",
-    derivedFrom: "Strategy.businessContext",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "Strategy.businessContext",
   },
   pricingJustification: {
     description: "Pourquoi CE prix pour CE positionnement",
     format: "Texte 1-3 phrases qui lie D.positionnement → V.prix",
     examples: ["Notre premium de 15-20% est justifié par la garantie qualité blockchain et le réseau de 5000 distributeurs experts"],
-    derivedFrom: "d.positionnement",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "d.positionnement",
   },
   economicModels: {
     description: "Les modèles économiques de capture de valeur",
     format: "Array de strings : VENTE_DIRECTE, ABONNEMENT, COMMISSION, FREEMIUM, PUBLICITE, LICENCE, etc.",
-    derivedFrom: "Strategy.businessContext",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "Strategy.businessContext",
   },
   positioningArchetype: {
     description: "L'archétype de positionnement prix (de ultra-luxe à low-cost)",
     format: "String enum : ULTRA_LUXE, LUXE, PREMIUM, MASSTIGE, MAINSTREAM, VALUE, LOW_COST",
-    derivedFrom: "Strategy.businessContext",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "Strategy.businessContext",
   },
   salesChannel: {
     description: "Le canal de vente principal — comment le produit atteint le client final",
     format: "String enum : DIRECT, INTERMEDIATED, HYBRID",
-    derivedFrom: "Strategy.businessContext",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "Strategy.businessContext",
   },
   freeLayer: {
     description: "Pour les modèles freemium : ce qui est gratuit vs payant",
@@ -480,7 +480,7 @@ export const BIBLE_V: Record<string, VariableSpec> = {
   personaSegmentMap: {
     description: "Quel persona (D) achète quel produit (V) à quel niveau Devotion",
     format: "Array d'objets { personaName (ref D.personas), productNames[] (ref V.produits), devotionLevel (enum), revenueContributionPct }",
-    derivedFrom: "d.personas + v.produitsCatalogue",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "d.personas + v.produitsCatalogue",
     rules: ["Chaque persona de D doit avoir au moins 1 produit", "La somme des revenueContributionPct ≈ 100%"],
   },
   productLadder: {
@@ -554,13 +554,13 @@ export const BIBLE_E: Record<string, VariableSpec> = {
     description: "L'expérience que chaque interaction avec la marque garantit",
     format: "1 phrase, orientée sensation/émotion du client",
     examples: ["La certitude que votre chantier tiendra"],
-    derivedFrom: "d.promesseMaitre",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "d.promesseMaitre",
   },
   superfanPortrait: {
     description: "Le profil du superfan cible — l'évangéliste qu'on vise",
     format: "Objet { personaRef (ref D.personas), motivations[], barriers[], profile (texte) }",
     rules: ["personaRef = le persona de D qui a le plus haut devotionPotential", "barriers = ce qui empêche la montée dans la Devotion Ladder"],
-    derivedFrom: "d.personas (le plus haut devotionPotential)",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "d.personas (le plus haut devotionPotential)",
   },
   touchpoints: {
     description: "Les 5-15 points de contact entre la marque et son audience",
@@ -572,10 +572,10 @@ export const BIBLE_E: Record<string, VariableSpec> = {
     format: "Array d'objets { nom, type (enum), frequency (enum), description (texte), devotionLevels[], aarrPrimary (enum), kpiMeasure }",
     rules: ["3 minimum", "Chaque rituel doit cibler au moins 1 niveau Devotion"],
   },
-  primaryChannel: { description: "Canal principal d'engagement de la marque", format: "Enum canal : INSTAGRAM, FACEBOOK, TIKTOK, WEBSITE, EVENT, etc.", derivedFrom: "Strategy.primaryChannel" },
-  productExperienceMap: { description: "Comment chaque produit (V) se traduit en expérience", format: "Array d'objets { productRef (ref V.produit), experienceDescription, touchpointRefs[], emotionalOutcome }", derivedFrom: "v.produitsCatalogue" },
-  ladderProductAlignment: { description: "Mapping Devotion Ladder ↔ Product Ladder", format: "Array d'objets { devotionLevel (enum), productTierRef (ref V.productLadder), entryAction, upgradeAction }", derivedFrom: "v.productLadder + e.touchpoints" },
-  channelTouchpointMap: { description: "Quels touchpoints sur quels canaux de vente", format: "Array d'objets { salesChannel (DIRECT|INTERMEDIATED|HYBRID), touchpointRefs[] }", derivedFrom: "v.salesChannel" },
+  primaryChannel: { description: "Canal principal d'engagement de la marque", format: "Enum canal : INSTAGRAM, FACEBOOK, TIKTOK, WEBSITE, EVENT, etc.", editableMode: "STRATEGIC_REWRITE", derivedFrom: "Strategy.primaryChannel" },
+  productExperienceMap: { description: "Comment chaque produit (V) se traduit en expérience", format: "Array d'objets { productRef (ref V.produit), experienceDescription, touchpointRefs[], emotionalOutcome }", editableMode: "STRATEGIC_REWRITE", derivedFrom: "v.produitsCatalogue" },
+  ladderProductAlignment: { description: "Mapping Devotion Ladder ↔ Product Ladder", format: "Array d'objets { devotionLevel (enum), productTierRef (ref V.productLadder), entryAction, upgradeAction }", editableMode: "STRATEGIC_REWRITE", derivedFrom: "v.productLadder + e.touchpoints" },
+  channelTouchpointMap: { description: "Quels touchpoints sur quels canaux de vente", format: "Array d'objets { salesChannel (DIRECT|INTERMEDIATED|HYBRID), touchpointRefs[] }", editableMode: "STRATEGIC_REWRITE", derivedFrom: "v.salesChannel" },
   conversionTriggers: { description: "Ce qui fait passer quelqu'un d'un niveau Devotion au suivant", format: "Array d'objets { fromLevel (enum), toLevel (enum), trigger (texte), channel }", rules: ["1 trigger par transition de niveau"] },
   barriersEngagement: { description: "Ce qui bloque la montée dans la Devotion Ladder", format: "Array d'objets { level (enum), barrier (texte), mitigation }", rules: ["Identifier les points de friction par niveau"] },
   principesCommunautaires: { description: "Les règles de la communauté de marque", format: "Array d'objets { principle (texte), enforcement (comment c'est appliqué) }", rules: ["3 minimum"] },
@@ -796,7 +796,9 @@ const ADVE_PILLAR_KEYS = new Set<string>([...ADVE_STORAGE_KEYS]);
  *
  * Decision order:
  *   1. Explicit override on the spec wins.
- *   2. `derivedFrom` set → INFERRED_NO_EDIT (calculated from upstream).
+ *   2. `derivedFrom` without an explicit mode → INFERRED_NO_EDIT.
+ *      Qualitative ADVE syntheses explicitly allow strategic correction;
+ *      their inference inputs remain documented without requiring a model.
  *   3. RTIS pillars (R/T/I/S) → INFERRED_NO_EDIT (regenerated via
  *      ENRICH_*_FROM_ADVE intents, never amended manually).
  *   4. Long qualitative text (minLength ≥ 30 OR maxLength ≥ 200) →
@@ -825,7 +827,7 @@ export function getEditableMode(
  * spec. Used by the OPERATOR_AMEND_PILLAR modal dropdown.
  *
  * Returns an empty array for unknown pillars.
- * INFERRED_NO_EDIT entries are excluded from the editable list — RTIS
+ * Computed INFERRED_NO_EDIT entries stay outside the editor — RTIS
  * recalculations go through ENRICH_*_FROM_ADVE intents, not this dropdown.
  */
 export function listEditableFields(pillarKey: string): Array<{

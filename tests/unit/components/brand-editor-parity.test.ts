@@ -93,12 +93,18 @@ describe("historical brand editor reuses the canonical manual circuit", () => {
     expect(screen.getByRole("dialog").textContent).toContain("éditeur structuré");
     expect(h.writes).not.toHaveBeenCalled();
   });
-  it("does not turn a derived voice or strategic analysis into a manual patch", () => {
+  it("opens a qualitative voice for strategic correction while keeping strategic analysis read-only", () => {
     h.params = "strategy=brand-a&focus=d.tonDeVoix.onDit,r.swot";
     render(React.createElement(Editor));
-    expect(screen.getByRole("region", { name: "Champs à revoir" }).textContent).toContain("Champ calculé ou non éditable");
-    expect(screen.queryByRole("button", { name: /^Revoir / })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /^Revoir / }));
+    const dialog = within(screen.getByRole("dialog"));
+    expect((dialog.getByRole("combobox", { name: "Variable à amender" }) as HTMLSelectElement).value).toBe("tonDeVoix");
+    expect((dialog.getByRole("button", { name: /patch direct/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((dialog.getByRole("button", { name: /llm rephrase/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect(dialog.getByRole("button", { name: /strategic rewrite/ })).toBeDefined();
+    fireEvent.click(dialog.getByRole("button", { name: "Fermer" }));
     fireEvent.click(screen.getByRole("button", { name: /^R —/ }));
+    expect(screen.getByRole("region", { name: "Champs à revoir" }).textContent).toContain("Champ calculé ou non éditable");
     expect(screen.queryByRole("button", { name: "Modifier" })).toBeNull();
     expect(h.writes).not.toHaveBeenCalled(); expect(h.preview).not.toHaveBeenCalled();
   });

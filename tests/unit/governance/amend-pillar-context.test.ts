@@ -70,6 +70,15 @@ const citeDocument = () => {
   fireEvent.click(screen.getByRole("button", { name: "Utiliser cette version comme référence" }));
 };
 describe("manual documentary references stay with the draft actually read", () => {
+  it("opens a catalogued rewrite as a structured manual correction without a model preview", () => {
+    transport.data!.fields[2]!.spec = { editableMode: "STRATEGIC_REWRITE" };
+    render(view()); choose("unitEconomics");
+    expect((screen.getByRole("textbox", { name: "Valeur structurée" }) as HTMLInputElement).value).toBe('{"budgetCom":10}');
+    expect((screen.getByRole("button", { name: /patch direct/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /llm rephrase/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect(transport.previews).toHaveLength(0);
+    expect(transport.writes).toHaveLength(0);
+  });
   it("only an explicit citation attaches the exact reader fingerprint to the existing amendment", () => {
     render(view()); choose("mvp"); fill(); citeDocument();
     fireEvent.click(screen.getByRole("button", { name: "Appliquer" }));

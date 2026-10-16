@@ -114,13 +114,17 @@ function AmendPillarEditor({
     () => editable.data?.fields.find((f) => f.field === field) ?? null,
     [editable.data, field],
   );
+  const requiresRewrite = selectedFieldEntry?.spec.editableMode === "STRATEGIC_REWRITE";
+  useEffect(() => {
+    if (requiresRewrite && mode !== "STRATEGIC_REWRITE") onModeChange("STRATEGIC_REWRITE");
+  }, [requiresRewrite, mode, onModeChange]);
 
-  // Édition profonde structurée : PATCH_DIRECT + champ à shape déclarée au
+  // Édition manuelle structurée : champ à shape déclarée au
   // registre → éditeur récursif (matrice/objet imbriqué jusqu'à la feuille) au
   // lieu du textarea JSON brut. Le write reste la voie gouvernée OPERATOR_AMEND_PILLAR.
   const pillarKeyLower = pillarKey.toLowerCase();
   const usesStructured =
-    Boolean(field) && mode === "PATCH_DIRECT" && hasFieldDef(pillarKeyLower, field ?? "");
+    Boolean(field) && mode !== "LLM_REPHRASE" && hasFieldDef(pillarKeyLower, field ?? "");
 
   // Réinitialise le brouillon structuré sur la valeur courante quand le champ
   // (ou son chargement async) change — l'éditeur récursif part de l'existant.
@@ -132,6 +136,7 @@ function AmendPillarEditor({
   const reasonTooShort = mode === "STRATEGIC_REWRITE" && reason.trim().length < 20;
   const cannotApply =
     !field || !selectedFieldEntry || !editable.data || !reason.trim() ||
+    (requiresRewrite && mode !== "STRATEGIC_REWRITE") ||
     reasonTooShort ||
     (mode === "PATCH_DIRECT" && !usesStructured && !proposedValue) ||
     (mode === "LLM_REPHRASE" && !proposedValue) ||
@@ -284,6 +289,7 @@ function AmendPillarEditor({
                     key={m}
                     type="button"
                     onClick={() => onModeChange(m)}
+                    disabled={requiresRewrite && m !== "STRATEGIC_REWRITE"}
                     className={`flex-1 rounded-md px-2 py-1 text-xs font-medium ${
                       mode === m ? "bg-accent/20 text-accent" : "text-foreground-muted hover:text-foreground"
                     }`}
