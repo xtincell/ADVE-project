@@ -13,6 +13,8 @@ Cible 42 / 5, DEFAULT 4 698 / 443/gouvernance 1 658 / 167 reçus. Cause ciblée 
 
 **Sauvegarde et reprise partielle C7 — 16 octobre** : retour hors VPS, bases/Minio et complément chiffré des clés métier reçus ; dix médias authentifiés, connexion de fixture et portefeuilles natifs sur copie reçus. Instantanés séparés non atomiques ; Conservation historique qualifiée hors deux comptes fixture/deux journaux de boot ; La Barre/Radar non restaurés, images toujours en transfert. Aucun login historique, reprise globale ou RPO/RTO/SLO déduit. Runtime 479/incident JWT actif inchangés, zéro modèle ou mutation production ; seize réceptions/C7 ouverts. [Bornage](docs/governance/REFONTE-PLAN.md).
 
+**Expiration REST C7 — 16 octobre** : fixture synthétique reçue, 28 HTTP ; Bearer expiré 401/apikey seule 200 comme la référence. Prototype naïf refusé puis compatibilité corrigée dans le transformateur existant, sans changer HEADER/PAYLOAD/exp ni traduire apikey seule en Bearer. 145 politiques RLS identiques ; aucune rotation réelle, reprise globale ou préparation à la rotation réelle reçue. Incident JWT/images/C7 ouverts, zéro modèle/mutation production, seize réceptions inchangées. [Bornage](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.478 — fix(governance): borner les reprises aux erreurs réessayables (2026-10-16)
 
 **478 livré : reprises bornées dans le gestionnaire existant.**
