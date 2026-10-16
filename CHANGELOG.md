@@ -1,3 +1,12 @@
+## v6.27.487 — feat(barre): lire les références de marque et publier une pièce délimitée (2026-10-17)
+
+**La Barre consulte le socle autorisé et prépare le partage explicite d’un document, sans copier la plateforme.**
+
+- `BrandNode` courants/`canAccessStrategy`/`pillarPreciseFields` alimentent le VAULT natif avec valeurs, versions et provenance ; ambiguïtés signalées, gammes locales prioritaires, édition renvoyée vers la plateforme existante. Aucune écriture de pilier ou copie du socle dans le dépôt.
+- Compilation par les 109 scripts natifs dans JSDOM déjà présent, promu runtime, sans coque ni réseau de compilation. Publication explicite dans le volume de revue existant ; édition datée/versionnée, rejeu si sources identiques et refus des anciens jetons exposés avant renouvellement humain.
+- Lecteur public limité au HTML assaini et aux médias autorisés de cette édition, grant relu pour chaque requête ; aucun pilier privé ou corpus transmis. Aucun Intent, modèle, provider ou gestionnaire ajouté, aucune validation client déduite du partage.
+- Candidat non déployé : cible 33/2, DEFAULT 4 780/447, gouvernance 1 663/167, 94 tests natifs, tsc/lint/cycles verts (24 avertissements existants au lint). Copie : quatre pièces/rejeu, vrai geste de publication et présentation 30 pages reçus ; 113 requêtes de ressources, vidéo 206, PDF refusé aux trois autres pièces, huit GET/HEAD refusés après révocation conditionnelle. Le geste UI Révoquer reste non reçu ; effets de sauvegarde natifs qualifiés au bornage, aucune conservation intégrale de la source de copie prétendue. Reprise du publisher reçue sur copie : même édition/date/rejeu, document 200. CI/image native e06af7e reçue ; CI/image publisher et production attendues. La 486 est livrée ; délégation fine/PDF datés/médias-masters/accords/onboarding restent ouverts. [ADR-0217](docs/governance/adr/0217-barre-brand-readers-and-document-publication.md), [bornage](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.486 — fix(access): raccorder La Barre à la session existante (2026-10-16)
 
 **Le travail créatif retrouve le compte et les droits de son équipe.**

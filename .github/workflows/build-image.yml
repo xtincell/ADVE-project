@@ -106,6 +106,20 @@ jobs:
             exit 1
           fi
           echo "✓ image saine — démarre, migre, sert /login."
+          # La publication de pièce utilise le moteur natif dans JSDOM externe.
+          # Vérifier ses fichiers runtime et le contexte VM dans le standalone exact.
+          docker exec app node --input-type=module -e '
+            import { JSDOM } from "jsdom";
+            import { Script } from "node:vm";
+            const dom = new JSDOM("<main></main>", { runScripts: "outside-only" });
+            try {
+              new Script("document.querySelector(\"main\").textContent = \"received\"")
+                .runInContext(dom.getInternalVMContext());
+              if (dom.window.document.querySelector("main").textContent !== "received")
+                throw new Error("Native document context not received");
+              console.log("JSDOM + native VM context received in exact image");
+            } finally { dom.window.close(); }
+          '
           # Le test unitaire ne détecte pas un worker PDF omis du standalone.
           # Exercer le lecteur installé dans l'image exacte avant publication.
           docker cp tests/fixtures/source-deposit.pdf app:/tmp/source-deposit.pdf

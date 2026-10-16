@@ -1,6 +1,6 @@
 # La Barre dans la session de cette installation
 
-ADR-0216, candidat 486 du 16 octobre. Réception production distincte.
+ADR-0216, 486 livrée le 16 octobre : session native, source privée et redirection de l’ancien domaine reçues ; corpus/octet source et deux portefeuilles conservés. Publisher 8c4ab85c/La Barre 2ba00242, reçu privé `release/preuves-source-access-20261016/receipt.json`. Aucun nouveau compte/droit ou écrit métier production ; formulaire réel ouvert puis annulé, PUT conditionnel/rejeu/conflits exercés sur copie seulement.
 
 - `/la-barre/index.html#/projets/<id>` garde les écrans et l’autorité de La Barre. Le portefeuille produit des liens relatifs à cette installation. Auth.js et l’affectation courante contrôlent chaque requête.
 - `PORTFOLIO_BARRE_UPSTREAM` : origine privée seule du serveur natif, par exemple `http://la-barre-source:3000`, sans identifiants, chemin, query ou hash. Runtime uniquement.
@@ -9,4 +9,13 @@ ADR-0216, candidat 486 du 16 octobre. Réception production distincte.
 - Ordre : adresse privée réellement résolue depuis le publisher, mêmes octets source ; variable runtime ; code/CI/image reçus ; déploiement publisher seulement ; natif autorisé + source refusée anonymement ; ancien domaine redirigé **après** ces réceptions. Ne jamais rendre le corpus public en repli si l’amont échoue.
 - Retour arrière : conserver les données courantes. Restaurer uniquement la version/env delta du publisher et le fichier d’ingress détenu ; aucune restauration de snapshot ou ancien dépôt de campagne. Ne pas exposer à nouveau les données pour réparer une navigation.
 
-Le partage client sans compte, la délégation par campagne, les autres IP et la rotation de signature Supabase sont des réceptions distinctes encore ouvertes. Ce montage n’est pas une preuve d’isolation de toute la flotte.
+## Candidat 487 — références et publication d’un document
+
+- Le contexte authentifié `/la-barre/contexte.json` lit seulement les références des BrandNode/stratégies autorisés via pillarPreciseFields ; VAULT conserve provenance/version, spécialisations des gammes et valeurs locales absentes du noyau. Aucun socle copié ou pilier écrit ; modification dans l’éditeur de marque existant.
+- Déployer les versions compatibles du publisher et du serveur natif en conservant les volumes. Le compilateur charge les 109 scripts natifs dans JSDOM runtime sans coque/réseau de compilation et exige `X-La-Barre-Runtime` identique ; une empreinte absente ou mélangée refuse le rendu, sans repli public du corpus.
+- Le geste Partager sauvegarde le grant natif puis POST `/la-barre/publication` (opérateur/origine contrôlés). Un ancien jeton exposé doit être renouvelé au geste humain. Le serveur écrit conditionnellement l’édition dans `/assets/review/partage/<token>.json`, volume review existant ; préserver ce volume et ses éditions lors des remplacements.
+- `/la-barre/partage/<token>/document` est le lecteur public de la seule édition publiée. Grant relu pour HTML/média/HEAD, HTML assaini/styles et médias autorisés seulement, aucun pilier privé/corpus/code natif transmis. Révocation ferme le lien et ses médias ; ne pas publier le dépôt ou réactiver une ancienne route publique pour rétablir un lien.
+- Contrôles locaux reçus : cible 33/2, DEFAULT 4 780/447, gouvernance 1 663/167, 94 tests natifs/tsc/lint/cycles verts (24 avertissements existants). Sur copie : quatre pièces/rejeu, vrai clic partage/source et publication 200, lecteur 30 pages/bouton impression, 113 requêtes de ressources/vidéo 206/PDF limité à la présentation reçus. Huit GET/HEAD 404 après révocation conditionnelle native ; clic UI Révoquer non reçu, dialogue IAB bloquant.
+- Le geste de sauvegarde modifie 232 chemins du dépôt de copie : pages 3→30 et lectures/blocages dérivés recalculés, quatre grants synthétiques. Aucune source de copie identique après geste ou mutation production prétendue. Reprise de process/geste UI Révoquer/CI/images/runtime restent à recevoir ; qualifier effets attendus et conservation hors effets avant livraison, aucun lien envoyé à un tiers. Preuves privées `release/preuves-noyau-partage-20261016/`.
+
+La délégation fine par campagne/client, les anciens PDF locaux datés, éditions/médias/masters/droits, les véritables accords, autres IP et rotation Supabase restent ouverts. Une publication n’est pas une validation client ou un onboarding entier ; ce montage ne reçoit pas l’isolation de toute la flotte. [ADR-0217](../governance/adr/0217-barre-brand-readers-and-document-publication.md).

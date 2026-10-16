@@ -56,10 +56,11 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 49 modules (src/domain, cœur métier pur)
+## Domain — 50 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
+- **barre-brand-context**
 - **brand-asset-kinds** — BrandAsset.kind — taxonomie complète des actifs de marque.
 - **brand-nature-archetypes** — Phase 18 (ADR-0061) — `BRAND_NATURE_ARCHETYPES` source de vérité unique.
 - **brand-scores** — src/domain/brand-scores.ts — Layer 0. Les TROIS mesures d'une marque, nommées

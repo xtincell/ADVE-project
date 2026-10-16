@@ -9,11 +9,19 @@ import { signalObservation } from "@/domain/signal-observation";
 import { metricObservationTime } from "@/domain/external-metric";
 
 /** Short, process-local read cache. A failed refresh is surfaced, never an empty portfolio. */
-let cache: { data: unknown; fetchedAt: number } | undefined;
-let pending: Promise<{ data: unknown; fetchedAt: number }> | undefined;
-async function readBarre() {
-  if (cache && Date.now() - cache.fetchedAt < 60_000) return cache;
-  if (!pending) pending = (async () => {
+let cache: { data: unknown; fetchedAt: number; etag: string | null } | undefined;
+let pending: Promise<NonNullable<typeof cache>> | undefined;
+export async function readBarreSnapshot(options: { fresh?: boolean } = {}) {
+  if (options.fresh && cache?.etag) {
+    // Revocation is checked against the source on every public request. HEAD
+    // avoids sending the entire private corpus for every image in one document.
+    const head = await fetch(barreUpstreamUrl(["depots", "beignet-paradise.json"]), {
+      method: "HEAD", signal: AbortSignal.timeout(12_000), cache: "no-store", redirect: "error",
+    });
+    if (!head.ok) throw new Error(`La Barre répond ${head.status}`);
+    if (head.headers.get("etag") === cache.etag) return cache;
+  } else if (!options.fresh && cache && Date.now() - cache.fetchedAt < 60_000) return cache;
+  const load = async () => {
     const response = await fetch(barreUpstreamUrl(["depots", "beignet-paradise.json"]), {
       signal: AbortSignal.timeout(12_000), cache: "no-store", redirect: "error",
     });
@@ -21,9 +29,12 @@ async function readBarre() {
     const data: unknown = await response.json();
     // Reject invalid successful responses before caching.
     projectBarreWorkspace(data, []);
-    cache = { data, fetchedAt: Date.now() };
+    cache = { data, fetchedAt: Date.now(), etag: response.headers.get("etag") };
     return cache;
-  })().finally(() => { pending = undefined; });
+  };
+  // A source grant check never joins a possibly older in-flight cached read.
+  if (options.fresh) return load();
+  if (!pending) pending = load().finally(() => { pending = undefined; });
   return pending;
 }
 
@@ -95,7 +106,7 @@ export async function getPortfolioWorkspace(root: BrandNode, options: { allowBar
   if (references.some((r) => r.system === "LA_BARRE")) {
     if (!options.allowBarre) sourceError = "La connexion de votre équipe à La Barre reste à configurer.";
     else try {
-      const snapshot = await readBarre();
+      const snapshot = await readBarreSnapshot();
       barre = projectBarreWorkspace(snapshot.data, references);
       sourceStatus = "LIVE"; fetchedAt = new Date(snapshot.fetchedAt).toISOString();
     } catch (error) {

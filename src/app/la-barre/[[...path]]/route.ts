@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth/config";
 import { getOperatorContext } from "@/server/services/operator-isolation";
 import { barreUpstreamUrl, canAccessBarre } from "@/server/services/brand-node/barre-connection";
+import { getBarreBrandContext } from "@/server/services/brand-node/barre-context";
+import { barrePublicationInput, publishBarreDocument } from "@/server/services/brand-node/barre-document";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +36,25 @@ async function serve(request: Request, context: Context) {
   if (!path.length) return new Response(null, { status: 307, headers: { ...PRIVATE, Location: "/la-barre/index.html" } });
   const rel = path.join("/");
   const readOnly = request.method === "GET" || request.method === "HEAD";
+  if (rel === "contexte.json" && readOnly) {
+    try { return Response.json(await getBarreBrandContext(actor), { headers: PRIVATE }); }
+    catch { return message("Les références de marque n’ont pas pu être relues.", 503); }
+  }
+  if (rel === "publication") {
+    if (request.method !== "POST") return message("Ouvrez le document depuis son dossier pour le partager.", 405);
+    if (!["ADMIN", "OPERATOR"].includes(actor.role)) return message("Le partage est pris en charge par votre équipe.", 403);
+    if (request.headers.get("origin") !== publicOrigin) return message("Ouvrez La Barre pour publier ce document.", 403);
+    try {
+      if (Number(request.headers.get("content-length") || 0) > 2_048) return message("Demande trop volumineuse.", 413);
+      const text = await request.text();
+      if (text.length > 2_048) return message("Demande trop volumineuse.", 413);
+      const input = barrePublicationInput.safeParse(JSON.parse(text));
+      if (!input.success) return Response.json({ quoi: "Le document à partager n’est pas reconnu." }, { status: 400, headers: PRIVATE });
+      return Response.json(await publishBarreDocument(input.data, actor), { headers: PRIVATE });
+    } catch {
+      return Response.json({ quoi: "La publication n’a pas été reçue. Votre travail reste dans son dossier ; reprenez le même lien." }, { status: 503, headers: PRIVATE });
+    }
+  }
   // Expose the native application and its corpus, never repository/configuration or local disk helpers.
   const readable = rel === "index.html" || /^(app|styles|corpus|sources|documents)\//.test(rel) ||
     (rel.startsWith("assets/") && !rel.startsWith("assets/production/")) ||

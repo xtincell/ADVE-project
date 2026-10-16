@@ -44,6 +44,10 @@ const SCAN_DIRS = [
 // + sources de chaînes rendues au prospect (grille /pricing).
 const EXTRA_FILES = [
   join(ROOT, "src/app/la-barre/[[...path]]/route.ts"),
+  join(ROOT, "src/app/la-barre/partage/[token]/[[...path]]/route.ts"),
+  join(ROOT, "src/server/services/brand-node/barre-context.ts"),
+  join(ROOT, "src/server/services/brand-node/barre-document.ts"),
+  join(ROOT, "src/server/services/brand-node/barre-document-runtime.ts"),
   join(ROOT, "src/server/services/brand-node/barre-connection.ts"),
   join(ROOT, "src/components/shared/markdown-content.tsx"),
   join(ROOT, "src/server/services/notoria/generate-typed-recos.ts"),

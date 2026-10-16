@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), actor: vi.fn(), fetch: vi.fn() }));
 vi.mock("@/lib/auth/config", () => ({ auth: mocks.auth }));
 vi.mock("@/server/services/operator-isolation", () => ({ getOperatorContext: mocks.actor }));
-import { GET, HEAD, PUT } from "@/app/la-barre/[[...path]]/route";
+import { GET, HEAD, PUT, POST } from "@/app/la-barre/[[...path]]/route";
 import { barreUpstreamUrl } from "@/server/services/brand-node/barre-connection";
 
 const context = (path = ["depots", "beignet-paradise.json"]) => ({ params: Promise.resolve({ path }) });
@@ -20,6 +20,25 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
 describe("native La Barre through the existing authenticated session", () => {
+  it("does not let an anonymous visitor publish a document", async () => {
+    mocks.auth.mockResolvedValue(null);
+    const response = await POST(new Request(url, { method: "POST", body: "{}" }), context(["publication"]));
+    expect(response.status).toBe(401); expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+  it("does not turn a team read permission into a publication permission", async () => {
+    const response = await POST(new Request(url, { method: "POST", body: "{}", headers: { origin: "https://workspace.example" } }), context(["publication"]));
+    expect(response.status).toBe(403); expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+  it("refuses a publication from a foreign origin before consulting the source", async () => {
+    mocks.actor.mockResolvedValue({ userId: "actor-a", role: "OPERATOR", operatorId: "agency-a" });
+    const response = await POST(new Request(url, { method: "POST", body: "{}", headers: { origin: "https://other.example" } }), context(["publication"]));
+    expect(response.status).toBe(403); expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+  it("rejects an unrecognized publication without exporting anything", async () => {
+    mocks.actor.mockResolvedValue({ userId: "actor-a", role: "OPERATOR", operatorId: "agency-a" });
+    const response = await POST(new Request(url, { method: "POST", body: '{"projectId":"PRJ-EOTY26","doc":"corpus"}', headers: { origin: "https://workspace.example" } }), context(["publication"]));
+    expect(response.status).toBe(400); expect(mocks.fetch).not.toHaveBeenCalled();
+  });
   it("refuses anonymous corpus reads and writes without touching the source", async () => {
     mocks.auth.mockResolvedValue(null);
     expect((await GET(new Request(url), context())).status).toBe(401);

@@ -52,7 +52,7 @@ const nextConfig: NextConfig = {
    */
   // PDF parsing loads a sibling worker at runtime. Bundling it into a Next
   // chunk breaks that path even though direct Node/unit extraction works.
-  serverExternalPackages: ["web-push", "puppeteer", "pdf-parse", "@napi-rs/canvas"],
+  serverExternalPackages: ["web-push", "puppeteer", "pdf-parse", "@napi-rs/canvas", "jsdom"],
   outputFileTracingIncludes: {
     "/*": [
       "./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",

@@ -34,6 +34,19 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.487",
+    date: "2026-10-17",
+    headline: "Vos références de marque dans vos documents",
+    highlights: [
+      { emoji: "📖", title: "Retrouver votre plateforme dans La Barre",
+        body: "Les références de marque sont consultables avec leur origine. Les spécificités locales des gammes restent conservées ; les corrections de la plateforme se font dans son éditeur habituel.",
+      },
+      { emoji: "📄", title: "Partager le document choisi",
+        body: "Le partage publie une édition datée de la pièce et des médias qu’elle présente, avec un bouton d’impression. Chaque lien ouvre uniquement le document choisi.",
+      },
+    ],
+  },
+  {
     version: "6.27.486",
     date: "2026-10-16",
     headline: "Vos campagnes dans votre session",
