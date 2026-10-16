@@ -22,9 +22,9 @@ describe("SESHAT — chunkText (BRAND_SOURCE chunking)", () => {
     const text = `${para}\n\n${para}\n\n${para}`;
     const chunks = chunkText(text);
     expect(chunks.length).toBeGreaterThanOrEqual(2);
-    // Each chunk respects the 2500 char ceiling (allowing ~2x for buffer-merge fallback).
+    // Every emitted chunk respects the canonical hard bound.
     for (const chunk of chunks) {
-      expect(chunk.text.length).toBeLessThanOrEqual(5000);
+      expect(chunk.text.length).toBeLessThanOrEqual(2500);
     }
     // Indexes are strictly increasing from 0
     expect(chunks.map((c) => c.index)).toEqual(chunks.map((_, i) => i));
@@ -36,7 +36,7 @@ describe("SESHAT — chunkText (BRAND_SOURCE chunking)", () => {
     expect(chunks.length).toBeGreaterThanOrEqual(2);
     // Hard ceiling enforced (no chunk grossly oversized).
     for (const chunk of chunks) {
-      expect(chunk.text.length).toBeLessThanOrEqual(5000);
+      expect(chunk.text.length).toBeLessThanOrEqual(2500);
     }
   });
 
@@ -59,6 +59,38 @@ describe("SESHAT — chunkText (BRAND_SOURCE chunking)", () => {
     const chunks = chunkText(text);
     for (let i = 1; i < chunks.length; i++) {
       expect(chunks[i]!.charStart).toBeGreaterThanOrEqual(chunks[i - 1]!.charStart);
+    }
+  });
+
+  it("retains exact original offsets through whitespace and long paragraphs", () => {
+    const text = "  \n" + "Première phrase précise.  ".repeat(160)
+      + "\r\n\r\n\r\n" + "Second paragraphe intact.\t".repeat(180) + "\n Fin.  ";
+    const chunks = chunkText(text);
+    expect(chunks.length).toBeGreaterThan(1);
+    for (const chunk of chunks) {
+      expect(text.slice(chunk.charStart, chunk.charEnd)).toBe(chunk.text);
+      expect(chunk.text.length).toBeLessThanOrEqual(2500);
+    }
+    expect(chunks.map(c => c.text).join("").replace(/\s/gu, ""))
+      .toBe(text.replace(/\s/gu, ""));
+    expect(chunks.at(-1)!.text).toContain("Fin.");
+  });
+
+  it("supports bounded source windows without dropping a short tail or splitting emoji", () => {
+    const text = "🙂".repeat(7000) + " Fin exacte.";
+    const chunks = chunkText(text, { maxChars: 12001 });
+    expect(chunks.length).toBeGreaterThan(1);
+    for (const chunk of chunks) {
+      expect(text.slice(chunk.charStart, chunk.charEnd)).toBe(chunk.text);
+      expect(chunk.text.length).toBeLessThanOrEqual(12001);
+      expect(chunk.text).not.toMatch(/^[\uDC00-\uDFFF]|[\uD800-\uDBFF]$/u);
+    }
+    expect(chunks.map(c => c.text).join("").replace(/\s/gu, "")).toBe(text.replace(/\s/gu, ""));
+  });
+
+  it("refuses unusable bounds rather than looping or silently changing the budget", () => {
+    for (const maxChars of [0, 1, -2, 2.5, NaN, Infinity]) {
+      expect(() => chunkText("Source", { maxChars })).toThrow(RangeError);
     }
   });
 });

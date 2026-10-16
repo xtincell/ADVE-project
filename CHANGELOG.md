@@ -1,5 +1,17 @@
 # Changelog — La Fusee
 
+## v6.27.482 — fix(seshat): conserver les extraits et leurs positions dans la source (2026-10-16)
+
+**Le découpage canonique conserve le texte non blanc et ses positions d’origine.**
+
+- `chunkText` existant corrigé : chaque extrait égale la tranche originale à ses offsets UTF-16, sans réécriture ni perte de fin courte ; couverture non blanche complète, borne configurable et paires de substitution préservées. Aucun nouveau service, gestionnaire d’appels, identité, canon ou écriture métier.
+- Trois régressions rouges initiales ; après correction du seul chunker, une verte/deux encore rouges classifier conservées. Deux garde-fous supplémentaires échouent sur le module original copié hors repo, puis cible actuelle 14/1 verte, sans mutation du code actif pour le rouge. DEFAULT 4 710/444, gouvernance 1 658/167 et typage/deux lints/cycles verts ; 24 avertissements préexistants par lint, CODE-MAP régénérée sans diff. Onze sources réelles du snapshot qualifiées ; huit noms de profils couverts sur neuf fenêtres de 12 000 caractères, sans sélection stratégique ou classification d’assets reçue.
+- Ancienne projection copie : 56 BRAND_SOURCE/zéro vecteur, sept textes différents de leur tranche aux positions annoncées. Premier POST `ingestion.prepareSourceIndex` expiré à 180 016 ms pendant compilation Turbopack sans réponse/retry automatique ; état identique au relevé puis à l’arrêt du serveur possédé, traces conservées. Reprise même source sous Webpack : `/api/version` 200/482 puis deux POST réels 200, 56 fragments aux textes/offsets UTF-16/hashes exacts et huit noms couverts ; second `alreadyFresh:true`, tous champs/IDs des fragments identiques. Aucun SLO ou incident production déduit des durées de recette.
+- Conservation reçue sur copie : onze tables métier, 1 514 autres nœuds et 9 984 émissions historiques exacts. Seules la projection cible et quatre émissions gouvernées nested `INDEX_BRAND_SOURCE` attendues pour les deux POST changent ; zéro modèle/embedding, zéro vecteur avant/après. Réception locale détaillée dans `source-local-received.json`/`qualify-index.ts` ; CI/image/runtime 482 non reçus, production toujours 481.
+- Classificateur toujours limité au préfixe de 12 000 caractères et fusionnant les propositions de même kind ; idempotence selon version de traitement à qualifier. Reprise immédiate après ce socle dans l’entrée C3 existante, sans nouvelle surcouche ; aucune clôture C3 ou note client pour cette plomberie. Seize réceptions/zéro chantier sur sept/progression globale non calculée inchangés.
+
+[Bornage et reprise](docs/governance/REFONTE-PLAN.md).
+
 ## v6.27.481 — fix(governance): distinguer les liens vérifiés des références différées (2026-10-16)
 
 **Un identifiant manquant ne vaut plus preuve de cohérence.**
