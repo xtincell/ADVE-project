@@ -59,10 +59,14 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
       // Si callbackUrl fourni (deep link), on respecte. Sinon, redirect
       // role-based vers le portail correspondant.
       let target = callbackUrl;
+      // A native campaign uses hash routes. HTTP redirects retain that fragment
+      // on /login; carry it back after sign-in, then load the native document.
+      if (target?.startsWith("/la-barre/") && !target.includes("#")) target += window.location.hash;
       if (!target) {
         const session = await getSession();
         target = portalForRole(session?.user?.role);
       }
+      if (target.startsWith("/la-barre/")) { window.location.assign(target); return; }
       router.push(target);
       router.refresh();
     } catch {
@@ -74,7 +78,9 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
   function handleGoogle() {
     // OAuth = redirection plein écran ; NextAuth gère le retour vers callbackUrl.
     // Le portail final est résolu par role côté /portals si pas de deep link.
-    void signIn("google", { callbackUrl: callbackUrl ?? "/portals" });
+    const target = callbackUrl?.startsWith("/la-barre/") && !callbackUrl.includes("#")
+      ? callbackUrl + window.location.hash : callbackUrl ?? "/portals";
+    void signIn("google", { callbackUrl: target });
   }
 
   return (

@@ -96,7 +96,7 @@ describe("ventilation fidèle aux identités sources", () => {
   });
   it("ouvre la revue disponible sans fabriquer de lien public pour un master privé", () => {
     const result = projectBarreWorkspace({ ...data, sku: [{ id: "pack", marque: "br", nom: "Pack", production: "assets/production/pack.png", review: "assets/review/pack.png", vignette: "assets/review/proxy/pack.jpg" }] }, [{ system: "LA_BARRE", kind: "brand", id: "br" }]);
-    expect(result.products[0]?.url).toBe("https://labarre.powerupgraders.com/assets/review/pack.png");
+    expect(result.products[0]?.url).toBe("/la-barre/assets/review/pack.png");
     expect(result.products[0]).toMatchObject({ hasProductionReference: true });
     expect(barreFileUrl("assets/production/pack.png")).toBeNull();
   });
@@ -113,6 +113,6 @@ describe("ventilation fidèle aux identités sources", () => {
   });
   it("emploie le fichier de revue léger désigné par la source pour l'aperçu et l'ouverture", () => {
     const result = projectBarreWorkspace({ ...data, proxys: { "assets/review/pack.png": "assets/review/proxy/pack.jpg" }, sku: [{ id: "pack", marque: "br", nom: "Pack", vignette: "assets/review/pack.png", review: "assets/review/pack.png" }] }, [{ system: "LA_BARRE", kind: "brand", id: "br" }]);
-    expect(result.products[0]).toMatchObject({ preview: "https://labarre.powerupgraders.com/assets/review/proxy/pack.jpg", url: "https://labarre.powerupgraders.com/assets/review/proxy/pack.jpg" });
+    expect(result.products[0]).toMatchObject({ preview: "/la-barre/assets/review/proxy/pack.jpg", url: "/la-barre/assets/review/proxy/pack.jpg" });
   });
 });

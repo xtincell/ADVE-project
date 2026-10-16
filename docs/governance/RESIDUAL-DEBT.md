@@ -1,3 +1,7 @@
+## La Barre — périmètre de délégation et partage client (2026-10-16, ADR-0216)
+
+Le candidat 486 raccorde le corpus d’équipe à la session existante ; il ne crée pas de délégation limitée à un projet et ne reçoit pas le partage client anonyme. Le client ne doit pas recevoir le corpus complet pour consulter une présentation. Reprise : lot C6 de remise/retour Noël, avant tout envoi de lien client ; qualifier les partages et rendus existants puis exercer une lecture limitée à la pièce autorisée, refus des autres dossiers et révocation, via l’existant. Aucun envoi ou accès client créé dans ce lot. Portée : lecteur de partage et droits de pièce, sans nouveau compte global ni copie de toute la base.
+
 # RESIDUAL DEBT — inventaire honnête des résidus
 
 ## Édition publique et surfaces de marque — 2026-10-08 (ADR-0209)

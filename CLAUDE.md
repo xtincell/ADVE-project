@@ -1,3 +1,5 @@
+**486 candidat, raccord natif La Barre** : ADR-0216 réutilise Auth.js, affectation actuelle et liste d’équipes du portefeuille ; refus des autres entreprises, écriture opérateur/origine, transport natif conditionnel sans copie métier ou nouveau gestionnaire. Adresse amont d’installation privée, liens natifs dans la même session. Réception HTTP/navigateur/déploiement ouverte, ne pas fermer C3/C4/C7 sur les tests. 485 est reçue en production (61b2f92c, index c9622fb0, runtime485 exact, deux dossiers conservés) ; les formulations historiques de candidat ci-dessous sont des checkpoints antérieurs.
+
 # La Fusée — Project Memory
 
 This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/code). It briefs any agent picking up work on this repo.

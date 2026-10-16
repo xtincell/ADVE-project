@@ -1,3 +1,10 @@
+## v6.27.486 — fix(access): raccorder La Barre à la session existante (2026-10-16)
+
+**Le travail créatif retrouve le compte et les droits de son équipe.**
+
+- Montage natif authentifié, affectation relue, autre entreprise refusée ; écritures opérateur et origine contrôlées. Les octets, révisions et conflits restent dans La Barre.
+- Le portefeuille lit une adresse privée configurée ; absence de connexion explicite et liens natifs vers le même compte. Aucun nouveau compte, gestionnaire, modèle ou décision métier. Réception du déploiement distincte des tests ; ADR-0216.
+
 # Changelog — La Fusee
 
 ## v6.27.485 — fix(portfolio): réunir les suivis et les états réels du travail (2026-10-16)

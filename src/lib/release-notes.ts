@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.486",
+    date: "2026-10-16",
+    headline: "Vos campagnes dans votre session",
+    highlights: [{ emoji: "📂", title: "Poursuivre le travail créatif",
+      body: "Ouvrez La Barre depuis votre portefeuille avec le même compte. Le travail reste dans son outil, avec les accès de votre équipe.",
+    }],
+  },
+  {
     version: "6.27.485",
     date: "2026-10-16",
     headline: "Retrouver vos suivis et vos dossiers clos",

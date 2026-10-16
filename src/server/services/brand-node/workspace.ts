@@ -3,7 +3,8 @@ import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { db } from "@/lib/db";
 import { listBrandSourceSummaries } from "@/server/services/ingestion-pipeline/source-usage";
 import { inspectPortfolioReferences, portfolioReferenceKey } from "@/domain/portfolio-reference";
-import { BARRE_ORIGIN, projectBarreWorkspace, type BarreWorkspace } from "@/domain/portfolio-barre";
+import { projectBarreWorkspace, type BarreWorkspace } from "@/domain/portfolio-barre";
+import { barreUpstreamUrl } from "./barre-connection";
 import { signalObservation } from "@/domain/signal-observation";
 import { metricObservationTime } from "@/domain/external-metric";
 
@@ -13,7 +14,7 @@ let pending: Promise<{ data: unknown; fetchedAt: number }> | undefined;
 async function readBarre() {
   if (cache && Date.now() - cache.fetchedAt < 60_000) return cache;
   if (!pending) pending = (async () => {
-    const response = await fetch(`${BARRE_ORIGIN}/depots/beignet-paradise.json`, {
+    const response = await fetch(barreUpstreamUrl(["depots", "beignet-paradise.json"]), {
       signal: AbortSignal.timeout(12_000), cache: "no-store", redirect: "error",
     });
     if (!response.ok) throw new Error(`La Barre répond ${response.status}`);

@@ -13,6 +13,7 @@
 import { z } from "zod";
 import { PortfolioReferencesSchema } from "@/domain/portfolio-reference";
 import { getPortfolioWorkspace } from "@/server/services/brand-node/workspace";
+import { canAccessBarre } from "@/server/services/brand-node/barre-connection";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
@@ -298,8 +299,7 @@ export const brandNodeRouter = createTRPCRouter({
     if (opCtx.role !== "ADMIN" && opCtx.operatorId !== node.operatorId) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Cet espace est réservé à votre équipe." });
     }
-    const allowedBarre = opCtx.role === "ADMIN" ||
-      (process.env.PORTFOLIO_BARRE_OPERATOR_IDS ?? "").split(",").includes(node.operatorId);
+    const allowedBarre = canAccessBarre(opCtx);
     return getPortfolioWorkspace(node, { allowBarre: allowedBarre, actor: opCtx });
   }),
 

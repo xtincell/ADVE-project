@@ -1,6 +1,7 @@
 import { portfolioFileUrl, type PortfolioReference } from "./portfolio-reference";
 
-export const BARRE_ORIGIN = "https://labarre.powerupgraders.com";
+// Native links stay on this installation and reuse its authenticated session.
+export const BARRE_ORIGIN = "/la-barre";
 type Row = Record<string, unknown>;
 export const asRow = (v: unknown): Row => v && typeof v === "object" && !Array.isArray(v) ? v as Row : {};
 export const asRows = (v: unknown): Row[] => Array.isArray(v) ? v.map(asRow) : [];
@@ -17,7 +18,7 @@ export function barreFileUrl(value: unknown): string | null {
   if (!/^(assets|corpus)\//.test(path) || path.split("/").includes("..")) return null;
   // La Barre keeps production masters on the holder's machine, not its public host.
   if (path.startsWith("assets/production/")) return null;
-  return new URL(path.split("/").map(encodeURIComponent).join("/"), `${BARRE_ORIGIN}/`).href;
+  return `${BARRE_ORIGIN}/${path.split("/").map(encodeURIComponent).join("/")}`;
 }
 
 export interface WorkspaceAsset {
@@ -108,7 +109,7 @@ export function projectBarreWorkspace(raw: unknown, references: PortfolioReferen
       objective: asText(brief.objectif_com) || asText(identity.objectif),
       brief: asText(brief.verbatim), deliverables: readableValue(brief.livrables_attendus),
       constraints: readableValue(brief.contraintes), schedule: readableValue(brief.calendrier),
-      sourceUrl: `${BARRE_ORIGIN}/#/projets/${encodeURIComponent(asText(p.id))}`,
+      sourceUrl: `${BARRE_ORIGIN}/index.html#/projets/${encodeURIComponent(asText(p.id))}`,
       inferredPerimeter: Boolean(perimeter.infere), source: "La Barre",
     };
   });

@@ -1,3 +1,7 @@
+## 16 octobre — raccord natif La Barre et session, candidat 486
+
+ADR-0216 : étendre les mécanismes auth/operator-isolation/brand-node, conserver l’autorité La Barre et son PUT conditionnel. Le routeur HTTPS source observé ne porte que gzip ; lecture et écriture conditionnelle sans auth applicative reçues depuis le VPS, réseau arbitraire non mesuré. Montage `/la-barre/` et adresse privée configurée à recevoir avant fermeture de l’ancien chemin. Aucune permission nouvelle pour une autre entreprise, aucun compte ou gestionnaire ajouté.
+
 # La Fusée — Refonte Governance "Sans Compromis"
 
 ## Dossiers SPAWT/FrieslandCampina — projection 485 candidate (2026-10-16)
@@ -3666,3 +3670,8 @@ verrou et refus des conflits. L’action d’historique perd son writer direct ;
 l’amendement conserve l’id serveur réel. Aucun nouveau modèle, Intent ou agent.
 Les anciennes archives et les autres compensateurs ne sont pas reçus par ce lot.
 La restauration intégrale du SI demeure au chantier C7 Shinkiro.
+
+
+### Réception copie 486 — accès natif
+
+Copie sous compte ADMIN fictif existant, aucune permission créée : document200, DOM32 578ms (CDP Performance), titre observé dans une borne114 050ms, quatre pistes/seize champs et formulaire natif quatre champs reçus. 0/56 images sur cette copie : volumes médias non miroités, pas une panne du serveur réel déduite. Deux fenêtres réseau partiellement tronquées, 0erreur serveur/exception observée seulement ; pas de SLO ou fenêtre entière reçu. HTTP réel de copie : GET200, PUT identique200/idempotence, payload différent avec révision périmée409, origine étrangère403, source171projets exactement conservée. Première attente de sessionP1017 après fermeture du forward local conservée ; tunnel rétabli vers la même copie sans restauration. Preuves privées `release/preuves-source-access-20261016/{native-copy-received,copy-http-write-received}.json`.
