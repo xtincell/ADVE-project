@@ -50,18 +50,22 @@ export const strategyRouter = createTRPCRouter({
       // porter un id orphelin après re-seed (sinon FK Strategy_userId_fkey).
       const { resolveSessionUserId } = await import("../resolve-session-user");
       const userId = await resolveSessionUserId(ctx);
+      const { lookupCountry } = await import("@/server/services/country-registry");
+      const declaredCountry = country ? await lookupCountry(country) : null;
+      const biz = businessContext as Record<string, unknown> | undefined;
+      const declaredBusinessContext = sector ? { ...biz, sector } : biz;
       const strategy = await ctx.db.strategy.create({
         data: {
           ...rest,
           userId,
           operatorId: input.operatorId ?? (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | undefined,
           clientId: clientId ?? undefined,
-          businessContext: businessContext as Prisma.InputJsonValue,
+          businessContext: declaredBusinessContext as Prisma.InputJsonValue,
+          ...(declaredCountry ? { countryCode: declaredCountry.code, currencyCode: declaredCountry.currencyCode } : {}),
         },
       });
 
       // Auto-create 8 pillars — seed A and V with Strategy metadata (Chantier -1)
-      const biz = businessContext as Record<string, unknown> | undefined;
       const pillarSeeds: Record<string, Record<string, unknown>> = {
         a: {
           nomMarque: input.name,
@@ -175,7 +179,9 @@ export const strategyRouter = createTRPCRouter({
 
       // Auto-create BrandOSConfig
       await ctx.db.brandOSConfig.create({
-        data: { strategyId: strategy.id, config: { currency: "XAF", language: "fr" } },
+        data: { strategyId: strategy.id, config: {
+          ...(declaredCountry ? { currency: declaredCountry.currencyCode } : {}), language: "fr",
+        } },
       }).catch((err) => { console.warn("[strategy] brandOS config creation failed:", err instanceof Error ? err.message : err); });
 
       // A brand dossier is not a sale. Commercial opportunities and their

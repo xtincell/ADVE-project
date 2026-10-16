@@ -8,6 +8,7 @@ import { INTAKE_SECTORS, INTAKE_COUNTRIES } from "@/lib/constants/intake-options
 import { PageHeader } from "@/components/shared/page-header";
 import { SourcePreparationOption } from "@/components/brand/source-preparation-option";
 import { useT } from "@/lib/i18n/use-t";
+import { useStrategy } from "@/components/cockpit/strategy-context";
 import {
   Rocket, Building2, Globe, DollarSign, Users, ArrowRight,
   ArrowLeft, Check, Sparkles, ShoppingBag, Radio, Zap,
@@ -75,6 +76,7 @@ const COUNTRIES = INTAKE_COUNTRIES;
 export default function NewBrandPage() {
   const router = useRouter();
   const { t } = useT();
+  const { setStrategyId } = useStrategy();
   const [prepareAssistance, setPrepareAssistance] = useState(false);
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -116,7 +118,10 @@ export default function NewBrandPage() {
     { enabled: !!intakeToken },
   );
   const activateBrand = trpc.quickIntake.activateBrand.useMutation({
-    onSuccess: () => router.push("/cockpit"),
+    onSuccess: (data) => {
+      setStrategyId(data.strategyId);
+      router.push(`/cockpit/brand/fondation?strategy=${data.strategyId}`);
+    },
     onError: (e) => setError(e.message || "Activation impossible — créez la marque manuellement ci-dessous."),
   });
   const intakeMatchesSession =
@@ -166,6 +171,11 @@ export default function NewBrandPage() {
   };
 
   const handleSubmit = async () => {
+    if (createdId) {
+      setStrategyId(createdId);
+      router.push(`/cockpit/brand/fondation?strategy=${createdId}`);
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
     try {
@@ -188,6 +198,7 @@ export default function NewBrandPage() {
       });
 
       setCreatedId(result.id);
+      setStrategyId(result.id);
 
       // The dossier is usable manually; assisted questions require an opt-in.
       if (prepareAssistance) try {
@@ -233,7 +244,7 @@ export default function NewBrandPage() {
       <SourcePreparationOption
         checked={prepareAssistance}
         onChange={setPrepareAssistance}
-        disabled={isSubmitting || activateBrand.isPending}
+        disabled={isSubmitting || activateBrand.isPending || !!createdId}
         label={t("intakeResult.activate.assistanceTitle")}
         description={t("intakeResult.activate.assistanceDescription")}
       />
@@ -271,7 +282,8 @@ export default function NewBrandPage() {
         {STEPS.map((s, i) => (
           <div key={i} className="flex items-center gap-2 flex-1">
             <button
-              onClick={() => i < step && setStep(i)}
+              onClick={() => !createdId && i < step && setStep(i)}
+              disabled={!!createdId}
               className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-all w-full ${
                 i === step
                   ? "bg-accent text-white font-medium"
@@ -535,6 +547,7 @@ export default function NewBrandPage() {
       {/* Navigation buttons */}
       <div className="flex justify-between">
         <button
+          disabled={!!createdId}
           onClick={() => step > 0 ? setStep(step - 1) : router.push("/cockpit")}
           className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground-secondary hover:bg-surface-raised"
         >
@@ -565,7 +578,7 @@ export default function NewBrandPage() {
             ) : (
               <>
                 <Rocket className="h-4 w-4" />
-                Créer la marque
+                {createdId ? "Ouvrir la marque" : "Créer la marque"}
               </>
             )}
           </button>

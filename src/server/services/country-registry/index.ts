@@ -40,12 +40,11 @@ async function load(): Promise<void> {
       usdRate: c.usdRate,
     });
   }
-  // Deterministic fallback: a fresh / un-seeded prod DB has empty Currency
-  // rows, which would make every price resolution throw. Seed the in-memory
-  // map from the canonical static table so the registry is never empty.
-  if (cur.size === 0) {
-    const { FALLBACK_CURRENCIES } = await import("./fallback");
-    for (const c of FALLBACK_CURRENCIES) cur.set(c.code, c);
+  // Complete only absent codes, including a partially seeded database.
+  // Operator-configured currency records always take precedence.
+  const { FALLBACK_CURRENCIES, buildFallbackCountries } = await import("./fallback");
+  for (const c of FALLBACK_CURRENCIES) {
+    if (!cur.has(c.code)) cur.set(c.code, c);
   }
 
   const byCode = new Map<string, CountryRecord>();
@@ -70,14 +69,12 @@ async function load(): Promise<void> {
     byCode.set(c.code.toUpperCase(), rec);
     byName.set(c.name.toLowerCase(), rec);
   }
-  // Same fallback for countries — keeps /pricing and quotes working before
-  // `prisma/seed-countries.ts` has run against this database.
-  if (byCode.size === 0) {
-    const { buildFallbackCountries } = await import("./fallback");
-    for (const rec of buildFallbackCountries(cur)) {
-      byCode.set(rec.code.toUpperCase(), rec);
-      byName.set(rec.name.toLowerCase(), rec);
-    }
+  // The canonical fallback also covers missing countries in partial seeds.
+  // Never replace a configured code or a configured name with a fallback.
+  for (const rec of buildFallbackCountries(cur)) {
+    if (byCode.has(rec.code.toUpperCase())) continue;
+    byCode.set(rec.code.toUpperCase(), rec);
+    if (!byName.has(rec.name.toLowerCase())) byName.set(rec.name.toLowerCase(), rec);
   }
   _byCode = byCode;
   _byName = byName;

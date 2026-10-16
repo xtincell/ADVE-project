@@ -18,6 +18,9 @@ vi.mock("@/server/governance/governed-procedure", async () => {
 });
 vi.mock("@/server/trpc/resolve-session-user", () => ({ resolveSessionUserId: async () => "operator-user" }));
 vi.mock("@/server/services/audit-trail", () => ({ log: vi.fn(async () => undefined) }));
+vi.mock("@/server/services/country-registry", () => ({
+  lookupCountry: async (country: string) => country === "CI" ? { code: "CI", currencyCode: "XOF" } : null,
+}));
 
 import { buildInitialIntakeResponses, formatIntakeRawContent, strategyRouter } from "@/server/trpc/routers/strategy";
 
@@ -32,6 +35,30 @@ function persistence() {
 }
 
 describe("creation source does not fabricate diagnostic evidence", () => {
+  it("keeps the declared market in the existing routing fields and currency registry", async () => {
+    const db = persistence();
+    const caller = strategyRouter.createCaller({ db,
+      session: { user: { id: "operator-user", name: "Operator", email: "operator@example.test" } },
+    } as any);
+    await caller.create({ name: "Declared market", country: "CI", sector: "CONSEIL", businessContext: { businessModel: "SERVICES" } });
+    expect(db.strategy.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      countryCode: "CI", currencyCode: "XOF", businessContext: { businessModel: "SERVICES", sector: "CONSEIL" },
+    }) }));
+    expect(db.brandOSConfig.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      config: expect.objectContaining({ currency: "XOF" }),
+    }) }));
+  });
+
+  it("does not turn an unknown country into a Cameroon currency declaration", async () => {
+    const db = persistence();
+    const caller = strategyRouter.createCaller({ db,
+      session: { user: { id: "operator-user", name: "Operator", email: "operator@example.test" } },
+    } as any);
+    await caller.create({ name: "Unknown market", country: "AUTRE" });
+    expect(db.strategy.create.mock.calls[0]![0].data.countryCode).toBeUndefined();
+    expect(db.strategy.create.mock.calls[0]![0].data.currencyCode).toBeUndefined();
+    expect(db.brandOSConfig.create.mock.calls[0]![0].data.config.currency).toBeUndefined();
+  });
   it("opening a brand dossier does not invent a commercial opportunity or win", async () => {
     const db = persistence();
     const caller = strategyRouter.createCaller({

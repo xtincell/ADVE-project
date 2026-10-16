@@ -743,9 +743,26 @@ export const quickIntakeRouter = createTRPCRouter({
       // Defense (ADR-0029): convertedToId can dangle after Strategy archive+purge
       // (cf. ADR-0028). If the pointer is null OR the referenced Strategy was
       // purged, re-materialize the temp strategy from intake data.
-      const tempStrategyExists = intake.convertedToId
-        ? Boolean(await ctx.db.strategy.findUnique({ where: { id: intake.convertedToId }, select: { id: true } }))
-        : false;
+      const tempStrategy = intake.convertedToId
+        ? await ctx.db.strategy.findUnique({ where: { id: intake.convertedToId },
+            select: { id: true, status: true, countryCode: true, currencyCode: true, businessContext: true } })
+        : null;
+      const tempStrategyExists = Boolean(tempStrategy);
+
+      // Initialize routing from the declared intake only on first activation.
+      // A replay must preserve market choices made later in the cockpit.
+      const market: { countryCode?: string; currencyCode?: string; businessContext?: Prisma.InputJsonValue } = {};
+      if (!tempStrategy || tempStrategy.status === "QUICK_INTAKE") {
+        const { lookupCountry } = await import("@/server/services/country-registry");
+        const countryInput = tempStrategy?.countryCode || intake.country;
+        const declaredCountry = countryInput ? await lookupCountry(countryInput) : null;
+        if (!tempStrategy?.countryCode && declaredCountry) market.countryCode = declaredCountry.code;
+        if (!tempStrategy?.currencyCode && declaredCountry) market.currencyCode = declaredCountry.currencyCode;
+        const previousContext = (tempStrategy?.businessContext as Record<string, unknown> | null) ?? {};
+        if (!("sector" in previousContext) && intake.sector) {
+          market.businessContext = { ...previousContext, sector: intake.sector } as Prisma.InputJsonValue;
+        }
+      }
 
       const email = intake.contactEmail.toLowerCase();
 
@@ -799,6 +816,7 @@ export const quickIntakeRouter = createTRPCRouter({
         strategy = await ctx.db.strategy.update({
           where: { id: intake.convertedToId },
           data: {
+            ...market,
             userId: stubUser.id,
             operatorId: operator.id,
             clientId: client.id,
@@ -810,6 +828,7 @@ export const quickIntakeRouter = createTRPCRouter({
       } else {
         strategy = await ctx.db.strategy.create({
           data: {
+            ...market,
             name: intake.companyName,
             description: `Activé self-serve depuis Quick Intake le ${new Date().toLocaleDateString("fr-FR")}`,
             userId: stubUser.id,

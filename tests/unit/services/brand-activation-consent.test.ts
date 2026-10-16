@@ -29,6 +29,9 @@ vi.mock("@/server/services/quick-intake/question-bank", () => ({
   getAdaptiveQuestions: vi.fn(), getBusinessContextQuestions: vi.fn(), getAllQuestions: vi.fn(),
 }));
 vi.mock("@/server/services/quick-intake/infer-needs-human-fields", () => ({ inferNeedsHumanFields: h.infer }));
+vi.mock("@/server/services/country-registry", () => ({
+  lookupCountry: async (country: string) => (({ CI: { code: "CI", currencyCode: "XOF" }, FR: { code: "FR", currencyCode: "EUR" } } as Record<string, { code: string; currencyCode: string }>)[country] ?? null),
+}));
 vi.mock("@/server/services/mestor", () => ({}));
 vi.mock("@/server/services/mestor/intents", () => ({ emitIntent: vi.fn() }));
 vi.mock("@/server/services/pillar-gateway", () => ({ writePillar: h.write }));
@@ -63,6 +66,33 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("brand activation keeps assistance optional", () => {
+  it("initializes the declared market on first activation through the existing registry", async () => {
+    h.db.quickIntake.findUnique.mockResolvedValue({ ...intake, country: "CI", sector: "CONSEIL" });
+    h.db.strategy.findUnique.mockResolvedValue({ id: "brand-fixture", status: "QUICK_INTAKE", countryCode: null, currencyCode: null, businessContext: {} });
+    await caller().activateBrand({ token: "fixture-token" });
+    expect(h.db.strategy.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      countryCode: "CI", currencyCode: "XOF", businessContext: { sector: "CONSEIL" },
+    }) }));
+    expect(h.infer).not.toHaveBeenCalled();
+  });
+
+  it("preserves later manual market choices, including explicit empty values, on replay", async () => {
+    h.db.quickIntake.findUnique.mockResolvedValue({ ...intake, country: "CI", sector: "CONSEIL" });
+    h.db.strategy.findUnique.mockResolvedValue({ id: "brand-fixture", status: "ACTIVE", countryCode: null, currencyCode: null, businessContext: { sector: null } });
+    await caller().activateBrand({ token: "fixture-token" });
+    const data = h.db.strategy.update.mock.calls[0]![0].data;
+    expect(data).not.toHaveProperty("countryCode"); expect(data).not.toHaveProperty("currencyCode");
+    expect(data).not.toHaveProperty("businessContext"); expect(h.infer).not.toHaveBeenCalled();
+  });
+
+  it("does not replace an existing country or declared sector during first promotion", async () => {
+    h.db.quickIntake.findUnique.mockResolvedValue({ ...intake, country: "CI", sector: "CONSEIL" });
+    h.db.strategy.findUnique.mockResolvedValue({ id: "brand-fixture", status: "QUICK_INTAKE", countryCode: "FR", currencyCode: null, businessContext: { sector: "TOURISME" } });
+    await caller().activateBrand({ token: "fixture-token" });
+    const data = h.db.strategy.update.mock.calls[0]![0].data;
+    expect(data).not.toHaveProperty("countryCode"); expect(data.currencyCode).toBe("EUR");
+    expect(data).not.toHaveProperty("businessContext");
+  });
   it.each([undefined, false])("activates without background inference when opt-in is %s", async inferMissingFields => {
     const result = await caller().activateBrand({ token: "fixture-token", ...(inferMissingFields === undefined ? {} : { inferMissingFields }) });
     await new Promise(resolve => setTimeout(resolve, 0));
