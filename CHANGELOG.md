@@ -1,3 +1,11 @@
+## v6.27.491 — fix(mestor): share complete context with field completion (2026-10-17)
+
+Le catalogue SPAWT I3 reçu en production contient 37 propositions sur six canaux. Sa projection qualifiée atteint 86 348 caractères et dépassait la limite structurée de 64 K avant d’atteindre le gestionnaire d’appels. La limite d’admission par pilier passe à 128 K ; les fenêtres de modèles, la compression Headroom, les routes et les budgets restent sous le contrôle du gestionnaire existant. Les structures trop grandes restent refusées explicitement, sans couper le JSON.
+
+Le lecteur de complétion après génération R/T/I réutilise maintenant la même projection que R/T/I/Council. Son ancien résumé à 6 K supprimait les références et les entrées après la cinquième, après même qu’un générateur les avait conservées. Les ancres de champ et les protections inter-items restent présentes. Aucun nouveau manager, outil ou agent ; aucune donnée de marque régénérée par cette correction de lecteur. Les documents sources et leurs limites ne sont pas modifiés par ce lot.
+
+Contrôles locaux : 62 scénarios ciblés, typage. Réception CI, image et pont Galahad → La Fusée à recevoir distinctement ; aucun crédit de qualité des propositions ou de maturité globale.
+
 ## v6.27.490 — fix(rtis): preserve documented audiences and entity references (2026-10-17)
 
 Les lecteurs R/T/I réutilisent la projection de contexte de R : toutes les entrées et leurs identifiants survivent, les longues feuilles de prose sont résumées, chaque champ garde sa provenance. La limite de 24 K caractères qui coupait le JSON est remplacée par un refus explicite au-delà de 64 K par pilier. Track transmet ses signaux datés et identifiés au modèle, dans le périmètre de la marque ; leur collecte ne vaut pas validation.

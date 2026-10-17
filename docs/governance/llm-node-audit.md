@@ -44,7 +44,7 @@ Ces points appellent `callLLM`/`callLLMAndParse` sans passer par `executeStructu
 | `src/server/services/mestor/insights.ts` | 253 | 1 | ✅ FENCED | non |
 | `src/server/services/mestor/rtis-cascade.ts` | 78 | 1 | ✅ FENCED | non |
 | `src/server/services/notoria/engine.ts` | 45 | 1 | ✅ FENCED | non |
-| `src/server/services/pillar-maturity/auto-filler.ts` | 1032, 1275 | 2 | ✅ FENCED | non |
+| `src/server/services/pillar-maturity/auto-filler.ts` | 986, 1229 | 2 | ✅ FENCED | non |
 | `src/server/services/qc-router/automated-qc.ts` | 151 | 1 | ✅ FENCED | non |
 | `src/server/services/quick-intake/brand-level-evaluator.ts` | 288 | 1 | ✅ FENCED | non |
 | `src/server/services/quick-intake/deduce-adve.ts` | 147, 173 | 2 | ✅ FENCED | non |

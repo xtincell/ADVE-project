@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.491",
+    date: "2026-10-17",
+    headline: "Conserver le contexte d’un catalogue complet",
+    highlights: [{ emoji: "📚", title: "Retrouver toutes les entrées dans les compléments",
+      body: "La complétion d’une analyse conserve les profils, actions et références déjà disponibles, avec leur origine. Un catalogue complet peut ainsi être consulté par les autres analyses sans être coupé au milieu.",
+    }],
+  },
+  {
     version: "6.27.490",
     date: "2026-10-17",
     headline: "Retrouver tous vos profils dans les analyses",

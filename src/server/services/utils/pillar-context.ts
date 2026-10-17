@@ -28,7 +28,10 @@ export function serializePillar(key: string, content: unknown, fieldStatus?: (fi
   const json = JSON.stringify(qualified, null, 2);
   // Never hand a reader half a JSON object or silently discard its last personas.
   // The former 8K/1.1K summaries also removed all nested foreign-key targets.
-  const max = 64_000;
+  // A complete I catalogue is larger than the former 64K per-pillar guard.
+  // Keep admission bounded and lossless at the record level; model-window
+  // compression, routing and cost remain the existing gateway's responsibility.
+  const max = 128_000;
   if (json.length > max) throw new Error(`PILLAR_CONTEXT_TOO_LARGE: ${key} dépasse la fenêtre structurée (${json.length}/${max}).`);
   return wrapUntrusted(`PILIER ${key}`, json, { max });
 }

@@ -14,6 +14,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildFieldAnchor } from "@/lib/types/pillar-maturity-contracts";
+import { buildPillarContext } from "@/server/services/pillar-maturity/auto-filler";
 
 const personas = [
   { name: "Betsy", age: 40, csp: "Cadre supérieur", location: "Cocody", motivations: ["statut"] },
@@ -82,8 +83,18 @@ describe("câblage — l'ancre est réellement injectée dans le prompt de gén�
   it("la règle d'anti-contamination inter-items est présente dans les consignes LLM", () => {
     expect(src).toMatch(/anti-contamination inter-items/i);
   });
-  it("summarizePillar garde les identités des items au lieu d'un opaque [Array×N]", () => {
-    // La regex prouve la branche « [Array×N: id, id] » (identités préservées).
-    expect(src).toMatch(/\[Array×\$\{v\.length\}: \$\{ids\.join/);
+  it("completion retains all eight identity-bearing records, references and source qualification", () => {
+    const entries = Array.from({ length: 8 }, (_, i) => ({ id: `profile-${i}`, name: `Profile ${i}`,
+      detail: "Source detail ".repeat(200), productRefs: [`product-${i}`] }));
+    const out = buildPillarContext({ d: { personas: entries, _fieldProvenance: { personas: "SOURCE" } },
+      v: { products: [{ id: "product-7", nom: "Final product" }] } });
+    const firstBlock = out.split("\n\n")[0]!;
+    const data = JSON.parse(firstBlock.slice(firstBlock.indexOf("\n") + 1, firstBlock.lastIndexOf("\n")));
+    expect(data.personas.valeur).toHaveLength(8);
+    expect(data.personas.valeur[7]).toMatchObject({ id: "profile-7", name: "Profile 7", productRefs: ["product-7"] });
+    expect(data.personas.statut).toBe("SOURCE");
+    expect(out).toContain("Final product");
+    expect(entries[7]!.detail.length).toBeGreaterThan(400);
+    expect(data.personas.valeur[7].detail).toHaveLength(401);
   });
 });

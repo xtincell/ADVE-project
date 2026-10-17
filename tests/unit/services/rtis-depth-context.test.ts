@@ -29,6 +29,22 @@ describe("projectForContext — prose capée, structure intacte", () => {
 });
 
 describe("serializePillar — la matrice profonde n'est plus tronquée (Phase 4)", () => {
+  it("admits a complete six-channel catalogue above 64K without dropping records or authority", () => {
+    let n = 0;
+    const catalogueParCanal = Object.fromEntries(["DIGITAL", "PRODUCTION", "EVENEMENTIEL", "PR_INFLUENCE", "MEDIA_TRADITIONNEL", "RETAIL_DISTRIBUTION"]
+      .map(channel => [channel, Array.from({ length: 7 }, () => ({ id: `initiative-${++n}`, action: `Action ${n}`,
+        objectif: "a".repeat(500), execution: "b".repeat(500), justification: "c".repeat(500),
+        detail: "d".repeat(500), targetsPersonaIds: ["profile-7"], budget: 0 }))]));
+    const out = serializePillar("I", { catalogueParCanal, _fieldProvenance: { catalogueParCanal: "INFERRED" } });
+    expect(out.length).toBeGreaterThan(64_000);
+    const data = JSON.parse(out.slice(out.indexOf("\n") + 1, out.lastIndexOf("\n")));
+    expect(Object.values(data.catalogueParCanal.valeur).flat()).toHaveLength(42);
+    expect(data.catalogueParCanal.valeur.RETAIL_DISTRIBUTION[6]).toMatchObject({
+      id: "initiative-42", targetsPersonaIds: ["profile-7"], budget: 0,
+    });
+    expect(data.catalogueParCanal.statut).toBe("INFERRED");
+    expect(catalogueParCanal.DIGITAL![0]!.objectif).toHaveLength(500);
+  });
   it("retains eight sourced profiles without inventing seven priorities", () => {
     const personas = Array.from({ length: 8 }, (_, i) => ({ id: `10000000-0000-4000-8000-00000000000${i}`, name: `Profile ${i}`,
       csp: "Documentaire", location: "Non renseigné", motivations: "Contexte source",
