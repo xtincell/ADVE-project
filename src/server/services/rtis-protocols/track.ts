@@ -100,7 +100,9 @@ async function loadExternalSaasSignals(strategyId?: string): Promise<Array<Recor
     orderBy: { createdAt: "desc" },
     take: 20,
   });
-  return signals.map((s) => ({ type: s.type, data: s.data, createdAt: s.createdAt }));
+  // This projection enters Pillar.content and the strict JSON audit diff.
+  // Prisma dates must cross that boundary as timestamps, never Date objects.
+  return signals.map((s) => ({ type: s.type, data: s.data, createdAt: s.createdAt.toISOString() }));
 }
 
 /** Nombre de variables Trend Tracker effectivement renseignées (valeur non-nulle). */

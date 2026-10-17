@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.489",
+    date: "2026-10-17",
+    headline: "Actualiser le marché avec vos signaux récents",
+    highlights: [{ emoji: "📅", title: "Conserver les observations et leurs dates",
+      body: "Les signaux récents de votre marque conservent leur date dans l’analyse. Leur présence ne bloque plus l’enregistrement du recalcul.",
+    }],
+  },
+  {
     version: "6.27.488",
     date: "2026-10-17",
     headline: "Retrouver les résultats actuels de vos analyses",
