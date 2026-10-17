@@ -7,7 +7,7 @@ vi.mock("next-auth", () => ({}));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
 const draftProvider = vi.hoisted(() => ({
   callLLM: vi.fn(async () => ({ text: "{}" })),
-  track: vi.fn(async () => ({ pillarKey: "t", content: {} as Record<string, unknown>, confidence: 0 })),
+  track: vi.fn(async (_strategyId: string) => ({ pillarKey: "t", content: {} as Record<string, unknown>, confidence: 0 })),
   innovation: vi.fn(async () => ({ catalogueParCanal: { DIGITAL: [{
     id: "22222222-2222-4222-8222-222222222222", action: "Budget réellement inconnu",
     format: "Text", objectif: "Objectif fictif", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90",
@@ -128,6 +128,33 @@ describe("derived RTIS snapshots replace obsolete work through both existing ent
     await actualizePillar(f.strategy.id, "T");
     const saved = await db.pillar.findUniqueOrThrow({ where: { id: t.id } });
     expect((saved.content as Record<string, unknown>).hypothesisValidation).toEqual(previous.hypothesisValidation);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+  it("actual Track signals cross the JSON audit boundary with their dates and brand scope intact", async () => {
+    const f = await fixture(), neighbor = await fixture();
+    const observedAt = new Date(Date.now() - 5000);
+    const previous = { hypothesisValidation: [], retainedSource: "Prior synthetic source", _fieldProvenance: {} };
+    const t = await db.pillar.create({ data: { strategyId: f.strategy.id, key: "t", content: previous, currentVersion: 1 } });
+    await db.signal.createMany({ data: [
+      { strategyId: f.strategy.id, type: "MARKET_SIGNAL", data: { observation: "Manual synthetic observation" }, createdAt: observedAt },
+      { strategyId: f.strategy.id, type: "EXTERNAL_SAAS", data: { observation: "External synthetic observation" }, createdAt: observedAt },
+      { strategyId: neighbor.strategy.id, type: "MARKET_SIGNAL", data: { observation: "Private neighbor observation" }, createdAt: observedAt },
+    ] });
+    expect((await db.signal.findFirstOrThrow({ where: { strategyId: f.strategy.id } })).createdAt).toBeInstanceOf(Date);
+    const track = await vi.importActual<typeof import("@/server/services/rtis-protocols/track")>("@/server/services/rtis-protocols/track");
+    draftProvider.track.mockImplementation(track.executeProtocoleTrack);
+    draftProvider.callLLM.mockResolvedValue({ text: "{}" });
+    expect(await actualizePillar(f.strategy.id, "T")).toMatchObject({ updated: true });
+    const saved = await db.pillar.findUniqueOrThrow({ where: { id: t.id } });
+    expect(saved.currentVersion).toBe(2);
+    const content = saved.content as Record<string, unknown>;
+    expect(content.externalSaasSignals).toHaveLength(2);
+    expect(content.externalSaasSignals).toEqual(expect.arrayContaining([
+      { type: "MARKET_SIGNAL", data: { observation: "Manual synthetic observation" }, createdAt: observedAt.toISOString() },
+      { type: "EXTERNAL_SAAS", data: { observation: "External synthetic observation" }, createdAt: observedAt.toISOString() },
+    ]));
+    expect(content.retainedSource).toBe(previous.retainedSource);
+    expect((await db.pillarVersion.findFirstOrThrow({ where: { pillarId: t.id, version: 1 } })).content).toEqual(previous);
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });
