@@ -2,7 +2,7 @@
 
 > Auto-généré par `npm run audit:llm` (`scripts/audit-llm-nodes.ts`). Ne pas éditer à la main.
 
-Généré le 2026-10-16.
+Généré le 2026-10-17.
 
 Deux contrats vérifiés par nœud : **sortie** (validation Zod stricte) et **entrée** (pas d'appel LLM direct qui court-circuite la validation et concatène l'entrée brute).
 
@@ -15,7 +15,7 @@ Deux contrats vérifiés par nœud : **sortie** (validation Zod stricte) et **en
 | Appels LLM directs (bypass wrapper) | 37 | 37 (entrée durcie) | 100% | 0 bruts |
 
 
-Entrée durcie = 35 fichiers `FENCED` (neutralisation `wrapUntrusted`/`sanitizeInline`) + 2 `INTERNAL` (annotés `@llm-input-internal` — entrée 100% interne). 51 appels directs au total.
+Entrée durcie = 35 fichiers `FENCED` (neutralisation `wrapUntrusted`/`sanitizeInline`) + 2 `INTERNAL` (annotés `@llm-input-internal` — entrée 100% interne). 50 appels directs au total.
 
 ## SORTIE — nœuds sans contrat de validation
 
@@ -40,9 +40,9 @@ Ces points appellent `callLLM`/`callLLMAndParse` sans passer par `executeStructu
 | `src/server/services/implementation-generator/index.ts` | 105, 118, 144, 163 | 4 | ✅ FENCED | non |
 | `src/server/services/ingestion-pipeline/ai-filler.ts` | 154, 245, 431 | 3 | ✅ FENCED | non |
 | `src/server/services/mestor/commandant.ts` | 96, 172, 220 | 3 | ✅ FENCED | non |
-| `src/server/services/mestor/i-pillar-sequenced.ts` | 148 | 1 | ✅ FENCED | non |
+| `src/server/services/mestor/i-pillar-sequenced.ts` | 113 | 1 | ✅ FENCED | non |
 | `src/server/services/mestor/insights.ts` | 253 | 1 | ✅ FENCED | non |
-| `src/server/services/mestor/rtis-cascade.ts` | 75 | 1 | ✅ FENCED | non |
+| `src/server/services/mestor/rtis-cascade.ts` | 78 | 1 | ✅ FENCED | non |
 | `src/server/services/notoria/engine.ts` | 45 | 1 | ✅ FENCED | non |
 | `src/server/services/pillar-maturity/auto-filler.ts` | 1032, 1275 | 2 | ✅ FENCED | non |
 | `src/server/services/qc-router/automated-qc.ts` | 151 | 1 | ✅ FENCED | non |
@@ -57,14 +57,14 @@ Ces points appellent `callLLM`/`callLLMAndParse` sans passer par `executeStructu
 | `src/server/services/quick-intake/narrative-report.ts` | 252, 261 | 2 | ✅ FENCED | non |
 | `src/server/services/quick-intake/question-bank.ts` | 328 | 1 | ✅ FENCED | non |
 | `src/server/services/quick-intake/rtis-draft.ts` | 301 | 1 | ✅ FENCED | non |
-| `src/server/services/rtis-protocols/innovation.ts` | 86 | 1 | ✅ FENCED | non |
-| `src/server/services/rtis-protocols/risk.ts` | 219 | 1 | ✅ FENCED | non |
-| `src/server/services/rtis-protocols/track.ts` | 238 | 1 | ✅ FENCED | non |
+| `src/server/services/rtis-protocols/innovation.ts` | 87 | 1 | ✅ FENCED | non |
+| `src/server/services/rtis-protocols/risk.ts` | 220 | 1 | ✅ FENCED | non |
+| `src/server/services/rtis-protocols/track.ts` | 241 | 1 | ✅ FENCED | non |
 | `src/server/services/seshat/market-study-ingestion/extractor-llm.ts` | 68 | 1 | ✅ FENCED | non |
 | `src/server/services/seshat/tarsis/index.ts` | 248 | 1 | ✅ FENCED | non |
 | `src/server/services/seshat/tarsis/signal-collector.ts` | 186 | 1 | ✅ FENCED | non |
 | `src/server/services/seshat/tarsis/weak-signal-analyzer.ts` | 168 | 1 | ✅ FENCED | non |
-| `src/server/services/source-classifier/llm-decomposer.ts` | 124, 218 | 2 | ✅ FENCED | non |
+| `src/server/services/source-classifier/llm-decomposer.ts` | 175 | 1 | ✅ FENCED | oui (mixte) |
 | `src/server/services/translation/index.ts` | 187 | 1 | ✅ FENCED | non |
 
 ### Entrées brutes restantes (`RAW`)
