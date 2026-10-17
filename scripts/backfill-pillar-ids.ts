@@ -35,6 +35,7 @@ import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { deriveSeverity } from "../src/lib/types/pillar-schemas";
+import { acquireEntityIds } from "../src/domain/entity-ids";
 
 function makeClient() {
   const connectionString = process.env.DATABASE_URL;
@@ -53,14 +54,13 @@ const asArr = (v: unknown): Blob[] => (Array.isArray(v) ? (v as Blob[]) : []);
 
 /** Ensure each entry of an array has an `id`; returns count newly assigned. */
 function ensureIds(arr: Blob[]): number {
-  let n = 0;
-  for (const e of arr) {
-    if (isObj(e) && typeof e.id !== "string") {
-      e.id = randomUUID();
-      n++;
-    }
-  }
-  return n;
+  const records = arr.filter(isObj);
+  const acquired = acquireEntityIds(records, [], "", () => randomUUID());
+  let assigned = 0;
+  records.forEach((entry, i) => {
+    if (acquired[i] !== entry) { entry.id = acquired[i]!.id; assigned++; }
+  });
+  return assigned;
 }
 
 /** Every PotentialAction instance scattered across a Pillar I blob. */

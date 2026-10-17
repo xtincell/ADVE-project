@@ -6,7 +6,7 @@ vi.mock("@/lib/auth/config", () => ({ auth: vi.fn() }));
 vi.mock("next-auth", () => ({}));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
 const draftProvider = vi.hoisted(() => ({
-  callLLM: vi.fn(async () => ({ text: "{}" })),
+  callLLM: vi.fn(async (_request: { prompt: string }) => ({ text: "{}" })),
   track: vi.fn(async (_strategyId: string) => ({ pillarKey: "t", content: {} as Record<string, unknown>, confidence: 0 })),
   innovation: vi.fn(async () => ({ catalogueParCanal: { DIGITAL: [{
     id: "22222222-2222-4222-8222-222222222222", action: "Budget réellement inconnu",
@@ -122,7 +122,8 @@ describe("derived RTIS snapshots replace obsolete work through both existing ent
   });
   it("the shared writer still protects a human hypothesis list from a generated replacement", async () => {
     const f = await fixture();
-    const previous = { ...refreshedTrack(), _fieldProvenance: { hypothesisValidation: "HUMAN" } };
+    const previous = { ...refreshedTrack(), hypothesisValidation: [{ hypothesis: "Human legacy without id", status: "HYPOTHESIS" }],
+      _fieldProvenance: { hypothesisValidation: "HUMAN" } };
     const t = await db.pillar.create({ data: { strategyId: f.strategy.id, key: "t", content: previous as Prisma.InputJsonValue } });
     draftProvider.track.mockResolvedValue({ pillarKey: "t", content: refreshedTrack(), confidence: 0 });
     await actualizePillar(f.strategy.id, "T");
@@ -131,8 +132,14 @@ describe("derived RTIS snapshots replace obsolete work through both existing ent
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
   it("actual Track signals cross the JSON audit boundary with their dates and brand scope intact", async () => {
+    draftProvider.callLLM.mockClear();
     const f = await fixture(), neighbor = await fixture();
     const observedAt = new Date(Date.now() - 5000);
+    const personas = Array.from({ length: 8 }, (_, i) => ({ id: randomUUID(), name: `Documented profile ${i}`,
+      detail: "Long sourced context ".repeat(100) }));
+    await db.pillar.create({ data: { strategyId: f.strategy.id, key: "d", content: {
+      personas, _fieldProvenance: { personas: "SOURCE" },
+    } } });
     const previous = { hypothesisValidation: [], retainedSource: "Prior synthetic source", _fieldProvenance: {} };
     const t = await db.pillar.create({ data: { strategyId: f.strategy.id, key: "t", content: previous, currentVersion: 1 } });
     await db.signal.createMany({ data: [
@@ -150,11 +157,56 @@ describe("derived RTIS snapshots replace obsolete work through both existing ent
     const content = saved.content as Record<string, unknown>;
     expect(content.externalSaasSignals).toHaveLength(2);
     expect(content.externalSaasSignals).toEqual(expect.arrayContaining([
-      { type: "MARKET_SIGNAL", data: { observation: "Manual synthetic observation" }, createdAt: observedAt.toISOString() },
-      { type: "EXTERNAL_SAAS", data: { observation: "External synthetic observation" }, createdAt: observedAt.toISOString() },
+      expect.objectContaining({ type: "MARKET_SIGNAL", data: { observation: "Manual synthetic observation" }, createdAt: observedAt.toISOString() }),
+      expect.objectContaining({ type: "EXTERNAL_SAAS", data: { observation: "External synthetic observation" }, createdAt: observedAt.toISOString() }),
     ]));
+    const signals = await db.signal.findMany({ where: { strategyId: f.strategy.id, type: { in: ["MARKET_SIGNAL", "EXTERNAL_SAAS"] } } });
+    expect((content.externalSaasSignals as { id: string }[]).map(s => s.id).sort()).toEqual(signals.map(s => s.id).sort());
+    const prompts = draftProvider.callLLM.mock.calls.map(c => (c[0] as { prompt: string }).prompt);
+    expect(prompts).toHaveLength(4);
+    for (const prompt of prompts) {
+      expect(prompt).toContain("Manual synthetic observation");
+      expect(prompt).toContain("External synthetic observation");
+      expect(prompt).not.toContain("Private neighbor observation");
+      for (const signal of signals) expect(prompt).toContain(signal.id);
+      for (const persona of personas) expect(prompt).toContain(persona.id);
+      expect(prompt).toContain("Documented profile 7");
+    }
     expect(content.retainedSource).toBe(previous.retainedSource);
     expect((await db.pillarVersion.findFirstOrThrow({ where: { pillarId: t.id, version: 1 } })).content).toEqual(previous);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+});
+describe("shared writer entity identities", () => {
+  it("acquires accepted action IDs through the same writer, keeping FK targets and former content", async () => {
+    const f = await fixture();
+    const old = await db.pillar.findUniqueOrThrow({ where: { id: f.i.id } });
+    const targets = { targetsPersonaIds: [randomUUID()], mitigatesRiskIds: [randomUUID()] };
+    const result = await writePillar({ strategyId: f.strategy.id, pillarKey: "i", operation: { type: "SET_FIELDS", fields: [
+      { path: "catalogueParCanal", value: { DIGITAL: [{ action: "Accepted action", ...targets }] } },
+    ] }, author: { system: "OPERATOR", userId: owner, reason: "Synthetic action replacement" }, options: { expectedVersion: 1 } });
+    expect(result.success).toBe(true);
+    expect(result.newContent).toMatchObject({ catalogueParCanal: { DIGITAL: [{ id: expect.any(String), ...targets }] } });
+    expect((await db.pillarVersion.findFirstOrThrow({ where: { pillarId: f.i.id, version: 1 } })).content).toEqual(old.content);
+  });
+  it.each([
+    ["d", "personas", "name"], ["r", "probabilityImpactMatrix", "risk"], ["t", "hypothesisValidation", "hypothesis"],
+  ] as const)("acquires %s IDs, retains them on source refresh and archives the actual former content", async (key, field, label) => {
+    const f = await fixture();
+    const prior = { [field]: [{ [label]: "Previous" }], _fieldProvenance: {} };
+    const pillar = await db.pillar.create({ data: { strategyId: f.strategy.id, key, content: prior, currentVersion: 1 } });
+    const apply = (version: number, rows: object[]) => writePillar({ strategyId: f.strategy.id, pillarKey: key,
+      operation: { type: "SET_FIELDS", fields: [{ path: field, value: rows }] },
+      author: { system: "OPERATOR", userId: owner, reason: "Synthetic source replacement" }, options: { expectedVersion: version } });
+    const first = await apply(1, [{ [label]: "One" }, { [label]: "Two" }]);
+    expect(first.success).toBe(true);
+    const rows = first.newContent[field] as { id: string }[];
+    rows.forEach(row => expect(row.id).toMatch(/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i));
+    const second = await apply(2, [{ [label]: "Two", detail: "Updated" }, { [label]: "One" }]);
+    expect(second.success).toBe(true);
+    expect((second.newContent[field] as { id: string }[]).map(row => row.id)).toEqual([rows[1]!.id, rows[0]!.id]);
+    expect((await db.pillarVersion.findFirstOrThrow({ where: { pillarId: pillar.id, version: 1 } })).content).toEqual(prior);
+    expect((await db.pillarVersion.findFirstOrThrow({ where: { pillarId: pillar.id, version: 2 } })).content).toEqual(first.newContent);
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });

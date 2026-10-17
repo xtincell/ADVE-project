@@ -310,7 +310,7 @@ const PersonaSchema = z.object({
   decisionProcess: textShort.optional(),
   devotionPotential: z.enum(DEVOTION_LEVELS).optional(),
 
-  rank: rank, // 1 = primary persona
+  rank: rank.optional(), // 1 = primary when established; absent priority stays unknown
 });
 
 /** Concurrent */
@@ -332,8 +332,8 @@ export const PillarDSchema = z.object({
     emotionalRegister: z.string().min(1).optional(),       // Le registre émotionnel dérivé
   }).optional(),
 
-  // Personas (2-5)
-  personas: z.array(PersonaSchema).min(2).max(5),
+  // Preserve every documented audience of the brand, including two-sided products.
+  personas: z.array(PersonaSchema).min(2),
 
   // Paysage concurrentiel (3+ concurrents)
   paysageConcurrentiel: z.array(CompetitorSchema).min(3),

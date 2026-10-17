@@ -139,7 +139,7 @@ const PILLAR_D: Record<string, FieldDef> = {
   personas: {
     kind: "array-of-objects", label: "Personas", itemLabel: "Persona",
     itemFields: {
-      name: textField("Prenom"),
+      name: textField("Nom du profil"),
       age: textField("Age"),
       csp: textField("CSP"),
       location: textField("Localisation"),
@@ -158,7 +158,7 @@ const PILLAR_D: Record<string, FieldDef> = {
       jobsToBeDone: stringsField("Jobs to be done"),
       decisionProcess: textField("Processus de decision"),
       devotionPotential: enumField("Potentiel de devotion", ["LOW", "MEDIUM", "HIGH", "FANATIC"] as const),
-      rank: numberField("Rang", { min: 1, max: 10 }),
+      rank: numberField("Priorité (si connue)", { min: 1 }),
     },
   },
   paysageConcurrentiel: {

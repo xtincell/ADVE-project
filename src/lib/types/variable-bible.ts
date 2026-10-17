@@ -321,9 +321,9 @@ export const BIBLE_D: Record<string, VariableSpec> = {
     feedsInto: ["e.promesseExperience", "v.promesseDeValeur"],
   },
   personas: {
-    description: "Les 2-5 profils types de clients de la marque",
-    format: "Array d'objets { name, age, csp, location, motivations (texte), fears (texte), hiddenDesire, jobsToBeDone[], devotionPotential (enum Devotion), rank }",
-    rules: ["2 minimum, 5 maximum", "Rank 1 = persona principal", "Chaque persona doit avoir motivations + fears minimum"],
+    description: "Les profils types des différents publics de la marque",
+    format: "Array d'objets { id, name, age, csp, location, motivations (texte), fears (texte), hiddenDesire, jobsToBeDone[], devotionPotential (enum Devotion), rank (si connu) }",
+    rules: ["2 minimum ; conserver tous les profils sourcés utiles", "Rank 1 = persona principal lorsque cette priorité est établie ; sinon laisser le rang absent", "Chaque persona doit avoir motivations + fears minimum"],
     editableMode: "STRATEGIC_REWRITE", derivedFrom: "a.publicCible",
     feedsInto: ["v.personaSegmentMap", "e.superfanPortrait"],
   },

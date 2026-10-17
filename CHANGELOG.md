@@ -1,3 +1,11 @@
+## v6.27.490 — fix(rtis): preserve documented audiences and entity references (2026-10-17)
+
+Les lecteurs R/T/I réutilisent la projection de contexte de R : toutes les entrées et leurs identifiants survivent, les longues feuilles de prose sont résumées, chaque champ garde sa provenance. La limite de 24 K caractères qui coupait le JSON est remplacée par un refus explicite au-delà de 64 K par pilier. Track transmet ses signaux datés et identifiés au modèle, dans le périmètre de la marque ; leur collecte ne vaut pas validation.
+
+Le contrat persona accepte les huit profils documentaires d’un produit à deux faces et conserve une priorité inconnue sans classement inventé. L’acquisition d’identités déjà utilisée pour le catalogue produit est factorisée avec les collections D/R/T/I : identités acquises conservées, récupération sur libellé exact unique seulement, génération après arbitrage du writer, aucune migration aveugle des données historiques ou réécriture des champs refusés. Le routeur de modèles existant reste l’autorité ; aucune nouvelle route, table ou agent.
+
+Régression PostgreSQL dans le contrôle existant : writer réel, IDs/version/historique, protection des décisions humaines et vrai producteur Track avec huit profils et deux signaux, sans fuite d’une marque voisine. Génération simulée pour ces tests ; réception des données pilotes et runtime distincte.
+
 ## v6.27.489 — fix(rtis): serialize sourced signal dates before persistence (2026-10-17)
 
 Le protocole Track transforme les dates Prisma des signaux de marque en horodatages ISO avant leur entrée dans le contenu et le diff JSON strict. Le recalcul T pouvait terminer ses appels puis échouer à la sauvegarde sur un objet Date. Types, données, filtre de marque et fenêtre de collecte restent inchangés ; aucun assouplissement du journal ou nouveau gestionnaire.

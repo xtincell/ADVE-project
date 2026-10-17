@@ -27,7 +27,8 @@ import {
   MitigationPrioritySchema,
   OvertonBlockerSchema,
 } from "@/lib/types/pillar-schemas";
-import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
+import { UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
+import { serializePillar } from "@/server/services/utils/pillar-context";
 
 // ADR-0063 / PR-K3-ter — LLM-response sub-schemas. Items are strictly typed (so
 // malformed rows are dropped by the pruner), but parent-level `.min(N)` count
@@ -259,7 +260,7 @@ async function generateSWOT(
     .map(k => {
       const c = pillars[k];
       if (!c || Object.keys(c).length === 0) return `[PILIER ${k.toUpperCase()}] Vide`;
-      return wrapUntrusted(`PILIER ${k.toUpperCase()}`, JSON.stringify(c, null, 2), { max: 8000 });
+      return serializePillar(k.toUpperCase(), c);
     })
     .join("\n\n");
 
