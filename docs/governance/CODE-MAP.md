@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 50 modules (src/domain, cœur métier pur)
+## Domain — 52 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
@@ -78,6 +78,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **creative-sources**
 - **cult-index-tier** — Domain — Cult Index tier (échelle de maturité culturelle de la marque).
 - **devotion-ladder** — Domain — Devotion Ladder canonique (rungs du parcours superfan).
+- **entity-ids**
 - **external-metric**
 - **field-provenance** — FieldProvenance — qui a posé la valeur d'un champ de pilier ADVE.
 - **forecast** — ADR-0156 — Moteur de forecast déterministe (pur, zéro IO, zéro LLM).
@@ -88,6 +89,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **market-scale** — src/domain/market-scale.ts — Layer 0. Échelle de marché déclarée d'une marque
 - **overton-graph** — ADR-0148 — Overton Graph : cœur déterministe (Layer 0, pur, zéro-LLM zéro-IO).
 - **overton-radar-signal** — OvertonRadarSignal — Layer-0 presentational view-model for `<OvertonRadar>`
+- **pillar-entity-ids**
 - **pillar-reference-edges** — pillar-reference-edges.ts — intégrité des arêtes de référence inter-piliers
 - **pillars** — src/domain/pillars.ts — Single source of truth for ADVERTIS pillars.
 - **portfolio-barre**
