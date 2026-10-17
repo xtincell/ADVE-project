@@ -49,7 +49,11 @@ async function persistViaGateway(
   const writeRes = await writePillarAndScore({
     strategyId,
     pillarKey: result.pillarKey as PillarKey,
-    operation: { type: "MERGE_DEEP", patch: result.content },
+    // Each returned field is the current derived snapshot, not an additive
+    // intake. Keep absent fields and human protections in the shared gateway;
+    // archive the previous lists instead of appending obsolete hypotheses.
+    operation: { type: "SET_FIELDS", fields: Object.entries(result.content)
+      .filter(([, value]) => value !== undefined).map(([path, value]) => ({ path, value })) },
     author: {
       system: protocolName as "PROTOCOLE_R" | "PROTOCOLE_T" | "PROTOCOLE_I" | "PROTOCOLE_S",
       reason: `Cascade RTIS — protocole ${result.pillarKey.toUpperCase()}`,

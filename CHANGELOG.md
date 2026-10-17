@@ -1,3 +1,9 @@
+## v6.27.488 — fix(rtis): replace current lists on recalculation (2026-10-17)
+
+Le recalcul R/T individuel et la cascade RTIS remplacent les champs produits via le `SET_FIELDS` existant : les listes ne s’ajoutent plus à leurs versions périmées. Champs absents du résultat partiel, historique et garde de provenance conservés ; ingestion incrémentale et édition ADVE inchangées.
+
+Source `177b0fd3` : typage,23 contrôles voisins et lint ciblé reçus localement. Trois régressions PostgreSQL ajoutées au contrôle existant pour répétition, conservation/historique et décision humaine. CI, réception de livraison et actualisation réelle du dossier SPAWT restent à recevoir.
+
 ## v6.27.487 — feat(barre): lire les références de marque et publier une pièce délimitée (2026-10-17)
 
 **La Barre consulte le socle autorisé et prépare le partage explicite d’un document, sans copier la plateforme.**

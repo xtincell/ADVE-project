@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.488",
+    date: "2026-10-17",
+    headline: "Retrouver les résultats actuels de vos analyses",
+    highlights: [{ emoji: "🔄", title: "Actualiser sans empiler les anciennes listes",
+      body: "Les listes produites par un nouveau calcul remplacent leur version précédente. L’historique et les informations que le calcul n’a pas reprises restent conservés, avec les protections des décisions humaines.",
+    }],
+  },
+  {
     version: "6.27.487",
     date: "2026-10-17",
     headline: "Vos références de marque dans vos documents",
