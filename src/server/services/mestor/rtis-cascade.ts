@@ -42,7 +42,7 @@ async function savePillar(
   key: string,
   content: Record<string, unknown>,
   confidence: number,
-  operationType: "MERGE_DEEP" | "REPLACE_FULL" = "MERGE_DEEP",
+  operationType: "MERGE_DEEP" | "REPLACE_FULL" | "SET_FIELDS" = "MERGE_DEEP",
 ) {
   // LOI 1 — writePillarAndScore reconcile Pillar.completionLevel cache
   // (D-2 invariant). writePillar seul laisse le cache divergent, ce qui
@@ -53,6 +53,8 @@ async function savePillar(
     pillarKey: key.toLowerCase() as import("@/lib/types/advertis-vector").PillarKey,
     operation: operationType === "REPLACE_FULL"
       ? { type: "REPLACE_FULL", content }
+      : operationType === "SET_FIELDS"
+        ? { type: "SET_FIELDS", fields: Object.entries(content).filter(([, value]) => value !== undefined).map(([path, value]) => ({ path, value })) }
       : { type: "MERGE_DEEP", patch: content },
     author: { system: "MESTOR", reason: "RTIS cascade — actualizePillar" },
     options: { targetStatus: "AI_PROPOSED", confidenceDelta: confidence * 0.1 },
@@ -617,11 +619,15 @@ Retourne le pilier ${pillarKey} complet en JSON.`;
     // append-ait les arrays → le catalogue gonflait à chaque « Recalculer » :
     // 37 → 79 → … On préserve les champs HORS catalogue de l'ancien blob
     // (éditions opérateur, collections Notoria type actionsByDevotionLevel) en
-    // les spreadant SOUS le nouveau contenu. Les autres piliers gardent le
-    // MERGE_DEEP incrémental (LOI 1).
+    // les spreadant SOUS le nouveau contenu. R/T remplacent chaque champ
+    // recalculé : anciennes hypothèses/risques restent dans PillarVersion,
+    // sans réapparaître dans le travail courant. Les champs non produits et
+    // les protections de provenance restent sous l'autorité du gateway.
     if (pillarKey === "I") {
       const existingI = (pillars[pillarKey] ?? {}) as Record<string, unknown>;
       await savePillar(strategyId, pillarKey, { ...existingI, ...newContent }, confidence, "REPLACE_FULL");
+    } else if (pillarKey === "R" || pillarKey === "T") {
+      await savePillar(strategyId, pillarKey, newContent, confidence, "SET_FIELDS");
     } else {
       await savePillar(strategyId, pillarKey, newContent, confidence);
     }

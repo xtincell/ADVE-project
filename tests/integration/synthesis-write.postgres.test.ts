@@ -7,6 +7,7 @@ vi.mock("next-auth", () => ({}));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
 const draftProvider = vi.hoisted(() => ({
   callLLM: vi.fn(async () => ({ text: "{}" })),
+  track: vi.fn(async () => ({ pillarKey: "t", content: {} as Record<string, unknown>, confidence: 0 })),
   innovation: vi.fn(async () => ({ catalogueParCanal: { DIGITAL: [{
     id: "22222222-2222-4222-8222-222222222222", action: "Budget réellement inconnu",
     format: "Text", objectif: "Objectif fictif", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90",
@@ -19,7 +20,7 @@ vi.mock("@/server/services/seshat/context-store", () => ({
 vi.mock("@/server/services/quick-intake/multi-agent-orchestrator", () => ({ generatePillarIMultiAgent: draftProvider.innovation }));
 // These tests exercise the real S entry points and gateway, with upstream AI disabled.
 vi.mock("@/server/services/rtis-protocols/risk", () => ({ executeProtocoleRisk: vi.fn(async () => ({ pillarKey: "r", content: {}, confidence: 0 })) }));
-vi.mock("@/server/services/rtis-protocols/track", () => ({ executeProtocoleTrack: vi.fn(async () => ({ pillarKey: "t", content: {}, confidence: 0 })) }));
+vi.mock("@/server/services/rtis-protocols/track", () => ({ executeProtocoleTrack: draftProvider.track }));
 vi.mock("@/server/services/rtis-protocols/innovation", () => ({ executeProtocoleInnovation: vi.fn(async () => ({ pillarKey: "i", content: {}, confidence: 0 })) }));
 import { db } from "@/lib/db";
 import { writePillar, type PillarWriteRequest } from "@/server/services/pillar-gateway";
@@ -32,6 +33,7 @@ import { composedSynthesis } from "../fixtures/synthesis";
 import { generateAndPersistRtisDraft } from "@/server/services/quick-intake/rtis-draft";
 import { executeNextStep, type OrchestrationPlan } from "@/server/services/mestor/hyperviseur";
 import { executeRTISCascade } from "@/server/services/rtis-protocols";
+import { actualizePillar } from "@/server/services/mestor/rtis-cascade";
 
 const brands: string[] = [];
 let owner: string, operatorId: string;
@@ -43,7 +45,10 @@ beforeAll(async () => {
     status: "ACTIVE", licenseType: "TRIAL", licensedAt: new Date(), licenseExpiry: new Date(Date.now() + 86400000) } })).id;
   owner = (await db.user.create({ data: { email: "s-writer-" + randomUUID() + "@example.invalid", operatorId } })).id;
 });
-beforeEach(() => { vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("EXTERNAL_NETWORK_FORBIDDEN_IN_FIXTURE")); });
+beforeEach(() => {
+  draftProvider.track.mockReset().mockResolvedValue({ pillarKey: "t", content: {}, confidence: 0 });
+  vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("EXTERNAL_NETWORK_FORBIDDEN_IN_FIXTURE"));
+});
 afterEach(() => vi.restoreAllMocks());
 afterAll(async () => {
   const where = { strategyId: { in: brands } };
@@ -82,6 +87,44 @@ const read = async (f: Fixture) => ({
 const context = () => ({ db, headers: undefined, session: {
   user: { id: owner, role: "USER" }, expires: new Date(Date.now() + 60_000).toISOString(),
 } });
+
+describe("derived RTIS snapshots replace obsolete work through both existing entry points", () => {
+  const refreshedTrack = () => ({
+    triangulation: {},
+    hypothesisValidation: Array.from({ length: 5 }, (_, n) => ({ id: randomUUID(),
+      hypothesis: `Current synthetic hypothesis ${n}`, validationMethod: "Synthetic observation", status: "HYPOTHESIS" })),
+    tamSamSom: Object.fromEntries(["tam", "sam", "som"].map(k => [k, { value: 1, description: "Synthetic fixture" }])),
+  });
+  it.each(["single-pillar", "cascade"])("%s replaces old hypotheses, preserves untouched content and archives the former list", async entry => {
+    const f = await fixture();
+    const previous = { hypothesisValidation: [{ hypothesis: "Old paid access policy", status: "HYPOTHESIS" }],
+      retainedSource: "Independent source not returned by this refresh", _fieldProvenance: {} };
+    const t = await db.pillar.create({ data: { strategyId: f.strategy.id, key: "t", content: previous, currentVersion: 1 } });
+    const current = refreshedTrack();
+    draftProvider.track.mockResolvedValue({ pillarKey: "t", content: current, confidence: 0 });
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (entry === "single-pillar") expect(await actualizePillar(f.strategy.id, "T")).toMatchObject({ updated: true });
+      else await executeRTISCascade(f.strategy.id);
+      const saved = await db.pillar.findUniqueOrThrow({ where: { id: t.id } });
+      expect(saved.currentVersion).toBe(attempt + 2);
+      expect((saved.content as Record<string, unknown>).hypothesisValidation).toEqual(current.hypothesisValidation);
+      expect((saved.content as Record<string, unknown>).retainedSource).toBe(previous.retainedSource);
+    }
+    const archived = await db.pillarVersion.findFirstOrThrow({ where: { pillarId: t.id, version: 1 } });
+    expect(archived.content).toEqual(previous);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+  it("the shared writer still protects a human hypothesis list from a generated replacement", async () => {
+    const f = await fixture();
+    const previous = { ...refreshedTrack(), _fieldProvenance: { hypothesisValidation: "HUMAN" } };
+    const t = await db.pillar.create({ data: { strategyId: f.strategy.id, key: "t", content: previous as Prisma.InputJsonValue } });
+    draftProvider.track.mockResolvedValue({ pillarKey: "t", content: refreshedTrack(), confidence: 0 });
+    await actualizePillar(f.strategy.id, "T");
+    const saved = await db.pillar.findUniqueOrThrow({ where: { id: t.id } });
+    expect((saved.content as Record<string, unknown>).hypothesisValidation).toEqual(previous.hypothesisValidation);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+});
 describe("the shared S writer conserves snapshots and human review", () => {
   it("intake replaces the old plan, keeps unknown money absent, and grants no confidence for a pure calculation", async () => {
     const f = await fixture({ content: { globalBudget: 9000, computed: { totalBudget: 9000, selectedRouteKey: "AMBITIOUS" } } });
