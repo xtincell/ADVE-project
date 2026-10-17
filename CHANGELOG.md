@@ -2,7 +2,7 @@
 
 Le protocole Track transforme les dates Prisma des signaux de marque en horodatages ISO avant leur entrée dans le contenu et le diff JSON strict. Le recalcul T pouvait terminer ses appels puis échouer à la sauvegarde sur un objet Date. Types, données, filtre de marque et fenêtre de collecte restent inchangés ; aucun assouplissement du journal ou nouveau gestionnaire.
 
-Régression ajoutée au contrôle PostgreSQL existant : vrai producteur Track, signaux manuels et externes datés, refus de la fuite d’une marque voisine, sauvegarde et historique via le writer réel. Génération simulée uniquement dans cette recette ; réception CI et runtime à consigner dans la livraison.
+Régression ajoutée au contrôle PostgreSQL existant : vrai producteur Track, signaux manuels et externes datés, refus de la fuite d’une marque voisine, sauvegarde et historique via le writer réel. Source `a6d76fcaa` : typage,25 contrôles voisins et lint ciblé reçus localement. Génération simulée uniquement dans cette recette ; réception CI et runtime à consigner dans la livraison.
 
 ## v6.27.488 — fix(rtis): replace current lists on recalculation (2026-10-17)
 
