@@ -16,7 +16,7 @@ import { ADVE_KEYS } from "@/domain";
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
-import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
+import { UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
 import { setNestedValue } from "@/lib/pillar-path";
 import { PILLAR_SCHEMAS, type PillarKey } from "@/lib/types/pillar-schemas";
@@ -26,7 +26,8 @@ import { Prisma } from "@prisma/client";
 import { runMarketIntelligence } from "@/server/services/market-intelligence";
 import type { PillarWriteRequest, PillarWriteResult } from "@/server/services/pillar-gateway";
 import type { RouteKey } from "@/lib/strategy/roadmap-routes";
-import { FIELD_PROVENANCE_LABEL, isFieldProvenance } from "@/domain/field-provenance";
+import { serializePillar } from "@/server/services/utils/pillar-context";
+export { projectForContext, serializePillar } from "@/server/services/utils/pillar-context";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -88,59 +89,6 @@ async function callCascadeLLM(system: string, prompt: string, strategyId?: strin
 import { extractJSON as _extractJSON } from "@/server/services/utils/llm";
 function extractJSON(text: string): Record<string, unknown> {
   return _extractJSON(text) as Record<string, unknown>;
-}
-
-/**
- * Projection préservant la STRUCTURE pour le contexte RTIS (Phase 4).
- * L'ancien `slice(8000)` coupait la QUEUE du JSON — un pilier V rempli en
- * profondeur (matrice `produitsCatalogue` : N produits × ~15 cellules) dépasse
- * 8000 caractères et perdait ses derniers champs → le RTIS dérivait d'un ADVE
- * amputé. Ici on ne coupe QUE la PROSE longue par feuille (manifestes/récits) et
- * on garde TOUTE l'arborescence (chaque produit, chaque cellule de matrice) : la
- * profondeur atteint enfin R/T/I/S. Les cellules de valeur (courtes) sont intactes.
- */
-export function projectForContext(value: unknown, leafMax: number): unknown {
-  if (typeof value === "string") {
-    return value.length > leafMax ? value.slice(0, leafMax) + "…" : value;
-  }
-  if (Array.isArray(value)) return value.map((v) => projectForContext(v, leafMax));
-  if (value && typeof value === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) out[k] = projectForContext(v, leafMax);
-    return out;
-  }
-  return value;
-}
-
-export function serializePillar(
-  key: string,
-  content: unknown,
-  fieldStatus?: (field: string) => string | undefined,
-): string {
-  if (!content || typeof content !== "object") return `[${key}] Vide`;
-  // Projection profondeur-préservante : cap prose par feuille (400), garde toute
-  // la structure. Backstop total généreux (24000, ex-8000) — après projection, un
-  // pilier réaliste tient largement ; seul un pilier pathologique est encore capé.
-  const projected = projectForContext(content, 400);
-  // Conseil : l'autorité suit sa valeur, au lieu d'une table distante que le
-  // modèle peut attribuer à un autre champ. Même grain que pillar-gateway.
-  // Les autres lecteurs gardent strictement leur projection historique.
-  const qualified = fieldStatus && !Array.isArray(projected)
-    ? Object.fromEntries(Object.entries(projected as Record<string, unknown>)
-      .filter(([field]) => !field.startsWith("_"))
-      .map(([field, valeur]) => {
-        const statut = fieldStatus(field) ?? "UNKNOWN";
-        return [field, {
-          statut,
-          origine: isFieldProvenance(statut) ? FIELD_PROVENANCE_LABEL[statut]
-            : "Qualification héritée — provenance de champ non établie",
-          valeur,
-        }];
-      }))
-    : projected;
-  const json = JSON.stringify(qualified, null, 2);
-  // LOT 1b — contenu pilier (donnée non fiable) balisé anti-injection.
-  return wrapUntrusted(`PILIER ${key}`, json, { max: 24000 });
 }
 
 /**

@@ -21,7 +21,8 @@
 
 import { callLLM } from "@/server/services/llm-gateway";
 import { extractJSON } from "@/server/services/utils/llm";
-import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
+import { sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
+import { serializePillar } from "@/server/services/utils/pillar-context";
 
 // Canaux du catalogue I (cf. RTIS_PROMPTS.I dans rtis-cascade.ts)
 export const I_CHANNELS = [
@@ -48,62 +49,26 @@ Tu produis le PILIER I (Potentiel) — l'inventaire EXHAUSTIF de ce qu'une marqu
 Tu réponds TOUJOURS et UNIQUEMENT en JSON valide : pas de markdown, pas de commentaire, pas de texte autour.`;
 
 /**
- * Modèle Ollama pour le pilier I. Par défaut `hermes3:8b` (ctx 4K, tient en
- * VRAM sur une GTX 1080 → ~42 tok/s, 100% GPU) plutôt que le `hermes3-ctx`
- * (ctx 64K) de la ModelPolicy qui déborde la VRAM → spill CPU → ~7 tok/s.
- * Les sections I sont petites (≤3K tokens), 4K de contexte suffisent largement.
- * Surcharge possible via env `OLLAMA_FAST_MODEL`.
+ * Existing Ollama hint, used only when the central policy permits substitution.
+ * The gateway remains the authority for routing and capacity; this reader does
+ * not select a provider or trim source entities to fit a smaller model.
  */
 export const I_OLLAMA_MODEL = process.env.OLLAMA_FAST_MODEL ?? "hermes3:8b";
 
-/** Résume un pilier en gardant la forme + l'intention sans saturer la fenêtre d'entrée du 8B. */
-function compactPillar(content: unknown, cap = 1100): string {
-  if (!content || typeof content !== "object") return "(vide)";
-  const json = JSON.stringify(content);
-  if (json.length <= cap) return json;
-  const summary: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(content as Record<string, unknown>)) {
-    if (v == null || v === "") continue;
-    if (typeof v === "string") summary[k] = v.length > 150 ? v.slice(0, 150) + "…" : v;
-    else if (Array.isArray(v)) {
-      // Garde les IDENTITÉS des items (name/nom/label) au lieu d'un opaque « [N éléments] » —
-      // sans ça, une action I ne peut pas citer un persona par son nom (D condensé). Cap serré.
-      const ids = v
-        .slice(0, 5)
-        .map((it) => {
-          if (it && typeof it === "object" && !Array.isArray(it)) {
-            const r = it as Record<string, unknown>;
-            const id = r.name ?? r.nom ?? r.label ?? r.titre ?? r.title;
-            if (typeof id === "string" && id.trim()) return id.length > 40 ? id.slice(0, 40) + "…" : id;
-          }
-          return null;
-        })
-        .filter(Boolean);
-      summary[k] = ids.length > 0
-        ? `[${v.length} éléments : ${ids.join(", ")}${v.length > ids.length ? ", …" : ""}]`
-        : `[${v.length} éléments]`;
-    }
-    else if (typeof v === "object") summary[k] = `{${Object.keys(v as object).slice(0, 6).join(", ")}}`;
-    else summary[k] = v;
-  }
-  const s = JSON.stringify(summary);
-  return s.length <= cap ? s : s.slice(0, cap) + "…";
-}
-
-/** Contexte marque compact (ADVE + R + T) réutilisé pour chaque appel de section. */
+/** Same qualified ADVE/R/T records for every section, including all FK targets. */
 export function buildContext(pillars: Record<string, unknown>): string {
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : contenu des
   // piliers (dérivé du fondateur) balisé bloc par bloc ; la clé pilier est interne.
   return ["A", "D", "V", "E", "R", "T"]
-    .map((k) => wrapUntrusted(`PILIER ${k}`, compactPillar(pillars[k]), { max: 1100 }))
+    .map((k) => serializePillar(k, pillars[k]))
     .join("\n\n");
 }
 
 const fcfaShort = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : String(Math.round(n)));
 
 /**
- * Bloc de grounding ÉCONOMIQUE + MARCHÉ — chiffres RÉELS de V (budget) et T
- * (TAM/marché), NON tronqués (≠ compactPillar). Injecté dans chaque appel de
+ * Bloc de grounding ÉCONOMIQUE + MARCHÉ — valeurs enregistrées de V (budget) et T
+ * (TAM/marché). Injecté dans chaque appel de
  * section pour que le catalogue I soit cohérent avec l'enveloppe budgétaire et
  * le marché réels (pas un blockbuster pour un budget de PME). Retourne aussi le
  * budgetCom pour le calcul déterministe de potentielBudget.
@@ -123,8 +88,8 @@ function buildEconomicGrounding(pillars: Record<string, unknown>): { block: stri
   // (texte libre dérivé du pilier T) ; les montants budget/TAM sont des nombres calculés.
   const trends = Array.isArray(mr.macroTrends) ? mr.macroTrends.slice(0, 4).map((t) => sanitizeInline(t, { max: 200 })) : [];
   const lines = [
-    "ENVELOPPE ÉCONOMIQUE & MARCHÉ (chiffres RÉELS — propose des actions cohérentes avec CE budget et CE marché) :",
-    budgetCom != null ? `- Budget marketing annuel disponible : ${fcfaShort(budgetCom)} FCFA (les actions doivent tenir dans cette enveloppe)` : "- Budget marketing : non renseigné (V.unitEconomics.budgetCom)",
+    "REPÈRES ÉCONOMIQUES & MARCHÉ : provenance dans le contexte qualifié ci-dessus. Leur présence ne prouve ni validation ni disponibilité pour engagement.",
+    budgetCom != null ? `- Budget marketing annuel enregistré : ${fcfaShort(budgetCom)} FCFA (enveloppe de simulation ; confirmation requise avant engagement)` : "- Budget marketing : non renseigné (V.unitEconomics.budgetCom)",
     caVise != null ? `- CA visé : ${fcfaShort(caVise)} FCFA` : null,
     (tamVal != null || samVal != null) ? `- Marché : TAM ${tamVal != null ? fcfaShort(tamVal) : "?"}${samVal != null ? ` / SAM ${fcfaShort(samVal)}` : ""}` : null,
     bmf != null ? `- Brand-Market Fit : ${bmf}/100` : null,
@@ -133,7 +98,7 @@ function buildEconomicGrounding(pillars: Record<string, unknown>): { block: stri
   return { block: "\n\n" + lines.join("\n"), budgetCom };
 }
 
-/** Un appel LLM pour une section, via le gateway (Ollama en local). */
+/** Un appel LLM pour une section, via le gateway et sa politique courante. */
 async function callSection(
   strategyId: string | undefined,
   context: string,
@@ -151,7 +116,7 @@ async function callSection(
     caller: `mestor:i-seq:${callerTag}`,
     strategyId,
     purpose: "agent", // substituable Ollama (allowOllamaSubstitution=true)
-    ollamaModel: I_OLLAMA_MODEL, // modèle rapide 4K ctx (cf. note ci-dessus)
+    ollamaModel: I_OLLAMA_MODEL,
     responseFormat: jsonMode ? "json_object" : "text",
     maxOutputTokens,
   });
@@ -249,9 +214,10 @@ export async function generateICatalogueSequenced(args: {
   const catalogueParCanal: Record<string, Array<Record<string, unknown>>> = {};
   for (const canal of I_CHANNELS) {
     const actions = await sectionArray({
-      strategyId, context, arrayKey: "actions", maxOutputTokens: 1400, tag: `canal-${canal}`, onProgress: log,
+      strategyId, context, arrayKey: "actions", maxOutputTokens: 2400, tag: `canal-${canal}`, onProgress: log,
       instruction: `Pour le CANAL « ${canal} », génère un inventaire de 5 à 8 actions marketing CONCRÈTES, spécifiques à CETTE marque (pas générique).
 Chaque action = objet { "action": string, "format": string, "objectif": string, "pilierImpact": "A"|"D"|"V"|"E", "budgetEstime": "LOW"|"MEDIUM"|"HIGH" }.
+Ajoute targetsPersonaIds et mitigatesRiskIds : copie seulement les UUID des profils D et des risques R effectivement concernés dans le contexte. Une liste vide est permise si aucun lien n'est justifié ; n'invente aucun identifiant. Une cible documentaire n'est pas un client acquis, un risque n'est pas un fait validé et une action proposée n'est pas une décision.
 Réponds STRICTEMENT au format : { "actions": [ …5 à 8 objets… ] }`,
     });
     // Enrichissement déterministe du backbone (ne dépend pas du 8B pour les enums critiques).

@@ -16,6 +16,8 @@
  *     cross-validator (surfacer honnêtement les liens cassés, jamais les cacher).
  */
 
+import { acquireEntityIds } from "./entity-ids";
+
 export interface CatalogueProduct {
   id?: string;
   nom?: string;
@@ -92,24 +94,9 @@ export function productSlug(nom: string): string {
 export function ensureProductIds<T extends CatalogueProduct>(
   catalogue: readonly T[], previous: readonly CatalogueProduct[] = [],
 ): T[] {
-  const claimed = new Set(catalogue.flatMap(p => typeof p.id === "string" && p.id ? [p.id] : []));
-  const recovered = catalogue.map(p => {
-    if (typeof p.id === "string" && p.id) return p;
-    const matches = previous.filter(old => typeof p.nom === "string" && p.nom === old.nom);
-    const oldId = matches.length === 1 ? matches[0]!.id : undefined;
-    if (typeof oldId !== "string" || !oldId || claimed.has(oldId) || catalogue.filter(next => next.nom === p.nom).length !== 1) return p;
-    claimed.add(oldId);
-    return { ...p, id: oldId };
-  });
-  const used = new Set<string>();
-  for (const p of [...previous, ...recovered]) if (typeof p.id === "string" && p.id) used.add(p.id);
-  return recovered.map((p) => {
-    if (typeof p.id === "string" && p.id) return p;
-    let candidate = productSlug(typeof p.nom === "string" ? p.nom : "");
-    let n = 2;
-    while (used.has(candidate)) candidate = `${productSlug(typeof p.nom === "string" ? p.nom : "")}-${n++}`;
-    used.add(candidate);
-    return { ...p, id: candidate };
+  return acquireEntityIds(catalogue, previous, "nom", (product, attempt) => {
+    const slug = productSlug(typeof product.nom === "string" ? product.nom : "");
+    return attempt ? `${slug}-${attempt + 1}` : slug;
   });
 }
 

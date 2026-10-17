@@ -21,6 +21,8 @@
 
 import { db } from "@/lib/db";
 import { ensureProductIds, rebindProductRefs, type CatalogueProduct } from "@/domain/product-catalog";
+import { acquirePillarEntityIds } from "@/domain/pillar-entity-ids";
+import { randomUUID } from "node:crypto";
 import { inferredFieldPaths, provenanceTopKey } from "@/domain/field-provenance";
 import { setNestedValue, tokenizePillarPath, assertSafePillarPath } from "@/lib/pillar-path";
 import { coerceValue, applyResolvedRecoOps } from "./apply-resolved-ops";
@@ -571,6 +573,10 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
           newContent = rebindProductRefs(newContent, previous, products);
         }
       }
+
+      // Same acquisition rule as the product catalogue, after authority arbitration.
+      // Never backfill a refused human collection or an unrelated field edit.
+      if (!restoration) newContent = acquirePillarEntityIds(pillarKey, newContent, previousContent, randomUUID);
 
       const newVersion = (pillar.currentVersion ?? 1) + 1;
 

@@ -24,7 +24,7 @@ import { db } from "@/lib/db";
 import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 import { loadStrategyContextForFramework } from "@/server/services/seshat/context-store/strategy-context";
 import { getOracleBrandContextByQuery, formatSourceReferences, type OracleContextBlock } from "@/server/services/seshat/context-store/oracle-augment";
-import { serializePillar } from "@/server/services/mestor/rtis-cascade";
+import { serializePillar } from "@/server/services/utils/pillar-context";
 import { untrustedContentBody, wrapUntrusted } from "@/server/services/utils/untrusted-content";
 import { signalObservation } from "@/domain/signal-observation";
 import { metricObservationTime } from "@/domain/external-metric";

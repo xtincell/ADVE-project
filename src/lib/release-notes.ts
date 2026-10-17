@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.490",
+    date: "2026-10-17",
+    headline: "Retrouver tous vos profils dans les analyses",
+    highlights: [{ emoji: "🔗", title: "Relier les actions à leur contexte",
+      body: "Les analyses conservent l’ensemble des profils et leurs références, avec l’origine des informations. Une priorité inconnue peut rester vide. Les signaux récents de la marque alimentent désormais l’analyse du marché.",
+    }],
+  },
+  {
     version: "6.27.489",
     date: "2026-10-17",
     headline: "Actualiser le marché avec vos signaux récents",

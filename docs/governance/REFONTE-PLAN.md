@@ -1,5 +1,13 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Continuité profils → analyses → actions — candidat 490 (2026-10-17)
+
+**Obstacle de gros œuvre C2/C4** : le PRD SPAWT documente huit profils ; le contrat en plafonne cinq et exige des rangs non établis. Les consommateurs T/I coupent leur contexte, omettent les dernières entrées et leurs identités ; les signaux stockés par T ne lui sont pas présentés. Les nouvelles listes R/T n’acquièrent pas les UUID déjà prévus par les schémas et les références I. La recette de T3 expose sept hypothèses sans identifiant. Ces absences empêchent la continuité métier ; elles ne sont pas une demande de nouvelles fonctions.
+
+**Factorisation bornée** : extraction de l’acquisition d’identités du catalogue produit et de la projection déjà utilisée par R ; réemploi par le Gateway après arbitrage et les lecteurs R/T/I. Priorité de persona facultative, ensemble documentaire conservé, observations datées/identifiées présentées sans valeur de preuve commerciale automatique. Les enveloppes économiques restent des valeurs enregistrées et qualifiées, sans disponibilité budgétaire déduite. Aucun provider/manager/Intent/table ajouté. Migration globale non exécutée ; aucune correspondance Awa/Koffi inventée. Conservation de tous les éléments privés et historiques.
+
+**Réception attendue** : contrôles source/PG, livraison de l’image exacte, huit profils sourcés conservés avec identité, liens V/E réconciliés sur leur source, puis actualisation des dépendants dans le parcours existant. Les tests à modèle simulé ne reçoivent ni les données réelles ni une décision client. Suite immédiate : catalogue d’actions utilisable et autres gros lots ; finitions différées.
+
 ## Références de marque et pièce publiée — 487 livré au périmètre code/transport (2026-10-17)
 
 **Contrat dans les outils existants** : BrandNode actifs et stratégie autorisée par canAccessStrategy → pillarPreciseFields → contexte authentifié/VAULT natif, valeurs complètes/versions/provenance et lien vers l’éditeur existant. Un rattachement ambigu n’est pas arbitré par premier résultat ; aucun pilier ou socle copié dans La Barre. Les valeurs locales de gamme restent prioritaires ; une valeur locale de marque absente du noyau courant reste conservée et identifiée.

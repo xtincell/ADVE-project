@@ -25,6 +25,9 @@ import { PillarTSchema } from "@/lib/types/pillar-schemas";
 import { loadCountrySectorIntelligence } from "@/server/services/seshat/knowledge/access";
 import type { TamSamSom, TrendTrackerExtraction } from "@/server/services/seshat/knowledge/schemas";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
+import { serializePillar } from "@/server/services/utils/pillar-context";
+import { callLLM, extractJSON } from "@/server/services/llm-gateway";
+import { parseAndValidateLLM } from "@/server/services/llm-gateway/parse-validate";
 
 // ADR-0063 / PR-K3-ter — sous-schémas. Le mega-appel (9 champs) est ÉCLATÉ en
 // 4 sous-appels focalisés ; `.pick().partial()` valide strictement chaque champ
@@ -102,7 +105,7 @@ async function loadExternalSaasSignals(strategyId?: string): Promise<Array<Recor
   });
   // This projection enters Pillar.content and the strict JSON audit diff.
   // Prisma dates must cross that boundary as timestamps, never Date objects.
-  return signals.map((s) => ({ type: s.type, data: s.data, createdAt: s.createdAt.toISOString() }));
+  return signals.map((s) => ({ id: s.id, type: s.type, data: s.data, createdAt: s.createdAt.toISOString() }));
 }
 
 /** Nombre de variables Trend Tracker effectivement renseignées (valeur non-nulle). */
@@ -234,8 +237,6 @@ async function callTrackJSON(args: {
 }): Promise<Record<string, unknown>> {
   // LLM Gateway obligatoire (jamais @ai-sdk/anthropic direct) : circuit breaker
   // + fallback provider + substitution Ollama locale + budget/cost tracking.
-  const { callLLM } = await import("@/server/services/llm-gateway");
-  const { extractJSON, parseAndValidateLLM } = await import("@/server/services/utils/llm");
   try {
     const { text } = await callLLM({
       caller: `mestor:protocole-track:${args.label}`,
@@ -281,6 +282,7 @@ async function generateTrackAnalysis(
   riskContent: Record<string, unknown> | null,
   intelligence: Intelligence,
   competitorData: Array<Record<string, unknown>>,
+  externalSignals: Array<Record<string, unknown>>,
   strategyId: string,
 ): Promise<Record<string, unknown>> {
 
@@ -294,13 +296,16 @@ async function generateTrackAnalysis(
     .map(k => {
       const c = pillars[k];
       if (!c || Object.keys(c).length === 0) return `[${k.toUpperCase()}] Vide`;
-      return wrapUntrusted(`PILIER ${k.toUpperCase()}`, JSON.stringify(c, null, 2), { max: 8000 });
+      return serializePillar(k.toUpperCase(), c);
     })
     .join("\n\n");
 
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : le pilier R dérive
   // lui aussi de l'ADVE fondateur.
-  const rContext = riskContent ? wrapUntrusted("PILIER R", JSON.stringify(riskContent, null, 2), { max: 8000 }) : "[R] Vide";
+  const rContext = serializePillar("R", riskContent);
+  const observations = externalSignals.length
+    ? `\n\nSignaux collectés pour cette marque, avec leurs identités et dates. Ils ne constituent pas une validation ni un résultat commercial à eux seuls :\n${serializePillar("OBSERVATIONS", { observations: externalSignals })}`
+    : "\n\nAucun signal récent de cette marque n’est disponible.";
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : données marché
   // Seshat = contenu externe (études, feeds, signaux) → encadré comme DONNÉE.
   // L'étiquette de chaque bloc conserve la consigne d'usage ; seul le payload
@@ -332,7 +337,7 @@ RÈGLES CRITIQUES:
 
 Retourne UNIQUEMENT du JSON valide, sans markdown.`;
 
-  const baseData = `Données ADVE + R:\n\n${context}\n\n${rContext}${seshatContext}${competitorContext}`;
+  const baseData = `Données ADVE + R:\n\n${context}\n\n${rContext}${seshatContext}${competitorContext}${observations}`;
 
   // Mega-appel (9 champs, 6000 tokens) ÉCLATÉ en 4 sous-appels focalisés.
   // L'invariant « le LLM ne valide jamais une hypothèse » (VALIDATED → TESTING)
@@ -426,7 +431,7 @@ export async function executeProtocoleTrack(strategyId: string): Promise<Protoco
     const { triangulation, sourcedFields, aiFields } = buildTriangulation(pillars, intelligence);
 
     // Step 3 — Analyse Track (MESTOR_ASSIST) AVEC les données vérifiées en contexte.
-    const trackAnalysis = await generateTrackAnalysis(pillars, pillars.r ?? null, intelligence, competitorData, strategyId);
+    const trackAnalysis = await generateTrackAnalysis(pillars, pillars.r ?? null, intelligence, competitorData, externalSignals, strategyId);
 
     // Step 3b — Override DÉTERMINISTE : si Seshat a un TAM/SAM/SOM vérifié, il
     // écrase l'estimation LLM (source=verified). Le LLM ne reste qu'un fallback.

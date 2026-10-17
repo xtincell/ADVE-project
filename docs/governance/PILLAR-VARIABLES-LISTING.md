@@ -7,20 +7,20 @@ Ce document descend **récursivement** dans tout l'arbre Zod (objets imbriqués,
 ## Synthèse
 
 - **8 piliers** : 4 ADVE fondateurs (A·D·V·E, édités manuellement) + 4 RTIS dérivés (R·T·I·S, régénérés via cascade — jamais édités à la main, cf. ADR-0023).
-- **156 champs de premier niveau** (ce que montre la page Console).
-- **1051 entrées totales** une fois l'arbre déplié récursivement (objets + sous-champs + éléments d'array + options d'union + records).
-- **156/156 champs de premier niveau documentés** dans la Variable Bible.
+- **157 champs de premier niveau** (ce que montre la page Console).
+- **969 entrées totales** une fois l'arbre déplié récursivement (objets + sous-champs + éléments d'array + options d'union + records).
+- **157/157 champs de premier niveau documentés** dans la Variable Bible.
 
 | Pilier | Nom | Champs niveau 1 | Entrées dépliées | Documentés (N1) |
 |---|---|---:|---:|---:|
-| **A** (ADVE) | Authenticité | 32 | 129 | 32/32 |
-| **D** (ADVE) | Distinction | 17 | 211 | 17/17 |
-| **V** (ADVE) | Valeur | 25 | 109 | 25/25 |
-| **E** (ADVE) | Engagement | 23 | 131 | 23/23 |
+| **A** (ADVE) | Authenticité | 32 | 122 | 32/32 |
+| **D** (ADVE) | Distinction | 17 | 209 | 17/17 |
+| **V** (ADVE) | Valeur | 26 | 143 | 26/26 |
+| **E** (ADVE) | Engagement | 23 | 112 | 23/23 |
 | **R** (RTIS) | Risk | 9 | 54 | 9/9 |
-| **T** (RTIS) | Track | 14 | 97 | 14/14 |
-| **I** (RTIS) | Innovation | 16 | 192 | 16/16 |
-| **S** (RTIS) | Strategy | 20 | 128 | 20/20 |
+| **T** (RTIS) | Track | 14 | 87 | 14/14 |
+| **I** (RTIS) | Innovation | 16 | 94 | 16/16 |
+| **S** (RTIS) | Strategy | 20 | 148 | 20/20 |
 
 ---
 
@@ -54,18 +54,16 @@ _ADVE — fondateur (édition manuelle)_
 |   `ikigai.competence` | `string` | ✓ | min 1 car. |  |
 |   `ikigai.worldNeed` | `string` | ✓ | min 1 car. |  |
 |   `ikigai.remuneration` | `string` | ✓ | min 1 car. |  |
-| `valeurs` | `array<object>` | ✓ | min 1 car. · max 3 car. | Les 1-3 valeurs fondamentales de la marque (modèle Schwartz — roue de 10 valeurs, la marque en choisit 3 MAXIMUM) |
+| `valeurs` | `array<object>` | ✓ | min 1 car. · max 5 car. | Les 1-3 valeurs fondamentales de la marque (modèle Schwartz — roue de 10 valeurs, la marque en choisit 3 MAXIMUM) |
 |   `valeurs[].value` | `enum` | ✓ | valeurs: POUVOIR, ACCOMPLISSEMENT, HEDONISME, STIMULATION, AUTONOMIE, UNIVERSALISME, BIENVEILLANCE, TRADITION, CONFORMITE, SECURITE |  |
 |   `valeurs[].customName` | `string` | ✓ | min 1 car. · max 200 car. |  |
 |   `valeurs[].rank` | `number` | ✓ | safeint · > 1 |  |
 |   `valeurs[].justification` | `string` | ✓ | min 1 car. |  |
 |   `valeurs[].costOfHolding` | `string` | ✓ | min 1 car. |  |
 |   `valeurs[].tensionWith` | `array<enum>` | — | valeurs: POUVOIR, ACCOMPLISSEMENT, HEDONISME, STIMULATION, AUTONOMIE, UNIVERSALISME, BIENVEILLANCE, TRADITION, CONFORMITE, SECURITE |  |
-| `hierarchieCommunautaire` | `array<object>` | ✓ | min 4 car. · max 6 car. | Les niveaux de la communauté de marque, mappés sur la Devotion Ladder |
-|   `hierarchieCommunautaire[].level` | `enum` | ✓ | valeurs: SPECTATEUR, INTERESSE, PARTICIPANT, ENGAGE, AMBASSADEUR, EVANGELISTE |  |
-|   `hierarchieCommunautaire[].description` | `string` | ✓ | min 1 car. |  |
-|   `hierarchieCommunautaire[].privileges` | `string` | ✓ | min 1 car. |  |
-|   `hierarchieCommunautaire[].entryCriteria` | `string` | — | min 1 car. · max 200 car. |  |
+| `hierarchieCommunautaire` | `union(array \| object)` | ✓ |  | Les niveaux de la communauté de marque, mappés sur la Devotion Ladder |
+|   `hierarchieCommunautaire(opt2).niveaux` | `array<string>` | ✓ | min 3 car. |  |
+|   `hierarchieCommunautaire(opt2).principe` | `string` | — | min 1 car. |  |
 | `timelineNarrative` | `object` | — |  | L histoire de la marque en 4 époques : origines, transformation, présent, futur |
 |   `timelineNarrative.origine` | `string` | — | min 1 car. |  |
 |   `timelineNarrative.transformation` | `string` | — | min 1 car. |  |
@@ -73,33 +71,33 @@ _ADVE — fondateur (édition manuelle)_
 |   `timelineNarrative.futur` | `string` | — | min 1 car. |  |
 | `prophecy` | `union(object \| string)` | — |  | La vision transformatrice de la marque — le monde qu'elle veut créer |
 |   `prophecy(opt1).worldTransformed` | `string` | ✓ | min 1 car. |  |
-|   `prophecy(opt1).pioneers` | `string` | ✓ | min 1 car. |  |
-|   `prophecy(opt1).urgency` | `string` | ✓ | min 1 car. |  |
-|   `prophecy(opt1).horizon` | `string` | ✓ | min 1 car. |  |
+|   `prophecy(opt1).vision` | `string` | — | min 1 car. |  |
+|   `prophecy(opt1).pioneers` | `string` | — | min 1 car. |  |
+|   `prophecy(opt1).urgency` | `string` | — | min 1 car. |  |
+|   `prophecy(opt1).horizon` | `string` | — | min 1 car. |  |
 | `enemy` | `object` | — |  | L'ennemi déclaré de la marque — ce contre quoi elle se bat |
 |   `enemy.name` | `string` | ✓ | min 1 car. · max 200 car. |  |
 |   `enemy.manifesto` | `string` | — | min 1 car. |  |
 |   `enemy.narrative` | `string` | — | min 1 car. |  |
 |   `enemy.enemySchwartzValues` | `array<enum>` | — | valeurs: POUVOIR, ACCOMPLISSEMENT, HEDONISME, STIMULATION, AUTONOMIE, UNIVERSALISME, BIENVEILLANCE, TRADITION, CONFORMITE, SECURITE |  |
-|   `enemy.overtonMap` | `object` | — |  |  |
-|     `enemy.overtonMap.ourPosition` | `string` | — | min 1 car. |  |
-|     `enemy.overtonMap.enemyPosition` | `string` | — | min 1 car. |  |
-|     `enemy.overtonMap.battleground` | `string` | — | min 1 car. |  |
-|     `enemy.overtonMap.shiftDirection` | `string` | — | min 1 car. |  |
-|   `enemy.enemyBrands` | `array<object>` | — |  |  |
-|     `enemy.enemyBrands[].name` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `enemy.enemyBrands[].howTheyFight` | `string` | — | min 1 car. · max 200 car. |  |
-|   `enemy.activeOpposition` | `array<string>` | — |  |  |
-|   `enemy.passiveOpposition` | `array<string>` | — |  |  |
-|   `enemy.counterStrategy` | `object` | — |  |  |
-|     `enemy.counterStrategy.marketingCounter` | `string` | — | min 1 car. |  |
-|     `enemy.counterStrategy.alliances` | `array<string>` | — |  |  |
-|   `enemy.fraternityFuel` | `object` | — |  |  |
-|     `enemy.fraternityFuel.sharedHatred` | `string` | — | min 1 car. |  |
-|     `enemy.fraternityFuel.bondingRituals` | `array<string>` | — |  |  |
+|   `enemy.overtonMap` | `union(string \| object)` | — |  |  |
+|     `enemy.overtonMap(opt2).ourPosition` | `string` | — | min 1 car. |  |
+|     `enemy.overtonMap(opt2).enemyPosition` | `string` | — | min 1 car. |  |
+|     `enemy.overtonMap(opt2).battleground` | `string` | — | min 1 car. |  |
+|     `enemy.overtonMap(opt2).shiftDirection` | `string` | — | min 1 car. |  |
+|   `enemy.enemyBrands` | `array<union>` | — |  |  |
+|   `enemy.activeOpposition` | `union(string \| array)` | — |  |  |
+|   `enemy.passiveOpposition` | `union(string \| array)` | — |  |  |
+|   `enemy.counterStrategy` | `union(string \| object)` | — |  |  |
+|     `enemy.counterStrategy(opt2).marketingCounter` | `string` | — | min 1 car. |  |
+|     `enemy.counterStrategy(opt2).alliances` | `array<string>` | — |  |  |
+|   `enemy.fraternityFuel` | `union(string \| object)` | — |  |  |
+|     `enemy.fraternityFuel(opt2).sharedHatred` | `string` | — | min 1 car. |  |
+|     `enemy.fraternityFuel(opt2).bondingRituals` | `array<string>` | — |  |  |
 | `doctrine` | `union(object \| string)` | — |  | Les dogmes et principes non-négociables de la marque |
 |   `doctrine(opt1).dogmas` | `array<string>` | ✓ | min 3 car. |  |
-|   `doctrine(opt1).principles` | `array<string>` | ✓ | min 3 car. |  |
+|   `doctrine(opt1).texte` | `string` | — | min 1 car. |  |
+|   `doctrine(opt1).principles` | `array<string>` | — |  |  |
 |   `doctrine(opt1).practices` | `array<string>` | — |  |  |
 | `livingMythology` | `object` | — |  | Le récit mythologique vivant de la marque — son canon narratif |
 |   `livingMythology.canon` | `string` | ✓ | min 1 car. |  |
@@ -125,22 +123,17 @@ _ADVE — fondateur (édition manuelle)_
 | `messieFondateur` | `object` | — |  | Le Messie — figure charismatique principale qui incarne la marque (fondateur ou autre) _(code A1bis)_ |
 |   `messieFondateur.nom` | `string` | ✓ | min 1 car. |  |
 |   `messieFondateur.role` | `string` | ✓ | min 1 car. |  |
-|   `messieFondateur.charismaScore` | `object` | — |  |  |
-|     `messieFondateur.charismaScore.conviction` | `number` | ✓ | > 0 · < 10 |  |
-|     `messieFondateur.charismaScore.storytelling` | `number` | ✓ | > 0 · < 10 |  |
-|     `messieFondateur.charismaScore.presence` | `number` | ✓ | > 0 · < 10 |  |
-|     `messieFondateur.charismaScore.authenticity` | `number` | ✓ | > 0 · < 10 |  |
+|   `messieFondateur.charismaScore` | `union(number \| object)` | — |  |  |
+|     `messieFondateur.charismaScore(opt2).conviction` | `number` | ✓ | > 0 · < 10 |  |
+|     `messieFondateur.charismaScore(opt2).storytelling` | `number` | ✓ | > 0 · < 10 |  |
+|     `messieFondateur.charismaScore(opt2).presence` | `number` | ✓ | > 0 · < 10 |  |
+|     `messieFondateur.charismaScore(opt2).authenticity` | `number` | ✓ | > 0 · < 10 |  |
 |   `messieFondateur.narrative` | `string` | ✓ | min 50 car. |  |
 | `competencesDivines` | `array<object>` | — | min 1 car. · max 3 car. | Les 1-3 compétences que SEUL la marque peut accomplir (Compétences Divines du manuel) _(code A6)_ |
 |   `competencesDivines[].competence` | `string` | ✓ | min 50 car. |  |
 |   `competencesDivines[].justification` | `string` | ✓ | min 1 car. |  |
 |   `competencesDivines[].exclusivityProof` | `string` | ✓ | min 1 car. |  |
-| `preuvesAuthenticite` | `array<object>` | — |  | Les preuves tangibles d'origine et légitimité (ancienneté, certifications, reconnaissance fondateur) _(code A8)_ |
-|   `preuvesAuthenticite[].type` | `enum` | ✓ | valeurs: heritage, certification, recognition, press, datapoint |  |
-|   `preuvesAuthenticite[].claim` | `string` | ✓ | min 1 car. |  |
-|   `preuvesAuthenticite[].evidence` | `string` | ✓ | min 1 car. |  |
-|   `preuvesAuthenticite[].source` | `string` | ✓ | min 1 car. |  |
-|   `preuvesAuthenticite[].year` | `number` | — | safeint |  |
+| `preuvesAuthenticite` | `array<union>` | — |  | Les preuves tangibles d'origine et légitimité (ancienneté, certifications, reconnaissance fondateur) _(code A8)_ |
 | `indexReputation` | `object` | — |  | Index public de réputation — Google Reviews, Trustpilot, NPS, etc. _(code A10)_ |
 |   `indexReputation.source` | `enum` | ✓ | valeurs: GOOGLE_REVIEWS, TRUSTPILOT, NPS, YELP, TRIPADVISOR, OTHER |  |
 |   `indexReputation.score` | `number` | ✓ |  |  |
@@ -172,7 +165,7 @@ _ADVE — fondateur (édition manuelle)_
 |   `archetypalExpression.visualTranslation` | `string` | — | min 1 car. |  |
 |   `archetypalExpression.verbalTranslation` | `string` | — | min 1 car. |  |
 |   `archetypalExpression.emotionalRegister` | `string` | — | min 1 car. |  |
-| `personas` | `array<object>` | ✓ | min 2 car. · max 5 car. | Les 2-5 profils types de clients de la marque |
+| `personas` | `array<object>` | ✓ | min 2 car. | Les profils types des différents publics de la marque |
 |   `personas[].id` | `string` | — | string_format |  |
 |   `personas[].name` | `string` | ✓ | min 1 car. · max 200 car. |  |
 |   `personas[].age` | `number` | — | safeint · > 1 · < 120 |  |
@@ -189,14 +182,14 @@ _ADVE — fondateur (édition manuelle)_
 |   `personas[].lifestyle` | `string` | — | min 1 car. |  |
 |   `personas[].mediaConsumption` | `string` | — | min 1 car. |  |
 |   `personas[].brandRelationships` | `string` | — | min 1 car. |  |
-|   `personas[].motivations` | `string` | ✓ | min 1 car. |  |
+|   `personas[].motivations` | `union(string \| array)` | ✓ |  |  |
 |   `personas[].fears` | `string` | — | min 1 car. |  |
 |   `personas[].hiddenDesire` | `string` | — | min 1 car. |  |
 |   `personas[].whatTheyActuallyBuy` | `string` | — | min 1 car. |  |
 |   `personas[].jobsToBeDone` | `array<string>` | — | min 1 car. · max 3 car. |  |
 |   `personas[].decisionProcess` | `string` | — | min 1 car. · max 200 car. |  |
 |   `personas[].devotionPotential` | `enum` | — | valeurs: SPECTATEUR, INTERESSE, PARTICIPANT, ENGAGE, AMBASSADEUR, EVANGELISTE |  |
-|   `personas[].rank` | `number` | ✓ | safeint · > 1 |  |
+|   `personas[].rank` | `number` | — | safeint · > 1 |  |
 | `paysageConcurrentiel` | `array<object>` | ✓ | min 3 car. | Les 3+ concurrents directs avec forces/faiblesses |
 |   `paysageConcurrentiel[].name` | `string` | ✓ | min 1 car. · max 200 car. |  |
 |   `paysageConcurrentiel[].partDeMarcheEstimee` | `number` | — | > 0 · < 100 |  |
@@ -205,7 +198,7 @@ _ADVE — fondateur (édition manuelle)_
 |   `paysageConcurrentiel[].strategiePos` | `string` | — | min 1 car. · max 200 car. |  |
 |   `paysageConcurrentiel[].distinctiveAssets` | `array<string>` | — |  |  |
 | `promesseMaitre` | `string` | ✓ | max 150 car. | La promesse principale de la marque au client, en 1 phrase |
-| `sousPromesses` | `array<string>` | ✓ | min 2 car. | Déclinaisons de la promesse maître pour chaque segment/produit/contexte |
+| `sousPromesses` | `array<union>` | ✓ | min 2 car. | Déclinaisons de la promesse maître pour chaque segment/produit/contexte |
 | `positionnement` | `string` | ✓ | max 200 car. | La position unique de la marque sur le marché, en 1-2 phrases |
 | `tonDeVoix` | `object` | ✓ |  | Le ton et la personnalité verbale de la marque |
 |   `tonDeVoix.personnalite` | `array<string>` | ✓ | min 5 car. · max 7 car. |  |
@@ -222,6 +215,8 @@ _ADVE — fondateur (édition manuelle)_
 |     `assetsLinguistiques.lexiquePropre[].word` | `string` | ✓ | min 1 car. · max 200 car. |  |
 |     `assetsLinguistiques.lexiquePropre[].definition` | `string` | ✓ | min 1 car. · max 200 car. |  |
 | `directionArtistique` | `object` | — |  | Système de production visuelle — 11 sous-composites produits par le pipeline BRAND GLORY |
+|   `directionArtistique.univers` | `string` | — | min 1 car. |  |
+|   `directionArtistique.principes` | `array<string>` | — |  |  |
 |   `directionArtistique.semioticAnalysis` | `object` | — |  |  |
 |     `directionArtistique.semioticAnalysis.gloryOutputId` | `string` | — |  |  |
 |     `directionArtistique.semioticAnalysis.dominantSigns` | `array<object>` | — |  |  |
@@ -350,11 +345,7 @@ _ADVE — fondateur (édition manuelle)_
 |   `sacredObjects[].narrative` | `string` | — | min 1 car. · max 200 car. |  |
 |   `sacredObjects[].stage` | `string` | — | min 1 car. · max 200 car. |  |
 |   `sacredObjects[].socialSignal` | `string` | — | min 1 car. · max 200 car. |  |
-| `proofPoints` | `array<object>` | — |  | Les preuves tangibles des promesses de la marque |
-|   `proofPoints[].type` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|   `proofPoints[].claim` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|   `proofPoints[].evidence` | `string` | — | min 1 car. · max 200 car. |  |
-|   `proofPoints[].source` | `string` | — | min 1 car. · max 200 car. |  |
+| `proofPoints` | `array<union>` | — |  | Les preuves tangibles des promesses de la marque |
 | `symboles` | `array<object>` | — |  | Les symboles visuels et culturels associés à la marque |
 |   `symboles[].symbol` | `string` | ✓ | min 1 car. · max 200 car. |  |
 |   `symboles[].meanings` | `array<string>` | — |  |  |
@@ -389,7 +380,7 @@ _ADVE — fondateur (édition manuelle)_
 | Champ (chemin) | Type | Req. | Contraintes / valeurs | Bible (description) |
 |---|---|:--:|---|---|
 | `businessModel` | `string` | — | min 1 car. | Le modèle d'affaires fondamental |
-| `economicModels` | `array<string>` | — |  | Les modèles économiques de capture de valeur |
+| `economicModels` | `array<union>` | — |  | Les modèles économiques de capture de valeur |
 | `positioningArchetype` | `string` | — | min 1 car. | L'archétype de positionnement prix (de ultra-luxe à low-cost) |
 | `salesChannel` | `enum` | — | valeurs: DIRECT, INTERMEDIATED, HYBRID | Le canal de vente principal — comment le produit atteint le client final |
 | `freeLayer` | `object` | — |  | Pour les modèles freemium : ce qui est gratuit vs payant |
@@ -407,6 +398,7 @@ _ADVE — fondateur (édition manuelle)_
 |   `produitsCatalogue[].nom` | `string` | ✓ | min 1 car. · max 200 car. |  |
 |   `produitsCatalogue[].categorie` | `enum` | ✓ | valeurs: PRODUIT_PHYSIQUE, SERVICE, ABONNEMENT, LICENCE, FORMATION, EXPERIENCE, CONTENU, PLATEFORME, CONSEIL, CUSTOM |  |
 |   `produitsCatalogue[].prix` | `number` | — | > 0 |  |
+|   `produitsCatalogue[].conditionsTarifaires` | `string` | — | min 1 car. |  |
 |   `produitsCatalogue[].cout` | `number` | — | > 0 |  |
 |   `produitsCatalogue[].margeUnitaire` | `number` | — | > 0 |  |
 |   `produitsCatalogue[].gainClientConcret` | `string` | ✓ | min 1 car. |  |
@@ -424,10 +416,10 @@ _ADVE — fondateur (édition manuelle)_
 |   `produitsCatalogue[].maslowMapping` | `enum` | — | valeurs: PHYSIOLOGICAL, SAFETY, BELONGING, ESTEEM, SELF_ACTUALIZATION |  |
 |   `produitsCatalogue[].lf8Trigger` | `array<enum>` | — | min 1 car. · max 3 car. · valeurs: SURVIE_SANTE, NOURRITURE_PLAISIR, LIBERTE_DANGER, COMPAGNON_SEXUEL, CONDITIONS_CONFORT, SUPERIORITE_STATUT, PROTECTION_PROCHES, APPROBATION_SOCIALE |  |
 |   `produitsCatalogue[].scoreEmotionnelADVE` | `number` | — | > 0 · < 100 |  |
-|   `produitsCatalogue[].canalDistribution` | `array<enum>` | ✓ | min 1 car. · valeurs: INSTAGRAM, FACEBOOK, TIKTOK, LINKEDIN, YOUTUBE, TWITTER, WEBSITE, APP, EMAIL, SMS, PACKAGING, PLV, OOH, PRINT, EVENT, POPUP, PR, TV, RADIO, VIDEO |  |
+|   `produitsCatalogue[].canalDistribution` | `array<enum>` | ✓ | min 1 car. · valeurs: INSTAGRAM, FACEBOOK, TIKTOK, LINKEDIN, YOUTUBE, TWITTER, WEBSITE, APP, EMAIL, SMS, WHATSAPP, PACKAGING, PLV, OOH, PRINT, EVENT, POPUP, PR, TV, RADIO, VIDEO |  |
 |   `produitsCatalogue[].disponibilite` | `enum` | — | valeurs: ALWAYS, SEASONAL, LIMITED, PRE_ORDER, PENDING |  |
 |   `produitsCatalogue[].skuRef` | `string` | — | min 1 car. · max 200 car. |  |
-| `productLadder` | `array<object>` | ✓ | min 2 car. · max 5 car. | L'échelle de produits par tier (entrée de gamme → premium) |
+| `productLadder` | `array<object>` | ✓ | min 2 car. · max 7 car. | L'échelle de produits par tier (entrée de gamme → premium) |
 |   `productLadder[].tier` | `string` | ✓ | min 1 car. · max 200 car. |  |
 |   `productLadder[].prix` | `number` | — | > 0 |  |
 |   `productLadder[].produitIds` | `array<string>` | ✓ | min 1 car. |  |
@@ -444,6 +436,41 @@ _ADVE — fondateur (édition manuelle)_
 |   `unitEconomics.paybackPeriod` | `number` | — |  |  |
 |   `unitEconomics.budgetCom` | `number` | ✓ | > 0 |  |
 |   `unitEconomics.caVise` | `number` | ✓ | > 0 |  |
+| `productSystem` | `object` | — |  | Le SYSTÈME/mécanisme interne du produit — ce qui le fait fonctionner et crée de la valeur structurellement (distinct du catalogue/économie). Ex. le « Système Palais » de SPAWT. _(code V8)_ |
+|   `productSystem.coreConcept` | `string` | — | min 1 car. |  |
+|   `productSystem.anchorProductIds` | `array<string>` | — |  |  |
+|   `productSystem.axes` | `array<object>` | — |  |  |
+|     `productSystem.axes[].id` | `string` | — | min 1 car. · max 200 car. |  |
+|     `productSystem.axes[].label` | `string` | ✓ | min 1 car. · max 200 car. |  |
+|     `productSystem.axes[].poleLow` | `string` | — | min 1 car. · max 200 car. |  |
+|     `productSystem.axes[].poleHigh` | `string` | — | min 1 car. · max 200 car. |  |
+|     `productSystem.axes[].description` | `string` | — | min 1 car. · max 200 car. |  |
+|   `productSystem.archetypes` | `array<object>` | — |  |  |
+|     `productSystem.archetypes[].name` | `string` | ✓ | min 1 car. · max 200 car. |  |
+|     `productSystem.archetypes[].axesSignature` | `string` | — | min 1 car. · max 200 car. |  |
+|     `productSystem.archetypes[].essence` | `string` | — | min 1 car. · max 200 car. |  |
+|     `productSystem.archetypes[].progressionNames` | `array<string>` | — |  |  |
+|     `productSystem.archetypes[].relatedProductIds` | `array<string>` | — |  |  |
+|   `productSystem.progressionStages` | `array<object>` | — |  |  |
+|     `productSystem.progressionStages[].name` | `string` | ✓ | min 1 car. · max 200 car. |  |
+|     `productSystem.progressionStages[].threshold` | `string` | — | min 1 car. · max 200 car. |  |
+|     `productSystem.progressionStages[].signals` | `array<string>` | — |  |  |
+|     `productSystem.progressionStages[].unlocks` | `array<string>` | — |  |  |
+|   `productSystem.modes` | `array<object>` | — |  |  |
+|     `productSystem.modes[].name` | `string` | ✓ | min 1 car. · max 200 car. |  |
+|     `productSystem.modes[].trigger` | `string` | — | min 1 car. · max 200 car. |  |
+|     `productSystem.modes[].format` | `string` | — | min 1 car. · max 200 car. |  |
+|     `productSystem.modes[].description` | `string` | — | min 1 car. · max 200 car. |  |
+|     `productSystem.modes[].relatedProductIds` | `array<string>` | — |  |  |
+|   `productSystem.artifacts` | `array<object>` | — |  |  |
+|     `productSystem.artifacts[].name` | `string` | ✓ | min 1 car. · max 200 car. |  |
+|     `productSystem.artifacts[].kind` | `string` | — | min 1 car. · max 200 car. |  |
+|     `productSystem.artifacts[].description` | `string` | — | min 1 car. · max 200 car. |  |
+|     `productSystem.artifacts[].socialSignal` | `string` | — | min 1 car. · max 200 car. |  |
+|     `productSystem.artifacts[].relatedProductIds` | `array<string>` | — |  |  |
+|   `productSystem.mechanics` | `array<object>` | — |  |  |
+|     `productSystem.mechanics[].name` | `string` | ✓ | min 1 car. · max 200 car. |  |
+|     `productSystem.mechanics[].rule` | `string` | ✓ | min 1 car. |  |
 | `promesseDeValeur` | `string` | — | min 1 car. | La proposition de valeur globale de la marque (synthèse V) |
 | `valeurMarqueTangible` | `array<string>` | — |  | Valeurs tangibles créées pour la marque |
 | `valeurMarqueIntangible` | `array<string>` | — |  | Valeurs intangibles créées pour la marque |
@@ -469,9 +496,7 @@ _ADVE — fondateur (édition manuelle)_
 |   `proprieteIntellectuelle.secretsCommerciaux` | `array<string>` | — |  |  |
 |   `proprieteIntellectuelle.technologieProprietary` | `string` | — |  |  |
 |   `proprieteIntellectuelle.barrieresEntree` | `array<string>` | — |  |  |
-|   `proprieteIntellectuelle.licences` | `array<object>` | — |  |  |
-|     `proprieteIntellectuelle.licences[].nom` | `string` | ✓ | min 1 car. |  |
-|     `proprieteIntellectuelle.licences[].type` | `string` | ✓ | min 1 car. |  |
+|   `proprieteIntellectuelle.licences` | `array<union>` | — |  |  |
 |   `proprieteIntellectuelle.protectionScore` | `number` | — | > 0 · < 10 |  |
 | `roiProofs` | `array<object>` | — |  | Preuves chiffrées de ROI client — testimoniaux quantifiés _(code V7)_ |
 |   `roiProofs[].client` | `string` | — |  |  |
@@ -492,7 +517,7 @@ _ADVE — fondateur (édition manuelle)_
 |   `sacrificeRequis.effort` | `string` | — |  |  |
 |   `sacrificeRequis.justification` | `string` | ✓ | min 1 car. |  |
 | `packagingExperience` | `object` | — |  | L'expérience d'unboxing / réception / découverte du produit _(code V-Packaging)_ |
-|   `packagingExperience.unboxingRitual` | `array<string>` | — |  |  |
+|   `packagingExperience.unboxingRitual` | `union(string \| array)` | — |  |  |
 |   `packagingExperience.packagingMaterial` | `enum` | — | valeurs: premium, standard, eco |  |
 |   `packagingExperience.deliveryMode` | `enum` | — | valeurs: express, standard, event |  |
 |   `packagingExperience.sensoryNotes` | `string` | — |  |  |
@@ -507,7 +532,7 @@ _ADVE — fondateur (édition manuelle)_
 | Champ (chemin) | Type | Req. | Contraintes / valeurs | Bible (description) |
 |---|---|:--:|---|---|
 | `promesseExperience` | `string` | — | min 1 car. | L'expérience que chaque interaction avec la marque garantit |
-| `primaryChannel` | `enum` | — | valeurs: INSTAGRAM, FACEBOOK, TIKTOK, LINKEDIN, YOUTUBE, TWITTER, WEBSITE, APP, EMAIL, SMS, PACKAGING, PLV, OOH, PRINT, EVENT, POPUP, PR, TV, RADIO, VIDEO | Canal principal d'engagement de la marque |
+| `primaryChannel` | `enum` | — | valeurs: INSTAGRAM, FACEBOOK, TIKTOK, LINKEDIN, YOUTUBE, TWITTER, WEBSITE, APP, EMAIL, SMS, WHATSAPP, PACKAGING, PLV, OOH, PRINT, EVENT, POPUP, PR, TV, RADIO, VIDEO | Canal principal d'engagement de la marque |
 | `superfanPortrait` | `object` | — |  | Le profil du superfan cible — l'évangéliste qu'on vise |
 |   `superfanPortrait.personaRef` | `string` | — | min 1 car. |  |
 |   `superfanPortrait.motivations` | `array<string>` | — |  |  |
@@ -538,7 +563,7 @@ _ADVE — fondateur (édition manuelle)_
 | `touchpoints` | `array<object>` | ✓ | min 5 car. · max 15 car. | Les 5-15 points de contact entre la marque et son audience |
 |   `touchpoints[].canal` | `string` | ✓ | min 1 car. · max 200 car. |  |
 |   `touchpoints[].type` | `enum` | ✓ | valeurs: PHYSIQUE, DIGITAL, HUMAIN |  |
-|   `touchpoints[].channelRef` | `enum` | ✓ | valeurs: INSTAGRAM, FACEBOOK, TIKTOK, LINKEDIN, YOUTUBE, TWITTER, WEBSITE, APP, EMAIL, SMS, PACKAGING, PLV, OOH, PRINT, EVENT, POPUP, PR, TV, RADIO, VIDEO |  |
+|   `touchpoints[].channelRef` | `enum` | ✓ | valeurs: INSTAGRAM, FACEBOOK, TIKTOK, LINKEDIN, YOUTUBE, TWITTER, WEBSITE, APP, EMAIL, SMS, WHATSAPP, PACKAGING, PLV, OOH, PRINT, EVENT, POPUP, PR, TV, RADIO, VIDEO |  |
 |   `touchpoints[].role` | `string` | ✓ | min 1 car. |  |
 |   `touchpoints[].aarrStage` | `enum` | ✓ | valeurs: ACQUISITION, ACTIVATION, RETENTION, REVENUE, REFERRAL |  |
 |   `touchpoints[].devotionLevel` | `array<enum>` | ✓ | min 1 car. · valeurs: SPECTATEUR, INTERESSE, PARTICIPANT, ENGAGE, AMBASSADEUR, EVANGELISTE |  |
@@ -553,15 +578,9 @@ _ADVE — fondateur (édition manuelle)_
 |   `rituels[].touchpoints` | `array<string>` | — |  |  |
 |   `rituels[].aarrPrimary` | `enum` | ✓ | valeurs: ACQUISITION, ACTIVATION, RETENTION, REVENUE, REFERRAL |  |
 |   `rituels[].kpiMeasure` | `string` | ✓ | min 1 car. · max 200 car. |  |
-| `principesCommunautaires` | `array<object>` | — | min 3 car. | Les règles de la communauté de marque |
-|   `principesCommunautaires[].principle` | `string` | ✓ | min 1 car. |  |
-|   `principesCommunautaires[].enforcement` | `string` | ✓ | min 1 car. · max 200 car. |  |
+| `principesCommunautaires` | `array<union>` | — | min 3 car. | Les règles de la communauté de marque |
 | `gamification` | `object` | — |  | Système de progression ludique |
-|   `gamification.niveaux` | `array<object>` | ✓ | min 3 car. |  |
-|     `gamification.niveaux[].niveau` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `gamification.niveaux[].condition` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `gamification.niveaux[].reward` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `gamification.niveaux[].duration` | `string` | — | min 1 car. · max 200 car. |  |
+|   `gamification.niveaux` | `array<union>` | ✓ | min 3 car. |  |
 |   `gamification.recompenses` | `array<string>` | — |  |  |
 | `aarrr` | `object` | ✓ |  | Le funnel AARRR appliqué à la marque |
 |   `aarrr.acquisition` | `string` | ✓ | min 1 car. |  |
@@ -574,13 +593,8 @@ _ADVE — fondateur (édition manuelle)_
 |   `kpis[].metricType` | `enum` | ✓ | valeurs: ENGAGEMENT, FINANCIAL, BEHAVIORAL, SATISFACTION |  |
 |   `kpis[].target` | `number` | ✓ |  |  |
 |   `kpis[].frequency` | `enum` | ✓ | valeurs: DAILY, WEEKLY, MONTHLY |  |
-| `taboos` | `array<object>` | — |  | Les tabous de la communauté — ce qu'on ne fait JAMAIS |
-|   `taboos[].taboo` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|   `taboos[].consequence` | `string` | — | min 1 car. · max 200 car. |  |
-| `sacredCalendar` | `array<object>` | — | min 4 car. | Le calendrier sacré de la marque — dates et moments clés |
-|   `sacredCalendar[].date` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|   `sacredCalendar[].name` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|   `sacredCalendar[].significance` | `string` | ✓ | min 1 car. · max 200 car. |  |
+| `taboos` | `array<union>` | — |  | Les tabous de la communauté — ce qu'on ne fait JAMAIS |
+| `sacredCalendar` | `union(array \| record)` | — |  | Le calendrier sacré de la marque — dates et moments clés |
 | `commandments` | `array<object>` | — | max 10 car. | Les commandements de la marque — règles non-négociables |
 |   `commandments[].commandment` | `string` | ✓ | min 1 car. · max 200 car. |  |
 |   `commandments[].justification` | `string` | ✓ | min 1 car. · max 200 car. |  |
@@ -597,20 +611,15 @@ _ADVE — fondateur (édition manuelle)_
 |   `sacraments[].kpi` | `string` | ✓ | min 1 car. · max 200 car. |  |
 |   `sacraments[].aarrStage` | `enum` | ✓ | valeurs: ACQUISITION, ACTIVATION, RETENTION, REVENUE, REFERRAL |  |
 | `clergeStructure` | `object` | — |  | Le Clergé — équipe d'incarnation de la marque (CM, ambassadeurs, evangelists, support) _(code E-Clerge)_ |
-|   `clergeStructure.communityManager` | `object` | — |  |  |
-|     `clergeStructure.communityManager.name` | `string` | ✓ | min 1 car. |  |
-|     `clergeStructure.communityManager.role` | `string` | ✓ | min 1 car. |  |
-|     `clergeStructure.communityManager.status` | `enum` | ✓ | valeurs: FULL_TIME, PART_TIME, VOLUNTEER |  |
-|   `clergeStructure.ambassadeurs` | `array<object>` | — |  |  |
-|     `clergeStructure.ambassadeurs[].name` | `string` | ✓ | min 1 car. |  |
-|     `clergeStructure.ambassadeurs[].reach` | `number` | — | safeint |  |
-|     `clergeStructure.ambassadeurs[].tier` | `enum` | — | valeurs: ALPHA, BETA, MICRO |  |
-|   `clergeStructure.supportTeam` | `object` | — |  |  |
-|     `clergeStructure.supportTeam.size` | `number` | ✓ | safeint · > 0 |  |
-|     `clergeStructure.supportTeam.sla` | `string` | — |  |  |
-|   `clergeStructure.specialists` | `array<object>` | — |  |  |
-|     `clergeStructure.specialists[].name` | `string` | ✓ | min 1 car. |  |
-|     `clergeStructure.specialists[].expertise` | `string` | ✓ | min 1 car. |  |
+|   `clergeStructure.communityManager` | `union(string \| object)` | — |  |  |
+|     `clergeStructure.communityManager(opt2).name` | `string` | ✓ | min 1 car. |  |
+|     `clergeStructure.communityManager(opt2).role` | `string` | ✓ | min 1 car. |  |
+|     `clergeStructure.communityManager(opt2).status` | `enum` | ✓ | valeurs: FULL_TIME, PART_TIME, VOLUNTEER |  |
+|   `clergeStructure.ambassadeurs` | `union(string \| array)` | — |  |  |
+|   `clergeStructure.supportTeam` | `union(string \| object)` | — |  |  |
+|     `clergeStructure.supportTeam(opt2).size` | `number` | ✓ | safeint · > 0 |  |
+|     `clergeStructure.supportTeam(opt2).sla` | `string` | — |  |  |
+|   `clergeStructure.specialists` | `union(string \| array)` | — |  |  |
 | `pelerinages` | `array<object>` | — |  | Les Pèlerinages — événements majeurs (vs touchpoints quotidiens en e.touchpoints) _(code E-Pelerinages)_ |
 |   `pelerinages[].name` | `string` | ✓ | min 1 car. |  |
 |   `pelerinages[].frequency` | `enum` | ✓ | valeurs: ANNUAL, BIANNUAL, QUARTERLY |  |
@@ -619,24 +628,21 @@ _ADVE — fondateur (édition manuelle)_
 |   `pelerinages[].devotionLevelTarget` | `enum` | — | valeurs: SPECTATEUR, INTERESSE, PARTICIPANT, ENGAGE, AMBASSADEUR, EVANGELISTE |  |
 |   `pelerinages[].entryRitual` | `string` | — |  |  |
 | `programmeEvangelisation` | `object` | — |  | Système qui transforme clients en recruteurs actifs _(code E-Evangelisation)_ |
-|   `programmeEvangelisation.referralProgram` | `object` | — |  |  |
-|     `programmeEvangelisation.referralProgram.incentive` | `string` | ✓ | min 1 car. |  |
-|     `programmeEvangelisation.referralProgram.viralCoefficient` | `number` | — |  |  |
-|     `programmeEvangelisation.referralProgram.launchedAt` | `string` | — |  |  |
-|   `programmeEvangelisation.brandAdvocacyProgram` | `object` | — |  |  |
-|     `programmeEvangelisation.brandAdvocacyProgram.tiers` | `array<string>` | — |  |  |
-|     `programmeEvangelisation.brandAdvocacyProgram.rewards` | `string` | — |  |  |
-|     `programmeEvangelisation.brandAdvocacyProgram.kpi` | `string` | — |  |  |
-|   `programmeEvangelisation.communityRecruitment` | `object` | — |  |  |
-|     `programmeEvangelisation.communityRecruitment.channels` | `array<string>` | — |  |  |
-|     `programmeEvangelisation.communityRecruitment.conversionRate` | `number` | — |  |  |
+|   `programmeEvangelisation.referralProgram` | `union(string \| object)` | — |  |  |
+|     `programmeEvangelisation.referralProgram(opt2).incentive` | `string` | ✓ | min 1 car. |  |
+|     `programmeEvangelisation.referralProgram(opt2).viralCoefficient` | `number` | — |  |  |
+|     `programmeEvangelisation.referralProgram(opt2).launchedAt` | `string` | — |  |  |
+|   `programmeEvangelisation.brandAdvocacyProgram` | `union(string \| object)` | — |  |  |
+|     `programmeEvangelisation.brandAdvocacyProgram(opt2).tiers` | `array<string>` | — |  |  |
+|     `programmeEvangelisation.brandAdvocacyProgram(opt2).rewards` | `string` | — |  |  |
+|     `programmeEvangelisation.brandAdvocacyProgram(opt2).kpi` | `string` | — |  |  |
+|   `programmeEvangelisation.communityRecruitment` | `union(string \| object)` | — |  |  |
+|     `programmeEvangelisation.communityRecruitment(opt2).channels` | `array<string>` | — |  |  |
+|     `programmeEvangelisation.communityRecruitment(opt2).conversionRate` | `number` | — |  |  |
 | `communityBuilding` | `object` | — |  | Architecture de construction communautaire (vs e.principesCommunautaires qui sont les règles) _(code E-Community)_ |
-|   `communityBuilding.platforms` | `array<object>` | — | min 1 car. |  |
-|     `communityBuilding.platforms[].name` | `string` | ✓ | min 1 car. |  |
-|     `communityBuilding.platforms[].type` | `enum` | ✓ | valeurs: DISCORD, SLACK, FACEBOOK_GROUP, FORUM, CIRCLE, OTHER |  |
-|     `communityBuilding.platforms[].memberCount` | `number` | — | safeint · > 0 |  |
+|   `communityBuilding.platforms` | `array<union>` | — | min 1 car. |  |
 |   `communityBuilding.moderationRules` | `array<string>` | — | min 3 car. |  |
-|   `communityBuilding.growthMechanics` | `array<enum>` | — | valeurs: referral, content, events |  |
+|   `communityBuilding.growthMechanics` | `union(string \| array)` | — |  |  |
 
 ---
 
@@ -647,18 +653,18 @@ _RTIS — dérivé (régénéré par cascade)_
 | Champ (chemin) | Type | Req. | Contraintes / valeurs | Bible (description) |
 |---|---|:--:|---|---|
 | `pillarGaps` | `object` | — |  | Diagnostic par pilier ADVE — score + lacunes |
-|   `pillarGaps.a` | `object` | — |  |  |
-|     `pillarGaps.a.score` | `number` | — |  |  |
-|     `pillarGaps.a.gaps` | `array<string>` | — |  |  |
-|   `pillarGaps.d` | `object` | — |  |  |
-|     `pillarGaps.d.score` | `number` | — |  |  |
-|     `pillarGaps.d.gaps` | `array<string>` | — |  |  |
-|   `pillarGaps.v` | `object` | — |  |  |
-|     `pillarGaps.v.score` | `number` | — |  |  |
-|     `pillarGaps.v.gaps` | `array<string>` | — |  |  |
-|   `pillarGaps.e` | `object` | — |  |  |
-|     `pillarGaps.e.score` | `number` | — |  |  |
-|     `pillarGaps.e.gaps` | `array<string>` | — |  |  |
+|   `pillarGaps.a` | `union(string \| object)` | — |  |  |
+|     `pillarGaps.a(opt2).score` | `number` | — |  |  |
+|     `pillarGaps.a(opt2).gaps` | `array<string>` | — |  |  |
+|   `pillarGaps.d` | `union(string \| object)` | — |  |  |
+|     `pillarGaps.d(opt2).score` | `number` | — |  |  |
+|     `pillarGaps.d(opt2).gaps` | `array<string>` | — |  |  |
+|   `pillarGaps.v` | `union(string \| object)` | — |  |  |
+|     `pillarGaps.v(opt2).score` | `number` | — |  |  |
+|     `pillarGaps.v(opt2).gaps` | `array<string>` | — |  |  |
+|   `pillarGaps.e` | `union(string \| object)` | — |  |  |
+|     `pillarGaps.e(opt2).score` | `number` | — |  |  |
+|     `pillarGaps.e(opt2).gaps` | `array<string>` | — |  |  |
 | `coherenceRisks` | `array<object>` | — |  | Contradictions détectées entre piliers |
 |   `coherenceRisks[].pillar1` | `string` | ✓ | min 1 car. |  |
 |   `coherenceRisks[].pillar2` | `string` | ✓ | min 1 car. |  |
@@ -717,9 +723,7 @@ _RTIS — dérivé (régénéré par cascade)_
 |   `riskValidation[].source` | `enum` | — | valeurs: ai_estimate, verified, calculated, operator_input |  |
 | `overtonPosition` | `object` | — |  | La position actuelle de la Fenêtre d'Overton — comment le marché perçoit la marque MAINTENANT |
 |   `overtonPosition.currentPerception` | `string` | ✓ | min 1 car. |  |
-|   `overtonPosition.marketSegments` | `array<object>` | — |  |  |
-|     `overtonPosition.marketSegments[].segment` | `string` | ✓ | min 1 car. |  |
-|     `overtonPosition.marketSegments[].perception` | `string` | ✓ | min 1 car. |  |
+|   `overtonPosition.marketSegments` | `array<union>` | — |  |  |
 |   `overtonPosition.measurementMethod` | `string` | — | min 1 car. |  |
 |   `overtonPosition.measuredAt` | `string` | — |  |  |
 |   `overtonPosition.confidence` | `number` | — | > 0 · < 1 |  |
@@ -777,11 +781,7 @@ _RTIS — dérivé (régénéré par cascade)_
 |   `weakSignalAnalysis[].confidence` | `number` | ✓ | > 0 · < 1 |  |
 |   `weakSignalAnalysis[].urgency` | `enum` | ✓ | valeurs: LOW, MEDIUM, HIGH, CRITICAL |  |
 |   `weakSignalAnalysis[].relatedPillars` | `array<string>` | — |  |  |
-|   `weakSignalAnalysis[].supportingSignals` | `array<object>` | — |  |  |
-|     `weakSignalAnalysis[].supportingSignals[].title` | `string` | ✓ | min 1 car. |  |
-|     `weakSignalAnalysis[].supportingSignals[].content` | `string` | ✓ | min 1 car. |  |
-|     `weakSignalAnalysis[].supportingSignals[].addedConfidence` | `number` | ✓ | > 0 · < 0.3 |  |
-|     `weakSignalAnalysis[].supportingSignals[].link` | `string` | ✓ | min 1 car. |  |
+|   `weakSignalAnalysis[].supportingSignals` | `array<union>` | — |  |  |
 |   `weakSignalAnalysis[].recommendedAction` | `string` | — | min 1 car. |  |
 | `marketDataSources` | `array<object>` | — |  | Sources de données marché utilisées |
 |   `marketDataSources[].sourceType` | `string` | ✓ |  |  |
@@ -791,19 +791,15 @@ _RTIS — dérivé (régénéré par cascade)_
 | `lastMarketDataRefresh` | `string` | — |  | Date de dernière actualisation des données marché |
 | `sectorKnowledgeReused` | `boolean` | — |  | Si les données sectorielles cross-brand ont été réutilisées |
 | `traction` | `object` | — |  | Preuves de traction marché (Berkus: Business Relationships) |
-|   `traction.loisSignees` | `array<object>` | — |  |  |
-|     `traction.loisSignees[].partenaire` | `string` | ✓ | min 1 car. |  |
-|     `traction.loisSignees[].type` | `enum` | ✓ | valeurs: LOI, MOU, CONTRAT, PRECOMMANDE, PILOTE |  |
-|     `traction.loisSignees[].valeur` | `number` | — |  |  |
-|     `traction.loisSignees[].date` | `string` | — |  |  |
+|   `traction.loisSignees` | `union(number \| array)` | — |  |  |
 |   `traction.utilisateursInscrits` | `number` | — | > 0 |  |
 |   `traction.utilisateursActifs` | `number` | — | > 0 |  |
 |   `traction.croissanceHebdo` | `number` | — |  |  |
 |   `traction.revenusRecurrents` | `number` | — | > 0 |  |
-|   `traction.metriqueCle` | `object` | — |  |  |
-|     `traction.metriqueCle.nom` | `string` | ✓ | min 1 car. |  |
-|     `traction.metriqueCle.valeur` | `number` | ✓ |  |  |
-|     `traction.metriqueCle.tendance` | `enum` | ✓ | valeurs: UP, DOWN, STABLE |  |
+|   `traction.metriqueCle` | `union(string \| object)` | — |  |  |
+|     `traction.metriqueCle(opt2).nom` | `string` | ✓ | min 1 car. |  |
+|     `traction.metriqueCle(opt2).valeur` | `number` | ✓ |  |  |
+|     `traction.metriqueCle(opt2).tendance` | `enum` | ✓ | valeurs: UP, DOWN, STABLE |  |
 |   `traction.preuvesTraction` | `array<string>` | — |  |  |
 |   `traction.tractionScore` | `number` | — | > 0 · < 10 |  |
 
@@ -816,113 +812,15 @@ _RTIS — dérivé (régénéré par cascade)_
 | Champ (chemin) | Type | Req. | Contraintes / valeurs | Bible (description) |
 |---|---|:--:|---|---|
 | `actionsByDevotionLevel` | `object` | — |  | Le catalogue trié par niveau Devotion Ladder au lieu de par canal |
-|   `actionsByDevotionLevel.SPECTATEUR` | `array<object>` | — |  |  |
-|     `actionsByDevotionLevel.SPECTATEUR[].action` | `string` | ✓ | min 1 car. |  |
-|     `actionsByDevotionLevel.SPECTATEUR[].format` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.SPECTATEUR[].objectif` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.SPECTATEUR[].pilierImpact` | `enum` | — | valeurs: A, D, V, E |  |
-|     `actionsByDevotionLevel.SPECTATEUR[].devotionImpact` | `enum` | — | valeurs: SPECTATEUR, INTERESSE, PARTICIPANT, ENGAGE, AMBASSADEUR, EVANGELISTE |  |
-|     `actionsByDevotionLevel.SPECTATEUR[].overtonShift` | `string` | — | min 1 car. |  |
-|     `actionsByDevotionLevel.SPECTATEUR[].id` | `string` | — | string_format |  |
-|     `actionsByDevotionLevel.SPECTATEUR[].status` | `enum` | — | valeurs: DRAFT, RECOMMENDED, SELECTED_FOR_ROADMAP, REJECTED |  |
-|     `actionsByDevotionLevel.SPECTATEUR[].budget` | `number` | — | > 0 |  |
-|     `actionsByDevotionLevel.SPECTATEUR[].budgetEstime` | `enum` | — | valeurs: LOW, MEDIUM, HIGH |  |
-|     `actionsByDevotionLevel.SPECTATEUR[].channel` | `string` | — | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.SPECTATEUR[].timeframe` | `enum` | — | valeurs: SPRINT_90, PHASE_1, PHASE_2, LONG_TERM |  |
-|     `actionsByDevotionLevel.SPECTATEUR[].mitigatesRiskIds` | `array<string>` | — |  |  |
-|     `actionsByDevotionLevel.SPECTATEUR[].targetsPersonaIds` | `array<string>` | — |  |  |
-|   `actionsByDevotionLevel.INTERESSE` | `array<object>` | — |  |  |
-|     `actionsByDevotionLevel.INTERESSE[].action` | `string` | ✓ | min 1 car. |  |
-|     `actionsByDevotionLevel.INTERESSE[].format` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.INTERESSE[].objectif` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.INTERESSE[].pilierImpact` | `enum` | — | valeurs: A, D, V, E |  |
-|     `actionsByDevotionLevel.INTERESSE[].devotionImpact` | `enum` | — | valeurs: SPECTATEUR, INTERESSE, PARTICIPANT, ENGAGE, AMBASSADEUR, EVANGELISTE |  |
-|     `actionsByDevotionLevel.INTERESSE[].overtonShift` | `string` | — | min 1 car. |  |
-|     `actionsByDevotionLevel.INTERESSE[].id` | `string` | — | string_format |  |
-|     `actionsByDevotionLevel.INTERESSE[].status` | `enum` | — | valeurs: DRAFT, RECOMMENDED, SELECTED_FOR_ROADMAP, REJECTED |  |
-|     `actionsByDevotionLevel.INTERESSE[].budget` | `number` | — | > 0 |  |
-|     `actionsByDevotionLevel.INTERESSE[].budgetEstime` | `enum` | — | valeurs: LOW, MEDIUM, HIGH |  |
-|     `actionsByDevotionLevel.INTERESSE[].channel` | `string` | — | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.INTERESSE[].timeframe` | `enum` | — | valeurs: SPRINT_90, PHASE_1, PHASE_2, LONG_TERM |  |
-|     `actionsByDevotionLevel.INTERESSE[].mitigatesRiskIds` | `array<string>` | — |  |  |
-|     `actionsByDevotionLevel.INTERESSE[].targetsPersonaIds` | `array<string>` | — |  |  |
-|   `actionsByDevotionLevel.PARTICIPANT` | `array<object>` | — |  |  |
-|     `actionsByDevotionLevel.PARTICIPANT[].action` | `string` | ✓ | min 1 car. |  |
-|     `actionsByDevotionLevel.PARTICIPANT[].format` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.PARTICIPANT[].objectif` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.PARTICIPANT[].pilierImpact` | `enum` | — | valeurs: A, D, V, E |  |
-|     `actionsByDevotionLevel.PARTICIPANT[].devotionImpact` | `enum` | — | valeurs: SPECTATEUR, INTERESSE, PARTICIPANT, ENGAGE, AMBASSADEUR, EVANGELISTE |  |
-|     `actionsByDevotionLevel.PARTICIPANT[].overtonShift` | `string` | — | min 1 car. |  |
-|     `actionsByDevotionLevel.PARTICIPANT[].id` | `string` | — | string_format |  |
-|     `actionsByDevotionLevel.PARTICIPANT[].status` | `enum` | — | valeurs: DRAFT, RECOMMENDED, SELECTED_FOR_ROADMAP, REJECTED |  |
-|     `actionsByDevotionLevel.PARTICIPANT[].budget` | `number` | — | > 0 |  |
-|     `actionsByDevotionLevel.PARTICIPANT[].budgetEstime` | `enum` | — | valeurs: LOW, MEDIUM, HIGH |  |
-|     `actionsByDevotionLevel.PARTICIPANT[].channel` | `string` | — | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.PARTICIPANT[].timeframe` | `enum` | — | valeurs: SPRINT_90, PHASE_1, PHASE_2, LONG_TERM |  |
-|     `actionsByDevotionLevel.PARTICIPANT[].mitigatesRiskIds` | `array<string>` | — |  |  |
-|     `actionsByDevotionLevel.PARTICIPANT[].targetsPersonaIds` | `array<string>` | — |  |  |
-|   `actionsByDevotionLevel.ENGAGE` | `array<object>` | — |  |  |
-|     `actionsByDevotionLevel.ENGAGE[].action` | `string` | ✓ | min 1 car. |  |
-|     `actionsByDevotionLevel.ENGAGE[].format` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.ENGAGE[].objectif` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.ENGAGE[].pilierImpact` | `enum` | — | valeurs: A, D, V, E |  |
-|     `actionsByDevotionLevel.ENGAGE[].devotionImpact` | `enum` | — | valeurs: SPECTATEUR, INTERESSE, PARTICIPANT, ENGAGE, AMBASSADEUR, EVANGELISTE |  |
-|     `actionsByDevotionLevel.ENGAGE[].overtonShift` | `string` | — | min 1 car. |  |
-|     `actionsByDevotionLevel.ENGAGE[].id` | `string` | — | string_format |  |
-|     `actionsByDevotionLevel.ENGAGE[].status` | `enum` | — | valeurs: DRAFT, RECOMMENDED, SELECTED_FOR_ROADMAP, REJECTED |  |
-|     `actionsByDevotionLevel.ENGAGE[].budget` | `number` | — | > 0 |  |
-|     `actionsByDevotionLevel.ENGAGE[].budgetEstime` | `enum` | — | valeurs: LOW, MEDIUM, HIGH |  |
-|     `actionsByDevotionLevel.ENGAGE[].channel` | `string` | — | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.ENGAGE[].timeframe` | `enum` | — | valeurs: SPRINT_90, PHASE_1, PHASE_2, LONG_TERM |  |
-|     `actionsByDevotionLevel.ENGAGE[].mitigatesRiskIds` | `array<string>` | — |  |  |
-|     `actionsByDevotionLevel.ENGAGE[].targetsPersonaIds` | `array<string>` | — |  |  |
-|   `actionsByDevotionLevel.AMBASSADEUR` | `array<object>` | — |  |  |
-|     `actionsByDevotionLevel.AMBASSADEUR[].action` | `string` | ✓ | min 1 car. |  |
-|     `actionsByDevotionLevel.AMBASSADEUR[].format` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.AMBASSADEUR[].objectif` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.AMBASSADEUR[].pilierImpact` | `enum` | — | valeurs: A, D, V, E |  |
-|     `actionsByDevotionLevel.AMBASSADEUR[].devotionImpact` | `enum` | — | valeurs: SPECTATEUR, INTERESSE, PARTICIPANT, ENGAGE, AMBASSADEUR, EVANGELISTE |  |
-|     `actionsByDevotionLevel.AMBASSADEUR[].overtonShift` | `string` | — | min 1 car. |  |
-|     `actionsByDevotionLevel.AMBASSADEUR[].id` | `string` | — | string_format |  |
-|     `actionsByDevotionLevel.AMBASSADEUR[].status` | `enum` | — | valeurs: DRAFT, RECOMMENDED, SELECTED_FOR_ROADMAP, REJECTED |  |
-|     `actionsByDevotionLevel.AMBASSADEUR[].budget` | `number` | — | > 0 |  |
-|     `actionsByDevotionLevel.AMBASSADEUR[].budgetEstime` | `enum` | — | valeurs: LOW, MEDIUM, HIGH |  |
-|     `actionsByDevotionLevel.AMBASSADEUR[].channel` | `string` | — | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.AMBASSADEUR[].timeframe` | `enum` | — | valeurs: SPRINT_90, PHASE_1, PHASE_2, LONG_TERM |  |
-|     `actionsByDevotionLevel.AMBASSADEUR[].mitigatesRiskIds` | `array<string>` | — |  |  |
-|     `actionsByDevotionLevel.AMBASSADEUR[].targetsPersonaIds` | `array<string>` | — |  |  |
-|   `actionsByDevotionLevel.EVANGELISTE` | `array<object>` | — |  |  |
-|     `actionsByDevotionLevel.EVANGELISTE[].action` | `string` | ✓ | min 1 car. |  |
-|     `actionsByDevotionLevel.EVANGELISTE[].format` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.EVANGELISTE[].objectif` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.EVANGELISTE[].pilierImpact` | `enum` | — | valeurs: A, D, V, E |  |
-|     `actionsByDevotionLevel.EVANGELISTE[].devotionImpact` | `enum` | — | valeurs: SPECTATEUR, INTERESSE, PARTICIPANT, ENGAGE, AMBASSADEUR, EVANGELISTE |  |
-|     `actionsByDevotionLevel.EVANGELISTE[].overtonShift` | `string` | — | min 1 car. |  |
-|     `actionsByDevotionLevel.EVANGELISTE[].id` | `string` | — | string_format |  |
-|     `actionsByDevotionLevel.EVANGELISTE[].status` | `enum` | — | valeurs: DRAFT, RECOMMENDED, SELECTED_FOR_ROADMAP, REJECTED |  |
-|     `actionsByDevotionLevel.EVANGELISTE[].budget` | `number` | — | > 0 |  |
-|     `actionsByDevotionLevel.EVANGELISTE[].budgetEstime` | `enum` | — | valeurs: LOW, MEDIUM, HIGH |  |
-|     `actionsByDevotionLevel.EVANGELISTE[].channel` | `string` | — | min 1 car. · max 200 car. |  |
-|     `actionsByDevotionLevel.EVANGELISTE[].timeframe` | `enum` | — | valeurs: SPRINT_90, PHASE_1, PHASE_2, LONG_TERM |  |
-|     `actionsByDevotionLevel.EVANGELISTE[].mitigatesRiskIds` | `array<string>` | — |  |  |
-|     `actionsByDevotionLevel.EVANGELISTE[].targetsPersonaIds` | `array<string>` | — |  |  |
+|   `actionsByDevotionLevel.SPECTATEUR` | `array<union>` | — |  |  |
+|   `actionsByDevotionLevel.INTERESSE` | `array<union>` | — |  |  |
+|   `actionsByDevotionLevel.PARTICIPANT` | `array<union>` | — |  |  |
+|   `actionsByDevotionLevel.ENGAGE` | `array<union>` | — |  |  |
+|   `actionsByDevotionLevel.AMBASSADEUR` | `array<union>` | — |  |  |
+|   `actionsByDevotionLevel.EVANGELISTE` | `array<union>` | — |  |  |
 | `actionsByOvertonPhase` | `array<object>` | — |  | Actions groupées par phase de déplacement Overton |
 |   `actionsByOvertonPhase[].phase` | `string` | ✓ | min 1 car. |  |
-|   `actionsByOvertonPhase[].actions` | `array<object>` | ✓ |  |  |
-|     `actionsByOvertonPhase[].actions[].action` | `string` | ✓ | min 1 car. |  |
-|     `actionsByOvertonPhase[].actions[].format` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `actionsByOvertonPhase[].actions[].objectif` | `string` | ✓ | min 1 car. · max 200 car. |  |
-|     `actionsByOvertonPhase[].actions[].pilierImpact` | `enum` | — | valeurs: A, D, V, E |  |
-|     `actionsByOvertonPhase[].actions[].devotionImpact` | `enum` | — | valeurs: SPECTATEUR, INTERESSE, PARTICIPANT, ENGAGE, AMBASSADEUR, EVANGELISTE |  |
-|     `actionsByOvertonPhase[].actions[].overtonShift` | `string` | — | min 1 car. |  |
-|     `actionsByOvertonPhase[].actions[].id` | `string` | — | string_format |  |
-|     `actionsByOvertonPhase[].actions[].status` | `enum` | — | valeurs: DRAFT, RECOMMENDED, SELECTED_FOR_ROADMAP, REJECTED |  |
-|     `actionsByOvertonPhase[].actions[].budget` | `number` | — | > 0 |  |
-|     `actionsByOvertonPhase[].actions[].budgetEstime` | `enum` | — | valeurs: LOW, MEDIUM, HIGH |  |
-|     `actionsByOvertonPhase[].actions[].channel` | `string` | — | min 1 car. · max 200 car. |  |
-|     `actionsByOvertonPhase[].actions[].timeframe` | `enum` | — | valeurs: SPRINT_90, PHASE_1, PHASE_2, LONG_TERM |  |
-|     `actionsByOvertonPhase[].actions[].mitigatesRiskIds` | `array<string>` | — |  |  |
-|     `actionsByOvertonPhase[].actions[].targetsPersonaIds` | `array<string>` | — |  |  |
+|   `actionsByOvertonPhase[].actions` | `array<union>` | ✓ |  |  |
 | `riskMitigationActions` | `array<object>` | — |  | Actions qui mitigent spécifiquement les risques R |
 |   `riskMitigationActions[].riskRef` | `string` | — | min 1 car. |  |
 |   `riskMitigationActions[].riskId` | `string` | — | string_format |  |
@@ -976,7 +874,7 @@ _RTIS — dérivé (régénéré par cascade)_
 |   `brandPlatform.competitiveAdvantage` | `string` | — | min 1 car. · max 200 car. |  |
 |   `brandPlatform.emotionalBenefit` | `string` | — | min 1 car. · max 200 car. |  |
 |   `brandPlatform.functionalBenefit` | `string` | — | min 1 car. · max 200 car. |  |
-|   `brandPlatform.supportedBy` | `string` | — | min 1 car. · max 200 car. |  |
+|   `brandPlatform.supportedBy` | `union(string \| array)` | — |  |  |
 | `copyStrategy` | `object` | — |  | Stratégie de copywriting — promesse, RTB, ton, messages clés |
 |   `copyStrategy.promise` | `string` | — | min 1 car. · max 200 car. |  |
 |   `copyStrategy.rtb` | `string` | — | min 1 car. · max 200 car. |  |
@@ -1052,6 +950,14 @@ _RTIS — dérivé (régénéré par cascade)_
 |   `roadmap[].objectifDevotion` | `string` | — | min 1 car. |  |
 |   `roadmap[].actions` | `array<string>` | — |  |  |
 |   `roadmap[].budget` | `number` | — | > 0 |  |
+|   `roadmap[].budgetSummary` | `object` | — |  |  |
+|     `roadmap[].budgetSummary.knownSubtotal` | `number` | ✓ | > 0 |  |
+|     `roadmap[].budgetSummary.declaredSubtotal` | `number` | ✓ | > 0 |  |
+|     `roadmap[].budgetSummary.estimatedSubtotal` | `number` | ✓ | > 0 |  |
+|     `roadmap[].budgetSummary.declaredCount` | `number` | ✓ | safeint · > 0 |  |
+|     `roadmap[].budgetSummary.estimatedCount` | `number` | ✓ | safeint · > 0 |  |
+|     `roadmap[].budgetSummary.unknownCount` | `number` | ✓ | safeint · > 0 |  |
+|     `roadmap[].budgetSummary.unassignedTimeframeCount` | `number` | ✓ | safeint · > 0 |  |
 |   `roadmap[].duree` | `string` | — | min 1 car. · max 200 car. |  |
 | `globalBudget` | `number` | — | > 0 | Budget total de la strategie. @deprecated saisie (ADR-0088) — voir computed.totalBudget (Σ des initiatives sélectionnées). |
 | `budgetBreakdown` | `object` | — |  | Ventilation du budget par poste |
@@ -1107,22 +1013,23 @@ _RTIS — dérivé (régénéré par cascade)_
 |   `northStarKPI.currentValue` | `string` | — |  |  |
 | `computed` | `object` | — |  | Tableau de bord PUREMENT CALCULÉ de S (ADR-0088 + ADR-0089) — agrégations sur le jeu de stratégie de l'ambition retenue + 3 trajectoires de roadmap (chacune avec son jeu d'initiatives/budget/couverture). Aucune saisie texte ; la seule mutation possible est la sélection d'ambition via l'Intent gouverné SELECT_ROADMAP_ROUTE. |
 |   `computed.totalBudget` | `number` | — | > 0 |  |
-|   `computed.budgetByPhase` | `record<enum, number>` | — |  |  |
+|   `computed.budgetSummary` | `object` | — |  |  |
+|     `computed.budgetSummary.knownSubtotal` | `number` | ✓ | > 0 |  |
+|     `computed.budgetSummary.declaredSubtotal` | `number` | ✓ | > 0 |  |
+|     `computed.budgetSummary.estimatedSubtotal` | `number` | ✓ | > 0 |  |
+|     `computed.budgetSummary.declaredCount` | `number` | ✓ | safeint · > 0 |  |
+|     `computed.budgetSummary.estimatedCount` | `number` | ✓ | safeint · > 0 |  |
+|     `computed.budgetSummary.unknownCount` | `number` | ✓ | safeint · > 0 |  |
+|     `computed.budgetSummary.unassignedTimeframeCount` | `number` | ✓ | safeint · > 0 |  |
+|   `computed.budgetByPhase` | `union(record \| record \| array)` | — |  |  |
 |   `computed.riskCoverage` | `number` | — | > 0 · < 100 |  |
 |   `computed.mitigatedRiskIds` | `array<string>` | — |  |  |
 |   `computed.selectedInitiativeCount` | `number` | — | safeint · > 0 |  |
-|   `computed.devotionFunnel` | `array<object>` | — |  |  |
-|     `computed.devotionFunnel[].phase` | `string` | ✓ | min 1 car. |  |
-|     `computed.devotionFunnel[].spectateurs` | `number` | — |  |  |
-|     `computed.devotionFunnel[].interesses` | `number` | — |  |  |
-|     `computed.devotionFunnel[].participants` | `number` | — |  |  |
-|     `computed.devotionFunnel[].engages` | `number` | — |  |  |
-|     `computed.devotionFunnel[].ambassadeurs` | `number` | — |  |  |
-|     `computed.devotionFunnel[].evangelistes` | `number` | — |  |  |
-|   `computed.overtonPosition` | `object` | — |  |  |
-|     `computed.overtonPosition.current` | `string` | ✓ | min 1 car. |  |
-|     `computed.overtonPosition.target` | `string` | ✓ | min 1 car. |  |
-|     `computed.overtonPosition.gapScore` | `number` | — | > 0 · < 100 |  |
+|   `computed.devotionFunnel` | `union(array \| record)` | — |  |  |
+|   `computed.overtonPosition` | `union(string \| object)` | — |  |  |
+|     `computed.overtonPosition(opt2).current` | `string` | ✓ | min 1 car. |  |
+|     `computed.overtonPosition(opt2).target` | `string` | ✓ | min 1 car. |  |
+|     `computed.overtonPosition(opt2).gapScore` | `number` | — | > 0 · < 100 |  |
 |   `computed.coherenceScore` | `number` | — | > 0 · < 100 |  |
 |   `computed.roadmapRoutes` | `array<object>` | — | exactement 3 car. |  |
 |     `computed.roadmapRoutes[].key` | `enum` | ✓ | valeurs: CONSERVATIVE, TARGET, AMBITIOUS |  |
@@ -1133,9 +1040,20 @@ _RTIS — dérivé (régénéré par cascade)_
 |     `computed.roadmapRoutes[].projectedRevenue` | `number` | — | > 0 |  |
 |     `computed.roadmapRoutes[].targetCultIndex` | `number` | ✓ | > 0 · < 100 |  |
 |     `computed.roadmapRoutes[].description` | `string` | ✓ | min 1 car. |  |
+|     `computed.roadmapRoutes[].projectionAssumptions` | `object` | — |  |  |
+|       `computed.roadmapRoutes[].projectionAssumptions.riskCoverage` | `number` | — | > 0 · < 100 |  |
+|       `computed.roadmapRoutes[].projectionAssumptions.baseCultIndex` | `number` | — | > 0 · < 100 |  |
 |     `computed.roadmapRoutes[].initiativeIds` | `array<string>` | — |  |  |
 |     `computed.roadmapRoutes[].initiativeCount` | `number` | — | safeint · > 0 |  |
 |     `computed.roadmapRoutes[].totalBudget` | `number` | — | > 0 |  |
+|     `computed.roadmapRoutes[].budgetSummary` | `object` | — |  |  |
+|       `computed.roadmapRoutes[].budgetSummary.knownSubtotal` | `number` | ✓ | > 0 |  |
+|       `computed.roadmapRoutes[].budgetSummary.declaredSubtotal` | `number` | ✓ | > 0 |  |
+|       `computed.roadmapRoutes[].budgetSummary.estimatedSubtotal` | `number` | ✓ | > 0 |  |
+|       `computed.roadmapRoutes[].budgetSummary.declaredCount` | `number` | ✓ | safeint · > 0 |  |
+|       `computed.roadmapRoutes[].budgetSummary.estimatedCount` | `number` | ✓ | safeint · > 0 |  |
+|       `computed.roadmapRoutes[].budgetSummary.unknownCount` | `number` | ✓ | safeint · > 0 |  |
+|       `computed.roadmapRoutes[].budgetSummary.unassignedTimeframeCount` | `number` | ✓ | safeint · > 0 |  |
 |     `computed.roadmapRoutes[].budgetByPhase` | `record<enum, number>` | — |  |  |
 |     `computed.roadmapRoutes[].riskCoverage` | `number` | — | > 0 · < 100 |  |
 |   `computed.selectedRouteKey` | `enum` | — | valeurs: CONSERVATIVE, TARGET, AMBITIOUS |  |
