@@ -26,6 +26,8 @@ import { loadCountrySectorIntelligence } from "@/server/services/seshat/knowledg
 import type { TamSamSom, TrendTrackerExtraction } from "@/server/services/seshat/knowledge/schemas";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { serializePillar } from "@/server/services/utils/pillar-context";
+import { callLLM, extractJSON } from "@/server/services/llm-gateway";
+import { parseAndValidateLLM } from "@/server/services/llm-gateway/parse-validate";
 
 // ADR-0063 / PR-K3-ter — sous-schémas. Le mega-appel (9 champs) est ÉCLATÉ en
 // 4 sous-appels focalisés ; `.pick().partial()` valide strictement chaque champ
@@ -235,8 +237,6 @@ async function callTrackJSON(args: {
 }): Promise<Record<string, unknown>> {
   // LLM Gateway obligatoire (jamais @ai-sdk/anthropic direct) : circuit breaker
   // + fallback provider + substitution Ollama locale + budget/cost tracking.
-  const { callLLM } = await import("@/server/services/llm-gateway");
-  const { extractJSON, parseAndValidateLLM } = await import("@/server/services/utils/llm");
   try {
     const { text } = await callLLM({
       caller: `mestor:protocole-track:${args.label}`,
