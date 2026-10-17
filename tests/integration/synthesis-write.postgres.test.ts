@@ -14,6 +14,12 @@ const draftProvider = vi.hoisted(() => ({
   }] } })),
 }));
 vi.mock("@/server/services/llm-gateway", () => ({ callLLM: draftProvider.callLLM, extractJSON: JSON.parse }));
+// This receipt exercises real persistence, not optional generation completion.
+// That helper imports the lower-level router directly, outside the barrel mock.
+vi.mock("@/server/services/pillar-maturity/auto-filler", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/server/services/pillar-maturity/auto-filler")>(),
+  runChunkedFieldGeneration: vi.fn(async () => ({})),
+}));
 vi.mock("@/server/services/seshat/context-store", () => ({
   getOracleBrandContextByQuery: vi.fn(async () => null), findComparableBrands: vi.fn(async () => []),
 }));
