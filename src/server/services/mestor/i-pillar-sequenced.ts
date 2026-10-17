@@ -214,7 +214,7 @@ export async function generateICatalogueSequenced(args: {
   const catalogueParCanal: Record<string, Array<Record<string, unknown>>> = {};
   for (const canal of I_CHANNELS) {
     const actions = await sectionArray({
-      strategyId, context, arrayKey: "actions", maxOutputTokens: 1400, tag: `canal-${canal}`, onProgress: log,
+      strategyId, context, arrayKey: "actions", maxOutputTokens: 2400, tag: `canal-${canal}`, onProgress: log,
       instruction: `Pour le CANAL « ${canal} », génère un inventaire de 5 à 8 actions marketing CONCRÈTES, spécifiques à CETTE marque (pas générique).
 Chaque action = objet { "action": string, "format": string, "objectif": string, "pilierImpact": "A"|"D"|"V"|"E", "budgetEstime": "LOW"|"MEDIUM"|"HIGH" }.
 Ajoute targetsPersonaIds et mitigatesRiskIds : copie seulement les UUID des profils D et des risques R effectivement concernés dans le contexte. Une liste vide est permise si aucun lien n'est justifié ; n'invente aucun identifiant. Une cible documentaire n'est pas un client acquis, un risque n'est pas un fait validé et une action proposée n'est pas une décision.
