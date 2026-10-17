@@ -24,6 +24,7 @@ import { assessPillar } from "./assessor";
 import { getContract } from "./contracts-loader";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
+import { serializePillar } from "@/server/services/utils/pillar-context";
 
 // ─── Enrichissement surgical des matrices (Phase 3) ───────────────────────────
 
@@ -868,60 +869,13 @@ function shapeHint(r: FieldRequirement): string {
   }
 }
 
-const PILLAR_CHAR_BUDGET = 6_000;
-
-/**
- * Cap each pillar's serialized JSON to ~6kB. Once Oracle enrichment writes
- * nested SuperAsset payloads back into pillars, raw JSON.stringify of all 8
- * pillars routinely overflows the LLM input budget. The summary keeps
- * top-level keys with brief value digests so the model still has shape +
- * intent without burning the input window.
- */
-function summarizePillar(content: Record<string, unknown>): string {
-  const json = JSON.stringify(content, null, 2);
-  if (json.length <= PILLAR_CHAR_BUDGET) return json;
-  const summary: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(content)) {
-    if (v === null || v === undefined) continue;
-    if (typeof v === "string") {
-      summary[k] = v.length > 240 ? v.slice(0, 240) + "…" : v;
-    } else if (Array.isArray(v)) {
-      // Garde les IDENTITÉS des items-objets visibles (name/nom/label) au lieu d'un
-      // opaque « [Array×N] » qui effaçait QUI peuple le tableau — première cause de la
-      // contamination inter-persona (le LLM ne « voyait » plus Awa/Betsy). Cap serré.
-      const ids = v
-        .slice(0, 5)
-        .map((it) => {
-          if (it && typeof it === "object" && !Array.isArray(it)) {
-            const r = it as Record<string, unknown>;
-            const id = r.name ?? r.nom ?? r.label ?? r.titre ?? r.title;
-            if (typeof id === "string" && id.trim()) return id.length > 40 ? id.slice(0, 40) + "…" : id;
-          }
-          return null;
-        })
-        .filter(Boolean);
-      summary[k] = ids.length > 0
-        ? `[Array×${v.length}: ${ids.join(", ")}${v.length > ids.length ? ", …" : ""}]`
-        : `[Array×${v.length}]`;
-    } else if (typeof v === "object") {
-      const keys = Object.keys(v as object);
-      summary[k] = `{${keys.slice(0, 6).join(", ")}${keys.length > 6 ? "…" : ""}}`;
-    } else {
-      summary[k] = v;
-    }
-  }
-  const summaryJson = JSON.stringify(summary, null, 2);
-  return summaryJson.length <= PILLAR_CHAR_BUDGET
-    ? `${summaryJson}\n[…contenu condensé : ${(json.length / 1000).toFixed(0)}k chars de détails omis…]`
-    : summaryJson.slice(0, PILLAR_CHAR_BUDGET) + "\n[…tronqué…]";
-}
-
-function buildPillarContext(allPillars: Record<string, Record<string, unknown>>): string {
+/** Completion sees the same records, identities and origins as R/T/I/Council. */
+export function buildPillarContext(allPillars: Record<string, Record<string, unknown>>): string {
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : contenu des
   // piliers (dérivé du fondateur) balisé bloc par bloc ; la clé pilier est interne.
   return Object.entries(allPillars)
     .filter(([, v]) => v && Object.keys(v).length > 0)
-    .map(([k, v]) => wrapUntrusted(`PILIER ${k.toUpperCase()}`, summarizePillar(v), { max: PILLAR_CHAR_BUDGET }))
+    .map(([k, v]) => serializePillar(k.toUpperCase(), v))
     .join("\n\n");
 }
 

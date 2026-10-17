@@ -1,5 +1,13 @@
 # La Fusée — Refonte Governance "Sans Compromis"
 
+## Lecture du catalogue complet et complétion — candidat491 (2026-10-17)
+
+**Obstacle au raccord de flotte C1/C3** : le cas réel SPAWT I3 compte37 propositions par canal et52 initiatives normalisées. Sa projection qualifiée mesure86348 caractères : le garde64K la refuse avant le gestionnaire. La complétion après génération utilise encore un résumé distinct6K, avec cinq premières entrées et références supprimées. Le passage réel révèle cette seconde lecture après le générateur.
+
+**Correction bornée** : même `serializePillar` pour la complétion et R/T/I/Council ; admission structurée128K par pilier, JSON complet ou refus explicite. Aucune seconde politique de modèle : Headroom, ordre de fournisseurs, quotas et coûts restent dans `llm-gateway`. Ancres brutes par champ et qualification d’origine conservées. Les données SPAWT ne sont pas régénérées ; la qualité des références proposées et le bloc des documents sources restent ouverts. Pas de nouvelle interface ou autorité.
+
+**Réception** : 62 contrôles locaux et typage reçus ; CI/image, conservation de production et reprise du récepteur Galahad isolé restent à recevoir. La décision de marque garde ses autorités métier et les agents d’infrastructure leurs limites. Suite : terminer la capacité donneuse de consultation puis les autres gros lots ; pas de passe cosmétique.
+
 ## Continuité profils → analyses → actions — candidat 490 (2026-10-17)
 
 **Obstacle de gros œuvre C2/C4** : le PRD SPAWT documente huit profils ; le contrat en plafonne cinq et exige des rangs non établis. Les consommateurs T/I coupent leur contexte, omettent les dernières entrées et leurs identités ; les signaux stockés par T ne lui sont pas présentés. Les nouvelles listes R/T n’acquièrent pas les UUID déjà prévus par les schémas et les références I. La recette de T3 expose sept hypothèses sans identifiant. Ces absences empêchent la continuité métier ; elles ne sont pas une demande de nouvelles fonctions.
