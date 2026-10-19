@@ -54,7 +54,7 @@ const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1_048_576;
  * Proposer un format qu'on va rejeter, c'est faire découvrir le refus APRÈS le
  * dépôt, sur une source déjà créée en échec.
  */
-const ACCEPTED_UPLOAD = ".pdf,.docx,.txt,.md,.csv,.xlsx";
+const ACCEPTED_UPLOAD = ".pdf,.docx,.txt,.md,.json,.csv,.xlsx";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
   PENDING: { label: "En attente", color: "text-foreground-muted", icon: Clock },
@@ -1045,7 +1045,7 @@ export default function SourcesPage() {
             {uploading ? "Lecture en cours…" : "Déposez vos documents de marque"}
           </span>
           <span className="text-xs text-foreground-muted">
-            PDF, Word, texte, tableur (.xlsx, .csv) — {MAX_UPLOAD_MB} Mo par fichier maximum
+            PDF, Word, texte, observations JSON, tableur (.xlsx, .csv) — {MAX_UPLOAD_MB} Mo par fichier maximum
           </span>
           <input
             type="file"
