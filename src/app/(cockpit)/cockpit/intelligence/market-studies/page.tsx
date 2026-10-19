@@ -12,6 +12,8 @@ import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
+import { DocumentLibrary } from "@/components/brand/document-library";
+import { SourceReadDialog } from "@/components/brand/source-read-dialog";
 import { Modal } from "@/components/shared/modal";
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import type { MarketStudyExtraction } from "@/server/services/seshat/market-study-ingestion/types";
@@ -49,7 +51,9 @@ function fileToBase64(file: File): Promise<string> {
 
 export default function MarketStudiesPage() {
   const strategyId = useCurrentStrategyId();
-  const list = trpc.marketStudyIngestion.list.useQuery({ limit: 50 });
+  const list = trpc.marketStudyIngestion.list.useQuery({ limit: 50, strategyId: strategyId ?? undefined });
+  const documentary = trpc.ingestion.listSources.useQuery({ strategyId: strategyId ?? "" }, { enabled: Boolean(strategyId) });
+  const [readDocumentId, setReadDocumentId] = useState<string | null>(null);
   const previewMut = trpc.marketStudyIngestion.preview.useMutation();
   const confirmMut = trpc.marketStudyIngestion.confirm.useMutation();
   const [openUpload, setOpenUpload] = useState(false);
@@ -116,17 +120,22 @@ export default function MarketStudiesPage() {
           onClick={() => setOpenUpload(true)}
           className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
         >
-          <Upload className="h-4 w-4" /> Injecter une étude
+          <Upload className="h-4 w-4" />
+ Injecter une étude
         </button>
       </PageHeader>
+      {strategyId && <DocumentLibrary sources={(documentary.data ?? []).filter(s => s.document && ["MARKET_STUDY", "RESEARCH_DATA"].includes(s.document.kind))} onRead={setReadDocumentId} />}
+      {readDocumentId && strategyId && <SourceReadDialog sourceId={readDocumentId} strategyId={strategyId} onClose={() => setReadDocumentId(null)} />}
+      {documentary.error && <p role="alert" className="text-error">Les documents d’étude n’ont pas pu être lus. Réessayez depuis les sources de marque.</p>}
+
 
       {list.isLoading ? (
         <div className="text-foreground-muted">Chargement…</div>
       ) : !list.data || list.data.length === 0 ? (
         <EmptyState
           icon={FileText}
-          title="Aucune étude ingérée"
-          description="Drag-drop une étude tierce. Le moteur extrait TAM/SAM/SOM, parts de marché concurrentes, segments consommateurs, signaux faibles et 49 variables Trend Tracker."
+          title="Aucune analyse structurée"
+          description="Les documents conservés ci-dessus restent consultables sans analyse automatique. Vous pouvez préparer séparément une extraction structurée du marché."
         />
       ) : (
         <div className="grid gap-3">

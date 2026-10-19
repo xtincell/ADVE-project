@@ -118,12 +118,15 @@ export const marketStudyIngestionRouter = createTRPCRouter({
       countryCode: z.string().length(2).optional(),
       sector: z.string().optional(),
       limit: z.number().int().min(1).max(200).default(50),
+      strategyId: z.string().optional(),
     }))
     .query(async ({ ctx, input }) => {
+      await assertRawStrategyScope(ctx.session.user.id, input, { optional: true });
       const allowed = await accessibleStrategyIds(ctx.session.user.id);
       const where: Record<string, unknown> = { entryType: "MARKET_STUDY_RAW" };
       // `null` = ADMIN (voit tout, y compris le non-attribué).
       if (allowed !== null) where.originStrategyId = { in: allowed };
+      if (input.strategyId) where.originStrategyId = input.strategyId;
       if (input.countryCode) where.countryCode = input.countryCode;
       if (input.sector) where.sector = { contains: input.sector, mode: "insensitive" };
       const entries = await db.knowledgeEntry.findMany({

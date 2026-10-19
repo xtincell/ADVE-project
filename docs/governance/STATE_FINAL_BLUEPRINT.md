@@ -2115,6 +2115,10 @@ feuilles indépendantes et conserve provenance et reçus. `compensatedFrom` iden
 un effet unique par pilier, commun à l’historique et au journal. Une archive sans
 checkpoint ne permet pas de déduire une restauration précise.
 
+### Édition documentaire
+
+ADR-0219 : la lignée et son édition vivent sur la source canonique existante, dans `rawData._document`. Proposition et référence peuvent coexister. La proposition est une hypothèse non validée ; seule une décision humaine explicite la retient comme référence documentaire. Aucun amendement ADVE implicite. Historique et originaux conservés, dérivés invalidés, reçus périmés refusés. Les lecteurs et l’index qualifient les propositions et excluent les éditions antérieures des analyses courantes ; la consultation historique demeure autorisée dans le même périmètre d’accès.
+
 ### Usage documentaire
 
 ADR-0198, 2026-10-07 : une `BrandDataSource` garde son propriétaire, son original

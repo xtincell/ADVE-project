@@ -1,3 +1,4 @@
+import { documentContext } from "@/domain/source-document";
 import { ADVE_KEYS } from "@/domain";
 
 /**
@@ -126,7 +127,7 @@ async function buildSourceContext(strategyId: string, sourceIds?: string[]): Pro
   const textParts: string[] = [];
 
   for (const src of sources) {
-    const content = src.rawContent ?? JSON.stringify(src.rawData ?? {});
+    const content = documentContext(src.rawData) + (src.rawContent ?? JSON.stringify(src.rawData ?? {}));
     sourceMap.set(src.id, content.slice(0, 500)); // excerpt for provenance
     textParts.push(`--- SOURCE: ${src.fileName ?? src.sourceType} (${src.id}) ---\n${content.slice(0, 8000)}`);
   }

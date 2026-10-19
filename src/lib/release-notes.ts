@@ -34,6 +34,11 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.494", date: "2026-10-19", headline: "Vos documents gardent leur histoire",
+    highlights: [{ emoji: "📚", title: "Distinguer une piste d’une référence", body: "Votre dossier documentaire conserve les éditions de vos études, modèles économiques, présentations et autres pièces. Une proposition reste à valider et ne remplace pas votre référence de travail." },
+      { emoji: "📝", title: "Conserver les décisions", body: "Vous pouvez décider explicitement de l’usage d’une édition. Le motif et la date sont conservés ; les fondamentaux de la marque restent un choix distinct." }],
+  },
+  {
     version: "6.27.493", date: "2026-10-19",
     headline: "Vos projets retrouvent leur marque",
     highlights: [{ emoji: "🔗", title: "Conserver le dossier déjà commencé", body: "Lors de la création d’une marque au portefeuille, vous pouvez choisir sa plateforme existante et conserver ses réponses et ses sources." },

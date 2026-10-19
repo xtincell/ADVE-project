@@ -23,6 +23,8 @@ import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { useCanOperate, useBrandWriteAccess } from "@/components/cockpit/use-can-operate";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Modal } from "@/components/shared/modal";
+import { DocumentLibrary, DocumentEditionDialog } from "@/components/brand/document-library";
+import { DOCUMENT_STATUS_LABEL, type DocumentEdition } from "@/domain/source-document";
 import { SourceReadDialog } from "@/components/brand/source-read-dialog";
 import { SourcePreparationOption } from "@/components/brand/source-preparation-option";
 import {
@@ -898,6 +900,7 @@ export default function SourcesPage() {
   const [editSourceId, setEditSourceId] = useState<string | null>(null);
   const [readSourceId, setReadSourceId] = useState<string | null>(null);
 
+  const [classifySourceId, setClassifySourceId] = useState<string | null>(null);
   const sourcesQuery = trpc.ingestion.listSources.useQuery(
     { strategyId: strategyId ?? "" },
     { enabled: !!strategyId },
@@ -1031,6 +1034,9 @@ export default function SourcesPage() {
         </button>
       </div>
 
+      <DocumentLibrary sources={sources as unknown as Parameters<typeof DocumentLibrary>[0]["sources"]} onRead={setReadSourceId} canManage={canOperateOnBrand} onSaved={() => { void sourcesQuery.refetch(); }} />
+      {classifySourceId && <DocumentEditionDialog source={sources.find(s => s.id === classifySourceId) as unknown as Parameters<typeof DocumentEditionDialog>[0]["source"]} sources={sources as unknown as Parameters<typeof DocumentEditionDialog>[0]["sources"]} onClose={() => setClassifySourceId(null)} onSaved={() => { void sourcesQuery.refetch(); }} />}
+
       {/* Dépôt de document — le porteur de marque a les documents ; il ne
           pouvait jusqu'ici que les recopier à la main. */}
       <SourcePreparationOption checked={prepareAnalysis} onChange={setPrepareAnalysis} disabled={uploading || isSubmitting} />
@@ -1144,6 +1150,8 @@ export default function SourcesPage() {
       ) : (
         <div className="space-y-3">
           {sources.map((source, i) => {
+            const edition = source.document as DocumentEdition | null;
+            const usableEdition = !edition || edition.status === "REFERENCE" || edition.status === "PROPOSED";
             const status = STATUS_CONFIG[source.processingStatus as string] ?? STATUS_CONFIG.PENDING!;
             const original = source.original as { state: string; contentHash: string; byteLength: number } | null;
             const TypeIcon = TYPE_ICONS[source.sourceType as string] ?? FileText;
@@ -1162,10 +1170,11 @@ export default function SourcesPage() {
                         {source.fileType as string ?? source.sourceType as string}
                         {source.createdAt ? ` — ${new Date(source.createdAt as string).toLocaleDateString("fr")}` : ""}
                       </p>
+                      {source.document ? <p className="text-xs text-foreground-secondary">{DOCUMENT_STATUS_LABEL[(source.document as DocumentEdition).status]} · {(source.document as DocumentEdition).label}</p> : null}
                       {/* « Déposé » ≠ « exploitable ». L'indexation est
                           best-effort ; sans ce compte, une source jamais
                           indexée passait pour prise en compte. */}
-                      {typeof source.indexedChunks === "number" ? (
+                      {!usableEdition ? <p className="text-2xs text-foreground-muted">Édition conservée pour l’historique, exclue des analyses courantes.</p> : typeof source.indexedChunks === "number" ? (
                         source.indexedChunks > 0 ? (
                           <p className="text-2xs text-success">
                             Lisible par vos analyses ({source.indexedChunks} fragment
@@ -1178,7 +1187,7 @@ export default function SourcesPage() {
                           </p>
                         ) : null
                       ) : null}
-                      {canOperateOnBrand && typeof source.id === "string" &&
+                      {canOperateOnBrand && usableEdition && typeof source.id === "string" &&
                         (source.processingStatus === "EXTRACTED" || source.processingStatus === "PROCESSED") &&
                         source.indexedChunks === 0 ? (
                           <div className="mt-2 space-y-1">
@@ -1210,6 +1219,7 @@ export default function SourcesPage() {
                         <FileText className="h-3.5 w-3.5" />
                       </button>
                     ) : null}
+                    {canOperateOnBrand && !source.document && source.shared !== true && ["EXTRACTED", "PROCESSED"].includes(source.processingStatus as string) && <button onClick={() => setClassifySourceId(source.id as string)} className="rounded border border-border px-2 py-1 text-xs text-accent">Classer le document</button>}
                     {/* PR-A (ADR-0032) — niveau de certitude éditable. Default
                         DECLARED côté DB pour les rows pré-migration et nouveaux
                         intakes ; INFERRED pour les sources extraites IA. */}
@@ -1218,7 +1228,7 @@ export default function SourcesPage() {
                         sourceId={source.id}
                         current={(source.certainty as SourceCertainty | undefined) ?? "DECLARED"}
                         pending={updateSourceMutation.isPending}
-                        readOnly={!canOperate || source.shared === true}
+                        readOnly={!canOperate || source.shared === true || Boolean(source.document)}
                         onChange={(next) =>
                           updateSourceMutation.mutate({ id: source.id as string, certainty: next })
                         }
@@ -1230,7 +1240,7 @@ export default function SourcesPage() {
                     </div>
                     {/* Édition de source (titre + contenu) — toute source est
                         éditable. updateSource passe par le gateway d'ingestion. */}
-                    {canOperate && source.shared !== true && typeof source.id === "string" ? (
+                    {canOperate && !source.document && source.shared !== true && typeof source.id === "string" ? (
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditSourceId(source.id as string); }}
                         className="rounded p-1 text-foreground-muted/40 hover:text-accent hover:bg-accent/10 transition-colors"
@@ -1261,7 +1271,7 @@ export default function SourcesPage() {
                     {/* ADR-0173 — `previewBrandBook`/`ingestBrandBook` étaient
                         livrés côté serveur et n'avaient AUCUN appelant : un
                         brand book officiel déposé restait un simple texte. */}
-                    {canOperate &&
+                    {canOperate && usableEdition &&
                     typeof source.id === "string" &&
                     (source.processingStatus === "EXTRACTED" ||
                       source.processingStatus === "PROCESSED") ? (
@@ -1279,7 +1289,7 @@ export default function SourcesPage() {
                         <Sparkles className="h-3.5 w-3.5" />
                       </button>
                     ) : null}
-                    {canOperate && source.shared !== true && source.sourceType === "MANUAL_INPUT" ? (
+                    {canOperate && !source.document && source.shared !== true && source.sourceType === "MANUAL_INPUT" ? (
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteMutation.mutate({ id: source.id as string }); }}
                         className="rounded p-1 text-foreground-muted/40 hover:text-error hover:bg-error/10 transition-colors"

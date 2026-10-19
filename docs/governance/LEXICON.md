@@ -16,3 +16,7 @@ reçu de stockage ne vaut ni confirmation d’une assertion ni accord du client.
 Voir la définition dans [la bible, annexe L](STATE_FINAL_BLUEPRINT.md#usage-documentaire).
 `BrandSourceUse` relie une pièce canonique à une marque consommatrice ; les reçus
 enregistrent la version lue, sans copier le document ni confirmer son contenu.
+
+### Édition documentaire — ADR-0219 (2026-10-19)
+
+`BrandDataSource.rawData._document` relie les éditions d’un même document. `PROPOSED` désigne une piste non validée, `REFERENCE` une référence de travail, sans certification des assertions. Les éditions antérieures et archives restent consultables. Les décisions datées et attribuées changent l’usage documentaire ; seules les commandes d’amendement existantes modifient le socle stratégique.

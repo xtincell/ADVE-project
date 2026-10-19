@@ -45,7 +45,7 @@ const ALLOWED_BARE_CALLERS: ReadonlyArray<{ file: string; line: number; reason: 
   },
   {
     file: "src/server/services/ingestion-pipeline/ai-filler.ts",
-    line: 451,
+    line: 452,
     reason:
       "AI RTIS filler (ingestion) — bare writePillar VOLONTAIRE : draft AI_PROPOSED MERGE_DEEP mi-ingestion, scoré à l'activation comme C1/C2. Site historique qui échappait au test via l'alias `writePillarRTIS` (audit 2026-07-13, T5) — dé-aliasé et catalogué ; la cascade staleness Oracle s'applique désormais dans writePillar lui-même.",
   },

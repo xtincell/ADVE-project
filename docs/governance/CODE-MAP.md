@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 52 modules (src/domain, cœur métier pur)
+## Domain — 53 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
@@ -107,6 +107,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **sector-taxonomy** — Taxonomie de secteurs CANONIQUE — la clé de ligue universelle du scoreur.
 - **signal-observation** — Observation factuelle partagée par la Gazette et son analyse explicitement demandée.
 - **source-certainty** — SourceCertainty — niveau de certitude opérateur sur une `BrandDataSource`.
+- **source-document**
 - **source-original**
 - **superfan-conditions** — Domain — Superfan à conditions strictes (ADR-0141).
 - **touchpoints** — src/domain/touchpoints.ts — Touchpoint families & AARRR pirate metrics.

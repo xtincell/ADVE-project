@@ -1,4 +1,5 @@
 "use client";
+import { DOCUMENT_STATUS_LABEL } from "@/domain/source-document";
 import { trpc } from "@/lib/trpc/client";
 import { Modal } from "@/components/shared/modal";
 import { Button } from "@/components/primitives/button";
@@ -20,6 +21,7 @@ export function SourceReadDialog({ sourceId, strategyId, onClose, onCite }: {
     {loading && <p role="status">Chargement…</p>}
     {!loading && source.error && <p role="alert" className="text-error">{source.error.message}</p>}
     {!loading && !source.error && source.data && <div className="space-y-4 text-sm">
+      {source.data.document && <p className="rounded border border-border p-3">{source.data.document.family} · {source.data.document.label} · {DOCUMENT_STATUS_LABEL[source.data.document.status]}{source.data.document.status === "PROPOSED" ? " — À discuter avec l’équipe ; cette piste n’est pas adoptée." : ""}</p>}
       <label className="block space-y-2"><span>Titre</span><input aria-label="Titre de la source" readOnly value={source.data.fileName ?? ""} className="w-full rounded border border-border bg-surface-raised px-3 py-2 text-foreground" /></label>
       <label className="block space-y-2"><span>Texte de référence</span><textarea aria-label="Texte de référence" readOnly value={source.data.rawContent ?? ""} rows={18} className="w-full resize-y rounded border border-border bg-surface-raised px-3 py-2 text-foreground" /></label>
       {!source.data.rawContent && <p className="text-foreground-secondary">Aucun texte conservé dans cette source.</p>}
