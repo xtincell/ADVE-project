@@ -1,24 +1,37 @@
-## Conseil et champs exacts — 496 candidate, 2026-10-19
+## Conseil et documents — réception bornée 496, 2026-10-19
 
-La production 495 (a5c2d306) reçoit la clarification des BMC, 42 sources et les fondamentaux
-préservés. Un appel natif cite rapport + BMC précédent et omet les dénominateurs ; aucune
-qualité globale reçue. MCP retrouve pourtant le nouveau BMC (3) et l’étude primaire (4).
-Le conseil dépense les 6 K avec ses premiers paquets ; le fragment d’étude sélectionné
-n’inclut pas le dénominateur Google. Cinq régressions rouges reproduisent ces défauts.
-496 sélectionne deux passages complémentaires par source à partir des candidats déjà
-autorisés ; clause de question pertinente par pièce, sans changer la question du conseil,
-ni ajouter d’appel, réindexation ou gestionnaire. Qualification commune conservée une fois.
-La capacité est partagée entre sources puis passages ; 496 répartit la capacité par source, porte l’enveloppe à 6–18 K selon les pièces retenues,
-conserve les qualifications hors du texte original, et partage les expressions exactes
-entre ranker et extraits. Aucun writer de marque, routeur, Intent, provider ou gestionnaire
-supplémentaire. Contexte de fixture, contrôles et nouvelle réception native attendus ;
-99 contrôles ciblés verts. Contrôle pur additionnel sur la fonction candidate exacte :
-les mots de titre/date ne comptent plus comme couverture factuelle intra-document ;
-les deux taux/dénominateurs réels survivent à l’enveloppe partagée de six pièces. PostgreSQL de recette : six pièces retenues présentes chez
-coordinateur/expert, deux dénominateurs et clarification de proposition conservés, zéro
-génération/écriture métier. Étude réelle relue via API : préflight pur sélectionne les
-fragments 1 et 2 avec les deux taux et dénominateurs. Le conseil réel reste à recevoir ;
-les sept chantiers et la totalité du Drive restent ouverts. Preuves privées context496-*.
+#1025 / code 1c33ee174, image et runtime 6.27.496 reçus, même volume privé.
+La capacité est partagée entre pièces puis fragments (6–18 K) ; jusqu’à deux
+passages complémentaires, qualification commune intacte. Les mots du titre servent
+à découvrir la pièce, sans remplacer son contenu factuel dans les passages. Une
+sélection par titre reste disponible si le corps ne correspond pas lexicalement.
+Neuf régressions rouges et un défaut additionnel sur le contexte réel reproduits ;
+99 tests ciblés, 4 834 tests / 451 fichiers, gouvernance 1 663 / 167 verts.
+Typecheck, deux lints et cycles sans erreur, 24 avertissements préexistants.
+Préflight pur sur le texte primaire autorisé : fragments 1/2 et deux dénominateurs
+survivent à l’enveloppe de six pièces. PostgreSQL de recette : six pièces présentes
+chez coordinateur/expert, proposition et clarification conservées. MCP list/call reçu.
+Aucun changement du Gateway, modèle métier, migration, routeur ou Intent.
+
+Une question native réelle identique, HTTP 200 et persistée, sans nouvelle mutation
+stratégique : étude primaire citée, taux et dénominateurs présents. Le nouveau BMC
+reste cité via le rapport ; la formule « soit 392 lieux » est ambiguë. Conseil complet
+NON reçu, observation conservée pour la passe corrective après le gros œuvre.
+La précision des BMC différents/successifs et le postulat PROPOSED sont conservés.
+
+Trois dépôts supplémentaires via les writers gouvernés, zéro génération/embedding :
+missions Abidjan 1/2 comme rapports qualitatifs datés complémentaires, et modèle de
+coûts v6 comme proposition historique à réviser. Origines exactes téléchargées et
+hachées ; précédent dossier et piliers inchangés. Limites et contradictions qualifiées,
+pas de relance automatique ni adoption de décisions proposées. Le modèle de juillet
+ne rend pas actuel un abonnement utilisateur payant : la gratuité confirmée prévaut.
+Le classeur conserve ses neuf feuilles et 482 formules dans l’original ; aucune
+revalidation des tarifs ni nouveau calcul reçu. La roadmap mêlant SPAWT, d’autres IP
+et le personnel reste hors portée de la marque ; séparation à traiter dans l’existant.
+45 sources au total ; 31/2 286 originaux Drive déposés, 2 255 encore ouverts. Originaux
+acquis, texte extrait, dépôt, capacité de requête et validation restent distincts.
+Autres IP, corpus entier, cycle et sept chantiers ouverts. Preuves privées :
+production496-*, advice496-*, reviewed-import-*, context496-* sous le release local.
 
 ## Checkpoint 495 avant livraison — historique, conseil encore non reçu (2026-10-19)
 

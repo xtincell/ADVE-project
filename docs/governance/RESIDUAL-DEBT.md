@@ -1,17 +1,19 @@
-## Conseil 496 candidat — documents sélectionnés, paquets et champs exacts (2026-10-19)
+## Conseil 496 — références directes et formulation des unités (2026-10-19)
 
-495 reçue au périmètre code/transport/précision BMC, source a5c2d306 et image exacte.
-42 sources et fondamentaux conservés ; BMC proposés/antérieur et clarification visibles.
-Le conseil natif cite le rapport et le BMC précédent, sans les dénominateurs. MCP retrouve
-bien six pièces : défaut confirmé après sélection, plus choix d’un résumé au lieu du champ
-précis. Correction 496 dans qualifiedRag et chunker/ranker existants. Reprise : après
-réception source/image 496, une seule question réelle avec dénominateurs, études et statuts.
-Contexte complet reçu sur fixture PostgreSQL sans génération : six pièces sélectionnées,
-deux dénominateurs et proposition/clarification présents chez les deux lecteurs. Préflight
-pur de l’étude primaire réelle reçu. La fonction candidate exacte conserve aussi les
-deux taux/dénominateurs dans une enveloppe de six pièces ; résumé titré déclassé
-pour les recherches intra-document. Pas encore une preuve du conseil déployé. Responsable C2/C5 ; pas
-de nouvel appel texte avant changement prouvé. Le reste du Drive et les actifs restent ouverts.
+Cause de perte des pièces/fragments corrigée et reçue dans 496 / code 1c33ee174.
+Une question native, persistée et HTTP 200, cite l’étude primaire et restitue les taux
+avec leurs dénominateurs. La qualité entière reste ouverte : nouveau BMC encore cité
+via la synthèse, et phrase « soit 392 lieux » ambiguë entre corpus de lieux et avis.
+Reprise : après établissement des grands blocs, recevoir des citations directes des
+deux BMC et la formulation exacte des unités dans les sorties du conseil existant,
+sans nouveau gestionnaire ni répétition aveugle des générations. Responsable C5/C2.
+Ne pas confondre ce défaut de sortie avec une perte des sources, ni fermer le corpus.
+45 sources reçues, 31/2 286 fichiers Drive déposés ; originaux/formules conservés,
+mais aucun nouveau calcul financier ou tarif courant certifié. La roadmap transversale
+mêle plusieurs périmètres et reste privée : auditer les capacités de conservation
+propriétaire existantes et préparer la projection SPAWT avec provenance avant partage.
+Responsable C2/C7 ; reprise lors de l’irrigation du reste du corpus, sans dépôt intégral
+implicite de données personnelles dans la portée d’une marque.
 
 ## Mesure mobile existante — collecte Lighthouse non reçue (2026-10-19)
 
