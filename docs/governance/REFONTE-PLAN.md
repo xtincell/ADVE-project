@@ -1,6 +1,8 @@
-## Coffre du corpus — candidat 497 (2026-10-19)
+## Coffre du corpus — 497 reçu, transport 498 qualifié sur copie (2026-10-20)
 
-C2-01 / ADR-0220. Le dépôt matériel rejoint le coffre et FileUpload existants, sans activation ou analyse implicite. Conservation, édition, lecture privée et publication explicite reçues sur copie : huit scénarios PostgreSQL ; UI native dépôt/sélection/téléchargement exact/archive/réutilisation/recharge. Runtime à recevoir avant dépôt massif. 45 sources / 31 fichiers Drive reçus à ce checkpoint ; aucun des 841 actifs matériels nouvellement déposé par ce seul code. Gros fichiers et projection privée de roadmap restent ouverts. Aucun chantier ou parcours entier reçu.
+C2-01 / ADR-0220. Source 497 `d0368d906b068d1039619651ee1dfc03d227db87`, build 39339777266, index `sha256:1aa4f13ede79b2ebd42039cae1f4cf194c27c121624cb395ffbce2ba24a78dc0` et runtime 497 reçus ; déploiement `qs6xl8kiw8sit8dlt5l6oyxy` fini le 19 octobre à 23:25:09 UTC. Même volume, 45 sources/huit piliers/163 actifs antérieurs conservés. Neuf documents complémentaires et un premier visuel reçus ensuite, originaux relus exacts ; dépôt des autres matériaux en cours, sans adoption ni appel modèle. Le classement affiné distingue 831 matériaux, neuf pièces documentaires et une métadonnée technique parmi les 841 éléments. Tous restent au périmètre, ainsi que le reste du Drive.
+
+Premier PNG de 9 001 474 octets refusé sans admission : le proxy Next tronquait l’enveloppe base64 à dix Mio. Candidat 498 : tampon existant seize Mio, borne fichier dix Mio conservée. Clone réel rouge puis vert ; HTTP authentifié sur base synthétique, dix Mio reçus et relus exacts, dix Mio plus un octet refusés 400 sans actif. Production 498 encore à recevoir. Gros fichiers, lecture sémantique, projection privée et récupération restent ouverts. Aucun chantier ou parcours entier reçu.
 
 ## Conseil et documents — réception bornée 496, 2026-10-19
 

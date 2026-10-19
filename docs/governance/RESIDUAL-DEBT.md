@@ -1,7 +1,7 @@
-## Corpus matériel — réception 497 et cycle de rétention (2026-10-19)
+## Corpus matériel — réception 497, transport 498 et rétention (2026-10-20)
 
-ADR-0220 : dépôt/reprise/édition et publication explicite reçus sur copie, UI native
-et original exact reçus. Recevoir image/runtime avant ingestion des 841 actifs matériels. Les fichiers
+ADR-0220 : runtime 497 reçu, neuf pièces et un matériau Drive relus exacts ; dépôt/reprise/édition et publication explicite reçus sur copie, UI native
+et original exact reçus. Parmi les 841 éléments, neuf pièces documentaires et un premier matériau ont été reçus après livraison ; les autres matériaux restent en dépôt. Le PNG de neuf Mo refusé avant admission a révélé la troncature du proxy, corrigée dans le candidat 498 : maximum dix Mio et refus hors borne reçus sur copie, runtime à recevoir. Les fichiers
 plus grands restent ouverts (APK/archives jusqu’à 162 Mo) : étendre le stockage et le
 transport existants avec reprise, sans simple relèvement d’une borne mémoire ni
 nouveau gestionnaire. Reprise après le raccord du petit fichier reçu ; C2/C7.

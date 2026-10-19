@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.498", date: "2026-10-20", headline: "Conserver les fichiers jusqu’à la limite annoncée",
+    highlights: [{ emoji: "📁", title: "Recevoir les originaux volumineux", body: "Un fichier autorisé de dix Mo peut être déposé sans être coupé pendant son transfert. Il reste à examiner avant sélection ou publication." }],
+  },
+  {
     version: "6.27.497", date: "2026-10-20", headline: "Déposer vos actifs, puis choisir leur usage",
     highlights: [
       { emoji: "📁", title: "Des originaux privés conservés", body: "Les fichiers déposés gardent leur original vérifié. Recevoir un logo ne le met plus automatiquement en usage ; vous retenez l’édition après examen." },

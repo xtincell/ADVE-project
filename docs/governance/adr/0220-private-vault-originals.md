@@ -1,6 +1,6 @@
 # ADR-0220 — Originaux privés du coffre existant
 
-- **Status**: Accepted — code et copie reçus, production à recevoir
+- **Status**: Accepted — code, copie et runtime 497 reçus ; corpus en cours
 - **Date**: 2026-10-19
 - **Phase**: 7 — raccord du corpus réel / C2, C3, C4, C7
 - **Depends on**: ADR-0012, ADR-0175, ADR-0197, ADR-0211, ADR-0212, ADR-0219
@@ -57,12 +57,17 @@ des marques, condition de l'accumulation d'audience ; aucun résultat marketing 
 ## Conséquences
 
 Aucune ingestion massive, lecture sémantique, licence de publication ou adoption
-stratégique n'est déduite d'un dépôt. Les 841 BRAND_ASSET recensés tiennent dans la
+stratégique n'est déduite d'un dépôt. Le classement affiné des 841 éléments distingue 831 matériaux, neuf
+pièces documentaires et une métadonnée technique. Les matériaux tiennent dans la
 borne actuelle ; APK/archives de plus grande taille et documents restants demeurent
 au contrat global. La roadmap mêlant plusieurs IP et données personnelles conserve
 son original dans son périmètre privé ; pas de partage intégral dans une marque.
 
 Tests : recette PostgreSQL gouvernée dédiée (concurrence, édition, isolement,
 corruption, reprise, archivage, recherche >50, publication explicite), régression
-des originaux documentaires et suite de gouvernance. Réception native et production
-encore ouvertes à l'écriture de cet ADR. Aucun chantier entier reçu par cette unité.
+des originaux documentaires et suite de gouvernance. Réception native et runtime 497 reçus. Neuf pièces documentaires et un
+premier matériau Drive ont ensuite été relus exactement, sans adoption. Le premier
+fichier de neuf Mo a révélé une troncature du proxy avant admission ; 498 porte le
+tampon existant à seize Mio et conserve la borne des fichiers à dix Mio. Clone réel
+rouge puis vert et HTTP authentifié maximal/refus hors borne reçus sur copie ;
+runtime 498 et reste du corpus encore ouverts. Aucun chantier entier reçu par cette unité.

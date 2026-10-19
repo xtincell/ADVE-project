@@ -35,6 +35,10 @@ const nextConfig: NextConfig = {
   },
   // Next 16 : reactCompiler stabilized — moved out of `experimental`.
   reactCompiler: true,
+  // A permitted 10 MiB original becomes ~14 MiB in the JSON/base64 envelope.
+  // Next's default 10 MiB proxy clone truncated it before the upload handler.
+  // Keep the file admission cap unchanged; this bounds only the wire buffer.
+  experimental: { proxyClientMaxBodySize: 16 * 1024 * 1024 },
   /**
    * Phase 16 (ADR-0025) — Anubis providers optionnels.
    *
