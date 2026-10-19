@@ -3,6 +3,7 @@
  */
 
 import { z } from "zod";
+import { sourceUploadContentSchema } from "@/server/services/ingestion-pipeline/original";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
@@ -71,7 +72,7 @@ export const ingestionRouter = createTRPCRouter({
       strategyId: z.string(),
       fileName: z.string().min(1).max(255),
       fileType: z.string().min(1).max(8),
-      content: z.string().max(13_981_016), // base64, 10 MiB
+      content: sourceUploadContentSchema, // same exact-byte admission as the vault
       sourceId: z.string().optional(), // Explicit recovery of a legacy file source
       prepareAnalysis: z.boolean().default(false),
     }),

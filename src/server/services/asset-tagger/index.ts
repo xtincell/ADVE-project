@@ -52,10 +52,15 @@ export async function tagAsset(assetId: string): Promise<TagResult> {
     confidence = 0.6;
   }
 
-  // Persist tags
+  // Suggestions must not erase manual choices or vault provenance/type tags.
+  const existing = asset.pillarTags && typeof asset.pillarTags === "object" && !Array.isArray(asset.pillarTags) ? asset.pillarTags : {};
+  for (const key of PILLAR_KEYS) {
+    const manual = (existing as Record<string, unknown>)[key];
+    if (typeof manual === "number") tags[key] = manual;
+  }
   await db.brandAsset.update({
     where: { id: assetId },
-    data: { pillarTags: tags },
+    data: { pillarTags: { ...existing, ...tags } },
   });
 
   const entries = Object.entries(tags) as [PillarKey, number][];

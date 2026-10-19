@@ -10,6 +10,7 @@ import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { assertCollaboratorMayEmit } from "@/server/governance/collaborator-firewall";
 import { isGodModeEmail } from "@/lib/auth/god-mode";
 import { z } from "zod";
+import { readAssetOriginal, retainedAssetUrl } from "./original";
 import { resolveBrandIdentity, resolveBrandDeploymentOrigin, collectHexes, extractFontFamilies, contrastRatio, hexToRgb } from "@/server/services/brand-theme";
 import { publicLogoReceipt, retainPublicLogo, retainPublicMedia, readPublicLogoBytes, publicLogoSnapshotUrl, publicIdentityArchives, type PublicLogoReceipt, type IdentityArchive } from "./public-media";
 
@@ -36,6 +37,18 @@ function publicLogoUrl(value: string | null, font = false): string | null {
   }
   return PublicBrandContent.shape.logoUrl.safeParse(value).success ? value : null;
 }
+/** A private choice is offered to the authenticated publisher only. The public
+ * edition still requires validation, an explicit command and a new byte receipt. */
+function identityChoiceUrl(asset: { id: string; fileUrl: string | null; metadata: unknown }, font = false) {
+  const retained = retainedAssetUrl(asset), origin = resolveBrandDeploymentOrigin();
+  return retained && origin ? new URL(retained, origin).href : publicLogoUrl(asset.fileUrl, font);
+}
+async function identityBytes(asset: { id: string; fileUrl: string | null; metadata: unknown }, url: string, tx: Client) {
+  if (!retainedAssetUrl(asset)) return url;
+  const original = await readAssetOriginal(asset.id, tx);
+  if (!original) throw new Error("L’original de l’actif choisi est absent.");
+  return original.bytes;
+}
 const logoFingerprint = (logo: { id: string; version: number; fileUrl: string | null; content: unknown; metadata: unknown }) =>
   sourceFingerprint({ rawData: { id: logo.id, version: logo.version, fileUrl: logo.fileUrl, content: logo.content, metadata: logo.metadata } });
 
@@ -54,7 +67,7 @@ async function inspect(strategyId: string, tx: Client) {
     const meta = object(logo.metadata);
     const sourceCurrent = typeof meta.sourceDataSourceId !== "string" || sources.some((source) =>
       source.id === meta.sourceDataSourceId && source.contentHash === meta.sourceContentHash);
-    const url = sourceCurrent ? publicLogoUrl(logo.fileUrl) : null;
+    const url = sourceCurrent ? identityChoiceUrl(logo) : null;
     return logo.kind === "LOGO_FINAL" && logo.campaignId === null && ["ACTIVE", "SELECTED"].includes(logo.state) && url
       ? [{ ...logo, url, fingerprint: logoFingerprint(logo) }] : [];
   });
@@ -105,7 +118,7 @@ export async function previewPublicBrand(strategyId: string, actorId?: string) {
     identityOptions: {
       sources: state.sources.map(source => ({ id: source.id, name: source.fileName ?? "Document de marque" })),
       assets: state.identityAssets.map(asset => ({ id: asset.id, kind: asset.kind, name: asset.name, version: asset.version,
-        url: publicLogoUrl(asset.fileUrl, asset.kind === "GENERIC"),
+        url: identityChoiceUrl(asset, asset.kind === "GENERIC"),
         colors: asset.kind === "CHROMATIC_STRATEGY" ? collectHexes(asset.content).all : [],
         families: asset.kind === "TYPOGRAPHY_SYSTEM" ? extractFontFamilies(asset.content).all : [] })),
     },
@@ -137,7 +150,7 @@ async function preparePublicIdentity(choice: PublicIdentityChoice | null, state:
   };
   const file = async (pick: { assetId: string; version: number }, role: string, weight?: number, family?: string) => {
     const asset = await choose(pick, weight === undefined ? "KV_VISUAL" : "GENERIC"), fingerprint = logoFingerprint(asset);
-    const url = publicLogoUrl(asset.fileUrl, weight !== undefined);
+    const url = identityChoiceUrl(asset, weight !== undefined);
     if (!url) throw new PublicBrandError("PRECONDITION_FAILED", "Un fichier choisi n’est pas une ressource publique admissible.");
     const prior = old.find(a => a.role === role);
     if (prior && (prior.assetId !== asset.id || prior.version !== asset.version || prior.fingerprint !== fingerprint)) {
@@ -146,7 +159,7 @@ async function preparePublicIdentity(choice: PublicIdentityChoice | null, state:
     let receipt: PublicLogoReceipt;
     try {
       if (prior) { await readPublicLogoBytes(prior.receipt); receipt = prior.receipt; }
-      else receipt = await retainPublicMedia(url, weight, family);
+      else receipt = await retainPublicMedia(await identityBytes(asset, url, tx), weight, family);
     } catch {
       throw new PublicBrandError("PRECONDITION_FAILED", "Un fichier de l’identité n’a pas pu être conservé et vérifié. L’édition précédente reste en ligne.");
     }
@@ -171,7 +184,11 @@ async function preparePublicIdentity(choice: PublicIdentityChoice | null, state:
     const files: string[] = [];
     const walk = (value: unknown, depth = 0) => {
       if (depth > 5) return;
-      if (typeof value === "string" && /\.(otf|ttf)$/i.test(value)) { const url = publicLogoUrl(value, true); if (url) files.push(url); }
+      if (typeof value === "string") {
+        const retained = state.identityAssets.find(a => a.kind === "GENERIC" && a.fileUrl === value && retainedAssetUrl(a));
+        const url = retained ? identityChoiceUrl(retained, true) : /\.(otf|ttf)$/i.test(value) ? publicLogoUrl(value, true) : null;
+        if (url) files.push(url);
+      }
       else if (Array.isArray(value)) value.forEach(v => walk(v, depth + 1));
       else if (value && typeof value === "object") Object.values(value).forEach(v => walk(v, depth + 1));
     }; walk(charter.content);
@@ -180,7 +197,7 @@ async function preparePublicIdentity(choice: PublicIdentityChoice | null, state:
       const faces = [];
       for (const face of font.faces) {
         const candidate = state.identityAssets.find(a => a.id === face.assetId);
-        if (!candidate || !files.includes(publicLogoUrl(candidate.fileUrl, true) ?? "")) throw new PublicBrandError("PRECONDITION_FAILED", "Le fichier choisi n’appartient pas à ce système typographique.");
+        if (!candidate || !files.includes(identityChoiceUrl(candidate, true) ?? "")) throw new PublicBrandError("PRECONDITION_FAILED", "Le fichier choisi n’appartient pas à ce système typographique.");
         faces.push({ weight: face.weight, file: await file(face, `${role}:${face.weight}`, face.weight, font.family) });
       }
       return { family: font.family, faces };
@@ -289,7 +306,8 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
     if (chosenLogo) {
       try {
         if (logoArchive) await readPublicLogoBytes(logoArchive);
-        else logoArchive = await retainPublicLogo(chosenLogo.url);
+        else logoArchive = retainedAssetUrl(chosenLogo)
+          ? await retainPublicMedia(await identityBytes(chosenLogo, chosenLogo.url, tx)) : await retainPublicLogo(chosenLogo.url);
       } catch {
         throw new PublicBrandError("PRECONDITION_FAILED", "Le logo n’a pas pu être conservé et vérifié. La publication précédente reste en ligne. Vérifiez son fichier et le stockage avant de réessayer.");
       }

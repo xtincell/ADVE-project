@@ -1,3 +1,7 @@
+## Coffre du corpus — candidat 497 (2026-10-19)
+
+C2-01 / ADR-0220. Le dépôt matériel rejoint le coffre et FileUpload existants, sans activation ou analyse implicite. Conservation, édition, lecture privée et publication explicite reçues sur copie : huit scénarios PostgreSQL ; UI native dépôt/sélection/téléchargement exact/archive/réutilisation/recharge. Runtime à recevoir avant dépôt massif. 45 sources / 31 fichiers Drive reçus à ce checkpoint ; aucun des 841 actifs matériels nouvellement déposé par ce seul code. Gros fichiers et projection privée de roadmap restent ouverts. Aucun chantier ou parcours entier reçu.
+
 ## Conseil et documents — réception bornée 496, 2026-10-19
 
 #1025 / code 1c33ee174, image et runtime 6.27.496 reçus, même volume privé.

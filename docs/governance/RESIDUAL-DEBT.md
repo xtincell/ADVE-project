@@ -1,3 +1,23 @@
+## Corpus matériel — réception 497 et cycle de rétention (2026-10-19)
+
+ADR-0220 : dépôt/reprise/édition et publication explicite reçus sur copie, UI native
+et original exact reçus. Recevoir image/runtime avant ingestion des 841 actifs matériels. Les fichiers
+plus grands restent ouverts (APK/archives jusqu’à 162 Mo) : étendre le stockage et le
+transport existants avec reprise, sans simple relèvement d’une borne mémoire ni
+nouveau gestionnaire. Reprise après le raccord du petit fichier reçu ; C2/C7.
+FileUpload/BRAND_ASSET conserve sa référence par entityId sans FK : purge refusée pour
+un original et GC physique protège son reçu. Le cycle de suppression d’une marque
+et la libération des reçus orphelins restent à recevoir avec les restaurations C7 ;
+étendre le raccord relationnel existant et tester la rétention avant toute purge
+réelle. Aucune suppression de marque effectuée pour ce raccord.
+Les anciennes émissions de dépôt peuvent contenir des octets base64 ; 497 cesse cette
+copie dans le spine existant sans réécrire l’historique scellé. Reprise C7 après
+raccord : auditer accès/rétention des anciennes traces, puis préparer une migration
+explicite préservant la preuve avant toute suppression. Aucun ancien journal purgé.
+Le classement existant est une suggestion sur nom/contexte, pas une lecture visuelle.
+Son admission fournisseur et la qualité sémantique restent en C5 après les grands blocs ;
+pas de nouvel appel ni de promesse d’absorption sémantique intégrale.
+
 ## Conseil 496 — références directes et formulation des unités (2026-10-19)
 
 Cause de perte des pièces/fragments corrigée et reçue dans 496 / code 1c33ee174.

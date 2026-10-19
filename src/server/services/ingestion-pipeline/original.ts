@@ -2,9 +2,10 @@
 import { createHash, randomBytes } from "node:crypto";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db";
-import { sourceOriginalReceiptSchema, MAX_SOURCE_BYTES, type SourceOriginalReceipt } from "@/domain/source-original";
+import { sourceOriginalReceiptSchema, MAX_SOURCE_BYTES, type SourceOriginalReceipt, type AssetOriginalReceipt } from "@/domain/source-original";
 import { mediaStoreConfiguration, putEncryptedMedia, getEncryptedMedia, type MediaStore } from "@/lib/encrypted-media-store";
 import { extractAuto } from "./extractors";
+import { z } from "zod";
 
 const json = (v: unknown) => JSON.parse(JSON.stringify(v)) as Prisma.InputJsonValue;
 const hash = (b: Buffer) => createHash("sha256").update(b).digest("hex");
@@ -14,12 +15,25 @@ export function decodeSourceUpload(content: string): Buffer {
   if (!bytes.length || bytes.length > MAX_SOURCE_BYTES || bytes.toString("base64") !== content) throw new Error("Fichier vide ou encodage invalide.");
   return bytes;
 }
+export const sourceUploadContentSchema = z.string().min(4).max(Math.ceil(MAX_SOURCE_BYTES / 3) * 4)
+  .refine(value => { try { decodeSourceUpload(value); return true; } catch { return false; } }, "Fichier vide, trop volumineux ou encodage invalide.");
 
-async function verifyOriginal(store: MediaStore, receipt: SourceOriginalReceipt) {
+export async function verifyOriginal(store: MediaStore, receipt: SourceOriginalReceipt | AssetOriginalReceipt) {
   if (store.kind !== receipt.storage || store.backendId !== receipt.backendId || store.keyId !== receipt.keyId) throw new Error("Stockage ou clé de lecture de l’original indisponible.");
   const bytes = await getEncryptedMedia(store, receipt.objectKey);
   if (hash(bytes) !== receipt.contentHash || bytes.length !== receipt.byteLength) throw new Error("L’intégrité de l’original n’est pas vérifiée.");
   return bytes;
+}
+
+/** Shared resumable byte primitive. Never replace an existing corrupt object. */
+export async function retainOriginalBytes(store: MediaStore, receipt: SourceOriginalReceipt | AssetOriginalReceipt, bytes: Buffer) {
+  if (hash(bytes) !== receipt.contentHash || bytes.length !== receipt.byteLength) throw new Error("Le fichier attendu a changé.");
+  try { await verifyOriginal(store, receipt); }
+  catch (error) {
+    if (receipt.state !== "PENDING" || (error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    await putEncryptedMedia(store, receipt.objectKey, bytes);
+    await verifyOriginal(store, receipt);
+  }
 }
 
 /** Primitive behind LEGACY_INGESTION_UPLOAD_FILE, including explicit legacy repair. */
@@ -87,16 +101,7 @@ export async function retainSourceFile(
     if (receipt.state === "PENDING") {
       // The previous attempt may have written the object and lost its DB receipt.
       // Resume by verifying those bytes. An existing corrupt object is not replaced.
-      try { await verifyOriginal(store, receipt); }
-      catch (error) {
-        const absent = (error as NodeJS.ErrnoException).code === "ENOENT";
-        if (!absent) {
-          // A newly admitted object also has no file; all other failures fail closed.
-          throw error;
-        }
-        await putEncryptedMedia(store, receipt.objectKey, bytes);
-        await verifyOriginal(store, receipt);
-      }
+      await retainOriginalBytes(store, receipt, bytes);
       await tx.fileUpload.update({ where: { id: upload.id }, data: { storageReceipt: json({ ...receipt, state: "STORED" }) } });
     } else {
       await verifyOriginal(store, receipt);
