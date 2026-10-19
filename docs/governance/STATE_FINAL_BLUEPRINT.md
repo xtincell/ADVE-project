@@ -3990,3 +3990,10 @@ Policy owner: Strategy Governor (à définir) — pour questions et changements 
 
 ---
 Fin du draft.
+
+### Conservation matérielle — ADR-0220 (2026-10-19)
+
+BrandAsset/FileUpload et le stockage existant conservent les fichiers privés.
+Le dépôt reste CANDIDATE, sélection et publication sont explicites ; lecture et
+provenance ne changent pas la stratégie. Extensions du coffre sous Mestor/Sustainment,
+aucun nouveau Neter ou gestionnaire. Réceptions bornées dans REFONTE-PLAN.

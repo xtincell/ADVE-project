@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.497", date: "2026-10-20", headline: "Déposer vos actifs, puis choisir leur usage",
+    highlights: [
+      { emoji: "📁", title: "Des originaux privés conservés", body: "Les fichiers déposés gardent leur original vérifié. Recevoir un logo ne le met plus automatiquement en usage ; vous retenez l’édition après examen." },
+      { emoji: "🔎", title: "Retrouver les actifs de tout le coffre", body: "La recherche porte sur l’ensemble du coffre, avec des pages supplémentaires et un accès aux archives. Le classement automatique reste un choix facultatif." },
+    ],
+  },
+  {
     version: "6.27.496", date: "2026-10-19", headline: "Des pièces retrouvées aux faits utiles",
     highlights: [{ emoji: "📚", title: "Une place pour les documents sélectionnés", body: "Le conseil répartit son contexte entre les pièces retenues. Les propositions et leurs précisions restent identifiées, à côté des extraits réellement lus." },
       { emoji: "🔎", title: "Retrouver un champ précis", body: "Un intitulé placé entre guillemets aide à retrouver le passage demandé et la valeur qui le suit, avec sa référence." }],

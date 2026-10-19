@@ -1,3 +1,14 @@
+## v6.27.497 — feat(vault): conserve les originaux privés sans adoption implicite (2026-10-20)
+
+**Recevoir un actif ne choisit plus l’identité de la marque à la place de son équipe.**
+
+- ADR-0220 : extension de BrandAsset/FileUpload, sans nouvelle table, gestionnaire, fournisseur, Intent ou routeur. Reçu privé chiffré, empreinte et taille relues ; reprise PENDING et vérification partagées avec les sources documentaires. Provenance Drive, rejeu exact et éditions enfants conservés sans fusion des alias distincts.
+- Dépôts CANDIDATE, sélection humaine dans Mes actifs. Le premier logo n’est plus activé automatiquement et un candidat ne devient pas le logo de repli. Le classement sur nom/contexte est facultatif, décoché ; il conserve les choix manuels. Aucun original assimilé à une interprétation ou une validation.
+- Lecture authentifiée, pièce jointe exacte et sans cache public ; aperçu PNG réservé aux rasters reconnus puis décodés. Publication existante raccordée aux octets privés sélectionnés, avec copie publique vérifiée et mêmes contrôles de sélection/identité. Aucun fichier publié par le seul dépôt.
+- Recherche et filtres avant pagination stable ; compteurs limités aux actifs affichés. Archives accessibles et originaux conservés ; purge refusée pour ces fichiers. Les deux formats de publication restent sous leur procédure dédiée.
+- Le journal existant scelle une description du fichier (empreinte/taille) au lieu de recopier ses octets encodés. Les entrées du handler et l’historique scellé restent intacts ; les fichiers trop volumineux ou non canoniques sont refusés avant émission. Quatre régressions rouges du spine reçues, puis 31 contrôles ciblés verts.
+- Réception pré-livraison : 4 838 tests / 451 fichiers, gouvernance 1 667 / 167 et huit scénarios PostgreSQL verts ; types et deux lints sans erreur, zéro cycle (24 avertissements historiques). Copie native ADMIN : dépôt CANDIDATE, sélection, original téléchargé exact, archive/réutilisation et recharge reçus ; fenêtre stable 28 réponses sans erreur serveur/exception. Première navigation et attente de titre expirées pendant compilation, première attente d’événement de téléchargement expirée ; lien direct reçu ensuite. Une régression de l’ancien premier-logo ACTIVE et quatre du spine ont échoué avant correction. Le premier scénario de publication a refusé un slug de fixture invalide, corrigé sans assouplir le format public. Runtime production encore à recevoir. Aucune ingestion matérielle réelle ou fermeture de chantier entier déduite. Les 841 actifs recensés tiennent dans dix Mio ; plus grands APK/archives, cycle de suppression de marque et absorption sémantique restent au plan avec déclencheur.
+
 ## v6.27.496 — fix(council): preserve selected documents and exact requested fields (2026-10-19)
 
 **Les documents retrouvés doivent aussi parvenir au conseil avec leur statut et les chiffres demandés.**

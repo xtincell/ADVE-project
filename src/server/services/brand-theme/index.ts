@@ -286,10 +286,10 @@ export async function resolveBrandIdentity(strategyId: string, client: Pick<Pris
       state: { notIn: ["SUPERSEDED", "ARCHIVED", "REJECTED"] }, staleAt: null },
     orderBy: [{ createdAt: "desc" }, { id: "asc" }],
     select: { id: true, kind: true, name: true, content: true, fileUrl: true,
-      state: true, version: true, metadata: true, createdAt: true, campaignId: true },
+      state: true, version: true, metadata: true, pillarTags: true, createdAt: true, campaignId: true },
   });
   const byKind = (kind: string) => assets.filter((a) => a.kind === kind);
-  const select = <T extends { state: string }>(rows: T[]) => rows.find((a) => a.state === "ACTIVE") ?? rows[0] ?? null;
+  const select = <T extends { state: string }>(rows: T[]) => rows.find((a) => a.state === "ACTIVE") ?? rows.find(a => a.state !== "CANDIDATE") ?? null;
   const finals = byKind("LOGO_FINAL").filter((a) => portfolioFileUrl(a.fileUrl));
   const ideas = byKind("LOGO_IDEA").filter((a) => portfolioFileUrl(a.fileUrl));
   const chromatics = byKind("CHROMATIC_STRATEGY");
@@ -300,7 +300,10 @@ export async function resolveBrandIdentity(strategyId: string, client: Pick<Pris
     logos: [...finals, ...ideas],
     palettes: chromatics,
     typographies,
-    fonts: byKind("GENERIC").filter(a => /\.(otf|ttf)$/i.test(a.fileUrl ?? "")),
+    fonts: byKind("GENERIC").filter(a => /\.(otf|ttf)$/i.test(a.fileUrl ?? "")
+      || ((a.pillarTags as { assetType?: string } | null)?.assetType === "FONT"
+        && (a.metadata as { original?: { state?: string } } | null)?.original?.state === "STORED"
+        && a.fileUrl === `/api/brand-assets/${a.id}/original`)),
     characters: byKind("PERSONA"),
     illustrations: byKind("KV_VISUAL").filter(a => portfolioFileUrl(a.fileUrl)),
     chromatic: select(chromatics),

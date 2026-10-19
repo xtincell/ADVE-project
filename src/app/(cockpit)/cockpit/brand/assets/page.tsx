@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { PUBLIC_BRAND_FORMAT } from "@/domain/public-brand";
+import { PUBLIC_BRAND_FORMAT, PUBLIC_BRAND_IDENTITY_FORMAT } from "@/domain/public-brand";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchFilter } from "@/components/shared/search-filter";
@@ -53,6 +53,13 @@ type AssetType = (typeof ASSET_TYPES)[number]["value"];
  * vérité du filtre Type : l'ancien filtre comparait un INDEX numérique stocké
  * à l'upload à une STRING → ne matchait jamais (audit 2026-07-16).
  */
+const STATE_LABELS: Record<string, string> = { DRAFT: "Brouillon", CANDIDATE: "À examiner", SELECTED: "Sélectionné", ACTIVE: "En usage", SUPERSEDED: "Édition antérieure", ARCHIVED: "Archivé", REJECTED: "Non retenu" };
+const isPublication = (format: string | null) => format === PUBLIC_BRAND_FORMAT || format === PUBLIC_BRAND_IDENTITY_FORMAT;
+function previewUrl(asset: { id: string; fileUrl: string | null; mimeType: string | null }) {
+  if (!asset.fileUrl) return null;
+  if (asset.fileUrl === `/api/brand-assets/${asset.id}/original`) return /^image\/(png|jpeg|gif|webp)$/.test(asset.mimeType ?? "") ? `${asset.fileUrl}?preview=1` : null;
+  return /\.(png|jpe?g|webp|gif|svg)(?:[?#]|$)/i.test(asset.fileUrl) || asset.fileUrl.startsWith("data:image/") ? asset.fileUrl : null;
+}
 const TYPE_FOR_KIND: Record<string, AssetType> = {
   LOGO_FINAL: "LOGO",
   LOGO_IDEA: "LOGO",
@@ -73,6 +80,7 @@ export default function AssetsPage() {
   const [search, setSearch] = useState("");
   const [pillarFilter, setPillarFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("");
+  const [stateFilter, setStateFilter] = useState<string>("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showUpload, setShowUpload] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
@@ -82,6 +90,8 @@ export default function AssetsPage() {
     name: "",
     type: "IMAGE" as AssetType,
     fileUrl: "",
+    fileName: "",
+    autoTag: false,
     pillarTags: {} as Record<string, number>,
   });
   const [uploadMode, setUploadMode] = useState<"file" | "url">("file");
@@ -101,19 +111,23 @@ export default function AssetsPage() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const dataUrl = ev.target?.result as string;
-      setUploadForm((prev) => ({ ...prev, fileUrl: dataUrl }));
+      setUploadForm((prev) => ({ ...prev, fileUrl: dataUrl, fileName: file.name }));
       setFilePreview(dataUrl);
     };
     reader.readAsDataURL(file);
   };
 
   const utils = trpc.useUtils();
-  const assetsQuery = trpc.brandVault.list.useQuery(
+  const assetsQuery = trpc.brandVault.list.useInfiniteQuery(
     {
       strategyId: strategyId!,
       pillar: pillarFilter !== "all" ? pillarFilter : undefined,
+      search: search || undefined,
+      type: (typeFilter || undefined) as AssetType | undefined,
+      state: (stateFilter || undefined) as "CANDIDATE" | "SELECTED" | "ACTIVE" | "ARCHIVED" | "ALL" | undefined,
+      limit: 50,
     },
-    { enabled: !!strategyId },
+    { enabled: !!strategyId, getNextPageParam: (lastPage) => lastPage.length === 50 ? lastPage.at(-1)?.id : undefined },
   );
 
   const strategies = trpc.strategy.list.useQuery({});
@@ -133,11 +147,13 @@ export default function AssetsPage() {
         utils.cockpitDashboard.getCampaignShowcase.invalidate({ strategyId });
       }
       setShowUpload(false);
-      setUploadForm({ name: "", type: "IMAGE", fileUrl: "", pillarTags: {} });
+      setUploadForm({ name: "", type: "IMAGE", fileUrl: "", fileName: "", autoTag: false, pillarTags: {} });
       setFilePreview(null);
       setUploadMode("file");
     },
   });
+
+  const selectMutation = trpc.brandVault.selectFromBatch.useMutation({ onSuccess: () => { void assetsQuery.refetch(); } });
 
   const deleteMutation = trpc.brandVault.delete.useMutation({
     onSuccess: () => {
@@ -151,16 +167,8 @@ export default function AssetsPage() {
     return <SkeletonPage />;
   }
 
-  const allAssets = assetsQuery.data ?? [];
-
-  // Apply type filter
-  const typeFiltered = typeFilter
-    ? allAssets.filter((a) => assetUiType(a) === typeFilter)
-    : allAssets;
-
-  const assets = typeFiltered.filter(
-    (a) => !search || a.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const allAssets = assetsQuery.data?.pages.flat() ?? [];
+  const assets = allAssets; // Filters apply before pagination on the server.
 
   // Stats
   const recentCount = allAssets.filter((a) => {
@@ -205,7 +213,12 @@ export default function AssetsPage() {
       strategyId,
       name: uploadForm.name,
       type: uploadForm.type,
-      fileUrl: uploadForm.fileUrl || undefined,
+      ...(uploadMode === "file" && uploadForm.fileUrl.startsWith("data:") ? {
+        file: { name: uploadForm.fileName || uploadForm.name,
+          mimeType: uploadForm.fileUrl.slice(5, uploadForm.fileUrl.indexOf(";")),
+          content: uploadForm.fileUrl.slice(uploadForm.fileUrl.indexOf(",") + 1) },
+      } : { fileUrl: uploadForm.fileUrl || undefined }),
+      autoTag: uploadForm.autoTag,
       // `type` → kind canonique côté serveur ; plus d'index numérique
       // assetType (illisible côté filtre, audit 2026-07-16).
       pillarTags: uploadForm.pillarTags,
@@ -235,7 +248,7 @@ export default function AssetsPage() {
       >
         <button
           onClick={() => setShowUpload(true)}
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground"
+          className="flex items-center gap-2 rounded-lg bg-surface-raised px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground"
         >
           <Upload className="h-4 w-4" />
           Ajouter un asset
@@ -245,21 +258,21 @@ export default function AssetsPage() {
       {/* Stat cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
-          title="Total assets"
+          title="Actifs affichés"
           value={allAssets.length}
           icon={Layers}
           trend="flat"
           trendValue={`${allAssets.length} fichier${allAssets.length !== 1 ? "s" : ""}`}
         />
         <StatCard
-          title="Categories"
+          title="Catégories affichées"
           value={categoryMap.size}
           icon={FolderOpen}
           trend="flat"
           trendValue={`${categoryMap.size} type${categoryMap.size !== 1 ? "s" : ""}`}
         />
         <StatCard
-          title="Ajoutes recemment"
+          title="Récents dans cette sélection"
           value={recentCount}
           icon={Clock}
           trend={recentCount > 0 ? "up" : "flat"}
@@ -273,7 +286,7 @@ export default function AssetsPage() {
           onClick={() => setPillarFilter("all")}
           className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
             pillarFilter === "all"
-              ? "bg-white text-foreground-muted"
+              ? "bg-surface-raised text-foreground-muted"
               : "border border-border bg-background text-foreground-secondary hover:text-foreground"
           }`}
         >
@@ -285,7 +298,7 @@ export default function AssetsPage() {
             onClick={() => setPillarFilter(key)}
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
               pillarFilter === key
-                ? "bg-white text-foreground-muted"
+                ? "bg-surface-raised text-foreground-muted"
                 : "border border-border bg-background text-foreground-secondary hover:text-foreground"
             }`}
           >
@@ -300,7 +313,7 @@ export default function AssetsPage() {
           <SearchFilter
             placeholder="Rechercher un asset..."
             value={search}
-            onChange={setSearch}
+            onChange={(value) => setSearch(value.slice(0, 200))}
             filters={[
               {
                 key: "type",
@@ -332,6 +345,15 @@ export default function AssetsPage() {
           </button>
         </div>
       </div>
+
+      <label className="flex items-center gap-3 text-sm text-foreground-secondary">
+        Usage
+        <select value={stateFilter} onChange={e => setStateFilter(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-foreground">
+          <option value="">Actifs disponibles</option>
+          <option value="CANDIDATE">À examiner</option><option value="SELECTED">Sélectionnés</option>
+          <option value="ACTIVE">En usage</option><option value="ARCHIVED">Archives</option><option value="ALL">Tous les états</option>
+        </select>
+      </label>
 
       {/* Pillar brand context banner */}
       {pillarFilter !== "all" && pillarContentMap[pillarFilter] && (
@@ -372,11 +394,15 @@ export default function AssetsPage() {
               icon={FolderOpen}
               title="Aucun asset"
               description={
-                pillarFilter !== "all"
+                search || typeFilter || stateFilter
+                  ? "Aucun actif ne correspond à ces filtres. Les autres fichiers restent conservés."
+                  : pillarFilter !== "all"
                   ? `Aucun asset associe au pilier ${PILLAR_NAMES[pillarFilter as PillarKey]}.`
                   : "Votre Brand Vault est vide. Ajoutez vos premiers assets."
               }
-              action={{ label: "Ajouter un asset", onClick: () => setShowUpload(true) }}
+              action={search || typeFilter || stateFilter || pillarFilter !== "all"
+                ? { label: "Réinitialiser les filtres", onClick: () => { setSearch(""); setTypeFilter(""); setStateFilter(""); setPillarFilter("all"); } }
+                : { label: "Ajouter un asset", onClick: () => setShowUpload(true) }}
             />
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -391,7 +417,7 @@ export default function AssetsPage() {
                     key={asset.id}
                     className="group relative rounded-xl border border-border bg-background/80 p-4 text-left transition-colors hover:border-border"
                   >
-                    {asset.format === PUBLIC_BRAND_FORMAT ? (
+                    {isPublication(asset.format) ? (
                       <Link href="/cockpit/settings/connections" title="Gérer cette publication" aria-label="Gérer cette publication"
                         className="absolute right-2 top-2 z-10 rounded-lg border border-border bg-background p-1.5 text-accent">
                         <ExternalLink className="h-3.5 w-3.5" />
@@ -402,7 +428,7 @@ export default function AssetsPage() {
                         setDeleteTarget({ id: asset.id, name: asset.name });
                       }}
                       className="absolute right-2 top-2 z-10 rounded-lg border border-border bg-background/90 p-1.5 text-foreground-muted opacity-0 transition-opacity hover:bg-error/50 hover:text-error group-hover:opacity-100"
-                      title="Supprimer cet asset"
+                      title="Archiver cet actif"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>}
@@ -412,9 +438,9 @@ export default function AssetsPage() {
                     >
                     {/* Preview area */}
                     <div className={`flex h-24 items-center justify-center rounded-lg ${getTypeBgColor(String(assetType))}`}>
-                      {asset.fileUrl ? (
+                      {previewUrl(asset) ? (
                         <img
-                          src={asset.fileUrl}
+                          src={previewUrl(asset)!}
                           alt={asset.name}
                           className="h-full w-full rounded-lg object-cover"
                           onError={(e) => {
@@ -437,7 +463,7 @@ export default function AssetsPage() {
                       </p>
                       <div className="mt-2 flex flex-wrap items-center gap-1.5">
                         <StatusBadge
-                          status={level}
+                          status={STATE_LABELS[asset.state] ?? level}
                           variantMap={{
                             system: "bg-accent/15 text-accent ring-accent/30",
                             operator: "bg-info/15 text-info ring-info/30",
@@ -486,7 +512,7 @@ export default function AssetsPage() {
                         </p>
                       </div>
                       <StatusBadge
-                        status={level}
+                        status={STATE_LABELS[asset.state] ?? level}
                         variantMap={{
                           system: "bg-accent/15 text-accent ring-accent/30",
                           operator: "bg-info/15 text-info ring-info/30",
@@ -512,7 +538,7 @@ export default function AssetsPage() {
                         ).toLocaleDateString("fr-FR")}
                       </p>
                     </button>
-                    {asset.format === PUBLIC_BRAND_FORMAT ? (
+                    {isPublication(asset.format) ? (
                       <Link href="/cockpit/settings/connections" title="Gérer cette publication" aria-label="Gérer cette publication"
                         className="rounded-lg border border-border bg-background p-1.5 text-accent">
                         <ExternalLink className="h-3.5 w-3.5" />
@@ -520,7 +546,7 @@ export default function AssetsPage() {
                     ) : <button
                         onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: asset.id, name: asset.name }); }}
                         className="rounded-lg border border-border bg-background p-1.5 text-foreground-muted opacity-0 transition-opacity hover:bg-error/50 hover:text-error group-hover:opacity-100"
-                        title="Supprimer cet asset">
+                        title="Archiver cet actif">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>}
                   </div>
@@ -531,14 +557,20 @@ export default function AssetsPage() {
         </>
       )}
 
+      {assetsQuery.hasNextPage && <button onClick={() => void assetsQuery.fetchNextPage()} disabled={assetsQuery.isFetchingNextPage}
+        className="rounded-lg border border-border bg-background px-4 py-2 text-sm text-foreground disabled:opacity-50">
+        {assetsQuery.isFetchingNextPage ? "Chargement…" : "Afficher les suivants"}
+      </button>}
+
       {/* Upload Modal */}
       <Modal
         open={showUpload}
         onClose={() => setShowUpload(false)}
-        title="Ajouter un asset"
+        title="Déposer un actif"
         size="lg"
       >
         <div className="space-y-4">
+          <p className="text-sm text-foreground-secondary">Le fichier est conservé en privé, à examiner. Son dépôt ne le met pas en usage et ne publie rien.</p>
           <FormField label="Nom de l'asset" required>
             <input
               type="text"
@@ -562,7 +594,7 @@ export default function AssetsPage() {
                   }
                   className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
                     uploadForm.type === t.value
-                      ? "border-white bg-white text-foreground-muted"
+                      ? "border-border-strong bg-surface-raised text-foreground-muted"
                       : "border-border bg-background text-foreground-secondary hover:border-border hover:text-foreground"
                   }`}
                 >
@@ -582,7 +614,7 @@ export default function AssetsPage() {
                   onClick={() => togglePillarTag(key)}
                   className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                     (uploadForm.pillarTags[key] ?? 0) > 0
-                      ? "bg-accent text-white"
+                      ? "bg-accent text-foreground"
                       : "border border-border bg-background text-foreground-secondary hover:text-foreground"
                   }`}
                 >
@@ -597,11 +629,11 @@ export default function AssetsPage() {
               {/* Toggle file vs URL */}
               <div className="flex gap-2">
                 <button type="button" onClick={() => setUploadMode("file")}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${uploadMode === "file" ? "bg-white text-foreground-muted" : "border border-border text-foreground-secondary hover:text-foreground"}`}>
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${uploadMode === "file" ? "bg-surface-raised text-foreground-muted" : "border border-border text-foreground-secondary hover:text-foreground"}`}>
                   Uploader un fichier
                 </button>
                 <button type="button" onClick={() => setUploadMode("url")}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${uploadMode === "url" ? "bg-white text-foreground-muted" : "border border-border text-foreground-secondary hover:text-foreground"}`}>
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${uploadMode === "url" ? "bg-surface-raised text-foreground-muted" : "border border-border text-foreground-secondary hover:text-foreground"}`}>
                   Lien URL
                 </button>
               </div>
@@ -612,12 +644,12 @@ export default function AssetsPage() {
                     <Upload className="mb-2 h-8 w-8 text-foreground-muted" />
                     <span className="text-sm text-foreground-secondary">Cliquez ou glissez un fichier ici</span>
                     <span className="mt-1 text-2xs text-foreground-muted">Max 10 MB — Images, PDF, Documents</span>
-                    <input type="file" className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.svg,.mp4"
+                    <input type="file" className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.svg,.mp4,.otf,.ttf,.woff,.woff2,.zip,.ai,.psd,.fig"
                       onChange={handleFileChange} />
                   </label>
                   {filePreview && (
                     <div className="mt-3 flex items-center gap-3 rounded-lg border border-border bg-background/50 p-3">
-                      {filePreview.startsWith("data:image") ? (
+                      {/^data:image\/(png|jpeg|gif|webp);/.test(filePreview) ? (
                         <img src={filePreview} alt="preview" className="h-12 w-12 rounded object-cover" />
                       ) : (
                         <FileText className="h-12 w-12 text-foreground-muted" />
@@ -640,6 +672,11 @@ export default function AssetsPage() {
             </div>
           </FormField>
 
+          <label className="flex items-start gap-2 text-sm text-foreground-secondary">
+            <input type="checkbox" checked={uploadForm.autoTag} onChange={e => setUploadForm({ ...uploadForm, autoTag: e.target.checked })} />
+            Suggérer automatiquement les piliers à partir du nom et du contexte. Cette option ne lit pas le contenu visuel du fichier.
+          </label>
+
           {uploadMutation.error && (
             <div className="rounded-lg border border-error/50 bg-error/20 p-3 text-sm text-error">
               <AlertTriangle className="mr-2 inline h-4 w-4" />
@@ -656,8 +693,8 @@ export default function AssetsPage() {
             </button>
             <button
               onClick={handleUpload}
-              disabled={!uploadForm.name.trim() || uploadMutation.isPending}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
+              disabled={!uploadForm.name.trim() || (uploadMode === "file" && !uploadForm.fileUrl) || uploadMutation.isPending}
+              className="rounded-lg bg-surface-raised px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
             >
               {uploadMutation.isPending ? "Envoi..." : "Ajouter"}
             </button>
@@ -681,9 +718,9 @@ export default function AssetsPage() {
             <div className="space-y-4">
               {/* Preview */}
               <div className="flex h-40 items-center justify-center rounded-lg bg-background/50">
-                {selectedAssetData.fileUrl ? (
+                {previewUrl(selectedAssetData) ? (
                   <img
-                    src={selectedAssetData.fileUrl}
+                    src={previewUrl(selectedAssetData)!}
                     alt={selectedAssetData.name}
                     className="h-full max-w-full rounded-lg object-contain"
                     onError={(e) => {
@@ -724,6 +761,27 @@ export default function AssetsPage() {
                 </div>
               </div>
 
+              <div className="rounded-lg border border-border bg-background p-4 text-sm text-foreground-secondary">
+                <p>{STATE_LABELS[selectedAssetData.state] ?? selectedAssetData.state} · Édition {selectedAssetData.version}</p>
+                {(() => {
+                  const meta = selectedAssetData.metadata as { original?: { state: string; contentHash: string; byteLength: number }; provenance?: { path: string } } | null;
+                  return <>
+                    {meta?.provenance?.path && <p className="mt-2 break-words">Provenance : {meta.provenance.path}</p>}
+                    {meta?.original ? <>
+                      <p className="mt-2">Original {meta.original.state === "STORED" ? "conservé et vérifié" : "en cours de conservation"} · {meta.original.byteLength.toLocaleString("fr-FR")} octets</p>
+                      <p className="mt-1 break-all font-mono text-xs">SHA-256 : {meta.original.contentHash}</p>
+                    </> : <p className="mt-2">Aucun reçu d’original privé pour cet actif.</p>}
+                  </>;
+                })()}
+                {((selectedAssetData.state === "CANDIDATE") || (selectedAssetData.state === "ARCHIVED" && selectedAssetData.fileUrl === `/api/brand-assets/${selectedAssetData.id}/original`)) && selectedAssetData.batchId && <button
+                  onClick={() => selectMutation.mutate({ batchId: selectedAssetData.batchId!, selectedAssetId: selectedAssetData.id, selectedReason: "Sélection manuelle après examen de l’actif" })}
+                  disabled={selectMutation.isPending}
+                  className="mt-3 rounded-lg border border-border px-3 py-2 text-foreground disabled:opacity-50">
+                  {selectMutation.isPending ? "Sélection…" : selectedAssetData.state === "ARCHIVED" ? "Réutiliser cette édition" : "Retenir cette édition"}
+                </button>}
+                {selectMutation.error && <p className="mt-2 text-error">{selectMutation.error.message}</p>}
+              </div>
+
               {/* Pillar tags */}
               <div>
                 <p className="text-xs font-medium text-foreground-muted">Piliers associes</p>
@@ -753,9 +811,10 @@ export default function AssetsPage() {
               {selectedAssetData.fileUrl && (
                 <a
                   href={selectedAssetData.fileUrl}
-                  target="_blank"
+                  download={selectedAssetData.fileUrl.startsWith("/api/brand-assets/")}
+                  target={selectedAssetData.fileUrl.startsWith("/api/brand-assets/") ? undefined : "_blank"}
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-foreground-muted hover:bg-foreground"
+                  className="flex items-center justify-center gap-2 rounded-lg bg-surface-raised px-4 py-2.5 text-sm font-medium text-foreground-muted hover:bg-foreground"
                 >
                   <Download className="h-4 w-4" />
                   Telecharger
@@ -775,9 +834,9 @@ export default function AssetsPage() {
             deleteMutation.mutate({ id: deleteTarget.id });
           }
         }}
-        title="Supprimer l'asset"
-        message={`Voulez-vous vraiment supprimer "${deleteTarget?.name}" ? Cette action est irreversible.`}
-        confirmLabel={deleteMutation.isPending ? "Suppression..." : "Supprimer"}
+        title="Archiver l’actif"
+        message={`Archiver « ${deleteTarget?.name} » ? Son original et son historique restent conservés et consultables dans Archives.`}
+        confirmLabel={deleteMutation.isPending ? "Archivage…" : "Archiver"}
         variant="danger"
       />
     </div>

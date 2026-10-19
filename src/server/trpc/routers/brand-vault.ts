@@ -18,6 +18,8 @@ import {
 } from "@/server/services/brand-vault/engine";
 import { isBrandAssetKind } from "@/domain/brand-asset-kinds";
 import { PILLAR_KEYS } from "@/domain";
+import { assetUploadSchema, assetProvenanceSchema, retainAssetFile } from "@/server/services/brand-vault/original";
+import { PublicWebUrl } from "@/domain/public-brand";
 /* lafusee:governed-active */
 
 // BrandVault 3 levels: system / operator / production
@@ -85,8 +87,11 @@ export const brandVaultRouter = createTRPCRouter({
 
     inputSchema: z.object({
       strategyId: z.string(),
-      name: z.string(),
+      name: z.string().trim().min(1).max(500),
       fileUrl: z.string().optional(),
+      file: assetUploadSchema.optional(),
+      provenance: assetProvenanceSchema.optional(),
+      autoTag: z.boolean().default(false),
       /** Type UI (Mes actifs) → kind canonique — sans lui, tout upload
        *  tombait en kind GENERIC et le dashboard (LOGO_FINAL/LOGO_IDEA)
        *  ne voyait JAMAIS un logo uploadé par le founder (bug 12/07). */
@@ -100,45 +105,45 @@ export const brandVaultRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const { level, expiresAt, pillarTags, type, ...rest } = input;
+      const { level, expiresAt, pillarTags, type, file, provenance, autoTag, fileUrl, ...rest } = input;
       // Type UI → kind canonique (source de vérité domain/brand-asset-kinds).
       const KIND_FOR_TYPE: Record<string, string> = {
         LOGO: "LOGO_FINAL",
-        FONT: "TYPOGRAPHY_SYSTEM",
+        FONT: "GENERIC", // a font file is not a structured typography system
         COLOR: "CHROMATIC_STRATEGY",
         IMAGE: "KV_VISUAL",
         DOCUMENT: "GENERIC",
       };
       const kind = type ? KIND_FOR_TYPE[type] ?? "GENERIC" : "GENERIC";
-      // Premier logo actif de la marque → ACTIVE (le dashboard l'affiche
-      // immédiatement) ; sinon SELECTED (variante, le porteur arbitre).
-      let state: "ACTIVE" | "SELECTED" | undefined;
-      if (kind === "LOGO_FINAL") {
-        const activeLogo = await ctx.db.brandAsset.findFirst({
-          where: { strategyId: input.strategyId, kind: "LOGO_FINAL", state: "ACTIVE" },
-          select: { id: true },
-        });
-        state = activeLogo ? "SELECTED" : "ACTIVE";
-      }
-      const mimeType = input.fileUrl?.startsWith("data:")
-        ? input.fileUrl.slice(5, input.fileUrl.indexOf(";")) || undefined
-        : undefined;
-      const asset = await ctx.db.brandAsset.create({
+      if (file && fileUrl) throw new TRPCError({ code: "BAD_REQUEST", message: "Déposez un fichier ou un lien, pas les deux." });
+      // Legacy data URLs join the same private retention path; never persist them in JSON.
+      const inline = fileUrl?.match(/^data:([^;,]+);base64,([A-Za-z0-9+/=]+)$/);
+      if (!file && fileUrl?.startsWith("data:") && !inline) throw new TRPCError({ code: "BAD_REQUEST", message: "Fichier encodé invalide." });
+      const received = file ?? (inline ? { name: input.name, mimeType: inline[1]!, content: inline[2]! } : null);
+      if (!received && fileUrl && !PublicWebUrl.safeParse(fileUrl).success) throw new TRPCError({ code: "BAD_REQUEST", message: "Un lien HTTPS public est requis." });
+      if (provenance && !received) throw new TRPCError({ code: "BAD_REQUEST", message: "La provenance de fichier exige ses octets originaux." });
+      const asset = received ? await vaultResult(() => retainAssetFile({
+        strategyId: input.strategyId, name: input.name, kind, level,
+        pillarTags: { ...pillarTags }, assetType: type, file: received, provenance,
+      }, ctx.session.user.id, ctx.intentId)) : await ctx.db.brandAsset.create({
         data: {
           ...rest,
           kind,
-          ...(state ? { state } : {}),
-          ...(mimeType ? { mimeType } : {}),
+          fileUrl,
+          state: "CANDIDATE",
+          batchId: ctx.intentId,
+          sourceIntentId: ctx.intentId,
           pillarTags: {
             ...((pillarTags ?? {}) as Record<string, unknown>),
+            assetType: type ?? "DOCUMENT",
             level,
             expiresAt: expiresAt ?? null,
           } as Prisma.InputJsonValue,
         },
       });
 
-      // Auto-tag asset with AI-detected pillar relevance (non-blocking)
-      tagAsset(asset.id).catch((err) => { console.warn("[asset-tagger] tag failed:", err instanceof Error ? err.message : err); });
+      // Optional naming suggestion through the existing call manager; no implicit analysis.
+      if (autoTag) await tagAsset(asset.id);
 
       return asset;
     }),
@@ -148,24 +153,35 @@ export const brandVaultRouter = createTRPCRouter({
     .input(z.object({
       strategyId: z.string(),
       pillar: z.string().optional(),
-      limit: z.number().default(50),
+      limit: z.number().int().min(1).max(200).default(50),
+      cursor: z.string().optional(),
+      search: z.string().max(200).optional(),
+      type: z.enum(["LOGO", "FONT", "COLOR", "IMAGE", "DOCUMENT"]).optional(),
+      state: z.enum(["DRAFT", "CANDIDATE", "SELECTED", "ACTIVE", "SUPERSEDED", "ARCHIVED", "REJECTED", "ALL"]).optional(),
     }))
     .query(async ({ ctx, input }) => {
-      const assets = await ctx.db.brandAsset.findMany({
-        where: { strategyId: input.strategyId },
-        orderBy: { createdAt: "desc" },
+      const filters: Prisma.BrandAssetWhereInput[] = [];
+      if (input.pillar) filters.push({ pillarTags: { path: [input.pillar], gt: 0.5 } });
+      if (input.search) filters.push({ OR: [
+        { name: { contains: input.search, mode: "insensitive" } },
+        { metadata: { path: ["provenance", "path"], string_contains: input.search } },
+      ] });
+      const kinds: Record<string, string[]> = { LOGO: ["LOGO_FINAL", "LOGO_IDEA"], FONT: ["TYPOGRAPHY_SYSTEM"], COLOR: ["CHROMATIC_STRATEGY"], IMAGE: ["KV_VISUAL"], DOCUMENT: ["GENERIC"] };
+      if (input.type) filters.push({ OR: [
+        { kind: { in: kinds[input.type] }, ...(input.type === "DOCUMENT" ? { OR: [{ mimeType: null }, { NOT: { mimeType: { startsWith: "font/" } } }] } : {}) },
+        { pillarTags: { path: ["assetType"], equals: input.type } },
+        ...(input.type === "FONT" ? [{ mimeType: { startsWith: "font/" } }] : []),
+      ] });
+      if (input.cursor && !await ctx.db.brandAsset.findFirst({ where: { id: input.cursor, strategyId: input.strategyId }, select: { id: true } })) throw new TRPCError({ code: "NOT_FOUND", message: "Page d’actifs indisponible. Rechargez la liste." });
+      return ctx.db.brandAsset.findMany({
+        where: { strategyId: input.strategyId,
+          ...(input.state && input.state !== "ALL" ? { state: input.state } : input.state === "ALL" ? {} : { state: { notIn: ["ARCHIVED", "REJECTED"] } }),
+          AND: filters,
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: input.limit,
+        ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
       });
-
-      // Client-side filter by pillar if specified
-      if (input.pillar) {
-        return assets.filter((a) => {
-          const tags = a.pillarTags as Record<string, unknown> | null;
-          return tags && (tags[input.pillar!] as number) > 0.5;
-        });
-      }
-
-      return assets;
     }),
 
   // Get single asset
@@ -216,13 +232,7 @@ export const brandVaultRouter = createTRPCRouter({
       await assertBrandAssetAccess(ctx, input.id);
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
       await vaultResult(async () => assertOrdinaryAsset(asset.format));
-      const tags = (asset.pillarTags as Record<string, unknown>) ?? {};
-      return ctx.db.brandAsset.update({
-        where: { id: input.id },
-        data: {
-          pillarTags: { ...tags, expired: true, expiredAt: new Date().toISOString() } as Prisma.InputJsonValue,
-        },
-      });
+      return vaultResult(() => engineArchive({ brandAssetId: input.id, archivedById: ctx.session.user.id, reason: "Archivage manuel depuis les actifs" }));
     }),
 
   // Garbage collection — find expired assets
@@ -270,6 +280,9 @@ export const brandVaultRouter = createTRPCRouter({
       }
       const purgeableIds = owned.map((a) => a.id);
       if (purgeableIds.length === 0) return { deleted: 0 };
+      if (await ctx.db.fileUpload.count({ where: { entityType: "BRAND_ASSET", entityId: { in: purgeableIds } } })) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Ces actifs conservent des originaux. Archivez-les pour préserver les fichiers et leur historique." });
+      }
       const result = await ctx.db.brandAsset.deleteMany({
         where: { id: { in: purgeableIds } },
       });

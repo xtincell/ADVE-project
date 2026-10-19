@@ -37,6 +37,7 @@ import {
 } from "@/server/governance/emission-spine";
 import { computeSelfHash, verifyChain } from "@/server/governance/hash-chain";
 import { eventBus } from "@/server/governance/event-bus";
+import { createHash } from "node:crypto";
 
 const ROOT = join(__dirname, "..", "..", "..");
 const SRC = join(ROOT, "src");
@@ -134,6 +135,30 @@ function collectEvents(names: string[]): { events: Array<{ name: string; payload
 }
 
 describe("ADR-0124 — openEmission (Loi 1 : hash-chain, Q1 : trace d'abord)", () => {
+  it.each(["source", "asset", "legacy"])("seals a file receipt instead of the %s upload bytes", async (shape) => {
+    const { db, calls } = makeMockDb({});
+    const bytes = Buffer.from("Synthetic private original, not ledger text."), encoded = bytes.toString("base64");
+    const payload = shape === "source" ? { strategyId: "s", content: encoded, fileName: "a.txt" }
+      : shape === "asset" ? { strategyId: "s", file: { content: encoded, name: "a.txt", mimeType: "text/plain" } }
+      : { strategyId: "s", fileUrl: `data:text/plain;base64,${encoded}`, name: "a.txt" };
+    const before = JSON.stringify(payload);
+    await openEmission({ kind: shape === "source" ? "LEGACY_INGESTION_UPLOAD_FILE" : "LEGACY_BRAND_VAULT_CREATE", strategyId: "s", payload, caller: "test", db });
+    const row = calls.created[0]!;
+    expect(JSON.stringify(row.payload)).not.toContain(encoded);
+    expect(JSON.stringify(row.payload)).toContain(createHash("sha256").update(bytes).digest("hex"));
+    expect(JSON.stringify(row.payload)).toContain(`"byteLength":${bytes.length}`);
+    expect(JSON.stringify(payload)).toBe(before); // handler input is not rewritten
+    expect(verifyChain([{ ...row, result: null } as unknown as Parameters<typeof verifyChain>[0][number]]).ok).toBe(true);
+  });
+
+  it("keeps strategic text unchanged while not journaling invalid file encodings", async () => {
+    const { db, calls } = makeMockDb({});
+    await openEmission({ kind: "OPERATOR_AMEND_PILLAR", strategyId: "s", payload: { content: "Real strategic text" }, caller: "test", db });
+    expect(calls.created[0]?.payload).toEqual({ content: "Real strategic text" });
+    await openEmission({ kind: "LEGACY_INGESTION_UPLOAD_FILE", strategyId: "s", payload: { content: "invalid-secret-upload" }, caller: "test", db });
+    expect(JSON.stringify(calls.created[1]?.payload)).not.toContain("invalid-secret-upload");
+  });
+
   it("chaîne sur le selfHash de la dernière row HASHÉE et scelle avec result:null", async () => {
     const { db, calls } = makeMockDb({ lastSelfHash: "aaaa1111" });
     const { events, off } = collectEvents(["intent.proposed"]);

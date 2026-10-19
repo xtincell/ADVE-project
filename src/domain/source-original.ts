@@ -14,6 +14,9 @@ export const sourceOriginalReceiptSchema = z.object({
   receivedAt: z.string().datetime(),
 });
 export type SourceOriginalReceipt = z.infer<typeof sourceOriginalReceiptSchema>;
+/** Same received-byte contract for the existing BrandAsset/FileUpload register. */
+export const assetOriginalReceiptSchema = sourceOriginalReceiptSchema.extend({ schema: z.literal("asset-original-v1") });
+export type AssetOriginalReceipt = z.infer<typeof assetOriginalReceiptSchema>;
 export const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 
 export function sourceOriginalSummary(value: unknown) {

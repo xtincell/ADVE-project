@@ -115,10 +115,10 @@ export function inspectPublicFont(bytes: Buffer, weight: number, family?: string
   return otf ? ["otf", "font/otf"] as const : ["ttf", "font/ttf"] as const;
 }
 
-export async function retainPublicMedia(rawUrl: string, fontWeight?: number, fontFamily?: string): Promise<PublicLogoReceipt> {
+export async function retainPublicMedia(rawUrl: string | Buffer, fontWeight?: number, fontFamily?: string): Promise<PublicLogoReceipt> {
   const store = mediaStoreConfiguration();
   if (!store || !resolveBrandDeploymentOrigin()) throw new Error("Le stockage et l’adresse publique doivent être configurés avant de publier ce logo.");
-  const bytes = await sourceBytes(rawUrl);
+  const bytes = Buffer.isBuffer(rawUrl) ? rawUrl : await sourceBytes(rawUrl);
   if (!bytes.length || bytes.length > MAX_LOGO_BYTES) throw new Error("Logo hors limites.");
   let format: readonly [PublicLogoReceipt["extension"], PublicLogoReceipt["mediaType"]];
   if (fontWeight !== undefined) format = inspectPublicFont(bytes, fontWeight, fontFamily);

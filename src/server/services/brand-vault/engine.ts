@@ -19,10 +19,10 @@ import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { assertCollaboratorMayEmit } from "@/server/governance/collaborator-firewall";
 import { isGodModeEmail } from "@/lib/auth/god-mode";
 import { randomBytes } from "node:crypto";
-import { PUBLIC_BRAND_FORMAT } from "@/domain/public-brand";
+import { PUBLIC_BRAND_FORMAT, PUBLIC_BRAND_IDENTITY_FORMAT } from "@/domain/public-brand";
 
 export function assertOrdinaryAsset(format: string | null | undefined) {
-  if (format === PUBLIC_BRAND_FORMAT) throw new BrandAssetLifecycleError("PRECONDITION_FAILED",
+  if (format === PUBLIC_BRAND_FORMAT || format === PUBLIC_BRAND_IDENTITY_FORMAT) throw new BrandAssetLifecycleError("PRECONDITION_FAILED",
     "Cette publication se gère depuis Connexions → Page publique, pour conserver son historique.");
 }
 
@@ -303,6 +303,11 @@ async function withLockedAsset<T>(args: {
     if (initial.campaignId) await tx.$queryRaw`SELECT id FROM "Campaign" WHERE id=${initial.campaignId} FOR UPDATE`;
     await tx.$queryRaw`SELECT id FROM "BrandAsset" WHERE id=${initial.id} FOR UPDATE`;
     const current = await tx.brandAsset.findUniqueOrThrow({ where: { id: initial.id } });
+    if (current.fileUrl === `/api/brand-assets/${current.id}/original`
+      && args.kind !== "LEGACY_BRAND_VAULT_ARCHIVE" && args.kind !== "ARCHIVE_BRAND_ASSET"
+      && (current.metadata as { original?: { state?: string } } | null)?.original?.state !== "STORED") {
+      throw new BrandAssetLifecycleError("PRECONDITION_FAILED", "La conservation du fichier est inachevée. Redéposez le même fichier avant de le sélectionner.");
+    }
     if (current.strategyId !== initial.strategyId || current.campaignId !== initial.campaignId
       || current.kind !== initial.kind || current.briefId !== initial.briefId
       || sourceId(current.metadata) !== sourceId(initial.metadata)) {
@@ -356,7 +361,10 @@ export async function selectFromBatch(args: {
   return withLockedAsset({ assetId: args.selectedAssetId, actorId: args.selectedById,
     kind: "SELECT_BRAND_ASSET", strategyId: args.strategyId, useSource: true }, async (tx, selected) => {
     if (selected.batchId !== args.batchId) throw new BrandAssetLifecycleError("PRECONDITION_FAILED", "ASSET_BATCH_MISMATCH: cet actif ne fait pas partie de ce lot.");
-    if (!["CANDIDATE", "SELECTED", "ACTIVE"].includes(selected.state)) {
+    const retainedArchive = selected.state === "ARCHIVED"
+      && selected.fileUrl === `/api/brand-assets/${selected.id}/original`
+      && (selected.metadata as { original?: { state?: string } } | null)?.original?.state === "STORED";
+    if (!["CANDIDATE", "SELECTED", "ACTIVE"].includes(selected.state) && !retainedArchive) {
       throw new BrandAssetLifecycleError("PRECONDITION_FAILED", `ASSET_TRANSITION_REFUSED: ${selected.state} → SELECTED`);
     }
     // Repeating a selection must not demote ACTIVE to SELECTED.

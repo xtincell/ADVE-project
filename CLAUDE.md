@@ -1,3 +1,7 @@
+## 497 candidate — originaux dans le coffre existant (2026-10-19)
+
+ADR-0220 : BrandAsset/FileUpload étendus, dépôt CANDIDATE, sélection et publication explicites, analyse facultative. Originaux chiffrés vérifiés et reprise commune avec les sources ; filtres serveur et pagination dans Mes actifs. Code/copie reçus : 4 838 tests, huit scénarios PostgreSQL, dépôt et sélection natifs, original exact, archive/réutilisation et recharge. Tsc/lints/cycles sans erreur ; 24 avertissements historiques. Le journal scelle les reçus de fichiers sans copier leurs octets, anciens sceaux inchangés. Runtime/ingestion réelle ouverts, aucun crédit global ni mutation des fondamentaux. Les BMC restent successifs, nouvelle piste PROPOSED à valider par l’équipe.
+
 ## Conseil documentaire — 496 livrée au périmètre, corpus ouvert (2026-10-19)
 
 Code 1c33ee174 (#1025), image publiée et runtime 6.27.496 reçus ; volume privé,

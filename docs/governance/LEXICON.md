@@ -20,3 +20,10 @@ enregistrent la version lue, sans copier le document ni confirmer son contenu.
 ### Édition documentaire — ADR-0219 (2026-10-19)
 
 `BrandDataSource.rawData._document` relie les éditions d’un même document. `PROPOSED` désigne une piste non validée, `REFERENCE` une référence de travail, sans certification des assertions. Les éditions antérieures et archives restent consultables. Les décisions datées et attribuées changent l’usage documentaire ; seules les commandes d’amendement existantes modifient le socle stratégique.
+
+### Original d’un actif — ADR-0220 (2026-10-19)
+
+Le coffre `BrandAsset` conserve son original dans `FileUpload` (BRAND_ASSET), reçu
+asset-original-v1, distinct du contenu interprété. Un dépôt CANDIDATE attend un
+choix ; il ne vaut ni sélection, ni activation, ni publication. Les éditions par
+origine conservent leurs octets et leur filiation.

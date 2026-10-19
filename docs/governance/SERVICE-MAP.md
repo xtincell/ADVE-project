@@ -484,7 +484,7 @@ Maintiennent la mission viable techniquement. Mémoires long terme, transports, 
 | `sla-tracker/` | SLO/SLA tracking par Intent kind | INFRASTRUCTURE | ✅ existant |
 | `operator-isolation/` | Tenant isolation (default-deny) | INFRASTRUCTURE | ✅ existant |
 | `neteru-shared/` | Governance registry central | INFRASTRUCTURE | manifests des autres |
-| `brand-vault/` | BrandAsset CRUD engine — vault unifié ; conservation d’identité publique par stockage chiffré existant/transport borné ([ADR-0211 Accepted](adr/0211-retained-public-logo-bytes.md), logo 431 reçu ; [ADR-0212 Accepted borné](adr/0212-versioned-public-identity-projection.md), identité de vitrine 432 reçue) | MESTOR | ✅ existant |
+| `brand-vault/` | BrandAsset CRUD engine — vault unifié ; originaux privés FileUpload, dépôt CANDIDATE et sélection explicite ([ADR-0220](adr/0220-private-vault-originals.md), code/copie reçus) ; conservation d’identité publique par stockage chiffré existant/transport borné ([ADR-0211 Accepted](adr/0211-retained-public-logo-bytes.md), logo 431 reçu ; [ADR-0212 Accepted borné](adr/0212-versioned-public-identity-projection.md), identité de vitrine 432 reçue) | MESTOR | ✅ existant |
 | `strategy-archive/` | 2-phase soft archive + hard purge (`Strategy.archivedAt`) | INFRASTRUCTURE | ✅ existant |
 | `sentinel-handlers/` | Handlers cron `/api/cron/sentinels` — consomme IntentEmission PENDING (Loi 4 maintien orbite) | MESTOR | ✅ existant |
 | `nsp/` | Neteru Streaming Protocol — transport publish/subscribe vers UI | INFRASTRUCTURE | ✅ existant (stub utilitaire) |
