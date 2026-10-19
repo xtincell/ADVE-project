@@ -44,6 +44,52 @@ beforeEach(() => {
     payload:{text:source.rawContent,fileName:source.fileName,sourceType:"FILE",chunkIndex:0,sourceContentHash:sourceFingerprint(source)}}];
 });
 describe("Oracle and council consume the same current documentary proof", () => {
+  it.each([false, true])("supplies separate requested measurements from one source without changing default limits (vector=%s)", async vector => {
+    if (vector) harness.vector = [1, 0];
+    const texts = [
+      'Google : champ « prix par personne » renseigné dans 22 % des 8 000 avis.',
+      'TikTok : demandes d’adresse ou d’horaires dans 12 % des 1 200 commentaires.',
+      'Indicateur proposé : « prix par personne ». BMC continuité alignée équipe postulats déploiements.',
+    ];
+    harness.sources[0] = { ...source, fileName: "Étude terrain.docx", rawContent: texts.join("\n") };
+    const node = harness.nodes[0];
+    harness.nodes = texts.map((text, chunkIndex) => ({ ...node, id: `measurement-${chunkIndex}`,
+      payload: { ...node.payload, fileName: "Étude terrain.docx", text, chunkIndex, sourceContentHash: sourceFingerprint(harness.sources[0]) } }));
+    const query = 'Étude terrain : Google champ « prix par personne » et TikTok demandes d’adresse ou d’horaires ? Puis situe les BMC continuité et alignée, équipe, postulats, déploiements.';
+    const original = structuredClone(harness.sources);
+    const result = await getOracleBrandContextByQuery("brand-a", query, { includeSources: true, sourcesLimit: 1, passagesPerSource: 2 });
+    expect(result?.sourceReferences?.map(r => r.chunkIndex)).toEqual([0, 1]);
+    expect(result?.text).toContain("8 000 avis"); expect(result?.text).toContain("1 200 commentaires");
+    const ordinary = await getOracleBrandContextByQuery("brand-a", query, { includeSources: true, sourcesLimit: 1 });
+    expect(ordinary?.sourceReferences).toHaveLength(1);
+    expect(harness.sources).toEqual(original);
+  });
+  it.each([false, true])("ranks the local field passage before distant unrelated keywords (vector=%s)", async vector => {
+    if (vector) harness.vector = [1, 0];
+    const proposal = 'Indicateur proposé : « prix par personne » à vérifier ultérieurement. '
+      + "Règles générales sans observation reçue. ".repeat(30)
+      + "Étude terrain Google TikTok taux limites BMC continuité alignée équipe observations postulats déploiements. ".repeat(8);
+    const factual = 'Google, champ « prix par personne » : 22 % des 8 000 avis. TikTok, demandes pratiques : 12 % de 1 200 commentaires. Limites de cette étude terrain : populations distinctes.';
+    harness.sources[0] = { ...source, rawContent: proposal + "\n" + factual };
+    const node = harness.nodes[0];
+    harness.nodes = [proposal, factual].map((text, chunkIndex) => ({ ...node, id: `local-${chunkIndex}`,
+      payload: { ...node.payload, text, chunkIndex, sourceContentHash: sourceFingerprint(harness.sources[0]) } }));
+    const result = await getOracleBrandContextByQuery("brand-a", 'Étude terrain Google TikTok taux limites BMC continuité alignée équipe observations postulats déploiements : champ « prix par personne » ?', { includeSources: true, sourcesLimit: 1 });
+    expect(result?.sourceReferences?.[0]?.chunkIndex).toBe(1);
+    expect(result?.sourceReferences?.[0]?.text).toContain("8 000 avis");
+  });
+  it.each([false, true])("selects the exact quoted field rather than a dense summary (vector=%s)", async vector => {
+    if (vector) harness.vector = [1, 0];
+    const summary = "Étude terrain Google TikTok taux limites BMC continuité alignée équipe observations postulats déploiements. ".repeat(15);
+    const factual = 'Champ « prix par personne » : 22 % de 8 000 avis. Commentaires : 12 % sur 1 200, échantillon distinct.';
+    harness.sources[0] = { ...source, rawContent: summary + "\n" + factual };
+    const node = harness.nodes[0];
+    harness.nodes = [summary, factual].map((text, chunkIndex) => ({ ...node, id: `quote-${chunkIndex}`,
+      payload: { ...node.payload, text, chunkIndex, sourceContentHash: sourceFingerprint(harness.sources[0]) } }));
+    const result = await getOracleBrandContextByQuery("brand-a", 'Étude terrain Google TikTok taux limites BMC continuité alignée équipe observations postulats déploiements : champ « prix par personne » ?', { includeSources: true, sourcesLimit: 1 });
+    expect(result?.sourceReferences?.[0]?.chunkIndex).toBe(1);
+    expect(result?.sourceReferences?.[0]?.text).toContain("8 000 avis");
+  });
   it.each([false,true])("carries certainty and fingerprint in source references (vector=%s)", async(vector)=>{
     if(vector)harness.vector=[1,0];
     const result=vector?await getOracleBrandContextByQuery("brand-a","assertion",{includeSources:true}):await getOracleBrandContext("brand-a","a",{includeSources:true});
@@ -178,4 +224,14 @@ describe("a question survives deterministic documentary retrieval", () => {
     const result = await getOracleBrandContextByQuery("brand-a", "BMC étude terrain", { includeSources: true, sourcesLimit: 2 });
     expect(new Set(result?.sourceReferences?.map(r => r.sourceId))).toEqual(new Set(["previous-bmc", "field-study"]));
   });
+});
+
+it("keeps an exact quoted field and its denominator in a bounded original excerpt", async () => {
+  const { excerptForQuery } = await import("@/server/services/seshat/context-store/chunker");
+  const intro = "Étude terrain Google TikTok taux limites équipe observations postulats déploiements. ".repeat(25);
+  const fact = "Le champ « prix par personne » est renseigné dans 22 % des 8 000 avis.";
+  const original = intro + "\n" + fact + "\nMéthode de recette, aucun résultat client.";
+  const excerpt = excerptForQuery(original, 'Étude terrain Google TikTok taux limites équipe observations postulats déploiements : champ « prix par personne »', 180);
+  expect(excerpt).toContain(fact);
+  expect(original).toContain(excerpt);
 });
