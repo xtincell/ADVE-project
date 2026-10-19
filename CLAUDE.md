@@ -1,10 +1,21 @@
-## Éditions documentaires 494 — candidate en réception (2026-10-19)
+## Documents 494 reçus ; recherche pertinente 495 candidate (2026-10-19)
 
-ADR-0219 étend BrandDataSource.rawData._document et les primitives gouvernées d’ingestion. Une proposition ne remplace pas la référence ; décisions explicites datées/attribuées, texte et original conservés, dérivés invalidés. Consultation de toutes les éditions ; analyses courantes limitées aux références et propositions marquées non validées. Sources et études partagent le même lecteur ; liste des analyses bornée à la marque courante. Aucun nouveau modèle, routeur, Intent ou gestionnaire d’appels. Recette native synthétique v1/v2/index sans modèle/décision reçue ; source/CI/runtime et ingestion intégrale SPAWT à recevoir. Le nouveau BMC réel reste une proposition à faire valider par l’équipe.
+La production 494 reçoit une seule lignée BMC SPAWT : référence de travail précédente,
+puis proposition à valider par l’équipe. 26 pièces Drive et une note ont été intégrées ;
+27 originaux vérifiés, textes et deux lecteurs natifs reçus. Les fondamentaux restent
+inchangés. Le premier conseil réel ne citait que la note : le corpus complet et la qualité
+du conseil restent ouverts. 495 factorise la recherche documentaire dans Seshat pour
+le conseil, MCP et Notoria, sans nouveau service, modèle ou gestionnaire d’appels.
+Réception locale MCP réelle : BMC courant et étude trouvés en 3,618 s, historique exclu,
+sans appel modèle ; source, CI, image et conseil de production 495 encore à recevoir.
 
-## Installation entreprise — raccord 493 candidat, réception intégrée ouverte (2026-10-19)
+## Raccord entreprise 493 reçu sur D ; reprise couplée ouverte (2026-10-19)
 
-ADR-0218 étend les identités source/lecteurs/BrandNodeForm existants, sans gestionnaire ou pilier ajouté. Namespace et dépôt configurables, références historiques Matanga conservées, choix manuel de plateforme existante et retour des projets natifs par pointeur exact. Contrôles et source seuls ne qualifient pas l’onboarding. BrandNode SERVICE/SERVICE_BRAND créé nativement sur copie et relié à la stratégie initiale ; ouverture de La Barre depuis Next dev local partiellement refusée après saturation des connexions à PostgreSQL distant (JWTSessionError, ressources 401). Recevoir le même parcours sur image CI dans le réseau privé puis la reprise des deux stockages ; détails/preuves privés `release/preuves-barre-entreprise-20261019/`. Aucun dossier réel modifié, appel modèle ou grant client créé ; les sept chantiers restent ouverts.
+ADR-0218 : formulaire natif, choix de marque La Barre, projet retrouvé au portefeuille,
+ancien projet/actif conservés et sept refus ciblés reçus sur l’installation fictive D.
+Les échecs JWT/connexions du premier essai local restent historiques. Aucun parcours
+entier ou chantier reçu : sauvegarde/reprise des deux stockages, poste B, pins et droits
+de toute la flotte restent ouverts. Voir REFONTE-PLAN et RESIDUAL-DEBT pour les preuves.
 
 # La Fusée — Project Memory
 

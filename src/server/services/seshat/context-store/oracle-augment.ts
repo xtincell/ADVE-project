@@ -25,8 +25,7 @@
 import { db } from "@/lib/db";
 import { embed } from "@/server/services/llm-gateway";
 import { cosineSimilarity } from "./embedder";
-import { currentDocumentNodes, listByMetadata } from "./ranker";
-import { normalizeSourceQuery, sourceQueryTerms } from "./chunker";
+import { currentDocumentNodes, listDocumentCandidates, rankDocumentNodes } from "./ranker";
 import type { SourceCertainty } from "@/domain/source-certainty";
 import { coerceProvenance, fieldStatusFor, type FieldProvenance } from "@/domain/field-provenance";
 
@@ -238,54 +237,6 @@ function nodeToSourceReference(node: {
   };
 }
 
-/** Rank current, authorized references before spending the citation budget.
- * One long recent note cannot occupy every slot. The original text, hash,
- * authority and edition stay unchanged; lexical relevance is not validation.
- */
-function selectSourceReferences(refs: SourceReference[], query: string, limit: number): SourceReference[] {
-  if (limit <= 0) return [];
-  const unique = [...new Map(refs.map(r => [`${r.sourceId}:${r.contentHash}:${r.chunkIndex}`, r])).values()];
-  const terms = sourceQueryTerms(query);
-  const words = (text: string) => new Set(normalizeSourceQuery(text).match(/[\p{L}\p{N}]+/gu) ?? []);
-  const rows = unique.map(ref => ({ ref, title: words(ref.fileName ?? ""), body: words(ref.text) }));
-  const documents = new Set(rows.map(r => r.ref.sourceId));
-  const frequency = new Map(terms.map(term => [term, new Set(rows.filter(r => r.title.has(term) || r.body.has(term)).map(r => r.ref.sourceId)).size]));
-  const scored = rows.map(row => ({ ...row, score: terms.reduce((sum, term) =>
-    sum + (row.title.has(term) ? 6 : row.body.has(term) ? 1 : 0)
-      * (1 + Math.log((documents.size + 1) / ((frequency.get(term) ?? 0) + 1))), row.ref.similarity ?? 0) }))
-    .filter(row => !terms.length || row.score > 0).sort((a, b) => b.score - a.score);
-  const selected: SourceReference[] = [];
-  const seen = new Set<string>();
-  for (const row of scored) if (!seen.has(row.ref.sourceId)) {
-    selected.push(row.ref); seen.add(row.ref.sourceId);
-    if (selected.length >= limit) return selected.slice(0, limit);
-  }
-  for (const row of scored) if (!selected.includes(row.ref) && selected.length < limit) selected.push(row.ref);
-  return selected;
-}
-
-/** Bound candidates per document, not globally by newest chunks. A large raw
- * table must not evict older BMCs/studies before relevance is even evaluated.
- * Reuse the ranker's scope, edition and fingerprint checks for every source.
- */
-async function documentaryCandidates(strategyId: string,
-  options: Parameters<typeof listByMetadata>[1] = {},
-): Promise<Awaited<ReturnType<typeof listByMetadata>>> {
-  const kinds = ["BRAND_SOURCE", "SOURCE_CHUNK"];
-  const pointers = await db.brandContextNode.findMany({
-    where: { strategyId, kind: { in: kinds }, sourceId: { not: null } },
-    distinct: ["sourceId"], select: { sourceId: true },
-  });
-  const ids = [...new Set(pointers.flatMap(p => p.sourceId ? [p.sourceId] : []))];
-  const rows: Awaited<ReturnType<typeof listByMetadata>> = [];
-  for (let offset = 0; offset < ids.length; offset += 8) {
-    const batch = await Promise.all(ids.slice(offset, offset + 8).map(sourceId =>
-      listByMetadata({ strategyId, sourceId, kinds, candidateLimit: 32 }, options)));
-    rows.push(...batch.flat());
-  }
-  return rows;
-}
-
 // ── Public API ───────────────────────────────────────────────────────
 
 const HYBRID_HEADER = `--- CONTEXTE MARQUE (Seshat — RAG hybride) ---
@@ -333,8 +284,8 @@ export async function getOracleBrandContext(
   // Source references (operator uploads) — only when explicitly requested
   let sourceReferences: SourceReference[] = [];
   if (options.includeSources) {
-    const currentSources = await documentaryCandidates(strategyId);
-    sourceReferences = selectSourceReferences(currentSources.map(nodeToSourceReference), options.query ?? "", sourcesLimit);
+    const currentSources = await listDocumentCandidates(strategyId);
+    sourceReferences = rankDocumentNodes(currentSources, options.query ?? "", sourcesLimit).map(nodeToSourceReference);
   }
 
   if (narrativeRows.length === 0 && precise.length === 0 && sourceReferences.length === 0) return null;
@@ -461,16 +412,15 @@ export async function getOracleBrandContextByQuery(
   // Indexing without embeddings is an explicit supported choice, not a
   // reason to make a current source disappear when older vectors succeed.
   const metadataSources = options.includeSources
-    ? await documentaryCandidates(strategyId, {
+    ? await listDocumentCandidates(strategyId, {
       incompatibleEmbedding: { dimension: queryDim, model: embedResult.model },
     })
     : [];
   const sourceReferences: SourceReference[] = options.includeSources
-    ? selectSourceReferences([
-      ...metadataSources.map(nodeToSourceReference),
-      ...scored.filter((s: ScoredCandidate) => s.kind === "BRAND_SOURCE" || s.kind === "SOURCE_CHUNK")
-        .map(nodeToSourceReference),
-    ], query, sourcesLimit)
+    ? rankDocumentNodes([
+      ...metadataSources,
+      ...scored.filter((s: ScoredCandidate) => s.kind === "BRAND_SOURCE" || s.kind === "SOURCE_CHUNK"),
+    ], query, sourcesLimit, { keepSemanticMatches: true }).map(nodeToSourceReference)
     : [];
 
   if (narrativeScored.length === 0 && sourceReferences.length === 0) return metadataContext();

@@ -32,6 +32,7 @@ import { sourceIsUsable, documentContext } from "@/domain/source-document";
 import { db } from "@/lib/db";
 import { sourceScope, sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
 import { compareCertainty, isSourceCertainty, type SourceCertainty } from "@/domain/source-certainty";
+import { rankDocumentNodes } from "@/server/services/seshat/context-store/ranker";
 import {
   ensureSourcesIndexed,
   retrieveSourceChunksForField,
@@ -317,7 +318,9 @@ export async function loadBrandSourceContext(
     }
   }
 
-  const candidates = usable.slice(0, maxDocuments);
+  const candidates = rankDocumentNodes(usable.map(row => ({ sourceId: row.id,
+    payload: { fileName: row.fileName, text: row.rawContent }, row,
+  })), query ?? "", maxDocuments).map(node => node.row);
   const excerpts: SourceExcerpt[] = [];
   let remaining = budget;
 

@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const harness = vi.hoisted(() => ({ vector: vi.fn(), metadata: vi.fn(), index: vi.fn() }));
+const harness = vi.hoisted(() => ({ vector: vi.fn(), metadata: vi.fn(), documents: vi.fn(), index: vi.fn() }));
 vi.mock("@/lib/db", () => ({ db: {} }));
 vi.mock("@/server/services/mestor", () => ({}));
 vi.mock("@/server/services/knowledge-aggregator", () => ({}));
 vi.mock("@/server/services/feedback-loop", () => ({}));
 vi.mock("@/server/services/seshat-bridge", () => ({}));
-vi.mock("@/server/services/seshat/context-store/ranker", () => ({
-  topKWithinStrategy: harness.vector, listByMetadata: harness.metadata,
+vi.mock("@/server/services/seshat/context-store/ranker", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/server/services/seshat/context-store/ranker")>(),
+  topKWithinStrategy: harness.vector, listByMetadata: harness.metadata, listDocumentCandidates: harness.documents,
 }));
 vi.mock("@/server/services/seshat/context-store/indexer", () => ({ indexBrandSource: harness.index }));
 
@@ -23,9 +24,40 @@ beforeEach(() => {
   vi.clearAllMocks();
   harness.vector.mockResolvedValue([]);
   harness.metadata.mockResolvedValue([hit]);
+  harness.documents.mockImplementation(async () => harness.metadata());
 });
 
 describe("MCP excerpts remain attributable and read only", () => {
+  it("does not merge distinct precise fields from the same pillar", async () => {
+    harness.documents.mockResolvedValue([]);
+    harness.metadata.mockResolvedValue([1, 2].map(i => ({ ...hit, id: `field-${i}`, sourceId: "pillar-a", kind: "PILLAR_FIELD",
+      payload: { field: `price-${i}`, value: "Prix historique à qualifier." } })));
+    const result = await rag.handler({ strategyId: "brand-a", query: "prix", topK: 2 }) as any;
+    expect(result.results.map((r: any) => r.id)).toEqual(["field-1", "field-2"]);
+  });
+  it("keeps a newly indexed document beside older successful vectors", async () => {
+    harness.vector.mockResolvedValue([hit]);
+    harness.documents.mockResolvedValue([{ ...hit, id: "fresh-bmc", sourceId: "fresh-source", similarity: undefined,
+      payload: { ...hit.payload, fileName: "BMC.docx", text: "Position à faire valider." } }]);
+    const result = await rag.handler({ strategyId: "brand-a", query: "BMC", topK: 1 }) as any;
+    expect(result.results[0]?.sourceId).toBe("fresh-source");
+    expect(result.results[0]?.similarity).toBeUndefined();
+    expect(result.usedVectorSearch).toBe(true);
+  });
+  it("finds an accented document name through the same normalized query", async () => {
+    harness.metadata.mockResolvedValue([{ ...hit, payload: { ...hit.payload, fileName: "Étude terrain.docx", text: "Prix constatés." } }]);
+    const result = await rag.handler({ strategyId: "brand-a", query: "etude", topK: 1 }) as any;
+    expect(result.results[0]?.sourceId).toBe(hit.sourceId);
+    expect(result.usedVectorSearch).toBe(false);
+  });
+  it("does not prefer a recent summary over the requested original title", async () => {
+    harness.metadata.mockResolvedValue([
+      ...Array.from({ length: 20 }, (_, i) => ({ ...hit, id: `note-${i}`, sourceId: "recent-note", payload: { ...hit.payload, fileName: "Note.txt", text: "BMC résumé." } })),
+      { ...hit, id: "bmc", sourceId: "bmc-original", payload: { ...hit.payload, fileName: "BMC.docx", text: "Hypothèses à valider." } },
+    ]);
+    const result = await rag.handler({ strategyId: "brand-a", query: "BMC", topK: 1 }) as any;
+    expect(result.results[0]?.sourceId).toBe("bmc-original");
+  });
   it.each([true, false])("preserves the document and chunk anchors (vector=%s)", async (vector) => {
     if (vector) harness.vector.mockResolvedValue([hit]);
     const result = await rag.handler({ strategyId: "brand-a", query: "SPAWT", topK: 8 }) as any;

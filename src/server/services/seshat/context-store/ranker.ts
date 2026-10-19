@@ -29,6 +29,40 @@ import { embed } from "@/server/services/llm-gateway";
 import { cosineSimilarity } from "./embedder";
 import { sourceScope, sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
 import { isSourceCertainty, type SourceCertainty } from "@/domain/source-certainty";
+import { normalizeSourceQuery, sourceQueryTerms } from "./chunker";
+
+/** Pure selection over already authorized candidates, shared by all readers.
+ * Lexical relevance never changes text, authority, edition or citation identity.
+ */
+export function rankDocumentNodes<T extends { sourceId: string | null; payload: unknown; id?: string; similarity?: number }>(
+  nodes: T[], query: string, limit: number, options: { keepSemanticMatches?: boolean } = {},
+): T[] {
+  if (limit <= 0) return [];
+  const payload = (n: T) => (n.payload && typeof n.payload === "object" ? n.payload : {}) as Record<string, unknown>;
+  const key = (n: T) => n.sourceId ?? n.id ?? "unknown";
+  const unique = [...new Map(nodes.map(n => [typeof payload(n).chunkIndex === "number"
+    ? `${key(n)}:${payload(n).sourceContentHash}:${payload(n).chunkIndex}` : n.id ?? key(n), n])).values()];
+  const terms = sourceQueryTerms(query);
+  const words = (text: string) => new Set(normalizeSourceQuery(text).match(/[\p{L}\p{N}]+/gu) ?? []);
+  const rows = unique.map(node => { const p = payload(node); return { node,
+    title: words(typeof p.fileName === "string" ? p.fileName : ""),
+    body: words(typeof p.text === "string" ? p.text : JSON.stringify(p).replace(/([a-z])([A-Z])/g, "$1 $2")),
+  }; });
+  const documents = new Set(rows.map(r => key(r.node)));
+  const frequency = new Map(terms.map(term => [term, new Set(rows.filter(r => r.title.has(term) || r.body.has(term)).map(r => key(r.node))).size]));
+  const scored = rows.map(row => ({ ...row, score: terms.reduce((sum, term) =>
+    sum + (row.title.has(term) ? 6 : row.body.has(term) ? 1 : 0)
+      * (1 + Math.log((documents.size + 1) / ((frequency.get(term) ?? 0) + 1))),
+    options.keepSemanticMatches ? row.node.similarity ?? 0 : 0) }))
+    .filter(row => !terms.length || row.score > 0).sort((a, b) => b.score - a.score);
+  const selected: T[] = []; const seen = new Set<string>();
+  for (const row of scored) if (!seen.has(key(row.node))) {
+    selected.push(row.node); seen.add(key(row.node));
+    if (selected.length >= limit) return selected.slice(0, limit);
+  }
+  for (const row of scored) if (!selected.includes(row.node) && selected.length < limit) selected.push(row.node);
+  return selected;
+}
 
 /** A saved fragment is a cache, never an access grant or current proof. */
 export async function currentDocumentNodes<T extends { kind: string; sourceId: string | null; payload: unknown }>(nodes: T[], filter: RankerFilter): Promise<(T & { sourceCertainty: SourceCertainty | null })[]> {
@@ -306,4 +340,25 @@ export async function listByMetadata(
     },
   });
   return currentDocumentNodes(rows, filter);
+}
+
+/** Bound candidates per document; a large table cannot evict all older files.
+ * The canonical metadata reader still checks scope, edition and fingerprint.
+ */
+export async function listDocumentCandidates(strategyId: string,
+  options: Parameters<typeof listByMetadata>[1] = {},
+): Promise<Awaited<ReturnType<typeof listByMetadata>>> {
+  const kinds = ["BRAND_SOURCE", "SOURCE_CHUNK"];
+  const pointers = await db.brandContextNode.findMany({
+    where: { strategyId, kind: { in: kinds }, sourceId: { not: null } },
+    distinct: ["sourceId"], select: { sourceId: true },
+  });
+  const ids = [...new Set(pointers.flatMap(p => p.sourceId ? [p.sourceId] : []))];
+  const rows: Awaited<ReturnType<typeof listByMetadata>> = [];
+  for (let offset = 0; offset < ids.length; offset += 8) {
+    const batch = await Promise.all(ids.slice(offset, offset + 8).map(sourceId =>
+      listByMetadata({ strategyId, sourceId, kinds, candidateLimit: 32 }, options)));
+    rows.push(...batch.flat());
+  }
+  return rows;
 }

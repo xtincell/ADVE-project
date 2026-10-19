@@ -25,6 +25,18 @@ beforeEach(() => {
     pillarKey: null, field: "chunk_0", metadata: null, embedding: [1, 0], embeddingModel: "fixture-model",
     payload: { text: source.rawContent, sourceContentHash: sourceFingerprint(source), certainty: "ARBITRARY" } }];
 });
+
+it("Notoria selects the requested older study before its document cap", async () => {
+  state.sources = [
+    ...Array.from({ length: 14 }, (_, i) => ({ ...source, id: `note-${i}`, certainty: "DECLARED", fileName: "Note de suivi.txt",
+      rawContent: "Note générale sans résultat pertinent. ".repeat(20), updatedAt: new Date("2026-10-19T00:00:00Z") })),
+    { ...source, id: "study-older", certainty: "DECLARED", fileName: "Étude terrain.docx",
+      rawContent: "Étude terrain : prix observés et limites des échantillons. ".repeat(20), updatedAt: new Date("2026-10-18T00:00:00Z") },
+  ];
+  const result = await loadBrandSourceContext("brand-a", { query: "terrain", maxDocuments: 1 });
+  expect(result.excerpts[0]?.sourceId).toBe("study-older");
+  expect(result.retrieval).toBe("DETERMINISTIC");
+});
 describe("canonical documentary certainty follows current retrieval", () => {
   it.each([false, true])("takes certainty from the current source, never the cache (vector=%s)", async (vector) => {
     if (vector) state.embedding = [1, 0];

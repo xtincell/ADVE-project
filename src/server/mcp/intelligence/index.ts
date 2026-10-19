@@ -139,57 +139,34 @@ export const tools: ToolDefinition[] = [
       const pillarKey = typeof input.pillarKey === "string" ? input.pillarKey.toLowerCase() : undefined;
       const topK = (input.topK as number) ?? 8;
 
-      const { topKWithinStrategy, listByMetadata } = await import(
+      const { topKWithinStrategy, listByMetadata, listDocumentCandidates, rankDocumentNodes } = await import(
         "@/server/services/seshat/context-store/ranker"
       );
       const vectorHits = await topKWithinStrategy(strategyId, query, { pillarKey, topK });
-      if (vectorHits.length > 0) {
-        return {
-          strategyId,
-          query,
-          usedVectorSearch: true,
-          results: vectorHits.map((h) => ({
-            id: h.id,
-            sourceId: h.sourceId,
-            sourceCertainty: h.sourceCertainty,
-            kind: h.kind,
-            pillarKey: h.pillarKey,
-            field: h.field,
-            similarity: h.similarity,
-            payload: h.payload,
-          })),
-        };
-      }
-
-      // Aucun embedding (provider "none") → repli déterministe métadonnées + mots-clés.
-      const candidates = await listByMetadata({
+      // Same document candidates and question ranking as the council. Sources
+      // without vectors remain eligible beside older compatible vectors.
+      const documents = await listDocumentCandidates(strategyId);
+      const fields = vectorHits.length ? [] : await listByMetadata({
         strategyId,
-        kinds: ["PILLAR_FIELD", "NARRATIVE", "BRAND_SOURCE"],
+        kinds: ["PILLAR_FIELD", "NARRATIVE"],
         pillarKey,
         candidateLimit: 200,
       });
-      const terms = query.toLowerCase().split(/\s+/).filter((t) => t.length > 2);
-      const ranked = candidates
-        .map((c) => {
-          const hay = JSON.stringify(c.payload ?? {}).toLowerCase();
-          const score = terms.reduce((s, t) => (hay.includes(t) ? s + 1 : s), 0);
-          return { c, score };
-        })
-        .filter((r) => r.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, topK);
+      const ranked = rankDocumentNodes([...documents, ...fields, ...vectorHits], query, topK,
+        { keepSemanticMatches: vectorHits.length > 0 });
       return {
         strategyId,
         query,
-        usedVectorSearch: false,
+        usedVectorSearch: vectorHits.length > 0,
         results: ranked.map((r) => ({
-          id: r.c.id,
-          sourceId: r.c.sourceId,
-          sourceCertainty: r.c.sourceCertainty,
-          kind: r.c.kind,
-          pillarKey: r.c.pillarKey,
-          field: r.c.field,
-          payload: r.c.payload,
+          id: r.id,
+          sourceId: r.sourceId,
+          sourceCertainty: r.sourceCertainty,
+          kind: r.kind,
+          pillarKey: r.pillarKey,
+          field: r.field,
+          ...("similarity" in r && typeof r.similarity === "number" ? { similarity: r.similarity } : {}),
+          payload: r.payload,
         })),
       };
     },
