@@ -1,3 +1,7 @@
+## 2026-10-20 — Enveloppe des fichiers autorisés
+
+Le premier PNG de 9 Mo échouait avant admission : le proxy Next tronquait son corps JSON/base64 à 10 Mio. Cause reproduite avec le clone réel ; tampon existant 16 Mio et borne fichier 10 Mio inchangée, maximum HTTP reçu et hors borne refusé sur copie. Aucun gestionnaire ajouté ; recette du fichier Drive et runtime 498 déclenchés dès image livrée.
+
 # PATCHED SYMPTOMS — journal heuristique des fixes en passant
 
 > Doctrine : [NEFER.md §3.4](NEFER.md) — interdit absolu n°4 (« un problème découvert se résout, se

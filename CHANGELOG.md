@@ -1,3 +1,13 @@
+## v6.27.498 — fix(upload): conserve l’enveloppe des originaux de dix Mio (2026-10-20)
+
+**Un fichier admissible ne doit pas être tronqué avant son admission.**
+
+- Le premier PNG Drive de 9 001 474 octets a été refusé sans création d’actif : le proxy Next limitait le corps JSON/base64 à dix Mio. Son tampon existant est porté à seize Mio ; la limite des fichiers reste dix Mio, sans nouveau transport ni gestionnaire.
+- Régression sur le vrai clone de corps Next : troncature par défaut reproduite, puis enveloppe maximale conservée dans les deux lectures. HTTP authentifié sur base isolée : dix Mio reçus CANDIDATE et original relu exact ; dix Mio plus un octet refusés 400 sans actif admis. Aucun appel modèle ou donnée de production dans cette recette.
+- Réception 497 désormais acquise : source d0368d906, CI/image/runtime exacts, mêmes volumes et conservation des 45 sources, huit piliers et 163 actifs antérieurs. Neuf documents Drive complémentaires et un premier visuel reçus ensuite avec originaux relus ; aucun changement de validation ou publication. Les documents de travail restent distincts des décisions de l’équipe.
+- Contrôles : 4 840 tests / 452 fichiers, gouvernance 1 669 / 168, typage et deux lints sans erreur, zéro cycle (24 avertissements historiques). Premier typage arrêté sur un fichier généré de développement invalide ; cache de types régénérable retiré, contrôle complet repris avec succès. Aucun code métier ou test assoupli.
+- Dépôt du reste du corpus en cours ; l’acquisition technique ne vaut pas absorption sémantique. Grands fichiers, dépendances des sprites, droits, suppression/récupération et vérification du conseil restent au plan. Aucun chantier entier fermé.
+
 ## v6.27.497 — feat(vault): conserve les originaux privés sans adoption implicite (2026-10-20)
 
 **Recevoir un actif ne choisit plus l’identité de la marque à la place de son équipe.**
