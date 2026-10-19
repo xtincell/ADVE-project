@@ -12,10 +12,12 @@ La capacité est partagée entre sources puis passages ; 496 répartit la capaci
 conserve les qualifications hors du texte original, et partage les expressions exactes
 entre ranker et extraits. Aucun writer de marque, routeur, Intent, provider ou gestionnaire
 supplémentaire. Contexte de fixture, contrôles et nouvelle réception native attendus ;
-95 contrôles ciblés verts. PostgreSQL de recette : six pièces retenues présentes chez
+99 contrôles ciblés verts. Contrôle pur additionnel sur la fonction candidate exacte :
+les mots de titre/date ne comptent plus comme couverture factuelle intra-document ;
+les deux taux/dénominateurs réels survivent à l’enveloppe partagée de six pièces. PostgreSQL de recette : six pièces retenues présentes chez
 coordinateur/expert, deux dénominateurs et clarification de proposition conservés, zéro
 génération/écriture métier. Étude réelle relue via API : préflight pur sélectionne les
-fragments 1 et 0 avec les deux taux et dénominateurs. Le conseil réel reste à recevoir ;
+fragments 1 et 2 avec les deux taux et dénominateurs. Le conseil réel reste à recevoir ;
 les sept chantiers et la totalité du Drive restent ouverts. Preuves privées context496-*.
 
 ## Checkpoint 495 avant livraison — historique, conseil encore non reçu (2026-10-19)

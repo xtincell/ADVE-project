@@ -8,7 +8,9 @@ précis. Correction 496 dans qualifiedRag et chunker/ranker existants. Reprise :
 réception source/image 496, une seule question réelle avec dénominateurs, études et statuts.
 Contexte complet reçu sur fixture PostgreSQL sans génération : six pièces sélectionnées,
 deux dénominateurs et proposition/clarification présents chez les deux lecteurs. Préflight
-pur de l’étude primaire réel reçu, pas encore une preuve du conseil déployé. Responsable C2/C5 ; pas
+pur de l’étude primaire réelle reçu. La fonction candidate exacte conserve aussi les
+deux taux/dénominateurs dans une enveloppe de six pièces ; résumé titré déclassé
+pour les recherches intra-document. Pas encore une preuve du conseil déployé. Responsable C2/C5 ; pas
 de nouvel appel texte avant changement prouvé. Le reste du Drive et les actifs restent ouverts.
 
 ## Mesure mobile existante — collecte Lighthouse non reçue (2026-10-19)

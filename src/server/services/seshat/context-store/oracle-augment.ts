@@ -255,9 +255,12 @@ function selectSourceReferences<T extends Parameters<typeof nodeToSourceReferenc
     if (!node.sourceId || selected.has(node.sourceId)) return [];
     selected.add(node.sourceId);
     const name = (node.payload as Record<string, unknown> | null)?.fileName;
-    return rankDocumentNodes(nodes.filter(candidate => candidate.sourceId === node.sourceId),
-      sourceQueryForDocument(query, typeof name === "string" ? name : null), count,
-      { keepSemanticMatches }).map(nodeToSourceReference);
+    const passages = rankDocumentNodes(nodes.filter(candidate => candidate.sourceId === node.sourceId),
+      sourceQueryForDocument(query, typeof name === "string" ? name : null, { passage: true }), count,
+      { keepSemanticMatches });
+    // A title-only match still identifies a selected document. Focusing its
+    // body may refine passages, never silently revoke that existing selection.
+    return (passages.length ? passages : [node]).map(nodeToSourceReference);
   });
 }
 

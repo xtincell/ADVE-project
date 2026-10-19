@@ -44,6 +44,29 @@ beforeEach(() => {
     payload:{text:source.rawContent,fileName:source.fileName,sourceType:"FILE",chunkIndex:0,sourceContentHash:sourceFingerprint(source)}}];
 });
 describe("Oracle and council consume the same current documentary proof", () => {
+  it.each([false, true])("keeps a selected document when its title identifies it but the focused body has no match (vector=%s)", async vector => {
+    if (vector) harness.vector = [1, 0];
+    harness.sources[0] = { ...source, fileName: "BMC.docx" };
+    harness.nodes[0].payload = { ...harness.nodes[0].payload, fileName: "BMC.docx", sourceContentHash: sourceFingerprint(harness.sources[0]) };
+    const result = await getOracleBrandContextByQuery("brand-a", "BMC et validation d’équipe", { includeSources: true, sourcesLimit: 1, passagesPerSource: 2 });
+    expect(result?.sourceReferences?.map(ref => ref.sourceId)).toEqual([source.id]);
+    expect(result?.sourceReferences?.[0]?.text).toContain(source.rawContent);
+  });
+  it.each([false, true])("does not spend a complementary passage on title words from the overview (vector=%s)", async vector => {
+    if (vector) harness.vector = [1, 0];
+    const texts = [
+      "Étude terrain 18 octobre 2026 : périmètre, collecte, méthode, ordres de grandeur. " + "Introduction générale. ".repeat(80) + "TikTok : 12 % sur 1 200 commentaires.",
+      'Google, champ « prix par personne » : 22 % des 8 000 avis.',
+      'TikTok : commentaires avec demandes d’adresse, de prix et d’horaires : 12 % sur 1 200 commentaires. Les populations sont distinctes.',
+    ];
+    const fileName = "Étude terrain 18 octobre 2026.docx";
+    harness.sources[0] = { ...source, fileName, rawContent: texts.join("\n") };
+    const node = harness.nodes[0];
+    harness.nodes = texts.map((text, chunkIndex) => ({ ...node, id: `overview-${chunkIndex}`,
+      payload: { ...node.payload, fileName, text, chunkIndex, sourceContentHash: sourceFingerprint(harness.sources[0]) } }));
+    const result = await getOracleBrandContextByQuery("brand-a", 'Étude terrain 18 octobre 2026 : Google champ « prix par personne » et TikTok commentaires avec demandes d’adresse, de prix et d’horaires ?', { includeSources: true, sourcesLimit: 1, passagesPerSource: 2 });
+    expect(result?.sourceReferences?.map(ref => ref.chunkIndex)).toEqual([1, 2]);
+  });
   it.each([false, true])("supplies separate requested measurements from one source without changing default limits (vector=%s)", async vector => {
     if (vector) harness.vector = [1, 0];
     const texts = [

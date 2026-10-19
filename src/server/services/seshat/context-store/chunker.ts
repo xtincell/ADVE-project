@@ -29,14 +29,20 @@ export function sourceQueryTerms(query: string): string[] {
 /** Focus retrieval on the question clause naming this document. The caller's
  * original question remains intact; this never supplies inferred source text.
  */
-export function sourceQueryForDocument(query: string, fileName: string | null): string {
+export function sourceQueryForDocument(query: string, fileName: string | null, options: { passage?: boolean } = {}): string {
   const clauses = query.split(/(?<=[.!?。！？])\s+|\n+/u).filter(Boolean);
   const title = new Set(sourceQueryTerms((fileName ?? "").replace(/\.(?:docx?|pdf|txt|md|xlsx?|csv|pptx?|html?)$/iu, "")));
-  if (clauses.length < 2 || !title.size) return query;
   const scores = clauses.map(clause => sourceQueryTerms(clause).reduce((score, term) =>
     score + (title.has(term) ? /\d/u.test(term) ? 3 : 1 : 0), 0));
-  const best = Math.max(...scores);
-  return best ? clauses.filter((_, index) => scores[index] === best).join(" ") : query;
+  const best = Math.max(0, ...scores);
+  const focused = clauses.length > 1 && best
+    ? clauses.filter((_, index) => scores[index] === best).join(" ") : query;
+  if (!options.passage) return focused;
+  // The document is already selected. Its title/date identify the piece,
+  // but must not count as new factual coverage in an introductory paragraph.
+  const terms = sourceQueryTerms(focused).filter(term => !title.has(term));
+  const phrases = sourceQueryPhrases(focused);
+  return terms.length || phrases.length ? [...terms, ...phrases.map(phrase => `«${phrase}»`)].join(" ") : focused;
 }
 
 /** Quoted field names remain phrases, including short words such as "par". */

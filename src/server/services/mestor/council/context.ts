@@ -139,7 +139,7 @@ function qualifiedRag(rag: OracleContextBlock | null, query: string): { text: st
       const original = ref.documentNotice && ref.text.startsWith(ref.documentNotice)
         ? ref.text.slice(ref.documentNotice.length) : ref.text;
       const body = untrustedContentBody(original, { max: original.length });
-      const text = excerptForQuery(body, sourceQueryForDocument(query, ref.fileName), budget);
+      const text = excerptForQuery(body, sourceQueryForDocument(query, ref.fileName, { passage: true }), budget);
       const omitted = text.length < body.length ? "\n…[extrait borné — reste du fragment non fourni]" : "";
       const block = `${header}${text}${omitted}`;
       documentBlocks.push(block); documentRemaining -= block.length + 2;
