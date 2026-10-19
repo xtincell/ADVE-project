@@ -5,6 +5,7 @@
 - Les sources existantes portent une lignée, une édition, une provenance et un statut : proposition, référence de travail, édition antérieure ou archive. Un nouveau BMC proposé conserve la référence précédente ; une décision humaine datée et attribuée peut changer son usage, sans amender les fondamentaux.
 - Le dossier documentaire couvre tous les types de pièces, avec consultation et recherche. La page des études retrouve les mêmes sources et borne ses analyses à la marque sélectionnée. Les textes et originaux restent conservés ; aucun nouveau magasin, modèle, routeur ou gestionnaire d’appels.
 - Index et lecteurs écartent les éditions historiques des analyses courantes et qualifient les propositions non validées. Les reçus obsolètes sont refusés avant écriture ; classement et décisions invalident les dérivés. L’édition et la purge ordinaires ne détruisent pas une édition retenue.
+- Les scénarios PostgreSQL créent leurs propres fixtures et ne dépendent pas de l’ordre de passage des autres tests.
 - Réception locale sur données synthétiques : v1 référence puis v2 proposition dans une même lignée, consultation, indexation déterministe sans embedding, puis décision manuelle. Acquisition du corpus Drive SPAWT en cours, distincte de son ingestion production et de la validation d’équipe. ADR-0219.
 
 ## v6.27.493 — fix(portfolio): connect company workbenches to canonical brand identities (2026-10-19)

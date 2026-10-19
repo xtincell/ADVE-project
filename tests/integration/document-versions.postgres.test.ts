@@ -10,9 +10,14 @@ let brand: string, foreign: string, actor: string;
 const ids: string[] = [];
 beforeAll(async () => {
   expect(process.env.DATABASE_URL).toContain("shinkiro_verify");
-  const template = await db.strategy.findFirstOrThrow({ where: { operatorId: { not: null } } });
-  actor = template.userId;
+  const url = new URL(process.env.DATABASE_URL!);
+  expect(["127.0.0.1", "localhost"]).toContain(url.hostname);
+  expect(url.pathname).toBe("/shinkiro_verify");
   const key = randomUUID();
+  const operator = await db.operator.create({ data: { name: "Document versions fixture", slug: `doc-versions-${key}`,
+    status: "ACTIVE", licenseType: "TRIAL", licensedAt: new Date(), licenseExpiry: new Date(Date.now() + 86_400_000) } });
+  actor = (await db.user.create({ data: { email: `doc-versions-${key}@example.invalid`, operatorId: operator.id } })).id;
+  const template = { userId: actor, operatorId: operator.id };
   const owner = await db.strategy.create({ data: { name: `Document lineage ${key}`, userId: actor, operatorId: template.operatorId } });
   const other = await db.strategy.create({ data: { name: `Unrelated documents ${key}`, userId: actor } });
   brand = owner.id; foreign = other.id;
