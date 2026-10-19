@@ -2,7 +2,7 @@
 import { Prisma } from "@prisma/client";
 import { DocumentEditionInputSchema, documentEdition, type DocumentEdition } from "@/domain/source-document";
 import { invalidateSourceDerivatives, sourceFingerprint, type SourceDb } from "./source-usage";
-import type { z } from "zod";
+import { z } from "zod";
 
 export async function registerDocumentEdition(tx: SourceDb, input: {
   id: string; expectedSourceHash: string; document: z.infer<typeof DocumentEditionInputSchema>;
@@ -75,5 +75,24 @@ export async function decideDocumentEdition(tx: SourceDb, input: {
       decisions: [...(doc.decisions ?? []), { ...input.decision, by: input.userId, at: new Date().toISOString() }] } },
   } });
   await invalidateSourceDerivatives(tx, current.id);
+  return updated;
+}
+
+/** Clarifying a deposit is not adopting a proposal. Preserve the full history. */
+export async function clarifyDocumentEdition(tx: SourceDb, input: {
+  id: string; expectedSourceHash: string; userId: string; clarification: string;
+}) {
+  const text = z.string().trim().min(1).max(4000).parse(input.clarification);
+  await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${input.id} FOR UPDATE`;
+  const source = await tx.brandDataSource.findUniqueOrThrow({ where: { id: input.id } });
+  await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${source.strategyId} FOR UPDATE`;
+  if (sourceFingerprint(source) !== input.expectedSourceHash) throw new Error("SOURCE_CHANGED: relisez cette édition avant de la préciser.");
+  const doc = documentEdition(source.rawData);
+  if (!doc) throw new Error("Classez ce document avant de préciser sa place.");
+  const updated = await tx.brandDataSource.update({ where: { id: source.id }, data: {
+    rawData: { ...(source.rawData as Prisma.JsonObject), _document: { ...doc,
+      clarifications: [...(doc.clarifications ?? []), { by: input.userId, at: new Date().toISOString(), text }] } },
+  } });
+  await invalidateSourceDerivatives(tx, source.id);
   return updated;
 }

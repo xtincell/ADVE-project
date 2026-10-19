@@ -25,7 +25,7 @@
 import { db } from "@/lib/db";
 import { embed } from "@/server/services/llm-gateway";
 import { cosineSimilarity } from "./embedder";
-import { currentDocumentNodes, listByMetadata } from "./ranker";
+import { currentDocumentNodes, listDocumentCandidates, rankDocumentNodes } from "./ranker";
 import type { SourceCertainty } from "@/domain/source-certainty";
 import { coerceProvenance, fieldStatusFor, type FieldProvenance } from "@/domain/field-provenance";
 
@@ -255,7 +255,7 @@ RÈGLE D'USAGE :
 export async function getOracleBrandContext(
   strategyId: string,
   pillarKey?: string,
-  options: { limit?: number; includeSources?: boolean; sourcesLimit?: number } = {},
+  options: { limit?: number; includeSources?: boolean; sourcesLimit?: number; query?: string } = {},
 ): Promise<OracleContextBlock | null> {
   const limit = options.limit ?? 12;
   const sourcesLimit = options.sourcesLimit ?? 6;
@@ -264,6 +264,7 @@ export async function getOracleBrandContext(
   const rows = await db.brandContextNode.findMany({
     where: {
       strategyId,
+      kind: { notIn: ["BRAND_SOURCE", "SOURCE_CHUNK"] },
       ...(pillarKey ? { OR: [
         { pillarKey },
         { kind: "BRANDLEVEL" },
@@ -283,16 +284,8 @@ export async function getOracleBrandContext(
   // Source references (operator uploads) — only when explicitly requested
   let sourceReferences: SourceReference[] = [];
   if (options.includeSources) {
-    const sourceRows = await db.brandContextNode.findMany({
-      where: { strategyId, kind: { in: ["BRAND_SOURCE", "SOURCE_CHUNK"] } },
-      take: sourcesLimit,
-      orderBy: { createdAt: "desc" },
-      select: { kind: true, sourceId: true, payload: true },
-    });
-    const currentSources = await currentDocumentNodes(sourceRows, { strategyId });
-    sourceReferences = currentSources.map((r) =>
-      nodeToSourceReference(r),
-    );
+    const currentSources = await listDocumentCandidates(strategyId);
+    sourceReferences = rankDocumentNodes(currentSources, options.query ?? "", sourcesLimit).map(nodeToSourceReference);
   }
 
   if (narrativeRows.length === 0 && precise.length === 0 && sourceReferences.length === 0) return null;
@@ -353,7 +346,7 @@ export async function getOracleBrandContextByQuery(
 
   // Embed the query
   const metadataContext = () => getOracleBrandContext(strategyId, options.pillarKey, {
-    limit, includeSources: options.includeSources, sourcesLimit,
+    limit, includeSources: options.includeSources, sourcesLimit, query,
   });
   let embedResult: Awaited<ReturnType<typeof embed>>;
   try {
@@ -419,16 +412,15 @@ export async function getOracleBrandContextByQuery(
   // Indexing without embeddings is an explicit supported choice, not a
   // reason to make a current source disappear when older vectors succeed.
   const metadataSources = options.includeSources
-    ? await listByMetadata({ strategyId, kinds: ["BRAND_SOURCE", "SOURCE_CHUNK"], candidateLimit: sourcesLimit }, {
+    ? await listDocumentCandidates(strategyId, {
       incompatibleEmbedding: { dimension: queryDim, model: embedResult.model },
     })
     : [];
   const sourceReferences: SourceReference[] = options.includeSources
-    ? [...new Map([
-      ...metadataSources.map(nodeToSourceReference),
-      ...scored.filter((s: ScoredCandidate) => s.kind === "BRAND_SOURCE" || s.kind === "SOURCE_CHUNK")
-        .map(nodeToSourceReference),
-    ].map((ref) => [`${ref.sourceId}:${ref.contentHash}:${ref.chunkIndex}`, ref])).values()].slice(0, sourcesLimit)
+    ? rankDocumentNodes([
+      ...metadataSources,
+      ...scored.filter((s: ScoredCandidate) => s.kind === "BRAND_SOURCE" || s.kind === "SOURCE_CHUNK"),
+    ], query, sourcesLimit, { keepSemanticMatches: true }).map(nodeToSourceReference)
     : [];
 
   if (narrativeScored.length === 0 && sourceReferences.length === 0) return metadataContext();
