@@ -1,3 +1,11 @@
+## v6.27.493 — fix(portfolio): connect company workbenches to canonical brand identities (2026-10-19)
+
+Le raccord existant reçoit une instance source et un nom de dépôt par installation. Une référence historique non qualifiée garde son sens Matanga ; les identifiants identiques d’une autre instance ne sont pas résolus. Cache de lecture, projection et suivis Radar utilisent cette identité. Aucun nouveau service, schéma, Intent, provider ou gestionnaire d’appels.
+
+Le formulaire natif BrandNode peut rattacher une plateforme déjà commencée par la commande gouvernée de création existante. Le contexte La Barre propose uniquement les marques autorisées de l’équipe courante ; un choix de projet admet un pointeur, sans recopier le socle. Le portefeuille retrouve les vrais projets via les identités présentes dans le dépôt et ouvre le poste natif. La classification de marque et les décisions restent manuelles.
+
+Réception sur copie synthétique : création native d’un BrandNode SERVICE_BRAND/SERVICE relié à l’unique stratégie existante, puis dossier/accès aux projets. Ouverture du poste via Next dev local et PostgreSQL distant partiellement échouée : JWTSessionError/Connection terminated due to connection timeout, ressources 401 ; aucun parcours intégré ou SLO reçu. Reprise prévue sur image CI avec base locale au réseau privé, puis sauvegarde/restauration des deux stockages. Les dossiers réels, autres IP et sept chantiers restent ouverts. ADR-0218.
+
 ## v6.27.492 — fix(sources): admit collector JSON in the existing native chooser (2026-10-19)
 
 Le sélecteur de fichiers de la marque accepte `.json`, déjà pris en charge comme texte par l’extracteur et retenu par le stockage d’originaux existants. Le dépôt garde `prepareAnalysis=false` par défaut ; aucun parseur, table, score, diagnostic, writer de pilier ou gestionnaire de modèles ajouté. Le statut d’une collecte et ses valeurs inconnues restent ceux du fichier source.

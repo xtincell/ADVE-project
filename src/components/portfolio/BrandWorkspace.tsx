@@ -73,7 +73,7 @@ function WorkspaceContent({ data, refresh, refreshing }: { data: PortfolioWorksp
 
   const refs = data.nodes.flatMap((n) => readPortfolioReferences(n.sourceRefs).map((r) => ({ ...r, node: n.name })));
   const followUps = portfolioProjectFollowUps(refs);
-  const separateFollowUps = followUps.filter((r) => !r.project || !barre?.projects.some((p) => p.id === r.project?.id));
+  const separateFollowUps = followUps.filter((r) => !r.project || !barre?.projects.some((p) => p.id === r.project?.id && r.project?.instance === data.barreBinding?.instance));
   const matchingFollowUps = separateFollowUps.filter((r) => match(`${r.label ?? ""} ${r.id} ${r.instance ?? ""}`));
   const links = refs.filter((r) => r.system === "WEB" || r.system === "GITHUB");
   const sourceProductNodes = new Map(data.nodes.flatMap((n) => readPortfolioReferences(n.sourceRefs).filter((r) => r.system === "LA_BARRE" && r.kind === "sku").map((r) => [r.id, n.slug] as const)));
@@ -116,13 +116,14 @@ function WorkspaceContent({ data, refresh, refreshing }: { data: PortfolioWorksp
       </div>
     </div>}
     {section === "projects" && <div className="space-y-6">
+      {barre && <a href="/la-barre/index.html#/projets" className="inline-flex rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-raised">Travailler dans La Barre</a>}
       <p className="text-sm text-foreground-secondary">Les campagnes regroupent les projets. Un projet multimarque est présenté une seule fois, avec toutes ses marques.</p>
       {matchingFollowUps.length > 0 && <div className="rounded-xl border border-border p-4 sm:p-6"><h2 className="mb-3 font-display text-xl">Suivis dans Radar</h2><FollowUpLinks references={matchingFollowUps} /></div>}
       {(barre?.campaigns ?? []).filter((c) => match(`${c.name} ${c.brands.join(" ")}`) || projects.some((p) => p.campaignId === c.id)).map((c) => <article key={c.id} className="rounded-xl border border-border p-4 sm:p-6"><header className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><p className="mb-1 text-xs text-accent">{c.brands.join(" · ")}</p><h2 className="font-display text-xl">{c.name}</h2></div>{c.start && <p className="text-xs text-foreground-secondary">{dateLabel(c.start)} → {dateLabel(c.end)}{c.inferredDates ? " · dates inférées" : ""}</p>}</header>
-        <div className="space-y-2">{projects.filter((p) => p.campaignId === c.id).map((p) => <ProjectRow key={p.id} project={p} followUps={portfolioProjectFollowUps(refs, p.id)} />)}</div>
+        <div className="space-y-2">{projects.filter((p) => p.campaignId === c.id).map((p) => <ProjectRow key={p.id} project={p} followUps={portfolioProjectFollowUps(refs, p.id, data.barreBinding?.instance)} />)}</div>
         {!projects.some((p) => p.campaignId === c.id) && <p className="text-xs text-foreground-secondary">Aucun projet correspondant à cette recherche.</p>}
       </article>)}
-      {projects.filter((p) => !barre?.campaigns.some((c) => c.id === p.campaignId)).map((p) => <ProjectRow key={p.id} project={p} followUps={portfolioProjectFollowUps(refs, p.id)} />)}
+      {projects.filter((p) => !barre?.campaigns.some((c) => c.id === p.campaignId)).map((p) => <ProjectRow key={p.id} project={p} followUps={portfolioProjectFollowUps(refs, p.id, data.barreBinding?.instance)} />)}
       {!projects.length && !matchingFollowUps.length && <Empty>Aucun projet ou suivi correspondant dans les sources disponibles.</Empty>}
       {data.strategies.some((s) => s.campaigns.length) && <div className="border-t border-border pt-5"><h3 className="mb-3 font-medium">Dossiers présents dans La Fusée</h3>{data.strategies.flatMap((s) => s.campaigns.map((c) => <p key={c.id} className="py-2 text-sm">{c.name} <span className="text-foreground-secondary">· {s.name} · {label(c.status)}</span></p>))}</div>}
     </div>}
@@ -150,7 +151,7 @@ function WorkspaceContent({ data, refresh, refreshing }: { data: PortfolioWorksp
       {!knowledge.length && !data.strategies.length && <Empty>Aucun socle de marque relié. Les éléments inconnus restent à documenter.</Empty>}
     </div>}
     {section === "sources" && <div className="space-y-6">
-      <PortfolioReferencesForm node={data.root} onSaved={refresh} />
+      <PortfolioReferencesForm node={data.root} onSaved={refresh} barreInstance={data.barreBinding?.instance} />
       {data.strategies.map((s) => <div key={s.id}><h2 className="mb-3 font-medium">{s.name}</h2>{s.dataSources.length ? <ul className="divide-y divide-border">{s.dataSources.map((source) => <li key={source.id} className="flex items-start gap-3 py-3 text-sm"><FileText className="mt-1 h-4 w-4 shrink-0 text-foreground-secondary" /><div><button type="button" aria-label={`Consulter ${source.fileName ?? "la source sans titre"} dans ${s.name}`} onClick={() => setSelectedSource({ id: source.id, strategyId: s.id })} className="text-left underline decoration-border underline-offset-4 hover:text-accent focus-visible:outline-2 focus-visible:outline-accent">{source.fileName ?? "Source sans titre"}</button>{source.shared && <p className="mt-1 text-xs text-foreground-secondary">Document partagé par {source.ownerBrandName} · consultation pour ce dossier</p>}<p className="mt-1 text-xs text-foreground-secondary">{label(source.certainty)} · {label(source.processingStatus)} · {dateLabel(source.updatedAt.toISOString())}</p></div></li>)}</ul> : <p className="text-sm text-foreground-secondary">Aucun document ingéré dans ce dossier.</p>}</div>)}
       <div><h2 className="mb-3 font-medium">Identités et points d’accès reliés</h2><ul className="max-h-[32rem] divide-y divide-border overflow-y-auto">{refs.map((r, i) => <li key={`${r.system}:${r.id}:${i}`} className="flex items-start gap-3 py-3 text-sm"><Link2 className="mt-1 h-4 w-4 shrink-0 text-foreground-secondary" /><div className="min-w-0"><p>{r.node} · {r.label ?? r.id}</p><p className="mt-1 break-all text-xs text-foreground-secondary">{r.system === "LA_BARRE" ? "La Barre" : r.system === "LA_FUSEE" ? "La Fusée" : r.system === "WEB" ? "Site web" : r.system === "RADAR" ? "Radar" : "Dépôt de code"} · {r.id}{r.instance ? ` · ${r.instance}` : ""}{r.project ? ` · projet ${r.project.id}` : ""}</p>{r.url && <a href={r.url} target="_blank" rel="noreferrer" className="text-xs underline">Ouvrir la source</a>}</div></li>)}</ul></div>
     </div>}

@@ -1,3 +1,7 @@
+## Installation entreprise — raccord 493 candidat, réception intégrée ouverte (2026-10-19)
+
+ADR-0218 étend les identités source/lecteurs/BrandNodeForm existants, sans gestionnaire ou pilier ajouté. Namespace et dépôt configurables, références historiques Matanga conservées, choix manuel de plateforme existante et retour des projets natifs par pointeur exact. Contrôles et source seuls ne qualifient pas l’onboarding. BrandNode SERVICE/SERVICE_BRAND créé nativement sur copie et relié à la stratégie initiale ; ouverture de La Barre depuis Next dev local partiellement refusée après saturation des connexions à PostgreSQL distant (JWTSessionError, ressources 401). Recevoir le même parcours sur image CI dans le réseau privé puis la reprise des deux stockages ; détails/preuves privés `release/preuves-barre-entreprise-20261019/`. Aucun dossier réel modifié, appel modèle ou grant client créé ; les sept chantiers restent ouverts.
+
 # La Fusée — Refonte Governance "Sans Compromis"
 
 ## Lecture du catalogue complet et complétion — candidat491 (2026-10-17)

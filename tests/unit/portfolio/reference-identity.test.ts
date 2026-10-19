@@ -35,9 +35,12 @@ describe("identités des raccordements du portefeuille", () => {
     expect(standalone).not.toHaveProperty("project");
     expect(standalone).not.toHaveProperty("status");
   });
-  it("ne lit pas une autre instance Barre dans le dépôt Matanga fixe", () => {
-    expect(PortfolioReferencesSchema.safeParse([{ ...radar, project: { ...project, instance: "autre-barre" } }]).success).toBe(false);
-    expect(PortfolioReferencesSchema.safeParse([{ system: "LA_BARRE", instance: "autre-barre", kind: "project", id: "PRJ-EOTY26" }]).success).toBe(false);
+  it("qualifie les identités dans leur instance et filtre les suivis du projet courant", () => {
+    const other = { ...radar, project: { ...project, instance: "autre-barre" } };
+    expect(PortfolioReferencesSchema.safeParse([other]).success).toBe(true);
+    expect(portfolioProjectFollowUps([other], "PRJ-EOTY26")).toEqual([]);
+    expect(portfolioProjectFollowUps([other], "PRJ-EOTY26", "autre-barre")).toEqual([other]);
+    expect(PortfolioReferencesSchema.safeParse([{ system: "LA_BARRE", instance: "../bad", kind: "project", id: "P" }]).success).toBe(false);
   });
   it("conserve les anciennes identités Barre sans créer un doublon qualifié", () => {
     const legacy = { system: "LA_BARRE" as const, kind: "brand" as const, id: "MQ-br" };

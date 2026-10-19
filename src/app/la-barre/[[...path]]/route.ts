@@ -37,7 +37,9 @@ async function serve(request: Request, context: Context) {
   const rel = path.join("/");
   const readOnly = request.method === "GET" || request.method === "HEAD";
   if (rel === "contexte.json" && readOnly) {
-    try { return Response.json(await getBarreBrandContext(actor), { headers: PRIVATE }); }
+    const ids = new URL(request.url).searchParams.getAll("brand");
+    if (ids.length > 200 || ids.some((id) => !/^[a-zA-Z0-9_-]{1,200}$/.test(id))) return message("Les références demandées ne sont pas reconnues.", 400);
+    try { return Response.json(await getBarreBrandContext(actor, ids.length ? [...new Set(ids)] : undefined), { headers: PRIVATE }); }
     catch { return message("Les références de marque n’ont pas pu être relues.", 503); }
   }
   if (rel === "publication") {

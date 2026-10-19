@@ -83,6 +83,7 @@ export function BrandNodeForm({
   onCancel,
 }: BrandNodeFormProps) {
   const isEdit = Boolean(nodeId);
+  const platforms = trpc.strategy.list.useQuery({ operatorId }, { enabled: !isEdit });
   const [state, setState] = useState<FormState>(INITIAL_STATE);
   const [error, setError] = useState<string | null>(null);
   const [roleInput, setRoleInput] = useState("");
@@ -195,6 +196,20 @@ export function BrandNodeForm({
 
       {error && <div className="rounded bg-error/15 p-2 text-sm text-error">{error}</div>}
 
+      {!isEdit && <label className="flex flex-col gap-1 text-sm">
+        <span className="font-medium">Plateforme de marque existante</span>
+        <select aria-label="Plateforme de marque existante" value={state.attachStrategyId ?? ""}
+          onChange={(e) => {
+            const selected = platforms.data?.find((row) => row.id === e.target.value);
+            setState((current) => ({ ...current, attachStrategyId: selected?.id ?? null,
+              ...(!current.name && selected ? { name: selected.name, slug: slugify(selected.name) } : {}) }));
+          }} className="rounded border border-border bg-surface-raised px-2 py-1.5">
+          <option value="">À créer ou rattacher plus tard</option>
+          {(platforms.data ?? []).filter((row) => !row.brandNode).map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}
+        </select>
+        {platforms.error && <span role="alert" className="text-xs text-warning">Les plateformes existantes n’ont pas pu être relues. Vous pouvez créer le dossier sans rattachement.</span>}
+        <span className="text-xs text-foreground-secondary">Choisissez un dossier déjà commencé pour conserver ses réponses et ses sources.</span>
+      </label>}
       {/* Name + Slug */}
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium">Nom</span>

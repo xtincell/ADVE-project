@@ -4,6 +4,7 @@ import type { FieldProvenance } from "./field-provenance";
 export type BarreBrandContext = {
   generatedAt: string;
   sharingMode: "DOCUMENT_V2";
+  choices?: Array<{ id: string; nodeId: string; strategyId: string; name: string; url: string }>;
   brands: Record<string, {
     nodeId: string;
     strategyId: string;

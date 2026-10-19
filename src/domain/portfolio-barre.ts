@@ -1,4 +1,4 @@
-import { portfolioFileUrl, type PortfolioReference } from "./portfolio-reference";
+import { portfolioFileUrl, isBarreReference, PORTFOLIO_BARRE_INSTANCE, inspectPortfolioReferences, type PortfolioReference } from "./portfolio-reference";
 
 // Native links stay on this installation and reuse its authenticated session.
 export const BARRE_ORIGIN = "/la-barre";
@@ -53,7 +53,7 @@ export interface WorkspaceKnowledge {
 const VAULT_META = new Set(["inferences", "sources", "revisions", "inferencesLevees"]);
 
 /** Exact identities and explicit links only. Names never establish ownership. */
-export function projectBarreWorkspace(raw: unknown, references: PortfolioReference[]) {
+export function projectBarreWorkspace(raw: unknown, references: PortfolioReference[], instance = PORTFOLIO_BARRE_INSTANCE) {
   const data = asRow(raw);
   if (!["marques", "clients", "campagnes", "projets", "sku", "assets"].every((key) => Array.isArray(data[key]))) {
     throw new Error("Le dépôt La Barre ne respecte pas le format attendu.");
@@ -63,7 +63,14 @@ export function projectBarreWorkspace(raw: unknown, references: PortfolioReferen
     const path = asText(value);
     return barreFileUrl(proxies[path]) || barreFileUrl(path);
   };
-  const refs = references.filter((r) => r.system === "LA_BARRE");
+  const refs = references.filter((r) => isBarreReference(r, instance));
+  // Reverse links come from actual rows in this corpus, never guessed local IDs.
+  const nodes = new Set(references.filter((r) => r.system === "LA_FUSEE" && r.kind === "brand").map((r) => r.id));
+  for (const brand of asRows(data.marques)) {
+    if (inspectPortfolioReferences(brand.sourceRefs).references.some((r) => r.system === "LA_FUSEE" && r.kind === "brand" && nodes.has(r.id))) {
+      refs.push({ system: "LA_BARRE", instance, kind: "brand", id: asText(brand.id) });
+    }
+  }
   const clientIds = new Set(refs.filter((r) => r.kind === "client").map((r) => r.id));
   const explicitBrands = new Set(refs.filter((r) => r.kind === "brand").map((r) => r.id));
   const rangeRefs = refs.filter((r) => r.kind === "range").map((r) => {
