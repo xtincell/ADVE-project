@@ -26,6 +26,7 @@ import { db } from "@/lib/db";
 import { embed } from "@/server/services/llm-gateway";
 import { cosineSimilarity } from "./embedder";
 import { currentDocumentNodes, listDocumentCandidates, rankDocumentNodes } from "./ranker";
+import { sourceQueryForDocument } from "./chunker";
 import type { SourceCertainty } from "@/domain/source-certainty";
 import { coerceProvenance, fieldStatusFor, type FieldProvenance } from "@/domain/field-provenance";
 
@@ -65,6 +66,8 @@ export interface SourceReference {
   chunkIndex: number | null;
   /** Verbatim chunk text */
   text: string;
+  /** Current edition/status and operator clarification; not original source text. */
+  documentNotice?: string;
   /** Cosine similarity if vector search was used */
   similarity?: number;
 }
@@ -233,8 +236,32 @@ function nodeToSourceReference(node: {
     fileType: typeof p.fileType === "string" ? p.fileType : null,
     chunkIndex: typeof p.chunkIndex === "number" ? p.chunkIndex : null,
     text: typeof p.text === "string" ? p.text : JSON.stringify(p).slice(0, 800),
+    ...(typeof p.documentNotice === "string" && p.documentNotice ? { documentNotice: p.documentNotice } : {}),
     ...(typeof node.similarity === "number" ? { similarity: node.similarity } : {}),
   };
+}
+
+/** Reuse already authorized candidates. Multiple passages are an explicit
+ * reader choice; ordinary consumers retain their existing reference limit.
+ */
+function selectSourceReferences<T extends Parameters<typeof nodeToSourceReference>[0]>(
+  nodes: T[], query: string, limit: number, passagesPerSource = 1, keepSemanticMatches = false,
+): SourceReference[] {
+  const ranked = rankDocumentNodes(nodes, query, limit, { keepSemanticMatches });
+  const count = Number.isFinite(passagesPerSource) ? Math.max(1, Math.min(3, Math.floor(passagesPerSource))) : 1;
+  if (count === 1) return ranked.map(nodeToSourceReference);
+  const selected = new Set<string>();
+  return ranked.flatMap(node => {
+    if (!node.sourceId || selected.has(node.sourceId)) return [];
+    selected.add(node.sourceId);
+    const name = (node.payload as Record<string, unknown> | null)?.fileName;
+    const passages = rankDocumentNodes(nodes.filter(candidate => candidate.sourceId === node.sourceId),
+      sourceQueryForDocument(query, typeof name === "string" ? name : null, { passage: true }), count,
+      { keepSemanticMatches });
+    // A title-only match still identifies a selected document. Focusing its
+    // body may refine passages, never silently revoke that existing selection.
+    return (passages.length ? passages : [node]).map(nodeToSourceReference);
+  });
 }
 
 // ── Public API ───────────────────────────────────────────────────────
@@ -255,7 +282,7 @@ RÈGLE D'USAGE :
 export async function getOracleBrandContext(
   strategyId: string,
   pillarKey?: string,
-  options: { limit?: number; includeSources?: boolean; sourcesLimit?: number; query?: string } = {},
+  options: { limit?: number; includeSources?: boolean; sourcesLimit?: number; query?: string; passagesPerSource?: number } = {},
 ): Promise<OracleContextBlock | null> {
   const limit = options.limit ?? 12;
   const sourcesLimit = options.sourcesLimit ?? 6;
@@ -285,7 +312,7 @@ export async function getOracleBrandContext(
   let sourceReferences: SourceReference[] = [];
   if (options.includeSources) {
     const currentSources = await listDocumentCandidates(strategyId);
-    sourceReferences = rankDocumentNodes(currentSources, options.query ?? "", sourcesLimit).map(nodeToSourceReference);
+    sourceReferences = selectSourceReferences(currentSources, options.query ?? "", sourcesLimit, options.passagesPerSource);
   }
 
   if (narrativeRows.length === 0 && precise.length === 0 && sourceReferences.length === 0) return null;
@@ -339,6 +366,7 @@ export async function getOracleBrandContextByQuery(
     limit?: number;
     includeSources?: boolean;
     sourcesLimit?: number;
+    passagesPerSource?: number;
   } = {},
 ): Promise<OracleContextBlock | null> {
   const limit = options.limit ?? 8;
@@ -346,7 +374,7 @@ export async function getOracleBrandContextByQuery(
 
   // Embed the query
   const metadataContext = () => getOracleBrandContext(strategyId, options.pillarKey, {
-    limit, includeSources: options.includeSources, sourcesLimit, query,
+    limit, includeSources: options.includeSources, sourcesLimit, query, passagesPerSource: options.passagesPerSource,
   });
   let embedResult: Awaited<ReturnType<typeof embed>>;
   try {
@@ -409,18 +437,16 @@ export async function getOracleBrandContextByQuery(
   const narrativeScored = scored
     .filter((s: ScoredCandidate) => s.kind !== "BRAND_SOURCE" && s.kind !== "SOURCE_CHUNK")
     .slice(0, limit);
-  // Indexing without embeddings is an explicit supported choice, not a
-  // reason to make a current source disappear when older vectors succeed.
+  // Balance all current documents before ranking: a global vector candidate
+  // cap must not hide later passages, even when their vectors are compatible.
   const metadataSources = options.includeSources
-    ? await listDocumentCandidates(strategyId, {
-      incompatibleEmbedding: { dimension: queryDim, model: embedResult.model },
-    })
+    ? await listDocumentCandidates(strategyId)
     : [];
   const sourceReferences: SourceReference[] = options.includeSources
-    ? rankDocumentNodes([
+    ? selectSourceReferences([
       ...metadataSources,
       ...scored.filter((s: ScoredCandidate) => s.kind === "BRAND_SOURCE" || s.kind === "SOURCE_CHUNK"),
-    ], query, sourcesLimit, { keepSemanticMatches: true }).map(nodeToSourceReference)
+    ], query, sourcesLimit, options.passagesPerSource, true)
     : [];
 
   if (narrativeScored.length === 0 && sourceReferences.length === 0) return metadataContext();

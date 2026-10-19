@@ -1,8 +1,30 @@
-## Recherche documentaire par question — 495 candidate, 2026-10-19
+## Conseil et champs exacts — 496 candidate, 2026-10-19
+
+La production 495 (a5c2d306) reçoit la clarification des BMC, 42 sources et les fondamentaux
+préservés. Un appel natif cite rapport + BMC précédent et omet les dénominateurs ; aucune
+qualité globale reçue. MCP retrouve pourtant le nouveau BMC (3) et l’étude primaire (4).
+Le conseil dépense les 6 K avec ses premiers paquets ; le fragment d’étude sélectionné
+n’inclut pas le dénominateur Google. Cinq régressions rouges reproduisent ces défauts.
+496 sélectionne deux passages complémentaires par source à partir des candidats déjà
+autorisés ; clause de question pertinente par pièce, sans changer la question du conseil,
+ni ajouter d’appel, réindexation ou gestionnaire. Qualification commune conservée une fois.
+La capacité est partagée entre sources puis passages ; 496 répartit la capacité par source, porte l’enveloppe à 6–18 K selon les pièces retenues,
+conserve les qualifications hors du texte original, et partage les expressions exactes
+entre ranker et extraits. Aucun writer de marque, routeur, Intent, provider ou gestionnaire
+supplémentaire. Contexte de fixture, contrôles et nouvelle réception native attendus ;
+99 contrôles ciblés verts. Contrôle pur additionnel sur la fonction candidate exacte :
+les mots de titre/date ne comptent plus comme couverture factuelle intra-document ;
+les deux taux/dénominateurs réels survivent à l’enveloppe partagée de six pièces. PostgreSQL de recette : six pièces retenues présentes chez
+coordinateur/expert, deux dénominateurs et clarification de proposition conservés, zéro
+génération/écriture métier. Étude réelle relue via API : préflight pur sélectionne les
+fragments 1 et 2 avec les deux taux et dénominateurs. Le conseil réel reste à recevoir ;
+les sept chantiers et la totalité du Drive restent ouverts. Preuves privées context496-*.
+
+## Checkpoint 495 avant livraison — historique, conseil encore non reçu (2026-10-19)
 
 Le premier conseil après absorption cite correctement la note de réconciliation, mais pas directement les BMC et études : la pertinence du corpus entier reste non reçue. Cause reproduite : question perdue dans le repli sans vecteurs et coupe par récence des fragments avant sélection. Correction 6591dc123 dans Seshat : titre/texte et sigles courts, diversité documentaire, candidats bornés par pièce et mêmes contrôles de portée/empreinte. Cinq régressions Seshat puis trois MCP/Notoria reçues rouges ; règle factorisée dans le ranker existant, 92 ciblés et 4 819 tests / 451 fichiers verts. PostgreSQL réel de fixture retrouve BMC courant + étude et exclut l’ancien sans modèle (3 509 ms) ; tools/list puis tools/call MCP JSON-RPC réels HTTP 200 (3 618 ms), mêmes pièces et exclusion. Les 32 candidats par pièce sont une fenêtre de recherche, pas une lecture exhaustive à chaque question. Une précision datée peut corriger l’interprétation du dépôt sans changer son usage : original/annotation/décisions conservés, lecture native fictive et refus de rejeu reçus ; contexte PostgreSQL réel contient la précision après indexation sans modèle. Réception du conseil de production et précision réelle après livraison 495 attendues.
 
-## Dossier documentaire et propositions de direction — 494 reçue au périmètre, 2026-10-19, ADR-0219
+## Réception initiale du dossier documentaire — 494 reçue au périmètre, 2026-10-19, ADR-0219
 
 PR #1023/source 478942193950b754c7373edc73d0881ee0b6524c, CI/image/production 6.27.494 reçues. Même volume privé, piliers et 13 sources antérieures conservés avant ingestion. 26 pièces Drive et une note déposées : 27 originaux relus et empreintes vérifiées, 40 sources dans SPAWT, 13 feuilles du grand tableur relues par la même API depuis le serveur. Les deux vues natives Sources/Études et le lecteur du BMC montrent la lignée, l’historique et le statut proposé. BMC continuité référence de travail précédente ; BMC aligné nouveau postulat à faire valider par l’équipe. Aucune adoption ni réécriture des fondamentaux ; tentative d’annotation directe refusée par la gouvernance, rien appliqué. Le reste du Drive, la ventilation des actifs, le conseil sur tout le corpus et les sept chantiers demeurent ouverts. Plan privé C2-01 et preuves `release/preuves-spawt-drive-20261019/`.
 

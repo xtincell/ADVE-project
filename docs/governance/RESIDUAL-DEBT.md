@@ -1,6 +1,25 @@
-## Corpus documentaire et conseil — absorption 494 reçue au périmètre, pertinence 495 à recevoir (2026-10-19)
+## Conseil 496 candidat — documents sélectionnés, paquets et champs exacts (2026-10-19)
 
-La lignée réelle des BMC, 26 pièces Drive + une note, les originaux, les deux lecteurs natifs et le tableau complet sont reçus en production 494. Ce n’est plus un chantier de création de section documentaire. Le premier conseil réel ne cite que la note de réconciliation : ni la présence des fichiers ni une réponse correcte ne reçoivent la lecture pertinente du corpus entier. Correction 495 dans les services Seshat existants, sans nouveau gestionnaire : huit régressions rouges puis 4 819 tests verts, lecture PostgreSQL synthétique et MCP JSON-RPC réels reçus. Précision d’annotation sans changement d’usage reçue nativement sur fixture, trois cas rouges puis neuf verts ; texte, décisions et fondamentaux conservés, rejeu périmé refusé. **Déclencheur** : image 495 livrée ; préciser la différence entre BMC puis recevoir directement BMC/études dans une question réelle avec leurs statuts et limites, puis poursuivre les fichiers/actifs restants. Responsable mission C2/C5 ; ne pas multiplier les appels avant ce changement. Les actifs/binaires et l’exploitation de grandes tables restent distincts du texte documentaire. Ne pas adopter le nouveau modèle ni changer des offres par une lecture de source.
+495 reçue au périmètre code/transport/précision BMC, source a5c2d306 et image exacte.
+42 sources et fondamentaux conservés ; BMC proposés/antérieur et clarification visibles.
+Le conseil natif cite le rapport et le BMC précédent, sans les dénominateurs. MCP retrouve
+bien six pièces : défaut confirmé après sélection, plus choix d’un résumé au lieu du champ
+précis. Correction 496 dans qualifiedRag et chunker/ranker existants. Reprise : après
+réception source/image 496, une seule question réelle avec dénominateurs, études et statuts.
+Contexte complet reçu sur fixture PostgreSQL sans génération : six pièces sélectionnées,
+deux dénominateurs et proposition/clarification présents chez les deux lecteurs. Préflight
+pur de l’étude primaire réelle reçu. La fonction candidate exacte conserve aussi les
+deux taux/dénominateurs dans une enveloppe de six pièces ; résumé titré déclassé
+pour les recherches intra-document. Pas encore une preuve du conseil déployé. Responsable C2/C5 ; pas
+de nouvel appel texte avant changement prouvé. Le reste du Drive et les actifs restent ouverts.
+
+## Mesure mobile existante — collecte Lighthouse non reçue (2026-10-19)
+
+Run 39319055374 vert selon sa politique non bloquante, mais collect échoue : preset mobile
+invalide (choix annoncés perf, experimental, desktop). Aucun score mobile reçu. Réparer
+.lighthouserc.json dans la passe corrective après le gros œuvre, puis recevoir la collecte
+sur build exact, sans ajouter un moniteur. Responsable C4 ; entrée LeRadar C4-01-E008.
+Les tests natifs bornés ne constituent pas une mesure de performance de toute la flotte.
 
 ## Réception C7 du raccord entreprise 493 — reprise des deux stockages ouverte (2026-10-19)
 

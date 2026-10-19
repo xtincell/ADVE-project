@@ -1,14 +1,22 @@
-## Documents 494 reçus ; recherche pertinente 495 candidate (2026-10-19)
+## Conseil documentaire — 496 candidate ; 495 reçue au périmètre (2026-10-19)
 
-La production 494 reçoit une seule lignée BMC SPAWT : référence de travail précédente,
-puis proposition à valider par l’équipe. 26 pièces Drive et une note ont été intégrées ;
-27 originaux vérifiés, textes et deux lecteurs natifs reçus. Les fondamentaux restent
-inchangés. Le premier conseil réel ne citait que la note : le corpus complet et la qualité
-du conseil restent ouverts. 495 factorise la recherche documentaire dans Seshat pour
-le conseil, MCP et Notoria, sans nouveau service, modèle ou gestionnaire d’appels. Une annotation peut recevoir une
-précision datée, sans modifier l’usage ni effacer l’historique initial.
-Réception locale MCP réelle : BMC courant et étude trouvés en 3,618 s, historique exclu,
-sans appel modèle ; source, CI, image et conseil de production 495 encore à recevoir.
+495 livrée : source a5c2d306, image et volume privé reçus, 42 sources et fondamentaux
+préservés. Les BMC sont différents et successifs ; nouveau postulat PROPOSED, précédent
+REFERENCE. Précision réelle datée visible, original exact conservé. Une question native
+ne restitue pas les dénominateurs : le conseil n’est pas qualifié. Le ranker retrouve six
+pièces, dont BMC proposé au rang 3 et étude primaire au rang 4 ; le paquet de contexte
+consomme son budget avant elles et sélectionne un résumé plutôt que le champ précis.
+496 étend les mêmes lecteurs : budget réparti par document (6–18 K selon la sélection),
+qualifications préservées et expressions exactes communes au ranker et aux extraits.
+Deux passages complémentaires par source, ciblés sur la clause de question pertinente,
+sans réindexation ni appel supplémentaire ; qualification commune conservée une fois.
+Neuf régressions rouges reçues, 99 contrôles ciblés verts et recette PostgreSQL sans
+génération reçue : six pièces et les deux dénominateurs présents chez les deux lecteurs.
+Contrôles finaux : 4 834 tests / 451 fichiers et gouvernance 1 663 / 167 verts ; TypeScript/lints/cycles zéro
+erreur, 24 avertissements préexistants. MCP réel six résultats reçu. Titre/date ne comptent plus comme apport factuel intra-document. Le contexte candidat
+exact reçoit aussi les deux taux/dénominateurs réels dans l’enveloppe de six pièces.
+Source/image et conseil de production à recevoir.
+Corpus intégral, autres IP et sept chantiers restent ouverts. Voir REFONTE-PLAN.
 
 ## Raccord entreprise 493 reçu sur D ; reprise couplée ouverte (2026-10-19)
 

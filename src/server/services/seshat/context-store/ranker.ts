@@ -29,7 +29,7 @@ import { embed } from "@/server/services/llm-gateway";
 import { cosineSimilarity } from "./embedder";
 import { sourceScope, sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
 import { isSourceCertainty, type SourceCertainty } from "@/domain/source-certainty";
-import { normalizeSourceQuery, sourceQueryTerms } from "./chunker";
+import { normalizeSourceQuery, sourceQueryTerms, sourceQueryPhrases, sourcePhraseScore, excerptForQuery } from "./chunker";
 
 /** Pure selection over already authorized candidates, shared by all readers.
  * Lexical relevance never changes text, authority, edition or citation identity.
@@ -43,24 +43,49 @@ export function rankDocumentNodes<T extends { sourceId: string | null; payload: 
   const unique = [...new Map(nodes.map(n => [typeof payload(n).chunkIndex === "number"
     ? `${key(n)}:${payload(n).sourceContentHash}:${payload(n).chunkIndex}` : n.id ?? key(n), n])).values()];
   const terms = sourceQueryTerms(query);
+  const phrases = sourceQueryPhrases(query);
   const words = (text: string) => new Set(normalizeSourceQuery(text).match(/[\p{L}\p{N}]+/gu) ?? []);
-  const rows = unique.map(node => { const p = payload(node); return { node,
-    title: words(typeof p.fileName === "string" ? p.fileName : ""),
-    body: words(typeof p.text === "string" ? p.text : JSON.stringify(p).replace(/([a-z])([A-Z])/g, "$1 $2")),
-  }; });
+  const rows = unique.map(node => {
+    const p = payload(node);
+    const title = typeof p.fileName === "string" ? p.fileName : "";
+    const fullText = typeof p.text === "string" ? p.text : JSON.stringify(p).replace(/([a-z])([A-Z])/g, "$1 $2");
+    const notice = typeof p.documentNotice === "string" ? p.documentNotice : "";
+    const text = notice && fullText.startsWith(notice) ? fullText.slice(notice.length) : fullText;
+    // Rank the same local passage that can actually reach the reader. Remote
+    // keywords in a long summary must not outrank the requested field's vicinity.
+    const passage = excerptForQuery(text, query, 800);
+    return { node, title: words(title), body: words(passage), notice: words(notice), passage,
+      phraseScore: 3 * sourcePhraseScore(title, phrases) + sourcePhraseScore(passage, phrases) };
+  });
   const documents = new Set(rows.map(r => key(r.node)));
   const frequency = new Map(terms.map(term => [term, new Set(rows.filter(r => r.title.has(term) || r.body.has(term)).map(r => key(r.node))).size]));
   const scored = rows.map(row => ({ ...row, score: terms.reduce((sum, term) =>
-    sum + (row.title.has(term) ? 6 : row.body.has(term) ? 1 : 0)
+    sum + (row.title.has(term) ? 6 : row.body.has(term) ? 1 : row.notice.has(term) ? 0.5 : 0)
       * (1 + Math.log((documents.size + 1) / ((frequency.get(term) ?? 0) + 1))),
-    options.keepSemanticMatches ? row.node.similarity ?? 0 : 0) }))
-    .filter(row => !terms.length || row.score > 0).sort((a, b) => b.score - a.score);
+    row.phraseScore + (options.keepSemanticMatches ? row.node.similarity ?? 0 : 0)) }))
+    .filter(row => (!terms.length && !phrases.length) || row.score > 0).sort((a, b) => b.score - a.score);
   const selected: T[] = []; const seen = new Set<string>();
   for (const row of scored) if (!seen.has(key(row.node))) {
     selected.push(row.node); seen.add(key(row.node));
     if (selected.length >= limit) return selected.slice(0, limit);
   }
-  for (const row of scored) if (!selected.includes(row.node) && selected.length < limit) selected.push(row.node);
+  // Extra passages should add requested information, rather than repeat the
+  // same field. Title/authority matches cannot masquerade as factual coverage.
+  const covered = new Set<string>(); const coveredPhrases = new Set<string>();
+  const cover = (row: (typeof scored)[number]) => {
+    for (const term of terms) if (row.body.has(term)) covered.add(term);
+    for (const phrase of phrases) if (sourcePhraseScore(row.passage, [phrase])) coveredPhrases.add(phrase);
+  };
+  scored.filter(row => selected.includes(row.node)).forEach(cover);
+  while (selected.length < limit) {
+    const next = scored.filter(row => !selected.includes(row.node)).map(row => ({ row,
+      novelty: terms.reduce((sum, term) => sum + (!covered.has(term) && row.body.has(term)
+        ? 1 + Math.log((documents.size + 1) / ((frequency.get(term) ?? 0) + 1)) : 0), 0)
+        + sourcePhraseScore(row.passage, phrases.filter(phrase => !coveredPhrases.has(phrase))),
+    })).sort((a, b) => b.novelty - a.novelty || b.row.score - a.row.score)[0];
+    if (!next) break;
+    selected.push(next.row.node); cover(next.row);
+  }
   return selected;
 }
 

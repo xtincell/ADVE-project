@@ -26,6 +26,40 @@ export function sourceQueryTerms(query: string): string[] {
     .filter(word => (word.length >= 3 || /\d/.test(word)) && !stop.has(word)))].slice(0, 64);
 }
 
+/** Focus retrieval on the question clause naming this document. The caller's
+ * original question remains intact; this never supplies inferred source text.
+ */
+export function sourceQueryForDocument(query: string, fileName: string | null, options: { passage?: boolean } = {}): string {
+  const clauses = query.split(/(?<=[.!?。！？])\s+|\n+/u).filter(Boolean);
+  const title = new Set(sourceQueryTerms((fileName ?? "").replace(/\.(?:docx?|pdf|txt|md|xlsx?|csv|pptx?|html?)$/iu, "")));
+  const scores = clauses.map(clause => sourceQueryTerms(clause).reduce((score, term) =>
+    score + (title.has(term) ? /\d/u.test(term) ? 3 : 1 : 0), 0));
+  const best = Math.max(0, ...scores);
+  const focused = clauses.length > 1 && best
+    ? clauses.filter((_, index) => scores[index] === best).join(" ") : query;
+  if (!options.passage) return focused;
+  // The document is already selected. Its title/date identify the piece,
+  // but must not count as new factual coverage in an introductory paragraph.
+  const terms = sourceQueryTerms(focused).filter(term => !title.has(term));
+  const phrases = sourceQueryPhrases(focused);
+  return terms.length || phrases.length ? [...terms, ...phrases.map(phrase => `«${phrase}»`)].join(" ") : focused;
+}
+
+/** Quoted field names remain phrases, including short words such as "par". */
+export function sourceQueryPhrases(query: string): string[] {
+  return [...new Set([...query.matchAll(/[«“"]([^»”"]+)[»”"]/gu)]
+    .map(match => normalizeSourceQuery(match[1]!).replace(/[^\p{L}\p{N}]+/gu, " ").trim())
+    .filter(phrase => phrase.split(" ").length >= 2 && phrase.length <= 160))].slice(0, 16);
+}
+
+/** Same exact-phrase preference for document ranking and bounded excerpts. */
+export function sourcePhraseScore(text: string, phrases: string[]): number {
+  if (!phrases.length) return 0;
+  const normalized = ` ${normalizeSourceQuery(text).replace(/[^\p{L}\p{N}]+/gu, " ").trim()} `;
+  return phrases.reduce((score, phrase) => score + (normalized.includes(` ${phrase} `)
+    ? Math.min(40, 8 * phrase.split(" ").length) : 0), 0);
+}
+
 /**
  * Bound an already selected chunk around the question's words. This only
  * chooses a contiguous verbatim excerpt; it neither ranks documents nor
@@ -34,19 +68,52 @@ export function sourceQueryTerms(query: string): string[] {
 export function excerptForQuery(text: string, query: string, max: number): string {
   const budget = Math.max(0, Math.floor(max));
   if (text.length <= budget) return text;
-  const terms = new Set(sourceQueryTerms(query));
-  const hits = [...text.matchAll(/[\p{L}\p{N}]+/gu)]
-    .filter(match => terms.has(normalizeSourceQuery(match[0])))
-    .map(match => ({ word: normalizeSourceQuery(match[0]), index: match.index }));
+  if (!budget) return "";
+  const phrases = sourceQueryPhrases(query);
+  const phraseWords = phrases.map(phrase => phrase.split(" "));
+  const terms = new Set([...sourceQueryTerms(query), ...phraseWords.flat()]);
+  const hits: { word: string; index: number }[] = [];
+  const phraseStarts: number[] = [];
+  const tail: { word: string; index: number }[] = [];
+  const maxPhraseWords = Math.max(0, ...phraseWords.map(words => words.length));
+  for (const match of text.matchAll(/[\p{L}\p{N}]+/gu)) {
+    const word = normalizeSourceQuery(match[0]);
+    if (terms.has(word)) hits.push({ word, index: match.index });
+    if (maxPhraseWords) {
+      tail.push({ word, index: match.index });
+      if (tail.length > maxPhraseWords) tail.shift();
+      for (const words of phraseWords) if (words.at(-1) === word && tail.length >= words.length
+        && words.every((value, offset) => tail[tail.length - words.length + offset]!.word === value)) {
+        phraseStarts.push(tail[tail.length - words.length]!.index);
+      }
+    }
+  }
   let bestStart = 0;
-  let bestScore = 0;
-  for (const hit of hits) {
-    const start = Math.max(0, Math.min(hit.index - Math.floor(budget / 4), text.length - budget));
-    const words = new Set(hits.filter(other => other.index >= start && other.index < start + budget)
-      .map(other => other.word));
-    // A requested identifier (Q9, SKU42…) is more specific than incidental
-    // prose words in an introduction. This is lexical selection, not meaning.
-    const score = [...words].reduce((sum, word) => sum + (/\p{L}/u.test(word) && /\d/.test(word) ? 3 : 1), 0);
+  let bestScore = -1;
+  let previousStart = -1;
+  let left = 0, right = 0, wordScore = 0;
+  const counts = new Map<string, number>();
+  const weight = (word: string) => /\p{L}/u.test(word) && /\d/.test(word) ? 3 : 1;
+  // Exact fields anchor the window. Otherwise use every query-word position.
+  // Moving pointers avoid rescanning all hits for every candidate in a large source.
+  const starts = phraseStarts.length ? phraseStarts.sort((a, b) => a - b) : hits.map(hit => hit.index);
+  for (const index of starts) {
+    const start = Math.max(0, Math.min(index - Math.floor(budget / 4), text.length - budget));
+    if (start === previousStart) continue;
+    previousStart = start;
+    while (right < hits.length && hits[right]!.index < start + budget) {
+      const word = hits[right++]!.word;
+      const count = counts.get(word) ?? 0;
+      if (!count) wordScore += weight(word);
+      counts.set(word, count + 1);
+    }
+    while (left < right && hits[left]!.index < start) {
+      const word = hits[left++]!.word;
+      const count = counts.get(word)! - 1;
+      if (!count) { counts.delete(word); wordScore -= weight(word); }
+      else counts.set(word, count);
+    }
+    const score = wordScore + (phraseStarts.length ? sourcePhraseScore(text.slice(start, start + budget), phrases) : 0);
     if (score > bestScore) { bestStart = start; bestScore = score; }
   }
   return text.slice(bestStart, bestStart + budget);

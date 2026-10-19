@@ -29,7 +29,7 @@ import { untrustedContentBody, wrapUntrusted } from "@/server/services/utils/unt
 import { signalObservation } from "@/domain/signal-observation";
 import { metricObservationTime } from "@/domain/external-metric";
 import { SourceReceiptSchema } from "@/domain/source-certainty";
-import { excerptForQuery } from "@/server/services/seshat/context-store/chunker";
+import { excerptForQuery, sourceQueryForDocument } from "@/server/services/seshat/context-store/chunker";
 import { COUNCIL_EVIDENCE_NOTICE } from "./personas";
 import { coerceProvenance, fieldStatusFor } from "@/domain/field-provenance";
 import type { CouncilEvidenceExcerpt } from "./schemas";
@@ -37,8 +37,10 @@ import type { CouncilEvidenceExcerpt } from "./schemas";
 /** Budgets déterministes (caractères) — troncature par bloc, jamais silencieuse. */
 const FOUNDER_PILLAR_MAX = 5_000; // A/D/V/E — profondeur prioritaire
 const DERIVED_PILLAR_MAX = 1_200; // R/T/I/S — résumé diagnostic
-// Two canonical 2,500-character chunks plus their qualified citation packets.
-const RAG_BLOCK_MAX = 6_000;
+// Up to six selected documents: each receives text beside its citation and authority.
+// The existing Gateway still governs the final input window, fuel and rate limits.
+const RAG_BLOCK_MAX = 18_000;
+const RAG_DOCUMENT_BUDGET = 3_000;
 const EXPERT_PILLAR_MAX = 9_000; // l'expert ne voit qu'UN pilier → plus de place
 const OBSERVATIONS_MAX = 6_000;
 
@@ -103,25 +105,51 @@ function qualifiedRag(rag: OracleContextBlock | null, query: string): { text: st
   if (!rag) return { text: "", evidence: [] };
   const blocks: string[] = [];
   const evidence: CouncilEvidenceExcerpt[] = [];
-  let remaining = RAG_BLOCK_MAX;
   const validRefs = (rag.sourceReferences ?? []).filter(ref => SourceReceiptSchema.safeParse(ref).success
     && typeof ref.text === "string" && ref.text.trim());
-  let supplied = 0;
+  const grouped = new Map<string, typeof validRefs>();
   for (const ref of validRefs) {
-    const reference = { kind: "DOCUMENT" as const, sourceId: ref.sourceId, contentHash: ref.contentHash,
-      certainty: ref.certainty, chunkIndex: ref.chunkIndex };
-    const header = `Référence de citation : ${JSON.stringify(reference)}\n${formatSourceReferences([{ ...ref, text: "" }])}\n`;
-    // Preserve complete selected chunks when they fit. Reserving an envelope
-    // for every candidate leaves only unusably short lines beside each one.
-    const budget = remaining - header.length - 80;
-    if (budget < 60) break;
-    const body = untrustedContentBody(ref.text, { max: ref.text.length });
-    const text = excerptForQuery(body, query, budget);
-    const omitted = text.length < body.length ? "\n…[extrait borné — reste du fragment non fourni]" : "";
-    const block = `${header}${text}${omitted}`;
-    blocks.push(block); remaining -= block.length + 2;
-    evidence.push({ reference, text });
-    supplied++;
+    const key = `${ref.sourceId}:${ref.contentHash}`;
+    grouped.set(key, [...(grouped.get(key) ?? []), ref]);
+  }
+  const groups = [...grouped.values()];
+  let remaining = Math.min(RAG_BLOCK_MAX, Math.max(6_000, groups.length * RAG_DOCUMENT_BUDGET));
+  let supplied = 0;
+  for (const [index, group] of groups.entries()) {
+    // Match this council reader's two-passage bound. A stale caller cannot exhaust the
+    // source envelope with arbitrarily many citation headers.
+    const refs = group.slice(0, 2);
+    let documentRemaining = Math.floor(remaining / (groups.length - index));
+    const commonNotice = refs[0]?.documentNotice && refs.every(ref => ref.documentNotice === refs[0]!.documentNotice)
+      ? untrustedContentBody(refs[0].documentNotice, { max: refs[0].documentNotice.length }) : "";
+    const prefix = commonNotice ? commonNotice + "\n" : "";
+    if (prefix.length > documentRemaining - 500) continue;
+    documentRemaining -= prefix.length;
+    const documentBlocks: string[] = [];
+    for (const [passageIndex, ref] of refs.entries()) {
+      const reference = { kind: "DOCUMENT" as const, sourceId: ref.sourceId, contentHash: ref.contentHash,
+        certainty: ref.certainty, chunkIndex: ref.chunkIndex };
+      const notice = !commonNotice && ref.documentNotice
+        ? untrustedContentBody(ref.documentNotice, { max: ref.documentNotice.length }) : "";
+      const header = `Référence de citation : ${JSON.stringify(reference)}\n${formatSourceReferences([{ ...ref, text: "" }])}\n${notice ? notice + "\n" : ""}`;
+      // Divide the source envelope between its passages too. Neither the
+      // introduction nor a repeated qualification may hide the next measure.
+      const budget = Math.floor(documentRemaining / (refs.length - passageIndex)) - header.length - 80;
+      if (budget < 60) continue;
+      const original = ref.documentNotice && ref.text.startsWith(ref.documentNotice)
+        ? ref.text.slice(ref.documentNotice.length) : ref.text;
+      const body = untrustedContentBody(original, { max: original.length });
+      const text = excerptForQuery(body, sourceQueryForDocument(query, ref.fileName, { passage: true }), budget);
+      const omitted = text.length < body.length ? "\n…[extrait borné — reste du fragment non fourni]" : "";
+      const block = `${header}${text}${omitted}`;
+      documentBlocks.push(block); documentRemaining -= block.length + 2;
+      evidence.push({ reference, text });
+      supplied++;
+    }
+    if (documentBlocks.length) {
+      const block = prefix + documentBlocks.join("\n\n");
+      blocks.push(block); remaining -= block.length + 2;
+    }
   }
   if (validRefs.length > supplied) blocks.push("[Budget documentaire] Autres fragments sélectionnés non fournis ; aucune lecture complète déduite.");
   // Orientation remains advisory. It never authorizes a documentary citation.
@@ -168,7 +196,7 @@ export async function buildAssistantContext(
       where: { strategyId },
       select: { id: true, key: true, currentVersion: true, content: true, fieldCertainty: true, updatedAt: true },
     }),
-    getOracleBrandContextByQuery(strategyId, question, { limit: 8, includeSources: true })
+    getOracleBrandContextByQuery(strategyId, question, { limit: 8, includeSources: true, passagesPerSource: 2 })
       .catch(() => { ragUnavailable = true; return null; }),
     buildCommunityBlock(strategyId),
     buildObservationsBlock(strategyId),
@@ -302,6 +330,7 @@ export async function buildExpertContext(
       pillarKey,
       limit: 6,
       includeSources: true,
+      passagesPerSource: 2,
     })
       .catch(() => { ragUnavailable = true; return null; }),
     // L'expert Engagement juge sur la communauté RÉELLE ; les autres l'ignorent.

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { chunkText, excerptForQuery } from "@/server/services/seshat/context-store/chunker";
+import { chunkText, excerptForQuery, sourceQueryForDocument } from "@/server/services/seshat/context-store/chunker";
 
 describe("SESHAT — chunkText (BRAND_SOURCE chunking)", () => {
   it("returns empty array for empty / whitespace input", () => {
@@ -126,5 +126,18 @@ describe("SESHAT — bound already selected excerpts without another index", () 
   });
   it("does not expand an empty budget", () => {
     expect(excerptForQuery("Document", "Document", 0)).toBe("");
+  });
+});
+
+
+describe("document-specific clauses in a compound question", () => {
+  it("keeps the study request distinct from the subsequent BMC request", () => {
+    const study = 'Dans l’étude terrain, que disent Google et TikTok du champ « prix par personne » ?';
+    const bmc = 'Puis situe les BMC v3.1 et la validation de l’équipe.';
+    const query = `${study} ${bmc}`;
+    expect(sourceQueryForDocument(query, "Étude terrain.docx")).toBe(study);
+    expect(sourceQueryForDocument(query, "BMC v3.1.docx")).toBe(bmc);
+    expect(sourceQueryForDocument(query, "Autre document.txt")).toBe(query);
+    expect(sourceQueryForDocument(query, null)).toBe(query);
   });
 });
