@@ -24,11 +24,13 @@ export function DocumentLibrary({ sources, onRead, canManage = false, onSaved }:
         <div><p>{DOCUMENT_KIND_LABEL[source.document!.kind]} · {source.document!.label}</p>
           <p className="text-foreground-secondary">{DOCUMENT_STATUS_LABEL[source.document!.status]}</p>
           {source.document!.sourceUrl && <a className="text-xs text-accent underline" href={source.document!.sourceUrl} target="_blank" rel="noopener noreferrer">Source d’origine</a>}
-          <p className="text-xs text-foreground-muted">Lors du dépôt : {source.document!.changeSummary}</p>
+          {source.document!.clarifications?.map((c, i) => <p key={i} className="text-xs text-foreground-secondary">Précision du {new Date(c.at).toLocaleDateString("fr-FR")} : {c.text}</p>)}
+          {source.document!.clarifications?.length ? <details className="text-xs text-foreground-muted"><summary>Annotation initiale conservée</summary><p>{source.document!.changeSummary}</p></details>
+            : <p className="text-xs text-foreground-muted">Lors du dépôt : {source.document!.changeSummary}</p>}
           {source.document!.decisions?.at(-1) && <p className="text-xs text-foreground-secondary">Dernière décision : {source.document!.decisions!.at(-1)!.reason}</p>}
         </div>
         <div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => onRead(source.id)}>Consulter cette édition</Button>
-        {canManage && !source.shared && <Button variant="outline" size="sm" onClick={() => setDecision(source)}>Décider de son usage</Button>}</div>
+        {canManage && !source.shared && <Button variant="outline" size="sm" onClick={() => setDecision(source)}>Préciser sa place</Button>}</div>
       </div>)}
     </article>)}
   </section>;
@@ -71,18 +73,19 @@ export function DocumentEditionDialog({ source, sources, onClose, onSaved }: {
 }
 
 function DocumentDecisionDialog({ source, onClose, onSaved }: { source: Source; onClose: () => void; onSaved: () => void }) {
-  const [status, setStatus] = useState<"REFERENCE" | "ARCHIVED">("REFERENCE");
+  const [status, setStatus] = useState<"CLARIFY" | "REFERENCE" | "ARCHIVED">("CLARIFY");
   const [reason, setReason] = useState("");
   const current = trpc.ingestion.getSource.useQuery({ id: source.id }, { staleTime: 0, refetchOnMount: "always" });
   const mutation = trpc.ingestion.updateSource.useMutation({ onSuccess: () => { onSaved(); onClose(); } });
-  return <Modal open onClose={onClose} title="Décision sur cette édition" size="lg"><form className="space-y-4 text-sm" onSubmit={e => {
-    e.preventDefault(); if (current.data && !current.isFetching) mutation.mutate({ id: source.id, expectedSourceHash: current.data.contentHash, documentDecision: { status, reason } });
+  return <Modal open onClose={onClose} title="Place de cette édition" size="lg"><form className="space-y-4 text-sm" onSubmit={e => {
+    e.preventDefault(); if (current.data && !current.isFetching) mutation.mutate({ id: source.id, expectedSourceHash: current.data.contentHash,
+      ...(status === "CLARIFY" ? { documentClarification: reason } : { documentDecision: { status, reason } }) });
   }}>
     <p>{source.fileName} · {source.document?.label}</p>
-    <label className="block space-y-1"><span>Usage retenu</span><select className="w-full rounded border border-border bg-surface-raised p-2" value={status} onChange={e => setStatus(e.target.value as typeof status)}><option value="REFERENCE">Définir comme référence de travail</option><option value="ARCHIVED">Conserver dans les archives</option></select></label>
-    <label className="block space-y-1"><span>Décision et motif</span><textarea required rows={4} className="w-full rounded border border-border bg-surface-raised p-2" value={reason} onChange={e => setReason(e.target.value)} /></label>
-    <p className="text-foreground-secondary">La décision sera datée et attribuée à votre compte. Les éditions restent conservées. Les fondamentaux de la marque ne sont pas modifiés par ce choix.</p>
+    <label className="block space-y-1"><span>Action</span><select className="w-full rounded border border-border bg-surface-raised p-2" value={status} onChange={e => setStatus(e.target.value as typeof status)}><option value="CLARIFY">Ajouter une précision, sans changer son usage</option><option value="REFERENCE">Définir comme référence de travail</option><option value="ARCHIVED">Conserver dans les archives</option></select></label>
+    <label className="block space-y-1"><span>{status === "CLARIFY" ? "Précision à conserver" : "Décision et motif"}</span><textarea required rows={4} maxLength={4000} className="w-full rounded border border-border bg-surface-raised p-2" value={reason} onChange={e => setReason(e.target.value)} /></label>
+    <p className="text-foreground-secondary">{status === "CLARIFY" ? "La précision sera datée et attribuée à votre compte. L’usage, les éditions et l’annotation initiale restent conservés." : "La décision sera datée et attribuée à votre compte. Les éditions restent conservées. Les fondamentaux de la marque ne sont pas modifiés par ce choix."}</p>
     {(mutation.error || current.error) && <p role="alert" className="text-error">{(mutation.error ?? current.error)?.message}</p>}
-    <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onClose}>Annuler</Button><Button type="submit" disabled={!current.data || current.isFetching || mutation.isPending}>Enregistrer la décision</Button></div>
+    <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onClose}>Annuler</Button><Button type="submit" disabled={!current.data || current.isFetching || mutation.isPending}>{status === "CLARIFY" ? "Conserver cette précision" : "Enregistrer la décision"}</Button></div>
   </form></Modal>;
 }

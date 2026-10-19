@@ -5,7 +5,8 @@ puis proposition à valider par l’équipe. 26 pièces Drive et une note ont é
 27 originaux vérifiés, textes et deux lecteurs natifs reçus. Les fondamentaux restent
 inchangés. Le premier conseil réel ne citait que la note : le corpus complet et la qualité
 du conseil restent ouverts. 495 factorise la recherche documentaire dans Seshat pour
-le conseil, MCP et Notoria, sans nouveau service, modèle ou gestionnaire d’appels.
+le conseil, MCP et Notoria, sans nouveau service, modèle ou gestionnaire d’appels. Une annotation peut recevoir une
+précision datée, sans modifier l’usage ni effacer l’historique initial.
 Réception locale MCP réelle : BMC courant et étude trouvés en 3,618 s, historique exclu,
 sans appel modèle ; source, CI, image et conseil de production 495 encore à recevoir.
 

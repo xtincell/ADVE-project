@@ -35,7 +35,8 @@ export interface ReleaseNote {
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
     version: "6.27.495", date: "2026-10-19", headline: "Retrouver les pièces utiles à votre question",
-    highlights: [{ emoji: "🔎", title: "Des références choisies selon la question", body: "Le conseil tient compte de votre question pour choisir ses références. Une note récente ou un gros document ne prend plus toutes les places des études et modèles précédents." }],
+    highlights: [{ emoji: "🔎", title: "Des références choisies selon la question", body: "Le conseil tient compte de votre question pour choisir ses références. Une note récente ou un gros document ne prend plus toutes les places des études et modèles précédents." },
+      { emoji: "📝", title: "Préciser une piste sans l’adopter", body: "Ajoutez une précision datée à une édition documentaire. Son usage reste inchangé et l’annotation initiale demeure consultable dans l’historique." }],
   },
   {
     version: "6.27.494", date: "2026-10-19", headline: "Vos documents gardent leur histoire",

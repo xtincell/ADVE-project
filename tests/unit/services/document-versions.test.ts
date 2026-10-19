@@ -4,7 +4,7 @@ vi.mock("@/server/services/ingestion-pipeline/source-usage", async original => (
   ...await original<object>(), invalidateSourceDerivatives: vi.fn(async () => {}),
 }));
 import { documentEdition, sourceIsUsable, documentContext } from "@/domain/source-document";
-import { registerDocumentEdition, decideDocumentEdition } from "@/server/services/ingestion-pipeline/document-versions";
+import { registerDocumentEdition, decideDocumentEdition, clarifyDocumentEdition } from "@/server/services/ingestion-pipeline/document-versions";
 import { sourceFingerprint, type SourceDb } from "@/server/services/ingestion-pipeline/source-usage";
 
 const raw = (id: string) => ({ id, strategyId: "own", fileName: id, sourceType: "FILE", rawContent: `${id}: prix déclarés, pas de ventes prouvées`, rawData: {}, processingStatus: "EXTRACTED" });
@@ -24,6 +24,35 @@ function fixture() {
   return { rows, db, classify };
 }
 describe("document lineage and strategic authority", () => {
+  it("clarifies the new BMC without adopting it or rewriting its deposit history", async () => {
+    const f = fixture(); await f.classify("old", "REFERENCE"); await f.classify("new", "PROPOSED", "old");
+    const before = structuredClone(f.rows);
+    const clarification = "Ces BMC diffèrent. Le précédent précède la nouvelle piste, à valider par l’équipe.";
+    await clarifyDocumentEdition(f.db, { id: "new", expectedSourceHash: sourceFingerprint(f.rows[1]!), userId: "owner", clarification });
+    const doc = documentEdition(f.rows[1]!.rawData)!;
+    expect(doc).toMatchObject({ ...documentEdition(before[1]!.rawData), clarifications: [{ by: "owner", text: clarification, at: expect.any(String) }] });
+    expect(doc.decisions).toBeUndefined();
+    expect(f.rows[0]).toEqual(before[0]);
+    expect(f.rows[1]!.rawContent).toBe(before[1]!.rawContent);
+    expect(documentContext(f.rows[1]!.rawData)).toContain(clarification);
+    expect(documentContext(f.rows[1]!.rawData)).toContain("NON VALIDÉE PAR L’ÉQUIPE");
+  });
+  it("refuses a stale clarification and retains all previous clarifications", async () => {
+    const f = fixture(); await f.classify("old", "PROPOSED");
+    const first = { id: "old", expectedSourceHash: sourceFingerprint(f.rows[0]!), userId: "owner", clarification: "Première précision, sans adoption." };
+    await clarifyDocumentEdition(f.db, first);
+    await expect(clarifyDocumentEdition(f.db, first)).rejects.toThrow("SOURCE_CHANGED");
+    await clarifyDocumentEdition(f.db, { ...first, expectedSourceHash: sourceFingerprint(f.rows[0]!), clarification: "Seconde précision, sans adoption." });
+    expect(documentEdition(f.rows[0]!.rawData)?.clarifications?.map(c => c.text)).toEqual([first.clarification, "Seconde précision, sans adoption."]);
+  });
+  it("requires a classified edition and a nonempty clarification, without reviving archives", async () => {
+    const f = fixture();
+    await expect(clarifyDocumentEdition(f.db, { id: "old", expectedSourceHash: sourceFingerprint(f.rows[0]!), userId: "owner", clarification: "Précision." })).rejects.toThrow("Classez");
+    await f.classify("old", "ARCHIVED");
+    await expect(clarifyDocumentEdition(f.db, { id: "old", expectedSourceHash: sourceFingerprint(f.rows[0]!), userId: "owner", clarification: "  " })).rejects.toThrow();
+    await clarifyDocumentEdition(f.db, { id: "old", expectedSourceHash: sourceFingerprint(f.rows[0]!), userId: "owner", clarification: "Historique uniquement." });
+    expect(sourceIsUsable(f.rows[0]!.rawData)).toBe(false);
+  });
   it("retains the previous BMC reference when a later BMC is only a proposition", async () => {
     const f = fixture(); const before = f.rows.map(r => r.rawContent);
     await f.classify("old", "REFERENCE"); await f.classify("new", "PROPOSED", "old");

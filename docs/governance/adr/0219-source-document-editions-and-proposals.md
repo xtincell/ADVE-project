@@ -29,3 +29,13 @@ Tutelle : Guidance / Mestor pour l’entrée gouvernée, lecteurs Seshat pour la
 Migration de schéma inutile ; sources legacy compatibles. Les assertions d’un fichier et son statut documentaire restent distincts de leur certitude. Tous les formats entrent au dossier avec leur état réel de lecture ; un original binaire ou une archive inventoriée ne vaut pas lecture sémantique de son contenu.
 
 Tests métier : préservation référence/proposition, succession, décision humaine, historique immutable, reçus périmés, isolement et concurrence réelle PostgreSQL. Recette native synthétique distincte de la réception de source/CI/image/runtime et de l’absorption du Drive réel. Aucun chantier global clôturé par ce seul lot.
+
+## Précision d’annotation — 495, 19 octobre 2026
+
+Une formulation déposée peut mal exprimer la différence entre deux éditions. Le texte
+original et l’annotation initiale restent conservés ; une précision ultérieure datée et
+attribuée est ajoutée par updateSource gouverné, après relecture de l’empreinte. Aucun
+changement d’usage, de prédécesseur ou de décision n’en découle. Les dérivés sont invalidés
+et les lecteurs présentent la précision avec le statut courant. Dans le dossier, l’annotation
+initiale devient un historique consultable ; préciser est le choix par défaut, adopter reste
+un geste distinct. Pas de nouveau routeur, Intent, table ou gestionnaire.

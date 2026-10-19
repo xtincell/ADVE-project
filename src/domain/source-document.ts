@@ -23,6 +23,7 @@ export const DocumentEditionSchema = DocumentEditionInputSchema.omit({ previous:
   status: z.enum(["PROPOSED", "REFERENCE", "SUPERSEDED", "ARCHIVED"]),
   previousSourceId: z.string().optional(), recordedAt: z.string().datetime(),
   decisions: z.array(z.object({ by: z.string(), at: z.string().datetime(), status: z.enum(["REFERENCE", "ARCHIVED"]), reason: z.string() })).optional(),
+  clarifications: z.array(z.object({ by: z.string(), at: z.string().datetime(), text: z.string().trim().min(1).max(4000) })).optional(),
 });
 export type DocumentEdition = z.infer<typeof DocumentEditionSchema>;
 export function documentEdition(rawData: unknown): DocumentEdition | null {
@@ -41,5 +42,6 @@ export function documentContext(rawData: unknown): string {
   if (!doc) return "";
   return `Document : ${doc.family} · ${doc.label} · édition ${doc.edition} · ${DOCUMENT_STATUS_LABEL[doc.status]}. `
     + (doc.status === "PROPOSED" ? "HYPOTHÈSE NON VALIDÉE PAR L’ÉQUIPE : examiner cette piste sans la présenter comme une décision adoptée. " : "Une référence de travail ne certifie pas ses assertions. ")
-    + (doc.sourceUrl ? `Source : ${doc.sourceUrl}. ` : "");
+    + (doc.sourceUrl ? `Source : ${doc.sourceUrl}. ` : "")
+    + (doc.clarifications?.length ? `Précisions ultérieures (sans changement d’usage) : ${doc.clarifications.map(c => `${c.at} : ${c.text}`).join("\n")} ` : "");
 }

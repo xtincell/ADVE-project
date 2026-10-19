@@ -9,7 +9,7 @@ import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import * as ingestion from "@/server/services/ingestion-pipeline";
 import { AdveKeySchema } from "@/domain";
 import { DocumentEditionInputSchema, documentEdition, sourceIsUsable } from "@/domain/source-document";
-import { registerDocumentEdition, decideDocumentEdition } from "@/server/services/ingestion-pipeline/document-versions";
+import { registerDocumentEdition, decideDocumentEdition, clarifyDocumentEdition } from "@/server/services/ingestion-pipeline/document-versions";
 import { SourceCertaintySchema } from "@/domain/source-certainty";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
@@ -238,9 +238,10 @@ export const ingestionRouter = createTRPCRouter({
       certainty: SourceCertaintySchema.optional(),
       document: DocumentEditionInputSchema.optional(),
       documentDecision: z.object({ status: z.enum(["REFERENCE", "ARCHIVED"]), reason: z.string().trim().min(1).max(4000) }).optional(),
+      documentClarification: z.string().trim().min(1).max(4000).optional(),
       expectedSourceHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
       use: z.object({ strategyId: z.string(), revoke: z.boolean().default(false) }).optional(),
-    }).refine(v => !v.documentDecision || (v.expectedSourceHash && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Décider sur une édition est un geste distinct, après relecture.").refine((v) => !v.document || (v.expectedSourceHash && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Classer une édition est un geste distinct, après relecture.").refine((v) => v.documentDecision || v.document || v.use || v.title !== undefined || v.content !== undefined || v.certainty !== undefined,
+    }).refine(v => !v.documentClarification || (v.expectedSourceHash && !v.documentDecision && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Préciser une édition est un geste distinct, après relecture.").refine(v => !v.documentDecision || (v.expectedSourceHash && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Décider sur une édition est un geste distinct, après relecture.").refine((v) => !v.document || (v.expectedSourceHash && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Classer une édition est un geste distinct, après relecture.").refine((v) => v.documentClarification || v.documentDecision || v.document || v.use || v.title !== undefined || v.content !== undefined || v.certainty !== undefined,
       "Choisir une correction ou un usage du document.").refine((v) => !v.use || (v.title === undefined && v.content === undefined && v.certainty === undefined),
       "Lier un usage et corriger le document sont deux gestes distincts."),
 
@@ -249,6 +250,7 @@ export const ingestionRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertSourceAccess(ctx.session.user.id, input.id);
+      if (input.documentClarification) return ctx.db.$transaction(tx => clarifyDocumentEdition(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, userId: ctx.session.user.id, clarification: input.documentClarification! }), { timeout: 30_000 });
       if (input.use) {
         const op = await getOperatorContext(ctx.session.user.id);
         return setSourceUse({ sourceId: input.id, strategyId: input.use.strategyId, revoke: input.use.revoke,
