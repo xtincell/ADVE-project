@@ -1,3 +1,9 @@
+## v6.27.492 — fix(sources): admit collector JSON in the existing native chooser (2026-10-19)
+
+Le sélecteur de fichiers de la marque accepte `.json`, déjà pris en charge comme texte par l’extracteur et retenu par le stockage d’originaux existants. Le dépôt garde `prepareAnalysis=false` par défaut ; aucun parseur, table, score, diagnostic, writer de pilier ou gestionnaire de modèles ajouté. Le statut d’une collecte et ses valeurs inconnues restent ceux du fichier source.
+
+La réception du parcours DataCollector → source SPAWT conserve séparément l’original, la lecture native et l’absence de mutation des contenus de marque. Ce changement de filtre ne qualifie ni les autres fournisseurs ni tout le cycle d’analyse.
+
 ## v6.27.491 — fix(mestor): share complete context with field completion (2026-10-17)
 
 Le catalogue SPAWT I3 reçu en production contient 37 propositions sur six canaux. Sa projection qualifiée atteint 86 348 caractères et dépassait la limite structurée de 64 K avant d’atteindre le gestionnaire d’appels. La limite d’admission par pilier passe à 128 K ; les fenêtres de modèles, la compression Headroom, les routes et les budgets restent sous le contrôle du gestionnaire existant. Les structures trop grandes restent refusées explicitement, sans couper le JSON.

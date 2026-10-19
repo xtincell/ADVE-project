@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.492",
+    date: "2026-10-19",
+    headline: "Conserver vos observations dans les sources de marque",
+    highlights: [{ emoji: "📥", title: "Déposer un fichier JSON",
+      body: "Les fichiers JSON peuvent être choisis dans les sources de marque. Vous pouvez conserver vos observations et leur fichier original sans lancer d’analyse.",
+    }],
+  },
+  {
     version: "6.27.491",
     date: "2026-10-17",
     headline: "Conserver le contexte d’un catalogue complet",

@@ -3715,3 +3715,9 @@ La restauration intégrale du SI demeure au chantier C7 Shinkiro.
 ### Réception copie 486 — accès natif
 
 Copie sous compte ADMIN fictif existant, aucune permission créée : document200, DOM32 578ms (CDP Performance), titre observé dans une borne114 050ms, quatre pistes/seize champs et formulaire natif quatre champs reçus. 0/56 images sur cette copie : volumes médias non miroités, pas une panne du serveur réel déduite. Deux fenêtres réseau partiellement tronquées, 0erreur serveur/exception observée seulement ; pas de SLO ou fenêtre entière reçu. HTTP réel de copie : GET200, PUT identique200/idempotence, payload différent avec révision périmée409, origine étrangère403, source171projets exactement conservée. Première attente de sessionP1017 après fermeture du forward local conservée ; tunnel rétabli vers la même copie sans restauration. Preuves privées `release/preuves-source-access-20261016/{native-copy-received,copy-http-write-received}.json`.
+
+### 2026-10-19 — 6.27.492 / collecte publique vers source existante
+
+- Trou observé : l’extraction et la conservation de JSON existent, mais les deux sélecteurs natifs ne proposent pas son extension. Le filtre partagé et son aide sont complétés ; aucun nouveau pipeline.
+- DataCollector 1.0.2 sélectionne les observations avant effet et conserve les états non demandés. L’admission comme document de SPAWT reste distincte d’un diagnostic ou d’une référence créative Argos.
+- Réceptions CI, image, dépôt et conservation des huit contenus restent à consigner séparément dans le lot C3-02 ; aucun crédit de chantier entier sur le filtre.
