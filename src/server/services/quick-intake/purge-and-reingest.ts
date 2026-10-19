@@ -1,3 +1,4 @@
+import { documentEdition } from "@/domain/source-document";
 /**
  * INTAKE_SOURCE_PURGE_AND_REINGEST handler — ADR-0033.
  *
@@ -155,6 +156,8 @@ export async function purgeAndReingest(
     //    document et restent récupérables/citables avec une ancre morte
     //    (cf. `ingestion.deleteSource`, même invariant).
     await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${sourceId} FOR UPDATE`;
+    const current = await tx.brandDataSource.findUniqueOrThrow({ where: { id: sourceId } });
+    if (documentEdition(current.rawData)) throw new Error("Une édition documentaire est conservée. Créez une nouvelle édition.");
     await invalidateSourceDerivatives(tx, sourceId);
     await tx.brandDataSource.delete({ where: { id: sourceId } });
 

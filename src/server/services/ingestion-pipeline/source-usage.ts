@@ -1,6 +1,7 @@
 /** Canonical documents and their explicit uses by other brands (ADR-0198).
  * Never copies content and never launches analysis on a read or a grant.
  */
+import { documentEdition, sourceIsUsable } from "@/domain/source-document";
 import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -111,6 +112,8 @@ export async function listBrandSourceSummaries(strategyId: string, client: Sourc
 
   return sources.map(({ strategy, uses, originalUpload, rawContent: _rawContent, rawData: _rawData, ...s }) => ({
     ...s,
+    contentHash: fingerprints.get(s.id),
+    document: documentEdition(_rawData),
     shared: s.strategyId !== strategyId,
     ownerBrandName: strategy.name,
     ownerStrategyId: s.strategyId,
@@ -149,7 +152,7 @@ export async function loadBrandSources(strategyId: string, extra: Prisma.BrandDa
     include: { uses: { where: { strategyId, revokedAt: null } } },
     orderBy: { createdAt: "desc" },
   });
-  return rows.map((source) => ({
+  return rows.filter(source => sourceIsUsable(source.rawData)).map((source) => ({
     ...source, contentHash: sourceFingerprint(source),
     pillarMapping: source.strategyId === strategyId ? source.pillarMapping : sharedSourceAnalysis(source, source.uses[0]).pillarMapping,
     analysisStatus: source.strategyId === strategyId ? source.processingStatus : sharedSourceAnalysis(source, source.uses[0]).analysisStatus,
@@ -196,6 +199,7 @@ export async function assertCurrentSourceReceipts(
     OR id IN (SELECT "strategyId" FROM "BrandDataSource" WHERE id IN (${Prisma.join(ids)})) ORDER BY id ${lock}`);
   for (const receipt of receipts) {
     const current = await resolveBrandSource(receipt.sourceId, strategyId, client);
+    if (!sourceIsUsable(current.source.rawData)) throw new Error("SOURCE_CHANGED: cette édition est antérieure ou archivée. Relire la référence courante.");
     if (current.contentHash !== receipt.contentHash) throw new Error("SOURCE_CHANGED: le document a été corrigé. Relire ou refaire cette proposition.");
   }
 }

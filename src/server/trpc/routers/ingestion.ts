@@ -8,6 +8,8 @@ import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import * as ingestion from "@/server/services/ingestion-pipeline";
 import { AdveKeySchema } from "@/domain";
+import { DocumentEditionInputSchema, documentEdition, sourceIsUsable } from "@/domain/source-document";
+import { registerDocumentEdition, decideDocumentEdition } from "@/server/services/ingestion-pipeline/document-versions";
 import { SourceCertaintySchema } from "@/domain/source-certainty";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
@@ -139,6 +141,7 @@ export const ingestionRouter = createTRPCRouter({
       }
       throw error;
     });
+    if (!sourceIsUsable(source.rawData)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Cette édition antérieure reste consultable dans l’historique." });
     if (!["EXTRACTED", "PROCESSED"].includes(source.processingStatus)) {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le texte de ce document doit être extrait avant sa préparation." });
     }
@@ -167,7 +170,7 @@ export const ingestionRouter = createTRPCRouter({
       });
       await assertStrategyRead(ctx.session.user.id, consumerStrategyId);
       return { id: source.id, contentHash, fileName: source.fileName, rawContent: source.rawContent,
-        certainty: source.certainty, sourceType: source.sourceType, origin: source.origin };
+        certainty: source.certainty, sourceType: source.sourceType, origin: source.origin, document: documentEdition(source.rawData) };
     }),
 
   // Owner chooses a destination in the existing portfolio; no document is copied.
@@ -215,6 +218,8 @@ export const ingestionRouter = createTRPCRouter({
       // l'est pas. Les deux suppressions vont ensemble, en transaction.
       return ctx.db.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${input.id} FOR UPDATE`;
+        const previous = await tx.brandDataSource.findUniqueOrThrow({ where: { id: input.id } });
+        if (documentEdition(previous.rawData)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Les éditions documentaires restent conservées dans leur historique." });
         await invalidateSourceDerivatives(tx, input.id);
         return tx.brandDataSource.delete({ where: { id: input.id } });
       });
@@ -231,8 +236,11 @@ export const ingestionRouter = createTRPCRouter({
       title: z.string().min(1).optional(),
       content: z.string().min(1).optional(),
       certainty: SourceCertaintySchema.optional(),
+      document: DocumentEditionInputSchema.optional(),
+      documentDecision: z.object({ status: z.enum(["REFERENCE", "ARCHIVED"]), reason: z.string().trim().min(1).max(4000) }).optional(),
+      expectedSourceHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
       use: z.object({ strategyId: z.string(), revoke: z.boolean().default(false) }).optional(),
-    }).refine((v) => v.use || v.title !== undefined || v.content !== undefined || v.certainty !== undefined,
+    }).refine(v => !v.documentDecision || (v.expectedSourceHash && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Décider sur une édition est un geste distinct, après relecture.").refine((v) => !v.document || (v.expectedSourceHash && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Classer une édition est un geste distinct, après relecture.").refine((v) => v.documentDecision || v.document || v.use || v.title !== undefined || v.content !== undefined || v.certainty !== undefined,
       "Choisir une correction ou un usage du document.").refine((v) => !v.use || (v.title === undefined && v.content === undefined && v.certainty === undefined),
       "Lier un usage et corriger le document sont deux gestes distincts."),
 
@@ -246,6 +254,8 @@ export const ingestionRouter = createTRPCRouter({
         return setSourceUse({ sourceId: input.id, strategyId: input.use.strategyId, revoke: input.use.revoke,
           userId: op.userId, operatorId: op.operatorId, admin: op.role === "ADMIN" });
       }
+      if (input.documentDecision) return ctx.db.$transaction(tx => decideDocumentEdition(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, decision: input.documentDecision!, userId: ctx.session.user.id }), { timeout: 30_000 });
+      if (input.document) return ctx.db.$transaction(tx => registerDocumentEdition(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, document: input.document! }), { timeout: 30_000 });
       const data: Record<string, unknown> = { processingStatus: "EXTRACTED", pillarMapping: {} };
       if (input.title !== undefined) data.fileName = input.title;
       if (input.content !== undefined) {
@@ -262,6 +272,9 @@ export const ingestionRouter = createTRPCRouter({
       // with its index, or the revised source awaiting explicit preparation.
       // No embedding or generation follows a manual correction implicitly.
       return ctx.db.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${input.id} FOR UPDATE`;
+        const previous = await tx.brandDataSource.findUniqueOrThrow({ where: { id: input.id } });
+        if (documentEdition(previous.rawData)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Cette édition est conservée. Déposez un nouveau fichier pour créer une nouvelle édition." });
         const updated = await tx.brandDataSource.update({ where: { id: input.id }, data });
         await invalidateSourceDerivatives(tx, input.id);
         return updated;
@@ -403,6 +416,7 @@ export const ingestionRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await assertStrategyRead(ctx.session.user.id, input.strategyId);
       const { source, contentHash } = await resolveBrandSource(input.sourceId, input.strategyId, ctx.db);
+      if (!sourceIsUsable(source.rawData)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Cette édition reste consultable dans l’historique. Choisissez une référence ou une proposition pour l’analyse." });
       if (!source?.rawContent) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Source introuvable ou sans texte extrait — uploade d'abord le brand book." });
       }

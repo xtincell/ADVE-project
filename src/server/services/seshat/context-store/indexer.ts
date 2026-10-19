@@ -18,6 +18,7 @@
  * lets us ship indexing today without depending on pgvector.
  */
 
+import { sourceIsUsable, documentContext } from "@/domain/source-document";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import crypto from "crypto";
@@ -356,11 +357,11 @@ async function writeSourceIndex(sourceId: string, strategyId?: string) {
     const resolved = await resolveBrandSource(sourceId, strategyId, tx);
     const { source } = resolved;
     const scope = { strategyId: resolved.consumerStrategyId, sourceId: source.id };
-    const readable = source.processingStatus === "EXTRACTED" || source.processingStatus === "PROCESSED";
+    const readable = sourceIsUsable(source.rawData) && (source.processingStatus === "EXTRACTED" || source.processingStatus === "PROCESSED");
     const chunks = readable ? chunkText(source.rawContent ?? "") : [];
     const desired = chunks.map((chunk) => {
       const payload = {
-        text: chunk.text, fileName: source.fileName, sourceType: source.sourceType,
+        text: chunk.text, documentNotice: documentContext(source.rawData), fileName: source.fileName, sourceType: source.sourceType,
         fileType: source.fileType, chunkIndex: chunk.index,
         charStart: chunk.charStart, charEnd: chunk.charEnd,
         pillarMapping: resolved.pillarMapping ?? null,

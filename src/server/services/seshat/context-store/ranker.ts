@@ -22,6 +22,7 @@
  * fields) for any output that involves citation or calculation.
  */
 
+import { sourceIsUsable, documentContext } from "@/domain/source-document";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { embed } from "@/server/services/llm-gateway";
@@ -42,8 +43,8 @@ export async function currentDocumentNodes<T extends { kind: string; sourceId: s
     AND: [await sourceScope(filter.strategyId)], id: { in: documentIds },
     processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
   } });
-  const current = new Map(sources.map((s) => [s.id, {
-    hash: sourceFingerprint(s), certainty: isSourceCertainty(s.certainty) ? s.certainty : null,
+  const current = new Map(sources.filter(s => sourceIsUsable(s.rawData)).map((s) => [s.id, {
+    documentNotice: documentContext(s.rawData), hash: sourceFingerprint(s), certainty: isSourceCertainty(s.certainty) ? s.certainty : null,
   }]));
   return nodes.flatMap((n) => {
     if (!isDocument(n)) return [withoutDocument(n)];
@@ -51,7 +52,7 @@ export async function currentDocumentNodes<T extends { kind: string; sourceId: s
     if (!source || (n.payload as Record<string, unknown> | null)?.sourceContentHash !== source.hash) return [];
     // Resolve trust from the same authorized, current source as the fingerprint.
     // Never promote a cache label or infer validation from a retrieved fragment.
-    return [{ ...n, sourceCertainty: source.certainty }];
+    return [{ ...n, payload: n.payload && typeof n.payload === "object" ? { ...n.payload, documentNotice: source.documentNotice, text: source.documentNotice + String((n.payload as Record<string, unknown>).text ?? "") } : n.payload, sourceCertainty: source.certainty }];
   });
 }
 

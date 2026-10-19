@@ -28,6 +28,7 @@
  * avec `wrapUntrusted` (OWASP LLM01).
  */
 
+import { sourceIsUsable, documentContext } from "@/domain/source-document";
 import { db } from "@/lib/db";
 import { sourceScope, sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
 import { compareCertainty, isSourceCertainty, type SourceCertainty } from "@/domain/source-certainty";
@@ -266,7 +267,7 @@ export async function loadBrandSourceContext(
     select: { id: true, fileName: true, fileType: true, sourceType: true, certainty: true, rawContent: true, rawData: true, extractedFields: true, updatedAt: true },
   });
 
-  const usable = rows.filter((r) => (r.rawContent ?? "").trim().length > 0);
+  const usable = rows.filter((r) => sourceIsUsable(r.rawData) && (r.rawContent ?? "").trim().length > 0);
   // OFFICIAL > DECLARED > INFERRED > ARBITRARY, puis le plus récent.
   //
   // `compareCertainty(a, b)` rend POSITIF quand `a` est plus fiable ; dans un
@@ -325,7 +326,10 @@ export async function loadBrandSourceContext(
     // Part équitable du budget restant, jamais en dessous du plancher utile.
     const share = Math.max(MIN_EXCERPT, Math.floor(remaining / left));
     if (remaining < MIN_EXCERPT) break;
-    const { text, offset } = selectPassages(row.rawContent ?? "", opts.query, Math.min(share, remaining));
+    const notice = documentContext(row.rawData);
+    const selected = selectPassages(row.rawContent ?? "", opts.query, Math.max(0, Math.min(share, remaining) - notice.length));
+    const { offset } = selected;
+    const text = selected.text ? notice + selected.text : "";
     if (!text) continue;
     excerpts.push({
       sourceId: row.id,
