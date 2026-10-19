@@ -1,10 +1,10 @@
 import { z } from "zod";
 
-// The existing connector reads this one depot. Never pretend to resolve another instance.
+// Historical unqualified references keep their original source identity.
 export const PORTFOLIO_BARRE_INSTANCE = "barre-matanga";
 const instanceSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,79}$/);
 const projectSchema = z.object({
-  system: z.literal("LA_BARRE"), instance: z.literal(PORTFOLIO_BARRE_INSTANCE),
+  system: z.literal("LA_BARRE"), instance: instanceSchema,
   kind: z.literal("project"), id: z.string().min(1).max(200),
 }).strict();
 
@@ -23,7 +23,7 @@ export const PortfolioReferenceSchema = z.object({
 }).strict().superRefine((ref, ctx) => {
   const allowed: Record<string, string[]> = {
     LA_BARRE: ["client", "brand", "range", "sku", "project"],
-    LA_FUSEE: ["strategy"], WEB: ["site"], GITHUB: ["repository"], RADAR: ["brief"],
+    LA_FUSEE: ["strategy", "brand"], WEB: ["site"], GITHUB: ["repository"], RADAR: ["brief"],
   };
   if (!allowed[ref.system]?.includes(ref.kind)) ctx.addIssue({ code: "custom", path: ["kind"], message: "Ce type de dossier n’appartient pas à cet outil." });
   if ((ref.system === "WEB" || ref.system === "GITHUB") && !ref.url) ctx.addIssue({ code: "custom", path: ["url"], message: "Le lien d’accès est nécessaire." });
@@ -33,7 +33,7 @@ export const PortfolioReferenceSchema = z.object({
     if (!/^[1-9]\d*$/.test(ref.id)) ctx.addIssue({ code: "custom", path: ["id"], message: "Utilisez l’identifiant numérique stable du dossier Radar, pas son code affiché." });
   } else {
     if (ref.project) ctx.addIssue({ code: "custom", path: ["project"], message: "Le projet source qualifie uniquement un suivi Radar." });
-    if (ref.instance && !(ref.system === "LA_BARRE" && ref.instance === PORTFOLIO_BARRE_INSTANCE)) {
+    if (ref.instance && ref.system !== "LA_BARRE") {
       ctx.addIssue({ code: "custom", path: ["instance"], message: "Cette instance n’est pas raccordée au portefeuille." });
     }
   }
@@ -71,9 +71,9 @@ export function readPortfolioReferences(value: unknown): PortfolioReference[] {
 }
 
 /** One shared follow-up appears once per project, even across several brand nodes. */
-export function portfolioProjectFollowUps(references: PortfolioReference[], projectId?: string): PortfolioReference[] {
+export function portfolioProjectFollowUps(references: PortfolioReference[], projectId?: string, barreInstance = PORTFOLIO_BARRE_INSTANCE): PortfolioReference[] {
   return [...new Map(references.filter((r) => r.system === "RADAR" && (projectId === undefined ||
-    (r.project?.id === projectId && r.project.instance === PORTFOLIO_BARRE_INSTANCE)))
+    (r.project?.id === projectId && r.project.instance === barreInstance)))
     .map((r) => [portfolioReferenceKey(r), r])).values()];
 }
 
@@ -109,3 +109,8 @@ export const PORTFOLIO_KIND_LABELS: Record<string, string> = {
 export const PORTFOLIO_LIFECYCLE_LABELS: Record<string, string> = {
   ACTIVE: "Actif", DRAFT: "À achever", ARCHIVED: "Archivé", DEPRECATED: "Retiré",
 };
+
+/** Missing historical namespaces never acquire a new installation’s identity. */
+export function isBarreReference(ref: PortfolioReference, instance: string) {
+  return ref.system === "LA_BARRE" && (ref.instance ?? PORTFOLIO_BARRE_INSTANCE) === instance;
+}

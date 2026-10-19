@@ -14,7 +14,7 @@ beforeEach(() => {
   vi.resetAllMocks(); mocks.nodes.mockResolvedValue([node]); mocks.access.mockResolvedValue(true);
   mocks.pillars.mockResolvedValue([{ id: "p", key: "a", currentVersion: 11, content: { prophecy: { vision: "Une ville vivante", horizon: "2029" } }, fieldCertainty: null, updatedAt: new Date("2026-10-16T00:00:00Z") }]);
 });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
 
 describe("native readers use current authorized brand sources", () => {
   it("uses the attached current strategy, exact typed value/version and the native access check", async () => {
@@ -31,6 +31,24 @@ describe("native readers use current authorized brand sources", () => {
     expect(mocks.pillars).not.toHaveBeenCalled();
     mocks.access.mockResolvedValue(true);
     expect((await getBarreBrandContext(actor, ["OTHER"])).brands).toEqual({});
+  });
+  it("proposes own authorized identities without loading their platform until selected", async () => {
+    mocks.nodes.mockResolvedValue([{ ...node, sourceRefs: [] }]);
+    const discovery = await getBarreBrandContext(actor);
+    expect(discovery.choices).toEqual([{ id: "MQ-FUSEE-node", nodeId: "node", strategyId: "current", name: "SPAWT", url: "/cockpit/brand/fondation?strategy=current" }]);
+    expect(discovery.brands).toEqual({}); expect(mocks.pillars).not.toHaveBeenCalled();
+    const selected = await getBarreBrandContext(actor, ["MQ-FUSEE-node"]);
+    expect(selected.brands["MQ-FUSEE-node"]?.nodeId).toBe("node");
+    expect(mocks.pillars).toHaveBeenCalledTimes(1);
+  });
+  it("does not offer another operator’s brand to an administrator or resolve another Barre namespace", async () => {
+    mocks.nodes.mockResolvedValue([{ ...node, operatorId: "elsewhere" }]);
+    expect((await getBarreBrandContext({ ...actor, role: "ADMIN" })).choices).toEqual([]);
+    mocks.pillars.mockClear();
+    vi.stubEnv("PORTFOLIO_BARRE_INSTANCE", "barre-own");
+    mocks.nodes.mockResolvedValue([node]);
+    const data = await getBarreBrandContext(actor, ["MQ"]);
+    expect(data.brands).toEqual({}); expect(mocks.pillars).not.toHaveBeenCalled();
   });
   it("refuses ambiguous company/strategy assignments instead of choosing the first", async () => {
     mocks.nodes.mockResolvedValue([node, { ...node, id: "other", operatorId: "another-company" }]);

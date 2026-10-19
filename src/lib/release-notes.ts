@@ -34,6 +34,12 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.493", date: "2026-10-19",
+    headline: "Vos projets retrouvent leur marque",
+    highlights: [{ emoji: "🔗", title: "Conserver le dossier déjà commencé", body: "Lors de la création d’une marque au portefeuille, vous pouvez choisir sa plateforme existante et conserver ses réponses et ses sources." },
+      { emoji: "🗂️", title: "Ouvrir le poste de projet", body: "La rubrique Campagnes & projets donne accès à La Barre lorsqu’elle est raccordée à votre entreprise." }],
+  },
+  {
     version: "6.27.492",
     date: "2026-10-19",
     headline: "Conserver vos observations dans les sources de marque",

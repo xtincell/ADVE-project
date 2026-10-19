@@ -1,3 +1,5 @@
+import { PORTFOLIO_BARRE_INSTANCE } from "@/domain/portfolio-reference";
+
 /** The configured agency corpus is not a grant to another company. */
 export function canAccessBarre(actor: { role: string; operatorId: string | null }) {
   return actor.role === "ADMIN" || Boolean(actor.operatorId &&
@@ -15,4 +17,15 @@ export function barreUpstreamUrl(path: string[]) {
     throw new Error("La connexion à La Barre n’est pas valide.");
   }
   return new URL(path.map(encodeURIComponent).join("/"), base);
+}
+
+/** Business source identity stays stable across a deployment's restoration. */
+export function barreBinding() {
+  const instance = process.env.PORTFOLIO_BARRE_INSTANCE ?? PORTFOLIO_BARRE_INSTANCE;
+  const depot = process.env.PORTFOLIO_BARRE_DEPOT ?? "beignet-paradise.json";
+  if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(instance) ||
+      !/^[a-zA-Z0-9_-][a-zA-Z0-9._-]{0,99}\.json$/.test(depot)) {
+    throw new Error("L’identité de la connexion à La Barre n’est pas valide.");
+  }
+  return { instance, depot };
 }

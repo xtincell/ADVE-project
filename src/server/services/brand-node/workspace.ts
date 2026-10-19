@@ -2,40 +2,46 @@ import type { BrandNode } from "@prisma/client";
 import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { db } from "@/lib/db";
 import { listBrandSourceSummaries } from "@/server/services/ingestion-pipeline/source-usage";
-import { inspectPortfolioReferences, portfolioReferenceKey } from "@/domain/portfolio-reference";
+import { inspectPortfolioReferences, portfolioReferenceKey, isBarreReference } from "@/domain/portfolio-reference";
 import { projectBarreWorkspace, type BarreWorkspace } from "@/domain/portfolio-barre";
-import { barreUpstreamUrl } from "./barre-connection";
+import { barreUpstreamUrl, barreBinding } from "./barre-connection";
 import { signalObservation } from "@/domain/signal-observation";
 import { metricObservationTime } from "@/domain/external-metric";
 
 /** Short, process-local read cache. A failed refresh is surfaced, never an empty portfolio. */
-let cache: { data: unknown; fetchedAt: number; etag: string | null } | undefined;
-let pending: Promise<NonNullable<typeof cache>> | undefined;
+let cache: { key: string; data: unknown; fetchedAt: number; etag: string | null } | undefined;
+let pending: { key: string; promise: Promise<NonNullable<typeof cache>> } | undefined;
 export async function readBarreSnapshot(options: { fresh?: boolean } = {}) {
-  if (options.fresh && cache?.etag) {
+  const binding = barreBinding();
+  const url = barreUpstreamUrl(["depots", binding.depot]);
+  const key = JSON.stringify([url.href, binding.instance]);
+  const previous = cache?.key === key ? cache : undefined;
+  if (options.fresh && previous?.etag) {
     // Revocation is checked against the source on every public request. HEAD
     // avoids sending the entire private corpus for every image in one document.
-    const head = await fetch(barreUpstreamUrl(["depots", "beignet-paradise.json"]), {
+    const head = await fetch(url, {
       method: "HEAD", signal: AbortSignal.timeout(12_000), cache: "no-store", redirect: "error",
     });
     if (!head.ok) throw new Error(`La Barre répond ${head.status}`);
-    if (head.headers.get("etag") === cache.etag) return cache;
-  } else if (!options.fresh && cache && Date.now() - cache.fetchedAt < 60_000) return cache;
+    if (head.headers.get("etag") === previous.etag) return previous;
+  } else if (!options.fresh && previous && Date.now() - previous.fetchedAt < 60_000) return previous;
   const load = async () => {
-    const response = await fetch(barreUpstreamUrl(["depots", "beignet-paradise.json"]), {
+    const response = await fetch(url, {
       signal: AbortSignal.timeout(12_000), cache: "no-store", redirect: "error",
     });
     if (!response.ok) throw new Error(`La Barre répond ${response.status}`);
     const data: unknown = await response.json();
     // Reject invalid successful responses before caching.
-    projectBarreWorkspace(data, []);
-    cache = { data, fetchedAt: Date.now(), etag: response.headers.get("etag") };
+    projectBarreWorkspace(data, [], binding.instance);
+    cache = { key, data, fetchedAt: Date.now(), etag: response.headers.get("etag") };
     return cache;
   };
   // A source grant check never joins a possibly older in-flight cached read.
   if (options.fresh) return load();
-  if (!pending) pending = load().finally(() => { pending = undefined; });
-  return pending;
+  if (pending?.key === key) return pending.promise;
+  const entry = { key, promise: load().finally(() => { if (pending === entry) pending = undefined; }) };
+  pending = entry;
+  return entry.promise;
 }
 
 export async function getPortfolioWorkspace(root: BrandNode, options: { allowBarre: boolean; actor: Parameters<typeof canAccessStrategy>[1] }) {
@@ -103,17 +109,21 @@ export async function getPortfolioWorkspace(root: BrandNode, options: { allowBar
   let barre: BarreWorkspace | null = null;
   let sourceStatus: "LIVE" | "UNAVAILABLE" | "NOT_CONNECTED" = "NOT_CONNECTED";
   let sourceError: string | null = null, fetchedAt: string | null = null;
-  if (references.some((r) => r.system === "LA_BARRE")) {
+  const binding = barreBinding();
+  const ownIdentities = nodes.filter((n) => n.operatorId === options.actor.operatorId)
+    .map((n) => ({ system: "LA_FUSEE" as const, kind: "brand" as const, id: n.id }));
+  if (references.some((r) => isBarreReference(r, binding.instance)) ||
+      (ownIdentities.length > 0 && Boolean(process.env.PORTFOLIO_BARRE_UPSTREAM))) {
     if (!options.allowBarre) sourceError = "La connexion de votre équipe à La Barre reste à configurer.";
     else try {
       const snapshot = await readBarreSnapshot();
-      barre = projectBarreWorkspace(snapshot.data, references);
+      barre = projectBarreWorkspace(snapshot.data, [...references, ...ownIdentities], binding.instance);
       sourceStatus = "LIVE"; fetchedAt = new Date(snapshot.fetchedAt).toISOString();
     } catch (error) {
       sourceStatus = "UNAVAILABLE";
       sourceError = error instanceof Error ? error.message : "La Barre est momentanément indisponible.";
     }
   }
-  return { root, nodes, strategies, observations, referenceIssues, inheritedFrom: inheritedFrom ? { name: inheritedFrom.name, strategyId: inheritedFrom.strategyId } : null, barre, sourceStatus, sourceError, fetchedAt };
+  return { root, nodes, strategies, observations, referenceIssues, barreBinding: binding, inheritedFrom: inheritedFrom ? { name: inheritedFrom.name, strategyId: inheritedFrom.strategyId } : null, barre, sourceStatus, sourceError, fetchedAt };
 }
 export type PortfolioWorkspace = Awaited<ReturnType<typeof getPortfolioWorkspace>>;

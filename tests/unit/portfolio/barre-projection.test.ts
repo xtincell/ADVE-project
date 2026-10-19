@@ -116,3 +116,19 @@ describe("ventilation fidèle aux identités sources", () => {
     expect(result.products[0]).toMatchObject({ preview: "/la-barre/assets/review/proxy/pack.jpg", url: "/la-barre/assets/review/proxy/pack.jpg" });
   });
 });
+
+describe("installation source identity", () => {
+  it("does not resolve a legacy or foreign reference against the same ID in another corpus", () => {
+    const ref = { system: "LA_BARRE" as const, kind: "brand" as const, id: "br" };
+    expect(projectBarreWorkspace(data, [ref], "barre-own").projects).toEqual([]);
+    expect(projectBarreWorkspace(data, [{ ...ref, instance: "barre-other" }], "barre-own").products).toEqual([]);
+    expect(projectBarreWorkspace(data, [{ ...ref, instance: "barre-own" }], "barre-own").projects.map((p) => p.id)).toEqual(["p1"]);
+  });
+  it("returns actual project backlinks for an exact admitted BrandNode without writing the source", () => {
+    const linked = { ...data, marques: data.marques.map((m) => m.id === "br" ? { ...m, sourceRefs: [{ system: "LA_FUSEE", kind: "brand", id: "node-a" }] } : m) };
+    const before = JSON.stringify(linked);
+    expect(projectBarreWorkspace(linked, [{ system: "LA_FUSEE", kind: "brand", id: "node-a" }], "barre-own").projects.map((p) => p.id)).toEqual(["p1"]);
+    expect(projectBarreWorkspace(linked, [{ system: "LA_FUSEE", kind: "brand", id: "node-b" }], "barre-own").projects).toEqual([]);
+    expect(JSON.stringify(linked)).toBe(before);
+  });
+});

@@ -1,3 +1,7 @@
+## Réception C7 du raccord entreprise 493 — ouverte, reprise immédiate (2026-10-19)
+
+Le formulaire manuel a relié le BrandNode de recette à la stratégie existante. Le chargement de La Barre depuis un Next dev local avec PostgreSQL sur VPS a produit JWTSessionError/Connection terminated due to connection timeout et des ressources 401 : aucun parcours intégré accepté. Plan borné : après image CI de cette source, déployer uniquement sur l’installation fictive possédée avec base sur le même réseau privé ; recevoir projet/marque/retour au portefeuille, refus inter-entreprises et sauvegarde/reprise des deux stockages. Déclencheur : image disponible, sans nouvelle clé ou décision requise ; responsable : mission Shinkiro C7, reprise 2026-10-19. Ne pas réduire les contrôles d’auth pour faire passer la recette. Pas de conservation globale ou onboarding déduit du seul build. ADR-0218 ; preuves privées `release/preuves-barre-entreprise-20261019/`.
+
 ## La Barre — délégation, références et partage client (2026-10-17, ADR-0216/0217)
 
 486 livrée au périmètre session/source privée : accès natif et ancien domaine redirigé reçus, corpus public fermé, deux portefeuilles/octets conservés, aucun nouveau droit ou mutation métier production. La cause d’exposition du corpus dans ce raccord n’est plus une tâche candidate. Réception privée `release/preuves-source-access-20261016/receipt.json` ; écriture conditionnelle exercée uniquement sur copie.

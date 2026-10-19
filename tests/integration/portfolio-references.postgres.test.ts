@@ -45,12 +45,18 @@ describe("raccordements versionnés sur PostgreSQL", () => {
     const merged = await updateBrandNode(node.id, { sourceRefs: [legacy, radar, { ...radar, instance: "radar-personnel" }] }, current.updatedAt.toISOString());
     expect(merged.sourceRefs).toHaveLength(3);
   });
-  it("refuse les états métier et un autre dépôt Barre avant toute écriture", async () => {
+  it("refuse les états métier et une instance malformée avant toute écriture", async () => {
     const node = await fixture();
-    for (const sourceRefs of [[{ ...radar, status: "Livré" }], [{ ...legacy, instance: "barre-autre" }]]) {
+    for (const sourceRefs of [[{ ...radar, status: "Livré" }], [{ ...legacy, instance: "../barre-autre" }]]) {
       await expect(updateBrandNode(node.id, { sourceRefs }, node.updatedAt.toISOString())).rejects.toThrow();
     }
     expect((await db.brandNode.findUniqueOrThrow({ where: { id: node.id } })).sourceRefs).toEqual([legacy]);
+  });
+  it("conserve le même identifiant dans deux instances sans réaffecter la référence historique", async () => {
+    const node = await fixture();
+    const sourceRefs = [legacy, { ...legacy, instance: "barre-entreprise" }];
+    await updateBrandNode(node.id, { sourceRefs }, node.updatedAt.toISOString());
+    expect((await db.brandNode.findUniqueOrThrow({ where: { id: node.id } })).sourceRefs).toEqual(sourceRefs);
   });
   it("consomme une nouvelle version même dans la même milliseconde", async () => {
     const node = await fixture();
