@@ -1,3 +1,12 @@
+## v6.27.495 — fix(seshat): retrieve documents for the question before applying citation limits (2026-10-19)
+
+**Une note récente ne prend plus toutes les places réservées aux pièces utiles à la question.**
+
+- Le repli sans vecteurs conserve la question, reconnaît les sigles courts comme BMC et classe les fragments autorisés par correspondance du titre et du texte. La sélection réserve d’abord une place par document ; les extraits restent inchangés, avec leurs empreintes, statuts et références.
+- Les candidats sont bornés par document et chargés par groupes limités. Une grande table ne chasse plus les anciens BMC et études avant le classement. Les mêmes contrôles Seshat de marque, d’usage, d’édition et d’empreinte s’appliquent ; aucun nouveau service, gestionnaire d’appels, provider ou modèle.
+- La sélection s’applique aussi aux sources sans vecteur compatible quand la recherche vectorielle fonctionne. Les fragments documentaires sont exclus de la requête narrative avant sa limite.
+- Régression reçue : quatre échecs sur la coupe et la diversité, puis un échec distinct avec 2 100 fragments récents ; correction ciblée 81 tests verts. Lecture réelle sur la base synthétique par les services existants : BMC courant et étude retrouvés, BMC antérieur exclu, aucun appel de modèle. Qualification du conseil réel après déploiement encore attendue.
+
 ## v6.27.494 — feat(sources): retain documentary editions and proposed directions (2026-10-19)
 
 **Une nouvelle piste documentaire ne devient plus silencieusement la référence de marque.**

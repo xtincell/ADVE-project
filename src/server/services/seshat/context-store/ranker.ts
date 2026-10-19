@@ -81,6 +81,8 @@ export interface RankedNode {
 export interface RankerFilter {
   /** Restrict to a specific strategy (default: any strategy — global search) */
   strategyId?: string;
+  /** Drill into one canonical source without widening the strategy scope. */
+  sourceId?: string;
   /** Restrict to specific kinds */
   kinds?: string[];
   /** Restrict to a specific pillar */
@@ -107,6 +109,7 @@ function buildWhere(
 ) {
   const where: Record<string, unknown> = {};
   if (filter.strategyId) where.strategyId = filter.strategyId;
+  if (filter.sourceId) where.sourceId = filter.sourceId;
   if (filter.excludeStrategyId) where.strategyId = { not: filter.excludeStrategyId };
   if (filter.kinds && filter.kinds.length > 0) where.kind = { in: filter.kinds };
   if (filter.pillarKey) where.pillarKey = filter.pillarKey;

@@ -15,6 +15,17 @@ export interface SourceChunk {
   charEnd: number;
 }
 
+export function normalizeSourceQuery(text: string): string {
+  return text.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+}
+
+/** Same words for retrieval and excerpt selection, including BMC and Q6. */
+export function sourceQueryTerms(query: string): string[] {
+  const stop = new Set(["les", "des", "une", "pour", "avec", "dans", "sur", "qui", "que", "est", "sont", "par", "aux", "ces", "ses", "leur", "leurs", "the", "and", "with", "from", "this", "that"]);
+  return [...new Set((query.match(/[\p{L}\p{N}]+/gu) ?? []).map(normalizeSourceQuery)
+    .filter(word => (word.length >= 3 || /\d/.test(word)) && !stop.has(word)))].slice(0, 64);
+}
+
 /**
  * Bound an already selected chunk around the question's words. This only
  * chooses a contiguous verbatim excerpt; it neither ranks documents nor
@@ -23,12 +34,10 @@ export interface SourceChunk {
 export function excerptForQuery(text: string, query: string, max: number): string {
   const budget = Math.max(0, Math.floor(max));
   if (text.length <= budget) return text;
-  const normalize = (word: string) => word.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
-  const terms = new Set((query.match(/[\p{L}\p{N}]+/gu) ?? [])
-    .map(normalize).filter(word => word.length > 3 || /\d/.test(word)).slice(0, 64));
+  const terms = new Set(sourceQueryTerms(query));
   const hits = [...text.matchAll(/[\p{L}\p{N}]+/gu)]
-    .filter(match => terms.has(normalize(match[0])))
-    .map(match => ({ word: normalize(match[0]), index: match.index }));
+    .filter(match => terms.has(normalizeSourceQuery(match[0])))
+    .map(match => ({ word: normalizeSourceQuery(match[0]), index: match.index }));
   let bestStart = 0;
   let bestScore = 0;
   for (const hit of hits) {

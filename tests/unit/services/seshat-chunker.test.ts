@@ -112,6 +112,12 @@ describe("SESHAT — bound already selected excerpts without another index", () 
     const text = "Le texte conservé. ".repeat(30);
     expect(excerptForQuery(text, "inconnu", 80)).toBe(text.slice(0, 80));
   });
+  it("finds a late three-letter document identifier without rewriting", () => {
+    const text = "Introduction ancienne. ".repeat(100) + "BMC : nouvelle piste à valider par l’équipe.";
+    const excerpt = excerptForQuery(text, "BMC", 120);
+    expect(excerpt).toContain("BMC : nouvelle piste à valider");
+    expect(text).toContain(excerpt);
+  });
   it("keeps the requested identifier ahead of incidental introduction words", () => {
     const text = "Sixième question. Fichier taste.mjs. " + "Contexte général. ".repeat(120)
       + "RÔLE DE Q9 — RADAR\nQ9 mesure directement la découverte.";

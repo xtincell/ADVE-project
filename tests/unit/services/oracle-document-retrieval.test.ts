@@ -19,8 +19,15 @@ vi.mock("@/lib/db", () => ({ db: {
   strategy: { findUnique: vi.fn(async () => ({ operatorId: "operator-a", businessContext: { offre: "Offre exacte" }, financialCapacity: harness.financialCapacity })) },
   pillar: { findMany: vi.fn(async () => [{ key: "a", content: { nom: "Nom exact" } }]) },
   brandDataSource: { findMany: vi.fn(async () => structuredClone(harness.sources)) },
-  brandContextNode: { findMany: vi.fn(async (args: any) => structuredClone(
-    harness.nodes.filter((n) => harness.matches(n, args?.where)).slice(0, args?.take ?? 200))) },
+  brandContextNode: { findMany: vi.fn(async (args: any) => {
+    let rows = harness.nodes.filter((n) => harness.matches(n, args?.where));
+    if (args?.distinct) {
+      const seen = new Set<string>();
+      rows = rows.filter(n => { const key = JSON.stringify(args.distinct.map((field: string) => n[field]));
+        if (seen.has(key)) return false; seen.add(key); return true; });
+    }
+    return structuredClone(rows.slice(0, args?.take ?? rows.length));
+  }) },
 } }));
 vi.mock("@/server/services/llm-gateway", () => ({ embed: vi.fn(async () => {
   if(harness.failEmbedding) throw new Error("configured provider refused");
@@ -131,5 +138,44 @@ describe("current sources remain eligible without a compatible vector", () => {
     const result=await getOracleBrandContextByQuery("brand-a","Q6",{includeSources:false});
     expect(result?.sourceReferences).toBeUndefined();
     expect(result?.text).not.toContain(fresh.rawContent);
+  });
+});
+
+describe("a question survives deterministic documentary retrieval", () => {
+  function corpusWithRecentSummary(chunks = 30) {
+    const note = { ...source, id: "recent-summary", fileName: "Note de réconciliation.txt",
+      rawContent: "BMC, étude terrain : une note de réconciliation, pas les documents originaux. ".repeat(chunks) };
+    const bmc = { ...source, id: "previous-bmc", fileName: "BMC — modèle économique.docx",
+      rawContent: "BMC proposé : hypothèses économiques à faire valider par l’équipe." };
+    const study = { ...source, id: "field-study", fileName: "Étude terrain — observations.docx",
+      rawContent: "Étude terrain : échantillons, observations, limites et méthode de comparaison." };
+    harness.sources = [note, bmc, study];
+    harness.nodes = [
+      ...Array.from({ length: chunks }, (_, i) => ({ source: note, index: i })),
+      { source: bmc, index: 0 }, { source: study, index: 0 },
+    ].map(({ source: doc, index }) => ({ id: `${doc.id}-${index}`, strategyId: "brand-a", kind: "BRAND_SOURCE",
+      sourceId: doc.id, payload: { text: doc.rawContent.slice(0, 200), fileName: doc.fileName,
+        chunkIndex: index, sourceContentHash: sourceFingerprint(doc) } }));
+  }
+  it.each([false, true])("retrieves older BMC and study instead of only recent summary chunks (provider refused=%s)", async (refused) => {
+    corpusWithRecentSummary(); harness.failEmbedding = refused;
+    const result = await getOracleBrandContextByQuery("brand-a", "BMC et étude terrain", { includeSources: true, sourcesLimit: 2 });
+    expect(new Set(result?.sourceReferences?.map(r => r.sourceId))).toEqual(new Set(["previous-bmc", "field-study"]));
+  });
+  it("recognizes a three-letter document name and keeps its original citation", async () => {
+    corpusWithRecentSummary();
+    const result = await getOracleBrandContextByQuery("brand-a", "BMC", { includeSources: true, sourcesLimit: 1 });
+    expect(result?.sourceReferences?.[0]).toMatchObject({ sourceId: "previous-bmc", fileName: "BMC — modèle économique.docx",
+      text: harness.sources[1].rawContent });
+  });
+  it("uses more than one document for an unqueried overview", async () => {
+    corpusWithRecentSummary();
+    const result = await getOracleBrandContext("brand-a", undefined, { includeSources: true, sourcesLimit: 2 });
+    expect(new Set(result?.sourceReferences?.map(r => r.sourceId)).size).toBe(2);
+  });
+  it("a large table cannot evict other documents from the candidate pool", async () => {
+    corpusWithRecentSummary(2100);
+    const result = await getOracleBrandContextByQuery("brand-a", "BMC étude terrain", { includeSources: true, sourcesLimit: 2 });
+    expect(new Set(result?.sourceReferences?.map(r => r.sourceId))).toEqual(new Set(["previous-bmc", "field-study"]));
   });
 });
