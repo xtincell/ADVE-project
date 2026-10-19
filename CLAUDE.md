@@ -1,22 +1,23 @@
-## Conseil documentaire — 496 candidate ; 495 reçue au périmètre (2026-10-19)
+## Conseil documentaire — 496 livrée au périmètre, corpus ouvert (2026-10-19)
 
-495 livrée : source a5c2d306, image et volume privé reçus, 42 sources et fondamentaux
-préservés. Les BMC sont différents et successifs ; nouveau postulat PROPOSED, précédent
-REFERENCE. Précision réelle datée visible, original exact conservé. Une question native
-ne restitue pas les dénominateurs : le conseil n’est pas qualifié. Le ranker retrouve six
-pièces, dont BMC proposé au rang 3 et étude primaire au rang 4 ; le paquet de contexte
-consomme son budget avant elles et sélectionne un résumé plutôt que le champ précis.
-496 étend les mêmes lecteurs : budget réparti par document (6–18 K selon la sélection),
-qualifications préservées et expressions exactes communes au ranker et aux extraits.
-Deux passages complémentaires par source, ciblés sur la clause de question pertinente,
-sans réindexation ni appel supplémentaire ; qualification commune conservée une fois.
-Neuf régressions rouges reçues, 99 contrôles ciblés verts et recette PostgreSQL sans
-génération reçue : six pièces et les deux dénominateurs présents chez les deux lecteurs.
-Contrôles finaux : 4 834 tests / 451 fichiers et gouvernance 1 663 / 167 verts ; TypeScript/lints/cycles zéro
-erreur, 24 avertissements préexistants. MCP réel six résultats reçu. Titre/date ne comptent plus comme apport factuel intra-document. Le contexte candidat
-exact reçoit aussi les deux taux/dénominateurs réels dans l’enveloppe de six pièces.
-Source/image et conseil de production à recevoir.
-Corpus intégral, autres IP et sept chantiers restent ouverts. Voir REFONTE-PLAN.
+Code 1c33ee174 (#1025), image publiée et runtime 6.27.496 reçus ; volume privé,
+42 sources et huit piliers préservés avant la question native. Lecture commune étendue,
+aucun nouveau gestionnaire, fournisseur ou changement de fondamentaux. Contrôles :
+4 834 tests / 451 fichiers, gouvernance 1 663 / 167, 99 ciblés ; types/lints/cycles
+sans erreur (24 avertissements préexistants). PostgreSQL synthétique : six pièces,
+qualifications et dénominateurs transmis aux deux lecteurs ; MCP réel exercé.
+Une question native identique à 495 cite l’étude primaire et donne les deux taux avec
+leurs dénominateurs. Réception bornée à leur présence : nouveau BMC encore cité via
+la synthèse, et formulation « soit 392 lieux » ambiguë. Qualité du conseil complet
+NON reçue ; ne pas rejouer la génération pour polir avant les grands blocs.
+Les BMC restent différents et successifs : précédent REFERENCE, nouveau postulat
+PROPOSED à valider par l’équipe ; clarification 495 conservée, aucune adoption.
+Trois pièces supplémentaires reçues, originaux exacts : missions Abidjan mars/août
+(références qualitatives datées) et modèle de coûts juillet (proposition historique,
+hypothèses payantes distinctes de la gratuité décidée depuis). 45 sources au total,
+31/2 286 fichiers Drive directement déposés ; 2 255 restent ouverts. La roadmap
+mixte personnelle/autres IP reste hors portée SPAWT ; pas de partage implicite.
+Les autres IP et les sept chantiers restent ouverts. Voir REFONTE-PLAN.
 
 ## Raccord entreprise 493 reçu sur D ; reprise couplée ouverte (2026-10-19)
 
