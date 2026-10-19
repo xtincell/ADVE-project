@@ -6,6 +6,7 @@
 - Les candidats sont bornés par document et chargés par groupes limités. Une grande table ne chasse plus les anciens BMC et études avant le classement. Les mêmes contrôles Seshat de marque, d’usage, d’édition et d’empreinte s’appliquent ; aucun nouveau service, gestionnaire d’appels, provider ou modèle.
 - La sélection s’applique aussi aux sources sans vecteur compatible quand la recherche vectorielle fonctionne. Les fragments documentaires sont exclus de la requête narrative avant sa limite.
 - Régression reçue : quatre échecs sur la coupe et la diversité, puis un échec distinct avec 2 100 fragments récents ; correction ciblée 81 tests verts. Lecture réelle sur la base synthétique par les services existants : BMC courant et étude retrouvés, BMC antérieur exclu, aucun appel de modèle. Qualification du conseil réel après déploiement encore attendue.
+- Clôture documentaire distincte du code : réception bornée 494 (lignée BMC et 27 dépôts) et raccord 493 sur D consignés ; anciennes étapes candidates retirées du reste à faire. Corpus complet, conseil pertinent de production, reprise des deux stockages et sept chantiers restent ouverts.
 
 ## v6.27.494 — feat(sources): retain documentary editions and proposed directions (2026-10-19)
 
