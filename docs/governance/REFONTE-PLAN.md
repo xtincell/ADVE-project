@@ -1,3 +1,26 @@
+## Lecture documentaire — boot 499 bloqué, correctif 500 candidat (2026-10-20)
+
+ADR-0221 reste Proposed. Source 499 fusionnée, build 39351802930 échoué avant
+`/login` : `public-brand-migration.cjs` chargeait JSZip absent de son standalone.
+Image non poussée/non déployée ; production 498 intacte. Cause établie, distincte
+de l’incident auth/session dev dont la cause reste inconnue.
+
+500 diffère l’import de JSZip jusqu’à `readPptxText` : les chemins de
+conservation d’octets et de capture publique au boot n’initialisent plus le
+lecteur inutilisé. Pas de copies de dépendances en chaîne, de boot contourné ou
+de nouvelle capacité. Régression sur le vrai bundle `freeze-public-brands`,
+paquets externes/JSZip absent/base vide simulée : rouge `MODULE_NOT_FOUND` 499
+puis vert 500 reçus. CLI auxiliaire sur PostgreSQL de recette détenu reçue :
+exit 0, zéro publication, JSZip indisponible, aucune écriture production. Gauntlet
+local définitif 500 : 4 848 tests / 454 fichiers, gouvernance 1 670 / 169,
+typage et deux lints sans erreur, zéro cycle sur 1 770 fichiers ;
+24 avertissements historiques. Ce boot auxiliaire ne reçoit pas le standalone
+exact ; CI, image et runtime 500 restent à recevoir. Le lecteur PPTX garde sa
+recette propre ; ni dépôt réel PPTX,
+compréhension des visuels, grands fichiers/lots ni chantier entier reçus.
+Reprise immédiate : recevoir la CI puis le vrai boot d’image
+et la session avant toute bascule, sur les contrôles de livraison existants.
+
 ## Lecture documentaire commune — recette locale bornée 499 (2026-10-20)
 
 C2/C3/C4 / ADR-0221 Proposed. Le module d’ingestion existant reçoit un lecteur
@@ -30,9 +53,10 @@ quick-intake sont corrigées par 83→84 après l’import, sans nouvelle except
 Le boot d’image existant appelle désormais `/api/auth/session` sans cookie et
 refuse une erreur HTTP ou un JSON invalide ; HTML refusé et JSON `null` accepté
 au contrôle pur, véritable endpoint standalone à recevoir pendant le build.
-CI, image et runtime 499 encore à recevoir. Puis déposer les originaux
-admissibles, relire les reçus exacts et qualifier les contenus ; toute lecture
-visuelle reste distincte.
+Source 499 fusionnée mais image bloquée au boot, sans publication ni déploiement ;
+la livraison reprend avec 500 ci-dessus. Puis déposer les originaux admissibles,
+relire les reçus exacts et qualifier les contenus ; toute lecture visuelle reste
+distincte.
 
 **Suite de gros œuvre C2/C3/C7** : 36 grands fichiers / 1 509 103 850 octets,
 maximum 162 437 099 octets, conservés au périmètre. Étendre le transfert

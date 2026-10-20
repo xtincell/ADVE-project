@@ -8,7 +8,7 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**499 candidat — lecture documentaire dans les modules existants** :
+**499 fusionné / 500 candidat — lecteur existant et boot découplés** :
 `ingestion-pipeline` porte le lecteur commun des octets reçus et du PPTX, réutilisé
 par `seshat/market-study-ingestion` et les deux `quick-intake`. Primitives sous
 tutelle MESTOR / Sustainment, sans nouveau service ni Glory tool, routeur,
@@ -16,10 +16,17 @@ Intent, modèle ou fournisseur. Texte/notes seulement ; originaux, usages et
 analyse en aval restent distincts. Préflight pur du corpus et recette locale
 HTTP/native de la source synthétique reçus ; autres formulaires au rendu/sélection
 seulement, aucun dépôt réel PowerPoint ou analyse automatique de bout en bout.
-Gauntlet local définitif reçu, repère quick-intake actualisé sans nouvelle
+Gauntlet local définitif 499 reçu, repère quick-intake actualisé sans nouvelle
 exception. Incident initial auth/session dev conservé ; contrôle HTTP/JSON de
 session raccordé au boot existant et éprouvé en pur. Véritable endpoint
-standalone, CI/image/runtime et livraison encore à recevoir ;
+standalone encore à recevoir. Build 499 39351802930 bloqué avant `/login` par
+JSZip absent dans le bundle de capture publique ; aucune image poussée/déployée,
+production 498 intacte. 500 charge JSZip dans la lecture PPTX à la demande,
+sans nouveau service ni copie de paquets en chaîne. Régression du vrai bundle
+avec paquet absent et base vide simulée rouge sur 499 puis verte sur 500 ;
+CLI auxiliaire sur PostgreSQL de recette détenu reçue exit 0/zéro publication,
+JSZip indisponible et aucune écriture production. Gauntlet local définitif 500
+reçu ; véritable boot d’image, CI/image/runtime 500 et livraison encore à recevoir ;
 [ADR-0221](adr/0221-common-received-document-reader.md).
 
 **448 source/CI/image reçues — ANUBIS Comms/MCP existant** :
