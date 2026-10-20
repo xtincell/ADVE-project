@@ -202,3 +202,5 @@ exiger le label avant merge via une protection de branche.
 | 2026-10-20 | #1039 | fix(intake) réponses et mesures inconnues | NEFER — priorité MVP explicite | Audit/scoring MVP : conserver les corrections et les inconnues, exiger une observation avant mesure et qualifier le rapport existant. Aucun nouveau gestionnaire. |
 
 | 2026-10-20 | #1041 | fix(intake) originaux conservés et reprise du diagnostic | NEFER — priorité MVP explicite | FileUpload et stockage privé existants, reprise et rattachement atomique sans copie. Garde d’accès rouge/verte, 4 883 unitaires, 414 PostgreSQL et natif compilé reçus ; aucun nouveau gestionnaire. Qualité/coût assistés et conversion commerciale restent ouverts. |
+
+| 2026-10-20 | PR #1042 | phase/7 | Clôture documentaire508 : runtime/source reçus, dette technique retirée ; rapport, droits et coût commercial ouverts. Aucun code/version/image ou redéploiement. |
