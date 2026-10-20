@@ -31,7 +31,10 @@ const nextConfig: NextConfig = {
   // Don't advertise the framework (site-prober finding: x-powered-by leak).
   poweredByHeader: false,
   async headers() {
-    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+    return [
+      { source: "/:path*", headers: SECURITY_HEADERS },
+      { source: "/api/intake/:token/documents/:uploadId", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+    ];
   },
   // Next 16 : reactCompiler stabilized — moved out of `experimental`.
   reactCompiler: true,

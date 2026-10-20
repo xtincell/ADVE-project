@@ -30,6 +30,7 @@ import { classifyCanonicalSector } from "@/domain/sector-taxonomy";
 
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { persistCompletedIntake } from "./document-input";
 import { callLLM } from "@/server/services/llm-gateway";
 import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import * as mestor from "@/server/services/mestor";
@@ -1152,17 +1153,11 @@ export async function complete(token: string) {
     console.warn("[quick-intake] Thot capacity assessment failed (non-blocking):", err instanceof Error ? err.message : err);
   }
 
-  // Update the intake with results (diagnostic + notoria preview + narrative)
-  await db.quickIntake.update({
-    where: { id: intake.id },
-    data: {
+  // Originals become documentary sources in the same commit as COMPLETED.
+  await persistCompletedIntake(token, strategy.id, {
       advertis_vector: vector,
       classification,
       diagnostic: { ...diagnostic, notoriaPreview, narrativeReport, brandLevel, financialCapacity } as Prisma.InputJsonValue,
-      convertedToId: strategy.id,
-      status: "COMPLETED",
-      completedAt: new Date(),
-    },
   });
 
   // Auto-create CRM Deal from intake — Thot-grounded value

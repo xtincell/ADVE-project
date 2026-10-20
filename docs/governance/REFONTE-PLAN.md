@@ -1,4 +1,61 @@
-## MVP-FUSEE-02 — inconnues du guidé au rapport, candidat 507 (2026-10-20)
+## MVP-FUSEE-02 — conservation/reprise de l’import, candidat 508 (2026-10-20)
+
+[ADR-0224 Accepted pour l’implémentation testée](adr/0224-retained-intake-originals.md) : primitive de
+persistance dans quick-intake existant, FileUpload/source-original-v1/stockage
+chiffré, PENDING avant IO puis STORED vérifié. Dépôt avant préflight modèle,
+une requête par fichier jusqu’à dix Mio ; reprise du reçu complet sans redéposer.
+Lecture privée par bearer du même intake. openEmission/closeEmission utilisent
+le kind existant/caller quick-intake:retain-sources, sans nouveau gestionnaire.
+persistCompletedIntake trace le kind LEGACY_QUICK_INTAKE_COMPLETE existant,
+caller quick-intake:bind-sources, et rattache les mêmes FileUpload.sourceId/
+objectKey aux sources atomiquement avec COMPLETED, EXTRACTED ou FAILED honnête,
+sans copie ni adoption.
+
+Treize tests PostgreSQL reçus ; garde ownership retirée volontairement donne
+un rouge, restaurée donne treize verts. Natif import partiel : enregistrement
+puis refus modèle, reprise sans file input/original de 665 octets SHA exact,
+trois réponses 200/fenêtre complète sans erreur. GET propriétaire 200/exact,
+mauvais intake/inconnu404. Fermeture/réouverture reçue avec texte saisi104/original
+distinct665 exact ; ingest-plus site/social repris, dépôts200 puis modèle indisponible412
+attendu ; questionnaire du même intake reçu. Header final HTTP200/no-referrer
+reçu, première observation écrasée conservée. Natif compilé local : import HTTP 200, DOM 133,3 ms/titre observé ≤308 ms pilote compris, 28 réponses sans ≥500/exception/échec ; ingest-plus HTTP 200, DOM 77,5 ms/titre ≤248 ms, 29 réponses sans erreur. Fenêtres complètes ; dépôts reçus puis refus modèle explicites (trois réponses 200 pour import ; 200/200/412 pour ingest-plus), aucune analyse reçue. Original HTTP 200/665 octets exact/no-referrer. Deadlines et échecs dev conservés, pas de SLO global.
+
+Build webpack et neuf contrôles finaux reçus : 4 883 unitaires/456 fichiers, gouvernance 1 671/169, PostgreSQL 414/23 dont les treize nouveaux, tsc/deux lints sans erreur, 24 avertissements historiques par lint, zéro cycle.
+Premier refus de séquence ADR conservé ; renumérotation réelle0224 sans garde
+affaiblie, relance finale verte. **Suite immédiate** : recevoir CI/image/runtime
+exacts avant fermer le défaut507. Responsable C6/MVP-FUSEE-02 ; effort fin du
+même lot fonctionnel, déclencheur contrôles locaux reçus. Pas de livraison508
+ni MVP entier ; clôture technique507, import négatif et autres réserves conservés.
+Vérification admission/conservation par les mécanismes existants en MVP-FUSEE-05/C7
+avant réception commerciale (RESIDUAL-DEBT), sans nouveau gestionnaire ou politique.
+
+## MVP-FUSEE-02 — reprise de l’import, prochain lot fonctionnel (2026-10-20)
+
+Import local 507 reçu comme échec de reprise/conservation : refus LLM HTTP 200
+explicite, 104 caractères de texte saisi et nom de fichier conservés en base mais
+formulaire vide après reload. TXT de 665 octets, zéro FileUpload/BrandDataSource,
+original non conservé ; promesse générale de conservation trop large. Premier
+chooser caché expiré dans l’outil puis zone fonctionnelle ; rejet deux réponses
+complètes sans erreur, reload tronqué 19 réponses qualifié. Aucun modèle externe
+ou production touchée. Preuves `release/preuves-mvp-commercial-20261020/import507-{recovery-gap,data}-received.json`.
+
+**Suite immédiate** : réhydrater le texte/nom enregistrés dans la même page,
+raccorder les primitives de conservation existantes aux originaux importés et
+aligner la promesse sur le reçu réel ; recevoir refus sans fournisseur, fermeture/
+reprise, original exact et poursuite manuelle/assistée choisie. Aucun nouveau
+manager. Responsable C6/MVP-FUSEE-02 ; effort un lot fonctionnel borné,
+déclencheur immédiat après livraison 507, avant réception de la voie import.
+
+Public production 507 : score SPAWT 43/100/couverture 68 % sur cache, API 200 /
+767,9 ms, DOM 1 001,5 ms/titre borne 1 425 ms incluant pilote ; quatre réponses
+calcul complètes sans erreur. Préremplissage marque/site reçu, titre borne
+1 888 ms avec pilote, six réponses sans ≥500/exception mais un RSC ERR_ABORTED
+conservé. Fenêtre initiale tronquée ; pas de zéro global/SLO. Trois facts null
+optionnels omis par projection préexistante : valeurs/dimensions/dates mesurées
+identiques, pas d’égalité brute du snapshot production reçue. Coût réel, audit
+production complet, export, qualité/conversion et MVP entier restent ouverts.
+
+## 507 livré — inconnues du guidé au rapport, réception technique (2026-10-20)
 
 Recette guidée compilée 506 sur TPE fictive : contact/business et A passés,
 sauvegarde/fermeture/reprise A exacte, puis D/V. E bloque car retour client et
@@ -34,15 +91,19 @@ Un contact CRM/un Deal LEAD sans propriétaire, zéro ligne AICostLog/snapshot
 public inchangé ; aucune vente. Preuves privées `guided507-b-{native,data}-received.json`.
 Gauntlet local 507 reçu : huit sorties zéro, 4 883 tests / 456 fichiers,
 gouvernance 1 671 / 169, tsc et deux lints sans erreur, 24 avertissements
-historiques par lint, zéro cycle. **Suite immédiate** : CI/image/runtime exacts
-du lot 507 incluant 506, production toujours 504. Import/export, option agentique choisie, qualité modèle/coût réel,
+historiques par lint, zéro cycle. Livraison 507 incluant 506 reçue : PR 1039,
+source `f48a938e494ca286330cab74ff6c4d49ea906281`, seize checks verts, build
+39454014249/boot PostgreSQL/login 200 et image/runtime exacts. Digest
+`229c8ab49874153f400fdf3b3ee82c31489a057e10a07992fc19e90a107573bd`, volumes,
+relais OpenAI/délai 90 s conservés, OpenRouter absent. Sources/actifs/fondamentaux
+et portefeuille Friesland conservés. Attentes techniques 506/507 levées. Import/export, option agentique choisie, qualité modèle/coût réel,
 propriétaire/offre CRM et rapport commercial restent ouverts : conseils
 génériques pour l’atelier, chiffres non sourcés et classification à faible
 couverture à corriger/recevoir dans ce MVP, sans nouveau chantier.
 Responsable C6/MVP-FUSEE-02 ; effort correctifs bornés et recette du même
 parcours, déclencheur fin du candidat en cours. Source 506
-`2c5c2b276`/PR 1038/CI 39444684044 reçues ; livraison prévue avec 507, production
-504 inchangée. Audit/rapport complets, coût, conversion et MVP entier ouverts.
+`2c5c2b276`/PR 1038/CI 39444684044 reçues, désormais intégrées à 507 livré.
+Guidé B local uniquement, pas de complétion guidée production reçue. Audit/rapport complets, coût, conversion et MVP entier ouverts.
 
 Point statique séparé à vérifier sur le préflight `generateAiFollowUps` :
 configuration par clés ignorant le relais OAuth seul. Reprise bornée MVP02,
@@ -80,9 +141,9 @@ contact locale. DOM 707,6 ms/titre ≤931 ms incluant pilote ; première compila
 API environ 60 s, aucun SLO public. Build additionnel Turbopack échoué sur le
 symlink hors root, sans défaut code établi ou contournement CI. Guidé compilé
 506 ensuite exercé jusqu’au blocage E décrit au-dessus. Code fusionné à `2c5c2b276`, PR 1038,
-CI 39444684044 verte. **Suite immédiate** : recevoir image/runtime avec le lot
-507 et conservation production avant de purger les dettes
-ciblées, puis poursuivre coût réel du scan, audit et conversion. Responsable C6/MVP-FUSEE-01,
+CI 39444684044 verte ; correctifs intégrés au runtime 507 exact reçu, conservation
+production acquise et attentes de livraison ciblées levées. **Suite immédiate** :
+poursuivre coût réel du scan, audit et conversion. Responsable C6/MVP-FUSEE-01,
 effort un correctif borné puis recette, déclencheur fin du candidat en cours.
 Candidat 505 conservé séparément, aucun raccord documentaire transposé ;
 C2-01, corpus, conseil/C7 et sept chantiers restent dus. [Dettes](RESIDUAL-DEBT.md).

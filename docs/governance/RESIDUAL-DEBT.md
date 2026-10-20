@@ -1,4 +1,71 @@
-## MVP-FUSEE-02 — conserver les inconnues jusqu’au rapport, candidat 507 (2026-10-20)
+## Coordination ADR — candidat 505 conservé séparément (2026-10-20)
+
+Le premier gauntlet 508 a refusé le saut 223→225 : priorité au commit, pas à
+une proposition non committée d’un autre clone. ADR508 renuméroté 0224 dans
+ce checkout, sans toucher au candidat505 ni aux gardes. **Fermer** : à la reprise
+du candidat505, lui attribuer le prochain numéro réellement disponible après
+relecture du registre committé et corriger ses références avant merge.
+Responsable reprise du lot505 ; effort renumérotation documentaire bornée,
+déclencheur explicite reprise de ce candidat. Aucun numéro réservé à l’avance.
+
+## MVP-FUSEE-02 — import : texte en base, reprise vide et original absent (2026-10-20)
+
+**Reçu local** : import TXT de 665 octets, refus LLM HTTP 200 explicite, texte
+saisi de 104 caractères/nom en base ; formulaire vide après reload. Zéro
+FileUpload/BrandDataSource pour cette pièce : original non conservé, promesse
+large de conservation des sources non reçue. Aucun appel modèle externe ou
+production touchée. Premier chooser caché : timeout outil puis dépôt via zone
+réussi, pas un défaut produit établi par cette première attente. Fenêtre de
+rejet complète deux réponses sans erreur ; reload tronqué 19 réponses qualifié.
+Preuves `release/preuves-mvp-commercial-20261020/import507-{recovery-gap,data}-received.json`.
+
+**Candidat 508, implémentation locale reçue, livraison ouverte** : [ADR-0224 Accepted pour l’implémentation testée](adr/0224-retained-intake-originals.md).
+FileUpload/source-original-v1/stockage chiffré, dépôt avant préflight modèle,
+PENDING avant IO/STORED vérifié, requête par fichier jusqu’à dix Mio et reprise
+du reçu complet sans redéposer. Lecture privée liée au même bearer intake ;
+trace openEmission/closeEmission par le kind existant, sans token/base64 dans
+le journal. Complete rattache les mêmes FileUpload/objectKey aux sources de
+stratégie atomiquement avec COMPLETED, EXTRACTED ou FAILED honnête, par
+persistCompletedIntake et kind LEGACY_QUICK_INTAKE_COMPLETE/caller
+quick-intake:bind-sources existants, sans copie ni adoption. Treize tests
+PostgreSQL reçus, garde ownership retirée/rouge puis restaurée/treize verts
+(preuve intake508-ownership-red-green.json). Natif import partiel reçu : refus
+modèle puis reprise sans file input, original de 665 octets SHA exact, trois
+réponses 200 complètes sans erreur ; GET propriétaire 200, mauvais intake ou
+inconnu404. Header final HTTP200/no-referrer reçu, première observation globale
+écrasée conservée. Fermeture/réouverture texte saisi104/original distinct665 exact reçue ;
+ingest-plus site/social repris, dépôts200 puis refus modèle412 attendu et
+questionnaire du même intake reçus. Natif compilé local : import HTTP 200, DOM 133,3 ms/titre observé ≤308 ms pilote compris, 28 réponses sans ≥500/exception/échec ; ingest-plus HTTP 200, DOM 77,5 ms/titre ≤248 ms, 29 réponses sans erreur. Fenêtres complètes ; dépôts reçus puis refus modèle explicites (trois réponses 200 pour import ; 200/200/412 pour ingest-plus), aucune analyse reçue. Original HTTP 200/665 octets exact/no-referrer. Deadlines et échecs dev conservés, pas de SLO global.
+
+Build webpack et neuf contrôles finaux reçus : 4 883 unitaires/456 fichiers, gouvernance 1 671/169, PostgreSQL 414/23 dont les treize nouveaux, tsc/deux lints sans erreur, 24 avertissements historiques par lint, zéro cycle.
+Premier refus de séquence ADR et renumérotation réelle0224 sans test affaibli
+conservés ; relance finale verte. CI/image/runtime508 encore ouverts. Preuves :
+`release/preuves-intake-reprise-20261020/compiled508-{ingest,plus,http}-received.json`
+et `release/preuves-mvp-commercial-20261020/gauntlet508-final2-results.json` ;
+recettes dev et garde ownership rouge/vert conservées dans les mêmes dossiers.
+
+**Fermer** : recevoir CI/image/runtime exacts, puis reprise du dépôt reçu et
+poursuite choisie manuelle ou assistée sur cet état livré, sans faux succès ni
+perte, avant purger la dette de production. Les treize PostgreSQL reçus couvrent
+les gardes du rattachement/rejeu et refus ; aucune complétion guidée production
+ou qualité d’analyse reçue par les seuls refus fournisseur. Responsable
+C6/MVP-FUSEE-02 ; effort fin du même lot fonctionnel, déclencheur contrôles locaux
+reçus avant acceptation du parcours import. Aucun nouveau manager, modèle ou
+chantier. Export, coût/qualité modèle, choix agentique utilisateur, propriétaire/
+offre CRM, rapport commercial et conversion restent dus.
+
+## MVP-FUSEE-05/C7 — réception de l’admission et de la conservation existantes (2026-10-20)
+
+**Bornage statique508** : `publicProcedure=t.procedure` ; dépôt limité à cinq
+fichiers de dix Mio par intake. Ces limites par diagnostic ne reçoivent pas un
+quota global ni l’expiration des originaux. **Fermer** : vérifier et éprouver
+les mécanismes existants d’admission, de comptabilisation et de conservation/
+nettoyage, avec leurs droits et périmètres effectifs, puis documenter la borne
+commerciale reçue. Aucun nouveau gestionnaire, quota inventé ou durée arbitraire
+de conservation dans ce lot. Responsable C7/MVP-FUSEE-05 ; effort une vérification
+bornée des mécanismes existants, déclencheur avant réception commerciale du MVP.
+
+## 507 — correctifs techniques livrés, réserves MVP conservées (2026-10-20)
 
 **Blocage natif reçu** : TPE fictive sur guidé compilé 506, contact/business/A,
 sauvegarde-fermeture-reprise exacte A, D/V passés ; E exige un taux de retour
@@ -48,11 +115,13 @@ Preuves privées `release/preuves-mvp-commercial-20261020/guided507-b-{native,da
 
 Gauntlet local 507 reçu : huit sorties zéro, 4 883 tests / 456 fichiers,
 gouvernance 1 671 / 169, tsc et deux lints sans erreur, 24 avertissements
-historiques par lint, zéro cycle. **Fermer le correctif borné** : recevoir CI et
-image/runtime exacts avec conservation production du lot 507 incluant 506 ;
-la recette B et le gauntlet local ne reçoivent pas cette livraison. 506 fusionnée PR 1038 /
-`2c5c2b276` / CI 39444684044 verte, image/runtime non reçus ; livraison avec 507
-après ces contrôles, production 504 inchangée. Responsable C6/MVP-FUSEE-02 ;
+historiques par lint, zéro cycle. **Correctif borné livré** : PR 1039/source
+`f48a938e494ca286330cab74ff6c4d49ea906281`, seize checks verts, build 39454014249
+avec boot PostgreSQL/login 200, image/runtime 507 exacts et conservation production
+reçus ; digest `229c8ab49874153f400fdf3b3ee82c31489a057e10a07992fc19e90a107573bd`.
+Volumes/relais OpenAI/délai 90 s conservés, OpenRouter absent. 506 est intégrée
+à ce lot, attentes de livraison 506/507 retirées. Guidé B local reçu, aucune
+complétion guidée production ou qualité commerciale entière déduite. Responsable C6/MVP-FUSEE-02 ;
 effort des corrections bornées et recette du même parcours, déclencheur fin
 du candidat en cours. Aucun nouveau modèle/service/router/page/Intent/provider/
 manager, aucune mutation des données réelles en production. Aucune
@@ -80,7 +149,7 @@ périmètre autorisé. Aucun nouveau manager, policy ou provider. Responsable
 C6/MVP-FUSEE-02 ; effort une vérification/correction ciblée, déclencheur après
 réception du parcours manuel 507 et avant option assistée du même parcours.
 
-## Sprint MVP1 — écarts du scoreur, candidat 506 à recevoir (2026-10-20)
+## Sprint MVP1 — correctifs du scoreur livrés avec 507, réception limitée (2026-10-20)
 
 Priorité audits/scoring de La Fusée comme entrée du service, LeRadar C6-03 /
 MVP-FUSEE-01 et cinq tâches MVP. Le scan public et préremplissage intake sont
@@ -125,10 +194,13 @@ Turbopack échoué sur `node_modules` en symlink hors root, défaut code non ét
 journal conservé, pas de contournement CI. Guidé compilé 506 ensuite exercé jusqu’au blocage E décrit ci-dessus,
 sans réception du parcours entier.
 
-Code 506 fusionné PR 1038, source `2c5c2b276`, CI 39444684044 verte ; production
-encore 504. **Fermer ces dettes seulement après** image/runtime du lot 507 et conservation
-production : recevoir couverture, note/poids inchangés, textes et accessibilité
-au périmètre livré, sans perdre la garde d’homonymie. Coût réel du scan, audit,
+Code 506 fusionné PR 1038/source `2c5c2b276`/CI 39444684044, intégré au runtime
+507 exact reçu avec conservation production. Attentes techniques de livraison
+fermées ; public SPAWT 43/100, poids 75/panel 110/couverture 68 % reçus sur cache,
+garde d’homonymie conservée. Valeurs/dimensions/dates mesurées identiques ; trois
+facts optionnels null omis par la projection préexistante, pas d’égalité brute
+du snapshot reçue. Fenêtres calcul/préremplissage bornées dans REFONTE-PLAN,
+un RSC ERR_ABORTED et la première fenêtre tronquée conservés, pas zéro global/SLO. Coût réel du scan, audit,
 restitution et conversion restent des réceptions distinctes.
 Responsable C6/MVP-FUSEE-01 ; effort un lot borné de contrôle/livraison, reprise
 immédiate Sprint MVP1 à la fin du candidat en cours. Pas de qualité générale
