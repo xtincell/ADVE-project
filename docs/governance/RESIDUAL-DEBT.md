@@ -30,28 +30,54 @@ Luna réel local sur entreprise fictive : COMPLETED, même original665octets/re�
 déduites sont présentées comme faits déclarés et des clés/structures internes
 restent visibles. Reprendre le rapport, les libellés/provenances et l’export
 existants : distinguer déclaration, observation et proposition générée, conserver
-celle-ci à valider ; recevoir rendu et export. Responsable C6/MVP-FUSEE-03 ;
-effort une passe ciblée du parcours existant, déclencheur immédiat après508.
+celle-ci à valider. Export PDF technique reçu localement509, qualité commerciale
+non reçue :26pages face à la promesse8pages, page7 quasi vide et dump de champs ;
+propositions toujours présentées comme faits. Corriger source/provenance et
+présentation par les composants existants, recevoir à nouveau leur qualité sans
+réécrire ce mauvais cas sauvegardé. Responsable C6/MVP-FUSEE-03 ; effort une passe
+ciblée du rapport existant, déclencheur immédiat avant réception commerciale.
+Preuve `release/preuves-rapport-commercial-20261020/pdf-quality-not-received.json`.
 
-**Droits payants M03 — défaut reproduit, réception refusée** : Défaut M03 droits payants reproduit localement en lecture anonyme, sans référence de paiement : getRecosByToken paid:false donne2/71 recommandations, paid:true donne71/71 et isPreview:false, HTTP200. Le boolean client ouvre donc ce contenu ; PDF sans paiement402 et token inconnu404 restent reçus. Aucun paiement, fixture ou mutation créé ; paiement global non reçu.
-**Fermer** : contrôler les droits côté serveur par les mécanismes existants,
-recevoir refus sans droit puis relecture avec droit établi, conserver refus PDF
-sans paiement402 et token inconnu404. Responsable C6/MVP-FUSEE-03 ; effort
-correctif borné du lecteur existant et recette, déclencheur immédiat avant
-réception commerciale. Aucun nouveau gestionnaire ou paiement créé dans ce lot.
+**Droits/export/reprise M03 — reçus localement509, livraison ouverte** :
+Réception finale locale509 : build webpack du code reçu, 4 889 unitaires/457 fichiers, PostgreSQL424/24, gouvernance1 671/169, tsc et deux lints sans erreur (24 avertissements historiques par lint), zéro cycle, code-map exécutée. Premier passage11 rouges conservé : garde de ligne84→86 déplacée sans nouvelle exception, huit mocks activation sans PAID alignés avec un test de refus ajouté, un timeout gros original sous build concurrent ; reprise sans build concurrent verte. Pas de règle assouplie.
+Droits/export/reprise reçus localement : six HTTP réels200, PDF impayé402, référence étrangère refusée, rejeu terminal9ms. Fenêtres natives gratuites/payées/ADMIN complètes42/44/42 réponses sans ≥500/exception/échec de chargement ; réouverture payée même URL sans callback. PDF payé26pages/710952octets, texte intégral des huit sections vérifié ; PDF ADMIN sur cas impayé distinct15pages/571934octets, vraie session sans PAID synthétique. Aucun nouvel appel modèle, PSP ou vente externe dans cette recette ; aucun SLO global.
+Conservation exacte reçue au périmètre sélectionné : deux diagnostics (diagnostic/rawText/responses/status/id),16piliers (content/fieldCertainty/currentVersion), un upload complet/une source complète, huit coûts inchangés, aucun paiement synthétique et ADMIN dédié retiré. Comparaison deepStrictEqual après normalisation JSON/triID ; pas toute la base atomique. Le premier helper avait des assertions vertes mais une collision booléens/compteurs dans le JSON : défaut du reçu corrigé par helper readonly séparant conserved/counts, aucun défaut produit ni second nettoyage. Preuve `release/preuves-rapport-commercial-20261020/native509-content-conservation-received.json`. CI/image/runtime509 restent ouverts, production508 inchangée ; aucun paiement complet, client/vente, qualité commerciale ou MVP entier reçus.
+**Fermer la dette restante** : recevoir CI/image/runtime exacts, puis refus et
+relecture sur l’état livré ; ne pas redemander un correctif local déjà reçu.
+Responsable C6/MVP-FUSEE-03 ; effort livraison/réception du même lot existant,
+déclencheur réception locale acquise avant remise commerciale. Paiement PSP
+complet, qualité/provenance et parcours commercial restent distincts. Preuves :
+`release/preuves-rapport-commercial-20261020/native-api-received.json`,
+`native-{free,paid,admin}-network*.json`, `native-paid-reopen.json`,
+`paid-pdf-reparsed.json`, `native509-content-conservation-received.json` ; logs finaux
+`release/preuves-mvp-commercial-20261020/report509-*.log`.
 
-**Coût/durée M04/M05/C7 — fermer avant annonce commerciale** : recevoir le suivi
-de l’extraction initiale avec les huit appels déjà suivis via les rails existants ;
+**Coût/durée M04/M05/C7 — fermer avant annonce commerciale** : vérifier tous les
+appels modèle du parcours intake et de ses helpers sans strategyId, pas seulement
+l’extraction initiale. Lecture statique509 : extractStructuredPillarContent ne
+transmet pas non plus strategyId ; nombre exact d’appels concernés encore à
+mesurer, aucune exhaustivité déduite des huit coûts Luna suivis. Réconcilier
+appels/ledger par les mécanismes existants avant recevoir le coût complet ;
 distinguer équivalent API estimé partiel, usage d’abonnement et coût réellement dû.
 Confronter30–60s affichées aux364358ms reçues, sans inventer plafond/SLO.
-Responsable MVP-FUSEE-05/C7 ; effort vérification/correction bornée du suivi,
-déclencheur avant annoncer coût/délai et avant réception commerciale.
+Responsable MVP-FUSEE-05/C7 ; effort inventaire/réconciliation bornés du parcours
+existant, déclencheur avant annoncer coût/délai et avant réception commerciale.
 
 **Choix agentique/offre CRM M04/M05/C7** : recevoir choix utilisateur et droits/
 export/partage/rattachement offre par les rails existants ; un Deal LEAD fictif ne
 reçoit ni entitlement client, ni revenu. Responsable MVP-FUSEE-04/05 et C7 ;
 effort recette bornée, déclencheur avant ouverture commerciale. Export, conversion
 et MVP entier restent ouverts, aucun nouveau modèle/service/gestionnaire requis.
+
+**Compte précréé M04/C7 — constat statique509, exploitation non reçue** :
+auth.register (auth.ts37–64) attache un mot de passe à un User existant sans
+hashedPassword sur la seule adresse email, sans preuve de contrôle de celle-ci
+dans ce chemin. **Fermer** : vérifier/reproduire le bornage sur fixture puis
+exiger la preuve appropriée via auth/reset existants avant revendication ;
+recevoir refus sans preuve et récupération légitime, préservation du compte et
+de ses rattachements. Responsable MVP-FUSEE-04/C7 ; effort vérification/correctif
+bornés du rail existant, déclencheur avant remise commerciale d’un compte.
+Aucun exploit réel, accès à un compte tiers ou nouveau gestionnaire reçu/créé.
 
 Preuves privées : `release/preuves-mvp-commercial-20261020/production508-{received,data-preserved,public-api-received}.json`, `pr508-green-before-merge.json`, `image508-build-digest.json` ; `release/preuves-intake-reprise-20261020/luna508-{data-received,timing-received,native-terminal}.json`, `mvp03-luna-report-quality-not-received.json`, `mvp03-entitlement508-received.json`.
 

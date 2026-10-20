@@ -6,6 +6,7 @@ const h = vi.hoisted(() => ({
   infer: vi.fn(), write: vi.fn(),
   db: {
     quickIntake: { findUnique: vi.fn(), update: vi.fn() },
+    intakePayment: { findFirst: vi.fn() },
     operator: { upsert: vi.fn() }, user: { upsert: vi.fn() },
     client: { findFirst: vi.fn(), create: vi.fn() },
     strategy: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn() },
@@ -54,6 +55,7 @@ beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => undefined);
   h.db.quickIntake.findUnique.mockResolvedValue(intake);
   h.db.quickIntake.update.mockResolvedValue(intake);
+  h.db.intakePayment.findFirst.mockResolvedValue({ reference: "paid-fixture" });
   h.db.operator.upsert.mockResolvedValue({ id: "operator-fixture" });
   h.db.user.upsert.mockResolvedValue({ id: "user-fixture", email: intake.contactEmail, hashedPassword: "fixture" });
   h.db.client.findFirst.mockResolvedValue({ id: "client-fixture", name: intake.companyName });
@@ -66,6 +68,15 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("brand activation keeps assistance optional", () => {
+  it("requires the persisted right before activating or requesting assistance", async () => {
+    h.db.intakePayment.findFirst.mockResolvedValue(null);
+    await expect(caller().activateBrand({ token: "fixture-token", inferMissingFields: true }))
+      .rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(h.db.strategy.update).not.toHaveBeenCalled();
+    expect(h.db.operator.upsert).not.toHaveBeenCalled();
+    expect(h.infer).not.toHaveBeenCalled();
+  });
+
   it("initializes the declared market on first activation through the existing registry", async () => {
     h.db.quickIntake.findUnique.mockResolvedValue({ ...intake, country: "CI", sector: "CONSEIL" });
     h.db.strategy.findUnique.mockResolvedValue({ id: "brand-fixture", status: "QUICK_INTAKE", countryCode: null, currencyCode: null, businessContext: {} });

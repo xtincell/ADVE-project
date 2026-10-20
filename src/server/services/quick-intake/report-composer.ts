@@ -40,7 +40,36 @@ export const HIDDEN_FIELDS = new Set([
   "webPresence",
   "footprintScore",
   "fieldCertainty",
+  "_fieldProvenance",
 ]);
+
+/** The free screen already shows nine proposal lines; full ADVE stays paid. Pure projection. */
+export function previewIntakeDiagnostic<T>(value: T): T {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const diagnostic = value as Record<string, unknown>;
+  const report = diagnostic.narrativeReport;
+  if (!report || typeof report !== "object" || Array.isArray(report)) return value;
+  const r = report as Record<string, unknown>;
+  const projectSections = (sections: unknown, lines: number) => !Array.isArray(sections) ? sections
+    : sections.map(section => {
+      if (!section || typeof section !== "object" || Array.isArray(section)) return section;
+      const s = section as Record<string, unknown>;
+      return { ...s, full: lines && typeof s.full === "string" ? s.full.split("\n").slice(0, lines).join("\n") : "" };
+    });
+  const rtis = r.rtis && typeof r.rtis === "object" && !Array.isArray(r.rtis) ? r.rtis as Record<string, unknown> : null;
+  return { ...diagnostic, narrativeReport: { ...r, adve: projectSections(r.adve, 0),
+    ...(rtis ? { rtis: { ...rtis, pillars: projectSections(rtis.pillars, 9) } } : {}) } } as T;
+}
+
+/** Filter presentation/technical metadata before counting or projecting a paid field. */
+export function intakePillarFields(content: Record<string, unknown>): Array<[string, unknown]> {
+  // PostgreSQL JSONB order is not a meaningful preview: mission/offer/channels first.
+  const primary = ["missionStatement", "noyauIdentitaire", "valeurs", "positionnement", "promesseMaitre",
+    "produitsCatalogue", "businessModel", "promesseExperience", "touchpoints", "aarrr"];
+  const rank = (key: string) => { const index = primary.indexOf(key); return index < 0 ? primary.length : index; };
+  return Object.entries(content).filter(([key, value]) => !key.startsWith("_") && !HIDDEN_FIELDS.has(key)
+    && humanizeValue(value) !== null).sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b));
+}
 
 /** Valeur → texte lisible court (récursif borné, jamais de JSON brut massif). */
 export function humanizeValue(v: unknown, depth = 0): string | null {
@@ -73,7 +102,7 @@ export function humanizeValue(v: unknown, depth = 0): string | null {
 export function pillarContentLines(content: Record<string, unknown>): string[] {
   const lines: string[] = [];
   for (const [key, value] of Object.entries(content)) {
-    if (HIDDEN_FIELDS.has(key)) continue;
+    if (key.startsWith("_") || HIDDEN_FIELDS.has(key)) continue;
     const h = humanizeValue(value);
     if (h) lines.push(`${key} : ${h.slice(0, 300)}`);
   }

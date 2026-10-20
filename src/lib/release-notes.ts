@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.509", date: "2026-10-20", headline: "Retrouver votre rapport après paiement",
+    highlights: [{ emoji: "📄", title: "Un accès conservé", body: "Votre rapport payé se retrouve depuis le même diagnostic, même après fermeture du navigateur. Ses détails restent réservés aux accès autorisés ; les originaux que vous avez fournis restent téléchargeables depuis le résultat." }],
+  },
+  {
     version: "6.27.508", date: "2026-10-20", headline: "Reprendre un diagnostic avec ses documents",
     highlights: [{ emoji: "📄", title: "Des originaux retrouvables", body: "Les documents reçus restent téléchargeables quand vous rouvrez le diagnostic, même si l’analyse automatique est indisponible. Votre texte revient dans le formulaire ; les mêmes fichiers rejoignent le dossier de marque à la finalisation, sans remplacer vos informations validées." }],
   },

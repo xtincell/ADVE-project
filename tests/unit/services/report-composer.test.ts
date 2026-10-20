@@ -10,7 +10,28 @@ import {
   composeDeterministicReport,
   humanizeValue,
   pillarContentLines,
+  previewIntakeDiagnostic,
+  intakePillarFields,
 } from "@/server/services/quick-intake/report-composer";
+
+describe("free report projection", () => {
+  it("preserves the nine-line proposal preview without changing the stored report", () => {
+    const full = Array.from({ length: 10 }, (_, i) => `Ligne ${i + 1}`).join("\n");
+    const original = { narrativeReport: { executiveSummary: "Synthèse", adve: [{ preview: "Aperçu", full: "Texte complet" }], rtis: { pillars: [{ full }] } } };
+    const preview = previewIntakeDiagnostic(original);
+    expect(preview.narrativeReport.adve[0]?.full).toBe("");
+    expect(preview.narrativeReport.rtis.pillars[0]?.full).toContain("Ligne 9");
+    expect(preview.narrativeReport.rtis.pillars[0]?.full).not.toContain("Ligne 10");
+    expect(original.narrativeReport.adve[0]?.full).toBe("Texte complet");
+    expect(original.narrativeReport.rtis.pillars[0]?.full).toBe(full);
+  });
+  it("uses a stable useful field order instead of JSONB order and never counts metadata", () => {
+    const content = { pays: "CM", _private: "secret", _fieldProvenance: { valeurs: "INFERRED" }, narrativeFull: "Texte", valeurs: ["Clarté"], missionStatement: "Réparer avec clarté" };
+    expect(intakePillarFields(content).map(([key]) => key)).toEqual(["missionStatement", "valeurs", "pays"]);
+    expect(pillarContentLines(content).join("\n")).not.toContain("secret");
+    expect(pillarContentLines(content).join("\n")).not.toContain("INFERRED");
+  });
+});
 
 describe("humanizeValue", () => {
   it("humanise chaînes, nombres, tableaux et objets nommés", () => {

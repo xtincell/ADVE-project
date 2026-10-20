@@ -43,6 +43,7 @@ const SCAN_DIRS = [
 // Composants hors components/cockpit mais rendus dans le portail founder,
 // + sources de chaînes rendues au prospect (grille /pricing).
 const EXTRA_FILES = [
+  join(ROOT, "src/app/api/intake/[token]/pdf/route.ts"),
   join(ROOT, "src/app/la-barre/[[...path]]/route.ts"),
   join(ROOT, "src/app/la-barre/partage/[token]/[[...path]]/route.ts"),
   join(ROOT, "src/server/services/brand-node/barre-context.ts"),
