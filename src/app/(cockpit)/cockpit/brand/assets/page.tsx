@@ -1,5 +1,7 @@
 "use client";
 
+import { sha256 } from "@noble/hashes/sha2.js";
+import { ORIGINAL_CHUNK_BYTES, MAX_CHUNKED_ORIGINAL_BYTES } from "@/domain/source-original";
 import { useState } from "react";
 import Link from "next/link";
 import { PUBLIC_BRAND_FORMAT, PUBLIC_BRAND_IDENTITY_FORMAT } from "@/domain/public-brand";
@@ -95,18 +97,29 @@ export default function AssetsPage() {
     pillarTags: {} as Record<string, number>,
   });
   const [uploadMode, setUploadMode] = useState<"file" | "url">("file");
+  const [largeFile, setLargeFile] = useState<File | null>(null);
+  const [transferProgress, setTransferProgress] = useState<string | null>(null);
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const [transferring, setTransferring] = useState(false);
+  const transferMutation = trpc.brandVault.transfer.useMutation();
   const [filePreview, setFilePreview] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      toast.warning("Fichier trop volumineux — 10 Mo maximum.");
+    if (!file.size || file.size > MAX_CHUNKED_ORIGINAL_BYTES) {
+      toast.warning("Choisissez un fichier non vide de 200 Mio maximum.");
       return;
     }
     // Auto-fill name if empty
     if (!uploadForm.name.trim()) {
       setUploadForm((prev) => ({ ...prev, name: file.name.replace(/\.[^.]+$/, "") }));
+    }
+    setTransferError(null); setTransferProgress(null); setLargeFile(null);
+    if (file.size > 10 * 1024 * 1024) {
+      setLargeFile(file); setFilePreview(null);
+      setUploadForm(prev => ({ ...prev, fileName: file.name, fileUrl: "" }));
+      return;
     }
     const reader = new FileReader();
     reader.onload = (ev) => {
@@ -138,8 +151,7 @@ export default function AssetsPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
-  const uploadMutation = trpc.brandVault.create.useMutation({
-    onSuccess: () => {
+  const afterUpload = () => {
       assetsQuery.refetch();
       // Le dashboard (logo/actifs/vitrine) reflète l'upload immédiatement.
       if (strategyId) {
@@ -149,9 +161,9 @@ export default function AssetsPage() {
       setShowUpload(false);
       setUploadForm({ name: "", type: "IMAGE", fileUrl: "", fileName: "", autoTag: false, pillarTags: {} });
       setFilePreview(null);
-      setUploadMode("file");
-    },
-  });
+      setUploadMode("file"); setLargeFile(null); setTransferError(null); setTransferProgress(null);
+  };
+  const uploadMutation = trpc.brandVault.create.useMutation({ onSuccess: afterUpload });
 
   const selectMutation = trpc.brandVault.selectFromBatch.useMutation({ onSuccess: () => { void assetsQuery.refetch(); } });
 
@@ -207,8 +219,40 @@ export default function AssetsPage() {
     }
   };
 
-  const handleUpload = () => {
-    if (!uploadForm.name.trim() || !strategyId) return;
+  const handleUpload = async () => {
+    if (!uploadForm.name.trim() || !strategyId || transferring) return;
+    if (uploadMode === "file" && largeFile) {
+      setTransferring(true); setTransferError(null);
+      try {
+        const parts = Math.ceil(largeFile.size / ORIGINAL_CHUNK_BYTES), hash = sha256.create();
+        for (let index = 0; index < parts; index++) {
+          setTransferProgress(`Vérification du fichier : ${index + 1}/${parts}`);
+          hash.update(new Uint8Array(await largeFile.slice(index * ORIGINAL_CHUNK_BYTES, (index + 1) * ORIGINAL_CHUNK_BYTES).arrayBuffer()));
+        }
+        const contentHash = Array.from(hash.digest(), byte => byte.toString(16).padStart(2, "0")).join("");
+        const start = await transferMutation.mutateAsync({ strategyId, transfer: { action: "BEGIN",
+          name: uploadForm.name, fileName: largeFile.name, mimeType: largeFile.type || "application/octet-stream",
+          contentHash, byteLength: largeFile.size, type: uploadForm.type, pillarTags: uploadForm.pillarTags } });
+        if (start.state !== "STORED") {
+          for (let index = 0; index < parts; index++) {
+            setTransferProgress(`Envoi : ${index + 1}/${parts}`);
+            if (start.receivedParts.includes(index)) continue;
+            const blob = largeFile.slice(index * ORIGINAL_CHUNK_BYTES, (index + 1) * ORIGINAL_CHUNK_BYTES);
+            const content = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader(); reader.onerror = () => reject(new Error("Lecture du fichier impossible."));
+              reader.onload = () => resolve(String(reader.result).split(",")[1]!); reader.readAsDataURL(blob);
+            });
+            await transferMutation.mutateAsync({ strategyId, transfer: { action: "PART", assetId: start.assetId, index, content } });
+          }
+        }
+        setTransferProgress("Vérification de la conservation complète…");
+        await transferMutation.mutateAsync({ strategyId, transfer: { action: "FINISH", assetId: start.assetId, autoTag: uploadForm.autoTag } });
+        afterUpload();
+      } catch (error) {
+        setTransferError(`${error instanceof Error ? error.message : "Envoi interrompu."} Reprenez avec le même fichier : les parties reçues seront conservées.`);
+      } finally { setTransferring(false); }
+      return;
+    }
     uploadMutation.mutate({
       strategyId,
       name: uploadForm.name,
@@ -565,11 +609,11 @@ export default function AssetsPage() {
       {/* Upload Modal */}
       <Modal
         open={showUpload}
-        onClose={() => setShowUpload(false)}
+        onClose={() => { if (!transferring) setShowUpload(false); }}
         title="Déposer un actif"
         size="lg"
       >
-        <div className="space-y-4">
+        <fieldset disabled={transferring} className="space-y-4">
           <p className="text-sm text-foreground-secondary">Le fichier est conservé en privé, à examiner. Son dépôt ne le met pas en usage et ne publie rien.</p>
           <FormField label="Nom de l'asset" required>
             <input
@@ -643,14 +687,14 @@ export default function AssetsPage() {
                   <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-background/50 p-6 transition-colors hover:border-border-strong">
                     <Upload className="mb-2 h-8 w-8 text-foreground-muted" />
                     <span className="text-sm text-foreground-secondary">Cliquez ou glissez un fichier ici</span>
-                    <span className="mt-1 text-2xs text-foreground-muted">Max 10 MB — Images, PDF, Documents</span>
-                    <input type="file" className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.svg,.mp4,.otf,.ttf,.woff,.woff2,.zip,.ai,.psd,.fig"
+                    <span className="mt-1 text-2xs text-foreground-muted">Max 200 Mio — Reprise avec le même fichier après interruption</span>
+                    <input type="file" className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.svg,.mp4,.otf,.ttf,.woff,.woff2,.zip,.ai,.psd,.fig,.apk,.gz,.ppt,.pptx"
                       onChange={handleFileChange} />
                   </label>
-                  {filePreview && (
+                  {(filePreview || largeFile) && (
                     <div className="mt-3 flex items-center gap-3 rounded-lg border border-border bg-background/50 p-3">
-                      {/^data:image\/(png|jpeg|gif|webp);/.test(filePreview) ? (
-                        <img src={filePreview} alt="preview" className="h-12 w-12 rounded object-cover" />
+                      {/^data:image\/(png|jpeg|gif|webp);/.test(filePreview ?? "") ? (
+                        <img src={filePreview!} alt="preview" className="h-12 w-12 rounded object-cover" />
                       ) : (
                         <FileText className="h-12 w-12 text-foreground-muted" />
                       )}
@@ -658,7 +702,7 @@ export default function AssetsPage() {
                         <p className="truncate text-sm text-foreground">{uploadForm.name || "Fichier selectionne"}</p>
                         <p className="text-2xs text-foreground-muted">Pret a uploader</p>
                       </div>
-                      <button type="button" onClick={() => { setFilePreview(null); setUploadForm((p) => ({ ...p, fileUrl: "" })); }}
+                      <button type="button" onClick={() => { setFilePreview(null); setLargeFile(null); setUploadForm((p) => ({ ...p, fileUrl: "" })); }}
                         className="text-xs text-error hover:text-error">Retirer</button>
                     </div>
                   )}
@@ -677,6 +721,8 @@ export default function AssetsPage() {
             Suggérer automatiquement les piliers à partir du nom et du contexte. Cette option ne lit pas le contenu visuel du fichier.
           </label>
 
+          {transferProgress && <p role="status" aria-live="polite" className="text-sm text-foreground-secondary">{transferProgress}</p>}
+          {transferError && <p role="alert" className="text-sm text-error">{transferError}</p>}
           {uploadMutation.error && (
             <div className="rounded-lg border border-error/50 bg-error/20 p-3 text-sm text-error">
               <AlertTriangle className="mr-2 inline h-4 w-4" />
@@ -686,20 +732,20 @@ export default function AssetsPage() {
 
           <div className="flex justify-end gap-3 pt-2">
             <button
-              onClick={() => setShowUpload(false)}
+              onClick={() => setShowUpload(false)} disabled={transferring}
               className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-raised"
             >
               Annuler
             </button>
             <button
               onClick={handleUpload}
-              disabled={!uploadForm.name.trim() || (uploadMode === "file" && !uploadForm.fileUrl) || uploadMutation.isPending}
+              disabled={!uploadForm.name.trim() || (uploadMode === "file" && !uploadForm.fileUrl && !largeFile) || uploadMutation.isPending || transferring}
               className="rounded-lg bg-surface-raised px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
             >
-              {uploadMutation.isPending ? "Envoi..." : "Ajouter"}
+              {uploadMutation.isPending || transferring ? "Envoi..." : "Ajouter"}
             </button>
           </div>
-        </div>
+        </fieldset>
       </Modal>
 
       {/* Asset Detail Modal */}

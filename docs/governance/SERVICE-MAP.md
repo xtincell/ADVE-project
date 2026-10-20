@@ -8,26 +8,35 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**499 fusionné / 500 candidat — lecteur existant et boot découplés** :
-`ingestion-pipeline` porte le lecteur commun des octets reçus et du PPTX, réutilisé
-par `seshat/market-study-ingestion` et les deux `quick-intake`. Primitives sous
-tutelle MESTOR / Sustainment, sans nouveau service ni Glory tool, routeur,
-Intent, modèle ou fournisseur. Texte/notes seulement ; originaux, usages et
-analyse en aval restent distincts. Préflight pur du corpus et recette locale
-HTTP/native de la source synthétique reçus ; autres formulaires au rendu/sélection
-seulement, aucun dépôt réel PowerPoint ou analyse automatique de bout en bout.
-Gauntlet local définitif 499 reçu, repère quick-intake actualisé sans nouvelle
-exception. Incident initial auth/session dev conservé ; contrôle HTTP/JSON de
-session raccordé au boot existant et éprouvé en pur. Véritable endpoint
-standalone encore à recevoir. Build 499 39351802930 bloqué avant `/login` par
-JSZip absent dans le bundle de capture publique ; aucune image poussée/déployée,
-production 498 intacte. 500 charge JSZip dans la lecture PPTX à la demande,
-sans nouveau service ni copie de paquets en chaîne. Régression du vrai bundle
-avec paquet absent et base vide simulée rouge sur 499 puis verte sur 500 ;
-CLI auxiliaire sur PostgreSQL de recette détenu reçue exit 0/zéro publication,
-JSZip indisponible et aucune écriture production. Gauntlet local définitif 500
-reçu ; véritable boot d’image, CI/image/runtime 500 et livraison encore à recevoir ;
-[ADR-0221](adr/0221-common-received-document-reader.md).
+**501 candidat — originaux fragmentés dans le coffre existant** :
+`brand-vault/original`, `FileUpload` et stockage chiffré existants portent
+`asset-original-v2`, sous Mestor / Sustainment et admission INFRASTRUCTURE.
+`brandVault.transfer` gouverné, identité Drive/éditions/droits relus, trace des
+octets projetée, collecteur raccordé aux fragments et GET original en flux sont
+présents au code. Mes actifs calcule par tranches de quatre Mio avec
+`@noble/hashes` 2.4.0 et propose progression/reprise jusqu’à 200 Mio.
+Aucun nouveau service, routeur, Intent, modèle ou fournisseur. Dix intégrations
+locales reçues après le timeout initial conservé ; formulaire USER synthétique
+12 582 941 octets/quatre fragments/six émissions OK, CANDIDATE/STORED et original
+téléchargé exact, sans modèle/adoption. Fenêtre d’envoi complète six POST 200 /
+zéro exception ; recharge mesurée incomplètement, pas de SLO. Suite 4 857/456,
+gouvernance 1 671/169, typage/deux lints/cycles sans erreur, 24 avertissements
+historiques ; concurrence bornée sans assertion ou délai affaibli. Restauration,
+CI/image/runtime 501 et grands originaux réels encore à recevoir ; sources/études 50 Mo et lots intake restent des raccords
+distincts ouverts. [ADR-0222 Proposed](adr/0222-private-original-chunk-transfers.md).
+
+**500 reçu — lecteur existant, réception documentaire bornée** :
+Le chargement du format à la demande ferme le blocage de boot 499 ; CI/build/
+boot/session JSON/image/runtime exacts et login 200 reçus sur source eb8ffd355.
+61 sources, 994 actifs et huit fondamentaux conservés pendant la bascule.
+Premier pitch réel PROPOSED reçu ensuite : 3 722 103 octets exacts et
+4 905 caractères texte/notes, alias conservé, aucun modèle/adoption ; 62 sources,
+61 antérieures/994 actifs/huit fondamentaux et BMC REFERENCE/PROPOSED préservés.
+Les 831 matériaux reçus avant 500 gardent leur registre ; aucune relecture
+physique fraîche de tout le lot sur 500 déduite. Lecture des visuels, autres
+présentations et analyses intake/études restent ouvertes ; incident auth/session
+dev de cause inconnue conservé séparément. Pas de nouvel onboarding ou chantier
+entier reçu. [ADR-0221](adr/0221-common-received-document-reader.md).
 
 **448 source/CI/image reçues — ANUBIS Comms/MCP existant** :
 mcp-billing/transport partagent outcome explicite et scopeMcpParams, résultat/
@@ -505,7 +514,7 @@ Maintiennent la mission viable techniquement. Mémoires long terme, transports, 
 | `sla-tracker/` | SLO/SLA tracking par Intent kind | INFRASTRUCTURE | ✅ existant |
 | `operator-isolation/` | Tenant isolation (default-deny) | INFRASTRUCTURE | ✅ existant |
 | `neteru-shared/` | Governance registry central | INFRASTRUCTURE | manifests des autres |
-| `brand-vault/` | BrandAsset CRUD engine — vault unifié ; originaux privés FileUpload, dépôt CANDIDATE et sélection explicite ([ADR-0220](adr/0220-private-vault-originals.md), code/copie reçus) ; conservation d’identité publique par stockage chiffré existant/transport borné ([ADR-0211 Accepted](adr/0211-retained-public-logo-bytes.md), logo 431 reçu ; [ADR-0212 Accepted borné](adr/0212-versioned-public-identity-projection.md), identité de vitrine 432 reçue) | MESTOR | ✅ existant |
+| `brand-vault/` | BrandAsset CRUD engine — vault unifié ; originaux privés FileUpload, dépôt CANDIDATE et sélection explicite ([ADR-0220](adr/0220-private-vault-originals.md), code/copie reçus). Transfert fragmenté v2, protection des références et flux de téléchargement reçus sur copie locale, livraison ouverte ([ADR-0222 Proposed](adr/0222-private-original-chunk-transfers.md)) ; conservation d’identité publique par stockage chiffré existant/transport borné ([ADR-0211 Accepted](adr/0211-retained-public-logo-bytes.md), logo 431 reçu ; [ADR-0212 Accepted borné](adr/0212-versioned-public-identity-projection.md), identité de vitrine 432 reçue) | MESTOR | ✅ existant |
 | `strategy-archive/` | 2-phase soft archive + hard purge (`Strategy.archivedAt`) | INFRASTRUCTURE | ✅ existant |
 | `sentinel-handlers/` | Handlers cron `/api/cron/sentinels` — consomme IntentEmission PENDING (Loi 4 maintien orbite) | MESTOR | ✅ existant |
 | `nsp/` | Neteru Streaming Protocol — transport publish/subscribe vers UI | INFRASTRUCTURE | ✅ existant (stub utilitaire) |

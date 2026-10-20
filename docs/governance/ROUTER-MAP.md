@@ -6,6 +6,23 @@ Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts`
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
+**501 candidat — procédure de transfert dans `brand-vault` existant** :
+`brandVault.transfer` emploie `governedProcedure`, l’Intent existant
+`LEGACY_BRAND_VAULT_CREATE` et les mêmes contrôles de création. BEGIN/PART/FINISH
+admettent plan, fragments et scellement ; droits courants, marque, backend/clé,
+origine Drive et éditions sont relus côté service. Les clés internes sont
+créées par le serveur. Le spine scelle la projection empreinte/taille de PART,
+sans journaliser son base64. GET original existant raccordé au flux privé v1/v2.
+Aucun nouveau routeur, Intent, modèle ou fournisseur. Dix intégrations locales
+sur dix reçues après l’attente de transaction initiale conservée. Formulaire
+USER reçu sur copie : quatre fragments / six POST 200, CANDIDATE/STORED et
+téléchargement exact sans modèle/adoption ; fenêtre d’envoi complète sans
+exception. Recharge de page incomplètement mesurée, pas de SLO. Suite 4 857/456,
+gouvernance 1 671/169 et contrôles locaux verts, sans assouplir assertions/délais.
+CI/image/runtime 501, restauration et grands fichiers réels restent ouverts ; les entrées sources,
+études 50 Mo et lots intake ne sont pas raccordées par cette procédure.
+[ADR-0222 Proposed](adr/0222-private-original-chunk-transfers.md).
+
 **448 source/CI/image reçues — endpoints MCP existants, livraison en attente** :
 auth agrégée de clés de serveur avec scopeServer conservé ; GET /api/mcp,
 lafusee_catalog et méthode RPC tools/list filtrés. invoke garde serveur/marque via
@@ -288,7 +305,7 @@ garde des versions source restent à réconcilier.
 | `framework.ts` | Frameworks Artemis | M | point gouverné présent |
 | `guidelines.ts` | Identité et références ; partage gouverné (ADR-0203) | M | point gouverné présent |
 | `boot-sequence.ts` | Boot sequence trigger | M | point gouverné présent |
-| `brand-vault.ts` | Vault brand content | M | point gouverné présent |
+| `brand-vault.ts` | Vault brand content ; transfert fragmenté BEGIN/PART/FINISH candidat via LEGACY_BRAND_VAULT_CREATE existant (ADR-0222), recette locale bornée reçue, livraison ouverte | M | point gouverné présent |
 | `implementation-generator.ts` | Plans d'implémentation | M | point gouverné présent |
 | `cohort.ts` | Cohort analysis (segmentation strat) | M | lecture seule |
 | `campaign-tracker.ts` | **Campaign tracker L2 Instrumental** (Phase 19, ADR-0052) — 6 procedures Vague 1 (Cluster A trajectory + B coherence) toutes via `auditedProcedure("campaign-tracker")` ; helper `listClusterCapabilities` query non-auditée. Délégation pure aux handlers du service `campaign-tracker`. **Phase 23 SHIPPED (Epic 6)** — `runAttributionCalibration` + `promotePivotSubcluster` (gouvernés via `mestor.emitIntent`) + `listCalibrationSnapshots` (read). Cf. ADR-0080 + ADR-0081. **Cockpit founder Overton read (Epic 7 Story 7.4)** : `cockpitDashboard.overtonSignal` (`protectedProcedure`, tenant-scoped + ownership guard, paid-tier-gated `TIER_GATE_DENIED` arm) retourne `ConnectorResult<OvertonRadarSignal>` — composé depuis `sector-intelligence.getSectorAxis` + pillar-D + Tarsis façade `fetchSectorSignal`. Cf. ADR-0078. | M | point gouverné présent |

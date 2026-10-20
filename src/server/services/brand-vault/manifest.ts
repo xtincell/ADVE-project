@@ -12,6 +12,7 @@
 import { z } from "zod";
 import { defineManifest } from "@/server/governance/manifest";
 import { PillarKeySchema } from "@/domain/pillars";
+import { assetTransferInputSchema } from "@/domain/source-original";
 import { PublicBrandPublicationInput, AnyPublicBrandEdition } from "@/domain/public-brand";
 
 const StringId = z.string().min(1);
@@ -57,10 +58,15 @@ const BrandAssetOutput = z.object({
 export const manifest = defineManifest({
   service: "brand-vault",
   governor: "MESTOR",
-  version: "1.2.0",
+  version: "1.3.0",
   acceptsIntents: ["SELECT_BRAND_ASSET", "PROMOTE_BRAND_ASSET_TO_ACTIVE", "SUPERSEDE_BRAND_ASSET", "ARCHIVE_BRAND_ASSET"],
   emits: [],
   capabilities: [
+    { name: "transferAssetFile", inputSchema: assetTransferInputSchema.extend({ actorId: StringId, intentId: StringId }),
+      outputSchema: z.object({ assetId: StringId, state: z.enum(["PENDING", "STORED"]), contentHash: z.string(),
+        byteLength: z.number(), receivedParts: z.array(z.number()), partCount: z.number(), chunkBytes: z.number(), receivedAt: z.string() }),
+      sideEffects: ["DB_READ", "DB_WRITE", "FILE_WRITE", "EXTERNAL_API"], idempotent: true,
+      missionContribution: "DIRECT_BOTH" },
     {
       name: "previewPublicBrand",
       inputSchema: z.object({ strategyId: StringId, actorId: StringId }),

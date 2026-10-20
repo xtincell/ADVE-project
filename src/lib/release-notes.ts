@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.501", date: "2026-10-20", headline: "Reprendre le dépôt de vos grands actifs",
+    highlights: [
+      { emoji: "📁", title: "Des fichiers conservés avec une progression visible", body: "Déposez vos grands fichiers dans vos actifs, jusqu’à 200 Mio. Après une interruption, choisissez le même fichier pour reprendre les parties déjà reçues." },
+      { emoji: "🔎", title: "Un original vérifié reste à examiner", body: "La réception complète vérifie votre fichier et permet de télécharger son original privé. Son dépôt ne le sélectionne pas et ne le publie pas." },
+    ],
+  },
+  {
     version: "6.27.499", date: "2026-10-20", headline: "Lire les textes de vos présentations",
     highlights: [
       { emoji: "📚", title: "Présentations et notes consultables", body: "Déposez vos fichiers PowerPoint récents dans les sources ou les études. Leurs textes et notes suivent l’ordre des diapositives ; les images et graphiques restent à examiner." },

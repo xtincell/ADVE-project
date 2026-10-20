@@ -28,13 +28,20 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+## Clôture du défaut de boot documentaire — 2026-10-20
+
+Le blocage JSZip de l’image 499 est fermé par le chargement à la demande livré
+en 500 : source eb8ffd355210c73cdd6fe40d943afab6c4b388d9, CI/build/boot/session
+JSON et image/runtime exacts reçus, login 200 et 61 sources/994 actifs/huit
+fondamentaux conservés. Un premier pitch réel PROPOSED est ensuite reçu avec
+original exact, texte/notes et alias qualifié, sans modèle/adoption. Les attentes
+de boot 500 et leurs lignes convergentes sont retirées. Les autres présentations,
+visuels, sources/lots/études et l’incident auth dev de cause inconnue restent
+au plan, sans réception entière déduite. [Reprise](RESIDUAL-DEBT.md).
+
 ## Entrées actives
 
-2026-10-20 · **501 candidat — écriture VOLUME rendue atomique** : lecture d’un préfixe chiffré au nom canonique reproduite rouge sur le vrai système de fichiers. L’écriture privée est synchronisée et fermée avant liaison atomique au nom canonique, sans remplacement d’un objet existant ; deux tests réels de visibilité/collision verts. Cause corrigée et reçue localement, CI/image/runtime 501 encore ouverts. Aucun transfert ou restauration de production déduit de ce correctif de stockage.
-
-2026-10-20 · **500 candidat — lecteur de format découplé du boot** : source 499 fusionnée mais build 39351802930 bloqué avant `/login`, `public-brand-migration.cjs` chargeant JSZip absent du standalone. Cause établie : import immédiat d’un format non utilisé par la conservation ou la capture publique. Import déplacé dans `readPptxText`, sans copies de dépendances en chaîne ni contrôle contourné. Régression sur le vrai bundle `freeze-public-brands`, paquets externes/JSZip absent/base vide simulée : rouge `MODULE_NOT_FOUND` 499 puis vert 500 reçus. CLI auxiliaire sur PostgreSQL de recette détenu reçue exit 0/zéro publication/JSZip indisponible, aucune écriture production ; gauntlet local définitif 500 reçu. Le boot de l’image exacte, CI/image/runtime 500 restent ouverts. Aucune image 499 poussée/déployée, production 498 intacte ; pas de nouvelle capacité ou dépôt réel PPTX. [Reprise](RESIDUAL-DEBT.md) / [ADR-0221](adr/0221-common-received-document-reader.md).
-
-2026-10-20 · **499 candidat — lecture documentaire divergente réparée, recette locale bornée** : PPTX autrefois absent du lecteur commun et replis des deux intake nettoyant des octets en pseudo-texte ; primitive partagée, texte/notes bornés et UTF-8 strict, sans modifier les appels/budgets. Hypothèse de fond : plusieurs entrées avaient dupliqué la lecture au lieu de partager le contrat octets/texte. Préflight pur du corpus, source synthétique HTTP/native, original exact et gauntlet local définitif reçus ; refus binaire conservant l’original/source FAILED sans faux texte reçu. Les deux erreurs initiales du repère quick-intake sont levées par 83→84 sans nouvelle exception. Autres formulaires au rendu/sélection seulement ; incident initial auth/session 500 pendant compilation dev conservé malgré reprise console reçue. Contrôle de réponse session ajouté au boot existant, éprouvé en pur seulement ; Source 499 fusionnée mais image bloquée au boot ; livraison et reprise standalone poursuivies par 500 dans [RESIDUAL-DEBT](RESIDUAL-DEBT.md) / [ADR-0221](adr/0221-common-received-document-reader.md). La ligne de troncature individuelle 498 est retirée : cause diagnostiquée, runtime et PNG réel exact reçus ; lots/grands originaux restent dans la dette distincte.
+2026-10-20 · **501 candidat — écriture VOLUME rendue atomique** : lecture d’un préfixe chiffré au nom canonique reproduite rouge sur le vrai système de fichiers. L’écriture privée est synchronisée et fermée avant liaison atomique au nom canonique, sans remplacement d’un objet existant ; deux tests réels de visibilité/collision verts. Cause corrigée et reçue localement, CI/image/runtime 501 encore ouverts. Aucun transfert ou restauration de production déduit de ce correctif de stockage. [ADR-0222](adr/0222-private-original-chunk-transfers.md).
 
 **472 livré — repli malgré le relais choisi réparé (2026-10-15)** : l’ordre des conditions autorisait un ancien provider malgré le choix OpenAI explicite et un relais incomplet. Deux conditions existantes corrigées/livrées ; admission reçue dans quatre processus de fixture, cible 94 / 8, sans modèle/réseau/DB. Source c92abbc6/CI/image/runtime et reprise native sans génération reçus ; aucune panne réelle injectée. Cause fermée au périmètre ; autres réserves C7/pont manuel C3 et seize réceptions inchangés. Premiers refus AST conservés au [bornage](REFONTE-PLAN.md).
 

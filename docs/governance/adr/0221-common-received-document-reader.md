@@ -1,6 +1,6 @@
 # ADR-0221 — Lecture commune des documents reçus
 
-- **Status**: Proposed — source 499 fusionnée, image bloquée au boot ; correctif 500 à recevoir
+- **Status**: Proposed — lecteur et runtime 500 reçus ; autres parcours documentaires ouverts
 - **Date**: 2026-10-20
 - **Phase**: 7 — absorption du corpus réel / C2, C3, C4, C7
 - **Depends on**: ADR-0012, ADR-0197, ADR-0219, ADR-0220
@@ -102,8 +102,20 @@ exercée sur PostgreSQL de recette détenu avec JSZip indisponible : exit 0,
 zéro publication, aucune écriture production. Gauntlet local définitif 500 reçu :
 4 848 tests / 454 fichiers, gouvernance 1 670 / 169, typage et deux lints sans
 erreur, zéro cycle sur 1 770 fichiers, 24 avertissements historiques conservés.
-La CLI auxiliaire n’est pas le boot du standalone exact ; CI, image et runtime
-500 exacts restent à recevoir avant clôture de cette décision.
+La CLI auxiliaire seule ne prouvait pas le boot du standalone exact. Celui-ci
+est désormais reçu par le build 39354275049, avec session JSON, CI/image et
+runtime 500 exacts sur source eb8ffd355210c73cdd6fe40d943afab6c4b388d9,
+image sha256:c09ff5de46930fc8ee58aa14530e8ffe815b2ad2e44d5fd1cc0565f718360c93.
+Login 200, mêmes volumes, 61 sources/994 actifs/huit fondamentaux conservés
+pendant la bascule. Le blocage de démarrage 499 n’est plus une attente.
+
+Premier pitch réel reçu ensuite : original de 3 722 103 octets relu exact,
+4 905 caractères texte/notes conformes au préflight ; source PROPOSED et alias
+qualifié conservé, sans modèle/embedding/adoption. Le dossier compte 62 sources,
+61 antérieures/994 actifs/huit fondamentaux préservés ; les deux BMC restent
+REFERENCE/PROPOSED. Ce seul dépôt ne reçoit pas les douze présentations, leurs
+visuels ou les parcours automatiques intake/études. Ces critères et les limites
+50 Mo / lots 5×10 Mio maintiennent la décision Proposed au-delà du lecteur reçu.
 Les originaux acquis et les textes/notes lus ne prouvent pas la compréhension
 des visuels. Toute conclusion dépendant d’une image ou d’un graphique doit être
 qualifiée et reçue séparément.
@@ -120,5 +132,6 @@ périmètre annoncé ne vaut clôture.
 Le contrôle de boot standalone existant appelle aussi `/api/auth/session` sans
 cookie et refuse erreur HTTP ou JSON invalide avant publication de l’image.
 Le refus d’une réponse HTML et l’acceptation de JSON `null` sont éprouvés au
-contrôle pur ; la réponse du véritable endpoint standalone exact reste à
-recevoir pendant le build. Ce contrôle n’est pas un correctif d’authentification.
+contrôle pur ; le véritable endpoint standalone exact est ensuite reçu au
+build 500. Ce contrôle n’établit pas la cause de l’incident auth/session dev et
+ne remplace pas la recette des parcours authentifiés ou une mesure de SLO.

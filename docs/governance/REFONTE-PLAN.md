@@ -1,27 +1,66 @@
-## Lecture documentaire — boot 499 bloqué, correctif 500 candidat (2026-10-20)
+## Originaux fragmentés — recette locale 501 reçue, livraison ouverte (2026-10-20)
 
-ADR-0221 reste Proposed. Source 499 fusionnée, build 39351802930 échoué avant
-`/login` : `public-brand-migration.cjs` chargeait JSZip absent de son standalone.
-Image non poussée/non déployée ; production 498 intacte. Cause établie, distincte
-de l’incident auth/session dev dont la cause reste inconnue.
+C2/C3/C4/C7 / ADR-0222 Proposed. Stockage existant étendu par fragments de quatre
+Mio, manifeste vérifié et visibilité atomique VOLUME. `brandVault.transfer`
+rejoint le routeur et l’Intent de création existants : BEGIN/PART/FINISH, droits
+actuels, origine Drive/éditions, `FileUpload` asset-original-v2 et état PENDING
+puis STORED après vérification. Trace sans copie base64, collecteur raccordé
+aux clés de manifeste/fragments et GET original privé en flux présents au code.
+Le formulaire Mes actifs calcule l’empreinte par tranches avec `@noble/hashes`
+2.4.0 et propose progression/reprise jusqu’à 200 Mio. Aucun nouveau gestionnaire,
+service, routeur, Intent, modèle, fournisseur ni adoption automatique.
 
-500 diffère l’import de JSZip jusqu’à `readPptxText` : les chemins de
-conservation d’octets et de capture publique au boot n’initialisent plus le
-lecteur inutilisé. Pas de copies de dépendances en chaîne, de boot contourné ou
-de nouvelle capacité. Régression sur le vrai bundle `freeze-public-brands`,
-paquets externes/JSZip absent/base vide simulée : rouge `MODULE_NOT_FOUND` 499
-puis vert 500 reçus. CLI auxiliaire sur PostgreSQL de recette détenu reçue :
-exit 0, zéro publication, JSZip indisponible, aucune écriture production. Gauntlet
-local définitif 500 : 4 848 tests / 454 fichiers, gouvernance 1 670 / 169,
-typage et deux lints sans erreur, zéro cycle sur 1 770 fichiers ;
-24 avertissements historiques. Ce boot auxiliaire ne reçoit pas le standalone
-exact ; CI, image et runtime 500 restent à recevoir. Le lecteur PPTX garde sa
-recette propre ; ni dépôt réel PPTX,
-compréhension des visuels, grands fichiers/lots ni chantier entier reçus.
-Reprise immédiate : recevoir la CI puis le vrai boot d’image
-et la session avant toute bascule, sur les contrôles de livraison existants.
+Réception locale bornée : dix intégrations PostgreSQL sur dix, dont reprise,
+protection des fragments et téléchargement exact. Le premier P2028 d’ouverture
+de transaction reste conservé. Suite complète 4 857 tests / 456 fichiers avec
+deux workers, mêmes assertions et borne de trente secondes ; gouvernance
+1 671 / 169, typage/deux lints sans erreur, 24 avertissements historiques et
+zéro cycle. Le harnais n’impose plus GOD_MODE_EMAILS vide ; le test synthétique
+de 162 437 099 octets passe seul puis dans la suite sans relèvement du délai.
 
-## Lecture documentaire commune — recette locale bornée 499 (2026-10-20)
+Formulaire USER reçu sur copie synthétique : 12 582 941 octets, quatre fragments,
+six émissions gouvernées OK et six POST 200 sans exception dans une fenêtre
+complète. Un seul CANDIDATE / original STORED ; téléchargement depuis la fiche
+avec empreinte exacte, aucun modèle ni adoption. Recharge : trace tronquée,
+DOM non mesuré, attente du titre SDK échouée avant écran visible ; aucun SLO.
+
+**Suite immédiate** : recevoir CI/image/runtime 501, restauration et grands
+originaux réels. La protection du collecteur est reçue sur copie, sans purge
+production ou restauration déduite. Consommer le flux jusqu’au terme pour
+qualifier son intégrité ; HTTP_BLOB simulé n’établit pas les garanties de
+concurrence du backend distant. Le raccord BrandDataSource, les études de 50 Mo
+et les lots de cinq fichiers de dix Mio restent ouverts séparément ; les
+raccorder au transfert borné sans réduire les promesses. Sauvegarde/restauration
+C7 conserve reçus, manifestes, fragments et clés. Les 36 grands originaux restent
+au contrat ; aucun chantier ou parcours entier reçu.
+
+## Lecture documentaire — production 500 reçue, absorption encore bornée (2026-10-20)
+
+ADR-0221 reste Proposed pour les critères non reçus. L’échec du build 499
+39351802930 avant /login est conservé : public-brand-migration.cjs chargeait
+JSZip absent du standalone, aucune image 499 publiée. Le correctif 500 charge
+ce format à la demande ; CI/build/boot/session JSON/image et runtime exacts
+sont désormais reçus, source eb8ffd355210c73cdd6fe40d943afab6c4b388d9,
+image sha256:c09ff5de46930fc8ee58aa14530e8ffe815b2ad2e44d5fd1cc0565f718360c93,
+login HTTP 200 et mêmes volumes. La cause de démarrage n’est plus une attente.
+61 sources, 994 actifs et huit fondamentaux conservés pendant la bascule.
+L’incident auth/session dev reste distinct, de cause non établie.
+
+Premier pitch réel reçu ensuite : 3 722 103 octets relus exacts, 4 905 caractères
+de texte/notes conformes au préflight, source PROPOSED, alias qualifié et
+conservé, aucun modèle/embedding/adoption. Le dossier atteint 62 sources ;
+61 antérieures, 994 actifs et huit fondamentaux préservés ; les deux BMC restent
+REFERENCE/PROPOSED. Ce dépôt ne reçoit ni les douze présentations ni les visuels
+ou les parcours automatiques intake/études. Les études 50 Mo, lots 5×10 Mio et
+les grands originaux restent ouverts.
+
+Les 831 matériaux / 572 634 293 octets ont chacun reçu leur original exact
+avant 500 ; le registre a été conservé par la bascule. Aucune nouvelle relecture
+physique des 831 sur 500 n’est déduite. Droits, dépendances de sprites,
+interprétation visuelle, réutilisation et publication demeurent à qualifier ;
+aucun onboarding ou chantier entier reçu par ce stockage.
+
+## Historique — recette locale bornée 499 avant réception 500 (2026-10-20)
 
 C2/C3/C4 / ADR-0221 Proposed. Le module d’ingestion existant reçoit un lecteur
 PPTX déterministe, partagé avec les études et les deux intake. Ordre déclaré
@@ -52,9 +91,9 @@ gouvernance 1 669 / 168, typage et deux lints sans erreur, zéro cycle ;
 quick-intake sont corrigées par 83→84 après l’import, sans nouvelle exception.
 Le boot d’image existant appelle désormais `/api/auth/session` sans cookie et
 refuse une erreur HTTP ou un JSON invalide ; HTML refusé et JSON `null` accepté
-au contrôle pur, véritable endpoint standalone à recevoir pendant le build.
-Source 499 fusionnée mais image bloquée au boot, sans publication ni déploiement ;
-la livraison reprend avec 500 ci-dessus. Puis déposer les originaux admissibles,
+au contrôle pur ; le véritable endpoint a ensuite été reçu au build 500.
+La source 499 avait son image bloquée au boot, sans publication ni déploiement ;
+le correctif et runtime 500 sont désormais reçus ci-dessus. Puis déposer les originaux admissibles,
 relire les reçus exacts et qualifier les contenus ; toute lecture visuelle reste
 distincte.
 

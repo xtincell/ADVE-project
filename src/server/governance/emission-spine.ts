@@ -62,6 +62,11 @@ function receivedFileTrace(kind: string, input: unknown): unknown {
   const projected = { ...input } as Record<string, unknown>;
   if (kind === "LEGACY_INGESTION_UPLOAD_FILE" && typeof projected.content === "string") projected.content = receipt(projected.content);
   if (kind === "LEGACY_BRAND_VAULT_CREATE") {
+    const transfer = projected.transfer;
+    if (transfer && typeof transfer === "object" && !Array.isArray(transfer)
+      && "content" in transfer && typeof transfer.content === "string") {
+      projected.transfer = { ...transfer, content: receipt(transfer.content) };
+    }
     const file = projected.file;
     if (file && typeof file === "object" && !Array.isArray(file) && "content" in file && typeof file.content === "string") {
       projected.file = { ...file, content: receipt(file.content) };
