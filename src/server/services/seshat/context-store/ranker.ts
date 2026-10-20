@@ -22,7 +22,7 @@
  * fields) for any output that involves citation or calculation.
  */
 
-import { sourceIsUsable, documentContext } from "@/domain/source-document";
+import { sourceIsUsable, documentContext, documentIdentity } from "@/domain/source-document";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { embed } from "@/server/services/llm-gateway";
@@ -47,20 +47,24 @@ export function rankDocumentNodes<T extends { sourceId: string | null; payload: 
   const words = (text: string) => new Set(normalizeSourceQuery(text).match(/[\p{L}\p{N}]+/gu) ?? []);
   const rows = unique.map(node => {
     const p = payload(node);
-    const title = typeof p.fileName === "string" ? p.fileName : "";
+    const fileName = typeof p.fileName === "string" ? p.fileName : "";
+    const title = typeof p.documentTitle === "string" && p.documentTitle ? p.documentTitle : fileName;
+    // A classified edition has an explicit identity. Keep its original filename
+    // searchable at body weight, without giving a verbose export heading priority.
+    const alias = title !== fileName ? fileName : "";
     const fullText = typeof p.text === "string" ? p.text : JSON.stringify(p).replace(/([a-z])([A-Z])/g, "$1 $2");
     const notice = typeof p.documentNotice === "string" ? p.documentNotice : "";
     const text = notice && fullText.startsWith(notice) ? fullText.slice(notice.length) : fullText;
     // Rank the same local passage that can actually reach the reader. Remote
     // keywords in a long summary must not outrank the requested field's vicinity.
     const passage = excerptForQuery(text, query, 800);
-    return { node, title: words(title), body: words(passage), notice: words(notice), passage,
+    return { node, title: words(title), alias: words(alias), body: words(passage), notice: words(notice), passage,
       phraseScore: 3 * sourcePhraseScore(title, phrases) + sourcePhraseScore(passage, phrases) };
   });
   const documents = new Set(rows.map(r => key(r.node)));
-  const frequency = new Map(terms.map(term => [term, new Set(rows.filter(r => r.title.has(term) || r.body.has(term)).map(r => key(r.node))).size]));
+  const frequency = new Map(terms.map(term => [term, new Set(rows.filter(r => r.title.has(term) || r.alias.has(term) || r.body.has(term)).map(r => key(r.node))).size]));
   const scored = rows.map(row => ({ ...row, score: terms.reduce((sum, term) =>
-    sum + (row.title.has(term) ? 6 : row.body.has(term) ? 1 : row.notice.has(term) ? 0.5 : 0)
+    sum + (row.title.has(term) ? 6 : row.body.has(term) || row.alias.has(term) ? 1 : row.notice.has(term) ? 0.5 : 0)
       * (1 + Math.log((documents.size + 1) / ((frequency.get(term) ?? 0) + 1))),
     row.phraseScore + (options.keepSemanticMatches ? row.node.similarity ?? 0 : 0)) }))
     .filter(row => (!terms.length && !phrases.length) || row.score > 0).sort((a, b) => b.score - a.score);
@@ -103,7 +107,8 @@ export async function currentDocumentNodes<T extends { kind: string; sourceId: s
     processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
   } });
   const current = new Map(sources.filter(s => sourceIsUsable(s.rawData)).map((s) => [s.id, {
-    documentNotice: documentContext(s.rawData), hash: sourceFingerprint(s), certainty: isSourceCertainty(s.certainty) ? s.certainty : null,
+    documentNotice: documentContext(s.rawData), documentTitle: documentIdentity(s.rawData),
+    hash: sourceFingerprint(s), certainty: isSourceCertainty(s.certainty) ? s.certainty : null,
   }]));
   return nodes.flatMap((n) => {
     if (!isDocument(n)) return [withoutDocument(n)];
@@ -111,7 +116,7 @@ export async function currentDocumentNodes<T extends { kind: string; sourceId: s
     if (!source || (n.payload as Record<string, unknown> | null)?.sourceContentHash !== source.hash) return [];
     // Resolve trust from the same authorized, current source as the fingerprint.
     // Never promote a cache label or infer validation from a retrieved fragment.
-    return [{ ...n, payload: n.payload && typeof n.payload === "object" ? { ...n.payload, documentNotice: source.documentNotice, text: source.documentNotice + String((n.payload as Record<string, unknown>).text ?? "") } : n.payload, sourceCertainty: source.certainty }];
+    return [{ ...n, payload: n.payload && typeof n.payload === "object" ? { ...n.payload, documentTitle: source.documentTitle, documentNotice: source.documentNotice, text: source.documentNotice + String((n.payload as Record<string, unknown>).text ?? "") } : n.payload, sourceCertainty: source.certainty }];
   });
 }
 
