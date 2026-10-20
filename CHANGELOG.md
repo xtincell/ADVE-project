@@ -15,6 +15,8 @@ Preuves : `release/preuves-rapport-commercial-20261020/red-green-received.json` 
 
 Preuves privées de livraison : `release/preuves-mvp-commercial-20261020/production509-{received,data-preserved,public-api-received}.json`, `pr509-green-before-merge.json`, `postmerge509-received.json` ; plan de reprise `release/preuves-rapport-commercial-20261020/mvp-report-root-plan.json`.
 
+- Clôture documentaire consignée sous le numéro réel PR1044, phase7 ; aucun changement de code, de version ni de déploiement.
+
 ## v6.27.508 — fix(intake): conserve les originaux avant l’analyse et reprend leur usage (2026-10-20)
 
 **Fermer le navigateur ou rencontrer un fournisseur indisponible ne doit pas effacer un dépôt reçu.**
