@@ -1,10 +1,62 @@
-## Corpus matériel — réception 497, transport 498 et rétention (2026-10-20)
+## Lecture documentaire commune — livraison 499 et portée visuelle (2026-10-20)
 
-ADR-0220 : runtime 497 reçu, neuf pièces et un matériau Drive relus exacts ; dépôt/reprise/édition et publication explicite reçus sur copie, UI native
-et original exact reçus. Parmi les 841 éléments, neuf pièces documentaires et un premier matériau ont été reçus après livraison ; les autres matériaux restent en dépôt. Le PNG de neuf Mo refusé avant admission a révélé la troncature du proxy, corrigée dans le candidat 498 : maximum dix Mio et refus hors borne reçus sur copie, runtime à recevoir. Les fichiers
-plus grands restent ouverts (APK/archives jusqu’à 162 Mo) : étendre le stockage et le
-transport existants avec reprise, sans simple relèvement d’une borne mémoire ni
-nouveau gestionnaire. Reprise après le raccord du petit fichier reçu ; C2/C7.
+ADR-0221 Proposed : lecteur PPTX partagé dans `ingestion-pipeline`, sources,
+études et deux intake raccordés au code candidat. Préflight pur des douze
+présentations réelles reçu, pas leur dépôt dans le produit ; textes et notes
+seulement, aucun visuel interprété. Recette locale synthétique HTTP/native reçue :
+PPTX extrait avec notes et original exact ; refus binaire, original conservé et
+source FAILED sans faux texte (HTTP 500 du contrat existant), dépôt sans IA et
+téléchargement exact. Cinq écrans ouverts ; les autres formulaires ne sont reçus
+qu’au rendu/sélection, pas en analyse automatique de bout en bout. Gauntlet local
+définitif reçu, sans nouvelle exception ; les deux erreurs initiales liées au
+repère quick-intake sont levées après actualisation 83→84 suivant l’import. **Fermer** : CI/image/runtime exacts, reprise
+standalone ci-dessous puis dépôt du corpus admissible. Conserver les originaux et faire recevoir séparément
+toute conclusion dépendant des images ou graphiques. Responsable C2/C4 ; effort
+un lot de recette des chemins communs et qualification par pièce ; déclencheur
+immédiat avant livraison du candidat 499, puis lot documentaire du corpus.
+Ce lecteur ne valide ni les postulats des BMC ni les résultats d’une étude.
+
+**Incident de recette dev conservé** : `/api/auth/session` a répondu 500 avec
+`SyntaxError: Unexpected end of JSON input` pendant compilation ; cause non
+établie. La console a ensuite été reprise HTTP 200 sans erreur serveur ni
+exception dans cette fenêtre. Ce second passage n’efface pas le premier et ne
+prouve pas une performance de production. **Fermer** : au prochain boot de
+l’image standalone exacte, recevoir connexion/session et parcours console,
+conserver logs/statuts et diagnostiquer si le refus se reproduit, avant bascule
+production. Responsable C4/C7 ; effort une recette ciblée au boot, déclencheur
+prochain boot standalone de 499. Son contrôle de boot existant appelle maintenant
+`/api/auth/session` sans cookie et refuse erreur HTTP/JSON invalide ; le contrôle
+pur refuse HTML et accepte JSON `null`, mais le véritable endpoint de l’image
+reste à recevoir pendant le build. Ce contrôle n’est pas une correction de la
+cause d’authentification non établie. Aucun chantier supplémentaire créé.
+
+## Transport des lots et grands originaux — C2/C3/C7 (2026-10-20)
+
+La cause de troncature d’un fichier individuel admissible est fermée par 498
+reçue et son PNG réel relu exact. Restent 36 grands fichiers / 1 509 103 850
+octets, maximum 162 437 099 octets. Défaut préexistant distinct : les deux intake
+permettent cinq fichiers de dix Mio et les études annoncent 50 Mo ; les requêtes
+JSON/base64 correspondantes peuvent dépasser le tampon proxy de seize Mio.
+Le lecteur PPTX pur de 28 Mo ne reçoit pas ce transport applicatif.
+**Fermer** : étendre le transfert borné/reprenable existant et raccorder ces
+chemins aux reçus/stockages existants ; éprouver interruption/rejeu sans doublon,
+refus sans admission partielle, original complet/empreinte et restauration.
+Ne pas réduire les tailles annoncées ni relever simplement un tampon mémoire.
+Responsables C2/C3/C7 ; effort un lot de transport et intégration de chaque
+entrée, suivi de la recette de rétention/restauration. **Déclencheur** : prochain
+lot des 36 grands originaux, avant réception de ces parcours et du corpus entier.
+
+## Corpus matériel — transport individuel reçu, rétention ouverte (2026-10-20)
+
+ADR-0220 : runtimes 497/498 reçus, dépôt/reprise/édition et publication explicite
+reçus sur copie, UI native et original exact reçus. 498 a conservé 54 sources,
+huit piliers et 215 actifs au remplacement ; le PNG réel de 9 001 474 octets
+auparavant refusé est reçu et relu exact. La dette de troncature individuelle est
+fermée, sans fermer les grands fichiers ou les lots ci-dessus. Les neuf pièces
+documentaires parmi les 841 éléments sont reçues ; le dépôt des 831 matériaux
+continue et la métadonnée technique reste conservée à part. Sept documents
+complémentaires reçus ensuite portent le dossier à 61 sources / 47 originaux
+Drive ; acquisition et stockage ne valent pas absorption sémantique intégrale.
 FileUpload/BRAND_ASSET conserve sa référence par entityId sans FK : purge refusée pour
 un original et GC physique protège son reçu. Le cycle de suppression d’une marque
 et la libération des reçus orphelins restent à recevoir avec les restaurations C7 ;
@@ -28,7 +80,7 @@ Reprise : après établissement des grands blocs, recevoir des citations directe
 deux BMC et la formulation exacte des unités dans les sorties du conseil existant,
 sans nouveau gestionnaire ni répétition aveugle des générations. Responsable C5/C2.
 Ne pas confondre ce défaut de sortie avec une perte des sources, ni fermer le corpus.
-45 sources reçues, 31/2 286 fichiers Drive déposés ; originaux/formules conservés,
+Au reçu du 20 octobre : 61 sources / 47 originaux Drive reçus ; originaux/formules conservés,
 mais aucun nouveau calcul financier ou tarif courant certifié. La roadmap transversale
 mêle plusieurs périmètres et reste privée : auditer les capacités de conservation
 propriétaire existantes et préparer la projection SPAWT avec provenance avant partage.

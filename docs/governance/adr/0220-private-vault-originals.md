@@ -1,6 +1,6 @@
 # ADR-0220 — Originaux privés du coffre existant
 
-- **Status**: Accepted — code, copie et runtime 497 reçus ; corpus en cours
+- **Status**: Accepted — code, copie et runtimes 497/498 reçus ; corpus en cours
 - **Date**: 2026-10-19
 - **Phase**: 7 — raccord du corpus réel / C2, C3, C4, C7
 - **Depends on**: ADR-0012, ADR-0175, ADR-0197, ADR-0211, ADR-0212, ADR-0219
@@ -70,4 +70,10 @@ premier matériau Drive ont ensuite été relus exactement, sans adoption. Le pr
 fichier de neuf Mo a révélé une troncature du proxy avant admission ; 498 porte le
 tampon existant à seize Mio et conserve la borne des fichiers à dix Mio. Clone réel
 rouge puis vert et HTTP authentifié maximal/refus hors borne reçus sur copie ;
-runtime 498 et reste du corpus encore ouverts. Aucun chantier entier reçu par cette unité.
+runtime 498 reçu sur la source `5c720bf6482e12b6d785d4afa5d8fc687f5dda11`,
+image exacte `sha256:daf7f9bf1efc7b925d16d7e88bd4fa4801245018591340579d3cd9a5392e8106`.
+La bascule a conservé 54 sources, huit piliers et 215 actifs ; le PNG réel de
+9 001 474 octets auparavant refusé est reçu et relu exact. La cause du fichier
+individuel est fermée. Le reste du corpus, le transport des grands originaux et
+des lots dépassant l’enveloppe, ainsi que la rétention/restauration C7 restent
+ouverts. Aucun chantier entier reçu par cette unité.

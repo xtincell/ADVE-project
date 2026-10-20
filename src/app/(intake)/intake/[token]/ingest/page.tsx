@@ -17,13 +17,11 @@ import { useT } from "@/lib/i18n/use-t";
 
 const ACCEPTED_TYPES = [
   "application/pdf",
-  "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-powerpoint",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "text/plain",
 ];
-const ACCEPTED_EXTENSIONS = ".pdf,.doc,.docx,.ppt,.pptx,.txt";
+const ACCEPTED_EXTENSIONS = ".pdf,.docx,.pptx,.txt";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 interface SelectedFile {
@@ -232,7 +230,7 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
     const newFiles: SelectedFile[] = [];
 
     for (const file of Array.from(fileList)) {
-      if (!ACCEPTED_TYPES.includes(file.type) && !file.name.match(/\.(pdf|docx?|pptx?|txt)$/i)) {
+      if (!ACCEPTED_TYPES.includes(file.type) && !file.name.match(/\.(pdf|docx|pptx|txt)$/i)) {
         setError(`${t("intakeIngest.err.format")} ${file.name}. ${t("intakeIngest.err.formatAccepted")}`);
         continue;
       }

@@ -18,7 +18,7 @@ import { IntakeProcessingScreen } from "@/components/intake/intake-processing-sc
 import { useIntakeProcessingWatch, failureReasonKey } from "@/components/intake/use-intake-processing-watch";
 import { useT } from "@/lib/i18n/use-t";
 
-const ACCEPTED_EXTENSIONS = ".pdf,.doc,.docx,.ppt,.pptx,.txt";
+const ACCEPTED_EXTENSIONS = ".pdf,.docx,.pptx,.txt";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 interface SelectedFile {

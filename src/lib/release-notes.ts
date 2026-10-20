@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.499", date: "2026-10-20", headline: "Lire les textes de vos présentations",
+    highlights: [
+      { emoji: "📚", title: "Présentations et notes consultables", body: "Déposez vos fichiers PowerPoint récents dans les sources ou les études. Leurs textes et notes suivent l’ordre des diapositives ; les images et graphiques restent à examiner." },
+      { emoji: "📝", title: "Un document reste une référence ou une piste", body: "L’extraction conserve l’original et ne valide aucune proposition à votre place. Un fichier sans texte lisible signale sa limite au lieu de fournir un contenu inventé." },
+    ],
+  },
+  {
     version: "6.27.498", date: "2026-10-20", headline: "Conserver les fichiers jusqu’à la limite annoncée",
     highlights: [{ emoji: "📁", title: "Recevoir les originaux volumineux", body: "Un fichier autorisé de dix Mo peut être déposé sans être coupé pendant son transfert. Il reste à examiner avant sélection ou publication." }],
   },

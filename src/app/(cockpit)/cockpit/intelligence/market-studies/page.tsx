@@ -113,7 +113,7 @@ export default function MarketStudiesPage() {
     <div className="space-y-6 p-6">
       <PageHeader
         title="Études de marché"
-        description="Injectez une étude (PDF / DOCX / XLSX) — Statista, Nielsen, Kantar, BCG, Euromonitor — et notre moteur d'analyse l'intègre à votre veille marché, par pays et par secteur."
+        description="Injectez une étude (PDF / DOCX / PPTX / XLSX) — Statista, Nielsen, Kantar, BCG, Euromonitor — et notre moteur d'analyse l'intègre à votre veille marché, par pays et par secteur."
       >
         <button
           type="button"
@@ -189,10 +189,10 @@ export default function MarketStudiesPage() {
           {state.status === "idle" && (
             <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-white/15 bg-white/[0.02] p-8 hover:bg-white/[0.04]">
               <Upload className="h-6 w-6 text-foreground-muted" />
-              <span className="mt-2 text-sm text-foreground-muted">Drag-drop ou clique (PDF / DOCX / XLSX, max 50 MB)</span>
+              <span className="mt-2 text-sm text-foreground-muted">Drag-drop ou clique (PDF / DOCX / PPTX / XLSX, max 50 MB)</span>
               <input
                 type="file"
-                accept=".pdf,.docx,.xlsx"
+                accept=".pdf,.docx,.pptx,.xlsx"
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];

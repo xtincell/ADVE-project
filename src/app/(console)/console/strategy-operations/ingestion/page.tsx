@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 const FILE_ICONS: Record<string, React.ElementType> = {
-  PDF: FileText, DOCX: FileText, DOC: FileText, TXT: FileText,
+  PDF: FileText, DOCX: FileText, PPTX: FileText, DOC: FileText, TXT: FileText,
   XLSX: FileSpreadsheet, XLS: FileSpreadsheet, CSV: FileSpreadsheet,
   IMG: Image, PNG: Image, JPG: Image, JPEG: Image, WEBP: Image,
 };
@@ -179,7 +179,7 @@ export default function IngestionPage() {
             <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-background/50 p-8 transition-colors hover:border-accent">
               <Upload className="mb-3 h-10 w-10 text-foreground-muted" />
               <span className="text-sm font-medium text-foreground-secondary">Uploader des fichiers</span>
-              <span className="mt-1 text-[10px] text-foreground-muted">PDF, DOCX, XLSX, CSV, texte — Max 10 MB par fichier</span>
+              <span className="mt-1 text-[10px] text-foreground-muted">PDF, DOCX, PPTX, XLSX, CSV, texte — Max 10 MB par fichier</span>
               {/* Le sélecteur ne propose plus que ce que le pipeline sait
                   RÉELLEMENT lire (`extractAuto`) :
                   - `.xls` legacy → refusé (exceljs ne lit pas le BIFF binaire) ;
@@ -189,7 +189,7 @@ export default function IngestionPage() {
                   l'opérateur découvrait le refus APRÈS coup, sur une source
                   déjà créée en FAILED. */}
               <input type="file" className="hidden" multiple
-                accept=".pdf,.docx,.xlsx,.csv,.txt,.md"
+                accept=".pdf,.docx,.pptx,.xlsx,.csv,.txt,.md"
                 onChange={handleFileUpload} />
             </label>
 

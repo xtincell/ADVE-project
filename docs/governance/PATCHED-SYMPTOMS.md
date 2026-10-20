@@ -1,7 +1,3 @@
-## 2026-10-20 — Enveloppe des fichiers autorisés
-
-Le premier PNG de 9 Mo échouait avant admission : le proxy Next tronquait son corps JSON/base64 à 10 Mio. Cause reproduite avec le clone réel ; tampon existant 16 Mio et borne fichier 10 Mio inchangée, maximum HTTP reçu et hors borne refusé sur copie. Aucun gestionnaire ajouté ; recette du fichier Drive et runtime 498 déclenchés dès image livrée.
-
 # PATCHED SYMPTOMS — journal heuristique des fixes en passant
 
 > Doctrine : [NEFER.md §3.4](NEFER.md) — interdit absolu n°4 (« un problème découvert se résout, se
@@ -33,6 +29,8 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 ---
 
 ## Entrées actives
+
+2026-10-20 · **499 candidat — lecture documentaire divergente réparée, recette locale bornée** : PPTX autrefois absent du lecteur commun et replis des deux intake nettoyant des octets en pseudo-texte ; primitive partagée, texte/notes bornés et UTF-8 strict, sans modifier les appels/budgets. Hypothèse de fond : plusieurs entrées avaient dupliqué la lecture au lieu de partager le contrat octets/texte. Préflight pur du corpus, source synthétique HTTP/native, original exact et gauntlet local définitif reçus ; refus binaire conservant l’original/source FAILED sans faux texte reçu. Les deux erreurs initiales du repère quick-intake sont levées par 83→84 sans nouvelle exception. Autres formulaires au rendu/sélection seulement ; incident initial auth/session 500 pendant compilation dev conservé malgré reprise console reçue. Contrôle de réponse session ajouté au boot existant, éprouvé en pur seulement ; CI/image/runtime et reprise standalone ouverts dans [RESIDUAL-DEBT](RESIDUAL-DEBT.md) / [ADR-0221](adr/0221-common-received-document-reader.md). La ligne de troncature individuelle 498 est retirée : cause diagnostiquée, runtime et PNG réel exact reçus ; lots/grands originaux restent dans la dette distincte.
 
 **472 livré — repli malgré le relais choisi réparé (2026-10-15)** : l’ordre des conditions autorisait un ancien provider malgré le choix OpenAI explicite et un relais incomplet. Deux conditions existantes corrigées/livrées ; admission reçue dans quatre processus de fixture, cible 94 / 8, sans modèle/réseau/DB. Source c92abbc6/CI/image/runtime et reprise native sans génération reçus ; aucune panne réelle injectée. Cause fermée au périmètre ; autres réserves C7/pont manuel C3 et seize réceptions inchangés. Premiers refus AST conservés au [bornage](REFONTE-PLAN.md).
 

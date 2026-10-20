@@ -23,6 +23,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@
 // ============================================================================
 
 import { z } from "zod";
+import { readIntakeDocument } from "@/server/services/quick-intake/document-input";
 import type { Prisma } from "@prisma/client";
 import { callLLM, extractJSON, isTextLLMAvailable } from "@/server/services/llm-gateway";
 import * as mestor from "@/server/services/mestor";
@@ -1352,27 +1353,7 @@ export const quickIntakeRouter = createTRPCRouter({
         //    while the network calls above are in flight).
         for (const f of input.files) {
           try {
-            const buffer = Buffer.from(f.content, "base64");
-
-            if (f.type === "text/plain" || f.name.endsWith(".txt")) {
-              textParts.push(`[DOCUMENT: ${f.name}]\n${buffer.toString("utf-8")}`);
-            } else if (f.type === "application/pdf" || f.name.endsWith(".pdf")) {
-              const pdfParseRaw = await import("pdf-parse");
-              const pdfParse = (pdfParseRaw as any).default || pdfParseRaw;
-              const pdfData = await pdfParse(buffer);
-              const text = pdfData.text.replace(/\s{3,}/g, " ").trim().slice(0, 20_000);
-              if (text.length > 50) textParts.push(`[DOCUMENT: ${f.name}]\n${text}`);
-            } else if (f.name.endsWith(".docx") || f.type.includes("wordprocessingml")) {
-              const mammoth = (await import("mammoth")).default;
-              const result = await mammoth.extractRawText({ buffer });
-              const text = result.value.replace(/\s{3,}/g, " ").trim().slice(0, 20_000);
-              if (text.length > 50) textParts.push(`[DOCUMENT: ${f.name}]\n${text}`);
-            } else {
-              // Fallback for unknown text-like formats
-              const decoded = buffer.toString("utf-8");
-              const cleaned = decoded.replace(/[^\x20-\x7E\xC0-\xFF\n\r\t]/g, " ").replace(/\s{3,}/g, " ").trim();
-              if (cleaned.length > 50) textParts.push(`[DOCUMENT: ${f.name}]\n${cleaned}`);
-            }
+            textParts.push(await readIntakeDocument(f));
           } catch {
             textParts.push(`[Fichier non lisible ou format non supporté: ${f.name}]`);
           }
@@ -1462,12 +1443,7 @@ export const quickIntakeRouter = createTRPCRouter({
         if (input.files?.length) {
           for (const f of input.files) {
             try {
-              if (f.type === "text/plain") {
-                textParts.push(Buffer.from(f.content, "base64").toString("utf-8"));
-              } else {
-                const decoded = Buffer.from(f.content, "base64").toString("utf-8");
-                textParts.push(decoded.replace(/[^\x20-\x7E\xC0-\xFF\n\r\t]/g, " ").replace(/\s{3,}/g, " ").trim());
-              }
+              textParts.push(await readIntakeDocument(f));
             } catch {
               textParts.push(`[Fichier: ${f.name}]`);
             }

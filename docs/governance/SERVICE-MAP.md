@@ -8,6 +8,20 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
+**499 candidat — lecture documentaire dans les modules existants** :
+`ingestion-pipeline` porte le lecteur commun des octets reçus et du PPTX, réutilisé
+par `seshat/market-study-ingestion` et les deux `quick-intake`. Primitives sous
+tutelle MESTOR / Sustainment, sans nouveau service ni Glory tool, routeur,
+Intent, modèle ou fournisseur. Texte/notes seulement ; originaux, usages et
+analyse en aval restent distincts. Préflight pur du corpus et recette locale
+HTTP/native de la source synthétique reçus ; autres formulaires au rendu/sélection
+seulement, aucun dépôt réel PowerPoint ou analyse automatique de bout en bout.
+Gauntlet local définitif reçu, repère quick-intake actualisé sans nouvelle
+exception. Incident initial auth/session dev conservé ; contrôle HTTP/JSON de
+session raccordé au boot existant et éprouvé en pur. Véritable endpoint
+standalone, CI/image/runtime et livraison encore à recevoir ;
+[ADR-0221](adr/0221-common-received-document-reader.md).
+
 **448 source/CI/image reçues — ANUBIS Comms/MCP existant** :
 mcp-billing/transport partagent outcome explicite et scopeMcpParams, résultat/
 provenance conservés avec ERROR/isError ou DENIED sans double journal. scopeServer
@@ -571,7 +585,7 @@ Configuration, boot, ingestion système, support, security, collaboration intern
 |---|---|---|---|
 | `boot-sequence/` | Initialisation système au démarrage | INFRASTRUCTURE | ✅ existant |
 | `process-scheduler/` | Cron + queue intents async | INFRASTRUCTURE | ✅ existant |
-| `ingestion-pipeline/` | Pipeline d'ingestion data externe ; `source-usage` factorise usages documentaires, reçus de version et invalidation (ADR-0198). Aucun nouveau worker. | INFRASTRUCTURE | ✅ existant |
+| `ingestion-pipeline/` | Pipeline d'ingestion data externe ; `source-usage` factorise usages documentaires, reçus de version et invalidation (ADR-0198). Lecture commune des octets reçus et du PPTX candidate (ADR-0221), réutilisée par études/intake ; aucun nouveau worker. Primitive Sustainment, tutelle du manifest existant. | MESTOR | ✅ existant |
 | `quick-intake/` | Pipeline onboarding intake (rev 9) | INFRASTRUCTURE | ✅ existant |
 | `brief-ingest/` | Ingestion PDF briefs | MESTOR | ✅ existant |
 | `demo-data/` | Seeding pour staging/demo | INFRASTRUCTURE | ✅ existant |

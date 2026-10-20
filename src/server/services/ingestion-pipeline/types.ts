@@ -9,6 +9,8 @@ export interface ExtractionResult {
     pages?: number;
     sheets?: string[];
     dimensions?: string;
+    extractionScope?: "SLIDE_XML_AND_SPEAKER_NOTES";
+    visualContentRead?: false;
     wordCount?: number;
   };
 }

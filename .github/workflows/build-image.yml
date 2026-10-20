@@ -125,6 +125,9 @@ jobs:
             exit 1
           fi
           echo "✓ image saine — démarre, migre, sert /login."
+          # La page de connexion ne prouve pas que le endpoint de session rend du JSON.
+          curl --fail --silent --show-error http://localhost:3000/api/auth/session \
+            | node -e 'JSON.parse(require("fs").readFileSync(0,"utf8")); console.log("Anonymous session: HTTP 200 and valid JSON in exact image");'
           # La publication de pièce utilise le moteur natif dans JSDOM externe.
           # Vérifier ses fichiers runtime et le contexte VM dans le standalone exact.
           docker exec app node --input-type=module -e '
