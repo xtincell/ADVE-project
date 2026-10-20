@@ -2181,10 +2181,41 @@ local réel COMPLETED conserve le même original/source sans copie. Rapport non
 reçu : déductions dites faits et clés brutes. Huit appels suivis hors extraction
 initiale,364358ms DB ; lectures anonymes paid:false→2/71, paid:true→71/71 sans
 paiement reproduites, tandis que PDF402/token inconnu404 sont reçus. M03 actif :
-rapport/provenance et droits serveur à recevoir ; coût complet, choix agentique,
+rapport/provenance non reçus ; droits serveur reçus localement509, encore à
+livrer ; coût complet, choix agentique,
 offre/export et admission/conservation globales en M04/M05/C7 avant réception
 commerciale, aucun client/vente, MVP entier ou politique arbitraire déduits.
 Voir ADR0224 et RESIDUAL-DEBT pour les preuves et déclencheurs.
+
+Extension candidate509 du même résultat : une lecture commune PAID/même intake
+ou vraie session ADMIN dans paid-fulfillment existant borne rapport, recommandations
+et PDF. paid client ne donne pas de droit, référence liée à l’intake ; projection
+gratuite au serveur (deux champs utiles, total, métadonnées exclues, narratif
+complet masqué/neuf lignes stratégiques existantes). Droit payé retrouvé sans
+callback, originaux dans le résultat gratuit/payé ; PDF sans faux PAID et session
+existante bornée à l’origine, attente du rendu autorisé puis des polices. Rejeu
+terminal sans nouveau modèle/Deal, activation sans droit refusée avant mutation.
+Dix PostgreSQL/22 ciblés et deux gardes rouge/restauration exacte reçus ; final
+local : build webpack,4 889unitaires/457fichiers,424PostgreSQL/24,1 671gouvernance/169,
+tsc/lints sans erreur (24 avertissements historiques par lint),cycles0/code-map.
+Premier passage11rouges et corrections de mocks/ligne existante sans nouvelle
+exception, timeout sous compilation concurrente conservés ; reprise verte.
+Droits/export/reprise natifs reçus localement, fenêtres complètes42/44/42 sans
+≥500/exception/échec ; payé rouvert sans callback. PDF payé26pages avec huit
+sections complètes, ADMIN impayé15pages sans faux PAID reçus. Conservation exacte
+locale reçue : deux diagnostics/champs sélectionnés,16piliers contenu/certitude/
+version, un upload/une source complets et huit coûts inchangés, aucun PAID
+synthétique, ADMIN dédié retiré. deepStrictEqual après normalisation JSON/triID,
+pas toute la base atomique ; reçu conserved/counts corrigé sans second nettoyage
+(voir RESIDUAL-DEBT et reçu privé native509-content-conservation-received.json). Qualité commerciale
+refusée (promesse8pages, page7 quasi vide, champs bruts/propositions dites faits).
+CI/image/runtime509 restent ouverts, production508 inchangée ; M03 source/
+provenance/présentation et MVP entier non reçus commercialement.
+Compte précréé revendiqué par email et appels sans strategyId restent des
+constats statiques à vérifier via auth/reset et comptabilisation existants avant
+remise commerciale (M04/M05/C7, RESIDUAL-DEBT), nombre exact d’appels non reçu.
+Aucun nouveau concept/modèle/service/routeur/page/Intent/driver/provider, ADR0224
+inchangé.
 
 ### Compensation d’une écriture
 

@@ -22,6 +22,18 @@
 
 import { db } from "@/lib/db";
 
+/** Same persisted right for web, recommendations and PDF. No caller flag grants access. */
+export async function readIntakeReportAccess(
+  intakeToken: string,
+  role?: string,
+  client: Pick<typeof db, "intakePayment"> = db,
+): Promise<{ unlocked: boolean; reference: string | null }> {
+  const payment = await client.intakePayment.findFirst({
+    where: { intakeToken, status: "PAID" }, orderBy: { createdAt: "desc" }, select: { reference: true },
+  });
+  return { unlocked: role === "ADMIN" || payment !== null, reference: payment?.reference ?? null };
+}
+
 export async function fulfillPaidIntakeReport(reference: string): Promise<void> {
   try {
     const payment = await db.intakePayment.findUnique({

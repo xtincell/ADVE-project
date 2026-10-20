@@ -1,3 +1,33 @@
+## 509 candidat — reprise M03 des droits et du rapport existant (2026-10-20)
+
+Le service paid-fulfillment fournit la même lecture de droit enregistré (PAID du
+même intake ou session ADMIN) au rapport, recommandations et PDF ; paid client
+ignoré, référence de paiement liée au même intake. La projection gratuite se
+fait au serveur : deux champs ordonnés et total après exclusion des métadonnées,
+narratif ADVE complet masqué, neuf lignes stratégiques déjà publiques. Le même
+résultat retrouve le droit payé sans callback et expose les originaux reçus.
+PDF ADMIN sans faux PAID, session existante limitée à l’origine configurée ;
+attente du rendu autorisé/chargé et des polices. complete terminal relit sans
+modèle/nouveau Deal ; activation refuse sans droit avant mutation. Aucun nouveau
+concept/modèle/service/routeur/page/Intent/driver/provider ni ADR.
+
+Dix tests PostgreSQL verts (accès, rejeu terminal, activation) et 22 ciblés/six fichiers reçus. Les gardes paid-flag et vocabulaire public ont réellement échoué après retrait/injection volontaire, puis sont revenues au vert après restauration exacte ; erreurs initiales de mock/fixture conservées, sans les compter comme preuves produit.
+Réception finale locale509 : build webpack du code reçu, 4 889 unitaires/457 fichiers, PostgreSQL424/24, gouvernance1 671/169, tsc et deux lints sans erreur (24 avertissements historiques par lint), zéro cycle, code-map exécutée. Premier passage11 rouges conservé : garde de ligne84→86 déplacée sans nouvelle exception, huit mocks activation sans PAID alignés avec un test de refus ajouté, un timeout gros original sous build concurrent ; reprise sans build concurrent verte. Pas de règle assouplie. Droits/export/reprise reçus localement : six HTTP réels200, PDF impayé402, référence étrangère refusée, rejeu terminal9ms. Fenêtres natives gratuites/payées/ADMIN complètes42/44/42 réponses sans ≥500/exception/échec de chargement ; réouverture payée même URL sans callback. PDF payé26pages/710952octets, texte intégral des huit sections vérifié ; PDF ADMIN sur cas impayé distinct15pages/571934octets, vraie session sans PAID synthétique. Aucun nouvel appel modèle, PSP ou vente externe dans cette recette ; aucun SLO global. Qualité commerciale explicitement refusée : PDF26pages face à la promesse existante8pages, page7 quasi vide, restitution de champs bruts et propositions présentées comme faits. Reprendre source/provenance et présentation dans M03, sans réécrire le mauvais cas sauvegardé. Conservation exacte reçue au périmètre sélectionné : deux diagnostics (diagnostic/rawText/responses/status/id),16piliers (content/fieldCertainty/currentVersion), un upload complet/une source complète, huit coûts inchangés, aucun paiement synthétique et ADMIN dédié retiré. Comparaison deepStrictEqual après normalisation JSON/triID ; pas toute la base atomique. Le premier helper avait des assertions vertes mais une collision booléens/compteurs dans le JSON : défaut du reçu corrigé par helper readonly séparant conserved/counts, aucun défaut produit ni second nettoyage. Preuve `release/preuves-rapport-commercial-20261020/native509-content-conservation-received.json`. CI/image/runtime509 restent ouverts, production508 inchangée ; aucun paiement complet, client/vente, qualité commerciale ou MVP entier reçus.
+
+**Fermer ce lot technique** : recevoir CI/image/runtime exacts et refus/relecture
+sur l’état livré ; conservation locale exacte au périmètre sélectionné reçue. Les attentes locales
+build/gauntlet/natif/export/reprise sont closes à ce périmètre. Responsable
+C6/MVP-FUSEE-03 ; effort livraison/réception du même lot fonctionnel, déclencheur
+réception locale acquise. **M03 qualité reste actif** : source/provenance et
+présentation du rapport, PDF commercial à recevoir après correction ; ni retour
+client ni cycle de vente reçus par ces contrôles techniques.
+M04/C7 vérifie la revendication du compte précréé par auth/reset existants ; M05
+reçoit tous les appels sans strategyId, nombre à mesurer. Déclencheur avant
+remise commerciale ; plans/efforts dans RESIDUAL-DEBT, aucune exploitation de
+compte ou fuite globale de coût reçue par ces constats statiques.
+
+Preuves : `release/preuves-rapport-commercial-20261020/red-green-received.json` ; `release/preuves-mvp-commercial-20261020/report509-{targeted-final,access-replay-activation-green}.log`. Réceptions finales locales : `release/preuves-rapport-commercial-20261020/native-api-received.json`, `native-paid-reopen.json`, `paid-pdf-reparsed.json`, `pdf-quality-not-received.json` ; build/tests dans `release/preuves-mvp-commercial-20261020/report509-*.log`.
+
 ## MVP-FUSEE-02 — 508 livrée, conservation/reprise technique reçues (2026-10-20)
 
 [ADR-0224 Accepted pour l’implémentation testée](adr/0224-retained-intake-originals.md) : primitive de
@@ -28,18 +58,21 @@ Attentes CI/image/runtime et dette de livraison/conservation import closes au
 périmètre technique. M02 observé borné ; production508 et complétion locale Luna
 restent distinctes, aucun parcours client complet de production ou MVP entier reçu.
 
-## MVP-FUSEE-03 — rapport/provenance et droits payants, reprise immédiate (2026-10-20)
+## MVP-FUSEE-03 — qualité du rapport active, droits509 reçus localement (2026-10-20)
 
 Luna réel local sur entreprise fictive : COMPLETED, même original665octets/reçu/identifiant et rattachement sans copie conservés, un Deal LEAD, aucune vente ni écriture de production. Huit appels gpt-5.6-luna via OAuth existant suivis, extraction initiale absente du registre ; 0,0348356USD est un équivalent API estimé partiel, pas une facture reçue. Même horloge DB : 364358ms, environ6min4, contre estimation affichée30–60s ; fenêtre native complète114réponses/deux ERR_ABORTED conservés, aucun SLO global.
 
 Qualité commerciale du rapport refusée : déductions données comme faits et
 clés/structures brutes. Reprendre rapport, libellés/provenances et export existants,
-garder les hypothèses comme propositions à valider, recevoir rendu/export.
+garder les hypothèses comme propositions à valider ; PDF technique509 reçu,
+qualité de la présentation/provenance encore à recevoir.
 Défaut M03 droits payants reproduit localement en lecture anonyme, sans référence de paiement : getRecosByToken paid:false donne2/71 recommandations, paid:true donne71/71 et isPreview:false, HTTP200. Le boolean client ouvre donc ce contenu ; PDF sans paiement402 et token inconnu404 restent reçus. Aucun paiement, fixture ou mutation créé ; paiement global non reçu.
-**Fermer** : contrôle des droits côté serveur par les mécanismes existants,
-refus anonyme sans droit puis relecture avec droit reçu ; confirmer PDF402/404.
-Responsable C6/MVP-FUSEE-03 ; effort une passe ciblée du rapport et des droits
-existants, déclencheur immédiat avant réception commerciale. M04/M05/C7 reçoivent
+**État local509** : contrôle des droits, refus/relecture et vrai PDF reçus ;
+le défaut508 ci-dessus reste historique et présent en production508 jusqu’à
+livraison509. **Fermer la reprise qualité** : source/provenance et présentation
+utilisables, sans dump26pages/promesse8pages ni page7 quasi vide, puis réception
+commerciale sur cette recette conservée. Responsable C6/MVP-FUSEE-03 ; effort
+une passe ciblée du rapport existant, déclencheur immédiat avant commercialisation. M04/M05/C7 reçoivent
 séparément coût complet/extraction, durée annoncée, choix agentique et offre CRM,
 admission/conservation existantes ; aucun nouveau manager ou politique arbitraire.
 

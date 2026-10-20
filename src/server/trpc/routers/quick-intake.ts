@@ -24,6 +24,8 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@
 
 import { z } from "zod";
 import { listIntakeDocuments, retainIntakeDocuments, readRetainedIntakeDocuments } from "@/server/services/quick-intake/document-input";
+import { readIntakeReportAccess } from "@/server/services/quick-intake/paid-fulfillment";
+import { previewIntakeDiagnostic, intakePillarFields } from "@/server/services/quick-intake/report-composer";
 import type { Prisma } from "@prisma/client";
 import { callLLM, extractJSON, isTextLLMAvailable } from "@/server/services/llm-gateway";
 import * as mestor from "@/server/services/mestor";
@@ -471,8 +473,18 @@ export const quickIntakeRouter = createTRPCRouter({
 
   complete: publicProcedure
     .input(z.object({ token: z.string() }))
-    .mutation(async ({ input }) => {
-      return quickIntakeService.complete(input.token);
+    .mutation(async ({ ctx, input }) => {
+      const saved = await ctx.db.quickIntake.findUnique({ where: { shareToken: input.token } });
+      const access = await readIntakeReportAccess(input.token, ctx.session?.user?.role, ctx.db);
+      if (saved && (saved.status === "COMPLETED" || saved.status === "CONVERTED")) {
+        // A lost response/reopen must not regenerate a finished audit or another Deal.
+        const deal = await ctx.db.deal.findFirst({ where: { intakeId: saved.id }, select: { id: true } });
+        return { token: input.token, vector: saved.advertis_vector, classification: saved.classification,
+          diagnostic: access.unlocked ? saved.diagnostic : previewIntakeDiagnostic(saved.diagnostic),
+          strategyId: saved.convertedToId, dealId: deal?.id ?? null };
+      }
+      const result = await quickIntakeService.complete(input.token);
+      return { ...result, diagnostic: access.unlocked ? result.diagnostic : previewIntakeDiagnostic(result.diagnostic) };
     }),
 
   /**
@@ -492,7 +504,7 @@ export const quickIntakeRouter = createTRPCRouter({
   getByToken: publicProcedure
     .input(z.object({ token: z.string() }))
     .query(async ({ ctx, input }) => {
-      const intake = await ctx.db.quickIntake.findUnique({
+      let intake = await ctx.db.quickIntake.findUnique({
         where: { shareToken: input.token },
       });
       // Garde de sécurité F1 : un traitement de fond tué net (redeploy, OOM)
@@ -507,11 +519,13 @@ export const quickIntakeRouter = createTRPCRouter({
           data: { status: "FAILED", failureReason: "timeout" },
         });
         if (repaired.count > 0) {
-          const recovered = await ctx.db.quickIntake.findUnique({ where: { shareToken: input.token } });
-          return recovered ? { ...recovered, documents: await listIntakeDocuments(input.token, ctx.db) } : null;
+          intake = await ctx.db.quickIntake.findUnique({ where: { shareToken: input.token } });
         }
       }
-      return intake ? { ...intake, documents: await listIntakeDocuments(input.token, ctx.db) } : null;
+      if (!intake) return null;
+      const reportAccess = await readIntakeReportAccess(input.token, ctx.session?.user?.role, ctx.db);
+      return { ...intake, diagnostic: reportAccess.unlocked ? intake.diagnostic : previewIntakeDiagnostic(intake.diagnostic),
+        reportAccess, documents: await listIntakeDocuments(input.token, ctx.db) };
     }),
 
   /**
@@ -536,12 +550,13 @@ export const quickIntakeRouter = createTRPCRouter({
         where: { strategyId: intake.convertedToId, status: "PENDING" },
         orderBy: [{ impact: "desc" }, { confidence: "desc" }],
       });
-      // Free preview: 2 recos. Paid: all.
-      const recos = input.paid ? allRecos : allRecos.slice(0, 2);
+      // Keep accepting legacy `paid`, but only persisted rights authorize the full list.
+      const access = await readIntakeReportAccess(input.token, ctx.session?.user?.role, ctx.db);
+      const recos = access.unlocked ? allRecos : allRecos.slice(0, 2);
       return {
         recos,
         totalCount: allRecos.length,
-        isPreview: !input.paid,
+        isPreview: !access.unlocked,
       };
     }),
 
@@ -558,18 +573,18 @@ export const quickIntakeRouter = createTRPCRouter({
         select: { convertedToId: true },
       });
       if (!intake?.convertedToId) {
-        return { pillars: [] as Array<{ key: string; content: Record<string, unknown> }> };
+        return { pillars: [] as Array<{ key: string; content: Record<string, unknown>; totalFields: number }> };
       }
       const rows = await ctx.db.pillar.findMany({
         where: { strategyId: intake.convertedToId, key: { in: [...ADVE_STORAGE_KEYS] } },
         select: { key: true, content: true },
       });
-      return {
-        pillars: rows.map((r) => ({
-          key: r.key,
-          content: (r.content as Record<string, unknown> | null) ?? {},
-        })),
-      };
+      const access = await readIntakeReportAccess(input.token, ctx.session?.user?.role, ctx.db);
+      return { pillars: rows.map(r => {
+        const entries = intakePillarFields((r.content as Record<string, unknown> | null) ?? {});
+        return { key: r.key, totalFields: entries.length,
+          content: Object.fromEntries(access.unlocked ? entries : entries.slice(0, 2)) };
+      }) };
     }),
 
   /**
@@ -741,6 +756,8 @@ export const quickIntakeRouter = createTRPCRouter({
       if (intake.status !== "COMPLETED" && intake.status !== "CONVERTED") {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Intake non finalise" });
       }
+      const access = await readIntakeReportAccess(input.token, ctx.session?.user?.role, ctx.db);
+      if (!access.unlocked) throw new TRPCError({ code: "FORBIDDEN", message: "Le rapport doit être déverrouillé avant l’activation." });
 
       // Defense (ADR-0029): convertedToId can dangle after Strategy archive+purge
       // (cf. ADR-0028). If the pointer is null OR the referenced Strategy was

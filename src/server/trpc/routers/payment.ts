@@ -693,10 +693,10 @@ export const paymentRouter = createTRPCRouter({
    * Used by the result page after redirect to gate the paid content.
    */
   verifyPayment: publicProcedure
-    .input(z.object({ reference: z.string() }))
+    .input(z.object({ reference: z.string(), intakeToken: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      const payment = await ctx.db.intakePayment.findUnique({
-        where: { reference: input.reference },
+      const payment = await ctx.db.intakePayment.findFirst({
+        where: { reference: input.reference, intakeToken: input.intakeToken },
         select: { status: true, intakeToken: true, provider: true, tierKey: true },
       });
       if (!payment) {

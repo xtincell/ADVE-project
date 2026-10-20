@@ -39,6 +39,7 @@ import { PILLAR_KEYS } from "@/lib/types/advertis-vector";
 import { HIDDEN_FIELDS, humanizeValue } from "@/server/services/quick-intake/report-composer";
 import { useT } from "@/lib/i18n/use-t";
 import { SourcePreparationOption } from "@/components/brand/source-preparation-option";
+import { ReceivedIntakeDocuments } from "@/components/intake/received-documents";
 
 // ── Types matching the narrative-report service ────────────────────
 interface AdvePillarReport {
@@ -231,7 +232,7 @@ function flattenContent(content: Record<string, unknown>): Array<{ key: string; 
   return Object.entries(content)
     // Champs méta/techniques (narrativeFull dupliqué, webPresence JSON,
     // fieldCertainty…) — même liste que le composer (audit 2026-07-16).
-    .filter(([k]) => !HIDDEN_FIELDS.has(k))
+    .filter(([k]) => !k.startsWith("_") && !HIDDEN_FIELDS.has(k))
     .map(([k, v]) => ({ key: humanizeKey(k), value: flattenValue(v) }))
     .filter((entry) => entry.value && entry.value.length > 0);
 }
@@ -308,9 +309,6 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   const { token } = use(params);
   const searchParams = useSearchParams();
   const paymentRef = searchParams.get("ref");
-  const paymentStatus = searchParams.get("status");
-
-  const [unlockedByPayment, setUnlockedByPayment] = useState(false);
   const [paywallLoading, setPaywallLoading] = useState(false);
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
@@ -326,14 +324,15 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
     { enabled: !!token, retry: 2, staleTime: 0 },
   );
 
-  const { data: pillarsData } = trpc.quickIntake.getPillarsByToken.useQuery(
+  const { data: pillarsData, isFetching: pillarsFetching, refetch: refetchPillars } = trpc.quickIntake.getPillarsByToken.useQuery(
     { token },
     { enabled: !!intake?.convertedToId, staleTime: 0 },
   );
 
+  const effectivePaymentRef = paymentRef ?? intake?.reportAccess.reference;
   const { data: paymentData } = trpc.payment.verifyPayment.useQuery(
-    { reference: paymentRef ?? "" },
-    { enabled: !!paymentRef && paymentStatus === "paid", retry: 1 },
+    { reference: effectivePaymentRef ?? "", intakeToken: token },
+    { enabled: !!effectivePaymentRef, retry: 1 },
   );
 
   const { data: pricing } = trpc.payment.getPricing.useQuery(
@@ -348,8 +347,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   );
 
   useEffect(() => {
-    if (paymentData?.paid === true) setUnlockedByPayment(true);
-  }, [paymentData]);
+    if (paymentData?.paid === true) { void refetch(); void refetchPillars(); }
+  }, [paymentData?.paid, refetch, refetchPillars]);
 
   // F1 async : pendant un traitement de fond (statut PROCESSING), la page
   // suit l'avancement — refetch 4 s jusqu'à l'état terminal réel en base.
@@ -359,7 +358,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
     return () => window.clearInterval(id);
   }, [intake?.status, refetch]);
 
-  const isPaid = isAdmin || unlockedByPayment || paymentData?.paid === true;
+  const isPaid = intake?.reportAccess.unlocked === true;
   // Use the canonical localized price (handles ALL currencies, not just XAF/XOF/EUR).
   // Default = paid (false) while pricing is loading/erroring — never claim "Gratuit"
   // before the pricing query has actually resolved.
@@ -618,7 +617,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   const reportDate = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
 
   return (
-    <main className="min-h-screen bg-background pb-24 print:bg-white print:pb-0">
+    <main className="min-h-screen bg-background pb-24 print:bg-white print:pb-0"
+      data-intake-report-ready={isPaid && pillarsData && !pillarsFetching ? "true" : undefined}>
       <div className="mx-auto w-full max-w-3xl px-5 py-8 sm:px-8 sm:py-12 print:px-6 print:py-0">
 
         {/* ════════════════════════════════════════════════════════════
@@ -811,6 +811,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             {t("intakeResult.estRev.p3")}
           </p>
         </header>
+
+        <div className="print:hidden"><ReceivedIntakeDocuments documents={intake.documents} /></div>
 
         {/* ════════════════════════════════════════════════════════════
             PDF-ONLY: Intro + Contexte business
@@ -1037,8 +1039,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           <div className="space-y-5">
             {ADVE_PILLARS.map((meta) => {
               const allExtracted = extractedByKey[meta.key] ?? [];
-              const previewExtracted = allExtracted.slice(0, PAGE_VALUES_PER_PILLAR);
-              const moreCount = Math.max(0, allExtracted.length - PAGE_VALUES_PER_PILLAR);
+              const previewExtracted = isPaid ? allExtracted : allExtracted.slice(0, PAGE_VALUES_PER_PILLAR);
+              const totalFields = pillarsData?.pillars.find(p => p.key === meta.key)?.totalFields ?? allExtracted.length;
+              const moreCount = isPaid ? 0 : Math.max(0, totalFields - PAGE_VALUES_PER_PILLAR);
               const reportPillar = report?.adve?.find((p) => p.key === meta.key);
               const score = cap(vector[meta.key] ?? 0);
               return (
@@ -1059,7 +1062,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                   <div className="mb-4">
                     <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
                       <Database className="h-3.5 w-3.5" />
-                      {t("intakeResult.adve.extracted")} ({allExtracted.length})
+                      {t("intakeResult.adve.extracted")} ({totalFields})
                     </h4>
                     {allExtracted.length === 0 ? (
                       <p className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-foreground-muted">
@@ -1094,10 +1097,11 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                         {t("intakeResult.adve.strategicRead")}
                       </h4>
                       <p className="text-sm leading-relaxed text-foreground">{reportPillar.preview}</p>
-                      <p className="mt-2 flex items-center gap-1.5 text-xs text-foreground-muted">
+                      {isPaid && <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground-secondary">{reportPillar.full}</p>}
+                      {!isPaid && <p className="mt-2 flex items-center gap-1.5 text-xs text-foreground-muted">
                         <Lock className="h-3 w-3" />
                         {t("intakeResult.adve.deepDive")}
-                      </p>
+                      </p>}
                     </div>
                   )}
                 </article>
@@ -1109,7 +1113,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         {/* ════════════════════════════════════════════════════════════
             ADVE — print (FULL: all values + full narrative)
         ════════════════════════════════════════════════════════════ */}
-        <section className="hidden print:block print:mb-8 print:break-after-page">
+        {isPaid && <section className="hidden print:block print:mb-8 print:break-after-page">
           <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.adveTitle")}</h2>
           <div className="space-y-6">
             {ADVE_PILLARS.map((meta) => {
@@ -1155,7 +1159,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               );
             })}
           </div>
-        </section>
+        </section>}
 
         {/* ════════════════════════════════════════════════════════════
             RTIS — page (1 pilier preview, others teased)
@@ -1194,7 +1198,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                     </p>
                   )}
                   <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">
-                    {p.full.split("\n").slice(0, 9).join("\n") || p.preview}
+                    {(isPaid ? p.full : p.full.split("\n").slice(0, 9).join("\n")) || p.preview}
                   </p>
                   <p className="mt-3 flex items-center gap-1.5 border-t border-border-subtle pt-3 text-xs text-foreground-muted">
                     <Lock className="h-3 w-3" />
@@ -1209,7 +1213,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         {/* ════════════════════════════════════════════════════════════
             RTIS — print (FULL: 4 piliers R/T/I/S complete)
         ════════════════════════════════════════════════════════════ */}
-        {report?.rtis && (
+        {isPaid && report?.rtis && (
           <section className="hidden print:block print:mb-8 print:break-after-page">
             <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.rtisTitle")}</h2>
             <p className="mb-4 text-sm italic text-foreground-secondary">{report.rtis.framing}</p>
