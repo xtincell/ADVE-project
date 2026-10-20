@@ -1,141 +1,96 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import crypto from "crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { cinetpayProvider } from "@/server/services/payment-providers/cinetpay";
 
-// ---------------------------------------------------------------------------
-// CinetPay webhook (notifyUrl) — "Aurore" v1 API notifications.
-// ---------------------------------------------------------------------------
-// Aurore posts a JSON body:
-//   { merchantTransactionId, transactionId, notifyToken, status }
-// We DON'T trust the payload blindly: we re-verify the transaction against the
-// Aurore status API (authoritative, defense in depth). If that call is
-// unavailable (e.g. IP allow-list not yet set during first tests) we fall back
-// to the notification's own status, optionally gated by notifyToken when a
-// CINETPAY_NOTIFY_TOKEN is configured — so a genuine sandbox notification is
-// still honored while a spoofed one without the token is not.
-//
-// Legacy v2 fields (cpm_*) are still parsed so an old-format POST degrades
-// gracefully instead of 400-ing.
-// ---------------------------------------------------------------------------
-
-interface CinetPayNotify {
-  merchantTransactionId?: string;
-  transactionId?: string;
-  notifyToken?: string;
-  status?: string;
-  // Legacy v2 fallback fields:
-  cpm_trans_id?: string;
-  cpm_trans_status?: string;
-  cpm_payid?: string;
+// Notifications are only signals. Payment authority is the authenticated status
+// API, bound to the receipt saved at initialization. Raw proof is never persisted.
+const notification = z.object({
+  merchant_transaction_id: z.string().min(1), transaction_id: z.string().min(1), notify_token: z.string().min(1),
+});
+const receipt = z.object({
+  merchant_transaction_id: z.string().min(1), transaction_id: z.string().min(1), status: z.string().min(1),
+  amount: z.number().optional(), currency: z.string().optional(),
+});
+function matchesProof(token: string, hash: string): boolean {
+  if (!/^[a-f0-9]{64}$/.test(hash)) return false;
+  return timingSafeEqual(createHash("sha256").update(token).digest(), Buffer.from(hash, "hex"));
 }
 
-function notifyTokenMatches(provided: string | undefined): boolean {
-  const expected = process.env.CINETPAY_NOTIFY_TOKEN;
-  if (!expected || !provided) return false;
+async function finishCycle(reference: string) {
   try {
-    const a = Buffer.from(provided);
-    const b = Buffer.from(expected);
-    return a.length === b.length && crypto.timingSafeEqual(a, b);
+    const { applySubscriptionCycleIfPaid } = await import("@/server/services/payment-providers/subscription-cycles");
+    await applySubscriptionCycleIfPaid(reference);
+    return NextResponse.json({ received: true, status: "PAID" });
   } catch {
-    return false;
+    console.warn("[webhook/cinetpay] subscription cycle extension unavailable");
+    return NextResponse.json({ error: "Cycle reconciliation unavailable" }, { status: 503 });
   }
-}
-
-function parseBody(rawBody: string, contentType: string): CinetPayNotify {
-  if (contentType.includes("application/json")) {
-    return JSON.parse(rawBody) as CinetPayNotify;
-  }
-  const params = new URLSearchParams(rawBody);
-  const out: CinetPayNotify = {};
-  for (const [k, v] of params.entries()) (out as Record<string, string>)[k] = v;
-  return out;
 }
 
 export async function POST(request: Request) {
-  const rawBody = await request.text();
-  const contentType = request.headers.get("content-type") ?? "";
-
-  let payload: CinetPayNotify;
+  let body: unknown;
   try {
-    payload = parseBody(rawBody, contentType);
-  } catch {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    const raw = await request.text();
+    body = request.headers.get("content-type")?.includes("application/json")
+      ? JSON.parse(raw) : Object.fromEntries(new URLSearchParams(raw));
+  } catch { return NextResponse.json({ error: "Invalid payload" }, { status: 400 }); }
+  const parsed = notification.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ error: "Invalid notification" }, { status: 400 });
+  const payload = parsed.data;
+  const reference = payload.merchant_transaction_id;
+  const payment = await db.intakePayment.findUnique({ where: { reference } });
+  if (!payment || payment.provider !== "CINETPAY") return NextResponse.json({ error: "Unknown reference" }, { status: 404 });
+  // Pre-proof legacy rows are retained, never auto-promoted from an unbound signal.
+  if (!payment.notificationTokenHash || !payment.providerRef) {
+    return NextResponse.json({ error: "Payment reconciliation required" }, { status: 503 });
   }
-
-  const reference = payload.merchantTransactionId ?? payload.cpm_trans_id;
-  if (!reference) {
-    return NextResponse.json({ error: "Missing merchantTransactionId" }, { status: 400 });
+  if (!matchesProof(payload.notify_token, payment.notificationTokenHash) || payload.transaction_id !== payment.providerRef) {
+    return NextResponse.json({ error: "Invalid notification proof" }, { status: 401 });
   }
+  if (payment.status === "PAID") return finishCycle(reference);
 
-  // Authoritative re-check against the Aurore status API. Fall back to the
-  // notification payload only if that call throws.
-  let isPaid: boolean;
-  try {
-    const verified = await cinetpayProvider.verifyPayment!(reference);
-    isPaid = verified.paid;
-  } catch (err) {
-    console.warn(
-      "[webhook/cinetpay] status re-check unavailable, falling back to payload:",
-      err instanceof Error ? err.message : err,
-    );
-    const rawStatus = payload.status ?? payload.cpm_trans_status;
-    const statusOk = rawStatus === "SUCCESS" || rawStatus === "ACCEPTED";
-    // If a notify token is configured, require it; otherwise accept the status.
-    isPaid = statusOk && (process.env.CINETPAY_NOTIFY_TOKEN ? notifyTokenMatches(payload.notifyToken) : true);
+  let verified;
+  try { verified = await cinetpayProvider.verifyPayment!(reference); }
+  catch {
+    // No provider text/token/body in logs. 503 permits a later authenticated retry.
+    console.warn("[webhook/cinetpay] authoritative status unavailable");
+    return NextResponse.json({ error: "Verification unavailable" }, { status: 503 });
   }
-
-  const providerRef = payload.transactionId ?? payload.cpm_payid ?? null;
-
-  let intakeToken: string | null = null;
-  let newlyPaid = false;
-  if (isPaid) {
-    // Claim atomique : PAID une SEULE fois → le fulfillment ne tourne qu'au 1er
-    // passage même si CinetPay redélivre la notif (fin du double-envoi email +
-    // ré-assemblage Oracle). Le cycle d'abonnement plus bas est déjà idempotent.
-    const claimed = await db.intakePayment.updateMany({
-      where: { reference, status: { not: "PAID" } },
-      data: { status: "PAID", paidAt: new Date(), providerRef },
-    });
-    newlyPaid = claimed.count > 0;
-    const row = await db.intakePayment.findUnique({
-      where: { reference },
-      select: { intakeToken: true },
-    });
-    if (!row) return NextResponse.json({ error: "Unknown reference" }, { status: 404 });
-    intakeToken = row.intakeToken;
-  } else {
-    try {
-      const payment = await db.intakePayment.update({
-        where: { reference },
-        data: { status: "FAILED", failureReason: payload.status ?? payload.cpm_trans_status ?? "REFUSED" },
+  const authoritative = receipt.safeParse(verified.raw);
+  if (!authoritative.success) return NextResponse.json({ error: "Invalid payment receipt" }, { status: 503 });
+  const data = authoritative.data;
+  if (data.merchant_transaction_id !== reference || data.transaction_id !== payment.providerRef
+    || (data.amount !== undefined && data.amount !== payment.amount)
+    || (data.currency !== undefined && data.currency !== payment.currency)) {
+    return NextResponse.json({ error: "Payment receipt mismatch" }, { status: 409 });
+  }
+  const paid = verified.paid && data.status === "SUCCESS";
+  if (verified.paid !== (data.status === "SUCCESS")) return NextResponse.json({ error: "Inconsistent payment receipt" }, { status: 503 });
+  if (!paid) {
+    if (data.status === "FAILED" || data.status === "EXPIRED") {
+      await db.intakePayment.updateMany({
+        where: { reference, status: { not: "PAID" }, provider: "CINETPAY" },
+        data: { status: "FAILED", failureReason: data.status },
       });
-      intakeToken = payment.intakeToken;
-    } catch {
-      return NextResponse.json({ error: "Unknown reference" }, { status: 404 });
+    } else if (!["PENDING", "INITIATED", "OK"].includes(data.status)) {
+      return NextResponse.json({ error: "Status unavailable" }, { status: 503 });
     }
+    const current = await db.intakePayment.findUniqueOrThrow({ where: { reference }, select: { status: true } });
+    return NextResponse.json({ received: true, status: current.status });
   }
 
-  // Fulfillment centralisé (fire-and-forget) — UNIQUEMENT au 1er passage PAID :
-  // re-extraction premium + livraison ORACLE_FULL selon le tierKey payé.
-  if (isPaid && newlyPaid && intakeToken) {
+  const claimed = await db.intakePayment.updateMany({
+    where: { reference, status: { not: "PAID" }, provider: "CINETPAY" },
+    data: { status: "PAID", paidAt: new Date(), failureReason: null },
+  });
+  if (claimed.count > 0 && payment.intakeToken) {
     const { fulfillPaidIntakeReport } = await import("@/server/services/quick-intake/paid-fulfillment");
     void fulfillPaidIntakeReport(reference);
   }
-
-  // Cycle d'abonnement manuel : un paiement lié à une Subscription étend sa
-  // période de 30 j à l'encaissement. No-op pour un paiement intake.
-  if (isPaid) {
-    const { applySubscriptionCycleIfPaid } = await import(
-      "@/server/services/payment-providers/subscription-cycles"
-    );
-    await applySubscriptionCycleIfPaid(reference).catch((err) =>
-      console.warn("[webhook/cinetpay] subscription cycle extension failed:", err instanceof Error ? err.message : err),
-    );
-  }
-
-  return NextResponse.json({ received: true, status: isPaid ? "PAID" : "FAILED" });
+  return finishCycle(reference);
 }
 
 export async function GET() {

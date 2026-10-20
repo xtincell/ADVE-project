@@ -29,7 +29,7 @@ annulations Next _rsc et effets volontaires conservés dans les reçus P27 ; auc
 SMTP/PSP/vente/MVP entier déduit. Compte d’envoi et transport autorisé restent ouverts.
 Preuves : `release/preuves-mvp-commercial-20261020/production511-{received,data-preserved,public-api-received}.json`.
 
-**512 candidat — extensions des services existants** : trackCost du Gateway
+**512 livrée — extensions des services existants** : trackCost du Gateway
 ne saute plus l’usage sans Strategy ; AICostLog nullable et ALS intake interne,
 sans bearer/PII ni identité tenant, puis rattachement au vrai Strategy. Contexte
 partagé par les entrées quick-intake, budgets stream et descendants différés.
@@ -42,7 +42,35 @@ Luna/12 lignes exactes, extraction pré-marque conservée/rattachée ; admission
 409/429 et runner/rejeu sans génération reçus. FILL_ADVE/INDEX OK,19 nœuds sans
 embeddings, 98 recommandations PENDING conservées comme enrichissements futurs,
 zéro production/BrandAsset, sans déduire zéro agent. Contrôles locaux finaux verts ;
-CI/image/runtime et autres parcours ouverts. [Réception M05](RESIDUAL-DEBT.md).
+Autres parcours encore ouverts. [Réception M05](RESIDUAL-DEBT.md).
+
+512 livrée : déploiement terminé le 20 octobre à 23:40:14 UTC, runtime reçu à 23:40:36 UTC,
+source `0c6a3a959145c49a3f2c0b3b645334f8ae25248c`, digest
+`f663b9ea80772547563bfbd1248e485ddb61f77b0cfa26ea391aa85091163f67`.
+Conservation 23:41 UTC : 67 sources/1 041 actifs/huit piliers/racine Friesland, mêmes
+volumes/relais Luna/90s, OpenRouter absent ; lectures séquentielles non atomiques.
+Attente livraison/runtime/conservation 512 close. Preuves P23
+`release/preuves-mvp-commercial-20261020/production512-{received,data-preserved,public-api-received}.json`.
+
+**513 candidat — payment-providers existant** : contrat CinetPay v1/PUSH,
+providerRef et SHA256 nullable de preuve par paiement persistés avant URL dans
+les deux init existants. Notification liée puis statut serveur obligatoire,
+identités/montant/devise si présents vérifiés, PAID monotone/CAS ; 503 sans promotion
+sur indisponibilité. Aucun service/provider/manager ajouté. Ciblés PG/unitaires
+verts sur transport simulé ; livraison/PSP et durabilité du fulfillment
+restent à recevoir. [Plan M04](RESIDUAL-DEBT.md).
+
+**Réception locale 513 (2026-10-21)** : PostgreSQL 462 tests / 29 fichiers ;
+DEFAULT 4 919 / 462 reçu par union après deux reprises, sans garde affaiblie ;
+gouvernance 1 671 / 169, typage et deux lints sans erreur, cycles 0. Dix réponses
+HTTP Next locales reçues sur simulateur de prestataire : preuve invalide refusée,
+indisponibilité sans promotion, PAID conservé et accès voisin refusé. Persistance
+et retrait de la fixture reçus ; anciens dossiers conservés. Aucun paiement réel.
+Preuves P29 : `local-reception.json` et `http-received.json`. Livraison 513,
+paiement PSP, SMTP et reprise durable restent ouverts. Raccord réel : clé reconnue
+live sur origine sandbox ; OAuth seul sur `https://api.cinetpay.co` refusé par
+HTTP 422 / INVALID_CREDENTIALS (1005). Aucun secret sorti, paiement créé ou
+changement de configuration. Compte ou rail de lancement à confirmer, [plan M04](RESIDUAL-DEBT.md).
 
 510 est reçue en production : source `5c5cc907249ef2123e2d6c7a60c95f81ab7794fe`,
 déploiement `ip02ws80mllbkno6xn7skm1h` terminé le 20 octobre à 21:48:22 UTC,
@@ -55,7 +83,7 @@ séquentielles, pas un snapshot atomique. Aucun changement métier causé par la
 bascule. Attente de livraison/runtime/conservation 510 close ; aucun PSP, vente,
 coût complet ou MVP entier reçu.
 Preuves : `release/preuves-mvp-commercial-20261020/production510-received.json`,
-`production510-data-preserved.json`, `production510-public-api-received.json`. **Blocage de remise M04 confirmé** : lecture seule du runtime509 le20octobre
+`production510-data-preserved.json`, `production510-public-api-received.json`. **Blocage de remise M04 confirmé** : lecture seule du runtime509 le 20 octobre
 à21:39UTC : sendEmail sélectionne provider=log, aucun EMAIL_FROM configuré.
 Aucun transport transactionnel actif : le titulaire ne recevrait pas son lien,
 malgré les gardes de reset reçues localement. Réutiliser email/Anubis et le
@@ -656,7 +684,7 @@ Argent, contrats, facturation, monétisation. Sans Operations, pas de business.
 | `financial-engine/` | Logique business financière | THOT | ✅ existant |
 | `financial-reconciliation/` | Réconciliation transactions | THOT | ✅ existant |
 | `mobile-money/` | Intégration paiement mobile (Orange/MTN/Wave) | INFRASTRUCTURE | ✅ existant |
-| `payment-providers/` | Registry abstrait providers paiement (`pickProvider()`) | INFRASTRUCTURE | ✅ existant |
+| `payment-providers/` | Registry existant ; 513 candidat étend liaison CinetPay par paiement/statut serveur, sans nouveau provider | INFRASTRUCTURE | ✅ existant ; 513 à recevoir |
 | `monetization/` | Pricing localisé marché (FMCG / SaaS / agence — Mission contribution: GROUND_INFRASTRUCTURE) | THOT | ✅ existant |
 | `crm-engine/` | Relation client structurée | INFRASTRUCTURE | ✅ existant |
 | `upsell-detector/` | Signaux d'upgrade contractuel | SESHAT | ✅ existant |
@@ -711,7 +739,7 @@ Configuration, boot, ingestion système, support, security, collaboration intern
 | `boot-sequence/` | Initialisation système au démarrage | INFRASTRUCTURE | ✅ existant |
 | `process-scheduler/` | Cron + queue intents async | INFRASTRUCTURE | ✅ existant |
 | `ingestion-pipeline/` | Pipeline d'ingestion data externe ; `source-usage` factorise usages documentaires, reçus de version et invalidation (ADR-0198). Lecture commune des octets reçus et du PPTX candidate (ADR-0221), réutilisée par études/intake ; aucun nouveau worker. Primitive Sustainment, tutelle du manifest existant. | MESTOR | ✅ existant |
-| `quick-intake/` | Pipeline existant ; M03 origines/rapport et M04 livré : activation sans autorité opérateur pour le nouveau fondateur, Client lié au même propriétaire | INFRASTRUCTURE | ✅ existant ; 511 livré, 512 candidat ; transport réel ouvert |
+| `quick-intake/` | Pipeline existant ; M03 origines/rapport et M04 livré : activation sans autorité opérateur pour le nouveau fondateur, Client lié au même propriétaire | INFRASTRUCTURE | ✅ existant ; 511/512 livrés, 513 candidat ; transport réel ouvert |
 | `brief-ingest/` | Ingestion PDF briefs | MESTOR | ✅ existant |
 | `demo-data/` | Seeding pour staging/demo | INFRASTRUCTURE | ✅ existant |
 | `country-registry/` | Référentiel pays (devises, langues) | INFRASTRUCTURE | ✅ existant |

@@ -1,3 +1,11 @@
+## v6.27.513 — fix(payment): lie les notifications à la preuve d’encaissement (2026-10-21)
+
+**Un signal de paiement ne peut plus devenir un droit sans confirmation liée à la transaction.**
+
+- Adaptateur CinetPay existant aligné sur le contrat wire v1 snake_case/PUSH ; initialisation validée, providerRef et digest SHA-256 de la preuve par paiement persistés avant exposition de l’URL, pour one-shot et cycle mensuel. Aucun token brut enregistré ou renvoyé au prospect, aucune nouvelle entité ou nouveau prestataire.
+- Webhook existant : preuve liée à la ligne/provider/transaction puis statut serveur obligatoire. Indisponibilité → 503 sans promotion depuis le payload, statut pending conservé, identité et montant/devise vérifiés quand fournis. PAID monotone, claim concurrent unique ; cycle réessayable via le même rail idempotent. Les anciennes lignes sans liaison restent intactes et exigent réconciliation ; aucun backfill ou paiement réel inventé.
+- 512 reçue en production au digest exact f663b9ea80772547563bfbd1248e485ddb61f77b0cfa26ea391aa85091163f67 ; 67sources/1041actifs/piliers/originaux/racineFriesland conservés, lectures séquentielles. Dette de livraison512 close. Réceptions finales513, environnement/PSP réel, remise email et reprise durable du fulfillment restent distincts, tracés dans RESIDUAL-DEBT ; aucun MVP entier reçu.
+
 ## v6.27.512 — fix(intake): attribue les usages et réserve le travail public (2026-10-20)
 
 **Le diagnostic réutilise les rails existants de coût, de capacité et de production facultative.**

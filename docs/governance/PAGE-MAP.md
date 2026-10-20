@@ -25,7 +25,7 @@ annulations Next _rsc et effets volontaires conservés dans les reçus P27 ; auc
 SMTP/PSP/vente/MVP entier déduit. Compte d’envoi et transport autorisé restent ouverts.
 Preuves : `release/preuves-mvp-commercial-20261020/production511-{received,data-preserved,public-api-received}.json`.
 
-**512 candidat — surfaces existantes seulement** : catalogue et grille retirent
+**512 livrée — surfaces existantes seulement** : catalogue et grille retirent
 les promesses de complétude/90 jours/illimité non garanties, annoncent au plus deux
 recommandations en aperçu et distinguent fondations ADVE éditables et analyses
 dérivées. Occupation 409/429 conserve les informations et la reprise ; pas de page
@@ -34,8 +34,33 @@ nouvelle ni de quota fournisseur promis. Traitement/reprise compilés reçus :
 pilote compris, pas SLO. Copie observée ; première grille 5 colonnes refusée pour
 prix débordants. Correction 3 colonnes du même composant reçue sur le build final :
 cinq prix dans leurs cartes sur ordinateur et mobile420, fenêtre43réponses sans
-HTTP≥500/exception/échec, titre252ms pilote compris. Livraison 512, mail réel et offre commerciale restent ouverts.
+HTTP≥500/exception/échec, titre252ms pilote compris. Livraison 512 reçue ; mail réel et offre commerciale restent ouverts.
 [Réception et finitions différées](RESIDUAL-DEBT.md).
+
+512 livrée : déploiement terminé le 20 octobre à 23:40:14 UTC, runtime reçu à 23:40:36 UTC,
+source `0c6a3a959145c49a3f2c0b3b645334f8ae25248c`, digest
+`f663b9ea80772547563bfbd1248e485ddb61f77b0cfa26ea391aa85091163f67`.
+Conservation 23:41 UTC : 67 sources/1 041 actifs/huit piliers/racine Friesland, mêmes
+volumes/relais Luna/90s, OpenRouter absent ; lectures séquentielles non atomiques.
+Attente livraison/runtime/conservation 512 close. Preuves P23
+`release/preuves-mvp-commercial-20261020/production512-{received,data-preserved,public-api-received}.json`.
+
+**513 candidat — initialisations et retour existants** : l’URL de paiement
+n’est exposée qu’après persistance de sa liaison serveur ; aucune nouvelle page.
+Le callback client ne prouve aucun paiement. HTTP local reçu sur simulateur ; PSP réel, configuration
+et livraison 513 encore ouverts ; SMTP et remise commerciale distincts.
+
+**Réception locale 513 (2026-10-21)** : PostgreSQL 462 tests / 29 fichiers ;
+DEFAULT 4 919 / 462 reçu par union après deux reprises, sans garde affaiblie ;
+gouvernance 1 671 / 169, typage et deux lints sans erreur, cycles 0. Dix réponses
+HTTP Next locales reçues sur simulateur de prestataire : preuve invalide refusée,
+indisponibilité sans promotion, PAID conservé et accès voisin refusé. Persistance
+et retrait de la fixture reçus ; anciens dossiers conservés. Aucun paiement réel.
+Preuves P29 : `local-reception.json` et `http-received.json`. Livraison 513,
+paiement PSP, SMTP et reprise durable restent ouverts. Raccord réel : clé reconnue
+live sur origine sandbox ; OAuth seul sur `https://api.cinetpay.co` refusé par
+HTTP 422 / INVALID_CREDENTIALS (1005). Aucun secret sorti, paiement créé ou
+changement de configuration. Compte ou rail de lancement à confirmer, [plan M04](RESIDUAL-DEBT.md).
 
 510 est reçue en production : source `5c5cc907249ef2123e2d6c7a60c95f81ab7794fe`,
 déploiement `ip02ws80mllbkno6xn7skm1h` terminé le 20 octobre à 21:48:22 UTC,
@@ -48,7 +73,7 @@ séquentielles, pas un snapshot atomique. Aucun changement métier causé par la
 bascule. Attente de livraison/runtime/conservation 510 close ; aucun PSP, vente,
 coût complet ou MVP entier reçu.
 Preuves : `release/preuves-mvp-commercial-20261020/production510-received.json`,
-`production510-data-preserved.json`, `production510-public-api-received.json`. **Blocage de remise M04 confirmé** : lecture seule du runtime509 le20octobre
+`production510-data-preserved.json`, `production510-public-api-received.json`. **Blocage de remise M04 confirmé** : lecture seule du runtime509 le 20 octobre
 à21:39UTC : sendEmail sélectionne provider=log, aucun EMAIL_FROM configuré.
 Aucun transport transactionnel actif : le titulaire ne recevrait pas son lien,
 malgré les gardes de reset reçues localement. Réutiliser email/Anubis et le

@@ -1,128 +1,94 @@
-/**
- * CinetPay provider — "Aurore" v1 API (api.cinetpay.net).
- *
- * Auth model (DIFFERENT from the legacy api-checkout.cinetpay.com/v2 API that
- * used apikey + site_id in the body):
- *   1. POST {base}/v1/oauth/login { api_key, api_password } -> { access_token, expires_in }
- *   2. `Authorization: Bearer <access_token>` on every subsequent call.
- *      Tokens live ~24h (expires_in seconds) and are cached in-process.
- *
- * Secrets come from env vars only (ADR-0075):
- *   CINETPAY_API_KEY + CINETPAY_API_PASSWORD  (from the panel: Ressources > API & sécurité)
- * Base URL is env-driven so the same code targets Sandbox / Production:
- *   CINETPAY_BASE_URL=https://api.cinetpay.net   (Sandbox default)
- *
- * NB — CinetPay restricts API calls to the account's IP allow-list ("Liste
- * blanche IP" in the panel). The CALLER server's public IP must be listed or
- * every call is rejected (HTTP 401/403) regardless of credentials.
+/** CinetPay Aurore v1 adapter. Credentials remain in env (ADR-0075).
+ * Wire contract: cinetpay/cinetpay-js, src/types/payment.ts.
+ * Sandbox remains the default; deployment must explicitly select production.
  */
+import { createHash } from "node:crypto";
+import { z } from "zod";
 import type { PaymentInitInput, PaymentInitResult, PaymentProvider } from "./types";
 import { PaymentProviderError } from "./types";
 
-const DEFAULT_BASE_URL = "https://api.cinetpay.net";
-
 function baseUrl(): string {
-  return (process.env.CINETPAY_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+  return (process.env.CINETPAY_BASE_URL ?? "https://api.cinetpay.net").replace(/\/+$/, "");
 }
 
-// In-process bearer-token cache. Refreshed a minute before expiry; reset on
-// process restart — no persistence needed (a cold start just re-logs in).
-let tokenCache: { value: string; expiresAt: number } | null = null;
-
-async function getAccessToken(): Promise<string> {
+let tokenCache: { value: string; expiresAt: number; base: string } | null = null;
+async function getAccessToken(signal: AbortSignal): Promise<string> {
   const now = Date.now();
-  if (tokenCache && tokenCache.expiresAt > now + 60_000) return tokenCache.value;
-
+  const base = baseUrl();
+  if (tokenCache?.base === base && tokenCache.expiresAt > now + 60_000) return tokenCache.value;
   const apiKey = process.env.CINETPAY_API_KEY;
   const apiPassword = process.env.CINETPAY_API_PASSWORD;
   if (!apiKey || !apiPassword) {
-    throw new PaymentProviderError("CINETPAY", "oauth/login", "CINETPAY_API_KEY + CINETPAY_API_PASSWORD required");
+    throw new PaymentProviderError("CINETPAY", "oauth/login", "Payment credentials unavailable");
   }
-
-  const res = await fetch(`${baseUrl()}/v1/oauth/login`, {
-    method: "POST",
+  const res = await fetch(`${base}/v1/oauth/login`, {
+    method: "POST", signal,
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({ api_key: apiKey, api_password: apiPassword }),
   });
-
-  const data = (await res.json().catch(() => ({}))) as {
-    access_token?: string;
-    expires_in?: number;
-    message?: string;
-  };
-  if (!res.ok || !data.access_token) {
-    throw new PaymentProviderError("CINETPAY", "oauth/login", data.message ?? `login failed (HTTP ${res.status})`);
+  const data = z.object({ access_token: z.string().min(1), expires_in: z.number().positive().optional() })
+    .safeParse(await res.json().catch(() => null));
+  if (!res.ok || !data.success) {
+    // Never echo an upstream body: it may contain credentials or notification proof.
+    throw new PaymentProviderError("CINETPAY", "oauth/login", `Authentication unavailable (HTTP ${res.status})`);
   }
-
-  const ttlMs = Math.max(60, data.expires_in ?? 86_400) * 1000;
-  tokenCache = { value: data.access_token, expiresAt: now + ttlMs };
-  return data.access_token;
+  tokenCache = { value: data.data.access_token, expiresAt: now + (data.data.expires_in ?? 86_400) * 1000, base };
+  return tokenCache.value;
 }
 
-/** Aurore expects separate first/last names; split a display name best-effort. */
-function splitName(name: string | undefined): { first: string; last: string } {
-  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return { first: "Client", last: "-" };
-  if (parts.length === 1) return { first: parts[0]!, last: "-" };
-  return { first: parts[0]!, last: parts.slice(1).join(" ") };
-}
+const initReceipt = z.object({
+  payment_url: z.string().url().refine(value => new URL(value).protocol === "https:"),
+  transaction_id: z.string().min(1), merchant_transaction_id: z.string().min(1),
+  notify_token: z.string().min(1),
+});
+const statusReceipt = z.object({
+  status: z.string().min(1), merchant_transaction_id: z.string().min(1), transaction_id: z.string().min(1),
+  // These are not guaranteed by v1. Check them when supplied, never invent them.
+  amount: z.number().finite().optional(), currency: z.string().optional(),
+});
+const paymentStatuses = new Set(["SUCCESS", "FAILED", "EXPIRED", "INITIATED", "PENDING", "OK"]);
 
 export const cinetpayProvider: PaymentProvider = {
   id: "CINETPAY",
-
-  isConfigured() {
-    return Boolean(process.env.CINETPAY_API_KEY && process.env.CINETPAY_API_PASSWORD);
-  },
+  isConfigured() { return Boolean(process.env.CINETPAY_API_KEY && process.env.CINETPAY_API_PASSWORD); },
 
   async initPayment(input: PaymentInitInput): Promise<PaymentInitResult> {
-    const token = await getAccessToken();
-    const { first, last } = splitName(input.customer.name);
-
+    const signal = AbortSignal.timeout(20_000);
+    const token = await getAccessToken(signal);
+    const parts = (input.customer.name ?? "").trim().split(/\s+/).filter(Boolean);
+    const first = parts[0] && parts[0].length >= 2 ? parts[0] : "Client";
+    const last = parts.slice(1).join(" ") || "Client";
     const res = await fetch(`${baseUrl()}/v1/payment`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      method: "POST", signal,
+      headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({
-        currency: input.currency, // XAF for CEMAC / XOF for UEMOA — driven by caller
-        merchantTransactionId: input.reference,
-        amount: input.amount,
-        lang: "fr",
-        designation: input.description,
-        clientEmail: input.customer.email,
-        clientFirstName: first,
-        clientLastName: last,
-        successUrl: input.returnUrl,
-        failedUrl: input.returnUrl,
-        notifyUrl: input.notifyUrl,
+        currency: input.currency, merchant_transaction_id: input.reference,
+        amount: input.amount, lang: "fr", designation: input.description,
+        client_email: input.customer.email, client_first_name: first, client_last_name: last.length >= 2 ? last : "Client",
+        success_url: input.returnUrl, failed_url: input.returnUrl, notify_url: input.notifyUrl, channel: "PUSH",
       }),
     });
-
-    const data = (await res.json().catch(() => ({}))) as {
-      paymentUrl?: string;
-      transactionId?: string;
-      details?: { status?: string; mustBeRedirected?: boolean };
-      message?: string;
-    };
-    if (!res.ok || !data.paymentUrl) {
-      throw new PaymentProviderError("CINETPAY", input.reference, data.message ?? `init failed (HTTP ${res.status})`);
+    const data = initReceipt.safeParse(await res.json().catch(() => null));
+    if (!res.ok || !data.success || data.data.merchant_transaction_id !== input.reference) {
+      throw new PaymentProviderError("CINETPAY", input.reference, `Invalid initialization receipt (HTTP ${res.status})`);
     }
-    return { paymentUrl: data.paymentUrl, providerRef: data.transactionId };
+    return {
+      paymentUrl: data.data.payment_url, providerRef: data.data.transaction_id,
+      notificationTokenHash: createHash("sha256").update(data.data.notify_token).digest("hex"),
+    };
   },
 
-  async verifyPayment(reference: string): Promise<{ paid: boolean; raw?: unknown }> {
-    const token = await getAccessToken();
+  async verifyPayment(reference: string) {
+    // One deadline shared by authentication and status, no retry or fallback to the notification.
+    const signal = AbortSignal.timeout(8_000);
+    const token = await getAccessToken(signal);
     const res = await fetch(`${baseUrl()}/v1/payment/${encodeURIComponent(reference)}`, {
-      method: "GET",
-      headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      method: "GET", signal, headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
     });
-    const data = (await res.json().catch(() => ({}))) as {
-      status?: string;
-      details?: { status?: string };
-    };
-    const status = data.status ?? data.details?.status;
-    return { paid: status === "SUCCESS", raw: data };
+    const data = statusReceipt.safeParse(await res.json().catch(() => null));
+    if (!res.ok || !data.success || data.data.merchant_transaction_id !== reference || !paymentStatuses.has(data.data.status)) {
+      throw new PaymentProviderError("CINETPAY", reference, `Status unavailable or inconsistent (HTTP ${res.status})`);
+    }
+    return { paid: data.data.status === "SUCCESS", raw: data.data };
   },
 };

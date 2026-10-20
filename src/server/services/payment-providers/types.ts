@@ -39,6 +39,8 @@ export interface PaymentInitResult {
   readonly paymentUrl: string;
   /** Provider-side identifier (Stripe session id, PayPal order id, etc.). */
   readonly providerRef?: string;
+  /** Server-only digest of the per-payment notification proof (CinetPay). */
+  readonly notificationTokenHash?: string;
 }
 
 export interface PaymentProvider {

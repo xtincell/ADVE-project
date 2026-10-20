@@ -3699,6 +3699,8 @@ model IntakePayment {
   providerRef     String?
   /// Tier purchased (INTAKE_PDF | ORACLE_FULL etc.).
   tierKey         String?
+  /// SHA-256 of the per-payment CinetPay notification proof; never the raw token.
+  notificationTokenHash String?
   /// Cycle d'abonnement manuel (FCFA) : Subscription étendue à l'encaissement.
   subscriptionId  String?
   /// Webhook event id for idempotency.

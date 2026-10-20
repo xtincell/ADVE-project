@@ -1,4 +1,4 @@
-## 511 livrée / 512 candidate — remise, coûts et admission (2026-10-20)
+## 512 livrée / 513 candidate — coûts et paiement (2026-10-21)
 
 auth.register refuse toute identité existante, y compris sans mot de passe ;
 la pose initiale utilise forgot/reset par jeton email existant, consommé une seule
@@ -22,7 +22,7 @@ annulations Next _rsc et effets volontaires conservés dans les reçus P27 ; auc
 SMTP/PSP/vente/MVP entier déduit. Compte d’envoi et transport autorisé restent ouverts.
 Preuves : `release/preuves-mvp-commercial-20261020/production511-{received,data-preserved,public-api-received}.json`.
 
-**512 candidat — coûts et admission du diagnostic** : Gateway conserve aussi
+**512 livrée — coûts et admission du diagnostic** : Gateway conserve aussi
 l’usage avant Strategy, corrélé par id intake interne distinct du tenant puis
 rattaché à la vraie marque, descendants différés/stream compris. Claim durable
 existant : même intake : 409 ; occupation partagée : 429, capacité issue de la politique modèle ;
@@ -35,8 +35,36 @@ anciens cas conservés ; 19 nœuds sans embeddings et 98 recommandations PENDING
 conservées, aucun livrable créatif produit. DEFAULT 4 909/461, PG 440/27 et contrôles
 finaux verts. Première grille refusée puis correction 3 colonnes reçue sur le build final,
 cinq prix contenus sur ordinateur et mobile420 ; fenêtre finale43réponses sans erreur,
-titre252ms pilote compris, pasSLO. CI/image/runtime 512, transport, autres parcours/coûts et offre
+titre252ms pilote compris, pasSLO. Transport, autres parcours/coûts et offre
 commerciale restent ouverts. [Bornes et preuves](docs/governance/RESIDUAL-DEBT.md).
+
+512 livrée : déploiement terminé le 20 octobre à 23:40:14 UTC, runtime reçu à 23:40:36 UTC,
+source `0c6a3a959145c49a3f2c0b3b645334f8ae25248c`, digest
+`f663b9ea80772547563bfbd1248e485ddb61f77b0cfa26ea391aa85091163f67`.
+Conservation 23:41 UTC : 67 sources/1 041 actifs/huit piliers/racine Friesland, mêmes
+volumes/relais Luna/90s, OpenRouter absent ; lectures séquentielles non atomiques.
+Attente livraison/runtime/conservation 512 close. Preuves P23
+`release/preuves-mvp-commercial-20261020/production512-{received,data-preserved,public-api-received}.json`.
+
+**513 candidat — paiement CinetPay lié à sa preuve** : adaptateur/webhook et
+IntakePayment existants étendus, empreinte SHA256 nullable de notification et
+providerRef enregistrés avant URL ; contrat v1 snake_case/PUSH et statut serveur
+autoritaire, pas preuve par secret global ni SUCCESS par défaut. PAID monotone et
+CAS ; indisponibilité 503/PENDING conservé.18 PG et10 unitaires ciblés verts après
+rouges réels ; contrôles et HTTP locaux reçus ; livraison et paiement PSP réel ouverts. Anciennes lignes/
+droits conservés ; réconciliation et durabilité après PAID restent à recevoir.
+
+**Réception locale 513 (2026-10-21)** : PostgreSQL 462 tests / 29 fichiers ;
+DEFAULT 4 919 / 462 reçu par union après deux reprises, sans garde affaiblie ;
+gouvernance 1 671 / 169, typage et deux lints sans erreur, cycles 0. Dix réponses
+HTTP Next locales reçues sur simulateur de prestataire : preuve invalide refusée,
+indisponibilité sans promotion, PAID conservé et accès voisin refusé. Persistance
+et retrait de la fixture reçus ; anciens dossiers conservés. Aucun paiement réel.
+Preuves P29 : `local-reception.json` et `http-received.json`. Livraison 513,
+paiement PSP, SMTP et reprise durable restent ouverts. Raccord réel : clé reconnue
+live sur origine sandbox ; OAuth seul sur `https://api.cinetpay.co` refusé par
+HTTP 422 / INVALID_CREDENTIALS (1005). Aucun secret sorti, paiement créé ou
+changement de configuration. Compte ou rail de lancement à confirmer, [plan M04](RESIDUAL-DEBT.md).
 
 510 est reçue en production : source `5c5cc907249ef2123e2d6c7a60c95f81ab7794fe`,
 déploiement `ip02ws80mllbkno6xn7skm1h` terminé le 20 octobre à 21:48:22 UTC,
@@ -57,7 +85,7 @@ compte réel exercé/muté ni migration/retrait d’opérateur. Constat statique
 pris en charge par 511 livré ; M04offre/CRM complet et M05coût,
 différés/assistance facultative/admission restent ouverts. Aucun nouveau concept,
 modèle/service/routeur/page/Intent/ADR/provider/manager ou compte de registre.
-[Recette requise](docs/governance/RESIDUAL-DEBT.md). **Blocage de remise M04 confirmé** : lecture seule du runtime509 le20octobre
+[Recette requise](docs/governance/RESIDUAL-DEBT.md). **Blocage de remise M04 confirmé** : lecture seule du runtime509 le 20 octobre
 à21:39UTC : sendEmail sélectionne provider=log, aucun EMAIL_FROM configuré.
 Aucun transport transactionnel actif : le titulaire ne recevrait pas son lien,
 malgré les gardes de reset reçues localement. Réutiliser email/Anubis et le
@@ -109,7 +137,7 @@ Preuve de cadrage : `release/preuves-rapport-fidelite-20261020/framing.json`. Pr
 
 paid-fulfillment existant partage IntakePayment PAID/même intake ou vraie session ADMIN pour rapport/recommandations/PDF ; paid client ne donne aucun droit et verifyPayment lie référence/intake. Aperçu limité côté serveur (deux champs utiles par pilier, totaux, narratif ADVE complet masqué, neuf lignes stratégiques existantes), ordre stable sans dépendre du JSONB. Page et composants existants montrent détails selon le droit et originaux dans les deux modes. PDF ADMIN sans PAID fictif : cookies de session existants scoppés à l’origine configurée, attente du rendu autorisé et des polices. complete terminal relit sans modèle/nouveau Deal ; activation refuse sans droit avant effet. Aucun concept/modèle/service/routeur/page/Intent/driver/provider ajouté, ADR0224 inchangé.
 
-Dix tests PostgreSQL verts (accès, rejeu terminal, activation) et 22 ciblés/six fichiers reçus. Les gardes paid-flag et vocabulaire public ont réellement échoué après retrait/injection volontaire, puis sont revenues au vert après restauration exacte ; erreurs initiales de mock/fixture conservées, sans les compter comme preuves produit. Réception finale locale509 : build webpack du code reçu, 4 889 unitaires/457 fichiers, PostgreSQL424/24, gouvernance1 671/169, tsc et deux lints sans erreur (24 avertissements historiques par lint), zéro cycle, code-map exécutée. Premier passage11 rouges conservé : garde de ligne84→86 déplacée sans nouvelle exception, huit mocks activation sans PAID alignés avec un test de refus ajouté, un timeout gros original sous build concurrent ; reprise sans build concurrent verte. Pas de règle assouplie. Droits/export/reprise reçus localement : six HTTP réels200, PDF impayé402, référence étrangère refusée, rejeu terminal9ms. Fenêtres natives gratuites/payées/ADMIN complètes42/44/42 réponses sans ≥500/exception/échec de chargement ; réouverture payée même URL sans callback. PDF payé26pages/710952octets, texte intégral des huit sections vérifié ; PDF ADMIN sur cas impayé distinct15pages/571934octets, vraie session sans PAID synthétique. Aucun nouvel appel modèle, PSP ou vente externe dans cette recette ; aucun SLO global. Qualité commerciale explicitement refusée : PDF26pages face à la promesse existante8pages, page7 quasi vide, restitution de champs bruts et propositions présentées comme faits. Reprendre source/provenance et présentation dans M03, sans réécrire le mauvais cas sauvegardé. Conservation exacte reçue au périmètre sélectionné : deux diagnostics (diagnostic/rawText/responses/status/id),16piliers (content/fieldCertainty/currentVersion), un upload complet/une source complète, huit coûts inchangés, aucun paiement synthétique et ADMIN dédié retiré. Comparaison deepStrictEqual après normalisation JSON/triID ; pas toute la base atomique. Le premier helper avait des assertions vertes mais une collision booléens/compteurs dans le JSON : défaut du reçu corrigé par helper readonly séparant conserved/counts, aucun défaut produit ni second nettoyage. Preuve `release/preuves-rapport-commercial-20261020/native509-content-conservation-received.json`. 509 livrée au périmètre technique : PR1043/source `f75c6c290dd0672ff29aa2a7529a44348d513eaf`, quinze checks SUCCESS/un SKIPPED ; build39483634646 smoke/push et runtime6.27.509 au digest `a3825f5246e0daa4eb9c25149fc2d5f6c252527238c79c747d234bc0b1277fae` reçus. Déploiement terminé le20octobre2026 à19:44:17UTC, mêmes volumes, login/version200, primaire OpenAI/relais/délai90000ms conservés, OpenRouter absent. Après livraison,67sources/1041actifs, états/originaux, huit piliers et portefeuille Friesland conservés ; lectures avant/après séquentielles, pas toute base atomique. Version publique509/200 et original d’intake inconnu404/private,no-store/no-referrer reçus : transport public uniquement, pas parcours client payé. Attente CI/image/runtime509 close au périmètre technique ; droits/export/reprise reçus localement puis code/runtime livrés. Aucune qualité commerciale, paiement PSP complet, client/vente ou MVP entier reçus.
+Dix tests PostgreSQL verts (accès, rejeu terminal, activation) et 22 ciblés/six fichiers reçus. Les gardes paid-flag et vocabulaire public ont réellement échoué après retrait/injection volontaire, puis sont revenues au vert après restauration exacte ; erreurs initiales de mock/fixture conservées, sans les compter comme preuves produit. Réception finale locale509 : build webpack du code reçu, 4 889 unitaires/457 fichiers, PostgreSQL424/24, gouvernance1 671/169, tsc et deux lints sans erreur (24 avertissements historiques par lint), zéro cycle, code-map exécutée. Premier passage11 rouges conservé : garde de ligne84→86 déplacée sans nouvelle exception, huit mocks activation sans PAID alignés avec un test de refus ajouté, un timeout gros original sous build concurrent ; reprise sans build concurrent verte. Pas de règle assouplie. Droits/export/reprise reçus localement : six HTTP réels200, PDF impayé402, référence étrangère refusée, rejeu terminal9ms. Fenêtres natives gratuites/payées/ADMIN complètes42/44/42 réponses sans ≥500/exception/échec de chargement ; réouverture payée même URL sans callback. PDF payé26pages/710952octets, texte intégral des huit sections vérifié ; PDF ADMIN sur cas impayé distinct15pages/571934octets, vraie session sans PAID synthétique. Aucun nouvel appel modèle, PSP ou vente externe dans cette recette ; aucun SLO global. Qualité commerciale explicitement refusée : PDF26pages face à la promesse existante8pages, page7 quasi vide, restitution de champs bruts et propositions présentées comme faits. Reprendre source/provenance et présentation dans M03, sans réécrire le mauvais cas sauvegardé. Conservation exacte reçue au périmètre sélectionné : deux diagnostics (diagnostic/rawText/responses/status/id),16piliers (content/fieldCertainty/currentVersion), un upload complet/une source complète, huit coûts inchangés, aucun paiement synthétique et ADMIN dédié retiré. Comparaison deepStrictEqual après normalisation JSON/triID ; pas toute la base atomique. Le premier helper avait des assertions vertes mais une collision booléens/compteurs dans le JSON : défaut du reçu corrigé par helper readonly séparant conserved/counts, aucun défaut produit ni second nettoyage. Preuve `release/preuves-rapport-commercial-20261020/native509-content-conservation-received.json`. 509 livrée au périmètre technique : PR1043/source `f75c6c290dd0672ff29aa2a7529a44348d513eaf`, quinze checks SUCCESS/un SKIPPED ; build39483634646 smoke/push et runtime6.27.509 au digest `a3825f5246e0daa4eb9c25149fc2d5f6c252527238c79c747d234bc0b1277fae` reçus. Déploiement terminé le 20 octobre2026 à19:44:17UTC, mêmes volumes, login/version200, primaire OpenAI/relais/délai90000ms conservés, OpenRouter absent. Après livraison,67sources/1041actifs, états/originaux, huit piliers et portefeuille Friesland conservés ; lectures avant/après séquentielles, pas toute base atomique. Version publique509/200 et original d’intake inconnu404/private,no-store/no-referrer reçus : transport public uniquement, pas parcours client payé. Attente CI/image/runtime509 close au périmètre technique ; droits/export/reprise reçus localement puis code/runtime livrés. Aucune qualité commerciale, paiement PSP complet, client/vente ou MVP entier reçus.
 
 M03 reste actif : provenance des déductions et qualité commerciale du rapport et de son export à recevoir. M04/C7 : ancien constat auth509 désormais reproduit sur fixtures et pris en charge par 511 livré, remise native reçue localement via auth/reset existants ; transport réel encore ouvert. M05 : recevoir tous les appels du parcours intake sans strategyId, extraction initiale et extractStructuredPillarContent inclus ; inventaire19sites statiques dans les modules/routeur sélectionnés, pas19appels runtime. Nombre exécuté/coût complet encore à mesurer, huit coûts suivis ne reçoivent pas le total. Durée/choix agentique/offre CRM/admission restent ouverts. [Plans bornés](docs/governance/RESIDUAL-DEBT.md).
 
