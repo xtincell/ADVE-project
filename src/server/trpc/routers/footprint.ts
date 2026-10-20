@@ -1,18 +1,19 @@
 /**
- * Funnel de capture — score d'empreinte INSTANTANÉ, public, éphémère.
+ * Funnel de capture — score d'empreinte public, observations conservées.
  *
  * Le hook du tunnel « Scorer ma marque » : un prospect entre nom + site + réseaux
  * et voit un score /100 tout de suite, SANS compte, SANS email (largeur maximale du
  * haut de funnel). Le score d'EMPREINTE (présence digitale) est distinct de la force
  * révélée /200 (ADR-0149) — c'est le teaser qui pousse vers l'intake (capture email).
  *
- * 100 % éphémère : `strategyId: null` ⇒ aucune écriture (les snapshots sont
- * strategyId-gardés ; Apify défère sans clé). Zéro LLM. Rate-limit par IP sur
- * store DB partagé entre workers (ADR-0161) — seuls les scans frais consomment.
+ * Aucun dossier client créé : les observations publiques rejoignent le registre
+ * partagé de marques et son cache ; les snapshots par-client restent gardés par
+ * strategyId. Rate-limit par IP partagé entre workers (ADR-0161).
  */
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { measuredScoreCoverage } from "@/domain/brand-scores";
 import { createTRPCRouter, publicProcedure, operatorProcedure } from "../init";
 import { enrichPublicFootprint } from "@/server/services/quick-intake/public-enrichment";
 import { computeFootprintScore } from "@/server/services/quick-intake/footprint-score";
@@ -56,7 +57,7 @@ const LOW_COVERAGE_CACHE_MS = 24 * 60 * 60 * 1000;
 
 export const footprintRouter = createTRPCRouter({
   /**
-   * Score d'empreinte instantané d'une marque (public, éphémère, ne persiste rien).
+   * Score public d'une marque ; observations conservées dans le registre partagé.
    * Renvoie le /100 + la ventilation par dimension (honnête : dimension non mesurée
    * exclue du dénominateur ; total null si rien de mesurable).
    */
@@ -91,11 +92,11 @@ export const footprintRouter = createTRPCRouter({
         // pas d'une marque sans empreinte. La resservir une semaine fige
         // l'échec — y compris après un correctif de collecte. 24 h, puis on
         // retente pour de vrai.
-        // `measuredWeight` null = observation legacy sans couverture connue :
-        // traitée comme faible (on ne fige pas une inconnue 7 jours).
+        // La couverture est le rapport des poids des dimensions, pas le poids
+        // brut conservé. Un ancien panel peut totaliser 100, le panel actuel 110.
         const lowCoverageExpired =
           !!cached &&
-          (cached.measuredWeight ?? 0) < LOW_COVERAGE_PCT &&
+          measuredScoreCoverage(cached.dimensions) < LOW_COVERAGE_PCT &&
           Date.now() - cached.capturedAt.getTime() > LOW_COVERAGE_CACHE_MS;
         if (cached && cachedFacts && !lowCoverageExpired) {
           return {

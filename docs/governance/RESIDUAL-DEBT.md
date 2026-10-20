@@ -1,8 +1,64 @@
-## Dossier documentaire 504 — recettes locales reçues, livraison à recevoir (2026-10-20)
+## Sprint MVP1 — écarts du scoreur, candidat 506 à recevoir (2026-10-20)
+
+Priorité audits/scoring de La Fusée comme entrée du service, LeRadar C6-03 /
+MVP-FUSEE-01 et cinq tâches MVP. Le scan public et préremplissage intake sont
+reçus ; aucun contact envoyé, audit complet, conversion ou MVP entier reçu.
+Le correctif reste dans le module pur `brand-scores` et les consommateurs
+existants, sans nouveau modèle/service/router/page/Intent/provider/gestionnaire.
+
+- **Couverture pondérée** : ancien affichage 75 % alors que le panel pèse 110
+  et le poids mesuré 75, donc 68 % ; note publique 43/100 distincte. Candidat
+  `measuredScoreCoverage` partagé par scoreur, rapport intake, narratif et
+  seuil de cache faible. Poids brut, observations et formule de note conservés.
+- **Conservation annoncée** : « Rien n’est enregistré à cette étape » contredit
+  `recordFootprintObservation`. Le candidat FR/EN/ZH annonce l’historique des
+  relevés publics, sans supprimer la conservation pour rendre l’ancien texte vrai.
+- **Identité et site** : bannière demandant un site déjà fourni et mesuré.
+  Le candidat garde l’avertissement sur les mentions homonymes, distingue
+  l’adresse analysée des autres mentions et invite à préciser secteur/pays ;
+  aucune garde d’homonymie supprimée ou identité globale certifiée.
+- **Résumé des fondations** : une liste générique incluait un domaine en échec.
+  Le candidat compose seulement les fondations mesurées ; site/email/performance
+  effectivement reçus dans ce cas, domaine non annoncé comme mesuré.
+- **Portée du badge** : l’empreinte publique /100 ne classe pas la santé d’une
+  marque. Le candidat utilise ScoreBadge sans classification ; aria respecte
+  aussi `showClassification=false`, sans réécrire la note ou les autres usages.
+
+Trois régressions rouges réelles au retour du poids brut, vingt anciens
+contrôles encore verts ; restauration exacte reçue et 27 tests ciblés / deux
+fichiers passent. Preuves privées `release/preuves-mvp-commercial-20261020/coverage-candidate-restored.json`
+et `coverage-restored-green.log`. Gauntlet local final reçu : huit sorties
+zéro, 4 877 unitaires / 456 fichiers, gouvernance 1 671 / 169, typage/lints
+sans erreur, 24 avertissements historiques par lint et zéro cycle. Premier tsc
+sur types Next générés conservé ; preview arrêté puis typegen officiel et
+tsc zéro, sans modification manuelle des types ni règle assouplie.
+
+Natif local reçu sur cache : HTTP 200, 68 %, 43/100, fondations exactes et aria
+« Score 43 sur 100 », intake prérempli, captures inspectées. Fenêtre complète
+de 25 réponses sans ≥500/exception/échec de chargement. Une observation
+strictement identique, zéro ligne AICostLog/intake/contact et aucun appel frais.
+DOM 707,6 ms/titre observé ≤931 ms avec pilote ; compilation froide API environ
+60 s, aucun SLO ni coût du scan public réel reçu. Build local additionnel
+Turbopack échoué sur `node_modules` en symlink hors root, défaut code non établi ;
+journal conservé, pas de contournement CI. Build webpack de recette en cours,
+non reçu et distinct des contrôles/natif acquis.
+
+**Fermer ces dettes seulement après** CI/image/runtime 506 exacts et conservation
+production : recevoir couverture, note/poids inchangés, textes et accessibilité
+au périmètre livré, sans perdre la garde d’homonymie. Coût réel du scan, audit,
+restitution et conversion restent des réceptions distinctes.
+Responsable C6/MVP-FUSEE-01 ; effort un lot borné de contrôle/livraison, reprise
+immédiate Sprint MVP1 à la fin du candidat en cours. Pas de qualité générale
+du score ou de recette commerciale reçue de ces tests. Candidat 505 conservé
+séparément ; C2-01, corpus, Alloco sept critères sur huit, C7 et sept chantiers
+restent ouverts. Les cinq étapes MVP gardent les critères du contrat privé
+`release/preuves-mvp-commercial-20261020/requirements-and-baseline.json`.
+
+## Dossier documentaire 504 — livraison reçue, corpus encore ouvert (2026-10-20)
 
 Le registre existant ne distinguait pas une ancienne édition reçue tardivement,
 un autre format d’une version et les mêmes octets sous plusieurs noms déclarés.
-Le candidat [ADR-0223 Proposed](adr/0223-document-edition-representations.md)
+L’extension [ADR-0223](adr/0223-document-edition-representations.md)
 étend `_document`, les métadonnées de représentation et le reçu original,
 sans nouveau modèle/service/router/Intent/page/provider. Antérieure initialement
 ARCHIVED, référence et proposition conservées ; autre format consultable sous
@@ -15,10 +71,17 @@ historiques et zéro cycle. Natif USER opérateur : cinq mutations 200, ordre,
 statuts, quatre sources/originaux, alias et recharge reçus ; aucun modèle/adoption.
 Première fenêtre réseau du reload tronquée, qualifiée dans ADR-0223 ; fenêtre
 complète des mutations et fenêtre stable reçues sans 500 ou exception.
-**Fermer** : recevoir CI et image/runtime exacts avant rapprochement des documents
-réels. Ces dernières réceptions 504 restent ouvertes, sans SLO déduit.
+Source `b7d460f51`, PR 1037, CI 39419107847 et build 39419232494/runtime
+6.27.504 exacts reçus ; données et volumes conservés avant/après. Preuves privées
+`release/preuves-documents504-20261020/production504-{received,data-preserved}.json`.
+Baseline avant 506 : données et portefeuille Friesland inchangés, lectures
+séquentielles non atomiques. L’attente de livraison 504 est close ; aucun nouveau
+déploiement requis pour la refermer. Pas de SLO ou réception de toutes les relations.
+
+**Fermer le reste** : recevoir rapprochement, relations et usages des documents
+réels dans le corpus.
 Responsable Sustainment/Mestor et lecteurs Seshat/Notoria, C2/C3/C4/C7 ; effort
-un lot documentaire borné, déclencheur fin du candidat en cours avant admission
+un lot documentaire borné, déclencheur prochaine reprise C2-01 avant admission
 des antérieures et formats du corpus. Ni IA/adoption implicite, ni qualité de
 conseil ou corpus entier reçus par cette extension. Le dépôt actif garde son
 suivi propre, sans compteur volatile dans ce registre.

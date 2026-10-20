@@ -72,6 +72,7 @@ export interface FootprintDimension {
 export interface FootprintScore {
   total: number | null;
   outOf: 100;
+  /** Raw sum of measured weights; coverage is derived from all dimension weights. */
   measuredWeight: number;
   dimensions: FootprintDimension[];
 }

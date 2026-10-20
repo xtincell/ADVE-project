@@ -1,3 +1,13 @@
+## v6.27.506 — fix(scoring): rapporte la couverture au poids total réel (2026-10-20)
+
+**Le poids mesuré n’est pas un pourcentage lorsque le panel totalise 110.**
+
+- Le test public SPAWT reçoit 43/100 sur 75 points de poids mesurés parmi 110 ; la couverture affichée à 75 % était erronée. Le lecteur pur commun `measuredScoreCoverage` rapporte les poids mesurés au panel complet. Le score lui-même, les poids et les observations stockées restent inchangés ; les anciens panels totalisant 100 restent interprétés selon leurs dimensions.
+- Scoreur public, rapport intake, narratif déterministe/prompt et seuil de cache partiel utilisent le même ratio. Un zéro réellement mesuré compte ; une note absente reste hors du numérateur. Aucun nouveau modèle, service, routeur, page, Intent, fournisseur ou gestionnaire d’appels.
+- Les textes FR/EN/ZH annoncent la conservation des relevés publics dans l’historique, au lieu de promettre une absence d’enregistrement. L’avertissement sur les homonymes distingue les mesures du site et les recherches par nom ; une couverture partielle ne promet plus qu’ajouter un site suffira à tout mesurer. Le résumé cite seulement les fondations mesurées ; le badge public affiche une empreinte sur 100 sans classification de santé, y compris dans son libellé accessible.
+- Garde réellement éprouvée : réintroduire le poids brut produit trois échecs, vingt tests antérieurs restent verts ; restauration exacte puis 27 ciblés sur deux fichiers verts. Recette native anonyme locale reçue : HTTP 200, DOM 708 ms, titre observé ≤ 931 ms incluant pilote ; 25 réponses, zéro ≥ 500, exception ou échec dans la fenêtre complète. Cache réel copié : 43/100, couverture 68 %, seuls site/email/performance résumés ; passage à l’intake prérempli reçu. L’observation reste strictement identique, zéro intake/contact/coût IA local créé. Première compilation API dev ~60 s conservée, aucun SLO déduit.
+- Gauntlet final : 4 877 tests / 456 fichiers, gouvernance 1 671 / 169, types/deux lints sans erreur (24 avertissements historiques), zéro cycle. Premier typage en échec sur les types Next générés pendant preview, puis arrêt contrôlé et régénération officielle reçus ; aucune garde affaiblie. CI et livraison 506 restent à recevoir. Ce correctif ne reçoit ni l’audit complet, la restitution commerciale, la conversion, les coûts du scan réel ou le MVP entier ; la priorité audit/scoring est conservée dans LeRadar, les sept chantiers restent ouverts.
+
 ## v6.27.504 — feat(ingestion): distingue versions métier, formats et copies exactes (2026-10-20)
 
 **L’arrivée tardive d’un fichier ne change ni la chronologie ni la décision de marque.**

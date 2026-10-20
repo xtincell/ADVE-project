@@ -12,6 +12,7 @@
 "use client";
 
 import { Globe, Star, CirclePlay, Mail, Gauge, Megaphone, CalendarClock } from "lucide-react";
+import { measuredScoreCoverage } from "@/domain/brand-scores";
 
 // ── Types (miroir JSON de EnrichedFootprint + FootprintScore persistés) ──
 
@@ -234,7 +235,7 @@ export function FootprintSection({
           ))}
           {score && measuredDims.length < dims.length && (
             <p className="pt-1 text-[10px] text-foreground-muted">
-              Score calculé sur les dimensions réellement mesurées ({score.measuredWeight} points de poids sur 100) —
+              Score calculé sur les dimensions réellement mesurées ({measuredScoreCoverage(dims)} % du poids total) —
               une dimension non mesurée n&apos;est jamais comptée comme une faiblesse.
             </p>
           )}

@@ -28,6 +28,14 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+## Clôture de l’attente de livraison 504 — 2026-10-20
+
+Source `b7d460f51` / PR 1037 / CI 39419107847 / build 39419232494 et runtime
+6.27.504 exacts reçus, conservation avant/après acquise. L’ancienne ligne
+candidate et l’attente de livraison active sont retirées. Relations et usages
+du corpus restent en [reprise C2-01](RESIDUAL-DEBT.md), sans SLO ou étape entière
+reçus ; baseline avant 506 et portefeuille Friesland conservés.
+
 ## Clôture des attentes de livraison 501/503 — 2026-10-20
 
 Runtime 503/source `90b50f9ff` et image exacts reçus, volumes, originaux,
@@ -63,7 +71,7 @@ au plan, sans réception entière déduite. [Reprise](RESIDUAL-DEBT.md).
 
 ## Entrées actives
 
-2026-10-20 · **504 candidat — antériorité et représentation distinctes du dépôt** : un numéro d’admission ne doit pas faire d’une ancienne pièce une nouvelle position, ni un export multiplier les preuves. Registres existants étendus par placement antérieur ARCHIVED, format rattaché à une édition et alias d’octets identiques après vérification physique ; statuts/originaux précédents préservés, autre format exclu des analyses courantes. 31 tests ciblés reçus ; PostgreSQL/navigateur/contrôles complets et livraison non reçus. [ADR-0223 Proposed](adr/0223-document-edition-representations.md) · [Reprise](RESIDUAL-DEBT.md).
+2026-10-20 · **506 candidat — mesure partielle présentée trop largement** : poids 75 affiché 75 % malgré panel 110 ; ratio correct 68 %, note 43/100 distincte. Calcul partagé, poids/notes conservés ; textes FR/EN/ZH honnêtes, fondations seulement mesurées, badge/aria sans santé de marque. Rouge/vert et final local huit sorties zéro reçus, 4 877 unitaires/456 et gouvernance 1 671/169, 24 avertissements historiques par lint. Premier tsc Next généré conservé puis typegen officiel/tsc zéro après arrêt preview, aucune règle assouplie. Natif local sur cache reçu : fenêtre complète 25 réponses sans ≥500/exception/échec de chargement, observation conservée et aucun appel frais/contact. CI/image/runtime 506, coût public réel et MVP entier restent ouverts ; dettes à purger après livraison seulement. [Reprise Sprint MVP1](RESIDUAL-DEBT.md).
 
 **472 livré — repli malgré le relais choisi réparé (2026-10-15)** : l’ordre des conditions autorisait un ancien provider malgré le choix OpenAI explicite et un relais incomplet. Deux conditions existantes corrigées/livrées ; admission reçue dans quatre processus de fixture, cible 94 / 8, sans modèle/réseau/DB. Source c92abbc6/CI/image/runtime et reprise native sans génération reçus ; aucune panne réelle injectée. Cause fermée au périmètre ; autres réserves C7/pont manuel C3 et seize réceptions inchangés. Premiers refus AST conservés au [bornage](REFONTE-PLAN.md).
 
