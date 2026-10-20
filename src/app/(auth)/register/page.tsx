@@ -23,6 +23,7 @@ function RegisterForm() {
     companyName: "",
   });
   const [error, setError] = useState<string | null>(null);
+  const [existingAccount, setExistingAccount] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const registerMutation = trpc.auth.register.useMutation({
@@ -43,6 +44,7 @@ function RegisterForm() {
     },
     onError: (err) => {
       setError(err.message);
+      setExistingAccount(err.data?.code === "CONFLICT");
       setLoading(false);
     },
   });
@@ -50,6 +52,7 @@ function RegisterForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setExistingAccount(false);
 
     if (form.password.length < 8) {
       setError("Le mot de passe doit contenir au moins 8 caracteres.");
@@ -92,6 +95,7 @@ function RegisterForm() {
           {error && (
             <div className="rounded-lg border border-error/50 bg-error/10 px-4 py-3 text-sm text-error">
               {error}
+              {existingAccount && <Link href={`/forgot-password?setup=1&email=${encodeURIComponent(form.email)}`} className="mt-2 block font-medium underline">Recevoir mon lien d’accès</Link>}
             </div>
           )}
 

@@ -24,19 +24,17 @@ export const authRouter = createTRPCRouter({
       const email = input.email.toLowerCase();
       const existing = await ctx.db.user.findUnique({ where: { email } });
 
-      // Real account already exists (with password) — refuse.
-      if (existing?.hashedPassword) {
+      // A passwordless intake/OAuth user is still an existing identity.
+      // Initial password setup uses the existing email reset proof, never email alone.
+      if (existing) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: "Un compte existe deja avec cet email.",
+          message: "Un compte existe déjà avec cette adresse. Connectez-vous ou demandez un lien pour définir votre mot de passe.",
         });
       }
 
       const hashedPassword = await bcrypt.hash(input.password, 12);
 
-      // Claim path: a stub User was provisioned by `quickIntake.activateBrand`.
-      // Set the password + name on the existing row so the prospect inherits
-      // the Client + Strategy that were already created in their name.
       // P1-2 (audit onboarding 2026-07-19) — email de bienvenue : aucune
       // inscription n'envoyait quoi que ce soit. Best-effort, jamais bloquant.
       const sendWelcome = (to: string, name: string) => {
@@ -51,18 +49,6 @@ export const authRouter = createTRPCRouter({
           });
         }).catch(() => {});
       };
-
-      if (existing) {
-        const user = await ctx.db.user.update({
-          where: { id: existing.id },
-          data: {
-            name: input.name,
-            hashedPassword,
-          },
-        });
-        sendWelcome(user.email, input.name);
-        return { id: user.id, email: user.email, claimed: true };
-      }
 
       const user = await ctx.db.user.create({
         data: {
@@ -83,6 +69,10 @@ export const authRouter = createTRPCRouter({
   forgotPassword: publicProcedure
     .input(z.object({ email: z.string().email() }))
     .mutation(async ({ ctx, input }) => {
+      const { systemEmailIsArmed } = await import("@/server/services/email");
+      // This global capability is identical for known and unknown addresses.
+      // Do not issue an unusable proof or print it into a delivery log.
+      if (!systemEmailIsArmed()) return { success: true, deliveryAvailable: false };
       const user = await ctx.db.user.findUnique({
         where: { email: input.email.toLowerCase() },
       });
@@ -105,20 +95,21 @@ export const authRouter = createTRPCRouter({
           const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
           const { sendEmail, renderPasswordResetEmail } = await import("@/server/services/email");
           const rendered = renderPasswordResetEmail({ resetUrl, userName: captured.name ?? undefined });
-          await sendEmail({
+          const delivery = await sendEmail({
             to: captured.email,
             subject: rendered.subject,
             html: rendered.html,
             text: rendered.text,
             tag: "password-reset",
           });
+          if (!delivery.ok) console.error("[auth:forgotPassword] email delivery failed", delivery.provider);
         })().catch((err) => {
           console.error("[auth:forgotPassword] background reset failed:", err instanceof Error ? err.message : err);
         });
       }
 
       // Always return success to prevent email enumeration
-      return { success: true };
+      return { success: true, deliveryAvailable: true };
     }),
 
   /**
@@ -148,14 +139,18 @@ export const authRouter = createTRPCRouter({
 
       const hashedPassword = await bcrypt.hash(input.password, 12);
 
-      await ctx.db.user.update({
-        where: { id: user.id },
+      // Consume the same live proof atomically, including across concurrent requests.
+      const consumed = await ctx.db.user.updateMany({
+        where: { id: user.id, resetToken: input.token, resetTokenExpiry: { gt: new Date() } },
         data: {
           hashedPassword,
           resetToken: null,
           resetTokenExpiry: null,
         },
       });
+      if (consumed.count !== 1) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Ce lien de réinitialisation est invalide ou a expiré." });
+      }
 
       return { success: true };
     }),

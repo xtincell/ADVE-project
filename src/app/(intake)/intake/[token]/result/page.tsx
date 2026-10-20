@@ -311,7 +311,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   const [paywallLoading, setPaywallLoading] = useState(false);
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
-  const [activated, setActivated] = useState<{ clientName: string; userEmail: string } | null>(null);
+  const [activated, setActivated] = useState<{ clientName: string; userEmail: string; alreadyClaimed: boolean } | null>(null);
   const [prepareAssistance, setPrepareAssistance] = useState(false);
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
 
@@ -358,6 +358,11 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   }, [intake?.status, refetch]);
 
   const isPaid = intake?.reportAccess.unlocked === true;
+  const activeAccount = activated ?? (intake?.status === "CONVERTED" ? {
+    clientName: intake.companyName,
+    userEmail: intake.contactEmail,
+    alreadyClaimed: null,
+  } : null);
   // Use the canonical localized price (handles ALL currencies, not just XAF/XOF/EUR).
   // Default = paid (false) while pricing is loading/erroring — never claim "Gratuit"
   // before the pricing query has actually resolved.
@@ -411,7 +416,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
 
   const activateMutation = trpc.quickIntake.activateBrand.useMutation({
     onSuccess: (data) => {
-      setActivated({ clientName: data.clientName, userEmail: data.userEmail });
+      setActivated({ clientName: data.clientName, userEmail: data.userEmail, alreadyClaimed: data.alreadyClaimed });
       void refetch();
     },
   });
@@ -1655,7 +1660,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           );
         })()}
 
-        {isPaid && !activated && (
+        {isPaid && !activeAccount && (
           <section className="mt-10 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/5 to-card p-6 sm:p-8 print:hidden">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-primary/10 p-2"><Rocket className="h-5 w-5 text-primary" /></div>
@@ -1710,23 +1715,28 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           </section>
         )}
 
-        {activated && (
+        {activeAccount && (
           <section className="mt-10 rounded-2xl border border-primary/50 bg-primary/5 p-6 sm:p-8 print:hidden">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-primary/15 p-2"><ShieldCheck className="h-6 w-6 text-primary" /></div>
               <div>
-                <h2 className="text-lg font-bold text-foreground">{t("intakeResult.activated.titleBefore")} {activated.clientName}</h2>
+                <h2 className="text-lg font-bold text-foreground">{t("intakeResult.activated.titleBefore")} {activeAccount.clientName}</h2>
                 <p className="mt-1 text-sm text-foreground-muted">
-                  {t("intakeResult.activated.subBefore")} <span className="font-mono text-foreground">{activated.userEmail}</span> {t("intakeResult.activated.subAfter")}
+                  {t("intakeResult.activated.subBefore")} <span className="font-mono text-foreground">{activeAccount.userEmail}</span> {t("intakeResult.activated.subAfter")}
                 </p>
               </div>
             </div>
             <Link
-              href={`/register?email=${encodeURIComponent(activated.userEmail)}`}
+              href={activeAccount.alreadyClaimed ? "/login" : `/forgot-password?setup=1&email=${encodeURIComponent(activeAccount.userEmail)}`}
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
             >
-              {t("intakeResult.activated.cta")} <ArrowRight className="h-4 w-4" />
+              {t(activeAccount.alreadyClaimed ? "intakeResult.activated.loginCta" : "intakeResult.activated.cta")} <ArrowRight className="h-4 w-4" />
             </Link>
+            {activeAccount.alreadyClaimed === null && (
+              <Link href="/login" className="mt-3 inline-flex text-sm font-medium text-primary hover:underline">
+                {t("intakeResult.activated.loginCta")}
+              </Link>
+            )}
           </section>
         )}
       </div>
@@ -1754,7 +1764,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
       {/* Sticky CTA — present on every viewport size, hidden when the user
           has already unlocked or activated. Pushes itself above mobile
           home-indicator via env(safe-area-inset-bottom). Hidden in print. */}
-      {!isPaid && !activated && tierGrid && tierGrid.length > 0 && (() => {
+      {!isPaid && !activeAccount && tierGrid && tierGrid.length > 0 && (() => {
         const recommended = tierGrid.find((t) => t.definition.key === "ORACLE_FULL");
         const cheapest = tierGrid.find((t) => t.definition.key === "INTAKE_PDF");
         return (

@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.511", date: "2026-10-20", headline: "Retrouver votre dossier avec un accès vérifié",
+    highlights: [{ emoji: "🔐", title: "Le même dossier, un accès protégé", body: "Votre accès reste lié à votre adresse et à votre dossier. Le lien de définition du mot de passe ne peut servir qu’une fois. Si son envoi est indisponible, la page l’indique et vous permet de contacter l’équipe. Les entreprises qui portent le même nom gardent des espaces séparés." }],
+  },
+  {
     version: "6.27.510", date: "2026-10-20", headline: "Distinguer vos données des propositions",
     highlights: [{ emoji: "📄", title: "Un diagnostic plus facile à vérifier", body: "Le rapport indique l’origine des données et les propositions à valider. Sa synthèse reste lisible, avec les détails consultables et une annexe dans le PDF. Le score de complétude est distingué de la force de marque ; les anciens rapports signalent leur besoin de vérification sans être réécrits." }],
   },

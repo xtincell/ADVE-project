@@ -805,7 +805,9 @@ export const quickIntakeRouter = createTRPCRouter({
         },
       });
 
-      // Find or stub the prospect User (no password — claimed via auth.register).
+      // A founder owns this strategy without becoming an operator of every
+      // self-serve company. Existing agency memberships are never changed here.
+      // Passwordless users prove control through the existing emailed reset link.
       const stubUser = await ctx.db.user.upsert({
         where: { email },
         update: {},
@@ -813,14 +815,15 @@ export const quickIntakeRouter = createTRPCRouter({
           email,
           name: intake.contactName,
           role: "USER",
-          operatorId: operator.id,
         },
       });
       const alreadyClaimed = !!stubUser.hashedPassword;
 
-      // Find or create the Client (one Client per (operator, name) — idempotent).
+      // A matching company name is not proof of ownership. Replay can reuse
+      // only a client already attached to a strategy owned by this same user.
       const existingClient = await ctx.db.client.findFirst({
-        where: { name: intake.companyName, operatorId: operator.id },
+        where: { name: intake.companyName, operatorId: operator.id,
+          strategies: { some: { userId: stubUser.id } } },
       });
       const client = existingClient ?? await ctx.db.client.create({
         data: {

@@ -208,3 +208,5 @@ exiger le label avant merge via une protection de branche.
 2026-10-20 | #1044 | Codex | Clôture documentaire509 reçue : runtime/données conservés, qualité du MVP et coût complets encore au plan. | Alexandre (priorité MVP explicite)
 
 | 2026-10-20 | #1046 | fix(intake) origine et restitution du diagnostic MVP | NEFER — priorité MVP explicite, phase7 | Réponses conservées, propositions qualifiées, projection historique sans réécriture, lecture et PDF13pages reçus localement ; gestionnaires existants. M04offre/compte etM05 coût/admission ouverts, aucun MVP entier ou coût total reçu. |
+
+| 2026-10-20 | #1047 | fix(auth) remise du compte et séparation des TPE | NEFER — priorité MVP explicite, phase7 | Auth/reset et activation existants, Anubis factorisé ; compte/CRM/original reçus localement sans SMTP ni vente. Même dossier, fondateur sans opérateur partagé et clients homonymes séparés ; transport email réel, promesses commerciales et coût complet ouverts. |
