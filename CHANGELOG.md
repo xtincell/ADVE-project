@@ -10,6 +10,8 @@
 - Natif compilé traitement/réouverture49/43réponses sans HTTP≥500/exception/échec, titre≤264ms pilote compris. Première grille refusée : cinq colonnes faisaient déborder les prix. Correction du même composant à trois colonnes statiques responsive, build final et prix contenus des cinq offres sur ordinateur/mobile420 reçus ; fenêtre finale43réponses sans erreur, titre252ms pilote compris. Aucun nouveau prix ni page. Aucun nouveau service, modèle, routeur, fournisseur, Intent kind ou gestionnaire.
 - Clôture technique511 reçue séparément : PR1047/source252fc551, build39508092180/digeste822a4a7ae96, runtime et conservation SPAWT/Friesland reçus, mêmes volumes et Luna conservés. CinetPay configuré en production, Stripe/PayPal absents, aucun paiement testé. Transport email réel et choix du compte existant attendus ; Oracle/retainers, autres parcours/coûts et réception commerciale restent ouverts. CI/image/runtime512 encore ouverts, aucune vente ni réception du MVP entier revendiquées.
 
+- Périmètre de livraison consigné au numéro réel PR1048 dans scope-drift, phase7 ; aucune extension de concept ni nouveau gestionnaire.
+
 ## v6.27.511 — fix(auth): remet le dossier au titulaire vérifié sans droits opérateur partagés (2026-10-20)
 
 **Un dossier conservé doit rejoindre le bon compte, sans ouvrir les marques voisines.**
