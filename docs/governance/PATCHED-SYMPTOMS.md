@@ -82,9 +82,21 @@ de boot 500 et leurs lignes convergentes sont retirées. Les autres présentatio
 visuels, sources/lots/études et l’incident auth dev de cause inconnue restent
 au plan, sans réception entière déduite. [Reprise](RESIDUAL-DEBT.md).
 
-## Entrées actives
+## Clôture technique508 — dépôt reçu et repris (2026-10-20)
 
-2026-10-20 · **508 candidat — dépôt confondu avec texte saisi/extrait** : import507 refusé puis formulaire vide, texte saisi/nom en base sans original. Primitive FileUpload/source-original-v1 existante étendue avant préflight, PENDING/STORED, reprise par même intake et lecture privée ; rattachement des mêmes FileUpload.sourceId/objectKey à complete sans copie, EXTRACTED ou FAILED honnête. Persistance tracée par kinds existants/callers retain-sources et bind-sources, pas de nouveau manager/Intent. Treize PostgreSQL nouveaux/ownership rouge-vert et reprise compilée locale reçus : texte saisi104/original distinct665 octets SHA exact, site/social, questionnaire même intake et refus GET étrangers ; HTTP final200/no-referrer reçu après premier header écrasé conservé. Fenêtres compilées import/ingest-plus complètes28/29 réponses sans ≥500/exception/échec, refus modèle explicites. Build webpack et neuf contrôles finaux verts, tsc inclus ; premier refus de séquence ADR puis renumérotation réelle0224 sans test affaibli conservés. Deadlines/échecs dev conservés, pas de SLO global ; CI/image/runtime508 et défaut en production restent ouverts. [ADR-0224 Accepted pour l’implémentation](adr/0224-retained-intake-originals.md) · [Reprise MVP02 et vérification MVP05/C7](RESIDUAL-DEBT.md).
+Import507 refusé : formulaire vide et texte saisi sans original. FileUpload/
+source-original-v1 existants étendus avant préflight, PENDING/STORED, reprise
+privée du même intake et même source rattachée sans copie. Treize PostgreSQL
+nouveaux/ownership rouge-vert, neuf contrôles et reprise compilée reçus ; PR1041/
+source817539dcef96, seize checks, build39467294504/runtime508 au digest04dce4fe22f8
+et données/volumes conservés. Attentes CI/image/runtime et conservation import
+closes au périmètre technique ; échecs/deadlines initiaux conservés. M02 observé
+borné, complétion Luna locale avec même original/source reçue, pas de parcours
+client complet de production. M03 actif : rapport/provenance/coût/droits commerciaux ouverts
+et datés dans RESIDUAL-DEBT ; aucun client/vente ou MVP entier reçu.
+[ADR0224 Accepted](adr/0224-retained-intake-originals.md).
+
+## Entrées actives
 
 **472 livré — repli malgré le relais choisi réparé (2026-10-15)** : l’ordre des conditions autorisait un ancien provider malgré le choix OpenAI explicite et un relais incomplet. Deux conditions existantes corrigées/livrées ; admission reçue dans quatre processus de fixture, cible 94 / 8, sans modèle/réseau/DB. Source c92abbc6/CI/image/runtime et reprise native sans génération reçus ; aucune panne réelle injectée. Cause fermée au périmètre ; autres réserves C7/pont manuel C3 et seize réceptions inchangés. Premiers refus AST conservés au [bornage](REFONTE-PLAN.md).
 

@@ -8,51 +8,52 @@ relecture du registre committé et corriger ses références avant merge.
 Responsable reprise du lot505 ; effort renumérotation documentaire bornée,
 déclencheur explicite reprise de ce candidat. Aucun numéro réservé à l’avance.
 
-## MVP-FUSEE-02 — import : texte en base, reprise vide et original absent (2026-10-20)
+## Clôture technique MVP-FUSEE-02 — import507 repris et livré508 (2026-10-20)
 
-**Reçu local** : import TXT de 665 octets, refus LLM HTTP 200 explicite, texte
-saisi de 104 caractères/nom en base ; formulaire vide après reload. Zéro
-FileUpload/BrandDataSource pour cette pièce : original non conservé, promesse
-large de conservation des sources non reçue. Aucun appel modèle externe ou
-production touchée. Premier chooser caché : timeout outil puis dépôt via zone
-réussi, pas un défaut produit établi par cette première attente. Fenêtre de
-rejet complète deux réponses sans erreur ; reload tronqué 19 réponses qualifié.
-Preuves `release/preuves-mvp-commercial-20261020/import507-{recovery-gap,data}-received.json`.
+Échec507 conservé : texte saisi104/nom en base, formulaire vide, TXT665 sans
+original. FileUpload/source-original-v1 et stockage chiffré existants reçoivent
+désormais avant préflight, reprennent sans redéposer et rattachent les mêmes
+identifiants sans copie. Refus fournisseur, fermeture/reprise, original exact et
+gardes croisés reçus localement ; treize PostgreSQL nouveaux/ownership rouge-vert
+et neuf contrôles finaux verts. PR1041 fusionnée, source `817539dcef96a5eb5f6f471448cf226398120421`, seize checks verts ; build39467294504 et runtime6.27.508 au digest `04dce4fe22f8584c7357284328b6fcaaca1f35930413c90e453e497430060e33` reçus.
+Mêmes volumes, 67 sources, 1041 actifs, huit piliers et portefeuille Friesland préservés ; lectures avant/après séquentielles, pas un snapshot atomique. Relais OpenAI/délai initial90s conservés, OpenRouter absent, login/version200 ; intake inconnu404/private,no-store/no-referrer.
+Dette de livraison/conservation import close au périmètre technique, M02 observé
+borné ; recette Luna locale COMPLETED avec même original/reçu/source conservés.
+Pas de parcours client complet de production ni réception commerciale déduite.
+Échecs507/dev et preuves locales/runtime conservés.
 
-**Candidat 508, implémentation locale reçue, livraison ouverte** : [ADR-0224 Accepted pour l’implémentation testée](adr/0224-retained-intake-originals.md).
-FileUpload/source-original-v1/stockage chiffré, dépôt avant préflight modèle,
-PENDING avant IO/STORED vérifié, requête par fichier jusqu’à dix Mio et reprise
-du reçu complet sans redéposer. Lecture privée liée au même bearer intake ;
-trace openEmission/closeEmission par le kind existant, sans token/base64 dans
-le journal. Complete rattache les mêmes FileUpload/objectKey aux sources de
-stratégie atomiquement avec COMPLETED, EXTRACTED ou FAILED honnête, par
-persistCompletedIntake et kind LEGACY_QUICK_INTAKE_COMPLETE/caller
-quick-intake:bind-sources existants, sans copie ni adoption. Treize tests
-PostgreSQL reçus, garde ownership retirée/rouge puis restaurée/treize verts
-(preuve intake508-ownership-red-green.json). Natif import partiel reçu : refus
-modèle puis reprise sans file input, original de 665 octets SHA exact, trois
-réponses 200 complètes sans erreur ; GET propriétaire 200, mauvais intake ou
-inconnu404. Header final HTTP200/no-referrer reçu, première observation globale
-écrasée conservée. Fermeture/réouverture texte saisi104/original distinct665 exact reçue ;
-ingest-plus site/social repris, dépôts200 puis refus modèle412 attendu et
-questionnaire du même intake reçus. Natif compilé local : import HTTP 200, DOM 133,3 ms/titre observé ≤308 ms pilote compris, 28 réponses sans ≥500/exception/échec ; ingest-plus HTTP 200, DOM 77,5 ms/titre ≤248 ms, 29 réponses sans erreur. Fenêtres complètes ; dépôts reçus puis refus modèle explicites (trois réponses 200 pour import ; 200/200/412 pour ingest-plus), aucune analyse reçue. Original HTTP 200/665 octets exact/no-referrer. Deadlines et échecs dev conservés, pas de SLO global.
+## MVP-FUSEE-03 — rapport, provenance, coût et droits commerciaux ouverts (2026-10-20)
 
-Build webpack et neuf contrôles finaux reçus : 4 883 unitaires/456 fichiers, gouvernance 1 671/169, PostgreSQL 414/23 dont les treize nouveaux, tsc/deux lints sans erreur, 24 avertissements historiques par lint, zéro cycle.
-Premier refus de séquence ADR et renumérotation réelle0224 sans test affaibli
-conservés ; relance finale verte. CI/image/runtime508 encore ouverts. Preuves :
-`release/preuves-intake-reprise-20261020/compiled508-{ingest,plus,http}-received.json`
-et `release/preuves-mvp-commercial-20261020/gauntlet508-final2-results.json` ;
-recettes dev et garde ownership rouge/vert conservées dans les mêmes dossiers.
+Luna réel local sur entreprise fictive : COMPLETED, même original665octets/reçu/identifiant et rattachement sans copie conservés, un Deal LEAD, aucune vente ni écriture de production. Huit appels gpt-5.6-luna via OAuth existant suivis, extraction initiale absente du registre ; 0,0348356USD est un équivalent API estimé partiel, pas une facture reçue. Même horloge DB : 364358ms, environ6min4, contre estimation affichée30–60s ; fenêtre native complète114réponses/deux ERR_ABORTED conservés, aucun SLO global.
 
-**Fermer** : recevoir CI/image/runtime exacts, puis reprise du dépôt reçu et
-poursuite choisie manuelle ou assistée sur cet état livré, sans faux succès ni
-perte, avant purger la dette de production. Les treize PostgreSQL reçus couvrent
-les gardes du rattachement/rejeu et refus ; aucune complétion guidée production
-ou qualité d’analyse reçue par les seuls refus fournisseur. Responsable
-C6/MVP-FUSEE-02 ; effort fin du même lot fonctionnel, déclencheur contrôles locaux
-reçus avant acceptation du parcours import. Aucun nouveau manager, modèle ou
-chantier. Export, coût/qualité modèle, choix agentique utilisateur, propriétaire/
-offre CRM, rapport commercial et conversion restent dus.
+**Rapport/provenance — fermer avant réception commerciale** : des formulations
+déduites sont présentées comme faits déclarés et des clés/structures internes
+restent visibles. Reprendre le rapport, les libellés/provenances et l’export
+existants : distinguer déclaration, observation et proposition générée, conserver
+celle-ci à valider ; recevoir rendu et export. Responsable C6/MVP-FUSEE-03 ;
+effort une passe ciblée du parcours existant, déclencheur immédiat après508.
+
+**Droits payants M03 — défaut reproduit, réception refusée** : Défaut M03 droits payants reproduit localement en lecture anonyme, sans référence de paiement : getRecosByToken paid:false donne2/71 recommandations, paid:true donne71/71 et isPreview:false, HTTP200. Le boolean client ouvre donc ce contenu ; PDF sans paiement402 et token inconnu404 restent reçus. Aucun paiement, fixture ou mutation créé ; paiement global non reçu.
+**Fermer** : contrôler les droits côté serveur par les mécanismes existants,
+recevoir refus sans droit puis relecture avec droit établi, conserver refus PDF
+sans paiement402 et token inconnu404. Responsable C6/MVP-FUSEE-03 ; effort
+correctif borné du lecteur existant et recette, déclencheur immédiat avant
+réception commerciale. Aucun nouveau gestionnaire ou paiement créé dans ce lot.
+
+**Coût/durée M04/M05/C7 — fermer avant annonce commerciale** : recevoir le suivi
+de l’extraction initiale avec les huit appels déjà suivis via les rails existants ;
+distinguer équivalent API estimé partiel, usage d’abonnement et coût réellement dû.
+Confronter30–60s affichées aux364358ms reçues, sans inventer plafond/SLO.
+Responsable MVP-FUSEE-05/C7 ; effort vérification/correction bornée du suivi,
+déclencheur avant annoncer coût/délai et avant réception commerciale.
+
+**Choix agentique/offre CRM M04/M05/C7** : recevoir choix utilisateur et droits/
+export/partage/rattachement offre par les rails existants ; un Deal LEAD fictif ne
+reçoit ni entitlement client, ni revenu. Responsable MVP-FUSEE-04/05 et C7 ;
+effort recette bornée, déclencheur avant ouverture commerciale. Export, conversion
+et MVP entier restent ouverts, aucun nouveau modèle/service/gestionnaire requis.
+
+Preuves privées : `release/preuves-mvp-commercial-20261020/production508-{received,data-preserved,public-api-received}.json`, `pr508-green-before-merge.json`, `image508-build-digest.json` ; `release/preuves-intake-reprise-20261020/luna508-{data-received,timing-received,native-terminal}.json`, `mvp03-luna-report-quality-not-received.json`, `mvp03-entitlement508-received.json`.
 
 ## MVP-FUSEE-05/C7 — réception de l’admission et de la conservation existantes (2026-10-20)
 

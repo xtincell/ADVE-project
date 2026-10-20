@@ -2160,7 +2160,7 @@ restent ouverts. Le texte d’un import et son nom conservés ne constituent pas
 un reçu d’original : le refus LLM local/reload révèle un formulaire vide et
 zéro original reçu, à corriger dans la page et les primitives existantes.
 
-Extension candidate 508, [ADR-0224 Accepted pour l’implémentation testée](adr/0224-retained-intake-originals.md) :
+Extension livrée508, [ADR-0224 Accepted pour l’implémentation testée](adr/0224-retained-intake-originals.md) :
 intake/FileUpload/source-original-v1 réutilisent le stockage privé, PENDING avant
 IO puis STORED vérifié, dépôt avant modèle et reprise du reçu complet. Bearer
 borné au même intake, persistance tracée par le kind existant ; à complete,
@@ -2173,9 +2173,18 @@ Texte saisi distinct de l’original conservé. Natif compilé : fenêtres compl
 28/29 réponses sans ≥500/exception/échec ; refus modèle explicites, aucune analyse
 reçue. Deadlines/échecs dev conservés, pas de SLO global. Build webpack et neuf
 contrôles finaux verts, tsc inclus ; premier refus de séquence puis renumérotation
-réelle0224 sans garde affaiblie conservés. CI/image/runtime508 restent ouverts.
-Admission/conservation globales à recevoir via les mécanismes existants en
-MVP-FUSEE-05/C7 avant réception commerciale, aucun MVP entier ou politique déduits.
+réelle0224 sans garde affaiblie conservés. PR1041/source817539dcef96, seize checks,
+build39467294504 et runtime508 au digest04dce4fe22f8 reçus, mêmes volumes et
+67sources/1041actifs/huit piliers/Friesland préservés par lectures séquentielles.
+Dette technique livraison/conservation import close, M02 observé borné ; Luna
+local réel COMPLETED conserve le même original/source sans copie. Rapport non
+reçu : déductions dites faits et clés brutes. Huit appels suivis hors extraction
+initiale,364358ms DB ; lectures anonymes paid:false→2/71, paid:true→71/71 sans
+paiement reproduites, tandis que PDF402/token inconnu404 sont reçus. M03 actif :
+rapport/provenance et droits serveur à recevoir ; coût complet, choix agentique,
+offre/export et admission/conservation globales en M04/M05/C7 avant réception
+commerciale, aucun client/vente, MVP entier ou politique arbitraire déduits.
+Voir ADR0224 et RESIDUAL-DEBT pour les preuves et déclencheurs.
 
 ### Compensation d’une écriture
 

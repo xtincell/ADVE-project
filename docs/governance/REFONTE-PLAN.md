@@ -1,4 +1,4 @@
-## MVP-FUSEE-02 — conservation/reprise de l’import, candidat 508 (2026-10-20)
+## MVP-FUSEE-02 — 508 livrée, conservation/reprise technique reçues (2026-10-20)
 
 [ADR-0224 Accepted pour l’implémentation testée](adr/0224-retained-intake-originals.md) : primitive de
 persistance dans quick-intake existant, FileUpload/source-original-v1/stockage
@@ -22,14 +22,30 @@ reçu, première observation écrasée conservée. Natif compilé local : import
 
 Build webpack et neuf contrôles finaux reçus : 4 883 unitaires/456 fichiers, gouvernance 1 671/169, PostgreSQL 414/23 dont les treize nouveaux, tsc/deux lints sans erreur, 24 avertissements historiques par lint, zéro cycle.
 Premier refus de séquence ADR conservé ; renumérotation réelle0224 sans garde
-affaiblie, relance finale verte. **Suite immédiate** : recevoir CI/image/runtime
-exacts avant fermer le défaut507. Responsable C6/MVP-FUSEE-02 ; effort fin du
-même lot fonctionnel, déclencheur contrôles locaux reçus. Pas de livraison508
-ni MVP entier ; clôture technique507, import négatif et autres réserves conservés.
-Vérification admission/conservation par les mécanismes existants en MVP-FUSEE-05/C7
-avant réception commerciale (RESIDUAL-DEBT), sans nouveau gestionnaire ou politique.
+affaiblie, relance finale verte. PR1041 fusionnée, source `817539dcef96a5eb5f6f471448cf226398120421`, seize checks verts ; build39467294504 et runtime6.27.508 au digest `04dce4fe22f8584c7357284328b6fcaaca1f35930413c90e453e497430060e33` reçus.
+Mêmes volumes, 67 sources, 1041 actifs, huit piliers et portefeuille Friesland préservés ; lectures avant/après séquentielles, pas un snapshot atomique. Relais OpenAI/délai initial90s conservés, OpenRouter absent, login/version200 ; intake inconnu404/private,no-store/no-referrer.
+Attentes CI/image/runtime et dette de livraison/conservation import closes au
+périmètre technique. M02 observé borné ; production508 et complétion locale Luna
+restent distinctes, aucun parcours client complet de production ou MVP entier reçu.
 
-## MVP-FUSEE-02 — reprise de l’import, prochain lot fonctionnel (2026-10-20)
+## MVP-FUSEE-03 — rapport/provenance et droits payants, reprise immédiate (2026-10-20)
+
+Luna réel local sur entreprise fictive : COMPLETED, même original665octets/reçu/identifiant et rattachement sans copie conservés, un Deal LEAD, aucune vente ni écriture de production. Huit appels gpt-5.6-luna via OAuth existant suivis, extraction initiale absente du registre ; 0,0348356USD est un équivalent API estimé partiel, pas une facture reçue. Même horloge DB : 364358ms, environ6min4, contre estimation affichée30–60s ; fenêtre native complète114réponses/deux ERR_ABORTED conservés, aucun SLO global.
+
+Qualité commerciale du rapport refusée : déductions données comme faits et
+clés/structures brutes. Reprendre rapport, libellés/provenances et export existants,
+garder les hypothèses comme propositions à valider, recevoir rendu/export.
+Défaut M03 droits payants reproduit localement en lecture anonyme, sans référence de paiement : getRecosByToken paid:false donne2/71 recommandations, paid:true donne71/71 et isPreview:false, HTTP200. Le boolean client ouvre donc ce contenu ; PDF sans paiement402 et token inconnu404 restent reçus. Aucun paiement, fixture ou mutation créé ; paiement global non reçu.
+**Fermer** : contrôle des droits côté serveur par les mécanismes existants,
+refus anonyme sans droit puis relecture avec droit reçu ; confirmer PDF402/404.
+Responsable C6/MVP-FUSEE-03 ; effort une passe ciblée du rapport et des droits
+existants, déclencheur immédiat avant réception commerciale. M04/M05/C7 reçoivent
+séparément coût complet/extraction, durée annoncée, choix agentique et offre CRM,
+admission/conservation existantes ; aucun nouveau manager ou politique arbitraire.
+
+Preuves privées : `release/preuves-mvp-commercial-20261020/production508-{received,data-preserved,public-api-received}.json`, `pr508-green-before-merge.json`, `image508-build-digest.json` ; `release/preuves-intake-reprise-20261020/luna508-{data-received,timing-received,native-terminal}.json`, `mvp03-luna-report-quality-not-received.json`, `mvp03-entitlement508-received.json`.
+
+## Historique MVP-FUSEE-02 — défaut507 clos techniquement par508 (2026-10-20)
 
 Import local 507 reçu comme échec de reprise/conservation : refus LLM HTTP 200
 explicite, 104 caractères de texte saisi et nom de fichier conservés en base mais
@@ -39,12 +55,11 @@ chooser caché expiré dans l’outil puis zone fonctionnelle ; rejet deux répo
 complètes sans erreur, reload tronqué 19 réponses qualifié. Aucun modèle externe
 ou production touchée. Preuves `release/preuves-mvp-commercial-20261020/import507-{recovery-gap,data}-received.json`.
 
-**Suite immédiate** : réhydrater le texte/nom enregistrés dans la même page,
-raccorder les primitives de conservation existantes aux originaux importés et
-aligner la promesse sur le reçu réel ; recevoir refus sans fournisseur, fermeture/
-reprise, original exact et poursuite manuelle/assistée choisie. Aucun nouveau
-manager. Responsable C6/MVP-FUSEE-02 ; effort un lot fonctionnel borné,
-déclencheur immédiat après livraison 507, avant réception de la voie import.
+**Clôture technique508** : reprise du texte/nom, original vérifié, refus sans
+perte et complétion Luna locale avec même source sans copie reçus ; code/image/
+runtime livrés. Cette attente de réparation est close. Qualité du rapport,
+coût complet, droits et réception commerciale demeurent en M03/M04/M05/C7,
+sans réception d’un import client complet de production.
 
 Public production 507 : score SPAWT 43/100/couverture 68 % sur cache, API 200 /
 767,9 ms, DOM 1 001,5 ms/titre borne 1 425 ms incluant pilote ; quatre réponses
