@@ -1,8 +1,9 @@
 import sharp from "sharp";
+import { Readable } from "node:stream";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
-import { readAssetOriginal } from "@/server/services/brand-vault/original";
+import { streamAssetOriginal } from "@/server/services/brand-vault/original";
 
 export const dynamic = "force-dynamic";
 export async function GET(request: Request, { params }: { params: Promise<{ assetId: string }> }) {
@@ -15,12 +16,18 @@ export async function GET(request: Request, { params }: { params: Promise<{ asse
     return Response.json({ error: "Original inaccessible." }, { status: 404, headers });
   }
   try {
-    const original = await readAssetOriginal(assetId);
+    const original = await streamAssetOriginal(assetId);
     if (!original) return Response.json({ error: "Aucun original conservé pour cet actif." }, { status: 404, headers });
     if (new URL(request.url).searchParams.get("preview") === "1") {
       // Only decoded raster bytes are shown inline. SVG, documents, archives and
       // fonts remain attachments; a caller-provided MIME cannot turn them active.
-      const b = original.bytes;
+      if (original.receipt.byteLength > 10 * 1024 * 1024) {
+        await original.body.return(undefined);
+        return Response.json({ error: "Téléchargez l’original pour consulter ce fichier volumineux." }, { status: 415, headers });
+      }
+      const parts: Buffer[] = [];
+      for await (const part of original.body) parts.push(part);
+      const b = Buffer.concat(parts);
       const raster = b.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex"))
         || b.subarray(0, 3).equals(Buffer.from("ffd8ff", "hex")) || /^GIF8[79]a/.test(b.toString("ascii", 0, 6))
         || (b.toString("ascii", 0, 4) === "RIFF" && b.toString("ascii", 8, 12) === "WEBP");
@@ -28,8 +35,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ asse
       const preview = await sharp(b, { limitInputPixels: 20_000_000 }).resize({ width: 1000, height: 1000, fit: "inside", withoutEnlargement: true }).png().toBuffer();
       return new Response(new Uint8Array(preview), { headers: { ...headers, "Content-Type": "image/png" } });
     }
-    return new Response(new Uint8Array(original.bytes), { headers: { ...headers,
-      "Content-Type": "application/octet-stream", "Content-Length": String(original.bytes.length),
+    return new Response(Readable.toWeb(Readable.from(original.body, { objectMode: false, highWaterMark: 64 * 1024 })) as ReadableStream<Uint8Array>, { headers: { ...headers,
+      "Content-Type": "application/octet-stream", "Content-Length": String(original.receipt.byteLength),
       "Content-Disposition": `attachment; filename="original"; filename*=UTF-8''${encodeURIComponent(original.fileName).replace(/'/g, "%27")}`,
       "X-Content-SHA256": original.receipt.contentHash,
     } });

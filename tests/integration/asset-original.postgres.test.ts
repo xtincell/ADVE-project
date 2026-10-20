@@ -1,7 +1,7 @@
 /** Real governed intake, file store, publication and tenant checks; synthetic DB. */
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile, utimes, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import sharp from "sharp";
@@ -13,6 +13,8 @@ import { auth } from "@/lib/auth/config";
 import { brandVaultRouter } from "@/server/trpc/routers/brand-vault";
 import { strategyRouter } from "@/server/trpc/routers/strategy";
 import { readAssetOriginal } from "@/server/services/brand-vault/original";
+import { ORIGINAL_CHUNK_BYTES, assetChunkedReceiptSchema } from "@/domain/source-original";
+import { purgeExpiredCreativeMedia } from "@/server/services/seshat/creative-intelligence/media-archive";
 import { resolveBrandIdentity } from "@/server/services/brand-theme";
 import { readPublicBrand } from "@/server/services/brand-vault/publication";
 import { GET } from "@/app/api/brand-assets/[assetId]/original/route";
@@ -149,4 +151,73 @@ describe.sequential("private asset originals through the existing vault", () => 
     const other = await brand(), otherAsset = await caller().create(input(other.id));
     await expect(caller().list({ strategyId: s.id, cursor: otherAsset.id })).rejects.toThrow("Page d’actifs");
   });
+  it("resumes governed fragments, protects them from cleanup and streams an exact large attachment", async () => {
+    const s = await brand(), bytes = Buffer.alloc(ORIGINAL_CHUNK_BYTES * 3 + 29, 83);
+    const digest = createHash("sha256").update(bytes).digest("hex");
+    const request = { strategyId: s.id, transfer: { action: "BEGIN" as const, name: "Synthetic large original",
+      fileName: "fixture.zip", mimeType: "application/zip", contentHash: digest, byteLength: bytes.length, type: "DOCUMENT" as const } };
+    const outcomes = await Promise.allSettled([caller().transfer(request), caller().transfer(request)]);
+    for (const outcome of outcomes) if (outcome.status === "rejected") throw outcome.reason;
+    const received = outcomes.map(outcome => (outcome as PromiseFulfilledResult<Awaited<ReturnType<ReturnType<typeof caller>["transfer"]>>>).value);
+    const start = received[0]!, retry = received[1]!;
+    expect(retry.assetId).toBe(start.assetId); expect(start).toMatchObject({ state: "PENDING", receivedParts: [], partCount: 4 });
+    expect(JSON.stringify(start)).not.toMatch(/objectKey|backendId|keyId/);
+    const a = await db.brandAsset.findUniqueOrThrow({ where: { id: start.assetId } });
+    await expect(caller().selectFromBatch({ batchId: a.batchId!, selectedAssetId: a.id })).rejects.toThrow();
+    vi.mocked(auth).mockResolvedValue({ user: { id: users[0]! } } as never);
+    expect((await get(a.id)).status).toBe(503);
+    const partInput = (index: number) => ({ strategyId: s.id, transfer: { action: "PART" as const, assetId: a.id, index,
+      content: bytes.subarray(index * ORIGINAL_CHUNK_BYTES, (index + 1) * ORIGINAL_CHUNK_BYTES).toString("base64") } });
+    await caller().transfer(partInput(0));
+    await expect(caller().transfer({ strategyId: s.id, transfer: { action: "FINISH", assetId: a.id } })).rejects.toThrow("incomplet");
+    const resumed = await caller().transfer(request); expect(resumed.receivedParts).toEqual([0]);
+    await expect(caller(1).transfer(partInput(1))).rejects.toThrow();
+    const other = await brand();
+    await expect(caller().transfer({ ...partInput(1), strategyId: other.id })).rejects.toThrow();
+    const upload = await db.fileUpload.findFirstOrThrow({ where: { entityType: "BRAND_ASSET", entityId: a.id } });
+    const receipt = assetChunkedReceiptSchema.parse(upload.storageReceipt), firstKey = receipt.chunks[0]!.objectKey;
+    const firstCipher = await readFile(join(root, firstKey + ".enc"));
+    await caller().transfer(partInput(0)); expect(await readFile(join(root, firstKey + ".enc"))).toEqual(firstCipher);
+    await expect(caller().transfer({ ...partInput(0), transfer: { ...partInput(0).transfer,
+      content: Buffer.alloc(ORIGINAL_CHUNK_BYTES, 42).toString("base64") } })).rejects.toThrow("changé");
+    // Recheck the database's current grant on each part, even with the old session.
+    await db.strategy.update({ where: { id: s.id }, data: { userId: users[1]!, operatorId: operators[1]! } });
+    await expect(caller().transfer(partInput(1))).rejects.toThrow();
+    await db.strategy.update({ where: { id: s.id }, data: { userId: users[0]!, operatorId: operators[0]! } });
+    for (let index = 1; index < 4; index++) await caller().transfer(partInput(index));
+    const finished = await caller().transfer({ strategyId: s.id, transfer: { action: "FINISH", assetId: a.id } });
+    expect(finished).toMatchObject({ assetId: a.id, state: "STORED", contentHash: digest, byteLength: bytes.length });
+    const finalReceipt = assetChunkedReceiptSchema.parse((await db.fileUpload.findUniqueOrThrow({ where: { id: upload.id } })).storageReceipt);
+    const old = new Date(Date.now() - 3 * 86400000);
+    for (const key of [finalReceipt.objectKey, ...finalReceipt.chunks.map(part => part.objectKey)]) {
+      await utimes(join(root, key + ".enc"), old, old);
+      expect(await db.fileUpload.count({ where: { OR: [
+        { storageReceipt: { path: ["objectKey"], equals: key } },
+        { storageReceipt: { path: ["chunks"], array_contains: [{ objectKey: key }] } },
+      ] } })).toBe(1);
+    }
+    expect((await purgeExpiredCreativeMedia()).orphanedRemoved).toBe(0);
+    expect((await readdir(root)).filter(name => name.endsWith(".enc"))).toEqual(expect.arrayContaining(finalReceipt.chunks.map(part => part.objectKey + ".enc")));
+    const response = await get(a.id); expect(response.status).toBe(200);
+    expect(response.headers.get("content-length")).toBe(String(bytes.length));
+    expect(createHash("sha256").update(Buffer.from(await response.arrayBuffer())).digest("hex")).toBe(digest);
+    expect((await get(a.id, "?preview=1")).status).toBe(415);
+    const emissions = await db.intentEmission.findMany({ where: { strategyId: s.id } });
+    expect(JSON.stringify(emissions.map(e => e.payload))).not.toContain(partInput(0).transfer.content.slice(0, 100));
+    expect((await db.brandAsset.findUniqueOrThrow({ where: { id: a.id } })).state).toBe("CANDIDATE");
+    expect(await db.brandAsset.count({ where: { strategyId: s.id } })).toBe(1);
+  });
+
+  it("rejects a false complete fingerprint without committing or adopting its original", async () => {
+    const s = await brand(), bytes = Buffer.from("synthetic false complete fingerprint");
+    const begun = await caller().transfer({ strategyId: s.id, transfer: { action: "BEGIN", name: "Unverified original",
+      fileName: "fixture.txt", mimeType: "text/plain", contentHash: "a".repeat(64), byteLength: bytes.length } });
+    await caller().transfer({ strategyId: s.id, transfer: { action: "PART", assetId: begun.assetId, index: 0, content: bytes.toString("base64") } });
+    await expect(caller().transfer({ strategyId: s.id, transfer: { action: "FINISH", assetId: begun.assetId } })).rejects.toThrow("ne correspondent pas");
+    const upload = await db.fileUpload.findFirstOrThrow({ where: { entityType: "BRAND_ASSET", entityId: begun.assetId } });
+    const receipt = assetChunkedReceiptSchema.parse(upload.storageReceipt);
+    expect(receipt.state).toBe("PENDING"); await expect(readFile(join(root, receipt.objectKey + ".enc"))).rejects.toMatchObject({ code: "ENOENT" });
+    expect((await db.brandAsset.findUniqueOrThrow({ where: { id: begun.assetId } })).state).toBe("CANDIDATE");
+  });
+
 });

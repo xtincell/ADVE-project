@@ -1,6 +1,6 @@
 /** Encrypted private objects. Extends the existing BLOB_STORAGE template contract. */
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from "node:crypto";
-import { mkdir, open, unlink, readdir, stat } from "node:fs/promises";
+import { mkdir, open, link, unlink, readdir, stat } from "node:fs/promises";
 import { constants } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { ssrfSafeFetch } from "./net/ssrf-guard";
@@ -43,8 +43,21 @@ export async function putEncryptedMedia(store: MediaStore, objectKey: string, by
   const encrypted = encryptMedia(bytes, store, objectKey);
   if (store.kind === "VOLUME") {
     await mkdir(store.root!, { recursive: true, mode: 0o700 });
-    const file = await open(join(store.root!, objectName(objectKey)), constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
-    try { await file.writeFile(encrypted); await file.sync(); } finally { await file.close(); }
+    // A crash may leave an orphan, never a partially visible canonical object.
+    // The existing age-based orphan cleanup recognizes this temporary name too.
+    const temporaryKey = randomBytes(32).toString("hex");
+    if (temporaryKey === objectKey) throw new Error("Identifiant temporaire indisponible.");
+    const temporary = join(store.root!, objectName(temporaryKey));
+    let created = false;
+    try {
+      const file = await open(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+      created = true;
+      try { await file.writeFile(encrypted); await file.sync(); } finally { await file.close(); }
+      // link is atomic and refuses an existing destination; rename could overwrite it.
+      await link(temporary, join(store.root!, objectName(objectKey)));
+    } finally {
+      if (created) await unlink(temporary).catch(e => { if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e; });
+    }
   } else {
     const response = await remote(store, objectKey, "PUT", encrypted); await response.body?.cancel();
     if (!response.ok) throw new Error("Écriture du stockage refusée.");

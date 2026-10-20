@@ -18,7 +18,8 @@ import {
 } from "@/server/services/brand-vault/engine";
 import { isBrandAssetKind } from "@/domain/brand-asset-kinds";
 import { PILLAR_KEYS } from "@/domain";
-import { assetUploadSchema, assetProvenanceSchema, retainAssetFile } from "@/server/services/brand-vault/original";
+import { assetUploadSchema, assetProvenanceSchema, retainAssetFile, transferAssetFile } from "@/server/services/brand-vault/original";
+import { assetTransferInputSchema } from "@/domain/source-original";
 import { PublicWebUrl } from "@/domain/public-brand";
 /* lafusee:governed-active */
 
@@ -147,6 +148,15 @@ export const brandVaultRouter = createTRPCRouter({
 
       return asset;
     }),
+
+  transfer: governedProcedure({
+    kind: "LEGACY_BRAND_VAULT_CREATE", inputSchema: assetTransferInputSchema,
+    caller: "brand-vault:transfer",
+  }).mutation(async ({ ctx, input }) => {
+    const result = await vaultResult(() => transferAssetFile(input, ctx.session.user.id, ctx.intentId));
+    if (input.transfer.action === "FINISH" && input.transfer.autoTag) await tagAsset(result.assetId);
+    return result;
+  }),
 
   // List assets filtered by pillar and level
   list: strategyScopedProcedure

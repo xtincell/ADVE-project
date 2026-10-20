@@ -1,50 +1,37 @@
-## Lecture documentaire commune — boot 500 et portée visuelle (2026-10-20)
+## Lecture documentaire 500 reçue — portée visuelle et autres entrées ouvertes (2026-10-20)
 
-ADR-0221 Proposed : lecteur PPTX partagé dans `ingestion-pipeline`, sources,
-études et deux intake raccordés au code 499 fusionné. Préflight pur des douze
-présentations réelles reçu, pas leur dépôt dans le produit ; textes et notes
-seulement, aucun visuel interprété. Recette locale synthétique HTTP/native reçue :
-PPTX extrait avec notes et original exact ; refus binaire, original conservé et
-source FAILED sans faux texte (HTTP 500 du contrat existant), dépôt sans IA et
-téléchargement exact. Cinq écrans ouverts ; les autres formulaires ne sont reçus
-qu’au rendu/sélection, pas en analyse automatique de bout en bout. Gauntlet local
-définitif 499 reçu, sans nouvelle exception ; les deux erreurs initiales liées au
-repère quick-intake sont levées après actualisation 83→84 suivant l’import.
-Gauntlet local définitif 500 reçu, typage/tests/gouvernance/lints/cycles sans
-erreur, avertissements historiques conservés. **Fermer** : CI/image/runtime exacts, reprise
-standalone ci-dessous puis dépôt du corpus admissible. Conserver les originaux et faire recevoir séparément
-toute conclusion dépendant des images ou graphiques. Responsable C2/C4 ; effort
-un lot de recette des chemins communs et qualification par pièce ; déclencheur
-immédiat avant livraison du correctif 500, puis lot documentaire du corpus.
-Ce lecteur ne valide ni les postulats des BMC ni les résultats d’une étude.
+ADR-0221 : cause du boot 499 fermée par le chargement du format à la demande
+livré en 500, source eb8ffd355210c73cdd6fe40d943afab6c4b388d9 et image/runtime
+sha256:c09ff5de46930fc8ee58aa14530e8ffe815b2ad2e44d5fd1cc0565f718360c93 exacts.
+CI/build/boot/session JSON et login 200 reçus ; 61 sources, 994 actifs et huit
+fondamentaux conservés pendant la bascule. Les attentes du seul démarrage 500
+sont retirées ; aucun nouveau rebuild requis pour les refermer.
 
-**Boot 499 bloqué, cause établie** : build 39351802930 échoué avant `/login`,
-`public-brand-migration.cjs` chargeait JSZip absent du standalone. Aucune image
-poussée/déployée, production 498 intacte. 500 diffère l’import jusqu’à
-`readPptxText`, sans copies supplémentaires de paquets ni exemption du boot.
-Régression sur le vrai bundle `freeze-public-brands`, paquets externes et
-JSZip absent/base vide simulée : rouge `MODULE_NOT_FOUND` 499 puis vert 500 reçus.
-CLI auxiliaire sur PostgreSQL de recette détenu : exit 0, zéro publication,
-JSZip indisponible, aucune écriture production. Gauntlet local définitif 500
-reçu ; ce boot auxiliaire n’est pas celui de l’image exacte. **Fermer** :
-recevoir CI puis vrai boot/session d’image 500, lecteur
-PPTX exercé et runtime exact avant clôture. Responsable C2/C7 ; effort une
-correction de couplage et recette de livraison, déclencheur immédiat au build
-du correctif 500. Aucun succès de boot d’image ou déploiement déduit de la CLI.
+Un premier pitch réel PROPOSED est reçu : original de 3 722 103 octets exact,
+4 905 caractères de texte/notes, alias conservé, aucun modèle ni adoption.
+62 sources ensuite, 61 antérieures/994 actifs/huit fondamentaux et les deux BMC
+REFERENCE/PROPOSED préservés. Les 831 matériaux / 572 634 293 octets ont été
+reçus et relus avant 500, registre conservé lors de la bascule ; pas de nouvelle
+relecture physique de tout le lot sur 500. **Fermer le reste** : poursuivre
+absorption/qualification par pièce et usages dans les outils existants ; recevoir
+séparément toute conclusion dépendant d’images ou graphiques, droits et
+sprites, les autres présentations et les parcours automatiques études/intake.
+Responsable C2/C4 ; effort un lot documentaire par famille, déclencheur prochain
+lot d’absorption avant réception de l’onboarding entier. Études 50 Mo, lots
+5×10 Mio, sources fragmentées et grands originaux restent ci-dessous ; aucun
+postulat adopté ou qualité du conseil déduite.
 
-**Incident de recette dev conservé** : `/api/auth/session` a répondu 500 avec
-`SyntaxError: Unexpected end of JSON input` pendant compilation ; cause non
-établie. La console a ensuite été reprise HTTP 200 sans erreur serveur ni
-exception dans cette fenêtre. Ce second passage n’efface pas le premier et ne
-prouve pas une performance de production. **Fermer** : au prochain boot de
-l’image standalone exacte, recevoir connexion/session et parcours console,
-conserver logs/statuts et diagnostiquer si le refus se reproduit, avant bascule
-production. Responsable C4/C7 ; effort une recette ciblée au boot, déclencheur
-prochain boot standalone de 500. Son contrôle de boot existant appelle maintenant
-`/api/auth/session` sans cookie et refuse erreur HTTP/JSON invalide ; le contrôle
-pur refuse HTML et accepte JSON `null`, mais le véritable endpoint de l’image
-reste à recevoir pendant le build. Ce contrôle n’est pas une correction de la
-cause d’authentification non établie. Aucun chantier supplémentaire créé.
+## Incident de session dev — cause non établie, distincte du boot reçu (2026-10-20)
+
+/api/auth/session a répondu 500 avec SyntaxError: Unexpected end of JSON input
+pendant compilation dev. La console a ensuite été reprise 200 sans erreur
+serveur ni exception dans cette fenêtre ; l’incident initial reste conservé.
+Le vrai contrôle de session JSON au boot 500 est reçu, sans démontrer la cause
+de cet incident ni une performance globale. **Fermer** : recevoir le parcours
+console sous session authentifiée dans l’image exacte lors de la prochaine
+recette du poste, conserver logs/statuts et diagnostiquer si le refus revient.
+Responsables C4/C7 ; effort une recette ciblée, déclencheur prochain parcours
+console standalone avant acceptation C4. Aucun chantier supplémentaire créé.
 
 ## Transport des lots et grands originaux — C2/C3/C7 (2026-10-20)
 
@@ -69,10 +56,13 @@ reçus sur copie, UI native et original exact reçus. 498 a conservé 54 sources
 huit piliers et 215 actifs au remplacement ; le PNG réel de 9 001 474 octets
 auparavant refusé est reçu et relu exact. La dette de troncature individuelle est
 fermée, sans fermer les grands fichiers ou les lots ci-dessus. Les neuf pièces
-documentaires parmi les 841 éléments sont reçues ; le dépôt des 831 matériaux
-continue et la métadonnée technique reste conservée à part. Sept documents
-complémentaires reçus ensuite portent le dossier à 61 sources / 47 originaux
-Drive ; acquisition et stockage ne valent pas absorption sémantique intégrale.
+documentaires parmi les 841 éléments sont reçues ; les 831 matériaux /
+572 634 293 octets ont ensuite été reçus et relus avant 500. Registre conservé
+par 500, sans relecture physique fraîche de tout le lot ; métadonnée technique
+conservée à part. Le premier pitch réel reçu sous 500 porte le dossier à
+62 sources, sans adoption ; acquisition et stockage ne valent pas absorption
+sémantique intégrale. Transfert 501 reçu sur copie seulement (ADR-0222), CI/image/
+runtime, restauration et grands originaux réels restent ouverts.
 FileUpload/BRAND_ASSET conserve sa référence par entityId sans FK : purge refusée pour
 un original et GC physique protège son reçu. Le cycle de suppression d’une marque
 et la libération des reçus orphelins restent à recevoir avec les restaurations C7 ;
@@ -96,7 +86,7 @@ Reprise : après établissement des grands blocs, recevoir des citations directe
 deux BMC et la formulation exacte des unités dans les sorties du conseil existant,
 sans nouveau gestionnaire ni répétition aveugle des générations. Responsable C5/C2.
 Ne pas confondre ce défaut de sortie avec une perte des sources, ni fermer le corpus.
-Au reçu du 20 octobre : 61 sources / 47 originaux Drive reçus ; originaux/formules conservés,
+Au reçu du 20 octobre : 62 sources après le premier pitch réel ; originaux/formules conservés,
 mais aucun nouveau calcul financier ou tarif courant certifié. La roadmap transversale
 mêle plusieurs périmètres et reste privée : auditer les capacités de conservation
 propriétaire existantes et préparer la projection SPAWT avec provenance avant partage.
@@ -1177,6 +1167,7 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
   triage puis lots par dépendance ; déclencheur : avant réception sécurité C7/offre
   TPE, priorité aux chemins runtime exposés confirmés. Aucun npm audit fix automatique
   ou clôture de sécurité en 463.
+  Relevé du 20 octobre, candidat 501 : mêmes 51 alertes (7 low, 16 moderate, 20 high, 8 critical) ; les versions verrouillées antérieures ne changent pas, et le nouveau `@noble/hashes` 2.4.0 n’a aucun advisory dans ce relevé. Ce delta n’établit toujours pas l’exposition runtime ni la sécurité C7 ; plan et déclencheur ci-dessus conservés.
 
 ## Couverture documentaire des extensions de marque — 2026-10-02
 

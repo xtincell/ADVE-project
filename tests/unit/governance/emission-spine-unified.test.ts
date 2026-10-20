@@ -135,11 +135,12 @@ function collectEvents(names: string[]): { events: Array<{ name: string; payload
 }
 
 describe("ADR-0124 — openEmission (Loi 1 : hash-chain, Q1 : trace d'abord)", () => {
-  it.each(["source", "asset", "legacy"])("seals a file receipt instead of the %s upload bytes", async (shape) => {
+  it.each(["source", "asset", "legacy", "chunk"])("seals a file receipt instead of the %s upload bytes", async (shape) => {
     const { db, calls } = makeMockDb({});
     const bytes = Buffer.from("Synthetic private original, not ledger text."), encoded = bytes.toString("base64");
     const payload = shape === "source" ? { strategyId: "s", content: encoded, fileName: "a.txt" }
       : shape === "asset" ? { strategyId: "s", file: { content: encoded, name: "a.txt", mimeType: "text/plain" } }
+      : shape === "chunk" ? { strategyId: "s", transfer: { action: "PART", assetId: "a", index: 0, content: encoded } }
       : { strategyId: "s", fileUrl: `data:text/plain;base64,${encoded}`, name: "a.txt" };
     const before = JSON.stringify(payload);
     await openEmission({ kind: shape === "source" ? "LEGACY_INGESTION_UPLOAD_FILE" : "LEGACY_BRAND_VAULT_CREATE", strategyId: "s", payload, caller: "test", db });
