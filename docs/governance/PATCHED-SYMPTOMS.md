@@ -28,6 +28,18 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+## Clôture des attentes de livraison 501/503 — 2026-10-20
+
+Runtime 503/source `90b50f9ff` et image exacts reçus, volumes, originaux,
+qualifications et fondamentaux conservés. Ce reçu actuel supprime l’attente de
+bascule des capacités héritées de 501, sans réception rétroactive du runtime
+historique 501. La recherche MCP de production reçoit directement l’étude et
+les deux BMC successifs, sans génération ni adoption : cause de sélection 503
+fermée au périmètre en métadonnées, ancienne ligne candidate retirée. Sortie
+native, unités et qualité générale restent ouvertes ; dernière question Alloco
+sept critères sur huit, sondage A omis. Corpus actif et restauration C7 demeurent
+distincts. [Réceptions et reprise](RESIDUAL-DEBT.md).
+
 ## Clôture de la préparation documentaire — 2026-10-20
 
 502 est reçu sur source `636ef287d`, CI/build/boot et image/runtime exacts.
@@ -51,9 +63,7 @@ au plan, sans réception entière déduite. [Reprise](RESIDUAL-DEBT.md).
 
 ## Entrées actives
 
-2026-10-20 · **503 candidat — identité documentaire dans le classement partagé** : des noms de synthèse verbeux écartent les éditions originales avant construction du contexte, sans perte de source. Famille/libellé/type validés deviennent le titre de recherche ; nom original conservé comme alias, repli historique intact et identité du cache relue sur la source courante. Deux contre-exemples génériques reproduisent la cause ; contrôles finaux/CI/image/runtime et citations natives restent à recevoir. Aucun texte, statut, empreinte, budget ou modèle modifié. [Reprise Conseil](RESIDUAL-DEBT.md).
-
-2026-10-20 · **501 — écriture VOLUME atomique, runtime en réception** : lecture d’un préfixe chiffré au nom canonique reproduite rouge sur le vrai système de fichiers. L’écriture privée est synchronisée et fermée avant liaison atomique au nom canonique, sans remplacement d’un objet existant ; deux tests réels de visibilité/collision verts. Cause corrigée et reçue localement ; source/CI/build/boot/image et image VPS exacte reçus ; unique demande Coolify reçue, runtime 501/conservation encore ouverts et dernier runtime qualifié 500. Restauration locale d’un original synthétique reçue, sans restauration C7 entière ou grand original réel déduits. [ADR-0222](adr/0222-private-original-chunk-transfers.md).
+2026-10-20 · **504 candidat — antériorité et représentation distinctes du dépôt** : un numéro d’admission ne doit pas faire d’une ancienne pièce une nouvelle position, ni un export multiplier les preuves. Registres existants étendus par placement antérieur ARCHIVED, format rattaché à une édition et alias d’octets identiques après vérification physique ; statuts/originaux précédents préservés, autre format exclu des analyses courantes. 31 tests ciblés reçus ; PostgreSQL/navigateur/contrôles complets et livraison non reçus. [ADR-0223 Proposed](adr/0223-document-edition-representations.md) · [Reprise](RESIDUAL-DEBT.md).
 
 **472 livré — repli malgré le relais choisi réparé (2026-10-15)** : l’ordre des conditions autorisait un ancien provider malgré le choix OpenAI explicite et un relais incomplet. Deux conditions existantes corrigées/livrées ; admission reçue dans quatre processus de fixture, cible 94 / 8, sans modèle/réseau/DB. Source c92abbc6/CI/image/runtime et reprise native sans génération reçus ; aucune panne réelle injectée. Cause fermée au périmètre ; autres réserves C7/pont manuel C3 et seize réceptions inchangés. Premiers refus AST conservés au [bornage](REFONTE-PLAN.md).
 

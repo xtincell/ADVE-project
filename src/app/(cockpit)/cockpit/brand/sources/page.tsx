@@ -24,7 +24,7 @@ import { useCanOperate, useBrandWriteAccess } from "@/components/cockpit/use-can
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Modal } from "@/components/shared/modal";
 import { DocumentLibrary, DocumentEditionDialog } from "@/components/brand/document-library";
-import { DOCUMENT_STATUS_LABEL, type DocumentEdition } from "@/domain/source-document";
+import { DOCUMENT_STATUS_LABEL, type DocumentEdition, type DocumentRepresentation } from "@/domain/source-document";
 import { SourceReadDialog } from "@/components/brand/source-read-dialog";
 import { SourcePreparationOption } from "@/components/brand/source-preparation-option";
 import {
@@ -1151,7 +1151,9 @@ export default function SourcesPage() {
         <div className="space-y-3">
           {sources.map((source, i) => {
             const edition = source.document as DocumentEdition | null;
-            const usableEdition = !edition || edition.status === "REFERENCE" || edition.status === "PROPOSED";
+            const representation = source.representation as DocumentRepresentation | null;
+            const retainedDocument = Boolean(edition || representation);
+            const usableEdition = !representation && (!edition || edition.status === "REFERENCE" || edition.status === "PROPOSED");
             const status = STATUS_CONFIG[source.processingStatus as string] ?? STATUS_CONFIG.PENDING!;
             const original = source.original as { state: string; contentHash: string; byteLength: number } | null;
             const TypeIcon = TYPE_ICONS[source.sourceType as string] ?? FileText;
@@ -1171,10 +1173,11 @@ export default function SourcesPage() {
                         {source.createdAt ? ` — ${new Date(source.createdAt as string).toLocaleDateString("fr")}` : ""}
                       </p>
                       {source.document ? <p className="text-xs text-foreground-secondary">{DOCUMENT_STATUS_LABEL[(source.document as DocumentEdition).status]} · {(source.document as DocumentEdition).label}</p> : null}
+                      {representation && <p className="text-xs text-foreground-secondary">Autre format d’une édition conservée. Consultez le dossier documentaire pour sa place actuelle.</p>}
                       {/* « Déposé » ≠ « exploitable ». L'indexation est
                           best-effort ; sans ce compte, une source jamais
                           indexée passait pour prise en compte. */}
-                      {!usableEdition ? <p className="text-2xs text-foreground-muted">Édition conservée pour l’historique, exclue des analyses courantes.</p> : typeof source.indexedChunks === "number" ? (
+                      {!usableEdition ? <p className="text-2xs text-foreground-muted">{representation ? "Fichier conservé sans compter comme une preuve supplémentaire dans les analyses." : "Édition conservée pour l’historique, exclue des analyses courantes."}</p> : typeof source.indexedChunks === "number" ? (
                         source.indexedChunks > 0 ? (
                           <p className="text-2xs text-success">
                             Lisible par vos analyses ({source.indexedChunks} fragment
@@ -1219,7 +1222,7 @@ export default function SourcesPage() {
                         <FileText className="h-3.5 w-3.5" />
                       </button>
                     ) : null}
-                    {canOperateOnBrand && !source.document && source.shared !== true && ["EXTRACTED", "PROCESSED"].includes(source.processingStatus as string) && <button onClick={() => setClassifySourceId(source.id as string)} className="rounded border border-border px-2 py-1 text-xs text-accent">Classer le document</button>}
+                    {canOperateOnBrand && !retainedDocument && source.shared !== true && ["EXTRACTED", "PROCESSED"].includes(source.processingStatus as string) && <button onClick={() => setClassifySourceId(source.id as string)} className="rounded border border-border px-2 py-1 text-xs text-accent">Classer le document</button>}
                     {/* PR-A (ADR-0032) — niveau de certitude éditable. Default
                         DECLARED côté DB pour les rows pré-migration et nouveaux
                         intakes ; INFERRED pour les sources extraites IA. */}
@@ -1228,7 +1231,7 @@ export default function SourcesPage() {
                         sourceId={source.id}
                         current={(source.certainty as SourceCertainty | undefined) ?? "DECLARED"}
                         pending={updateSourceMutation.isPending}
-                        readOnly={!canOperate || source.shared === true || Boolean(source.document)}
+                        readOnly={!canOperate || source.shared === true || retainedDocument}
                         onChange={(next) =>
                           updateSourceMutation.mutate({ id: source.id as string, certainty: next })
                         }
@@ -1240,7 +1243,7 @@ export default function SourcesPage() {
                     </div>
                     {/* Édition de source (titre + contenu) — toute source est
                         éditable. updateSource passe par le gateway d'ingestion. */}
-                    {canOperate && !source.document && source.shared !== true && typeof source.id === "string" ? (
+                    {canOperate && !retainedDocument && source.shared !== true && typeof source.id === "string" ? (
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditSourceId(source.id as string); }}
                         className="rounded p-1 text-foreground-muted/40 hover:text-accent hover:bg-accent/10 transition-colors"
@@ -1252,7 +1255,7 @@ export default function SourcesPage() {
                     {/* PR-B (ADR-0033) — Re-ingest button, only on intake-origin
                         sources. The full purge happens server-side via Mestor
                         Intent ; this button just opens the confirm modal. */}
-                    {canOperate && source.shared !== true && typeof source.origin === "string" && source.origin.startsWith("intake:") ? (
+                    {canOperate && !retainedDocument && source.shared !== true && typeof source.origin === "string" && source.origin.startsWith("intake:") ? (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1289,7 +1292,7 @@ export default function SourcesPage() {
                         <Sparkles className="h-3.5 w-3.5" />
                       </button>
                     ) : null}
-                    {canOperate && !source.document && source.shared !== true && source.sourceType === "MANUAL_INPUT" ? (
+                    {canOperate && !retainedDocument && source.shared !== true && source.sourceType === "MANUAL_INPUT" ? (
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteMutation.mutate({ id: source.id as string }); }}
                         className="rounded p-1 text-foreground-muted/40 hover:text-error hover:bg-error/10 transition-colors"

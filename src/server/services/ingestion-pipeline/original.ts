@@ -2,7 +2,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db";
-import { sourceOriginalReceiptSchema, MAX_SOURCE_BYTES, type SourceOriginalReceipt, type AssetOriginalReceipt } from "@/domain/source-original";
+import { sourceOriginalReceiptSchema, sourceFileLocationSchema, MAX_SOURCE_BYTES, type SourceOriginalReceipt, type AssetOriginalReceipt } from "@/domain/source-original";
 import { mediaStoreConfiguration, putEncryptedMedia, getEncryptedMedia, type MediaStore } from "@/lib/encrypted-media-store";
 import { extractReceivedFile } from "./extractors";
 import { z } from "zod";
@@ -39,11 +39,12 @@ export async function retainOriginalBytes(store: MediaStore, receipt: SourceOrig
 /** Primitive behind LEGACY_INGESTION_UPLOAD_FILE, including explicit legacy repair. */
 export async function retainSourceFile(
   strategyId: string,
-  file: { name: string; content: string; type: string; sourceId?: string },
+  file: { name: string; content: string; type: string; sourceId?: string; sourceLocation?: z.infer<typeof sourceFileLocationSchema> },
   uploaderId: string,
   client: PrismaClient = db,
 ): Promise<string> {
   const bytes = decodeSourceUpload(file.content), digest = hash(bytes);
+  const location = file.sourceLocation ? sourceFileLocationSchema.parse(file.sourceLocation) : undefined;
   const store = mediaStoreConfiguration();
   if (!store) throw new Error("Le stockage privé des originaux doit être configuré avant ce dépôt. Votre fichier n’a pas été enregistré.");
   const origin = `upload:${digest}`;
@@ -105,6 +106,17 @@ export async function retainSourceFile(
       await tx.fileUpload.update({ where: { id: upload.id }, data: { storageReceipt: json({ ...receipt, state: "STORED" }) } });
     } else {
       await verifyOriginal(store, receipt);
+    }
+    // These names/locations were submitted with the same verified bytes. They
+    // remain original-file metadata, not new evidence or source fingerprints.
+    if (file.name !== upload.fileName || location) {
+      const aliases = receipt.aliases ?? [];
+      const alias = { fileName: file.name, ...location, receivedAt: new Date().toISOString() };
+      if (!aliases.some(old => old.fileName === alias.fileName && old.sourceUrl === alias.sourceUrl && old.sourceRevision === alias.sourceRevision)) {
+        if (aliases.length >= 256) throw new Error("Ce fichier contient trop d’emplacements déclarés. Relisez ses références avant d’en ajouter.");
+        const next = sourceOriginalReceiptSchema.parse({ ...receipt, state: "STORED", aliases: [...aliases, alias] });
+        await tx.fileUpload.update({ where: { id: upload.id }, data: { storageReceipt: json(next) } });
+      }
     }
     // Dedup/legacy repair must never replace text that was manually corrected.
     if (source.processingStatus === "EXTRACTED" || source.processingStatus === "PROCESSED") return { sourceId };

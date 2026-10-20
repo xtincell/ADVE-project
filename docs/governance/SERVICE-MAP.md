@@ -8,7 +8,18 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**501 candidat — originaux fragmentés dans le coffre existant** :
+**504 candidat — compléter les registres documentaires existants** :
+`ingestion-pipeline/document-versions`, `original`, `source-usage` et les contrats
+`source-document`/`source-original` sont étendus sous Mestor / Sustainment.
+Antérieure explicitement placée avant une édition et initialement ARCHIVED ;
+autre format relié à la même version, consultable sans preuve supplémentaire ;
+mêmes octets réutilisés avec alias déclarés conservés dans le reçu original
+après vérification physique. Empreintes, droits, originaux et statuts précédents
+préservés. Aucun service, routeur, modèle, Intent, fournisseur ou appel IA ajouté.
+31 tests ciblés reçus ; PostgreSQL/navigateur, contrôles complets et livraison
+504 restent ouverts. [ADR-0223 Proposed](adr/0223-document-edition-representations.md).
+
+**501 — originaux fragmentés, capacité héritée reçue dans le runtime 503** :
 `brand-vault/original`, `FileUpload` et stockage chiffré existants portent
 `asset-original-v2`, sous Mestor / Sustainment et admission INFRASTRUCTURE.
 `brandVault.transfer` gouverné, identité Drive/éditions/droits relus, trace des
@@ -21,9 +32,12 @@ locales reçues après le timeout initial conservé ; formulaire USER synthétiq
 téléchargé exact, sans modèle/adoption. Fenêtre d’envoi complète six POST 200 /
 zéro exception ; recharge mesurée incomplètement, pas de SLO. Suite 4 857/456,
 gouvernance 1 671/169, typage/deux lints/cycles sans erreur, 24 avertissements
-historiques ; concurrence bornée sans assertion ou délai affaibli. Restauration,
-CI/image/runtime 501 et grands originaux réels encore à recevoir ; sources/études 50 Mo et lots intake restent des raccords
-distincts ouverts. [ADR-0222 Proposed](adr/0222-private-original-chunk-transfers.md).
+historiques ; concurrence bornée sans assertion ou délai affaibli. L’attente de
+bascule 501 est supplantée par le runtime 503 exact, source `90b50f9ff`, mêmes
+volumes et données conservées ; aucune nouvelle réception du runtime historique
+501 n’en est déduite. Restauration C7, terme du corpus réel, sources/études
+50 Mo et lots intake restent des réceptions distinctes ouvertes. Le dépôt réel
+continue, sans compteur figé ici. [ADR-0222 Proposed](adr/0222-private-original-chunk-transfers.md).
 
 **500 reçu — lecteur existant, réception documentaire bornée** :
 Le chargement du format à la demande ferme le blocage de boot 499 ; CI/build/

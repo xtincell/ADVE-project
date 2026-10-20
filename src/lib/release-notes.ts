@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.504", date: "2026-10-20", headline: "Conserver la juste place de chaque document",
+    highlights: [
+      { emoji: "📚", title: "Ajouter un ancien document au bon endroit", body: "Une version reçue tardivement peut rejoindre l’historique avant l’édition choisie, sans remplacer votre référence de travail ou votre proposition en discussion." },
+      { emoji: "📄", title: "Retrouver les formats d’une même version", body: "Vous pouvez relier un autre format à l’édition déjà conservée. Chaque fichier reste consultable, sans multiplier les preuves dans les analyses." },
+      { emoji: "🔗", title: "Reconnaître une copie identique", body: "Le même fichier déposé sous un autre nom conserve son original et sa référence. Ses autres noms et emplacements déclarés restent visibles dans le dossier documentaire." },
+    ],
+  },
+  {
     version: "6.27.503", date: "2026-10-20", headline: "Rechercher vos éditions par leur identité",
     highlights: [{ emoji: "📚", title: "Retrouver les pièces à comparer", body: "La recherche utilise la famille, l’édition et le type enregistrés dans votre dossier documentaire, tout en conservant le nom du fichier. Une proposition reste à valider par votre équipe." }],
   },

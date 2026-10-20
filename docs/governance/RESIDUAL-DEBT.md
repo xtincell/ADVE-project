@@ -1,3 +1,28 @@
+## Dossier documentaire 504 — recettes locales reçues, livraison à recevoir (2026-10-20)
+
+Le registre existant ne distinguait pas une ancienne édition reçue tardivement,
+un autre format d’une version et les mêmes octets sous plusieurs noms déclarés.
+Le candidat [ADR-0223 Proposed](adr/0223-document-edition-representations.md)
+étend `_document`, les métadonnées de représentation et le reçu original,
+sans nouveau modèle/service/router/Intent/page/provider. Antérieure initialement
+ARCHIVED, référence et proposition conservées ; autre format consultable sous
+sa version mais exclu comme preuve indépendante ; alias d’octets identiques
+après vérification physique, sans changement d’empreinte documentaire.
+
+Recettes locales reçues : 31 ciblés, sept PostgreSQL, 4 871 tests complets sur
+456 fichiers, gouvernance 1 671 / 169 ; typage/lints sans erreur, 24 avertissements
+historiques et zéro cycle. Natif USER opérateur : cinq mutations 200, ordre,
+statuts, quatre sources/originaux, alias et recharge reçus ; aucun modèle/adoption.
+Première fenêtre réseau du reload tronquée, qualifiée dans ADR-0223 ; fenêtre
+complète des mutations et fenêtre stable reçues sans 500 ou exception.
+**Fermer** : recevoir CI et image/runtime exacts avant rapprochement des documents
+réels. Ces dernières réceptions 504 restent ouvertes, sans SLO déduit.
+Responsable Sustainment/Mestor et lecteurs Seshat/Notoria, C2/C3/C4/C7 ; effort
+un lot documentaire borné, déclencheur fin du candidat en cours avant admission
+des antérieures et formats du corpus. Ni IA/adoption implicite, ni qualité de
+conseil ou corpus entier reçus par cette extension. Le dépôt actif garde son
+suivi propre, sans compteur volatile dans ce registre.
+
 ## Préparation de l’étude XLSX — défaut fermé au périmètre 502 (2026-10-20)
 
 La source `636ef287d`, sa CI/build/boot et l’image/runtime 502 exacts sont reçus.
@@ -18,23 +43,22 @@ complet, citations, exploitation et restauration restent dans leurs lots C2/C5/C
 à reprendre lors de leur ingestion ou recette respective. Aucun SLO ou chantier
 entier fermé. Preuves privées : `release/preuves-spawt-drive-20261019/`.
 
-## Livraison 501 — image reçue, runtime encore ouvert (2026-10-20)
+## Livraison des capacités 501/503 — attentes de bascule levées (2026-10-20)
 
-PR 1033 fusionnée à 9c8881b70d2b45ae35d3b4d9ab3d0339dc6fadaf, CI verte et
-build 39366449580/boot reçus ; digest
-sha256:02aea6935afdd8d7b13fa8a177e9d3abd22882b9784eb071addba26587f24571.
-Image reçue sur VPS par digest le 20 octobre à 04:46:47 UTC ; helper terminé
-à zéro et unique demande Coolify reçue, s45ljpw9sjt9skrmrb2r3k2o. Runtime 501
-et conservation après bascule restent ouverts ; dernier runtime qualifié 500. Dernier état qualifié :
-62 sources / 994 actifs / huit fondamentaux, zéro des 36 grands originaux
-réels reçu. **Fermer** : recevoir la bascule, le runtime exact et la conservation
-des données ; reprendre ensuite les grands fichiers et leurs octets exacts.
-Responsable C7 ; effort une réception et recette de bascule, déclencheur fin
-du déploiement déjà demandé, sans relance déduite de la seule attente d’observation.
-La restauration locale 501 d’un original synthétique de 12,58 Mo avec base,
-volume, clé et téléchargement exact est reçue ; elle ne ferme pas la
-restauration C7 entière. La capture BMC nommée 501 a été faite sur runtime 500,
-sans validation de production 501 ; les deux BMC restent REFERENCE/PROPOSED.
+Le runtime 503 est reçu sur source `90b50f9ff3f091dd4049ec31906b924a2b53c645`
+et image `sha256:ef764b8b2b58cf3b0e52265da4edf95b39db053406bbeb61c83cab6ad0f4bd7f`,
+login 200, mêmes volumes et données métier conservées. Sources, originaux,
+statuts documentaires, actifs et fondamentaux restent identiques après bascule.
+Ce reçu actuel lève l’attente de livraison des capacités héritées de 501 ;
+il ne qualifie pas rétroactivement le runtime historique 501 ou sa capture BMC
+faite sous 500. Les deux BMC successifs restent REFERENCE/PROPOSED.
+
+Preuves privées `release/preuves-spawt-drive-20261019/production503-received.json`
+et `production503-data-preserved.json`. Restaurations C7 complètes, terme du
+corpus réel et réceptions d’exploitation restent dans leurs lots ; reprendre
+la restauration lors de sa recette dédiée et le corpus pendant son dépôt actif.
+La restauration locale synthétique 501 ne les ferme pas. Aucune relance de
+déploiement 501 requise par l’ancienne attente et aucun compteur d’import figé.
 
 ## Lecture documentaire 500 reçue — portée visuelle et autres entrées ouvertes (2026-10-20)
 
@@ -99,9 +123,10 @@ documentaires parmi les 841 éléments sont reçues ; les 831 matériaux /
 par 500, sans relecture physique fraîche de tout le lot ; métadonnée technique
 conservée à part. Le premier pitch réel reçu sous 500 porte le dossier à
 62 sources, sans adoption ; acquisition et stockage ne valent pas absorption
-sémantique intégrale. Transfert 501 reçu sur copie (ADR-0222), source/CI/image/
-boot reçus ; runtime production, restauration C7 entière et grands originaux
-réels restent ouverts, sans généraliser la restauration locale synthétique.
+sémantique intégrale. Transfert 501 reçu sur copie (ADR-0222), puis capacité
+héritée livrée dans le runtime 503 exact avec conservation reçue. Restauration
+C7 entière et terme du corpus réel restent ouverts ; le dépôt continue sans
+compteur figé ni généralisation de la restauration locale synthétique.
 FileUpload/BRAND_ASSET conserve sa référence par entityId sans FK : purge refusée pour
 un original et GC physique protège son reçu. Le cycle de suppression d’une marque
 et la libération des reçus orphelins restent à recevoir avec les restaurations C7 ;
@@ -130,23 +155,29 @@ Le rejeu sans modèle du chemin documentaire canonique sur les sources autorisé
 montre la proposition omise dès la sélection, avant construction du contexte ;
 les six pièces retenues parviennent au contexte. Le nom de fichier était seul
 traité comme titre fort : une synthèse au nom verbeux pouvait écarter les éditions
-originales. Le candidat 503 réutilise famille/libellé/type existants, relus sur la
+originales. Le correctif 503 réutilise famille/libellé/type existants, relus sur la
 source courante, et conserve le nom original recherchable ou son rôle historique.
 Deux contre-exemples génériques reproduisent cette cause. Les 4 865 tests /
 456 fichiers, gouvernance 1 671 / 169 et cinq contrôles locaux passent (24
 avertissements historiques). La recherche MCP authentifiée sur PostgreSQL
 fictif reçoit directement les trois pièces en 325 ms ; rejeu des candidats
 réels : les deux BMC et l’étude primaire sont fournis dans le budget existant,
-sans nouvel appel. CI/image/runtime 503 et qualité de sortie restent à recevoir. Pas de perte de source, adoption, nouveau budget
+sans nouvel appel. Source `90b50f9ff`, CI/build/image/runtime exacts désormais
+reçus ; recherche MCP authentifiée de production 200, étude et deux BMC
+directement présents, qualification et clarification de succession conservées,
+zéro outil de génération invoqué, chemin sémantique inchangé. La sélection en
+métadonnées est reçue ; qualité de sortie générée toujours ouverte. Pas de perte de source, adoption, nouveau budget
 ou stratégie propre à une marque déduits de ce diagnostic ; le mode vectoriel de
 la question native n’a pas été établi par ce rejeu en métadonnées.
 
-**Fermer** : recevoir le correctif sur sa source/CI/image/runtime exacts, puis
-les citations directes des deux BMC successifs et la formulation exacte des unités
+La dernière question Alloco est reçue sur sept critères sur huit et omet le
+sondage A ; elle ne reçoit pas une qualité générale. **Fermer** : recevoir les
+citations directes des deux BMC successifs et la formulation exacte des unités
 dans le conseil existant. La référence de continuité reste REFERENCE ; la nouvelle
 piste reste PROPOSED à valider par l’équipe. Pas de répétition aveugle des générations.
-Responsable Seshat/Telemetry puis C5/C2 ; effort un correctif borné et une recette
-native, déclencheur immédiat après réception des contrôles du candidat 503. Le corpus
+Responsable Seshat/Telemetry puis C5/C2 ; effort une recette native bornée et
+correction du lecteur si l’omission se reproduit, déclencheur prochaine recette
+du conseil après établissement du dossier documentaire 504. Le corpus
 et le cycle d’erreur C5 restent à recevoir séparément.
 Au reçu du 20 octobre : 62 sources après le premier pitch réel ; originaux/formules conservés,
 mais aucun nouveau calcul financier ou tarif courant certifié. La roadmap transversale

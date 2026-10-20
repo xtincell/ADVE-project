@@ -10,6 +10,16 @@ Statut : `active` (page substantive), `redirect` (legacy renommée — redirige)
 
 Source de vérité : `find src/app -name 'page.tsx'`. Mis à jour avec [APOGEE.md](APOGEE.md) §4.
 
+**504 candidat — dossier Sources existant, aucune page ajoutée** :
+`/cockpit/brand/sources` et `DocumentLibrary` distinguent nouvelle version,
+antérieure reçue tardivement et autre format d’une version. L’antérieure entre
+aux archives ; le format reste consultable sous sa version, sans deuxième
+preuve d’analyse. Les alias de noms/emplacements déclarés restent visibles et
+recherchables dans le dossier. Les gestes conservent la référence et la proposition,
+sans adoption automatique ni IA obligatoire. 31 tests ciblés reçus ; rendu et
+gestes navigateur, PostgreSQL, contrôles complets et livraison 504 non reçus.
+[ADR-0223 Proposed](adr/0223-document-edition-representations.md).
+
 **477 livré, A/B — pages existantes** : source c4bc1882/CI/image/runtime reçus. ADMIN `/cockpit/new` : option décochée/activable, nom vide/Suivant désactivé, lecture sans POST/modèle ; 134 événements/59 réponses complets, zéro HTTP ≥400/exception, seize annulations de cause inconnue/pas SLO. Création/reprise et activations false reçues sur copie seulement ; BootSequence séparé si choisi, seul `activateBrand` porte `inferMissingFields=false`. Causes ciblées purgées ; `/register` pour compte connecté et MarketScaleCard après 401 restent ouverts, seize réceptions inchangées. [Bornage](REFONTE-PLAN.md).
 
 **476 livré — aucun ajout de page** : source cec5a163/CI/image/runtime exacts reçus. ADMIN lit cinq usages prévus Luna sans modèle/POST, données conservées ; 130 événements/56 réponses complets, zéro ≥500/exception mais 18 annulations, cause inconnue/pas SLO. Wrappers/cible 23 / 3 et refus sur copie reçus ; HTTP activateBrand/qualité utile/provenance/opt-out/coût complet restent ouverts, seize réceptions inchangées. [Bornage](REFONTE-PLAN.md).

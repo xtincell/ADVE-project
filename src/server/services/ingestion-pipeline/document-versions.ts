@@ -1,6 +1,6 @@
 /** Extension of canonical sources; no parallel document store or approval system. */
 import { Prisma } from "@prisma/client";
-import { DocumentEditionInputSchema, documentEdition, type DocumentEdition } from "@/domain/source-document";
+import { DocumentEditionInputSchema, DocumentRepresentationInputSchema, documentEdition, sourceHasRetainedDocument, type DocumentEdition, type DocumentRepresentation } from "@/domain/source-document";
 import { invalidateSourceDerivatives, sourceFingerprint, type SourceDb } from "./source-usage";
 import { z } from "zod";
 
@@ -15,19 +15,23 @@ export async function registerDocumentEdition(tx: SourceDb, input: {
   const source = await tx.brandDataSource.findUniqueOrThrow({ where: { id: input.id } });
   await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${source.strategyId} FOR UPDATE`;
   if (sourceFingerprint(source) !== input.expectedSourceHash) throw new Error("SOURCE_CHANGED: relisez ce document avant de le classer.");
-  if (documentEdition(source.rawData)) throw new Error("Cette édition est conservée. Déposez un nouveau fichier pour créer une nouvelle édition.");
+  if (sourceHasRetainedDocument(source.rawData)) throw new Error("Cette édition est conservée. Déposez un nouveau fichier pour créer une nouvelle édition.");
   if (!["EXTRACTED", "PROCESSED"].includes(source.processingStatus)) throw new Error("La lecture de ce document doit être achevée avant son classement.");
   const rows = await tx.brandDataSource.findMany({ where: { strategyId: source.strategyId } });
   const family = rows.flatMap(row => { const doc = documentEdition(row.rawData); return doc?.family === spec.family ? [{ row, doc }] : []; });
-  const latest = family.sort((a, b) => b.doc.edition - a.doc.edition)[0];
-  if (latest && (!spec.previous || spec.previous.sourceId !== latest.row.id || sourceFingerprint(latest.row) !== spec.previous.contentHash)) {
+  const latest = family.filter(f => !f.doc.beforeSourceId).sort((a, b) => b.doc.edition - a.doc.edition)[0];
+  if (spec.before) {
+    const target = family.find(f => f.row.id === spec.before!.sourceId);
+    if (spec.previous || spec.status !== "ARCHIVED") throw new Error("Une édition antérieure est ajoutée aux archives, sans remplacer la référence de travail.");
+    if (!target || sourceFingerprint(target.row) !== spec.before.contentHash) throw new Error("SOURCE_CHANGED: relisez l’édition qui suit ce document.");
+  } else if (latest && (!spec.previous || spec.previous.sourceId !== latest.row.id || sourceFingerprint(latest.row) !== spec.previous.contentHash)) {
     throw new Error("SOURCE_CHANGED: une autre édition existe. Relisez la dernière édition avant de poursuivre.");
   }
   if (!latest && spec.previous) throw new Error("Le document précédent n’appartient pas à cette lignée.");
   if (latest && latest.doc.kind !== spec.kind) throw new Error("Le type doit rester identique dans cette lignée documentaire.");
-  const { previous: _previous, ...details } = spec;
-  const doc: DocumentEdition = { ...details, schema: "document-edition-v1", edition: (latest?.doc.edition ?? 0) + 1,
-    recordedAt: new Date().toISOString(), ...(latest ? { previousSourceId: latest.row.id } : {}) };
+  const { previous: _previous, before: _before, ...details } = spec;
+  const doc: DocumentEdition = { ...details, schema: "document-edition-v1", edition: Math.max(0, ...family.map(f => f.doc.edition)) + 1,
+    recordedAt: new Date().toISOString(), ...(spec.before ? { beforeSourceId: spec.before.sourceId } : latest ? { previousSourceId: latest.row.id } : {}) };
   // A proposal NEVER withdraws the previous reference. Only an explicit choice
   // of REFERENCE may supersede it; all historical bytes and text remain intact.
   if (spec.status === "REFERENCE") for (const old of family.filter(f => f.doc.status === "REFERENCE")) {
@@ -38,6 +42,31 @@ export async function registerDocumentEdition(tx: SourceDb, input: {
   }
   const updated = await tx.brandDataSource.update({ where: { id: source.id }, data: {
     rawData: { ...(source.rawData && typeof source.rawData === "object" && !Array.isArray(source.rawData) ? source.rawData as Prisma.JsonObject : { _sourceData: source.rawData }), _document: doc },
+  } });
+  await invalidateSourceDerivatives(tx, source.id);
+  return updated;
+}
+
+/** Relate two already readable originals; the alternate format cannot become a second edition. */
+export async function registerDocumentRepresentation(tx: SourceDb, input: {
+  id: string; expectedSourceHash: string; userId: string;
+  representation: z.infer<typeof DocumentRepresentationInputSchema>;
+}) {
+  const spec = DocumentRepresentationInputSchema.parse(input.representation);
+  if (input.id === spec.canonical.sourceId) throw new Error("Ce document est déjà sa propre référence.");
+  const ids = [input.id, spec.canonical.sourceId].sort();
+  await tx.$queryRaw(Prisma.sql`SELECT id FROM "BrandDataSource" WHERE id IN (${Prisma.join(ids)}) ORDER BY id FOR UPDATE`);
+  const source = await tx.brandDataSource.findUniqueOrThrow({ where: { id: input.id } });
+  const canonical = await tx.brandDataSource.findUniqueOrThrow({ where: { id: spec.canonical.sourceId } });
+  if (source.strategyId !== canonical.strategyId) throw new Error("Ce format doit appartenir au même dossier de marque.");
+  await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${source.strategyId} FOR UPDATE`;
+  if (sourceFingerprint(source) !== input.expectedSourceHash || sourceFingerprint(canonical) !== spec.canonical.contentHash) throw new Error("SOURCE_CHANGED: relisez les deux documents avant de les rapprocher.");
+  if (sourceHasRetainedDocument(source.rawData)) throw new Error("Cette pièce est déjà classée et reste conservée.");
+  if (!documentEdition(canonical.rawData) || ![source, canonical].every(s => ["EXTRACTED", "PROCESSED"].includes(s.processingStatus))) throw new Error("Les deux pièces doivent être lisibles et l’édition de référence déjà classée.");
+  const representation: DocumentRepresentation = { schema: "document-representation-v1", canonicalSourceId: canonical.id,
+    canonicalSourceHash: spec.canonical.contentHash, reason: spec.reason, recordedAt: new Date().toISOString(), recordedBy: input.userId };
+  const updated = await tx.brandDataSource.update({ where: { id: source.id }, data: {
+    rawData: { ...(source.rawData && typeof source.rawData === "object" && !Array.isArray(source.rawData) ? source.rawData as Prisma.JsonObject : { _sourceData: source.rawData }), _documentRepresentation: representation },
   } });
   await invalidateSourceDerivatives(tx, source.id);
   return updated;

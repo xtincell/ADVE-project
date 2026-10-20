@@ -2119,6 +2119,18 @@ checkpoint ne permet pas de déduire une restauration précise.
 
 ADR-0219 : la lignée et son édition vivent sur la source canonique existante, dans `rawData._document`. Proposition et référence peuvent coexister. La proposition est une hypothèse non validée ; seule une décision humaine explicite la retient comme référence documentaire. Aucun amendement ADVE implicite. Historique et originaux conservés, dérivés invalidés, reçus périmés refusés. Les lecteurs et l’index qualifient les propositions et excluent les éditions antérieures des analyses courantes ; la consultation historique demeure autorisée dans le même périmètre d’accès.
 
+Extension candidate 504, [ADR-0223 Proposed](adr/0223-document-edition-representations.md) :
+une antérieure reçue tardivement entre ARCHIVED avec `beforeSourceId`, sans
+déplacer la référence ou la proposition. Les liens explicites ordonnent la lignée ;
+le numéro d’admission ne déclare pas la récence métier. Un autre format porte
+`_documentRepresentation`, relié après relecture à une édition du même dossier
+propriétaire : original consultable sous cette version, exclu comme preuve
+indépendante des analyses courantes. Les mêmes octets sous d’autres noms ou
+emplacements déclarés réutilisent source et `FileUpload` ; les alias datés vivent
+dans le reçu original après vérification physique, sans modifier l’empreinte
+documentaire. Aucune équivalence sémantique, adoption ou autorité supplémentaire
+inférée. Recettes PostgreSQL/navigateur et livraison 504 restent à recevoir.
+
 ### Usage documentaire
 
 ADR-0198, 2026-10-07 : une `BrandDataSource` garde son propriétaire, son original

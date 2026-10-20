@@ -1,4 +1,37 @@
-## Originaux fragmentés — recette locale 501 reçue, livraison ouverte (2026-10-20)
+## Dossier documentaire — candidat 504, réceptions ouvertes (2026-10-20)
+
+C2/C3/C4/C7 / [ADR-0223 Proposed](adr/0223-document-edition-representations.md).
+Étendre les sources, reçus et formulaire existants, sans magasin parallèle :
+placer une antérieure reçue tardivement avant l’édition choisie, initialement
+ARCHIVED ; rapprocher un autre format d’une même version sans seconde preuve
+d’analyse ; conserver les alias déclarés d’octets identiques après vérification
+physique, même source/original et empreinte documentaire. Droits, statuts et
+fondamentaux précédents restent conservés, sans IA ou adoption implicite.
+
+Recettes locales reçues : 31 ciblés, sept PostgreSQL, 4 871 tests complets /
+456 fichiers, gouvernance 1 671 / 169 et contrôles sans erreur. Cinq mutations
+natives USER opérateur 200, ordre v3/v2/v1, statuts, format lisible, copie renommée,
+original exact et recharge reçus ; quatre sources, aucun modèle/adoption. Fenêtre
+mutations complète sans 500/exception ; premier reload tronqué qualifié dans
+ADR-0223, sans SLO déduit. **Suite immédiate** : CI et image/runtime exacts, puis
+rapprochement des pièces réelles. La livraison 504 reste ouverte. Responsable Sustainment/Mestor, lecteurs
+Seshat/Notoria ; effort un lot borné dans le registre existant, déclencheur fin
+du correctif candidat avant rapprochement des pièces réelles. Aucun compteur
+du dépôt actif, corpus entier ou chantier reçu par cette extension.
+
+## Recherche documentaire — runtime 503 et MCP reçus, conseil ouvert (2026-10-20)
+
+Source `90b50f9ff` et runtime/image exacts reçus, mêmes volumes et données
+préservées. La recherche MCP authentifiée retrouve directement l’étude, la
+référence et la proposition, avec noms originaux et précision de succession ;
+aucun outil de génération invoqué, chemin de recherche sémantique inchangé.
+L’attente de livraison 503 est retirée. Ce reçu en métadonnées ne reçoit pas
+une réponse générée ni le mode vectoriel d’une autre question. La dernière
+question Alloco ne satisfait que sept critères sur huit : sondage A omis, donc
+pas de qualité générale du conseil. Unités/citations natives, reprise d’erreur
+C5 et corpus complet gardent leurs lots et leurs déclencheurs.
+
+## Originaux fragmentés — capacité 501 héritée reçue dans 503 (2026-10-20)
 
 C2/C3/C4/C7 / ADR-0222 Proposed. Stockage existant étendu par fragments de quatre
 Mio, manifeste vérifié et visibilité atomique VOLUME. `brandVault.transfer`
@@ -24,8 +57,10 @@ complète. Un seul CANDIDATE / original STORED ; téléchargement depuis la fich
 avec empreinte exacte, aucun modèle ni adoption. Recharge : trace tronquée,
 DOM non mesuré, attente du titre SDK échouée avant écran visible ; aucun SLO.
 
-**Suite immédiate** : recevoir CI/image/runtime 501, restauration et grands
-originaux réels. La protection du collecteur est reçue sur copie, sans purge
+L’attente de bascule 501 est supplantée par le runtime 503 exact reçu ci-dessus,
+sans prétendre avoir reçu rétroactivement le runtime historique 501.
+**Suite immédiate** : recevoir restauration et terme du corpus réel, dont le
+dépôt se poursuit sans compteur figé ici. La protection du collecteur est reçue sur copie, sans purge
 production ou restauration déduite. Consommer le flux jusqu’au terme pour
 qualifier son intégrité ; HTTP_BLOB simulé n’établit pas les garanties de
 concurrence du backend distant. Le raccord BrandDataSource, les études de 50 Mo
