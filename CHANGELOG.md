@@ -11,6 +11,8 @@
 
 - Clôture de livraison510 au périmètre technique : PR1046/source5c5cc907249ef2123e2d6c7a60c95f81ab7794fe et image39500586898/digest31c3a1b87b4577e781cc0e37b4753e8b58dc91be7932a3138e295d29fd2e2379 reçus, déploiement terminé le20octobre21:48:22UTC/runtime6.27.510. Version/login200, mêmes volumes et Luna/relais/90s, OpenRouter absent ; conservation séquentielle avant/après67sources/1041actifs, états/originaux, huit piliers SPAWT et racine Friesland. Pas de snapshot atomique, PSP/vente/MVP entier ; attentes runtime et conservation510 closes.
 
+- Périmètre de remise consigné sous le numéro réel PR1047 dans scope-drift, phase7 ; aucun gestionnaire ou tarif nouveau.
+
 ## v6.27.510 — fix(intake): distingue sources, propositions et complétude du dossier (2026-10-20)
 
 **Le diagnostic doit préserver la voix reçue et montrer ce qui reste à valider.**
