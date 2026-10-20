@@ -1,3 +1,68 @@
+## Préparation de l’étude XLSX — correctif 502 candidat (2026-10-20)
+
+Sur le runtime 500, la préparation native d’une étude de treize feuilles /
+205 666 mots / 10 655 460 caractères / 4 462 fragments a échoué : transaction
+de 30 s expirée au commit après 53,81 s. Zéro fragment indexé ; texte,
+empreinte, original de 3 536 844 octets et qualification documentaire conservés.
+Deux émissions wrapper/handler FAILED, aucune demande d’embedding. Le fichier
+est reçu, pas sa disponibilité pour la recherche indexée.
+
+502 prépare empreinte/fragments/notice/payload avant le verrou, puis relit
+l’accès et compare toutes les preuves courantes sans nouveau hash complet
+sous verrou. Texte/état/mapping/marque propriétaire modifiés sont refusés ;
+remplacement atomique et rejeu conservés. Écritures de plus de mille fragments
+bornées à 120 s, petites écritures toujours à 30 s. Vingt-six tests ciblés verts
+et copie locale de même empreinte reçus ; total 2,779→3,117 s, transaction
+2,779→2,213 s : aucune accélération globale ou latence VPS prouvée.
+
+Typage initial et geste natif USER local reçus : page 200/DOM 286 ms, titre
+observé borne haute 8 931 ms après attente SDK manquée, zéro réponse 500 ou
+exception dans la fenêtre. Préparation 200 en 5 881 ms, handler 4 799 ms et
+4 462 fragments exactement conformes au corpus de référence, empreinte source
+identique à la production ; zéro embedding demandé/stocké et deux émissions
+INDEX_BRAND_SOURCE OK. Copie sans original lié, preview arrêté après recette ;
+ni original téléchargé ni résolution production ou SLO déduits de ce geste.
+
+Garde négative reçue : quatre vrais refus concurrentiels échouent quand elle
+est retirée ; candidat exactement restauré puis 26 tests / deux fichiers verts.
+Six vérifications PostgreSQL réelles reçues : trois préparateurs concurrents
+réutilisent les identités ; modifications commises texte/mapping/FAILED refusées
+sans changer l’ancien index ; usage révoqué après préparation refusé et index
+consommateur absent/propriétaire conservé ; réattribution explicite fonctionne.
+Le premier typage du gauntlet a rencontré le validator Next généré malformé ;
+nettoyage limité à .next/dev/types par la commande existante, puis typecheck et
+npx tsc --noEmit à zéro. Aucune règle/code assoupli. Suite complète reçue :
+4 862 tests / 456 fichiers (4 824 / 454 tests/unit et 38 / deux fichiers hors de
+ce répertoire), gouvernance 1 671 / 169. Typage final et deux lints sans erreur,
+24 avertissements historiques et zéro cycle ; aucune assertion affaiblie.
+
+**Fermer** : recevoir CI/image/runtime 502 exacts,
+puis préparer l’étude réelle sans embeddings et relire ses
+4 462 fragments/empreintes/qualification avec conservation des autres données.
+Éprouver refus si la source ou son usage a changé et rejeu sans doublon ; ne pas
+annoncer l’étude résolue sur la seule mesure ou recette native locale. Responsable Seshat /
+Telemetry, C2/C3/C4 ; effort un lot de correction et recette du chemin existant,
+déclencheur immédiat à la livraison du candidat 502, avant réception de cette
+étude comme référence recherchable. Aucun nouveau gestionnaire ou service.
+
+## Livraison 501 — image reçue, runtime encore ouvert (2026-10-20)
+
+PR 1033 fusionnée à 9c8881b70d2b45ae35d3b4d9ab3d0339dc6fadaf, CI verte et
+build 39366449580/boot reçus ; digest
+sha256:02aea6935afdd8d7b13fa8a177e9d3abd22882b9784eb071addba26587f24571.
+Image reçue sur VPS par digest le 20 octobre à 04:46:47 UTC ; helper terminé
+à zéro et unique demande Coolify reçue, s45ljpw9sjt9skrmrb2r3k2o. Runtime 501
+et conservation après bascule restent ouverts ; dernier runtime qualifié 500. Dernier état qualifié :
+62 sources / 994 actifs / huit fondamentaux, zéro des 36 grands originaux
+réels reçu. **Fermer** : recevoir la bascule, le runtime exact et la conservation
+des données ; reprendre ensuite les grands fichiers et leurs octets exacts.
+Responsable C7 ; effort une réception et recette de bascule, déclencheur fin
+du déploiement déjà demandé, sans relance déduite de la seule attente d’observation.
+La restauration locale 501 d’un original synthétique de 12,58 Mo avec base,
+volume, clé et téléchargement exact est reçue ; elle ne ferme pas la
+restauration C7 entière. La capture BMC nommée 501 a été faite sur runtime 500,
+sans validation de production 501 ; les deux BMC restent REFERENCE/PROPOSED.
+
 ## Lecture documentaire 500 reçue — portée visuelle et autres entrées ouvertes (2026-10-20)
 
 ADR-0221 : cause du boot 499 fermée par le chargement du format à la demande
@@ -61,8 +126,9 @@ documentaires parmi les 841 éléments sont reçues ; les 831 matériaux /
 par 500, sans relecture physique fraîche de tout le lot ; métadonnée technique
 conservée à part. Le premier pitch réel reçu sous 500 porte le dossier à
 62 sources, sans adoption ; acquisition et stockage ne valent pas absorption
-sémantique intégrale. Transfert 501 reçu sur copie seulement (ADR-0222), CI/image/
-runtime, restauration et grands originaux réels restent ouverts.
+sémantique intégrale. Transfert 501 reçu sur copie (ADR-0222), source/CI/image/
+boot reçus ; runtime production, restauration C7 entière et grands originaux
+réels restent ouverts, sans généraliser la restauration locale synthétique.
 FileUpload/BRAND_ASSET conserve sa référence par entityId sans FK : purge refusée pour
 un original et GC physique protège son reçu. Le cycle de suppression d’une marque
 et la libération des reçus orphelins restent à recevoir avec les restaurations C7 ;

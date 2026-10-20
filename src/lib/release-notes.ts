@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.502", date: "2026-10-20", headline: "Préparer la recherche dans un document complet",
+    highlights: [
+      { emoji: "📚", title: "Conserver toute l’étude", body: "La préparation des recherches traite les nombreuses parties d’un document avant de les enregistrer ensemble. Son original, son contenu et son statut restent conservés." },
+      { emoji: "🔎", title: "Relire une source qui a changé", body: "Si le document ou son usage change pendant la préparation, l’opération s’arrête et demande de relire la source avant de réessayer." },
+    ],
+  },
+  {
     version: "6.27.501", date: "2026-10-20", headline: "Reprendre le dépôt de vos grands actifs",
     highlights: [
       { emoji: "📁", title: "Des fichiers conservés avec une progression visible", body: "Déposez vos grands fichiers dans vos actifs, jusqu’à 200 Mio. Après une interruption, choisissez le même fichier pour reprendre les parties déjà reçues." },
