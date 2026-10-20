@@ -174,7 +174,10 @@ export async function compilePresenceEpreuves(ctx: {
 
   // ── Arène A : le monde parle-t-il d'elle, à hauteur de sa ligue ? ──────────
   const press = Array.isArray(wp.press) ? wp.press.length : 0;
-  if (press > 0 || ctx.thirdPartyFloor > 0) {
+  const footprintScore = wp.footprintScore as { dimensions?: Array<{ key?: string; measured?: boolean; score?: number | null }> } | undefined;
+  const pressMeasured = press > 0 || (Array.isArray(footprintScore?.dimensions) &&
+    footprintScore.dimensions.some(d => d?.key === "press" && d.measured === true && typeof d.score === "number" && Number.isFinite(d.score)));
+  if (pressMeasured) {
     out.push({
       subjectRef: ctx.strategyId,
       opponentRef: ITEM_OPPONENTS.aPressFloor,
@@ -224,7 +227,9 @@ export async function compileMeasuredEpreuves(ctx: CompileContext): Promise<{
 
   // ── Arène E : masse superfan dédupliquée vs plancher de ligue (item) ────────
   const superfanCount = await countDistinctSuperfans(ctx.strategyId);
-  if (superfanCount > 0 || ctx.superfanFloor > 0) {
+  // An empty graph has no observation of loyalty. The league threshold is
+  // a reference, never evidence that a zero population was measured.
+  if (superfanCount > 0) {
     out.push({
       subjectRef: ctx.strategyId,
       opponentRef: ITEM_OPPONENTS.eMassFloor,

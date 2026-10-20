@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.507", date: "2026-10-20", headline: "Avancer sans inventer de chiffres",
+    highlights: [{ emoji: "📝", title: "Des réponses conservées jusqu’au résultat", body: "Terminez le questionnaire même lorsque le retour client ou la recommandation ne sont pas mesurés. Vos corrections restent enregistrées lors de la reprise ; les signaux inconnus sont distingués des mesures disponibles." }],
+  },
+  {
     version: "6.27.506", date: "2026-10-20", headline: "Comprendre la part réellement mesurée",
     highlights: [{ emoji: "📊", title: "Une couverture rapportée au bon total", body: "Le score public et le diagnostic expliquent la part des signaux effectivement mesurés. Les observations publiques conservées et les limites des recherches par nom sont indiquées clairement." }],
   },

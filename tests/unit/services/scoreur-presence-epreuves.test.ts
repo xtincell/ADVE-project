@@ -13,10 +13,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const findFirst = vi.fn();
-vi.mock("@/lib/db", () => ({ db: { pillar: { findFirst: () => findFirst() } } }));
-vi.mock("../../../src/server/services/seshat/overton-graph", () => ({ getOvertonSignalsForBrand: vi.fn() }));
+const profiles = vi.fn();
+const snapshots = vi.fn();
+vi.mock("@/lib/db", () => ({ db: {
+  pillar: { findFirst: () => findFirst() },
+  superfanProfile: { findMany: () => profiles() },
+  followerSnapshot: { findMany: () => snapshots() },
+} }));
+vi.mock("../../../src/server/services/seshat/overton-graph", () => ({ getOvertonSignalsForBrand: vi.fn().mockResolvedValue({ favorableTransitions: [], adverseTransitions: [] }) }));
 
-import { compilePresenceEpreuves, ITEM_OPPONENTS } from "@/server/services/seshat/scoreur/compilateur";
+import { compileMeasuredEpreuves, compilePresenceEpreuves, ITEM_OPPONENTS } from "@/server/services/seshat/scoreur/compilateur";
 
 const NOW = "2026-07-31T00:00:00.000Z";
 const pillar = (webPresence: unknown) => ({ content: { webPresence }, updatedAt: new Date(NOW) });
@@ -27,6 +33,31 @@ describe("compilePresenceEpreuves — la collecte entre dans l'arène", () => {
   it("jamais scannée ⇒ AUCUNE épreuve (absence honnête, P22-2)", async () => {
     findFirst.mockResolvedValue({ content: {}, updatedAt: new Date(NOW) });
     expect(await compilePresenceEpreuves({ strategyId: "s", nowIso: NOW, thirdPartyFloor: 20 })).toEqual([]);
+  });
+
+  it("a scanned email alone does not measure press or loyalty in an empty registry", async () => {
+    findFirst.mockResolvedValue(pillar({ site: null, socials: [], collectedAt: NOW,
+      footprintScore: { dimensions: [{ key: "press", measured: false, score: null }] } }));
+    profiles.mockResolvedValue([]);
+    snapshots.mockResolvedValue([]);
+    const out = await compileMeasuredEpreuves({ strategyId: "s", nowIso: NOW, superfanFloor: 1000, audienceFloor: 500, thirdPartyFloor: 20 });
+    expect(out.epreuves).toEqual([]);
+  });
+
+  it("an explicitly measured zero in press remains a real loss", async () => {
+    findFirst.mockResolvedValue(pillar({ footprintScore: { dimensions: [{ key: "press", measured: true, score: 0 }] } }));
+    const out = await compilePresenceEpreuves({ strategyId: "s", nowIso: NOW, thirdPartyFloor: 20 });
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ arena: "A", result: "LOSS" });
+  });
+
+  it("a real identified superfan below the threshold remains measured", async () => {
+    findFirst.mockResolvedValue(pillar({}));
+    profiles.mockResolvedValue([{ id: "profile1", personId: "person1" }]);
+    snapshots.mockResolvedValue([]);
+    const out = await compileMeasuredEpreuves({ strategyId: "s", nowIso: NOW, superfanFloor: 1000, audienceFloor: 500, thirdPartyFloor: 20 });
+    expect(out.epreuves).toHaveLength(1);
+    expect(out.epreuves[0]).toMatchObject({ arena: "E", result: "LOSS", source: "identity-graph:superfans=1/floor=1000" });
   });
 
   it("presse ≥ standard de la ligue ⇒ VICTOIRE en arène A", async () => {

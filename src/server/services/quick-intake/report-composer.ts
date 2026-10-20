@@ -12,6 +12,7 @@
 
 import type { NarrativeReport, AdvePillarReport, RtisPillarReport } from "./narrative-report";
 import { composeRtisPropositions } from "./rtis-propositions";
+import { measuredScoreCoverage } from "@/domain/brand-scores";
 
 const PILLAR_LABELS: Record<"a" | "d" | "v" | "e", string> = {
   a: "Authenticité",
@@ -184,10 +185,13 @@ export function composeDeterministicReport(input: ComposeReportInput): Narrative
       evidence.push(`${footprint.maps.reviewCount} avis Google (${footprint.maps.rating ?? "?"}★)`);
     if (footprint.site?.reachable) evidence.push("un site joignable");
   }
+  const coverage = measuredScoreCoverage(footprint?.score?.dimensions ?? []);
   const evidencePhrase =
     evidence.length > 0
       ? ` Côté public, nous avons trouvé : ${evidence.join(", ")}.`
-      : " Côté public, notre collecte n'a presque rien trouvé à votre nom — c'est une information en soi : votre marque vit surtout hors ligne pour l'instant.";
+      : coverage > 0
+        ? ` Côté public, aucun élément positif n'a été relevé parmi les signaux mesurés (couverture : ${coverage} % du poids total). Les autres signaux restent inconnus. Le résultat porte uniquement sur les dimensions effectivement mesurées.`
+        : " L'empreinte publique n'est pas mesurée ici ; aucune conclusion sur votre présence en ligne ne peut en être tirée.";
 
   return {
     executiveSummary:

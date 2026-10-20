@@ -383,12 +383,10 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
   const handleComplete = async () => {
     setError("");
     try {
-      // Only ship the current phase if it actually has content. If we got
-      // here with an empty current phase but earlier phases were filled
-      // (allPhasesAnswered is true server-side), `complete()` will succeed
-      // anyway. If nothing has ever been filled, `complete()` will throw
-      // IncompleteIntakeError and the user is told to fill the form.
-      if (!allPhasesAnswered && sliceHasContent(responses)) {
+      // A resumed or pre-filled phase may have been corrected locally. Save
+      // its current answers even when every phase already exists server-side.
+      // Empty slices remain excluded by the same guard as Save & Quit.
+      if (sliceHasContent(responses)) {
         await advanceMutation.mutateAsync({
           token,
           responses: { [currentPhase]: responses },
@@ -595,12 +593,8 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
             return (
               <button
                 key={p}
-                onClick={() => {
-                  setResponses(savedResponses[p] ?? {});
-                  setCurrentPhaseIndex(i);
-                  setCurrentQuestionIndex(0);
-                  utils.quickIntake.getQuestions.invalidate({ token, pillar: p });
-                }}
+                onClick={() => void saveAndAdvance(i)}
+                disabled={advanceMutation.isPending}
                 className={`h-2 rounded-full transition-all ${isCurrent ? "w-6" : "w-2"}`}
                 style={{
                   backgroundColor: isCurrent
