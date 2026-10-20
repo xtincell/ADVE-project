@@ -3,16 +3,57 @@
  *
  * Fallback ZÉRO-LLM du NarrativeReport : quand la génération LLM échoue
  * (aucun provider, quota, JSON invalide), le payeur reçoit quand même un
- * rapport lisible construit VERBATIM depuis ses piliers extraits et ses
+ * rapport lisible construit depuis ses piliers extraits et ses
  * réponses — jamais une page vide, jamais du contenu inventé (ADR-0046,
  * doctrine « Fusée non-dépendante du LLM » PR #258).
  *
  * Pur : aucune IO, testé sur fixtures.
  */
 
-import type { NarrativeReport, AdvePillarReport, RtisPillarReport } from "./narrative-report";
 import { composeRtisPropositions } from "./rtis-propositions";
+import { fieldStatusFor, coerceProvenance, type FieldProvenance } from "@/domain/field-provenance";
+import { getFieldLabel } from "@/lib/types/field-labels";
 import { measuredScoreCoverage } from "@/domain/brand-scores";
+
+export interface AdvePillarReport {
+  /** Lowercase pillar key */
+  key: "a" | "d" | "v" | "e";
+  /** Human-readable pillar name */
+  name: string;
+  /** 2–3 sentence verdict that goes in the FREE preview */
+  preview: string;
+  /** Detailed paragraph (~120 words) shown after paywall unlock */
+  full: string;
+}
+
+export interface RtisPillarReport {
+  /** Lowercase pillar key */
+  key: "r" | "t" | "i" | "s";
+  /** Human-readable pillar name (Risque / Track / Innovation / Strategie) */
+  name: string;
+  /** 1–2 sentence summary (FREE preview) */
+  preview: string;
+  /** Full strategic action paragraph (~120 words) */
+  full: string;
+  /** Suggested priority for the pillar's main action */
+  priority: "P0" | "P1" | "P2";
+  /** Single short headline action ("le coup a jouer") */
+  keyMove: string;
+}
+
+export interface NarrativeReport {
+  /** ADVE executive overview (3–4 sentences). Always free. */
+  executiveSummary: string;
+  /** Per-pillar ADVE diagnostic */
+  adve: AdvePillarReport[];
+  /** RTIS strategic proposition — one entry per RTIS pillar (R, T, I, S). */
+  rtis: {
+    /** 2–3 sentence framing */
+    framing: string;
+    /** Strategic narrative per RTIS pillar */
+    pillars: RtisPillarReport[];
+  };
+}
 
 const PILLAR_LABELS: Record<"a" | "d" | "v" | "e", string> = {
   a: "Authenticité",
@@ -41,6 +82,13 @@ export const HIDDEN_FIELDS = new Set([
   "footprintScore",
   "fieldCertainty",
   "_fieldProvenance",
+  "score",
+  "confidence",
+  "validationStatus",
+  "currentVersion",
+  "id",
+  "strategyId",
+  "pillarKey",
 ]);
 
 /** The free screen already shows nine proposal lines; full ADVE stays paid. Pure projection. */
@@ -74,7 +122,7 @@ export function intakePillarFields(content: Record<string, unknown>): Array<[str
 /** Valeur → texte lisible court (récursif borné, jamais de JSON brut massif). */
 export function humanizeValue(v: unknown, depth = 0): string | null {
   if (v === null || v === undefined || v === "") return null;
-  if (typeof v === "string") return v.trim() || null;
+  if (typeof v === "string") return (/^[A-Z][A-Z_]+$/.test(v.trim()) ? getFieldLabel(v.trim()) : v.trim()) || null;
   if (typeof v === "number" || typeof v === "boolean") return String(v);
   if (Array.isArray(v)) {
     const parts = v.map((item) => humanizeValue(item, depth + 1)).filter(Boolean) as string[];
@@ -87,9 +135,10 @@ export function humanizeValue(v: unknown, depth = 0): string | null {
     const label = obj.nom ?? obj.name ?? obj.title ?? obj.label;
     if (typeof label === "string" && label.trim()) return label.trim();
     const parts = Object.entries(obj)
+      .filter(([key]) => !key.startsWith("_") && !HIDDEN_FIELDS.has(key))
       .map(([k, val]) => {
         const h = humanizeValue(val, depth + 1);
-        return h ? `${k}: ${h}` : null;
+        return h ? `${getFieldLabel(k)}: ${h}` : null;
       })
       .filter(Boolean) as string[];
     if (parts.length === 0) return null;
@@ -98,15 +147,36 @@ export function humanizeValue(v: unknown, depth = 0): string | null {
   return null;
 }
 
-/** Lignes lisibles d'un contenu pilier (champ → valeur humanisée). */
-export function pillarContentLines(content: Record<string, unknown>): string[] {
-  const lines: string[] = [];
-  for (const [key, value] of Object.entries(content)) {
-    if (key.startsWith("_") || HIDDEN_FIELDS.has(key)) continue;
-    const h = humanizeValue(value);
-    if (h) lines.push(`${key} : ${h.slice(0, 300)}`);
-  }
-  return lines;
+/** Qualified fields shared by narrative producers and the report projections. */
+export function intakeEvidenceEntries(content: Record<string, unknown>, pillarKey = "") {
+  const status = fieldStatusFor(content.fieldCertainty as Record<string, string> | undefined,
+    pillarKey, content._fieldProvenance);
+  return intakePillarFields(content).map(([field, value]) => ({
+    field, value, origin: coerceProvenance(status(field)),
+  }));
+}
+
+/** Read projection only: historical INGESTION/SOURCE did not distinguish generation.
+ * A regeneration must not certify those old assignments, nor rewrite their history.
+ */
+export function intakeReportContent(content: Record<string, unknown>, pillarKey: string, evidenceVersion: unknown): Record<string, unknown> {
+  if (evidenceVersion === 1) return content;
+  return { ...content, _fieldProvenance: Object.fromEntries(intakeEvidenceEntries(content, pillarKey)
+    .map(entry => [entry.field, entry.origin === "HUMAN" ? "HUMAN" : "UNKNOWN"])) };
+}
+
+export const INTAKE_ORIGIN_LABELS: Record<FieldProvenance, string> = {
+  HUMAN: "Confirmé par l’équipe", SOURCE: "Donnée reçue ou observée",
+  INFERRED: "Proposition à valider", UNKNOWN: "Origine non documentée",
+};
+
+/** Same contract for every report writer; SOURCE does not imply a literal quote. */
+export const INTAKE_EVIDENCE_RULE = `Respecte l’origine de chaque champ. HUMAN est confirmé par l’équipe ; SOURCE est issu d’une donnée reçue ou observée, parfois reformulée lors d’un import : ni SOURCE ni une extraction ne garantit les mots exacts du dirigeant. INFERRED est une proposition à valider, jamais un fait ou des paroles du prospect. UNKNOWN reste non documenté. N’utilise des guillemets que pour un extrait exact du texte original fourni. Les champs générés ne prouvent ni traction, ni concurrence, ni communauté. Le score /100 indique la complétude structurelle du dossier, pas la force publique ni le niveau de marque. Sépare constats, limites et pistes à valider.`;
+
+/** Human labels + bounded values + origins; never technical metadata as evidence. */
+export function pillarContentLines(content: Record<string, unknown>, pillarKey = ""): string[] {
+  return intakeEvidenceEntries(content, pillarKey).map(({ field, value, origin }) =>
+    `${getFieldLabel(field)} [${INTAKE_ORIGIN_LABELS[origin]}] : ${humanizeValue(value)?.slice(0, 400)}`);
 }
 
 export interface ComposeReportInput {
@@ -156,12 +226,12 @@ export function composeDeterministicReport(input: ComposeReportInput): Narrative
     const plain = PILLAR_PLAIN[key];
     const preview =
       lines.length > 0
-        ? `${PILLAR_LABELS[key]} (${plain}) — ${lines.length} élément(s) dans vos réponses. ${lines[0]!.slice(0, 160)}${lines.length > 1 ? " (…)" : ""}`
+        ? `${PILLAR_LABELS[key]} (${plain}) — ${lines.length} élément(s) dans le dossier. ${lines[0]!.slice(0, 160)}${lines.length > 1 ? " (…)" : ""}`
         : `${PILLAR_LABELS[key]} (${plain}) — rien de documenté pour l'instant : c'est le premier chantier, et c'est normal à ce stade.`;
     const full =
       lines.length > 0
-        ? `Ce que vous nous avez dit sur ${plain}, restitué tel quel :\n${lines.map((l) => `• ${l}`).join("\n")}`
-        : `Vous n'avez encore rien déclaré sur ${plain} — et notre collecte publique n'a rien trouvé pour le déduire. Ce n'est pas une faute : c'est l'angle mort à documenter en premier avec votre opérateur.`;
+        ? `Lecture du dossier sur ${plain}. Les propositions restent à valider, les données reçues peuvent être reformulées :\n${lines.map((l) => `• ${l}`).join("\n")}`
+        : `Le dossier ne contient pas encore de matière exploitable sur ${plain}. À documenter avec votre opérateur ; cela ne permet pas de conclure à une absence dans votre entreprise ou sur le marché.`;
     return { key, name: PILLAR_LABELS[key], preview, full };
   });
 
@@ -224,11 +294,11 @@ export function composeDeterministicReport(input: ComposeReportInput): Narrative
 
   return {
     executiveSummary:
-      `${companyName} se situe aujourd'hui au niveau « ${tierPlain} », sur une échelle qui va de Latent à Icône (la référence de son marché). ` +
+      `${companyName} : niveau estimé « ${tierPlain} », à confirmer avec votre équipe, sur une échelle de Latent à Icône (la référence de son marché). ` +
       `Ce niveau est estimé à partir de vos réponses : ${documentedPillars} de vos 4 fondations de marque sont documentées` +
-      (typeof compositeScore === "number" ? ` (score de départ : ${Math.round(compositeScore)}/100)` : "") +
+      (typeof compositeScore === "number" ? ` (complétude du dossier : ${Math.round(compositeScore)}/100, distincte de la force de marque)` : "") +
       `.${evidencePhrase} ` +
-      `Ce rapport restitue fidèlement ce que vous avez déclaré et ce que le public voit — la lecture stratégique approfondie se fait ensuite avec votre opérateur.`,
+      `Ce rapport distingue données reçues, observations disponibles et propositions à valider. Les origines non documentées restent signalées ; la lecture stratégique se confirme avec votre opérateur.`,
     adve,
     rtis: {
       framing:

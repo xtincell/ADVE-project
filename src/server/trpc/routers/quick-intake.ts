@@ -25,7 +25,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@
 import { z } from "zod";
 import { listIntakeDocuments, retainIntakeDocuments, readRetainedIntakeDocuments } from "@/server/services/quick-intake/document-input";
 import { readIntakeReportAccess } from "@/server/services/quick-intake/paid-fulfillment";
-import { previewIntakeDiagnostic, intakePillarFields } from "@/server/services/quick-intake/report-composer";
+import { previewIntakeDiagnostic, intakePillarFields, intakeEvidenceEntries, intakeReportContent } from "@/server/services/quick-intake/report-composer";
 import type { Prisma } from "@prisma/client";
 import { callLLM, extractJSON, isTextLLMAvailable } from "@/server/services/llm-gateway";
 import * as mestor from "@/server/services/mestor";
@@ -570,10 +570,10 @@ export const quickIntakeRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const intake = await ctx.db.quickIntake.findUnique({
         where: { shareToken: input.token },
-        select: { convertedToId: true },
+        select: { convertedToId: true, diagnostic: true },
       });
       if (!intake?.convertedToId) {
-        return { pillars: [] as Array<{ key: string; content: Record<string, unknown>; totalFields: number }> };
+        return { pillars: [] as Array<{ key: string; content: Record<string, unknown>; totalFields: number; origins: Record<string, string> }> };
       }
       const rows = await ctx.db.pillar.findMany({
         where: { strategyId: intake.convertedToId, key: { in: [...ADVE_STORAGE_KEYS] } },
@@ -582,8 +582,14 @@ export const quickIntakeRouter = createTRPCRouter({
       const access = await readIntakeReportAccess(input.token, ctx.session?.user?.role, ctx.db);
       return { pillars: rows.map(r => {
         const entries = intakePillarFields((r.content as Record<string, unknown> | null) ?? {});
+        const visible = access.unlocked ? entries : entries.slice(0, 2);
+        const origins = intakeEvidenceEntries(intakeReportContent((r.content as Record<string, unknown> | null) ?? {}, r.key,
+          (intake.diagnostic as { reportEvidenceVersion?: number } | null)?.reportEvidenceVersion), r.key);
         return { key: r.key, totalFields: entries.length,
-          content: Object.fromEntries(access.unlocked ? entries : entries.slice(0, 2)) };
+          content: Object.fromEntries(visible),
+          origins: Object.fromEntries(origins.filter(entry => visible.some(([key]) => key === entry.field))
+            .map(entry => [entry.field, entry.origin])) };
+
       }) };
     }),
 

@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { salvageRawResponses } from "@/server/services/quick-intake/salvage-responses";
+import { salvageRawResponses, intakeFieldOrigins } from "@/server/services/quick-intake/salvage-responses";
 import { normalizePillarForIntake } from "@/server/services/pillar-normalizer";
 import { getStrategyPillarInputsFromContent } from "@/server/services/advertis-scorer/structural";
 import { scorePillarStructural } from "@/lib/utils/scoring";
@@ -138,5 +138,24 @@ describe("salvageRawResponses — re-clé déterministe question-bank → schém
     expect(scoreThroughPipeline("e", salvaged)).toBe(scoreThroughPipeline("e", salvageRawResponses("e", omitted)));
     expect(salvaged).not.toHaveProperty("loyaltyRate");
     expect(salvaged).not.toHaveProperty("referralRate");
+  });
+});
+
+describe("intake source versus generated origin", () => {
+  it("does not promote generated expansion, marketing guesses or untrusted metadata to SOURCE", () => {
+    const raw = { a_mission: "Réparer durablement", _fieldProvenance: { vision: "HUMAN" } };
+    const origins = intakeFieldOrigins("a", { missionStatement: "Réparer durablement", vision: "Leader mondial", valeurs: ["Audace"], _fieldProvenance: { vision: "HUMAN" } }, raw);
+    expect(origins).toEqual({ missionStatement: "SOURCE", vision: "INFERRED", valeurs: "INFERRED" });
+    expect(intakeFieldOrigins("a", { missionStatement: "Réparer durablement et conquérir le monde" }, raw).missionStatement).toBe("INFERRED");
+  });
+  it("only grants canonical/observed SOURCE to the explicit received fields", () => {
+    expect(intakeFieldOrigins("e", { webPresence: { site: "example.invalid" }, primaryChannel: "SOCIAL", touchpoints: ["inferred"] }, {}, ["webPresence"]))
+      .toEqual({ webPresence: "SOURCE", primaryChannel: "INFERRED", touchpoints: "INFERRED" });
+  });
+  it("does not mutate the received input or change a historical provenance map", () => {
+    const content = { missionStatement: "Texte", _fieldProvenance: { missionStatement: "HUMAN" } };
+    const before = JSON.stringify(content);
+    intakeFieldOrigins("a", content, {});
+    expect(JSON.stringify(content)).toBe(before);
   });
 });

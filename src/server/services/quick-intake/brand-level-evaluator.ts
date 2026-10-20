@@ -1,3 +1,4 @@
+import { intakePillarFields, pillarContentLines, INTAKE_EVIDENCE_RULE } from "./report-composer";
 import {
   ADVE_STORAGE_KEYS,
   BRAND_TIERS,
@@ -182,24 +183,10 @@ export async function evaluateBrandLevel(input: {
 }): Promise<BrandLevelEvaluation> {
   const { companyName, sector, country, responses, extractedValues, completionByPillar } = input;
 
-  const formatExtracted = () => {
-    const lines: string[] = [];
-    for (const pillar of ADVE_STORAGE_KEYS) {
-      const fields = extractedValues[pillar] ?? {};
-      const filled = Object.entries(fields).filter(([, v]) => v != null && v !== "");
-      const pct = (completionByPillar[pillar] * 100).toFixed(0);
-      if (filled.length === 0) {
-        lines.push(`[${pillar.toUpperCase()}] AUCUN champ extrait (completude: ${pct}%)`);
-      } else {
-        lines.push(`[${pillar.toUpperCase()}] (${filled.length} champ(s), completude: ${pct}%) :`);
-        for (const [k, v] of filled) {
-          const display = typeof v === "string" ? v : JSON.stringify(v);
-          lines.push(`  - ${k}: ${display.slice(0, 220)}`);
-        }
-      }
-    }
-    return lines.join("\n");
-  };
+  const formatExtracted = () => INTAKE_EVIDENCE_RULE + "\n" + ADVE_STORAGE_KEYS.map(pillar =>
+    `[${pillar.toUpperCase()}] complétude structurelle: ${(completionByPillar[pillar] * 100).toFixed(0)}%\n`
+    + (pillarContentLines(extractedValues[pillar] ?? {}, pillar).join("\n") || "Aucune donnée exploitable"),
+  ).join("\n");
 
   const formatResponses = () => {
     if (!responses) return "(non disponible)";
@@ -517,7 +504,7 @@ function computeLevelBasis(input: {
     (slice) => slice && typeof slice === "object" && Object.values(slice).some((v) => v != null && v !== ""),
   ).length;
   const emptyPillars = (ADVE_STORAGE_KEYS as readonly ("a" | "d" | "v" | "e")[]).filter(
-    (k) => Object.values(input.extractedValues[k] ?? {}).filter((v) => v != null && v !== "").length === 0,
+    (k) => intakePillarFields(input.extractedValues[k] ?? {}).length === 0,
   );
   return {
     declaredPhases,
@@ -561,7 +548,7 @@ export function deriveBrandLevelDeterministic(input: {
   // Per-pillar density: fraction of extracted fields that are non-empty.
   const pillarDensity = (k: "a" | "d" | "v" | "e"): number => {
     const fields = extractedValues[k] ?? {};
-    const entries = Object.values(fields);
+    const entries = Object.entries(fields).filter(([key]) => !key.startsWith("_") && !["narrativeFull", "narrativePreview", "fieldCertainty", "score", "confidence", "currentVersion", "validationStatus"].includes(key)).map(([, value]) => value);
     if (entries.length === 0) return 0;
     const filled = entries.filter((v) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0)).length;
     return filled / entries.length;

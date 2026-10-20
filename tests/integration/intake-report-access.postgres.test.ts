@@ -13,7 +13,7 @@ import { GET } from "@/app/api/intake/[token]/pdf/route";
 import * as intakeService from "@/server/services/quick-intake";
 
 const intakes: string[] = [], tokens: string[] = [], brands: string[] = [], users: string[] = [];
-const diagnostic = { narrativeReport: { executiveSummary: "Synthèse gratuite", adve: [{ key: "a", name: "Authenticité", preview: "Aperçu gratuit", full: "DETAIL_ADVE_PAYANT" }],
+const diagnostic = { reportEvidenceVersion: 1, narrativeReport: { executiveSummary: "Synthèse gratuite", adve: [{ key: "a", name: "Authenticité", preview: "Aperçu gratuit", full: "DETAIL_ADVE_PAYANT" }],
   rtis: { framing: "Première lecture", pillars: [{ key: "r", name: "Risques", preview: "Résumé", full: Array.from({ length: 10 }, (_, i) => i === 9 ? "DETAIL_RTIS_PAYANT" : `Proposition ${i + 1}`).join("\n"), priority: "P1", keyMove: "Documenter la preuve" }] } } };
 function caller(role?: "ADMIN") { return quickIntakeRouter.createCaller({ db, headers: undefined, session: role ? { user: { id: users[0]!, role }, expires: new Date(Date.now() + 60000).toISOString() } : null }); }
 const payments = () => paymentRouter.createCaller({ db, headers: undefined, session: null });
@@ -34,6 +34,7 @@ afterAll(async () => {
   await db.quickIntake.deleteMany({ where: { id: { in: intakes } } });
   await db.recommendation.deleteMany({ where: { strategyId: { in: brands } } });
   await db.pillar.deleteMany({ where: { strategyId: { in: brands } } });
+  await db.scoreSnapshot.deleteMany({ where: { strategyId: { in: brands } } });
   await db.strategy.deleteMany({ where: { id: { in: brands } } });
   await db.user.deleteMany({ where: { id: { in: users } } });
   await db.$disconnect();
@@ -57,7 +58,38 @@ describe.sequential("server-authorized intake report on actual PostgreSQL", () =
     expect(JSON.stringify(pillars)).not.toContain("TROISIEME_CHAMP_PAYANT");
     expect(JSON.stringify(pillars)).not.toContain("NARRATIF_PAYANT");
     expect(pillars.pillars[0]?.totalFields).toBe(3);
+    expect(pillars.pillars[0]?.origins).toEqual({ missionStatement: "SOURCE", valeurs: "INFERRED" });
+    expect(pillars.pillars[0]?.origins).not.toHaveProperty("originMyth");
     expect((await db.quickIntake.findUniqueOrThrow({ where: { id: i.id } })).diagnostic).toEqual(diagnostic);
+  });
+  it("projects historical assignments as unknown without changing the stored report or origins", async () => {
+    const i = await fixture();
+    const { reportEvidenceVersion: _version, ...legacy } = diagnostic;
+    await db.quickIntake.update({ where: { id: i.id }, data: { diagnostic: legacy } });
+    const before = await db.pillar.findFirstOrThrow({ where: { strategyId: i.convertedToId! } });
+    const result = await caller().getPillarsByToken({ token: i.shareToken });
+    expect(result.pillars[0]?.origins).toEqual({ missionStatement: "UNKNOWN", valeurs: "UNKNOWN" });
+    expect((await db.pillar.findUniqueOrThrow({ where: { id: before.id } })).content).toEqual(before.content);
+    expect((await db.quickIntake.findUniqueOrThrow({ where: { id: i.id } })).diagnostic).toEqual(legacy);
+  });
+  it("keeps an old intake unverified after deterministic regeneration and preserves a human decision", async () => {
+    const i = await fixture();
+    const { reportEvidenceVersion: _version, ...legacy } = diagnostic;
+    const footprint = { site: null, socials: [], articles: [], channels: [], collectedAt: "2026-10-20T00:00:00Z", errors: [], followerCounts: [], press: [], enrichment: { apify: "DEFERRED", press: "EMPTY", totalMs: 0, errors: [] }, score: { total: 0, outOf: 100, measuredWeight: 0, dimensions: [] } };
+    await db.quickIntake.update({ where: { id: i.id }, data: { diagnostic: legacy, responses: { a: { a_mission: "Une proposition différente" } }, webFootprint: footprint } });
+    const a = await db.pillar.findFirstOrThrow({ where: { strategyId: i.convertedToId!, key: "a" } });
+    const content = { missionStatement: "Décision humaine conservée", vision: "Ancienne génération", _fieldProvenance: { missionStatement: "HUMAN", vision: "SOURCE" } };
+    await db.pillar.update({ where: { id: a.id }, data: { content } });
+    const costsBefore = await db.aICostLog.count({ where: { strategyId: i.convertedToId! } });
+    await intakeService.regenerateAnalysis(i.shareToken);
+    const saved = await db.quickIntake.findUniqueOrThrow({ where: { id: i.id } });
+    expect((saved.diagnostic as { reportEvidenceVersion: number }).reportEvidenceVersion).toBe(0);
+    const stored = (await db.pillar.findUniqueOrThrow({ where: { id: a.id } })).content as typeof content;
+    expect(stored.missionStatement).toBe("Décision humaine conservée");
+    expect(stored._fieldProvenance.missionStatement).toBe("HUMAN");
+    const projected = await caller().getPillarsByToken({ token: i.shareToken });
+    expect(projected.pillars.find(p => p.key === "a")?.origins.missionStatement).toBe("HUMAN");
+    expect(await db.aICostLog.count({ where: { strategyId: i.convertedToId! } })).toBe(costsBefore);
   });
   it("restores the same paid report without a callback URL or client flag", async () => {
     const i = await fixture(); await payment(i.shareToken, "PAID");

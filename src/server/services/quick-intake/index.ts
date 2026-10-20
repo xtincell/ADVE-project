@@ -53,7 +53,8 @@ function classifyIntakeBrand(score: number): string {
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import { getAdaptiveQuestions, getBusinessContextQuestions } from "./question-bank";
-import { salvageRawResponses } from "./salvage-responses";
+import { intakeReportContent } from "./report-composer";
+import { salvageRawResponses, intakeFieldOrigins } from "./salvage-responses";
 import * as auditTrail from "@/server/services/audit-trail";
 import type { BusinessContext, BusinessModelKey, BrandNatureKey, EconomicModelKey, PositioningArchetypeKey, SalesChannel, PremiumScope } from "@/lib/types/business-context";
 import { POSITIONING_ARCHETYPES, BRAND_NATURES } from "@/lib/types/business-context";
@@ -115,7 +116,7 @@ function sealCanonicalPillarFields(
 ): Record<string, unknown> {
   const sealed: Record<string, unknown> = { ...content };
   if (pillar === "a") {
-    if (!sealed.nomMarque) sealed.nomMarque = ctx.companyName;
+    sealed.nomMarque = ctx.companyName;
     if (ctx.sector) sealed.secteur = ctx.sector;
     if (ctx.country) sealed.pays = ctx.country;
   }
@@ -575,7 +576,7 @@ export async function complete(token: string) {
     economicModel: intake.economicModel,
     positioning: intake.positioning,
   };
-  const structuredContents = await extractStructuredPillarContent(responses, canonicalContext);
+  const structuredContents = await extractStructuredPillarContent(responses, canonicalContext, { strategyId: strategy.id });
 
   // Pre-create empty pillar rows so the Gateway can find them — les 8 (les
   // rows RTIS restent vides ici : rtis-draft V3 / boot-sequence les remplira).
@@ -644,7 +645,9 @@ export async function complete(token: string) {
     // Seal declared canonical fields so LLM cannot drift the pillar away
     // from the intake (e.g. businessModel:"SERVICES" when declared RAZOR_BLADE).
     // Only ADVE pillars carry declared canonical fields — pass RTIS through.
-    const safeBase = scrubbed.content;
+    const safeBase = { ...scrubbed.content, ...Object.fromEntries(
+      Object.entries(salvageRawResponses(pillar, responses[pillar])).filter(([key]) => !key.startsWith("_")),
+    ) };
     let sealedContent =
       pillar === "a" || pillar === "d" || pillar === "v" || pillar === "e"
         ? sealCanonicalPillarFields(pillar, safeBase, canonicalContext)
@@ -654,33 +657,24 @@ export async function complete(token: string) {
     // touchpoints détectés (append-dédupliqués, le déclaré prime), bloc
     // webPresence factuel avec compteurs followers RÉELS (Apify) + presse,
     // primaryChannel inféré depuis la plus grande audience réelle.
-    let eInferredFields: string[] = [];
     if (pillar === "e" && webFootprint) {
       const { mergeEnrichedFootprintIntoPillarE } = await import("./public-enrichment");
-      const merged = mergeEnrichedFootprintIntoPillarE(sealedContent, webFootprint);
+      const merged = mergeEnrichedFootprintIntoPillarE({ ...sealedContent, webPresence: undefined }, webFootprint);
       sealedContent = merged.content;
-      eInferredFields = merged.inferredFields;
     }
 
     if (sealedContent && Object.keys(sealedContent).length > 0) {
       const normalized = normalizePillarForIntake(pillar, sealedContent);
-      // Provenance des champs issus de l'empreinte publique : données
-      // observées = SOURCE, déductions = INFERRED (le guard du gateway
-      // empêche tout écrasement d'un champ HUMAN ultérieur).
-      const fieldProvenance =
-        pillar === "e" && webFootprint
-          ? ({
-              webPresence: "SOURCE",
-              touchpoints: "SOURCE",
-              ...(eInferredFields.includes("primaryChannel") ? { primaryChannel: "INFERRED" } : {}),
-            } as Record<string, import("@/domain/field-provenance").FieldProvenance>)
-          : undefined;
+      const fieldProvenance = intakeFieldOrigins(pillar, normalized as Record<string, unknown>, responses[pillar],
+        pillar === "a" ? ["nomMarque", ...(canonicalContext.sector ? ["secteur"] : []), ...(canonicalContext.country ? ["pays"] : [])]
+          : pillar === "v" ? [...(canonicalContext.businessModel ? ["businessModel"] : []), ...(canonicalContext.positioning ? ["positioningArchetype"] : []), ...(canonicalContext.economicModel ? ["economicModels"] : [])]
+            : pillar === "e" && webFootprint ? ["webPresence"] : []);
       await writeGateway({
         strategyId: strategy.id,
         pillarKey: pillar as import("@/lib/types/advertis-vector").PillarKey,
         operation: { type: "REPLACE_FULL", content: normalized as Record<string, unknown> },
         author: { system: "INGESTION", reason: `Quick intake conversion: pillar ${pillar}` },
-        options: { confidenceDelta: 0.05, ...(fieldProvenance ? { fieldProvenance } : {}) },
+        options: { confidenceDelta: 0.05, fieldProvenance },
       });
       filledPillars.push(pillar);
     }
@@ -1371,6 +1365,7 @@ export async function regenerateAnalysis(
   // baked into the prompt (prevents the original drift) and seal declared
   // fields on top so the LLM cannot ship contradictions.
   const structuredContents = await extractStructuredPillarContent(responses, canonicalContext, {
+    strategyId: strategy.id,
     premium: options.premium,
   });
 
@@ -1397,7 +1392,9 @@ export async function regenerateAnalysis(
         `[quick-intake.regen] pilier ${pillar} — preuves non fondées droppées: ${scrubbed.dropped.join(", ")}`,
       );
     }
-    const safeBase = scrubbed.content;
+    const safeBase = { ...scrubbed.content, ...Object.fromEntries(
+      Object.entries(salvageRawResponses(pillar, responses[pillar])).filter(([key]) => !key.startsWith("_")),
+    ) };
     let sealed =
       pillar === "a" || pillar === "d" || pillar === "v" || pillar === "e"
         ? sealCanonicalPillarFields(pillar, safeBase, canonicalContext)
@@ -1407,7 +1404,7 @@ export async function regenerateAnalysis(
     // `webPresence` mesuré dès que l'extraction E rendait du contenu.
     if (pillar === "e" && webFootprint) {
       const { mergeEnrichedFootprintIntoPillarE } = await import("./public-enrichment");
-      sealed = mergeEnrichedFootprintIntoPillarE(sealed, webFootprint).content;
+      sealed = mergeEnrichedFootprintIntoPillarE({ ...sealed, webPresence: undefined }, webFootprint).content;
     }
     if (Object.keys(sealed).length === 0) continue;
     const normalized = normalizePillarForIntake(pillar, sealed);
@@ -1416,7 +1413,11 @@ export async function regenerateAnalysis(
       pillarKey: pillar as import("@/lib/types/advertis-vector").PillarKey,
       operation: { type: "REPLACE_FULL", content: normalized as Record<string, unknown> },
       author: { system: "INGESTION", reason: `Quick intake regeneration: pillar ${pillar}` },
-      options: { confidenceDelta: 0.05 },
+      options: { confidenceDelta: 0.05, fieldProvenance: intakeFieldOrigins(pillar,
+        normalized as Record<string, unknown>, responses[pillar],
+        pillar === "a" ? ["nomMarque", ...(canonicalContext.sector ? ["secteur"] : []), ...(canonicalContext.country ? ["pays"] : [])]
+          : pillar === "v" ? [...(canonicalContext.businessModel ? ["businessModel"] : []), ...(canonicalContext.positioning ? ["positioningArchetype"] : []), ...(canonicalContext.economicModel ? ["economicModels"] : [])]
+            : pillar === "e" && webFootprint ? ["webPresence"] : []) },
     });
     reportRefusedWrite(_w2, "quick-intake");
   }
@@ -1432,6 +1433,7 @@ export async function regenerateAnalysis(
     classification,
     responses as Record<string, Record<string, string>> | null,
     intake.companyName,
+    (intake.diagnostic as { reportEvidenceVersion?: number } | null)?.reportEvidenceVersion === 1 ? 1 : 0,
   );
 
   // ── Brand-level AVANT le narratif (fix cohérence 2026-07-20, parité avec
@@ -1452,7 +1454,7 @@ export async function regenerateAnalysis(
     });
     const levelValues = levelRows.reduce<Record<"a" | "d" | "v" | "e", Record<string, unknown>>>(
       (acc, row) => {
-        acc[row.key as "a" | "d" | "v" | "e"] = (row.content as Record<string, unknown> | null) ?? {};
+        acc[row.key as "a" | "d" | "v" | "e"] = intakeReportContent((row.content as Record<string, unknown> | null) ?? {}, row.key, diagnostic.reportEvidenceVersion);
         return acc;
       },
       { a: {}, d: {}, v: {}, e: {} },
@@ -1479,7 +1481,7 @@ export async function regenerateAnalysis(
     });
     const extractedValues = extractedRows.reduce<Record<"a" | "d" | "v" | "e", Record<string, unknown>>>(
       (acc, row) => {
-        acc[row.key as "a" | "d" | "v" | "e"] = (row.content as Record<string, unknown> | null) ?? {};
+        acc[row.key as "a" | "d" | "v" | "e"] = intakeReportContent((row.content as Record<string, unknown> | null) ?? {}, row.key, diagnostic.reportEvidenceVersion);
         return acc;
       },
       { a: {}, d: {}, v: {}, e: {} },
@@ -1510,7 +1512,7 @@ export async function regenerateAnalysis(
         where: { strategyId: strategy.id },
         select: { key: true, content: true },
       });
-      const byKey = Object.fromEntries(rows.map((r) => [r.key, (r.content as Record<string, unknown> | null) ?? {}]));
+      const byKey = Object.fromEntries(rows.map((r) => [r.key, intakeReportContent((r.content as Record<string, unknown> | null) ?? {}, r.key, diagnostic.reportEvidenceVersion)]));
       narrativeReport = composeDeterministicReport({
         companyName: intake.companyName,
         classification,
@@ -1591,9 +1593,9 @@ export function premiumReextractAfterPayment(intakeToken: string): void {
 async function extractStructuredPillarContent(
   responses: Record<string, Record<string, unknown>>,
   ctx: CanonicalIntakeContext,
-  opts: { premium?: boolean } = {},
+  opts: { premium?: boolean; strategyId?: string } = {},
 ): Promise<Record<string, Record<string, unknown>>> {
-  const { extractJSON } = await import("@/server/services/llm-gateway");
+  const { executeStructuredLLMCall } = await import("@/server/services/utils/llm-structured");
 
   const bizContext = responses.biz
     ? Object.entries(responses.biz)
@@ -1648,9 +1650,9 @@ async function extractStructuredPillarContent(
     const prompt = `Génère le contenu structuré pour le pilier ${upperK}.
 
 RÈGLES DE GÉNÉRATION (IMPORTANT) :
-1. Remplis le MAXIMUM de champs à partir des réponses brutes et de ce qui en découle logiquement.
+1. Extrais seulement les champs étayés par les réponses brutes. Un champ inconnu doit être omis ; remplir le schéma n’est pas un objectif.
 2. Utilise les réponses brutes comme source de vérité absolue.
-3. Pour un champ non couvert par les réponses : déduis-le UNIQUEMENT s'il découle clairement des faits déclarés et des piliers précédents. NE FABRIQUE JAMAIS de chiffres, statistiques, dates, noms de concurrents ou de personnes, ni aucun fait non déduisible — pour ceux-là retourne null (mieux vaut null qu'une valeur inventée).
+3. Les piliers générés servent à éviter les contradictions, jamais de preuve supplémentaire. Pour un champ non couvert, une déduction prudente reste une proposition à valider. NE FABRIQUE JAMAIS de chiffres, statistiques, dates, noms de concurrents ou de personnes, ni aucun fait non déduisible — pour ceux-là, omets le champ plutôt que d’inventer une valeur.
 4. Tu DOIS rédiger l'ensemble des valeurs en FRANÇAIS exclusivement.
 5. CONTRAINTE DURE — la marque opère dans le secteur, pays et modèle business déclarés ci-dessous. Tout produit, persona, concurrent, exemple ou narrative DOIT être cohérent avec ces faits.
 6. Ne génère PAS les champs canoniques suivants : \`secteur\`, \`pays\`, \`businessModel\`, \`positioningArchetype\`, \`economicModels\`. Ils sont scellés par le système après ton extraction.
@@ -1662,13 +1664,16 @@ ${wrapUntrusted("CONTEXTE BUSINESS LIBRE", bizContext, { max: 4000 })}
 
 ${previousPillarsContext ? `PILIERS DÉJÀ GÉNÉRÉS (Sers-t'en pour la cohérence globale) :\n${wrapUntrusted("PILIERS DÉJÀ GÉNÉRÉS", previousPillarsContext, { max: 12000 })}\n` : ""}
 
-${instructions ? `FORMAT ATTENDU (TOUS les champs doivent être remplis) :\n${instructions}\n` : ""}
+${instructions ? `FORMAT ATTENDU (omettre tout champ non étayé) :\n${instructions}\n` : ""}
 ${wrapUntrusted(`RÉPONSES BRUTES DE L'UTILISATEUR POUR LE PILIER ${upperK}`, answersText, { max: 8000 })}
 
-Réponds UNIQUEMENT avec un objet JSON contenant TOUS les champs du pilier ${upperK}. Pas de texte autour.`;
+Réponds UNIQUEMENT avec un objet JSON contenant seulement les champs étayés du pilier ${upperK}. Pas de texte autour.`;
 
     try {
-      const { text } = await callLLM({
+      const { data } = await executeStructuredLLMCall<Record<string, unknown>>({
+        schema: schema.partial().strict(),
+        strategyId: opts.strategyId,
+        retries: 0,
         // LOT 1e — system durci d'un rappel anti-injection ; les blocs founder du
         // prompt (biz, réponses brutes, piliers déjà générés) sont balisés ci-dessus.
         system: `${UNTRUSTED_NOTICE}\n\n${system}`,
@@ -1684,15 +1689,10 @@ Réponds UNIQUEMENT avec un objet JSON contenant TOUS les champs du pilier ${upp
         // pilier A non canonique → tout l'aval (Oracle, scorer) le voit vide.
         // Inerte sans Ollama (le cloud ignore l'option).
         ...(opts.premium ? {} : { ollamaModel: process.env.OLLAMA_STRUCTURED_MODEL ?? "hermes3-fast" }),
-        responseFormat: "json_object",
         maxOutputTokens: opts.premium ? 8192 : 4096,
       });
 
-      const parsed = extractJSON(text.trim()) as Record<string, unknown>;
-
-      if (parsed && typeof parsed === "object") {
-        result[pillarKey] = parsed;
-      }
+      result[pillarKey] = data as Record<string, unknown>;
     } catch (err) {
       console.warn(`[quick-intake] Pillar ${pillarKey} extraction failed:`, err instanceof Error ? err.message : String(err));
     }
@@ -1829,7 +1829,8 @@ function generateDiagnostic(
   vector: Record<string, number>,
   classification: string,
   responses?: Record<string, Record<string, string>> | null,
-  companyName?: string
+  companyName?: string,
+  reportEvidenceVersion = 1,
 ) {
   // Intake diagnostic covers ADVE only (RTIS = paid version)
   const pillars = [
@@ -1855,22 +1856,10 @@ function generateDiagnostic(
   const weakNames = weaknesses.map((p) => p.name).join(", ");
   const brand = companyName || "Votre marque";
 
-  let summaryIntro: string;
-  if (classification === "LATENT") {
-    summaryIntro = `${brand} présente des fondations fragiles. Les piliers fondamentaux de la marque sont absents ou sous-développés, ce qui la rend vulnérable et invisible sur son marché.`;
-  } else if (classification === "FRAGILE") {
-    summaryIntro = `${brand} a des bases mais elles manquent de cohérence. L'identité de marque est en construction — il faut consolider avant de pouvoir se différencier.`;
-  } else if (classification === "ORDINAIRE") {
-    summaryIntro = `${brand} possède une base fonctionnelle mais manque d'éléments différenciants. Elle risque d'être substituable par n'importe quel concurrent.`;
-  } else if (classification === "FORTE") {
-    summaryIntro = `${brand} a des fondations solides avec des forces réelles en ${strongNames}. L'enjeu est maintenant de combler les lacunes pour passer au niveau supérieur.`;
-  } else if (classification === "CULTE") {
-    summaryIntro = `${brand} approche le statut culte avec une communauté naissante. Les piliers ${strongNames} sont vos moteurs. Optimiser ${weakNames} peut déclencher un mouvement.`;
-  } else {
-    summaryIntro = `${brand} transcende son marché. Focus sur la pérennité et la transmission.`;
-  }
+  const summaryIntro = `${brand} : estimation ${classification}, à confirmer avec votre équipe. Le dossier est davantage renseigné sur ${strongNames} ; ${weakNames} sont à documenter en priorité. Cette complétude ne démontre ni visibilité, ni traction, ni préférence sur le marché.`;
 
   return {
+    reportEvidenceVersion,
     classification,
     strengths: strengths.map((p) => ({
       pillar: p.name,
@@ -1896,19 +1885,13 @@ function pillarResponses(
 }
 
 function generateStrengthInsight(
-  key: string,
-  responses?: Record<string, string>
+  _key: string,
+  responses?: Record<string, string>,
 ): string {
-  if (!responses) return "Ce pilier montre de bonnes fondations.";
-
-  const answers = Object.values(responses).map((v) => String(v ?? "")).filter((v) => v.trim());
-  const totalLength = answers.reduce((sum, a) => sum + a.length, 0);
-
-  // Richer answers = stronger signal
-  if (totalLength > 200) {
-    return "Vos réponses détaillées montrent une vraie maturité sur ce pilier. Capitalisez dessus dans votre communication.";
-  }
-  return "Ce pilier montre du potentiel. Approfondissez-le pour en faire un vrai avantage concurrentiel.";
+  const count = Object.values(responses ?? {}).filter(value => String(value ?? "").trim()).length;
+  return count > 0
+    ? `${count} réponse(s) reçue(s) sur ce volet, parmi les mieux renseignés du dossier. Leur effet réel sur le marché reste à vérifier.`
+    : "Ce classement porte sur la structure du dossier ; aucune réponse directe ne documente encore ce volet.";
 }
 
 /**
@@ -1921,200 +1904,17 @@ function analyzePillarResponses(
   score: number,
   responses?: Record<string, string>
 ): { pillar: string; key: string; score: number; diagnostic: string; actions: string[] } {
-  const answers = responses
-    ? Object.values(responses).map((v) => String(v ?? "")).filter((v) => v.trim())
-    : [];
-  const totalContent = answers.join(" ").toLowerCase();
-  const hasSubstance = totalContent.length > 50;
-  const isVague = answers.some((a) => a.length < 15);
-  const saysNo = answers.some((a) => /^(non|no|aucun|pas encore|rien|0|nope)/i.test(a.trim()));
-
-  // Pillar-specific analysis
-  switch (key) {
-    case "a": {
-      const noStory = saysNo || totalContent.includes("pas d'histoire") || !hasSubstance;
-      const noValues = answers.length < 3 || isVague;
-      return {
-        pillar: name, key, score,
-        diagnostic: noStory
-          ? "Votre marque n'a pas de mythologie fondatrice articulée. Sans histoire, il n'y a pas d'émotion, et sans émotion, pas de connexion avec votre audience."
-          : noValues
-            ? "Vous avez une histoire mais vos valeurs restent floues. Une marque authentique doit pouvoir articuler clairement ce en quoi elle croit."
-            : "Votre authenticité existe mais manque de structure. Elle doit être codifiée pour devenir un outil stratégique.",
-        actions: noStory
-          ? [
-              "Documenter votre histoire fondatrice : le moment déclencheur, le problème que vous avez voulu résoudre, votre transformation personnelle",
-              "Identifier votre archétype de marque (Héros, Sage, Rebelle...) pour ancrer votre narration",
-              "Formuler 3 valeurs non-négociables qui guident chaque décision",
-            ]
-          : [
-              "Structurer votre narration fondatrice en un récit de 90 secondes",
-              "Décliner vos valeurs en comportements observables par vos clients",
-              "Créer un manifeste de marque d'une page",
-            ],
-      };
-    }
-    case "d": {
-      const noDiff = saysNo || totalContent.includes("pas de difference") || totalContent.includes("inexistant");
-      const noVisual = answers.length >= 2 && answers[1] && answers[1].length < 20;
-      return {
-        pillar: name, key, score,
-        diagnostic: noDiff
-          ? "Vous n'avez pas identifié ce qui vous rend unique. Sur un marché compétitif, l'absence de distinction signifie l'invisibilité."
-          : noVisual
-            ? "Votre positionnement verbal existe mais votre identité visuelle est sous-développée. Le visuel représente 80% de la première impression."
-            : "Votre distinction a du potentiel mais n'est pas assez tranchante pour marquer les esprits.",
-        actions: noDiff
-          ? [
-              "Cartographier 5 concurrents directs et identifier les espaces non occupés",
-              "Définir votre 'Only Statement' : Nous sommes les seuls à [X] pour [Y] parce que [Z]",
-              "Tester votre proposition auprès de 10 clients : peuvent-ils vous décrire en une phrase ?",
-            ]
-          : [
-              "Créer un moodboard de direction artistique avec codes couleurs, typographies, imagerie",
-              "Définir votre ton de voix : 3 mots qu'on utilise, 3 mots qu'on n'utilise jamais",
-              "Auditer la cohérence visuelle sur tous vos points de contact",
-            ],
-      };
-    }
-    case "v": {
-      const noPromise = saysNo || !hasSubstance;
-      const weakOffer = totalContent.includes("service") && totalContent.length < 100;
-      return {
-        pillar: name, key, score,
-        diagnostic: noPromise
-          ? "Votre promesse de valeur n'est pas articulée. Sans promesse claire, vos clients ne savent pas pourquoi acheter chez vous plutôt qu'ailleurs."
-          : weakOffer
-            ? "Vous avez une offre mais elle n'est pas structurée en proposition de valeur. Il y a une différence entre décrire ce que vous faites et promettre un résultat."
-            : "Votre proposition de valeur existe mais manque de précision. Passez du vague au mesurable.",
-        actions: noPromise
-          ? [
-              "Formuler votre promesse en une phrase : 'Pour [cible], nous promettons [résultat] grâce à [méthode]'",
-              "Lister les 3 résultats concrets que vos clients obtiennent en travaillant avec vous",
-              "Définir votre pricing ladder : offre d'appel, offre principale, offre premium",
-            ]
-          : [
-              "Quantifier votre impact : délais, pourcentages, montants concrets",
-              "Créer un catalogue structuré avec bénéfices clients (pas juste des features)",
-              "Mettre en place un système de témoignages clients pour prouver votre promesse",
-            ],
-      };
-    }
-    case "e": {
-      const noCommunity = saysNo || totalContent.includes("pas de communaut");
-      const passiveEngagement = !totalContent.includes("interag") && !totalContent.includes("echange");
-      return {
-        pillar: name, key, score,
-        diagnostic: noCommunity
-          ? "Aucune communauté active. Votre marque parle mais personne ne répond. L'engagement est le carburant de la croissance organique."
-          : passiveEngagement
-            ? "Vous avez une audience mais pas une communauté. La différence : une audience consomme, une communauté participe et évangélise."
-            : "Votre engagement existe mais n'est pas structuré en rituels répétables.",
-        actions: noCommunity
-          ? [
-              "Choisir UN canal principal et publier 3x/semaine pendant 90 jours sans interruption",
-              "Créer un rituel de marque hebdomadaire (live, rubrique, challenge)",
-              "Répondre à 100% des commentaires et DMs pendant 30 jours",
-            ]
-          : [
-              // Vocabulaire fondateur (2026-07-20) : « Devotion Ladder » / « UGC »
-              // sont du jargon interne — jamais rendus au client (ADR-0123).
-              "Cartographier votre échelle d'engagement : qui vous regarde, qui participe, qui vous recommande",
-              "Créer un programme de parrainage pour transformer vos clients satisfaits en apporteurs d'affaires",
-              "Lancer un format où vos clients créent le contenu avec vous (photos, avis, défis)",
-            ],
-      };
-    }
-    case "r": {
-      const noRiskMgmt = saysNo || totalContent.includes("pas de plan") || totalContent.includes("ignore");
-      return {
-        pillar: name, key, score,
-        diagnostic: noRiskMgmt
-          ? "Aucune gestion de risque structurée. Vous naviguez à vue. Un seul événement négatif pourrait détruire des mois de travail sans plan de contingence."
-          : "Vous êtes conscient de certains risques mais il manque un cadre structuré pour les anticiper et les mitiger.",
-        actions: noRiskMgmt
-          ? [
-              "Réaliser une analyse SWOT honnête : 3 forces, 3 faiblesses, 3 opportunités, 3 menaces",
-              "Identifier votre 'Sheitan' — l'ennemi existentiel de votre marque (pas un concurrent, une force)",
-              "Rédiger un protocole de crise en une page : qui fait quoi quand ça déraille",
-            ]
-          : [
-              "Prioriser vos risques avec une matrice probabilité x impact",
-              "Mettre en place une veille concurrentielle mensuelle",
-              "Préparer 3 scénarios de réponse pour les types de crises les plus probables",
-            ],
-      };
-    }
-    case "t": {
-      const noKPIs = saysNo || totalContent.includes("pas de kpi") || !hasSubstance;
-      return {
-        pillar: name, key, score,
-        diagnostic: noKPIs
-          ? "Aucun système de mesure en place. Sans données, vous prenez des décisions à l'aveugle et ne pouvez pas prouver votre valeur."
-          : "Vous mesurez certaines choses mais il manque un tableau de bord structuré avec des KPIs actionables.",
-        actions: noKPIs
-          ? [
-              "Définir 5 KPIs vitaux : 2 d'acquisition, 1 de rétention, 1 de revenue, 1 de satisfaction",
-              "Mettre en place Google Analytics + un outil de social listening basique",
-              "Créer un rapport mensuel de 1 page avec vos métriques clés et tendances",
-            ]
-          : [
-              "Automatiser votre reporting avec un dashboard unifié",
-              "Ajouter des métriques de Brand-Market Fit : NPS, brand recall, part de voix",
-              "Faire une étude de marché TAM/SAM/SOM pour quantifier votre potentiel",
-            ],
-      };
-    }
-    case "i": {
-      const noRoadmap = saysNo || totalContent.includes("aucune structure") || totalContent.includes("0 fcfa") || totalContent.includes("0 cfa");
-      const noBudget = totalContent.includes("0") || totalContent.includes("aucun") || totalContent.includes("pas de budget");
-      return {
-        pillar: name, key, score,
-        diagnostic: noRoadmap
-          ? "Aucune structure d'exécution. Vous avez peut-être des idées mais sans roadmap, équipe, ni budget, rien ne se matérialise."
-          : noBudget
-            ? "Vous avez une idée de votre direction mais pas de ressources allouées. Une stratégie sans budget est un souhait, pas un plan."
-            : "Votre implémentation est en cours mais manque de rigueur opérationnelle.",
-        actions: noRoadmap
-          ? [
-              "Créer une roadmap 90 jours avec 3 objectifs maximum et des jalons hebdomadaires",
-              "Allouer un budget minimum viable : même 50K FCFA/mois est un début si c'est constant",
-              "Identifier une personne responsable du marketing, même à temps partiel",
-            ]
-          : [
-              "Structurer vos campagnes en sprints de 2 semaines avec objectifs mesurables",
-              "Mettre en place un calendrier éditorial 30 jours à l'avance",
-              "Définir un processus de validation clair : qui décide quoi et en combien de temps",
-            ],
-      };
-    }
-    case "s": {
-      const noStrategy = saysNo || totalContent.includes("freestyle") || !hasSubstance;
-      return {
-        pillar: name, key, score,
-        diagnostic: noStrategy
-          ? "Pas de stratégie documentée. Vous improvisez. Le 'freestyle' n'est pas une stratégie — c'est l'absence de stratégie déguisée en agilité."
-          : "Vous avez des éléments stratégiques mais ils ne forment pas un tout cohérent. La stratégie, c'est le liant entre tous les autres piliers.",
-        actions: noStrategy
-          ? [
-              "Rédiger un document stratégique d'une page : vision, mission, positionnement, 3 priorités",
-              "Créer des guidelines de marque même basiques : logo usage, couleurs, ton de voix",
-              "Planifier une session de réflexion stratégique trimestrielle (même 2h suffit)",
-            ]
-          : [
-              "Auditer la cohérence entre vos canaux : le même message est-il porté partout ?",
-              "Créer un score de cohérence interne : vos équipes peuvent-elles pitcher la marque de la même façon ?",
-              "Documenter vos apprentissages : qu'est-ce qui a marché, qu'est-ce qui a échoué, pourquoi",
-            ],
-      };
-    }
-    default:
-      return {
-        pillar: name, key, score,
-        diagnostic: "Ce pilier nécessite un renforcement.",
-        actions: ["Approfondir l'analyse avec un diagnostic complet IMPULSION."],
-      };
-  }
+  const answers = Object.values(responses ?? {}).map(value => String(value ?? "").trim()).filter(Boolean);
+  const actions: Record<string, string[]> = {
+    a: ["Vérifier l’histoire et la raison d’être dans les documents reçus", "Confirmer les valeurs avec votre équipe", "Relier ces valeurs à des comportements observables"],
+    d: ["Confirmer votre différence auprès de clients", "Rassembler des exemples de votre identité visuelle", "Comparer votre promesse à celle de concurrents documentés"],
+    v: ["Confirmer l’offre, ses bénéfices et ses prix", "Rassembler des preuves de résultat client", "Tester la compréhension de votre promesse"],
+    e: ["Renseigner vos canaux existants", "Distinguer audience, clients et recommandations réellement mesurés", "Choisir un indicateur d’engagement à suivre"],
+  };
+  return { pillar: name, key, score,
+    diagnostic: `${name} est parmi les volets les moins renseignés du dossier (${score.toFixed(1)}/25 de complétude structurelle). ${answers.length} réponse(s) reçue(s) ; les manques du dossier ne démontrent pas une faiblesse de votre entreprise.`,
+    actions: actions[key] ?? ["Compléter et confirmer les données de ce volet"],
+  };
 }
 
 /**

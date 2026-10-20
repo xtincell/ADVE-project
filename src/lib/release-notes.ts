@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.510", date: "2026-10-20", headline: "Distinguer vos données des propositions",
+    highlights: [{ emoji: "📄", title: "Un diagnostic plus facile à vérifier", body: "Le rapport indique l’origine des données et les propositions à valider. Sa synthèse reste lisible, avec les détails consultables et une annexe dans le PDF. Le score de complétude est distingué de la force de marque ; les anciens rapports signalent leur besoin de vérification sans être réécrits." }],
+  },
+  {
     version: "6.27.509", date: "2026-10-20", headline: "Retrouver votre rapport après paiement",
     highlights: [{ emoji: "📄", title: "Un accès conservé", body: "Votre rapport payé se retrouve depuis le même diagnostic, même après fermeture du navigateur. Ses détails restent réservés aux accès autorisés ; les originaux que vous avez fournis restent téléchargeables depuis le résultat." }],
   },
