@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.506", date: "2026-10-20", headline: "Comprendre la part réellement mesurée",
+    highlights: [{ emoji: "📊", title: "Une couverture rapportée au bon total", body: "Le score public et le diagnostic expliquent la part des signaux effectivement mesurés. Les observations publiques conservées et les limites des recherches par nom sont indiquées clairement." }],
+  },
+  {
     version: "6.27.504", date: "2026-10-20", headline: "Conserver la juste place de chaque document",
     highlights: [
       { emoji: "📚", title: "Ajouter un ancien document au bon endroit", body: "Une version reçue tardivement peut rejoindre l’historique avant l’édition choisie, sans remplacer votre référence de travail ou votre proposition en discussion." },

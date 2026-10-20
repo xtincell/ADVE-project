@@ -2107,6 +2107,30 @@ d'invariants spécifiques (cf. `tests/integration/`).
 
 # ANNEXE CANON L — LEXIQUE NORMATIF
 
+### Couverture de l’empreinte publique
+
+La couverture exprime la part du poids du panel effectivement mesurée ; ce
+n’est ni la note d’empreinte ni une nouvelle mesure de performance de marque.
+Le module pur `brand-scores.measuredScoreCoverage` calcule le ratio entre les
+poids mesurés avec un score exploitable et les poids de toutes les dimensions,
+arrondi en pourcentage. Panel vide ou poids invalides donnent une couverture
+d’affichage nulle, sans fabriquer une note de marque nulle. Le poids brut
+`measuredWeight` reste conservé distinctement ; un panel de 110 avec 75 mesurés
+représente 68 %, pas 75 %. Les scores et leurs formules restent inchangés.
+
+Candidat 506 : scoreur, restitution intake, narratif et seuil de cache faible
+partagent ce calcul. Textes FR/EN/ZH cohérents avec la conservation des relevés
+publics ; homonymie distincte des seules mesures du site analysé. Rouge/vert
+ciblé reçu. Le résumé factuel ne nomme que les fondations mesurées ; un domaine
+en échec n’est pas présenté comme reçu. Le badge public exprime l’empreinte /100,
+sans classification de santé de marque, y compris dans son libellé accessible.
+Natif local reçu sur cache, 68 %/43 sur 100 et résumé exact, snapshot conservé
+sans appel frais. Huit contrôles locaux finaux à zéro ; types Next régénérés
+par la commande officielle après arrêt du preview, premier échec conservé.
+Réseau local complet reçu au périmètre, pas de SLO public ni coût du scan
+réel. CI/livraison 506 encore ouvertes ; aucune réception du
+MVP entier ou modification des autres mesures canoniques déduite.
+
 ### Compensation d’une écriture
 
 ADR-0207, 2026-10-08 : `PillarVersion` conserve l’avant et le delta accepté dans
@@ -2119,7 +2143,7 @@ checkpoint ne permet pas de déduire une restauration précise.
 
 ADR-0219 : la lignée et son édition vivent sur la source canonique existante, dans `rawData._document`. Proposition et référence peuvent coexister. La proposition est une hypothèse non validée ; seule une décision humaine explicite la retient comme référence documentaire. Aucun amendement ADVE implicite. Historique et originaux conservés, dérivés invalidés, reçus périmés refusés. Les lecteurs et l’index qualifient les propositions et excluent les éditions antérieures des analyses courantes ; la consultation historique demeure autorisée dans le même périmètre d’accès.
 
-Extension candidate 504, [ADR-0223 Proposed](adr/0223-document-edition-representations.md) :
+Extension 504 reçue au périmètre code/runtime, [ADR-0223](adr/0223-document-edition-representations.md) :
 une antérieure reçue tardivement entre ARCHIVED avec `beforeSourceId`, sans
 déplacer la référence ou la proposition. Les liens explicites ordonnent la lignée ;
 le numéro d’admission ne déclare pas la récence métier. Un autre format porte
@@ -2129,7 +2153,10 @@ indépendante des analyses courantes. Les mêmes octets sous d’autres noms ou
 emplacements déclarés réutilisent source et `FileUpload` ; les alias datés vivent
 dans le reçu original après vérification physique, sans modifier l’empreinte
 documentaire. Aucune équivalence sémantique, adoption ou autorité supplémentaire
-inférée. Recettes PostgreSQL/navigateur et livraison 504 restent à recevoir.
+inférée. Source `b7d460f51`, PR 1037, CI/build/runtime 6.27.504 exacts et
+conservation avant/après reçus ; l’attente de livraison 504 est levée. Mutations
+sur USER fictif et lecture ADMIN production restent distinctes ; relations de
+l’intégralité du corpus et réception globale non déduites.
 
 ### Usage documentaire
 

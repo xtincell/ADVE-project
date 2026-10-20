@@ -27,7 +27,7 @@ export const scorerFr = {
 
   // ── Formulaire ─────────────────────────────────────────────────────────
   "scorer.form.title": "Votre marque",
-  "scorer.form.description": "Rien n'est enregistré à cette étape.",
+  "scorer.form.description": "Aucun compte ni email requis. Les informations publiques recueillies alimentent l’historique des scores.",
   "scorer.form.brandPlaceholder": "Nom de la marque *",
   "scorer.form.websitePlaceholder": "Site web (https://…) — recommandé",
   "scorer.form.websiteHint":
@@ -81,14 +81,14 @@ export const scorerFr = {
   "scorer.cover.silentTitle": "Ce qu'il ne dit pas encore",
   "scorer.says.audience": "Une audience comptée sur {count} réseaux, portée par {top}.",
   "scorer.says.presence": "Une présence détectée sur {count} réseaux, audience non relevée.",
-  "scorer.says.foundations": "Des fondations techniques mesurées : site, domaine, email.",
+  "scorer.says.foundations": "Des fondations techniques mesurées : {signals}.",
   "scorer.says.reviews": "Une réputation locale attestée par une fiche notée {rating}/5.",
   "scorer.says.press": "{count} retombées presse récentes, vérifiables une à une.",
   "scorer.ambiguity.title": "Plusieurs entreprises peuvent porter ce nom",
   "scorer.ambiguity.body":
-    "Sans votre secteur, nous ne pouvons pas distinguer votre marque d'une homonyme : les signaux ci-dessous reposent sur le seul nom. Ajoutez votre site pour lever le doute.",
+    "Les recherches par nom peuvent concerner une entreprise homonyme. Les mesures d’un site concernent l’adresse analysée ; elles ne certifient pas toutes les autres mentions. Vérifiez les liens et précisez votre secteur et votre pays dans le diagnostic complet.",
   "scorer.verdict.provisional":
-    "Score provisoire : nous n'avons pu mesurer qu'une partie de votre empreinte. Ajoutez votre site pour un score complet.",
+    "Score provisoire : seule une partie de votre empreinte a pu être mesurée. Complétez les informations manquantes et relancez le scan.",
   "scorer.cover.provisional": "provisoire",
   "scorer.cover.marketPosition": "{rank}ᵉ sur {total} marques {country} déjà scannées — devant {ahead} % d'entre elles.",
   "scorer.verdict.strong":
@@ -252,7 +252,7 @@ export const scorerEn: Record<keyof typeof scorerFr, string> = {
     ", no sign-up required. Then, if you want to go further, your full diagnostic (ADVE method) is waiting.",
 
   "scorer.form.title": "Your brand",
-  "scorer.form.description": "Nothing is saved at this step.",
+  "scorer.form.description": "No account or email required. The public information collected contributes to the score history.",
   "scorer.form.brandPlaceholder": "Brand name *",
   "scorer.form.websitePlaceholder": "Website (https://…) — recommended",
   "scorer.form.websiteHint":
@@ -292,14 +292,14 @@ export const scorerEn: Record<keyof typeof scorerFr, string> = {
   "scorer.cover.silentTitle": "What it cannot say yet",
   "scorer.says.audience": "An audience counted across {count} networks, led by {top}.",
   "scorer.says.presence": "A presence detected on {count} networks, audience not measured.",
-  "scorer.says.foundations": "Measured technical foundations: website, domain, email.",
+  "scorer.says.foundations": "Measured technical foundations: {signals}.",
   "scorer.says.reviews": "Local reputation backed by a {rating}/5 rating.",
   "scorer.says.press": "{count} recent press mentions, each one verifiable.",
   "scorer.ambiguity.title": "Several companies may share this name",
   "scorer.ambiguity.body":
-    "Without your sector, we cannot tell your brand apart from a namesake: the signals below rest on the name alone. Add your website to remove the doubt.",
+    "Name searches may concern a different company with the same name. Website measurements concern the address analysed; they do not verify every other mention. Check the links and specify your sector and country in the full diagnostic.",
   "scorer.verdict.provisional":
-    "Provisional score: we could only measure part of your footprint. Add your website for a complete score.",
+    "Provisional score: only part of your footprint could be measured. Complete the missing information and run the scan again.",
   "scorer.cover.provisional": "provisional",
   "scorer.cover.marketPosition": "{rank}th of {total} {country} brands scanned so far — ahead of {ahead}% of them.",
   "scorer.verdict.strong":
@@ -453,7 +453,7 @@ export const scorerZh: Record<keyof typeof scorerFr, string> = {
     "内扫描您的数字足迹，无需注册。之后若想更进一步，您的完整诊断（ADVE 方法）已在等您。",
 
   "scorer.form.title": "您的品牌",
-  "scorer.form.description": "此步骤不会保存任何信息。",
+  "scorer.form.description": "无需账号或邮箱。收集到的公开信息会用于评分历史记录。",
   "scorer.form.brandPlaceholder": "品牌名称 *",
   "scorer.form.websitePlaceholder": "网站（https://…）——推荐填写",
   "scorer.form.websiteHint": "填写网站可解锁另外 4 项信号（域名、邮件、性能……）。",
@@ -490,12 +490,12 @@ export const scorerZh: Record<keyof typeof scorerFr, string> = {
   "scorer.cover.silentTitle": "尚无法说明什么",
   "scorer.says.audience": "已在 {count} 个平台统计到受众，以 {top} 为主。",
   "scorer.says.presence": "已在 {count} 个平台发现账号，受众数据未采集。",
-  "scorer.says.foundations": "技术基础已测量：网站、域名、邮箱。",
+  "scorer.says.foundations": "技术基础已测量：{signals}。",
   "scorer.says.reviews": "本地口碑有据可依，评分 {rating}/5。",
   "scorer.says.press": "近期 {count} 条媒体报道，逐条可核。",
   "scorer.ambiguity.title": "可能有多家公司使用该名称",
-  "scorer.ambiguity.body": "在不知道您所属行业的情况下，我们无法将您的品牌与同名者区分开：以下信号仅依据名称。请补充您的网站以消除歧义。",
-  "scorer.verdict.provisional": "暂定评分：我们只能测量到您影响力的一部分。请补充您的网站以获得完整评分。",
+  "scorer.ambiguity.body": "按名称搜索可能找到同名企业。网站测量只涉及所分析的网址，并不能验证其他所有提及。请核查链接，并在完整诊断中注明您的行业和国家。",
+  "scorer.verdict.provisional": "暂定评分：只能测量到您影响力的一部分。请补充缺失信息后重新扫描。",
   "scorer.cover.provisional": "暂定",
   "scorer.cover.marketPosition": "在已扫描的 {total} 个 {country} 品牌中排第 {rank} — 领先其中 {ahead}%。",
   "scorer.verdict.strong": "您的线上影响力强劲——是打造狂热品牌的良好基础。",

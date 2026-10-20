@@ -25,6 +25,7 @@ import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { useT } from "@/lib/i18n/use-t";
 import { ScoreBadge } from "@/components/shared/score-badge";
+import { measuredScoreCoverage } from "@/domain/brand-scores";
 import {
   Button,
   Card,
@@ -234,11 +235,14 @@ function buildWhatScanSays(dims: Dim[], facts: FactsView, i: I18nCtx): string[] 
         : i.tf("scorer.says.presence", { count: facts.socials.length }),
     );
   }
-  const site = by.get("site");
-  const domain = by.get("domain");
-  const email = by.get("email");
-  if (site?.measured || domain?.measured || email?.measured) {
-    out.push(i.t("scorer.says.foundations"));
+  const foundations = ["site", "domain", "email", "perf"].filter((key) => {
+    const dimension = by.get(key);
+    return dimension?.measured && dimension.score !== null;
+  });
+  if (foundations.length > 0) {
+    out.push(i.tf("scorer.says.foundations", {
+      signals: foundations.map((key) => i.t(DIMENSION_LABEL_KEYS[key] ?? key)).join(", "),
+    }));
   }
   if (by.get("reviews")?.measured && facts.reviews?.rating != null) {
     out.push(i.tf("scorer.says.reviews", { rating: facts.reviews.rating }));
@@ -486,7 +490,7 @@ export default function ScorerPage() {
   const factSocials = facts?.socials ?? [];
   const totalFollowers = factSocials.reduce((s, f) => s + (f.followerCount ?? 0), 0);
   const maxFollowers = Math.max(0, ...factSocials.map((f) => f.followerCount ?? 0));
-  const coveragePct = result?.measuredWeight ?? 0;
+  const coveragePct = measuredScoreCoverage(dims);
   const scanDate = result?.capturedAt
     ? new Date(result.capturedAt).toLocaleDateString(intlTag, { day: "numeric", month: "long", year: "numeric" })
     : null;
@@ -639,7 +643,7 @@ export default function ScorerPage() {
                   <div className="flex shrink-0 flex-col items-center gap-1">
                     {result.total !== null ? (
                       <>
-                        <ScoreBadge score={result.total} maxScore={100} mode="cockpit" size="xl" />
+                        <ScoreBadge score={result.total} maxScore={100} showClassification={false} size="xl" />
                         {/* Le chiffre ne voyage jamais seul quand il repose sur
                             une fraction du spectre : le badge le qualifie à
                             l'endroit exact où l'œil se pose (audit 2026-07-30). */}

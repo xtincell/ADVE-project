@@ -1,4 +1,51 @@
-## Dossier documentaire — candidat 504, réceptions ouvertes (2026-10-20)
+## Sprint MVP1 — couverture et information publique, candidat 506 (2026-10-20)
+
+Priorité commerciale La Fusée : score public qualifié, audit guidé/import,
+restitution protégée, passage au service existant puis réception du cycle.
+LeRadar C6-03 / MVP-FUSEE-01 actif, cinq tâches MVP ; aucune réception entière.
+Premier scan public SPAWT HTTP 200 en 30 212 ms et préremplissage intake reçus,
+sans formulaire contact envoyé, audit achevé ou conversion. Critères privés
+`release/preuves-mvp-commercial-20261020/requirements-and-baseline.json`.
+
+Le candidat 506 réutilise `brand-scores` : poids brut 75 sur panel de 110 = 68 %
+de couverture, note 43/100 conservée ; ancien 75 % incorrect. Ratio commun au
+scoreur, rapport intake, narratif et seuil de cache faible, sans nouvelle
+formule de note ni réécriture des observations. Textes FR/EN/ZH conformes à la
+conservation publique réelle et garde d’homonymie maintenue, sans demande de
+site déjà donné. Résumé des seules fondations mesurées, domaine en échec exclu ;
+badge public 43/100 sans classification/santé de marque, aria cohérent avec ce
+choix. Pas de nouveau module de gestion ou capacité autonome.
+
+Rouge réel sur trois tests quand le poids brut reprend la place du ratio,
+vingt anciens contrôles verts ; restauration exacte puis 27 ciblés / deux
+fichiers reçus. Final local reçu : huit sorties zéro, 4 877 unitaires / 456,
+gouvernance 1 671 / 169, types/lints sans erreur, 24 avertissements historiques
+par lint et zéro cycle. Premier typage Next généré échoué conservé ; preview
+arrêté puis typegen officiel/tsc zéro, sans édition manuelle des types.
+Natif local sur cache : HTTP 200, 68 %, 43/100, fondations et aria exacts,
+préremplissage intake ; fenêtre complète de 25 réponses sans ≥500/exception/
+échec de chargement. Observation inchangée, aucun appel frais ni ligne AICostLog/intake/
+contact locale. DOM 707,6 ms/titre ≤931 ms incluant pilote ; première compilation
+API environ 60 s, aucun SLO public. Build additionnel Turbopack échoué sur le
+symlink hors root ; webpack local de recette en cours, sans défaut code établi
+ou contournement CI. **Suite immédiate** : recevoir CI et
+image/runtime 506 exacts et conservation production avant de purger les dettes
+ciblées, puis poursuivre coût réel du scan, audit et conversion. Responsable C6/MVP-FUSEE-01,
+effort un correctif borné puis recette, déclencheur fin du candidat en cours.
+Candidat 505 conservé séparément, aucun raccord documentaire transposé ;
+C2-01, corpus, conseil/C7 et sept chantiers restent dus. [Dettes](RESIDUAL-DEBT.md).
+
+## Runtime 504 reçu — attente de livraison levée (2026-10-20)
+
+Source `b7d460f51` / PR 1037 / CI 39419107847 / build 39419232494 / runtime
+6.27.504 exacts et conservation avant/après reçus, preuves privées
+`release/preuves-documents504-20261020/production504-{received,data-preserved}.json`.
+La baseline avant 506 reçoit données et portefeuille Friesland inchangés,
+lectures séquentielles non atomiques. L’attente de livraison 504 est close ;
+reprise au rapprochement des pièces et relations du corpus, sans réception
+entière de ce dernier ni relance de la livraison déjà reçue.
+
+## Checkpoint antérieur — candidat 504 avant livraison (2026-10-20)
 
 C2/C3/C4/C7 / [ADR-0223 Proposed](adr/0223-document-edition-representations.md).
 Étendre les sources, reçus et formulaire existants, sans magasin parallèle :
