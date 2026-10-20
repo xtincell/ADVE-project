@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.503", date: "2026-10-20", headline: "Rechercher vos éditions par leur identité",
+    highlights: [{ emoji: "📚", title: "Retrouver les pièces à comparer", body: "La recherche utilise la famille, l’édition et le type enregistrés dans votre dossier documentaire, tout en conservant le nom du fichier. Une proposition reste à valider par votre équipe." }],
+  },
+  {
     version: "6.27.502", date: "2026-10-20", headline: "Préparer la recherche dans un document complet",
     highlights: [
       { emoji: "📚", title: "Conserver toute l’étude", body: "La préparation des recherches traite les nombreuses parties d’un document avant de les enregistrer ensemble. Son original, son contenu et son statut restent conservés." },

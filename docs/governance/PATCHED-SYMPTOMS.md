@@ -28,6 +28,16 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+## Clôture de la préparation documentaire — 2026-10-20
+
+502 est reçu sur source `636ef287d`, CI/build/boot et image/runtime exacts.
+L’étude réelle fournit 4 462 fragments intégralement conformes au corpus de
+référence, sans embedding/adoption ni changement d’original ou de fondamentaux.
+La préparation hors verrou répare le commit après expiration ; refus, concurrence
+et rejeu restent reçus sur PostgreSQL. L’attente de préparation réelle est retirée
+des entrées actives ; échec 500 et mesures locales restent historiques. Qualité
+du conseil, autres documents et exploitation demeurent en [reprise](RESIDUAL-DEBT.md).
+
 ## Clôture du défaut de boot documentaire — 2026-10-20
 
 Le blocage JSZip de l’image 499 est fermé par le chargement à la demande livré
@@ -41,7 +51,7 @@ au plan, sans réception entière déduite. [Reprise](RESIDUAL-DEBT.md).
 
 ## Entrées actives
 
-2026-10-20 · **502 candidat — préparation de l’index hors verrou, natif/PG locaux reçus** : étude XLSX conservée mais zéro fragment indexé après commit 53,81 s / limite 30 s sur runtime 500. Cause observée : calcul d’empreinte/fragments/notices/payload et remplacement de 4 462 fragments dans la transaction. Préparation déplacée avant transaction, accès et preuves relus sous verrou sans nouveau hash complet, remplacement atomique/idempotence conservés ; borne 120 s pour plus de mille fragments, 30 s autrement. Garde retirée temporairement/quatre vrais refus échouent, candidat exactement restauré/26 tests verts ; six vérifications PG réelles concurrence/changements commis/révocation/réattribution reçues. Typage repris après nettoyage des seuls types Next générés malformés, sans règle/code assoupli ; suite complète 4 862/456 et gouvernance 1 671/169 reçues, typage/deux lints sans erreur, 24 avertissements historiques et zéro cycle, sans assertion affaiblie. Transaction locale 2,779→2,213 s mais total 2,779→3,117 s, sans gain global. Geste natif USER local 200, 4 462 fragments exacts et empreinte identique production, deux émissions OK/zéro embedding ; copie sans original lié, aucune résolution production. Titre borne haute après attente SDK manquée, pas de SLO. CI/image/runtime 502 et préparation réelle restent ouverts. [Reprise](RESIDUAL-DEBT.md).
+2026-10-20 · **503 candidat — identité documentaire dans le classement partagé** : des noms de synthèse verbeux écartent les éditions originales avant construction du contexte, sans perte de source. Famille/libellé/type validés deviennent le titre de recherche ; nom original conservé comme alias, repli historique intact et identité du cache relue sur la source courante. Deux contre-exemples génériques reproduisent la cause ; contrôles finaux/CI/image/runtime et citations natives restent à recevoir. Aucun texte, statut, empreinte, budget ou modèle modifié. [Reprise Conseil](RESIDUAL-DEBT.md).
 
 2026-10-20 · **501 — écriture VOLUME atomique, runtime en réception** : lecture d’un préfixe chiffré au nom canonique reproduite rouge sur le vrai système de fichiers. L’écriture privée est synchronisée et fermée avant liaison atomique au nom canonique, sans remplacement d’un objet existant ; deux tests réels de visibilité/collision verts. Cause corrigée et reçue localement ; source/CI/build/boot/image et image VPS exacte reçus ; unique demande Coolify reçue, runtime 501/conservation encore ouverts et dernier runtime qualifié 500. Restauration locale d’un original synthétique reçue, sans restauration C7 entière ou grand original réel déduits. [ADR-0222](adr/0222-private-original-chunk-transfers.md).
 

@@ -31,6 +31,11 @@ export function documentEdition(rawData: unknown): DocumentEdition | null {
   const parsed = DocumentEditionSchema.safeParse(value);
   return parsed.success ? parsed.data : null;
 }
+/** Registered identity is a search heading, not source text or an approval. */
+export function documentIdentity(rawData: unknown): string | null {
+  const doc = documentEdition(rawData);
+  return doc ? `${doc.family} · ${doc.label} · ${DOCUMENT_KIND_LABEL[doc.kind]}` : null;
+}
 /** Unknown edition metadata fails closed; legacy documents remain compatible. */
 export function sourceIsUsable(rawData: unknown): boolean {
   if (!rawData || typeof rawData !== "object" || !("_document" in rawData)) return true;

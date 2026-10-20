@@ -1,49 +1,22 @@
-## Préparation de l’étude XLSX — correctif 502 candidat (2026-10-20)
+## Préparation de l’étude XLSX — défaut fermé au périmètre 502 (2026-10-20)
 
-Sur le runtime 500, la préparation native d’une étude de treize feuilles /
-205 666 mots / 10 655 460 caractères / 4 462 fragments a échoué : transaction
-de 30 s expirée au commit après 53,81 s. Zéro fragment indexé ; texte,
-empreinte, original de 3 536 844 octets et qualification documentaire conservés.
-Deux émissions wrapper/handler FAILED, aucune demande d’embedding. Le fichier
-est reçu, pas sa disponibilité pour la recherche indexée.
+La source `636ef287d`, sa CI/build/boot et l’image/runtime 502 exacts sont reçus.
+Le geste natif sur l’étude réelle reçoit HTTP 200 en 60 595 ms : les 4 462
+fragments, leurs contenus, champs et empreintes correspondent intégralement au
+corpus de référence. Zéro embedding demandé ou stocké ; deux émissions
+INDEX_BRAND_SOURCE OK, original, qualification et huit fondamentaux conservés.
+La disponibilité de cette étude pour la recherche indexée est reçue, sans
+assimilation à une absorption sémantique ou à la qualité du conseil.
 
-502 prépare empreinte/fragments/notice/payload avant le verrou, puis relit
-l’accès et compare toutes les preuves courantes sans nouveau hash complet
-sous verrou. Texte/état/mapping/marque propriétaire modifiés sont refusés ;
-remplacement atomique et rejeu conservés. Écritures de plus de mille fragments
-bornées à 120 s, petites écritures toujours à 30 s. Vingt-six tests ciblés verts
-et copie locale de même empreinte reçus ; total 2,779→3,117 s, transaction
-2,779→2,213 s : aucune accélération globale ou latence VPS prouvée.
-
-Typage initial et geste natif USER local reçus : page 200/DOM 286 ms, titre
-observé borne haute 8 931 ms après attente SDK manquée, zéro réponse 500 ou
-exception dans la fenêtre. Préparation 200 en 5 881 ms, handler 4 799 ms et
-4 462 fragments exactement conformes au corpus de référence, empreinte source
-identique à la production ; zéro embedding demandé/stocké et deux émissions
-INDEX_BRAND_SOURCE OK. Copie sans original lié, preview arrêté après recette ;
-ni original téléchargé ni résolution production ou SLO déduits de ce geste.
-
-Garde négative reçue : quatre vrais refus concurrentiels échouent quand elle
-est retirée ; candidat exactement restauré puis 26 tests / deux fichiers verts.
-Six vérifications PostgreSQL réelles reçues : trois préparateurs concurrents
-réutilisent les identités ; modifications commises texte/mapping/FAILED refusées
-sans changer l’ancien index ; usage révoqué après préparation refusé et index
-consommateur absent/propriétaire conservé ; réattribution explicite fonctionne.
-Le premier typage du gauntlet a rencontré le validator Next généré malformé ;
-nettoyage limité à .next/dev/types par la commande existante, puis typecheck et
-npx tsc --noEmit à zéro. Aucune règle/code assoupli. Suite complète reçue :
-4 862 tests / 456 fichiers (4 824 / 454 tests/unit et 38 / deux fichiers hors de
-ce répertoire), gouvernance 1 671 / 169. Typage final et deux lints sans erreur,
-24 avertissements historiques et zéro cycle ; aucune assertion affaiblie.
-
-**Fermer** : recevoir CI/image/runtime 502 exacts,
-puis préparer l’étude réelle sans embeddings et relire ses
-4 462 fragments/empreintes/qualification avec conservation des autres données.
-Éprouver refus si la source ou son usage a changé et rejeu sans doublon ; ne pas
-annoncer l’étude résolue sur la seule mesure ou recette native locale. Responsable Seshat /
-Telemetry, C2/C3/C4 ; effort un lot de correction et recette du chemin existant,
-déclencheur immédiat à la livraison du candidat 502, avant réception de cette
-étude comme référence recherchable. Aucun nouveau gestionnaire ou service.
+L’échec initial sous 500 reste historique : commit après 53,81 s pour 30 s,
+zéro fragment, source intacte. La préparation hors verrou et les comparaisons
+courantes restent éprouvées par les refus/rejeu/concurrence PostgreSQL reçus ;
+suite locale 502 de 4 862 tests / 456 fichiers, gouvernance 1 671 / 169,
+typage/deux lints sans erreur et zéro cycle, 24 avertissements historiques.
+L’attente de livraison/préparation réelle est retirée. Autres études, corpus
+complet, citations, exploitation et restauration restent dans leurs lots C2/C5/C7,
+à reprendre lors de leur ingestion ou recette respective. Aucun SLO ou chantier
+entier fermé. Preuves privées : `release/preuves-spawt-drive-20261019/`.
 
 ## Livraison 501 — image reçue, runtime encore ouvert (2026-10-20)
 
@@ -142,16 +115,39 @@ Le classement existant est une suggestion sur nom/contexte, pas une lecture visu
 Son admission fournisseur et la qualité sémantique restent en C5 après les grands blocs ;
 pas de nouvel appel ni de promesse d’absorption sémantique intégrale.
 
-## Conseil 496 — références directes et formulation des unités (2026-10-19)
+## Conseil 496→503 — sélection des éditions, références directes et unités (2026-10-20)
 
 Cause de perte des pièces/fragments corrigée et reçue dans 496 / code 1c33ee174.
 Une question native, persistée et HTTP 200, cite l’étude primaire et restitue les taux
 avec leurs dénominateurs. La qualité entière reste ouverte : nouveau BMC encore cité
 via la synthèse, et phrase « soit 392 lieux » ambiguë entre corpus de lieux et avis.
-Reprise : après établissement des grands blocs, recevoir des citations directes des
-deux BMC et la formulation exacte des unités dans les sorties du conseil existant,
-sans nouveau gestionnaire ni répétition aveugle des générations. Responsable C5/C2.
-Ne pas confondre ce défaut de sortie avec une perte des sources, ni fermer le corpus.
+Sous 502, le réglage existant de délai de première réponse porté à 90 s reçoit
+une nouvelle réponse HTTP 200 et deux messages persistés, mêmes réserves de qualité.
+Le premier échec avant réponse n’avait pas été persisté et disparaît à la recharge :
+reprise/arrêt/erreur C5 restent ouverts, sans SLO de transport déduit du succès suivant.
+
+Le rejeu sans modèle du chemin documentaire canonique sur les sources autorisées
+montre la proposition omise dès la sélection, avant construction du contexte ;
+les six pièces retenues parviennent au contexte. Le nom de fichier était seul
+traité comme titre fort : une synthèse au nom verbeux pouvait écarter les éditions
+originales. Le candidat 503 réutilise famille/libellé/type existants, relus sur la
+source courante, et conserve le nom original recherchable ou son rôle historique.
+Deux contre-exemples génériques reproduisent cette cause. Les 4 865 tests /
+456 fichiers, gouvernance 1 671 / 169 et cinq contrôles locaux passent (24
+avertissements historiques). La recherche MCP authentifiée sur PostgreSQL
+fictif reçoit directement les trois pièces en 325 ms ; rejeu des candidats
+réels : les deux BMC et l’étude primaire sont fournis dans le budget existant,
+sans nouvel appel. CI/image/runtime 503 et qualité de sortie restent à recevoir. Pas de perte de source, adoption, nouveau budget
+ou stratégie propre à une marque déduits de ce diagnostic ; le mode vectoriel de
+la question native n’a pas été établi par ce rejeu en métadonnées.
+
+**Fermer** : recevoir le correctif sur sa source/CI/image/runtime exacts, puis
+les citations directes des deux BMC successifs et la formulation exacte des unités
+dans le conseil existant. La référence de continuité reste REFERENCE ; la nouvelle
+piste reste PROPOSED à valider par l’équipe. Pas de répétition aveugle des générations.
+Responsable Seshat/Telemetry puis C5/C2 ; effort un correctif borné et une recette
+native, déclencheur immédiat après réception des contrôles du candidat 503. Le corpus
+et le cycle d’erreur C5 restent à recevoir séparément.
 Au reçu du 20 octobre : 62 sources après le premier pitch réel ; originaux/formules conservés,
 mais aucun nouveau calcul financier ou tarif courant certifié. La roadmap transversale
 mêle plusieurs périmètres et reste privée : auditer les capacités de conservation

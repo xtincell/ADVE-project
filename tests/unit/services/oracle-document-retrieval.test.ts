@@ -211,6 +211,48 @@ describe("current sources remain eligible without a compatible vector", () => {
 });
 
 describe("a question survives deterministic documentary retrieval", () => {
+  it.each([false, true])("finds successive reference/proposal editions by their registered identity before summary filenames (vector=%s)", async vector => {
+    if (vector) harness.vector = [1, 0];
+    const edition = (family: string, label: string, kind: string, status = "REFERENCE") => ({
+      _document: { schema: "document-edition-v1", family, label, kind, status, edition: 1,
+        recordedAt: "2026-10-19T12:00:00Z", changeSummary: "Qualification de recette, sans adoption." },
+    });
+    const old = { ...source, id: "base", fileName: "livrable-a.docx", rawContent: "Modèle de travail précédent.",
+      rawData: edition("Atelier — Modèle économique (BMC)", "initial", "BMC") };
+    const proposal = { ...source, id: "proposal", fileName: "livrable-b.docx", rawContent: "Position à examiner par l’équipe.",
+      rawData: edition("Atelier — Modèle économique (BMC)", "expérimental", "BMC", "PROPOSED") };
+    proposal.rawData._document = { ...proposal.rawData._document, previousSourceId: old.id } as typeof proposal.rawData._document;
+    const study = { ...source, id: "study", fileName: "piece-c.docx", rawContent: "Champ « budget par client » : 22 % de 8 000 avis ; limites du corpus.",
+      rawData: edition("Atelier — Étude terrain", "observations", "MARKET_STUDY") };
+    const notes = Array.from({ length: 7 }, (_, i) => ({ ...source, id: `summary-${i}`,
+      fileName: `BMC initial expérimental étude terrain budget par client — synthèse ${i}.docx`,
+      rawContent: "Résumé secondaire, à rapprocher des pièces.", rawData: edition("Journal de travail", `séance ${i}`, "OTHER") }));
+    harness.sources = [...notes, old, proposal, study].map(doc => ({ ...doc, updatedAt: new Date("2026-10-19T12:00:00Z") }));
+    harness.nodes = harness.sources.map(doc => ({ ...harness.nodes[0], id: `${doc.id}-0`, sourceId: doc.id,
+      payload: { text: doc.rawContent, fileName: doc.fileName, chunkIndex: 0,
+        documentTitle: "identité périmée du cache", sourceContentHash: sourceFingerprint(doc) } }));
+    const before = structuredClone(harness.sources);
+    const query = 'Compare les BMC initial et expérimental. Que dit l’étude terrain sur « budget par client » ?';
+    const result = await getOracleBrandContextByQuery("brand-a", query, { includeSources: true, sourcesLimit: 3, passagesPerSource: 2 });
+    expect(new Set(result?.sourceReferences?.map(ref => ref.sourceId))).toEqual(new Set(["base", "proposal", "study"]));
+    const proposed = result?.sourceReferences?.find(ref => ref.sourceId === "proposal");
+    expect(proposed).toMatchObject({ fileName: proposal.fileName, contentHash: sourceFingerprint(proposal), certainty: "DECLARED" });
+    expect(proposed?.documentNotice).toContain("NON VALIDÉE PAR L’ÉQUIPE");
+    expect(result?.sourceReferences?.find(ref => ref.sourceId === "base")?.documentNotice).toContain("Référence de travail");
+    expect(harness.sources).toEqual(before);
+    const { loadBrandSourceContext } = await import("@/server/services/notoria/source-context");
+    harness.vector = [];
+    const fallback = await loadBrandSourceContext("brand-a", { query, maxDocuments: 3 });
+    expect(new Set(fallback.excerpts.map(ref => ref.sourceId))).toEqual(new Set(["base", "proposal", "study"]));
+  });
+  it("retains exact original-filename lookup for a classified document", async () => {
+    harness.sources[0].rawData = { _document: { schema: "document-edition-v1", family: "Atelier", label: "note initiale", kind: "OTHER",
+      status: "REFERENCE", edition: 1, recordedAt: "2026-10-19T12:00:00Z", changeSummary: "Recette." } };
+    harness.sources[0].fileName = "trace-zenith.txt";
+    harness.nodes[0].payload = { ...harness.nodes[0].payload, fileName: "trace-zenith.txt", sourceContentHash: sourceFingerprint(harness.sources[0]) };
+    const result = await getOracleBrandContextByQuery("brand-a", "zenith", { includeSources: true, sourcesLimit: 1 });
+    expect(result?.sourceReferences?.[0]?.fileName).toBe("trace-zenith.txt");
+  });
   function corpusWithRecentSummary(chunks = 30) {
     const note = { ...source, id: "recent-summary", fileName: "Note de réconciliation.txt",
       rawContent: "BMC, étude terrain : une note de réconciliation, pas les documents originaux. ".repeat(chunks) };

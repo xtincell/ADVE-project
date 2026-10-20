@@ -28,7 +28,7 @@
  * avec `wrapUntrusted` (OWASP LLM01).
  */
 
-import { sourceIsUsable, documentContext } from "@/domain/source-document";
+import { sourceIsUsable, documentContext, documentIdentity } from "@/domain/source-document";
 import { db } from "@/lib/db";
 import { sourceScope, sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
 import { compareCertainty, isSourceCertainty, type SourceCertainty } from "@/domain/source-certainty";
@@ -319,7 +319,7 @@ export async function loadBrandSourceContext(
   }
 
   const candidates = rankDocumentNodes(usable.map(row => ({ sourceId: row.id,
-    payload: { fileName: row.fileName, text: row.rawContent }, row,
+    payload: { fileName: row.fileName, documentTitle: documentIdentity(row.rawData), text: row.rawContent }, row,
   })), query ?? "", maxDocuments).map(node => node.row);
   const excerpts: SourceExcerpt[] = [];
   let remaining = budget;
