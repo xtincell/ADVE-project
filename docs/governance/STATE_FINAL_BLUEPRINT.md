@@ -2218,8 +2218,8 @@ reprendre INGESTION/SOURCE, généré INFERRED sur les rails existants puis tous
 les narrateurs/fallback, sans changer la doctrine de score ni réécrire la source.
 Inventaire19sites d’appels statiques, pas19appels runtime/coût complet reçu ;
 maintenance packagingC7 bornée dans RESIDUAL-DEBT, sans nouveau concept.
-Constat compte précréé désormais reproduit/traité par candidat511 (six PG),
-remise native/livraison encore ouvertes ; appels sans strategyId restent à
+Constat compte précréé désormais reproduit/traité par 511 livré,
+remise native reçue localement et transport réel encore ouvert ; appels sans strategyId restent à
 réconcilier via comptabilisation existante avant remise commerciale (M05/C7,
 RESIDUAL-DEBT), nombre exact d’appels non reçu.
 Aucun nouveau concept/modèle/service/routeur/page/Intent/driver/provider, ADR0224
@@ -2255,7 +2255,7 @@ Rendu candidat : ids/métadonnées masqués, e_channels/DIRECT traduits, vignett
 
 Preuve de cadrage : `release/preuves-rapport-fidelite-20261020/framing.json`. Première transition : `release/preuves-rapport-fidelite-20261020/native-model-transition-network.json` ; régénération historique reçue12/12. Preuves complémentaires : `release/preuves-rapport-fidelite-20261020/history-conservation510-received.json`, `regeneration-fixture-cleanup.json`, `native-paid-final-network.json`, `print2-visually-received.json` ; print2 conserve le checkpointdev13pages, désormais complété par `compiled-pdf-visually-received.json`, `native-compiled-print-network.json` et `original510-http-received.json` : PDF compilé/qualité bornée et conservation postnettoyage reçus, livraison encore ouverte. Reçus finaux : `history-conservation510-final-received.json`, `nori-read-conservation-received.json` ; ancien périmètre coût8 conservé, nouveau cas coût8 au snapshot puis11partiels par écritures différées avant la lecture sans provider.
 
-Extension candidate511 de la remise existante (2026-10-20) :
+Extension511 livrée de la remise existante (2026-10-20) :
 auth.register refuse toute identité existante, y compris sans mot de passe ;
 la pose initiale utilise forgot/reset par jeton email existant, consommé une seule
 fois par updateMany conditionnel token/date valide, y compris en concurrence.
@@ -2269,54 +2269,33 @@ préremplie : indisponibilité/contact humain sans transport ; accusé « Demand
 Propriété fondateur et rôle opérateur restent distincts ; aucun nouveau canon,
 modèle/service/routeur/page/Intent/ADR/provider/manager ou compte de registre.
 Census admin readonly limité au selfserve réservé :0op/0comptes/0stratégies/0clients,
-pas tous les comptes du système ni une migration. 511 reste candidate à la livraison ; réception locale acquise. DEFAULT :
-4 901 tests / 460 fichiers verts avant la dernière projection CONVERTED.
-PostgreSQL : 433 / 25 ; gouvernance : 1 671 / 169 après projection ; typage et
-deux lints sans erreur (24 avertissements historiques), zéro cycle et code-map.
-Dernière note client : 9 / 9 ; build webpack final reçu
-(`handover511-build-received.log`). Aucune garde affaiblie.
+pas tous les comptes du système ni une migration. 511 livrée : PR1047, source `252fc551e7a94362271395cece74d4b109e38f04`,
+build 39508092180 et digest `e822a4a7ae96db16c9ca2d3df3d7478524a71d02f3d225a73cc0cb3f0bc61e30`.
+Runtime 6.27.511 reçu le 20 octobre à 22:51 UTC ; conservation à 22:52 UTC :
+mêmes volumes, 67 sources/1 041 actifs, états/originaux/piliers et racine Friesland.
+Lectures séquentielles, pas snapshot atomique ; version/login 200, relais/90s
+conservés, OpenRouter absent. Attente technique 511 close. Remise native locale,
+annulations Next _rsc et effets volontaires conservés dans les reçus P27 ; aucun
+SMTP/PSP/vente/MVP entier déduit. Compte d’envoi et transport autorisé restent ouverts.
+Preuves : `release/preuves-mvp-commercial-20261020/production511-{received,data-preserved,public-api-received}.json`.
 
-Natif compilé reçu : activation sans assistance, même URL après rechargement,
-carte d’accès conservée et aucun bouton Activer. Forgot garde l’email prérempli
-et affiche l’indisponibilité sans jeton. Reset HTTP sur preuve locale semée,
-sans SMTP : inscription de l’existant 409, jeton invalide 400, valide 200,
-rejeu 400. Connexion USER réelle puis cockpit de la même marque, sources et
-original visibles. Stratégie propre HTTP 200/huit piliers, voisine 403 ; CRM
-fondateur 403 et ADMIN 200 sur le même Deal LEAD/Strategy/valeur. Ce reçu ne
-prouve ni transport externe, ni offre achetée, ni vente.
-
-Original du coffre reçu sous vraie session USER : HTTP 200, 1 139 octets/SHA
-exact, `private, no-store` et Referrer-Policy `strict-origin-when-cross-origin`.
-Cette route authentifiée reste distincte de la route intake bearer `no-referrer`.
-
-Fenêtres non tronquées, chacune sans HTTP ≥500 ni exception : activation/setup
-102 réponses et 6 annulations, login/cockpit 61 et 38, sources 15 et 7, offre
-48 et 5, sources finales 56 et 14. Les annulations sont des requêtes Next _rsc
-net::ERR_ABORTED : aucun zéro échec de chargement annoncé. Titres observés
-≤258 ms (activation) et ≤467 ms (sources finales), pilote compris ; aucun SLO.
-
-Conservation finale reçue après retrait exact du paiement MOCK et de l’ADMIN
-dédié : même intake, identité Strategy, diagnostic/réponses/rawText, huit piliers,
-upload et source originale, onze coûts et même Deal conservés au périmètre comparé.
-Activation volontaire : propriétaire USER sans opérateur, Client et statuts
-CONVERTED/ACTIVE, ajout d’une source intake canonique et d’un pointeur INTAKE_REPORT.
-Ces effets sont attendus : aucune affirmation de zéro écriture. Ancien périmètre
-B/C reçu exact et distinct, pas toute base atomique.
-
-Restent ouverts : compte d’envoi réel et transport email/Anubis autorisé,
-CI/image/runtime 511, offre/CRM commercial complet et M05 coût/différés/admission.
-Aucun SMTP, PSP, vente, coût complet ou MVP entier reçu. Les finitions constatées
-(contacts/liens voisins, icône succès sur indisponibilité, détour USER par /portals,
-jargon hérité) sont différées au prochain lot C5/C7 après gros œuvre ; parcours
-fonctionnel reçu, UX polie non reçue.
-
-Preuves privées : `release/preuves-remise-commerciale-20261020/` :
-`native-activation-setup-network.json`, `native-login-cockpit-network.json`,
-`native-sources-network.json`, `native-offer-network.json`,
-`native-sources-final-network.json`, `conservation-final.json`,
-`history-conservation511-received.json`, `native-owner-original-received.json`,
-`native-technical-received.json`, `local-server-stopped.json`. Réception limitée
-aux fixtures locales. Aperçu local détenu arrêté ; aucun autre service touché.
+Extension candidate 512 (2026-10-20) : l’usage du Gateway sans Strategy reste
+traçable via AICostLog nullable et un contexte ALS intake interne distinct de
+l’identité tenant, sans bearer/PII ; rattachement au vrai Strategy, descendants
+différés et budgets stream compris. Toutes les entrées quick-intake utilisent ce
+contexte. Admission durable par claim/advisory lock existants, capacité dérivée
+politique/modèle et runner terminal commun : 409 même intake, 429 occupé, manuel
+sans modèle conservé. Audit public sans préparation créative/embeddings implicites,
+index déterministe et chemins explicites/defaults compatibles. Catalogue borné,
+sans tarif, concept, modèle, service, route/page, kind, provider ou manager ajouté.
+Checkpoint local 512 reçu le 21 octobre : 12 réponses Luna/12 coûts exacts, même
+Strategy et extraction initiale préservée, estimation API distincte de facture/
+quota Pro. Admission réelle409/429, rejeu sans génération et cas antérieurs
+conservés ; index déterministe19 nœuds et 98 recommandations PENDING utiles reçus,
+pas zéro agent ni activation future acquise. Contrôles finaux locaux verts.
+Grille corrigée/CI/image/runtime 512 ouverts, ainsi que autres parcours/coûts,
+transport réel, offres non éprouvées, PSP/vente et MVP entier. Voir plan M05/C7
+et reçus dans RESIDUAL-DEBT ; aucun coût déjà reçu sur ce cas à rouvrir.
 
 510 est reçue en production : source `5c5cc907249ef2123e2d6c7a60c95f81ab7794fe`,
 déploiement `ip02ws80mllbkno6xn7skm1h` terminé le 20 octobre à 21:48:22 UTC,
@@ -2341,13 +2320,13 @@ ou fournisseur ajouté ; le MVP commercial n’est pas reçu.
 
 Preuves privées : `release/preuves-remise-commerciale-20261020/framing.json`, `handover-red-green-received.json`, `production-selfserve-census.json`. Configuration : `release/preuves-remise-commerciale-20261020/production-mail-configuration.json`.
 
-**Factorisation511 candidate** : email/index.ts délègue au sender système
+**Factorisation 511 livrée** : email/index.ts délègue au sender système
 Anubis existant, double cascade retirée et catégories transactionnelles conservées.
 Un petit lecteur pur systemEmailIsArmed est ajouté au module Anubis existant :
 expéditeur et provider requis ; brandEmailIsArmed réutilise cette disponibilité
 pour son repli système. Ce helper est neuf, aucun nouveau service/provider/manager.
 forgotPassword sans transport renvoie deliveryAvailable=false pareil pour adresse
-connue/inconnue, sans émettre de jeton. La page candidate affiche indisponibilité
+connue/inconnue, sans émettre de jeton. La page existante affiche indisponibilité
 et contact humain : aucun succès d’envoi ni secret journalisé. Raccord réel et
 transport autorisé restent à recevoir via email/Anubis/credentials existants.
 Preuve `release/preuves-remise-commerciale-20261020/email-factorization-received.json`.

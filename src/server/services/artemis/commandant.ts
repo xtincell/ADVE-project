@@ -794,16 +794,17 @@ async function fillAdve(
 
   // Spawned downstream intents:
   //   - INDEX_BRAND_CONTEXT (always — Seshat indexing async)
-  //   - PRODUCE_DELIVERABLE × 4 PILLAR sequences (only at INTAKE for previews)
+  //   - optional PRODUCE_DELIVERABLE × 4 previews (legacy/default INTAKE only)
   const spawned: Intent[] = [
     {
       kind: "INDEX_BRAND_CONTEXT",
       strategyId: intent.strategyId,
       scope: intent.phase === "INTAKE" ? "INTAKE_ONLY" : "FULL",
+      prepareEmbeddings: intent.phase !== "INTAKE",
     },
   ];
 
-  if (intent.phase === "INTAKE") {
+  if (intent.phase === "INTAKE" && intent.prepareDeliverables !== false) {
     for (const target of ["MANIFESTE-A", "BRANDBOOK-D", "OFFRE-V", "PLAYBOOK-E"]) {
       spawned.push({
         kind: "PRODUCE_DELIVERABLE",
@@ -1119,7 +1120,7 @@ async function indexBrandContext(
     const { indexBrandContext: runIndex } = await import(
       "@/server/services/seshat/context-store"
     );
-    const result = await runIndex(intent.strategyId, intent.scope);
+    const result = await runIndex(intent.strategyId, intent.scope, { prepareEmbeddings: intent.prepareEmbeddings });
     return {
       status: "OK",
       summary: `Brand context indexed: ${result.totalNodes} nodes (${intent.scope}) in ${result.durationMs}ms`,

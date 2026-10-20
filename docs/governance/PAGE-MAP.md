@@ -10,59 +10,32 @@ Statut : `active` (page substantive), `redirect` (legacy renommée — redirige)
 
 Source de vérité : `find src/app -name 'page.tsx'`. Mis à jour avec [APOGEE.md](APOGEE.md) §4.
 
-**511 candidat — remise via pages d’auth existantes (2026-10-20)** :
+**511 livrée — remise via pages d’auth existantes (2026-10-20)** :
 Résultat : compte avec mot de passe vers login, sinon forgot-password?setup=1
 et email prérempli ; conflit register vers récupération existante. Page forgot
 préremplie : indisponibilité/contact humain sans transport ; accusé « Demande prise en compte » quand armé, aucune livraison email promise.
 Reset existant consomme le jeton valide atomiquement ; aucune page, route ou
-promesse de transport ajoutée. 511 reste candidate à la livraison ; réception locale acquise. DEFAULT :
-4 901 tests / 460 fichiers verts avant la dernière projection CONVERTED.
-PostgreSQL : 433 / 25 ; gouvernance : 1 671 / 169 après projection ; typage et
-deux lints sans erreur (24 avertissements historiques), zéro cycle et code-map.
-Dernière note client : 9 / 9 ; build webpack final reçu
-(`handover511-build-received.log`). Aucune garde affaiblie.
+promesse de transport ajoutée. 511 livrée : PR1047, source `252fc551e7a94362271395cece74d4b109e38f04`,
+build 39508092180 et digest `e822a4a7ae96db16c9ca2d3df3d7478524a71d02f3d225a73cc0cb3f0bc61e30`.
+Runtime 6.27.511 reçu le 20 octobre à 22:51 UTC ; conservation à 22:52 UTC :
+mêmes volumes, 67 sources/1 041 actifs, états/originaux/piliers et racine Friesland.
+Lectures séquentielles, pas snapshot atomique ; version/login 200, relais/90s
+conservés, OpenRouter absent. Attente technique 511 close. Remise native locale,
+annulations Next _rsc et effets volontaires conservés dans les reçus P27 ; aucun
+SMTP/PSP/vente/MVP entier déduit. Compte d’envoi et transport autorisé restent ouverts.
+Preuves : `release/preuves-mvp-commercial-20261020/production511-{received,data-preserved,public-api-received}.json`.
 
-Natif compilé reçu : activation sans assistance, même URL après rechargement,
-carte d’accès conservée et aucun bouton Activer. Forgot garde l’email prérempli
-et affiche l’indisponibilité sans jeton. Reset HTTP sur preuve locale semée,
-sans SMTP : inscription de l’existant 409, jeton invalide 400, valide 200,
-rejeu 400. Connexion USER réelle puis cockpit de la même marque, sources et
-original visibles. Stratégie propre HTTP 200/huit piliers, voisine 403 ; CRM
-fondateur 403 et ADMIN 200 sur le même Deal LEAD/Strategy/valeur. Ce reçu ne
-prouve ni transport externe, ni offre achetée, ni vente.
-
-Original du coffre reçu sous vraie session USER : HTTP 200, 1 139 octets/SHA
-exact, `private, no-store` et Referrer-Policy `strict-origin-when-cross-origin`.
-Cette route authentifiée reste distincte de la route intake bearer `no-referrer`.
-
-Fenêtres non tronquées, chacune sans HTTP ≥500 ni exception : activation/setup
-102 réponses et 6 annulations, login/cockpit 61 et 38, sources 15 et 7, offre
-48 et 5, sources finales 56 et 14. Les annulations sont des requêtes Next _rsc
-net::ERR_ABORTED : aucun zéro échec de chargement annoncé. Titres observés
-≤258 ms (activation) et ≤467 ms (sources finales), pilote compris ; aucun SLO.
-
-Conservation finale reçue après retrait exact du paiement MOCK et de l’ADMIN
-dédié : même intake, identité Strategy, diagnostic/réponses/rawText, huit piliers,
-upload et source originale, onze coûts et même Deal conservés au périmètre comparé.
-Activation volontaire : propriétaire USER sans opérateur, Client et statuts
-CONVERTED/ACTIVE, ajout d’une source intake canonique et d’un pointeur INTAKE_REPORT.
-Ces effets sont attendus : aucune affirmation de zéro écriture. Ancien périmètre
-B/C reçu exact et distinct, pas toute base atomique.
-
-Restent ouverts : compte d’envoi réel et transport email/Anubis autorisé,
-CI/image/runtime 511, offre/CRM commercial complet et M05 coût/différés/admission.
-Aucun SMTP, PSP, vente, coût complet ou MVP entier reçu. Les finitions constatées
-(contacts/liens voisins, icône succès sur indisponibilité, détour USER par /portals,
-jargon hérité) sont différées au prochain lot C5/C7 après gros œuvre ; parcours
-fonctionnel reçu, UX polie non reçue.
-
-Preuves privées : `release/preuves-remise-commerciale-20261020/` :
-`native-activation-setup-network.json`, `native-login-cockpit-network.json`,
-`native-sources-network.json`, `native-offer-network.json`,
-`native-sources-final-network.json`, `conservation-final.json`,
-`history-conservation511-received.json`, `native-owner-original-received.json`,
-`native-technical-received.json`, `local-server-stopped.json`. Réception limitée
-aux fixtures locales. Aperçu local détenu arrêté ; aucun autre service touché.
+**512 candidat — surfaces existantes seulement** : catalogue et grille retirent
+les promesses de complétude/90 jours/illimité non garanties, annoncent au plus deux
+recommandations en aperçu et distinguent fondations ADVE éditables et analyses
+dérivées. Occupation 409/429 conserve les informations et la reprise ; pas de page
+nouvelle ni de quota fournisseur promis. Traitement/reprise compilés reçus :
+49/43 réponses, sans HTTP ≥500/exception/échec, fenêtres complètes ; titre ≤264 ms
+pilote compris, pas SLO. Copie observée ; première grille 5 colonnes refusée pour
+prix débordants. Correction 3 colonnes du même composant reçue sur le build final :
+cinq prix dans leurs cartes sur ordinateur et mobile420, fenêtre43réponses sans
+HTTP≥500/exception/échec, titre252ms pilote compris. Livraison 512, mail réel et offre commerciale restent ouverts.
+[Réception et finitions différées](RESIDUAL-DEBT.md).
 
 510 est reçue en production : source `5c5cc907249ef2123e2d6c7a60c95f81ab7794fe`,
 déploiement `ip02ws80mllbkno6xn7skm1h` terminé le 20 octobre à 21:48:22 UTC,
@@ -85,13 +58,13 @@ ou fournisseur ajouté ; le MVP commercial n’est pas reçu.
 
 Preuves privées : `release/preuves-remise-commerciale-20261020/framing.json`, `handover-red-green-received.json`, `production-selfserve-census.json`. Configuration : `release/preuves-remise-commerciale-20261020/production-mail-configuration.json`.
 
-**Factorisation511 candidate** : email/index.ts délègue au sender système
+**Factorisation 511 livrée** : email/index.ts délègue au sender système
 Anubis existant, double cascade retirée et catégories transactionnelles conservées.
 Un petit lecteur pur systemEmailIsArmed est ajouté au module Anubis existant :
 expéditeur et provider requis ; brandEmailIsArmed réutilise cette disponibilité
 pour son repli système. Ce helper est neuf, aucun nouveau service/provider/manager.
 forgotPassword sans transport renvoie deliveryAvailable=false pareil pour adresse
-connue/inconnue, sans émettre de jeton. La page candidate affiche indisponibilité
+connue/inconnue, sans émettre de jeton. La page existante affiche indisponibilité
 et contact humain : aucun succès d’envoi ni secret journalisé. Raccord réel et
 transport autorisé restent à recevoir via email/Anubis/credentials existants.
 Preuve `release/preuves-remise-commerciale-20261020/email-factorization-received.json`.
@@ -560,7 +533,7 @@ aucun SLO déduit des bornes tardives production.
 | `/intake/[token]/short/page.tsx` | Guidance | M | active | Variant court |
 | `/intake/[token]/ingest/page.tsx` | Guidance | M | active | Ingest brief |
 | `/intake/[token]/ingest-plus/page.tsx` | Guidance | M | active | Ingest étendu |
-| `/intake/[token]/result/page.tsx` | Telemetry | M | active | 510 reçue : origines et PDF local de 13 pages ; 511 carte d’accès après reload CONVERTED reçue localement ; transport réel/livraison ouverts |
+| `/intake/[token]/result/page.tsx` | Telemetry | M | active | 510 reçue : origines et PDF local de 13 pages ; 511 carte d’accès après reload CONVERTED livrée ; transport réel ouvert |
 | `/score/page.tsx` | Telemetry | M | active | Public score viewer |
 
 ---
@@ -572,9 +545,9 @@ aucun SLO déduit des bornes tardives production.
 | `/page.tsx` | — | — | active | Landing publique |
 | `/unauthorized/page.tsx` | Admin | G | active | 403 page |
 | `/login/page.tsx` | Admin | G | active | Auth |
-| `/register/page.tsx` | Admin | G | active | Auth existante ;511 candidat refuse compte existant et lie sa récupération |
-| `/forgot-password/page.tsx` | Admin | G | active | Auth existante ;511 candidat setup/email préremplis, indisponibilité explicite sans transport ; demande accusée si armé |
-| `/reset-password/page.tsx` | Admin | G | active | Auth existante ;511 jeton à usage unique atomique et reset HTTP local reçus ; SMTP/livraison ouverts |
+| `/register/page.tsx` | Admin | G | active | Auth existante ;511 livré refuse compte existant et lie sa récupération |
+| `/forgot-password/page.tsx` | Admin | G | active | Auth existante ;511 livré setup/email préremplis, indisponibilité explicite sans transport ; demande accusée si armé |
+| `/reset-password/page.tsx` | Admin | G | active | Auth existante ;511 jeton à usage unique atomique et reset HTTP local reçus ; SMTP réel ouvert |
 | `/shared/strategy/[token]/page.tsx` | Telemetry | M | active | Public strategy share link |
 
 ---

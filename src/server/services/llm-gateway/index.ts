@@ -16,6 +16,7 @@
  */
 
 import { applySonnet5Parity } from "./parity";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { LlmRateWaitExceededError } from "./rate-policy";
 import type { ResolvedPolicy } from "@/server/services/model-policy";
 
@@ -68,7 +69,7 @@ export interface GatewayCallOptions {
   prompt: string;
   /** Who is calling — used for cost tracking context (e.g. "artemis:fw-01", "mestor:insights") */
   caller: string;
-  /** Strategy ID for cost tracking. If omitted, cost is not tracked. */
+  /** Strategy ID for budget tracking. Unassigned usage is still recorded. */
   strategyId?: string;
   /** Model override. Default: derived from `purpose` (or DEFAULT_MODEL if no purpose). */
   model?: string;
@@ -720,6 +721,38 @@ function findBalancedJSON(text: string): string | null {
 
 // ── Cost tracking helper ────────────────────────────────────────────────────
 
+// Correlation belongs to this existing Gateway, separately from tenant/RLS identity.
+// Only internal intake ids enter the ledger; never the public bearer token or source text.
+const intakeCostContext = new AsyncLocalStorage<{ intakeId: string; strategyId?: string }>();
+
+/** Shared by text and streaming budget checks; explicit caller ownership wins. */
+export function resolveCostStrategy(strategyId?: string): string | undefined {
+  return strategyId ?? intakeCostContext.getStore()?.strategyId;
+}
+
+export function withIntakeCostContext<T>(intakeId: string, work: () => Promise<T>): Promise<T> {
+  if (intakeCostContext.getStore()?.intakeId === intakeId) return work();
+  return intakeCostContext.run({ intakeId }, work);
+}
+
+/** Attach pre-brand receipts after the real Strategy exists, without another model call. */
+export async function bindIntakeCostStrategy(strategyId: string): Promise<void> {
+  const context = intakeCostContext.getStore();
+  if (!context) return;
+  if (context.strategyId && context.strategyId !== strategyId) throw new Error("INTAKE_COST_STRATEGY_MISMATCH");
+  context.strategyId = strategyId;
+  try {
+    const { db } = await import("@/lib/db");
+    await db.aICostLog.updateMany({
+      where: { strategyId: null, context: { contains: `:intake[${context.intakeId}]` } },
+      data: { strategyId },
+    });
+  } catch {
+    // The usage remains correlated by intake; ledger trouble never repeats provider work.
+    console.warn("[llm-gateway] intake cost attribution pending", { intakeId: context.intakeId, strategyId });
+  }
+}
+
 /** Export intra-Gateway uniquement (cf. isProviderHealthy) — consommé par streaming.ts. */
 export async function trackCost(
   options: Pick<GatewayCallOptions, "strategyId" | "caller">,
@@ -728,26 +761,27 @@ export async function trackCost(
   billing?: { provider: string; costUsd: number; estimated: boolean },
   provider: LLMProvider = "anthropic",
 ): Promise<void> {
-  if (!options.strategyId) return;
-
   try {
     const { db } = await import("@/lib/db");
     const { calculateCost } = await import("@/server/services/ai-cost-tracker");
     const subscription = provider === "openai" && hasOpenAiTextRelay() && !billing;
+    const context = intakeCostContext.getStore();
     await db.aICostLog.create({
       data: {
-        strategyId: options.strategyId,
+        strategyId: resolveCostStrategy(options.strategyId) ?? null,
         provider: subscription ? "openai-codex-oauth" : billing?.provider ?? provider,
         model,
         inputTokens: usage.inputTokens,
         outputTokens: usage.outputTokens,
         cost: billing?.costUsd ?? calculateCost(model, usage.inputTokens, usage.outputTokens),
-        context: options.caller + (subscription ? ":subscription-quota:api-equivalent-estimate"
+        context: options.caller + (context ? `:intake[${context.intakeId}]` : "")
+          + (subscription ? ":subscription-quota:api-equivalent-estimate"
           : !billing || billing.estimated ? ":estimated-cost" : ""),
       },
     });
   } catch {
-    // Non-blocking — cost tracking should never break the flow
+    // Non-blocking, but explicit: never hide a missing receipt or repeat provider work.
+    console.warn("[llm-gateway] cost receipt not recorded", { caller: options.caller });
   }
 }
 
@@ -758,6 +792,7 @@ export async function trackCost(
  * Use this when you need to parse the response yourself.
  */
 export async function callLLM(options: GatewayCallOptions): Promise<GatewayResult> {
+  options = { ...options, strategyId: resolveCostStrategy(options.strategyId) };
   const { validateGatewayImages, visionConfiguration } = await import("./vision");
   validateGatewayImages(options.images);
   const { videoConfiguration, validateGatewayVideo, callNativeVideo } = await import("./audiovisual");

@@ -31,7 +31,7 @@ import { classifyCanonicalSector } from "@/domain/sector-taxonomy";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { persistCompletedIntake } from "./document-input";
-import { callLLM } from "@/server/services/llm-gateway";
+import { callLLM, withIntakeCostContext, bindIntakeCostStrategy } from "@/server/services/llm-gateway";
 import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import * as mestor from "@/server/services/mestor";
 import { scoreObject } from "@/server/services/advertis-scorer";
@@ -344,11 +344,11 @@ export async function advance(input: QuickIntakeAdvanceInput) {
     ? extractKeyFromOption(mergedResponses.biz_nature as string)
     : (intake as { brandNature?: string | null }).brandNature ?? undefined;
 
-  const questions = await getAdaptiveQuestions(nextPillar, mergedResponses, {
+  const questions = await withIntakeCostContext(intake.id, () => getAdaptiveQuestions(nextPillar, mergedResponses, {
     sector: intake.sector ?? undefined,
     positioning: intake.positioning ?? undefined,
     brandNature: resolvedBrandNature,
-  });
+  }));
 
   return {
     token: input.token,
@@ -392,6 +392,7 @@ export async function complete(token: string) {
 
   if (!intake) throw new Error("Intake not found");
 
+  return withIntakeCostContext(intake.id, async () => {
   emitIntakeStarted({ intakeToken: token, companyName: intake.companyName });
 
   /**
@@ -497,6 +498,8 @@ export async function complete(token: string) {
       ...(currencyCode ? { currencyCode } : {}),
     },
   });
+
+  await bindIntakeCostStrategy(strategy.id);
 
   // ── ADR-0121 — collecte de l'empreinte publique enrichie. ──
   // Inconditionnelle (l'orchestrateur dégrade seul : découverte Brave si
@@ -731,7 +734,7 @@ export async function complete(token: string) {
   // Artemis routes FILL_ADVE × INTAKE to the right Notoria mission
   // (ADVE_INTAKE_PARTIAL — does NOT require R+T) and spawns:
   //   - INDEX_BRAND_CONTEXT (Seshat async indexing)
-  //   - PRODUCE_DELIVERABLE × 4 PILLAR sequences (preview)
+  //   - no creative preview production on the public diagnostic path
   // The intake page does not wait for spawned intents — they run in background.
   let notoriaPreview: { batchId?: string; totalRecos: number; recosByPillar: Record<string, number> } | null = null;
   try {
@@ -741,6 +744,7 @@ export async function complete(token: string) {
         kind: "FILL_ADVE",
         phase: "INTAKE",
         strategyId: strategy.id,
+        prepareDeliverables: false,
         sources: { responses, extractedValues: structuredContents },
       },
       { caller: "quick-intake" },
@@ -1233,6 +1237,7 @@ export async function complete(token: string) {
     });
     throw err;
   }
+  });
 }
 
 // ============================================================================
@@ -1285,6 +1290,9 @@ export async function regenerateAnalysis(
       `Refusing to regenerate: strategy ${strategy.id} is in status ${strategy.status} (already activated). Pass force: true to override.`,
     );
   }
+
+  return withIntakeCostContext(intake.id, async () => {
+  await bindIntakeCostStrategy(strategy.id);
 
   const responses = intake.responses as Record<string, Record<string, unknown>>;
   const canonicalContext: CanonicalIntakeContext = {
@@ -1543,6 +1551,7 @@ export async function regenerateAnalysis(
   });
 
   return { strategyId: strategy.id, classification, vector };
+  });
 }
 
 // ============================================================================

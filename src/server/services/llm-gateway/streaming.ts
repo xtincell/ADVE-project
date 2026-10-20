@@ -35,6 +35,7 @@ import {
   recordProviderSuccess,
   resolveTextProviderOrder,
   trackCost,
+  resolveCostStrategy,
   type GatewayPurpose,
   type LLMProvider,
 } from "./index";
@@ -312,6 +313,7 @@ function isAttemptFailure(r: StreamChatResult | AttemptFailure): r is AttemptFai
  * la responsabilité du pre-flight `isTextLLMAvailable()` pour l'UX honnête).
  */
 export async function streamChatText(opts: StreamChatOptions): Promise<StreamChatResult> {
+  opts = { ...opts, strategyId: resolveCostStrategy(opts.strategyId) };
   // ── Policy gouvernée (même chemin que callLLM) ────────────────────────
   const purpose: GatewayPurpose = opts.purpose ?? "agent";
   const { resolvePolicy } = await import("@/server/services/model-policy");

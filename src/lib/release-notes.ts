@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.512", date: "2026-10-20", headline: "Un diagnostic mieux maîtrisé",
+    highlights: [{ emoji: "🔎", title: "Une seule analyse à la fois", body: "Un double clic ne relance plus deux analyses du même dossier. Si les analyses sont occupées, vos informations restent conservées pour réessayer. Le diagnostic ne lance plus automatiquement la création d’aperçus créatifs." }],
+  },
+  {
     version: "6.27.511", date: "2026-10-20", headline: "Retrouver votre dossier avec un accès vérifié",
     highlights: [{ emoji: "🔐", title: "Le même dossier, un accès protégé", body: "Votre accès reste lié à votre adresse et à votre dossier. Le lien de définition du mot de passe ne peut servir qu’une fois. Si son envoi est indisponible, la page l’indique et vous permet de contacter l’équipe. Les entreprises qui portent le même nom gardent des espaces séparés." }],
   },
