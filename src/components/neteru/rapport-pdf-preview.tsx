@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * <RapportPdfPreview /> — paywall FOMO for the Rapport ADVE+RTIS PDF.
+ * <RapportPdfPreview /> — paywall FOMO for the Rapport ADVE & stratégie PDF.
  *
  * Mission contribution: GROUND_INFRASTRUCTURE — funnel conversion lever (PDF tier).
  *
@@ -21,6 +21,7 @@ interface RapportPdfPreviewProps {
   /** Sample of the founder's own ADVE values to surface on page 1 (auth hook). */
   authVerbatimSample?: string;
   centralTension?: string;
+  hasRecommendation?: boolean;
   /** Pre-computed price display for the unlock CTA. */
   unlockPriceLabel?: string;
   onUnlock?: () => void;
@@ -42,7 +43,7 @@ function PageThumb({ pageNum, label, children, redacted }: PageThumbProps) {
     <article className="relative flex h-56 flex-col overflow-hidden rounded-md border border-border/60 bg-foreground p-3 text-[10px] leading-snug text-foreground-muted shadow-[0_1px_0_rgba(0,0,0,0.4),0_8px_24px_-6px_rgba(0,0,0,0.6)]">
       <div className="mb-2 flex items-center justify-between border-b border-zinc-300 pb-1">
         <span className="font-mono text-[9px] uppercase tracking-wider text-foreground-muted">{label}</span>
-        <span className="font-mono text-[9px] text-foreground-secondary">p. {pageNum}</span>
+        <span className="font-mono text-[9px] text-foreground-secondary">Volet {pageNum}</span>
       </div>
       <div className="flex-1 space-y-1.5 overflow-hidden">{children}</div>
       {redacted && (
@@ -62,6 +63,7 @@ export function RapportPdfPreview({
   classification,
   authVerbatimSample,
   centralTension,
+  hasRecommendation = false,
   unlockPriceLabel,
   onUnlock,
   unlockDisabled,
@@ -74,14 +76,14 @@ export function RapportPdfPreview({
         </div>
         <div className="flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/80">
-            Rapport ADVE+RTIS — PDF intégral
+            Rapport ADVE & stratégie — PDF intégral
           </p>
           <h2 className="mt-0.5 text-lg font-bold text-foreground">
             Le diagnostic complet de {brandName}, partageable, brandé.
           </h2>
           <p className="mt-1 text-sm text-foreground-muted">
-            Voici à quoi ressemble votre PDF — 8 pages, votre voix verbatim, votre tension centrale,
-            vos 4 piliers ADVE et 4 piliers RTIS. Cliquez pour le générer.
+            Votre PDF rassemble le diagnostic, l’origine des données et les pistes stratégiques.
+            Sa longueur dépend de votre dossier. Cliquez pour le générer.
           </p>
         </div>
       </header>
@@ -92,7 +94,7 @@ export function RapportPdfPreview({
         <PageThumb pageNum="1" label="Couverture">
           <div className="flex h-full flex-col items-center justify-center text-center">
             <FileText className="mb-2 h-6 w-6 text-foreground-secondary" />
-            <p className="text-[11px] font-bold uppercase tracking-wider text-foreground-muted">Rapport ADVE+RTIS</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-foreground-muted">Rapport ADVE & stratégie</p>
             <p className="mt-1 line-clamp-2 text-[10px] font-semibold text-foreground-muted">{brandName}</p>
             <span className="mt-2 rounded-full border border-zinc-400 px-2 py-0.5 text-[9px] uppercase tracking-wider text-foreground-muted">
               Niveau {classification}
@@ -101,21 +103,19 @@ export function RapportPdfPreview({
         </PageThumb>
 
         {/* Page 2 — Tension + ADVE preview (visible, hooks the founder) */}
-        <PageThumb pageNum="3" label="Diagnostic ADVE">
-          <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-foreground-muted">Tension centrale</p>
-          <p className="line-clamp-2 italic text-foreground-muted">
-            {centralTension ? `« ${centralTension.slice(0, 110)}${centralTension.length > 110 ? "…" : ""} »` : `« ${REDACT_LONG} »`}
-          </p>
+        <PageThumb pageNum="2" label="Diagnostic ADVE">
+          <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-foreground-muted">{centralTension ? "Tension centrale" : "Lecture de vos fondations"}</p>
+          <p className="line-clamp-2 italic text-foreground-muted">{centralTension ? `« ${centralTension.slice(0, 110)}${centralTension.length > 110 ? "…" : ""} »` : REDACT_LONG}</p>
           {authVerbatimSample && (
             <>
-              <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-foreground-muted">Votre voix (verbatim)</p>
+              <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-foreground-muted">Extrait du dossier</p>
               <p className="line-clamp-3 text-foreground-muted">«&nbsp;{authVerbatimSample.slice(0, 130)}{authVerbatimSample.length > 130 ? "…" : ""}&nbsp;»</p>
             </>
           )}
         </PageThumb>
 
         {/* Page 3 — RTIS preview (redacted, drives the FOMO) */}
-        <PageThumb pageNum="5" label="Proposition stratégique RTIS" redacted>
+        <PageThumb pageNum="3" label="Pistes stratégiques" redacted>
           <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-foreground-muted">R · Risque (P0)</p>
           <p className="text-foreground-muted">{REDACT_LONG}</p>
           <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-foreground-muted">T · Track (P1)</p>
@@ -125,7 +125,7 @@ export function RapportPdfPreview({
         </PageThumb>
 
         {/* Page 4 — Recommandation actions (redacted) */}
-        <PageThumb pageNum="6" label="Actions priorisées" redacted>
+        {hasRecommendation && <PageThumb pageNum="4" label="Actions priorisées" redacted>
           <p className="text-[9px] font-bold uppercase tracking-wider text-foreground-muted">Mouvement stratégique</p>
           <p className="text-foreground-muted">{REDACT_LONG}</p>
           <ul className="mt-2 space-y-1 text-foreground-muted">
@@ -134,10 +134,10 @@ export function RapportPdfPreview({
             <li>#3 [30-90j] {REDACT}</li>
             <li>#4 [30-90j] {REDACT}</li>
           </ul>
-        </PageThumb>
+        </PageThumb>}
 
         {/* Page 5 — Roadmap 90j (redacted) */}
-        <PageThumb pageNum="7" label="Feuille de route 90j" redacted>
+        {hasRecommendation && <PageThumb pageNum="5" label="Feuille de route 90j" redacted>
           <table className="w-full text-[9px]">
             <thead>
               <tr className="border-b border-zinc-300 text-foreground-muted">
@@ -153,10 +153,10 @@ export function RapportPdfPreview({
           </table>
           <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-foreground-muted">Risques à surveiller</p>
           <p className="text-foreground-muted">{REDACT_LONG}</p>
-        </PageThumb>
+        </PageThumb>}
 
-        {/* Page 6 — Annexe verbatim (redacted, hints at completeness) */}
-        <PageThumb pageNum="8" label="Annexe verbatim" redacted>
+        {/* Page 6 — Textes reçus et données structurées (redacted, hints at completeness) */}
+        <PageThumb pageNum={hasRecommendation ? "6" : "4"} label="Textes reçus et données structurées" redacted>
           <p className="text-[9px] font-bold uppercase tracking-wider text-foreground-muted">Toutes vos réponses, par pilier</p>
           {["A · Authenticité", "D · Distinction", "V · Valeur", "E · Engagement"].map((h) => (
             <div key={h} className="mt-1.5">
@@ -170,12 +170,12 @@ export function RapportPdfPreview({
       {/* Inclusions */}
       <ul className="mb-5 grid gap-1.5 text-xs text-foreground-secondary sm:grid-cols-2">
         {[
-          "Synthèse exécutive ancrée sur la tension centrale",
-          "ADVE complet — 4 paragraphes verbatim de votre voix",
-          "RTIS complet — Risque/Track/Innovation/Stratégie",
-          "5 actions priorisées avec 2 exemples concrets chacune",
-          "Roadmap 90 jours par sprint",
-          "Annexe verbatim — toutes vos réponses",
+          "Synthèse du diagnostic et des priorités",
+          "Diagnostic complet — les quatre fondations de marque",
+          "Stratégie — risques, preuves marché, pistes et plan",
+          "Actions prioritaires à valider avec votre équipe",
+          "Prochaines étapes et critères de validation",
+          "Annexe — textes reçus et réponses structurées",
         ].map((line) => (
           <li key={line} className="flex items-start gap-2">
             <span className="mt-0.5 text-primary">✓</span>

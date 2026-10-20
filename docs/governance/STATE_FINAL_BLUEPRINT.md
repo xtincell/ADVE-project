@@ -2224,6 +2224,36 @@ remise commerciale (M04/M05/C7, RESIDUAL-DEBT), nombre exact d’appels non reç
 Aucun nouveau concept/modèle/service/routeur/page/Intent/driver/provider, ADR0224
 inchangé.
 
+Extension candidate M03 de la même restitution (2026-10-20) : intakeFieldOrigins
+sur les deux écritures existantes donne SOURCE aux mappings reçus exacts et aux
+champs canoniques/scellés ou web observé ; le reste généré devient INFERRED.
+Original brut/HUMAN conservés ; SOURCE importé/reformulé n’est pas un verbatim
+implicite. Structured gateway/schéma partiel strict sans retry ajouté, doctrine
+de score/modèles/budgets inchangée. Narrateurs V1/V2/V3, narrate-adve, évaluateur
+et fallback partagent règle et libellés : données, observations, propositions à
+valider et inconnu gardent leur place. Le résultat existant privilégie deux
+champs clés puis détails et annexe PDF, score/100 de complétude distinct de force
+publique/couverture ; promesse fixe8pages retirée. Aucun nouveau canon/ADR,
+modèle/service/routeur/page/Intent/driver/provider ou compte ; lexique propagé ici,
+wrapper LEXICON intact. Candidat510/M03 : nouveau cas fictif Luna COMPLETED, reportEvidenceVersion1, un original1139octets distinct/une source/huit piliers/un Deal LEAD ; huit coûts au snapshot terminal20:28:53, désormais onze coûts PARTIELS, ni coût total ni vente. Conservation historique reçue au périmètre du reçu, ancien mauvais cas/original préservés. Natif payé final compilé45réponses sans ≥500/exception/échec, réouverture sans callback/détails observés ; première transition75réponses/deux ERR_ABORTED conservée, aucun SLO. Premier PDF17pages refusé (marges sombres/page blanche), print.css existant et déduplication full/preview corrigés : candidatdev13pages, huit sections intégrales, aucune page vide/chevauchement/clipping observés sur les13pages relues. Suite DEFAULT isolée reçue :4 860tests/457fichiers unitaires plus38/2horsunit, union4 898/459 en deux passes disjointes, aucune garde assouplie (`release/preuves-rapport-fidelite-20261020/final-default-test-received.json`). Build final webpack et PDF compilé reçus :13pages/582937octets, huit sections intégrales exactes,13pages relues blanches sans page vide/chevauchement/clipping ; vrai bouton téléchargement3,4s. Qualité bornée reçue sur ce cas fictif local, pas qualité universelle. Réseau compilé45réponses/non tronqué/0≥500/exception/échec, titre observé≤257ms pilote compris, pasSLO. Original1139octets/SHA exact HTTP200, voisin404/private,no-store/no-referrer ; six HTTP droits/rejeu200, PDF impayé402/référence étrangère refusée, complete11ms relit sans modèle. Conservation finale reçue : ancien périmètre alltrue, mock exact retiré ; nouveau cas intake/piliers/upload/source/Deal identiques àprogress3 et huit coûts initiaux identiques. Première assertion coûts refusée, trois Glory différés ont écrit20:28:59–20:29:16 avant arrêt Luna20:32, pas durant lecture/PDF sans provider (wordplay-cultural-bank, concept-generator, semiotic-brand-analyzer) ; présent onze coûts partiels, pas total ni absence d’agents. Gratuit après retrait du mock reçu sans bouton PDF et avec origines ; ancien rapport reçu avec avertissement/UNKNOWN sans réécriture. CI/image/runtime510 ouverts, production509 inchangée, aucun coût complet/PSP/vente/MVP entier reçu. Diagnostic de dossier : generateDiagnostic ne déduit plus maturité/visibilité/
+communauté de la longueur des réponses ou de la complétude ; templates orientés
+constats du dossier et pistes à valider, sans nouvelle formule. Diagnostic neuf
+reportEvidenceVersion1 ; historique sans marqueur averti à l’écran et projeté
+par intakeReportContent côté serveur en UNKNOWN sauf HUMAN, ancien SOURCE ayant
+pu contenir du généré. Lecture seule : aucune mutation/backfill/régénération
+implicite. Une régénération explicite existante garde le marqueur0 historique et
+alimente évaluateur/V1/fallback avec cette projection, sans certifier l’ancien.
+Projection et régénération historique réelle sans modèle reçues12/12 : décision
+HUMAN et marqueur0 conservés, aucun coût nouveau. Premier afterAll refusé par FK
+ScoreSnapshot corrigé uniquement dans le nettoyage des fixtures ; retrait local
+reçu de13fixtures/trois snapshots, aucun nettoyage production. Conservation
+historique reçue (deux diagnostics/16piliers/un upload/une source/huit coûts au
+périmètre comparé), pas une identité atomique de toute la base.
+Rendu candidat : ids/métadonnées masqués, e_channels/DIRECT traduits, vignettes
+« Volet » sans fausse pagination. Aucun nouveau concept/ADR ou compte.
+
+Preuve de cadrage : `release/preuves-rapport-fidelite-20261020/framing.json`. Première transition : `release/preuves-rapport-fidelite-20261020/native-model-transition-network.json` ; régénération historique reçue12/12. Preuves complémentaires : `release/preuves-rapport-fidelite-20261020/history-conservation510-received.json`, `regeneration-fixture-cleanup.json`, `native-paid-final-network.json`, `print2-visually-received.json` ; print2 conserve le checkpointdev13pages, désormais complété par `compiled-pdf-visually-received.json`, `native-compiled-print-network.json` et `original510-http-received.json` : PDF compilé/qualité bornée et conservation postnettoyage reçus, livraison encore ouverte. Reçus finaux : `history-conservation510-final-received.json`, `nori-read-conservation-received.json` ; ancien périmètre coût8 conservé, nouveau cas coût8 au snapshot puis11partiels par écritures différées avant la lecture sans provider.
+
 ### Compensation d’une écriture
 
 ADR-0207, 2026-10-08 : `PillarVersion` conserve l’avant et le delta accepté dans

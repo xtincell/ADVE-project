@@ -37,6 +37,8 @@ import { ForceSection } from "./force-section";
 import { AdvertisRadar } from "@/components/shared/advertis-radar";
 import { PILLAR_KEYS } from "@/lib/types/advertis-vector";
 import { HIDDEN_FIELDS, humanizeValue } from "@/server/services/quick-intake/report-composer";
+import { getFieldLabel } from "@/lib/types/field-labels";
+import { coerceProvenance, type FieldProvenance } from "@/domain/field-provenance";
 import { useT } from "@/lib/i18n/use-t";
 import { SourcePreparationOption } from "@/components/brand/source-preparation-option";
 import { ReceivedIntakeDocuments } from "@/components/intake/received-documents";
@@ -111,6 +113,7 @@ interface DiagnosticRecommendation {
 }
 
 interface Diagnostic {
+  reportEvidenceVersion?: number;
   classification?: string;
   summary?: string;
   narrativeReport?: NarrativeReport;
@@ -192,18 +195,13 @@ const CLASSIFICATION_RETAINER_PITCH: Record<string, string> = {
 };
 
 // ── Formatting helpers ─────────────────────────────────────────────
-function humanizeKey(key: string): string {
-  return key
-    .replace(/([A-Z])/g, " $1")
-    .replace(/[._-]/g, " ")
-    .toLowerCase()
-    .replace(/^./, (c) => c.toUpperCase())
-    .trim();
-}
+function humanizeKey(key: string): string { return getFieldLabel(key); }
+
+type ReportField = { key: string; value: string; origin: FieldProvenance };
 
 function flattenValue(value: unknown, depth = 0): string {
   if (value == null) return "";
-  if (typeof value === "string") return value;
+  if (typeof value === "string") return /^[A-Z][A-Z_]+$/.test(value.trim()) ? getFieldLabel(value.trim()) : value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   if (Array.isArray(value)) {
     if (value.length === 0) return "";
@@ -217,7 +215,7 @@ function flattenValue(value: unknown, depth = 0): string {
     // le humanize borné du composer produit du texte lisible à toute profondeur.
     if (depth > 1) return humanizeValue(value) ?? "";
     const entries = Object.entries(value as Record<string, unknown>)
-      .filter(([, v]) => v != null && v !== "")
+      .filter(([key, v]) => !key.startsWith("_") && !HIDDEN_FIELDS.has(key) && v != null && v !== "")
       .map(([k, v]) => {
         const formatted = flattenValue(v, depth + 1);
         return formatted ? `${humanizeKey(k)} : ${formatted}` : "";
@@ -228,12 +226,12 @@ function flattenValue(value: unknown, depth = 0): string {
   return "";
 }
 
-function flattenContent(content: Record<string, unknown>): Array<{ key: string; value: string }> {
+function flattenContent(content: Record<string, unknown>, origins: Record<string, string>): ReportField[] {
   return Object.entries(content)
     // Champs méta/techniques (narrativeFull dupliqué, webPresence JSON,
     // fieldCertainty…) — même liste que le composer (audit 2026-07-16).
     .filter(([k]) => !k.startsWith("_") && !HIDDEN_FIELDS.has(k))
-    .map(([k, v]) => ({ key: humanizeKey(k), value: flattenValue(v) }))
+    .map(([k, v]) => ({ key: humanizeKey(k), value: flattenValue(v), origin: coerceProvenance(origins[k]) }))
     .filter((entry) => entry.value && entry.value.length > 0);
 }
 
@@ -273,7 +271,8 @@ function formatVerbatim(
       ? [{ pillar: t("intakeResult.verbatim.freeText"), entries: [{ q: t("intakeResult.verbatim.freeDesc"), a: intake.rawText }] }]
       : [];
   }
-  const groups: Array<{ pillar: string; entries: Array<{ q: string; a: string }> }> = [];
+  const groups: Array<{ pillar: string; entries: Array<{ q: string; a: string }> }> = intake.rawText
+    ? [{ pillar: t("intakeResult.verbatim.freeText"), entries: [{ q: t("intakeResult.verbatim.freeDesc"), a: intake.rawText }] }] : [];
   const order = ["biz", "a", "d", "v", "e"];
   for (const k of order) {
     const v = responses[k];
@@ -600,9 +599,10 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   // lafusee:allow-adhoc-completion: intake wizard progress percentage (questionnaire step counter, not pillar completion)
   const levelProgressPct = levelIdx >= 0 ? Math.round(((levelIdx + 1) / LEVEL_ORDER.length) * 100) : 0;
 
-  const extractedByKey: Record<string, Array<{ key: string; value: string }>> = {};
+  const extractedByKey: Record<string, ReportField[]> = {};
   for (const p of pillarsData?.pillars ?? []) {
-    extractedByKey[p.key] = flattenContent(p.content as Record<string, unknown>);
+    extractedByKey[p.key] = flattenContent(p.content as Record<string, unknown>, diagnostic?.reportEvidenceVersion === 1 ? p.origins
+      : Object.fromEntries(Object.entries(p.origins).map(([key, origin]) => [key, origin === "HUMAN" ? origin : "UNKNOWN"])));
   }
 
   // Page-only previews: 2 ADVE values per pillar, all 4 RTIS pillars
@@ -813,6 +813,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         </header>
 
         <div className="print:hidden"><ReceivedIntakeDocuments documents={intake.documents} /></div>
+        <p className="mb-6 rounded-lg border border-border-subtle bg-card p-4 text-sm leading-relaxed text-foreground-secondary">{t("intakeResult.report.readingGuide")}</p>
+        {diagnostic?.reportEvidenceVersion !== 1 && <p className="mb-6 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-warning">{t("intakeResult.report.legacy")}</p>}
 
         {/* ════════════════════════════════════════════════════════════
             PDF-ONLY: Intro + Contexte business
@@ -823,7 +825,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         </section>
 
         {bizContext.length > 0 && (
-          <section className="hidden print:block print:mb-8 print:break-after-page">
+          <section className="hidden print:block print:mb-8">
             <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.bizTitle")}</h2>
             <p className="mb-4 text-sm text-foreground-muted">
               {t("intakeResult.pdf.bizSub")}
@@ -843,7 +845,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             PDF-ONLY: Niveau actuel + trajectoire vers ICONE
         ════════════════════════════════════════════════════════════ */}
         {brandLevel && (
-          <section className="hidden print:block print:mb-8 print:break-after-page">
+          <section className="hidden print:block print:mb-8">
             <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.levelTitle")}</h2>
             <div className="mb-6 rounded-lg border-2 border-foreground p-5">
               <p className="text-xs font-bold uppercase tracking-wider text-foreground-muted">
@@ -1029,7 +1031,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           <header className="mb-2 flex items-center justify-between gap-3">
             <h2 className="text-lg font-bold text-foreground">{t("intakeResult.adve.title")}</h2>
             <span className="rounded-full border border-border-subtle bg-card px-2 py-0.5 text-xs text-foreground-muted">
-              {t("intakeResult.adve.badge")}
+              {t(isPaid ? "intakeResult.report.complete" : "intakeResult.adve.badge")}
             </span>
           </header>
           <p className="mb-6 text-sm text-foreground-muted">
@@ -1039,7 +1041,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           <div className="space-y-5">
             {ADVE_PILLARS.map((meta) => {
               const allExtracted = extractedByKey[meta.key] ?? [];
-              const previewExtracted = isPaid ? allExtracted : allExtracted.slice(0, PAGE_VALUES_PER_PILLAR);
+              const previewExtracted = allExtracted.slice(0, PAGE_VALUES_PER_PILLAR);
               const totalFields = pillarsData?.pillars.find(p => p.key === meta.key)?.totalFields ?? allExtracted.length;
               const moreCount = isPaid ? 0 : Math.max(0, totalFields - PAGE_VALUES_PER_PILLAR);
               const reportPillar = report?.adve?.find((p) => p.key === meta.key);
@@ -1077,10 +1079,21 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                               className="grid grid-cols-1 gap-1 rounded-lg border border-border-subtle bg-background p-3 sm:grid-cols-[180px_1fr] sm:gap-4"
                             >
                               <dt className="text-xs font-medium uppercase tracking-wider text-foreground-muted">{entry.key}</dt>
-                              <dd className="text-sm leading-relaxed text-foreground">{entry.value}</dd>
+                              <dd className="text-sm leading-relaxed text-foreground"><span className="mb-1 block text-xs text-foreground-muted">{t(`intakeResult.origin.${entry.origin}`)}</span>{entry.value}</dd>
                             </div>
                           ))}
                         </dl>
+                        {isPaid && allExtracted.length > PAGE_VALUES_PER_PILLAR && (
+                          <details className="mt-3 rounded-lg border border-border-subtle p-3">
+                            <summary className="cursor-pointer text-sm font-medium text-foreground">{t("intakeResult.report.details")} ({allExtracted.length - PAGE_VALUES_PER_PILLAR})</summary>
+                            <dl className="mt-3 space-y-3">
+                              {allExtracted.slice(PAGE_VALUES_PER_PILLAR).map((entry, idx) => <div key={idx}>
+                                <dt className="text-xs font-semibold text-foreground-muted">{entry.key} · {t(`intakeResult.origin.${entry.origin}`)}</dt>
+                                <dd className="mt-1 whitespace-pre-line text-sm text-foreground">{entry.value}</dd>
+                              </div>)}
+                            </dl>
+                          </details>
+                        )}
                         {moreCount > 0 && (
                           <p className="mt-2 flex items-center gap-1.5 text-xs text-foreground-muted">
                             <Lock className="h-3 w-3" />
@@ -1096,8 +1109,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                       <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
                         {t("intakeResult.adve.strategicRead")}
                       </h4>
-                      <p className="text-sm leading-relaxed text-foreground">{reportPillar.preview}</p>
-                      {isPaid && <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground-secondary">{reportPillar.full}</p>}
+                      <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">{isPaid && reportPillar.full ? reportPillar.full : reportPillar.preview}</p>
                       {!isPaid && <p className="mt-2 flex items-center gap-1.5 text-xs text-foreground-muted">
                         <Lock className="h-3 w-3" />
                         {t("intakeResult.adve.deepDive")}
@@ -1113,7 +1125,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         {/* ════════════════════════════════════════════════════════════
             ADVE — print (FULL: all values + full narrative)
         ════════════════════════════════════════════════════════════ */}
-        {isPaid && <section className="hidden print:block print:mb-8 print:break-after-page">
+        {isPaid && <section className="hidden print:block print:mb-8">
           <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.adveTitle")}</h2>
           <div className="space-y-6">
             {ADVE_PILLARS.map((meta) => {
@@ -1136,10 +1148,10 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                         {t("intakeResult.adve.extracted")}
                       </h4>
                       <dl className="mb-4 space-y-1">
-                        {allExtracted.map((entry, idx) => (
+                        {allExtracted.slice(0, PAGE_VALUES_PER_PILLAR).map((entry, idx) => (
                           <div key={idx} className="grid grid-cols-[160px_1fr] gap-3 py-1">
                             <dt className="text-xs font-semibold text-foreground-muted">{entry.key}</dt>
-                            <dd className="text-sm text-foreground">{entry.value}</dd>
+                            <dd className="text-sm text-foreground"><span className="block text-xs text-foreground-muted">{t(`intakeResult.origin.${entry.origin}`)}</span>{entry.value}</dd>
                           </div>
                         ))}
                       </dl>
@@ -1151,8 +1163,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                       <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-foreground-muted">
                         {t("intakeResult.adve.strategicRead")}
                       </h4>
-                      <p className="text-sm leading-relaxed text-foreground">{reportPillar.preview}</p>
-                      <p className="mt-2 text-sm leading-relaxed text-foreground-secondary">{reportPillar.full}</p>
+                      <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">{reportPillar.full || reportPillar.preview}</p>
                     </>
                   )}
                 </div>
@@ -1169,7 +1180,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             <header className="mb-2 flex items-center justify-between gap-3">
               <h2 className="text-lg font-bold text-foreground">{t("intakeResult.rtis.title")}</h2>
               <span className="rounded-full border border-border-subtle bg-card px-2 py-0.5 text-xs text-foreground-muted">
-                {t("intakeResult.rtis.badge")}
+                {t(isPaid ? "intakeResult.report.complete" : "intakeResult.rtis.badge")}
               </span>
             </header>
             <p className="mb-6 text-sm text-foreground-muted">{report.rtis.framing}</p>
@@ -1200,10 +1211,10 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                   <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">
                     {(isPaid ? p.full : p.full.split("\n").slice(0, 9).join("\n")) || p.preview}
                   </p>
-                  <p className="mt-3 flex items-center gap-1.5 border-t border-border-subtle pt-3 text-xs text-foreground-muted">
+                  {!isPaid && <p className="mt-3 flex items-center gap-1.5 border-t border-border-subtle pt-3 text-xs text-foreground-muted">
                     <Lock className="h-3 w-3" />
                     {t("intakeResult.rtis.lock")}
-                  </p>
+                  </p>}
                 </article>
               ))}
             </div>
@@ -1214,7 +1225,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             RTIS — print (FULL: 4 piliers R/T/I/S complete)
         ════════════════════════════════════════════════════════════ */}
         {isPaid && report?.rtis && (
-          <section className="hidden print:block print:mb-8 print:break-after-page">
+          <section className="hidden print:block print:mb-8">
             <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.rtisTitle")}</h2>
             <p className="mb-4 text-sm italic text-foreground-secondary">{report.rtis.framing}</p>
             <div className="space-y-6">
@@ -1233,8 +1244,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                       {t("intakeResult.rtis.keyMove")} {p.keyMove}
                     </p>
                   )}
-                  <p className="text-sm leading-relaxed text-foreground">{p.preview}</p>
-                  <p className="mt-2 text-sm leading-relaxed text-foreground-secondary">{p.full}</p>
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">{p.full || p.preview}</p>
                 </div>
               ))}
             </div>
@@ -1405,7 +1415,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         {/* ════════════════════════════════════════════════════════════
             PDF-ONLY: Conclusion + CTA retainer
         ════════════════════════════════════════════════════════════ */}
-        <section className="hidden print:block print:mb-8 print:break-after-page">
+        <section className="hidden print:block print:mb-8">
           <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.conclusionTitle")}</h2>
           <p className="text-base leading-relaxed text-foreground">{retainerPitch}</p>
           <div className="mt-6 rounded-lg border-2 border-primary p-5">
@@ -1429,6 +1439,17 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         {/* ════════════════════════════════════════════════════════════
             PDF-ONLY: Annexe — verbatim
         ════════════════════════════════════════════════════════════ */}
+        {isPaid && <section className="hidden print:block print:mb-6">
+          <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.report.details")}</h2>
+          <p className="mb-4 text-xs text-foreground-muted">{t("intakeResult.report.readingGuide")}</p>
+          {ADVE_PILLARS.map(meta => <div key={meta.key} className="mb-5">
+            <h3 className="mb-2 text-lg font-bold text-foreground">{t(meta.name)}</h3>
+            <dl className="space-y-2">{(extractedByKey[meta.key] ?? []).map((entry, i) => <div key={i} className="border-l-2 border-border-subtle pl-3">
+              <dt className="text-xs font-semibold text-foreground-muted">{entry.key} · {t(`intakeResult.origin.${entry.origin}`)}</dt>
+              <dd className="mt-1 whitespace-pre-line text-sm text-foreground">{entry.value}</dd>
+            </div>)}</dl>
+          </div>)}
+        </section>}
         {verbatim.length > 0 && (
           <section className="hidden print:block print:mb-4">
             <h2 className="mb-3 text-2xl font-bold text-foreground">{t("intakeResult.pdf.annexTitle")}</h2>
@@ -1528,12 +1549,8 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               brandName={intake.companyName}
               classification={classification}
               centralTension={report?.centralTension}
-              authVerbatimSample={
-                // Surface a slice of the founder's actual ADVE narrative — read
-                // from the persisted Pillar.content[a].narrativeFull (V3 path)
-                // or from the executive summary as a fallback.
-                report?.adve?.[0]?.full ?? report?.executiveSummary
-              }
+              hasRecommendation={Boolean(report?.recommendation)}
+              authVerbatimSample={intake.rawText ?? undefined}
               unlockPriceLabel={
                 isFree
                   ? t("intakeResult.paywall.free")

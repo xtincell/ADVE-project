@@ -26,12 +26,14 @@ Pas de parcours client complet de production ni réception commerciale déduite.
 
 Luna réel local sur entreprise fictive : COMPLETED, même original665octets/reçu/identifiant et rattachement sans copie conservés, un Deal LEAD, aucune vente ni écriture de production. Huit appels gpt-5.6-luna via OAuth existant suivis, extraction initiale absente du registre ; 0,0348356USD est un équivalent API estimé partiel, pas une facture reçue. Même horloge DB : 364358ms, environ6min4, contre estimation affichée30–60s ; fenêtre native complète114réponses/deux ERR_ABORTED conservés, aucun SLO global.
 
-**Rapport/provenance — fermer avant réception commerciale** : des formulations
+**Rapport/provenance — correction locale bornée reçue, livraison à recevoir** : échec509 historique conservé ; des formulations
 déduites sont présentées comme faits déclarés et des clés/structures internes
 restent visibles. Reprendre le rapport, les libellés/provenances et l’export
 existants : distinguer déclaration, observation et proposition générée, conserver
-celle-ci à valider. Export PDF technique reçu localement509, qualité commerciale
-non reçue :26pages face à la promesse8pages, page7 quasi vide et dump de champs ;
+celle-ci à valider. Export509 technique reçu mais qualité refusée :26pages face à
+la promesse8pages, page7 quasi vide et dump de champs ; ce mauvais cas est
+conservé. La correction510 a désormais une qualité bornée reçue localement sur
+le nouveau cas Luna et son PDF compilé13pages, sans réception universelle ;
 propositions toujours présentées comme faits. Cause source/pipeline : extraction
 exigeant de nombreux champs et réinjectant les piliers générés ; writeGateway
 INGESTION/SOURCE par défaut n’explicite pas l’origine de toutes les propositions.
@@ -50,6 +52,45 @@ déclencheur immédiat après509, avant réception commerciale.
 Plan privé `release/preuves-rapport-commercial-20261020/mvp-report-root-plan.json`.
 Preuve `release/preuves-rapport-commercial-20261020/pdf-quality-not-received.json`.
 
+**Candidat M03 actuel, pas une réception qualité** : intakeFieldOrigins relie
+les deux écritures existantes au reçu exact/scellé/web observé SOURCE et au généré
+INFERRED ; règles/libellés communs V1/V2/V3/narrate/évaluateur/fallback. Original
+brut et HUMAN conservés, SOURCE reformulé distinct du verbatim. Extraction via
+structured gateway/schéma partiel strict sans retry ajouté ; résultat deux champs
+clés/détails/annexe et promesse fixe8pages retirée, complétude/force distinctes.
+Candidat510/M03 : nouveau cas fictif Luna COMPLETED, reportEvidenceVersion1, un original1139octets distinct/une source/huit piliers/un Deal LEAD ; huit coûts au snapshot terminal20:28:53, désormais onze coûts PARTIELS, ni coût total ni vente. Conservation historique reçue au périmètre du reçu, ancien mauvais cas/original préservés. Natif payé final compilé45réponses sans ≥500/exception/échec, réouverture sans callback/détails observés ; première transition75réponses/deux ERR_ABORTED conservée, aucun SLO. Premier PDF17pages refusé (marges sombres/page blanche), print.css existant et déduplication full/preview corrigés : candidatdev13pages, huit sections intégrales, aucune page vide/chevauchement/clipping observés sur les13pages relues. Suite DEFAULT isolée reçue :4 860tests/457fichiers unitaires plus38/2horsunit, union4 898/459 en deux passes disjointes, aucune garde assouplie (`release/preuves-rapport-fidelite-20261020/final-default-test-received.json`). Build final webpack et PDF compilé reçus :13pages/582937octets, huit sections intégrales exactes,13pages relues blanches sans page vide/chevauchement/clipping ; vrai bouton téléchargement3,4s. Qualité bornée reçue sur ce cas fictif local, pas qualité universelle. Réseau compilé45réponses/non tronqué/0≥500/exception/échec, titre observé≤257ms pilote compris, pasSLO. Original1139octets/SHA exact HTTP200, voisin404/private,no-store/no-referrer ; six HTTP droits/rejeu200, PDF impayé402/référence étrangère refusée, complete11ms relit sans modèle. Conservation finale reçue : ancien périmètre alltrue, mock exact retiré ; nouveau cas intake/piliers/upload/source/Deal identiques àprogress3 et huit coûts initiaux identiques. Première assertion coûts refusée, trois Glory différés ont écrit20:28:59–20:29:16 avant arrêt Luna20:32, pas durant lecture/PDF sans provider (wordplay-cultural-bank, concept-generator, semiotic-brand-analyzer) ; présent onze coûts partiels, pas total ni absence d’agents. Gratuit après retrait du mock reçu sans bouton PDF et avec origines ; ancien rapport reçu avec avertissement/UNKNOWN sans réécriture. CI/image/runtime510 ouverts, production509 inchangée, aucun coût complet/PSP/vente/MVP entier reçu.
+**Réception restante** : backend reçu (PostgreSQL426/24, gouvernance1 671,
+tsc/deux lints sans erreur, cycles0), projection/regen historique sans modèle12/12
+et natif payé compilé45réponses reçus. Suite DEFAULT isolée reçue en deux passes
+disjointes4 860/457 plus38/2, union4 898/459, sans garde affaiblie ; dernière
+concurrente4 897verts/un timeout chunked-original-store30s conservée. Build final
+webpack et PDF compilé13pages/huit sections exactes reçus après le17pages refusé,
+qualité bornée sur la recette fictive et conservation de l’original1139octets.
+Les attentes locales de build/PDF/qualité bornée sont closes. Recevoir maintenant
+CI/image/runtime exacts ; conservation finale après retrait du mock reçue,
+sans qualifier le MVP entier, un coût complet ou une qualité universelle.
+Responsable C6/MVP-FUSEE-03 ; effort fin du lot borné des producteurs/lecteurs
+existants, déclencheur recette locale compilée et conservation postnettoyage reçues, livraison attendue. M04offre/auth
+et M05coût/admission restent distincts ; aucun nouveau gestionnaire ou doctrine.
+Diagnostic de dossier : generateDiagnostic ne déduit plus maturité/visibilité/
+communauté de la longueur des réponses ou de la complétude ; templates orientés
+constats du dossier et pistes à valider, sans nouvelle formule. Diagnostic neuf
+reportEvidenceVersion1 ; historique sans marqueur averti à l’écran et projeté
+par intakeReportContent côté serveur en UNKNOWN sauf HUMAN, ancien SOURCE ayant
+pu contenir du généré. Lecture seule : aucune mutation/backfill/régénération
+implicite. Une régénération explicite existante garde le marqueur0 historique et
+alimente évaluateur/V1/fallback avec cette projection, sans certifier l’ancien.
+Projection et régénération historique réelle sans modèle reçues12/12 : décision
+HUMAN et marqueur0 conservés, aucun coût nouveau. Premier afterAll refusé par FK
+ScoreSnapshot corrigé uniquement dans le nettoyage des fixtures ; retrait local
+reçu de13fixtures/trois snapshots, aucun nettoyage production. Conservation
+historique reçue (deux diagnostics/16piliers/un upload/une source/huit coûts au
+périmètre comparé), pas une identité atomique de toute la base.
+Rendu candidat : ids/métadonnées masqués, e_channels/DIRECT traduits, vignettes
+« Volet » sans fausse pagination. Aucun nouveau concept/ADR ou compte.
+
+Preuve de cadrage : `release/preuves-rapport-fidelite-20261020/framing.json`. Première transition : `release/preuves-rapport-fidelite-20261020/native-model-transition-network.json` ; régénération historique reçue12/12. Preuves complémentaires : `release/preuves-rapport-fidelite-20261020/history-conservation510-received.json`, `regeneration-fixture-cleanup.json`, `native-paid-final-network.json`, `print2-visually-received.json` ; print2 conserve le checkpointdev13pages, désormais complété par `compiled-pdf-visually-received.json`, `native-compiled-print-network.json` et `original510-http-received.json` : PDF compilé/qualité bornée et conservation postnettoyage reçus, livraison encore ouverte. Reçus finaux : `history-conservation510-final-received.json`, `nori-read-conservation-received.json` ; ancien périmètre coût8 conservé, nouveau cas coût8 au snapshot puis11partiels par écritures différées avant la lecture sans provider.
+
 **Clôture technique droits/export/reprise509 — 2026-10-20** :
 509 livrée au périmètre technique : PR1043/source `f75c6c290dd0672ff29aa2a7529a44348d513eaf`, quinze checks SUCCESS/un SKIPPED ; build39483634646 smoke/push et runtime6.27.509 au digest `a3825f5246e0daa4eb9c25149fc2d5f6c252527238c79c747d234bc0b1277fae` reçus. Déploiement terminé le20octobre2026 à19:44:17UTC, mêmes volumes, login/version200, primaire OpenAI/relais/délai90000ms conservés, OpenRouter absent.
 Après livraison,67sources/1041actifs, états/originaux, huit piliers et portefeuille Friesland conservés ; lectures avant/après séquentielles, pas toute base atomique. Version publique509/200 et original d’intake inconnu404/private,no-store/no-referrer reçus : transport public uniquement, pas parcours client payé.
@@ -67,12 +108,29 @@ transmet pas non plus strategyId ; nombre exact d’appels concernés encore à
 mesurer. Inventaire19sites statiques dans les modules/routeur sélectionnés
 (intake-model-call-sites.json), pas19appels runtime ni preuve de19coûts manquants ;
 boucles/variantes et chemins exécutés restent à recevoir, aucune exhaustivité
-déduite des huit coûts Luna suivis. Réconcilier
+déduite des huit coûts Luna suivis. Le candidat M03 transmet strategyId à
+l’extraction structurée ; cela ne reçoit ni les autres sites ni le coût total. Réconcilier
 appels/ledger par les mécanismes existants avant recevoir le coût complet ;
 distinguer équivalent API estimé partiel, usage d’abonnement et coût réellement dû.
 Confronter30–60s affichées aux364358ms reçues, sans inventer plafond/SLO.
 Responsable MVP-FUSEE-05/C7 ; effort inventaire/réconciliation bornés du parcours
 existant, déclencheur avant annoncer coût/délai et avant réception commerciale.
+
+**Complément reçu M05 — différés/assistance facultative** : première comparaison
+coûts du nouveau cas refusée (8→11). Les huit lignes initiales restent identiques ;
+trois Glory ont terminé leur écriture20:28:59–20:29:16, après snapshot terminal
+20:28:53 et avant arrêt du serveur Luna20:32 : wordplay-cultural-bank,
+concept-generator, semiotic-brand-analyzer. Ce ne sont pas des coûts de lecture/
+PDF sans provider ; onze lignes restent partielles, pas coût total ni zéro agent.
+**Fermer** : via le gestionnaire existant, réconcilier le parcours et ses appels
+Glory différés jusqu’à leur terminaison, avec identité/contexte/ledger et choix
+d’assistance facultative ; recevoir consommation complète et parcours sans cette
+assistance, sans déduire de COMPLETED la fin de toute consommation. Conserver
+le refus initial et le snapshot8, ne pas écraser son histoire. Responsable
+MVP-FUSEE-05/C7 ; effort étendre la recette comptable existante aux différés,
+déclencheur avant coût/délai annoncé ou remise commerciale. Aucun nouveau
+manager/policy/service requis. Preuve privée
+`release/preuves-rapport-fidelite-20261020/nori-read-conservation-received.json`.
 
 **Choix agentique/offre CRM M04/M05/C7** : recevoir choix utilisateur et droits/
 export/partage/rattachement offre par les rails existants ; un Deal LEAD fictif ne

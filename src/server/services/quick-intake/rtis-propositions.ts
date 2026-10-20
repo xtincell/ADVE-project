@@ -116,7 +116,7 @@ export function composeRtisPropositions(input: ComposeInput): Record<"r" | "t" |
     r.push({
       action: `Écrire noir sur blanc ce qui vous distingue — tant que ce n'est pas formulé, un concurrent de ${secteur} peut prendre votre place dans la tête des clients.`,
       because: difference
-        ? `votre différence déclarée (« ${difference.slice(0, 90)}${difference.length > 90 ? "…" : ""} ») reste générique tant qu'elle n'est pas prouvée.`
+        ? `la différence inscrite au dossier, à confirmer (« ${difference.slice(0, 90)}${difference.length > 90 ? "…" : ""} ») reste générique tant qu'elle n'est pas prouvée.`
         : "votre fondation « différence » est aujourd'hui vide dans vos réponses.",
     });
   }
@@ -167,16 +167,16 @@ export function composeRtisPropositions(input: ComposeInput): Record<"r" | "t" |
       ? `Tester UNE déclinaison de votre offre sur 30 jours (édition limitée, format découverte, offre duo) et mesurer qui achète.`
       : `Formuler votre offre en une phrase vendable, puis en tester une variante sur 30 jours.`,
     because: offre
-      ? `piste de test pour votre offre déclarée — « ${offre.slice(0, 90)}${offre.length > 90 ? "…" : ""} » — à valider avec vous.`
-      : catalogCount > 0 ? `votre catalogue contient ${catalogCount} offre(s) déclarée(s) ; un test de variante reste une proposition à valider.` : "votre fondation « offre » est encore peu documentée dans vos réponses.",
+      ? `piste de test pour l’offre inscrite au dossier, à confirmer — « ${offre.slice(0, 90)}${offre.length > 90 ? "…" : ""} » — à valider avec vous.`
+      : catalogCount > 0 ? `votre catalogue contient ${catalogCount} offre(s) inscrite(s) au dossier, à confirmer ; un test de variante reste une proposition à valider.` : "votre fondation « offre » est encore peu documentée dans vos réponses.",
   });
   i.push({
     action: canaux?.toLowerCase().includes("whatsapp")
       ? "Structurer WhatsApp en vrai canal de vente (catalogue, statuts réguliers, liste de diffusion) plutôt qu'en simple messagerie."
       : hasChannel ? "Mesurer les retours sur vos canaux actuels avant de tester un canal supplémentaire." : `Choisir un canal à expérimenter après avoir vérifié les usages de ${secteur}.`,
     because: canaux
-      ? `vos canaux déclarés (« ${canaux.slice(0, 80)}${canaux.length > 80 ? "…" : ""} ») offrent une base à mesurer.`
-      : hasChannel ? "des points de contact sont déjà déclarés ; leurs résultats restent à documenter." : "aucun canal n'est encore formalisé dans vos réponses.",
+      ? `les canaux inscrits au dossier, à confirmer (« ${canaux.slice(0, 80)}${canaux.length > 80 ? "…" : ""} ») offrent une base à mesurer.`
+      : hasChannel ? "des points de contact sont inscrits au dossier ; leur origine et leurs résultats restent à documenter." : "aucun canal n'est encore formalisé dans vos réponses.",
   });
 
   // ── S — Plan : séquencé depuis les 2 fondations les plus faibles ──
@@ -186,12 +186,12 @@ export function composeRtisPropositions(input: ComposeInput): Record<"r" | "t" |
   const [w1, w2] = [ranked[0]!, ranked[1]!];
   const s: RtisProposition[] = [
     {
-      action: `Semaines 1-4 : consolider ${PILLAR_HUMAN[w1[0]]} — c'est votre fondation la plus faible, et chaque marque est tirée vers le bas par sa fondation la plus faible.`,
-      because: `score actuel ${Math.round(w1[1])}/25 sur cette fondation, d'après vos réponses.`,
+      action: `Semaines 1-4 : consolider ${PILLAR_HUMAN[w1[0]]} — c’est la partie la moins documentée du dossier ; son effet réel reste à vérifier.`,
+      because: `complétude structurelle ${Math.round(w1[1])}/25 sur cette fondation, distincte de sa force sur le marché.`,
     },
     {
       action: `Semaines 5-8 : renforcer ${PILLAR_HUMAN[w2[0]]}, juste derrière.`,
-      because: `score actuel ${Math.round(w2[1])}/25.`,
+      because: `complétude structurelle ${Math.round(w2[1])}/25.`,
     },
     {
       action: "Semaines 9-12 : re-mesurer l'empreinte publique et comparer — le rapport suivant doit montrer la progression, pas la raconter.",

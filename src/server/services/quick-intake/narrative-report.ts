@@ -10,48 +10,12 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
 // metrics. One LLM call returns both reports in a structured JSON envelope.
 // ============================================================================
 
+import { pillarContentLines, INTAKE_EVIDENCE_RULE } from "./report-composer";
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
 import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 
-export interface AdvePillarReport {
-  /** Lowercase pillar key */
-  key: "a" | "d" | "v" | "e";
-  /** Human-readable pillar name */
-  name: string;
-  /** 2–3 sentence verdict that goes in the FREE preview */
-  preview: string;
-  /** Detailed paragraph (~120 words) shown after paywall unlock */
-  full: string;
-}
-
-export interface RtisPillarReport {
-  /** Lowercase pillar key */
-  key: "r" | "t" | "i" | "s";
-  /** Human-readable pillar name (Risque / Track / Innovation / Strategie) */
-  name: string;
-  /** 1–2 sentence summary (FREE preview) */
-  preview: string;
-  /** Full strategic action paragraph (~120 words) */
-  full: string;
-  /** Suggested priority for the pillar's main action */
-  priority: "P0" | "P1" | "P2";
-  /** Single short headline action ("le coup a jouer") */
-  keyMove: string;
-}
-
-export interface NarrativeReport {
-  /** ADVE executive overview (3–4 sentences). Always free. */
-  executiveSummary: string;
-  /** Per-pillar ADVE diagnostic */
-  adve: AdvePillarReport[];
-  /** RTIS strategic proposition — one entry per RTIS pillar (R, T, I, S). */
-  rtis: {
-    /** 2–3 sentence framing */
-    framing: string;
-    /** Strategic narrative per RTIS pillar */
-    pillars: RtisPillarReport[];
-  };
-}
+import type { NarrativeReport, AdvePillarReport, RtisPillarReport } from "./report-composer";
+export type { NarrativeReport, AdvePillarReport, RtisPillarReport } from "./report-composer";
 
 // Style commun aux 2 sous-rapports (ADVE + RTIS).
 const SYSTEM_STYLE = `Style : francais professionnel, direct, sans superlatifs \
@@ -63,8 +27,7 @@ d'ADVE, de piliers ou de paliers. Regles d'ecriture (2026-07-20) :
 1. Chaque concept est explique en une phrase simple la premiere fois qu'il \
 apparait (ex : "vos fondations de marque : qui vous etes, ce qui vous \
 distingue, ce que vous vendez, qui vous suit").
-2. Tu CITES ses mots et ses chiffres (reponses declarees, mentions trouvees, \
-abonnes comptes) — chaque affirmation s'appuie sur une evidence nommee.
+2. Chaque affirmation s’appuie sur une donnée nommée avec son origine. Une extraction reformulée n’est pas une citation du dirigeant.
 3. Zero jargon interne (pas de "pilier ADVE", "RTIS", "cascade", "vecteur" — \
 dis "fondation", "volet", "votre score").
 4. Chaque section se termine par du concret : ce que ca change pour lui.
@@ -78,14 +41,12 @@ qui vient de finaliser son auto-diagnostic ADVE :
 RAPPORT ADVE : un diagnostic narratif honnête pilier par pilier (Authenticité, \
 Distinction, Valeur, Engagement). Pour CHAQUE pilier tu donnes :
    - "preview" : 2-3 phrases qui resument l'etat actuel du pilier en CITANT au \
-moins une valeur concrete extraite (mots-cles entre guillemets ou nom de champ).
+moins une donnée qualifiée, sans attribuer une proposition au dirigeant.
    - "full" : un paragraphe detaille (100-140 mots) qui CITE explicitement les \
-valeurs extraites (ex : "Votre mission '...' positionne...") et nomme les \
+données qualifiées (reçues, observées ou proposées) et nomme les \
 champs MANQUANTS (ex : "L'archetype n'a pas ete renseigne, ce qui...").
 
-REGLE D'OR : le client doit reconnaitre SES MOTS et SES CHAMPS dans ton commentaire. \
-Sans citation explicite des valeurs extraites, tu retravailles. Tu ne parles \
-JAMAIS d'un pilier en abstraction.
+REGLE D’OR : le client reconnaît les données reçues et distingue les propositions. Ne transforme aucune valeur générée en paroles du client. Respecte les origines ; ne parle jamais d’une fondation en abstraction.
 
 Si un pilier a peu de champs remplis : tu commentes la pauvrete reelle de \
 l'extraction sans rien inventer pour combler. Pas de score genereux, pas de \
@@ -94,6 +55,7 @@ flatterie.
 Tu produis aussi un "executiveSummary" de 3-4 phrases qui resume globalement \
 l'etat ADVE de la marque.
 
+${INTAKE_EVIDENCE_RULE}
 ${SYSTEM_STYLE}`;
 
 const SYSTEM_PROMPT_RTIS = `Tu es Mestor, le strategiste senior de La Fusee. La marque vient de \
@@ -110,6 +72,7 @@ aux valeurs extraites
 
 Tu produis aussi un "framing" de 2-3 phrases qui pose le cadre strategique RTIS.
 
+${INTAKE_EVIDENCE_RULE}
 ${SYSTEM_STYLE}`;
 
 export async function generateNarrativeReport(input: {
@@ -144,36 +107,10 @@ export async function generateNarrativeReport(input: {
     return lines.join("\n") || "Aucune réponse texte";
   };
 
-  const formatExtracted = () => {
-    if (!extractedValues) return "(non disponible)";
-    const lines: string[] = [];
-    for (const pillar of ADVE_STORAGE_KEYS) {
-      const fields = extractedValues[pillar] ?? {};
-      // Skip narrative meta-fields written by this same module — they
-      // should not be exposed as "extracted user content".
-      const filled = Object.entries(fields).filter(
-        ([k, v]) =>
-          v != null &&
-          v !== "" &&
-          k !== "narrativeFull" &&
-          k !== "narrativePreview",
-      );
-      if (filled.length === 0) {
-        // Constructive message, not accusatory. The downstream fallback
-        // in quick-intake/index.ts now writes raw responses when the
-        // extractor returns an empty shape, so reaching this branch
-        // means the user truly did not say anything for this pillar.
-        lines.push(`[${pillar.toUpperCase()}] Pilier à enrichir post-paywall (phase BOOT) — aucune valeur exploitable extraite à ce stade.`);
-      } else {
-        lines.push(`[${pillar.toUpperCase()}] (${filled.length} champ(s) extrait(s)) :`);
-        for (const [k, v] of filled) {
-          const display = typeof v === "string" ? v : JSON.stringify(v);
-          lines.push(`  - ${k}: ${display.slice(0, 200)}`);
-        }
-      }
-    }
-    return lines.join("\n");
-  };
+  const formatExtracted = () => ADVE_STORAGE_KEYS.map(pillar => {
+    const lines = pillarContentLines(extractedValues?.[pillar] ?? {}, pillar);
+    return `[${pillar.toUpperCase()}]\n${lines.join("\n") || "Dossier à documenter"}`;
+  }).join("\n");
 
   const recoText = (recoSummaries ?? [])
     .slice(0, 8)
@@ -194,10 +131,12 @@ SCORES /25 PAR PILIER :
 - Valeur (V)       : ${(vector.v ?? 0).toFixed(1)}
 - Engagement (E)   : ${(vector.e ?? 0).toFixed(1)}
 
-VALEURS EXTRAITES PAR PILIER (a CITER explicitement dans tes commentaires — c'est ce que la marque doit reconnaitre dans ton rapport) :
+${INTAKE_EVIDENCE_RULE}
+
+DONNÉES PAR PILIER AVEC ORIGINE :
 ${wrapUntrusted("VALEURS EXTRAITES PAR PILIER", formatExtracted(), { max: 8000 })}
 
-${wrapUntrusted("REPONSES BRUTES DE LA MARQUE", formatResponses(), { max: 8000 })}`;
+${wrapUntrusted("RÉPONSES REÇUES OU EXTRAITES DES DOCUMENTS — PAS NÉCESSAIREMENT VERBATIM", formatResponses(), { max: 8000 })}`;
 
   // Optimisation 2026-05-11 (commit c2d872d + post) : on splite le single-shot
   // Opus ~4k tokens en 2 calls parallèles ~2k tokens chacun (ADVE + RTIS).

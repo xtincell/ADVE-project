@@ -26,6 +26,7 @@
   :root,
   .dark,
   :root.dark {
+    color-scheme: only light !important;
     --color-background:           #ffffff;
     --color-surface-raised:       #ffffff;
     --color-surface-elevated:     #f7f7f6;
@@ -103,6 +104,10 @@
   }
 
   html, body {
+    margin: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
     background: #ffffff !important;
     color: #18181b !important;
     -webkit-print-color-adjust: exact;
@@ -193,6 +198,20 @@
 
   /* ─── Sections / cartes ─── */
   section, article {
+    break-inside: avoid-page;
+  }
+
+  /* Le rapport intake est un document continu : les sections longues
+     peuvent se fragmenter, les titres restent attachés au paragraphe suivant.
+     Neutralise le min-h-screen des wrappers, sans imposer un nombre de pages. */
+  [data-portal="intake"], [data-portal="intake"] main {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+  [data-portal="intake"] section, [data-portal="intake"] article {
+    break-inside: auto;
+  }
+  [data-portal="intake"] div[class*="rounded"] {
     break-inside: avoid-page;
   }
 

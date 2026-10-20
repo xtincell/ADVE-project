@@ -106,8 +106,8 @@ export const intakeResultFr = {
   "intakeResult.oracle.open": "Ouvrir ma stratégie complète",
 
   // ── Result — radar + estimé/révélé ─────────────────────────────────
-  "intakeResult.radar.before": "Score socle ADVE :",
-  "intakeResult.radar.after": "/100 — votre score de marque complet /200 (piliers d'exécution inclus) se construit ensuite dans votre espace.",
+  "intakeResult.radar.before": "Complétude du dossier ADVE :",
+  "intakeResult.radar.after": "/100 — ce score mesure la structure renseignée, pas la force de marque. La preuve publique est évaluée séparément.",
   "intakeResult.estRev.p1": "Votre niveau ci-dessus est",
   "intakeResult.estRev.estimated": "estimé",
   "intakeResult.estRev.p2": "à partir de vos réponses. Plus bas, votre palier",
@@ -126,8 +126,16 @@ export const intakeResultFr = {
   "intakeResult.pdf.conclusionTitle": "7. Conclusion & prochaine étape",
   "intakeResult.pdf.activate": "Activons votre plan",
   "intakeResult.pdf.activateBody": "Le diagnostic ADVE livre la photographie. La cascade stratégique et l'exécution sont la valeur ajoutée de l'accompagnement La Fusée. Premier échange offert pour cadrer le besoin.",
-  "intakeResult.pdf.annexTitle": "Annexe — Vos réponses verbatim",
-  "intakeResult.pdf.annexSub": "Reproduction fidèle des réponses fournies, pour vérifier la fidélité de l'extraction.",
+  "intakeResult.report.legacy": "Rapport antérieur au contrôle des origines : sa rédaction et ses attributions restent à vérifier avec votre équipe. Le document enregistré est conservé ; il n’a pas été réécrit.",
+  "intakeResult.report.complete": "Rapport complet",
+  "intakeResult.report.details": "Détail des données du dossier",
+  "intakeResult.report.readingGuide": "Le score /100 mesure la complétude du dossier, pas votre force de marque. Les données reçues ou observées peuvent être reformulées ; les propositions sont à valider. Une origine non documentée reste une limite. Le niveau de marque est une estimation distincte, la force publique dépend des mesures disponibles.",
+  "intakeResult.origin.HUMAN": "Confirmé par l’équipe",
+  "intakeResult.origin.SOURCE": "Donnée reçue ou observée",
+  "intakeResult.origin.INFERRED": "Proposition à valider",
+  "intakeResult.origin.UNKNOWN": "Origine non documentée",
+  "intakeResult.pdf.annexTitle": "Annexe — Textes reçus et réponses structurées",
+  "intakeResult.pdf.annexSub": "Le texte saisi est conservé. Les réponses structurées peuvent provenir d’une extraction reformulée des documents ; elles ne constituent pas des citations littérales.",
 
   // ── Result — contexte business (labels) ────────────────────────────
   "intakeResult.biz.sector": "Secteur",
@@ -164,9 +172,9 @@ export const intakeResultFr = {
 
   // ── Result — ADVE écran ────────────────────────────────────────────
   "intakeResult.adve.title": "Ce que le système a compris",
-  "intakeResult.adve.badge": "Aperçu — version complète dans le PDF",
-  "intakeResult.adve.sub": "Pour chaque pilier ADVE : un extrait des valeurs extraites, suivi du commentaire stratégique condensé.",
-  "intakeResult.adve.extracted": "Valeurs extraites",
+  "intakeResult.adve.badge": "Aperçu du diagnostic",
+  "intakeResult.adve.sub": "Les données du dossier et leur origine, puis une lecture de chaque fondation de marque.",
+  "intakeResult.adve.extracted": "Données du dossier",
   "intakeResult.adve.noValues": "Aucune valeur n'a pu être extraite de vos réponses pour ce pilier.",
   "intakeResult.adve.moreFields": "champ(s) supplémentaire(s) dans le PDF complet",
   "intakeResult.adve.strategicRead": "Lecture stratégique",
@@ -174,7 +182,7 @@ export const intakeResultFr = {
 
   // ── Result — RTIS écran + print ────────────────────────────────────
   "intakeResult.rtis.title": "Proposition stratégique",
-  "intakeResult.rtis.badge": "Aperçu — analyse complète dans le PDF",
+  "intakeResult.rtis.badge": "Pistes stratégiques",
   "intakeResult.rtis.lock": "Mécanique d'exécution dans le PDF",
   "intakeResult.rtis.keyMove": "Le coup à jouer :",
 
@@ -207,7 +215,7 @@ export const intakeResultFr = {
 
   // ── Result — paywall / téléchargement ──────────────────────────────
   "intakeResult.paywall.free": "Gratuit",
-  "intakeResult.proof.kicker": "Déjà mesuré pour",
+  "intakeResult.proof.kicker": "Première lecture pour",
   "intakeResult.proof.tail": "Le rapport complet les développe, avec la mécanique d'exécution de chaque proposition.",
   "intakeResult.proof.propositions": "propositions d'action fondées sur vos données",
   "intakeResult.proof.citations": "citation(s) web vérifiée(s)",
@@ -502,8 +510,16 @@ export const intakeResultEn: Record<keyof typeof intakeResultFr, string> = {
   "intakeResult.pdf.conclusionTitle": "7. Conclusion & next step",
   "intakeResult.pdf.activate": "Let's activate your plan",
   "intakeResult.pdf.activateBody": "The ADVE diagnostic delivers the snapshot. The strategic cascade and execution are the added value of La Fusée's support. First conversation offered to frame the need.",
-  "intakeResult.pdf.annexTitle": "Appendix — Your verbatim answers",
-  "intakeResult.pdf.annexSub": "Faithful reproduction of the answers provided, to verify extraction fidelity.",
+  "intakeResult.report.legacy": "This report predates origin checks: its wording and attributions need review with your team. The saved report is preserved without rewriting.",
+  "intakeResult.report.complete": "Complete report",
+  "intakeResult.report.details": "Detailed dossier data",
+  "intakeResult.report.readingGuide": "The /100 score measures dossier completeness, not brand strength. Received or observed data may be paraphrased; proposals require validation. Undocumented origins remain a limitation. The brand level is a separate estimate; public strength depends on available measurements.",
+  "intakeResult.origin.HUMAN": "Confirmed by the team",
+  "intakeResult.origin.SOURCE": "Received or observed data",
+  "intakeResult.origin.INFERRED": "Proposal to validate",
+  "intakeResult.origin.UNKNOWN": "Undocumented origin",
+  "intakeResult.pdf.annexTitle": "Appendix — Received text and structured answers",
+  "intakeResult.pdf.annexSub": "Typed text is preserved. Structured answers may be paraphrased document extractions, not literal quotations.",
 
   "intakeResult.biz.sector": "Sector",
   "intakeResult.biz.country": "Country",
@@ -535,16 +551,16 @@ export const intakeResultEn: Record<keyof typeof intakeResultFr, string> = {
   "intakeResult.bridge.force": "And when this public evidence is put through real-world trials, here is the force it reveals — the full score /200, the one used for the ranking.",
 
   "intakeResult.adve.title": "What the system understood",
-  "intakeResult.adve.badge": "Preview — full version in the PDF",
+  "intakeResult.adve.badge": "Diagnostic preview",
   "intakeResult.adve.sub": "For each ADVE pillar: an excerpt of the extracted values, followed by the condensed strategic commentary.",
-  "intakeResult.adve.extracted": "Extracted values",
+  "intakeResult.adve.extracted": "Dossier data",
   "intakeResult.adve.noValues": "No value could be extracted from your answers for this pillar.",
   "intakeResult.adve.moreFields": "more field(s) in the full PDF",
   "intakeResult.adve.strategicRead": "Strategic read",
   "intakeResult.adve.deepDive": "In-depth analysis in the full PDF",
 
   "intakeResult.rtis.title": "Strategic proposal",
-  "intakeResult.rtis.badge": "Preview — full analysis in the PDF",
+  "intakeResult.rtis.badge": "Strategic proposals",
   "intakeResult.rtis.lock": "Execution mechanics in the PDF",
   "intakeResult.rtis.keyMove": "The move to play:",
 
@@ -573,7 +589,7 @@ export const intakeResultEn: Record<keyof typeof intakeResultFr, string> = {
   "intakeResult.verbatim.pillar": "Pillar",
 
   "intakeResult.paywall.free": "Free",
-  "intakeResult.proof.kicker": "Already measured for",
+  "intakeResult.proof.kicker": "First reading for",
   "intakeResult.proof.tail": "The full report develops each of them, with the execution mechanics for every proposition.",
   "intakeResult.proof.propositions": "action propositions grounded in your data",
   "intakeResult.proof.citations": "verified web citation(s)",
@@ -857,8 +873,16 @@ export const intakeResultZh: Record<keyof typeof intakeResultFr, string> = {
   "intakeResult.pdf.conclusionTitle": "7. 结论与下一步",
   "intakeResult.pdf.activate": "启动您的计划",
   "intakeResult.pdf.activateBody": "ADVE 诊断给出的是现状快照。战略级联与落地执行才是 La Fusée 陪跑的附加价值。首次沟通免费，用于界定需求。",
+  "intakeResult.report.legacy": "此报告早于来源校验；其措辞和归属仍须由团队核实。已保存的报告保持原样，未被改写。",
+  "intakeResult.report.complete": "完整报告",
+  "intakeResult.report.details": "档案数据详情",
+  "intakeResult.report.readingGuide": "/100分数衡量档案完整度，而非品牌实力。收到或观察到的数据可能经过转述；建议须经验证。来源不明仍是局限。品牌等级为独立估计，公开实力取决于现有测量。",
+  "intakeResult.origin.HUMAN": "团队已确认",
+  "intakeResult.origin.SOURCE": "收到或观察到的数据",
+  "intakeResult.origin.INFERRED": "待验证的建议",
+  "intakeResult.origin.UNKNOWN": "来源未记录",
   "intakeResult.pdf.annexTitle": "附录——您的原文回答",
-  "intakeResult.pdf.annexSub": "忠实转录您提供的回答，以便核对提取的准确性。",
+  "intakeResult.pdf.annexSub": "输入文本予以保留；结构化回答可能是文档的转述提取，并非逐字引语。",
 
   "intakeResult.biz.sector": "行业",
   "intakeResult.biz.country": "国家",
@@ -928,7 +952,7 @@ export const intakeResultZh: Record<keyof typeof intakeResultFr, string> = {
   "intakeResult.verbatim.pillar": "支柱",
 
   "intakeResult.paywall.free": "免费",
-  "intakeResult.proof.kicker": "已为您测得",
+  "intakeResult.proof.kicker": "初步解读",
   "intakeResult.proof.tail": "完整报告将逐条展开，并附每项行动的执行方法。",
   "intakeResult.proof.propositions": "条基于您数据的行动建议",
   "intakeResult.proof.citations": "条经核实的网络引用",

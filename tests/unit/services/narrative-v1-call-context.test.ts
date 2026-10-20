@@ -33,6 +33,17 @@ describe("Active V1 report carries the existing manager's brand context", () => 
     expect(state.calls[1]!.model).toBeUndefined();
   });
 
+  it("carries qualified origins to both writers without treating proposals as founder quotes", async () => {
+    await generateNarrativeReport({ ...input, extractedValues: { a: { missionStatement: "Source exacte", vision: "Ambition proposée", _fieldProvenance: { missionStatement: "SOURCE", vision: "INFERRED" }, narrativeFull: "META_INTERDIT" }, d: {}, v: {}, e: {} } });
+    for (const call of state.calls) {
+      expect(call.prompt).toContain("Donnée reçue ou observée");
+      expect(call.prompt).toContain("Proposition à valider");
+      expect(call.prompt).toContain("jamais un fait ou des paroles du prospect");
+      expect(call.prompt).not.toContain("META_INTERDIT");
+      expect(call.prompt).not.toContain("_fieldProvenance");
+    }
+  });
+
   it("does not invent a brand identifier for an unbranded benchmark", async () => {
     const { strategyId: _strategyId, ...unbranded } = input;
     await generateNarrativeReport(unbranded);

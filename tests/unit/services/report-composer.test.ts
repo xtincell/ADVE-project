@@ -12,6 +12,8 @@ import {
   pillarContentLines,
   previewIntakeDiagnostic,
   intakePillarFields,
+  intakeEvidenceEntries,
+  intakeReportContent,
 } from "@/server/services/quick-intake/report-composer";
 
 describe("free report projection", () => {
@@ -40,6 +42,7 @@ describe("humanizeValue", () => {
     expect(humanizeValue(["transparence", "artisanat"])).toBe("transparence · artisanat");
     expect(humanizeValue({ nom: "Gamme Or", prix: 25000 })).toBe("Gamme Or");
     expect(humanizeValue({ label: "Premium" })).toBe("Premium");
+    expect(humanizeValue({ id: "internal-id", salesChannel: "DIRECT" })).toBe("Canal de vente: Vente directe");
   });
   it("null sur vide/absent — jamais de placeholder inventé", () => {
     expect(humanizeValue("")).toBeNull();
@@ -58,7 +61,7 @@ describe("pillarContentLines", () => {
       footprintScore: { total: 50 },
     });
     expect(lines).toHaveLength(1);
-    expect(lines[0]).toContain("vision");
+    expect(lines[0]).toContain("Vision");
   });
 });
 
@@ -160,5 +163,32 @@ describe("composeDeterministicReport", () => {
     expect(i.full).toContain("Plats du jour");
     const s = report.rtis.pillars.find((p) => p.key === "s")!;
     expect(s.full).toContain("communauté");
+  });
+});
+
+describe("report fidelity without model assistance", () => {
+  it("labels all four origins and never calls generated material founder speech", () => {
+    const a = { missionStatement: "Réparer localement", vision: "Leader mondial", citationFondatrice: "À retrouver", valeurs: ["Clarté"], _fieldProvenance: { missionStatement: "SOURCE", vision: "INFERRED", valeurs: "HUMAN" } };
+    expect(intakeEvidenceEntries(a).map(e => e.origin)).toEqual(["SOURCE", "HUMAN", "UNKNOWN", "INFERRED"]);
+    const report = composeDeterministicReport({ companyName: "Atelier", classification: "FRAGILE", compositeScore: 28, extractedValues: { a, d: {}, v: {}, e: {} } });
+    expect(report.adve[0]!.full).toContain("Proposition à valider");
+    expect(report.adve[0]!.full).toContain("Origine non documentée");
+    expect(report.adve[0]!.full).not.toContain("Ce que vous nous avez dit");
+    expect(report.executiveSummary).toContain("complétude du dossier : 28/100");
+    expect(report.adve[1]!.full).not.toContain("collecte publique n'a rien trouvé");
+  });
+  it("excludes narrative and edition metadata from evidence rather than counting them as fields", () => {
+    expect(intakeEvidenceEntries({ confidence: .8, currentVersion: 6, narrativeFull: "Synthèse générée", _fieldProvenance: { x: "SOURCE" }, fieldCertainty: { x: "DECLARED" } })).toEqual([]);
+  });
+});
+
+describe("historical report read projection", () => {
+  it("keeps the stored content unchanged and does not certify legacy SOURCE on regeneration", () => {
+    const content = { missionStatement: "Reçu ou généré autrefois", valeurs: ["Clarté"], _fieldProvenance: { missionStatement: "SOURCE", valeurs: "HUMAN" } };
+    const before = JSON.stringify(content);
+    expect(intakeReportContent(content, "a", 0)._fieldProvenance).toEqual({ missionStatement: "UNKNOWN", valeurs: "HUMAN" });
+    expect(intakeReportContent(content, "a", undefined)._fieldProvenance).toEqual({ missionStatement: "UNKNOWN", valeurs: "HUMAN" });
+    expect(intakeReportContent(content, "a", 1)).toBe(content);
+    expect(JSON.stringify(content)).toBe(before);
   });
 });

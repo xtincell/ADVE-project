@@ -42,6 +42,7 @@ import { callLLM, extractJSON } from "@/server/services/llm-gateway";
 import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { indexBrandContext } from "@/server/services/seshat/context-store";
 import { getOracleBrandContext, formatPreciseFields, type PreciseField } from "@/server/services/seshat/context-store";
+import { INTAKE_EVIDENCE_RULE } from "./report-composer";
 import type { NarrativeReport } from "./narrative-report";
 
 interface V2Input {
@@ -91,6 +92,8 @@ SCORES /25 :
 - V: ${(input.vector.v ?? 0).toFixed(1)}
 - E: ${(input.vector.e ?? 0).toFixed(1)}
 
+${INTAKE_EVIDENCE_RULE}
+
 Travail demandé : produire un BRIEF STRUCTURÉ qui servira d'input à un agent de rédaction final (Opus).
 Les extraits fournis sont bornés : ne cite pas une valeur tronquée ou absente.
 Conserve référence, version d’édition et origine pour toute valeur utilisée. INFERRED est une déduction,
@@ -99,7 +102,7 @@ Un objectif stocké n'est pas un résultat mesuré ; le narratif compressé sert
 Pour chaque pilier ADVE, identifier :
 - 2-4 keyFacts : faits saillants extraits du contexte (à citer dans le rapport)
 - 1-2 tensions : tensions identifiables (gap entre intention et exécution, asymétries, paradoxes)
-- 1-2 quotableAnchors : éléments verbatim que l'agent final DOIT reprendre tels quels
+- 1-2 quotableAnchors : données exactes avec leur origine à préserver, sans attribution automatique au dirigeant
 
 Plus une tension globale (overallTension) qui structure tout le rapport.
 
@@ -155,8 +158,10 @@ CONTEXTE HYBRIDE PAR PILIER (Seshat — narratif compressé + précis verbatim) 
 ${ctxBlocks}
 ${recoText ? `\nRECOMMANDATIONS NOTORIA :\n${wrapUntrusted("RECOMMANDATIONS NOTORIA", recoText, { max: 4000 })}` : ""}${input.seshatGrounding ? `\nRÉFÉRENCES SECTORIELLES :\n${wrapUntrusted("RÉFÉRENCES SECTORIELLES", input.seshatGrounding, { max: 6000 })}` : ""}
 
+${INTAKE_EVIDENCE_RULE}
+
 CONTRAINTES STRICTES :
-1. Reprends les quotableAnchors VERBATIM dans tes commentaires "full".
+1. Reprends les quotableAnchors avec leur origine, sans les présenter comme des citations du dirigeant.
 2. Cite les valeurs PRÉCISES verbatim (pas de paraphrase de chiffres ou noms).
 3. Le narratif compressé est pour t'orienter — ne le cite pas tel quel.
 4. Le rapport doit être en français, ton "vous" professionnel.
