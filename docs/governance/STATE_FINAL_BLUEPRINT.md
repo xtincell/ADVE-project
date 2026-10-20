@@ -2181,13 +2181,12 @@ local réel COMPLETED conserve le même original/source sans copie. Rapport non
 reçu : déductions dites faits et clés brutes. Huit appels suivis hors extraction
 initiale,364358ms DB ; lectures anonymes paid:false→2/71, paid:true→71/71 sans
 paiement reproduites, tandis que PDF402/token inconnu404 sont reçus. M03 actif :
-rapport/provenance non reçus ; droits serveur reçus localement509, encore à
-livrer ; coût complet, choix agentique,
+rapport/provenance non reçus ; droits serveur reçus localement puis code/runtime509 livrés ; coût complet, choix agentique,
 offre/export et admission/conservation globales en M04/M05/C7 avant réception
 commerciale, aucun client/vente, MVP entier ou politique arbitraire déduits.
 Voir ADR0224 et RESIDUAL-DEBT pour les preuves et déclencheurs.
 
-Extension candidate509 du même résultat : une lecture commune PAID/même intake
+Extension livrée509 au périmètre technique du même résultat : une lecture commune PAID/même intake
 ou vraie session ADMIN dans paid-fulfillment existant borne rapport, recommandations
 et PDF. paid client ne donne pas de droit, référence liée à l’intake ; projection
 gratuite au serveur (deux champs utiles, total, métadonnées exclues, narratif
@@ -2209,8 +2208,16 @@ synthétique, ADMIN dédié retiré. deepStrictEqual après normalisation JSON/t
 pas toute la base atomique ; reçu conserved/counts corrigé sans second nettoyage
 (voir RESIDUAL-DEBT et reçu privé native509-content-conservation-received.json). Qualité commerciale
 refusée (promesse8pages, page7 quasi vide, champs bruts/propositions dites faits).
-CI/image/runtime509 restent ouverts, production508 inchangée ; M03 source/
-provenance/présentation et MVP entier non reçus commercialement.
+PR1043/sourcef75c6c290dd0, quinze checks SUCCESS/un SKIPPED, build39483634646 et
+runtime509 au digesta3825f5246e0 reçus ; mêmes volumes et67sources/1041actifs/
+huit piliers/Friesland conservés par lectures séquentielles. Login/version200,
+intake inconnu404 privé/no-referrer, relaisOpenAI/délai90000/OpenRouter absent.
+Attente technique CI/image/runtime close ; pas parcours payé/PSP/vente reçu.
+M03 source/provenance/présentation et MVP entier non reçus commercialement :
+reprendre INGESTION/SOURCE, généré INFERRED sur les rails existants puis tous
+les narrateurs/fallback, sans changer la doctrine de score ni réécrire la source.
+Inventaire19sites d’appels statiques, pas19appels runtime/coût complet reçu ;
+maintenance packagingC7 bornée dans RESIDUAL-DEBT, sans nouveau concept.
 Compte précréé revendiqué par email et appels sans strategyId restent des
 constats statiques à vérifier via auth/reset et comptabilisation existants avant
 remise commerciale (M04/M05/C7, RESIDUAL-DEBT), nombre exact d’appels non reçu.

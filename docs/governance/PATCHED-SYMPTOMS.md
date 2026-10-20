@@ -96,9 +96,22 @@ client complet de production. M03 actif : rapport/provenance/coût/droits commer
 et datés dans RESIDUAL-DEBT ; aucun client/vente ou MVP entier reçu.
 [ADR0224 Accepted](adr/0224-retained-intake-originals.md).
 
-## Entrées actives
+## Clôture technique509 — droits, export et reprise (2026-10-20)
 
-2026-10-20 · **509 candidat — droits du rapport pilotés par le client et reprise terminale** : défaut508 reproduit paid:false→2/71 versus paid:true→71/71 sans paiement ; candidat utilise PAID/même intake ou vraie session ADMIN via paid-fulfillment existant, ignore paid client et lie la référence à l’intake. Projection gratuite bornée au serveur et total/ordre utile hors métadonnées ; PDF sans PAID ADMIN inventé, session existante scoppée à l’origine et attente du vrai rendu. complete terminal relit sans modèle/Deal ; activation sans droit refusée avant mutation. Cause : autorité client, rendu et état terminal insuffisamment liés aux droits/états existants. Dix PostgreSQL/22 ciblés et deux gardes rouge/restauration reçus ; final local build webpack/4 889unitaires/424PG/1 671gouvernance/types/lints/cycles verts, premières erreurs de mocks/ligne existante/timeout concurrent conservées sans nouvelle exception. Droits/export/reprise reçus localement : six HTTP200/rejeu9ms, payé rouvert sans callback, fenêtres complètes42/44/42 sans erreur ; PDF payé26pages/huit textes complets et ADMIN impayé15pages sans faux PAID reçus. Dette locale de lecteur/export close ; conservation exacte sélectionnée reçue (deux diagnostics/champs,16piliers contenu/certitude/version, un upload/une source complets, huit coûts inchangés, sans PAID synthétique ni ADMIN restant), deepStrictEqual JSON/triID, pas toute la base atomique. Reçu conserved/counts corrigé sans second nettoyage ; CI/image/runtime ouverts. Voir native509-content-conservation-received.json dans RESIDUAL-DEBT. Qualité commerciale refusée (dump26pages/promesse8pages/page7 quasi vide/propositions en faits) ; M03 provenance/présentation actif, coût/durée/offre et production508 demeurent, aucun paiement global ou MVP reçu. [Reprise M03 et constats statiques M04/M05/C7](RESIDUAL-DEBT.md).
+Cause508 : flag payé client, rendu et état terminal insuffisamment liés aux
+rails existants. Lecteur PAID/même intake ou vraie sessionADMIN, projection
+serveur, cookies PDF bornés, rejeu sans modèle/Deal et refus activation sans
+droit reçus localement avec vrai PDF ; conservation exacte sélectionnée reçue.
+509 livrée au périmètre technique : PR1043/source `f75c6c290dd0672ff29aa2a7529a44348d513eaf`, quinze checks SUCCESS/un SKIPPED ; build39483634646 smoke/push et runtime6.27.509 au digest `a3825f5246e0daa4eb9c25149fc2d5f6c252527238c79c747d234bc0b1277fae` reçus. Déploiement terminé le20octobre2026 à19:44:17UTC, mêmes volumes, login/version200, primaire OpenAI/relais/délai90000ms conservés, OpenRouter absent.
+Après livraison,67sources/1041actifs, états/originaux, huit piliers et portefeuille Friesland conservés ; lectures avant/après séquentielles, pas toute base atomique. Version publique509/200 et original d’intake inconnu404/private,no-store/no-referrer reçus : transport public uniquement, pas parcours client payé.
+Ligne candidate active et attente de CI/image/runtime retirées ; checkpoint
+initial conservé dans CHANGELOG. Qualité du rapport refusée (26p/promesse8p,
+page7 quasi vide, champs bruts/propositions en faits) : reprise M03 à la source
+INGESTION/SOURCE et narrateurs/fallback, puis présentation. M04offre/auth et
+M05coût/admission restent au plan ;19sites statiques ne comptent pas les appels
+runtime. Aucun PSP/vente/MVP entier reçu. Preuves privées de livraison : `release/preuves-mvp-commercial-20261020/production509-{received,data-preserved,public-api-received}.json`, `pr509-green-before-merge.json`, `postmerge509-received.json` ; plan de reprise `release/preuves-rapport-commercial-20261020/mvp-report-root-plan.json`.
+
+## Entrées actives
 
 **472 livré — repli malgré le relais choisi réparé (2026-10-15)** : l’ordre des conditions autorisait un ancien provider malgré le choix OpenAI explicite et un relais incomplet. Deux conditions existantes corrigées/livrées ; admission reçue dans quatre processus de fixture, cible 94 / 8, sans modèle/réseau/DB. Source c92abbc6/CI/image/runtime et reprise native sans génération reçus ; aucune panne réelle injectée. Cause fermée au périmètre ; autres réserves C7/pont manuel C3 et seize réceptions inchangés. Premiers refus AST conservés au [bornage](REFONTE-PLAN.md).
 

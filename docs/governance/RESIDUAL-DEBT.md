@@ -32,31 +32,42 @@ restent visibles. Reprendre le rapport, les libellés/provenances et l’export
 existants : distinguer déclaration, observation et proposition générée, conserver
 celle-ci à valider. Export PDF technique reçu localement509, qualité commerciale
 non reçue :26pages face à la promesse8pages, page7 quasi vide et dump de champs ;
-propositions toujours présentées comme faits. Corriger source/provenance et
-présentation par les composants existants, recevoir à nouveau leur qualité sans
-réécrire ce mauvais cas sauvegardé. Responsable C6/MVP-FUSEE-03 ; effort une passe
-ciblée du rapport existant, déclencheur immédiat avant réception commerciale.
+propositions toujours présentées comme faits. Cause source/pipeline : extraction
+exigeant de nombreux champs et réinjectant les piliers générés ; writeGateway
+INGESTION/SOURCE par défaut n’explicite pas l’origine de toutes les propositions.
+**Fermer** : étendre les origines existantes via fieldStatusFor/
+computeProvenanceBreakdown, extraction/sealCanonicalPillarFields/salvage et les
+deux écritures. Généré INFERRED par prudence ; SOURCE/HUMAN sur preuve brute
+déclarée/observée seulement, import extrait/paraphrasé jamais verbatim implicite.
+Transmettre ces origines à narrate-adve/narrative-report/V2/V3 et report-composer
+fallback ; ne pas attribuer le généré aux paroles du prospect. Restitution concise
+et annexe via composants/libellés existants, promesse de pages alignée à l’export.
+Doctrine de score structurel inchangée, distincte de force publique/couverture et
+niveau provisoire. Conserver mauvais rapport/source ; recevoir un nouveau cas
+généré et une reprise déterministe, sans qualité universelle prétendue.
+Responsable C6/MVP-FUSEE-03 ; effort un lot borné du pipeline existant,
+déclencheur immédiat après509, avant réception commerciale.
+Plan privé `release/preuves-rapport-commercial-20261020/mvp-report-root-plan.json`.
 Preuve `release/preuves-rapport-commercial-20261020/pdf-quality-not-received.json`.
 
-**Droits/export/reprise M03 — reçus localement509, livraison ouverte** :
-Réception finale locale509 : build webpack du code reçu, 4 889 unitaires/457 fichiers, PostgreSQL424/24, gouvernance1 671/169, tsc et deux lints sans erreur (24 avertissements historiques par lint), zéro cycle, code-map exécutée. Premier passage11 rouges conservé : garde de ligne84→86 déplacée sans nouvelle exception, huit mocks activation sans PAID alignés avec un test de refus ajouté, un timeout gros original sous build concurrent ; reprise sans build concurrent verte. Pas de règle assouplie.
-Droits/export/reprise reçus localement : six HTTP réels200, PDF impayé402, référence étrangère refusée, rejeu terminal9ms. Fenêtres natives gratuites/payées/ADMIN complètes42/44/42 réponses sans ≥500/exception/échec de chargement ; réouverture payée même URL sans callback. PDF payé26pages/710952octets, texte intégral des huit sections vérifié ; PDF ADMIN sur cas impayé distinct15pages/571934octets, vraie session sans PAID synthétique. Aucun nouvel appel modèle, PSP ou vente externe dans cette recette ; aucun SLO global.
-Conservation exacte reçue au périmètre sélectionné : deux diagnostics (diagnostic/rawText/responses/status/id),16piliers (content/fieldCertainty/currentVersion), un upload complet/une source complète, huit coûts inchangés, aucun paiement synthétique et ADMIN dédié retiré. Comparaison deepStrictEqual après normalisation JSON/triID ; pas toute la base atomique. Le premier helper avait des assertions vertes mais une collision booléens/compteurs dans le JSON : défaut du reçu corrigé par helper readonly séparant conserved/counts, aucun défaut produit ni second nettoyage. Preuve `release/preuves-rapport-commercial-20261020/native509-content-conservation-received.json`. CI/image/runtime509 restent ouverts, production508 inchangée ; aucun paiement complet, client/vente, qualité commerciale ou MVP entier reçus.
-**Fermer la dette restante** : recevoir CI/image/runtime exacts, puis refus et
-relecture sur l’état livré ; ne pas redemander un correctif local déjà reçu.
-Responsable C6/MVP-FUSEE-03 ; effort livraison/réception du même lot existant,
-déclencheur réception locale acquise avant remise commerciale. Paiement PSP
-complet, qualité/provenance et parcours commercial restent distincts. Preuves :
-`release/preuves-rapport-commercial-20261020/native-api-received.json`,
-`native-{free,paid,admin}-network*.json`, `native-paid-reopen.json`,
-`paid-pdf-reparsed.json`, `native509-content-conservation-received.json` ; logs finaux
-`release/preuves-mvp-commercial-20261020/report509-*.log`.
+**Clôture technique droits/export/reprise509 — 2026-10-20** :
+509 livrée au périmètre technique : PR1043/source `f75c6c290dd0672ff29aa2a7529a44348d513eaf`, quinze checks SUCCESS/un SKIPPED ; build39483634646 smoke/push et runtime6.27.509 au digest `a3825f5246e0daa4eb9c25149fc2d5f6c252527238c79c747d234bc0b1277fae` reçus. Déploiement terminé le20octobre2026 à19:44:17UTC, mêmes volumes, login/version200, primaire OpenAI/relais/délai90000ms conservés, OpenRouter absent.
+Après livraison,67sources/1041actifs, états/originaux, huit piliers et portefeuille Friesland conservés ; lectures avant/après séquentielles, pas toute base atomique. Version publique509/200 et original d’intake inconnu404/private,no-store/no-referrer reçus : transport public uniquement, pas parcours client payé.
+Attente CI/image/runtime509 close au périmètre technique ; droits/export/reprise reçus localement puis code/runtime livrés. Aucune qualité commerciale, paiement PSP complet, client/vente ou MVP entier reçus.
+La conservation locale exacte sélectionnée reste reçue (deux diagnostics/champs,
+16piliers contenu/certitude/version, un upload/une source complets et huit coûts,
+sans PAID synthétique, ADMIN dédié retiré), distincte des lectures production.
+Les dettes locales et l’attente CI/image/runtime sont retirées ; ne pas rouvrir
+le correctif technique pour polir la qualité. Preuves privées de livraison : `release/preuves-mvp-commercial-20261020/production509-{received,data-preserved,public-api-received}.json`, `pr509-green-before-merge.json`, `postmerge509-received.json` ; plan de reprise `release/preuves-rapport-commercial-20261020/mvp-report-root-plan.json`.
 
 **Coût/durée M04/M05/C7 — fermer avant annonce commerciale** : vérifier tous les
 appels modèle du parcours intake et de ses helpers sans strategyId, pas seulement
 l’extraction initiale. Lecture statique509 : extractStructuredPillarContent ne
 transmet pas non plus strategyId ; nombre exact d’appels concernés encore à
-mesurer, aucune exhaustivité déduite des huit coûts Luna suivis. Réconcilier
+mesurer. Inventaire19sites statiques dans les modules/routeur sélectionnés
+(intake-model-call-sites.json), pas19appels runtime ni preuve de19coûts manquants ;
+boucles/variantes et chemins exécutés restent à recevoir, aucune exhaustivité
+déduite des huit coûts Luna suivis. Réconcilier
 appels/ledger par les mécanismes existants avant recevoir le coût complet ;
 distinguer équivalent API estimé partiel, usage d’abonnement et coût réellement dû.
 Confronter30–60s affichées aux364358ms reçues, sans inventer plafond/SLO.
@@ -91,6 +102,18 @@ nettoyage, avec leurs droits et périmètres effectifs, puis documenter la borne
 commerciale reçue. Aucun nouveau gestionnaire, quota inventé ou durée arbitraire
 de conservation dans ce lot. Responsable C7/MVP-FUSEE-05 ; effort une vérification
 bornée des mécanismes existants, déclencheur avant réception commerciale du MVP.
+
+**Maintenance packagingC7 bornée, build509 réussi** : avertissement post-checkout
+Git128 dû au gitlink scratch/la-fusee-blueprint sans .gitmodules, pas échec du
+build/smoke/push ; actions Node20 forcées24 par le runner. Reçu build ARG/ENV :
+placeholder auth/localURL de build, aucune exposition de vrai secret production
+reçue ; injection runtime préservée. **Fermer** : inspecter/corriger délibérément
+le gitlink/config concernés sans supprimer d’autres dépôts, mettre à jour les
+actions supportées et recevoir CI ; revoir les placeholders du packaging existant.
+Responsable C7 ; effort une maintenance bornée, déclencheur prochaine maintenance
+packaging/CI avant sa modification, sans détourner la priorité M03 du MVP.
+Preuve `release/preuves-rapport-commercial-20261020/build509-warning-review.json`.
+C7 entier, quota global/expiration et réception commerciale restent ouverts.
 
 ## 507 — correctifs techniques livrés, réserves MVP conservées (2026-10-20)
 
