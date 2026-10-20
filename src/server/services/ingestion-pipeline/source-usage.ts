@@ -3,6 +3,7 @@
  */
 import { documentEdition, sourceIsUsable } from "@/domain/source-document";
 import { createHash } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { sourceOriginalSummary } from "@/domain/source-original";
@@ -21,15 +22,24 @@ function canonical(value: unknown): unknown {
   return value ?? null;
 }
 
-/** Analysis status, mapping and timestamps are NOT changes to documentary evidence. */
-export function sourceFingerprint(source: {
+type SourceEvidence = {
   rawContent?: string | null; rawData?: unknown; extractedFields?: unknown;
   certainty?: string; fileName?: string | null; sourceType?: string; fileType?: string | null;
-}): string {
-  return createHash("sha256").update(JSON.stringify(canonical({
+};
+const sourceEvidence = (source: SourceEvidence) => ({
     rawContent: source.rawContent, rawData: source.rawData, extractedFields: source.extractedFields,
     certainty: source.certainty, fileName: source.fileName, sourceType: source.sourceType, fileType: source.fileType,
-  }))).digest("hex");
+});
+
+/** Analysis status, mapping and timestamps are NOT changes to documentary evidence. */
+export function sourceFingerprint(source: SourceEvidence): string {
+  return createHash("sha256").update(JSON.stringify(canonical(sourceEvidence(source)))).digest("hex");
+}
+
+/** Revalidate an already prepared snapshot without hashing every cell again
+ * while holding its row lock. Both snapshots come from the same JSON columns. */
+export function sourceEvidenceMatches(left: SourceEvidence, right: SourceEvidence): boolean {
+  return isDeepStrictEqual(sourceEvidence(left), sourceEvidence(right));
 }
 
 export function readSourceReceipts(value: unknown): SourceReceipt[] {
@@ -125,7 +135,8 @@ export async function listBrandSourceSummaries(strategyId: string, client: Sourc
   }));
 }
 
-export async function resolveBrandSource(sourceId: string, strategyId?: string, client: SourceDb = db) {
+/** The same current scope check for readers and locked index commits. */
+export async function readAccessibleBrandSource(sourceId: string, strategyId?: string, client: SourceDb = db) {
   const where = strategyId ? { AND: [{ id: sourceId }, await sourceScope(strategyId, client)] } : { id: sourceId };
   const source = await client.brandDataSource.findFirst({
     where, include: {
@@ -134,6 +145,11 @@ export async function resolveBrandSource(sourceId: string, strategyId?: string, 
     },
   });
   if (!source) throw new Error("SOURCE_UNAVAILABLE: ce document n’est plus accessible dans ce dossier.");
+  return source;
+}
+
+export async function resolveBrandSource(sourceId: string, strategyId?: string, client: SourceDb = db) {
+  const source = await readAccessibleBrandSource(sourceId, strategyId, client);
   const use = source.uses?.find((u) => u.strategyId === strategyId);
   return {
     source, consumerStrategyId: strategyId ?? source.strategyId,

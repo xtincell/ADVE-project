@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const harness = vi.hoisted(() => {
-  const state = { sources: [] as any[], nodes: [] as any[], failWrite: false, nextId: 0 };
+  const state = { sources: [] as any[], nodes: [] as any[], failWrite: false, nextId: 0,
+    beforeTransaction: null as null | (() => void) };
   function matches(row: any, where: any = {}): boolean {
     return Object.entries(where).every(([key, value]: [string, any]) =>
       key === "AND" ? value.every((clause: any) => matches(row, clause)) :
@@ -44,6 +45,9 @@ const harness = vi.hoisted(() => {
     $queryRaw: vi.fn(async () => [{ id: "source-a" }]),
   };
   db.$transaction = vi.fn(async (work: any) => {
+    const before = state.beforeTransaction;
+    state.beforeTransaction = null;
+    before?.();
     const snapshot = structuredClone(state.nodes);
     try { return await work(db); }
     catch (error) { state.nodes = snapshot; throw error; }
@@ -65,6 +69,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   harness.state.nextId = 0;
   harness.state.failWrite = false;
+  harness.state.beforeTransaction = null;
   harness.state.nodes = [];
   harness.state.sources = [{
     id: "source-a", strategyId: "brand-a", sourceType: "FILE", fileName: "brief.txt",
@@ -73,6 +78,38 @@ beforeEach(() => {
 });
 
 describe("one complete, current document index", () => {
+  it.each(["text", "failed extraction", "mapping", "owner"])("refuses a prepared snapshot after a concurrent change to %s", async (change) => {
+    await indexBrandSource("source-a", undefined, { prepareEmbeddings: false });
+    const before = structuredClone(ownNodes());
+    harness.state.beforeTransaction = () => {
+      if (change === "text") source().rawContent = "Une correction arrivée après la préparation.";
+      if (change === "failed extraction") source().processingStatus = "FAILED";
+      if (change === "mapping") source().pillarMapping = { a: true };
+      if (change === "owner") source().strategyId = "brand-b";
+    };
+    await expect(indexBrandSource("source-a", undefined, { prepareEmbeddings: false })).rejects.toThrow("SOURCE_CHANGED");
+    expect(ownNodes()).toEqual(before);
+    expect(harness.embed).not.toHaveBeenCalled();
+    const result = await indexBrandSource("source-a", undefined, { prepareEmbeddings: false });
+    const currentScopeNodes = ownNodes().filter(node => node.strategyId === source().strategyId);
+    expect(result.chunks).toBe(change === "failed extraction" ? 0 : currentScopeNodes.length);
+    if (change === "owner") expect(ownNodes().filter(node => node.strategyId === "brand-a")).toEqual(before);
+    expect(harness.embed).not.toHaveBeenCalled();
+  });
+
+  it("accepts equivalent JSON ordering and a completed analysis without changing evidence", async () => {
+    source().rawData = { first: 1, second: { one: true, two: false } };
+    harness.state.beforeTransaction = () => {
+      source().rawData = { second: { two: false, one: true }, first: 1 };
+      source().processingStatus = "PROCESSED";
+      source().updatedAt = new Date();
+    };
+    const result = await indexBrandSource("source-a", undefined, { prepareEmbeddings: false });
+    expect(result.chunks).toBeGreaterThan(0);
+    expect(ownNodes()).toHaveLength(result.chunks);
+    expect(harness.embed).not.toHaveBeenCalled();
+  });
+
   it("repairs legacy text explicitly without requesting a vector provider, and is repeatable", async () => {
     harness.state.nodes.push({
       id: "legacy-brand-source", strategyId: "brand-a", sourceId: "source-a",

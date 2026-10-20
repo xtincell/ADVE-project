@@ -22,9 +22,10 @@ import { sourceIsUsable, documentContext } from "@/domain/source-document";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import crypto from "crypto";
+import { isDeepStrictEqual } from "node:util";
 import { embedBrandContext } from "./embedder";
 import { chunkText } from "./chunker";
-import { sourceScope, resolveBrandSource } from "@/server/services/ingestion-pipeline/source-usage";
+import { sourceScope, resolveBrandSource, readAccessibleBrandSource, sourceEvidenceMatches } from "@/server/services/ingestion-pipeline/source-usage";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -346,37 +347,52 @@ export async function indexBrandSource(
 }
 
 /**
- * Lock the canonical source BEFORE reading it. An editor updates the same row:
- * either its update commits first and we index the new text, or it runs after
- * this commit and invalidates our chunks. Two preparers cannot interleave.
- * No network work or embedding is held inside this transaction.
+ * Prepare large documents before taking their row lock. Re-read the current
+ * accessible source under that lock and reject any changed evidence or usage;
+ * an editor then either invalidates the prepared snapshot or runs after this
+ * commit and invalidates its chunks. No provider work enters the transaction.
  */
 async function writeSourceIndex(sourceId: string, strategyId?: string) {
+  const resolved = await resolveBrandSource(sourceId, strategyId);
+  const { source } = resolved;
+  const scope = { strategyId: resolved.consumerStrategyId, sourceId: source.id };
+  const readable = (row: typeof source) => sourceIsUsable(row.rawData)
+    && (row.processingStatus === "EXTRACTED" || row.processingStatus === "PROCESSED");
+  const usage = (row: typeof source) => ({ pillarMapping: row.pillarMapping,
+    uses: row.uses?.map(use => ({ strategyId: use.strategyId, operatorId: use.operatorId,
+      pillarMapping: use.pillarMapping, analyzedSourceHash: use.analyzedSourceHash, analysisStatus: use.analysisStatus })) ?? [],
+  });
+  const chunks = readable(source) ? chunkText(source.rawContent ?? "") : [];
+  const documentNotice = documentContext(source.rawData);
+  const desired = chunks.map((chunk) => {
+    const payload = {
+      text: chunk.text, documentNotice, fileName: source.fileName, sourceType: source.sourceType,
+      fileType: source.fileType, chunkIndex: chunk.index,
+      charStart: chunk.charStart, charEnd: chunk.charEnd,
+      pillarMapping: resolved.pillarMapping ?? null,
+      sourceContentHash: resolved.contentHash,
+    };
+    return {
+      ...scope, kind: "BRAND_SOURCE", pillarKey: null, field: `chunk_${chunk.index}`,
+      payload: payload as Prisma.InputJsonValue,
+      contentHash: hashPayload(payload),
+      metadata: {
+        sourceDataSourceId: source.id, sourceType: source.sourceType,
+        fileName: source.fileName, fileType: source.fileType,
+      } as Prisma.InputJsonValue,
+    };
+  });
+  // An admitted workbook can contain thousands of chunks (4,462 in the
+  // received case). Keep small writes at 30s; bound the large atomic insert
+  // without truncating it or exposing a partially replaced document index.
+  const commitTimeout = desired.length > 1000 ? 120_000 : 30_000;
   return db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${sourceId} FOR UPDATE`;
-    const resolved = await resolveBrandSource(sourceId, strategyId, tx);
-    const { source } = resolved;
-    const scope = { strategyId: resolved.consumerStrategyId, sourceId: source.id };
-    const readable = sourceIsUsable(source.rawData) && (source.processingStatus === "EXTRACTED" || source.processingStatus === "PROCESSED");
-    const chunks = readable ? chunkText(source.rawContent ?? "") : [];
-    const desired = chunks.map((chunk) => {
-      const payload = {
-        text: chunk.text, documentNotice: documentContext(source.rawData), fileName: source.fileName, sourceType: source.sourceType,
-        fileType: source.fileType, chunkIndex: chunk.index,
-        charStart: chunk.charStart, charEnd: chunk.charEnd,
-        pillarMapping: resolved.pillarMapping ?? null,
-        sourceContentHash: resolved.contentHash,
-      };
-      return {
-        ...scope, kind: "BRAND_SOURCE", pillarKey: null, field: `chunk_${chunk.index}`,
-        payload: payload as Prisma.InputJsonValue,
-        contentHash: hashPayload(payload),
-        metadata: {
-          sourceDataSourceId: source.id, sourceType: source.sourceType,
-          fileName: source.fileName, fileType: source.fileType,
-        } as Prisma.InputJsonValue,
-      };
-    });
+    const lockedSource = await readAccessibleBrandSource(sourceId, strategyId, tx);
+    if (lockedSource.strategyId !== source.strategyId || !sourceEvidenceMatches(lockedSource, source)
+      || readable(lockedSource) !== readable(source) || !isDeepStrictEqual(usage(lockedSource), usage(source))) {
+      throw new Error("SOURCE_CHANGED: ce document ou son usage a changé. Relisez-le avant de préparer son index.");
+    }
     const existing = await tx.brandContextNode.findMany({
       where: { ...scope, kind: "BRAND_SOURCE" },
       select: { field: true, contentHash: true },
@@ -393,5 +409,5 @@ async function writeSourceIndex(sourceId: string, strategyId?: string) {
       if (desired.length > 0) await tx.brandContextNode.createMany({ data: desired });
     }
     return { strategyId: resolved.consumerStrategyId, chunks: desired.length, reused };
-  }, { maxWait: 10_000, timeout: 30_000 });
+  }, { maxWait: 10_000, timeout: commitTimeout });
 }
