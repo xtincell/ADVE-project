@@ -204,3 +204,4 @@ exiger le label avant merge via une protection de branche.
 | 2026-10-20 | #1041 | fix(intake) originaux conservés et reprise du diagnostic | NEFER — priorité MVP explicite | FileUpload et stockage privé existants, reprise et rattachement atomique sans copie. Garde d’accès rouge/verte, 4 883 unitaires, 414 PostgreSQL et natif compilé reçus ; aucun nouveau gestionnaire. Qualité/coût assistés et conversion commerciale restent ouverts. |
 
 | 2026-10-20 | #1042 | docs(intake) clôture de réception508 | NEFER — priorité MVP explicite, phase7 | Runtime/source reçus, dette technique retirée ; rapport, droits et coût commercial ouverts. Aucun code/version/image ou redéploiement. |
+2026-10-20 | #1043 | Codex | Droits et reprise du rapport La Fusée : lecteurs/exports existants, priorité MVP Shinkiro ; qualité commerciale encore ouverte. | Alexandre (priorité MVP explicite)

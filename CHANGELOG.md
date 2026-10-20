@@ -10,6 +10,8 @@
 
 Preuves : `release/preuves-rapport-commercial-20261020/red-green-received.json` ; `release/preuves-mvp-commercial-20261020/report509-{targeted-final,access-replay-activation-green}.log`. Réceptions finales locales : `release/preuves-rapport-commercial-20261020/native-api-received.json`, `native-paid-reopen.json`, `paid-pdf-reparsed.json`, `pdf-quality-not-received.json` ; build/tests dans `release/preuves-mvp-commercial-20261020/report509-*.log`.
 
+- Périmètre de livraison consigné au numéro réel PR1043 dans scope-drift, phase7 ; aucun nouveau concept ni nouveau rail.
+
 ## v6.27.508 — fix(intake): conserve les originaux avant l’analyse et reprend leur usage (2026-10-20)
 
 **Fermer le navigateur ou rencontrer un fournisseur indisponible ne doit pas effacer un dépôt reçu.**
