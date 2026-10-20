@@ -1,8 +1,54 @@
-## Coffre du corpus — 497 reçu, transport 498 qualifié sur copie (2026-10-20)
+## Lecture documentaire commune — recette locale bornée 499 (2026-10-20)
+
+C2/C3/C4 / ADR-0221 Proposed. Le module d’ingestion existant reçoit un lecteur
+PPTX déterministe, partagé avec les études et les deux intake. Ordre déclaré
+des diapositives, paragraphes et notes attribuées ; lecture XML bornée, pièces
+requises et relations locales contrôlées, DTD/XML invalide refusés. Octets reçus
+et texte déjà extrait ont des contrats distincts ; le nettoyage du binaire en
+pseudo-texte disparaît. Les sources qualifient texte/notes sans interprétation
+des visuels. JSZip déjà transitif devient explicite ; JSDOM existant, sans
+nouveau gestionnaire, fournisseur, modèle, routeur ou Intent. Tutelle MESTOR /
+Sustainment ; appels, budgets, usages et décisions de marque inchangés.
+
+Préflight pur reçu sur les douze présentations du corpus, y compris exports
+Google Slides et fichier de 28 Mo ; aucun nouveau dépôt PowerPoint réel déduit.
+Les régressions ciblées vérifient ordre, notes et refus plutôt que simple
+extension annoncée. Recette locale sur base synthétique reçue : dépôt PPTX
+HTTP 200, texte/notes extraits et original relu exact ; binaire refusé, original
+STORED et source FAILED sans faux texte, avec HTTP 500 du contrat existant.
+Dépôt natif sans IA, lecture des notes et téléchargement exact reçus. Cinq
+écrans ouverts ; les autres formulaires sont reçus au rendu/sélection seulement,
+aucune analyse automatique de bout en bout. Incident initial auth/session 500 /
+SyntaxError JSON pendant compilation dev conservé, cause non établie ; console
+reprise HTTP 200 sans erreur serveur ni exception dans la nouvelle fenêtre.
+Ce passage ne reçoit ni une performance de production ni l’absence globale
+d’incident. Reprendre l’authentification au prochain boot standalone avant
+production. Gauntlet local définitif reçu : 4 847 tests / 453 fichiers,
+gouvernance 1 669 / 168, typage et deux lints sans erreur, zéro cycle ;
+24 avertissements historiques. Les deux erreurs initiales de repère
+quick-intake sont corrigées par 83→84 après l’import, sans nouvelle exception.
+Le boot d’image existant appelle désormais `/api/auth/session` sans cookie et
+refuse une erreur HTTP ou un JSON invalide ; HTML refusé et JSON `null` accepté
+au contrôle pur, véritable endpoint standalone à recevoir pendant le build.
+CI, image et runtime 499 encore à recevoir. Puis déposer les originaux
+admissibles, relire les reçus exacts et qualifier les contenus ; toute lecture
+visuelle reste distincte.
+
+**Suite de gros œuvre C2/C3/C7** : 36 grands fichiers / 1 509 103 850 octets,
+maximum 162 437 099 octets, conservés au périmètre. Étendre le transfert
+borné/reprenable existant et y raccorder également les intake de cinq fichiers
+de dix Mio et les études annoncées à 50 Mo : leur requête JSON/base64 peut
+dépasser le tampon de seize Mio. Recevoir interruption/rejeu, refus sans dépôt
+partiel, octets/empreintes et restauration avant acceptation. Déclencheur :
+prochain lot des grands originaux ; aucun plafond annoncé réduit pour faire
+passer la recette. Origine privée, isolation, rétention et récupération restent
+sous les mêmes critères. Aucun chantier ou parcours entier reçu par ce candidat.
+
+## Coffre du corpus — 497 et transport 498 reçus (2026-10-20)
 
 C2-01 / ADR-0220. Source 497 `d0368d906b068d1039619651ee1dfc03d227db87`, build 39339777266, index `sha256:1aa4f13ede79b2ebd42039cae1f4cf194c27c121624cb395ffbce2ba24a78dc0` et runtime 497 reçus ; déploiement `qs6xl8kiw8sit8dlt5l6oyxy` fini le 19 octobre à 23:25:09 UTC. Même volume, 45 sources/huit piliers/163 actifs antérieurs conservés. Neuf documents complémentaires et un premier visuel reçus ensuite, originaux relus exacts ; dépôt des autres matériaux en cours, sans adoption ni appel modèle. Le classement affiné distingue 831 matériaux, neuf pièces documentaires et une métadonnée technique parmi les 841 éléments. Tous restent au périmètre, ainsi que le reste du Drive.
 
-Premier PNG de 9 001 474 octets refusé sans admission : le proxy Next tronquait l’enveloppe base64 à dix Mio. Candidat 498 : tampon existant seize Mio, borne fichier dix Mio conservée. Clone réel rouge puis vert ; HTTP authentifié sur base synthétique, dix Mio reçus et relus exacts, dix Mio plus un octet refusés 400 sans actif. Production 498 encore à recevoir. Gros fichiers, lecture sémantique, projection privée et récupération restent ouverts. Aucun chantier ou parcours entier reçu.
+Premier PNG de 9 001 474 octets refusé sans admission : le proxy Next tronquait l’enveloppe base64 à dix Mio. 498 reçue : tampon existant seize Mio, borne fichier dix Mio conservée. Clone réel rouge puis vert ; HTTP authentifié sur base synthétique, dix Mio reçus et relus exacts, dix Mio plus un octet refusés 400 sans actif. Source `5c720bf6482e12b6d785d4afa5d8fc687f5dda11`, build 39344243962 et image/runtime `sha256:daf7f9bf1efc7b925d16d7e88bd4fa4801245018591340579d3cd9a5392e8106` exacts ; déploiement `hy422m7x8qz9euvw7m2jm3qo` fini le 20 octobre à 00:12:34 UTC. Même volume et 54 sources/huit piliers/215 actifs conservés pendant la bascule. Le PNG réel auparavant refusé est reçu et relu exact : la cause du fichier individuel est fermée. Sept documents ensuite reçus portent le dossier à 61 sources / 47 originaux Drive ; les deux BMC successifs restent REFERENCE/PROPOSED, sans adoption. L’index de 34 actifs porte trente correspondances exactes et quatre variantes locales différentes des originaux liés, qualifiées sans remplacement. Le dépôt des 831 matériaux continue ; grands fichiers, lecture sémantique, projection privée et récupération restent ouverts. Aucun chantier ou parcours entier reçu.
 
 ## Conseil et documents — réception bornée 496, 2026-10-19
 

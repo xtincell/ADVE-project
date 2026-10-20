@@ -1,6 +1,6 @@
 {
   "name": "lafusee",
-  "version": "6.27.498",
+  "version": "6.27.499",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -121,6 +121,7 @@
     "ioredis": "^5.11.1",
     "jsdom": "^26.1.0",
     "jspdf": "^4.2.1",
+    "jszip": "3.10.1",
     "lucide-react": "^1.14.0",
     "mammoth": "^1.12.0",
     "next": "^16.2.7",

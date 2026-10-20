@@ -4,7 +4,7 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db";
 import { sourceOriginalReceiptSchema, MAX_SOURCE_BYTES, type SourceOriginalReceipt, type AssetOriginalReceipt } from "@/domain/source-original";
 import { mediaStoreConfiguration, putEncryptedMedia, getEncryptedMedia, type MediaStore } from "@/lib/encrypted-media-store";
-import { extractAuto } from "./extractors";
+import { extractReceivedFile } from "./extractors";
 import { z } from "zod";
 
 const json = (v: unknown) => JSON.parse(JSON.stringify(v)) as Prisma.InputJsonValue;
@@ -70,7 +70,7 @@ export async function retainSourceFile(
       }
       // A legacy source has no hash. Match the deterministic extraction, not a
       // similar filename; never attach an arbitrary file to an existing claim.
-      const extracted = await extractAuto(file.type, file.content, strategyId);
+      const extracted = await extractReceivedFile(file.type, bytes, strategyId);
       if (source.rawContent !== extracted.text) throw new Error("Le texte du fichier diffère de cette source. Déposez-le comme nouvelle source.");
     } else {
       source = await tx.brandDataSource.create({ data: {
@@ -109,7 +109,7 @@ export async function retainSourceFile(
     // Dedup/legacy repair must never replace text that was manually corrected.
     if (source.processingStatus === "EXTRACTED" || source.processingStatus === "PROCESSED") return { sourceId };
     try {
-      const extracted = await extractAuto(receipt.fileType, file.content, strategyId);
+      const extracted = await extractReceivedFile(receipt.fileType, bytes, strategyId);
       await tx.brandDataSource.update({ where: { id: sourceId }, data: {
         rawContent: extracted.text, rawData: extracted.structured as Prisma.InputJsonValue ?? undefined,
         extractedFields: json(extracted.metadata), processingStatus: "EXTRACTED", errorMessage: null,

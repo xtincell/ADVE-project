@@ -41,7 +41,7 @@ vi.mock("@/server/trpc/middleware/strategy-scope", async () => {
   const { protectedProcedure } = await import("@/server/trpc/init");
   return { strategyScopedProcedure: protectedProcedure };
 });
-vi.mock("@/server/services/ingestion-pipeline/extractors", () => ({ extractAuto: recorded.extract }));
+vi.mock("@/server/services/ingestion-pipeline/extractors", () => ({ extractAuto: recorded.extract, extractReceivedFile: recorded.extract }));
 vi.mock("@/server/services/ingestion-pipeline/ai-filler", () => ({ analyzeAndMapSources: vi.fn(), fillPillar: vi.fn(), fillRTISPillar: vi.fn() }));
 vi.mock("@/server/services/advertis-scorer", () => ({ scoreObject: vi.fn() }));
 vi.mock("@/server/services/pipeline-orchestrator", () => ({ executeFirstValueProtocol: vi.fn() }));

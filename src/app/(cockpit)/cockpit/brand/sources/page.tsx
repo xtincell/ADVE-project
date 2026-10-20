@@ -56,7 +56,7 @@ const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1_048_576;
  * Proposer un format qu'on va rejeter, c'est faire découvrir le refus APRÈS le
  * dépôt, sur une source déjà créée en échec.
  */
-const ACCEPTED_UPLOAD = ".pdf,.docx,.txt,.md,.json,.csv,.xlsx";
+const ACCEPTED_UPLOAD = ".pdf,.docx,.pptx,.txt,.md,.json,.csv,.xlsx";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
   PENDING: { label: "En attente", color: "text-foreground-muted", icon: Clock },
@@ -1051,7 +1051,7 @@ export default function SourcesPage() {
             {uploading ? "Lecture en cours…" : "Déposez vos documents de marque"}
           </span>
           <span className="text-xs text-foreground-muted">
-            PDF, Word, texte, observations JSON, tableur (.xlsx, .csv) — {MAX_UPLOAD_MB} Mo par fichier maximum
+            PDF, Word, PowerPoint (.pptx), texte, observations JSON, tableur (.xlsx, .csv) — {MAX_UPLOAD_MB} Mo par fichier maximum
           </span>
           <input
             type="file"
@@ -1336,12 +1336,16 @@ export default function SourcesPage() {
                   </p>
                 ) : canOperate && typeof source.id === "string" ? <SourceUses sourceId={source.id} /> : null}
 
+                {source.extractedFields != null && typeof source.extractedFields === "object" && !Array.isArray(source.extractedFields) && (source.extractedFields as Record<string, unknown>).extractionScope === "SLIDE_XML_AND_SPEAKER_NOTES" ? (
+                  <p className="mt-3 text-xs text-foreground-secondary">Texte des diapositives et notes extrait. Les images et les graphiques ne sont pas interprétés ; l’original reste consultable.</p>
+                ) : null}
+
                 {/* Extracted fields preview */}
                 {source.extractedFields != null && typeof source.extractedFields === "object" && !Array.isArray(source.extractedFields) && Object.keys(source.extractedFields).length > 0 ? (
                   <div className="mt-3 rounded bg-white/5 p-3">
                     <p className="mb-1 text-xs font-medium text-foreground-muted">Champs extraits :</p>
                     <div className="flex flex-wrap gap-1">
-                      {Object.keys(source.extractedFields as Record<string, unknown>).slice(0, 10).map(key => (
+                      {Object.keys(source.extractedFields as Record<string, unknown>).filter(key => !["extractionScope", "visualContentRead"].includes(key)).slice(0, 10).map(key => (
                         <span key={key} className="rounded-full bg-accent/15 px-2 py-0.5 text-2xs text-accent">
                           {key}
                         </span>
