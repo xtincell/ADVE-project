@@ -1,16 +1,20 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 
 function ForgotPasswordForm() {
-  const [email, setEmail] = useState("");
+  const params = useSearchParams();
+  const setup = params.get("setup") === "1";
+  const [email, setEmail] = useState(params.get("email") ?? "");
   const [sent, setSent] = useState(false);
+  const [deliveryAvailable, setDeliveryAvailable] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const forgotMutation = trpc.auth.forgotPassword.useMutation({
-    onSuccess: () => setSent(true),
+    onSuccess: (data) => { setDeliveryAvailable(data.deliveryAvailable); setSent(true); },
     onError: (err) => setError(err.message),
   });
 
@@ -38,10 +42,11 @@ function ForgotPasswordForm() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="mb-2 text-lg font-semibold text-foreground">Email envoye</h2>
+            <h2 className="mb-2 text-lg font-semibold text-foreground">{deliveryAvailable ? "Demande prise en compte" : "Envoi temporairement indisponible"}</h2>
             <p className="text-sm text-foreground-secondary">
-              Si un compte existe avec l&apos;adresse <strong className="text-foreground-secondary">{email}</strong>, vous recevrez un lien de reinitialisation.
+              {deliveryAvailable ? <>Si un compte existe avec l&apos;adresse <strong className="text-foreground-secondary">{email}</strong>, vous recevrez un lien sécurisé pour définir votre mot de passe.</> : "Votre dossier reste conservé. Contactez l’équipe pour retrouver votre accès."}
             </p>
+            {!deliveryAvailable && <a href="mailto:xtincell@gmail.com?subject=Acc%C3%A8s%20La%20Fus%C3%A9e" className="mt-4 inline-block text-sm font-medium text-accent underline">Contacter l’équipe</a>}
             <Link
               href="/login"
               className="mt-6 inline-block text-sm font-medium text-accent hover:text-accent-hover"
@@ -51,9 +56,9 @@ function ForgotPasswordForm() {
           </div>
         ) : (
           <>
-            <h2 className="mb-2 text-center text-lg font-semibold text-foreground">Mot de passe oublie ?</h2>
+            <h2 className="mb-2 text-center text-lg font-semibold text-foreground">{setup ? "Définir votre accès" : "Mot de passe oublié ?"}</h2>
             <p className="mb-6 text-center text-sm text-foreground-secondary">
-              Entrez votre email et nous vous enverrons un lien de reinitialisation.
+              {setup ? "Votre dossier est conservé. Recevez un lien à votre adresse pour choisir votre mot de passe et y accéder." : "Entrez votre email pour recevoir un lien sécurisé de réinitialisation."}
             </p>
 
             <form onSubmit={handleSubmit} method="post" className="flex flex-col gap-4">

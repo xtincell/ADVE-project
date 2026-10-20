@@ -8,7 +8,99 @@ Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**M03 candidat — fidélité dans quick-intake existant (2026-10-20)** :
+**511 candidat — auth/reset et activation existants (2026-10-20)** :
+auth.register refuse toute identité existante, y compris sans mot de passe ;
+la pose initiale utilise forgot/reset par jeton email existant, consommé une seule
+fois par updateMany conditionnel token/date valide, y compris en concurrence.
+activateBrand crée le nouveau fondateur sans operatorId partagé, garde propriété
+directe Strategy.userId et appartenances opérateur déjà existantes. Client homonyme
+réutilisé seulement si une stratégie du même user y est attachée ; nom seul sans
+autorité. Droits payés/état final/rejeu et choix d’inférence explicite conservés.
+Auth publique reste sur ses rails INFRASTRUCTURE, activation sous les rails
+Mestor existants ; aucune reclassification ni service/manager ajouté. Census
+réservé selfserve production509 readonly :0op/0users/0stratégies/0clients associés,
+pas de modification ou migration réelle. 511 reste candidate à la livraison ; réception locale acquise. DEFAULT :
+4 901 tests / 460 fichiers verts avant la dernière projection CONVERTED.
+PostgreSQL : 433 / 25 ; gouvernance : 1 671 / 169 après projection ; typage et
+deux lints sans erreur (24 avertissements historiques), zéro cycle et code-map.
+Dernière note client : 9 / 9 ; build webpack final reçu
+(`handover511-build-received.log`). Aucune garde affaiblie.
+
+Natif compilé reçu : activation sans assistance, même URL après rechargement,
+carte d’accès conservée et aucun bouton Activer. Forgot garde l’email prérempli
+et affiche l’indisponibilité sans jeton. Reset HTTP sur preuve locale semée,
+sans SMTP : inscription de l’existant 409, jeton invalide 400, valide 200,
+rejeu 400. Connexion USER réelle puis cockpit de la même marque, sources et
+original visibles. Stratégie propre HTTP 200/huit piliers, voisine 403 ; CRM
+fondateur 403 et ADMIN 200 sur le même Deal LEAD/Strategy/valeur. Ce reçu ne
+prouve ni transport externe, ni offre achetée, ni vente.
+
+Original du coffre reçu sous vraie session USER : HTTP 200, 1 139 octets/SHA
+exact, `private, no-store` et Referrer-Policy `strict-origin-when-cross-origin`.
+Cette route authentifiée reste distincte de la route intake bearer `no-referrer`.
+
+Fenêtres non tronquées, chacune sans HTTP ≥500 ni exception : activation/setup
+102 réponses et 6 annulations, login/cockpit 61 et 38, sources 15 et 7, offre
+48 et 5, sources finales 56 et 14. Les annulations sont des requêtes Next _rsc
+net::ERR_ABORTED : aucun zéro échec de chargement annoncé. Titres observés
+≤258 ms (activation) et ≤467 ms (sources finales), pilote compris ; aucun SLO.
+
+Conservation finale reçue après retrait exact du paiement MOCK et de l’ADMIN
+dédié : même intake, identité Strategy, diagnostic/réponses/rawText, huit piliers,
+upload et source originale, onze coûts et même Deal conservés au périmètre comparé.
+Activation volontaire : propriétaire USER sans opérateur, Client et statuts
+CONVERTED/ACTIVE, ajout d’une source intake canonique et d’un pointeur INTAKE_REPORT.
+Ces effets sont attendus : aucune affirmation de zéro écriture. Ancien périmètre
+B/C reçu exact et distinct, pas toute base atomique.
+
+Restent ouverts : compte d’envoi réel et transport email/Anubis autorisé,
+CI/image/runtime 511, offre/CRM commercial complet et M05 coût/différés/admission.
+Aucun SMTP, PSP, vente, coût complet ou MVP entier reçu. Les finitions constatées
+(contacts/liens voisins, icône succès sur indisponibilité, détour USER par /portals,
+jargon hérité) sont différées au prochain lot C5/C7 après gros œuvre ; parcours
+fonctionnel reçu, UX polie non reçue.
+
+Preuves privées : `release/preuves-remise-commerciale-20261020/` :
+`native-activation-setup-network.json`, `native-login-cockpit-network.json`,
+`native-sources-network.json`, `native-offer-network.json`,
+`native-sources-final-network.json`, `conservation-final.json`,
+`history-conservation511-received.json`, `native-owner-original-received.json`,
+`native-technical-received.json`, `local-server-stopped.json`. Réception limitée
+aux fixtures locales. Aperçu local détenu arrêté ; aucun autre service touché.
+
+510 est reçue en production : source `5c5cc907249ef2123e2d6c7a60c95f81ab7794fe`,
+déploiement `ip02ws80mllbkno6xn7skm1h` terminé le 20 octobre à 21:48:22 UTC,
+runtime 6.27.510 au digest
+`31c3a1b87b4577e781cc0e37b4753e8b58dc91be7932a3138e295d29fd2e2379`.
+Mêmes volumes, Luna/relais et délai de 90 s conservés, OpenRouter absent ; version
+et login HTTP 200. Conservation reçue de 67 sources, 1 041 actifs, états et
+originaux, huit piliers SPAWT et racine Friesland ; lectures avant/après
+séquentielles, pas un snapshot atomique. Aucun changement métier causé par la
+bascule. Attente de livraison/runtime/conservation 510 close ; aucun PSP, vente,
+coût complet ou MVP entier reçu.
+Preuves : `release/preuves-mvp-commercial-20261020/production510-received.json`,
+`production510-data-preserved.json`, `production510-public-api-received.json`. **Blocage de remise M04 confirmé** : lecture seule du runtime509 le20octobre
+à21:39UTC : sendEmail sélectionne provider=log, aucun EMAIL_FROM configuré.
+Aucun transport transactionnel actif : le titulaire ne recevrait pas son lien,
+malgré les gardes de reset reçues localement. Réutiliser email/Anubis et le
+raccord/credentials existants, puis recevoir configuration et recette de transport
+autorisée avant remise commerciale. Aucun secret affiché, email externe envoyé
+ou fournisseur ajouté ; le MVP commercial n’est pas reçu.
+
+Preuves privées : `release/preuves-remise-commerciale-20261020/framing.json`, `handover-red-green-received.json`, `production-selfserve-census.json`. Configuration : `release/preuves-remise-commerciale-20261020/production-mail-configuration.json`.
+
+**Factorisation511 candidate** : email/index.ts délègue au sender système
+Anubis existant, double cascade retirée et catégories transactionnelles conservées.
+Un petit lecteur pur systemEmailIsArmed est ajouté au module Anubis existant :
+expéditeur et provider requis ; brandEmailIsArmed réutilise cette disponibilité
+pour son repli système. Ce helper est neuf, aucun nouveau service/provider/manager.
+forgotPassword sans transport renvoie deliveryAvailable=false pareil pour adresse
+connue/inconnue, sans émettre de jeton. La page candidate affiche indisponibilité
+et contact humain : aucun succès d’envoi ni secret journalisé. Raccord réel et
+transport autorisé restent à recevoir via email/Anubis/credentials existants.
+Preuve `release/preuves-remise-commerciale-20261020/email-factorization-received.json`.
+
+**510 reçue — fidélité dans quick-intake existant (2026-10-20)** :
 intakeFieldOrigins qualifie explicitement les deux écritures existantes : reçu
 exact/scellé canonique/web observé SOURCE, généré INFERRED. Original brut/HUMAN
 conservés ; SOURCE importé peut être reformulé. Extraction structured gateway/
@@ -16,7 +108,7 @@ schéma partiel strict sans retry ajouté, politique modèle/budget existante.
 Narrateurs V1/V2/V3, narrate-adve, évaluateur et report-composer fallback partagent
 règle/libellés d’origine ; ni généré ni complétude ne prouvent la force publique.
 Aucun service/Governor/compte nouveau, classification du registre conservée.
-Candidat510/M03 : nouveau cas fictif Luna COMPLETED, reportEvidenceVersion1, un original1139octets distinct/une source/huit piliers/un Deal LEAD ; huit coûts au snapshot terminal20:28:53, désormais onze coûts PARTIELS, ni coût total ni vente. Conservation historique reçue au périmètre du reçu, ancien mauvais cas/original préservés. Natif payé final compilé45réponses sans ≥500/exception/échec, réouverture sans callback/détails observés ; première transition75réponses/deux ERR_ABORTED conservée, aucun SLO. Premier PDF17pages refusé (marges sombres/page blanche), print.css existant et déduplication full/preview corrigés : candidatdev13pages, huit sections intégrales, aucune page vide/chevauchement/clipping observés sur les13pages relues. Suite DEFAULT isolée reçue :4 860tests/457fichiers unitaires plus38/2horsunit, union4 898/459 en deux passes disjointes, aucune garde assouplie (`release/preuves-rapport-fidelite-20261020/final-default-test-received.json`). Build final webpack et PDF compilé reçus :13pages/582937octets, huit sections intégrales exactes,13pages relues blanches sans page vide/chevauchement/clipping ; vrai bouton téléchargement3,4s. Qualité bornée reçue sur ce cas fictif local, pas qualité universelle. Réseau compilé45réponses/non tronqué/0≥500/exception/échec, titre observé≤257ms pilote compris, pasSLO. Original1139octets/SHA exact HTTP200, voisin404/private,no-store/no-referrer ; six HTTP droits/rejeu200, PDF impayé402/référence étrangère refusée, complete11ms relit sans modèle. Conservation finale reçue : ancien périmètre alltrue, mock exact retiré ; nouveau cas intake/piliers/upload/source/Deal identiques àprogress3 et huit coûts initiaux identiques. Première assertion coûts refusée, trois Glory différés ont écrit20:28:59–20:29:16 avant arrêt Luna20:32, pas durant lecture/PDF sans provider (wordplay-cultural-bank, concept-generator, semiotic-brand-analyzer) ; présent onze coûts partiels, pas total ni absence d’agents. Gratuit après retrait du mock reçu sans bouton PDF et avec origines ; ancien rapport reçu avec avertissement/UNKNOWN sans réécriture. CI/image/runtime510 ouverts, production509 inchangée, aucun coût complet/PSP/vente/MVP entier reçu. Diagnostic de dossier : generateDiagnostic ne déduit plus maturité/visibilité/
+510/M03 reçue au périmètre technique et à la qualité locale bornée : nouveau cas fictif Luna COMPLETED, reportEvidenceVersion1, un original1139octets distinct/une source/huit piliers/un Deal LEAD ; huit coûts au snapshot terminal20:28:53, désormais onze coûts PARTIELS, ni coût total ni vente. Conservation historique reçue au périmètre du reçu, ancien mauvais cas/original préservés. Natif payé final compilé45réponses sans ≥500/exception/échec, réouverture sans callback/détails observés ; première transition75réponses/deux ERR_ABORTED conservée, aucun SLO. Premier PDF17pages refusé (marges sombres/page blanche), print.css existant et déduplication full/preview corrigés : candidatdev13pages, huit sections intégrales, aucune page vide/chevauchement/clipping observés sur les13pages relues. Suite DEFAULT isolée reçue :4 860tests/457fichiers unitaires plus38/2horsunit, union4 898/459 en deux passes disjointes, aucune garde assouplie (`release/preuves-rapport-fidelite-20261020/final-default-test-received.json`). Build final webpack et PDF compilé reçus :13pages/582937octets, huit sections intégrales exactes,13pages relues blanches sans page vide/chevauchement/clipping ; vrai bouton téléchargement3,4s. Qualité bornée reçue sur ce cas fictif local, pas qualité universelle. Réseau compilé45réponses/non tronqué/0≥500/exception/échec, titre observé≤257ms pilote compris, pasSLO. Original1139octets/SHA exact HTTP200, voisin404/private,no-store/no-referrer ; six HTTP droits/rejeu200, PDF impayé402/référence étrangère refusée, complete11ms relit sans modèle. Conservation finale reçue : ancien périmètre alltrue, mock exact retiré ; nouveau cas intake/piliers/upload/source/Deal identiques àprogress3 et huit coûts initiaux identiques. Première assertion coûts refusée, trois Glory différés ont écrit20:28:59–20:29:16 avant arrêt Luna20:32, pas durant lecture/PDF sans provider (wordplay-cultural-bank, concept-generator, semiotic-brand-analyzer) ; présent onze coûts partiels, pas total ni absence d’agents. Gratuit après retrait du mock reçu sans bouton PDF et avec origines ; ancien rapport reçu avec avertissement/UNKNOWN sans réécriture. 510 reçue en production au digest exact 31c3a1b87b45, conservation avant/après reçue ; attente de livraison/runtime/conservation close, aucun coût complet/PSP/vente/MVP entier reçu. Diagnostic de dossier : generateDiagnostic ne déduit plus maturité/visibilité/
 communauté de la longueur des réponses ou de la complétude ; templates orientés
 constats du dossier et pistes à valider, sans nouvelle formule. Diagnostic neuf
 reportEvidenceVersion1 ; historique sans marqueur averti à l’écran et projeté
@@ -643,7 +735,7 @@ Configuration, boot, ingestion système, support, security, collaboration intern
 | `boot-sequence/` | Initialisation système au démarrage | INFRASTRUCTURE | ✅ existant |
 | `process-scheduler/` | Cron + queue intents async | INFRASTRUCTURE | ✅ existant |
 | `ingestion-pipeline/` | Pipeline d'ingestion data externe ; `source-usage` factorise usages documentaires, reçus de version et invalidation (ADR-0198). Lecture commune des octets reçus et du PPTX candidate (ADR-0221), réutilisée par études/intake ; aucun nouveau worker. Primitive Sustainment, tutelle du manifest existant. | MESTOR | ✅ existant |
-| `quick-intake/` | Pipeline intake existant ; M03 candidat origines/narrateurs partagés et projection historique en lecture seule, original conservé | INFRASTRUCTURE | ✅ existant ; conservation/regen12 et PDF compilé reçus localement, livraison M03 ouverte |
+| `quick-intake/` | Pipeline existant ; M03 origines/rapport et M04 candidat : activation sans autorité opérateur pour le nouveau fondateur, Client lié au même propriétaire | INFRASTRUCTURE | ✅ existant ; M04 local reçu, transport réel/livraison511 ouverts |
 | `brief-ingest/` | Ingestion PDF briefs | MESTOR | ✅ existant |
 | `demo-data/` | Seeding pour staging/demo | INFRASTRUCTURE | ✅ existant |
 | `country-registry/` | Référentiel pays (devises, langues) | INFRASTRUCTURE | ✅ existant |

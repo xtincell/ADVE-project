@@ -1,10 +1,113 @@
-## M03 candidat — origine des données et fidélité du rapport (2026-10-20)
+## 511 candidat — remise du compte et isolement des TPE (2026-10-20)
+
+auth.register refuse toute identité existante, y compris sans mot de passe ;
+la pose initiale utilise forgot/reset par jeton email existant, consommé une seule
+fois par updateMany conditionnel token/date valide, y compris en concurrence.
+activateBrand crée le nouveau fondateur sans operatorId partagé, garde propriété
+directe Strategy.userId et appartenances opérateur déjà existantes. Client homonyme
+réutilisé seulement si une stratégie du même user y est attachée ; nom seul sans
+autorité. Droits payés/état final/rejeu et choix d’inférence explicite conservés.
+
+Résultat : compte avec mot de passe vers login, sinon forgot-password?setup=1
+et email prérempli ; conflit register vers récupération existante. Page forgot
+préremplie : indisponibilité/contact humain sans transport ; accusé « Demande prise en compte » quand armé, aucune livraison email promise.
+
+511 reste candidate à la livraison ; réception locale acquise. DEFAULT :
+4 901 tests / 460 fichiers verts avant la dernière projection CONVERTED.
+PostgreSQL : 433 / 25 ; gouvernance : 1 671 / 169 après projection ; typage et
+deux lints sans erreur (24 avertissements historiques), zéro cycle et code-map.
+Dernière note client : 9 / 9 ; build webpack final reçu
+(`handover511-build-received.log`). Aucune garde affaiblie.
+
+Natif compilé reçu : activation sans assistance, même URL après rechargement,
+carte d’accès conservée et aucun bouton Activer. Forgot garde l’email prérempli
+et affiche l’indisponibilité sans jeton. Reset HTTP sur preuve locale semée,
+sans SMTP : inscription de l’existant 409, jeton invalide 400, valide 200,
+rejeu 400. Connexion USER réelle puis cockpit de la même marque, sources et
+original visibles. Stratégie propre HTTP 200/huit piliers, voisine 403 ; CRM
+fondateur 403 et ADMIN 200 sur le même Deal LEAD/Strategy/valeur. Ce reçu ne
+prouve ni transport externe, ni offre achetée, ni vente.
+
+Original du coffre reçu sous vraie session USER : HTTP 200, 1 139 octets/SHA
+exact, `private, no-store` et Referrer-Policy `strict-origin-when-cross-origin`.
+Cette route authentifiée reste distincte de la route intake bearer `no-referrer`.
+
+Fenêtres non tronquées, chacune sans HTTP ≥500 ni exception : activation/setup
+102 réponses et 6 annulations, login/cockpit 61 et 38, sources 15 et 7, offre
+48 et 5, sources finales 56 et 14. Les annulations sont des requêtes Next _rsc
+net::ERR_ABORTED : aucun zéro échec de chargement annoncé. Titres observés
+≤258 ms (activation) et ≤467 ms (sources finales), pilote compris ; aucun SLO.
+
+Conservation finale reçue après retrait exact du paiement MOCK et de l’ADMIN
+dédié : même intake, identité Strategy, diagnostic/réponses/rawText, huit piliers,
+upload et source originale, onze coûts et même Deal conservés au périmètre comparé.
+Activation volontaire : propriétaire USER sans opérateur, Client et statuts
+CONVERTED/ACTIVE, ajout d’une source intake canonique et d’un pointeur INTAKE_REPORT.
+Ces effets sont attendus : aucune affirmation de zéro écriture. Ancien périmètre
+B/C reçu exact et distinct, pas toute base atomique.
+
+Restent ouverts : compte d’envoi réel et transport email/Anubis autorisé,
+CI/image/runtime 511, offre/CRM commercial complet et M05 coût/différés/admission.
+Aucun SMTP, PSP, vente, coût complet ou MVP entier reçu. Les finitions constatées
+(contacts/liens voisins, icône succès sur indisponibilité, détour USER par /portals,
+jargon hérité) sont différées au prochain lot C5/C7 après gros œuvre ; parcours
+fonctionnel reçu, UX polie non reçue.
+
+Preuves privées : `release/preuves-remise-commerciale-20261020/` :
+`native-activation-setup-network.json`, `native-login-cockpit-network.json`,
+`native-sources-network.json`, `native-offer-network.json`,
+`native-sources-final-network.json`, `conservation-final.json`,
+`history-conservation511-received.json`, `native-owner-original-received.json`,
+`native-technical-received.json`, `local-server-stopped.json`. Réception limitée
+aux fixtures locales. Aperçu local détenu arrêté ; aucun autre service touché.
+
+510 est reçue en production : source `5c5cc907249ef2123e2d6c7a60c95f81ab7794fe`,
+déploiement `ip02ws80mllbkno6xn7skm1h` terminé le 20 octobre à 21:48:22 UTC,
+runtime 6.27.510 au digest
+`31c3a1b87b4577e781cc0e37b4753e8b58dc91be7932a3138e295d29fd2e2379`.
+Mêmes volumes, Luna/relais et délai de 90 s conservés, OpenRouter absent ; version
+et login HTTP 200. Conservation reçue de 67 sources, 1 041 actifs, états et
+originaux, huit piliers SPAWT et racine Friesland ; lectures avant/après
+séquentielles, pas un snapshot atomique. Aucun changement métier causé par la
+bascule. Attente de livraison/runtime/conservation 510 close ; aucun PSP, vente,
+coût complet ou MVP entier reçu.
+Preuves : `release/preuves-mvp-commercial-20261020/production510-received.json`,
+`production510-data-preserved.json`, `production510-public-api-received.json`.
+
+Census admin production509 en lecture seule au périmètre de l’opérateur selfserve
+réservé : zéro opérateur trouvé/zéro compte, stratégie ou client associés. Aucun
+compte réel exercé/muté ni migration/retrait d’opérateur. Constat statique auth
+pris en charge par le candidat reproduit ; M04offre/CRM complet et M05coût,
+différés/assistance facultative/admission restent ouverts. Aucun nouveau concept,
+modèle/service/routeur/page/Intent/ADR/provider/manager ou compte de registre.
+[Recette requise](docs/governance/RESIDUAL-DEBT.md). **Blocage de remise M04 confirmé** : lecture seule du runtime509 le20octobre
+à21:39UTC : sendEmail sélectionne provider=log, aucun EMAIL_FROM configuré.
+Aucun transport transactionnel actif : le titulaire ne recevrait pas son lien,
+malgré les gardes de reset reçues localement. Réutiliser email/Anubis et le
+raccord/credentials existants, puis recevoir configuration et recette de transport
+autorisée avant remise commerciale. Aucun secret affiché, email externe envoyé
+ou fournisseur ajouté ; le MVP commercial n’est pas reçu.
+
+Preuves privées : `release/preuves-remise-commerciale-20261020/framing.json`, `handover-red-green-received.json`, `production-selfserve-census.json`. Configuration : `release/preuves-remise-commerciale-20261020/production-mail-configuration.json`.
+
+**Factorisation511 candidate** : email/index.ts délègue au sender système
+Anubis existant, double cascade retirée et catégories transactionnelles conservées.
+Un petit lecteur pur systemEmailIsArmed est ajouté au module Anubis existant :
+expéditeur et provider requis ; brandEmailIsArmed réutilise cette disponibilité
+pour son repli système. Ce helper est neuf, aucun nouveau service/provider/manager.
+forgotPassword sans transport renvoie deliveryAvailable=false pareil pour adresse
+connue/inconnue, sans émettre de jeton. La page candidate affiche indisponibilité
+et contact humain : aucun succès d’envoi ni secret journalisé. Raccord réel et
+transport autorisé restent à recevoir via email/Anubis/credentials existants.
+Preuve `release/preuves-remise-commerciale-20261020/email-factorization-received.json`.
+
+## 510 reçue — origine des données et fidélité du rapport (2026-10-20)
 
 Le service quick-intake existant passe intakeFieldOrigins aux deux écritures : mappings reçus exacts et champs canoniques/scellés ou web observé SOURCE, autres champs générés INFERRED. SOURCE n’est pas une garantie de verbatim d’import ; original brut et décisions HUMAN conservés par les rails existants. Extraction par structured gateway/schéma partiel strict, sans retry ajouté ni changement de modèle/budget. V1/V2/V3, narrate-adve, évaluateur et fallback partagent règle d’origine et libellés ; inconnu signalé, proposition à valider jamais attribuée aux paroles du prospect.
 
 Le résultat existant privilégie deux champs clés puis détails à la demande et annexe PDF ; données/propositions distinctes, score/100 de complétude distinct de force publique/couverture, promesse fixe8pages retirée. Aucun nouveau concept/modèle/service/routeur/page/Intent/driver/provider ou ADR, comptes inchangés ; LEXICON absorbé reste intact, CODE-MAP générée à la gate finale.
 
-Candidat510/M03 : nouveau cas fictif Luna COMPLETED, reportEvidenceVersion1, un original1139octets distinct/une source/huit piliers/un Deal LEAD ; huit coûts au snapshot terminal20:28:53, désormais onze coûts PARTIELS, ni coût total ni vente. Conservation historique reçue au périmètre du reçu, ancien mauvais cas/original préservés. Natif payé final compilé45réponses sans ≥500/exception/échec, réouverture sans callback/détails observés ; première transition75réponses/deux ERR_ABORTED conservée, aucun SLO. Premier PDF17pages refusé (marges sombres/page blanche), print.css existant et déduplication full/preview corrigés : candidatdev13pages, huit sections intégrales, aucune page vide/chevauchement/clipping observés sur les13pages relues. Suite DEFAULT isolée reçue :4 860tests/457fichiers unitaires plus38/2horsunit, union4 898/459 en deux passes disjointes, aucune garde assouplie (`release/preuves-rapport-fidelite-20261020/final-default-test-received.json`). Build final webpack et PDF compilé reçus :13pages/582937octets, huit sections intégrales exactes,13pages relues blanches sans page vide/chevauchement/clipping ; vrai bouton téléchargement3,4s. Qualité bornée reçue sur ce cas fictif local, pas qualité universelle. Réseau compilé45réponses/non tronqué/0≥500/exception/échec, titre observé≤257ms pilote compris, pasSLO. Original1139octets/SHA exact HTTP200, voisin404/private,no-store/no-referrer ; six HTTP droits/rejeu200, PDF impayé402/référence étrangère refusée, complete11ms relit sans modèle. Conservation finale reçue : ancien périmètre alltrue, mock exact retiré ; nouveau cas intake/piliers/upload/source/Deal identiques àprogress3 et huit coûts initiaux identiques. Première assertion coûts refusée, trois Glory différés ont écrit20:28:59–20:29:16 avant arrêt Luna20:32, pas durant lecture/PDF sans provider (wordplay-cultural-bank, concept-generator, semiotic-brand-analyzer) ; présent onze coûts partiels, pas total ni absence d’agents. Gratuit après retrait du mock reçu sans bouton PDF et avec origines ; ancien rapport reçu avec avertissement/UNKNOWN sans réécriture. CI/image/runtime510 ouverts, production509 inchangée, aucun coût complet/PSP/vente/MVP entier reçu. Contrôles backend reçus : PostgreSQL426/24, gouvernance1 671, tsc/deux lints sans erreur et cycles0. Dernière suite concurrente4 897verts/un timeout historique chunked-original-store30s ; reprise isolée reçue4 898/459 (union DEFAULT), aucun seuil/aucune garde assouplis. Premiers refus/timeouts conservés. M03 qualité bornée et conservation finale reçues localement ; livraison encore ouverte. M04offre/auth et M05coût/admission restent au plan. [Réception et déclencheur](docs/governance/RESIDUAL-DEBT.md).
+510/M03 reçue au périmètre technique et à la qualité locale bornée : nouveau cas fictif Luna COMPLETED, reportEvidenceVersion1, un original1139octets distinct/une source/huit piliers/un Deal LEAD ; huit coûts au snapshot terminal20:28:53, désormais onze coûts PARTIELS, ni coût total ni vente. Conservation historique reçue au périmètre du reçu, ancien mauvais cas/original préservés. Natif payé final compilé45réponses sans ≥500/exception/échec, réouverture sans callback/détails observés ; première transition75réponses/deux ERR_ABORTED conservée, aucun SLO. Premier PDF17pages refusé (marges sombres/page blanche), print.css existant et déduplication full/preview corrigés : candidatdev13pages, huit sections intégrales, aucune page vide/chevauchement/clipping observés sur les13pages relues. Suite DEFAULT isolée reçue :4 860tests/457fichiers unitaires plus38/2horsunit, union4 898/459 en deux passes disjointes, aucune garde assouplie (`release/preuves-rapport-fidelite-20261020/final-default-test-received.json`). Build final webpack et PDF compilé reçus :13pages/582937octets, huit sections intégrales exactes,13pages relues blanches sans page vide/chevauchement/clipping ; vrai bouton téléchargement3,4s. Qualité bornée reçue sur ce cas fictif local, pas qualité universelle. Réseau compilé45réponses/non tronqué/0≥500/exception/échec, titre observé≤257ms pilote compris, pasSLO. Original1139octets/SHA exact HTTP200, voisin404/private,no-store/no-referrer ; six HTTP droits/rejeu200, PDF impayé402/référence étrangère refusée, complete11ms relit sans modèle. Conservation finale reçue : ancien périmètre alltrue, mock exact retiré ; nouveau cas intake/piliers/upload/source/Deal identiques àprogress3 et huit coûts initiaux identiques. Première assertion coûts refusée, trois Glory différés ont écrit20:28:59–20:29:16 avant arrêt Luna20:32, pas durant lecture/PDF sans provider (wordplay-cultural-bank, concept-generator, semiotic-brand-analyzer) ; présent onze coûts partiels, pas total ni absence d’agents. Gratuit après retrait du mock reçu sans bouton PDF et avec origines ; ancien rapport reçu avec avertissement/UNKNOWN sans réécriture. 510 reçue en production au digest exact 31c3a1b87b45, conservation avant/après reçue ; attente de livraison/runtime/conservation close, aucun coût complet/PSP/vente/MVP entier reçu. Contrôles backend reçus : PostgreSQL426/24, gouvernance1 671, tsc/deux lints sans erreur et cycles0. Dernière suite concurrente4 897verts/un timeout historique chunked-original-store30s ; reprise isolée reçue4 898/459 (union DEFAULT), aucun seuil/aucune garde assouplis. Premiers refus/timeouts conservés. M03 qualité bornée et conservation finale reçues localement ; livraison encore ouverte. M04offre/auth et M05coût/admission restent au plan. [Réception et déclencheur](docs/governance/RESIDUAL-DEBT.md).
 
 Diagnostic de dossier : generateDiagnostic ne déduit plus maturité/visibilité/
 communauté de la longueur des réponses ou de la complétude ; templates orientés
@@ -31,7 +134,7 @@ paid-fulfillment existant partage IntakePayment PAID/même intake ou vraie sessi
 
 Dix tests PostgreSQL verts (accès, rejeu terminal, activation) et 22 ciblés/six fichiers reçus. Les gardes paid-flag et vocabulaire public ont réellement échoué après retrait/injection volontaire, puis sont revenues au vert après restauration exacte ; erreurs initiales de mock/fixture conservées, sans les compter comme preuves produit. Réception finale locale509 : build webpack du code reçu, 4 889 unitaires/457 fichiers, PostgreSQL424/24, gouvernance1 671/169, tsc et deux lints sans erreur (24 avertissements historiques par lint), zéro cycle, code-map exécutée. Premier passage11 rouges conservé : garde de ligne84→86 déplacée sans nouvelle exception, huit mocks activation sans PAID alignés avec un test de refus ajouté, un timeout gros original sous build concurrent ; reprise sans build concurrent verte. Pas de règle assouplie. Droits/export/reprise reçus localement : six HTTP réels200, PDF impayé402, référence étrangère refusée, rejeu terminal9ms. Fenêtres natives gratuites/payées/ADMIN complètes42/44/42 réponses sans ≥500/exception/échec de chargement ; réouverture payée même URL sans callback. PDF payé26pages/710952octets, texte intégral des huit sections vérifié ; PDF ADMIN sur cas impayé distinct15pages/571934octets, vraie session sans PAID synthétique. Aucun nouvel appel modèle, PSP ou vente externe dans cette recette ; aucun SLO global. Qualité commerciale explicitement refusée : PDF26pages face à la promesse existante8pages, page7 quasi vide, restitution de champs bruts et propositions présentées comme faits. Reprendre source/provenance et présentation dans M03, sans réécrire le mauvais cas sauvegardé. Conservation exacte reçue au périmètre sélectionné : deux diagnostics (diagnostic/rawText/responses/status/id),16piliers (content/fieldCertainty/currentVersion), un upload complet/une source complète, huit coûts inchangés, aucun paiement synthétique et ADMIN dédié retiré. Comparaison deepStrictEqual après normalisation JSON/triID ; pas toute la base atomique. Le premier helper avait des assertions vertes mais une collision booléens/compteurs dans le JSON : défaut du reçu corrigé par helper readonly séparant conserved/counts, aucun défaut produit ni second nettoyage. Preuve `release/preuves-rapport-commercial-20261020/native509-content-conservation-received.json`. 509 livrée au périmètre technique : PR1043/source `f75c6c290dd0672ff29aa2a7529a44348d513eaf`, quinze checks SUCCESS/un SKIPPED ; build39483634646 smoke/push et runtime6.27.509 au digest `a3825f5246e0daa4eb9c25149fc2d5f6c252527238c79c747d234bc0b1277fae` reçus. Déploiement terminé le20octobre2026 à19:44:17UTC, mêmes volumes, login/version200, primaire OpenAI/relais/délai90000ms conservés, OpenRouter absent. Après livraison,67sources/1041actifs, états/originaux, huit piliers et portefeuille Friesland conservés ; lectures avant/après séquentielles, pas toute base atomique. Version publique509/200 et original d’intake inconnu404/private,no-store/no-referrer reçus : transport public uniquement, pas parcours client payé. Attente CI/image/runtime509 close au périmètre technique ; droits/export/reprise reçus localement puis code/runtime livrés. Aucune qualité commerciale, paiement PSP complet, client/vente ou MVP entier reçus.
 
-M03 reste actif : provenance des déductions et qualité commerciale du rapport et de son export à recevoir. M04/C7 : auth.register revendique statiquement un User précréé sans mot de passe sur simple email, sans preuve de contrôle de cet email ; vérifier/corriger via auth/reset existants avant remise commerciale, pas une exploitation reçue. M05 : recevoir tous les appels du parcours intake sans strategyId, extraction initiale et extractStructuredPillarContent inclus ; inventaire19sites statiques dans les modules/routeur sélectionnés, pas19appels runtime. Nombre exécuté/coût complet encore à mesurer, huit coûts suivis ne reçoivent pas le total. Durée/choix agentique/offre CRM/admission restent ouverts. [Plans bornés](docs/governance/RESIDUAL-DEBT.md).
+M03 reste actif : provenance des déductions et qualité commerciale du rapport et de son export à recevoir. M04/C7 : ancien constat auth509 désormais reproduit sur fixtures et pris en charge par candidat511/six PG, remise native/livraison encore ouvertes via auth/reset existants ; aucun compte réel exercé. M05 : recevoir tous les appels du parcours intake sans strategyId, extraction initiale et extractStructuredPillarContent inclus ; inventaire19sites statiques dans les modules/routeur sélectionnés, pas19appels runtime. Nombre exécuté/coût complet encore à mesurer, huit coûts suivis ne reçoivent pas le total. Durée/choix agentique/offre CRM/admission restent ouverts. [Plans bornés](docs/governance/RESIDUAL-DEBT.md).
 
 Preuves : `release/preuves-rapport-commercial-20261020/red-green-received.json` ; `release/preuves-mvp-commercial-20261020/report509-{targeted-final,access-replay-activation-green}.log`. Réceptions finales locales : `release/preuves-rapport-commercial-20261020/native-api-received.json`, `native-paid-reopen.json`, `paid-pdf-reparsed.json`, `pdf-quality-not-received.json` ; build/tests dans `release/preuves-mvp-commercial-20261020/report509-*.log`.
 
