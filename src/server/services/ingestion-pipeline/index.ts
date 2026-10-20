@@ -1,4 +1,4 @@
-import { documentEdition } from "@/domain/source-document";
+import { sourceHasRetainedDocument } from "@/domain/source-document";
 import { ADVE_KEYS } from "@/domain";
 
 // ============================================================================
@@ -425,7 +425,7 @@ export async function batchIngest(
   for (const sourceId of sourceIds) {
     try {
       const source = await db.brandDataSource.findUnique({ where: { id: sourceId } });
-      if (!source || source.strategyId !== strategyId || documentEdition(source.rawData)) {
+      if (!source || source.strategyId !== strategyId || sourceHasRetainedDocument(source.rawData)) {
         result.errors.push(`Source ${sourceId} introuvable`);
         result.failed++;
         continue;
@@ -479,7 +479,7 @@ export async function incrementalUpdate(
     where: { id: sourceId, strategyId },
   });
   if (!source) throw new Error(`Source ${sourceId} non trouvee`);
-  if (documentEdition(source.rawData)) throw new Error("Déposez un nouveau fichier pour créer une nouvelle édition.");
+  if (sourceHasRetainedDocument(source.rawData)) throw new Error("Déposez un nouveau fichier pour créer une nouvelle édition.");
 
   // Re-extract content
   const freshExtraction = await extractAuto(

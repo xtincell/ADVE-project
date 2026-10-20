@@ -1,7 +1,7 @@
 /** Canonical documents and their explicit uses by other brands (ADR-0198).
  * Never copies content and never launches analysis on a read or a grant.
  */
-import { documentEdition, sourceIsUsable } from "@/domain/source-document";
+import { documentEdition, documentRepresentation, sourceIsUsable } from "@/domain/source-document";
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import { Prisma } from "@prisma/client";
@@ -124,6 +124,7 @@ export async function listBrandSourceSummaries(strategyId: string, client: Sourc
     ...s,
     contentHash: fingerprints.get(s.id),
     document: documentEdition(_rawData),
+    representation: documentRepresentation(_rawData),
     shared: s.strategyId !== strategyId,
     ownerBrandName: strategy.name,
     ownerStrategyId: s.strategyId,

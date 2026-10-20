@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+export const sourceFileLocationSchema = z.object({
+  sourceUrl: z.string().url().refine(value => /^https:\/\//.test(value), "Un lien HTTPS est requis."),
+  sourceRevision: z.string().max(300).optional(),
+}).strict();
+export const sourceFileAliasSchema = z.object({
+  fileName: z.string().min(1).max(255), sourceUrl: sourceFileLocationSchema.shape.sourceUrl.optional(),
+  sourceRevision: z.string().max(300).optional(), receivedAt: z.string().datetime(),
+}).strict();
+
 /** Receipt of the received bytes, never a claim about their truth or approval. */
 export const sourceOriginalReceiptSchema = z.object({
   schema: z.literal("source-original-v1"),
@@ -12,10 +21,11 @@ export const sourceOriginalReceiptSchema = z.object({
   byteLength: z.number().int().positive().max(10 * 1024 * 1024),
   fileType: z.string(),
   receivedAt: z.string().datetime(),
+  aliases: z.array(sourceFileAliasSchema).max(256).optional(),
 });
 export type SourceOriginalReceipt = z.infer<typeof sourceOriginalReceiptSchema>;
 /** Same received-byte contract for the existing BrandAsset/FileUpload register. */
-export const assetOriginalReceiptSchema = sourceOriginalReceiptSchema.extend({ schema: z.literal("asset-original-v1") });
+export const assetOriginalReceiptSchema = sourceOriginalReceiptSchema.omit({ aliases: true }).extend({ schema: z.literal("asset-original-v1") });
 export type AssetOriginalReceipt = z.infer<typeof assetOriginalReceiptSchema>;
 export const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 
@@ -45,8 +55,8 @@ export type ChunkedOriginalManifest = z.infer<typeof chunkedOriginalManifestSche
 export function sourceOriginalSummary(value: unknown) {
   const parsed = sourceOriginalReceiptSchema.safeParse(value);
   if (!parsed.success) return null;
-  const { state, contentHash, byteLength, receivedAt } = parsed.data;
-  return { state, contentHash, byteLength, receivedAt };
+  const { state, contentHash, byteLength, receivedAt, aliases } = parsed.data;
+  return { state, contentHash, byteLength, receivedAt, ...(aliases?.length ? { aliases } : {}) };
 }
 
 /** FileUpload owns this plan before IO. No part or root key comes from a client. */

@@ -3,8 +3,8 @@ vi.mock("@/lib/db", () => ({ db: {} }));
 vi.mock("@/server/services/ingestion-pipeline/source-usage", async original => ({
   ...await original<object>(), invalidateSourceDerivatives: vi.fn(async () => {}),
 }));
-import { documentEdition, sourceIsUsable, documentContext } from "@/domain/source-document";
-import { registerDocumentEdition, decideDocumentEdition, clarifyDocumentEdition } from "@/server/services/ingestion-pipeline/document-versions";
+import { documentEdition, documentRepresentation, orderDocumentEditions, sourceIsUsable, documentContext } from "@/domain/source-document";
+import { registerDocumentEdition, registerDocumentRepresentation, decideDocumentEdition, clarifyDocumentEdition } from "@/server/services/ingestion-pipeline/document-versions";
 import { sourceFingerprint, type SourceDb } from "@/server/services/ingestion-pipeline/source-usage";
 
 const raw = (id: string) => ({ id, strategyId: "own", fileName: id, sourceType: "FILE", rawContent: `${id}: prix déclarés, pas de ventes prouvées`, rawData: {}, processingStatus: "EXTRACTED" });
@@ -24,6 +24,56 @@ function fixture() {
   return { rows, db, classify };
 }
 describe("document lineage and strategic authority", () => {
+  it("places a late historical deposit before its declared successor without replacing reference or proposal", async () => {
+    const f = fixture(); await f.classify("old", "REFERENCE"); await f.classify("new", "PROPOSED", "old");
+    const before = structuredClone(f.rows.slice(0, 2));
+    await registerDocumentEdition(f.db, { id: "next", expectedSourceHash: sourceFingerprint(f.rows[2]!), document: {
+      family: "BMC", kind: "BMC", label: "v1 antérieure reçue tardivement", status: "ARCHIVED", changeSummary: "Ancienne position, pas une nouvelle recommandation.",
+      before: { sourceId: "old", contentHash: sourceFingerprint(f.rows[0]!) },
+    } });
+    expect(f.rows.slice(0, 2)).toEqual(before);
+    expect(orderDocumentEditions(f.rows.map(r => ({ id: r.id, document: documentEdition(r.rawData) }))).map(r => r.id)).toEqual(["new", "old", "next"]);
+    expect(sourceIsUsable(f.rows[2]!.rawData)).toBe(false);
+    f.rows.push(raw("later")); await f.classify("later", "PROPOSED", "new");
+    expect(documentEdition(f.rows[3]!.rawData)?.previousSourceId).toBe("new");
+    expect(documentContext(f.rows[3]!.rawData)).not.toContain("édition 4");
+  });
+  it("refuses a historical deposit that would replace a reference, uses a stale boundary or invents a lineage", async () => {
+    const f = fixture(); await f.classify("old", "REFERENCE");
+    const document = { family: "BMC", kind: "BMC" as const, label: "Ancienne", status: "ARCHIVED" as const, changeSummary: "Document historique.",
+      before: { sourceId: "old", contentHash: sourceFingerprint(f.rows[0]!) } };
+    const input = { id: "new", expectedSourceHash: sourceFingerprint(f.rows[1]!), document };
+    await expect(registerDocumentEdition(f.db, { ...input, document: { ...document, status: "REFERENCE" } })).rejects.toThrow("archives");
+    await expect(registerDocumentEdition(f.db, { ...input, document: { ...document, previous: document.before } })).rejects.toThrow("archives");
+    await expect(registerDocumentEdition(f.db, { ...input, document: { ...document, before: { ...document.before, contentHash: "a".repeat(64) } } })).rejects.toThrow("SOURCE_CHANGED");
+    await expect(registerDocumentEdition(f.db, { ...input, document: { ...document, family: "Autre document" } })).rejects.toThrow("SOURCE_CHANGED");
+    expect(documentEdition(f.rows[1]!.rawData)).toBeNull();
+    expect(documentEdition(f.rows[0]!.rawData)?.status).toBe("REFERENCE");
+  });
+  it("retains an alternate format under one proposed business edition, without an independent analysis source", async () => {
+    const f = fixture(); await f.classify("old", "REFERENCE"); await f.classify("new", "PROPOSED", "old");
+    const before = structuredClone(f.rows);
+    await registerDocumentRepresentation(f.db, { id: "next", expectedSourceHash: sourceFingerprint(f.rows[2]!), userId: "owner",
+      representation: { canonical: { sourceId: "new", contentHash: sourceFingerprint(f.rows[1]!) }, reason: "Export PDF du même BMC, sans nouvelle position." } });
+    expect(f.rows.slice(0, 2)).toEqual(before.slice(0, 2));
+    expect(f.rows[2]!.rawContent).toBe(before[2]!.rawContent);
+    expect(documentEdition(f.rows[2]!.rawData)).toBeNull();
+    expect(documentRepresentation(f.rows[2]!.rawData)).toMatchObject({ canonicalSourceId: "new", recordedBy: "owner" });
+    expect(sourceIsUsable(f.rows[2]!.rawData)).toBe(false);
+    expect(sourceIsUsable({ _documentRepresentation: {} })).toBe(false);
+    await expect(f.classify("next", "REFERENCE", "new")).rejects.toThrow("conservée");
+  });
+  it("refuses unrelated, self, stale and already retained format relationships", async () => {
+    const f = fixture(); await f.classify("old", "REFERENCE");
+    const input = { id: "new", expectedSourceHash: sourceFingerprint(f.rows[1]!), userId: "owner", representation: {
+      canonical: { sourceId: "old", contentHash: sourceFingerprint(f.rows[0]!) }, reason: "Même version." } };
+    await expect(registerDocumentRepresentation(f.db, { ...input, id: "old" })).rejects.toThrow("propre référence");
+    await expect(registerDocumentRepresentation(f.db, { ...input, expectedSourceHash: "a".repeat(64) })).rejects.toThrow("SOURCE_CHANGED");
+    await expect(registerDocumentRepresentation(f.db, { ...input, representation: { ...input.representation, canonical: { ...input.representation.canonical, contentHash: "a".repeat(64) } } })).rejects.toThrow("SOURCE_CHANGED");
+    f.rows[1]!.strategyId = "foreign";
+    await expect(registerDocumentRepresentation(f.db, input)).rejects.toThrow("même dossier");
+    expect(documentRepresentation(f.rows[1]!.rawData)).toBeNull();
+  });
   it("clarifies the new BMC without adopting it or rewriting its deposit history", async () => {
     const f = fixture(); await f.classify("old", "REFERENCE"); await f.classify("new", "PROPOSED", "old");
     const before = structuredClone(f.rows);

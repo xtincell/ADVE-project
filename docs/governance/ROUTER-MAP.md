@@ -6,7 +6,17 @@ Le recompte global du 6 octobre inclut le sous-router `creative-intelligence.ts`
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-**501 candidat — procédure de transfert dans `brand-vault` existant** :
+**504 candidat — mêmes procédures gouvernées d’ingestion** :
+`ingestion.uploadFile` accepte un emplacement HTTPS explicitement déclaré avec
+les octets ; `updateSource` distingue antériorité et rapprochement de format
+après relecture des empreintes courantes. `listSources`/`getSource` exposent les
+relations et alias dans les mêmes droits ; un autre format n’entre pas comme
+preuve indépendante dans l’analyse. Modification/suppression ordinaires des
+pièces conservées restent refusées. Aucun routeur, Intent ou droit ajouté ;
+31 tests ciblés reçus, PostgreSQL/navigateur/contrôles complets et livraison 504
+non reçus. [ADR-0223 Proposed](adr/0223-document-edition-representations.md).
+
+**501 — transfert dans `brand-vault`, capacité héritée reçue dans 503** :
 `brandVault.transfer` emploie `governedProcedure`, l’Intent existant
 `LEGACY_BRAND_VAULT_CREATE` et les mêmes contrôles de création. BEGIN/PART/FINISH
 admettent plan, fragments et scellement ; droits courants, marque, backend/clé,
@@ -19,8 +29,11 @@ USER reçu sur copie : quatre fragments / six POST 200, CANDIDATE/STORED et
 téléchargement exact sans modèle/adoption ; fenêtre d’envoi complète sans
 exception. Recharge de page incomplètement mesurée, pas de SLO. Suite 4 857/456,
 gouvernance 1 671/169 et contrôles locaux verts, sans assouplir assertions/délais.
-CI/image/runtime 501, restauration et grands fichiers réels restent ouverts ; les entrées sources,
-études 50 Mo et lots intake ne sont pas raccordées par cette procédure.
+La réception du runtime 503 exact/source `90b50f9ff` et la conservation des
+données lèvent l’attente de bascule de cette capacité, sans réception rétroactive
+du runtime historique 501. Restauration et terme du corpus réel restent ouverts ;
+les entrées sources, études 50 Mo et lots intake ne sont pas raccordées par cette
+procédure. Pas de compteur volatile du dépôt dans ce registre.
 [ADR-0222 Proposed](adr/0222-private-original-chunk-transfers.md).
 
 **448 source/CI/image reçues — endpoints MCP existants, livraison en attente** :

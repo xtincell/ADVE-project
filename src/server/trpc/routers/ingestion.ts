@@ -4,13 +4,14 @@
 
 import { z } from "zod";
 import { sourceUploadContentSchema } from "@/server/services/ingestion-pipeline/original";
+import { sourceFileLocationSchema } from "@/domain/source-original";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import * as ingestion from "@/server/services/ingestion-pipeline";
 import { AdveKeySchema } from "@/domain";
-import { DocumentEditionInputSchema, documentEdition, sourceIsUsable } from "@/domain/source-document";
-import { registerDocumentEdition, decideDocumentEdition, clarifyDocumentEdition } from "@/server/services/ingestion-pipeline/document-versions";
+import { DocumentEditionInputSchema, DocumentRepresentationInputSchema, documentEdition, documentRepresentation, sourceHasRetainedDocument, sourceIsUsable } from "@/domain/source-document";
+import { registerDocumentEdition, registerDocumentRepresentation, decideDocumentEdition, clarifyDocumentEdition } from "@/server/services/ingestion-pipeline/document-versions";
 import { SourceCertaintySchema } from "@/domain/source-certainty";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
@@ -74,6 +75,7 @@ export const ingestionRouter = createTRPCRouter({
       fileType: z.string().min(1).max(8),
       content: sourceUploadContentSchema, // same exact-byte admission as the vault
       sourceId: z.string().optional(), // Explicit recovery of a legacy file source
+      sourceLocation: sourceFileLocationSchema.optional(),
       prepareAnalysis: z.boolean().default(false),
     }),
 
@@ -87,6 +89,7 @@ export const ingestionRouter = createTRPCRouter({
         type: input.fileType,
         content: input.content,
         sourceId: input.sourceId,
+        sourceLocation: input.sourceLocation,
       }, ctx.session.user.id);
       if (input.prepareAnalysis) {
         fireSourcePreparationHooks(input.strategyId, sourceId, ctx.session.user.id);
@@ -171,7 +174,7 @@ export const ingestionRouter = createTRPCRouter({
       });
       await assertStrategyRead(ctx.session.user.id, consumerStrategyId);
       return { id: source.id, contentHash, fileName: source.fileName, rawContent: source.rawContent,
-        certainty: source.certainty, sourceType: source.sourceType, origin: source.origin, document: documentEdition(source.rawData) };
+        certainty: source.certainty, sourceType: source.sourceType, origin: source.origin, document: documentEdition(source.rawData), representation: documentRepresentation(source.rawData) };
     }),
 
   // Owner chooses a destination in the existing portfolio; no document is copied.
@@ -220,7 +223,7 @@ export const ingestionRouter = createTRPCRouter({
       return ctx.db.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${input.id} FOR UPDATE`;
         const previous = await tx.brandDataSource.findUniqueOrThrow({ where: { id: input.id } });
-        if (documentEdition(previous.rawData)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Les éditions documentaires restent conservées dans leur historique." });
+        if (sourceHasRetainedDocument(previous.rawData)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Les éditions et leurs formats restent conservés dans leur historique." });
         await invalidateSourceDerivatives(tx, input.id);
         return tx.brandDataSource.delete({ where: { id: input.id } });
       });
@@ -238,11 +241,12 @@ export const ingestionRouter = createTRPCRouter({
       content: z.string().min(1).optional(),
       certainty: SourceCertaintySchema.optional(),
       document: DocumentEditionInputSchema.optional(),
+      documentRepresentation: DocumentRepresentationInputSchema.optional(),
       documentDecision: z.object({ status: z.enum(["REFERENCE", "ARCHIVED"]), reason: z.string().trim().min(1).max(4000) }).optional(),
       documentClarification: z.string().trim().min(1).max(4000).optional(),
       expectedSourceHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
       use: z.object({ strategyId: z.string(), revoke: z.boolean().default(false) }).optional(),
-    }).refine(v => !v.documentClarification || (v.expectedSourceHash && !v.documentDecision && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Préciser une édition est un geste distinct, après relecture.").refine(v => !v.documentDecision || (v.expectedSourceHash && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Décider sur une édition est un geste distinct, après relecture.").refine((v) => !v.document || (v.expectedSourceHash && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Classer une édition est un geste distinct, après relecture.").refine((v) => v.documentClarification || v.documentDecision || v.document || v.use || v.title !== undefined || v.content !== undefined || v.certainty !== undefined,
+    }).refine(v => !v.documentRepresentation || (v.expectedSourceHash && !v.document && !v.documentDecision && !v.documentClarification && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Relier un format est un geste distinct, après relecture.").refine(v => !v.documentClarification || (v.expectedSourceHash && !v.documentDecision && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Préciser une édition est un geste distinct, après relecture.").refine(v => !v.documentDecision || (v.expectedSourceHash && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Décider sur une édition est un geste distinct, après relecture.").refine((v) => !v.document || (v.expectedSourceHash && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Classer une édition est un geste distinct, après relecture.").refine((v) => v.documentRepresentation || v.documentClarification || v.documentDecision || v.document || v.use || v.title !== undefined || v.content !== undefined || v.certainty !== undefined,
       "Choisir une correction ou un usage du document.").refine((v) => !v.use || (v.title === undefined && v.content === undefined && v.certainty === undefined),
       "Lier un usage et corriger le document sont deux gestes distincts."),
 
@@ -251,6 +255,7 @@ export const ingestionRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertSourceAccess(ctx.session.user.id, input.id);
+      if (input.documentRepresentation) return ctx.db.$transaction(tx => registerDocumentRepresentation(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, representation: input.documentRepresentation!, userId: ctx.session.user.id }), { timeout: 30_000 });
       if (input.documentClarification) return ctx.db.$transaction(tx => clarifyDocumentEdition(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, userId: ctx.session.user.id, clarification: input.documentClarification! }), { timeout: 30_000 });
       if (input.use) {
         const op = await getOperatorContext(ctx.session.user.id);
@@ -277,7 +282,7 @@ export const ingestionRouter = createTRPCRouter({
       return ctx.db.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${input.id} FOR UPDATE`;
         const previous = await tx.brandDataSource.findUniqueOrThrow({ where: { id: input.id } });
-        if (documentEdition(previous.rawData)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Cette édition est conservée. Déposez un nouveau fichier pour créer une nouvelle édition." });
+        if (sourceHasRetainedDocument(previous.rawData)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Cette édition et ses formats sont conservés. Déposez un nouveau fichier pour une autre version." });
         const updated = await tx.brandDataSource.update({ where: { id: input.id }, data });
         await invalidateSourceDerivatives(tx, input.id);
         return updated;

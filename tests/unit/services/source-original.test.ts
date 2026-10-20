@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { decodeSourceUpload, retainSourceFile, readSourceOriginal } from "@/server/services/ingestion-pipeline/original";
 import { sourceOriginalSummary } from "@/domain/source-original";
+import { sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
 
 let root: string;
 let sources: any[], uploads: any[], seq: number;
@@ -34,6 +35,29 @@ beforeEach(async () => {
 afterEach(async () => { vi.unstubAllEnvs(); await rm(root, { recursive: true, force: true }); });
 
 describe("received original, distinct from working text", () => {
+  it("retains an exact-byte alias and origin without duplicating evidence or invalidating the source", async () => {
+    const id = await retainSourceFile("brand-a", file(), "owner", client);
+    const before = structuredClone(sources[0]);
+    const physical = await readFile(join(root, uploads[0].storageReceipt.objectKey + ".enc"));
+    const alias = { ...file(), name: "ARCHIVE_brief.txt", sourceLocation: { sourceUrl: "https://drive.google.com/file/d/fixture-alias/view", sourceRevision: "édition reçue" } };
+    expect(await retainSourceFile("brand-a", alias, "owner", client)).toBe(id);
+    expect(await retainSourceFile("brand-a", alias, "owner", client)).toBe(id);
+    expect(sources).toHaveLength(1); expect(uploads).toHaveLength(1);
+    expect(sources[0]).toEqual(before);
+    expect(sourceFingerprint(sources[0])).toBe(sourceFingerprint(before));
+    expect(sourceOriginalSummary(uploads[0].storageReceipt)?.aliases).toEqual([{ fileName: alias.name, ...alias.sourceLocation, receivedAt: expect.any(String) }]);
+    expect(await readFile(join(root, uploads[0].storageReceipt.objectKey + ".enc"))).toEqual(physical);
+    expect((await readSourceOriginal(id, client))?.bytes.toString("base64")).toBe(file().content);
+  });
+  it("checks actual original bytes before admitting another name and refuses non-HTTPS origin claims", async () => {
+    await retainSourceFile("brand-a", file(), "owner", client);
+    const path = join(root, uploads[0].storageReceipt.objectKey + ".enc");
+    await writeFile(path, "damaged");
+    await expect(retainSourceFile("brand-a", { ...file(), name: "copie.txt" }, "owner", client)).rejects.toThrow("corrompue");
+    expect(uploads[0].storageReceipt.aliases).toBeUndefined();
+    await expect(retainSourceFile("brand-a", { ...file(), sourceLocation: { sourceUrl: "http://example.invalid/file" } }, "owner", client)).rejects.toThrow("HTTPS");
+    expect(uploads[0].storageReceipt.aliases).toBeUndefined();
+  });
   it("keeps encrypted bytes and returns the identical original", async () => {
     const f = file(), id = await retainSourceFile("brand-a", f, "owner", client);
     const receipt = uploads[0].storageReceipt;
