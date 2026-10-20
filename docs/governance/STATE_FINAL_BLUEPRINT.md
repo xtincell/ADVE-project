@@ -2128,8 +2128,32 @@ Natif local reçu sur cache, 68 %/43 sur 100 et résumé exact, snapshot conserv
 sans appel frais. Huit contrôles locaux finaux à zéro ; types Next régénérés
 par la commande officielle après arrêt du preview, premier échec conservé.
 Réseau local complet reçu au périmètre, pas de SLO public ni coût du scan
-réel. CI/livraison 506 encore ouvertes ; aucune réception du
+réel. Code 506 fusionné, CI 39444684044 verte ; image/runtime restent à recevoir
+avec le lot guidé 507. Aucune réception du
 MVP entier ou modification des autres mesures canoniques déduite.
+
+Dans l’intake guidé, déclarer une mesure inconnue n’est ni omettre la réponse
+ni déclarer zéro. Candidat 507 : retour client et recommandation offrent
+« Non mesuré / je ne sais pas », questions toujours obligatoires ; salvage
+conserve cette information sans fabriquer loyaltyRate/referralRate ni modifier
+la formule de score. Le premier statut COMPLETED n’avait pas reçu leur sauvegarde ;
+la phase courante corrigée rejoint l’écrivain existant avant complete ou navigation.
+Recette B locale reçue : mission relue corrigée et inconnues conservées après
+completion/reload ; cette réception ne vaut pas livraison production.
+
+Un plancher de ligue est une référence, pas une mesure de fidélité ; registre
+superfan vide ne prouve pas une défaite E. Candidat 507 : filtre de profils
+réels en E, presse positive ou dimension mesurée en A ; zéro presse mesuré
+reste une défaite. Date courante par défaut, formule/poids/canon inchangés.
+Rapport et propositions distinguent non mesuré d’absence et gardent canaux/
+catalogue déjà déclarés ; une collecte manquante ne prouve pas une marque hors
+ligne. Rouge mesure/rapport et composite initial échoué conservés, 42 ciblés
+verts/quatre fichiers reçus. Natif B : force 19,6/200 sur 20 % de couverture
+mesurée A, fidélité inconnue ; aucune classification complète de la marque
+déduite. Gauntlet local 507 reçu : huit sorties zéro, 4 883 tests / 456 fichiers,
+gouvernance 1 671 / 169, tsc/lints sans erreur (24 avertissements historiques
+par lint), zéro cycle. CI/image/runtime, import/export, option agentique, coût
+réel et qualité commerciale du rapport encore ouverts, production toujours 504.
 
 ### Compensation d’une écriture
 

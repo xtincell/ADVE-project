@@ -76,34 +76,40 @@ export function composeRtisPropositions(input: ComposeInput): Record<"r" | "t" |
   const maps = footprint?.maps ?? null;
   const followers = footprint?.followerCounts ?? [];
   const totalFollowers = followers.reduce((n, f) => n + (f.followerCount ?? 0), 0);
-  const canaux = firstText(extractedValues.e, ["canaux", "touchpoints", "primaryChannel"]);
+  const measured = new Set((footprint?.score?.dimensions ?? []).filter(d => d.measured && d.score !== null).map(d => d.key));
+  const canaux = firstText(extractedValues.e, ["canaux", "e_channels", "primaryChannel"]);
+  const hasChannel = Boolean(canaux) || (Array.isArray(extractedValues.e.touchpoints) && extractedValues.e.touchpoints.length > 0);
   const difference = firstText(extractedValues.d, ["difference", "positionnement", "positioning"]);
   const offre = firstText(extractedValues.v, ["offre", "produitsCatalogue", "businessModel"]);
+  const catalogCount = Array.isArray(extractedValues.v.produitsCatalogue) ? extractedValues.v.produitsCatalogue.length : 0;
+  const hasOffer = Boolean(offre) || catalogCount > 0;
 
   // ── R — Vulnérabilités : les trous OBSERVÉS, classés du plus grave ──
   const r: RtisProposition[] = [];
   if (!site?.reachable) {
     r.push({
-      action: `Sécuriser une adresse web à vous (un site, même une page) : aujourd'hui, un client qui cherche ${companyName} ne trouve aucun site officiel.`,
-      because: "notre collecte publique n'a détecté aucun site joignable pour votre marque.",
+      action: site
+        ? `Vérifier l'accès au site de ${companyName} avant de décider d'une correction.`
+        : `Renseigner l'adresse web de ${companyName} si elle existe, puis vérifier son accès.`,
+      because: site ? "le site analysé n'était pas joignable lors de la collecte." : "l'accès à votre site n'a pas été mesuré ici.",
     });
   }
   if (socials.length <= 1) {
     r.push({
       action:
         socials.length === 0
-          ? "Ouvrir au moins un compte social public au nom exact de la marque — c'est le premier endroit où l'on vous cherche."
+          ? "Vérifier et renseigner les liens de vos comptes existants avant d'envisager d'en créer un."
           : `Ne pas dépendre d'un seul canal (${socials[0]!.platform.toLowerCase()}) : un compte suspendu ou piraté et votre visibilité tombe à zéro.`,
       because:
         socials.length === 0
-          ? "aucun profil social public n'a été trouvé lors de la collecte."
+          ? measured.has("social") ? "aucun profil n'a pu être rattaché par cette collecte." : "vos profils sociaux sont non mesurés ici ; leur absence n'est pas établie."
           : `un seul profil public détecté (${socials[0]!.handle ?? socials[0]!.url}).`,
     });
   }
-  if (press.length === 0) {
+  if (press.length === 0 && measured.has("press")) {
     r.push({
-      action: "Provoquer votre première retombée presse (communiqué local, portrait du fondateur, partenariat visible) — sans trace médiatique, votre histoire n'existe que par vous.",
-      because: "aucune mention presse récente n'a été trouvée sur votre marché.",
+      action: "Rechercher vos retombées presse existantes et préparer une prise de parole si nécessaire.",
+      because: "aucune mention presse récente n'a été retenue par les recherches de cette collecte.",
     });
   }
   if ((pillarScores.d ?? 0) < 8) {
@@ -145,10 +151,10 @@ export function composeRtisPropositions(input: ComposeInput): Record<"r" | "t" |
     t.push(
       {
         action: "Collecter 3 témoignages clients datés et signés ce mois-ci — c'est la preuve marché la moins chère qui existe.",
-        because: "aucune preuve publique (presse, avis, audience mesurée) n'a pu être captée automatiquement pour l'instant.",
+        because: "les pièces captées ici ne suffisent pas à documenter la validation commerciale ; des exemples datés peuvent les compléter.",
       },
       {
-        action: "Ouvrir (ou revendiquer) votre fiche Google Business : c'est le premier endroit où votre marché vérifie que vous existez.",
+        action: "Vérifier votre fiche Google Business existante ; si elle est absente, envisager sa création.",
         because: maps?.status === "DEFERRED_NO_KEY" || !maps ? "votre présence Google n'a pas pu être vérifiée." : "aucune fiche Google active trouvée à votre nom.",
       },
     );
@@ -157,20 +163,20 @@ export function composeRtisPropositions(input: ComposeInput): Record<"r" | "t" |
   // ── I — Innovation : une piste ancrée sur l'offre déclarée + une sur le canal ──
   const i: RtisProposition[] = [];
   i.push({
-    action: offre
+    action: hasOffer
       ? `Tester UNE déclinaison de votre offre sur 30 jours (édition limitée, format découverte, offre duo) et mesurer qui achète.`
       : `Formuler votre offre en une phrase vendable, puis en tester une variante sur 30 jours.`,
     because: offre
-      ? `votre offre déclarée — « ${offre.slice(0, 90)}${offre.length > 90 ? "…" : ""} » — n'a pas encore de variante qui teste le marché.`
-      : "votre fondation « offre » est encore peu documentée dans vos réponses.",
+      ? `piste de test pour votre offre déclarée — « ${offre.slice(0, 90)}${offre.length > 90 ? "…" : ""} » — à valider avec vous.`
+      : catalogCount > 0 ? `votre catalogue contient ${catalogCount} offre(s) déclarée(s) ; un test de variante reste une proposition à valider.` : "votre fondation « offre » est encore peu documentée dans vos réponses.",
   });
   i.push({
     action: canaux?.toLowerCase().includes("whatsapp")
       ? "Structurer WhatsApp en vrai canal de vente (catalogue, statuts réguliers, liste de diffusion) plutôt qu'en simple messagerie."
-      : `Tester un canal que ${secteur} n'exploite pas encore autour de vous (contenu court vidéo, partenariat local, événement récurrent).`,
+      : hasChannel ? "Mesurer les retours sur vos canaux actuels avant de tester un canal supplémentaire." : `Choisir un canal à expérimenter après avoir vérifié les usages de ${secteur}.`,
     because: canaux
-      ? `vos canaux déclarés (« ${canaux.slice(0, 80)}${canaux.length > 80 ? "…" : ""} ») ont une marge d'exploitation évidente.`
-      : "aucun canal n'est encore formalisé dans vos réponses.",
+      ? `vos canaux déclarés (« ${canaux.slice(0, 80)}${canaux.length > 80 ? "…" : ""} ») offrent une base à mesurer.`
+      : hasChannel ? "des points de contact sont déjà déclarés ; leurs résultats restent à documenter." : "aucun canal n'est encore formalisé dans vos réponses.",
   });
 
   // ── S — Plan : séquencé depuis les 2 fondations les plus faibles ──

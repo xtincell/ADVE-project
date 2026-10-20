@@ -176,7 +176,7 @@ export async function scoreBrand(
   strategyId: string,
   opts: { nowIso?: string; persist?: boolean } = {},
 ): Promise<ScoreBrandResult> {
-  const nowIso = opts.nowIso ?? "2026-07-15T00:00:00.000Z";
+  const nowIso = opts.nowIso ?? new Date().toISOString();
   const league = await resolveLeagueForStrategy(strategyId);
   const targets = resolveEvidenceTargets({
     marketScale: league.marketScale as MarketScale | null,

@@ -127,4 +127,16 @@ describe("salvageRawResponses — re-clé déterministe question-bank → schém
     expect(salvageRawResponses("a", null)).toEqual({});
     expect(salvageRawResponses("r", { r_threats: "x" })).toEqual({ r_threats: "x" });
   });
+
+  it("keeps unmeasured retention/referrals without manufacturing scored evidence", () => {
+    const unknown = "Non mesuré / je ne sais pas";
+    const omitted = { e_community: "Aucune", e_channels: "Visites en atelier et téléphone" };
+    const declaredUnknown = { ...omitted, e_loyalty: unknown, e_advocates: unknown };
+    const salvaged = salvageRawResponses("e", declaredUnknown);
+    expect(salvaged.e_loyalty).toBe(unknown);
+    expect(salvaged.e_advocates).toBe(unknown);
+    expect(scoreThroughPipeline("e", salvaged)).toBe(scoreThroughPipeline("e", salvageRawResponses("e", omitted)));
+    expect(salvaged).not.toHaveProperty("loyaltyRate");
+    expect(salvaged).not.toHaveProperty("referralRate");
+  });
 });

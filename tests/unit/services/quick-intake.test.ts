@@ -62,6 +62,15 @@ describe("Quick Intake Question Bank", () => {
       expect(all[pillar]!.length).toBeGreaterThanOrEqual(3);
     }
   });
+
+  it("lets a founder finish engagement without inventing retention or referrals", async () => {
+    const questions = await getAdaptiveQuestions("e", {});
+    for (const id of ["e_loyalty", "e_advocates"]) {
+      const question = questions.find(item => item.id === id);
+      expect(question?.required).toBe(true);
+      expect(question?.options).toContain("Non mesuré / je ne sais pas");
+    }
+  });
 });
 
 describe("Quick Intake - Business Context Questions", () => {

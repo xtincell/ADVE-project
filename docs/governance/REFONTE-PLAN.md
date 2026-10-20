@@ -1,3 +1,54 @@
+## MVP-FUSEE-02 — inconnues du guidé au rapport, candidat 507 (2026-10-20)
+
+Recette guidée compilée 506 sur TPE fictive : contact/business et A passés,
+sauvegarde/fermeture/reprise A exacte, puis D/V. E bloque car retour client et
+recommandation sont requis sans choix inconnu ; aucune valeur inventée ni
+complétion, aucun message externe. Fixture locale conservée. Preuves privées
+`release/preuves-mvp-commercial-20261020/guided506-required-unknown-gap.{txt,png}`
+et `guided506-resumed-a.json`.
+
+507 étend options/tooltip de `e_loyalty` et `e_advocates` :
+« Non mesuré / je ne sais pas », obligatoire toujours vrai. Texte inconnu
+conservé par salvage sans taux fabriqué : un échec/24 verts puis 25 verts/deux
+fichiers au périmètre de ces tests. Premier natif 507 COMPLETED/rapport atteint,
+mais inconnues E absentes du batch sauvegardé : reçu de conservation refusé.
+`handleComplete` ignorait la phase corrigée quand toutes les phases existaient ;
+candidat de sauvegarde substantielle avant complete et `saveAndAdvance` existant
+sur les changements de phase. Preuve `guided507-result-before-measurement-fix-batch.json`.
+
+Premier rapport non reçu comme utile : fidélité 19,1/force 38,2 avec registre superfan
+vide. Candidat compilateur : pas de LOSS E sur le seul plancher de ligue,
+presse positive ou explicitement mesurée requise en A, zéro presse mesuré
+conservé comme défaite. Horloge par défaut courante, formule/poids inchangés.
+Rapport déterministe explicite couverture/inconnus sans conclusion hors ligne,
+propositions tenant compte de `e_channels` et catalogue déjà déclaré.
+Rouges mesure deux échecs/huit verts, rapport un échec/six verts. Premier
+composite post-correction échoué sur texte négatif conservé ; wording corrigé,
+42 tests ciblés/quatre fichiers désormais verts. Recette B locale reçue :
+COMPLETED, mission corrigée et deux inconnues conservées, complete 200 en
+29 809 ms/fenêtre complète huit réponses sans ≥500/exception ; reload 200,
+DOM 733,5 ms/titre ≤2 077 ms incluant pilote, 22 réponses sans erreur.
+Force 19,6/200/couverture 20 % A presse zéro mesurée, fidélité non mesurée ;
+empreinte publique 0/100 sur 9 % de couverture, pas de faux constats d’absence.
+Un contact CRM/un Deal LEAD sans propriétaire, zéro ligne AICostLog/snapshot
+public inchangé ; aucune vente. Preuves privées `guided507-b-{native,data}-received.json`.
+Gauntlet local 507 reçu : huit sorties zéro, 4 883 tests / 456 fichiers,
+gouvernance 1 671 / 169, tsc et deux lints sans erreur, 24 avertissements
+historiques par lint, zéro cycle. **Suite immédiate** : CI/image/runtime exacts
+du lot 507 incluant 506, production toujours 504. Import/export, option agentique choisie, qualité modèle/coût réel,
+propriétaire/offre CRM et rapport commercial restent ouverts : conseils
+génériques pour l’atelier, chiffres non sourcés et classification à faible
+couverture à corriger/recevoir dans ce MVP, sans nouveau chantier.
+Responsable C6/MVP-FUSEE-02 ; effort correctifs bornés et recette du même
+parcours, déclencheur fin du candidat en cours. Source 506
+`2c5c2b276`/PR 1038/CI 39444684044 reçues ; livraison prévue avec 507, production
+504 inchangée. Audit/rapport complets, coût, conversion et MVP entier ouverts.
+
+Point statique séparé à vérifier sur le préflight `generateAiFollowUps` :
+configuration par clés ignorant le relais OAuth seul. Reprise bornée MVP02,
+s’appuyer sur `isTextLLMAvailable` existant après vérification ; aucun nouveau
+gestionnaire/policy/provider ni correctif runtime déduit. [Dette](RESIDUAL-DEBT.md).
+
 ## Sprint MVP1 — couverture et information publique, candidat 506 (2026-10-20)
 
 Priorité commerciale La Fusée : score public qualifié, audit guidé/import,
@@ -27,9 +78,10 @@ préremplissage intake ; fenêtre complète de 25 réponses sans ≥500/exceptio
 échec de chargement. Observation inchangée, aucun appel frais ni ligne AICostLog/intake/
 contact locale. DOM 707,6 ms/titre ≤931 ms incluant pilote ; première compilation
 API environ 60 s, aucun SLO public. Build additionnel Turbopack échoué sur le
-symlink hors root ; webpack local de recette en cours, sans défaut code établi
-ou contournement CI. **Suite immédiate** : recevoir CI et
-image/runtime 506 exacts et conservation production avant de purger les dettes
+symlink hors root, sans défaut code établi ou contournement CI. Guidé compilé
+506 ensuite exercé jusqu’au blocage E décrit au-dessus. Code fusionné à `2c5c2b276`, PR 1038,
+CI 39444684044 verte. **Suite immédiate** : recevoir image/runtime avec le lot
+507 et conservation production avant de purger les dettes
 ciblées, puis poursuivre coût réel du scan, audit et conversion. Responsable C6/MVP-FUSEE-01,
 effort un correctif borné puis recette, déclencheur fin du candidat en cours.
 Candidat 505 conservé séparément, aucun raccord documentaire transposé ;

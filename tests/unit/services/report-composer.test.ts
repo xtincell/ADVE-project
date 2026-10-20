@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import type { EnrichedFootprint } from "@/server/services/quick-intake/footprint-types";
 import {
   composeDeterministicReport,
   humanizeValue,
@@ -41,6 +42,29 @@ describe("pillarContentLines", () => {
 });
 
 describe("composeDeterministicReport", () => {
+  it("does not conclude absence from unconfigured collectors or ignore a declared offer and channel", () => {
+    const footprint: EnrichedFootprint = {
+      site: null, socials: [], articles: [], channels: [], collectedAt: "2026-10-20T00:00:00.000Z", errors: [],
+      followerCounts: [], press: [], discovery: { attempted: false, queries: [], status: "DEFERRED_NO_KEY" },
+      enrichment: { apify: "DEFERRED", press: "EMPTY", totalMs: 0, errors: [] },
+      score: { total: 0, outOf: 100, measuredWeight: 10, dimensions: ([
+        ["site", 20], ["social", 30], ["reviews", 15], ["press", 10],
+        ["citations", 10], ["email", 10], ["domain", 5], ["perf", 10],
+      ] as const).map(([key, weight]) => ({ key, weight, label: key, measured: key === "press", score: key === "press" ? 0 : null, details: "recette" })) },
+    };
+    const report = composeDeterministicReport({ companyName: "Atelier Kalo", classification: "FRAGILE", compositeScore: 11,
+      extractedValues: { a: { missionStatement: "Réparer avec clarté" }, d: {}, v: { produitsCatalogue: [{ nom: "Ressemelage" }] }, e: { e_channels: "Visites à l'atelier et téléphone" } },
+      pillarScores: { a: 4, d: 2, v: 4, e: 0 }, footprint, sectorLabel: "Services aux particuliers" });
+    expect(report.executiveSummary).not.toContain("vit surtout hors ligne");
+    expect(report.executiveSummary).toContain("9 %");
+    const r = report.rtis.pillars.find(p => p.key === "r")!.full;
+    expect(r).not.toContain("aucun profil social public n'a été trouvé");
+    expect(r).toContain("non mesurés");
+    const i = report.rtis.pillars.find(p => p.key === "i")!.full;
+    expect(i).not.toContain("aucun canal n'est encore formalisé");
+    expect(i).not.toContain("offre » est encore peu documentée");
+  });
+
   it("compose un rapport complet depuis des piliers documentés", () => {
     const report = composeDeterministicReport({
       companyName: "Cimencam",
