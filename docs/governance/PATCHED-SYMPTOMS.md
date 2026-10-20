@@ -28,6 +28,19 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+## Clôture technique 506/507 — 2026-10-20
+
+PR 1039/source `f48a938e494ca286330cab74ff6c4d49ea906281`, seize checks verts,
+build 39454014249/boot PostgreSQL/login 200 et image/runtime 507 exacts reçus.
+Digest `229c8ab49874153f400fdf3b3ee82c31489a057e10a07992fc19e90a107573bd`,
+volumes, relais OpenAI/délai 90 s conservés, OpenRouter absent ; données et
+portefeuille Friesland préservés. Les attentes de livraison 506/507 et leurs
+lignes candidates actives sont retirées. Public cache SPAWT 43/100/couverture
+68 % et préremplissage reçus ; RSC ERR_ABORTED/initiale tronquée conservés,
+pas zéro global/SLO, pas égalité brute du snapshot cache (facts null omis).
+Guidé B reçu localement seulement. Import/reprise/original absents non corrigés,
+rapport commercial, coût/qualité/conversion et MVP entier en [reprise](RESIDUAL-DEBT.md).
+
 ## Clôture de l’attente de livraison 504 — 2026-10-20
 
 Source `b7d460f51` / PR 1037 / CI 39419107847 / build 39419232494 et runtime
@@ -71,9 +84,7 @@ au plan, sans réception entière déduite. [Reprise](RESIDUAL-DEBT.md).
 
 ## Entrées actives
 
-2026-10-20 · **507 candidat — inconnue transformée en omission ou mesure** : premier natif COMPLETED perdant les deux inconnues et ancien rapport fidélité/force sans registre conservés comme échecs. Sauvegarde avant complete/navigation et filtres de preuves existants corrigés ; 42 tests/quatre fichiers verts après rouges mesure/rapport et premier composite échoué. Recette B locale reçue : mission corrigée/deux inconnues conservées, force 19,6/200 sur 20 % A presse zéro mesurée, fidélité non mesurée ; empreinte 0/100/couverture 9 %, faux constats d’absence retirés. Un contact/un Deal LEAD non attribué, zéro ligne AICostLog/snapshot public inchangé, aucune conversion. Gauntlet local 507 reçu (huit sorties zéro, 4 883/456 tests, gouvernance 1 671/169, tsc/lints sans erreur, 24 avertissements historiques par lint, zéro cycle) ; CI/image/runtime et qualité commerciale encore ouverts ; conseils génériques/chiffres non sourcés/classification faible couverture en reprise MVP03 après livraison fonctionnelle. Production 504 inchangée, préflight assistant statique non corrigé. [Reprise bornée MVP02–03](RESIDUAL-DEBT.md).
-
-2026-10-20 · **506 candidat — mesure partielle présentée trop largement** : poids 75 affiché 75 % malgré panel 110 ; ratio correct 68 %, note 43/100 distincte. Calcul partagé, poids/notes conservés ; textes FR/EN/ZH honnêtes, fondations seulement mesurées, badge/aria sans santé de marque. Rouge/vert et final local huit sorties zéro reçus, 4 877 unitaires/456 et gouvernance 1 671/169, 24 avertissements historiques par lint. Premier tsc Next généré conservé puis typegen officiel/tsc zéro après arrêt preview, aucune règle assouplie. Natif local sur cache reçu : fenêtre complète 25 réponses sans ≥500/exception/échec de chargement, observation conservée et aucun appel frais/contact. Code 506 fusionné/CI 39444684044 verte ; image/runtime attendus avec 507, coût public réel et MVP entier ouverts, dettes à purger après livraison seulement. [Reprise Sprint MVP1](RESIDUAL-DEBT.md).
+2026-10-20 · **508 candidat — dépôt confondu avec texte saisi/extrait** : import507 refusé puis formulaire vide, texte saisi/nom en base sans original. Primitive FileUpload/source-original-v1 existante étendue avant préflight, PENDING/STORED, reprise par même intake et lecture privée ; rattachement des mêmes FileUpload.sourceId/objectKey à complete sans copie, EXTRACTED ou FAILED honnête. Persistance tracée par kinds existants/callers retain-sources et bind-sources, pas de nouveau manager/Intent. Treize PostgreSQL nouveaux/ownership rouge-vert et reprise compilée locale reçus : texte saisi104/original distinct665 octets SHA exact, site/social, questionnaire même intake et refus GET étrangers ; HTTP final200/no-referrer reçu après premier header écrasé conservé. Fenêtres compilées import/ingest-plus complètes28/29 réponses sans ≥500/exception/échec, refus modèle explicites. Build webpack et neuf contrôles finaux verts, tsc inclus ; premier refus de séquence ADR puis renumérotation réelle0224 sans test affaibli conservés. Deadlines/échecs dev conservés, pas de SLO global ; CI/image/runtime508 et défaut en production restent ouverts. [ADR-0224 Accepted pour l’implémentation](adr/0224-retained-intake-originals.md) · [Reprise MVP02 et vérification MVP05/C7](RESIDUAL-DEBT.md).
 
 **472 livré — repli malgré le relais choisi réparé (2026-10-15)** : l’ordre des conditions autorisait un ancien provider malgré le choix OpenAI explicite et un relais incomplet. Deux conditions existantes corrigées/livrées ; admission reçue dans quatre processus de fixture, cible 94 / 8, sans modèle/réseau/DB. Source c92abbc6/CI/image/runtime et reprise native sans génération reçus ; aucune panne réelle injectée. Cause fermée au périmètre ; autres réserves C7/pont manuel C3 et seize réceptions inchangés. Premiers refus AST conservés au [bornage](REFONTE-PLAN.md).
 

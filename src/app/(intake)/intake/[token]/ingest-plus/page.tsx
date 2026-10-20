@@ -16,6 +16,7 @@ import {
 import { AiBadge } from "@/components/shared/ai-badge";
 import { IntakeProcessingScreen } from "@/components/intake/intake-processing-screen";
 import { useIntakeProcessingWatch, failureReasonKey } from "@/components/intake/use-intake-processing-watch";
+import { ReceivedIntakeDocuments, readIntakeFile } from "@/components/intake/received-documents";
 import { useT } from "@/lib/i18n/use-t";
 
 const ACCEPTED_EXTENSIONS = ".pdf,.docx,.pptx,.txt";
@@ -40,13 +41,37 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
     facebook: "",
     linkedin: "",
   });
+  const fieldsPrefilledRef = useRef(false);
+  const [extraUrls, setExtraUrls] = useState<string[]>([]);
+  const [savingSources, setSavingSources] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState("");
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
 
-  const { data: intake, isLoading } = trpc.quickIntake.getByToken.useQuery(
+  const { data: intake, isLoading, refetch } = trpc.quickIntake.getByToken.useQuery(
     { token },
     { enabled: !!token }
   );
+
+  useEffect(() => {
+    if (!fieldsPrefilledRef.current && intake) {
+      fieldsPrefilledRef.current = true;
+      setWebsiteUrl(intake.websiteUrl ?? "");
+      const links = intake.socialLinksRaw?.split(/\r?\n/).filter(Boolean) ?? [];
+      const restored = { instagram: "", facebook: "", linkedin: "" };
+      const other: string[] = [];
+      for (const link of links) {
+        const network = (["instagram", "facebook", "linkedin"] as const).find(key => {
+          try { return new URL(link).hostname.replace(/^www\./, "") === `${key}.com`; } catch { return false; }
+        });
+        if (network && !restored[network]) restored[network] = link;
+        else other.push(link);
+      }
+      setSocialUrls(restored);
+      setExtraUrls(other);
+    }
+  }, [intake]);
+  const saveSourcesMutation = trpc.quickIntake.processIngestPlus.useMutation();
 
   // F1 async : ack immédiat { status: "PROCESSING" }, puis suivi getByToken
   // jusqu'à l'état TERMINAL réel — redirection sur COMPLETED uniquement,
@@ -116,7 +141,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
   };
 
   const addFiles = (fileList: FileList | null) => {
-    if (!fileList) return;
+    if (!fileList || savingSources) return;
     setError("");
     const newFiles: SelectedFile[] = [];
     for (const file of Array.from(fileList)) {
@@ -124,7 +149,11 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
         setError(`${t("intakeIngest.err.tooBig")} ${file.name}`);
         continue;
       }
-      if (files.length + newFiles.length >= 5) break;
+      if (!file.name.match(/\.(pdf|docx|pptx|txt)$/i)) {
+        setError(`${t("intakeIngest.err.format")} ${file.name}. ${t("intakeIngest.err.formatAccepted")}`);
+        continue;
+      }
+      if (files.length + newFiles.length >= 5) { setError(t("intakeIngest.err.maxFiles")); break; }
       newFiles.push({ file, name: file.name, size: formatSize(file.size), type: file.type });
     }
     setFiles((prev) => [...prev, ...newFiles]);
@@ -132,33 +161,37 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
 
   const removeFile = (index: number) => setFiles((prev) => prev.filter((_, i) => i !== index));
 
-  const hasContent = files.length > 0 || websiteUrl.trim().length > 5;
+  const hasContent = files.length > 0 || intake.documents.length > 0 || websiteUrl.trim().length > 0
+    || Object.values(socialUrls).some(url => url.trim()) || extraUrls.length > 0;
 
   const handleSubmit = async () => {
+    if (savingSources || processIngestPlusMutation.isPending) return;
     if (!hasContent) {
       setError(t("intakeIngest.plus.errEmpty"));
       return;
     }
     setError("");
-
-    const fileData: Array<{ name: string; content: string; type: string }> = [];
-    for (const f of files) {
-      const content = await readFileAsBase64(f.file);
-      fileData.push({ name: f.name, content, type: f.type });
+    setSavingSources(true);
+    try {
+      const fields = { token, prepareOnly: true, websiteUrl: websiteUrl.trim() || undefined,
+        urls: [socialUrls.instagram.trim(), socialUrls.facebook.trim(), socialUrls.linkedin.trim(), ...extraUrls].filter(Boolean) };
+      await saveSourcesMutation.mutateAsync({ ...fields, files: [] });
+      for (const [index, selected] of files.entries()) {
+        setUploadProgress(`${index + 1}/${files.length} · ${selected.name}`);
+        await saveSourcesMutation.mutateAsync({ ...fields, files: [{ name: selected.name,
+          type: selected.type, content: await readIntakeFile(selected.file) }] });
+      }
+      setFiles([]);
+      await refetch();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("intakeIngest.received.failed"));
+      await refetch();
+      return;
+    } finally {
+      setSavingSources(false);
+      setUploadProgress("");
     }
-
-    const urls = [
-      websiteUrl.trim(),
-      socialUrls.instagram.trim(),
-      socialUrls.facebook.trim(),
-      socialUrls.linkedin.trim(),
-    ].filter(Boolean);
-
-    processIngestPlusMutation.mutate({
-      token,
-      files: fileData.length > 0 ? fileData : undefined,
-      urls: urls.length > 0 ? urls : undefined,
-    });
+    processIngestPlusMutation.mutate({ token, files: [] });
   };
 
   const inputClass =
@@ -169,7 +202,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-5 py-8 sm:px-8">
         {/* Back */}
         <button
-          onClick={() => router.push("/intake")}
+          onClick={() => router.push(`/intake/${token}`)}
           className="mb-6 flex items-center gap-1.5 text-sm text-foreground-muted transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -196,6 +229,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
             {t("intakeIngest.plus.website")}
           </h3>
           <input
+            disabled={savingSources}
             type="url"
             value={websiteUrl}
             onChange={(e) => setWebsiteUrl(e.target.value)}
@@ -212,7 +246,8 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
           <div className="flex items-center gap-3">
             <Camera className="h-4 w-4 shrink-0 text-foreground-muted" />
             <input
-              type="url"
+              disabled={savingSources}
+            type="url"
               value={socialUrls.instagram}
               onChange={(e) => setSocialUrls({ ...socialUrls, instagram: e.target.value })}
               className={inputClass}
@@ -222,7 +257,8 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
           <div className="flex items-center gap-3">
             <Users className="h-4 w-4 shrink-0 text-foreground-muted" />
             <input
-              type="url"
+              disabled={savingSources}
+            type="url"
               value={socialUrls.facebook}
               onChange={(e) => setSocialUrls({ ...socialUrls, facebook: e.target.value })}
               className={inputClass}
@@ -232,7 +268,8 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
           <div className="flex items-center gap-3">
             <Briefcase className="h-4 w-4 shrink-0 text-foreground-muted" />
             <input
-              type="url"
+              disabled={savingSources}
+            type="url"
               value={socialUrls.linkedin}
               onChange={(e) => setSocialUrls({ ...socialUrls, linkedin: e.target.value })}
               className={inputClass}
@@ -288,6 +325,8 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
           )}
         </div>
 
+        <ReceivedIntakeDocuments documents={intake.documents} />
+
         {error && (
           <div className="mt-4 flex items-center gap-2 rounded-lg bg-destructive-subtle/30 px-4 py-3 text-sm text-destructive">
             <AlertCircle className="h-4 w-4 shrink-0" />
@@ -299,13 +338,13 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
         <div className="sticky bottom-4 mt-6 sm:static sm:bottom-auto">
           <button
             onClick={handleSubmit}
-            disabled={processIngestPlusMutation.isPending || !hasContent}
+            disabled={savingSources || processIngestPlusMutation.isPending || !hasContent}
             className="w-full rounded-xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary-hover disabled:opacity-50 sm:py-3 sm:shadow-none"
           >
-            {processIngestPlusMutation.isPending ? (
+            {savingSources || processIngestPlusMutation.isPending ? (
               <span className="flex items-center justify-center gap-2">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                {t("intakeIngest.plus.pending")}
+                {savingSources ? `${t("intakeIngest.received.saving")} ${uploadProgress}` : t("intakeIngest.plus.pending")}
               </span>
             ) : (
               t("intakeIngest.plus.cta")
@@ -322,17 +361,4 @@ function isNetworkCut(message: string): boolean {
   return /load failed|failed to fetch|networkerror|network error|timed?\s?out|timeout|aborted|fetch failed|err_/i.test(
     message,
   );
-}
-
-function readFileAsBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64 = result.split(",")[1] ?? result;
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }

@@ -200,3 +200,5 @@ exiger le label avant merge via une protection de branche.
 | 2026-10-20 | #1038 | fix(scoring) couverture et qualification du score public | NEFER — priorité MVP explicite | 75 points mesurés sur 110 = 68 %, note brute conservée ; résumé des seuls faits mesurés, empreinte /100 sans classification de santé, conservation et homonymie annoncées. Module et rails existants, aucun modèle/service/route/page/Intent/provider/gestionnaire ajouté ; 4 877 tests et natif local reçus, MVP entier/coût réel ouverts. |
 
 | 2026-10-20 | #1039 | fix(intake) réponses et mesures inconnues | NEFER — priorité MVP explicite | Audit/scoring MVP : conserver les corrections et les inconnues, exiger une observation avant mesure et qualifier le rapport existant. Aucun nouveau gestionnaire. |
+
+| 2026-10-20 | #1041 | fix(intake) originaux conservés et reprise du diagnostic | NEFER — priorité MVP explicite | FileUpload et stockage privé existants, reprise et rattachement atomique sans copie. Garde d’accès rouge/verte, 4 883 unitaires, 414 PostgreSQL et natif compilé reçus ; aucun nouveau gestionnaire. Qualité/coût assistés et conversion commerciale restent ouverts. |

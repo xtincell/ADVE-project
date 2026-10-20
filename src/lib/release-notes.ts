@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.508", date: "2026-10-20", headline: "Reprendre un diagnostic avec ses documents",
+    highlights: [{ emoji: "📄", title: "Des originaux retrouvables", body: "Les documents reçus restent téléchargeables quand vous rouvrez le diagnostic, même si l’analyse automatique est indisponible. Votre texte revient dans le formulaire ; les mêmes fichiers rejoignent le dossier de marque à la finalisation, sans remplacer vos informations validées." }],
+  },
+  {
     version: "6.27.507", date: "2026-10-20", headline: "Avancer sans inventer de chiffres",
     highlights: [{ emoji: "📝", title: "Des réponses conservées jusqu’au résultat", body: "Terminez le questionnaire même lorsque le retour client ou la recommandation ne sont pas mesurés. Vos corrections restent enregistrées lors de la reprise ; les signaux inconnus sont distingués des mesures disponibles." }],
   },

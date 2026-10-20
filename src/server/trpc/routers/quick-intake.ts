@@ -23,7 +23,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@
 // ============================================================================
 
 import { z } from "zod";
-import { readIntakeDocument } from "@/server/services/quick-intake/document-input";
+import { listIntakeDocuments, retainIntakeDocuments, readRetainedIntakeDocuments } from "@/server/services/quick-intake/document-input";
 import type { Prisma } from "@prisma/client";
 import { callLLM, extractJSON, isTextLLMAvailable } from "@/server/services/llm-gateway";
 import * as mestor from "@/server/services/mestor";
@@ -507,10 +507,11 @@ export const quickIntakeRouter = createTRPCRouter({
           data: { status: "FAILED", failureReason: "timeout" },
         });
         if (repaired.count > 0) {
-          return ctx.db.quickIntake.findUnique({ where: { shareToken: input.token } });
+          const recovered = await ctx.db.quickIntake.findUnique({ where: { shareToken: input.token } });
+          return recovered ? { ...recovered, documents: await listIntakeDocuments(input.token, ctx.db) } : null;
         }
       }
-      return intake;
+      return intake ? { ...intake, documents: await listIntakeDocuments(input.token, ctx.db) } : null;
     }),
 
   /**
@@ -1283,6 +1284,7 @@ export const quickIntakeRouter = createTRPCRouter({
     .input(z.object({
       token: z.string(),
       rawText: z.string().optional(),
+      prepareOnly: z.boolean().default(false),
       websiteUrl: z.string().url().optional(),
       files: z.array(z.object({
         name: z.string(),
@@ -1304,26 +1306,20 @@ export const quickIntakeRouter = createTRPCRouter({
       // vide on ne DÉTRUIT pas la déclaration initiale — on la réutilise.
       const effectiveWebsiteUrl = input.websiteUrl ?? intake.websiteUrl?.trim() ?? undefined;
 
-      // Persist source info FIRST — même si l'extraction échoue ensuite, rien
-      // de ce que l'utilisateur a fourni n'est perdu. `undefined` = champ non
-      // touché : on n'écrase JAMAIS une valeur déclarée par null.
-      const sourceNames = [
-        input.rawText ? "texte" : null,
-        effectiveWebsiteUrl ?? null,
-        ...input.files.map((f) => f.name),
-      ].filter(Boolean);
-
-      await ctx.db.quickIntake.update({
-        where: { id: intake.id },
-        data: {
-          rawText: input.rawText ?? undefined,
-          websiteUrl: input.websiteUrl ?? undefined,
-          documentUrl: sourceNames.join(", "),
-        },
-      });
+      const documents = await retainIntakeDocuments(input.token, input.files, {
+        rawText: input.rawText ?? undefined, websiteUrl: input.websiteUrl ?? undefined,
+      }, ctx.db);
+      if (input.prepareOnly) return { status: "SAVED" as const, token: input.token, documents };
+      if (documents.some(document => document.original?.state !== "STORED")) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Un fichier reste à recevoir. Redéposez-le avant de lancer l’analyse." });
+      }
+      const effectiveRawText = input.rawText ?? intake.rawText ?? "";
+      if (!effectiveRawText.trim() && !effectiveWebsiteUrl && documents.length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Ajoutez un texte, un site ou un fichier à analyser." });
+      }
 
       // Pré-flight LLM : providers texte down (clés absentes, crédits épuisés,
-      // circuit ouvert) → on n'entame ni scrape ni décodage, on route tout de
+      // circuit ouvert) → les sources sont reçues ; sans scrape ni extraction on route tout de
       // suite vers le questionnaire pré-rempli avec une raison explicite.
       // JAMAIS de bascule muette.
       if (!isTextLLMAvailable()) {
@@ -1337,8 +1333,8 @@ export const quickIntakeRouter = createTRPCRouter({
         const textParts: string[] = [];
 
         // 1. Raw text input
-        if (input.rawText) {
-          textParts.push(`[TEXTE FOURNI]\n${input.rawText}`);
+        if (effectiveRawText) {
+          textParts.push(`[TEXTE FOURNI]\n${effectiveRawText}`);
         }
 
         // 2. Scrape du site déclaré (SSRF-gardé) — bounded best-effort, never
@@ -1349,15 +1345,8 @@ export const quickIntakeRouter = createTRPCRouter({
           ? fetchUrlAsText(effectiveWebsiteUrl, { maxChars: 15_000 })
           : Promise.resolve(null);
 
-        // 3. Decode base64 files and extract text robustly (CPU-bound — runs
-        //    while the network calls above are in flight).
-        for (const f of input.files) {
-          try {
-            textParts.push(await readIntakeDocument(f));
-          } catch {
-            textParts.push(`[Fichier non lisible ou format non supporté: ${f.name}]`);
-          }
-        }
+        // Originals are already private and durable; reopening needs no re-upload.
+        textParts.push(...await readRetainedIntakeDocuments(input.token, ctx.db));
 
         // Await the concurrent network I/O kicked off above and append in a
         // stable order.
@@ -1399,6 +1388,8 @@ export const quickIntakeRouter = createTRPCRouter({
   processIngestPlus: publicProcedure
     .input(z.object({
       token: z.string(),
+      prepareOnly: z.boolean().default(false),
+      websiteUrl: z.string().url().optional(),
       files: z.array(z.object({
         name: z.string(),
         content: z.string(),
@@ -1415,15 +1406,19 @@ export const quickIntakeRouter = createTRPCRouter({
         throw new Error("Intake already completed");
       }
 
-      // Persist source info FIRST (parité processIngest) — `undefined` = champ
-      // non touché, jamais d'écrasement d'une déclaration antérieure par null.
-      await ctx.db.quickIntake.update({
-        where: { id: intake.id },
-        data: {
-          documentUrl: input.files?.map((f) => f.name).join(", ") ?? undefined,
-          websiteUrl: input.urls?.[0] ?? undefined,
-        },
-      });
+      const effectiveWebsiteUrl = input.websiteUrl ?? intake.websiteUrl ?? (input.prepareOnly ? undefined : input.urls?.[0]);
+      const effectiveSocialUrls = input.urls ?? intake.socialLinksRaw?.split(/\r?\n/).filter(Boolean) ?? [];
+      const effectiveUrls = [...new Set([effectiveWebsiteUrl, ...effectiveSocialUrls].filter((url): url is string => Boolean(url)))];
+      const documents = await retainIntakeDocuments(input.token, input.files ?? [], {
+        websiteUrl: effectiveWebsiteUrl ?? undefined, socialLinksRaw: effectiveSocialUrls.join("\n"),
+      }, ctx.db);
+      if (input.prepareOnly) return { status: "SAVED" as const, token: input.token, documents };
+      if (documents.some(document => document.original?.state !== "STORED")) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Un fichier reste à recevoir. Redéposez-le avant de lancer l’analyse." });
+      }
+      if (documents.length === 0 && effectiveUrls.length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Ajoutez un lien ou un fichier à analyser." });
+      }
 
       // Pré-flight LLM synchrone : dégradation honnête immédiate, rien réservé.
       if (!isTextLLMAvailable()) {
@@ -1438,23 +1433,15 @@ export const quickIntakeRouter = createTRPCRouter({
 
       void runIntakeProcessing(ctx.db, intake.id, input.token, "processIngestPlus", async () => {
         const textParts: string[] = [];
+        if (intake.rawText) textParts.push(`[TEXTE FOURNI]\n${intake.rawText}`);
 
-        // Process files
-        if (input.files?.length) {
-          for (const f of input.files) {
-            try {
-              textParts.push(await readIntakeDocument(f));
-            } catch {
-              textParts.push(`[Fichier: ${f.name}]`);
-            }
-          }
-        }
+        textParts.push(...await readRetainedIntakeDocuments(input.token, ctx.db));
 
         // Fetch URLs CONCURRENTLY (bounded best-effort) — same canonical
         // web-fetch helper as processIngest.
-        if (input.urls?.length) {
+        if (effectiveUrls.length) {
           const fetched = await Promise.all(
-            input.urls.map(async (url) => {
+            effectiveUrls.map(async (url) => {
               const text = await fetchUrlAsText(url, { maxChars: 10_000 });
               return text ? `[Source: ${url}]\n${text}` : `[URL inaccessible: ${url}]`;
             }),

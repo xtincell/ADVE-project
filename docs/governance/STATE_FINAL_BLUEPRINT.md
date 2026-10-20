@@ -2118,7 +2118,7 @@ d’affichage nulle, sans fabriquer une note de marque nulle. Le poids brut
 `measuredWeight` reste conservé distinctement ; un panel de 110 avec 75 mesurés
 représente 68 %, pas 75 %. Les scores et leurs formules restent inchangés.
 
-Candidat 506 : scoreur, restitution intake, narratif et seuil de cache faible
+Correctif 506 livré avec 507 : scoreur, restitution intake, narratif et seuil de cache faible
 partagent ce calcul. Textes FR/EN/ZH cohérents avec la conservation des relevés
 publics ; homonymie distincte des seules mesures du site analysé. Rouge/vert
 ciblé reçu. Le résumé factuel ne nomme que les fondations mesurées ; un domaine
@@ -2128,21 +2128,23 @@ Natif local reçu sur cache, 68 %/43 sur 100 et résumé exact, snapshot conserv
 sans appel frais. Huit contrôles locaux finaux à zéro ; types Next régénérés
 par la commande officielle après arrêt du preview, premier échec conservé.
 Réseau local complet reçu au périmètre, pas de SLO public ni coût du scan
-réel. Code 506 fusionné, CI 39444684044 verte ; image/runtime restent à recevoir
-avec le lot guidé 507. Aucune réception du
+réel. Code 506 reçu avec la livraison 507, source `f48a938e`, CI/build/runtime
+exacts et conservation acquise. Public production 43/100/couverture 68 % reçu
+sur cache ; valeurs mesurées identiques, pas d’égalité brute de snapshot
+(quelques facts optionnels null omis par projection). Aucune réception du
 MVP entier ou modification des autres mesures canoniques déduite.
 
 Dans l’intake guidé, déclarer une mesure inconnue n’est ni omettre la réponse
-ni déclarer zéro. Candidat 507 : retour client et recommandation offrent
+ni déclarer zéro. Correctif 507 livré : retour client et recommandation offrent
 « Non mesuré / je ne sais pas », questions toujours obligatoires ; salvage
 conserve cette information sans fabriquer loyaltyRate/referralRate ni modifier
 la formule de score. Le premier statut COMPLETED n’avait pas reçu leur sauvegarde ;
 la phase courante corrigée rejoint l’écrivain existant avant complete ou navigation.
 Recette B locale reçue : mission relue corrigée et inconnues conservées après
-completion/reload ; cette réception ne vaut pas livraison production.
+completion/reload ; guidé complet de production encore à recevoir, distinct de la livraison technique.
 
 Un plancher de ligue est une référence, pas une mesure de fidélité ; registre
-superfan vide ne prouve pas une défaite E. Candidat 507 : filtre de profils
+superfan vide ne prouve pas une défaite E. Correctif 507 : filtre de profils
 réels en E, presse positive ou dimension mesurée en A ; zéro presse mesuré
 reste une défaite. Date courante par défaut, formule/poids/canon inchangés.
 Rapport et propositions distinguent non mesuré d’absence et gardent canaux/
@@ -2152,8 +2154,28 @@ verts/quatre fichiers reçus. Natif B : force 19,6/200 sur 20 % de couverture
 mesurée A, fidélité inconnue ; aucune classification complète de la marque
 déduite. Gauntlet local 507 reçu : huit sorties zéro, 4 883 tests / 456 fichiers,
 gouvernance 1 671 / 169, tsc/lints sans erreur (24 avertissements historiques
-par lint), zéro cycle. CI/image/runtime, import/export, option agentique, coût
-réel et qualité commerciale du rapport encore ouverts, production toujours 504.
+par lint), zéro cycle. CI/image/runtime 507 reçus, guidé B reçu localement
+seulement ; import/export, option agentique, coût réel et qualité commerciale
+restent ouverts. Le texte d’un import et son nom conservés ne constituent pas
+un reçu d’original : le refus LLM local/reload révèle un formulaire vide et
+zéro original reçu, à corriger dans la page et les primitives existantes.
+
+Extension candidate 508, [ADR-0224 Accepted pour l’implémentation testée](adr/0224-retained-intake-originals.md) :
+intake/FileUpload/source-original-v1 réutilisent le stockage privé, PENDING avant
+IO puis STORED vérifié, dépôt avant modèle et reprise du reçu complet. Bearer
+borné au même intake, persistance tracée par le kind existant ; à complete,
+mêmes FileUpload.sourceId/objectKey attachés aux sources atomiquement avec
+COMPLETED, EXTRACTED ou FAILED honnête ; kind/caller de complétion existants,
+sans copie ni adoption. Treize tests PostgreSQL/ownership rouge-vert et recette
+locale dépôt/fermeture/reprise/original exact et ingest-plus reçus, refus modèle
+attendu puis questionnaire du même intake ; header final 200/no-referrer reçu.
+Texte saisi distinct de l’original conservé. Natif compilé : fenêtres complètes
+28/29 réponses sans ≥500/exception/échec ; refus modèle explicites, aucune analyse
+reçue. Deadlines/échecs dev conservés, pas de SLO global. Build webpack et neuf
+contrôles finaux verts, tsc inclus ; premier refus de séquence puis renumérotation
+réelle0224 sans garde affaiblie conservés. CI/image/runtime508 restent ouverts.
+Admission/conservation globales à recevoir via les mécanismes existants en
+MVP-FUSEE-05/C7 avant réception commerciale, aucun MVP entier ou politique déduits.
 
 ### Compensation d’une écriture
 
