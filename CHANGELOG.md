@@ -1,3 +1,11 @@
+## v6.27.501 — fix(media): rend les écritures privées atomiques (2026-10-20)
+
+**Un lecteur ne doit jamais recevoir le préfixe d’un original encore en écriture.**
+
+- Le stockage VOLUME écrivait directement l’objet canonique. Écriture privée complète et synchronisée, puis liaison atomique sans remplacement : un arrêt laisse au plus un temporaire orphelin, jamais un préfixe canonique. La reprise ne détruit pas une destination existante. Le protocole HTTP existant est conservé.
+- Défaut reproduit avant correction : lecteur concurrent au milieu d’une écriture, rouge puis vert ; collision avec un objet reçu conservée. Deux tests sur le vrai système de fichiers ; les intégrations existantes conservent leurs originaux et leurs choix d’usage. Aucune promesse de durabilité sur coupure électrique du système de fichiers.
+- Cette correction prépare la reprise bornée des grands originaux dans les registres existants. Sa réception de source et de runtime reste distincte ; aucun grand fichier réel déposé par ce commit.
+
 ## v6.27.500 — fix(ingestion): charge le lecteur PowerPoint à la demande (2026-10-20)
 
 **Conserver un original ou démarrer l’application ne doit pas initialiser un lecteur inutilisé.**
