@@ -205,3 +205,4 @@ exiger le label avant merge via une protection de branche.
 
 | 2026-10-20 | #1042 | docs(intake) clôture de réception508 | NEFER — priorité MVP explicite, phase7 | Runtime/source reçus, dette technique retirée ; rapport, droits et coût commercial ouverts. Aucun code/version/image ou redéploiement. |
 2026-10-20 | #1043 | Codex | Droits et reprise du rapport La Fusée : lecteurs/exports existants, priorité MVP Shinkiro ; qualité commerciale encore ouverte. | Alexandre (priorité MVP explicite)
+2026-10-20 | #1044 | Codex | Clôture documentaire509 reçue : runtime/données conservés, qualité du MVP et coût complets encore au plan. | Alexandre (priorité MVP explicite)
