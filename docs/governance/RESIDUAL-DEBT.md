@@ -1,20 +1,36 @@
-## Lecture documentaire commune — livraison 499 et portée visuelle (2026-10-20)
+## Lecture documentaire commune — boot 500 et portée visuelle (2026-10-20)
 
 ADR-0221 Proposed : lecteur PPTX partagé dans `ingestion-pipeline`, sources,
-études et deux intake raccordés au code candidat. Préflight pur des douze
+études et deux intake raccordés au code 499 fusionné. Préflight pur des douze
 présentations réelles reçu, pas leur dépôt dans le produit ; textes et notes
 seulement, aucun visuel interprété. Recette locale synthétique HTTP/native reçue :
 PPTX extrait avec notes et original exact ; refus binaire, original conservé et
 source FAILED sans faux texte (HTTP 500 du contrat existant), dépôt sans IA et
 téléchargement exact. Cinq écrans ouverts ; les autres formulaires ne sont reçus
 qu’au rendu/sélection, pas en analyse automatique de bout en bout. Gauntlet local
-définitif reçu, sans nouvelle exception ; les deux erreurs initiales liées au
-repère quick-intake sont levées après actualisation 83→84 suivant l’import. **Fermer** : CI/image/runtime exacts, reprise
+définitif 499 reçu, sans nouvelle exception ; les deux erreurs initiales liées au
+repère quick-intake sont levées après actualisation 83→84 suivant l’import.
+Gauntlet local définitif 500 reçu, typage/tests/gouvernance/lints/cycles sans
+erreur, avertissements historiques conservés. **Fermer** : CI/image/runtime exacts, reprise
 standalone ci-dessous puis dépôt du corpus admissible. Conserver les originaux et faire recevoir séparément
 toute conclusion dépendant des images ou graphiques. Responsable C2/C4 ; effort
 un lot de recette des chemins communs et qualification par pièce ; déclencheur
-immédiat avant livraison du candidat 499, puis lot documentaire du corpus.
+immédiat avant livraison du correctif 500, puis lot documentaire du corpus.
 Ce lecteur ne valide ni les postulats des BMC ni les résultats d’une étude.
+
+**Boot 499 bloqué, cause établie** : build 39351802930 échoué avant `/login`,
+`public-brand-migration.cjs` chargeait JSZip absent du standalone. Aucune image
+poussée/déployée, production 498 intacte. 500 diffère l’import jusqu’à
+`readPptxText`, sans copies supplémentaires de paquets ni exemption du boot.
+Régression sur le vrai bundle `freeze-public-brands`, paquets externes et
+JSZip absent/base vide simulée : rouge `MODULE_NOT_FOUND` 499 puis vert 500 reçus.
+CLI auxiliaire sur PostgreSQL de recette détenu : exit 0, zéro publication,
+JSZip indisponible, aucune écriture production. Gauntlet local définitif 500
+reçu ; ce boot auxiliaire n’est pas celui de l’image exacte. **Fermer** :
+recevoir CI puis vrai boot/session d’image 500, lecteur
+PPTX exercé et runtime exact avant clôture. Responsable C2/C7 ; effort une
+correction de couplage et recette de livraison, déclencheur immédiat au build
+du correctif 500. Aucun succès de boot d’image ou déploiement déduit de la CLI.
 
 **Incident de recette dev conservé** : `/api/auth/session` a répondu 500 avec
 `SyntaxError: Unexpected end of JSON input` pendant compilation ; cause non
@@ -24,7 +40,7 @@ prouve pas une performance de production. **Fermer** : au prochain boot de
 l’image standalone exacte, recevoir connexion/session et parcours console,
 conserver logs/statuts et diagnostiquer si le refus se reproduit, avant bascule
 production. Responsable C4/C7 ; effort une recette ciblée au boot, déclencheur
-prochain boot standalone de 499. Son contrôle de boot existant appelle maintenant
+prochain boot standalone de 500. Son contrôle de boot existant appelle maintenant
 `/api/auth/session` sans cookie et refuse erreur HTTP/JSON invalide ; le contrôle
 pur refuse HTML et accepte JSON `null`, mais le véritable endpoint de l’image
 reste à recevoir pendant le build. Ce contrôle n’est pas une correction de la

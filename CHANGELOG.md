@@ -1,3 +1,13 @@
+## v6.27.500 — fix(ingestion): charge le lecteur PowerPoint à la demande (2026-10-20)
+
+**Conserver un original ou démarrer l’application ne doit pas initialiser un lecteur inutilisé.**
+
+- La source 499 est fusionnée, mais le build 39351802930 a échoué avant `/login` : `public-brand-migration.cjs` chargeait JSZip au démarrage alors que ce paquet n’était pas dans son standalone. Aucune image 499 poussée ou déployée ; la production 498 reste intacte. L’échec reste consigné, sans assimiler la compilation de l’image à un boot réussi.
+- Le candidat 500 déplace l’import de JSZip dans `readPptxText`, au moment de la lecture PPTX. Conservation d’octets et capture publique au boot ne chargent plus ce format inutilement. Pas de copie supplémentaire de dépendances, de contrôle de boot contourné, de nouvelle capacité, d’autorité ou de gestionnaire ; ADR-0221 reste Proposed jusqu’à réception.
+- La régression bundle le vrai `freeze-public-brands` avec paquets externes, absence de JSZip imposée et base vide simulée. Rouge `MODULE_NOT_FOUND` sur 499 puis vert sur 500 reçus. CLI auxiliaire également reçue sur PostgreSQL de recette détenu : exit 0, zéro publication, JSZip indisponible, aucune écriture production. Cela ne reçoit pas le boot de l’image exacte ; CI 500, image et runtime encore à recevoir. Le lecteur PPTX garde ses essais documentaires, distincts de ce boot.
+- Gauntlet local définitif 500 : 4 848 tests / 454 fichiers, gouvernance 1 670 / 169, typage et deux lints sans erreur, zéro cycle sur 1 770 fichiers ; 24 avertissements historiques. Aucun test ou contrôle affaibli ; ces résultats ne valent pas réception de la CI, de l’image ou du déploiement.
+- Les recettes locales 499, le préflight texte/notes des douze présentations et les limites restent conservés : aucun dépôt réel PPTX, aucune lecture visuelle complète, aucun transport de grands originaux ou lot reçu par ce correctif. Pas de nouvelle note client pour cette correction de démarrage.
+
 ## v6.27.499 — fix(ingestion): partage la lecture des documents reçus (2026-10-20)
 
 **Un PowerPoint doit fournir son texte et ses notes, sans transformer ses octets en faux contenu.**

@@ -1,6 +1,6 @@
 # ADR-0221 — Lecture commune des documents reçus
 
-- **Status**: Proposed — recette locale bornée 6.27.499 reçue ; livraison à recevoir
+- **Status**: Proposed — source 499 fusionnée, image bloquée au boot ; correctif 500 à recevoir
 - **Date**: 2026-10-20
 - **Phase**: 7 — absorption du corpus réel / C2, C3, C4, C7
 - **Depends on**: ADR-0012, ADR-0197, ADR-0219, ADR-0220
@@ -39,6 +39,11 @@ prouve pas leur valeur commerciale ni la validité de leurs postulats.
   de la présentation pour l’ordre des diapositives, puis leurs notes attribuées.
   Les paragraphes et sauts de ligne sont conservés ; les noms de fichiers ne
   décident pas de l’ordre de lecture.
+- Les dépendances propres au format sont chargées dans la fonction de lecture,
+  à la demande. JSZip ne doit pas être initialisé par la conservation d’octets
+  ou la capture publique au boot lorsqu’aucun PPTX n’est lu. Le correctif 500
+  déplace cet import ; aucune chaîne de copies de paquets ou exemption du boot
+  ne remplace ce découplage.
 - La lecture XML est bornée par pièce et au total. Les chemins invalides,
   pièces requises absentes, relations requises vers des diapositives ou notes
   externes, DTD, déclarations d’entités et XML malformé entraînent un refus.
@@ -83,7 +88,22 @@ diagnostic si le refus se reproduit, logs/statuts conservés dans la dette C4/C7
 Gauntlet local définitif reçu : typage et deux lints sans erreur, tests et
 gouvernance verts, zéro cycle. Les deux erreurs initiales de repère quick-intake
 sont corrigées par 83→84 après l’import ; aucune nouvelle exception ni invariant
-affaibli. Cette décision reste candidate avant CI, image et runtime exacts.
+affaibli. Ces contrôles historiques restent ceux de 499. La source 499 fusionnée
+a échoué au boot de l’image, avant `/login`
+(build 39351802930) : `public-brand-migration.cjs` importait JSZip absent du
+standalone. Aucune image 499 poussée ou déployée ; production 498 intacte.
+
+La régression 500 bundle le vrai `freeze-public-brands` avec paquets externes,
+absence de JSZip imposée et base vide simulée ; son rouge `MODULE_NOT_FOUND`
+reproduit le couplage 499. Le chargement à la demande dans `readPptxText` corrige
+la dépendance de démarrage, sans changer la lecture documentaire ni contourner
+le contrôle. Rouge 499 puis vert 500 reçus. La CLI auxiliaire a également été
+exercée sur PostgreSQL de recette détenu avec JSZip indisponible : exit 0,
+zéro publication, aucune écriture production. Gauntlet local définitif 500 reçu :
+4 848 tests / 454 fichiers, gouvernance 1 670 / 169, typage et deux lints sans
+erreur, zéro cycle sur 1 770 fichiers, 24 avertissements historiques conservés.
+La CLI auxiliaire n’est pas le boot du standalone exact ; CI, image et runtime
+500 exacts restent à recevoir avant clôture de cette décision.
 Les originaux acquis et les textes/notes lus ne prouvent pas la compréhension
 des visuels. Toute conclusion dépendant d’une image ou d’un graphique doit être
 qualifiée et reçue séparément.

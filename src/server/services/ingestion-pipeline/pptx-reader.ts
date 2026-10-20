@@ -1,5 +1,4 @@
 /** Bounded OOXML text reading in the existing ingestion module. No rendering or code execution. */
-import JSZip from "jszip";
 import { posix } from "node:path";
 import type { ExtractionResult } from "./types";
 
@@ -46,6 +45,8 @@ function paragraphs(doc: Document) {
 }
 
 export async function readPptxText(bytes: Buffer): Promise<ExtractionResult> {
+  // Format dependencies belong to reading, never byte retention or boot capture.
+  const { default: JSZip } = await import("jszip");
   const zip = await JSZip.loadAsync(bytes);
   const entries = Object.values(zip.files);
   if (entries.length > 5000 || entries.some(e => (e as typeof e & { unsafeOriginalName?: string }).unsafeOriginalName && (e as typeof e & { unsafeOriginalName?: string }).unsafeOriginalName !== e.name)) {
