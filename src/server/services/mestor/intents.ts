@@ -58,6 +58,8 @@ export type Intent =
       kind: "FILL_ADVE";
       phase: StrategyLifecyclePhase;
       strategyId: string;
+      /** Optional creative previews; public diagnostics explicitly leave them off. */
+      prepareDeliverables?: boolean;
       sources?: {
         responses?: Record<string, Record<string, unknown>>;
         extractedValues?: Record<string, Record<string, unknown>>;
@@ -144,6 +146,7 @@ export type Intent =
       kind: "INDEX_BRAND_CONTEXT";
       strategyId: string;
       scope: "INTAKE_ONLY" | "FULL";
+      prepareEmbeddings?: boolean;
     }
   // ── Seshat single-source indexing (operator upload → BRAND_SOURCE chunks) ──
   | {

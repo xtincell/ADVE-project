@@ -62,6 +62,7 @@ function hashPayload(payload: unknown): string {
 export async function indexBrandContext(
   strategyId: string,
   scope: IndexScope = "INTAKE_ONLY",
+  options: { prepareEmbeddings?: boolean } = {},
 ): Promise<IndexResult> {
   const t0 = Date.now();
   const nodes: IndexedNode[] = [];
@@ -280,7 +281,7 @@ export async function indexBrandContext(
   // Static import above — robust across runtimes (Next, tsx, node ESM).
   // The indexing API returns as soon as nodes are persisted; embedding happens
   // in the background and updates BrandContextNode.embedding/embeddedAt.
-  if (inserted > 0) {
+  if (inserted > 0 && options.prepareEmbeddings !== false) {
     void embedBrandContext(strategyId).catch((err) => {
       console.warn(
         "[seshat:indexer] post-index embedding failed (non-blocking):",

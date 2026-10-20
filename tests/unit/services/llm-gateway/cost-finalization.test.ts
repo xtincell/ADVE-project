@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ create: vi.fn(), generate: vi.fn(), stream: vi.fn() }));
 vi.mock("@/lib/db", () => ({ db: {
-  aICostLog: { create: mocks.create }, modelPolicy: { findUnique: vi.fn(async () => null) },
+  aICostLog: { create: mocks.create, updateMany: vi.fn(async () => ({ count: 0 })) }, modelPolicy: { findUnique: vi.fn(async () => null) },
 } }));
 vi.mock("@/server/services/ai-cost-tracker", async (original) => ({
   ...await original<typeof import("@/server/services/ai-cost-tracker")>(),
@@ -13,8 +13,9 @@ vi.mock("ai", async (original) => ({
   generateText: (...args: unknown[]) => mocks.generate(...args),
   streamText: (...args: unknown[]) => mocks.stream(...args),
 }));
-import { callLLM, _resetProvidersForTest } from "@/server/services/llm-gateway";
+import { callLLM, _resetProvidersForTest, withIntakeCostContext, bindIntakeCostStrategy } from "@/server/services/llm-gateway";
 import { streamChatText } from "@/server/services/llm-gateway/streaming";
+import { checkBudget } from "@/server/services/ai-cost-tracker";
 import * as rate from "@/server/services/llm-gateway/rate-policy";
 
 const input = { system: "s", prompt: "Une réponse", caller: "receipt-fixture", strategyId: "brand-a" };
@@ -90,8 +91,23 @@ describe("existing Gateway cost receipt finalization", () => {
     expect(mocks.generate).toHaveBeenCalledOnce();
   });
 
-  it("does not invent a brand receipt for an unscoped call", async () => {
+  it("receives unassigned model usage without inventing a brand", async () => {
     expect((await callLLM({ ...input, strategyId: undefined })).text).toBe("Reçu");
-    expect(mocks.create).not.toHaveBeenCalled(); expect(mocks.generate).toHaveBeenCalledOnce();
+    expect(mocks.create).toHaveBeenCalledOnce();
+    expect(mocks.create.mock.calls[0]![0].data).toMatchObject({ strategyId: null, inputTokens: 10, outputTokens: 5 });
+    expect(mocks.generate).toHaveBeenCalledOnce();
   });
+  it("applies the same inherited brand budget and receipt to a stream without an explicit strategy", async () => {
+    await withIntakeCostContext("owned-stream", async () => {
+      await bindIntakeCostStrategy("brand-inherited");
+      const stream = await streamChatText({ ...input, strategyId: undefined, messages: [{ role: "user", content: input.prompt }] });
+      expect((await stream.finished).text).toBe("Reçu");
+    });
+    expect(checkBudget).toHaveBeenCalledWith("brand-inherited");
+    expect(mocks.create.mock.calls.at(-1)![0].data).toMatchObject({
+      strategyId: "brand-inherited", context: "receipt-fixture:intake[owned-stream]:subscription-quota:api-equivalent-estimate",
+    });
+    expect(mocks.stream).toHaveBeenCalledOnce();
+  });
+
 });

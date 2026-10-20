@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const create = vi.hoisted(() => vi.fn(async (_args: { data: Record<string, unknown> }) => ({ id: "cost-receipt" })));
-vi.mock("@/lib/db", () => ({ db: { aICostLog: { create } } }));
-import { trackCost } from "@/server/services/llm-gateway";
+const updateMany = vi.hoisted(() => vi.fn(async () => ({ count: 1 })));
+vi.mock("@/lib/db", () => ({ db: { aICostLog: { create, updateMany } } }));
+import { trackCost, withIntakeCostContext, bindIntakeCostStrategy } from "@/server/services/llm-gateway";
 
-beforeEach(() => { create.mockClear(); });
+beforeEach(() => { create.mockClear(); updateMany.mockClear(); });
 afterEach(() => { vi.unstubAllEnvs(); });
 describe("actual text provider and estimated cost receipt", () => {
   it("separates subscription quota from an API-priced estimate for OAuth Luna", async () => {
@@ -46,9 +47,58 @@ describe("actual text provider and estimated cost receipt", () => {
     });
   });
 
-  it("an unscoped invocation does not invent a brand cost", async () => {
+  it("records unassigned usage without inventing a brand", async () => {
     await trackCost({ caller: "unscoped" }, { inputTokens: 10, outputTokens: 5 },
       "gemma4:31b", undefined, "ollama");
-    expect(create).not.toHaveBeenCalled();
+    expect(create).toHaveBeenCalledOnce();
+    expect(create.mock.calls[0]![0].data).toMatchObject({
+      strategyId: null, inputTokens: 10, outputTokens: 5, context: "unscoped:estimated-cost",
+    });
   });
+  it("keeps concurrent intake usage separate before and after each real brand is bound", async () => {
+    let release!: () => void;
+    const otherBound = new Promise<void>(resolve => { release = resolve; });
+    await Promise.all([
+      withIntakeCostContext("owned-intake-a", async () => {
+        await trackCost({ caller: "extract" }, { inputTokens: 10, outputTokens: 5 }, "gemma4:31b", undefined, "ollama");
+        await otherBound;
+        await bindIntakeCostStrategy("brand-a");
+        await trackCost({ caller: "evaluate" }, { inputTokens: 7, outputTokens: 2 }, "gemma4:31b", undefined, "ollama");
+      }),
+      withIntakeCostContext("owned-intake-b", async () => {
+        await bindIntakeCostStrategy("brand-b");
+        await trackCost({ caller: "evaluate" }, { inputTokens: 3, outputTokens: 1 }, "gemma4:31b", undefined, "ollama");
+        release();
+      }),
+    ]);
+    const rows = create.mock.calls.map(([v]) => v.data);
+    expect(rows.find(r => r.context === "extract:intake[owned-intake-a]:estimated-cost")?.strategyId).toBeNull();
+    expect(rows.find(r => r.context === "evaluate:intake[owned-intake-a]:estimated-cost")?.strategyId).toBe("brand-a");
+    expect(rows.find(r => r.context === "evaluate:intake[owned-intake-b]:estimated-cost")?.strategyId).toBe("brand-b");
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { strategyId: null, context: { contains: ":intake[owned-intake-a]" } }, data: { strategyId: "brand-a" },
+    });
+    await trackCost({ caller: "outside" }, { inputTokens: 1, outputTokens: 1 }, "gemma4:31b", undefined, "ollama");
+    expect(create.mock.calls.at(-1)![0].data).toMatchObject({ strategyId: null, context: "outside:estimated-cost" });
+  });
+
+  it("retains attribution for a deferred child after its parent has returned", async () => {
+    let release!: () => void, child!: Promise<void>;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    await withIntakeCostContext("deferred-owned", async () => {
+      await bindIntakeCostStrategy("brand-a");
+      child = gate.then(() => trackCost({ caller: "deferred" }, { inputTokens: 2, outputTokens: 1 }, "gemma4:31b", undefined, "ollama"));
+    });
+    await withIntakeCostContext("next-owned", async () => { await bindIntakeCostStrategy("brand-b"); release(); await child; });
+    expect(create.mock.calls[0]![0].data).toMatchObject({ strategyId: "brand-a", context: "deferred:intake[deferred-owned]:estimated-cost" });
+  });
+
+  it("never reassigns an already bound operation to another brand", async () => {
+    await withIntakeCostContext("owned-intake", async () => {
+      await bindIntakeCostStrategy("brand-a");
+      await expect(bindIntakeCostStrategy("brand-b")).rejects.toThrow("INTAKE_COST_STRATEGY_MISMATCH");
+    });
+    expect(updateMany).toHaveBeenCalledOnce();
+  });
+
 });

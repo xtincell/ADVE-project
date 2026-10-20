@@ -27,7 +27,8 @@ import { listIntakeDocuments, retainIntakeDocuments, readRetainedIntakeDocuments
 import { readIntakeReportAccess } from "@/server/services/quick-intake/paid-fulfillment";
 import { previewIntakeDiagnostic, intakePillarFields, intakeEvidenceEntries, intakeReportContent } from "@/server/services/quick-intake/report-composer";
 import type { Prisma } from "@prisma/client";
-import { callLLM, extractJSON, isTextLLMAvailable } from "@/server/services/llm-gateway";
+import { callLLM, extractJSON, isTextLLMAvailable, withIntakeCostContext, describeTextRouting, FALLBACK_POLICY } from "@/server/services/llm-gateway";
+import { resolveRatePolicy } from "@/server/services/llm-gateway/rate-policy";
 import * as mestor from "@/server/services/mestor";
 import { emitIntent as mestorEmitIntent } from "@/server/services/mestor/intents";
 import { TRPCError } from "@trpc/server";
@@ -314,24 +315,42 @@ async function fetchUrlAsText(
 // ── F1 async (fix prod 2026-07-19) — mécanique commune des 3 chemins lourds ──
 
 /**
- * Réserve la row pour un traitement asynchrone. Claim ATOMIQUE : seuls
- * IN_PROGRESS (premier passage) et FAILED (retry) sont réservables — un
- * double-submit concurrent perd la course et reçoit une erreur explicite au
- * lieu d'un double traitement.
+ * Durable admission shared by every public completion path. Capacity comes
+ * from the existing model policy/limiter, never a second independent quota.
+ * The lock serializes only the claim, not provider work. Manual completions
+ * without an eligible model retain their existing deterministic path.
  */
 async function claimIntakeForProcessing(db: import("@prisma/client").PrismaClient, intakeId: string): Promise<void> {
-  const claimed = await db.quickIntake.updateMany({
-    where: { id: intakeId, status: { in: ["IN_PROGRESS", "FAILED"] } },
-    // `processingStage` remis à zéro comme `failureReason` : un retry ne doit
-    // jamais afficher l'étape de la tentative précédente.
-    data: { status: "PROCESSING", failureReason: null, processingStage: null },
-  });
-  if (claimed.count === 0) {
-    throw new TRPCError({
-      code: "CONFLICT",
-      message: "L'analyse est déjà en cours pour ce diagnostic. Patientez quelques instants, la page suit l'avancement.",
+  const { resolvePolicy } = await import("@/server/services/model-policy");
+  const policy = await resolvePolicy("extraction").catch(() => ({ ...FALLBACK_POLICY.extraction, version: 0 }));
+  const model = describeTextRouting(policy).attempts.find(attempt => attempt.eligible)?.model;
+  const capacity = model ? resolveRatePolicy(model).policy.maxConcurrent : null;
+  await db.$transaction(async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('quick-intake-admission'))`;
+    const current = await tx.quickIntake.findUnique({ where: { id: intakeId }, select: { status: true } });
+    if (current?.status === "PROCESSING") {
+      throw new TRPCError({ code: "CONFLICT",
+        message: "L'analyse est déjà en cours pour ce diagnostic. Patientez quelques instants, la page suit l'avancement." });
+    }
+    if (!current || !["IN_PROGRESS", "FAILED"].includes(current.status)) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Ce diagnostic ne peut pas être relancé dans son état actuel." });
+    }
+    if (capacity !== null) {
+      // Same recovery window as getByToken: a killed worker cannot occupy
+      // capacity forever. This is admission, not a provider quota guarantee.
+      const active = await tx.quickIntake.count({ where: { status: "PROCESSING",
+        updatedAt: { gt: new Date(Date.now() - 10 * 60_000) } } });
+      if (active >= capacity) {
+        throw new TRPCError({ code: "TOO_MANY_REQUESTS",
+          message: "Les analyses sont momentanément occupées. Vos informations sont conservées ; réessayez dans quelques instants." });
+      }
+    }
+    const claimed = await tx.quickIntake.updateMany({
+      where: { id: intakeId, status: { in: ["IN_PROGRESS", "FAILED"] } },
+      data: { status: "PROCESSING", failureReason: null, processingStage: null },
     });
-  }
+    if (!claimed.count) throw new TRPCError({ code: "CONFLICT", message: "Ce diagnostic est déjà pris en charge." });
+  });
 }
 
 /**
@@ -382,22 +401,25 @@ async function mergeIntakeResponses(
  * est rattrapé par la garde paresseuse de getByToken (> 10 min → FAILED
  * "timeout").
  */
-function runIntakeProcessing(
+function runIntakeProcessing<T extends { failed: "extraction" | "llm_unavailable" | null }>(
   db: import("@prisma/client").PrismaClient,
   intakeId: string,
-  token: string,
   caller: string,
-  work: () => Promise<{ failed: "extraction" | "llm_unavailable" | null }>,
-): Promise<void> {
-  return (async () => {
+  work: () => Promise<T>,
+  rethrow = false,
+): Promise<T | null> {
+  return withIntakeCostContext(intakeId, async () => {
     let reason: "extraction" | "llm_unavailable" | "internal" | null = null;
+    let outcome: T | null = null;
+    let failure: unknown;
     try {
-      const outcome = await work();
+      outcome = await work();
       reason = outcome.failed;
     } catch (err) {
+      failure = err;
       reason = err instanceof quickIntakeService.IncompleteIntakeError ? "extraction" : "internal";
       console.error(
-        `[quick-intake:${caller}] traitement de fond échoué (token ${token}):`,
+        `[quick-intake:${caller}] traitement de fond échoué (intake ${intakeId}):`,
         err instanceof Error ? err.message : err,
       );
     }
@@ -411,7 +433,9 @@ function runIntakeProcessing(
           console.error(`[quick-intake:${caller}] transition FAILED impossible:`, err instanceof Error ? err.message : err);
         });
     }
-  })();
+    if (rethrow && reason !== null) throw failure ?? new Error("INTAKE_PROCESSING_FAILED");
+    return outcome;
+  });
 }
 
 export const quickIntakeRouter = createTRPCRouter({
@@ -483,7 +507,13 @@ export const quickIntakeRouter = createTRPCRouter({
           diagnostic: access.unlocked ? saved.diagnostic : previewIntakeDiagnostic(saved.diagnostic),
           strategyId: saved.convertedToId, dealId: deal?.id ?? null };
       }
-      const result = await quickIntakeService.complete(input.token);
+      if (!saved) throw new TRPCError({ code: "NOT_FOUND", message: "Diagnostic introuvable." });
+      await claimIntakeForProcessing(ctx.db, saved.id);
+      const outcome = await runIntakeProcessing(ctx.db, saved.id, "complete", async () => ({
+        failed: null, result: await quickIntakeService.complete(input.token),
+      }), true);
+      if (!outcome) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "L'analyse n'a pas abouti. Vos informations sont conservées." });
+      const result = outcome.result;
       return { ...result, diagnostic: access.unlocked ? result.diagnostic : previewIntakeDiagnostic(result.diagnostic) };
     }),
 
@@ -678,10 +708,10 @@ export const quickIntakeRouter = createTRPCRouter({
 
       const questions = targetPillar === "biz"
         ? getBusinessContextQuestions()
-        : await getAdaptiveQuestions(targetPillar, responses, {
+        : await withIntakeCostContext(intake.id, () => getAdaptiveQuestions(targetPillar, responses, {
             sector: intake.sector ?? undefined,
             positioning: intake.positioning ?? undefined,
-          });
+          }));
 
       const answeredCount = Object.keys(responses).length;
       const progress = answeredCount / allSteps.length;
@@ -1287,7 +1317,7 @@ export const quickIntakeRouter = createTRPCRouter({
 
       await claimIntakeForProcessing(ctx.db, intake.id);
 
-      void runIntakeProcessing(ctx.db, intake.id, input.token, "processShort", async () => {
+      void runIntakeProcessing(ctx.db, intake.id, "processShort", async () => {
         const extraction = await extractFromText(input.text, intake.companyName, intake.sector);
         if (extraction === null) return { failed: "llm_unavailable" as const };
         await mergeIntakeResponses(ctx.db, intake.id, extraction.responses);
@@ -1354,7 +1384,7 @@ export const quickIntakeRouter = createTRPCRouter({
 
       await claimIntakeForProcessing(ctx.db, intake.id);
 
-      void runIntakeProcessing(ctx.db, intake.id, input.token, "processIngest", async () => {
+      void runIntakeProcessing(ctx.db, intake.id, "processIngest", async () => {
         // Collect all text sources
         const textParts: string[] = [];
 
@@ -1457,7 +1487,7 @@ export const quickIntakeRouter = createTRPCRouter({
 
       await claimIntakeForProcessing(ctx.db, intake.id);
 
-      void runIntakeProcessing(ctx.db, intake.id, input.token, "processIngestPlus", async () => {
+      void runIntakeProcessing(ctx.db, intake.id, "processIngestPlus", async () => {
         const textParts: string[] = [];
         if (intake.rawText) textParts.push(`[TEXTE FOURNI]\n${intake.rawText}`);
 
