@@ -235,6 +235,11 @@ export const paymentRouter = createTRPCRouter({
           customer: { name: intake.contactName, email: intake.contactEmail },
           metadata: { tierKey: input.tierKey, intakeToken: input.intakeToken },
         });
+        // Persist the provider's receipt before exposing its checkout URL.
+        await ctx.db.intakePayment.update({
+          where: { reference },
+          data: { providerRef: result.providerRef, notificationTokenHash: result.notificationTokenHash },
+        });
         return {
           paymentUrl: result.paymentUrl,
           reference,
@@ -243,8 +248,8 @@ export const paymentRouter = createTRPCRouter({
           currency: resolved.currencyCode,
         };
       } catch (err) {
-        await ctx.db.intakePayment.update({
-          where: { reference },
+        await ctx.db.intakePayment.updateMany({
+          where: { reference, status: { not: "PAID" } },
           data: {
             status: "FAILED",
             failureReason: err instanceof PaymentProviderError ? err.message : (err as Error).message,

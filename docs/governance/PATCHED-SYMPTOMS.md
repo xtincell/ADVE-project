@@ -102,7 +102,7 @@ Cause508 : flag payé client, rendu et état terminal insuffisamment liés aux
 rails existants. Lecteur PAID/même intake ou vraie sessionADMIN, projection
 serveur, cookies PDF bornés, rejeu sans modèle/Deal et refus activation sans
 droit reçus localement avec vrai PDF ; conservation exacte sélectionnée reçue.
-509 livrée au périmètre technique : PR1043/source `f75c6c290dd0672ff29aa2a7529a44348d513eaf`, quinze checks SUCCESS/un SKIPPED ; build39483634646 smoke/push et runtime6.27.509 au digest `a3825f5246e0daa4eb9c25149fc2d5f6c252527238c79c747d234bc0b1277fae` reçus. Déploiement terminé le20octobre2026 à19:44:17UTC, mêmes volumes, login/version200, primaire OpenAI/relais/délai90000ms conservés, OpenRouter absent.
+509 livrée au périmètre technique : PR1043/source `f75c6c290dd0672ff29aa2a7529a44348d513eaf`, quinze checks SUCCESS/un SKIPPED ; build39483634646 smoke/push et runtime6.27.509 au digest `a3825f5246e0daa4eb9c25149fc2d5f6c252527238c79c747d234bc0b1277fae` reçus. Déploiement terminé le 20 octobre2026 à19:44:17UTC, mêmes volumes, login/version200, primaire OpenAI/relais/délai90000ms conservés, OpenRouter absent.
 Après livraison,67sources/1041actifs, états/originaux, huit piliers et portefeuille Friesland conservés ; lectures avant/après séquentielles, pas toute base atomique. Version publique509/200 et original d’intake inconnu404/private,no-store/no-referrer reçus : transport public uniquement, pas parcours client payé.
 Ligne candidate active et attente de CI/image/runtime retirées ; checkpoint
 initial conservé dans CHANGELOG. Qualité du rapport refusée (26p/promesse8p,
@@ -113,7 +113,7 @@ runtime. Aucun PSP/vente/MVP entier reçu. Preuves privées de livraison : `rele
 
 ## Entrées actives
 
-2026-10-20 · **511 livré — identité revendiquée et autorité partagée au selfserve** : trois défauts reproduits sur fixtures (hashnull revendiqué sur email seul, double consommation concurrente de reset, homonymes fusionnés/accès entre deux TPE). auth.register refuse tout existant, reset existant consommé atomiquement token/date ; nouveau fondateur sans operatorId partagé, propriété Strategy.userId gardée, Client réutilisé seulement sous même propriétaire, opérateurs existants inchangés. Résultat login ou récupération préremplie, register conflict vers récupération, indisponibilité sans transport/accusé demande si armé sans mail prétendu livré. Six PG initiaux puis sept avec refus sans transport/identité inchangée, harnais corrigé séparément ; census admin readonly réservé selfserve production509 zéroop/zéroassocié, aucune mutation réelle. Cause : email/nom et affectation technique partagée traités comme preuve de contrôle/droit. 511 livré, natif reçu localement ; transport externe ouvert, M04offre/CRM et M05coût/différés/admission ouverts, pas PSP/vente/MVP entier. [Plan unique M04/C7](RESIDUAL-DEBT.md). **Blocage de remise M04 confirmé** : lecture seule du runtime509 le20octobre
+2026-10-20 · **511 livré — identité revendiquée et autorité partagée au selfserve** : trois défauts reproduits sur fixtures (hashnull revendiqué sur email seul, double consommation concurrente de reset, homonymes fusionnés/accès entre deux TPE). auth.register refuse tout existant, reset existant consommé atomiquement token/date ; nouveau fondateur sans operatorId partagé, propriété Strategy.userId gardée, Client réutilisé seulement sous même propriétaire, opérateurs existants inchangés. Résultat login ou récupération préremplie, register conflict vers récupération, indisponibilité sans transport/accusé demande si armé sans mail prétendu livré. Six PG initiaux puis sept avec refus sans transport/identité inchangée, harnais corrigé séparément ; census admin readonly réservé selfserve production509 zéroop/zéroassocié, aucune mutation réelle. Cause : email/nom et affectation technique partagée traités comme preuve de contrôle/droit. 511 livré, natif reçu localement ; transport externe ouvert, M04offre/CRM et M05coût/différés/admission ouverts, pas PSP/vente/MVP entier. [Plan unique M04/C7](RESIDUAL-DEBT.md). **Blocage de remise M04 confirmé** : lecture seule du runtime509 le 20 octobre
 à21:39UTC : sendEmail sélectionne provider=log, aucun EMAIL_FROM configuré.
 Aucun transport transactionnel actif : le titulaire ne recevrait pas son lien,
 malgré les gardes de reset reçues localement. Réutiliser email/Anubis et le
@@ -142,7 +142,7 @@ annulations Next _rsc et effets volontaires conservés dans les reçus P27 ; auc
 SMTP/PSP/vente/MVP entier déduit. Compte d’envoi et transport autorisé restent ouverts.
 Preuves : `release/preuves-mvp-commercial-20261020/production511-{received,data-preserved,public-api-received}.json`.
 
-2026-10-20 · **512 candidat — usage pré-marque perdu et travail implicite** :
+2026-10-20 · **512 livré — usage pré-marque perdu et travail implicite** :
 trackCost ignorait l’usage sans Strategy et le rapport public lançait des
 préparations créatives/embeddings ; le claim par intake ne bornait pas l’occupation
 partagée. Gateway/ALS interne et rattachement réel, claim PostgreSQL et capacité
@@ -155,8 +155,38 @@ Luna/12 coûts exacts, pré-marque rattachée, admission 409/429/rejeu/original 
 cas conservés ; 19 nœuds sans embeddings/98 PENDING utiles, pas zéro agent.
 DEFAULT 4 909/461, PG 440/27 et contrôles finaux verts. Première grille refusée puis
 correctif 3 colonnes reçu sur build final, cinq tarifs contenus sur ordinateur et
-mobile420 ; CI/image/runtime 512, autres parcours/
+mobile420 ; livraison 512 reçue, autres parcours/
 coûts et réception commerciale ouverts. [Plan M05/C7](RESIDUAL-DEBT.md).
+
+512 livrée : déploiement terminé le 20 octobre à 23:40:14 UTC, runtime reçu à 23:40:36 UTC,
+source `0c6a3a959145c49a3f2c0b3b645334f8ae25248c`, digest
+`f663b9ea80772547563bfbd1248e485ddb61f77b0cfa26ea391aa85091163f67`.
+Conservation 23:41 UTC : 67 sources/1 041 actifs/huit piliers/racine Friesland, mêmes
+volumes/relais Luna/90s, OpenRouter absent ; lectures séquentielles non atomiques.
+Attente livraison/runtime/conservation 512 close. Preuves P23
+`release/preuves-mvp-commercial-20261020/production512-{received,data-preserved,public-api-received}.json`.
+
+2026-10-21 · **513 candidat — signal de paiement confondu avec autorité** :
+adaptateur/webhook/types et IntakePayment existants lient providerRef/hash SHA256
+avant URL, contrat v1 snake_case/PUSH et statut serveur obligatoire ; plus de
+SUCCESS par défaut ni secret global pris pour preuve par paiement. PAID monotone/
+CAS,503/PENDING et anciennes lignes/droits conservés.8 rouges/1 vert puis 9 verts,
+18 PG et10 unitaires verts sur transport/fulfillment simulés, ancienne implémentation
+réellement rouge puis restaurée. Livraison513/paiement PSP et reprise durable
+après PAID non reçus. Cause : liaison du reçu et autorité du statut perdues entre
+initialisation et notification. [Plan M04](RESIDUAL-DEBT.md).
+
+**Réception locale 513 (2026-10-21)** : PostgreSQL 462 tests / 29 fichiers ;
+DEFAULT 4 919 / 462 reçu par union après deux reprises, sans garde affaiblie ;
+gouvernance 1 671 / 169, typage et deux lints sans erreur, cycles 0. Dix réponses
+HTTP Next locales reçues sur simulateur de prestataire : preuve invalide refusée,
+indisponibilité sans promotion, PAID conservé et accès voisin refusé. Persistance
+et retrait de la fixture reçus ; anciens dossiers conservés. Aucun paiement réel.
+Preuves P29 : `local-reception.json` et `http-received.json`. Livraison 513,
+paiement PSP, SMTP et reprise durable restent ouverts. Raccord réel : clé reconnue
+live sur origine sandbox ; OAuth seul sur `https://api.cinetpay.co` refusé par
+HTTP 422 / INVALID_CREDENTIALS (1005). Aucun secret sorti, paiement créé ou
+changement de configuration. Compte ou rail de lancement à confirmer, [plan M04](RESIDUAL-DEBT.md).
 
 510 est reçue en production : source `5c5cc907249ef2123e2d6c7a60c95f81ab7794fe`,
 déploiement `ip02ws80mllbkno6xn7skm1h` terminé le 20 octobre à 21:48:22 UTC,

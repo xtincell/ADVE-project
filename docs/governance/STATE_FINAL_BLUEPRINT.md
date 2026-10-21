@@ -2279,7 +2279,7 @@ annulations Next _rsc et effets volontaires conservés dans les reçus P27 ; auc
 SMTP/PSP/vente/MVP entier déduit. Compte d’envoi et transport autorisé restent ouverts.
 Preuves : `release/preuves-mvp-commercial-20261020/production511-{received,data-preserved,public-api-received}.json`.
 
-Extension candidate 512 (2026-10-20) : l’usage du Gateway sans Strategy reste
+Extension 512 livrée (2026-10-20) : l’usage du Gateway sans Strategy reste
 traçable via AICostLog nullable et un contexte ALS intake interne distinct de
 l’identité tenant, sans bearer/PII ; rattachement au vrai Strategy, descendants
 différés et budgets stream compris. Toutes les entrées quick-intake utilisent ce
@@ -2293,9 +2293,40 @@ Strategy et extraction initiale préservée, estimation API distincte de facture
 quota Pro. Admission réelle409/429, rejeu sans génération et cas antérieurs
 conservés ; index déterministe19 nœuds et 98 recommandations PENDING utiles reçus,
 pas zéro agent ni activation future acquise. Contrôles finaux locaux verts.
-Grille corrigée/CI/image/runtime 512 ouverts, ainsi que autres parcours/coûts,
+Grille corrigée/livraison 512 reçues ; restent autres parcours/coûts,
 transport réel, offres non éprouvées, PSP/vente et MVP entier. Voir plan M05/C7
 et reçus dans RESIDUAL-DEBT ; aucun coût déjà reçu sur ce cas à rouvrir.
+
+512 livrée : déploiement terminé le 20 octobre à 23:40:14 UTC, runtime reçu à 23:40:36 UTC,
+source `0c6a3a959145c49a3f2c0b3b645334f8ae25248c`, digest
+`f663b9ea80772547563bfbd1248e485ddb61f77b0cfa26ea391aa85091163f67`.
+Conservation 23:41 UTC : 67 sources/1 041 actifs/huit piliers/racine Friesland, mêmes
+volumes/relais Luna/90s, OpenRouter absent ; lectures séquentielles non atomiques.
+Attente livraison/runtime/conservation 512 close. Preuves P23
+`release/preuves-mvp-commercial-20261020/production512-{received,data-preserved,public-api-received}.json`.
+
+Extension candidate 513 (2026-10-21) : IntakePayment ajoute uniquement
+notificationTokenHash nullable (SHA256, jamais token brut/credential) ; providerRef
+et hash sont liés avant exposition URL dans les deux init existants. Adaptateur/
+webhook CinetPay v1 snake_case/PUSH : preuve liée puis statut serveur autoritaire,
+identités et montant/devise présents vérifiés,503/PENDING sur indisponibilité,
+PAID monotone/CAS. Anciennes lignes sans liaison conservées, sans backfill ni
+suppression ; leurs notifications 503 sont à réconcilier sans retirer les droits
+PAID existants. Aucun concept/service/provider/page/route/Intent/ADR nouveau.
+Réception 513 finale/PSP et durabilité du fulfillment ouverts ; aucun achat/vente
+ou MVP entier reçu. [Plans M04/M05](RESIDUAL-DEBT.md).
+
+**Réception locale 513 (2026-10-21)** : PostgreSQL 462 tests / 29 fichiers ;
+DEFAULT 4 919 / 462 reçu par union après deux reprises, sans garde affaiblie ;
+gouvernance 1 671 / 169, typage et deux lints sans erreur, cycles 0. Dix réponses
+HTTP Next locales reçues sur simulateur de prestataire : preuve invalide refusée,
+indisponibilité sans promotion, PAID conservé et accès voisin refusé. Persistance
+et retrait de la fixture reçus ; anciens dossiers conservés. Aucun paiement réel.
+Preuves P29 : `local-reception.json` et `http-received.json`. Livraison 513,
+paiement PSP, SMTP et reprise durable restent ouverts. Raccord réel : clé reconnue
+live sur origine sandbox ; OAuth seul sur `https://api.cinetpay.co` refusé par
+HTTP 422 / INVALID_CREDENTIALS (1005). Aucun secret sorti, paiement créé ou
+changement de configuration. Compte ou rail de lancement à confirmer, [plan M04](RESIDUAL-DEBT.md).
 
 510 est reçue en production : source `5c5cc907249ef2123e2d6c7a60c95f81ab7794fe`,
 déploiement `ip02ws80mllbkno6xn7skm1h` terminé le 20 octobre à 21:48:22 UTC,
@@ -2310,7 +2341,7 @@ coût complet ou MVP entier reçu.
 Preuves : `release/preuves-mvp-commercial-20261020/production510-received.json`,
 `production510-data-preserved.json`, `production510-public-api-received.json`.
 M04 offre/CRM entier et M05 coût/différés/assistance/admission restent à recevoir.
-**Blocage de remise M04 confirmé** : lecture seule du runtime509 le20octobre
+**Blocage de remise M04 confirmé** : lecture seule du runtime509 le 20 octobre
 à21:39UTC : sendEmail sélectionne provider=log, aucun EMAIL_FROM configuré.
 Aucun transport transactionnel actif : le titulaire ne recevrait pas son lien,
 malgré les gardes de reset reçues localement. Réutiliser email/Anubis et le

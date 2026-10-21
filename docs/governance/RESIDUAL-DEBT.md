@@ -73,7 +73,7 @@ Rendu candidat : ids/métadonnées masqués, e_channels/DIRECT traduits, vignett
 Preuve de cadrage : `release/preuves-rapport-fidelite-20261020/framing.json`. Première transition : `release/preuves-rapport-fidelite-20261020/native-model-transition-network.json` ; régénération historique reçue12/12. Preuves complémentaires : `release/preuves-rapport-fidelite-20261020/history-conservation510-received.json`, `regeneration-fixture-cleanup.json`, `native-paid-final-network.json`, `print2-visually-received.json` ; print2 conserve le checkpointdev13pages, désormais complété par `compiled-pdf-visually-received.json`, `native-compiled-print-network.json` et `original510-http-received.json` : PDF compilé/qualité bornée et conservation postnettoyage reçus ; livraison510 désormais reçue séparément. Reçus finaux : `history-conservation510-final-received.json`, `nori-read-conservation-received.json` ; ancien périmètre coût8 conservé, nouveau cas coût8 au snapshot puis11partiels par écritures différées avant la lecture sans provider.
 
 **Clôture technique droits/export/reprise509 — 2026-10-20** :
-509 livrée au périmètre technique : PR1043/source `f75c6c290dd0672ff29aa2a7529a44348d513eaf`, quinze checks SUCCESS/un SKIPPED ; build39483634646 smoke/push et runtime6.27.509 au digest `a3825f5246e0daa4eb9c25149fc2d5f6c252527238c79c747d234bc0b1277fae` reçus. Déploiement terminé le20octobre2026 à19:44:17UTC, mêmes volumes, login/version200, primaire OpenAI/relais/délai90000ms conservés, OpenRouter absent.
+509 livrée au périmètre technique : PR1043/source `f75c6c290dd0672ff29aa2a7529a44348d513eaf`, quinze checks SUCCESS/un SKIPPED ; build39483634646 smoke/push et runtime6.27.509 au digest `a3825f5246e0daa4eb9c25149fc2d5f6c252527238c79c747d234bc0b1277fae` reçus. Déploiement terminé le 20 octobre2026 à19:44:17UTC, mêmes volumes, login/version200, primaire OpenAI/relais/délai90000ms conservés, OpenRouter absent.
 Après livraison,67sources/1041actifs, états/originaux, huit piliers et portefeuille Friesland conservés ; lectures avant/après séquentielles, pas toute base atomique. Version publique509/200 et original d’intake inconnu404/private,no-store/no-referrer reçus : transport public uniquement, pas parcours client payé.
 Attente CI/image/runtime509 close au périmètre technique ; droits/export/reprise reçus localement puis code/runtime livrés. Aucune qualité commerciale, paiement PSP complet, client/vente ou MVP entier reçus.
 La conservation locale exacte sélectionnée reste reçue (deux diagnostics/champs,
@@ -82,7 +82,7 @@ sans PAID synthétique, ADMIN dédié retiré), distincte des lectures productio
 Les dettes locales et l’attente CI/image/runtime sont retirées ; ne pas rouvrir
 le correctif technique pour polir la qualité. Preuves privées de livraison : `release/preuves-mvp-commercial-20261020/production509-{received,data-preserved,public-api-received}.json`, `pr509-green-before-merge.json`, `postmerge509-received.json` ; plan de reprise `release/preuves-rapport-commercial-20261020/mvp-report-root-plan.json`.
 
-**Coût/admission M05/C7 — candidat 512, réception complète ouverte** : Gateway
+**Coût/admission M05/C7 — 512 livrée, réception commerciale ouverte** : Gateway
 conserve l’usage réussi avant Strategy ; ALS intake interne sans bearer/PII,
 distinct du contexte tenant, puis rattachement au vrai Strategy et descendants
 différés/stream. Toutes les entrées quick-intake sont branchées. Claim durable
@@ -109,8 +109,8 @@ même id, pas défaut produit. Trois anciens dossiers/24 piliers/2 uploads/3 sou
 original sous concurrence conservés, aucune garde assouplie) ; PG 440/27,
 gouvernance 1 671/169, typage/deux lints sans erreur, 24 avertissements historiques,
 zéro cycle, gauntlet responsive vert. Ne pas rouvrir ces coûts/rejeux déjà reçus.
-**Fermer M05 restant** : recevoir CI/image/runtime 512 et
-conservation de bascule ; qualifier coûts des autres parcours, appels différés/
+**Fermer M05 restant** : livraison 512 et conservation de bascule reçues ;
+qualifier coûts des autres parcours, appels différés/
 assistance facultative, consommation d’abonnement/capacité et admission/
 conservation globales par mécanismes existants. 19 sites statiques ne comptent pas
 les appels exécutés ; aucun quota fournisseur, SLO universel, expiration des
@@ -141,14 +141,14 @@ et MVP entier restent ouverts, aucun nouveau modèle/service/gestionnaire requis
 **Offre/CRM M04 — grille lue, promesses non reçues** : navigation native des
 offres existantes sans checkout. « Plan 90 jours », « régénération illimitée »,
 exécution de 35 sections, TVA et flux Stripe/CinetPay ne sont pas reçus. Le
-candidat 512 retire les promesses non garanties de complet/90 jours/illimité,
+512 livrée retire les promesses non garanties de complet/90 jours/illimité,
 borne l’aperçu à deux recommandations et distingue édition ADVE/analyses dérivées.
 Copie observée nativement, mais première grille 5 colonnes refusée pour prix
 débordants ; correction bornée 3 colonnes du composant existant reçue sur le build final,
 cinq prix contenus sur ordinateur et mobile420. Configuration production reçue en booléens seulement :
 CinetPay configuré, Stripe/PayPal absents ; aucun PSP appelé/paiement reçu,
 EMAIL_FROM absent/provider log. Ne pas confondre configuration et paiement prêt.
-Livraison 512 et offres Oracle/retainers restent à recevoir. Comparer
+Livraison 512 reçue ; offres Oracle/retainers restent à recevoir. Comparer
 `src/server/services/monetization/pricing-tiers.ts` et le composant existant aux
 livrables/capacités effectivement reçus, y compris limites, rôle fondateur/
 opérateur et rattachement au Deal. Corriger les promesses/conditions via le même
@@ -157,6 +157,40 @@ Responsable MVP-FUSEE-04 ; effort une confrontation bornée du catalogue et de l
 recette commerciale, déclencheur avant présenter une offre vendable/checkout.
 SMTP/PSP/vente et conversion commerciale restent distincts des lectures CRM.
 Preuve privée : `release/preuves-cout-admission-20261020/production-payment-readiness.json`.
+
+**Paiement M04 — candidat 513, preuve locale distincte du PSP** : adaptateur,
+webhook et types existants étendus, hash de notification par paiement et providerRef
+persistés avant URL dans les deux init. Pas de token brut/credential stocké ;
+preuve liée puis statut serveur obligatoire, PAID monotone/CAS et 503/PENDING sur
+API indisponible. Replays/cycles et déclenchement unique reçus sur fixtures,
+pas garantie de livraison durable. Census production readonly :
+quatre lignes CinetPay (une PENDING/deux PAID/une FAILED), pas preuve de vente.
+Anciennes lignes sans liaison conservées : aucune suppression/backfill, droits
+PAID préservés ; notifications 503 à réconcilier par voie existante gardée.
+**Fermer** : persistance init/HTTP/replays/cycles et gates locaux reçus ; recevoir
+CI/image/runtime 513 ; rétablir les credentials compatibles v1 (OAuth422 reçu)
+puis recette PSP autorisée sans confondre test et paiement réel. Réconcilier
+l’ancien PENDING et les lignes legacy via les mécanismes existants, sans promotion
+non vérifiée. Fulfillment fire-and-forget après PAID non reçu durablement : chercher
+et réutiliser les jobs/reprises existants avant toute création, puis recevoir
+échec/reprise et absence de double livraison. Compte SMTP existant à désigner et
+transport autorisé restent requis. Responsable MVP-FUSEE-04/C7 ; effort recette
+bornée du paiement et de la reprise, déclencheur avant exposition commerciale ou
+promesse d’encaissement/livraison. Aucun nouveau service/provider/route/page/kind/
+ADR/tarif ni gestionnaire. Tests locaux avec transport/fulfillment simulés et
+vraies lignes PG ne reçoivent ni PSP, charge, mail, vente ni MVP entier.
+
+**Réception locale 513 (2026-10-21)** : PostgreSQL 462 tests / 29 fichiers ;
+DEFAULT 4 919 / 462 reçu par union après deux reprises, sans garde affaiblie ;
+gouvernance 1 671 / 169, typage et deux lints sans erreur, cycles 0. Dix réponses
+HTTP Next locales reçues sur simulateur de prestataire : preuve invalide refusée,
+indisponibilité sans promotion, PAID conservé et accès voisin refusé. Persistance
+et retrait de la fixture reçus ; anciens dossiers conservés. Aucun paiement réel.
+Preuves P29 : `local-reception.json` et `http-received.json`. Livraison 513,
+paiement PSP, SMTP et reprise durable restent ouverts. Raccord réel : clé reconnue
+live sur origine sandbox ; OAuth seul sur `https://api.cinetpay.co` refusé par
+HTTP 422 / INVALID_CREDENTIALS (1005). Aucun secret sorti, paiement créé ou
+changement de configuration. Compte ou rail de lancement à confirmer, [plan M04](RESIDUAL-DEBT.md).
 
 **Finitions C5/C7 différées après gros œuvre** : natif fonctionnel, mais liens
 contact/connexion voisins et icône succès sur indisponibilité, détour USER via
@@ -214,12 +248,23 @@ annulations Next _rsc et effets volontaires conservés dans les reçus P27 ; auc
 SMTP/PSP/vente/MVP entier déduit. Compte d’envoi et transport autorisé restent ouverts.
 Preuves : `release/preuves-mvp-commercial-20261020/production511-{received,data-preserved,public-api-received}.json`.
 
-512 reste candidat à la livraison : cas Luna/coût et contrôles locaux finaux
-reçus au périmètre ci-dessus. Natif compilé : 49 réponses traitement/43 réouverture,
-0 HTTP ≥500/exception/échec, fenêtres complètes ; titre ≤264 ms pilote compris,
-pas SLO. Grille finale reçue sur ordinateur et mobile420, cinq tarifs contenus ;
-fenêtre finale43réponses sans HTTP≥500/exception/échec, titre252ms pilote compris.
-CI/image/runtime restent ouverts ; aucun MVP entier reçu.
+512 livrée au périmètre technique ; coûts du cas Luna, garde d’admission et
+grille corrigée reçus localement. Offre/SMTP/autres parcours et réception
+commerciale restent ouverts ; aucun MVP entier reçu.
+
+512 livrée : déploiement terminé le 20 octobre à 23:40:14 UTC, runtime reçu à 23:40:36 UTC,
+source `0c6a3a959145c49a3f2c0b3b645334f8ae25248c`, digest
+`f663b9ea80772547563bfbd1248e485ddb61f77b0cfa26ea391aa85091163f67`.
+Conservation 23:41 UTC : 67 sources/1 041 actifs/huit piliers/racine Friesland, mêmes
+volumes/relais Luna/90s, OpenRouter absent ; lectures séquentielles non atomiques.
+Attente livraison/runtime/conservation 512 close. Preuves P23
+`release/preuves-mvp-commercial-20261020/production512-{received,data-preserved,public-api-received}.json`.
+
+513 candidat : 18 PG ciblés/10 unitaires contrat verts sur vraies lignes PostgreSQL,
+transport et fulfillment simulés ; 8 rouges/1 vert initiaux puis 9 verts, ancien
+adaptateur réellement rouge puis restauré vert. Migration/generate locaux : 0.
+Trois tests de persistance init et HTTP/contrôles locaux reçus ;
+CI/image/runtime et paiement réel encore ouverts. Voir plan M04 ci-dessus.
 
 510 est reçue en production : source `5c5cc907249ef2123e2d6c7a60c95f81ab7794fe`,
 déploiement `ip02ws80mllbkno6xn7skm1h` terminé le 20 octobre à 21:48:22 UTC,
@@ -235,7 +280,7 @@ Preuves : `release/preuves-mvp-commercial-20261020/production510-received.json`,
 `production510-data-preserved.json`, `production510-public-api-received.json`.
 M04offre/CRM complet et M05coût/différés/assistance facultative/admission demeurent
 ouverts. Aucun nouveau gestionnaire, prix ou décision commerciale ajouté.
-**Blocage de remise M04 confirmé** : lecture seule du runtime509 le20octobre
+**Blocage de remise M04 confirmé** : lecture seule du runtime509 le 20 octobre
 à21:39UTC : sendEmail sélectionne provider=log, aucun EMAIL_FROM configuré.
 Aucun transport transactionnel actif : le titulaire ne recevrait pas son lien,
 malgré les gardes de reset reçues localement. Réutiliser email/Anubis et le

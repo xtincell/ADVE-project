@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.513", date: "2026-10-21", headline: "Un paiement confirmé reste acquis",
+    highlights: [{ emoji: "🔒", title: "Une confirmation vérifiée", body: "Le rapport se débloque après vérification de la transaction. Une notification en double ne relance pas sa livraison ; un paiement confirmé ne repasse plus en échec à cause d’une notification tardive." }],
+  },
+  {
     version: "6.27.512", date: "2026-10-20", headline: "Un diagnostic mieux maîtrisé",
     highlights: [{ emoji: "🔎", title: "Une seule analyse à la fois", body: "Un double clic ne relance plus deux analyses du même dossier. Si les analyses sont occupées, vos informations restent conservées pour réessayer. Le diagnostic ne lance plus automatiquement la création d’aperçus créatifs." }],
   },
