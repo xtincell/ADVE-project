@@ -2,6 +2,8 @@
 
 **Charger les repères manquants conserve les réglages opérateur existants.**
 
+- Périmètre de livraison consigné sous le numéro réel PR #1054, phase/4, dans scope-drift.
+
 - L’initialisation utilise le single-writer existant en mode création des absents, dans une transaction sérialisée. Un type incompatible refuse l’ensemble du chargement ; les valeurs, sources, identifiants et dates existantes restent inchangés au rejeu. Les autres usages de l’upsert conservent leur comportement.
 - L’écran de canon existant expose la route ADMIN existante, avec état de chargement et retour explicite « proposé ». Aucun nouveau modèle, service, routeur, page, Intent, fournisseur, gestionnaire ou formule. Trois régressions PostgreSQL rouges réellement reproduites, puis 31 tests du parcours verts. DEFAULT 4935/466, PostgreSQL 493/30, gouvernance 1671/169 ; typage et deux lints sans erreur (24 avertissements historiques chacun), zéro cycle, carte et build webpack reçus. Premier build refusé sur un cache généré non vide, conservé et déplacé réversiblement avant reprise.
 - Réception locale compilée sous ADMIN : chargement des 29 absents, ancien repère personnalisé à 2191 conservé dans tous ses champs ; second clic réellement reçu et 30 lignes identiques, dates comprises. Fenêtre initiale 64 réponses sans HTTP >=500 ni exception, 25 ERR_ABORTED conservés ; DOM et titre mesurés, titre 254 ms pilote compris, aucun SLO. Rejeu : deux réponses sans erreur ni échec. Capture réelle inspectée ; onze tables antérieures exactes après retrait des seules fixtures détenues, aucun appel IA. CI, image et production 517 encore à recevoir.
