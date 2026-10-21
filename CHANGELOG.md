@@ -1,3 +1,16 @@
+## v6.27.518 — fix(portfolio): rattache les dossiers existants à leur client (2026-10-21)
+
+**Le dossier et sa plateforme de marque conservent le même client après une réaffectation.**
+
+- Périmètre de livraison consigné sous le numéro réel PR #1056, phase/4, dans scope-drift.
+
+- Le formulaire existant permet à l’équipe responsable de sélectionner un client actif de son opérateur, avec pagination. La mutation existante exige une version relue et rattache atomiquement le dossier et sa plateforme ; conflit concurrent, client archivé ou étranger, plateforme partagée avec un autre client et liens antérieurs incohérents refusent l’opération. Les pays, contenus ADVE, sources et historiques restent conservés. Le dirigeant conserve son accès sans pouvoir réaffecter le client.
+- Aucun modèle, service, routeur, page, Intent, fournisseur ou gestionnaire ajouté. Guidance/Mestor : le rattachement rend les plateformes existantes utilisables dans le dossier client, puis dans la production et la mesure de ses marques. Réception locale et distante de cette version en cours ; aucune réception complète du MVP ou de l’Oracle déduite des tests ciblés.
+- Réception locale compilée sous membre de l’équipe : changement manuel puis relecture du client sélectionné ; deux liens conservés ensemble, pays CM de la marque distinct du siège CI, autres scalaires et piliers/HUMAN exacts. 58réponses/0>=500/exception, huit ERR_ABORTED conservés, DOM331ms et titre7057ms pilote compris, pas de SLO. Compilation antérieure à la dernière note Quoi de neuf518 ; cette prose est testée séparément avant réception du runtime final. DEFAULT4937/466, PostgreSQL500/30, gouvernance1671/169 ; typage et deux lints sans erreur (24avertissements historiques), zéro cycle et build webpack reçus. Les premiers refus de fixtures/mocks/typage et de cache sont conservés. Après retrait des seules fixtures natives, les lignes préexistantes de onze tables sont exactes par hash ; cinq nouvelles stratégies de deux suites PostgreSQL sont attribuées et conservées séparément. Premier refus81/76 conservé ; aucune identité de base entière ni snapshot global revendiqués. CI, image et runtime518 restent à recevoir.
+
+- Livraison 517 close : PR1054/source a4770ab55a3860d87f0f41a5ce513c6c3cec3db0, image reçue, déploiement terminé le 21 octobre à 10:24:36 UTC et runtime 6.27.517. CI distante DEFAULT4935/466 et PostgreSQL493/30 ; canon30références conservées, natif réel32réponses/0>=500/exception avec2annulations conservées. SPAWT reste à39.5/200 et40%de couverture ; conservation des dossiers/paiements reçue par lectures séquentielles, sans snapshot global ni SLO.
+- Référentiels La Barre des trois marques pilotes reçus le21octobre via les chemins d’ingestion et d’amendement gouvernés existants :42champs absents relus (Bonnet Rouge12, Peak12, Belle Hollandaise18), sources indexées, provenance INFERRED, formulations antérieures et SPAWT conservés. Ce reçu documentaire ne vaut ni adoption de doctrine, ni observation publique, ni audit de tout le corpus Drive. Les instances pays, équipes, droits, fiches réelles et l’Oracle restent à recevoir au plan.
+
 ## v6.27.517 — fix(scoreur): conserve le canon au rechargement (2026-10-21)
 
 **Charger les repères manquants conserve les réglages opérateur existants.**

@@ -181,6 +181,7 @@ export const brandNodeRouter = createTRPCRouter({
         slug: z.string().min(1).max(80).regex(/^[a-z0-9-]+$/).optional(),
         clusterTag: z.string().nullable().optional(),
         countryCode: z.string().length(2).nullable().optional(),
+        clientId: StringId.nullable().optional(),
         nodeRole: z.array(z.string()).optional(),
         lifecycle: z.string().optional(),
         inheritanceLocked: z.boolean().optional(),
@@ -189,6 +190,13 @@ export const brandNodeRouter = createTRPCRouter({
     }),
   }).mutation(async ({ ctx, input }) => {
     await assertNodeAccess(ctx.session.user.id, input.nodeId);
+    if ("clientId" in input.patches) {
+      const actor = await getOperatorContext(ctx.session.user.id);
+      const target = await db.brandNode.findUniqueOrThrow({ where: { id: input.nodeId }, select: { operatorId: true } });
+      if (actor.role !== "ADMIN" && actor.operatorId !== target.operatorId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Le rattachement client est pris en charge par votre équipe." });
+      }
+    }
     try {
       const node = await updateBrandNode(input.nodeId, input.patches, input.expectedUpdatedAt);
       return { ok: true as const, node };

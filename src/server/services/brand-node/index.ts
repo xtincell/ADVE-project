@@ -246,7 +246,7 @@ export async function updateBrandNode(
   patches: UpdateIntent["patches"],
   expectedUpdatedAt?: string,
 ): Promise<BrandNode> {
-  if ("sourceRefs" in patches && (!expectedUpdatedAt || !Number.isFinite(Date.parse(expectedUpdatedAt)))) {
+  if (("sourceRefs" in patches || "clientId" in patches) && (!expectedUpdatedAt || !Number.isFinite(Date.parse(expectedUpdatedAt)))) {
     throw new BrandNodeUpdateConflictError("Relisez les raccordements avant de les enregistrer : leur version est requise.");
   }
   const node = await db.brandNode.findUnique({ where: { id: nodeId }, select: { id: true, archivedAt: true, parentNodeId: true } });
@@ -273,7 +273,7 @@ export async function updateBrandNode(
   // Whitelist : nodeKind + nodeNature sont immutables (utiliser MOVE pour position structurelle).
   const allowedKeys = [
     "name", "slug", "clusterTag", "countryCode",
-    "nodeRole", "lifecycle", "inheritanceLocked", "pillarOverrides", "sourceRefs",
+    "nodeRole", "lifecycle", "inheritanceLocked", "pillarOverrides", "sourceRefs", "clientId",
   ];
   const data: Prisma.BrandNodeUpdateInput = {};
   if (restoring) data.archivedAt = null;
@@ -283,8 +283,13 @@ export async function updateBrandNode(
     if (!allowedKeys.includes(key)) {
       throw new Error(`Field "${key}" is immutable or unknown for OPERATOR_UPDATE_BRAND_NODE. Allowed: ${allowedKeys.join(", ")}`);
     }
-    // Type narrowing intentionnellement permissif — Prisma valide au runtime.
-    (data as Record<string, unknown>)[key] = key === "sourceRefs" ? PortfolioReferencesSchema.parse(value) : value;
+    if (key === "clientId") {
+      if (value !== null && (typeof value !== "string" || !value.trim())) throw new Error("Client indisponible.");
+      data.client = value === null ? { disconnect: true } : { connect: { id: value as string } };
+    } else {
+      // Type narrowing intentionnellement permissif — Prisma valide au runtime.
+      (data as Record<string, unknown>)[key] = key === "sourceRefs" ? PortfolioReferencesSchema.parse(value) : value;
+    }
     if (key === "pillarOverrides") pillarOverridesChanged = true;
   }
 
@@ -292,11 +297,42 @@ export async function updateBrandNode(
   try {
     // Even two writes in the same millisecond must consume distinct versions.
     if (expectedUpdatedAt) data.updatedAt = new Date(Math.max(Date.now(), Date.parse(expectedUpdatedAt) + 1));
-    updated = await db.brandNode.update({ where: { id: nodeId, archivedAt: node.archivedAt,
+    const where = { id: nodeId, archivedAt: node.archivedAt,
       ...(expectedUpdatedAt ? { updatedAt: new Date(expectedUpdatedAt) } : {}),
-    }, data });
+    };
+    if ("clientId" in patches) {
+      // One governed write binds the dossier and its existing platform together.
+      // Serializable isolation also guards client archival and shared attachments.
+      updated = await db.$transaction(async (tx) => {
+        const current = await tx.brandNode.findUniqueOrThrow({ where: { id: nodeId } });
+        const clientId = patches.clientId ?? null;
+        if (clientId && !await tx.client.findFirst({ where: { id: clientId,
+          operatorId: current.operatorId, status: "ACTIVE" }, select: { id: true } })) {
+          throw new Error("Client indisponible pour cet opérateur.");
+        }
+        if (current.strategyId) {
+          const strategy = await tx.strategy.findUniqueOrThrow({ where: { id: current.strategyId } });
+          if (strategy.operatorId !== current.operatorId || strategy.archivedAt) {
+            throw new Error("La plateforme liée doit être active et appartenir au même opérateur.");
+          }
+          if (strategy.clientId !== current.clientId && strategy.clientId !== clientId) {
+            throw new BrandNodeUpdateConflictError("Le dossier et sa plateforme ont des clients différents. Vérifiez leurs raccordements.");
+          }
+          const shared = await tx.brandNode.findFirst({ where: { strategyId: strategy.id, id: { not: nodeId },
+            ...(clientId === null ? { clientId: { not: null } } : { OR: [{ clientId: null }, { clientId: { not: clientId } }] }),
+          }, select: { id: true } });
+          if (shared) throw new BrandNodeUpdateConflictError("Cette plateforme est partagée avec un autre dossier. Vérifiez ses clients avant de la réaffecter.");
+          const changed = await tx.strategy.updateMany({ where: { id: strategy.id,
+            operatorId: current.operatorId, clientId: strategy.clientId, archivedAt: null }, data: { clientId } });
+          if (changed.count !== 1) throw new BrandNodeUpdateConflictError("La plateforme a changé. Actualisez le dossier.");
+        }
+        return tx.brandNode.update({ where, data });
+      }, { isolationLevel: "Serializable" });
+    } else {
+      updated = await db.brandNode.update({ where, data });
+    }
   } catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
+    if (error && typeof error === "object" && "code" in error && ["P2025", "P2034"].includes(String(error.code))) {
       throw new BrandNodeUpdateConflictError("Ce dossier a changé. Actualisez les sources puis reprenez vos raccordements.");
     }
     throw error;

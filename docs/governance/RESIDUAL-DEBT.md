@@ -70,6 +70,19 @@ périmètre comparé), pas une identité atomique de toute la base.
 Rendu candidat : ids/métadonnées masqués, e_channels/DIRECT traduits, vignettes
 « Volet » sans fausse pagination. Aucun nouveau concept/ADR ou compte.
 
+**Réception FIDÉLITÉ existante — reprise SPAWT avant Oracle (2026-10-21)** :
+lecture native A en production 517 reçue, mais pré-lancement hérité/métriques zéro
+sans mesure et 160/200 du sélecteur latéral restent à réconcilier avec le verdict
+mesuré 39,5/200. Ne pas promouvoir ancien texte/complétude en fait mesuré ; respecter
+origines/HUMAN et inconnues. **Fermer** : confronter sources datées/état live, corriger
+par édition gouvernée/lecteurs existants, recevoir relecture et unités/libellés
+explicites sur même marque. Responsable FIDÉLITÉ/M03 existant ; effort une recette
+ciblée, déclencheur avant génération/réception Oracle, sans nouveau chantier.
+Oracle lu sans génération : 35 COMPLETE SPAWT du 17 octobre, zéro section FRC ;
+catalogue 35 sans hasGap mais dépendances non entièrement auditées. Statut technique
+seulement : acceptation Oracle 0/6 maintenue. Preuves P35
+`adve-spawt-a-production517-native.{json,txt,png}`, `oracle518-initial-received.json`.
+
 Preuve de cadrage : `release/preuves-rapport-fidelite-20261020/framing.json`. Première transition : `release/preuves-rapport-fidelite-20261020/native-model-transition-network.json` ; régénération historique reçue12/12. Preuves complémentaires : `release/preuves-rapport-fidelite-20261020/history-conservation510-received.json`, `regeneration-fixture-cleanup.json`, `native-paid-final-network.json`, `print2-visually-received.json` ; print2 conserve le checkpointdev13pages, désormais complété par `compiled-pdf-visually-received.json`, `native-compiled-print-network.json` et `original510-http-received.json` : PDF compilé/qualité bornée et conservation postnettoyage reçus ; livraison510 désormais reçue séparément. Reçus finaux : `history-conservation510-final-received.json`, `nori-read-conservation-received.json` ; ancien périmètre coût8 conservé, nouveau cas coût8 au snapshot puis11partiels par écritures différées avant la lecture sans provider.
 
 **Clôture technique droits/export/reprise509 — 2026-10-20** :
@@ -285,18 +298,11 @@ Console production : sélection SPAWT sans publication, 39 réponses complètes,
 CI/image/runtime/conservation 515 clos. Preuves P33 `delivery515-received.json`,
 `production-native-hydrated.json`. Pas de championnat réel ou réception macro déduit.
 
-**LB01 — canon initial reçu, rejeu conservatif/UI 517 reçus localement** : chargement
-initial 15 ancres/15 items reçu en 516. Le seed déployé peut écraser des réglages ;
-517 ajoute transaction/verrou et initialisation des seuls absents, collision de type
-refusée atomiquement, réglages et dates préservés ; autres upserts inchangés.
-Trois rouges réels (écrasement, collision, dates) puis 31/31 PG et neuf contrôles
-locaux verts (DEFAULT 4 935/466, PG 493/30, gouvernance 1 671/169). Bouton ADMIN
-sur route existante, toujours proposé. Build/natif sur canon édité et deuxième
-clic exact reçus ; onze tables locales antérieures conservées, fixtures retirées.
-**Fermer** : recevoir CI/image/runtime et conservation/rejeu de production 517 ;
-ces étapes restent ouvertes, sans ratification humaine implicite.
-Responsable LB01 ; effort livraison/réception bornées du rail existant,
-déclencheur avant rejouer sur réglages édités ou clore calibration TPE.
+**LB01 — dette technique de rejeu conservatif/UI close en 517** : initialisation
+15+15 et rejeu production exacts reçus via route/bouton ADMIN existants, CI/image/
+runtime/conservation reçus dans P34 `delivery517-received.json`. Réglage personnalisé
+2191 reçu localement, production conserve son registre existant ; pas de ratification
+humaine implicite. Aucune attente technique 517 restante à reconduire en 518.
 
 **LB02 — « Recevoir le calcul et la publication » reçu (516)** : contexte mesuré des rivaux
 connectés/même ligue et ancres fixes terminales, transaction propagée, formule/
@@ -309,22 +315,37 @@ complète des autres marques/rivaux renvoyée à LB03/LB04, pas nouvelle dette d
 livraison 516. Responsable LB02/C6-03 ; conservation/provenance à recevoir par
 périmètre avant annoncer le championnat entier ou sa qualité universelle.
 
-**LB03 — « Qualifier les marques et leurs ligues » ouvert** : décision utilisateur
-du 21 octobre, une instance régionale et une équipe propres pour chaque marque
-présente dans un pays (BR Côte d’Ivoire ≠ BR Congo), en plus de l’international.
-Onboarder le modèle existant CORPORATE → MASTER_BRAND → REGIONAL_CLUSTER facultatif
-→ REGIONAL_BRAND, Strategy régionale si exploitation/calcul distinct. Recevoir
-sources master partagées, héritage effectif, décisions locales explicites, droits
-et isolation des équipes, navigation globale/marché et verdicts au périmètre exact.
-Aucun nœud régional créé/reçu ; le census antérieur sans région ne vaut pas onboarding.
-FOOD/aliases ne choisissent pas un marché ; SPAWT est publiée food/VILLE/CI.
-Ne réduire aucune marque Friesland multinationale à un pays arbitraire ni fabriquer
-un score international par moyenne des scores nationaux. Connaissances multi-pays
-conservées hors pillarOverrides via `retained-market-source-bridge.json` ; confronter
-les originaux, pays/équipes et ligues avant placement. Responsable LB03 ; effort
-onboarding/réception par instance via schéma, héritage, droits et commutateur existants,
-déclencheur avant placement FRC/local ou annonce d’onboarding international.
-Preuve P34 `market-instance-user-decision-20261021.json` ; aucune entité nouvelle.
+**LB03 — « Qualifier les marques et leurs ligues » ouvert** : chaque marque/pays
+a son instance opérationnelle et son équipe propres, avec périmètre international.
+Modèle existant CORPORATE → MASTER_BRAND → REGIONAL_CLUSTER facultatif → REGIONAL_BRAND ;
+Strategy régionale si exploitation/calcul distinct. Census reçu du 21 octobre :
+neuf Clients sans FRC/WAMCO ; 96 nœuds recensés, zéro régional ; 15 couples marque-pays
+La Barre sont des usages, pas des instances opérationnelles. Cadrage utilisateur :
+client régional à Abidjan et périmètre WAMCO Nigeria ; ne déduire aucun facturant
+ni parent juridique, ni réduire une marque multinationale à un pays arbitraire.
+518 candidate réutilise le rattachement manuel Client/nœud/Strategy existant,
+atomique/même opérateur/Client actif ; incohérences ou Strategy partagée refusées.
+Recette locale binding/formulaire/conservation reçue (deux FK exactes, marché CM
+≠ client CI) ; DEFAULT 4 937/466, PG 500/30 et cinq contrôles finaux verts, dont
+typage/gouvernance 1 671/169. Hashes des lignes préexistantes de onze tables exacts,
+ajouts documentaires post-capture attribués/exclus/laissés en place ; refus 81/76
+conservé, pas une base entière identique. **Fermer** : recevoir CI/image/runtime et
+conservation de bascule 518 ; marques réelles non rattachées avant livraison. Après ship, qualifier les 15 usages depuis leurs
+sources et onboarder seulement les contextes opérationnels prouvés. Trou statique
+concret : commutateur/useActiveMarket sans consommateur actif repéré ; marchés
+renvoyés seulement parmi les enfants directs. L’héritage est un pilier entier,
+Strategy propre même {} prioritaire intentionnellement, pas bug du resolver.
+Raccorder commutateur/résolveur existants aux pages actuelles puis recevoir deux pays,
+sources master/héritage effectif/décisions locales/équipes/droits/isolation et preuves
+indépendantes. Aucun clonage de Strategy, nouvelle taxonomie ou moyenne de scores. Aucun nœud pays
+créé/reçu ici ; aucune moyenne automatique des scores locaux pour l’international.
+Responsable LB03 ; effort qualification puis recette par instance via rails existants,
+déclencheur après livraison 518, avant placement FRC/local ou annonce d’onboarding.
+Connaissances multi-pays conservées hors pillarOverrides ; preuves P34
+`market-instance-user-decision-20261021.json`, `retained-market-source-bridge.json`.
+Les 42 champs ADVE désormais sauvés/relus (12 BR/12 Peak/18 BH) sont INFERRED,
+avec valeurs antérieures conservées : réception humaine, ADVE complet et corpus Drive
+entier restent ouverts, P35 `adve518-fields-received.json`.
 
 **LB04 — publication SPAWT reçue, FRC ouverte** : un clic natif, un ScoreVerdict/
 émission gouvernée OK, 39,5/200 LATENT/40 % couverture/deux épreuves A/V ; 189 enregistrements du suivi des followers
@@ -350,8 +371,8 @@ clos ; premières fenêtres partielles et erreurs instrumentales conservées, pa
 bugs produit. Reste réception des autres placements/rangs/pays réels et parcours
 championnat entier. Responsable LB06 ; effort recette des lecteurs existants,
 déclencheur avant annonce du championnat complet, sans nouveau stade.
-**Plan global conservé** : LB02/LB05 reçus, soit 2/6 ; LB01 actif via candidat 517,
-LB03/LB04/LB06 ouverts. Oracle dernier 0/6 ; championnat entier, sept chantiers,
+**Plan global conservé** : LB02/LB05 reçus au checkpoint 516 (2/6) ; reprise
+technique LB01 close en 517, LB03/LB04/LB06 ouverts. Oracle dernier 0/6 ; championnat entier, sept chantiers,
 MVP/onboarding/ADVE entiers non reçus.
 Preuves P23 postmerge/production516 et P34 canon/publication/natif/bridge retenu.
 
@@ -380,23 +401,53 @@ mobile finales ; P23 `scoreur516-build-units-final.log`,
 `gauntlet516-units-results.json`.
 
 
-**517 candidate validée localement — canon conservatif (2026-10-21)** :
-transaction/verrou PostgreSQL et `initializeOnly` complètent les seuls absents ;
-type incompatible refusé atomiquement, réglages/dates existants préservés ; autres
-upserts inchangés. Bouton ADMIN dans la console canon existante, repères proposés
-sans ratification. Trois rouges réels puis 31/31 PG verts ; neuf contrôles locaux
-verts. Build compilé reçu après premier ENOTEMPTY conservé et déplacement réversible
-de `.next` généré, sans suppression de donnée. Natif ADMIN : 29 absents ajoutés,
-Coca-Cola réglé à 2191 conservé tous champs/ID/source/dates ; deuxième clic,
-30 références exactes (15+15), aucun appel IA. Première fenêtre complète :
-64 réponses, 0 HTTP ≥500/exception, mais 25 ERR_ABORTED conservés ; DOM 165,5 ms,
-titre 254 ms pilote compris, pas SLO. Rejeu : deux HTTP 200 sans erreur/échec.
-Onze tables locales comparées exactes après retrait des fixtures. CI/image/runtime
-et rejeu de production 517 restent ouverts ; aucun nœud régional créé en production,
-héritage/équipes pays à recevoir, Oracle dernier 0/6. Preuves P23 gauntlet/build ; P34
-`canon517-{first,replay}-received.json`, `native-canon517-{first,replay}.json`,
-`canon517-local-conservation-received.json`, capture relue `native-canon517.png`.
-Aucun service/modèle/page/route/ADR nouveau.
+**517 livrée — canon conservatif (2026-10-21)** : PR1054/source `a4770ab55`,
+runtime 6.27.517, digest `4ce654f0635ac49c7f2355ce29e43806730beefaa51976f56be736860c9d29b4`.
+CI distante DEFAULT 4 935 et PostgreSQL 493 verts. Rejeu ADMIN production :
+30 références exactes, sans ratification ; 32 réponses complètes, 0 HTTP ≥500/
+exception, mais deux ERR_ABORTED conservés, pas SLO. SPAWT 39,5/200 et 40 % couverture,
+verdict/piliers/suivi antérieurs, sources/originaux/actifs et six paiements conservés ;
+aucun appel IA demandé. Lectures séparées non atomiques avec bascule/rejeu.
+Attentes techniques CI/image/runtime/conservation et rejeu production 517 closes.
+Historique local conservé : trois rouges puis 31/31 PG, neuf contrôles verts ;
+ancien réglage 2191 exact, 29 absents ajoutés, deuxième clic exact ; fenêtre 64 réponses/
+25 ERR_ABORTED, reprise deux HTTP 200, onze tables locales conservées après retrait
+fixtures. Premier ENOTEMPTY et déplacement réversible de `.next` généré conservés,
+sans suppression de donnée. Preuves P34 `delivery517-received.json` et reçus locaux
+`canon517-{first,replay}-received.json`, `canon517-local-conservation-received.json`.
+
+**518 candidate — rattachement Client manuel dans le portefeuille** : extension de
+`brandNode.update`/`OPERATOR_UPDATE_BRAND_NODE` et BrandNodeForm existants ; liaison
+nœud/Strategy attachée atomique par CAS, Client actif du même opérateur seulement.
+Strategy partagée ou Clients incohérents refusés ; ADVE, pays, sources, historique
+et frontières professionnelles/juridiques conservés. Aucun modèle/router/Intent/
+provider nouveau. Recette locale compilée reçue : USER du même opérateur,
+un clic HTTP 200 et sélecteur conservé à la réouverture ; deux FK liées, autres
+scalaires/piliers/HUMAN exacts au périmètre comparé, pays marque CM/client CI distincts,
+aucun modèle appelé. Conservation des lignes préexistantes de onze tables reçue
+par hashes après exclusions documentées des ajouts post-capture. Premier refus
+Strategy 81/76 conservé : cinq stratégies et lignes associées attribuées aux suites
+PG document-representations/document-versions dont afterAll ne retire pas ces fixtures,
+laissées en place. Seules fixtures natives 518 retirées ; aucun inconnu effacé.
+Populations/base entière non identiques, aucune conservation atomique globale déduite.
+Preuve P35 `client518-prior-rows-conservation-received.json`.
+Fenêtre complète 58 réponses, 0 HTTP ≥500/exception, huit
+net::ERR_ABORTED conservés ; DOM 331 ms/titre 7 057 ms pilote compris, pas SLO.
+Build reçu avant la dernière prose « Quoi de neuf 518 » ; note finale validée par
+14 tests, mais son rendu natif non recetté sur ce build. DEFAULT 4 937/466 et PG 500/30
+reçus en reprise ; cinq contrôles finaux verts : typage, deux lints sans erreur
+(24 avertissements historiques chacun), cycles zéro, gouvernance 1 671/169.
+Premiers refus de mocks de hook, assertion nullable de test et ENOTEMPTY conservés ;
+cache `.next` déplacé réversiblement avant build réussi. CI/image/runtime 518 toujours ouverts. Preuves
+P35 `client518-native-local.json`, `client518-local-received.json`.
+Après livraison 518 : raccorder commutateur/résolveur existants aux pages de piliers,
+qualifier les 15 usages pays et recevoir deux marchés/décisions/équipes/droits/preuves
+indépendants, sans copie de Strategy ni nouvelle taxonomie ; [plan LB03](RESIDUAL-DEBT.md).
+Enrichissement documentaire déjà reçu en production, distinct du code candidat :
+42 champs manquants indexés/enregistrés/relus via amendements gouvernés existants
+(Bonnet Rouge 12, Peak 12, Belle Hollandaise 18), tous INFERRED, pas HUMAN ; valeurs
+antérieures et SPAWT conservées. P35 `adve518-fields-received.json`. Aucune adoption
+humaine ni publication de score déduite ; MVP/ADVE/Oracle/corpus Drive entiers non reçus.
 
 **516 livrée — production reçue (2026-10-21)** : PR1053/source
 `5e39fc12f2acf73b42ea795bf99342942c317c64`, runtime 6.27.516 reçu à 09:24:15 UTC,
@@ -408,7 +459,7 @@ six lignes de paiement exacts, lectures séquentielles non atomiques. Dette
 CI/image/runtime/conservation 516 close ; sept chantiers/MVP/ADVE entiers non reçus.
 Canon : 15 ancres+15 items chargés une fois par API ADMIN existante sur registre
 frais vide ; pas d’override/ADVE/humain ratifié. À la livraison 516, rejeu conservatif/
-UI ouverts : le seed déployé peut écraser des réglages ; correctif 517 candidat ci-dessus.
+UI alors ouverts : risque du seed 516 corrigé et reçu en 517 ci-dessus.
 Lecture canon : 32 réponses, 0 HTTP ≥500/exception mais 1 ERR_ABORTED conservé,
 DOM 2077,7 ms/titre 2120 ms pilote compris, pas SLO.
 SPAWT : un clic natif, un ScoreVerdict et émission gouvernée OK ; 39,5/200 LATENT,
@@ -420,7 +471,8 @@ exception/échec, DOM 842,1 ms/titre 875 ms pilote compris ; trois arènes non o
 15 repères proposés. Anciennes erreurs instrumentales conservées, pas bugs produit
 revendiqués. Sources multi-pays conservées hors pillarOverrides ; pays/ligues et
 instances régionales et placement Friesland restent à recevoir. Plan : LB02 et LB05
-reçus, soit 2/6 ; LB01 actif. Championnat entier/Oracle non reçus, dernier Oracle 0/6. Preuves P23 `merge516-received.json`,
+reçus à ce checkpoint 516 (2/6) ; reprise technique LB01 ensuite reçue en 517.
+Championnat entier/Oracle non reçus, dernier Oracle 0/6. Preuves P23 `merge516-received.json`,
 `ci516-suites-received.json`, `postmerge516-received.json`, `production516-*.json`,
 `children516-after-received.json`, `payments-after516.json` ; P34
 `canon516-initialization-received.json`, `spawt516-publication-received.json`,

@@ -13,6 +13,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { trpc } from "@/lib/trpc/client";
 import {
   ALL_BRAND_NATURES,
@@ -49,6 +50,7 @@ interface FormState {
   nodeRole: string[];
   attachStrategyId: string | null;
   lifecycle: string;
+  clientId: string | null;
 }
 
 const INITIAL_STATE: FormState = {
@@ -61,6 +63,7 @@ const INITIAL_STATE: FormState = {
   nodeRole: [],
   attachStrategyId: null,
   lifecycle: "ACTIVE",
+  clientId: null,
 };
 
 function slugify(name: string): string {
@@ -83,8 +86,16 @@ export function BrandNodeForm({
   onCancel,
 }: BrandNodeFormProps) {
   const isEdit = Boolean(nodeId);
+  const { data: session } = useSession();
+  const ownOperator = trpc.operator.getOwn.useQuery(undefined, { enabled: isEdit });
+  const canBindClient = isEdit && (session?.user.role === "ADMIN" || ownOperator.data?.id === operatorId);
+  const clients = trpc.brandClient.list.useInfiniteQuery({ operatorId, limit: 100 }, {
+    enabled: canBindClient, getNextPageParam: (page) => page.nextCursor,
+  });
   const platforms = trpc.strategy.list.useQuery({ operatorId }, { enabled: !isEdit });
   const [state, setState] = useState<FormState>(INITIAL_STATE);
+  const clientOptions = clients.data?.pages.flatMap((page) => page.items)
+    .filter((client) => client.status === "ACTIVE" || client.id === state.clientId);
   const [error, setError] = useState<string | null>(null);
   const [roleInput, setRoleInput] = useState("");
   const [autoSlug, setAutoSlug] = useState(true);
@@ -113,6 +124,7 @@ export function BrandNodeForm({
         nodeRole: existingNode.nodeRole,
         attachStrategyId: existingNode.strategyId,
         lifecycle: existingNode.lifecycle,
+        clientId: existingNode.clientId,
       });
       setAutoSlug(false);
     }
@@ -133,6 +145,10 @@ export function BrandNodeForm({
     onSuccess: (res) => {
       utils.brandNode.get.invalidate({ nodeId });
       utils.brandNode.listChildren.invalidate();
+      utils.brandNode.listRoots.invalidate();
+      utils.brandNode.workspace.invalidate();
+      utils.brandClient.invalidate();
+      utils.strategy.list.invalidate();
       if (res.ok) onSuccess?.(res.node.id);
     },
     onError: (err) => setError(err.message),
@@ -161,6 +177,7 @@ export function BrandNodeForm({
           countryCode: state.countryCode,
           clusterTag: state.clusterTag,
           nodeRole: state.nodeRole,
+          ...(canBindClient && state.clientId !== existingNode?.clientId ? { clientId: state.clientId } : {}),
           ...(state.lifecycle !== existingNode?.lifecycle ? { lifecycle: state.lifecycle } : {}),
         },
       });
@@ -195,6 +212,25 @@ export function BrandNodeForm({
       </h2>
 
       {error && <div className="rounded bg-error/15 p-2 text-sm text-error">{error}</div>}
+
+      {canBindClient && <label className="flex flex-col gap-1 text-sm">
+        <span className="font-medium">Client du dossier</span>
+        <select aria-label="Client du dossier" value={state.clientId ?? ""}
+          disabled={clients.isLoading || clients.isError}
+          onChange={(event) => setState((current) => ({ ...current, clientId: event.target.value || null }))}
+          className="rounded border border-border bg-surface-raised px-2 py-1.5">
+          <option value="">Aucun client rattaché</option>
+          {state.clientId && !clientOptions?.some((client) => client.id === state.clientId)
+            && <option value={state.clientId}>Client actuellement rattaché</option>}
+          {clientOptions?.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}
+        </select>
+        <span className="text-xs text-foreground-secondary">Ce choix rattache aussi la plateforme liée. Le pays du client ne change pas les marchés de la marque.</span>
+        {clients.isError && <span className="text-xs text-error">La liste des clients est indisponible. Actualisez le dossier avant de changer ce rattachement.</span>}
+        {clients.hasNextPage && <button type="button" disabled={clients.isFetchingNextPage}
+          onClick={() => void clients.fetchNextPage()} className="text-left text-xs text-accent">
+          {clients.isFetchingNextPage ? "Chargement…" : "Charger les clients suivants"}
+        </button>}
+      </label>}
 
       {!isEdit && <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium">Plateforme de marque existante</span>
