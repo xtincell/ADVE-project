@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.518", date: "2026-10-21", headline: "Des dossiers rattachés au bon client",
+    highlights: [{ emoji: "🗂️", title: "Une seule affectation à maintenir", body: "Votre équipe peut rattacher un dossier existant à son client depuis le portefeuille. Sa plateforme de marque suit ce choix ; ses marchés, ses sources et son historique sont conservés. Une modification simultanée vous invite à actualiser avant de poursuivre." }],
+  },
+  {
     version: "6.27.517", date: "2026-10-21", headline: "Des références de mesure conservées",
     highlights: [{ emoji: "📏", title: "Vos réglages restent en place", body: "L’administrateur peut charger les repères de mesure manquants depuis l’écran existant. Refaire ce chargement conserve les valeurs déjà réglées ; les références chargées restent des propositions à valider." }],
   },

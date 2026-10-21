@@ -12,6 +12,7 @@ import { archiveBrandNode, updateBrandNode } from "@/server/services/brand-node"
 import { brandNodeRouter } from "@/server/trpc/routers/brand-node";
 let operatorId: string, userId: string, foreignUserId: string;
 const strategies: string[] = [], nodes: string[] = [];
+const clientIds: string[] = [];
 beforeAll(async () => {
   const url = new URL(process.env.DATABASE_URL!);
   expect(["127.0.0.1", "localhost"]).toContain(url.hostname);
@@ -30,8 +31,37 @@ afterAll(async () => {
     await db.strategy.deleteMany({ where: { id: { in: strategies } } });
   }
   if (userId && foreignUserId) await db.user.deleteMany({ where: { id: { in: [userId, foreignUserId] } } });
+  if (clientIds.length) await db.client.deleteMany({ where: { id: { in: clientIds } } });
   if (operatorId) await db.operator.delete({ where: { id: operatorId } });
   await db.$disconnect();
+});
+
+describe("droits du rattachement client", () => {
+  it("conserve la lecture founder sans lui accorder la réaffectation du client", async () => {
+    const { own, node } = await fixture();
+    await db.strategy.update({ where: { id: own.id }, data: { userId: foreignUserId } });
+    const caller = brandNodeRouter.createCaller({ db, headers: undefined, session: {
+      user: { id: foreignUserId, role: "USER" }, expires: new Date(Date.now() + 60_000).toISOString(),
+    } });
+    expect(await caller.get({ nodeId: node.id })).toMatchObject({ id: node.id });
+    await expect(caller.update({ nodeId: node.id, operatorId, strategyId: own.id,
+      expectedUpdatedAt: node.updatedAt.toISOString(), patches: { clientId: null } })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(await db.brandNode.findUniqueOrThrow({ where: { id: node.id } })).toEqual(node);
+  });
+  it("reçoit le rattachement pour l’équipe et refuse une version périmée", async () => {
+    const { own, node } = await fixture();
+    const client = await db.client.create({ data: { name: "Client de recette", operatorId } });
+    clientIds.push(client.id);
+    const caller = brandNodeRouter.createCaller({ db, headers: undefined, session: {
+      user: { id: userId, role: "USER" }, expires: new Date(Date.now() + 60_000).toISOString(),
+    } });
+    const changed = await caller.update({ nodeId: node.id, operatorId, strategyId: own.id,
+      expectedUpdatedAt: node.updatedAt.toISOString(), patches: { clientId: client.id } });
+    expect(changed.node.clientId).toBe(client.id);
+    expect((await db.strategy.findUniqueOrThrow({ where: { id: own.id } })).clientId).toBe(client.id);
+    await expect(caller.update({ nodeId: node.id, operatorId, strategyId: own.id,
+      expectedUpdatedAt: node.updatedAt.toISOString(), patches: { clientId: null } })).rejects.toMatchObject({ code: "CONFLICT" });
+  });
 });
 
 describe("documents utilisables depuis le portefeuille", () => {

@@ -865,13 +865,14 @@ export type Intent =
       strategyId: string; // audit pivot
       operatorId: string;
       nodeId: string;
-      /** Required when replacing sourceRefs; guards an operator's read version. */
+      /** Required when replacing sourceRefs or clientId; guards the read version. */
       expectedUpdatedAt?: string;
       patches: {
         name?: string;
         slug?: string;
         clusterTag?: string | null;
         countryCode?: string | null;
+        clientId?: string | null;
         nodeRole?: string[];
         lifecycle?: string;
         inheritanceLocked?: boolean;
