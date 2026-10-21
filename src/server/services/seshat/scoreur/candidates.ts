@@ -11,7 +11,7 @@
 import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
 import { PROOF_WEIGHTS } from "@/domain/scoreur";
-import { recordEpreuve, resolveLeagueForStrategy } from "./index";
+import { loadAnchorsForLeague, recordEpreuve, resolveLeagueForStrategy, scoreBrand } from "./index";
 
 export type CandidateArena = "A" | "D" | "V";
 export type ProposedResult = "WIN" | "LOSS";
@@ -40,6 +40,11 @@ export interface CreateCandidatesResult {
   skippedDuplicate: number;
 }
 
+function isWebSource(value: string | null | undefined): boolean {
+  try { return !!value && ["http:", "https:"].includes(new URL(value).protocol); }
+  catch { return false; }
+}
+
 /**
  * Persiste des victoires candidates (append-only). Garde : sans `sourceUrl` →
  * status REJECTED d'emblée (auto-reject, conservé pour l'audit, jamais présenté à
@@ -61,7 +66,7 @@ export async function createCandidates(
       skippedDuplicate += 1;
       continue;
     }
-    const hasSource = !!c.sourceUrl && c.sourceUrl.trim().length > 0;
+    const hasSource = isWebSource(c.sourceUrl);
     const status = hasSource ? "PENDING" : "REJECTED";
     await db.epreuveCandidate.create({
       data: {
@@ -91,62 +96,77 @@ export interface DecideCandidateInput {
   candidateId: string;
   decision: "APPROVE" | "REJECT";
   reviewedBy: string;
+  /** Explicit human link when an external proposal has no identified rival yet. */
+  rivalStrategyId?: string;
+  /** Date du fait vérifiée par le réviseur ; distincte de reviewedAt. */
+  occurredAt?: string;
 }
 
 /**
  * Décision opérateur. APPROVE → `recordEpreuve` (voie unique) dans la ligue du
  * sujet ; REJECT → statut, aucune écriture `Epreuve`.
  */
-export async function decideCandidate(input: DecideCandidateInput): Promise<{ status: string; recordedEpreuveId: string | null }> {
-  const cand = await db.epreuveCandidate.findUnique({ where: { id: input.candidateId } });
-  if (!cand) throw new Error("EpreuveCandidate introuvable");
-  if (cand.status !== "PENDING") throw new Error(`Candidate déjà traitée (${cand.status})`);
+export async function decideCandidate(input: DecideCandidateInput) {
+  return db.$transaction(async (tx) => {
+    const cand = await tx.epreuveCandidate.findUnique({ where: { id: input.candidateId } });
+    if (!cand) throw new Error("EpreuveCandidate introuvable");
+    if (cand.status !== "PENDING") throw new Error(`Candidate déjà traitée (${cand.status})`);
 
-  if (input.decision === "REJECT") {
-    await db.epreuveCandidate.update({
+    if (input.decision === "REJECT") {
+      const changed = await tx.epreuveCandidate.updateMany({
+        where: { id: cand.id, status: "PENDING" },
+        data: { status: "REJECTED", reviewedBy: input.reviewedBy, reviewedAt: new Date() },
+      });
+      if (changed.count !== 1) throw new Error("Cette preuve a déjà été traitée");
+      return { status: "REJECTED", recordedEpreuveId: null, strategyId: cand.subjectStrategyId, score: null };
+    }
+
+    if (!isWebSource(cand.sourceUrl)) throw new Error("Une source web consultable est requise avant validation");
+    if (!input.occurredAt || !Number.isFinite(Date.parse(input.occurredAt))) throw new Error("La date d’observation du fait est requise avant validation");
+    const rivalStrategyId = input.rivalStrategyId ?? cand.rivalStrategyId;
+    if (rivalStrategyId === cand.subjectStrategyId) throw new Error("Choisissez un rival distinct de la marque étudiée");
+    if (input.rivalStrategyId && ((cand.rivalStrategyId && cand.rivalStrategyId !== input.rivalStrategyId) || cand.rivalBrandRefId)) throw new Error("Le rival est déjà identifié dans cette preuve");
+    if (!rivalStrategyId && !cand.rivalBrandRefId) throw new Error("Identifiez le rival avant de valider cette preuve");
+    if (rivalStrategyId && !(await tx.strategy.findUnique({ where: { id: rivalStrategyId }, select: { id: true } }))) throw new Error("Rival introuvable");
+    if (!rivalStrategyId && cand.rivalBrandRefId && !(await tx.brandRef.findUnique({ where: { id: cand.rivalBrandRefId }, select: { id: true } }))) throw new Error("Rival introuvable");
+    const claimed = await tx.epreuveCandidate.updateMany({ where: { id: cand.id, status: "PENDING" },
+      data: { status: "APPROVED", reviewedBy: input.reviewedBy, reviewedAt: new Date() } });
+    if (claimed.count !== 1) throw new Error("Cette preuve a déjà été traitée");
+
+    // APPROVE — la ligue vient du sujet (déterministe), la source du claim + URL.
+    const league = await resolveLeagueForStrategy(cand.subjectStrategyId, tx);
+    if (!rivalStrategyId && cand.rivalBrandRefId) {
+      const ref = await tx.brandRef.findUniqueOrThrow({ where: { id: cand.rivalBrandRefId }, select: { fixedTheta: true } });
+      if (ref.fixedTheta != null && (await loadAnchorsForLeague(league, tx))[cand.rivalBrandRefId] === undefined) throw new Error("Cet étalon ne concerne pas cette ligue");
+    }
+    const ep = await recordEpreuve({
+      subjectStrategyId: cand.subjectStrategyId,
+      opponentStrategyId: rivalStrategyId ?? null,
+      opponentBrandRefId: rivalStrategyId ? null : cand.rivalBrandRefId,
+      arena: cand.arena as "A" | "D" | "V",
+      league: { sectorSlug: league.sectorSlug, marketScale: league.marketScale, countryCode: league.countryCode },
+      result: cand.proposedResult as "WIN" | "LOSS",
+      proofWeight: PROOF_WEIGHTS.moyen,
+      source: `hunter-review:${cand.claim}${cand.sourceUrl ? ` @${cand.sourceUrl}` : ""}`,
+      occurredAt: input.occurredAt,
+    }, tx);
+    await tx.epreuveCandidate.update({
       where: { id: cand.id },
-      data: { status: "REJECTED", reviewedBy: input.reviewedBy, reviewedAt: new Date() },
-    });
-    return { status: "REJECTED", recordedEpreuveId: null };
-  }
-
-  // APPROVE — la ligue vient du sujet (déterministe), la source du claim + URL.
-  const league = await resolveLeagueForStrategy(cand.subjectStrategyId);
-  const ep = await recordEpreuve({
-    subjectStrategyId: cand.subjectStrategyId,
-    opponentStrategyId: cand.rivalStrategyId ?? null,
-    opponentBrandRefId: cand.rivalBrandRefId ?? null,
-    arena: cand.arena as "A" | "D" | "V",
-    league: { sectorSlug: league.sectorSlug, marketScale: league.marketScale, countryCode: league.countryCode },
-    result: cand.proposedResult as "WIN" | "LOSS",
-    proofWeight: PROOF_WEIGHTS.moyen,
-    source: `hunter-review:${cand.claim}${cand.sourceUrl ? ` @${cand.sourceUrl}` : ""}`,
-    occurredAt: new Date().toISOString(),
-  });
-  await db.epreuveCandidate.update({
-    where: { id: cand.id },
-    data: { status: "APPROVED", reviewedBy: input.reviewedBy, reviewedAt: new Date(), recordedEpreuveId: ep.id },
+      data: { rivalStrategyId, recordedEpreuveId: ep.id },
   });
 
-  // Re-score immédiat du sujet — SANS ça, l'épreuve validée ne « comptait »
-  // nulle part : le leaderboard gardait le verdict d'AVANT la validation tant
-  // que l'opérateur ne relançait pas toute la moulinette (audit 2026-07-16,
-  // `victoire-validee-score-jamais-recalcule`). Best-effort : un échec de
-  // rescore ne défait pas la validation.
-  try {
-    const { scoreBrand } = await import("./index");
-    await scoreBrand(cand.subjectStrategyId, { persist: true });
-  } catch (err) {
-    console.warn("[scoreur] rescore post-validation échoué (non bloquant):", err instanceof Error ? err.message : err);
-  }
-
-  return { status: "APPROVED", recordedEpreuveId: ep.id };
+  // Approval, observed duel and its public verdict commit together. A failure
+  // leaves the review pending, so the same decision can be retried safely.
+  const score = await scoreBrand(cand.subjectStrategyId, { persist: true, client: tx });
+  return { status: "APPROVED", recordedEpreuveId: ep.id, strategyId: cand.subjectStrategyId, score };
+  });
 }
 
-export async function listCandidates(args: { subjectStrategyId?: string; status?: string; limit?: number }) {
+export async function listCandidates(args: { subjectStrategyId?: string; subjectStrategyIds?: string[]; status?: string; limit?: number }) {
   const rows = await db.epreuveCandidate.findMany({
     where: {
       ...(args.subjectStrategyId ? { subjectStrategyId: args.subjectStrategyId } : {}),
+      ...(args.subjectStrategyIds ? { subjectStrategyId: { in: args.subjectStrategyIds } } : {}),
       ...(args.status ? { status: args.status } : {}),
     },
     orderBy: { createdAt: "desc" },

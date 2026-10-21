@@ -181,7 +181,7 @@ export async function getCanonForConsole() {
     db.brandRef.findMany({
       where: { fixedTheta: { not: null } },
       orderBy: [{ kind: "asc" }, { fixedTheta: "desc" }],
-      select: { slug: true, name: true, kind: true, fixedTheta: true, marketScale: true },
+      select: { id: true, slug: true, name: true, kind: true, fixedTheta: true, sectorSlug: true, marketScale: true, countryCode: true },
     }),
     resolveScoreurCanon(),
   ]);
