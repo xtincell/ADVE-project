@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.519", date: "2026-10-21", headline: "Un calcul terminé correspond à ses résultats",
+    highlights: [{ emoji: "📋", title: "Vos documents restent à jour", body: "La préparation attend les résultats de la tentative en cours. Lorsqu’une source change, l’Oracle conserve son contenu précédent et indique qu’il doit être réactualisé. Un calcul lancé avant ce changement ne peut plus masquer cette attente." }],
+  },
+  {
     version: "6.27.518", date: "2026-10-21", headline: "Des dossiers rattachés au bon client",
     highlights: [{ emoji: "🗂️", title: "Une seule affectation à maintenir", body: "Votre équipe peut rattacher un dossier existant à son client depuis le portefeuille. Sa plateforme de marque suit ce choix ; ses marchés, ses sources et son historique sont conservés. Une modification simultanée vous invite à actualiser avant de poursuivre." }],
   },

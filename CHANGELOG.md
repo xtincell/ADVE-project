@@ -1,3 +1,16 @@
+## v6.27.519 — fix(core): reçoit le calcul courant et propage la péremption documentaire (2026-10-21)
+
+**Une fin de calcul et un Oracle à jour doivent correspondre aux données réellement enregistrées.**
+
+- Périmètre de livraison consigné sous le numéro réel PR #1057, out-of-scope, dans scope-drift.
+
+- Guidance/Mestor étend les cycles existants : le dialogue de préparation attend les quatre retours R/T/I/S de cet appel, refuse réponse vide, partielle ou en erreur et ne promet plus huit piliers ni 35 sections validés. Le polling des anciens piliers décrit les données présentes, sans terminer la tentative courante.
+- Une correction documentaire invalide les sections Oracle dans la transaction de sa source via les services existants. Ancien contenu, versions et historique restent conservés ; marque voisine, PENDING et FAILED restent distincts. Une génération en cours garde son verrou et un marqueur de changement ; son succès tardif est refusé SOURCE_CHANGED sans écraser le livrable précédent. Une reprise explicite peut enregistrer le résultat frais, sans génération automatique ajoutée.
+- Aucun modèle, service, routeur, page, Intent, fournisseur ou gestionnaire ajouté. Deux défauts reproduits avant correction ; quatre cas PostgreSQL et treize UI ciblés reçus. Les suites PostgreSQL partagent une base : sérialisation des fichiers pour éviter saturation de connexions et contamination des compteurs globaux, tout en conservant les opérations concurrentes internes aux tests. Premiers refus du harnais conservés ; contrôles finaux et réception native/distante en cours. Aucun MVP, ADVE entier, Oracle entier ou chantier macro reçu par ce correctif.
+- 518 livrée et conservation reçue séparément ; actualisation réelle R et T de SPAWT enregistrée sur 518 à relire, sans adoption humaine. Dépendances Oracle 270 nœuds/338 arêtes issues des registres, pas preuve de fonctionnement de toute la chaîne.
+
+- Réception locale finale : build compilé et rôle USER de l’équipe, quatre réponses de cet appel en mode déjà à jour reçues HTTP200, 68réponses sans >=500/exception et15ERR_ABORTED conservés ; DOM468ms et titre1057ms pilote compris, pasSLO. Premier texte natif contradictoire refusé, rouge1/4verts puis corrigé et relu dans le build final ; promesses de durée et absence de trous retirées. PostgreSQL504/31 reçu après sérialisation, DEFAULT4942/467 par union après deux timeouts historiques du grand original et reprise isolée6/6 sans changer le seuil ; gouvernance+UI1684/171, typage0/deuxlints0erreur24warnings/cycles0. Réception du calcul limitée à ce cas sans modèle ; CI/image/runtime et conservation production519 restent ouverts.
+
 ## v6.27.518 — fix(portfolio): rattache les dossiers existants à leur client (2026-10-21)
 
 **Le dossier et sa plateforme de marque conservent le même client après une réaffectation.**

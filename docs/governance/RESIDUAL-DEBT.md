@@ -71,17 +71,47 @@ Rendu candidat : ids/métadonnées masqués, e_channels/DIRECT traduits, vignett
 « Volet » sans fausse pagination. Aucun nouveau concept/ADR ou compte.
 
 **Réception FIDÉLITÉ existante — reprise SPAWT avant Oracle (2026-10-21)** :
-lecture native A en production 517 reçue, mais pré-lancement hérité/métriques zéro
-sans mesure et 160/200 du sélecteur latéral restent à réconcilier avec le verdict
-mesuré 39,5/200. Ne pas promouvoir ancien texte/complétude en fait mesuré ; respecter
-origines/HUMAN et inconnues. **Fermer** : confronter sources datées/état live, corriger
-par édition gouvernée/lecteurs existants, recevoir relecture et unités/libellés
-explicites sur même marque. Responsable FIDÉLITÉ/M03 existant ; effort une recette
-ciblée, déclencheur avant génération/réception Oracle, sans nouveau chantier.
-Oracle lu sans génération : 35 COMPLETE SPAWT du 17 octobre, zéro section FRC ;
-catalogue 35 sans hasGap mais dépendances non entièrement auditées. Statut technique
-seulement : acceptation Oracle 0/6 maintenue. Preuves P35
-`adve-spawt-a-production517-native.{json,txt,png}`, `oracle518-initial-received.json`.
+ancien pré-lancement/métriques zéro sans mesure et 160/200 latéral ambigus vus en 517
+restent à réconcilier sans promouvoir la complétude en force. R actualisé/enregistré
+sur 518 HTTP 200, à relire ; T également HTTP 200/enregistré à relire. Force 39,5
+inchangée, structure 160 distincte, pas fidélité intégrale.
+519 candidate reçoit honnêtement les quatre retours R/T/I/S et invalide Oracle dans
+la transaction documentaire ; verrou GENERATING gardé avec marqueur de changement,
+retour tardif SOURCE_CHANGED/STALE sans écraser payload/version/historique. Reprise
+explicite, pas de génération implicite ni validation de huit piliers/35 sections.
+Trois rouges PG/1 vert puis 4/4, cinq cas UI rouges valides puis 13 ciblés verts.
+Contrôles locaux reçus : DEFAULT 4 942/467 par union après deux 4 941/4 942 et
+fichier isolé 6/6, PG sérialisé 504/31, gouvernance+UI 1 684/171, typage/lints/cycles.
+Premier build vert, premier texte natif Oracle prêt refusé puis rouge réel/correction.
+Build final/natif corrigé/conservation locale 519 reçus, 68 réponses et 15 annulations
+conservées, zéro coût IA propre. **Fermer** : recevoir CI/image/runtime/conservation
+production 519, puis relecture des données/origines/HUMAN, cascade complète et refus des retours
+incomplets/anciens, invalidation/retour tardif/conservation/isolation sur cas réels.
+Responsable FIDÉLITÉ/M03 et chaîne Oracle existants ; effort recette ciblée du rail,
+déclencheur avant réception Oracle, sans nouveau chantier. Ancien état technique :
+35 COMPLETE SPAWT du 17 octobre/zéro section FRC ; graphe déclaré 270 nœuds/338 arêtes
+statique, aucune réception E2E déduite. Acceptation Oracle 0/6 maintenue, ADVE/MVP/
+sept chantiers entiers non reçus. Preuves P35 `core518-r-actualize-native.json`,
+`oracle518-initial-received.json`, `oracle518-declared-dependency-graph.json` ;
+P23 `core519-red-pg.log`, `core519-green-pg.log`, `core519-red-ui-valid-cases.log`,
+`core519-green-ui-final.log`. Les constats A historiques restent dans
+`adve-spawt-a-production517-native.{json,txt,png}`.
+
+**Reprise I→S de la même réception Core — active `C6-03-CORE-I`** : projection
+80 actions/28 retenues ; 52 normalisées I, aucune retenue. Les 28 retenues sont
+21 OPERATOR_MANUAL+7 MATERIALIZED historiques juillet/août 2026, toutes hors I
+courant ; aucune émission SET_BRAND_ACTION_STATUS trouvée. Ne pas les réactiver,
+adopter ou calquer sur les nouvelles propositions ; conserver données et contexte.
+**Fermer** : distinguer historique/catalogue courant dans l’UI existante puis
+recevoir choix explicite proposé→retenu→S via le chemin gouverné existant, vérifier
+contenu/conservation et effet réel sur S. Responsable Core-I/S/FIDÉLITÉ existants ;
+effort recette ciblée, déclencheur immédiat à cette étape Core demandée, avant
+Oracle. Huit étapes Core A/D/V/E/R/T/I/S suivies, aucun crédit macro déduit.
+**Restitution Oracle restante, hors correctif 519** : titre local 27/35 « complètes »
+avec zéro rédigée. Diagnostiquer compteurs/état/contenu puis corriger leurs libellés
+sur lecteurs existants et recevoir le rendu ; ne pas annoncer des sections rédigées
+depuis un statut préparatoire. Responsable réception Oracle existante ; effort
+recette/correction bornée, déclencheur avant recevoir Oracle, toujours 0/6.
 
 Preuve de cadrage : `release/preuves-rapport-fidelite-20261020/framing.json`. Première transition : `release/preuves-rapport-fidelite-20261020/native-model-transition-network.json` ; régénération historique reçue12/12. Preuves complémentaires : `release/preuves-rapport-fidelite-20261020/history-conservation510-received.json`, `regeneration-fixture-cleanup.json`, `native-paid-final-network.json`, `print2-visually-received.json` ; print2 conserve le checkpointdev13pages, désormais complété par `compiled-pdf-visually-received.json`, `native-compiled-print-network.json` et `original510-http-received.json` : PDF compilé/qualité bornée et conservation postnettoyage reçus ; livraison510 désormais reçue séparément. Reçus finaux : `history-conservation510-final-received.json`, `nori-read-conservation-received.json` ; ancien périmètre coût8 conservé, nouveau cas coût8 au snapshot puis11partiels par écritures différées avant la lecture sans provider.
 
@@ -318,20 +348,27 @@ périmètre avant annoncer le championnat entier ou sa qualité universelle.
 **LB03 — « Qualifier les marques et leurs ligues » ouvert** : chaque marque/pays
 a son instance opérationnelle et son équipe propres, avec périmètre international.
 Modèle existant CORPORATE → MASTER_BRAND → REGIONAL_CLUSTER facultatif → REGIONAL_BRAND ;
-Strategy régionale si exploitation/calcul distinct. Census reçu du 21 octobre :
-neuf Clients sans FRC/WAMCO ; 96 nœuds recensés, zéro régional ; 15 couples marque-pays
-La Barre sont des usages, pas des instances opérationnelles. Cadrage utilisateur :
+Strategy régionale si exploitation/calcul distinct. Census antérieur à l’admission
+518 : neuf Clients sans FRC/WAMCO ; 96 nœuds recensés, zéro régional ; 15 couples
+marque-pays La Barre étaient des usages, pas des instances opérationnelles.
+Deux Clients région Abidjan/WAMCO Nigeria créés/relus en production 518 ; rattachements
+API réels reçus : quatre nœuds (racine+trois masters) et trois Strategy au Client
+régional Abidjan, autres scalaires/piliers exacts, pays/droits/facturation inchangés.
+WAMCO Nigeria reste un Client distinct, sans rattachement juridique inventé.
+Preuves P35 `friesland-clients518-admission-received.json`,
+`friesland-bindings518-received.json` ; lectures séquentielles, pas snapshot atomique. Cadrage utilisateur :
 client régional à Abidjan et périmètre WAMCO Nigeria ; ne déduire aucun facturant
 ni parent juridique, ni réduire une marque multinationale à un pays arbitraire.
-518 candidate réutilise le rattachement manuel Client/nœud/Strategy existant,
+518 livrée réutilise le rattachement manuel Client/nœud/Strategy existant,
 atomique/même opérateur/Client actif ; incohérences ou Strategy partagée refusées.
 Recette locale binding/formulaire/conservation reçue (deux FK exactes, marché CM
 ≠ client CI) ; DEFAULT 4 937/466, PG 500/30 et cinq contrôles finaux verts, dont
 typage/gouvernance 1 671/169. Hashes des lignes préexistantes de onze tables exacts,
 ajouts documentaires post-capture attribués/exclus/laissés en place ; refus 81/76
-conservé, pas une base entière identique. **Fermer** : recevoir CI/image/runtime et
-conservation de bascule 518 ; marques réelles non rattachées avant livraison. Après ship, qualifier les 15 usages depuis leurs
-sources et onboarder seulement les contextes opérationnels prouvés. Trou statique
+conservé, pas une base entière identique. CI/image/runtime/conservation de bascule
+518 reçus ; livraison et rattachements réels ci-dessus clos au périmètre reçu.
+**Fermer** : qualifier les 15 usages depuis leurs sources et onboarder seulement
+les contextes opérationnels prouvés. Trou statique
 concret : commutateur/useActiveMarket sans consommateur actif repéré ; marchés
 renvoyés seulement parmi les enfants directs. L’héritage est un pilier entier,
 Strategy propre même {} prioritaire intentionnellement, pas bug du resolver.
@@ -416,7 +453,45 @@ fixtures. Premier ENOTEMPTY et déplacement réversible de `.next` généré con
 sans suppression de donnée. Preuves P34 `delivery517-received.json` et reçus locaux
 `canon517-{first,replay}-received.json`, `canon517-local-conservation-received.json`.
 
-**518 candidate — rattachement Client manuel dans le portefeuille** : extension de
+**519 candidate — réception de cascade et fraîcheur Oracle** : RtisCascadeModal
+attend la réponse complète des quatre R/T/I/S de cet appel ; anciens piliers pollés,
+sous-ensemble ou erreur n’acquittent plus la cascade. Ni huit piliers ni 35 sections
+validés promis. `markPillarsStale` utilise `markAllSectionsStale` dans la même
+transaction : correction documentaire/invalidation Oracle atomiques, payload/
+version/historique et isolation conservés, sans génération. GENERATING garde son
+verrou avec marqueur de changement ; retour tardif refusé SOURCE_CHANGED, statut
+STALE/ancien payload conservé, reprise explicite. Trois rouges PG/1 vert avant,
+puis 4/4 ; cinq cas UI rouges valides puis 13 ciblés verts après correction des
+mocks de table. DEFAULT 4 942/467 reçu PAR UNION : deux runs 4 941/4 942 (cas gros
+original >30s sous concurrence), fichier isolé 6/6 en 17,4s, aucun seuil assoupli.
+PG premier 497/504 refusé (P2037/compteur global croisé), puis 504/31 verts avec
+fichiers sérialisés, concurrence interne conservée. Gouvernance+UI finale 1 684/171
+(1 671+13), typage/deux lints sans erreur (24 avertissements chacun), zéro cycle.
+Premier build vert ; premier dialogue quatre retours HTTP 200/skipIfReady sans
+modèle, mais texte « Oracle prêt … sans sections vides » refusé. Rouge 1/5 puis
+texte corrigé et suite gouvernance+UI verte ; build webpack final reçu.
+Natif compilé final USER équipe locale : RPC cascade HTTP 200, quatre résultats
+courants (R/T/I COMPLETE, S ENRICHED) en skipIfReady sans modèle ; succès enregistré/
+propositions à relire, sans Oracle prêt/35 sections validées/promesse de durée.
+Fenêtre complète 68 réponses, 0 HTTP ≥500/exception, mais 15 ERR_ABORTED conservés ;
+DOM 467,8 ms/titre 1 057 ms pilote compris, pas SLO. Onze tables préexistantes
+comparées exactes par hash après retrait de la fixture ; zéro coût IA propre,
+deux émissions/35 sections de fixture. Réception locale 519 close au périmètre
+reçu ; premier texte refusé conservé, CI/image/runtime production 519 ouverts.
+Preuves P35 `core519-native-local.json/png`, `core519-local-conservation-received.json`.
+Aucun service/router/Intent/modèle/gestionnaire nouveau. Preuves P23 `core519-*.log`.
+Graphe Oracle déclaré 270 nœuds/338 arêtes : lecture statique, pas E2E des dépendances.
+Raccords Friesland réels API sur 518 reçus : racine+trois masterbrands (quatre nœuds)
+et trois Strategy vers le Client régional Abidjan ; autres scalaires/piliers exacts,
+aucun pays/droit/facturation modifié, Client WAMCO Nigeria distinct conservé.
+P35 `friesland-bindings518-received.json` ; instances pays/équipes/leaderboard FRC
+et ADVE entier restent ouverts.
+Sur production 518 : actualisations R et T SPAWT HTTP 200/enregistrements à relire
+reçus, pas fidélité intégrale ; force 39,5 inchangée/structure 160 distincte.
+I→S reste à recevoir : choix courants distincts des anciennes actions retenues,
+via chemin existant ; ADVE, MVP, Oracle et sept chantiers entiers non reçus.
+
+**518 livrée — rattachement Client manuel dans le portefeuille** : extension de
 `brandNode.update`/`OPERATOR_UPDATE_BRAND_NODE` et BrandNodeForm existants ; liaison
 nœud/Strategy attachée atomique par CAS, Client actif du même opérateur seulement.
 Strategy partagée ou Clients incohérents refusés ; ADVE, pays, sources, historique
@@ -433,17 +508,23 @@ Populations/base entière non identiques, aucune conservation atomique globale d
 Preuve P35 `client518-prior-rows-conservation-received.json`.
 Fenêtre complète 58 réponses, 0 HTTP ≥500/exception, huit
 net::ERR_ABORTED conservés ; DOM 331 ms/titre 7 057 ms pilote compris, pas SLO.
-Build reçu avant la dernière prose « Quoi de neuf 518 » ; note finale validée par
+Limite de la recette locale : build antérieur à la dernière prose « Quoi de neuf 518 » ; note finale validée par
 14 tests, mais son rendu natif non recetté sur ce build. DEFAULT 4 937/466 et PG 500/30
 reçus en reprise ; cinq contrôles finaux verts : typage, deux lints sans erreur
 (24 avertissements historiques chacun), cycles zéro, gouvernance 1 671/169.
 Premiers refus de mocks de hook, assertion nullable de test et ENOTEMPTY conservés ;
-cache `.next` déplacé réversiblement avant build réussi. CI/image/runtime 518 toujours ouverts. Preuves
+cache `.next` déplacé réversiblement avant build réussi. Limites locales historiques
+conservées. 518 livrée : source `290aa20c`, digest
+`ca4ab7e0562a696d5f2b532b872d31e2bcc111a9df7e42c3256410c7165e25d1`, runtime reçu
+à 13:15 UTC ; CI DEFAULT 4 937/PG 500 verts. Conservation 67 sources/1 041 actifs/
+huit piliers/trois enfants/six paiements reçue séparément, pas snapshot atomique ;
+mêmes volumes/relais/90s, OpenRouter absent. Attentes techniques 518 closes.
+Preuves P23 `production518-received.json`, `production518-data-preserved.json` ;
 P35 `client518-native-local.json`, `client518-local-received.json`.
-Après livraison 518 : raccorder commutateur/résolveur existants aux pages de piliers,
+Reprise après livraison 518 : raccorder commutateur/résolveur existants aux pages de piliers,
 qualifier les 15 usages pays et recevoir deux marchés/décisions/équipes/droits/preuves
 indépendants, sans copie de Strategy ni nouvelle taxonomie ; [plan LB03](RESIDUAL-DEBT.md).
-Enrichissement documentaire déjà reçu en production, distinct du code candidat :
+Enrichissement documentaire déjà reçu en production, distinct du correctif 519 :
 42 champs manquants indexés/enregistrés/relus via amendements gouvernés existants
 (Bonnet Rouge 12, Peak 12, Belle Hollandaise 18), tous INFERRED, pas HUMAN ; valeurs
 antérieures et SPAWT conservées. P35 `adve518-fields-received.json`. Aucune adoption
