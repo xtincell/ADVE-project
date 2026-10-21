@@ -279,9 +279,8 @@ cycles/gouvernance) reçus après correction de la garde ; produit inchangé vé
 Nouveau CI/image/runtime515 reçus dans la livraison ; refus initial conservé comme harnais.
 Preuves P23 `ci515-postgres-first-failure.log`, `scoreur515-ci-fixture-local-green.log`,
 `gauntlet515-ci-fixture-results.json`, `ci515-fixture-change-scope.json`.
- Mesures
-vivantes rivales prises en charge par candidat516, réception complète LB02 non reçue ; aucun placement
-réel SPAWT/FRC ni championnat/Oracle entier reçu. Preuves P33
+ Limite historique515 : contexte rival alors pris en charge par516, sans
+championnat/Oracle entier reçu ; la publication réelle SPAWT516 est reçue plus bas. Preuves P33
 `native-reception-received.json`, `local-conservation-received.json`.
 
 **515 livrée, périmètre technique reçu** : source
@@ -294,7 +293,7 @@ Console production : sélection SPAWT sans publication, 39 réponses complètes,
 CI/image/runtime/conservation 515 clos. Preuves P33 `delivery515-received.json`,
 `production-native-hydrated.json`. Pas de championnat réel ou réception macro déduit.
 
-2026-10-21 · **516 candidate validée localement — contexte rival et dernier verdict public** : calcul
+2026-10-21 · **516 livrée — contexte rival et dernier verdict public** : calcul
 ne reprenait pas les mesures vivantes des rivaux ; filtre/limite avant dernier
 verdict par marque pouvait réafficher un ancien placement ou masquer une marque.
 Compilateur/parcours existants étendus sous même client transactionnel, ancres
@@ -304,14 +303,18 @@ FOOD raccordés. Premier natif refusé : projection perdait theta et rendu mêla
 force/40 et ±RDθ. Projection nullable/rendu distinct θ±RD, absence de preuve ou
 RD legacy indisponible explicitée sans 0/θ par défaut ; fit/gauge inchangés.
 Deux assertions de rendu réellement rouges puis trois tests de page verts,
-réception locale finale reçue, livraison ouverte. Quatre rouges PG réels puis 26/26, trois rouges unitaires puis ciblés
+réception locale finale et livraison reçues. Quatre rouges PG réels puis 26/26, trois rouges unitaires puis ciblés
 verts ; première passe 25/26 avait supposé un mouvement du theta arrondi alors que
 l’incertitude réelle 349→348 bougeait : assertion RD corrigée, fit/poids/test
 conservés. Vérifications/égalité computedAt (déjà verte avant ordre explicite,
 pas défaut reproduit), build final/rendu/HTTP/rejeu/cleanup locaux reçus ;
-CI/image/runtime 516 et conservation de bascule ouverts. [Plan LB02/03/05/06](RESIDUAL-DEBT.md).
+CI/image/runtime 516 et conservation de bascule reçus. [Plan LB02/03/05/06](RESIDUAL-DEBT.md).
 
-**516 candidate validée localement, pas livrée** : build webpack final terminé,
+Les refus de réception liés aux majuscules CSS, aux champs emittedAt/statusOK
+et à la performance indisponible dans evaluateDOM relèvent de l’instrumentation ;
+aucun bug ni correctif produit revendiqué pour ces écarts.
+
+**516, réception locale historique avant livraison** : build webpack final terminé,
 cinq contrôles post-unités verts ; PostgreSQL 489/30 dont 27 pipeline, ciblés 52/6
 dont trois tests de page, gouvernance 1 671/169, typage/deux lints sans erreur
 (24 avertissements chacun), zéro cycle. DEFAULT 4 935/466 PAR UNION : 4 933 verts
@@ -328,12 +331,65 @@ conservés ; seules les finales 27+27 reçoivent le rendu corrigé.
 Neuf tables locales antérieures exactes pour IDs/champs comparés (SHA), lectures
 séquentielles non atomiques ; contenu/version/certitude/dates conservés, zéro
 AICost, fixtures retirées, serveur arrêté/onglet local fermé/viewport restauré.
-CI/image/runtime 516 et conservation de bascule restent ouverts ; qualification
-des marques réelles, seed canon, onboarding/championnat et Oracle non reçus.
+CI/image/runtime et conservation de bascule 516 désormais reçus ; qualification
+complète des marques, rejeu seed/UI, onboarding/championnat et Oracle restent ouverts.
 Preuves P34 `release/preuves-championnat-20261021/native-reception-received.json`,
 `http-final-received.json`, `local-conservation-received.json`, captures desktop/
 mobile finales ; P23 `scoreur516-build-units-final.log`,
 `gauntlet516-units-results.json`.
+
+
+Décision régionale utilisateur : modèle existant à onboarder, pas bug du resolver ;
+instances pays/équipes et international distincts, [réception LB03](RESIDUAL-DEBT.md).
+
+**517 candidate validée localement — canon conservatif (2026-10-21)** :
+rejeu du seed écrasait réglages et dates ; collision de kind non refusée. Cause :
+upsert de mise à jour réutilisé pour une simple initialisation ;
+transaction/verrou PostgreSQL et `initializeOnly` complètent les seuls absents ;
+type incompatible refusé atomiquement, réglages/dates existants préservés ; autres
+upserts inchangés. Bouton ADMIN dans la console canon existante, repères proposés
+sans ratification. Trois rouges réels puis 31/31 PG verts ; neuf contrôles locaux
+verts. Build compilé reçu après premier ENOTEMPTY conservé et déplacement réversible
+de `.next` généré, sans suppression de donnée. Natif ADMIN : 29 absents ajoutés,
+Coca-Cola réglé à 2191 conservé tous champs/ID/source/dates ; deuxième clic,
+30 références exactes (15+15), aucun appel IA. Première fenêtre complète :
+64 réponses, 0 HTTP ≥500/exception, mais 25 ERR_ABORTED conservés ; DOM 165,5 ms,
+titre 254 ms pilote compris, pas SLO. Rejeu : deux HTTP 200 sans erreur/échec.
+Onze tables locales comparées exactes après retrait des fixtures. CI/image/runtime
+et rejeu de production 517 restent ouverts ; aucun nœud régional créé en production,
+héritage/équipes pays à recevoir, Oracle dernier 0/6. Preuves P23 gauntlet/build ; P34
+`canon517-{first,replay}-received.json`, `native-canon517-{first,replay}.json`,
+`canon517-local-conservation-received.json`, capture relue `native-canon517.png`.
+Aucun service/modèle/page/route/ADR nouveau.
+
+**516 livrée — production reçue (2026-10-21)** : PR1053/source
+`5e39fc12f2acf73b42ea795bf99342942c317c64`, runtime 6.27.516 reçu à 09:24:15 UTC,
+image `26f20f644b6584d4d49e4d74f2627fc0783c523c47838431fc572e408b47955c`.
+CI distante : DEFAULT 4 935/466 et PostgreSQL 489/30 en runs complets verts ; la
+borne locale PAR UNION ci-dessus reste historique. Mêmes volumes/relais Luna/90s,
+OpenRouter absent. Bascule : 67 sources/1 041 actifs/huit piliers/FRC+trois masters/
+six lignes de paiement exacts, lectures séquentielles non atomiques. Dette
+CI/image/runtime/conservation 516 close ; sept chantiers/MVP/ADVE entiers non reçus.
+Canon : 15 ancres+15 items chargés une fois par API ADMIN existante sur registre
+frais vide ; pas d’override/ADVE/humain ratifié. À la livraison 516, rejeu conservatif/
+UI ouverts : le seed déployé peut écraser des réglages ; correctif 517 candidat ci-dessus.
+Lecture canon : 32 réponses, 0 HTTP ≥500/exception mais 1 ERR_ABORTED conservé,
+DOM 2077,7 ms/titre 2120 ms pilote compris, pas SLO.
+SPAWT : un clic natif, un ScoreVerdict et émission gouvernée OK ; 39,5/200 LATENT,
+couverture 40%, deux épreuves A/V, ligue effective food/VILLE/CI. 189 enregistrements
+antérieurs du suivi des followers et huit piliers exacts, zéro nouveau coût IA ;
+pas nouvelle marque/collecte ni modification/ratification ADVE. Lectures anonymes
+leaderboard/verdict HTTP 200. Public production : 24 réponses complètes sans ≥500/
+exception/échec, DOM 842,1 ms/titre 875 ms pilote compris ; trois arènes non observées,
+15 repères proposés. Anciennes erreurs instrumentales conservées, pas bugs produit
+revendiqués. Sources multi-pays conservées hors pillarOverrides ; pays/ligues et
+instances régionales et placement Friesland restent à recevoir. Plan : LB02 et LB05
+reçus, soit 2/6 ; LB01 actif. Championnat entier/Oracle non reçus, dernier Oracle 0/6. Preuves P23 `merge516-received.json`,
+`ci516-suites-received.json`, `postmerge516-received.json`, `production516-*.json`,
+`children516-after-received.json`, `payments-after516.json` ; P34
+`canon516-initialization-received.json`, `spawt516-publication-received.json`,
+`native-canon-production516.json`, `native-spawt-publication516.json`,
+`native-public-production516.json`, `retained-market-source-bridge.json`.
 
 
 510 est reçue en production : source `5c5cc907249ef2123e2d6c7a60c95f81ab7794fe`,
