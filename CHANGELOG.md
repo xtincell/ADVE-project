@@ -2,6 +2,8 @@
 
 **Les lecteurs d’identité affichent les données admises sans leur inventer de complétude.**
 
+- Périmètre de livraison PR #1050 inscrit au registre scope-drift.
+
 - Le kit existant partage la lecture des libellés et rangs de valeurs, y compris `valeur` et `rang`. Les champs canoniques renseignés gardent leur priorité ; les lecteurs spécialisé et générique affichent le même ordre déclaré. Les responsabilités de l’équipe sont affichées séparément de la biographie.
 - Aucun contenu, classement, contrat de maturité ou score n’est réécrit. Les données SPAWT présentes ne sont plus décrites comme absentes ; les détails contractuels manquants restent à compléter. Aucun nouveau modèle, service, routeur, Intent ou ADR.
 - Quatre régressions rouges réelles puis 22 tests ciblés verts sur trois fichiers. DEFAULT 4 925/463, PostgreSQL 462/29, gouvernance 1 671/169 ; typage/deux lints sans erreur, 24 avertissements historiques par lint, zéro cycle et build webpack reçus. Vue compilée authentifiée locale : HTTP200, DOM214,6ms/titre observé≤708ms pilote compris, 60 réponses sans ≥500/exception ; 11 net::ERR_ABORTED conservés, fenêtre complète. Contenu/version/certitude exacts, zéro coût IA, fixtures retirées ; premières fenêtres dev tronquées conservées. Aucun SLO ni ADVE complet déduit ; livraison suivie dans RESIDUAL-DEBT.
