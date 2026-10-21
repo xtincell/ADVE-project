@@ -18,6 +18,7 @@ import {
   scoreBrand,
   resolveLeagueForStrategy,
   loadAnchorsForLeague,
+  listLatestPublicVerdicts,
 } from "@/server/services/seshat/scoreur";
 import { getOperatorContext } from "@/server/services/operator-isolation";
 import { scoreProspect } from "@/server/services/seshat/scoreur/prospect";
@@ -282,26 +283,13 @@ export const scoreurRouter = createTRPCRouter({
       }),
     )
     .query(async ({ input }) => {
-      const rows = await db.scoreVerdict.findMany({
-        where: {
-          ...(input.sectorSlug ? { sectorSlug: input.sectorSlug } : {}),
-          ...(input.marketScale ? { marketScale: input.marketScale } : {}),
-          ...(input.countryCode ? { countryCode: input.countryCode } : {}),
-        },
-        orderBy: { computedAt: "desc" },
-        take: 500,
-      });
-      // Dernier verdict par sujet.
-      const latest = new Map<string, (typeof rows)[number]>();
-      for (const r of rows) {
-        const key = r.subjectStrategyId ?? r.subjectBrandRefId ?? r.subjectLabel;
-        if (!latest.has(key)) latest.set(key, r);
-      }
-      return [...latest.values()]
-        .sort((a, b) => b.force - a.force)
-        .slice(0, input.limit)
-        .map((r, i) => ({
-          rank: i + 1,
+      const rows = await listLatestPublicVerdicts(input);
+      const ranks = new Map<string, number>();
+      return rows.map(r => {
+        const league = leagueKeyString(r), rank = (ranks.get(league) ?? 0) + 1;
+        ranks.set(league, rank);
+        return {
+          rank,
           subjectLabel: r.subjectLabel,
           force: r.force,
           tier: r.tier,
@@ -312,7 +300,8 @@ export const scoreurRouter = createTRPCRouter({
           countryCode: r.countryCode,
           cappedReason: r.cappedReason,
           computedAt: r.computedAt,
-        }));
+        };
+      });
     }),
 
   /** Verdict complet (palmarès) le plus récent d'une marque — public. */
@@ -321,7 +310,7 @@ export const scoreurRouter = createTRPCRouter({
     .query(async ({ input }) => {
       return db.scoreVerdict.findFirst({
         where: { subjectStrategyId: input.strategyId },
-        orderBy: { computedAt: "desc" },
+        orderBy: [{ computedAt: "desc" }, { id: "desc" }],
       });
     }),
 });

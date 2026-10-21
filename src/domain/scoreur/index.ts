@@ -38,6 +38,31 @@ export interface ScoreInput {
   readonly canon?: { gauge?: GaugeMap; items?: readonly MustHaveItem[] };
 }
 
+/** Connected observations for one arena; a fixed calibration ends a branch. */
+export function connectedScoreurObservations(
+  subjectRef: string,
+  observed: readonly CompiledEpreuve[],
+  anchors: Readonly<Record<string, number>>,
+): { nodes: string[]; epreuves: CompiledEpreuve[] } {
+  const adjacency = new Map<string, Set<string>>();
+  for (const e of observed) {
+    for (const [a, b] of [[e.subjectRef, e.opponentRef], [e.opponentRef, e.subjectRef]] as const) {
+      if (!adjacency.has(a)) adjacency.set(a, new Set());
+      adjacency.get(a)!.add(b);
+    }
+  }
+  const nodes = new Set<string>([subjectRef]);
+  const frontier = [subjectRef];
+  for (let i = 0; i < frontier.length; i++) {
+    const node = frontier[i]!;
+    if (anchors[node] !== undefined) continue;
+    for (const neighbour of adjacency.get(node) ?? []) {
+      if (!nodes.has(neighbour)) { nodes.add(neighbour); frontier.push(neighbour); }
+    }
+  }
+  return { nodes: [...nodes], epreuves: observed.filter(e => nodes.has(e.subjectRef) && nodes.has(e.opponentRef)) };
+}
+
 /** Estime une arène : θ ± RD du sujet, mappé en force via la jauge de ligue. */
 function estimateArena(
   arena: ScoreurArena,
@@ -69,34 +94,16 @@ function estimateArena(
     };
   }
 
-  const adjacency = new Map<string, Set<string>>();
-  for (const e of observed) {
-    for (const [a, b] of [[e.subjectRef, e.opponentRef], [e.opponentRef, e.subjectRef]] as const) {
-      if (!adjacency.has(a)) adjacency.set(a, new Set());
-      adjacency.get(a)!.add(b);
-    }
-  }
-  const nodeSet = new Set<string>([subjectRef]);
-  const frontier = [subjectRef];
-  for (let i = 0; i < frontier.length; i++) {
-    const node = frontier[i]!;
-    // Une ancre fixe termine une branche : les autres marques qui l'affrontent
-    // ne peuvent pas déplacer sa jauge ni informer ce sujet.
-    if (anchors[node] !== undefined) continue;
-    for (const neighbour of adjacency.get(node) ?? []) {
-      if (!nodeSet.has(neighbour)) { nodeSet.add(neighbour); frontier.push(neighbour); }
-    }
-  }
-  const connected = observed.filter((e) => nodeSet.has(e.subjectRef) && nodeSet.has(e.opponentRef));
+  const { nodes, epreuves: connected } = connectedScoreurObservations(subjectRef, observed, anchors);
   // N'inclut que les ancres réellement affrontées (les autres ne contraignent pas).
   const relevantAnchors: Record<string, number> = {};
-  for (const n of nodeSet) {
+  for (const n of nodes) {
     const a = anchors[n];
     if (a !== undefined) relevantAnchors[n] = a;
   }
 
   const { theta, rd } = fitBradleyTerry(
-    { nodes: [...nodeSet], anchors: relevantAnchors, pairwise: toPairwise(connected) },
+    { nodes, anchors: relevantAnchors, pairwise: toPairwise(connected) },
     { defaultTheta: defaultThetaForScale(scale, gauge) },
   );
 

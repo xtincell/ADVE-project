@@ -9,16 +9,18 @@
  */
 
 import { db } from "@/lib/db";
-import type { Epreuve, Prisma } from "@prisma/client";
+import { Prisma, type Epreuve, type ScoreVerdict as StoredScoreVerdict } from "@prisma/client";
 import type { MarketScale } from "@/domain/market-scale";
 import { resolveEvidenceTargets } from "@/domain/market-scale";
 import { canonicalSectorSlug } from "@/domain/sector-taxonomy";
 import {
   COHERENCE_THRESHOLD,
+  connectedScoreurObservations,
   defaultThetaForScale,
   MUST_HAVE_ITEMS,
   resolveRevealedGates,
   scoreFromEpreuves,
+  SCOREUR_ARENAS,
   type CompiledEpreuve,
   type LeagueKey,
   type RevealedGateThresholds,
@@ -213,7 +215,7 @@ export async function scoreBrand(
     // V3 : le standard de SIGNAUX TIERS du rang disputé (ADR-0126) — la presse
     // collectée s'y mesure enfin au lieu de rester décorative.
     thirdPartyFloor: targets.tarsisTarget,
-  });
+  }, client);
   const persistedRows = await client.epreuve.findMany({
     // Une ligue = une jauge. Ne réutilise ni une ancienne ligue du sujet ni un
     // ScoreVerdict estimé pour transformer la force d'un rival en observation.
@@ -225,9 +227,6 @@ export async function scoreBrand(
     },
   });
   const persisted = persistedToCompiled(persistedRows);
-  const epreuves = [...measured.epreuves, ...persisted];
-  const epreuveCount = epreuves.filter((e) => e.subjectRef === strategyId || e.opponentRef === strategyId).length;
-
   // Résout les θ des items opponents (compilateur) s'ils manquent en base.
   const anchors = await loadAnchorsForLeague(league, client);
   for (const slug of Object.values(ITEM_OPPONENTS)) {
@@ -236,6 +235,30 @@ export async function scoreBrand(
     }
   }
 
+  // Only connected rivals can inform this subject. The same pure traversal is
+  // used by the estimator; shared fixed items never drag in unrelated brands.
+  const connectedIds = new Set<string>();
+  for (const arena of SCOREUR_ARENAS) {
+    for (const id of connectedScoreurObservations(strategyId, persisted.filter(e => e.arena === arena), anchors).nodes) {
+      if (id !== strategyId && anchors[id] === undefined) connectedIds.add(id);
+    }
+  }
+  const rivals = connectedIds.size ? await client.strategy.findMany({
+    where: { id: { in: [...connectedIds] }, marketScale: league.marketScale as MarketScale | null, countryCode: league.countryCode },
+    select: { id: true, client: { select: { sector: true } } },
+    orderBy: { id: "asc" },
+  }) : [];
+  const epreuves = [...measured.epreuves, ...persisted];
+  for (const rival of rivals) {
+    if (canonicalSectorSlug(rival.client?.sector) !== league.sectorSlug) continue;
+    const observed = await compileMeasuredEpreuves({
+      strategyId: rival.id, nowIso, superfanFloor: targets.superfansTarget,
+      audienceFloor: targets.audienceFloor, thirdPartyFloor: targets.tarsisTarget,
+    }, client);
+    epreuves.push(...observed.epreuves);
+  }
+  const epreuveCount = epreuves.filter(e => e.subjectRef === strategyId || e.opponentRef === strategyId).length;
+
   // Audience cumulée ≥ plancher de ligue : arène A gagnée au footprint (ADR-0153).
   const audienceMeetsFloor = measured.epreuves.some(
     (e) => e.arena === "A" && e.opponentRef === ITEM_OPPONENTS.aAudienceFloor && e.result === "WIN",
@@ -243,7 +266,7 @@ export async function scoreBrand(
 
   // Canon éditable a posteriori (ADR-0150) : override DB par-dessus les défauts code.
   // Résolu AVANT les items — ses seuils de portes révélées pilotent computeItemsMet.
-  const canon = await resolveScoreurCanon();
+  const canon = await resolveScoreurCanon(client);
 
   // Items franchis (mesurés + preuve publique révélée + items gagnés au registre).
   const itemsMet = await computeItemsMet(
@@ -275,6 +298,26 @@ export async function scoreBrand(
     verdictId = row.id;
   }
   return { verdict, epreuveCount, superfanCount: measured.superfanCount, verdictId };
+}
+
+/** Public placements: latest per brand BEFORE league filters or result limits. */
+export async function listLatestPublicVerdicts(
+  filters: { sectorSlug?: string | null; marketScale?: MarketScale | null; countryCode?: string | null; limit?: number } = {},
+): Promise<StoredScoreVerdict[]> {
+  return db.$queryRaw<StoredScoreVerdict[]>(Prisma.sql`
+    WITH latest AS (
+      SELECT DISTINCT ON (COALESCE("subjectStrategyId", "subjectBrandRefId", "subjectLabel")) *
+      FROM "ScoreVerdict"
+      ORDER BY COALESCE("subjectStrategyId", "subjectBrandRefId", "subjectLabel"), "computedAt" DESC, "id" DESC
+    )
+    SELECT * FROM latest
+    WHERE TRUE
+      ${filters.sectorSlug ? Prisma.sql`AND "sectorSlug" = ${filters.sectorSlug}` : Prisma.empty}
+      ${filters.marketScale ? Prisma.sql`AND "marketScale" = ${filters.marketScale}::"MarketScale"` : Prisma.empty}
+      ${filters.countryCode ? Prisma.sql`AND "countryCode" = ${filters.countryCode}` : Prisma.empty}
+    ORDER BY "force" DESC, "subjectLabel" ASC, "id" ASC
+    ${filters.limit == null ? Prisma.empty : Prisma.sql`LIMIT ${filters.limit}`}
+  `);
 }
 
 /** Items franchis : signaux mesurés + preuve publique révélée + items gagnés au registre. */

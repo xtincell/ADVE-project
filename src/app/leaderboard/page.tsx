@@ -4,8 +4,10 @@
  * (aucune PII). Server component, lecture directe (comme /b/[slug]).
  */
 import "@/styles/leaderboard.css";
-import { db } from "@/lib/db";
 import { type MarketScale } from "@/domain/market-scale";
+import { ARENA_FORCE_MAX } from "@/domain/scoreur";
+import { listLatestPublicVerdicts } from "@/server/services/seshat/scoreur";
+import { getPublicScoreurReferences } from "@/server/services/seshat/scoreur/canon";
 import { listPublicDossiers } from "@/server/services/seshat/argos";
 import { NewsletterCapture } from "@/components/public/newsletter-capture";
 import { getServerLocale } from "@/lib/i18n/server";
@@ -24,7 +26,8 @@ export const metadata = {
 interface ArenaRow {
   arena: string;
   force: number;
-  rd: number;
+  theta: number | null;
+  rd: number | null;
   epreuveCount: number;
   wins: number;
   losses: number;
@@ -73,7 +76,8 @@ function toArenas(value: unknown): ArenaRow[] {
     .map((a) => ({
       arena: String(a.arena ?? ""),
       force: typeof a.force === "number" ? a.force : 0,
-      rd: typeof a.rd === "number" ? a.rd : 0,
+      theta: typeof a.theta === "number" && Number.isFinite(a.theta) ? a.theta : null,
+      rd: typeof a.rd === "number" && Number.isFinite(a.rd) ? a.rd : null,
       epreuveCount: typeof a.epreuveCount === "number" ? a.epreuveCount : 0,
       wins: typeof a.wins === "number" ? a.wins : 0,
       losses: typeof a.losses === "number" ? a.losses : 0,
@@ -102,20 +106,16 @@ function fmtDate(d: Date, locale: Locale): string {
 
 export default async function LeaderboardPage() {
   const locale = await getServerLocale();
-  const verdicts = await db.scoreVerdict.findMany({
-    orderBy: { computedAt: "desc" },
-    take: 1000,
-  });
+  const verdicts = await listLatestPublicVerdicts();
+  const references = await getPublicScoreurReferences();
   // Phase A état-final — le championnat et sa rédaction sont UN média :
   // les derniers dossiers Argos publiés (PASS uniquement) en pied de page.
   const dossiers = await listPublicDossiers({ limit: 3 }).catch(() => []);
 
-  // Dernier verdict par sujet.
-  const latest = new Map<string, Row>();
-  for (const v of verdicts) {
+  // Same latest-per-brand reader as the public API; history cannot mask peers.
+  const latest: Row[] = verdicts.map(v => {
     const subjectKey = v.subjectStrategyId ?? v.subjectBrandRefId ?? v.subjectLabel;
-    if (latest.has(subjectKey)) continue;
-    latest.set(subjectKey, {
+    return {
       subjectLabel: v.subjectLabel,
       force: v.force,
       tier: v.tier,
@@ -130,12 +130,12 @@ export default async function LeaderboardPage() {
       arenas: toArenas(v.arenas),
       gates: toGates(v.gates),
       epreuveCount: v.epreuveCount,
-    });
-  }
+    };
+  });
 
   // Regroupe par ligue, classe par force.
   const byLeague = new Map<string, Row[]>();
-  for (const row of latest.values()) {
+  for (const row of latest) {
     const key = `${row.sectorSlug}|${row.marketScale ?? "*"}|${row.countryCode ?? "*"}`;
     const arr = byLeague.get(key) ?? [];
     arr.push(row);
@@ -224,7 +224,10 @@ export default async function LeaderboardPage() {
                                 <div className="lb__arena" key={a.arena}>
                                   <b>{ARENA_KEYS[a.arena] ? t(ARENA_KEYS[a.arena]!, locale) : a.arena}</b>
                                   <span className="lb__wl">{a.wins}{t("lb.palmares.win", locale)} · {a.losses}{t("lb.palmares.loss", locale)}</span>
-                                  <span>{t("lb.palmares.force", locale)} {Math.round(a.force * 10) / 10}/25 ±{Math.round(a.rd * 10) / 10}</span>
+                                  <span>{t("lb.palmares.force", locale)} {Math.round(a.force * 10) / 10}/{ARENA_FORCE_MAX}</span>
+                                  <span>{a.epreuveCount === 0 ? t("lb.palmares.unobserved", locale) :
+                                    a.theta !== null && a.rd !== null ? `${t("lb.palmares.theta", locale)} ${a.theta} ±${a.rd}` :
+                                      t("lb.palmares.uncertaintyUnavailable", locale)}</span>
                                   <span>{a.epreuveCount} {t(a.epreuveCount > 1 ? "lb.trial.many" : "lb.trial.one", locale)}</span>
                                 </div>
                               ))}
@@ -255,6 +258,20 @@ export default async function LeaderboardPage() {
             );
           })
         )}
+
+        <section className="lb__league" aria-labelledby="scoreur-references">
+          <h2 id="scoreur-references">{t("lb.references.title", locale)}</h2>
+          <p className="lb__lede">{t("lb.references.explanation", locale)}</p>
+          <div className="lb__arenas">
+            {references.map(reference => (
+              <div className="lb__arena" key={reference.id}>
+                <b>{reference.label}</b>
+                <span>{t(SCALE_KEYS[reference.scale], locale)}</span>
+                <span>{t("lb.references.position", locale)} {reference.theta}</span>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Phase A état-final — la rédaction du championnat : derniers dossiers
             Argos publiés (PASS + revue), et la newsletter possédée en propre. */}

@@ -2378,7 +2378,7 @@ de paiement conservées par lectures séquentielles, pas snapshot atomique. Atte
 CI/image/runtime/conservation 514 closes ; aucun onboarding/leaderboard/Oracle
 complet reçu. Preuves P32 `delivery-received.json`, `production-native-received.json`.
 
-Extension candidate 515 (2026-10-21), pipeline scoreur existant sous SESHAT :
+Extension515 livrée (2026-10-21), pipeline scoreur existant sous SESHAT :
 calibration par ID pour épreuves et alias pour items, filtrage de ligue ; aucune
 formule/poids/canon modifiés. Rejeu exact recordEpreuve sous verrou PG ; approval
 CAS, observation et verdict atomiques ; une erreur de verdict laisse le même
@@ -2387,7 +2387,7 @@ ancrés aux URLs réellement retournées ; sans résultat web, différé avant m
 Garde de portée existante pour alias/candidateId/file ; opérateur résolu en DB
 pour prospect/liste des stratégies, aucune projection JWT nouvelle. UI existante : même
 dossier par ID, sujet distinct du rang, preuve humaine et IA facultative.
-Ciblés et typage/build/gauntlet/natif locaux reçus ; CI/image/runtime 515 non reçus.
+Ciblés et typage/build/gauntlet/natif/CI/image/runtime515 reçus.
 LB02 actif : championnat entier, placements SPAWT/FRC, ADVE et Oracles non reçus.
 Aucun modèle/service/router/page/Intent/ADR/manager/provider ajouté.
 
@@ -2412,7 +2412,7 @@ final reçus. Console : fenêtre complète 55 réponses, 0 HTTP ≥500/exception
 titres observés ≤162/146 ms, pilote compris ; pas SLO ni zéro échec console.
 Premières fenêtres incomplètes conservées ; date reçue par calendrier natif,
 outil fill sans commit du champ, aucun correctif produit/bouton forcé.
-CI/image/runtime 515 et conservation production ouverts avant merge.
+CI/image/runtime515 et conservation production reçus ; attente technique close.
 **Premier CI 515 refusé avant les 22 tests PG** : garde locale 55439 incompatible
 avec le conteneur CI détenu 5432 ; 29 fichiers/462 tests verts, 22 non exécutés,
 pas rouge métier. Deux cibles exactes seulement : hostname 127.0.0.1 et base
@@ -2421,13 +2421,64 @@ GITHUB_ACTIONS=true, GITHUB_REPOSITORY=xtincell/ADVE-project, port 5432/user pos
 Aucune assertion métier retirée ni skip ajouté ; produit/version/build/natif
 inchangés. Relance locale 22/22 et cinq contrôles obligatoires (typage/deux lints/
 cycles/gouvernance) reçus après correction de la garde ; produit inchangé vérifié.
-Nouveau job sur cible CI, image et runtime toujours non reçus avant merge.
+Nouveau CI/image/runtime515 reçus dans la livraison ; refus initial conservé comme harnais.
 Preuves P23 `ci515-postgres-first-failure.log`, `scoreur515-ci-fixture-local-green.log`,
 `gauntlet515-ci-fixture-results.json`, `ci515-fixture-change-scope.json`.
  Mesures
-vivantes rivales non reçues et bloquantes pour LB02 complet ; aucun placement
+vivantes rivales prises en charge par candidat516, réception complète LB02 non reçue ; aucun placement
 réel SPAWT/FRC ni championnat/Oracle entier reçu. Preuves P33
 `native-reception-received.json`, `local-conservation-received.json`.
+
+**515 livrée, périmètre technique reçu** : source
+`61c0118534556cc9778623a33516f63821fc221a`, digest
+`cc6658f2e6901d910b2b5a9ce62ced2d0943c44dbd45f47539f5f3341e308f06`, runtime 6.27.515.
+67 sources/1 041 actifs/huit piliers, racine Friesland/trois masterbrands et six
+lignes paiement conservés ; lectures séquentielles, pas snapshot atomique.
+Console production : sélection SPAWT sans publication, 39 réponses complètes,
+0 HTTP ≥500/exception mais 6 ERR_ABORTED ; DOM 440,6 ms, pas SLO ni zéro échec global.
+CI/image/runtime/conservation 515 clos. Preuves P33 `delivery515-received.json`,
+`production-native-hydrated.json`. Pas de championnat réel ou réception macro déduit.
+
+Extension 516 candidate validée localement (2026-10-21), mêmes modules scoreur/SESHAT : mesures
+vivantes des rivaux connectés de même ligue en contexte, parcours partagé domaine/
+estimateur avec arrêt aux ancres fixes ; client transactionnel propagé aux lectures
+compilateur/canon/Overton, formule et poids conservés. API/page publique partagent
+le dernier verdict par marque avant filtre/limite, rang par ligue ; ancien verdict
+ne ressuscite pas, historique d’une marque ne masque pas les autres. Repères
+proposés depuis le canon, pas performance mesurée/ratification ; rendu arène/40
+et aliases FOOD ajustés sans nouveau code canonique. Vérifications/build/rendu/
+HTTP/rejeu/cleanup locaux reçus ; CI/image/runtime 516 et conservation de bascule ouverts.
+LB01 reste distinct : seed ADMIN existant sans appel UI trouvé, upsert peut
+remplacer fixedTheta/source ; contrôler/initier de façon bornée et recevoir
+préservation du canon édité avant annoncer calibration TPE. Aucun seed production.
+Aucun service/router/page/Intent/ADR/schéma/modèle/provider nouveau. LB02/03/05/06
+à recevoir ; 0/6 stades et 0/6 Oracle, marques réelles/ligues/documents/ADVE et sept
+chantiers entiers non reçus.
+
+**516 candidate validée localement, pas livrée** : build webpack final terminé,
+cinq contrôles post-unités verts ; PostgreSQL 489/30 dont 27 pipeline, ciblés 52/6
+dont trois tests de page, gouvernance 1 671/169, typage/deux lints sans erreur
+(24 avertissements chacun), zéro cycle. DEFAULT 4 935/466 PAR UNION : 4 933 verts
+initialement avec timeout, reprise 6/6 et page finale 3/3 ; exécutions recouvrantes,
+pas run complet tout vert. Aucun test/délai/fit/poids modifié.
+HTTP OPERATOR/rejeu et lectures anonymes reçus : trois marques fictives/deux
+ligues, rangs VILLE 1,2/NATION 1. Desktop et viewport mobile demandé 420/effectif
+414 : HTTP 200, chacun 27 réponses complètes sans ≥500/exception/échec ; DOM
+126,2/121,8 ms, titres observés ≤232/163 ms pilote compris, pas SLO ni appareil
+physique reçu. Quinze repères proposés distincts, override DB 2151 lu, sans
+ratification. Force/40 séparée de θ1343±347, arènes non observées explicites ;
+captures relues sans débordement. Premier écran refusé et fenêtres partielles
+conservés ; seules les finales 27+27 reçoivent le rendu corrigé.
+Neuf tables locales antérieures exactes pour IDs/champs comparés (SHA), lectures
+séquentielles non atomiques ; contenu/version/certitude/dates conservés, zéro
+AICost, fixtures retirées, serveur arrêté/onglet local fermé/viewport restauré.
+CI/image/runtime 516 et conservation de bascule restent ouverts ; qualification
+des marques réelles, seed canon, onboarding/championnat et Oracle non reçus.
+Preuves P34 `release/preuves-championnat-20261021/native-reception-received.json`,
+`http-final-received.json`, `local-conservation-received.json`, captures desktop/
+mobile finales ; P23 `scoreur516-build-units-final.log`,
+`gauntlet516-units-results.json`.
+
 
 510 est reçue en production : source `5c5cc907249ef2123e2d6c7a60c95f81ab7794fe`,
 déploiement `ip02ws80mllbkno6xn7skm1h` terminé le 20 octobre à 21:48:22 UTC,

@@ -55,6 +55,7 @@ afterAll(async () => {
     ...prospectNames.map(name => ({ payload: { path: ["name"], equals: name } })),
     ...candidates.map(id => ({ payload: { path: ["candidateId"], equals: id } }))] } });
   await db.pillar.deleteMany({ where: { strategyId: scope } });
+  await db.followerSnapshot.deleteMany({ where: { strategyId: scope } });
   await db.strategy.deleteMany({ where: { id: scope } });
   await db.client.deleteMany({ where: { id: { in: clients } } });
   await db.brandRef.deleteMany({ where: { id: { in: refs } } });
@@ -85,6 +86,75 @@ const evidence = (f: Fixture) => ({ subjectStrategyId: f.strategy.id, opponentBr
   league: f.league, result: "WIN" as const, proofWeight: 1, source: "https://example.invalid/owned/direct-observation", occurredAt: nowIso });
 
 describe("existing deterministic scorer as an owned publication pipeline", () => {
+  it("uses the connected rival's retained audience without adding that audience to the subject's coverage", async () => {
+    const a = await fixture(), b = await fixture();
+    await recordEpreuve({ ...evidence(a), arena: "A", opponentBrandRefId: null, opponentStrategyId: b.strategy.id });
+    const before = await scoreBrand(a.strategy.id, { nowIso, persist: false });
+    await db.followerSnapshot.create({ data: { strategyId: b.strategy.id, platform: "INSTAGRAM", handle: `owned-${b.strategy.id}`,
+      followerCount: 100000, capturedAt: new Date(nowIso) } });
+    const after = await scoreBrand(a.strategy.id, { nowIso, persist: false });
+    // A single low-weight audience observation changes Fisher uncertainty;
+    // the canonical integer theta can round to the same value. Never alter
+    // the fitter or weights to manufacture a larger effect.
+    expect(before.verdict.arenas.find(x => x.arena === "A")!.rd).toBe(349);
+    expect(after.verdict.arenas.find(x => x.arena === "A")!.rd).toBe(348);
+    expect(after.epreuveCount).toBe(1); expect(after.verdict.coveragePct).toBe(20);
+    expect(after.verdict.arenas.find(x => x.arena === "A")).toMatchObject({ epreuveCount: 1, wins: 1, losses: 0 });
+    await db.strategy.update({ where: { id: b.strategy.id }, data: { countryCode: "FR" } });
+    expect((await scoreBrand(a.strategy.id, { nowIso, persist: false })).verdict).toEqual(before.verdict);
+  });
+
+  it("reads observed signals from the caller's transaction and leaves no signal after rollback", async () => {
+    const a = await fixture();
+    await expect(db.$transaction(async tx => {
+      await tx.followerSnapshot.create({ data: { strategyId: a.strategy.id, platform: "INSTAGRAM", handle: `owned-${a.strategy.id}`,
+        followerCount: 100000, capturedAt: new Date(nowIso) } });
+      const result = await scoreBrand(a.strategy.id, { nowIso, persist: false, client: tx });
+      expect(result.verdict.coveragePct).toBe(20);
+      throw new Error("OWNED_ROLLBACK_AFTER_OBSERVED_READ");
+    })).rejects.toThrow("OWNED_ROLLBACK_AFTER_OBSERVED_READ");
+    expect(await db.followerSnapshot.count({ where: { strategyId: a.strategy.id } })).toBe(0);
+  });
+
+  it("keeps every brand's latest public placement when another brand has over a thousand snapshots", async () => {
+    const a = await fixture(), b = await fixture(), sectorSlug = `owned-${randomUUID()}`;
+    const base = { sectorSlug, marketScale: "VILLE" as const, countryCode: "CM", force: 10, tier: "LATENT",
+      coherence: 0, coveragePct: 20, arenas: [], gates: [], epreuveCount: 1 };
+    await db.scoreVerdict.createMany({ data: [
+      { ...base, subjectStrategyId: b.strategy.id, subjectLabel: b.strategy.name, computedAt: new Date("2026-01-01") },
+      ...Array.from({ length: 1001 }, (_, i) => ({ ...base, subjectStrategyId: a.strategy.id, subjectLabel: a.strategy.name,
+        computedAt: new Date(Date.parse("2026-02-01") + i) })),
+    ] });
+    const rows = await caller().leaderboard({ sectorSlug, limit: 200 });
+    expect(rows.map(x => x.subjectLabel).sort()).toEqual([a.strategy.name, b.strategy.name].sort());
+  });
+
+  it("filters the latest league rather than resurrecting an old placement and ranks within each league", async () => {
+    const a = await fixture(), b = await fixture(), sectorSlug = `owned-${randomUUID()}`;
+    const base = { sectorSlug, countryCode: "CM", tier: "LATENT", coherence: 0, coveragePct: 20, arenas: [], gates: [], epreuveCount: 1 };
+    await db.scoreVerdict.createMany({ data: [
+      { ...base, subjectStrategyId: a.strategy.id, subjectLabel: a.strategy.name, marketScale: "VILLE", force: 100, computedAt: new Date("2026-01-01") },
+      { ...base, subjectStrategyId: a.strategy.id, subjectLabel: a.strategy.name, marketScale: "NATION", force: 110, computedAt: new Date("2026-02-01") },
+      { ...base, subjectStrategyId: b.strategy.id, subjectLabel: b.strategy.name, marketScale: "VILLE", force: 100, computedAt: new Date("2026-02-01") },
+    ] });
+    const city = await caller().leaderboard({ sectorSlug, marketScale: "VILLE", limit: 200 });
+    expect(city.map(x => x.subjectLabel)).toEqual([b.strategy.name]);
+    const mixed = await caller().leaderboard({ sectorSlug, limit: 200 });
+    expect(mixed.map(x => x.rank)).toEqual([1, 1]);
+  });
+
+  it("uses the same deterministic tie breaker for a brand's public verdict and placement", async () => {
+    const a = await fixture(), sectorSlug = `owned-${randomUUID()}`, prefix = `owned-${randomUUID()}`;
+    const base = { subjectStrategyId: a.strategy.id, subjectLabel: a.strategy.name, sectorSlug, marketScale: "VILLE" as const,
+      countryCode: "CM", tier: "LATENT", coherence: 0, coveragePct: 20, arenas: [], gates: [], epreuveCount: 1,
+      computedAt: new Date("2026-10-21") };
+    await db.scoreVerdict.createMany({ data: [{ ...base, id: prefix + "-a", force: 10 }, { ...base, id: prefix + "-z", force: 20 }] });
+    const publicRows = await caller().leaderboard({ sectorSlug, limit: 200 });
+    const verdict = await caller().verdict({ strategyId: a.strategy.id });
+    expect(verdict?.force).toBe(publicRows[0]!.force);
+    expect(verdict?.id).toBe(prefix + "-z");
+  });
+
   it("joins stored opponent IDs to the exact fixed calibration and preserves semantic slugs", async () => {
     const f = await fixture(); const ep = await recordEpreuve(evidence(f)); const loaded = await loadAnchorsForLeague(f.league);
     expect(loaded[ep.opponentBrandRefId!]).toBe(1850); expect(loaded[f.anchor.slug]).toBe(1850);
