@@ -2,6 +2,8 @@
 
 **Un calcul périmé ou une projection échouée ne peut plus devenir un nouveau plan.**
 
+- Périmètre de livraison consigné sous le numéro réel PR #1058, out-of-scope, dans scope-drift.
+
 - Guidance/Mestor réutilise le contrôle des versions sources du Gateway pour R/T/I ; l’enregistrement de I et sa projection BrandAction sont atomiques. Une erreur T ou I arrête les consommateurs de cette cascade. La maturité annoncée porte sur le contenu conservé, après protection des décisions humaines.
 - Les lecteurs d’actions distinguent le catalogue courant des choix antérieurs hors catalogue, qui restent conservés et ne sont pas adoptés dans le nouveau plan. Les compteurs Oracle distinguent données disponibles, rédaction enregistrée et fraîcheur. Le ratio LTV/CAC contradictoire est refusé dans les lecteurs et exports, plutôt que remplacé par un quotient de cohortes différentes ; zéro CAC ne produit ni ratio infini ni offre gratuite.
 - Aucun modèle, service, routeur, page, Intent, fournisseur ou manager ajouté. Corrections reçues contre les défauts réintroduits ; gouvernance/UI1681/171, PostgreSQL508/31, typage et deux lints sans erreur (24 avertissements historiques), zéro cycle. ADVE entier, MVP et Oracle35 ne sont pas reçus par cet incrément. Suites et résidus dans les registres existants.
