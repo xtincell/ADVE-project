@@ -2,6 +2,8 @@
 
 **Une fin de calcul et un Oracle à jour doivent correspondre aux données réellement enregistrées.**
 
+- Périmètre de livraison consigné sous le numéro réel PR #1057, out-of-scope, dans scope-drift.
+
 - Guidance/Mestor étend les cycles existants : le dialogue de préparation attend les quatre retours R/T/I/S de cet appel, refuse réponse vide, partielle ou en erreur et ne promet plus huit piliers ni 35 sections validés. Le polling des anciens piliers décrit les données présentes, sans terminer la tentative courante.
 - Une correction documentaire invalide les sections Oracle dans la transaction de sa source via les services existants. Ancien contenu, versions et historique restent conservés ; marque voisine, PENDING et FAILED restent distincts. Une génération en cours garde son verrou et un marqueur de changement ; son succès tardif est refusé SOURCE_CHANGED sans écraser le livrable précédent. Une reprise explicite peut enregistrer le résultat frais, sans génération automatique ajoutée.
 - Aucun modèle, service, routeur, page, Intent, fournisseur ou gestionnaire ajouté. Deux défauts reproduits avant correction ; quatre cas PostgreSQL et treize UI ciblés reçus. Les suites PostgreSQL partagent une base : sérialisation des fichiers pour éviter saturation de connexions et contamination des compteurs globaux, tout en conservant les opérations concurrentes internes aux tests. Premiers refus du harnais conservés ; contrôles finaux et réception native/distante en cours. Aucun MVP, ADVE entier, Oracle entier ou chantier macro reçu par ce correctif.
