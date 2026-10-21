@@ -216,3 +216,5 @@ exiger le label avant merge via une protection de branche.
 | 2026-10-21 | #1049 | fix(payment) preuve liée au paiement existant | NEFER — priorité MVP explicite, phase7 | CinetPay v1, hash/ref avant URL, statut serveur autoritaire et PAID monotone ; PG462/29 et dix réponses HTTP locales reçus sans paiement réel. Livraison513, raccord CinetPay refusé422, SMTP et reprise durable ouverts ; aucun nouveau gestionnaire ou tarif. |
 
 | 2026-10-21 | #1050 | fix(brand) lecture des formats d’identité admis | NEFER — onboarding Shinkiro explicite, phase7 | Kit et lecteurs existants étendus pour valeurs/rangs et responsabilités sans modifier données/maturité/score. DEFAULT4925/463, PG462/29 et natif compilé/conservation locale reçus ; socles entiers, leaderboard et Oracle restent ouverts. |
+
+| 2026-10-21 | #1052 | Phase 7 · C6-03-LB-02 | Scoreur existant : identités d’étalons, graphe accepté de ligue, couverture propre, observation humaine datée, publication atomique/réessayable et droits indirects ; console sans copie ni sujet dérivé du rang. Réceptions locales bornées ; mesures vivantes rivales, marques réelles et Oracle restent ouverts. |

@@ -2,6 +2,8 @@
 
 **Une comparaison sourcée rejoint le calcul et son verdict dans la même transaction.**
 
+- Périmètre de livraison PR #1052 inscrit au registre scope-drift.
+
 - Les observations persistées reconnaissent les identifiants des étalons comme leurs alias sémantiques. Chaque calcul reprend les confrontations acceptées de sa ligue courante et la composante utile à l’estimateur existant. Les duels entrants comptent pour le sujet ; les autres arènes du rival ne gonflent ni ses compteurs ni sa couverture. Les items gagnés restent dans leur ligue d’observation. Aucun verdict estimé n’est transformé en preuve ; aucune formule changée.
 - Rejeu exact verrouillé sur l’observation ; revue concurrente à gagnant unique. Décision humaine, observation et verdict sont atomiques : une panne de publication laisse la proposition en attente. Source web, rival identifié et date du fait sont nécessaires avant validation ; la date de revue reste distincte. Le chasseur s’arrête avant le modèle lorsqu’aucun résultat web exploitable n’existe.
 - La console conserve le sujet indépendamment du rang. Elle reprend un dossier existant par identifiant, accepte une observation humaine sans modèle et permet de dater ou refuser les propositions. Les ports existants résolvent l’opérateur depuis l’appartenance stockée et protègent aussi les identifiants indirects et la branche de revue sans sujet sélectionné. Aucun nouveau service, routeur, modèle, Intent, fournisseur ou ADR.
