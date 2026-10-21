@@ -70,6 +70,38 @@ périmètre comparé), pas une identité atomique de toute la base.
 Rendu candidat : ids/métadonnées masqués, e_channels/DIRECT traduits, vignettes
 « Volet » sans fausse pagination. Aucun nouveau concept/ADR ou compte.
 
+**520 candidate — reprise de continuité Core/FIDÉLITÉ existante** : versions source
+vérifiées par Gateway avant R/T/I, I+projection BrandAction atomiques, arrêt de cascade
+sur T/I échoué ; choix historiques conservés à part du catalogue courant. Restitution
+Oracle repris dans les lecteurs existants. Ratio LTV/CAC : première présentation
+arithmétique refusée nativement, CAC B2C et LTV B2B distincts ; ratio enregistré
+contradictoire non validé, montants/commentaire conservés, aucun ratio de remplacement.
+**Qualifier unités, type de client et période avant toute réception de ce ratio** via
+les champs/sources et lecteurs existants. Transport de la qualification/commentaire
+unitEconomics reçu dans section-mappers/types optionnels vers HTML valeur/budget et
+PDF. Export partiel local de 41 pages produit et relu : réserve/commentaire présents pages
+6/34 et ratio incohérent non affiché ; premier PDF privé refusé pour perte de contexte
+conservé. Pages 6/34 rendues et visuellement lues : réserve/commentaire visibles sans
+coupure, pas validation visuelle de toutes les pages. Null explicite désormais gardé
+comme refus dans l’assemblage mapper→composant HTML ; un rouge/7 verts puis 10 tests/
+2 fichiers verts. Recette native HTML encore en cours ; aucune écriture métier,
+ni Oracle 35/export entier/MVP reçu. **Dette de la passe Oracle, hors continuité 520** :
+export texte de secours affiche encore des budgets inconnus à 0 et rend mal le
+glyphe ≥. Résoudre dans mappers/texte/polices existants : distinguer inconnu de vrai
+zéro sans inventer un budget, préserver le commentaire et recevoir texte/rendu des
+glyphes. Responsable Oracle/export existant ; effort recette/correction ciblée,
+déclencheur passe Oracle 35/export après continuité 520, sans bloquer cet incrément.
+Corrections documentaires séparées en
+production 519 : E9→E12, six questions en rituels/sacrements et quatre rites inférés
+retirés ; V37→V39, nouvelle piste BMC explicitement à valider et tarif rapporté/non
+publié, catalogue inchangé. Historique conservé, ni E ni V entiers reçus.
+Contrôles 520 en cours, aucun correctif déployé, aucune réception Core/MVP entière.
+**Fermer** : recevoir contrôles/natif/livraison puis chaîne réelle A/D/V/E/R/T/I/S,
+fidélité documentaire, choix courant→S et Oracle 35/export. Conserver origines/HUMAN/
+historique, sans réadopter les anciens choix. Responsable Core/FIDÉLITÉ/Oracle
+existants ; effort recette ciblée, déclencheur immédiat dans la réception Core avant
+Oracle. Marques-pays Friesland restent en LB03.
+
 **Réception FIDÉLITÉ existante — reprise SPAWT avant Oracle (2026-10-21)** :
 ancien pré-lancement/métriques zéro sans mesure et 160/200 latéral ambigus vus en 517
 restent à réconcilier sans promouvoir la complétude en force. R actualisé/enregistré

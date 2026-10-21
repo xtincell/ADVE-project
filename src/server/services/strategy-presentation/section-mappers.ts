@@ -8,6 +8,7 @@
  */
 
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
+import { unitEconomicsNote, unitEconomicsRatio } from "@/domain/unit-economics";
 import { resolveCultIndexTier } from "@/domain/cult-index-tier";
 import { cataloguePriceLabel, productLadderPriceLabel } from "@/domain/product-catalog";
 import { TIER_MIN_DEPTH } from "@/domain/superfan-conditions";
@@ -645,7 +646,8 @@ export function mapBudget(strategy: any): BudgetSection {
       ? {
           cac: safeNum(ue.cac),
           ltv: safeNum(ue.ltv),
-          ltvCacRatio: safeNum(ue.ltvCacRatio),
+          ltvCacRatio: unitEconomicsRatio(ue.cac, ue.ltv, ue.ltvCacRatio),
+          ...(unitEconomicsNote(ue) ? { commentaire: unitEconomicsNote(ue) } : {}),
           margeNette: safeNum(ue.margeNette),
           roiEstime: safeNum(ue.roiEstime),
           budgetCom: safeNum(ue.budgetCom),
@@ -1031,7 +1033,8 @@ export function mapPropositionValeur(strategy: any): PropositionValeurSection {
     unitEconomics: vContent?.unitEconomics ? {
       cac: vContent.unitEconomics.cac ?? null,
       ltv: vContent.unitEconomics.ltv ?? null,
-      ltvCacRatio: vContent.unitEconomics.ltvCacRatio ?? null,
+      ltvCacRatio: unitEconomicsRatio(vContent.unitEconomics.cac, vContent.unitEconomics.ltv, vContent.unitEconomics.ltvCacRatio),
+      ...(unitEconomicsNote(vContent.unitEconomics) ? { commentaire: unitEconomicsNote(vContent.unitEconomics) } : {}),
     } : null,
   };
 }

@@ -9,6 +9,7 @@
  */
 
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
+import { unitEconomicsNote, unitEconomicsRatio } from "@/domain/unit-economics";
 import { cataloguePriceLabel, productLadderPriceLabel, resolveProductRef } from "@/domain/product-catalog";
 import {
   Section, ACard, EmptyBody, EmptyValue, TagRow, ObjCard, ProofList,
@@ -150,18 +151,23 @@ function ProductLadder({ items, catalogue, status }: { items: unknown; catalogue
 function UnitEconomics({ value, status }: { value: unknown; status?: string }) {
   const empty = isEmpty(value);
   const o = asRec(value);
+  const ratio = unitEconomicsRatio(o.cac, o.ltv, o.ltvCacRatio);
+  const displayed: Rec = { ...o, ltvCacRatio: ratio };
+  const note = unitEconomicsNote(o);
+  const amount = (x: unknown) => typeof x === "number" ? `${new Intl.NumberFormat("fr-FR").format(x)} F` : str(x);
   const K: Array<[string, string, (x: unknown) => string]> = [
-    ["cac", "CAC", fcfa], ["ltv", "LTV", fcfa], ["ltvCacRatio", "LTV / CAC", (x) => `${str(x)}x`],
+    ["cac", "CAC", amount], ["ltv", "LTV", amount], ["ltvCacRatio", "LTV / CAC calculé", (x) => `${str(x)}x`],
     ["margeNette", "Marge nette", (x) => `${str(x)} %`], ["roiEstime", "ROI estimé", str], ["paybackPeriod", "Payback", (x) => `${str(x)} mois`],
-    ["budgetCom", "Budget com", fcfa], ["caVise", "CA visé", fcfa],
+    ["budgetCom", "Budget com", amount], ["caVise", "CA visé", amount],
   ];
   return (
     <ACard title="Unit Economics" status={status} empty={empty} span>
       {empty ? <EmptyBody /> : (
         <div className="ck-v-econ">
-          {K.map(([k, label, fmt]) => (!isEmpty(o[k]) ? (
-            <div className="ck-v-econ__c" key={k}><span className="ck-v-econ__k">{label}</span><span className="ck-v-econ__v">{fmt(o[k])}</span></div>
+          {K.map(([k, label, fmt]) => (!isEmpty(displayed[k]) ? (
+            <div className="ck-v-econ__c" key={k}><span className="ck-v-econ__k">{label}</span><span className="ck-v-econ__v">{fmt(displayed[k])}</span></div>
           ) : null))}
+          {note ? <p className="col-span-full whitespace-pre-line text-xs text-foreground-muted">{note}</p> : null}
         </div>
       )}
     </ACard>

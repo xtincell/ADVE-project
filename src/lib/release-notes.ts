@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.520", date: "2026-10-21", headline: "Des choix et des livrables mieux distingués",
+    highlights: [{ emoji: "🧭", title: "Votre plan part des choix courants", body: "Les actions antérieures restent consultables sans être présentées comme retenues dans le nouveau plan. Une source modifiée ou une étape échouée empêche de présenter la suite comme un nouveau calcul réussi. Le document distingue désormais ses données disponibles des sections réellement rédigées et à jour." }],
+  },
+  {
     version: "6.27.519", date: "2026-10-21", headline: "Un calcul terminé correspond à ses résultats",
     highlights: [{ emoji: "📋", title: "Vos documents restent à jour", body: "La préparation attend les résultats de la tentative en cours. Lorsqu’une source change, l’Oracle conserve son contenu précédent et indique qu’il doit être réactualisé. Un calcul lancé avant ce changement ne peut plus masquer cette attente." }],
   },

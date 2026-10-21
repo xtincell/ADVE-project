@@ -462,6 +462,7 @@ export interface BudgetSection {
     cac: number | null;
     ltv: number | null;
     ltvCacRatio: number | null;
+    commentaire?: string | null;
     margeNette: number | null;
     roiEstime: number | null;
     budgetCom: number | null;
@@ -601,6 +602,7 @@ export interface PropositionValeurSection {
     cac: number | null;
     ltv: number | null;
     ltvCacRatio: number | null;
+    commentaire?: string | null;
   } | null;
 }
 

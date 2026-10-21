@@ -2,10 +2,12 @@
 
 import type { PropositionValeurSection } from "@/server/services/strategy-presentation/types";
 import { MetricCard } from "../shared/metric-card";
+import { unitEconomicsRatio } from "@/domain/unit-economics";
 
 interface Props { data: PropositionValeurSection }
 
 export function PropositionValeur({ data }: Props) {
+  const ratio = unitEconomicsRatio(data.unitEconomics?.cac, data.unitEconomics?.ltv, data.unitEconomics?.ltvCacRatio);
   return (
     <div className="space-y-6">
       {data.pricing && (
@@ -52,8 +54,9 @@ export function PropositionValeur({ data }: Props) {
           <div className="grid gap-4 sm:grid-cols-3">
             <MetricCard label="CAC" value={data.unitEconomics.cac != null ? `${data.unitEconomics.cac.toLocaleString("fr-FR")} FCFA` : "—"} />
             <MetricCard label="LTV" value={data.unitEconomics.ltv != null ? `${data.unitEconomics.ltv.toLocaleString("fr-FR")} FCFA` : "—"} />
-            <MetricCard label="LTV/CAC" value={data.unitEconomics.ltvCacRatio != null ? `${data.unitEconomics.ltvCacRatio.toFixed(1)}x` : "—"} />
+            <MetricCard label="LTV/CAC calculé" value={ratio !== null ? `${ratio.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}x` : "—"} />
           </div>
+          {data.unitEconomics.commentaire ? <p className="mt-2 whitespace-pre-line text-xs text-foreground-muted">{data.unitEconomics.commentaire}</p> : null}
         </div>
       )}
 

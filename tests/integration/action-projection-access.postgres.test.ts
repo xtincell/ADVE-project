@@ -52,6 +52,20 @@ async function denied(f: Awaited<ReturnType<typeof fixture>>) {
   await expect(caller().sync({ strategyId: f.strategyId })).rejects.toMatchObject({ code: "FORBIDDEN" });
   expect(await db.brandAction.findUniqueOrThrow({ where: { id: f.action.id } })).toEqual(f.action);
 }
+describe("current catalogue and prior operational choices", () => {
+  it("never counts an orphan or stale projection flag as a retained current initiative", async () => {
+    const f = await fixture(actorId, operatorA);
+    const old = await db.brandAction.create({ data: { strategyId: f.strategyId, title: "Historical selected action",
+      sourceInitiativeId: randomUUID(), source: "OPERATOR_MANUAL", selected: true, budgetMin: 9000 } });
+    const summary = await caller().summary({ strategyId: f.strategyId });
+    expect(summary).toMatchObject({ total: 2, selectedCount: 2,
+      currentCatalogueCount: 1, currentSelectedCount: 0, outsideCatalogueSelectedCount: 1 });
+    const rows = await caller().byStrategy({ strategyId: f.strategyId });
+    expect(rows.find(r => r.id === old.id)).toMatchObject({ inCurrentCatalogue: false, selectedForCurrentPlan: false });
+    expect(rows.find(r => r.id === f.action.id)).toMatchObject({ inCurrentCatalogue: true, selectedForCurrentPlan: false });
+    expect(await db.brandAction.findUniqueOrThrow({ where: { id: old.id } })).toEqual(old);
+  });
+});
 describe("actions.sync — same write boundary as the existing calendar", () => {
   it("refuses another operator before changing that brand's projection", async () => { await denied(await fixture()); });
   it("preserves a brand reached only as a read collaborator", async () => {

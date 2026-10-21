@@ -63,6 +63,7 @@ interface Props {
 
 export function ActionDatabasePanel({ strategyId, canWrite = false, canSync = false }: Props) {
   const [touchpointFilter, setTouchpointFilter] = useState<string | null>(null);
+  const [showOutsideCatalogue, setShowOutsideCatalogue] = useState(false);
   const utils = trpc.useUtils();
 
   const summaryQuery = trpc.actions.summary.useQuery({ strategyId }, { enabled: !!strategyId });
@@ -96,6 +97,8 @@ export function ActionDatabasePanel({ strategyId, canWrite = false, canSync = fa
 
   const summary = summaryQuery.data;
   const actions = listQuery.data ?? [];
+  const outsideCatalogue = actions.filter(a => a.sourceInitiativeId && !a.inCurrentCatalogue);
+  const visibleActions = showOutsideCatalogue ? actions : actions.filter(a => a.inCurrentCatalogue || !a.sourceInitiativeId);
   const touchpoints = summary ? Object.keys(summary.byTouchpoint).sort() : [];
 
   return (
@@ -108,7 +111,7 @@ export function ActionDatabasePanel({ strategyId, canWrite = false, canSync = fa
           {summary ? (
             <span className="rounded-full bg-white/5 px-2 py-0.5 text-2xs text-foreground-muted">
               {summary.total} action{summary.total > 1 ? "s" : ""}
-              {summary.selectedCount > 0 ? ` · ${summary.selectedCount} retenue${summary.selectedCount > 1 ? "s" : ""}` : ""}
+              {` · ${summary.currentCatalogueCount} au catalogue courant · ${summary.currentSelectedCount} retenue${summary.currentSelectedCount > 1 ? "s" : ""}`}
             </span>
           ) : null}
         </div>
@@ -233,6 +236,14 @@ export function ActionDatabasePanel({ strategyId, canWrite = false, canSync = fa
       ) : null}
 
       {/* List */}
+      {outsideCatalogue.length > 0 ? (
+        <div className="mb-3 text-xs text-foreground-muted">
+          <p>{summary?.outsideCatalogueSelectedCount ?? 0} choix antérieurs restent hors du catalogue courant. Ils ne sont pas transmis au nouveau plan.</p>
+          <button type="button" className="mt-1 text-accent" onClick={() => setShowOutsideCatalogue(v => !v)}>
+            {showOutsideCatalogue ? "Masquer les actions hors catalogue" : `Voir les ${outsideCatalogue.length} actions hors catalogue`}
+          </button>
+        </div>
+      ) : null}
       {listQuery.isLoading ? (
         <div className="flex items-center justify-center py-8 text-foreground-muted">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -245,28 +256,30 @@ export function ActionDatabasePanel({ strategyId, canWrite = false, canSync = fa
         </div>
       ) : (
         <div className="space-y-1.5">
-          {actions.map((a) => {
+          {visibleActions.map((a) => {
             const meta = (a.metadata ?? {}) as Record<string, unknown>;
             const channel = typeof meta.channel === "string" ? meta.channel : null;
             const hasBudget = typeof a.budgetMin === "number" && Number.isFinite(a.budgetMin) && a.budgetMin >= 0;
             const estimatedBudget = hasBudget && meta.budgetBasis === "QUALITATIVE_ESTIMATE" && meta.projectedBudget === a.budgetMin;
+            const needsReconciliation = !!a.sourceInitiativeId && !a.inCurrentCatalogue;
+            const retained = a.inCurrentCatalogue ? a.selectedForCurrentPlan : a.selected;
             return (
               <div
                 key={a.id}
                 className={`flex items-start justify-between gap-3 rounded-lg border px-3 py-2 ${
-                  a.selected ? "border-accent/30 bg-accent/5" : "border-white/5 bg-white/[0.02]"
+                  retained && !needsReconciliation ? "border-accent/30 bg-accent/5" : "border-white/5 bg-white/[0.02]"
                 }`}
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={() => selectMutation.mutate({ strategyId, actionId: a.id, selected: !a.selected })}
-                      disabled={!canWrite || selectMutation.isPending}
-                      title={!canWrite ? "Lecture seule sur ces actions" : a.selected ? "Retirer de la roadmap" : "Retenir pour la roadmap"}
+                      onClick={() => selectMutation.mutate({ strategyId, actionId: a.id, selected: !retained })}
+                      disabled={!canWrite || needsReconciliation || selectMutation.isPending}
+                      title={needsReconciliation ? "Choix antérieur à requalifier dans le catalogue courant" : !canWrite ? "Lecture seule sur ces actions" : retained ? "Retirer du plan" : "Retenir pour le plan"}
                       className="flex-shrink-0"
                     >
-                      <Star className={`h-3 w-3 ${a.selected ? "fill-accent text-accent" : "text-foreground-muted hover:text-accent"}`} />
+                      <Star className={`h-3 w-3 ${retained ? "fill-accent text-accent" : "text-foreground-muted hover:text-accent"}`} />
                     </button>
                     <span className="truncate text-xs font-medium text-foreground">{a.title}</span>
                   </div>
@@ -296,7 +309,7 @@ export function ActionDatabasePanel({ strategyId, canWrite = false, canSync = fa
                   <span className="text-2xs font-semibold text-foreground">{estimatedBudget ? "Estimation · " : ""}{fcfa(a.budgetMin)}{hasBudget ? <span className="text-[9px] font-normal text-foreground-muted"> {a.budgetCurrency ?? ""}</span> : null}</span>
                   <div className="flex items-center gap-1">
                     <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">{a.priority}</span>
-                    <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">{STATUS_LABELS[a.status] ?? a.status}</span>
+                    <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">{needsReconciliation ? "Hors catalogue courant" : STATUS_LABELS[a.status] ?? a.status}</span>
                   </div>
                 </div>
               </div>

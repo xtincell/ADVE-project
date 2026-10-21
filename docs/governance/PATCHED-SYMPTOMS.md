@@ -28,6 +28,28 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+2026-10-21 · **520 candidate — continuité des sources et des projections** :
+Gateway vérifie les versions source avant actualize R/T/I ; I/BrandAction atomiques,
+cascade arrêtée si T/I échoue, catalogue courant et choix antérieurs distingués.
+Oracle ne déduit plus « rédigé » de données présentes. Première présentation
+arithmétique LTV/CAC refusée nativement : CAC B2C et LTV B2B non comparables ;
+le lecteur refuse le ratio enregistré contradictoire et demande de qualifier
+unités/client/période, sans changer les montants ni fabriquer un ratio de remplacement.
+Qualification/commentaire unitEconomics désormais transportés par section-mappers/
+types optionnels jusqu’aux vues HTML valeur/budget et PDF, au-delà de la fiche V.
+PDF partiel local 41 pages relu : réserve/commentaire présents pages 6/34, ratio
+incohérent absent ; première tentative privée refusée (contexte perdu) conservée.
+Pages 6/34 rendues et visuellement lues : réserve/commentaire visibles sans coupure,
+seules ces pages reçues visuellement. Test mapper→composant HTML : null explicite
+préserve le refus sans recalcul après assemblage ; un rouge/7 verts puis 10 tests/
+2 fichiers verts. Recette native HTML encore en cours ; aucune écriture métier ni
+Oracle/MVP entier reçu. Export de secours : budgets inconnus encore affichés à 0
+et glyphe ≥ mal rendu, non corrigés ; reprise dans la passe Oracle existante.
+Hypothèse de cause : versions, projections et libellés ne portaient pas la même
+réception. Contrôles en cours, aucun correctif 520 déployé ni MVP reçu. Corrections
+E/V de production 519 distinctes, sans réception entière de ces piliers ;
+[réceptions et qualification du ratio encore ouvertes](RESIDUAL-DEBT.md).
+
 ## Clôture technique 506/507 — 2026-10-20
 
 PR 1039/source `f48a938e494ca286330cab74ff6c4d49ea906281`, seize checks verts,

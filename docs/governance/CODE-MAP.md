@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 53 modules (src/domain, cœur métier pur)
+## Domain — 54 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
@@ -111,6 +111,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **source-original**
 - **superfan-conditions** — Domain — Superfan à conditions strictes (ADR-0141).
 - **touchpoints** — src/domain/touchpoints.ts — Touchpoint families & AARRR pirate metrics.
+- **unit-economics**
 
 ---
 

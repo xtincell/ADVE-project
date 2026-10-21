@@ -1,3 +1,4 @@
+import { unitEconomicsRatio } from "@/domain/unit-economics";
 import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -617,10 +618,7 @@ async function deriveByCalculation(
     const sd = SECTORS[sector] ?? SECTORS.SERVICES!;
 
     if (path === "unitEconomics.ltvCacRatio") {
-      if (ue?.ltv && ue?.cac && typeof ue.ltv === "number" && typeof ue.cac === "number" && ue.cac > 0) {
-        return Math.round((ue.ltv / ue.cac) * 100) / 100;
-      }
-      return undefined;
+      return unitEconomicsRatio(ue?.cac, ue?.ltv, ue?.ltvCacRatio) ?? undefined;
     }
     if (path === "unitEconomics.cac") {
       return Math.round(sd.cacMid * cm * bm);

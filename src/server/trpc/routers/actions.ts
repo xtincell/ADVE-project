@@ -24,6 +24,7 @@ import { db } from "@/lib/db";
 import { syncBrandActionsFromBlob } from "@/server/services/artemis/action-db/materializer";
 import { canAccessStrategy, getOperatorContext, getStrategyCollaboratorRole } from "@/server/services/operator-isolation";
 import { collaboratorCanWrite } from "@/domain/collaborator-access";
+import { collectNormalizedInitiatives } from "@/lib/types/pillar-schemas";
 
 const filters = z.object({
   strategyId: z.string().min(1),
@@ -73,7 +74,7 @@ export const actionsRouter = createTRPCRouter({
   /** Flat, homogeneous list of the strategy's actions (optionally filtered). */
   byStrategy: protectedProcedure.input(filters).query(async ({ ctx, input }) => {
     await assertCalendarAccess(ctx.session.user.id, input.strategyId);
-    return ctx.db.brandAction.findMany({
+    const [rows, pillar] = await Promise.all([ctx.db.brandAction.findMany({
       where: {
         strategyId: input.strategyId,
         ...(input.touchpoint ? { touchpoint: input.touchpoint } : {}),
@@ -81,7 +82,12 @@ export const actionsRouter = createTRPCRouter({
         ...(input.selected !== undefined ? { selected: input.selected } : {}),
       },
       orderBy: [{ selected: "desc" }, { priority: "asc" }, { createdAt: "asc" }],
-    });
+    }), ctx.db.pillar.findUnique({ where: { strategyId_key: { strategyId: input.strategyId, key: "i" } }, select: { content: true } })]);
+    const current = new Map(collectNormalizedInitiatives(pillar?.content).map(i => [i.id, i]));
+    return rows.map(row => ({ ...row,
+      inCurrentCatalogue: !!row.sourceInitiativeId && current.has(row.sourceInitiativeId),
+      selectedForCurrentPlan: !!row.sourceInitiativeId && current.get(row.sourceInitiativeId)?.status === "SELECTED_FOR_ROADMAP",
+    }));
   }),
 
   /** Aggregate counts for dashboard chips — honest emptiness when no rows. */
@@ -91,13 +97,18 @@ export const actionsRouter = createTRPCRouter({
       await assertCalendarAccess(ctx.session.user.id, input.strategyId);
       const rows = await ctx.db.brandAction.findMany({
         where: { strategyId: input.strategyId },
-        select: { touchpoint: true, status: true, selected: true, budgetMin: true, costTemplateKey: true },
+        select: { touchpoint: true, status: true, selected: true, budgetMin: true, costTemplateKey: true, sourceInitiativeId: true },
       });
+      const pillar = await ctx.db.pillar.findUnique({ where: { strategyId_key: { strategyId: input.strategyId, key: "i" } }, select: { content: true } });
+      const initiatives = collectNormalizedInitiatives(pillar?.content);
+      const currentIds = new Set(initiatives.map(i => i.id));
+      const retainedIds = new Set(initiatives.filter(i => i.status === "SELECTED_FOR_ROADMAP").map(i => i.id));
       const byTouchpoint: Record<string, number> = {};
       const byStatus: Record<string, number> = {};
       let selectedCount = 0;
       let withCost = 0;
       let totalSelectedBudget = 0;
+      let outsideCatalogueSelectedCount = 0;
       for (const r of rows) {
         const tp = r.touchpoint ?? "UNCLASSIFIED";
         byTouchpoint[tp] = (byTouchpoint[tp] ?? 0) + 1;
@@ -105,6 +116,7 @@ export const actionsRouter = createTRPCRouter({
         if (r.selected) {
           selectedCount++;
           totalSelectedBudget += r.budgetMin ?? 0;
+          if (!r.sourceInitiativeId || !currentIds.has(r.sourceInitiativeId)) outsideCatalogueSelectedCount++;
         }
         if (r.costTemplateKey) withCost++;
       }
@@ -115,6 +127,9 @@ export const actionsRouter = createTRPCRouter({
         selectedCount,
         withCostTemplate: withCost,
         totalSelectedBudget,
+        currentCatalogueCount: currentIds.size,
+        currentSelectedCount: retainedIds.size,
+        outsideCatalogueSelectedCount,
       };
     }),
 
