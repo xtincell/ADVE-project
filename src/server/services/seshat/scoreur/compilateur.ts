@@ -11,6 +11,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { getOvertonSignalsForBrand } from "../overton-graph";
 import type { CompiledEpreuve } from "@/domain/scoreur";
 import { PROOF_WEIGHTS } from "@/domain/scoreur";
@@ -31,8 +32,8 @@ const SUSTAIN_DAYS = 60; // audience maintenue ≥ ce nb de jours → preuve « 
 const GROWTH_MIN_DAYS = 30; // ≥ ce span entre 2 relevés → l'arène V (croissance) joue
 
 /** Compte les superfans DÉDUPLIQUÉS par personne (Identity Graph). */
-export async function countDistinctSuperfans(strategyId: string): Promise<number> {
-  const profiles = await db.superfanProfile.findMany({
+export async function countDistinctSuperfans(strategyId: string, client: Prisma.TransactionClient = db): Promise<number> {
+  const profiles = await client.superfanProfile.findMany({
     where: { strategyId },
     select: { id: true, personId: true },
   });
@@ -70,8 +71,8 @@ export async function compileFootprintEpreuves(ctx: {
   readonly strategyId: string;
   readonly nowIso: string;
   readonly audienceFloor: number;
-}): Promise<CompiledEpreuve[]> {
-  const snaps = await db.followerSnapshot.findMany({
+}, client: Prisma.TransactionClient = db): Promise<CompiledEpreuve[]> {
+  const snaps = await client.followerSnapshot.findMany({
     where: { strategyId: ctx.strategyId },
     select: { platform: true, followerCount: true, capturedAt: true },
     orderBy: { capturedAt: "desc" },
@@ -159,8 +160,8 @@ export async function compilePresenceEpreuves(ctx: {
   readonly strategyId: string;
   readonly nowIso: string;
   readonly thirdPartyFloor: number;
-}): Promise<CompiledEpreuve[]> {
-  const pillar = await db.pillar.findFirst({
+}, client: Prisma.TransactionClient = db): Promise<CompiledEpreuve[]> {
+  const pillar = await client.pillar.findFirst({
     where: { strategyId: ctx.strategyId, key: "e" },
     select: { content: true, updatedAt: true },
   });
@@ -218,7 +219,7 @@ export async function compilePresenceEpreuves(ctx: {
  * Compile les épreuves E + T mesurées. Le sujet est référencé par `strategyId`
  * (le node id du sujet dans l'estimateur).
  */
-export async function compileMeasuredEpreuves(ctx: CompileContext): Promise<{
+export async function compileMeasuredEpreuves(ctx: CompileContext, client: Prisma.TransactionClient = db): Promise<{
   epreuves: CompiledEpreuve[];
   superfanCount: number;
   favorableOverton: number;
@@ -226,7 +227,7 @@ export async function compileMeasuredEpreuves(ctx: CompileContext): Promise<{
   const out: CompiledEpreuve[] = [];
 
   // ── Arène E : masse superfan dédupliquée vs plancher de ligue (item) ────────
-  const superfanCount = await countDistinctSuperfans(ctx.strategyId);
+  const superfanCount = await countDistinctSuperfans(ctx.strategyId, client);
   // An empty graph has no observation of loyalty. The league threshold is
   // a reference, never evidence that a zero population was measured.
   if (superfanCount > 0) {
@@ -246,7 +247,7 @@ export async function compileMeasuredEpreuves(ctx: CompileContext): Promise<{
     strategyId: ctx.strategyId,
     nowIso: ctx.nowIso,
     audienceFloor: ctx.audienceFloor,
-  });
+  }, client);
   out.push(...footprint);
 
   // ── Arènes A + E : la PRÉSENCE collectée dispute enfin (V3, le tournoi) ────
@@ -254,11 +255,11 @@ export async function compileMeasuredEpreuves(ctx: CompileContext): Promise<{
     strategyId: ctx.strategyId,
     nowIso: ctx.nowIso,
     thirdPartyFloor: ctx.thirdPartyFloor,
-  });
+  }, client);
   out.push(...presence);
 
   // ── Arène T : transitions Overton attribuées (favorables = victoires) ───────
-  const overton = await getOvertonSignalsForBrand(db, ctx.strategyId);
+  const overton = await getOvertonSignalsForBrand(client, ctx.strategyId);
   for (const t of overton.favorableTransitions) {
     out.push({
       subjectRef: ctx.strategyId,

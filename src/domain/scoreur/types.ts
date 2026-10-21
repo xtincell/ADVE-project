@@ -45,7 +45,7 @@ export interface ArenaEstimate {
   readonly arena: ScoreurArena;
   readonly theta: number; // échelle Elo (ancres jaugent)
   readonly rd: number; // ± incertitude (peu d'épreuves → large)
-  readonly force: number; // 0..25 (θ mappé sur la jauge de ligue)
+  readonly force: number; // 0..40 (θ mappé sur la jauge de ligue)
   readonly epreuveCount: number;
   readonly wins: number;
   readonly losses: number;

@@ -143,7 +143,7 @@ export interface OvertonBrandSignals {
  * T sera « absente », RD large en aval).
  */
 export async function getOvertonSignalsForBrand(
-  client: OvertonDbClient,
+  client: Pick<Prisma.TransactionClient, "overtonActorLink" | "overtonZoneTransition">,
   strategyId: string,
 ): Promise<OvertonBrandSignals> {
   const links = await client.overtonActorLink.findMany({

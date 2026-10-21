@@ -113,14 +113,14 @@ de paiement conservées par lectures séquentielles, pas snapshot atomique. Atte
 CI/image/runtime/conservation 514 closes ; aucun onboarding/leaderboard/Oracle
 complet reçu. Preuves P32 `delivery-received.json`, `production-native-received.json`.
 
-**515 candidat — seshat/scoreur existant (Telemetry/SESHAT)** : calibration chargée
+**515 livrée — seshat/scoreur existant (Telemetry/SESHAT)** : calibration chargée
 par IDs d’épreuve et alias d’item, filtrée par ligue ; source canonique conservée,
 aucune formule/poids changés. recordEpreuve réutilisé sous verrou transactionnel
 PG pour rejeu exact ; approval CAS/observation/verdict atomiques, échec réessayable.
 Hunter diffère avant modèle sans résultat web et refuse les URLs hors résultats.
 Garde de portée et getOperatorContextDB existants réutilisés, pas projection JWT
 nouvelle ni service/manager/provider ajouté. Checkpoint PG 22/22 vert ; premier ciblé unitaire 14/4 conservé ;
-typage/build/gates/natif locaux reçus ; livraison 515 ouverte. [LB02](RESIDUAL-DEBT.md).
+typage/build/gates/natif et livraison515 reçus. [LB02](RESIDUAL-DEBT.md).
 
 Checkpoint 515 : 22/22 PostgreSQL verts. Graphe accepté de la ligue courante
 repris par l’estimateur existant ; aucun ScoreVerdict→observation, formule/poids
@@ -143,7 +143,7 @@ final reçus. Console : fenêtre complète 55 réponses, 0 HTTP ≥500/exception
 titres observés ≤162/146 ms, pilote compris ; pas SLO ni zéro échec console.
 Premières fenêtres incomplètes conservées ; date reçue par calendrier natif,
 outil fill sans commit du champ, aucun correctif produit/bouton forcé.
-CI/image/runtime 515 et conservation production ouverts avant merge.
+CI/image/runtime515 et conservation production reçus ; attente technique close.
 **Premier CI 515 refusé avant les 22 tests PG** : garde locale 55439 incompatible
 avec le conteneur CI détenu 5432 ; 29 fichiers/462 tests verts, 22 non exécutés,
 pas rouge métier. Deux cibles exactes seulement : hostname 127.0.0.1 et base
@@ -152,13 +152,57 @@ GITHUB_ACTIONS=true, GITHUB_REPOSITORY=xtincell/ADVE-project, port 5432/user pos
 Aucune assertion métier retirée ni skip ajouté ; produit/version/build/natif
 inchangés. Relance locale 22/22 et cinq contrôles obligatoires (typage/deux lints/
 cycles/gouvernance) reçus après correction de la garde ; produit inchangé vérifié.
-Nouveau job sur cible CI, image et runtime toujours non reçus avant merge.
+Nouveau CI/image/runtime515 reçus dans la livraison ; refus initial conservé comme harnais.
 Preuves P23 `ci515-postgres-first-failure.log`, `scoreur515-ci-fixture-local-green.log`,
 `gauntlet515-ci-fixture-results.json`, `ci515-fixture-change-scope.json`.
  Mesures
-vivantes rivales non reçues et bloquantes pour LB02 complet ; aucun placement
+vivantes rivales prises en charge par candidat516, réception complète LB02 non reçue ; aucun placement
 réel SPAWT/FRC ni championnat/Oracle entier reçu. Preuves P33
 `native-reception-received.json`, `local-conservation-received.json`.
+
+**515 livrée, périmètre technique reçu** : source
+`61c0118534556cc9778623a33516f63821fc221a`, digest
+`cc6658f2e6901d910b2b5a9ce62ced2d0943c44dbd45f47539f5f3341e308f06`, runtime 6.27.515.
+67 sources/1 041 actifs/huit piliers, racine Friesland/trois masterbrands et six
+lignes paiement conservés ; lectures séquentielles, pas snapshot atomique.
+Console production : sélection SPAWT sans publication, 39 réponses complètes,
+0 HTTP ≥500/exception mais 6 ERR_ABORTED ; DOM 440,6 ms, pas SLO ni zéro échec global.
+CI/image/runtime/conservation 515 clos. Preuves P33 `delivery515-received.json`,
+`production-native-hydrated.json`. Pas de championnat réel ou réception macro déduit.
+
+**516 candidate validée localement — SESHAT/scoreur existant** : compilation des mesures des rivaux
+connectés de même ligue, parcours domaine partagé avec l’estimateur et arrêt aux
+ancres fixes ; client transactionnel conservé jusqu’au compilateur/canon/Overton.
+Chargement public partagé du dernier verdict de chaque marque avant filtre/
+limite, rang par ligue : éviter ancien placement ressuscité et masquage par un
+historique de 1 001 snapshots. Aucun changement de formule/poids, service/router/
+Intent/modèle/provider/ADR nouveau. Vérifications/build/natif/HTTP/cleanup locaux reçus ;
+CI/image/runtime 516 et conservation de bascule non reçus.
+
+**516 candidate validée localement, pas livrée** : build webpack final terminé,
+cinq contrôles post-unités verts ; PostgreSQL 489/30 dont 27 pipeline, ciblés 52/6
+dont trois tests de page, gouvernance 1 671/169, typage/deux lints sans erreur
+(24 avertissements chacun), zéro cycle. DEFAULT 4 935/466 PAR UNION : 4 933 verts
+initialement avec timeout, reprise 6/6 et page finale 3/3 ; exécutions recouvrantes,
+pas run complet tout vert. Aucun test/délai/fit/poids modifié.
+HTTP OPERATOR/rejeu et lectures anonymes reçus : trois marques fictives/deux
+ligues, rangs VILLE 1,2/NATION 1. Desktop et viewport mobile demandé 420/effectif
+414 : HTTP 200, chacun 27 réponses complètes sans ≥500/exception/échec ; DOM
+126,2/121,8 ms, titres observés ≤232/163 ms pilote compris, pas SLO ni appareil
+physique reçu. Quinze repères proposés distincts, override DB 2151 lu, sans
+ratification. Force/40 séparée de θ1343±347, arènes non observées explicites ;
+captures relues sans débordement. Premier écran refusé et fenêtres partielles
+conservés ; seules les finales 27+27 reçoivent le rendu corrigé.
+Neuf tables locales antérieures exactes pour IDs/champs comparés (SHA), lectures
+séquentielles non atomiques ; contenu/version/certitude/dates conservés, zéro
+AICost, fixtures retirées, serveur arrêté/onglet local fermé/viewport restauré.
+CI/image/runtime 516 et conservation de bascule restent ouverts ; qualification
+des marques réelles, seed canon, onboarding/championnat et Oracle non reçus.
+Preuves P34 `release/preuves-championnat-20261021/native-reception-received.json`,
+`http-final-received.json`, `local-conservation-received.json`, captures desktop/
+mobile finales ; P23 `scoreur516-build-units-final.log`,
+`gauntlet516-units-results.json`.
+
 
 510 est reçue en production : source `5c5cc907249ef2123e2d6c7a60c95f81ab7794fe`,
 déploiement `ip02ws80mllbkno6xn7skm1h` terminé le 20 octobre à 21:48:22 UTC,

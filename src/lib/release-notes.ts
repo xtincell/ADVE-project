@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.516", date: "2026-10-21", headline: "Un classement lisible dans chaque ligue",
+    highlights: [{ emoji: "📊", title: "Chaque marque garde sa place", body: "Un historique abondant ne masque plus les autres marques. Le classement retient la mesure la plus récente et affiche le rang dans sa ligue. Les marques de référence restent identifiées comme des repères proposés, séparés des résultats mesurés." }],
+  },
+  {
     version: "6.27.515", date: "2026-10-21", headline: "Mesurer une marque à partir de faits vérifiés",
     highlights: [{ emoji: "📍", title: "Même marque, même dossier", body: "Reprenez une marque existante sans créer de copie. La marque étudiée reste sélectionnée lorsqu’un concurrent la dépasse. Vous pouvez enregistrer une comparaison avec sa source et sa date, sans recherche assistée." }],
   },

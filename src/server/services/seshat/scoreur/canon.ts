@@ -13,6 +13,7 @@ import type { MarketScale } from "@/domain/market-scale";
 import { MARKET_SCALES } from "@/domain/market-scale";
 import {
   DEFAULT_REVEALED_GATE_THRESHOLDS,
+  ANCHOR_REGISTRY,
   GAUGE_BY_SCALE,
   MUST_HAVE_ITEMS,
   type GaugeMap,
@@ -33,8 +34,8 @@ const VALID_ITEM_ARENAS = new Set<string>([...SCOREUR_ARENAS, "R", "TENURE"]);
 const VALID_TIERS = new Set<string>(BRAND_TIERS.filter((t) => t !== "LATENT"));
 
 /** Résout le canon effectif = défauts code + overrides DB actifs. */
-export async function resolveScoreurCanon(): Promise<ResolvedCanon> {
-  const overrides = await db.scoreurCanonOverride.findMany({ where: { active: true } });
+export async function resolveScoreurCanon(client: Prisma.TransactionClient = db): Promise<ResolvedCanon> {
+  const overrides = await client.scoreurCanonOverride.findMany({ where: { active: true } });
 
   // ── Jauge ──────────────────────────────────────────────────────────────────
   const gauge: GaugeMap = { ...GAUGE_BY_SCALE };
@@ -186,4 +187,18 @@ export async function getCanonForConsole() {
     resolveScoreurCanon(),
   ]);
   return { anchors, gauge: resolved.gauge, items: resolved.items, revealedThresholds: resolved.revealedThresholds };
+}
+
+/** Canonical public references, with configured calibration values if present.
+ * Never score them or infer human ratification from a seeded database row. */
+export async function getPublicScoreurReferences() {
+  const rows = await db.brandRef.findMany({
+    where: { kind: "ANCHOR", slug: { in: ANCHOR_REGISTRY.map(a => `anchor-${a.id}`) } },
+    select: { slug: true, fixedTheta: true },
+  });
+  const configured = new Map(rows.map(r => [r.slug, r.fixedTheta]));
+  return ANCHOR_REGISTRY.map(a => ({
+    id: a.id, label: a.label, scale: a.scale,
+    theta: configured.get(`anchor-${a.id}`) ?? a.theta,
+  }));
 }
