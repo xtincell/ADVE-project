@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.514", date: "2026-10-21", headline: "Retrouver les informations déjà renseignées",
+    highlights: [{ emoji: "📋", title: "Valeurs et équipe lisibles", body: "Les valeurs importées retrouvent leur libellé et leur ordre. Les responsabilités de l’équipe restent visibles à côté du parcours de chacun. Les informations encore manquantes restent indiquées." }],
+  },
+  {
     version: "6.27.513", date: "2026-10-21", headline: "Un paiement confirmé reste acquis",
     highlights: [{ emoji: "🔒", title: "Une confirmation vérifiée", body: "Le rapport se débloque après vérification de la transaction. Une notification en double ne relance pas sa livraison ; un paiement confirmé ne repasse plus en échec à cause d’une notification tardive." }],
   },
