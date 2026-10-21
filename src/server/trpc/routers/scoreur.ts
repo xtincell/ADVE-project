@@ -8,15 +8,18 @@
 
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
-import { strategyScopedProcedure } from "../middleware/strategy-scope";
+import { accessibleStrategyIds, assertRawStrategyScope, strategyScopedProcedure } from "../middleware/strategy-scope";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
 import { MarketScaleSchema } from "@/domain/market-scale";
-import { ScoreurArenaSchema, EpreuveResultSchema } from "@/domain/scoreur";
+import { ScoreurArenaSchema, EpreuveResultSchema, leagueKeyString } from "@/domain/scoreur";
 import {
   recordEpreuve,
   scoreBrand,
+  resolveLeagueForStrategy,
+  loadAnchorsForLeague,
 } from "@/server/services/seshat/scoreur";
+import { getOperatorContext } from "@/server/services/operator-isolation";
 import { scoreProspect } from "@/server/services/seshat/scoreur/prospect";
 import { decideCandidate, listCandidates } from "@/server/services/seshat/scoreur/candidates";
 import { huntVictories } from "@/server/services/seshat/argos/victory-hunt";
@@ -56,20 +59,31 @@ export const scoreurRouter = createTRPCRouter({
     }),
     caller: "scoreur:recordEpreuve",
   }).mutation(async ({ input }) => {
-    return recordEpreuve({
-      subjectStrategyId: input.strategyId,
-      opponentBrandRefId: input.opponentBrandRefId ?? null,
-      opponentStrategyId: input.opponentStrategyId ?? null,
-      arena: input.arena,
-      league: {
-        sectorSlug: input.league.sectorSlug,
-        marketScale: input.league.marketScale ?? null,
-        countryCode: input.league.countryCode ?? null,
-      },
-      result: input.result,
-      proofWeight: input.proofWeight,
-      source: input.source,
-      occurredAt: input.occurredAt,
+    return db.$transaction(async (tx) => {
+      const league = await resolveLeagueForStrategy(input.strategyId, tx);
+      const supplied = { sectorSlug: input.league.sectorSlug, marketScale: input.league.marketScale ?? null, countryCode: input.league.countryCode ?? null };
+      if (leagueKeyString(supplied) !== leagueKeyString(league)) throw new TRPCError({ code: "BAD_REQUEST", message: "La ligue doit correspondre à la marque étudiée" });
+      if (!!input.opponentBrandRefId === !!input.opponentStrategyId) throw new TRPCError({ code: "BAD_REQUEST", message: "Choisissez un adversaire identifié" });
+      if (input.opponentStrategyId === input.strategyId) throw new TRPCError({ code: "BAD_REQUEST", message: "Choisissez un rival distinct de la marque étudiée" });
+      if (input.opponentStrategyId && !(await tx.strategy.findUnique({ where: { id: input.opponentStrategyId }, select: { id: true } }))) throw new TRPCError({ code: "NOT_FOUND", message: "Adversaire introuvable" });
+      if (input.opponentBrandRefId) {
+        const ref = await tx.brandRef.findUnique({ where: { id: input.opponentBrandRefId }, select: { id: true, fixedTheta: true } });
+        if (!ref) throw new TRPCError({ code: "NOT_FOUND", message: "Adversaire introuvable" });
+        if (ref.fixedTheta != null && (await loadAnchorsForLeague(league, tx))[ref.id] === undefined) throw new TRPCError({ code: "BAD_REQUEST", message: "Cet étalon ne concerne pas cette ligue" });
+      }
+      const observation = await recordEpreuve({
+        subjectStrategyId: input.strategyId,
+        opponentBrandRefId: input.opponentBrandRefId ?? null,
+        opponentStrategyId: input.opponentStrategyId ?? null,
+        arena: input.arena,
+        league,
+        result: input.result,
+        proofWeight: input.proofWeight,
+        source: input.source,
+        occurredAt: input.occurredAt,
+      }, tx);
+      const score = await scoreBrand(input.strategyId, { persist: true, client: tx });
+      return { ...observation, score };
     });
   }),
 
@@ -170,7 +184,7 @@ export const scoreurRouter = createTRPCRouter({
     caller: "scoreur:scoreProspect",
   }).mutation(async ({ input, ctx }) => {
     const user = ctx.session!.user;
-    const operatorId = (user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
+    const { operatorId } = await getOperatorContext(user.id, ctx.db);
     if (!operatorId) throw new TRPCError({ code: "BAD_REQUEST", message: "Aucun opérateur associé" });
     return scoreProspect({
       operatorId,
@@ -192,7 +206,7 @@ export const scoreurRouter = createTRPCRouter({
       subjectStrategyId: z.string().min(1),
       rivalName: z.string().min(1).max(160),
       rivalStrategyId: z.string().nullish(),
-    }),
+    }).transform((input) => ({ ...input, strategyId: input.subjectStrategyId })),
     caller: "scoreur:huntVictories",
   }).mutation(async ({ input }) => {
     const strat = await db.strategy.findUnique({
@@ -217,23 +231,35 @@ export const scoreurRouter = createTRPCRouter({
     inputSchema: z.object({
       candidateId: z.string().min(1),
       decision: z.enum(["APPROVE", "REJECT"]),
+      strategyId: z.string().min(1).optional(),
+      rivalStrategyId: z.string().min(1).optional(),
+      occurredAt: z.string().datetime().optional(),
     }),
     caller: "scoreur:decideCandidate",
   }).mutation(async ({ input, ctx }) => {
+    const candidate = await db.epreuveCandidate.findUnique({ where: { id: input.candidateId }, select: { subjectStrategyId: true } });
+    if (!candidate) throw new TRPCError({ code: "NOT_FOUND", message: "Preuve proposée introuvable" });
+    await assertRawStrategyScope(ctx.session!.user.id, { strategyId: candidate.subjectStrategyId });
+    if (input.strategyId && input.strategyId !== candidate.subjectStrategyId) throw new TRPCError({ code: "BAD_REQUEST", message: "Cette preuve concerne une autre marque" });
     return decideCandidate({
       candidateId: input.candidateId,
       decision: input.decision,
       reviewedBy: ctx.session?.user?.id ?? "operator",
+      rivalStrategyId: input.rivalStrategyId,
+      occurredAt: input.occurredAt,
     });
   }),
 
   /** File de revue : victoires candidates (opérateur, lecture). */
   listCandidates: operatorProcedure
     .input(z.object({ subjectStrategyId: z.string().nullish(), status: z.string().nullish() }).optional())
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      if (input?.subjectStrategyId) await assertRawStrategyScope(ctx.session.user.id, { strategyId: input.subjectStrategyId });
+      const ids = input?.subjectStrategyId ? null : await accessibleStrategyIds(ctx.session.user.id);
       return listCandidates({
         subjectStrategyId: input?.subjectStrategyId ?? undefined,
         status: input?.status ?? undefined,
+        ...(ids === null ? {} : { subjectStrategyIds: ids }),
       });
     }),
 

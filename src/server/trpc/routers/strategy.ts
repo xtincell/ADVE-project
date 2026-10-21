@@ -7,7 +7,7 @@ import { assertStrategyRead } from "./_strategy-read-guard";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import * as auditTrail from "@/server/services/audit-trail";
-import { canAccessStrategy, scopeStrategies } from "@/server/services/operator-isolation";
+import { canAccessStrategy, getOperatorContext, scopeStrategies } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import * as strategyArchive from "@/server/services/strategy-archive";
 import { emitIntent, type Intent } from "@/server/services/mestor/intents";
@@ -490,8 +490,7 @@ export const strategyRouter = createTRPCRouter({
     }))
     .query(async ({ ctx, input }) => {
       // Enforce operator isolation: non-ADMIN users can only see their operator's strategies
-      const userRole = ctx.session.user.role ?? "USER";
-      const userOperatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
+      const { role: userRole, operatorId: userOperatorId } = await getOperatorContext(ctx.session.user.id, ctx.db);
       const operatorScope = scopeStrategies({ operatorId: userOperatorId, userId: ctx.session.user.id, role: userRole });
 
       const strategies = await ctx.db.strategy.findMany({

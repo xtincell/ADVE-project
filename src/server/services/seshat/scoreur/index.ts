@@ -9,6 +9,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Epreuve, Prisma } from "@prisma/client";
 import type { MarketScale } from "@/domain/market-scale";
 import { resolveEvidenceTargets } from "@/domain/market-scale";
 import { canonicalSectorSlug } from "@/domain/sector-taxonomy";
@@ -44,23 +45,30 @@ export interface RecordEpreuveInput {
 }
 
 /** Écriture unique d'une épreuve (append-only). */
-export async function recordEpreuve(input: RecordEpreuveInput) {
-  return db.epreuve.create({
-    data: {
-      subjectStrategyId: input.subjectStrategyId ?? null,
-      subjectBrandRefId: input.subjectBrandRefId ?? null,
-      opponentBrandRefId: input.opponentBrandRefId ?? null,
-      opponentStrategyId: input.opponentStrategyId ?? null,
-      arena: input.arena,
-      sectorSlug: input.league.sectorSlug,
-      marketScale: (input.league.marketScale ?? null) as MarketScale | null,
-      countryCode: input.league.countryCode ?? null,
-      result: input.result,
-      proofWeight: input.proofWeight,
-      source: input.source,
-      occurredAt: new Date(input.occurredAt),
-    },
-  });
+export async function recordEpreuve(input: RecordEpreuveInput, client?: Prisma.TransactionClient): Promise<Epreuve> {
+  if (!client) return db.$transaction((tx) => recordEpreuve(input, tx));
+  const occurredAt = new Date(input.occurredAt);
+  if (!input.source.trim() || !Number.isFinite(occurredAt.getTime())) throw new Error("Source et date d’observation requises");
+  const data = {
+    subjectStrategyId: input.subjectStrategyId ?? null,
+    subjectBrandRefId: input.subjectBrandRefId ?? null,
+    opponentBrandRefId: input.opponentBrandRefId ?? null,
+    opponentStrategyId: input.opponentStrategyId ?? null,
+    arena: input.arena,
+    sectorSlug: input.league.sectorSlug,
+    marketScale: (input.league.marketScale ?? null) as MarketScale | null,
+    countryCode: input.league.countryCode ?? null,
+    result: input.result,
+    proofWeight: input.proofWeight,
+    source: input.source,
+    occurredAt,
+  };
+  // Exact observation replay, not a second win. The transaction lock also
+  // covers concurrent submissions without a new registry or schema change.
+  const identity = JSON.stringify(data);
+  await client.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${identity}, 0))`;
+  const previous = await client.epreuve.findFirst({ where: data });
+  return previous ?? client.epreuve.create({ data });
 }
 
 /** Écriture unique d'un BrandRef (rival/ancre/item). Idempotent par slug. */
@@ -95,8 +103,9 @@ export async function writeVerdict(
   subject: { strategyId?: string | null; brandRefId?: string | null; label: string },
   verdict: ScoreVerdict,
   epreuveCount: number,
+  client: Prisma.TransactionClient = db,
 ) {
-  return db.scoreVerdict.create({
+  return client.scoreVerdict.create({
     data: {
       subjectStrategyId: subject.strategyId ?? null,
       subjectBrandRefId: subject.brandRefId ?? null,
@@ -119,11 +128,12 @@ export async function writeVerdict(
 // ── orchestration ────────────────────────────────────────────────────────────
 
 /** Résout la ligue (polity) d'une marque : secteur (Client) × échelle × pays. */
-export async function resolveLeagueForStrategy(strategyId: string): Promise<LeagueKey & { label: string }> {
-  const strategy = await db.strategy.findUnique({
+export async function resolveLeagueForStrategy(strategyId: string, client: Prisma.TransactionClient = db): Promise<LeagueKey & { label: string }> {
+  const strategy = await client.strategy.findUnique({
     where: { id: strategyId },
     select: { name: true, marketScale: true, countryCode: true, client: { select: { sector: true } } },
   });
+  if (!strategy) throw new Error("Stratégie sujet introuvable");
   const sectorSlug = canonicalSectorSlug(strategy?.client?.sector);
   return {
     sectorSlug,
@@ -133,31 +143,41 @@ export async function resolveLeagueForStrategy(strategyId: string): Promise<Leag
   };
 }
 
-/** Charge la jauge d'ancres + items (BrandRef.fixedTheta) → Record<slug, θ>. */
-export async function loadAnchorsForLeague(league: LeagueKey): Promise<Record<string, number>> {
-  const rows = await db.brandRef.findMany({
-    where: { fixedTheta: { not: null } },
-    select: { slug: true, fixedTheta: true },
+/** Stored duels use IDs; measured items retain their semantic slug references. */
+export async function loadAnchorsForLeague(league: LeagueKey, client: Prisma.TransactionClient = db): Promise<Record<string, number>> {
+  const rows = await client.brandRef.findMany({
+    where: { fixedTheta: { not: null }, AND: [
+      { OR: [{ sectorSlug: null }, { sectorSlug: league.sectorSlug }] },
+      { OR: [{ marketScale: null }, { marketScale: league.marketScale as MarketScale | null }] },
+      { OR: [{ countryCode: null }, { countryCode: league.countryCode }] },
+    ] },
+    select: { id: true, slug: true, fixedTheta: true },
   });
   const anchors: Record<string, number> = {};
   for (const r of rows) if (r.fixedTheta != null) anchors[r.slug] = r.fixedTheta;
+  // Canonical IDs win if a legacy slug happens to collide with an ID.
+  for (const r of rows) if (r.fixedTheta != null) anchors[r.id] = r.fixedTheta;
   return anchors;
 }
 
 /** Convertit les épreuves persistées (A/D/V, sourcées) en épreuves compilées. */
 function persistedToCompiled(
-  rows: { subjectStrategyId: string | null; opponentBrandRefId: string | null; opponentStrategyId: string | null; arena: string; result: string; proofWeight: number; source: string; occurredAt: Date }[],
-  subjectRef: string,
+  rows: { subjectStrategyId: string | null; subjectBrandRefId: string | null; opponentBrandRefId: string | null; opponentStrategyId: string | null; arena: string; result: string; proofWeight: number; source: string; occurredAt: Date }[],
 ): CompiledEpreuve[] {
-  return rows.map((r) => ({
-    subjectRef,
-    opponentRef: r.opponentBrandRefId ?? r.opponentStrategyId ?? "unknown",
-    arena: r.arena as ScoreurArena,
-    result: r.result as "WIN" | "LOSS" | "DRAW",
-    proofWeight: r.proofWeight,
-    source: r.source,
-    occurredAt: r.occurredAt.toISOString(),
-  }));
+  return rows.flatMap((r) => {
+    const subjectRef = r.subjectStrategyId ?? r.subjectBrandRefId;
+    const opponentRef = r.opponentBrandRefId ?? r.opponentStrategyId;
+    if (!subjectRef || !opponentRef || !r.source.trim()) return [];
+    return [{
+      subjectRef,
+      opponentRef,
+      arena: r.arena as ScoreurArena,
+      result: r.result as "WIN" | "LOSS" | "DRAW",
+      proofWeight: r.proofWeight,
+      source: r.source,
+      occurredAt: r.occurredAt.toISOString(),
+    }];
+  });
 }
 
 export interface ScoreBrandResult {
@@ -174,10 +194,11 @@ export interface ScoreBrandResult {
  */
 export async function scoreBrand(
   strategyId: string,
-  opts: { nowIso?: string; persist?: boolean } = {},
+  opts: { nowIso?: string; persist?: boolean; client?: Prisma.TransactionClient } = {},
 ): Promise<ScoreBrandResult> {
+  const client = opts.client ?? db;
   const nowIso = opts.nowIso ?? new Date().toISOString();
-  const league = await resolveLeagueForStrategy(strategyId);
+  const league = await resolveLeagueForStrategy(strategyId, client);
   const targets = resolveEvidenceTargets({
     marketScale: league.marketScale as MarketScale | null,
     addressableAudience: null,
@@ -193,18 +214,22 @@ export async function scoreBrand(
     // collectée s'y mesure enfin au lieu de rester décorative.
     thirdPartyFloor: targets.tarsisTarget,
   });
-  const persistedRows = await db.epreuve.findMany({
-    where: { subjectStrategyId: strategyId },
+  const persistedRows = await client.epreuve.findMany({
+    // Une ligue = une jauge. Ne réutilise ni une ancienne ligue du sujet ni un
+    // ScoreVerdict estimé pour transformer la force d'un rival en observation.
+    where: { sectorSlug: league.sectorSlug, marketScale: league.marketScale as MarketScale | null, countryCode: league.countryCode },
+    orderBy: { id: "asc" },
     select: {
-      subjectStrategyId: true, opponentBrandRefId: true, opponentStrategyId: true,
+      subjectStrategyId: true, subjectBrandRefId: true, opponentBrandRefId: true, opponentStrategyId: true,
       arena: true, result: true, proofWeight: true, source: true, occurredAt: true,
     },
   });
-  const persisted = persistedToCompiled(persistedRows, strategyId);
+  const persisted = persistedToCompiled(persistedRows);
   const epreuves = [...measured.epreuves, ...persisted];
+  const epreuveCount = epreuves.filter((e) => e.subjectRef === strategyId || e.opponentRef === strategyId).length;
 
   // Résout les θ des items opponents (compilateur) s'ils manquent en base.
-  const anchors = await loadAnchorsForLeague(league);
+  const anchors = await loadAnchorsForLeague(league, client);
   for (const slug of Object.values(ITEM_OPPONENTS)) {
     if (anchors[slug] === undefined) {
       anchors[slug] = defaultThetaForScale(league.marketScale as MarketScale | null);
@@ -230,6 +255,8 @@ export async function scoreBrand(
       audienceMeetsFloor,
     },
     canon.revealedThresholds,
+    client,
+    league,
   );
 
   // 1er passage → cohérence ; ajoute l'item coherence-seuil si R ≥ seuil.
@@ -242,11 +269,12 @@ export async function scoreBrand(
     const row = await writeVerdict(
       { strategyId, label: league.label },
       verdict,
-      epreuves.length,
+      epreuveCount,
+      client,
     );
     verdictId = row.id;
   }
-  return { verdict, epreuveCount: epreuves.length, superfanCount: measured.superfanCount, verdictId };
+  return { verdict, epreuveCount, superfanCount: measured.superfanCount, verdictId };
 }
 
 /** Items franchis : signaux mesurés + preuve publique révélée + items gagnés au registre. */
@@ -254,6 +282,8 @@ async function computeItemsMet(
   strategyId: string,
   signals: { superfanCount: number; superfanFloor: number; favorableOverton: number; audienceMeetsFloor: boolean },
   revealedThresholds?: RevealedGateThresholds,
+  client: Prisma.TransactionClient = db,
+  league?: LeagueKey,
 ): Promise<Set<string>> {
   const met = new Set<string>();
   if (signals.superfanCount >= signals.superfanFloor && signals.superfanFloor > 0) met.add("masse-superfan");
@@ -264,17 +294,19 @@ async function computeItemsMet(
   // révélée » : une marque nationale ancienne franchit FRAGILE/ORDINAIRE sur
   // preuve datée (RDAP), presse, audience, avis. `actif-distinctif` (FORTE+)
   // reste gagné au registre. Cf. `@/domain/scoreur/revealed-gates`.
-  const revealed = await readRevealedSignals(strategyId, signals.audienceMeetsFloor);
+  const revealed = await readRevealedSignals(strategyId, signals.audienceMeetsFloor, client);
   for (const gate of resolveRevealedGates(revealed, revealedThresholds)) met.add(gate);
 
   // Items gagnés au registre : épreuve WIN dont l'opponent est un ITEM slug=item-<id>.
   const itemIds = new Set(MUST_HAVE_ITEMS.map((i) => i.id));
-  const wonItems = await db.epreuve.findMany({
-    where: { subjectStrategyId: strategyId, result: "WIN", opponentBrandRefId: { not: null } },
+  const wonItems = await client.epreuve.findMany({
+    where: { subjectStrategyId: strategyId, result: "WIN", opponentBrandRefId: { not: null },
+      ...(league ? { sectorSlug: league.sectorSlug, marketScale: league.marketScale as MarketScale | null, countryCode: league.countryCode } : {}),
+    },
     select: { opponentBrandRefId: true },
   });
   if (wonItems.length) {
-    const refs = await db.brandRef.findMany({
+    const refs = await client.brandRef.findMany({
       where: { id: { in: wonItems.map((w) => w.opponentBrandRefId!).filter(Boolean) }, kind: "ITEM" },
       select: { slug: true },
     });
@@ -291,8 +323,8 @@ async function computeItemsMet(
  * `webPresence`, provenance SOURCE — footprint observé, jamais l'ADVE déclaré).
  * Absence honnête : un champ non mesuré reste neutre (jamais fabriqué, P22-2).
  */
-async function readRevealedSignals(strategyId: string, audienceMeetsFloor: boolean): Promise<RevealedSignals> {
-  const pillar = await db.pillar.findFirst({
+async function readRevealedSignals(strategyId: string, audienceMeetsFloor: boolean, client: Prisma.TransactionClient = db): Promise<RevealedSignals> {
+  const pillar = await client.pillar.findFirst({
     where: { strategyId, key: "e" },
     select: { content: true },
   });

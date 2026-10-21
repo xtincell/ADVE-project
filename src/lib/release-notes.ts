@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.515", date: "2026-10-21", headline: "Mesurer une marque à partir de faits vérifiés",
+    highlights: [{ emoji: "📍", title: "Même marque, même dossier", body: "Reprenez une marque existante sans créer de copie. La marque étudiée reste sélectionnée lorsqu’un concurrent la dépasse. Vous pouvez enregistrer une comparaison avec sa source et sa date, sans recherche assistée." }],
+  },
+  {
     version: "6.27.514", date: "2026-10-21", headline: "Retrouver les informations déjà renseignées",
     highlights: [{ emoji: "📋", title: "Valeurs et équipe lisibles", body: "Les valeurs importées retrouvent leur libellé et leur ordre. Les responsabilités de l’équipe restent visibles à côté du parcours de chacun. Les informations encore manquantes restent indiquées." }],
   },

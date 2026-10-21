@@ -1,3 +1,14 @@
+## v6.27.515 — fix(scoreur): raccorde les observations à leur publication (2026-10-21)
+
+**Une comparaison sourcée rejoint le calcul et son verdict dans la même transaction.**
+
+- Périmètre de livraison PR #1052 inscrit au registre scope-drift. Le premier job PostgreSQL distant a refusé le port5432 de son propre conteneur jetable ; le garde de recette reconnaît désormais les deux cibles détenues exactes (locale55439 ou runner GitHub du dépôt5432), toujours loopback et base dédiée. Aucun test métier retiré ou ignoré.
+
+- Les observations persistées reconnaissent les identifiants des étalons comme leurs alias sémantiques. Chaque calcul reprend les confrontations acceptées de sa ligue courante et la composante utile à l’estimateur existant. Les duels entrants comptent pour le sujet ; les autres arènes du rival ne gonflent ni ses compteurs ni sa couverture. Les items gagnés restent dans leur ligue d’observation. Aucun verdict estimé n’est transformé en preuve ; aucune formule changée.
+- Rejeu exact verrouillé sur l’observation ; revue concurrente à gagnant unique. Décision humaine, observation et verdict sont atomiques : une panne de publication laisse la proposition en attente. Source web, rival identifié et date du fait sont nécessaires avant validation ; la date de revue reste distincte. Le chasseur s’arrête avant le modèle lorsqu’aucun résultat web exploitable n’existe.
+- La console conserve le sujet indépendamment du rang. Elle reprend un dossier existant par identifiant, accepte une observation humaine sans modèle et permet de dater ou refuser les propositions. Les ports existants résolvent l’opérateur depuis l’appartenance stockée et protègent aussi les identifiants indirects et la branche de revue sans sujet sélectionné. Aucun nouveau service, routeur, modèle, Intent, fournisseur ou ADR.
+- Qualification locale reçue : DEFAULT 4 931/465, PostgreSQL 484/30 (dont 22 cas du parcours), gouvernance 1 671/169 ; typage/deux lints sans erreur, 24 avertissements chacun, zéro cycle, code-map et build webpack. Console compilée sous OPERATOR : 55 réponses sans >=500/exception, seize ERR_ABORTED ; public 27 réponses sans >=500/exception/échec, deux marques synthétiques visibles. Fenêtres finales complètes, premières fenêtres partielles conservées. Deux observations, une validation/un refus, trois verdicts ; source/date, contenu/version/certitude exacts, zéro coût IA, fixtures retirées. Pas de SLO. Livraison CI/image/runtime suivie dans RESIDUAL-DEBT ; aucune marque réelle placée, ligue ratifiée, collecte complète, ADVE entier ni Oracle reçu par cette entrée. Les mesures vivantes des rivaux et les cinq autres étapes du championnat restent ouvertes.
+
 ## v6.27.514 — fix(brand): restitue les valeurs et responsabilités déjà déclarées (2026-10-21)
 
 **Les lecteurs d’identité affichent les données admises sans leur inventer de complétude.**

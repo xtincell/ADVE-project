@@ -193,20 +193,10 @@ live sur origine sandbox ; OAuth seul sur `https://api.cinetpay.co` refusé par
 HTTP 422 / INVALID_CREDENTIALS (1005). Aucun secret sorti, paiement créé ou
 changement de configuration. Compte ou rail de lancement à confirmer, [plan M04](RESIDUAL-DEBT.md).
 
-**Formats C5 — candidat 514 reçu localement, livraison ouverte** : valeurs stockées sous
-{valeur,rang,justification} et équipe {nom,role,responsabilites} partiellement
-invisibles ; trois lecteurs existants étendus en lecture seule. Six régressions,
-rouge réel : 4 KO/2 verts puis 22 tests/3 fichiers verts, priorité canonique/immutabilité
-reçues au ciblé ; aucune promotion de maturité ni donnée fabriquée. Natif dev
-sur page identité authentifiée locale reçu : libellés/rangs 1/2/3, responsabilités
-distinctes de bio visibles ; fenêtres tronquées, pas zéro global/SLO.
-**Attentes locales closes** : rendu compilé, contrôles finaux et conservation
-locale reçus. **Fermer** : CI/image/runtime 514 et conservation en production.
-Responsable C5 ; effort une livraison/réception bornée, déclencheur avant
-qualifier l’affichage et livrer 514. Preuves P32
-`release/preuves-formats-marque-20261021/framing.json`, P23
-`brand-display514-{red,green}.log`.
-
+**Formats C5 — cause514 close au périmètre reçu** : les trois lecteurs affichent
+les formats déclarés sans modifier la source/maturité/score. Local, CI/image/
+runtime/natif production et conservation reçus ; aucune attente de livraison514.
+Le reste de l’onboarding et l’héritage explicite ci-dessous restent distincts.
 
 **514, réception locale finale acquise** : DEFAULT 4 925/463, PostgreSQL 462/29,
 gouvernance 1 671/169, neuf contrôles réussis ; typage/deux lints sans erreur
@@ -216,10 +206,99 @@ visibles, maturité toujours incomplète ; DOM 214,6 ms/titre ≤708 ms pilote c
 pas SLO. Fenêtre complète 60 réponses, 0 HTTP ≥500 et 0 exception, mais 11 net::ERR_ABORTED
 conservés sans cause supposée ; aucun zéro échec de chargement annoncé.
 Contenu/version/certitude exacts au périmètre local comparé, zéro AICost,
-fixtures retirées, serveur local de recette arrêté. CI/image/runtime 514 et
-conservation de production restent ouverts, pas ADVE complet/portefeuille entier.
+fixtures retirées, serveur local de recette arrêté. CI/image/runtime514 et
+conservation production reçus au périmètre ci-dessous ; ADVE/portefeuille entier non reçus.
 Preuves P32 : `native-compiled-received.json`, `local-conservation-received.json`,
 `compiled-team-visible.png` ; P23 `gauntlet514-final-results.json`.
+
+
+**514 livrée — réception production bornée** : PR1050/source
+`fbaefc63f8b9f615ef91bacb8b5e38fd6b91050f`, image
+`c7d479accddfe69193fc6bddd233d1e225d786a613dd8b2394b212e2819f1eeb`.
+Identité SPAWT : quatre valeurs/rangs et trois responsabilités exacts ; fenêtre
+complète 46 réponses, 0 HTTP ≥500/exception, mais 5 ERR_ABORTED conservés, pas SLO.
+67 sources/1 041 actifs/huit piliers, racine Friesland/trois marques liées et six lignes
+de paiement conservées par lectures séquentielles, pas snapshot atomique. Attentes
+CI/image/runtime/conservation 514 closes ; aucun onboarding/leaderboard/Oracle
+complet reçu. Preuves P32 `delivery-received.json`, `production-native-received.json`.
+**LB02 — candidat 515, publication du scoreur à recevoir** : étendre scoreur,
+canon/candidates et console existants ; calibration par ID/alias filtrée par ligue,
+aucune formule/poids/canon modifiés. Rejeu exact sous verroutx PG ; approbation CAS,
+observation et verdict atomiques, choix réessayable si verdict échoue. Garde
+existante pour subjectalias/candidateId/file ; contexte opérateur relu en DB,
+pas nouveau claim JWT. URL web/adversaire identifiés requis pour la revue ; hunter
+différé avant modèle sans résultat web, URL hors résultats refusée. Dossier par ID
+sans copie/collecte nouvelle, marque étudiée distincte du rang ; preuve humaine
+via recordEpreuve et IA facultative, lien rival inconnu par choix explicite.
+**Historique des rouges conservé** : 12 KO réels sur ancien backend ; réception ciblée
+supplémentaire 4 KO/12 skips par sélection -t et restauration exacte conservées.
+UI 3 KO→3 verts, grounding 2 KO/1 vert→3 verts ; 14 tests/4 fichiers verts dont 8 gouvernance
+existants, pas de somme double. Premier typage refusé (entretien fixtures/LeagueKey,
+deux erreurs), dernier typage/build/gauntlet/natif locaux reçus ; livraison 515 ouverte.
+**Checkpoint 515 — 22/22 PostgreSQL verts** : rouge graphe A→B puis B→étalon
+ignoré (theta 1342 au lieu de 1343) conservé. Estimateur/poids inchangés, pas de
+ScoreVerdict converti en observation. Duel entrant compté une fois avec résultat
+inversé ; couverture/gains du sujet limités à ses confrontations. Contexte d’une
+autre ligue exclu. Changement de pays : registre historique conservé mais anciens
+duels et items gagnés exclus du calcul courant, rouge spécifique reçu puis vert.
+**Date du fait** : APPROVE exige une date distincte de reviewedAt ; absence laisse
+PENDING inchangé, REJECT possible sans date par input facultatif existant étendu.
+UI candidate : date par proposition, retour local succès/erreur sur voie humaine
+et revue reçues sur parcours local ; aucun modèle/rail nouveau.
+**515, réception finale locale acquise** : vrai OPERATOR sur build compilé ;
+A reste sujet lorsque B passe devant. Observation humaine datée, APPROVE daté,
+REJECT sans preuve et hunter indisponible dégradé honnêtement reçus ; deux marques
+synthétiques visibles au public, deux observations sujet/trois verdicts/20% de
+couverture, une validation/un refus. Source/date et contenu/version/certitude
+exacts au périmètre comparé, zéro AICost et fixtures retirées.
+DEFAULT 4 931/465, PostgreSQL 484/30, gouvernance 1 671/169, neuf gates verts :
+typage/deux lints sans erreur (24 avertissements chacun), cycles : 0, code-map/build
+final reçus. Console : fenêtre complète 55 réponses, 0 HTTP ≥500/exception, mais
+16 ERR_ABORTED ; public : 27 réponses, 0 HTTP ≥500/exception/échec. DOM 207,9/95,4 ms et
+titres observés ≤162/146 ms, pilote compris ; pas SLO ni zéro échec console.
+Premières fenêtres incomplètes conservées ; date reçue par calendrier natif,
+outil fill sans commit du champ, aucun correctif produit/bouton forcé.
+CI/image/runtime 515 et conservation production ouverts avant merge.
+**Premier CI 515 refusé avant les 22 tests PG** : garde locale 55439 incompatible
+avec le conteneur CI détenu 5432 ; 29 fichiers/462 tests verts, 22 non exécutés,
+pas rouge métier. Deux cibles exactes seulement : hostname 127.0.0.1 et base
+shinkiro_verify obligatoires ; local 55439/user shinkiro_fixture OU
+GITHUB_ACTIONS=true, GITHUB_REPOSITORY=xtincell/ADVE-project, port 5432/user postgres.
+Aucune assertion métier retirée ni skip ajouté ; produit/version/build/natif
+inchangés. Relance locale 22/22 et cinq contrôles obligatoires (typage/deux lints/
+cycles/gouvernance) reçus après correction de la garde ; produit inchangé vérifié.
+Nouveau job sur cible CI, image et runtime toujours non reçus avant merge.
+Preuves P23 `ci515-postgres-first-failure.log`, `scoreur515-ci-fixture-local-green.log`,
+`gauntlet515-ci-fixture-results.json`, `ci515-fixture-change-scope.json`.
+ Mesures
+vivantes rivales non reçues et bloquantes pour LB02 complet ; aucun placement
+réel SPAWT/FRC ni championnat/Oracle entier reçu. Preuves P33
+`native-reception-received.json`, `local-conservation-received.json`.
+Rouges conservés P23 `scoreur515-graph-red.log`, `scoreur515-item-league-red.log`,
+`scoreur515-observed-date-red.log` ; vert `scoreur515-pipeline-green6.log`.
+**Contexte vivant des rivaux — dette distincte** : au checkpoint lu, les mesures
+compilées viennent du sujet ; la réception du graphe d’épreuves acceptées ne reçoit
+pas les mesures vivantes des rivaux dans le contexte du calcul. **Fermer** :
+qualifier puis réutiliser le compilateur de mesures et les contextes de ligue
+existants, confronter effets sur estimation et invariance de couverture/gains
+propres, sans inventer d’observation ni convertir un verdict en preuve. Aucun
+nouveau collecteur/service/formule/provider/schéma/ADR. Responsable LB02/C6-03 ;
+effort une recette ciblée des mesures rivales et des limites de ligue, déclencheur
+avant annoncer leur calibration vivante ou la réception du championnat entier.
+Les 22 tests du pipeline ne reçoivent pas cette collecte mesurée ni LB02 complet.
+**Local clos** : contrôles/build, parcours OPERATOR manuel, sujet choisi distinct
+du rang, observation/revue datées, refus sans preuve, accès et conservation reçus.
+**Fermer la livraison** : relances locales après correction du harnais reçues ;
+recevoir nouveau job CI sur sa cible, puis image/runtime 515 et conservation de bascule avant
+population du classement réel. Responsable LB02/C6-03 ; effort une livraison et
+réception ciblées, déclencheur avant
+annoncer publication et avant placer SPAWT/FRC en championnat. Les six stades du
+championnat et six Oracles sont suivis dans Radar, non reçus ici ; aucune marque
+réellement placée, ADVE complet/leaderboard entier/Oracle final non reçus.
+Aucun nouveau service/router/page/Intent/modèle/ADR/manager/provider.
+Preuves P33 `release/preuves-scoreur-pipeline-20261021/framing.json` ; P23
+`scoreur515-red-restoration.json`, `scoreur515-pipeline-green2.log`,
+`scoreur515-targeted-green.log` et premiers rouges conservés.
 
 **Ventilation/héritage corporate — sémantique bornée reçue, pas bug démontré** :
 trois cas sur PostgreSQL local possédé reçus, fixtures retirées : feuille sans
