@@ -1,3 +1,15 @@
+## v6.27.517 — fix(scoreur): conserve le canon au rechargement (2026-10-21)
+
+**Charger les repères manquants conserve les réglages opérateur existants.**
+
+- Périmètre de livraison consigné sous le numéro réel PR #1054, phase/4, dans scope-drift.
+
+- L’initialisation utilise le single-writer existant en mode création des absents, dans une transaction sérialisée. Un type incompatible refuse l’ensemble du chargement ; les valeurs, sources, identifiants et dates existantes restent inchangés au rejeu. Les autres usages de l’upsert conservent leur comportement.
+- L’écran de canon existant expose la route ADMIN existante, avec état de chargement et retour explicite « proposé ». Aucun nouveau modèle, service, routeur, page, Intent, fournisseur, gestionnaire ou formule. Trois régressions PostgreSQL rouges réellement reproduites, puis 31 tests du parcours verts. DEFAULT 4935/466, PostgreSQL 493/30, gouvernance 1671/169 ; typage et deux lints sans erreur (24 avertissements historiques chacun), zéro cycle, carte et build webpack reçus. Premier build refusé sur un cache généré non vide, conservé et déplacé réversiblement avant reprise.
+- Réception locale compilée sous ADMIN : chargement des 29 absents, ancien repère personnalisé à 2191 conservé dans tous ses champs ; second clic réellement reçu et 30 lignes identiques, dates comprises. Fenêtre initiale 64 réponses sans HTTP >=500 ni exception, 25 ERR_ABORTED conservés ; DOM et titre mesurés, titre 254 ms pilote compris, aucun SLO. Rejeu : deux réponses sans erreur ni échec. Capture réelle inspectée ; onze tables antérieures exactes après retrait des seules fixtures détenues, aucun appel IA. CI, image et production 517 encore à recevoir.
+- Livraison516 reçue en production : PR1053/source5e39fc12f2acf73b42ea795bf99342942c317c64, image26f20f644b6584d4d49e4d74f2627fc0783c523c47838431fc572e408b47955c. CI distante complète DEFAULT4935/466 et PG489/30 reçue ; reprises locales antérieures conservées. Dossiers67sources/1041actifs/huitpiliers/FRC+3masters/sixpaiements conservés par lectures séquentielles, pas snapshot atomique.
+- SPAWT placé une fois depuis le dossier existant :1verdict39.5/200,40%couverture,2épreuvesA/V, émission gouvernéeOK ;189relevés et huitpiliers exacts, aucun nouveau coûtIA, aucune nouvelle marque/collecte/ratificationADVE. API anonymes200 et natif public24réponses/0>=500/exception/échec,3arènes nonobservées,15repères proposés. Natifcanon32réponses/1ERR_ABORTED conservé. PasSLO, aucun ADVE/MVP/championnat/Oracle entier reçu.
+
 ## v6.27.516 — fix(scoreur): partage les observations et le classement par ligue (2026-10-21)
 
 **L’historique ne masque plus les marques et les étalons restent des repères proposés.**

@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.517", date: "2026-10-21", headline: "Des références de mesure conservées",
+    highlights: [{ emoji: "📏", title: "Vos réglages restent en place", body: "L’administrateur peut charger les repères de mesure manquants depuis l’écran existant. Refaire ce chargement conserve les valeurs déjà réglées ; les références chargées restent des propositions à valider." }],
+  },
+  {
     version: "6.27.516", date: "2026-10-21", headline: "Un classement lisible dans chaque ligue",
     highlights: [{ emoji: "📊", title: "Chaque marque garde sa place", body: "Un historique abondant ne masque plus les autres marques. Le classement retient la mesure la plus récente et affiche le rang dans sa ligue. Les marques de référence restent identifiées comme des repères proposés, séparés des résultats mesurés." }],
   },

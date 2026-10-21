@@ -83,10 +83,11 @@ export async function upsertBrandRef(input: {
   countryCode?: string | null;
   fixedTheta?: number | null;
   source?: string | null;
-}) {
-  return db.brandRef.upsert({
+}, options: { initializeOnly?: boolean; client?: Prisma.TransactionClient } = {}) {
+  const client = options.client ?? db;
+  return client.brandRef.upsert({
     where: { slug: input.slug },
-    update: { name: input.name, fixedTheta: input.fixedTheta ?? null, source: input.source ?? null },
+    update: options.initializeOnly ? {} : { name: input.name, fixedTheta: input.fixedTheta ?? null, source: input.source ?? null },
     create: {
       kind: input.kind,
       slug: input.slug,

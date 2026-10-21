@@ -18,7 +18,9 @@ import { scoreurRouter } from "@/server/trpc/routers/scoreur";
 import { strategyRouter } from "@/server/trpc/routers/strategy";
 import { loadAnchorsForLeague, recordEpreuve, resolveLeagueForStrategy, scoreBrand } from "@/server/services/seshat/scoreur";
 import { createCandidates, decideCandidate } from "@/server/services/seshat/scoreur/candidates";
-import { scoreFromEpreuves } from "@/domain/scoreur";
+import { ANCHOR_REGISTRY, MUST_HAVE_ITEMS, scoreFromEpreuves } from "@/domain/scoreur";
+import { seedScoreurCanon } from "@/server/services/seshat/scoreur/anchor-seed";
+import { ITEM_OPPONENTS } from "@/server/services/seshat/scoreur/compilateur";
 
 const operators: string[] = [], users: string[] = [], strategies: string[] = [], clients: string[] = [], refs: string[] = [], candidates: string[] = [];
 const prospectNames: string[] = [];
@@ -74,6 +76,20 @@ async function fixture(isForeign = false) {
   return { strategy, league, anchor };
 }
 type Fixture = Awaited<ReturnType<typeof fixture>>;
+const canonicalSlugs = [...ANCHOR_REGISTRY.map(a => `anchor-${a.id}`),
+  ...MUST_HAVE_ITEMS.map(i => `item-${i.id}`), ...Object.values(ITEM_OPPONENTS)];
+async function withEmptyOwnedCanon(run: () => Promise<void>) {
+  const where = { slug: { in: canonicalSlugs } };
+  expect(await db.brandRef.findMany({ where })).toEqual([]);
+  const unrelated = await db.brandRef.findMany({ where: { NOT: where }, orderBy: { id: "asc" } });
+  try { await run(); }
+  finally {
+    const owned = await db.brandRef.findMany({ where, select: { id: true } });
+    refs.push(...owned.map(r => r.id));
+    await db.brandRef.deleteMany({ where: { id: { in: owned.map(r => r.id) } } });
+    expect(await db.brandRef.findMany({ where: { NOT: where }, orderBy: { id: "asc" } })).toEqual(unrelated);
+  }
+}
 async function pending(f: Fixture, patch: Record<string, unknown> = {}) {
   const input = { arena: "D" as const, rivalName: f.anchor.name, rivalBrandRefId: f.anchor.id, proposedResult: "WIN" as const,
     claim: `Synthetic observed comparison ${randomUUID()}`, sourceUrl: "https://example.invalid/owned/comparison" };
@@ -86,6 +102,45 @@ const evidence = (f: Fixture) => ({ subjectStrategyId: f.strategy.id, opponentBr
   league: f.league, result: "WIN" as const, proofWeight: 1, source: "https://example.invalid/owned/direct-observation", occurredAt: nowIso });
 
 describe("existing deterministic scorer as an owned publication pipeline", () => {
+  it("fills missing calibration and preserves every field of an edited reference on replay", async () => {
+    await withEmptyOwnedCanon(async () => {
+      const edited = await db.brandRef.create({ data: { slug: "anchor-coca-cola", kind: "ANCHOR", name: "Operator reference",
+        fixedTheta: 2191, source: "operator-current-proof", sectorSlug: "food", marketScale: "MONDE", countryCode: "CI" } });
+      expect(await seedScoreurCanon()).toEqual({ anchors: 15, items: 15 });
+      expect(await db.brandRef.findUnique({ where: { id: edited.id } })).toEqual(edited);
+      const first = await db.brandRef.findMany({ where: { slug: { in: canonicalSlugs } }, orderBy: { slug: "asc" } });
+      expect(first).toHaveLength(30);
+      await seedScoreurCanon();
+      expect(await db.brandRef.findMany({ where: { slug: { in: canonicalSlugs } }, orderBy: { slug: "asc" } })).toEqual(first);
+    });
+  });
+
+  it("rejects a conflicting reference kind without leaving a partially initialized canon", async () => {
+    await withEmptyOwnedCanon(async () => {
+      const collision = await db.brandRef.create({ data: { slug: ITEM_OPPONENTS.ePublishing, kind: "RIVAL", name: "Existing rival", source: "owned-existing-rival" } });
+      await expect(seedScoreurCanon()).rejects.toThrow("type incompatible");
+      expect(await db.brandRef.findMany({ where: { slug: { in: canonicalSlugs } } })).toEqual([collision]);
+    });
+  });
+
+  it("serializes concurrent initialization and keeps one stable set of calibration rows", async () => {
+    await withEmptyOwnedCanon(async () => {
+      expect(await Promise.all([seedScoreurCanon(), seedScoreurCanon(), seedScoreurCanon()]))
+        .toEqual(Array.from({ length: 3 }, () => ({ anchors: 15, items: 15 })));
+      const first = await db.brandRef.findMany({ where: { slug: { in: canonicalSlugs } }, orderBy: { slug: "asc" } });
+      expect(first).toHaveLength(30); expect(new Set(first.map(r => r.slug)).size).toBe(30);
+      await seedScoreurCanon();
+      expect(await db.brandRef.findMany({ where: { slug: { in: canonicalSlugs } }, orderBy: { slug: "asc" } })).toEqual(first);
+    });
+  });
+
+  it("keeps canon initialization ADMIN-only without writing for a normal operator", async () => {
+    await withEmptyOwnedCanon(async () => {
+      await expect(caller().seedCanon()).rejects.toMatchObject({ code: "FORBIDDEN" });
+      expect(await db.brandRef.count({ where: { slug: { in: canonicalSlugs } } })).toBe(0);
+    });
+  });
+
   it("uses the connected rival's retained audience without adding that audience to the subject's coverage", async () => {
     const a = await fixture(), b = await fixture();
     await recordEpreuve({ ...evidence(a), arena: "A", opponentBrandRefId: null, opponentStrategyId: b.strategy.id });
