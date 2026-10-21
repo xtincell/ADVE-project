@@ -45,10 +45,10 @@ volumes/relais Luna/90s, OpenRouter absent ; lectures séquentielles non atomiqu
 Attente livraison/runtime/conservation 512 close. Preuves P23
 `release/preuves-mvp-commercial-20261020/production512-{received,data-preserved,public-api-received}.json`.
 
-**513 candidat — initialisations et retour existants** : l’URL de paiement
+**513 livrée — initialisations et retour existants** : l’URL de paiement
 n’est exposée qu’après persistance de sa liaison serveur ; aucune nouvelle page.
 Le callback client ne prouve aucun paiement. HTTP local reçu sur simulateur ; PSP réel, configuration
-et livraison 513 encore ouverts ; SMTP et remise commerciale distincts.
+encore ouverts ; livraison 513 reçue, SMTP et remise commerciale distincts.
 
 **Réception locale 513 (2026-10-21)** : PostgreSQL 462 tests / 29 fichiers ;
 DEFAULT 4 919 / 462 reçu par union après deux reprises, sans garde affaiblie ;
@@ -56,11 +56,46 @@ gouvernance 1 671 / 169, typage et deux lints sans erreur, cycles 0. Dix répons
 HTTP Next locales reçues sur simulateur de prestataire : preuve invalide refusée,
 indisponibilité sans promotion, PAID conservé et accès voisin refusé. Persistance
 et retrait de la fixture reçus ; anciens dossiers conservés. Aucun paiement réel.
-Preuves P29 : `local-reception.json` et `http-received.json`. Livraison 513,
+Preuves P29 : `local-reception.json` et `http-received.json`. Livraison 513 reçue ;
 paiement PSP, SMTP et reprise durable restent ouverts. Raccord réel : clé reconnue
 live sur origine sandbox ; OAuth seul sur `https://api.cinetpay.co` refusé par
 HTTP 422 / INVALID_CREDENTIALS (1005). Aucun secret sorti, paiement créé ou
 changement de configuration. Compte ou rail de lancement à confirmer, [plan M04](RESIDUAL-DEBT.md).
+
+513 livrée (PR1049) : source `1631ab2e74a9229442b47f8fdc6605f7f09a11d8`,
+runtime 6.27.513 reçu le 21 octobre à 00:18 UTC, digest
+`3d026255e2eb4c60b72ff5dc533c405486b7e9547c169d51c92faab39b0e756a`.
+Mêmes volumes/relais Luna/90s, OpenRouter absent ; 67 sources/1 041 actifs, états/
+originaux/huit piliers et racine Friesland conservés par lectures séquentielles,
+non atomiques. HTTP production : santé 200, notification invalide 400/inconnue 404,
+sans paiement PSP ni mutation métier. Attente technique 513 close ; SMTP/PSP/
+réconciliation legacy/fulfillment durable et réception commerciale restent ouverts.
+Preuves P23 : `production513-{received,data-preserved,public-api-received,payment-http-received}.json`.
+
+**514 candidat — lecteurs d’identité existants** : kit partagé, rendu d’identité
+spécifique et rendu générique lisent les aliases de libellé/rang déclarés et
+responsabilités distinctes de bio. Aucun écran nouveau ni changement de donnée/
+score/maturité. Tests ciblés verts ; page dev authentifiée sur cas local fictif
+reçue : trois libellés/rangs 1/2/3, responsabilités et bio séparées visibles.
+Fenêtres réseau dev initiales tronquées conservées. Compilé/gates locaux 514
+reçus ; CI/image/runtime et conservation production ouverts ; aucun onboarding complet, portefeuille
+entier, leaderboard ou Oracle final reçu. Héritage A entier explicite vérifié ;
+recevoir l’identité propre masterbrand avant rattachement corporate, sans fusion
+supposée. Preuves P32 : `local-identity.png`, `inheritance-local-received.json`.
+
+**514, réception locale finale acquise** : DEFAULT 4 925/463, PostgreSQL 462/29,
+gouvernance 1 671/169, neuf contrôles réussis ; typage/deux lints sans erreur
+(24 avertissements historiques chacun), cycles : 0, code-map/typegen et build webpack
+final reçus. Natif compilé ADMIN/HTTP 200 : valeurs ordonnées et responsabilités
+visibles, maturité toujours incomplète ; DOM 214,6 ms/titre ≤708 ms pilote compris,
+pas SLO. Fenêtre complète 60 réponses, 0 HTTP ≥500 et 0 exception, mais 11 net::ERR_ABORTED
+conservés sans cause supposée ; aucun zéro échec de chargement annoncé.
+Contenu/version/certitude exacts au périmètre local comparé, zéro AICost,
+fixtures retirées, serveur local de recette arrêté. CI/image/runtime 514 et
+conservation de production restent ouverts, pas ADVE complet/portefeuille entier.
+Preuves P32 : `native-compiled-received.json`, `local-conservation-received.json`,
+`compiled-team-visible.png` ; P23 `gauntlet514-final-results.json`.
+
 
 510 est reçue en production : source `5c5cc907249ef2123e2d6c7a60c95f81ab7794fe`,
 déploiement `ip02ws80mllbkno6xn7skm1h` terminé le 20 octobre à 21:48:22 UTC,

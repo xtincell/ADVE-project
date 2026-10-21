@@ -166,13 +166,13 @@ volumes/relais Luna/90s, OpenRouter absent ; lectures séquentielles non atomiqu
 Attente livraison/runtime/conservation 512 close. Preuves P23
 `release/preuves-mvp-commercial-20261020/production512-{received,data-preserved,public-api-received}.json`.
 
-2026-10-21 · **513 candidat — signal de paiement confondu avec autorité** :
+2026-10-21 · **513 livré — signal de paiement confondu avec autorité** :
 adaptateur/webhook/types et IntakePayment existants lient providerRef/hash SHA256
 avant URL, contrat v1 snake_case/PUSH et statut serveur obligatoire ; plus de
 SUCCESS par défaut ni secret global pris pour preuve par paiement. PAID monotone/
 CAS,503/PENDING et anciennes lignes/droits conservés.8 rouges/1 vert puis 9 verts,
 18 PG et10 unitaires verts sur transport/fulfillment simulés, ancienne implémentation
-réellement rouge puis restaurée. Livraison513/paiement PSP et reprise durable
+réellement rouge puis restaurée. Livraison 513 reçue ; paiement PSP et reprise durable
 après PAID non reçus. Cause : liaison du reçu et autorité du statut perdues entre
 initialisation et notification. [Plan M04](RESIDUAL-DEBT.md).
 
@@ -182,11 +182,49 @@ gouvernance 1 671 / 169, typage et deux lints sans erreur, cycles 0. Dix répons
 HTTP Next locales reçues sur simulateur de prestataire : preuve invalide refusée,
 indisponibilité sans promotion, PAID conservé et accès voisin refusé. Persistance
 et retrait de la fixture reçus ; anciens dossiers conservés. Aucun paiement réel.
-Preuves P29 : `local-reception.json` et `http-received.json`. Livraison 513,
+Preuves P29 : `local-reception.json` et `http-received.json`. Livraison 513 reçue ;
 paiement PSP, SMTP et reprise durable restent ouverts. Raccord réel : clé reconnue
 live sur origine sandbox ; OAuth seul sur `https://api.cinetpay.co` refusé par
 HTTP 422 / INVALID_CREDENTIALS (1005). Aucun secret sorti, paiement créé ou
 changement de configuration. Compte ou rail de lancement à confirmer, [plan M04](RESIDUAL-DEBT.md).
+
+513 livrée (PR1049) : source `1631ab2e74a9229442b47f8fdc6605f7f09a11d8`,
+runtime 6.27.513 reçu le 21 octobre à 00:18 UTC, digest
+`3d026255e2eb4c60b72ff5dc533c405486b7e9547c169d51c92faab39b0e756a`.
+Mêmes volumes/relais Luna/90s, OpenRouter absent ; 67 sources/1 041 actifs, états/
+originaux/huit piliers et racine Friesland conservés par lectures séquentielles,
+non atomiques. HTTP production : santé 200, notification invalide 400/inconnue 404,
+sans paiement PSP ni mutation métier. Attente technique 513 close ; SMTP/PSP/
+réconciliation legacy/fulfillment durable et réception commerciale restent ouverts.
+Preuves P23 : `production513-{received,data-preserved,public-api-received,payment-http-received}.json`.
+
+2026-10-21 · **514 candidat — valeurs sans libellé et responsabilités invisibles** :
+les trois lecteurs d’identité attendaient seulement certaines clés, alors que les
+formats sources déclarent valeur/rang et responsabilités distinctes de bio. Kit
+partagé et deux rendus étendus sans mutation, priorité canonique conservée ; six
+régressions, rouge réel : 4 KO/2 verts puis 22/3 verts ciblés. Cause : divergence des
+lectures du même contenu, pas défaut démontré du canon/score. Natif dev local
+reçu, responsabilités/bio distinctes ; réseau tronqué, pas zéro global/SLO.
+Trois cas PostgreSQL reçoivent l’héritage A entier explicite et priorité d’un A
+propre même vide, sans merge ni bug du resolver démontré. Fixtures retirées,
+production inchangée ; identité masterbrand à recevoir avant rattachement
+corporate. Compilé/gates/conservation locale 514 reçus ; CI/image/runtime et
+conservation de production ouverts.
+[Réception et ordre opérationnel](RESIDUAL-DEBT.md).
+
+**514, réception locale finale acquise** : DEFAULT 4 925/463, PostgreSQL 462/29,
+gouvernance 1 671/169, neuf contrôles réussis ; typage/deux lints sans erreur
+(24 avertissements historiques chacun), cycles : 0, code-map/typegen et build webpack
+final reçus. Natif compilé ADMIN/HTTP 200 : valeurs ordonnées et responsabilités
+visibles, maturité toujours incomplète ; DOM 214,6 ms/titre ≤708 ms pilote compris,
+pas SLO. Fenêtre complète 60 réponses, 0 HTTP ≥500 et 0 exception, mais 11 net::ERR_ABORTED
+conservés sans cause supposée ; aucun zéro échec de chargement annoncé.
+Contenu/version/certitude exacts au périmètre local comparé, zéro AICost,
+fixtures retirées, serveur local de recette arrêté. CI/image/runtime 514 et
+conservation de production restent ouverts, pas ADVE complet/portefeuille entier.
+Preuves P32 : `native-compiled-received.json`, `local-conservation-received.json`,
+`compiled-team-visible.png` ; P23 `gauntlet514-final-results.json`.
+
 
 510 est reçue en production : source `5c5cc907249ef2123e2d6c7a60c95f81ab7794fe`,
 déploiement `ip02ws80mllbkno6xn7skm1h` terminé le 20 octobre à 21:48:22 UTC,

@@ -12,6 +12,7 @@
 import { useState } from "react";
 import { getFieldLabel } from "@/lib/types/field-labels";
 import { cataloguePriceLabel } from "@/domain/product-catalog";
+import { brandValueLabel, brandValueRank, str } from "./pillars/pillar-kit";
 import { getVariableSpec } from "@/lib/types/variable-bible";
 import { getVariableId } from "@/lib/types/variable-ids";
 import { findCanonicalCodes, CANONICAL_MAP } from "@/lib/types/variable-bible-canonical-map";
@@ -770,7 +771,7 @@ export function ValeursCard({ valeurs, onFocus }: { valeurs: Array<Record<string
   }
 
   const list = valeurs as Array<Record<string, unknown>>;
-  const sorted = [...list].sort((a, b) => (Number(a.rank) || 99) - (Number(b.rank) || 99));
+  const sorted = [...list].sort((a, b) => (brandValueRank(a) ?? Infinity) - (brandValueRank(b) ?? Infinity));
   return (
     <Card span={2}>
       <div className="flex items-center gap-2 mb-3">
@@ -784,14 +785,14 @@ export function ValeursCard({ valeurs, onFocus }: { valeurs: Array<Record<string
           // d'autres marques) contiennent `nom` au lieu de `customName`/`value`.
           // Le renderer reste défensif : fallback chain par priorité avant
           // d'afficher vide.
-          const label = String(v.customName ?? v.value ?? v.nom ?? v.name ?? v.title ?? "");
+          const label = brandValueLabel(v);
           const detail = v.justification ?? v.description ?? null;
           return (
             <div key={i}
               onClick={onFocus ? () => onFocus(v) : undefined}
               className={`flex items-start gap-3 rounded-lg bg-white/[0.02] px-3 py-2.5 ${onFocus ? "cursor-pointer hover:bg-white/[0.05] transition-colors" : ""}`}>
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xs font-bold text-accent">
-                {Number(v.rank) || i + 1}
+                {brandValueRank(v) ?? i + 1}
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -938,6 +939,7 @@ export function EquipeDirigenteCard({ equipe, onFocus }: { equipe: Array<Record<
               <span className="rounded bg-accent/10 px-1.5 py-0.5 text-2xs text-accent">{String(m.role ?? "")}</span>
             </div>
             {m.bio ? <p className="text-2xs text-white/60 line-clamp-2 mb-1.5">{String(m.bio)}</p> : null}
+            {m.responsabilites ? <p className="text-2xs text-foreground-muted mt-1"><b>Responsabilités : </b>{str(m.responsabilites)}</p> : null}
             {Array.isArray(m.competencesCles) ? (
               <div className="flex flex-wrap gap-1">
                 {(m.competencesCles as string[]).slice(0, 4).map((c, j) => (

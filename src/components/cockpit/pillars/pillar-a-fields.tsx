@@ -16,7 +16,7 @@
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import {
   Section, ACard, EmptyBody, EmptyValue, TagRow, ObjCard, ProofList, MetricObj, MetricNum,
-  isEmpty, asRec, asArr, str, makeStatusFor, type Rec,
+  isEmpty, asRec, asArr, str, brandValueLabel, brandValueRank, makeStatusFor, type Rec,
 } from "./pillar-kit";
 
 // ── 1. Fondamentaux ────────────────────────────────────────────────────
@@ -125,12 +125,12 @@ function Valeurs({ items, status }: { items: unknown; status?: string }) {
     <ACard title={"Valeurs" + (empty ? "" : ` · ${arr.length}`)} status={status} empty={empty} span>
       {empty ? <EmptyBody verb="À générer" /> : (
         <div className="ck-a-vals">
-          {[...arr].sort((a, b) => (Number(a.rank) || 9) - (Number(b.rank) || 9)).map((val, i) => (
+          {[...arr].sort((a, b) => (brandValueRank(a) ?? Infinity) - (brandValueRank(b) ?? Infinity)).map((val, i) => (
             <div className="ck-a-val" key={i}>
-              <div className="ck-a-val__rank">{str(val.rank) || i + 1}</div>
+              <div className="ck-a-val__rank">{brandValueRank(val) ?? i + 1}</div>
               <div className="ck-a-val__body">
                 <div className="ck-a-val__top">
-                  <span className="ck-a-val__name">{str(val.customName) || str(val.value)}</span>
+                  <span className="ck-a-val__name">{brandValueLabel(val)}</span>
                   {!isEmpty(val.value) ? <span className="ck-a-val__schwartz">Schwartz · {str(val.value)}</span> : null}
                 </div>
                 {!isEmpty(val.justification) ? <p className="ck-a-val__just">{str(val.justification)}</p> : null}
@@ -242,6 +242,7 @@ function Equipe({ items, status }: { items: unknown; status?: string }) {
                 <span className="ck-a-team__name">{str(m.nom)}</span>
                 {!isEmpty(m.role) ? <span className="ck-a-team__role">{str(m.role)}</span> : null}
                 {!isEmpty(m.bio) ? <p className="ck-a-team__bio">{str(m.bio)}</p> : null}
+                {!isEmpty(m.responsabilites) ? <p className="ck-a-team__bio"><b>Responsabilités : </b>{str(m.responsabilites)}</p> : null}
                 {!isEmpty(m.competencesCles) ? <TagRow items={m.competencesCles} /> : null}
               </div>
             </div>

@@ -75,6 +75,26 @@ export function str(v: unknown): string {
   return String(v);
 }
 
+/** Read declared labels without assigning a Schwartz category or rewriting data. */
+export function brandValueLabel(value: Rec): string {
+  for (const key of ["customName", "value", "valeur", "nom", "name", "title"]) {
+    const label = value[key];
+    if (typeof label === "string" && label.trim()) return label;
+  }
+  return "";
+}
+
+/** Both source spellings express the same supplied ordinal, not a new ranking. */
+export function brandValueRank(value: Rec): number | undefined {
+  for (const key of ["rank", "rang"]) {
+    const raw = value[key];
+    if (typeof raw !== "number" && typeof raw !== "string") continue;
+    const ordinal = Number(raw);
+    if (Number.isFinite(ordinal) && ordinal > 0) return ordinal;
+  }
+  return undefined;
+}
+
 // ── Section ────────────────────────────────────────────────────────────
 
 export function Section({ title, sub, children }: { title: string; sub?: string; children: ReactNode }) {
