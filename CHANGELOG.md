@@ -2,7 +2,7 @@
 
 **Une comparaison sourcée rejoint le calcul et son verdict dans la même transaction.**
 
-- Périmètre de livraison PR #1052 inscrit au registre scope-drift.
+- Périmètre de livraison PR #1052 inscrit au registre scope-drift. Le premier job PostgreSQL distant a refusé le port5432 de son propre conteneur jetable ; le garde de recette reconnaît désormais les deux cibles détenues exactes (locale55439 ou runner GitHub du dépôt5432), toujours loopback et base dédiée. Aucun test métier retiré ou ignoré.
 
 - Les observations persistées reconnaissent les identifiants des étalons comme leurs alias sémantiques. Chaque calcul reprend les confrontations acceptées de sa ligue courante et la composante utile à l’estimateur existant. Les duels entrants comptent pour le sujet ; les autres arènes du rival ne gonflent ni ses compteurs ni sa couverture. Les items gagnés restent dans leur ligue d’observation. Aucun verdict estimé n’est transformé en preuve ; aucune formule changée.
 - Rejeu exact verrouillé sur l’observation ; revue concurrente à gagnant unique. Décision humaine, observation et verdict sont atomiques : une panne de publication laisse la proposition en attente. Source web, rival identifié et date du fait sont nécessaires avant validation ; la date de revue reste distincte. Le chasseur s’arrête avant le modèle lorsqu’aucun résultat web exploitable n’existe.

@@ -267,7 +267,19 @@ final reçus. Console : fenêtre complète 55 réponses, 0 HTTP ≥500/exception
 titres observés ≤162/146 ms, pilote compris ; pas SLO ni zéro échec console.
 Premières fenêtres incomplètes conservées ; date reçue par calendrier natif,
 outil fill sans commit du champ, aucun correctif produit/bouton forcé.
-CI/image/runtime 515 et conservation production ouverts avant merge. Mesures
+CI/image/runtime 515 et conservation production ouverts avant merge.
+**Premier CI 515 refusé avant les 22 tests PG** : garde locale 55439 incompatible
+avec le conteneur CI détenu 5432 ; 29 fichiers/462 tests verts, 22 non exécutés,
+pas rouge métier. Deux cibles exactes seulement : hostname 127.0.0.1 et base
+shinkiro_verify obligatoires ; local 55439/user shinkiro_fixture OU
+GITHUB_ACTIONS=true, GITHUB_REPOSITORY=xtincell/ADVE-project, port 5432/user postgres.
+Aucune assertion métier retirée ni skip ajouté ; produit/version/build/natif
+inchangés. Relance locale 22/22 et cinq contrôles obligatoires (typage/deux lints/
+cycles/gouvernance) reçus après correction de la garde ; produit inchangé vérifié.
+Nouveau job sur cible CI, image et runtime toujours non reçus avant merge.
+Preuves P23 `ci515-postgres-first-failure.log`, `scoreur515-ci-fixture-local-green.log`,
+`gauntlet515-ci-fixture-results.json`, `ci515-fixture-change-scope.json`.
+ Mesures
 vivantes rivales non reçues et bloquantes pour LB02 complet ; aucun placement
 réel SPAWT/FRC ni championnat/Oracle entier reçu. Preuves P33
 `native-reception-received.json`, `local-conservation-received.json`.

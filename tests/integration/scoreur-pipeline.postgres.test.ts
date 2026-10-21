@@ -26,7 +26,13 @@ let actor: string, foreign: string, admin: string;
 const nowIso = "2026-10-21T00:00:00.000Z";
 beforeAll(async () => {
   const url = new URL(process.env.DATABASE_URL!);
-  expect(url.hostname).toBe("127.0.0.1"); expect(url.port).toBe("55439"); expect(url.pathname).toBe("/shinkiro_verify");
+  expect(url.hostname).toBe("127.0.0.1"); expect(url.pathname).toBe("/shinkiro_verify");
+  // The managed CI job creates its own pinned, disposable PostgreSQL container
+  // on 5432. Both paths stay loopback-only and use the exact fixture database.
+  const ownedLocal = url.port === "55439" && url.username === "shinkiro_fixture";
+  const ownedCI = process.env.GITHUB_ACTIONS === "true" && process.env.GITHUB_REPOSITORY === "xtincell/ADVE-project"
+    && url.port === "5432" && url.username === "postgres";
+  expect(ownedLocal || ownedCI).toBe(true);
   vi.stubGlobal("fetch", async () => { throw new Error("NETWORK_FORBIDDEN_IN_OWNED_FIXTURE"); });
   for (const label of ["A", "B"]) {
     const op = await db.operator.create({ data: { name: `Scorer pipeline ${label}`, slug: `scoreur-${randomUUID()}`,
