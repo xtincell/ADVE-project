@@ -360,7 +360,53 @@ fixtures. Premier ENOTEMPTY et déplacement réversible de `.next` généré con
 sans suppression de donnée. Preuves P34 `delivery517-received.json` et reçus locaux
 `canon517-{first,replay}-received.json`, `canon517-local-conservation-received.json`.
 
-**518 candidate — rattachement Client manuel dans le portefeuille** : extension de
+**519 candidate — réception de cascade et fraîcheur Oracle** : cause reproduite,
+ancien état pollé pouvait valider trop tôt ; invalidation Oracle absente de la
+transaction de correction et résultat tardif accepté malgré changement de source.
+RtisCascadeModal
+attend la réponse complète des quatre R/T/I/S de cet appel ; anciens piliers pollés,
+sous-ensemble ou erreur n’acquittent plus la cascade. Ni huit piliers ni 35 sections
+validés promis. `markPillarsStale` utilise `markAllSectionsStale` dans la même
+transaction : correction documentaire/invalidation Oracle atomiques, payload/
+version/historique et isolation conservés, sans génération. GENERATING garde son
+verrou avec marqueur de changement ; retour tardif refusé SOURCE_CHANGED, statut
+STALE/ancien payload conservé, reprise explicite. Trois rouges PG/1 vert avant,
+puis 4/4 ; cinq cas UI rouges valides puis 13 ciblés verts après correction des
+mocks de table. DEFAULT 4 942/467 reçu PAR UNION : deux runs 4 941/4 942 (cas gros
+original >30s sous concurrence), fichier isolé 6/6 en 17,4s, aucun seuil assoupli.
+PG premier 497/504 refusé (P2037/compteur global croisé), puis 504/31 verts avec
+fichiers sérialisés, concurrence interne conservée. Gouvernance+UI finale 1 684/171
+(1 671+13), typage/deux lints sans erreur (24 avertissements chacun), zéro cycle.
+Premier build vert ; premier dialogue quatre retours HTTP 200/skipIfReady sans
+modèle, mais texte « Oracle prêt … sans sections vides » refusé. Rouge 1/5 puis
+texte corrigé et suite gouvernance+UI verte ; build webpack final reçu.
+Natif compilé final USER équipe locale : RPC cascade HTTP 200, quatre résultats
+courants (R/T/I COMPLETE, S ENRICHED) en skipIfReady sans modèle ; succès enregistré/
+propositions à relire, sans Oracle prêt/35 sections validées/promesse de durée.
+Fenêtre complète 68 réponses, 0 HTTP ≥500/exception, mais 15 ERR_ABORTED conservés ;
+DOM 467,8 ms/titre 1 057 ms pilote compris, pas SLO. Onze tables préexistantes
+comparées exactes par hash après retrait de la fixture ; zéro coût IA propre,
+deux émissions/35 sections de fixture. Réception locale 519 close au périmètre
+reçu ; premier texte refusé conservé, CI/image/runtime production 519 ouverts.
+Preuves P35 `core519-native-local.json/png`, `core519-local-conservation-received.json`.
+Aucun service/router/Intent/modèle/gestionnaire nouveau. Preuves P23 `core519-*.log`.
+Graphe Oracle déclaré 270 nœuds/338 arêtes : lecture statique, pas E2E des dépendances.
+Raccords Friesland réels API sur 518 reçus : racine+trois masterbrands (quatre nœuds)
+et trois Strategy vers le Client régional Abidjan ; autres scalaires/piliers exacts,
+aucun pays/droit/facturation modifié, Client WAMCO Nigeria distinct conservé.
+P35 `friesland-bindings518-received.json` ; instances pays/équipes/leaderboard FRC
+et ADVE entier restent ouverts.
+Sur production 518 : actualisations R et T SPAWT HTTP 200/enregistrements à relire
+reçus, pas fidélité intégrale ; force 39,5 inchangée/structure 160 distincte.
+I→S reste à recevoir : choix courants distincts des anciennes actions retenues,
+via chemin existant ; ADVE, MVP, Oracle et sept chantiers entiers non reçus.
+
+I→S/Oracle restent des constats ouverts : 28 retenues historiques hors I courant,
+aucun choix des 52 actions I reçu ; titre Oracle local 27/35 « complètes » avec
+zéro rédigée non corrigé dans 519. Conservation sans réactivation et reprise par
+chemins existants planifiées dans [la même dette Core/Oracle](RESIDUAL-DEBT.md).
+
+**518 livrée — rattachement Client manuel dans le portefeuille** : extension de
 `brandNode.update`/`OPERATOR_UPDATE_BRAND_NODE` et BrandNodeForm existants ; liaison
 nœud/Strategy attachée atomique par CAS, Client actif du même opérateur seulement.
 Strategy partagée ou Clients incohérents refusés ; ADVE, pays, sources, historique
@@ -377,14 +423,20 @@ Populations/base entière non identiques, aucune conservation atomique globale d
 Preuve P35 `client518-prior-rows-conservation-received.json`.
 Fenêtre complète 58 réponses, 0 HTTP ≥500/exception, huit
 net::ERR_ABORTED conservés ; DOM 331 ms/titre 7 057 ms pilote compris, pas SLO.
-Build reçu avant la dernière prose « Quoi de neuf 518 » ; note finale validée par
+Limite de la recette locale : build antérieur à la dernière prose « Quoi de neuf 518 » ; note finale validée par
 14 tests, mais son rendu natif non recetté sur ce build. DEFAULT 4 937/466 et PG 500/30
 reçus en reprise ; cinq contrôles finaux verts : typage, deux lints sans erreur
 (24 avertissements historiques chacun), cycles zéro, gouvernance 1 671/169.
 Premiers refus de mocks de hook, assertion nullable de test et ENOTEMPTY conservés ;
-cache `.next` déplacé réversiblement avant build réussi. CI/image/runtime 518 toujours ouverts. Preuves
+cache `.next` déplacé réversiblement avant build réussi. Limites locales historiques
+conservées. 518 livrée : source `290aa20c`, digest
+`ca4ab7e0562a696d5f2b532b872d31e2bcc111a9df7e42c3256410c7165e25d1`, runtime reçu
+à 13:15 UTC ; CI DEFAULT 4 937/PG 500 verts. Conservation 67 sources/1 041 actifs/
+huit piliers/trois enfants/six paiements reçue séparément, pas snapshot atomique ;
+mêmes volumes/relais/90s, OpenRouter absent. Attentes techniques 518 closes.
+Preuves P23 `production518-received.json`, `production518-data-preserved.json` ;
 P35 `client518-native-local.json`, `client518-local-received.json`.
-Après livraison 518 : raccorder commutateur/résolveur existants aux pages de piliers,
+Reprise après livraison 518 : raccorder commutateur/résolveur existants aux pages de piliers,
 qualifier les 15 usages pays et recevoir deux marchés/décisions/équipes/droits/preuves
 indépendants, sans copie de Strategy ni nouvelle taxonomie ; [plan LB03](RESIDUAL-DEBT.md).
 Les défauts de raccord pays et de fidélité SPAWT restent ouverts, pas corrigés
@@ -392,7 +444,7 @@ par cette liaison Client : commutateur/hook sans lecteur actif repéré, hérita
 entier intentionnel ; pré-lancement/zéros non mesurés et 160/200 latéral ambigus.
 Reprise LB03/FIDÉLITÉ existants avant Oracle, dont 35 COMPLETE SPAWT historiques et
 zéro section FRC ne reçoivent aucun des six stades. [Plan](RESIDUAL-DEBT.md).
-Enrichissement documentaire déjà reçu en production, distinct du code candidat :
+Enrichissement documentaire déjà reçu en production, distinct du correctif 519 :
 42 champs manquants indexés/enregistrés/relus via amendements gouvernés existants
 (Bonnet Rouge 12, Peak 12, Belle Hollandaise 18), tous INFERRED, pas HUMAN ; valeurs
 antérieures et SPAWT conservées. P35 `adve518-fields-received.json`. Aucune adoption

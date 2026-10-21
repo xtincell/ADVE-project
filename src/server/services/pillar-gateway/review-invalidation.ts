@@ -16,4 +16,8 @@ export async function markPillarsStale(client: Prisma.TransactionClient, strateg
   await client.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${strategyId} FOR UPDATE`;
   await client.pillar.updateMany({ where: { strategyId, key: { in: normalized } }, data: { staleAt: new Date() } });
   if (normalized.includes("s")) await withdrawSynthesisReview(client, strategyId);
+  // Documentary corrections use this lifecycle without writing pillar content.
+  // Their last deliverable must be invalidated in the same transaction too.
+  const { markAllSectionsStale } = await import("@/server/services/oracle-section");
+  await markAllSectionsStale(strategyId, client);
 }
