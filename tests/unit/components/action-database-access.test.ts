@@ -8,8 +8,8 @@ const fixture = vi.hoisted(() => ({ select: vi.fn(), sync: vi.fn(), propose: vi.
 vi.mock("@/lib/trpc/client", () => ({ trpc: {
   useUtils: () => ({ pillar: { get: { invalidate: vi.fn() }, assess: { invalidate: vi.fn() }, readiness: { invalidate: vi.fn() } } }),
   actions: {
-    summary: { useQuery: () => ({ data: { total: 1, selectedCount: 0, byTouchpoint: {} }, refetch: vi.fn() }) },
-    byStrategy: { useQuery: () => ({ data: [{ id: "one", title: "Action existante", selected: false, status: "PROPOSED", budgetMin: fixture.budget, budgetCurrency: "XAF", metadata: fixture.metadata }], refetch: vi.fn() }) },
+    summary: { useQuery: () => ({ data: { total: 1, selectedCount: 0, currentCatalogueCount: 0, currentSelectedCount: 0, outsideCatalogueSelectedCount: 0, byTouchpoint: {} }, refetch: vi.fn() }) },
+    byStrategy: { useQuery: () => ({ data: [{ id: "one", title: "Action existante", selected: false, inCurrentCatalogue: false, selectedForCurrentPlan: false, status: "PROPOSED", budgetMin: fixture.budget, budgetCurrency: "XAF", metadata: fixture.metadata }], refetch: vi.fn() }) },
     sync: { useMutation: () => ({ mutate: fixture.sync, isPending: false }) },
     setSelected: { useMutation: () => ({ mutate: fixture.select, isPending: false }) },
     propose: { useMutation: () => ({ mutate: fixture.propose, isPending: false }) },
@@ -51,7 +51,7 @@ describe("action catalogue — visible calendar permission", () => {
 
   it("allows the owner's choice separately from the operator refresh", () => {
     render(React.createElement(ActionDatabasePanel, { strategyId: "fixture", canWrite: true }));
-    fireEvent.click(screen.getByTitle("Retenir pour la roadmap"));
+    fireEvent.click(screen.getByTitle("Retenir pour le plan"));
     expect(fixture.select).toHaveBeenCalledWith({ strategyId: "fixture", actionId: "one", selected: true });
     expect(screen.queryByRole("button", { name: "Synchroniser" })).toBeNull();
   });
