@@ -263,6 +263,7 @@ export interface ContexteDefiSection {
   } | null;
   personas: Array<{
     nom: string;
+    actorRoles?: string[];
     trancheAge: string;
     csp: string;
     insightCle: string;
@@ -386,6 +387,7 @@ export interface PlanActivationSection {
 }
 
 export interface ProductionLivrablesSection {
+  proposedAssets?: Array<{ asset: string; type: string; usage: string }>;
   missions: Array<{
     title: string;
     status: string;
@@ -414,6 +416,8 @@ export interface MediasDistributionSection {
     name: string;
     category: string;
     budget: number | null;
+    budgetLabel?: string | null;
+    proposed?: boolean;
     driverName: string | null;
   }>;
 }
@@ -462,6 +466,7 @@ export interface BudgetSection {
     cac: number | null;
     ltv: number | null;
     ltvCacRatio: number | null;
+    commentaire?: string | null;
     margeNette: number | null;
     roiEstime: number | null;
     budgetCom: number | null;
@@ -593,6 +598,15 @@ export interface ConditionsEtapesSection {
 // ─── NEW SECTIONS (v3 Oracle enrichment) ────────────────────────────────────
 
 export interface PropositionValeurSection {
+  valueExchanges?: Array<{
+    actor: string;
+    actorRoles: string[];
+    productNames: string[];
+    valueToBrand: string[];
+    valueToActor: string[];
+    actorCosts: string[];
+    dependencyConditions: string[];
+  }>;
   pricing: { strategy: string; ladderDescription: string; competitorComparison: string | null } | null;
   proofPoints: string[];
   guarantees: string[];
@@ -601,6 +615,7 @@ export interface PropositionValeurSection {
     cac: number | null;
     ltv: number | null;
     ltvCacRatio: number | null;
+    commentaire?: string | null;
   } | null;
 }
 
@@ -609,6 +624,7 @@ export interface ExperienceEngagementSection {
   rituels: Array<{ nom: string; frequence: string; description: string; adoptionScore: number | null }>;
   devotionPathway: {
     currentDistribution: Record<string, number>;
+    score?: number | null;
     conversionTriggers: Array<{ from: string; to: string; trigger: string }>;
     barriers: string[];
   } | null;
@@ -620,7 +636,7 @@ export interface SwotInterneSection {
   faiblesses: string[];
   menaces: string[];
   opportunites: string[];
-  mitigations: Array<{ risque: string; action: string; priorite: string }>;
+  mitigations: Array<{ risque: string; action: string; priorite: string; owner?: string; timeline?: string; investment?: string }>;
   resilienceScore: number | null;
   artemisResults: Array<{ framework: string; score: number | null; prescriptions: string[] }>;
 }
@@ -629,7 +645,7 @@ export interface SwotExterneSection {
   marche: { tam: string | null; sam: string | null; som: string | null; growth: string | null };
   concurrents: Array<{ nom: string; forces: string[]; faiblesses: string[]; partDeMarche: string | null }>;
   tendances: string[];
-  brandMarketFit: { score: number | null; gaps: string[]; opportunities: string[] } | null;
+  brandMarketFit: { score: number | null; scoreMax?: number | null; provenance?: string; gaps: string[]; opportunities: string[] } | null;
   validationTerrain: string | null;
 }
 
@@ -704,6 +720,7 @@ export interface StrategyPresentationDocument {
     brandName: string;
     operatorName: string | null;
     generatedAt: string;
+    stalePillars?: string[];
     vector: AdvertisVector;
     classification: BrandClassification;
   };

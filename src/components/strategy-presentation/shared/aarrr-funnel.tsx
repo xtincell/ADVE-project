@@ -17,7 +17,7 @@ export function AARRRFunnel({ data }: AARRRFunnelProps) {
     <div className="space-y-3">
       <h4 className="text-sm font-semibold text-foreground-secondary">Funnel AARRR</h4>
       <div className="space-y-2">
-        {STAGES.map(({ key, label, color, width }) => {
+        {STAGES.map(({ key, label, color }) => {
           const raw = data?.[key];
           // Support multiple formats:
           // 1. string: "CAC cible <2000 FCFA..." (direct from pillar E)
@@ -26,31 +26,31 @@ export function AARRRFunnel({ data }: AARRRFunnelProps) {
           let strategy = "";
           let metric = "";
           if (typeof raw === "string") {
-            strategy = raw.length > 100 ? raw.slice(0, 100) + "..." : raw;
+            strategy = raw;
           } else if (raw && typeof raw === "object") {
             const obj = raw as Record<string, unknown>;
             strategy = typeof obj.strategie === "string" ? obj.strategie : "";
             if (typeof obj.target === "number") {
-              metric = `${obj.current ?? 0} / ${obj.target}`;
+              metric = `${typeof obj.current === "number" ? obj.current : "à mesurer"} / ${obj.target}`;
             }
           }
 
           return (
             <div key={key} className="flex items-center gap-3">
-              <div className="w-full" style={{ maxWidth: width }}>
+              <div className="w-full">
                 <div
-                  className="flex items-center justify-between rounded-lg px-4 py-2.5"
+                  className="flex flex-col items-start gap-2 rounded-lg px-4 py-2.5"
                   style={{ background: `${color}20`, borderLeft: `3px solid ${color}` }}
                 >
                   <span className="text-sm font-semibold" style={{ color }}>{label}</span>
-                  <div className="flex items-center gap-2 max-w-[65%]">
+                  <div className="flex w-full flex-col items-start gap-2">
                     {metric && (
                       <span className="shrink-0 rounded bg-background px-1.5 py-0.5 text-[10px] font-bold text-foreground-secondary">
                         {metric}
                       </span>
                     )}
                     {strategy && (
-                      <span className="truncate text-right text-xs text-foreground-secondary">
+                      <span className="whitespace-pre-line text-sm text-foreground-secondary">
                         {strategy}
                       </span>
                     )}

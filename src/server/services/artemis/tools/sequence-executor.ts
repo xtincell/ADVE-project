@@ -583,15 +583,10 @@ async function executeCalcStep(
     return executeSectionDraftCalc(ref, strategyId);
   }
 
-  // Dynamic import — calculators may not exist yet (Phase 6)
-  try {
-    const calculators = await import("@/server/services/glory-tools/calculators");
-    const calcFn = (calculators as unknown as Record<string, (ctx: SequenceContext) => Record<string, unknown>>)[ref];
-    if (calcFn) return calcFn(context);
-  } catch {
-    // calculators.ts not yet built — return empty
-  }
-  return { _calcNotImplemented: ref };
+  const { calculators } = await import("@/server/services/glory-tools/calculators");
+  const calcFn = calculators[ref];
+  if (!calcFn) throw new Error(`Calculateur inconnu : ${ref}`);
+  return calcFn(context);
 }
 
 /**

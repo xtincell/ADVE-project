@@ -68,7 +68,9 @@ function pdfText(value: string): string {
     .replace(/[→⇒⟶]/g, " vers ")
     .replace(/[←⇐⟵]/g, " depuis ")
     .replace(/[↔⇔⟷]/g, " — aller-retour — ")
-    .replace(/↑/g, " hausse ").replace(/↓/g, " baisse ");
+    .replace(/↑/g, " hausse ").replace(/↓/g, " baisse ")
+    .replace(/≥/g, " supérieur ou égal à ").replace(/≤/g, " inférieur ou égal à ")
+    .replace(/≠/g, " différent de ").replace(/[−–]/g, "-");
 }
 
 function isEmptyValue(v: unknown): boolean {
@@ -192,7 +194,9 @@ async function loadOracle(strategyId: string, opts: ExportOpts): Promise<OracleS
     sections.push({
       key: meta.id,
       title: `${meta.number} — ${meta.title}`,
-      body: sectionDataToBody(data),
+      body: [meta.id === "executive-summary" && (doc.meta.stalePillars?.length ?? 0) > 0
+        ? `À réactualiser : ${doc.meta.stalePillars!.join(", ")}. Les sources ont évolué ; des analyses antérieures peuvent subsister.` : "",
+      sectionDataToBody(data)].filter(Boolean).join("\n\n"),
     });
   }
   return sections;

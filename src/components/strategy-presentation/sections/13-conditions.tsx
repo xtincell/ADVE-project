@@ -43,14 +43,8 @@ export function ConditionsEtapes({ data }: Props) {
         </div>
       )}
       <div className="rounded-xl border border-border bg-background/50 p-4">
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-foreground-muted">Conditions generales</h3>
-        <ul className="space-y-1 text-sm text-foreground-secondary">
-          <li>Validite de la proposition : 30 jours a compter de la date d'emission</li>
-          <li>Propriete intellectuelle : creations cedees au client apres paiement integral</li>
-          <li>Modifications hors scope : facturees selon barème</li>
-          <li>Annulation : travaux realises factures au prorata</li>
-          <li>Delais : conditionnes au respect des delais de validation client</li>
-        </ul>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-foreground-muted">Conditions contractuelles</h3>
+        <p className="text-sm text-foreground-secondary">{data.contracts.length > 0 ? "Les contrats enregistrés ci-dessus portent leurs propres conditions. Cette synthèse n’ajoute aucune clause." : "Aucun contrat enregistré. Durée de validité, conditions financières et droits restent à convenir dans le contrat."}</p>
       </div>
       <div className="rounded-xl border border-orange-900/30 bg-orange-950/10 p-4 text-center">
         <p className="text-sm text-foreground-secondary">

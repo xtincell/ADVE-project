@@ -76,24 +76,27 @@ export default function PropositionPage() {
     { strategyId: strategyId ?? "" },
     { enabled: !!strategyId, refetchOnWindowFocus: false },
   );
+  const readiness = trpc.pillar.readiness.useQuery(
+    { strategyId: strategyId ?? "" }, { enabled: !!strategyId, refetchOnWindowFocus: true },
+  );
 
   const adveAllComplete = useMemo(() => {
     const p = maturity.data?.pillars as Record<string, { currentStage?: string }> | undefined;
     if (!p) return false;
     return (ADVE_STORAGE_KEYS).every((k) => {
       const stage = p[k]?.currentStage;
-      return stage === "ENRICHED" || stage === "COMPLETE";
+      return (stage === "ENRICHED" || stage === "COMPLETE") && readiness.data?.byPillar[k.toUpperCase() as "A" | "D" | "V" | "E"]?.stale === false;
     });
-  }, [maturity.data]);
+  }, [maturity.data, readiness.data]);
 
   const rtisReady = useMemo(() => {
     const p = maturity.data?.pillars as Record<string, { currentStage?: string }> | undefined;
     if (!p) return false;
     return (["r", "t", "i", "s"] as const).every((k) => {
       const stage = p[k]?.currentStage;
-      return stage === "ENRICHED" || stage === "COMPLETE";
+      return (stage === "ENRICHED" || stage === "COMPLETE") && readiness.data?.byPillar[k.toUpperCase() as "R" | "T" | "I" | "S"]?.stale === false;
     });
-  }, [maturity.data]);
+  }, [maturity.data, readiness.data]);
 
   // "Oracle prêt à compiler" = ADVE ENRICHED+ ET RTIS ENRICHED+. RTIS seul ne
   // suffit pas : le gate ORACLE_ENRICH veto si ADVE est sous-ENRICHED, et
@@ -181,7 +184,7 @@ export default function PropositionPage() {
       key: "oracle", title: "Votre diagnostic",
       ready: oracleReadyToCompile,
       body: oracleReadyToCompile
-        ? `${completeSections} de ses ${totalSections} sections sont complètes — le document est prêt à être ouvert et partagé.`
+        ? "Les données permettent de préparer le document. Sa rédaction et sa relecture restent à recevoir."
         : "Disponible dès que vos fondations et votre lecture stratégique sont en place.",
     },
   ];
@@ -209,9 +212,7 @@ export default function PropositionPage() {
             contiennent tout ce qu'on en attend), pas celui des générations
             réussies — les deux étaient appelés « assemblé » indifféremment. */}
         <h2 className="ck-oracle-hero__h">
-          {completeSections === totalSections
-            ? <>Votre diagnostic est <span className="hl">complet</span> — les {totalSections} sections disent tout ce qu&apos;elles ont à dire.</>
-            : <><span className="hl">{completeSections}</span> de vos {totalSections} sections sont complètes — {totalSections - completeSections} restent à approfondir.</>}
+          <span className="hl">{writtenSections}</span> de vos {totalSections} sections sont rédigées et à jour.
         </h2>
         {staleSections > 0 && (
           <p className="ck-oracle-hero__p">
@@ -220,7 +221,7 @@ export default function PropositionPage() {
           </p>
         )}
         <p className="ck-oracle-hero__p">
-          Chaque section est un volet de conseil rédigé à partir de vos piliers de marque. Vous pouvez l&apos;ouvrir, l&apos;exporter et le partager à tout moment.
+          Les sections sont préparées à partir de vos données de marque. Relisez le contenu produit avant de le partager.
           {isAssembling ? " Rédaction en cours — les sections se mettent à jour en temps réel." : ""}
         </p>
         {/* Un seul jeu de compteurs sur la page. Il portait « Complètes /
@@ -228,7 +229,7 @@ export default function PropositionPage() {
             Y partielles / Z vides » cinq centimètres plus bas, puis encore
             « X complets / Y ratés / Z périmés » dans le panneau. */}
         <div className="ck-oracle-hero__stats">
-          <div><span className="k">Rédigées</span><b className="text-success">{writtenSections}/{totalSections}</b></div>
+          <div><span className="k">Rédigées et à jour</span><b className="text-success">{writtenSections}/{totalSections}</b></div>
           <div><span className="k">Nourries par vos piliers</span><b>{completeSections}/{totalSections}</b></div>
           <div><span className="k">À approfondir</span><b>{partialSections + emptySections}</b></div>
         </div>
@@ -240,9 +241,9 @@ export default function PropositionPage() {
             en matière. Un chiffre qui ne dit pas ce qu'il compte est une boîte
             noire, même juste. */}
         <p className="mt-2 text-xs text-foreground-muted">
-          « Rédigées » : les sections que le moteur a produites. « Nourries par vos piliers » :
-          celles dont la matière vient de vos fondations — les autres sont écrites, mais
-          gagneront à être enrichies. Ouvrez une section pour lire son contenu.
+          « Rédigées et à jour » compte les résultats enregistrés depuis la dernière évolution de vos données.
+          « Nourries par vos piliers » compte les sections dont les données attendues sont renseignées ;
+          cela ne signifie pas qu&apos;elles sont déjà rédigées ou validées. Ouvrez une section pour lire son contenu.
         </p>
       </div>
 

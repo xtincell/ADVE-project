@@ -9,6 +9,16 @@ export function ProductionLivrables({ data }: Props) {
   const layers = Object.entries(data.gloryOutputsByLayer).filter(([, arr]) => arr.length > 0);
   return (
     <div className="space-y-6">
+      {(data.proposedAssets?.length ?? 0) > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-foreground-secondary">Livrables proposés</h3>
+          <p className="mb-3 text-sm text-foreground-secondary">Possibilités du catalogue de marque, à choisir et préparer. Leur présence ne signifie pas qu’elles sont produites.</p>
+          <DataTable headers={["Proposition", "Type", "Usage"]} rows={data.proposedAssets!.map(a => [a.asset, a.type, a.usage])} />
+        </div>
+      )}
+      {data.missions.length === 0 && layers.length === 0 && (
+        <p className="text-sm text-foreground-secondary">Aucune mission ni sortie de production enregistrée pour ce dossier.</p>
+      )}
       {data.missions.length > 0 && (
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Missions</h3>
@@ -25,7 +35,7 @@ export function ProductionLivrables({ data }: Props) {
       )}
       {layers.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Outputs Glory par layer</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Productions enregistrées par spécialité</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             {layers.map(([layer, outputs]) => (
               <div key={layer} className="rounded-xl border border-border bg-background/50 p-4">

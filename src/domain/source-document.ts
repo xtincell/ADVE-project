@@ -13,6 +13,7 @@ export const DocumentEditionInputSchema = z.object({
   family: z.string().trim().min(1).max(180), kind: z.enum(DOCUMENT_KINDS),
   label: z.string().trim().min(1).max(120),
   status: z.enum(["PROPOSED", "REFERENCE", "ARCHIVED"]).default("PROPOSED"),
+  tags: z.array(z.string().trim().min(1).max(80)).max(24).optional(),
   changeSummary: z.string().trim().min(1).max(4000),
   sourceUrl: z.string().url().refine(v => /^https?:\/\//.test(v)).optional(),
   sourceRevision: z.string().max(300).optional(),
@@ -25,8 +26,23 @@ export const DocumentEditionSchema = DocumentEditionInputSchema.omit({ previous:
   previousSourceId: z.string().optional(), beforeSourceId: z.string().optional(), recordedAt: z.string().datetime(),
   decisions: z.array(z.object({ by: z.string(), at: z.string().datetime(), status: z.enum(["REFERENCE", "ARCHIVED"]), reason: z.string() })).optional(),
   clarifications: z.array(z.object({ by: z.string(), at: z.string().datetime(), text: z.string().trim().min(1).max(4000) })).optional(),
+  filingCorrections: z.array(z.object({ by: z.string(), at: z.string().datetime(), reason: z.string(),
+    previousFamily: z.string(), previousKind: z.enum(DOCUMENT_KINDS), previousLabel: z.string(), previousStatus: z.string(),
+    previousSourceId: z.string().optional(), beforeSourceId: z.string().optional() })).optional(),
 });
 export type DocumentEdition = z.infer<typeof DocumentEditionSchema>;
+/** Descriptive filing is separate from selecting an asset or adopting a plan. */
+export const SourceAssetClassificationSchema = DocumentEditionInputSchema.pick({ family: true, kind: true, label: true, status: true, tags: true });
+/** Only creative/technical resource filing can be corrected without a business decision. */
+export const ResourceDocumentFilingSchema = SourceAssetClassificationSchema.safeExtend({
+  kind: z.enum(["TECHNICAL", "ASSET"]), reason: z.string().trim().min(1).max(4000),
+});
+export const SourceAssetClassificationInputSchema = z.object({
+  expectedOriginalHash: SourceReceiptSchema.shape.contentHash,
+  expectedClassificationVersion: z.number().int().nonnegative(),
+  classification: SourceAssetClassificationSchema,
+  reason: z.string().trim().min(1).max(4000),
+});
 export const DocumentRepresentationInputSchema = z.object({
   canonical: SourceReceiptSchema,
   reason: z.string().trim().min(1).max(4000),
@@ -68,6 +84,7 @@ export function documentContext(rawData: unknown): string {
   const doc = documentEdition(rawData);
   if (!doc) return "";
   return `Document : ${doc.family} · ${doc.label} · ${DOCUMENT_STATUS_LABEL[doc.status]}. `
+    + (["TECHNICAL", "ASSET"].includes(doc.kind) ? "Ressource technique ou de création : ne prouve ni résultat commercial, ni publication, ni décision de marque. " : "")
     + (doc.status === "PROPOSED" ? "HYPOTHÈSE NON VALIDÉE PAR L’ÉQUIPE : examiner cette piste sans la présenter comme une décision adoptée. " : "Une référence de travail ne certifie pas ses assertions. ")
     + (doc.sourceUrl ? `Source : ${doc.sourceUrl}. ` : "")
     + (doc.clarifications?.length ? `Précisions ultérieures (sans changement d’usage) : ${doc.clarifications.map(c => `${c.at} : ${c.text}`).join("\n")} ` : "");

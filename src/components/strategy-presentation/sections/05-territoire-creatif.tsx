@@ -1,6 +1,7 @@
 "use client";
 
 import type { TerritoireCreatifSection } from "@/server/services/strategy-presentation/types";
+import { getFieldLabel } from "@/lib/types/field-labels";
 import { KvPromptCard } from "../shared/kv-prompt-card";
 
 interface Props { data: TerritoireCreatifSection }
@@ -62,25 +63,17 @@ export function TerritoireCreatif({ data }: Props) {
 
 /** Rend une valeur arbitraire proprement — jamais de JSON.stringify brut. */
 function renderValue(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  if (Array.isArray(value)) {
-    return value
-      .map((v) => (typeof v === "string" || typeof v === "number" ? String(v) : v && typeof v === "object" ? Object.values(v as object).filter((x) => typeof x === "string").join(" — ") : ""))
-      .filter(Boolean)
-      .join(", ");
-  }
-  if (value && typeof value === "object") {
-    return Object.entries(value as Record<string, unknown>)
-      .filter(([k, v]) => !k.startsWith("_") && (typeof v === "string" || typeof v === "number"))
-      .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`)
-      .slice(0, 4)
-      .join(" · ");
-  }
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  if (typeof value === "boolean") return value ? "Oui" : "Non";
+  if (Array.isArray(value)) return value.map(renderValue).filter(Boolean).join("\n");
+  if (value && typeof value === "object") return Object.entries(value as Record<string, unknown>)
+    .filter(([k]) => !k.startsWith("_"))
+    .map(([k, v]) => { const text = renderValue(v); return text ? `${getFieldLabel(k)} : ${text}` : ""; })
+    .filter(Boolean).join("\n");
   return "";
 }
 
-function GloryBlock({ data }: { data: Record<string, unknown> }) {
+export function GloryBlock({ data }: { data: Record<string, unknown> }) {
   const entries = Object.entries(data)
     .filter(([k, v]) => !k.startsWith("_") && v != null && v !== "")
     .map(([k, v]) => [k, renderValue(v)] as const)
@@ -88,10 +81,10 @@ function GloryBlock({ data }: { data: Record<string, unknown> }) {
   if (entries.length === 0) return null;
   return (
     <div className="space-y-3 rounded-xl border border-border bg-background/50 p-4">
-      {entries.slice(0, 8).map(([key, value]) => (
+      {entries.map(([key, value]) => (
         <div key={key}>
-          <p className="text-xs font-semibold uppercase text-foreground-muted">{key.replace(/_/g, " ")}</p>
-          <p className="mt-0.5 text-sm text-foreground-secondary">{value}</p>
+          <p className="text-xs font-semibold uppercase text-foreground-muted">{getFieldLabel(key)}</p>
+          <p className="mt-0.5 whitespace-pre-line text-sm text-foreground-secondary">{value}</p>
         </div>
       ))}
     </div>
@@ -102,16 +95,15 @@ function MiniGloryCard({ title, data }: { title: string; data: Record<string, un
   const summary = Object.entries(data)
     .filter(([k, v]) => !k.startsWith("_") && v != null && v !== "")
     .map(([k, v]) => [k, renderValue(v)] as const)
-    .filter(([, v]) => v !== "")
-    .slice(0, 3);
+    .filter(([, v]) => v !== "");
 
   return (
     <div className="rounded-xl border border-border bg-background/50 p-4">
       <h4 className="mb-2 text-xs font-semibold uppercase text-accent">{title}</h4>
       {summary.map(([key, value]) => (
         <div key={key} className="mt-1">
-          <span className="text-xs text-foreground-muted">{key.replace(/_/g, " ")}: </span>
-          <span className="text-xs text-foreground-secondary">{value}</span>
+          <span className="text-xs text-foreground-muted">{getFieldLabel(key)}: </span>
+          <span className="whitespace-pre-line text-sm text-foreground-secondary">{value}</span>
         </div>
       ))}
     </div>

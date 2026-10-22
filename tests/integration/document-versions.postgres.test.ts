@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 vi.mock("@/server/services/oracle-section", () => ({ markAllSectionsStale: vi.fn(async () => ({})) }));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
 import { db } from "@/lib/db";
-import { registerDocumentEdition, decideDocumentEdition } from "@/server/services/ingestion-pipeline/document-versions";
+import { registerDocumentEdition, decideDocumentEdition, correctResourceDocumentFiling } from "@/server/services/ingestion-pipeline/document-versions";
 import { documentEdition } from "@/domain/source-document";
 import { sourceFingerprint, loadBrandSources, assertCurrentSourceReceipts, resolveBrandSource } from "@/server/services/ingestion-pipeline/source-usage";
 let brand: string, foreign: string, actor: string;
@@ -63,4 +63,19 @@ describe.sequential("document editions on real PostgreSQL", () => {
     expect(documentEdition(current.rawData)?.decisions?.[0]?.by).toBe(actor);
     await expect(db.$transaction(tx => assertCurrentSourceReceipts(tx, brand, [{ sourceId: old.id, contentHash: sourceFingerprint(old) }]))).rejects.toThrow("SOURCE_CHANGED");
   });
+  it("corrects only descriptive resource filing with a stale-write fence and retained source history", async () => {
+    const r = await db.brandDataSource.create({ data: { strategyId: brand, sourceType: "FILE", fileName: "README.txt", rawContent: "Ressource de création de recette.", processingStatus: "EXTRACTED", rawData: { _original: { retainedFixture: true } } } });
+    await db.$transaction(tx => registerDocumentEdition(tx, { id: r.id, expectedSourceHash: sourceFingerprint(r), document: {
+      family: "README", kind: "ASSET", label: "v1", status: "PROPOSED", changeSummary: "Classement initial de recette." } }));
+    const before = await db.brandDataSource.findUniqueOrThrow({ where: { id: r.id } });
+    const input = { id: r.id, expectedSourceHash: sourceFingerprint(before), userId: actor, filing: {
+      family: "Carnet — README", kind: "ASSET" as const, label: "v1", status: "PROPOSED" as const, reason: "Même nom, autre ressource. Pas de décision métier." } };
+    const after = await db.$transaction(tx => correctResourceDocumentFiling(tx, input));
+    expect(after.rawContent).toBe(before.rawContent); expect(after.rawData).toMatchObject({ _original: { retainedFixture: true } });
+    expect(documentEdition(after.rawData)).toMatchObject({ family: "Carnet — README", status: "PROPOSED", edition: 1, filingCorrections: [{ previousFamily: "README", by: actor }] });
+    await expect(db.$transaction(tx => correctResourceDocumentFiling(tx, input))).rejects.toThrow("SOURCE_CHANGED");
+    const business = await db.brandDataSource.findUniqueOrThrow({ where: { id: ids[1]! } });
+    await expect(db.$transaction(tx => correctResourceDocumentFiling(tx, { ...input, id: business.id, expectedSourceHash: sourceFingerprint(business) }))).rejects.toThrow("réservée aux ressources");
+  });
+
 });

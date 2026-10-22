@@ -1,5 +1,6 @@
 import { FIELD_PROVENANCE_LABEL, fieldStatusFor, isFieldProvenance } from "@/domain/field-provenance";
 import { wrapUntrusted } from "./untrusted-content";
+import { BRAND_ACTOR_CONTEXT_NOTICE } from "@/domain/brand-actors";
 
 /** Shorten prose leaves; retain every record, identifier and numeric value. */
 export function projectForContext(value: unknown, leafMax: number): unknown {
@@ -33,5 +34,6 @@ export function serializePillar(key: string, content: unknown, fieldStatus?: (fi
   // compression, routing and cost remain the existing gateway's responsibility.
   const max = 128_000;
   if (json.length > max) throw new Error(`PILLAR_CONTEXT_TOO_LARGE: ${key} dépasse la fenêtre structurée (${json.length}/${max}).`);
-  return wrapUntrusted(`PILIER ${key}`, json, { max });
+  const notice = ["D", "V"].includes(key.toUpperCase()) ? `${BRAND_ACTOR_CONTEXT_NOTICE}\n` : "";
+  return notice + wrapUntrusted(`PILIER ${key}`, json, { max });
 }

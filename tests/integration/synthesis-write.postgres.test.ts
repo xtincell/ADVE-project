@@ -39,7 +39,7 @@ import { composedSynthesis } from "../fixtures/synthesis";
 import { generateAndPersistRtisDraft } from "@/server/services/quick-intake/rtis-draft";
 import { executeNextStep, type OrchestrationPlan } from "@/server/services/mestor/hyperviseur";
 import { executeRTISCascade } from "@/server/services/rtis-protocols";
-import { actualizePillar } from "@/server/services/mestor/rtis-cascade";
+import { actualizePillar, runRTISCascade } from "@/server/services/mestor/rtis-cascade";
 
 const brands: string[] = [];
 let owner: string, operatorId: string;
@@ -120,6 +120,60 @@ describe("derived RTIS snapshots replace obsolete work through both existing ent
     expect(archived.content).toEqual(previous);
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
+  it("refuses a Track result when a source changed during the provider call", async () => {
+    const f = await fixture();
+    const a = await db.pillar.create({ data: { strategyId: f.strategy.id, key: "a", content: { nomMarque: "Before" } } });
+    const t = await db.pillar.create({ data: { strategyId: f.strategy.id, key: "t", content: { retainedSource: "Before" } } });
+    draftProvider.track.mockImplementationOnce(async () => {
+      const changed = await writePillar({ strategyId: f.strategy.id, pillarKey: "a",
+        operation: { type: "SET_FIELDS", fields: [{ path: "nomMarque", value: "Concurrent correction" }] },
+        author: { system: "MESTOR", reason: "Synthetic concurrent source change" } });
+      expect(changed.success, changed.error).toBe(true);
+      return { pillarKey: "t", content: refreshedTrack(), confidence: 0 };
+    });
+    const result = await actualizePillar(f.strategy.id, "T");
+    expect(result).toMatchObject({ updated: false });
+    expect(result.error).toContain("PILLAR_SOURCE_VERSION_CONFLICT");
+    expect(await db.pillar.findUniqueOrThrow({ where: { id: t.id } })).toMatchObject({ currentVersion: 1, content: { retainedSource: "Before" } });
+    expect(await db.pillar.findUniqueOrThrow({ where: { id: a.id } })).toMatchObject({ currentVersion: 2 });
+    expect(await db.pillarVersion.count({ where: { pillarId: t.id } })).toBe(0);
+  });
+
+  it("stops the cascade after a failed Track without replacing the existing I or S", async () => {
+    const f = await fixture();
+    const before = await db.pillar.findMany({ where: { strategyId: f.strategy.id, key: { in: ["i", "s"] } }, orderBy: { key: "asc" } });
+    draftProvider.callLLM.mockResolvedValueOnce({ text: JSON.stringify({ riskScore: 25 }) });
+    // The provider's empty Track is an explicit failure, not permission to use an older T.
+    const result = await runRTISCascade(f.strategy.id);
+    expect(result.results.map(r => r.pillarKey)).toEqual(["R", "T"]);
+    expect(result.results[1]).toMatchObject({ updated: false });
+    const after = await db.pillar.findMany({ where: { strategyId: f.strategy.id, key: { in: ["i", "s"] } }, orderBy: { key: "asc" } });
+    // R's successful change correctly invalidates downstream freshness, while
+    // the failed T must never replace their previous content or versions.
+    expect(after.map(p => ({ content: p.content, version: p.currentVersion })))
+      .toEqual(before.map(p => ({ content: p.content, version: p.currentVersion })));
+    expect(after.every(p => p.staleAt !== null)).toBe(true);
+  });
+
+  it("rolls back I and its version when its operational projection fails", async () => {
+    const f = await fixture();
+    const before = await db.pillar.findUniqueOrThrow({ where: { id: f.i.id } });
+    const generator = await import("@/server/services/mestor/i-pillar-sequenced");
+    const materializer = await import("@/server/services/artemis/action-db/materializer");
+    const gen = vi.spyOn(generator, "generateICatalogueSequenced").mockResolvedValueOnce({
+      catalogueParCanal: { DIGITAL: [{ id: randomUUID(), action: "Current synthetic proposal", format: "Text", objectif: "Fixture" }] },
+      totalActions: 1, assetsProduisibles: [], activationsPossibles: [], formatsDisponibles: [],
+    });
+    const projection = vi.spyOn(materializer, "syncBrandActionsFromBlob").mockRejectedValueOnce(new Error("SYNTHETIC_PROJECTION_REFUSED"));
+    try {
+      const result = await actualizePillar(f.strategy.id, "I");
+      expect(result).toMatchObject({ updated: false });
+      expect(result.error).toContain("SYNTHETIC_PROJECTION_REFUSED");
+      expect(await db.pillar.findUniqueOrThrow({ where: { id: f.i.id } })).toEqual(before);
+      expect(await db.pillarVersion.count({ where: { pillarId: f.i.id } })).toBe(0);
+    } finally { gen.mockRestore(); projection.mockRestore(); }
+  });
+
   it("the shared writer still protects a human hypothesis list from a generated replacement", async () => {
     const f = await fixture();
     const previous = { ...refreshedTrack(), hypothesisValidation: [{ hypothesis: "Human legacy without id", status: "HYPOTHESIS" }],
@@ -437,4 +491,23 @@ describe("the shared S writer conserves snapshots and human review", () => {
     expect(await db.process.count({ where: { strategyId: f.strategy.id } })).toBe(autoRecalculate ? 1 : 0);
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
+});
+
+it("Oracle transporte les données présentes et la péremption sans modifier les sources", async () => {
+  const f = await fixture();
+  await db.pillar.createMany({ data: [
+    { strategyId: f.strategy.id, key: "a", content: { secteur: "Restauration", equipeDirigeante: [{ nom: "Fondatrice documentaire", role: "Produit" }] } },
+    { strategyId: f.strategy.id, key: "v", content: { businessModel: "Accès gratuit déclaré", economicModels: [{ modele: "Services aux lieux envisagés" }] } },
+  ] });
+  await db.pillar.update({ where: { id: f.i.id }, data: { staleAt: new Date(), content: { assetsProduisibles: [{ asset: "Film proposé", type: "VIDEO", usage: "Acquisition" }] } } });
+  const before = await db.pillar.findMany({ where: { strategyId: f.strategy.id }, orderBy: { id: "asc" } });
+  const callsBefore = draftProvider.callLLM.mock.calls.length;
+  const { assemblePresentation } = await import("@/server/services/strategy-presentation");
+  const doc = await assemblePresentation(f.strategy.id);
+  expect(doc.meta.stalePillars).toContain("Innovation");
+  expect(doc.sections.contexteDefi.businessContext.businessModel).toBe("Accès gratuit déclaré");
+  expect(doc.sections.productionLivrables.proposedAssets?.[0]?.asset).toBe("Film proposé");
+  expect(doc.sections.equipe.equipeDirigeante[0]?.nom).toBe("Fondatrice documentaire");
+  expect(await db.pillar.findMany({ where: { strategyId: f.strategy.id }, orderBy: { id: "asc" } })).toEqual(before);
+  expect(draftProvider.callLLM.mock.calls.length).toBe(callsBefore);
 });

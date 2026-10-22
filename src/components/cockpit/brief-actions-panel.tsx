@@ -200,10 +200,10 @@ export function BriefActionsPanel() {
             </div>
           )}
 
-          {summary && summary.selectedCount > 0 ? (
+          {summary && summary.currentSelectedCount > 0 ? (
             <div className="mt-4 flex items-center gap-2 rounded-lg border border-accent/20 bg-accent/[0.04] px-3 py-2 text-2xs text-accent">
               <Star className="h-3.5 w-3.5 fill-accent" />
-              <span><strong>{summary.selectedCount}</strong> action(s) retenue(s) alimentent la roadmap (pilier&nbsp;S) — budget {fcfa(summary.totalSelectedBudget)}.</span>
+              <span><strong>{summary.currentSelectedCount}</strong> action(s) retenue(s) dans le catalogue courant — recalculez le plan pour y intégrer ces choix.</span>
             </div>
           ) : null}
         </div>

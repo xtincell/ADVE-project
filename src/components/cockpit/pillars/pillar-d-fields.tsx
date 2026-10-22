@@ -9,6 +9,7 @@
  */
 
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
+import { brandActorRoleLabels } from "@/domain/brand-actors";
 import {
   Section, ACard, EmptyBody, EmptyValue, TagRow, ObjCard, ProofList,
   isEmpty, asRec, asArr, str, makeStatusFor, type Rec,
@@ -55,6 +56,8 @@ function Personas({ items, status }: { items: unknown; status?: string }) {
                 {!isEmpty(p.devotionPotential) ? <span className="ck-d-persona__dev" data-lvl={str(p.devotionPotential)}>{str(p.devotionPotential)}</span> : null}
               </div>
               <div className="ck-d-persona__chips">
+                {brandActorRoleLabels(p.actorRoles).map(role => <span className="ck-fc__tag" data-tone="info" key={role}>{role}</span>)}
+                {brandActorRoleLabels(p.actorRoles).length === 0 ? <span className="ck-fc__tag" data-tone="neutral">Rôles à qualifier</span> : null}
                 {!isEmpty(p.lf8Dominant) ? <span className="ck-fc__tag" data-tone="info">LF8 · {str(p.lf8Dominant)}</span> : null}
                 {!isEmpty(p.tensionProfile) ? <span className="ck-fc__tag" data-tone="neutral">{str(p.tensionProfile)}</span> : null}
                 {(Array.isArray(p.schwartzValues) ? p.schwartzValues : []).map((s, j) => <span className="ck-fc__tag" data-tone="neutral" key={`sv${j}`}>{str(s)}</span>)}
@@ -273,7 +276,7 @@ export function PillarDFields({ content, certainty }: { content: Rec; certainty:
         </div>
       </Section>
 
-      <Section title="Cibles" sub="Les personas — qui adresse-t-on, et que cherchent-ils vraiment">
+      <Section title="Publics et acteurs" sub="Qui reçoit la communication, utilise, paie ou contribue à la valeur ; plusieurs rôles peuvent se cumuler">
         <div className="ck-a-grid"><Personas items={v.personas} status={st("personas")} /></div>
       </Section>
 

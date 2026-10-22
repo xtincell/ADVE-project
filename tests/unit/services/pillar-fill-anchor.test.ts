@@ -89,7 +89,7 @@ describe("câblage — l'ancre est réellement injectée dans le prompt de gén�
     const out = buildPillarContext({ d: { personas: entries, _fieldProvenance: { personas: "SOURCE" } },
       v: { products: [{ id: "product-7", nom: "Final product" }] } });
     const firstBlock = out.split("\n\n")[0]!;
-    const data = JSON.parse(firstBlock.slice(firstBlock.indexOf("\n") + 1, firstBlock.lastIndexOf("\n")));
+    const data = JSON.parse(firstBlock.slice(firstBlock.indexOf("\n", firstBlock.indexOf("⟦DONNÉE⟧ PILIER")) + 1, firstBlock.lastIndexOf("\n")));
     expect(data.personas.valeur).toHaveLength(8);
     expect(data.personas.valeur[7]).toMatchObject({ id: "profile-7", name: "Profile 7", productRefs: ["product-7"] });
     expect(data.personas.statut).toBe("SOURCE");

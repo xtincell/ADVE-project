@@ -48,11 +48,12 @@ export function ContexteDefi({ data }: Props) {
       {/* Cibles */}
       {data.personas.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Cibles</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Publics et rôles dans le modèle</h3>
           <DataTable
-            headers={["Segment", "Age", "CSP", "Insight cle", "Freins"]}
+            headers={["Profil", "Rôles", "Age", "CSP", "Insight cle", "Freins"]}
             rows={data.personas.map((p) => [
               p.nom,
+              p.actorRoles?.join(" · ") || "Rôles à qualifier",
               p.trancheAge,
               p.csp,
               p.insightCle,

@@ -18,7 +18,8 @@ import {
 } from "@/server/services/brand-vault/engine";
 import { isBrandAssetKind } from "@/domain/brand-asset-kinds";
 import { PILLAR_KEYS } from "@/domain";
-import { assetUploadSchema, assetProvenanceSchema, retainAssetFile, transferAssetFile } from "@/server/services/brand-vault/original";
+import { assetUploadSchema, assetProvenanceSchema, retainAssetFile, transferAssetFile, classifyAssetOriginal } from "@/server/services/brand-vault/original";
+import { SourceAssetClassificationInputSchema } from "@/domain/source-document";
 import { assetTransferInputSchema } from "@/domain/source-original";
 import { PublicWebUrl } from "@/domain/public-brand";
 /* lafusee:governed-active */
@@ -209,7 +210,8 @@ export const brandVaultRouter = createTRPCRouter({
 
     inputSchema: z.object({
       id: z.string(),
-      pillarTags: z.record(z.string(), z.number()),
+      pillarTags: z.record(z.string(), z.number()).default({}),
+      sourceClassification: SourceAssetClassificationInputSchema.optional(),
     }),
 
     caller: "brand-vault:updateTags",
@@ -217,6 +219,10 @@ export const brandVaultRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertBrandAssetAccess(ctx, input.id);
+      if (input.sourceClassification) {
+        if (Object.keys(input.pillarTags).length) throw new TRPCError({ code: "BAD_REQUEST", message: "Classez le fichier et modifiez les tags de stratégie dans deux actions distinctes." });
+        return vaultResult(() => classifyAssetOriginal(input.id, input.sourceClassification!, ctx.session.user.id));
+      }
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
       await vaultResult(async () => assertOrdinaryAsset(asset.format));
       const existing = (asset.pillarTags as Record<string, unknown>) ?? {};

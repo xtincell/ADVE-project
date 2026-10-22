@@ -16,7 +16,9 @@ import { ADVE_KEYS } from "@/domain";
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
-import { UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
+import { UNTRUSTED_NOTICE, wrapUntrusted } from "@/server/services/utils/untrusted-content";
+import { loadBrandSourceContext, renderSourceContext } from "@/server/services/notoria/source-context";
+import type { SourceReceipt } from "@/domain/source-certainty";
 import { db } from "@/lib/db";
 import { setNestedValue } from "@/lib/pillar-path";
 import { PILLAR_SCHEMAS, type PillarKey } from "@/lib/types/pillar-schemas";
@@ -44,28 +46,39 @@ async function savePillar(
   content: Record<string, unknown>,
   confidence: number,
   operationType: "MERGE_DEEP" | "REPLACE_FULL" | "SET_FIELDS" = "MERGE_DEEP",
+  expectedPillarVersions?: NonNullable<PillarWriteRequest["options"]>["expectedPillarVersions"],
+  context?: { intentId?: string; userId?: string },
+  sourceReceipts: SourceReceipt[] = [],
 ) {
   // LOI 1 — writePillarAndScore reconcile Pillar.completionLevel cache
   // (D-2 invariant). writePillar seul laisse le cache divergent, ce qui
   // bloque le stepper Notoria sur étape 1 même quand stage=COMPLETE.
-  const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
-  const res = await writePillarAndScore({
-    strategyId,
-    pillarKey: key.toLowerCase() as import("@/lib/types/advertis-vector").PillarKey,
-    operation: operationType === "REPLACE_FULL"
-      ? { type: "REPLACE_FULL", content }
-      : operationType === "SET_FIELDS"
-        ? { type: "SET_FIELDS", fields: Object.entries(content).filter(([, value]) => value !== undefined).map(([path, value]) => ({ path, value })) }
-      : { type: "MERGE_DEEP", patch: content },
-    author: { system: "MESTOR", reason: "RTIS cascade — actualizePillar" },
-    options: { targetStatus: "AI_PROPOSED", confidenceDelta: confidence * 0.1 },
+  const { withPillarTransaction } = await import("@/server/services/pillar-gateway");
+  return withPillarTransaction(strategyId, async (tx, write) => {
+    const res = await write({
+      strategyId,
+      pillarKey: key.toLowerCase() as import("@/lib/types/advertis-vector").PillarKey,
+      operation: operationType === "REPLACE_FULL"
+        ? { type: "REPLACE_FULL", content }
+        : operationType === "SET_FIELDS"
+          ? { type: "SET_FIELDS", fields: Object.entries(content).filter(([, value]) => value !== undefined).map(([path, value]) => ({ path, value })) }
+        : { type: "MERGE_DEEP", patch: content },
+      author: { system: "MESTOR", reason: "RTIS cascade — actualizePillar", ...context },
+      options: { targetStatus: "AI_PROPOSED", confidenceDelta: confidence * 0.1, expectedPillarVersions,
+        sourceReceipts, requiredSourceIds: sourceReceipts.map(source => source.sourceId) },
+    });
+    // Ne JAMAIS avaler un échec d'écriture en silence : sinon actualizePillar
+    // renvoie updated=true alors que le blob n'a PAS été persisté (bug observé :
+    // catalogue généré mais perdu, base d'actions vide). On remonte l'erreur.
+    if (!res.success) {
+      throw new Error(`[savePillar ${key}] écriture rejetée: ${res.error ?? "(sans message)"}${res.warnings?.length ? " | " + res.warnings.slice(0, 3).join(" | ") : ""}`);
+    }
+    if (key === "I") {
+      const { syncBrandActionsFromBlob } = await import("@/server/services/artemis/action-db/materializer");
+      await syncBrandActionsFromBlob(strategyId, tx);
+    }
+    return res;
   });
-  // Ne JAMAIS avaler un échec d'écriture en silence : sinon actualizePillar
-  // renvoie updated=true alors que le blob n'a PAS été persisté (bug observé :
-  // catalogue généré mais perdu, base d'actions vide). On remonte l'erreur.
-  if (!res.success) {
-    throw new Error(`[savePillar ${key}] écriture rejetée: ${res.error ?? "(sans message)"}${res.warnings?.length ? " | " + res.warnings.slice(0, 3).join(" | ") : ""}`);
-  }
 }
 
 async function recalcScores(strategyId: string) {
@@ -422,7 +435,26 @@ export async function actualizePillar(
 ): Promise<ActualizeResult> {
   if (pillarKey === "S") return recalculateSynthesis(strategyId, context);
   try {
-    const pillars = await loadPillars(strategyId);
+    const snapshot = await db.pillar.findMany({ where: { strategyId } });
+    const pillars = Object.fromEntries(snapshot.map(p => [p.key.toUpperCase(), p.content]));
+    const dependencies = pillarKey === "R" ? [...ADVE_KEYS, "R"]
+      : pillarKey === "T" ? [...ADVE_KEYS, "R", "T"]
+      : pillarKey === "I" ? [...ADVE_KEYS, "R", "T", "I"] : [];
+    // The gateway checks both existing versions and absence inside the write
+    // transaction. A long provider call cannot publish an obsolete calculation.
+    const versions = new Map(snapshot.map(p => [p.key.toUpperCase(), p.currentVersion]));
+    const expectedPillarVersions = Object.fromEntries(dependencies.map(k => [k.toLowerCase(), versions.get(k) ?? null]));
+    const sourceContext = dependencies.length ? await loadBrandSourceContext(strategyId, {
+      query: pillarKey === "R" ? "risques modèle économique personas partenaires clients hypothèses études"
+        : pillarKey === "T" ? "étude marché terrain personas prix hypothèses validation TAM SAM SOM"
+        : "actions canaux publics partenaires clients modèle économique contraintes production",
+      ensureIndexed: false,
+    }) : null;
+    const sourceReceipts = [...new Map((sourceContext?.excerpts ?? []).flatMap(excerpt => excerpt.contentHash
+      ? [[excerpt.sourceId, { sourceId: excerpt.sourceId, contentHash: excerpt.contentHash }] as const] : [])).values()];
+    const documentaryContext = sourceContext && !sourceContext.empty
+      ? wrapUntrusted("Documents courants de la marque", renderSourceContext(sourceContext), { max: 32_000 })
+      : "Aucun extrait documentaire exploitable fourni. Ne pas prétendre avoir vérifié les documents.";
 
     let newContent: Record<string, unknown>;
     let confidence: number;
@@ -435,7 +467,7 @@ export async function actualizePillar(
 
       const response = await callCascadeLLM(
         RTIS_PROMPTS.R,
-        `Voici les données ADVE actuelles de la stratégie:\n\n${adveContext}\n\nProduis le pilier R (Risk) en JSON.`,
+        `Voici les données ADVE actuelles de la stratégie:\n\n${adveContext}\n\n${documentaryContext}\n\nConfronte les piliers aux sources datées ; distingue les observations, propositions et décisions. Produis le pilier R (Risk) en JSON.`,
         strategyId,
       );
       newContent = extractJSON(response);
@@ -444,7 +476,7 @@ export async function actualizePillar(
     } else if (pillarKey === "T") {
       // Step 2 only: Generate T pillar via Protocole Track using prepared Seshat data
       const { executeProtocoleTrack } = await import("@/server/services/rtis-protocols/track");
-      const tResult = await executeProtocoleTrack(strategyId);
+      const tResult = await executeProtocoleTrack(strategyId, { documentaryContext });
       if (tResult.error || Object.keys(tResult.content).length === 0) {
         throw new Error(`[protocole-track] ${tResult.error ?? "empty content returned"}`);
       }
@@ -458,7 +490,7 @@ export async function actualizePillar(
       // perdu). On génère donc le catalogue SECTION PAR SECTION via le gateway
       // (→ Ollama en 100% local), chaque fragment petit et parseable.
       const { generateICatalogueSequenced } = await import("./i-pillar-sequenced");
-      const catalogue = await generateICatalogueSequenced({ strategyId, pillars });
+      const catalogue = await generateICatalogueSequenced({ strategyId, pillars, documentaryContext });
       // Filet : si TOUTES les sections ont échoué (LLM indisponible), on remonte
       // une erreur honnête plutôt que de sauvegarder un catalogue creux.
       const allEmpty =
@@ -533,6 +565,8 @@ Retourne le pilier ${pillarKey} complet en JSON.`;
 
             const filled = await runChunkedFieldGeneration({
               strategyId,
+              documentaryContext,
+              sourceReceipts,
               pillarKey: pillarKey.toLowerCase(),
               currentContent: newContent,
               allPillars: allPillarsLower,
@@ -571,27 +605,14 @@ Retourne le pilier ${pillarKey} complet en JSON.`;
     // recalculé : anciennes hypothèses/risques restent dans PillarVersion,
     // sans réapparaître dans le travail courant. Les champs non produits et
     // les protections de provenance restent sous l'autorité du gateway.
+    let saved: PillarWriteResult;
     if (pillarKey === "I") {
       const existingI = (pillars[pillarKey] ?? {}) as Record<string, unknown>;
-      await savePillar(strategyId, pillarKey, { ...existingI, ...newContent }, confidence, "REPLACE_FULL");
+      saved = await savePillar(strategyId, pillarKey, { ...existingI, ...newContent }, confidence, "REPLACE_FULL", expectedPillarVersions, context, sourceReceipts);
     } else if (pillarKey === "R" || pillarKey === "T") {
-      await savePillar(strategyId, pillarKey, newContent, confidence, "SET_FIELDS");
+      saved = await savePillar(strategyId, pillarKey, newContent, confidence, "SET_FIELDS", expectedPillarVersions, context, sourceReceipts);
     } else {
-      await savePillar(strategyId, pillarKey, newContent, confidence);
-    }
-
-    // ADR-0094 — projeter le blob I fraîchement sauvé dans la table requêtable
-    // BrandAction (ce que le panel cockpit + les sections Oracle lisent). Le
-    // chemin "Recalculer ce pilier" sautait cette projection (seul
-    // GENERATE_I_ACTIONS la faisait) → la base d'actions restait vide. Non-fatal.
-    if (pillarKey === "I") {
-      try {
-        const { syncBrandActionsFromBlob } = await import("@/server/services/artemis/action-db/materializer");
-        const mat = await syncBrandActionsFromBlob(strategyId);
-        console.log(`[rtis-cascade] I → BrandAction: ${mat.upserted} upserted, ${mat.deleted} réconciliés (${mat.initiatives} initiatives)`);
-      } catch (err) {
-        console.warn(`[rtis-cascade] matérialisation BrandAction échouée:`, err instanceof Error ? err.message : err);
-      }
+      saved = await savePillar(strategyId, pillarKey, newContent, confidence, "MERGE_DEEP", undefined, context);
     }
 
     // Recalc scores
@@ -604,7 +625,7 @@ Retourne le pilier ${pillarKey} complet en JSON.`;
     try {
       const { assessPillar: assess } = await import("@/server/services/pillar-maturity/assessor");
       const { getContract } = await import("@/server/services/pillar-maturity/contracts-loader");
-      const assessment = assess(pillarKey.toLowerCase(), newContent, getContract(pillarKey.toLowerCase()) ?? undefined);
+      const assessment = assess(pillarKey.toLowerCase(), saved.newContent, getContract(pillarKey.toLowerCase()) ?? undefined);
       maturityStage = assessment.currentStage;
       maturityCompletionPct = assessment.completionPct;
       maturityMissing = assessment.missing;
@@ -819,7 +840,7 @@ export async function runRTISCascade(
   if (!options.skipT) {
     const tResult = await actualizePillar(strategyId, "T");
     results.push(tResult);
-    // T peut échouer sans bloquer la cascade — R seul suffit pour les recos
+    if (!tResult.updated) return { results };
   }
 
   // Step 3 (optional): R(+T) → generate ADVE recommendations (proposals for operator review)
@@ -837,6 +858,7 @@ export async function runRTISCascade(
   // Step 4: I = produit(ADVE, R, T si disponible)
   const iResult = await actualizePillar(strategyId, "I");
   results.push(iResult);
+  if (!iResult.updated) return { results };
 
   // Step 5: S = mise en forme(tout)
   const sResult = await actualizePillar(strategyId, "S");

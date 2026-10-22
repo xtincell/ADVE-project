@@ -284,6 +284,7 @@ async function generateTrackAnalysis(
   competitorData: Array<Record<string, unknown>>,
   externalSignals: Array<Record<string, unknown>>,
   strategyId: string,
+  documentaryContext = "",
 ): Promise<Record<string, unknown>> {
 
   const a = pillars.a ?? {};
@@ -337,7 +338,7 @@ RÈGLES CRITIQUES:
 
 Retourne UNIQUEMENT du JSON valide, sans markdown.`;
 
-  const baseData = `Données ADVE + R:\n\n${context}\n\n${rContext}${seshatContext}${competitorContext}${observations}`;
+  const baseData = `Données ADVE + R:\n\n${context}\n\n${rContext}${seshatContext}${competitorContext}${observations}\n\n${documentaryContext}`;
 
   // Mega-appel (9 champs, 6000 tokens) ÉCLATÉ en 4 sous-appels focalisés.
   // L'invariant « le LLM ne valide jamais une hypothèse » (VALIDATED → TESTING)
@@ -402,7 +403,7 @@ function calculateBMF(trackContent: Record<string, unknown>): number {
 
 // ── Public API ────────────────────────────────────────────────────────
 
-export async function executeProtocoleTrack(strategyId: string): Promise<ProtocoleTrackResult> {
+export async function executeProtocoleTrack(strategyId: string, opts: { documentaryContext?: string } = {}): Promise<ProtocoleTrackResult> {
   try {
     // Load all pillars A-R
     const dbPillars = await db.pillar.findMany({
@@ -431,7 +432,7 @@ export async function executeProtocoleTrack(strategyId: string): Promise<Protoco
     const { triangulation, sourcedFields, aiFields } = buildTriangulation(pillars, intelligence);
 
     // Step 3 — Analyse Track (MESTOR_ASSIST) AVEC les données vérifiées en contexte.
-    const trackAnalysis = await generateTrackAnalysis(pillars, pillars.r ?? null, intelligence, competitorData, externalSignals, strategyId);
+    const trackAnalysis = await generateTrackAnalysis(pillars, pillars.r ?? null, intelligence, competitorData, externalSignals, strategyId, opts.documentaryContext);
 
     // Step 3b — Override DÉTERMINISTE : si Seshat a un TAM/SAM/SOM vérifié, il
     // écrase l'estimation LLM (source=verified). Le LLM ne reste qu'un fallback.

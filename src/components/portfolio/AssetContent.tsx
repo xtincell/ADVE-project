@@ -3,6 +3,7 @@
 import { trpc } from "@/lib/trpc/client";
 import { Modal } from "@/components/shared/modal";
 import { portfolioFileUrl } from "@/domain/portfolio-reference";
+import { SourceAssetClassificationSchema, DOCUMENT_KIND_LABEL, DOCUMENT_STATUS_LABEL } from "@/domain/source-document";
 
 function Content({ value }: { value: unknown }) {
   if (value == null || value === "") return null;
@@ -16,12 +17,21 @@ export function AssetContent({ assetId, onClose }: { assetId: string; onClose: (
   const asset = trpc.brandVault.get.useQuery({ id: assetId });
   const fileUrl = portfolioFileUrl(asset.data?.fileUrl);
   const content = asset.data?.content;
+  const metadata = asset.data?.metadata as Record<string, unknown> | null | undefined;
+  const parsed = SourceAssetClassificationSchema.safeParse(metadata?._sourceClassification);
+  const filing = parsed.success ? parsed.data : null;
   const failed = content != null && typeof content === "object" && !Array.isArray(content) && content.status === "FAILED";
   return <Modal open onClose={onClose} title={asset.data?.name ?? "Contenu de l’asset"} size="lg">
     {asset.isLoading && <p role="status" className="text-sm text-foreground-secondary">Lecture du contenu…</p>}
     {asset.error && <p role="alert" className="text-sm text-error">{asset.error.message}</p>}
     {asset.data && <div className="space-y-5">
       <p className="text-xs text-foreground-secondary">Version {asset.data.version} · conservée dans La Fusée</p>
+      {filing && <div className="space-y-2 rounded border border-border p-3 text-sm">
+        <p className="font-medium">{filing.family} · {filing.label}</p>
+        <p>{DOCUMENT_KIND_LABEL[filing.kind]} · {DOCUMENT_STATUS_LABEL[filing.status]}</p>
+        {filing.tags?.length ? <p className="text-foreground-secondary">{filing.tags.join(" · ")}</p> : null}
+        <p className="text-xs text-foreground-secondary">Classement du fichier source ; il ne choisit pas une identité et ne prouve pas une publication.</p>
+      </div>}
       {failed && <p role="status" className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">Cette tentative de génération a échoué. Elle est conservée pour son historique.</p>}
       {asset.data.summary && <p className="text-sm leading-relaxed">{asset.data.summary}</p>}
       {asset.data.content ? <Content value={asset.data.content} /> : <p className="text-sm text-foreground-secondary">Aucun contenu textuel enregistré dans cette fiche.</p>}

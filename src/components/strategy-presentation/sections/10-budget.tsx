@@ -4,11 +4,13 @@ import type { BudgetSection } from "@/server/services/strategy-presentation/type
 import { MetricCard } from "../shared/metric-card";
 import { DataTable } from "../shared/data-table";
 import { aggregateCampaignBudgets, campaignBudgetLabel } from "@/lib/strategy/roadmap-routes";
+import { unitEconomicsRatio } from "@/domain/unit-economics";
 
 interface Props { data: BudgetSection }
 
 export function BudgetDisplay({ data }: Props) {
   const ue = data.unitEconomics;
+  const ratio = unitEconomicsRatio(ue?.cac, ue?.ltv, ue?.ltvCacRatio);
   // Recompute from the snapshot's rows too: older snapshots have no summary.
   const campaignSummary = aggregateCampaignBudgets(data.campaignBudgets);
   return (
@@ -19,12 +21,13 @@ export function BudgetDisplay({ data }: Props) {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {ue.cac != null && <MetricCard label="CAC" value={`${ue.cac.toLocaleString("fr-FR")} XAF`} />}
             {ue.ltv != null && <MetricCard label="LTV" value={`${ue.ltv.toLocaleString("fr-FR")} XAF`} />}
-            {ue.ltvCacRatio != null && <MetricCard label="LTV:CAC" value={`${ue.ltvCacRatio.toFixed(1)}x`} accent="rgb(124, 179, 66)" />}
+            {ratio !== null && <MetricCard label="LTV/CAC calculé" value={`${ratio.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}x`} accent="rgb(124, 179, 66)" />}
             {ue.margeNette != null && <MetricCard label="Marge nette" value={`${(ue.margeNette * 100).toFixed(0)}%`} />}
             {ue.roiEstime != null && <MetricCard label="ROI estime" value={`${(ue.roiEstime * 100).toFixed(0)}%`} accent="rgb(66, 165, 245)" />}
             {ue.budgetCom != null && <MetricCard label="Budget com" value={`${ue.budgetCom.toLocaleString("fr-FR")} XAF`} />}
             {ue.caVise != null && <MetricCard label="CA vise" value={`${ue.caVise.toLocaleString("fr-FR")} XAF`} />}
           </div>
+          {ue.commentaire ? <p className="mt-2 whitespace-pre-line text-xs text-foreground-muted">{ue.commentaire}</p> : null}
         </div>
       )}
       {data.campaignBudgets.length > 0 && (

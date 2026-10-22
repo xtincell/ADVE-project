@@ -27,6 +27,7 @@ import { DocumentLibrary, DocumentEditionDialog } from "@/components/brand/docum
 import { DOCUMENT_STATUS_LABEL, type DocumentEdition, type DocumentRepresentation } from "@/domain/source-document";
 import { SourceReadDialog } from "@/components/brand/source-read-dialog";
 import { SourcePreparationOption } from "@/components/brand/source-preparation-option";
+import { FinancialDocumentPanel } from "@/components/brand/financial-document-panel";
 import {
   FileText, Upload, Image as ImageIcon, MessageSquare,
   Globe, Clock, CheckCircle, AlertCircle, Loader2,
@@ -899,6 +900,7 @@ export default function SourcesPage() {
   // Source en cours d'édition (titre + contenu). Toute source est éditable.
   const [editSourceId, setEditSourceId] = useState<string | null>(null);
   const [readSourceId, setReadSourceId] = useState<string | null>(null);
+  const [sourcePage, setSourcePage] = useState(0);
 
   const [classifySourceId, setClassifySourceId] = useState<string | null>(null);
   const sourcesQuery = trpc.ingestion.listSources.useQuery(
@@ -1035,6 +1037,7 @@ export default function SourcesPage() {
       </div>
 
       <DocumentLibrary sources={sources as unknown as Parameters<typeof DocumentLibrary>[0]["sources"]} onRead={setReadSourceId} canManage={canOperateOnBrand} onSaved={() => { void sourcesQuery.refetch(); }} />
+      {strategyId && <FinancialDocumentPanel strategyId={strategyId} sources={sources as unknown as Parameters<typeof FinancialDocumentPanel>[0]["sources"]} canManage={canOperateOnBrand} onRead={setReadSourceId} />}
       {classifySourceId && <DocumentEditionDialog source={sources.find(s => s.id === classifySourceId) as unknown as Parameters<typeof DocumentEditionDialog>[0]["source"]} sources={sources as unknown as Parameters<typeof DocumentEditionDialog>[0]["sources"]} onClose={() => setClassifySourceId(null)} onSaved={() => { void sourcesQuery.refetch(); }} />}
 
       {/* Dépôt de document — le porteur de marque a les documents ; il ne
@@ -1139,6 +1142,11 @@ export default function SourcesPage() {
         </div>
       ) : null}
 
+      {sources.length > 25 && <nav aria-label="Pages du registre des sources" className="flex items-center justify-between gap-3 text-sm">
+        <button className="rounded border border-border px-3 py-2 disabled:opacity-50" disabled={sourcePage === 0} onClick={() => setSourcePage(Math.max(0, sourcePage - 1))}>Sources précédentes</button>
+        <span>{sources.length} sources · page {Math.min(sourcePage + 1, Math.ceil(sources.length / 25))}/{Math.ceil(sources.length / 25)}</span>
+        <button className="rounded border border-border px-3 py-2 disabled:opacity-50" disabled={sourcePage >= Math.ceil(sources.length / 25) - 1} onClick={() => setSourcePage(sourcePage + 1)}>Sources suivantes</button>
+      </nav>}
       {sources.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-white/10 py-16 text-center">
           <Upload className="mb-3 h-8 w-8 text-foreground-muted" />
@@ -1149,7 +1157,7 @@ export default function SourcesPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {sources.map((source, i) => {
+          {sources.slice(Math.min(sourcePage, Math.max(0, Math.ceil(sources.length / 25) - 1)) * 25, (Math.min(sourcePage, Math.max(0, Math.ceil(sources.length / 25) - 1)) + 1) * 25).map((source, i) => {
             const edition = source.document as DocumentEdition | null;
             const representation = source.representation as DocumentRepresentation | null;
             const retainedDocument = Boolean(edition || representation);

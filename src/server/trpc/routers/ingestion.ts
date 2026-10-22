@@ -10,8 +10,8 @@ import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import * as ingestion from "@/server/services/ingestion-pipeline";
 import { AdveKeySchema } from "@/domain";
-import { DocumentEditionInputSchema, DocumentRepresentationInputSchema, documentEdition, documentRepresentation, sourceHasRetainedDocument, sourceIsUsable } from "@/domain/source-document";
-import { registerDocumentEdition, registerDocumentRepresentation, decideDocumentEdition, clarifyDocumentEdition } from "@/server/services/ingestion-pipeline/document-versions";
+import { DocumentEditionInputSchema, DocumentRepresentationInputSchema, ResourceDocumentFilingSchema, documentEdition, documentRepresentation, sourceHasRetainedDocument, sourceIsUsable } from "@/domain/source-document";
+import { registerDocumentEdition, registerDocumentRepresentation, decideDocumentEdition, clarifyDocumentEdition, labelDocumentEdition, correctResourceDocumentFiling } from "@/server/services/ingestion-pipeline/document-versions";
 import { SourceCertaintySchema } from "@/domain/source-certainty";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
@@ -244,9 +244,11 @@ export const ingestionRouter = createTRPCRouter({
       documentRepresentation: DocumentRepresentationInputSchema.optional(),
       documentDecision: z.object({ status: z.enum(["REFERENCE", "ARCHIVED"]), reason: z.string().trim().min(1).max(4000) }).optional(),
       documentClarification: z.string().trim().min(1).max(4000).optional(),
+      resourceFiling: ResourceDocumentFilingSchema.optional(),
+      documentTags: z.object({ tags: z.array(z.string().trim().min(1).max(80)).max(24), reason: z.string().trim().min(1).max(1000) }).optional(),
       expectedSourceHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
       use: z.object({ strategyId: z.string(), revoke: z.boolean().default(false) }).optional(),
-    }).refine(v => !v.documentRepresentation || (v.expectedSourceHash && !v.document && !v.documentDecision && !v.documentClarification && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Relier un format est un geste distinct, après relecture.").refine(v => !v.documentClarification || (v.expectedSourceHash && !v.documentDecision && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Préciser une édition est un geste distinct, après relecture.").refine(v => !v.documentDecision || (v.expectedSourceHash && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Décider sur une édition est un geste distinct, après relecture.").refine((v) => !v.document || (v.expectedSourceHash && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Classer une édition est un geste distinct, après relecture.").refine((v) => v.documentRepresentation || v.documentClarification || v.documentDecision || v.document || v.use || v.title !== undefined || v.content !== undefined || v.certainty !== undefined,
+    }).refine(v => !v.resourceFiling || (v.expectedSourceHash && !v.documentTags && !v.documentRepresentation && !v.documentClarification && !v.documentDecision && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Corriger le classement d’une ressource est un geste distinct, après relecture.").refine(v => !v.documentTags || (v.expectedSourceHash && !v.documentRepresentation && !v.documentClarification && !v.documentDecision && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Étiqueter une édition est un geste distinct, après relecture.").refine(v => !v.documentRepresentation || (v.expectedSourceHash && !v.document && !v.documentDecision && !v.documentClarification && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Relier un format est un geste distinct, après relecture.").refine(v => !v.documentClarification || (v.expectedSourceHash && !v.documentDecision && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Préciser une édition est un geste distinct, après relecture.").refine(v => !v.documentDecision || (v.expectedSourceHash && !v.document && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Décider sur une édition est un geste distinct, après relecture.").refine((v) => !v.document || (v.expectedSourceHash && !v.use && v.title === undefined && v.content === undefined && v.certainty === undefined), "Classer une édition est un geste distinct, après relecture.").refine((v) => v.resourceFiling || v.documentTags || v.documentRepresentation || v.documentClarification || v.documentDecision || v.document || v.use || v.title !== undefined || v.content !== undefined || v.certainty !== undefined,
       "Choisir une correction ou un usage du document.").refine((v) => !v.use || (v.title === undefined && v.content === undefined && v.certainty === undefined),
       "Lier un usage et corriger le document sont deux gestes distincts."),
 
@@ -255,6 +257,8 @@ export const ingestionRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertSourceAccess(ctx.session.user.id, input.id);
+      if (input.resourceFiling) return ctx.db.$transaction(tx => correctResourceDocumentFiling(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, userId: ctx.session.user.id, filing: input.resourceFiling! }), { timeout: 30_000 });
+      if (input.documentTags) return ctx.db.$transaction(tx => labelDocumentEdition(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, userId: ctx.session.user.id, ...input.documentTags! }), { timeout: 30_000 });
       if (input.documentRepresentation) return ctx.db.$transaction(tx => registerDocumentRepresentation(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, representation: input.documentRepresentation!, userId: ctx.session.user.id }), { timeout: 30_000 });
       if (input.documentClarification) return ctx.db.$transaction(tx => clarifyDocumentEdition(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, userId: ctx.session.user.id, clarification: input.documentClarification! }), { timeout: 30_000 });
       if (input.use) {

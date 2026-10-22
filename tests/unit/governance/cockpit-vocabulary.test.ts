@@ -63,6 +63,7 @@ const EXTRA_FILES = [
   join(ROOT, "src/components/brand/source-preparation-option.tsx"),
   join(ROOT, "src/components/brand/source-read-dialog.tsx"),
   join(ROOT, "src/components/brand/document-library.tsx"),
+  join(ROOT, "src/components/brand/financial-document-panel.tsx"),
   join(ROOT, "src/components/brand/public-identity-review.tsx"),
   join(ROOT, "src/components/brand/guidelines-document.tsx"),
   join(ROOT, "src/components/creative-intelligence/recipe-cards.tsx"),

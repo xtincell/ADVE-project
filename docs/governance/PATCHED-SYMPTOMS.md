@@ -28,6 +28,64 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+2026-10-22 · **520 candidate — correctifs documentaires et financiers ciblés, non déployés** :
+
+- L’inscription/décision d’une édition rechargeait tous les contenus de la marque ;
+  les requêtes de lignée portent désormais le filtre marque/famille en base,
+  avec verrous et reçus conservés. Test ciblé de la forme des requêtes reçu ;
+  aucune mesure de performance en production déduite. Hypothèse : le coût de
+  lecture de métadonnées croissait avec le corpus complet. Commit à recevoir.
+- Un passage sémantique pouvait perdre le statut PROPOSED ou provenir d’une
+  empreinte périmée ; le lecteur compare le reçu à la source courante et préfixe
+  le contexte documentaire. TECHNICAL est écarté par défaut du conseil métier ;
+  l’accès explicite reste possible. Tests de statut/retrieval reçus. Hypothèse :
+  séparation entre index et source sans conservation de l’autorité documentaire.
+  Commit à recevoir.
+- Une absence de coût devenait zéro dans le seuil, et des charges récurrentes
+  pouvaient fabriquer un délai ; le calculateur canonique refuse les entrées
+  absentes/invalides, distingue absence de seuil fini, CA théorique et volume
+  entier, garde le délai inconnu sans trajectoire et compare les volumes sur
+  une même période. Régressions ciblées reçues, zéro explicite conservé.
+  L’exécuteur retrouve aussi les calculateurs dans leur table réelle, au lieu
+  d’un export inexistant. Hypothèse : contrats numériques et dispatch trop
+  permissifs. CODB reste distinct en dette planifiée, pas réparé par cette fiche.
+  Commit à recevoir.
+- Le premier Word financier de recette conservait une instruction FreshBox ;
+  paragraphe d’exemple remplacé par les données du modèle, contrôles et graphique
+  relus par le test vert après refus initial. Ce reçu de structure ne vaut pas
+  inspection visuelle des pages ou fiche SPAWT réelle. Hypothèse : réemploi de
+  gabarit sans distinguer exemple pédagogique et contenu produit. Commit à recevoir.
+
+Preuves : `finance520-labels-unit.log` (38), `finance520-unit-docx-reprise.log`
+(15), `finance520-financial-route-postgres.log` (4 cas, vraie route Glory).
+Les contrôles finaux, le rendu visuel et la livraison restent en
+[reprise bornée](RESIDUAL-DEBT.md), sans réception globale déduite.
+
+2026-10-21 · **520 candidate — continuité, lectures Oracle et rôles/échanges** :
+PR1058 draft, rien 520 déployé. Gateway vérifie les versions source R/T/I ;
+I/BrandAction atomiques, cascade arrêtée sur T/I échoué, historique/courant distincts.
+Lecteurs Oracle : contexte A/V, dix propositions de production, équipe/responsabilités A,
+mitigations owner/délai/moyens, fit 53/100 INFERRED, inconnues —, chaînes complètes/
+13 signaux T qualifiés sans dates inventées. Pas de clauses/cession ni pyramide
+mesurée fabriquées ; 7S/BCG/Greenhouse/3Horizons et mix uniforme restent exploratoires
+selon ADR0091, aucune formule changée. Public ≠ payeur, partenaire ≠ fournisseur,
+rôles cumulables : D.personas.actorRoles/V.personaSegmentMap, édition/fiches/Oracle/
+export étendus. deriveActorProductLinks retire les profils/produits arbitraires et
+SPECTATEUR fabriqué ; méthode/questionnaire existants et contexte calcul/Notoria alignés.
+LTV/CAC contradictoire refusé, null explicite conservé ; unités/client/période à qualifier,
+montants/commentaire conservés. Ancien PDF partiel 41 pages : p.6/34 visuellement reçues,
+réserve présente/ratio absent, première tentative privée refusée conservée. Budgets
+inconnus 0/glyphe ≥ corrigés en code, nouveau PDF non reçu. Test null rouge puis 10/2
+verts ; nouveaux ciblés 25/3, groupe additionnel en cours ; PG amend-source 9/1
+(route gouvernée, deux émissions, zéro contrat/coût), synthèse 38/1 verts après
+corrections de harnais, aucune garde affaiblie. Production 519 distincte : rôles/
+échanges de huit profils et businessModel amendés, autres champs exacts, aucune vente/
+partenariat acquis, BMC toujours proposé. Copie locale USER : huit lignes/cinq colonnes,
+zéro cellule vide, table 802 px dans 804 px ; capture finale à relire, première capture
+pendant scroll non concluante. Hypothèse de cause : contexte/provenance/rôles perdus
+entre sources, calcul et lectures. CI/build/livraison finale, nouveau PDF/all35/source/
+ADVE actuels non reçus ; Oracle 0/6/MVP entier non reçus. [Reprise](RESIDUAL-DEBT.md).
+
 ## Clôture technique 506/507 — 2026-10-20
 
 PR 1039/source `f48a938e494ca286330cab74ff6c4d49ea906281`, seize checks verts,

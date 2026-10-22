@@ -37,7 +37,9 @@ export function ExperienceEngagement({ data }: Props) {
       {data.devotionPathway && (
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Parcours de devotion</h3>
-          <DevotionPyramid data={data.devotionPathway.currentDistribution} score={0} />
+          {Object.keys(data.devotionPathway.currentDistribution).length > 0 ? (
+            <DevotionPyramid data={data.devotionPathway.currentDistribution} score={data.devotionPathway.score ?? null} />
+          ) : <p className="text-sm text-foreground-secondary">Distribution de la communauté non mesurée. Le parcours ci-dessous décrit les transitions proposées.</p>}
           {data.devotionPathway.conversionTriggers.length > 0 && (
             <div className="mt-4 space-y-2">
               <p className="text-xs font-medium text-foreground-muted">Triggers de conversion</p>

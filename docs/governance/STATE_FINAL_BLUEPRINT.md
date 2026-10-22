@@ -2107,6 +2107,19 @@ d'invariants spécifiques (cf. `tests/integration/`).
 
 # ANNEXE CANON L — LEXIQUE NORMATIF
 
+### Acteurs et échanges de valeur — ADR-0225 (2026-10-21, candidat)
+
+Une persona D décrit un acteur de la marque, pas nécessairement un acheteur.
+`actorRoles` distingue public de communication, utilisateur/bénéficiaire, payeur,
+partenaire, fournisseur, prescripteur et distributeur ; ces rôles sont cumulables.
+V.personaSegmentMap décrit l’apport, la contrepartie, le coût et les conditions de
+participation, y compris sans flux monétaire ou produit acheté. Un partenaire
+co-crée la valeur ; un fournisseur réalise une prestation. Ni le paiement ni
+l’intérêt mutuel seuls ne tranchent cette distinction. Le modèle ne prouve aucune
+relation contractuelle acquise. Source humaine ou documentaire et états inconnus
+conservés ; aucune nouvelle autorité, entité ou permission.
+Voir [ADR-0225](adr/0225-actor-roles-and-value-exchanges.md).
+
 ### Couverture de l’empreinte publique
 
 La couverture exprime la part du poids du panel effectivement mesurée ; ce
@@ -4566,3 +4579,14 @@ BrandAsset/FileUpload et le stockage existant conservent les fichiers privés.
 Le dépôt reste CANDIDATE, sélection et publication sont explicites ; lecture et
 provenance ne changent pas la stratégie. Extensions du coffre sous Mestor/Sustainment,
 aucun nouveau Neter ou gestionnaire. Réceptions bornées dans REFONTE-PLAN.
+
+
+### Exploitation des sources financières — ADR-0226 (2026-10-22)
+
+Extension des sources, de Glory et du calculateur Thot existants : le modèle est
+une édition FINANCE avec montants, périodes, qualifications et reçus. La composition
+vérifie la source et les versions A/D/V, conserve un GloryOutput et exporte le Word
+modulaire privé ; elle ne valide pas un BMC ni des comptes réalisés. Les ressources
+techniques/créatives gardent un classement contextuel avec corrections attribuées,
+distinct de la décision métier et de l’original. Aucun Neter ou registre parallèle.
+La candidate520 et la réception du corpus réel restent ouvertes au checkpoint.
