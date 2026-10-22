@@ -18,7 +18,8 @@ export function useCanOperate(): boolean {
 
 /** Visible permissions use the current brand's existing server verdict. */
 export function useBrandWriteAccess(strategyId: string | null) {
-  const canOperate = useCanOperate();
+  const operator = trpc.auth.me.useQuery();
+  const canOperate = operator.data?.canOperate ?? false;
   const access = trpc.strategy.getMyAccess.useQuery(
     { strategyId: strategyId ?? "" },
     { enabled: !!strategyId },
@@ -28,6 +29,7 @@ export function useBrandWriteAccess(strategyId: string | null) {
   const canWriteStrategy = zones.includes("*");
   const canWriteCalendar = canWriteStrategy || zones.includes("calendar");
   return {
+    accessReady: ready && !operator.isLoading && !operator.isError,
     canWriteStrategy,
     canWriteCalendar,
     canOperateOnBrand: canOperate && canWriteStrategy,

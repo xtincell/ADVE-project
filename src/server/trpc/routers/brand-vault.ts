@@ -20,7 +20,7 @@ import { isBrandAssetKind } from "@/domain/brand-asset-kinds";
 import { PILLAR_KEYS } from "@/domain";
 import { assetUploadSchema, assetProvenanceSchema, retainAssetFile, transferAssetFile, classifyAssetOriginal } from "@/server/services/brand-vault/original";
 import { SourceAssetClassificationInputSchema } from "@/domain/source-document";
-import { assetTransferInputSchema } from "@/domain/source-original";
+import { assetTransferInputSchema, anyAssetOriginalReceiptSchema } from "@/domain/source-original";
 import { PublicWebUrl } from "@/domain/public-brand";
 /* lafusee:governed-active */
 
@@ -200,7 +200,14 @@ export const brandVaultRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       await assertBrandAssetAccess(ctx, input.id);
-      return ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
+      const asset = await ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
+      const original = await ctx.db.fileUpload.findFirst({ where: { entityType: "BRAND_ASSET", entityId: asset.id }, select: { fileName: true, storageReceipt: true } });
+      const receipt = anyAssetOriginalReceiptSchema.safeParse(original?.storageReceipt);
+      const documentarySource = receipt.success && receipt.data.state === "STORED" ? await ctx.db.brandDataSource.findFirst({
+        where: { strategyId: asset.strategyId, sourceType: "FILE", origin: `upload:${receipt.data.contentHash}` },
+        orderBy: { createdAt: "asc" }, select: { id: true, processingStatus: true },
+      }) : null;
+      return { ...asset, originalFileName: original?.fileName ?? null, documentarySource };
     }),
 
   // Update asset tags

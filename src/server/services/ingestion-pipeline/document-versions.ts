@@ -162,7 +162,10 @@ export async function correctResourceDocumentFiling(tx: SourceDb, input: {
   await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${source.strategyId} FOR UPDATE`;
   if (sourceFingerprint(source) !== input.expectedSourceHash) throw new Error("SOURCE_CHANGED: relisez cette ressource avant de corriger son classement.");
   const old = documentEdition(source.rawData);
-  if (!old || !["TECHNICAL", "ASSET"].includes(old.kind)) throw new Error("Cette correction est réservée aux ressources techniques et de création. Une décision métier suit son parcours documentaire.");
+  const legacyTechnical = old?.kind === "OTHER" && source.sourceType === "FILE"
+    && spec.kind === "TECHNICAL" && spec.status === old.status
+    && /\.(?:[cm]?[jt]sx?|css|html|prompt\.(?:md|txt))$/i.test(source.fileName ?? "");
+  if (!old || (!["TECHNICAL", "ASSET"].includes(old.kind) && !legacyTechnical)) throw new Error("Cette correction est réservée aux ressources techniques et de création. Une décision métier suit son parcours documentaire.");
   if (old.decisions?.length) throw new Error("Cette ressource porte une décision conservée ; revoyez cette décision avant de changer sa famille.");
   const at = new Date().toISOString();
   const { previousSourceId, beforeSourceId, ...retained } = old;

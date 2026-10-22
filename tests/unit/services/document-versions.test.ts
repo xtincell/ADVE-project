@@ -24,6 +24,48 @@ function fixture() {
   return { rows, db, classify };
 }
 describe("document lineage and strategic authority", () => {
+  it.each(["Icon.jsx", "Icon.d.ts", "icons.card.html", "Icon.prompt.md"])("repairs legacy OTHER code filing for %s without a document decision", async fileName => {
+    const f = fixture(); f.rows[0]!.fileName = fileName;
+    await registerDocumentEdition(f.db, { id: "old", expectedSourceHash: sourceFingerprint(f.rows[0]!), document: {
+      family: "Icônes", kind: "OTHER", label: fileName, status: "REFERENCE", changeSummary: "Ancien classement générique." } });
+    const before = structuredClone(f.rows[0]!);
+    const input = { id: "old", expectedSourceHash: sourceFingerprint(before), userId: "owner", filing: {
+      family: "Système graphique — code des icônes", kind: "TECHNICAL" as const, label: fileName,
+      status: "REFERENCE" as const, reason: "Code conservé, pas une décision de marque." } };
+    await correctResourceDocumentFiling(f.db, input);
+    expect(f.rows[0]!.rawContent).toBe(before.rawContent);
+    expect(documentEdition(f.rows[0]!.rawData)).toMatchObject({ kind: "TECHNICAL", status: "REFERENCE", edition: 1,
+      filingCorrections: [{ previousKind: "OTHER", previousStatus: "REFERENCE", by: "owner" }] });
+    expect(documentEdition(f.rows[0]!.rawData)?.decisions).toBeUndefined();
+    await expect(correctResourceDocumentFiling(f.db, input)).rejects.toThrow("SOURCE_CHANGED");
+  });
+  it.each([
+    { fileName: "costs.xlsx", sourceType: "FILE", kind: "TECHNICAL", status: "REFERENCE" },
+    { fileName: "BMC.docx", sourceType: "FILE", kind: "TECHNICAL", status: "REFERENCE" },
+    { fileName: "strategy.md", sourceType: "FILE", kind: "TECHNICAL", status: "REFERENCE" },
+    { fileName: "Icon.jsx", sourceType: "MANUAL_INPUT", kind: "TECHNICAL", status: "REFERENCE" },
+    { fileName: "Icon.jsx", sourceType: "FILE", kind: "ASSET", status: "REFERENCE" },
+    { fileName: "Icon.jsx", sourceType: "FILE", kind: "TECHNICAL", status: "PROPOSED" },
+  ] as const)("refuses a legacy repair that changes authority or a business document: $fileName $sourceType $kind $status", async spec => {
+    const f = fixture(); Object.assign(f.rows[0]!, { fileName: spec.fileName, sourceType: spec.sourceType });
+    await registerDocumentEdition(f.db, { id: "old", expectedSourceHash: sourceFingerprint(f.rows[0]!), document: {
+      family: "Ancien classement", kind: "OTHER", label: spec.fileName, status: "REFERENCE", changeSummary: "Classement générique." } });
+    const before = structuredClone(f.rows);
+    await expect(correctResourceDocumentFiling(f.db, { id: "old", expectedSourceHash: sourceFingerprint(f.rows[0]!), userId: "owner",
+      filing: { family: "Ressource", kind: spec.kind, label: spec.fileName, status: spec.status, reason: "Ne doit pas modifier une autorité métier." } })).rejects.toThrow("réservée aux ressources");
+    expect(f.rows).toEqual(before);
+  });
+  it("retains a human decision on legacy code and requires its existing review path", async () => {
+    const f = fixture(); f.rows[0]!.fileName = "Icon.jsx";
+    await registerDocumentEdition(f.db, { id: "old", expectedSourceHash: sourceFingerprint(f.rows[0]!), document: {
+      family: "Icônes", kind: "OTHER", label: "Icon.jsx", status: "PROPOSED", changeSummary: "Ancien classement." } });
+    await decideDocumentEdition(f.db, { id: "old", expectedSourceHash: sourceFingerprint(f.rows[0]!), userId: "reviewer",
+      decision: { status: "REFERENCE", reason: "Décision de recette explicite." } });
+    const before = structuredClone(f.rows);
+    await expect(correctResourceDocumentFiling(f.db, { id: "old", expectedSourceHash: sourceFingerprint(f.rows[0]!), userId: "owner",
+      filing: { family: "Code", kind: "TECHNICAL", label: "Icon.jsx", status: "REFERENCE", reason: "Pas de suppression de décision." } })).rejects.toThrow("décision conservée");
+    expect(f.rows).toEqual(before);
+  });
   it("repairs an unrelated resource folder collision with attributed history, without rewriting bytes or text", async () => {
     const f = fixture();
     await registerDocumentEdition(f.db, { id: "old", expectedSourceHash: sourceFingerprint(f.rows[0]!), document: {

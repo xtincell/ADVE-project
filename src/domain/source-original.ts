@@ -25,7 +25,7 @@ export const sourceOriginalReceiptSchema = z.object({
 });
 export type SourceOriginalReceipt = z.infer<typeof sourceOriginalReceiptSchema>;
 /** Same received-byte contract for the existing BrandAsset/FileUpload register. */
-export const assetOriginalReceiptSchema = sourceOriginalReceiptSchema.omit({ aliases: true }).extend({ schema: z.literal("asset-original-v1") });
+export const assetOriginalReceiptSchema = sourceOriginalReceiptSchema.extend({ schema: z.literal("asset-original-v1") });
 export type AssetOriginalReceipt = z.infer<typeof assetOriginalReceiptSchema>;
 export const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 
@@ -53,7 +53,7 @@ export type OriginalChunk = z.infer<typeof originalChunkSchema>;
 export type ChunkedOriginalManifest = z.infer<typeof chunkedOriginalManifestSchema>;
 
 export function sourceOriginalSummary(value: unknown) {
-  const parsed = sourceOriginalReceiptSchema.safeParse(value);
+  const parsed = retainedOriginalReceiptSchema.safeParse(value);
   if (!parsed.success) return null;
   const { state, contentHash, byteLength, receivedAt, aliases } = parsed.data;
   return { state, contentHash, byteLength, receivedAt, ...(aliases?.length ? { aliases } : {}) };
@@ -75,6 +75,9 @@ export const assetChunkedReceiptSchema = assetOriginalReceiptSchema.omit({ schem
 });
 export const anyAssetOriginalReceiptSchema = z.union([assetOriginalReceiptSchema, assetChunkedReceiptSchema]);
 export type AssetChunkedReceipt = z.infer<typeof assetChunkedReceiptSchema>;
+/** A documentary use retains the same verified object/manifest, not another blob. */
+export const retainedOriginalReceiptSchema = z.union([sourceOriginalReceiptSchema, assetOriginalReceiptSchema, assetChunkedReceiptSchema]);
+export type RetainedOriginalReceipt = z.infer<typeof retainedOriginalReceiptSchema>;
 export const assetTransferInputSchema = z.object({
   strategyId: z.string().min(1),
   transfer: z.discriminatedUnion("action", [

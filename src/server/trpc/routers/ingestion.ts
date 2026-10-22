@@ -3,7 +3,7 @@
  */
 
 import { z } from "zod";
-import { sourceUploadContentSchema } from "@/server/services/ingestion-pipeline/original";
+import { sourceUploadContentSchema, UnreadableRetainedSourceError } from "@/server/services/ingestion-pipeline/original";
 import { sourceFileLocationSchema } from "@/domain/source-original";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
@@ -69,7 +69,7 @@ export const ingestionRouter = createTRPCRouter({
 
     kind: "LEGACY_INGESTION_UPLOAD_FILE",
 
-    inputSchema: z.object({
+    inputSchema: z.union([z.object({
       strategyId: z.string(),
       fileName: z.string().min(1).max(255),
       fileType: z.string().min(1).max(8),
@@ -77,12 +77,28 @@ export const ingestionRouter = createTRPCRouter({
       sourceId: z.string().optional(), // Explicit recovery of a legacy file source
       sourceLocation: sourceFileLocationSchema.optional(),
       prepareAnalysis: z.boolean().default(false),
-    }),
+    }), z.object({
+      strategyId: z.string(),
+      retainedAsset: z.object({ assetId: z.string().min(1), contentHash: z.string().regex(/^[a-f0-9]{64}$/) }).strict(),
+      document: DocumentEditionInputSchema.optional(),
+      documentRepresentation: DocumentRepresentationInputSchema.optional(),
+      prepareAnalysis: z.boolean().default(false),
+    }).strict().refine(v => Boolean(v.document) !== Boolean(v.documentRepresentation), "Choisissez une édition ou un autre format de la même version.")]),
 
     caller: "ingestion:uploadFile",
 
   })
     .mutation(async ({ ctx, input }) => {
+      if ("retainedAsset" in input) {
+        try {
+          const sourceId = await ingestion.ingestFile(input.strategyId, input, ctx.session.user.id);
+          if (input.prepareAnalysis) fireSourcePreparationHooks(input.strategyId, sourceId, ctx.session.user.id);
+          return { sourceId, needsManualReading: false, readingError: null };
+        } catch (error) {
+          if (error instanceof UnreadableRetainedSourceError) return { sourceId: error.sourceId, needsManualReading: true, readingError: error.message };
+          throw error;
+        }
+      }
       if (input.sourceId) await assertSourceAccess(ctx.session.user.id, input.sourceId);
       const sourceId = await ingestion.ingestFile(input.strategyId, {
         name: input.fileName,
@@ -258,7 +274,9 @@ export const ingestionRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await assertSourceAccess(ctx.session.user.id, input.id);
       if (input.resourceFiling) return ctx.db.$transaction(tx => correctResourceDocumentFiling(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, userId: ctx.session.user.id, filing: input.resourceFiling! }), { timeout: 30_000 });
-      if (input.documentTags) return ctx.db.$transaction(tx => labelDocumentEdition(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, userId: ctx.session.user.id, ...input.documentTags! }), { timeout: 30_000 });
+      // A compressed workbook can retain tens of MiB of cells. Keep the same
+      // atomic hash fence and invalidation, with a bounded import-sized budget.
+      if (input.documentTags) return ctx.db.$transaction(tx => labelDocumentEdition(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, userId: ctx.session.user.id, ...input.documentTags! }), { timeout: 120_000 });
       if (input.documentRepresentation) return ctx.db.$transaction(tx => registerDocumentRepresentation(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, representation: input.documentRepresentation!, userId: ctx.session.user.id }), { timeout: 30_000 });
       if (input.documentClarification) return ctx.db.$transaction(tx => clarifyDocumentEdition(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, userId: ctx.session.user.id, clarification: input.documentClarification! }), { timeout: 30_000 });
       if (input.use) {
