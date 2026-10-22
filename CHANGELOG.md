@@ -2,6 +2,8 @@
 
 **Un original au coffre peut rejoindre ses sources sans être téléversé une seconde fois.**
 
+- Périmètre de livraison consigné sous le numéro réel PR #1064, out-of-scope, dans scope-drift.
+
 - Reprise bornée du candidat505 conservé séparément, sur la source521. `ingestion.uploadFile`, les lecteurs privés et les dialogues existants reçoivent l’usage documentaire d’un actif conservé, avec contrôles de rôle, d’empreinte et d’intégrité. FileUpload d’actif, objets et manifestes restent en place ; aucune copie physique, nouvelle entité, page, routeur, service, Intent, fournisseur ou manager. [ADR-0227 Proposed](docs/governance/adr/0227-retained-original-document-uses.md).
 - Le PDF image sans texte rend FAILED visible avant classement. Le parcours manuel permet de corriger le texte puis de rattacher le format à l’édition ; le rejeu conserve correction et décisions. Le lien de l’actif retrouve sa source existante. Le correctif legacy OTHER→TECHNICAL reste limité aux fichiers FILE de code/prompt autorisés, à statut inchangé, empreinte courante et sans décision documentaire ; métier/BMC gardent leurs refus. Quatre rouges réels puis 33 tests ciblés verts.
 - Réception locale522 sur la base actuelle : typage, deux lints, cycles et code-map exit0, 1717 tests/172 fichiers de gouvernance et UI verts ; PostgreSQL ciblé25/3 et consommateurs d’originaux17/2. Build webpack exit0 ; premier refus Turbopack sur symlink externe conservé, symlink inchangé. Le stress FULL utilise un ADMIN dédié, séparé du USER : zéro finding, 276 probes HTTP reçus, cinq routes dynamiques de démonstration404 non reçues, aucun renvoi d’authentification. Ce stress ne reçoit pas les écrans.
