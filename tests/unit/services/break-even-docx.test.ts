@@ -5,13 +5,13 @@ import { composeBreakEvenDocument } from "@/server/services/financial-brain/brea
 import { exportBreakEvenDocx } from "@/server/services/financial-brain/break-even-docx";
 import type { SourcedBreakEvenDocument } from "@/server/services/financial-brain/break-even-source";
 
-it("exports the modular Word form with all controls filled, the actual sensitivity and an embedded graph", async () => {
+it.each(["HT", "TTC", "NO_VAT"] as const)("exports the modular form with readable %s labels and retained sources", async taxBasis => {
   const amount = (value: number) => ({ value, qualification: "ASSUMPTION" as const, note: "Donnée synthétique, pas un réel.", sources: [] });
   const doc: SourcedBreakEvenDocument = { ...composeBreakEvenDocument("Marque de recette", {
     schema: "adve-break-even-model-v1", title: "Scénario de recette", currency: "XOF", period: "MONTH", payer: "Professionnel",
-    unit: "abonnement", taxBasis: "HT", scope: "Recette synthétique", price: amount(15000), fixedCosts: [{ label: "CF", ...amount(315000) }],
+    unit: "abonnement", taxBasis, scope: "Recette synthétique", price: amount(15000), fixedCosts: [{ label: "CF", ...amount(315000) }],
     variableCosts: [{ label: "CV", ...amount(8000) }], assumptions: ["Sans ventes reçues"], exclusions: ["Trésorerie"],
-  }), evidence: [{ sourceId: "model", contentHash: "a".repeat(64), fileName: "Modèle de recette.json", document: null, historical: false }],
+  }), evidence: [{ sourceId: "model", contentHash: "a".repeat(64), fileName: "Modèle de recette.json", document: { schema: "document-edition-v1", family: "Fiche de recette", kind: "FINANCE", label: "Recette", status: "PROPOSED", edition: 1, recordedAt: "2026-10-21T00:00:00Z", changeSummary: "Cas synthétique", sourceUrl: "https://example.org/finance/recette?version=1&format=source" }, historical: false }],
   pillarVersions: { v: 1 }, sourceReceipt: { sourceId: "model", contentHash: "a".repeat(64) } };
   const bytes = await exportBreakEvenDocx(doc, new Date("2026-10-21T00:00:00Z"));
   const zip = await JSZip.loadAsync(bytes);
@@ -19,6 +19,9 @@ it("exports the modular Word form with all controls filled, the actual sensitivi
   const dom = new JSDOM(xml, { contentType: "application/xml" });
   const text = dom.window.document.documentElement.textContent!;
   expect(text).toContain("Marque de recette");
+  expect(text).not.toContain("NO_VAT");
+  if (taxBasis === "NO_VAT") expect(text).toContain("sans TVA collectée");
+  expect(text).toContain("https://example.org/finance/recette?version=1&format=source");
   expect(text).toContain("675");
   expect(text).toContain("Non déterminable"); // No invented growth or sales.
   expect(text).not.toContain("À renseigner");

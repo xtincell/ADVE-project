@@ -1,27 +1,71 @@
-## 520 candidate — corpus classé et fiche financière à recevoir (2026-10-22)
+## 521 — livraison et réception financière réelle restantes (2026-10-22)
 
-Extension du lot520/PR1058 existant, [ADR0226 Proposed](adr/0226-sourced-financial-documents-and-classification.md).
-Code préparé : étiquettes de documents et classement descriptif d’actifs versionnés,
-recherche qualifiée par statut, contexte documentaire R/T/I, modèle FINANCE conservé,
-composition Glory déterministe et export de la fiche modulaire Word. Tests ciblés
-reçus : 38 classement/retrieval/contexte, 15 document/Word, 11 cas de la suite d’originaux d’actifs PostgreSQL,
-4 source/route Glory PostgreSQL. Les premiers refus de harnais et d’export restent
-conservés ; ils ne valent ni recette native ni livraison. Aucun520 déployé au checkpoint. Build et stress compilés reçus :46HTTP anonymes,235accès non reçus, zéro erreur ; natif Sources200/DOM161ms/titre527ms pilote compris,64réponses sans500/exception et19ERR_ABORTED conservés. Calcul, deux éditions et Word téléchargés sur cas synthétique ;4pages inspectées. Le corpus réel et la fiche SPAWT restent ouverts.
+Attentes locales closes au périmètre reçu : 1674tests/170fichiers verts
+(169/1671gouvernance +3Word), typage régénéré, deux lints/cycles verts et build
+production exit0. Premier refus Next dev généré corrompu/cache préservé hors
+source conservé ; il n’est plus une attente active de typage.
 
-**Fermer** : achever le dépôt/rejeu des originaux et résoudre les reçus en erreur ;
-relire labels, lignées, statuts et index utiles de chaque catégorie, avec contrôle
-exact des originaux. Produire une proposition financière SPAWT depuis les pièces
-actuelles et historiques qualifiées, prix Gold humainement confirmé et hypothèses
-explicites pour tout coût non mesuré, sans adopter le BMC ou additionner des
-variantes de facture. Exercer le panneau sous les rôles autorisés, refus voisins,
-source modifiée et historique ; produire la fiche par la vraie route Glory,
-télécharger et relire intégralement le Word rendu. Recevoir gauntlet final,
-CI/image/runtime et conservation après bascule avant clôture du lot. Actualiser
-LeRadar par reçu, sans assimiler présence de fichier et compréhension par ADVE.
-Responsable C2-01 et lot520 existants ; effort reprise du corpus, recette ciblée
-et livraison, sans nouveau chantier. **Déclencheur immédiat** : poursuite de520,
-avant toute annonce d’absorption intégrale ou de fiche Catalyse SPAWT reçue.
-Les réceptions Core/Oracle et les chantiers macro restent distincts.
+USER local réel/version finale compilée : page200, DOM2169ms/titre observé4027ms,
+fenêtre non tronquée, zéro réponse≥500/exception, pas un SLO. Changement d’édition
+reçu avec source recalée sur HT puis retour sans TVA collectée. Édition synthétique
+produite par formulaire et téléchargée nativement :37contrôles Word remplis,
+`NO_VAT` absent, URL source conservée, quatre pages toutes vues sans clipping.
+Preuves P23 `finance521-native-word-received.json`,
+`finance521-final-native-received.json`, `finance521-final-governance.log` et
+`finance521-final-compiled-build.log`. Cette recette locale ne reçoit pas un
+scénario réel SPAWT521 ; les deux Word SPAWT520 vus sur cinq pages chacun restent
+distincts. Hypothèses de coûts, TVA et rentabilité globale non requalifiées.
+
+**Fermer** : recevoir CI/merge/image/runtime521 et conservation après bascule,
+puis produire/télécharger les Word réels SPAWT521 et inspecter toutes leurs pages
+avec hypothèses, sources, graphique et éditions. Les accès autorisés et refus de
+cette recette réelle restent à vérifier au périmètre du parcours existant.
+Responsable lot521 existant ; effort livraison et recette ciblée des fiches
+réelles, **déclencheur immédiat** après réception locale, avant clôture Catalyse.
+Aucune clôture du corpus, de Core/Oracle/MVP ou des sept chantiers déduite.
+
+## C2-01 — finaliser le corpus après livraison520 (2026-10-22)
+
+L’attente de livraison520 est close au périmètre technique : source
+`7d669f5d18014beb9054a90b390e329577ac99b4`, digest
+`cd0487cc50fe54cbbe3e7542f8be2ad7d65db254001cc3a1624a9db36c0271dc`, runtime520,
+login200, mêmes volumes, relais Luna/90s et OpenRouter absent. 278 sources/1225
+actifs, états/originaux, huit piliers, racine Friesland et six paiements conservés
+par lectures séquentielles, sans snapshot atomique. P23
+`production520-received.json` et `production520-data-preserved.json`.
+
+Fiches Catalyse SPAWT calculées/exportées par Glory520, zéro appel IA, 37 champs
+remplis et cinq pages chacune : scénario documenté350kCF/18kCV/60kprix →9Gold/mois ;
+variante TVA18% incluse conditionnelle →11. Hypothèses et budgets à valider, pas
+dépenses mesurées ou régime fiscal constaté ; aucune rentabilité globale reçue.
+Les cinq pages de chacun des deux Word520 ont été vues intégralement ; défaut
+`NO_VAT` confirmé, réception native du correctif521 encore ouverte et distincte
+de l’absorption.
+Nouveau BMC proposé, trois personas et Gold60000 conservés.
+
+Recensement22octobre : 2346 fichiers/350 dossiers, 349 connus relus et nouveau
+Shoot vide ; 102 originaux nouveaux/modifiés reçus localement. Plan ventilé dans
+les entités existantes :425 documents/1920 matériels/un alias. Les 1 092 matériels
+du premier lot sont reçus ; réception des 828 ressources supplémentaires et du
+lot de 425 documents en cours. L’alias `1lyZ_l9s7mlYrmhdorCimmzMoB-fwIxGT` est résolu
+par navigation Drive normale vers le dossier déjà recensé
+`1m7A4OMoUWpOlRjvOnknY_A8UwZw1K6FC`, « SPAWT — Cohorte Catalyse », sans création
+d’original en doublon (NEW `alias-canonique-received.json`). Ce repère est clos,
+sans clore l’ingestion ou le classement ; les anciennes familles et étiquettes doivent
+être rapprochées sans changer l’original ou adopter une proposition. Une lenteur
+sous charge reste à qualifier sur ce parcours, sans SLO ni capacité globale déduits.
+
+**Plan de fermeture** : reprendre les dépôts idempotents et reçus en erreur ;
+comparer les familles/étiquettes existantes au plan courant, puis corriger par
+les voies gouvernées avec empreinte et historique. Vérifier versions, statuts,
+originaux exacts et index métier avant la recherche et le conseil ADVE sur les
+pièces prioritaires. Mesurer les étapes lentes du même parcours sous charge,
+borner concurrence et taille des lots, corriger la cause observée et rejouer un
+lot témoin sans augmenter arbitrairement les délais ni créer un autre manager.
+Actualiser LeRadar à chaque reçu. Responsable C2-01 existant ; effort finalisation
+et recette ciblée du corpus, **déclencheur immédiat** après livraison520 et avant
+toute annonce d’absorption intégrale. Core/Oracle/MVP et sept chantiers entiers
+restent distincts et ouverts ; aucun pourcentage inventé.
 
 ## Calculateur CODB legacy — seuil non recevable (2026-10-22)
 
@@ -117,8 +161,9 @@ périmètre comparé), pas une identité atomique de toute la base.
 Rendu candidat : ids/métadonnées masqués, e_channels/DIRECT traduits, vignettes
 « Volet » sans fausse pagination. Aucun nouveau concept/ADR ou compte.
 
-**520 candidate — continuité Core/FIDÉLITÉ et lectures Oracle/rôles** : PR1058 draft,
-aucun 520 déployé. Gateway contrôle versions source R/T/I, I/projection BrandAction
+**520 livrée — réception Core/FIDÉLITÉ et Oracle encore ouverte** : PR1058,
+source/image/runtime520 et conservation séquentielle reçus le22octobre ;
+les checkpoints locaux suivants restent bornés, sans réception Core entière. Gateway contrôle versions source R/T/I, I/projection BrandAction
 atomiques, arrêt T/I échoué, historique/courant distincts. Lectures Oracle étendues :
 contexte A/V, dix propositions de production, équipe/responsabilités A, mitigations
 owner/délai/moyens, fit 53/100 INFERRED, inconnues —, chaînes complètes et 13 signaux T
@@ -148,16 +193,16 @@ non publié, catalogue inchangé. Depuis : D31→32 rôles de huit profils, V39�
 de huit profils, V40→41 clarification businessModel par pillar.amend sur demande humaine.
 Autres champs exacts, historique conservé ; aucune vente/partenariat acquis, BMC
 proposé toujours non adopté. Ni E/V ni ADVE actuel entiers reçus.
-**Fermer le périmètre 520** : recevoir contrôles finaux, copie native/capture et
-nouveau PDF sur les corrections puis CI/build/livraison exacte. Vérifier refus du
+**Fermer la réception Core/Oracle restante** : relire copie native/capture et
+nouveau PDF sur les corrections ; la livraison technique520 est reçue séparément. Vérifier refus du
 ratio contradictoire, inconnues distinctes de zéro, glyphes/commentaire et rôles/échanges
 sans faux contrat ni date. Réceptions all35/source/ADVE actuel, chaîne réelle
 A/D/V/E/R/T/I/S, choix courant→S et Oracle 35/export restent distinctes et ouvertes ;
 aucune réception Core/MVP entière, Oracle 0/6 maintenu.
 Responsable Core/FIDÉLITÉ/Oracle existants ; effort recette ciblée des lecteurs/exports,
-déclencheur immédiat sur le lot 520 et avant toute réception Oracle. Marques-pays
-Friesland restent en LB03 ; aucun ancien choix réadopté ni déploiement 520 déduit
-des amendements de production 519.
+déclencheur immédiat à la reprise Core et avant toute réception Oracle. Marques-pays
+Friesland restent en LB03 ; aucun ancien choix réadopté. Le déploiement520 est
+prouvé par ses reçus propres, distincts des amendements de production519.
 
 **Réception FIDÉLITÉ existante — reprise SPAWT avant Oracle (2026-10-21)** :
 ancien pré-lancement/métriques zéro sans mesure et 160/200 latéral ambigus vus en 517

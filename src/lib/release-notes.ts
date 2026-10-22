@@ -34,6 +34,10 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.521", date: "2026-10-22", headline: "Une fiche financière plus facile à relire",
+    highlights: [{ emoji: "📋", title: "La bonne édition et ses hypothèses", body: "Le scénario consulté porte son nom et sa base fiscale en français. Les éditions conservées sont identifiables, et la fiche Word reprend l’adresse des pièces sources disponibles. Les montants, calculs et hypothèses restent ceux de l’édition choisie." }],
+  },
+  {
     version: "6.27.520", date: "2026-10-22", headline: "Des documents reliés à leurs sources et hypothèses",
     highlights: [
       { emoji: "🧭", title: "Des acteurs et des choix mieux distingués", body: "Votre audience, vos partenaires et vos clients payeurs gardent leurs rôles et leurs échanges. Les actions antérieures restent consultables sans devenir des choix courants ; une source modifiée ou une étape échouée empêche de présenter la suite comme un nouveau calcul réussi." },

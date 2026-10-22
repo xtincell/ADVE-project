@@ -1,20 +1,59 @@
-## Candidate520 — corpus et fiche financière (22 octobre2026)
+## 521 candidate reçue localement — livraison ouverte (22 octobre2026)
 
-Les sources versionnées portent leurs étiquettes et les ressources homonymes leur
-contexte de dossier ; correction attribuée conservée, jamais adoption implicite.
-`financial-brain` réutilise le calculateur canonique ; une source FINANCE qualifiée
-alimente l’outil Glory existant, puis le Word FIN-06 privé. ADR-0226 Proposed.
-La recette synthétique n’est pas la fiche SPAWT : corpus et réception réelle restent
-ouverts jusqu’aux reçus applicatifs ; aucune rentabilité observée n’est déduite.
+Le correctif traduit `NO_VAT` en « sans TVA collectée » dans UI/Word/graphique,
+explicite modèle et historique, et conserve l’URL source dans l’annexe Word.
+Aucun calcul, writer, modèle métier, route, Neter ou tarif nouveau ; aucune
+réécriture des résultats conservés ni régime fiscal applicable déduit du libellé.
 
-## 520 candidate — fidélité des lecteurs et rôles des acteurs (2026-10-21)
+Réception locale finale : 1674tests/170fichiers verts (169/1671 gouvernance et
+3Word), tsc régénéré, deux lints, cycles et build production exit0. Le refus initial
+Next dev généré corrompu/cache préservé hors source reste historique ; typage clos.
+USER local réel sur version compilée finale : page200, DOM2169ms, titre observé
+4027ms, fenêtre non tronquée, zéro réponse≥500/exception, pas un SLO. Le changement
+d’édition recale la source sur HT puis retour sans TVA collectée. Une édition
+synthétique produite par le formulaire et téléchargée nativement conserve37
+contrôles remplis, URL source et libellés français ; quatre pages toutes vues
+sans clipping, `NO_VAT` absent. P23 `finance521-native-word-received.json`,
+`finance521-final-native-received.json` et `finance521-final-*.log`.
 
-D.personas.actorRoles distingue les rôles cumulables ; V.personaSegmentMap porte
-apports/contreparties/coûts/conditions sans achat imposé. Mêmes entités/autorités,
-7 Neteru inchangés ; contexte qualifié, questionnaire et lecteurs existants.
-Le modèle documentaire ne prouve aucun contrat signé ou revenu. [ADR-0225](docs/governance/adr/0225-actor-roles-and-value-exchanges.md).
-520 n’est pas déployée ; réception entière Core/Oracle/MVP ouverte. Les amendements
-SPAWT humains appliqués sous 519 restent distincts de la réception du code candidat.
+Attentes locales de typage/build/rendu synthétique closes ; CI/merge/image/prod521,
+conservation après bascule et Word réels SPAWT521 restent à recevoir. Les deux
+Word SPAWT520 lus sur cinq pages chacun ne sont pas la recette synthétique521.
+Corpus/Core/Oracle/MVP et sept chantiers entiers restent ouverts.
+
+## 520 livrée — corpus et fiche financière reçus à un périmètre borné (22 octobre2026)
+
+Source `7d669f5d18014beb9054a90b390e329577ac99b4`, image/runtime520 au digest
+`cd0487cc50fe54cbbe3e7542f8be2ad7d65db254001cc3a1624a9db36c0271dc` reçus.
+Mêmes volumes, relais Luna/90s et OpenRouter absent ; 278 sources/1225 actifs,
+états/originaux, huit piliers, racine Friesland et six paiements conservés par
+lectures séquentielles, pas un snapshot atomique. Preuves P23
+`production520-received.json` et `production520-data-preserved.json`.
+
+Les sources versionnées portent étiquettes et contexte de dossier, sans adoption
+implicite. Le calculateur canonique et l’outil Glory existants produisent deux
+fiches Catalyse SPAWT réelles, zéro appel IA : scénario documenté350kCF/18kCV/
+60kprix →9Gold mensuels ; variante TVA18% incluse, conditionnelle →11. Word privé
+exporté, 37 champs remplis et les cinq pages de chacune des deux fiches520 vues
+intégralement ; défaut `NO_VAT` confirmé, correction521 non encore reçue nativement. Ces valeurs ne sont ni dépenses
+constatées, ni TVA validée, ni rentabilité globale. ADR-0226 reste Proposed.
+
+Recensement22octobre : 2346 fichiers/350 dossiers (349 connus relus et nouveau
+Shoot vide), 102 originaux nouveaux/modifiés reçus localement. Plan ventilé :
+425 documents/1920 matériels/un alias dans les entités existantes. Les1092 matériels
+du premier lot sont reçus ; les 828 ressources supplémentaires et le lot de 425 documents
+restent en réception. L’alias Drive de la cohorte est résolu normalement vers le
+dossier « SPAWT — Cohorte Catalyse » déjà recensé, sans original dupliqué
+(`alias-canonique-received.json`). Dépôt applicatif,
+classement, rapprochement des anciennes familles/étiquettes, index utile et usage
+ADVE ne sont pas intégralement reçus. La lenteur sous charge reste en reprise
+bornée de finalisation du corpus, sans nouveau chantier ni pourcentage inventé.
+
+D.personas.actorRoles et V.personaSegmentMap conservent rôles cumulables, apports,
+contreparties, coûts et conditions sans achat imposé. Les trois personas SPAWT et
+Gold60000 sont conservés ; nouveau BMC proposé, aucun contrat ou revenu prouvé.
+Les amendements humains519 restent distincts de la réception logicielle520.
+ADR-0225 reste Proposed. Core/Oracle/MVP et sept chantiers entiers restent ouverts.
 
 ## 519 validée localement — production ouverte ; 518 livrée (2026-10-21)
 
