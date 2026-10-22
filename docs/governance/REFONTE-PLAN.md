@@ -1,10 +1,58 @@
-## 520 candidate — corpus classé et exploitation financière (2026-10-22)
+## 521 reçue localement — livrer puis recevoir les fiches réelles (2026-10-22)
 
-Extension des sources, de Glory et du calculateur existants (ADR-0226 Proposed),
-sans nouveau Neter ni journal comptable. Les homonymes techniques/créatifs gardent
-leur contexte et un historique de correction ; les modèles métier gardent leurs
-parcours de décision. Fiche Catalyse déterministe et Word reçus sur cas synthétique ;
-corpus complet, fiche SPAWT réelle et déploiement restent à recevoir séparément.
+Correctif borné aux lecteurs : libellé français de `NO_VAT`, modèle/historique
+identifiables, URL source Word. Calculs, écritures, modèles, routes, tarifs et
+Neteru inchangés. Contrôles locaux clos : 1674tests/170fichiers verts (169/1671
+gouvernance +3Word), typage régénéré, deux lints, cycles et build production exit0.
+Le refus initial Next dev généré corrompu/cache préservé demeure historique.
+
+USER local réel sur compilation finale : page200, DOM2169ms, titre observé4027ms,
+fenêtre non tronquée, zéro réponse≥500/exception, pas un SLO. Changement d’édition
+reçu avec source recalée HT puis sans TVA collectée. Production et téléchargement
+natifs d’une édition synthétique :37contrôles remplis, libellé français et URL
+source ; quatre pages toutes vues sans clipping, `NO_VAT` absent. Preuves P23
+`finance521-native-word-received.json`, `finance521-final-native-received.json`,
+`finance521-final-governance.log`, `finance521-final-compiled-build.log`.
+
+**Fermer la livraison restante** : CI/merge/image/runtime521 et conservation après
+bascule, puis export corrigé et inspection intégrale des Word SPAWT521. Responsable
+lot521 existant ; effort livraison et recette des fiches réelles, déclencheur
+immédiat après ces contrôles locaux, avant réception finale Catalyse. Cette recette
+synthétique ne reçoit ni les scénarios SPAWT corrigés ni le corpus entier. Les
+deux Word réels520 restent reçus séparément, cinq pages chacun.
+
+## 520 livrée — finalisation du corpus C2 encore active (2026-10-22)
+
+Source `7d669f5d18014beb9054a90b390e329577ac99b4`, image/runtime520 exacts et
+conservation séquentielle reçus : mêmes volumes, relais Luna/90s, OpenRouter
+absent, 278 sources/1225 actifs, états/originaux/huit piliers/racine Friesland/
+six paiements. L’attente de livraison520 est close ; corpus entier et qualité
+globale ne le sont pas. P23 `production520-{received,data-preserved}.json`.
+
+Glory520 a produit et exporté les fiches Catalyse SPAWT sans appel IA, avec37
+champs remplis et cinq pages chacune. Scénario documenté350kCF/18kCV/60kprix :
+9Gold/mois ; variante conditionnelle de TVA18% incluse :11. Hypothèses de budget,
+coûts non mesurés et régime fiscal restent à valider, sans adoption du BMC ni
+rentabilité globale. Les cinq pages de chacun des deux Word520 ont été vues
+intégralement ; défaut `NO_VAT` confirmé. Cette relecture déclenche521 sans
+recevoir son rendu corrigé ou son parcours natif.
+
+Le recensement22octobre reçoit 2346 fichiers/350 dossiers, dont349 connus relus
+et un nouveau Shoot vide ; 102 originaux nouveaux/modifiés sont reçus localement.
+La ventilation courante prépare425 documents/1920 matériels/un alias dans les
+entités existantes. Premier lot de 1 092 matériels reçu ; réception des 828 ressources
+supplémentaires et du lot de 425 documents encore en cours. L’alias
+`1lyZ_l9s7mlYrmhdorCimmzMoB-fwIxGT` est résolu par navigation Drive normale vers
+`1m7A4OMoUWpOlRjvOnknY_A8UwZw1K6FC`, « SPAWT — Cohorte Catalyse » déjà recensé ;
+aucun original en doublon (`alias-canonique-received.json`). **Fermer C2-01** : achever ingestion et reprises, réconcilier
+anciennes familles/étiquettes sous reçus, vérifier versions/statuts/originaux et
+index métier, puis recevoir la recherche et l’exploitation ADVE sur les pièces
+prioritaires. Borner les lots à la charge observée et diagnostiquer la lenteur
+sur le même parcours avant de conclure sur la capacité d’exploitation.
+Responsable C2-01 existant ; effort finalisation et recette du corpus, déclencheur
+immédiat après la livraison520, avant toute annonce d’absorption intégrale.
+Trois personas SPAWT et Gold60000 conservés ; nouveau BMC toujours proposé.
+Core/Oracle/MVP et sept chantiers entiers restent ouverts, sans pourcentage déduit.
 
 ## 509 livrée au périmètre technique — reprise qualité M03 active (2026-10-20)
 

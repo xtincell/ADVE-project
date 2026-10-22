@@ -28,63 +28,56 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
-2026-10-22 · **520 candidate — correctifs documentaires et financiers ciblés, non déployés** :
+2026-10-22 · **521 réparée et reçue localement — livraison ouverte** : `NO_VAT`
+exposé dans les lecteurs520, identification insuffisante du modèle/historique et
+URL source manquante dans l’annexe sont corrigés dans les surfaces existantes,
+sans montant, calcul ou writer modifié. Hypothèse de cause : contrat structuré
+exposé directement et contexte d’édition insuffisamment présenté.
 
-- L’inscription/décision d’une édition rechargeait tous les contenus de la marque ;
-  les requêtes de lignée portent désormais le filtre marque/famille en base,
-  avec verrous et reçus conservés. Test ciblé de la forme des requêtes reçu ;
-  aucune mesure de performance en production déduite. Hypothèse : le coût de
-  lecture de métadonnées croissait avec le corpus complet. Commit à recevoir.
-- Un passage sémantique pouvait perdre le statut PROPOSED ou provenir d’une
-  empreinte périmée ; le lecteur compare le reçu à la source courante et préfixe
-  le contexte documentaire. TECHNICAL est écarté par défaut du conseil métier ;
-  l’accès explicite reste possible. Tests de statut/retrieval reçus. Hypothèse :
-  séparation entre index et source sans conservation de l’autorité documentaire.
-  Commit à recevoir.
-- Une absence de coût devenait zéro dans le seuil, et des charges récurrentes
-  pouvaient fabriquer un délai ; le calculateur canonique refuse les entrées
-  absentes/invalides, distingue absence de seuil fini, CA théorique et volume
-  entier, garde le délai inconnu sans trajectoire et compare les volumes sur
-  une même période. Régressions ciblées reçues, zéro explicite conservé.
-  L’exécuteur retrouve aussi les calculateurs dans leur table réelle, au lieu
-  d’un export inexistant. Hypothèse : contrats numériques et dispatch trop
-  permissifs. CODB reste distinct en dette planifiée, pas réparé par cette fiche.
-  Commit à recevoir.
-- Le premier Word financier de recette conservait une instruction FreshBox ;
-  paragraphe d’exemple remplacé par les données du modèle, contrôles et graphique
-  relus par le test vert après refus initial. Ce reçu de structure ne vaut pas
-  inspection visuelle des pages ou fiche SPAWT réelle. Hypothèse : réemploi de
-  gabarit sans distinguer exemple pédagogique et contenu produit. Commit à recevoir.
+Réception locale finale :1674tests/170fichiers verts (169/1671gouvernance +3Word),
+typage régénéré, deux lints, cycles et build production exit0. Premier refus sur
+Next dev généré corrompu/cache préservé hors source conservé, attente locale close.
+USER local réel/compilation finale : page200, DOM2169ms/titre observé4027ms, fenêtre
+non tronquée, zéro réponse≥500/exception, pas un SLO. Changement d’édition/source
+HT puis retour sans TVA collectée reçu ; édition synthétique produite et Word
+téléchargé nativement,37contrôles remplis, URL conservée, `NO_VAT` absent,
+quatre pages inspectées sans clipping. P23 `finance521-native-word-received.json`
+et `finance521-final-native-received.json` ; contrôles `finance521-final-*.log`.
 
-Preuves : `finance520-labels-unit.log` (38), `finance520-unit-docx-reprise.log`
-(15), `finance520-financial-route-postgres.log` (4 cas, vraie route Glory).
-Les contrôles finaux, le rendu visuel et la livraison restent en
-[reprise bornée](RESIDUAL-DEBT.md), sans réception globale déduite.
+Seules attentes locales satisfaites closes ; CI/merge/image/prod521, conservation
+et Word SPAWT521 restent en [reprise](RESIDUAL-DEBT.md). Cette recette synthétique
+est distincte des deux Word SPAWT520 vus intégralement sur cinq pages chacun.
+Aucun corpus/Core/Oracle/MVP entier reçu.
 
-2026-10-21 · **520 candidate — continuité, lectures Oracle et rôles/échanges** :
-PR1058 draft, rien 520 déployé. Gateway vérifie les versions source R/T/I ;
-I/BrandAction atomiques, cascade arrêtée sur T/I échoué, historique/courant distincts.
-Lecteurs Oracle : contexte A/V, dix propositions de production, équipe/responsabilités A,
-mitigations owner/délai/moyens, fit 53/100 INFERRED, inconnues —, chaînes complètes/
-13 signaux T qualifiés sans dates inventées. Pas de clauses/cession ni pyramide
-mesurée fabriquées ; 7S/BCG/Greenhouse/3Horizons et mix uniforme restent exploratoires
-selon ADR0091, aucune formule changée. Public ≠ payeur, partenaire ≠ fournisseur,
-rôles cumulables : D.personas.actorRoles/V.personaSegmentMap, édition/fiches/Oracle/
-export étendus. deriveActorProductLinks retire les profils/produits arbitraires et
-SPECTATEUR fabriqué ; méthode/questionnaire existants et contexte calcul/Notoria alignés.
-LTV/CAC contradictoire refusé, null explicite conservé ; unités/client/période à qualifier,
-montants/commentaire conservés. Ancien PDF partiel 41 pages : p.6/34 visuellement reçues,
-réserve présente/ratio absent, première tentative privée refusée conservée. Budgets
-inconnus 0/glyphe ≥ corrigés en code, nouveau PDF non reçu. Test null rouge puis 10/2
-verts ; nouveaux ciblés 25/3, groupe additionnel en cours ; PG amend-source 9/1
-(route gouvernée, deux émissions, zéro contrat/coût), synthèse 38/1 verts après
-corrections de harnais, aucune garde affaiblie. Production 519 distincte : rôles/
-échanges de huit profils et businessModel amendés, autres champs exacts, aucune vente/
-partenariat acquis, BMC toujours proposé. Copie locale USER : huit lignes/cinq colonnes,
-zéro cellule vide, table 802 px dans 804 px ; capture finale à relire, première capture
-pendant scroll non concluante. Hypothèse de cause : contexte/provenance/rôles perdus
-entre sources, calcul et lectures. CI/build/livraison finale, nouveau PDF/all35/source/
-ADVE actuels non reçus ; Oracle 0/6/MVP entier non reçus. [Reprise](RESIDUAL-DEBT.md).
+## Clôture technique520 — réceptions bornées, corpus et Core ouverts (2026-10-22)
+
+Source `7d669f5d18014beb9054a90b390e329577ac99b4`, image/runtime520 exacts au digest
+`cd0487cc50fe54cbbe3e7542f8be2ad7d65db254001cc3a1624a9db36c0271dc`, login200.
+Mêmes volumes, relais Luna/90s et OpenRouter absent ; 278 sources/1225 actifs,
+états/originaux/huit piliers/racine Friesland/six paiements conservés par lectures
+séquentielles, sans snapshot atomique. Les anciennes lignes candidates et l’attente
+de livraison520 sont retirées ; leurs premiers refus et reçus ciblés restent dans
+CHANGELOG520 et les preuves, sans réécrire ces checkpoints.
+
+La livraison reprend les corrections du coût des requêtes de lignée, du statut et
+de l’empreinte sémantiques, des inconnues financières et du dispatch des calculateurs,
+ainsi que les lecteurs Oracle/rôles. Ce reçu de code ne qualifie ni vitesse générale,
+ni corpus intégral, ni chaîne Core/Oracle complète. CODB reste une dette séparée.
+
+Deux fiches Catalyse SPAWT produites et exportées par Glory520, zéro appel IA,
+37 champs remplis et cinq pages par Word. Scénario documenté350kCF/18kCV/60kprix :
+9Gold/mois ; variante TVA18% incluse conditionnelle :11. Ces seuils conditionnels
+ne prouvent ni dépenses actuelles, ni fiscalité applicable, ni rentabilité globale.
+Les cinq pages de chacun des deux Word520 ont été vues intégralement, défaut
+`NO_VAT` confirmé ; rendu corrigé521 non encore reçu nativement. Trois personas/
+Gold60000 conservés, nouveau BMC proposé. Corpus2346fichiers/350dossiers recensé ;
+1 092 premiers matériels reçus, 828 ressources supplémentaires et lot de 425 documents
+en réception, classement encore ouvert. L’alias de cohorte est résolu par
+navigation Drive normale vers « SPAWT — Cohorte Catalyse » déjà recensé, sans
+original dupliqué ; `alias-canonique-received.json` ferme ce seul repère.
+Preuves P23 `production520-{received,data-preserved}.json` et NEW
+`catalyse-spawt-app-calculations-received.json`, `catalyse-word-*-received.json`.
+[Finalisation et déclencheurs](RESIDUAL-DEBT.md), aucun chantier macro clôturé.
 
 ## Clôture technique 506/507 — 2026-10-20
 

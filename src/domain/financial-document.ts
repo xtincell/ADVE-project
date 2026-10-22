@@ -32,3 +32,8 @@ export const BreakEvenDocumentModelSchema = z.object({
     firstMonth: z.union([z.literal(0), z.literal(1)]), note: z.string().max(2000).optional() }).optional(),
 });
 export type BreakEvenDocumentModel = z.infer<typeof BreakEvenDocumentModelSchema>;
+
+/** Human labels shared by the existing financial screen, chart and Word. */
+export const FINANCIAL_TAX_BASIS_LABEL: Record<BreakEvenDocumentModel["taxBasis"], string> = {
+  HT: "HT", TTC: "TTC", NO_VAT: "sans TVA collectée",
+};

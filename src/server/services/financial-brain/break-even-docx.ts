@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { FINANCIAL_TAX_BASIS_LABEL } from "@/domain/financial-document";
 import { JSDOM } from "jsdom";
 import sharp from "sharp";
 import template from "./templates/break-even-v1.json";
@@ -18,7 +19,7 @@ export function breakEvenChartSvg(doc: SourcedBreakEvenDocument): string | null 
     const vx = maxX * i / 4, vy = maxY * i / 4;
     return `<line x1="135" y1="${y(vy)}" x2="935" y2="${y(vy)}" stroke="#dddddd"/><text x="120" y="${y(vy) + 7}" text-anchor="end">${xml(n(vy))}</text><text x="${x(vx)}" y="452" text-anchor="middle">${xml(n(vx))}</text>`;
   }).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="520" viewBox="0 0 1000 520"><rect width="1000" height="520" fill="white"/><g font-family="Arial,sans-serif" font-size="20" fill="#222222"><text x="135" y="33">Montants / mois (${xml(doc.model.currency)} ${xml(doc.model.taxBasis)})</text>${ticks}<path d="M135 70V420H945" stroke="#222222" fill="none"/><path d="${path("revenue")}" stroke="#cf4c41" stroke-width="4" fill="none"/><path d="${path("cost")}" stroke="#222222" stroke-width="4" fill="none"/><text x="135" y="493" fill="#cf4c41">Chiffre d’affaires</text><text x="375" y="493">Coûts totaux</text><text x="950" y="493" text-anchor="end">Unités / mois</text></g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="520" viewBox="0 0 1000 520"><rect width="1000" height="520" fill="white"/><g font-family="Arial,sans-serif" font-size="20" fill="#222222"><text x="135" y="33">Montants / mois (${xml(doc.model.currency)} ${xml(FINANCIAL_TAX_BASIS_LABEL[doc.model.taxBasis])})</text>${ticks}<path d="M135 70V420H945" stroke="#222222" fill="none"/><path d="${path("revenue")}" stroke="#cf4c41" stroke-width="4" fill="none"/><path d="${path("cost")}" stroke="#222222" stroke-width="4" fill="none"/><text x="135" y="493" fill="#cf4c41">Chiffre d’affaires</text><text x="375" y="493">Coûts totaux</text><text x="950" y="493" text-anchor="end">Unités / mois</text></g></svg>`;
 }
 
 /** Fill the retained FIN-06 modular template. All other template ZIP parts
@@ -35,7 +36,7 @@ export async function exportBreakEvenDocx(doc: SourcedBreakEvenDocument, generat
   const values: Record<string, string> = {
     "meta.brand": doc.brand, "meta.period": "Mensuelle · " + doc.model.scope,
     "meta.state": doc.state === "INCOMPLETE" ? "Données incomplètes : aucun seuil certifié" : "Scénario documenté, à valider",
-    "meta.cohort": doc.model.payer, "meta.currency_tax": `${doc.model.currency} · ${doc.model.taxBasis}`,
+    "meta.cohort": doc.model.payer, "meta.currency_tax": `${doc.model.currency} · ${FINANCIAL_TAX_BASIS_LABEL[doc.model.taxBasis]}`,
     "meta.author_date": `La Fusée · ${generatedAt.toLocaleDateString("fr-FR")}`,
     "breakeven.unit": `${doc.model.unit} · ${doc.model.payer}`, "breakeven.unit.source": "Périmètre du modèle [S1]",
     "breakeven.price": n(base.price), "breakeven.price.source": refs([{ ...doc.model.price, label: "Prix" }]),
@@ -115,7 +116,10 @@ export async function exportBreakEvenDocx(doc: SourcedBreakEvenDocument, generat
     for (const source of amount.sources) append(para(`${ref(source.sourceId)} ${source.locator}`));
   }
   append(para("Éditions documentaires utilisées", true));
-  for (const [i, e] of doc.evidence.entries()) append(para(`[S${i + 1}] ${e.fileName} · ${e.document?.label ?? "version conservée"}${e.historical ? " · archive" : ""}. Référence ${e.sourceId} ; empreinte ${e.contentHash}.`));
+  for (const [i, e] of doc.evidence.entries()) {
+    append(para(`[S${i + 1}] ${e.fileName} · ${e.document?.label ?? "version conservée"}${e.historical ? " · archive" : ""}. Référence ${e.sourceId} ; empreinte ${e.contentHash}.`));
+    if (e.document?.sourceUrl) append(para(`Document source : ${e.document.sourceUrl}`));
+  }
   append(para(`Édition de la fiche : ${generatedAt.toISOString()}. Modèle ${template.version}. Les pièces et les éditions antérieures restent conservées.`));
   zip.file("word/document.xml", dom.serialize());
   dom.window.close();
