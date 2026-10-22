@@ -63,6 +63,22 @@ describe.sequential("document editions on real PostgreSQL", () => {
     expect(documentEdition(current.rawData)?.decisions?.[0]?.by).toBe(actor);
     await expect(db.$transaction(tx => assertCurrentSourceReceipts(tx, brand, [{ sourceId: old.id, contentHash: sourceFingerprint(old) }]))).rejects.toThrow("SOURCE_CHANGED");
   });
+  it("repairs legacy OTHER file code on PostgreSQL while preserving its original and authority", async () => {
+    const row = await db.brandDataSource.create({ data: { strategyId: brand, sourceType: "FILE", fileName: "Icon.jsx",
+      rawContent: "export const Icon = () => null;", processingStatus: "EXTRACTED", rawData: { _original: { retainedFixture: true } } } });
+    await db.$transaction(tx => registerDocumentEdition(tx, { id: row.id, expectedSourceHash: sourceFingerprint(row), document: {
+      family: "Icônes", kind: "OTHER", label: "Icon.jsx", status: "REFERENCE", changeSummary: "Classement historique générique de recette." } }));
+    const before = await db.brandDataSource.findUniqueOrThrow({ where: { id: row.id } });
+    const input = { id: row.id, expectedSourceHash: sourceFingerprint(before), userId: actor, filing: {
+      family: "Système graphique — code des icônes", kind: "TECHNICAL" as const, label: "Icon.jsx", status: "REFERENCE" as const,
+      reason: "Classement du code, sans décision de marque." } };
+    const after = await db.$transaction(tx => correctResourceDocumentFiling(tx, input));
+    expect(after.rawContent).toBe(before.rawContent); expect(after.rawData).toMatchObject({ _original: { retainedFixture: true } });
+    expect(documentEdition(after.rawData)).toMatchObject({ kind: "TECHNICAL", status: "REFERENCE", edition: 1,
+      filingCorrections: [{ previousKind: "OTHER", previousStatus: "REFERENCE", by: actor }] });
+    expect(documentEdition(after.rawData)?.decisions).toBeUndefined();
+    await expect(db.$transaction(tx => correctResourceDocumentFiling(tx, input))).rejects.toThrow("SOURCE_CHANGED");
+  });
   it("corrects only descriptive resource filing with a stale-write fence and retained source history", async () => {
     const r = await db.brandDataSource.create({ data: { strategyId: brand, sourceType: "FILE", fileName: "README.txt", rawContent: "Ressource de création de recette.", processingStatus: "EXTRACTED", rawData: { _original: { retainedFixture: true } } } });
     await db.$transaction(tx => registerDocumentEdition(tx, { id: r.id, expectedSourceHash: sourceFingerprint(r), document: {

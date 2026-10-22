@@ -10,7 +10,7 @@ import { mediaStoreConfiguration, type MediaStore } from "@/lib/encrypted-media-
 import { isGodModeEmail } from "@/lib/auth/god-mode";
 import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { assertCollaboratorMayEmit } from "@/server/governance/collaborator-firewall";
-import { decodeSourceUpload, sourceUploadContentSchema, retainOriginalBytes, verifyOriginal } from "@/server/services/ingestion-pipeline/original";
+import { decodeSourceUpload, sourceUploadContentSchema, retainOriginalBytes, verifyOriginal, streamOriginalUpload } from "@/server/services/ingestion-pipeline/original";
 import { BrandAssetLifecycleError } from "./engine";
 import { SourceAssetClassificationInputSchema } from "@/domain/source-document";
 
@@ -250,18 +250,5 @@ export async function streamAssetOriginal(assetId: string, client: Pick<Prisma.T
   const upload = await client.fileUpload.findFirst({ where: { entityType: "BRAND_ASSET", entityId: assetId } });
   if (!upload) return null;
   const receipt = anyAssetOriginalReceiptSchema.parse(upload.storageReceipt);
-  if (receipt.state !== "STORED") throw new Error("Dépôt inachevé. Redéposez le même fichier pour reprendre.");
-  const store = mediaStoreConfiguration();
-  if (!store) throw new Error("Stockage privé indisponible.");
-  assertReceiptStore(store, receipt);
-  async function* read() {
-    if (receipt.schema === "asset-original-v1") yield await verifyOriginal(store!, receipt);
-    else yield* readOriginalChunks(store!, receipt.objectKey, chunkedOriginalManifestSchema.parse({
-      schema: "original-chunks-v1", contentHash: receipt.contentHash, byteLength: receipt.byteLength, chunks: receipt.chunks,
-    }));
-  }
-  const iterator = read();
-  const first = await iterator.next(); // Receive the manifest and first verified part before HTTP 200.
-  async function* body() { try { if (!first.done) yield first.value; yield* iterator; } finally { await iterator.return(undefined); } }
-  return { body: body(), fileName: upload.fileName, receipt };
+  return { ...await streamOriginalUpload(upload), receipt };
 }

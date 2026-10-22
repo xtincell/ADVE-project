@@ -12,6 +12,11 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/config";
 import { brandVaultRouter } from "@/server/trpc/routers/brand-vault";
 import { strategyRouter } from "@/server/trpc/routers/strategy";
+import { ingestionRouter } from "@/server/trpc/routers/ingestion";
+import { sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
+import { documentEdition, documentRepresentation, sourceIsUsable } from "@/domain/source-document";
+import * as extractors from "@/server/services/ingestion-pipeline/extractors";
+import { jsPDF } from "jspdf";
 import { readAssetOriginal } from "@/server/services/brand-vault/original";
 import { ORIGINAL_CHUNK_BYTES, assetChunkedReceiptSchema } from "@/domain/source-original";
 import { purgeExpiredCreativeMedia } from "@/server/services/seshat/creative-intelligence/media-archive";
@@ -19,6 +24,7 @@ import { resolveBrandIdentity } from "@/server/services/brand-theme";
 import { readPublicBrand } from "@/server/services/brand-vault/publication";
 import { GET } from "@/app/api/brand-assets/[assetId]/original/route";
 import { GET as publicFile } from "@/app/brand/editions/[editionId]/[file]/route";
+import { GET as sourceFile } from "@/app/api/brand-sources/[sourceId]/original/route";
 
 vi.setConfig({ testTimeout: 120_000, hookTimeout: 60_000 });
 
@@ -41,6 +47,7 @@ afterAll(async () => {
   const where = { strategyId: { in: brands } };
   const ids = (await db.brandAsset.findMany({ where, select: { id: true } })).map(a => a.id);
   await db.fileUpload.deleteMany({ where: { entityType: "BRAND_ASSET", entityId: { in: ids } } });
+  await db.brandDataSource.deleteMany({ where });
   await db.brandAsset.updateMany({ where, data: { parentBrandAssetId: null, supersededById: null } });
   await db.brandAsset.deleteMany({ where }); await db.intentEmission.deleteMany({ where }); await db.costDecision.deleteMany({ where });
   await db.strategy.deleteMany({ where: { id: { in: brands } } });
@@ -49,6 +56,11 @@ afterAll(async () => {
 });
 const context = (index = 0) => ({ db, headers: undefined, session: { user: { id: users[index]!, role: "USER" as const, operatorId: operators[index] }, expires: new Date(Date.now() + 60000).toISOString() } });
 const caller = (index = 0) => brandVaultRouter.createCaller(context(index));
+const documentCaller = (index = 0) => ingestionRouter.createCaller(context(index));
+const edition = (label: string) => ({ family: "Modèle documentaire fictif", kind: "OTHER" as const,
+  label, status: "PROPOSED" as const, changeSummary: "Recette synthétique : proposition sans adoption." });
+const storedDocument = (strategyId: string, assetId: string, bytes: Buffer, label = "v1") => ({ strategyId,
+  retainedAsset: { assetId, contentHash: createHash("sha256").update(bytes).digest("hex") }, document: edition(label), prepareAnalysis: false });
 async function brand() {
   const s = await db.strategy.create({ data: { name: "Private assets fixture", userId: users[0]!, operatorId: operators[0]!, publicSlug: "LFA-vault-" + randomUUID() } }); brands.push(s.id); return s;
 }
@@ -241,4 +253,122 @@ describe.sequential("private asset originals through the existing vault", () => 
     expect((await db.brandAsset.findUniqueOrThrow({ where: { id: begun.assetId } })).state).toBe("CANDIDATE");
   });
 
+});
+
+describe.sequential("documentary uses of already retained originals", () => {
+  it("reads a large chunked document, replays concurrently and retains the same encrypted objects", async () => {
+    const s = await brand(), bytes = Buffer.alloc(ORIGINAL_CHUNK_BYTES * 3 + 37, 65);
+    const digest = createHash("sha256").update(bytes).digest("hex");
+    const start = await caller().transfer({ strategyId: s.id, transfer: { action: "BEGIN", name: "Large fictional document",
+      fileName: "fixture.txt", mimeType: "text/plain", contentHash: digest, byteLength: bytes.length, type: "DOCUMENT" } });
+    for (let index = 0; index < start.partCount; index++) await caller().transfer({ strategyId: s.id, transfer: {
+      action: "PART", assetId: start.assetId, index, content: bytes.subarray(index * ORIGINAL_CHUNK_BYTES, (index + 1) * ORIGINAL_CHUNK_BYTES).toString("base64"),
+    } });
+    await caller().transfer({ strategyId: s.id, transfer: { action: "FINISH", assetId: start.assetId, autoTag: false } });
+    const original = await db.fileUpload.findFirstOrThrow({ where: { entityType: "BRAND_ASSET", entityId: start.assetId } });
+    const files = (await readdir(root)).sort(), before = await db.brandAsset.findUniqueOrThrow({ where: { id: start.assetId } });
+    const [received, replay] = await Promise.all([documentCaller().uploadFile(storedDocument(s.id, start.assetId, bytes)), documentCaller().uploadFile(storedDocument(s.id, start.assetId, bytes))]);
+    expect(received.sourceId).toBe(replay.sourceId);
+    const source = await db.brandDataSource.findUniqueOrThrow({ where: { id: received.sourceId } });
+    const use = await db.fileUpload.findUniqueOrThrow({ where: { sourceId: source.id } });
+    expect(use.id).not.toBe(original.id); // Another documentary use, the same physical original.
+    expect(use.storageReceipt).toEqual(original.storageReceipt);
+    expect((await readdir(root)).sort()).toEqual(files);
+    expect(await db.fileUpload.findUniqueOrThrow({ where: { id: original.id } })).toEqual(original);
+    expect(await db.brandAsset.findUniqueOrThrow({ where: { id: before.id } })).toEqual(before);
+    expect(await db.brandDataSource.count({ where: { strategyId: s.id } })).toBe(1);
+    expect(source.rawContent).toBe(bytes.toString()); expect(documentEdition(source.rawData)).toMatchObject(edition("v1"));
+    expect(await db.aICostLog.count({ where: { strategyId: s.id } })).toBe(0);
+    expect(await db.brandContextNode.count({ where: { strategyId: s.id } })).toBe(0);
+    vi.mocked(auth).mockResolvedValue({ user: { id: users[0]! } } as never);
+    const response = await sourceFile(new Request("http://localhost/api/brand-sources/" + source.id + "/original"), { params: Promise.resolve({ sourceId: source.id }) });
+    expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("x-content-sha256")).toBe(digest); expect(Buffer.from(await response.arrayBuffer())).toEqual(bytes);
+    vi.mocked(auth).mockResolvedValue({ user: { id: users[1]! } } as never);
+    expect((await sourceFile(new Request("http://localhost/api/brand-sources/" + source.id + "/original"), { params: Promise.resolve({ sourceId: source.id }) })).status).toBe(404);
+    const payloads = await db.intentEmission.findMany({ where: { strategyId: s.id, intentKind: "LEGACY_INGESTION_UPLOAD_FILE" }, select: { payload: true } });
+    expect(payloads).toHaveLength(2); expect(JSON.stringify(payloads)).not.toContain(bytes.subarray(0, 100).toString("base64"));
+  });
+
+  it("refuses a changed documentary decision on replay", async () => {
+    const s = await brand(), bytes = Buffer.from("version,position\nv1,proposition de recette\n");
+    const asset = await caller().create({ ...input(s.id), type: "DOCUMENT", file: { name: "fixture.csv", mimeType: "text/csv", content: bytes.toString("base64") } });
+    expect((await caller().get({ id: asset.id })).documentarySource).toBeNull();
+    const request = storedDocument(s.id, asset.id, bytes);
+    const received = await documentCaller().uploadFile(request);
+    const before = await db.brandDataSource.findUniqueOrThrow({ where: { id: received.sourceId } });
+    expect((await caller().get({ id: asset.id })).documentarySource).toEqual({ id: before.id, processingStatus: "EXTRACTED" });
+    expect((await documentCaller().uploadFile(request)).sourceId).toBe(before.id);
+    await expect(documentCaller().uploadFile({ ...request, document: { ...edition("v1"), status: "REFERENCE" } })).rejects.toThrow("déjà classé");
+    expect(await db.brandDataSource.findUniqueOrThrow({ where: { id: before.id } })).toEqual(before);
+    expect(await db.brandDataSource.count({ where: { strategyId: s.id } })).toBe(1);
+    expect(await db.aICostLog.count({ where: { strategyId: s.id } })).toBe(0);
+  });
+
+  it("rejects foreign, stale, incomplete and physically corrupted originals without admitting a source", async () => {
+    const s = await brand(), bytes = Buffer.from("position,statut\nrecette,proposition\n");
+    const a = await caller().create({ ...input(s.id), type: "DOCUMENT", file: { name: "fixture.csv", mimeType: "text/csv", content: bytes.toString("base64") } });
+    const request = storedDocument(s.id, a.id, bytes), other = await brand();
+    await expect(documentCaller(1).uploadFile(request)).rejects.toThrow();
+    await expect(documentCaller().uploadFile({ ...request, strategyId: other.id })).rejects.toThrow();
+    await expect(documentCaller().uploadFile({ ...request, retainedAsset: { assetId: a.id, contentHash: "0".repeat(64) } })).rejects.toThrow();
+    const upload = await db.fileUpload.findFirstOrThrow({ where: { entityType: "BRAND_ASSET", entityId: a.id } });
+    const receipt = upload.storageReceipt as { objectKey: string };
+    await db.fileUpload.update({ where: { id: upload.id }, data: { storageReceipt: { ...upload.storageReceipt as object, state: "PENDING" } } });
+    await expect(documentCaller().uploadFile(request)).rejects.toThrow();
+    await db.fileUpload.update({ where: { id: upload.id }, data: { storageReceipt: upload.storageReceipt! } });
+    await writeFile(join(root, receipt.objectKey + ".enc"), "damaged");
+    await expect(documentCaller().uploadFile(request)).rejects.toThrow();
+    expect(await db.brandDataSource.count({ where: { strategyId: { in: [s.id, other.id] } } })).toBe(0);
+    expect(await readFile(join(root, receipt.objectKey + ".enc"), "utf8")).toBe("damaged");
+  });
+
+  it("rechecks ownership and the stored receipt after physical reading", async () => {
+    const s = await brand(), other = await brand(), bytes = Buffer.from("Recette : lecture documentaire, sans adoption.");
+    const a = await caller().create({ ...input(s.id), type: "DOCUMENT", file: { name: "fixture.txt", mimeType: "text/plain", content: bytes.toString("base64") } });
+    const extract = extractors.extractReceivedFile;
+    const spy = vi.spyOn(extractors, "extractReceivedFile").mockImplementationOnce(async (...args) => {
+      const result = await extract(...args);
+      await db.brandAsset.update({ where: { id: a.id }, data: { strategyId: other.id } });
+      return result;
+    });
+    try { await expect(documentCaller().uploadFile(storedDocument(s.id, a.id, bytes))).rejects.toThrow(); }
+    finally { spy.mockRestore(); await db.brandAsset.update({ where: { id: a.id }, data: { strategyId: s.id } }); }
+    expect(await db.brandDataSource.count({ where: { strategyId: s.id } })).toBe(0);
+    const upload = await db.fileUpload.findFirstOrThrow({ where: { entityType: "BRAND_ASSET", entityId: a.id } });
+    const receiptSpy = vi.spyOn(extractors, "extractReceivedFile").mockImplementationOnce(async (...args) => {
+      const result = await extract(...args);
+      await db.fileUpload.update({ where: { id: upload.id }, data: { storageReceipt: { ...upload.storageReceipt as object, state: "PENDING" } } });
+      return result;
+    });
+    try { await expect(documentCaller().uploadFile(storedDocument(s.id, a.id, bytes))).rejects.toThrow(); }
+    finally { receiptSpy.mockRestore(); await db.fileUpload.update({ where: { id: upload.id }, data: { storageReceipt: upload.storageReceipt! } }); }
+    expect(await db.brandDataSource.count({ where: { strategyId: s.id } })).toBe(0);
+  });
+
+  it("keeps a raster PDF visibly unread, then accepts an explicit manual reading as the same version's format", async () => {
+    const s = await brand(), text = Buffer.from("Édition fictive : proposition à vérifier, sans adoption.");
+    const textAsset = await caller().create({ ...input(s.id), type: "DOCUMENT", file: { name: "edition.txt", mimeType: "text/plain", content: text.toString("base64") } });
+    const first = await documentCaller().uploadFile(storedDocument(s.id, textAsset.id, text));
+    const canonical = await db.brandDataSource.findUniqueOrThrow({ where: { id: first.sourceId } });
+    const pdf = new jsPDF(); pdf.addImage(png.toString("base64"), "PNG", 20, 20, 30, 30);
+    const bytes = Buffer.from(pdf.output("arraybuffer"));
+    const a = await caller().create({ ...input(s.id), type: "DOCUMENT", file: { name: "edition.pdf", mimeType: "application/pdf", content: bytes.toString("base64") } });
+    const request = { strategyId: s.id, retainedAsset: { assetId: a.id, contentHash: createHash("sha256").update(bytes).digest("hex") }, prepareAnalysis: false,
+      documentRepresentation: { canonical: { sourceId: canonical.id, contentHash: sourceFingerprint(canonical) }, reason: "Même édition fictive au format PDF illustré." } };
+    const received = await documentCaller().uploadFile(request);
+    expect(received).toMatchObject({ needsManualReading: true, readingError: expect.stringContaining("texte lisible") });
+    const unread = await db.brandDataSource.findUniqueOrThrow({ where: { id: received.sourceId } });
+    expect(unread.processingStatus).toBe("FAILED"); expect(documentEdition(unread.rawData)).toBeNull(); expect(documentRepresentation(unread.rawData)).toBeNull();
+    expect((await caller().get({ id: a.id })).documentarySource).toEqual({ id: unread.id, processingStatus: "FAILED" });
+    const corrected = await documentCaller().updateSource({ id: unread.id, expectedSourceHash: sourceFingerprint(unread), content: "Lecture humaine fictive, page 1 : un rectangle rouge. Aucun texte ni décision dans l’image." });
+    if (!("processingStatus" in corrected)) throw new Error("Expected the corrected source, not a shared-use link");
+    expect(corrected.processingStatus).toBe("EXTRACTED"); expect(corrected.errorMessage).toBeNull();
+    const result = await documentCaller().updateSource({ id: unread.id, expectedSourceHash: sourceFingerprint(corrected), documentRepresentation: request.documentRepresentation });
+    if (!("rawData" in result)) throw new Error("Expected the classified source, not a shared-use link");
+    expect(documentRepresentation(result.rawData)?.canonicalSourceId).toBe(canonical.id); expect(sourceIsUsable(result.rawData)).toBe(false);
+    expect((await db.fileUpload.findUniqueOrThrow({ where: { sourceId: unread.id } })).storageReceipt).toEqual((await db.fileUpload.findFirstOrThrow({ where: { entityType: "BRAND_ASSET", entityId: a.id } })).storageReceipt);
+    expect((await db.brandDataSource.findUniqueOrThrow({ where: { id: canonical.id } })).rawData).toEqual(canonical.rawData);
+    expect(await db.aICostLog.count({ where: { strategyId: s.id } })).toBe(0);
+  });
 });

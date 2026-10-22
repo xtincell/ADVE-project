@@ -1,28 +1,77 @@
-## 521 — livraison et réception financière réelle restantes (2026-10-22)
+## 522 — recette locale close, livraison et quatre pièces réelles restantes (2026-10-22)
 
-Attentes locales closes au périmètre reçu : 1674tests/170fichiers verts
-(169/1671gouvernance +3Word), typage régénéré, deux lints/cycles verts et build
-production exit0. Premier refus Next dev généré corrompu/cache préservé hors
-source conservé ; il n’est plus une attente active de typage.
+Port du candidat505 conservé séparément vers521, [ADR0227 Proposed](adr/0227-retained-original-document-uses.md).
+Contrôles locaux522 clos au périmètre reçu : quatre rouges puis33 verts ciblés,
+1717tests/172fichiers gouvernance/UI, typage/deux lints/cycles/code-map et build
+webpack exit0, PostgreSQL25/3 et consommateurs d’originaux17/2. Premier refus
+Turbopack/symlink externe conservé, aucun symlink modifié. FULL sous ADMIN dédié
+séparé du USER : zéro finding,276probes HTTP reçus, cinq routes démo404 non reçues,
+zéro renvoi d’authentification ; ces probes ne prouvent pas les écrans.
 
-USER local réel/version finale compilée : page200, DOM2169ms/titre observé4027ms,
-fenêtre non tronquée, zéro réponse≥500/exception, pas un SLO. Changement d’édition
-reçu avec source recalée sur HT puis retour sans TVA collectée. Édition synthétique
-produite par formulaire et téléchargée nativement :37contrôles Word remplis,
-`NO_VAT` absent, URL source conservée, quatre pages toutes vues sans clipping.
-Preuves P23 `finance521-native-word-received.json`,
-`finance521-final-native-received.json`, `finance521-final-governance.log` et
-`finance521-final-compiled-build.log`. Cette recette locale ne reçoit pas un
-scénario réel SPAWT521 ; les deux Word SPAWT520 vus sur cinq pages chacun restent
-distincts. Hypothèses de coûts, TVA et rentabilité globale non requalifiées.
+USER natif522 fictif : page200, DOM150ms/titre observé549ms, fenêtre complète sans
+≥500/exception ; deux éditions dont historique tardif, PDF image FAILED puis
+correction manuelle et format lié, retour vers source existante/téléchargements
+exacts. DB : trois actifs/trois sources/deux éditions/un format, mêmes reçus et
+originaux, états/versions conservés, zéro IA/pilier/contexte créé. Preuves P23
+`documents522-{final-gauntlet-results,stress-full-received,native-received,native-db-received}.json`.
+L’ancienne attente de contrôle local est retirée, pas transformée en livraison.
 
-**Fermer** : recevoir CI/merge/image/runtime521 et conservation après bascule,
-puis produire/télécharger les Word réels SPAWT521 et inspecter toutes leurs pages
-avec hypothèses, sources, graphique et éditions. Les accès autorisés et refus de
-cette recette réelle restent à vérifier au périmètre du parcours existant.
-Responsable lot521 existant ; effort livraison et recette ciblée des fiches
-réelles, **déclencheur immédiat** après réception locale, avant clôture Catalyse.
-Aucune clôture du corpus, de Core/Oracle/MVP ou des sept chantiers déduite.
+**Fermer le reste** : recevoir commit/CI/image/runtime522 et conservation, puis
+l’admission des quatre grands PDF/PPTX réels déjà au coffre. Requalifier leurs
+versions/statuts/formats selon le dossier Drive courant avant dépôt, préserver
+FileUpload/objet/manifeste et décisions, recevoir texte utile et original exact.
+Reprendre les quatre icônes par la réparation reçue OTHER→TECHNICAL : FILE de
+code/prompt autorisés, même statut, hash courant, aucune décision préalable ;
+garder fermée la voie métier/BMC. Responsable C2-01/lot522 existants ; effort
+livraison et recette bornés, **déclencheur immédiat** sur les pièces bloquées,
+avant réception intégrale du corpus. Aucun nouveau modèle/service/router/page/
+Intent/fournisseur/manager et aucun succès futur déduit.
+
+## Corpus — classement matériel reçu, absorption complète encore ouverte (2026-10-22)
+
+1920/1920 originaux matériels et classements reçus, cinq anciens diagnostics
+rapprochés de l’état courant sans rejouer leurs écritures inconnues ; alias résolu.
+425 est la population documentaire en cours, comprenant techniques/créatifs, pas
+425 documents métier reçus. Présence au coffre, texte lisible, classement, index
+et conseil restent des étapes distinctes. **Fermer** selon C2-01 ci-dessous :
+dépôts/rejeux restants, familles/versions/formats/statuts, index utile et usage
+ADVE sur pièces prioritaires. Responsable et effort inchangés ; **déclencheur**
+avant toute réception de corpus intégral, sans pourcentage global déduit.
+
+Réconciliation métier reçue séparément : E14 Vanessa/Grâce ; V47 retire CAC120B2C,
+LTV350000B2B et ratio23 incompatibles au profit d’inconnues avec sources jointes ;
+Gold60000 conservé, nouveaux BMC proposés non adoptés. **Suite** : recevoir la
+fraîcheur des calculs et lecteurs dérivés sur le dossier actuel, sans nouveau ratio
+fabriqué. Responsable Core/FIDÉLITÉ existants ; effort recette de l’irrigation,
+**déclencheur** reprise Core avant Oracle. Aucun ADVE/Core/Oracle/MVP ou chantier
+entier reçu.
+
+## 521 — livraison close, TVA conditionnelle et charge encore en reprise (2026-10-22)
+
+CI PR1063 quinze checks, postmerge, image/runtime521 exacts reçus, source
+`5f1ec2cb5e4158b47813908855affdec3661b9ff`.375sources/2083actifs/huit piliers,
+états/originaux/Friesland, six paiements et baseline du scoreur conservés par
+lectures séquentielles, pas un snapshot atomique ; mêmes volumes/Luna90s et
+OpenRouter absent. P23 `production521-{received,data-preserved}.json`.
+Les anciennes attentes d’image/runtime/conservation sont retirées.
+
+Le bouton réel521 produit et télécharge le nouveau Word SPAWT sans TVA collectée :
+37contrôles, URL sources conservées, `NO_VAT` absent et cinq pages toutes vues
+lisibles ; `finance521-spawt-native-word-received.json`. Synthétique local et
+anciens Word520 gardent leurs preuves distinctes, pas de SLO global.
+
+**Défaut restant constaté** : seconde génération TVA conditionnelle refusée par
+transaction5s expirée sur `brandDataSource.findFirst` après6917ms pendant ingestion
+à deux workers. Échec conservé ; nouvelle variante521 non reçue, même si l’ancien
+calcul11Gold existe. **Fermer** par lecture préalable des sorties pour exclure une
+réussite inconnue, reprise séquentielle après admissions, téléchargement et lecture
+de toutes les pages. Mesurer la transaction lente sur le même chemin sous charge,
+corriger la cause observée et recevoir un lot témoin sans délai arbitrairement
+augmenté ni autre manager. Responsable lot521/C2-01 existants ; effort recette
+ciblée et diagnostic de charge, **déclencheur immédiat** après admissions et avant
+clôture Catalyse. Coûts350kCF/18kCV/60kGold et seuils9/11 restent hypothèses,
+pas dépenses, TVA applicable ou rentabilité globale. Aucun corpus/Core/Oracle/
+MVP ou chantier entier reçu.
 
 ## C2-01 — finaliser le corpus après livraison520 (2026-10-22)
 
@@ -39,19 +88,19 @@ remplis et cinq pages chacune : scénario documenté350kCF/18kCV/60kprix →9Gol
 variante TVA18% incluse conditionnelle →11. Hypothèses et budgets à valider, pas
 dépenses mesurées ou régime fiscal constaté ; aucune rentabilité globale reçue.
 Les cinq pages de chacun des deux Word520 ont été vues intégralement ; défaut
-`NO_VAT` confirmé, réception native du correctif521 encore ouverte et distincte
-de l’absorption.
+`NO_VAT` confirmé ; correction521 ensuite reçue en production pour le Word sans TVA ; variante
+conditionnelle et charge restent en reprise, distinctes de l’absorption.
 Nouveau BMC proposé, trois personas et Gold60000 conservés.
 
 Recensement22octobre : 2346 fichiers/350 dossiers, 349 connus relus et nouveau
 Shoot vide ; 102 originaux nouveaux/modifiés reçus localement. Plan ventilé dans
-les entités existantes :425 documents/1920 matériels/un alias. Les 1 092 matériels
-du premier lot sont reçus ; réception des 828 ressources supplémentaires et du
-lot de 425 documents en cours. L’alias `1lyZ_l9s7mlYrmhdorCimmzMoB-fwIxGT` est résolu
+les entités existantes :425 entrées documentaires/1920 matériels/un alias. Les
+1920 matériels (1092+828) et leurs classements sont reçus ;
+le lot425 documentaire reste en réception dans le registre de progression courant. L’alias `1lyZ_l9s7mlYrmhdorCimmzMoB-fwIxGT` est résolu
 par navigation Drive normale vers le dossier déjà recensé
 `1m7A4OMoUWpOlRjvOnknY_A8UwZw1K6FC`, « SPAWT — Cohorte Catalyse », sans création
 d’original en doublon (NEW `alias-canonique-received.json`). Ce repère est clos,
-sans clore l’ingestion ou le classement ; les anciennes familles et étiquettes doivent
+sans clore l’absorption ; les anciennes familles et étiquettes documentaires doivent
 être rapprochées sans changer l’original ou adopter une proposition. Une lenteur
 sous charge reste à qualifier sur ce parcours, sans SLO ni capacité globale déduits.
 
@@ -89,15 +138,13 @@ consommateurs, correction dédiée et recette, séparés de la livraison520.
 séquence financière livrée, ou à la prochaine reprise du périmètre financier.
 Aucun nouveau calculateur, service ou gestionnaire à créer.
 
-## Coordination ADR — candidat 505 conservé séparément (2026-10-20)
+## Coordination ADR505 — renumérotation reçue, port522 encore ouvert (2026-10-22)
 
-Le premier gauntlet 508 a refusé le saut 223→225 : priorité au commit, pas à
-une proposition non committée d’un autre clone. ADR508 renuméroté 0224 dans
-ce checkout, sans toucher au candidat505 ni aux gardes. **Fermer** : à la reprise
-du candidat505, lui attribuer le prochain numéro réellement disponible après
-relecture du registre committé et corriger ses références avant merge.
-Responsable reprise du lot505 ; effort renumérotation documentaire bornée,
-déclencheur explicite reprise de ce candidat. Aucun numéro réservé à l’avance.
+ADR0224 courant reste retained-intake-originals. La proposition documentaire de
+l’ancien checkout505 est reprise sous ADR0227 Proposed dans ce checkout ; candidat
+et ancien fichier conservés séparément, aucune réécriture historique. L’attente
+de choix de numéro est close, les gardes de registre restent intactes. Recette locale522 reçue ; livraison et quatre pièces réelles restent dans le lot
+ci-dessus, sans production505 présumée.
 
 ## Clôture technique MVP-FUSEE-02 — import507 repris et livré508 (2026-10-20)
 
@@ -174,9 +221,11 @@ rôles cumulables. D.personas.actorRoles/V.personaSegmentMap étendus sur éditi
 fiches, Oracle et export ; deriveActorProductLinks retire trois profils/deux produits
 arbitraires et SPECTATEUR fabriqué. Méthode variable-bible/questionnaire existants et
 contexte qualifié partagé calcul/Notoria, sans nouveau rail de décision.
-Ratio LTV/CAC enregistré contradictoire non validé (CAC B2C/LTV B2B), null explicite
-conservé après assemblage. **Qualifier unités/client/période** par sources/champs
-existants, sans changer montants/commentaire ni calculer un ratio de remplacement.
+Ancien ratio LTV/CAC contradictoire (CAC B2C/LTV B2B) refusé par les lecteurs.
+Réconciliation documentaire V47 désormais reçue : montants et ratio incompatibles
+retirés au profit d’inconnues, historique conservé, aucun ratio de remplacement.
+**Recevoir les dérivés actuels** après cet amendement, sans transformer une
+absence de mesure comparable en score, rendement ou donnée observée.
 Qualification transportée jusqu’au HTML valeur/budget et PDF. Ancien export partiel
 41 pages : réserve/commentaire p.6/34 visuellement reçus sans coupure, ratio absent,
 premier PDF privé refusé conservé ; pas validation visuelle des 41 pages. Budgets

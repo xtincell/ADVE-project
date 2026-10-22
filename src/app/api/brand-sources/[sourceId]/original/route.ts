@@ -1,7 +1,8 @@
 import { auth } from "@/lib/auth/config";
 import { resolveBrandSource } from "@/server/services/ingestion-pipeline/source-usage";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
-import { readSourceOriginal } from "@/server/services/ingestion-pipeline/original";
+import { streamSourceOriginal } from "@/server/services/ingestion-pipeline/original";
+import { Readable } from "node:stream";
 
 export const dynamic = "force-dynamic";
 export async function GET(_request: Request, { params }: { params: Promise<{ sourceId: string }> }) {
@@ -15,11 +16,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sou
     return Response.json({ error: "Original inaccessible." }, { status: 404, headers });
   }
   try {
-    const original = await readSourceOriginal(sourceId);
+    const original = await streamSourceOriginal(sourceId);
     if (!original) return Response.json({ error: "L’original n’a pas encore été conservé." }, { status: 404, headers });
-    return new Response(new Uint8Array(original.bytes), { headers: {
+    return new Response(Readable.toWeb(Readable.from(original.body, { objectMode: false, highWaterMark: 64 * 1024 })) as ReadableStream<Uint8Array>, { headers: {
       ...headers, "Content-Type": "application/octet-stream",
-      "Content-Length": String(original.bytes.length),
+      "Content-Length": String(original.receipt.byteLength),
       "Content-Disposition": `attachment; filename="original"; filename*=UTF-8''${encodeURIComponent(original.fileName).replace(/'/g, "%27")}`,
       "X-Content-SHA256": original.receipt.contentHash,
     } });
