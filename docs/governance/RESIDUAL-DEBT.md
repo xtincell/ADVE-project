@@ -1,3 +1,50 @@
+## 520 candidate — corpus classé et fiche financière à recevoir (2026-10-22)
+
+Extension du lot520/PR1058 existant, [ADR0226 Proposed](adr/0226-sourced-financial-documents-and-classification.md).
+Code préparé : étiquettes de documents et classement descriptif d’actifs versionnés,
+recherche qualifiée par statut, contexte documentaire R/T/I, modèle FINANCE conservé,
+composition Glory déterministe et export de la fiche modulaire Word. Tests ciblés
+reçus : 38 classement/retrieval/contexte, 15 document/Word, 11 cas de la suite d’originaux d’actifs PostgreSQL,
+4 source/route Glory PostgreSQL. Les premiers refus de harnais et d’export restent
+conservés ; ils ne valent ni recette native ni livraison. Aucun520 déployé au checkpoint. Build et stress compilés reçus :46HTTP anonymes,235accès non reçus, zéro erreur ; natif Sources200/DOM161ms/titre527ms pilote compris,64réponses sans500/exception et19ERR_ABORTED conservés. Calcul, deux éditions et Word téléchargés sur cas synthétique ;4pages inspectées. Le corpus réel et la fiche SPAWT restent ouverts.
+
+**Fermer** : achever le dépôt/rejeu des originaux et résoudre les reçus en erreur ;
+relire labels, lignées, statuts et index utiles de chaque catégorie, avec contrôle
+exact des originaux. Produire une proposition financière SPAWT depuis les pièces
+actuelles et historiques qualifiées, prix Gold humainement confirmé et hypothèses
+explicites pour tout coût non mesuré, sans adopter le BMC ou additionner des
+variantes de facture. Exercer le panneau sous les rôles autorisés, refus voisins,
+source modifiée et historique ; produire la fiche par la vraie route Glory,
+télécharger et relire intégralement le Word rendu. Recevoir gauntlet final,
+CI/image/runtime et conservation après bascule avant clôture du lot. Actualiser
+LeRadar par reçu, sans assimiler présence de fichier et compréhension par ADVE.
+Responsable C2-01 et lot520 existants ; effort reprise du corpus, recette ciblée
+et livraison, sans nouveau chantier. **Déclencheur immédiat** : poursuite de520,
+avant toute annonce d’absorption intégrale ou de fiche Catalyse SPAWT reçue.
+Les réceptions Core/Oracle et les chantiers macro restent distincts.
+
+## Calculateur CODB legacy — seuil non recevable (2026-10-22)
+
+**Où/quoi** : `src/server/services/glory-tools/calculators.ts::codbCalculator`.
+La sortie `breakeven` vaut `codbAnnual / (revenueTarget / codbAnnual)` ; elle varie
+avec un objectif de revenu, sans marge unitaire ni ratio de contribution déclaré.
+Les périodes des entrées ne permettent pas de qualifier ce chiffre comme un seuil
+de rentabilité. Les défauts à zéro et le libellé XAF imposé restent également
+legacy. La nouvelle fiche Catalyse n’appelle pas ce calcul et ne le valide pas.
+
+**Plan de résolution** : préciser le contrat CODB (coût de fonctionnement versus
+seuil), ses unités, devise et périodes à partir des consommateurs existants ;
+retirer le faux seuil ou le déléguer au calculateur canonique avec ses entrées
+requises. Écrire les régressions sur revenus cibles différents, absence de coût,
+contribution nulle et comparaison mensuelle/annuelle, puis exercer les séquences
+et exports réellement consommateurs. Préserver les anciens résultats comme
+historiques ; ne pas les requalifier ou recalculer à la lecture.
+Responsable financial-brain / outils Glory existants ; effort audit borné des
+consommateurs, correction dédiée et recette, séparés de la livraison520.
+**Déclencheur** : avant toute réactivation de `codb-calculator` dans une fiche ou
+séquence financière livrée, ou à la prochaine reprise du périmètre financier.
+Aucun nouveau calculateur, service ou gestionnaire à créer.
+
 ## Coordination ADR — candidat 505 conservé séparément (2026-10-20)
 
 Le premier gauntlet 508 a refusé le saut 223→225 : priorité au commit, pas à
@@ -70,37 +117,47 @@ périmètre comparé), pas une identité atomique de toute la base.
 Rendu candidat : ids/métadonnées masqués, e_channels/DIRECT traduits, vignettes
 « Volet » sans fausse pagination. Aucun nouveau concept/ADR ou compte.
 
-**520 candidate — reprise de continuité Core/FIDÉLITÉ existante** : versions source
-vérifiées par Gateway avant R/T/I, I+projection BrandAction atomiques, arrêt de cascade
-sur T/I échoué ; choix historiques conservés à part du catalogue courant. Restitution
-Oracle repris dans les lecteurs existants. Ratio LTV/CAC : première présentation
-arithmétique refusée nativement, CAC B2C et LTV B2B distincts ; ratio enregistré
-contradictoire non validé, montants/commentaire conservés, aucun ratio de remplacement.
-**Qualifier unités, type de client et période avant toute réception de ce ratio** via
-les champs/sources et lecteurs existants. Transport de la qualification/commentaire
-unitEconomics reçu dans section-mappers/types optionnels vers HTML valeur/budget et
-PDF. Export partiel local de 41 pages produit et relu : réserve/commentaire présents pages
-6/34 et ratio incohérent non affiché ; premier PDF privé refusé pour perte de contexte
-conservé. Pages 6/34 rendues et visuellement lues : réserve/commentaire visibles sans
-coupure, pas validation visuelle de toutes les pages. Null explicite désormais gardé
-comme refus dans l’assemblage mapper→composant HTML ; un rouge/7 verts puis 10 tests/
-2 fichiers verts. Recette native HTML encore en cours ; aucune écriture métier,
-ni Oracle 35/export entier/MVP reçu. **Dette de la passe Oracle, hors continuité 520** :
-export texte de secours affiche encore des budgets inconnus à 0 et rend mal le
-glyphe ≥. Résoudre dans mappers/texte/polices existants : distinguer inconnu de vrai
-zéro sans inventer un budget, préserver le commentaire et recevoir texte/rendu des
-glyphes. Responsable Oracle/export existant ; effort recette/correction ciblée,
-déclencheur passe Oracle 35/export après continuité 520, sans bloquer cet incrément.
-Corrections documentaires séparées en
-production 519 : E9→E12, six questions en rituels/sacrements et quatre rites inférés
-retirés ; V37→V39, nouvelle piste BMC explicitement à valider et tarif rapporté/non
-publié, catalogue inchangé. Historique conservé, ni E ni V entiers reçus.
-Contrôles 520 en cours, aucun correctif déployé, aucune réception Core/MVP entière.
-**Fermer** : recevoir contrôles/natif/livraison puis chaîne réelle A/D/V/E/R/T/I/S,
-fidélité documentaire, choix courant→S et Oracle 35/export. Conserver origines/HUMAN/
-historique, sans réadopter les anciens choix. Responsable Core/FIDÉLITÉ/Oracle
-existants ; effort recette ciblée, déclencheur immédiat dans la réception Core avant
-Oracle. Marques-pays Friesland restent en LB03.
+**520 candidate — continuité Core/FIDÉLITÉ et lectures Oracle/rôles** : PR1058 draft,
+aucun 520 déployé. Gateway contrôle versions source R/T/I, I/projection BrandAction
+atomiques, arrêt T/I échoué, historique/courant distincts. Lectures Oracle étendues :
+contexte A/V, dix propositions de production, équipe/responsabilités A, mitigations
+owner/délai/moyens, fit 53/100 INFERRED, inconnues —, chaînes complètes et 13 signaux T
+qualifiés sans dates inventées. Pas de clauses/cession ni pyramide mesurée fabriquées ;
+7S/BCG/Greenhouse/3Horizons et mix uniforme restent règles exploratoires ADR0091,
+aucune formule changée. Décision utilisateur : public ≠ payeur, partenaire ≠ fournisseur,
+rôles cumulables. D.personas.actorRoles/V.personaSegmentMap étendus sur édition,
+fiches, Oracle et export ; deriveActorProductLinks retire trois profils/deux produits
+arbitraires et SPECTATEUR fabriqué. Méthode variable-bible/questionnaire existants et
+contexte qualifié partagé calcul/Notoria, sans nouveau rail de décision.
+Ratio LTV/CAC enregistré contradictoire non validé (CAC B2C/LTV B2B), null explicite
+conservé après assemblage. **Qualifier unités/client/période** par sources/champs
+existants, sans changer montants/commentaire ni calculer un ratio de remplacement.
+Qualification transportée jusqu’au HTML valeur/budget et PDF. Ancien export partiel
+41 pages : réserve/commentaire p.6/34 visuellement reçus sans coupure, ratio absent,
+premier PDF privé refusé conservé ; pas validation visuelle des 41 pages. Budgets
+inconnus 0/glyphe ≥ désormais corrigés en code 520, réception dans nouveau PDF encore
+ouverte. Tests null rouge puis 10/2 verts ; nouveaux ciblés 25/3 puis groupe en cours.
+PG amend-source 9/1 vert via vraie route gouvernée (deux émissions, zéro contrat/coût) ;
+synthèse PG 38/1 verte après corrections de harnais (label Innovation/compteur mock),
+aucune garde affaiblie. Copie locale USER : huit lignes/cinq colonnes/zéro cellule vide,
+table 802 px dans 804 px ; capture `actor520-oracle-blogger.png` à relire, première
+capture pendant scroll non concluante. Pas réception visuelle globale/nouveau PDF.
+Écritures de données séparées sur production 519 : E9→E12 six questions rituels/
+sacrements et quatre rites inférés retirés ; V37→V39 piste BMC à valider/tarif rapporté
+non publié, catalogue inchangé. Depuis : D31→32 rôles de huit profils, V39→40 échanges
+de huit profils, V40→41 clarification businessModel par pillar.amend sur demande humaine.
+Autres champs exacts, historique conservé ; aucune vente/partenariat acquis, BMC
+proposé toujours non adopté. Ni E/V ni ADVE actuel entiers reçus.
+**Fermer le périmètre 520** : recevoir contrôles finaux, copie native/capture et
+nouveau PDF sur les corrections puis CI/build/livraison exacte. Vérifier refus du
+ratio contradictoire, inconnues distinctes de zéro, glyphes/commentaire et rôles/échanges
+sans faux contrat ni date. Réceptions all35/source/ADVE actuel, chaîne réelle
+A/D/V/E/R/T/I/S, choix courant→S et Oracle 35/export restent distinctes et ouvertes ;
+aucune réception Core/MVP entière, Oracle 0/6 maintenu.
+Responsable Core/FIDÉLITÉ/Oracle existants ; effort recette ciblée des lecteurs/exports,
+déclencheur immédiat sur le lot 520 et avant toute réception Oracle. Marques-pays
+Friesland restent en LB03 ; aucun ancien choix réadopté ni déploiement 520 déduit
+des amendements de production 519.
 
 **Réception FIDÉLITÉ existante — reprise SPAWT avant Oracle (2026-10-21)** :
 ancien pré-lancement/métriques zéro sans mesure et 160/200 latéral ambigus vus en 517

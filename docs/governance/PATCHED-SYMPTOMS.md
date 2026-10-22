@@ -28,27 +28,63 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
-2026-10-21 · **520 candidate — continuité des sources et des projections** :
-Gateway vérifie les versions source avant actualize R/T/I ; I/BrandAction atomiques,
-cascade arrêtée si T/I échoue, catalogue courant et choix antérieurs distingués.
-Oracle ne déduit plus « rédigé » de données présentes. Première présentation
-arithmétique LTV/CAC refusée nativement : CAC B2C et LTV B2B non comparables ;
-le lecteur refuse le ratio enregistré contradictoire et demande de qualifier
-unités/client/période, sans changer les montants ni fabriquer un ratio de remplacement.
-Qualification/commentaire unitEconomics désormais transportés par section-mappers/
-types optionnels jusqu’aux vues HTML valeur/budget et PDF, au-delà de la fiche V.
-PDF partiel local 41 pages relu : réserve/commentaire présents pages 6/34, ratio
-incohérent absent ; première tentative privée refusée (contexte perdu) conservée.
-Pages 6/34 rendues et visuellement lues : réserve/commentaire visibles sans coupure,
-seules ces pages reçues visuellement. Test mapper→composant HTML : null explicite
-préserve le refus sans recalcul après assemblage ; un rouge/7 verts puis 10 tests/
-2 fichiers verts. Recette native HTML encore en cours ; aucune écriture métier ni
-Oracle/MVP entier reçu. Export de secours : budgets inconnus encore affichés à 0
-et glyphe ≥ mal rendu, non corrigés ; reprise dans la passe Oracle existante.
-Hypothèse de cause : versions, projections et libellés ne portaient pas la même
-réception. Contrôles en cours, aucun correctif 520 déployé ni MVP reçu. Corrections
-E/V de production 519 distinctes, sans réception entière de ces piliers ;
-[réceptions et qualification du ratio encore ouvertes](RESIDUAL-DEBT.md).
+2026-10-22 · **520 candidate — correctifs documentaires et financiers ciblés, non déployés** :
+
+- L’inscription/décision d’une édition rechargeait tous les contenus de la marque ;
+  les requêtes de lignée portent désormais le filtre marque/famille en base,
+  avec verrous et reçus conservés. Test ciblé de la forme des requêtes reçu ;
+  aucune mesure de performance en production déduite. Hypothèse : le coût de
+  lecture de métadonnées croissait avec le corpus complet. Commit à recevoir.
+- Un passage sémantique pouvait perdre le statut PROPOSED ou provenir d’une
+  empreinte périmée ; le lecteur compare le reçu à la source courante et préfixe
+  le contexte documentaire. TECHNICAL est écarté par défaut du conseil métier ;
+  l’accès explicite reste possible. Tests de statut/retrieval reçus. Hypothèse :
+  séparation entre index et source sans conservation de l’autorité documentaire.
+  Commit à recevoir.
+- Une absence de coût devenait zéro dans le seuil, et des charges récurrentes
+  pouvaient fabriquer un délai ; le calculateur canonique refuse les entrées
+  absentes/invalides, distingue absence de seuil fini, CA théorique et volume
+  entier, garde le délai inconnu sans trajectoire et compare les volumes sur
+  une même période. Régressions ciblées reçues, zéro explicite conservé.
+  L’exécuteur retrouve aussi les calculateurs dans leur table réelle, au lieu
+  d’un export inexistant. Hypothèse : contrats numériques et dispatch trop
+  permissifs. CODB reste distinct en dette planifiée, pas réparé par cette fiche.
+  Commit à recevoir.
+- Le premier Word financier de recette conservait une instruction FreshBox ;
+  paragraphe d’exemple remplacé par les données du modèle, contrôles et graphique
+  relus par le test vert après refus initial. Ce reçu de structure ne vaut pas
+  inspection visuelle des pages ou fiche SPAWT réelle. Hypothèse : réemploi de
+  gabarit sans distinguer exemple pédagogique et contenu produit. Commit à recevoir.
+
+Preuves : `finance520-labels-unit.log` (38), `finance520-unit-docx-reprise.log`
+(15), `finance520-financial-route-postgres.log` (4 cas, vraie route Glory).
+Les contrôles finaux, le rendu visuel et la livraison restent en
+[reprise bornée](RESIDUAL-DEBT.md), sans réception globale déduite.
+
+2026-10-21 · **520 candidate — continuité, lectures Oracle et rôles/échanges** :
+PR1058 draft, rien 520 déployé. Gateway vérifie les versions source R/T/I ;
+I/BrandAction atomiques, cascade arrêtée sur T/I échoué, historique/courant distincts.
+Lecteurs Oracle : contexte A/V, dix propositions de production, équipe/responsabilités A,
+mitigations owner/délai/moyens, fit 53/100 INFERRED, inconnues —, chaînes complètes/
+13 signaux T qualifiés sans dates inventées. Pas de clauses/cession ni pyramide
+mesurée fabriquées ; 7S/BCG/Greenhouse/3Horizons et mix uniforme restent exploratoires
+selon ADR0091, aucune formule changée. Public ≠ payeur, partenaire ≠ fournisseur,
+rôles cumulables : D.personas.actorRoles/V.personaSegmentMap, édition/fiches/Oracle/
+export étendus. deriveActorProductLinks retire les profils/produits arbitraires et
+SPECTATEUR fabriqué ; méthode/questionnaire existants et contexte calcul/Notoria alignés.
+LTV/CAC contradictoire refusé, null explicite conservé ; unités/client/période à qualifier,
+montants/commentaire conservés. Ancien PDF partiel 41 pages : p.6/34 visuellement reçues,
+réserve présente/ratio absent, première tentative privée refusée conservée. Budgets
+inconnus 0/glyphe ≥ corrigés en code, nouveau PDF non reçu. Test null rouge puis 10/2
+verts ; nouveaux ciblés 25/3, groupe additionnel en cours ; PG amend-source 9/1
+(route gouvernée, deux émissions, zéro contrat/coût), synthèse 38/1 verts après
+corrections de harnais, aucune garde affaiblie. Production 519 distincte : rôles/
+échanges de huit profils et businessModel amendés, autres champs exacts, aucune vente/
+partenariat acquis, BMC toujours proposé. Copie locale USER : huit lignes/cinq colonnes,
+zéro cellule vide, table 802 px dans 804 px ; capture finale à relire, première capture
+pendant scroll non concluante. Hypothèse de cause : contexte/provenance/rôles perdus
+entre sources, calcul et lectures. CI/build/livraison finale, nouveau PDF/all35/source/
+ADVE actuels non reçus ; Oracle 0/6/MVP entier non reçus. [Reprise](RESIDUAL-DEBT.md).
 
 ## Clôture technique 506/507 — 2026-10-20
 

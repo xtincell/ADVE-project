@@ -192,7 +192,7 @@ export async function executeTool(
   // reproductible, garantie par `outputSchema`, provenance DETERMINISTIC_COMPOSE.
   // C'est le chemin canonique (ADVERTIS → Glory → GloryOutput) qui faisait défaut.
   if (hasGloryComposer(tool.slug)) {
-    const composed = await composeGloryDeterministic(tool.slug, strategyId);
+    const composed = await composeGloryDeterministic(tool.slug, strategyId, input);
     if (composed.ok) {
       const aiOutput: Record<string, unknown> = {
         ...composed.output,
@@ -206,14 +206,17 @@ export async function executeTool(
           generatedAt: new Date().toISOString(),
         },
       };
-      const gloryOutput = await db.gloryOutput.create({
-        data: {
+      const data = {
           strategyId,
           toolSlug: tool.slug,
           output: aiOutput as Prisma.InputJsonValue,
           advertis_vector: { pillars: tool.pillarKeys },
-        },
-      });
+      };
+      const gloryOutput = tool.slug === "break-even-calculator" ? await db.$transaction(async tx => {
+        const { assertBreakEvenDocumentCurrent } = await import("@/server/services/financial-brain/break-even-source");
+        await assertBreakEvenDocumentCurrent(tx, strategyId, aiOutput);
+        return tx.gloryOutput.create({ data });
+      }) : await db.gloryOutput.create({ data });
       if (intentEmissionId) {
         try {
           await db.intentEmission.update({

@@ -2,6 +2,7 @@
 
 import type { MediasDistributionSection } from "@/server/services/strategy-presentation/types";
 import { DataTable } from "../shared/data-table";
+import { GloryBlock } from "./05-territoire-creatif";
 
 interface Props { data: MediasDistributionSection }
 
@@ -38,10 +39,11 @@ export function MediasDistribution({ data }: Props) {
       {data.mediaActions.length > 0 && (
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Actions media</h3>
+          {data.mediaActions.some(a => a.proposed) && <p className="mb-3 text-xs text-foreground-muted">Les actions proposées appartiennent au catalogue de possibilités ; leurs montants ne constituent pas un budget engagé ou une dépense mesurée.</p>}
           <DataTable
             headers={["Action", "Categorie", "Budget"]}
             rows={data.mediaActions.map((a) => [
-              a.name, a.category, a.budget != null ? `${a.budget.toLocaleString("fr-FR")} XAF` : "—",
+              a.name, a.category, a.budgetLabel ?? (a.budget != null ? `${a.budget.toLocaleString("fr-FR")} XAF` : "—"),
             ])}
             compact
           />
@@ -49,10 +51,8 @@ export function MediasDistribution({ data }: Props) {
       )}
       {data.digitalPlannerOutput && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Digital Planner (Glory)</h3>
-          <pre className="overflow-x-auto rounded-xl border border-border bg-background/50 p-4 font-mono text-xs text-foreground-muted">
-            {JSON.stringify(data.digitalPlannerOutput, null, 2).slice(0, 1500)}
-          </pre>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Plan de diffusion</h3>
+          <GloryBlock data={data.digitalPlannerOutput} />
         </div>
       )}
     </div>

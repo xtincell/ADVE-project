@@ -36,7 +36,7 @@ export function DataTable({ headers, rows, compact }: DataTableProps) {
                   key={ci}
                   className={`px-4 text-sm text-foreground-secondary ${compact ? "py-2" : "py-3"}`}
                 >
-                  {cell ?? <span className="text-foreground-muted">—</span>}
+                  {cell == null || (typeof cell === "string" && !cell.trim()) ? <span className="text-foreground-muted">—</span> : cell}
                 </td>
               ))}
             </tr>

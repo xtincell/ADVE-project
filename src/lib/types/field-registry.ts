@@ -9,6 +9,7 @@ import {
   PRODUCT_CATEGORIES, PRODUCT_LIFECYCLE, AARRR_STAGES,
 } from "./taxonomies";
 import { PILLAR_KEYS } from "@/domain/pillars";
+import { BRAND_ACTOR_ROLES, BRAND_ACTOR_ROLE_LABELS } from "@/domain/brand-actors";
 
 // ─── Field type definitions ──────────────────────────────────────────────
 
@@ -16,7 +17,7 @@ export type FieldDef =
   | { kind: "enum"; options: readonly string[]; label: string; nullable?: boolean }
   | { kind: "text"; label: string; maxLength?: number; multiline?: boolean; placeholder?: string }
   | { kind: "number"; label: string; min?: number; max?: number; unit?: string }
-  | { kind: "multi-enum"; options: readonly string[]; label: string }
+  | { kind: "multi-enum"; options: readonly string[]; label: string; optionLabels?: Readonly<Record<string, string>> }
   | { kind: "object"; label: string; fields: Record<string, FieldDef> }
   | { kind: "array-of-objects"; label: string; itemLabel?: string; itemFields: Record<string, FieldDef> }
   | { kind: "array-of-strings"; label: string; placeholder?: string }
@@ -140,6 +141,7 @@ const PILLAR_D: Record<string, FieldDef> = {
     kind: "array-of-objects", label: "Personas", itemLabel: "Persona",
     itemFields: {
       name: textField("Nom du profil"),
+      actorRoles: { kind: "multi-enum", label: "Rôles dans le modèle", options: BRAND_ACTOR_ROLES, optionLabels: BRAND_ACTOR_ROLE_LABELS },
       age: textField("Age"),
       csp: textField("CSP"),
       location: textField("Localisation"),
@@ -216,6 +218,19 @@ const PILLAR_D: Record<string, FieldDef> = {
 // ─── PILLAR V — Valeur ───────────────────────────────────────────────────
 
 const PILLAR_V: Record<string, FieldDef> = {
+  personaSegmentMap: {
+    kind: "array-of-objects", label: "Échanges de valeur par acteur", itemLabel: "Échange",
+    itemFields: {
+      personaName: textField("Profil concerné (nom dans D)"),
+      productNames: stringsField("Offres concernées (si applicable)"),
+      devotionLevel: enumField("Niveau d’engagement visé (si établi)", DEVOTION_LEVELS, true),
+      revenueContributionPct: numberField("Part de revenu (si établie)", { min: 0, max: 100, unit: "%" }),
+      valueToBrand: stringsField("Ce que l’acteur apporte à la marque"),
+      valueToActor: stringsField("Ce que l’acteur reçoit"),
+      actorCosts: stringsField("Ce que cela lui coûte (argent, temps, effort…)"),
+      dependencyConditions: stringsField("Conditions qui rendent sa participation viable"),
+    },
+  },
   promesseDeValeur: textField("Promesse de valeur", { multiline: true }),
   produitsCatalogue: {
     kind: "array-of-objects", label: "Catalogue produits", itemLabel: "Produit",

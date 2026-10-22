@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/config";
 import { exportStrategyData, exportAsCsv, exportPublicBrand } from "@/server/services/data-export";
 import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { publicBrandCorsHeaders } from "@/domain/public-brand";
+import { db } from "@/lib/db";
 
 export async function GET(
   request: Request,
@@ -42,6 +43,20 @@ export async function GET(
   const format = url.searchParams.get("format") ?? "json";
 
   try {
+    if (format === "break-even-docx") {
+      const outputId = url.searchParams.get("outputId");
+      if (!outputId) return NextResponse.json({ error: "Choisissez une édition de la fiche." }, { status: 400 });
+      const edition = await db.gloryOutput.findFirst({ where: { id: outputId, strategyId, toolSlug: "break-even-calculator" } });
+      const document = edition?.output as unknown as import("@/server/services/financial-brain/break-even-source").SourcedBreakEvenDocument | undefined;
+      if (!edition || document?.schema !== "adve-break-even-document-v1") return NextResponse.json({ error: "Édition financière introuvable." }, { status: 404 });
+      const { exportBreakEvenDocx } = await import("@/server/services/financial-brain/break-even-docx");
+      const bytes = await exportBreakEvenDocx(document, edition.createdAt);
+      return new Response(new Uint8Array(bytes), { headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Disposition": `attachment; filename="seuil-${strategyId}-${edition.id}.docx"`,
+        "Cache-Control": "private, no-store",
+      } });
+    }
     if (format === "csv") {
       const csvFiles = await exportAsCsv(strategyId);
 

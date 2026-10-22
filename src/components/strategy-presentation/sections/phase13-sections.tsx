@@ -221,6 +221,7 @@ export function Mckinsey7s({ data }: Props) {
     >
       {sevenS && Object.keys(sevenS).length > 0 ? (
         <Stack direction="col" gap={3}>
+          {typeof data.scoreLabel === "string" && <Text variant="body">{data.scoreLabel}</Text>}
           {dimensions.map((d) => {
             const dim = sevenS[d];
             if (!dim) return null;
@@ -254,7 +255,8 @@ export function Mckinsey7s({ data }: Props) {
 
 export function BcgPortfolio({ data, strategyId }: Props) {
   const portfolio = (data.bcgPortfolio ?? null) as Record<string, unknown[]> | null;
-  const health = data.bcgHealthScore as number | undefined;
+  const health = typeof data.bcgHealthScore === "number" ? data.bcgHealthScore : null;
+  const healthScale = typeof data.bcgHealthScale === "number" ? data.bcgHealthScale : null;
   return (
     <SectionShell
       tier="BIG4_BASELINE"
@@ -263,13 +265,14 @@ export function BcgPortfolio({ data, strategyId }: Props) {
     >
       {portfolio ? (
         <Stack direction="col" gap={3}>
-          {health !== undefined ? (
+          {typeof data.methodologie === "string" && <Text variant="body">{data.methodologie}</Text>}
+          {health !== null ? (
             <Stack direction="row" align="center" gap={2}>
               <Text variant="caption" tone="muted">
-                Portfolio health score
+                {typeof data.scoreLabel === "string" ? data.scoreLabel : "Indice enregistré — échelle à préciser"}
               </Text>
-              <Progress value={health} max={100} />
-              <Badge tone="accent">{health}</Badge>
+              {healthScale !== null && healthScale > 0 ? <Progress value={health} max={healthScale} /> : null}
+              <Badge tone="accent">{health}{healthScale !== null ? `/${healthScale}` : ""}</Badge>
             </Stack>
           ) : null}
           <Grid cols={2} gap={3}>
@@ -361,6 +364,7 @@ export function DeloitteGreenhouse({ data }: Props) {
   const dg = (data.deloitteGreenhouse ?? data) as {
     team_profiles?: Array<{ nom?: string; role?: string | null; competences?: string[] }>;
     complementarity_score?: number;
+    scoreLabel?: string;
     execution_capacity?: string;
     skill_gaps?: string[];
   } | null;
@@ -381,7 +385,7 @@ export function DeloitteGreenhouse({ data }: Props) {
             <Stack direction="row" align="center" gap={3}>
               {score !== null ? (
                 <Stack direction="row" align="center" gap={2}>
-                  <Text variant="caption" tone="muted">Complémentarité</Text>
+                  <Text variant="caption" tone="muted">{dg?.scoreLabel ?? "Indice d’équipe enregistré"}</Text>
                   <Progress value={score} max={10} />
                   <Badge tone="accent">{score}/10</Badge>
                 </Stack>
@@ -425,7 +429,7 @@ export function DeloitteGreenhouse({ data }: Props) {
 export function Mckinsey3Horizons({ data, strategyId }: Props) {
   const m3h = data.mckinsey3Horizons as { h1?: unknown; h2?: unknown; h3?: unknown; allocation?: Record<string, number>;
     unassigned?: { label?: string; items?: string[] };
-    coverage?: { totalCount: number; classifiedCount: number; unassignedCount: number } } | null;
+    coverage?: { totalCount: number; classifiedCount: number; unassignedCount: number }; methodologie?: string } | null;
   return (
     <SectionShell
       tier="BIG4_BASELINE"
@@ -434,6 +438,7 @@ export function Mckinsey3Horizons({ data, strategyId }: Props) {
     >
       {m3h ? (
         <Stack direction="col" gap={3}>
+          {m3h.methodologie && <Text variant="body">{m3h.methodologie}</Text>}
           {m3h.coverage ? (
             <Text variant="caption" tone="muted">
               {m3h.coverage.classifiedCount} sur {m3h.coverage.totalCount} éléments classés.
@@ -675,6 +680,7 @@ export function ManipulationMatrix({ data, strategyId }: Props) {
     >
       {mm ? (
         <Stack direction="col" gap={3}>
+          {mm.summary?.mixSource && <Text variant="body">{mm.summary.mixSource}</Text>}
           <Grid cols={4} gap={2}>
             {(["peddler", "dealer", "facilitator", "entertainer"] as const).map((mode) => {
               const ev = byMode.get(mode);
@@ -950,7 +956,7 @@ export function OvertonDistinctive({ data }: Props) {
 }
 
 export function TarsisWeakSignals({ data }: Props) {
-  const tarsis = data.tarsisWeakSignals as { signals?: Array<{ description?: string; category?: string; impact?: number; horizon?: string; action?: string; confidence?: number }>; top3?: unknown[] } | null;
+  const tarsis = data.tarsisWeakSignals as { signals?: Array<{ description?: string; category?: string; impact?: number | null; horizon?: string; action?: string; confidence?: number; qualification?: string }>; top3?: unknown[] } | null;
   return (
     <SectionShell
       tier="DISTINCTIVE"
@@ -959,19 +965,20 @@ export function TarsisWeakSignals({ data }: Props) {
     >
       {tarsis && tarsis.signals ? (
         <Stack direction="col" gap={2}>
-          {tarsis.signals.slice(0, 8).map((s, i) => (
+          {tarsis.signals.map((s, i) => (
             <Card key={i} surface="outlined">
               <CardBody>
                 <Stack direction="row" align="center" justify="between" gap={2}>
                   <Stack direction="col" gap={1}>
                     <Text variant="body">{s.description ?? "—"}</Text>
+                    {s.qualification && <Text variant="caption">{s.qualification}</Text>}
                     <Stack direction="row" gap={2}>
                       {s.category ? <Tag>{s.category}</Tag> : null}
                       {s.horizon ? <Tag>{s.horizon}</Tag> : null}
                       {s.action ? <Tag>{s.action}</Tag> : null}
                     </Stack>
                   </Stack>
-                  {s.impact !== undefined ? (
+                  {typeof s.impact === "number" ? (
                     <Badge tone={s.impact > 5 ? "accent" : "neutral"}>
                       Impact {s.impact}
                     </Badge>

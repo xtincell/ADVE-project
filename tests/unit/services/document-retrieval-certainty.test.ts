@@ -38,6 +38,17 @@ it("Notoria selects the requested older study before its document cap", async ()
   expect(result.retrieval).toBe("DETERMINISTIC");
 });
 describe("canonical documentary certainty follows current retrieval", () => {
+  it("retains the proposed edition notice on the semantic path", async () => {
+    state.embedding = [1, 0];
+    state.sources[0].rawData = { _document: { schema: "document-edition-v1", family: "Modèle économique",
+      kind: "BMC", label: "v3", status: "PROPOSED", changeSummary: "Piste à discuter", edition: 3,
+      recordedAt: "2026-10-18T00:00:00.000Z" } };
+    state.nodes[0].payload.sourceContentHash = sourceFingerprint(state.sources[0]);
+    const context = await loadBrandSourceContext("brand-a", { query: "marque" });
+    expect(context.retrieval).toBe("SEMANTIC");
+    expect(context.excerpts[0]?.text).toContain("HYPOTHÈSE NON VALIDÉE PAR L’ÉQUIPE");
+    expect(context.excerpts[0]?.text).toContain(source.rawContent);
+  });
   it.each([false, true])("takes certainty from the current source, never the cache (vector=%s)", async (vector) => {
     if (vector) state.embedding = [1, 0];
     const rows = vector ? await topKWithinStrategy("brand-a", "marque") : await listByMetadata({ strategyId: "brand-a" });

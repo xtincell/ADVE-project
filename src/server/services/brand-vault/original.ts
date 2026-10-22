@@ -12,6 +12,35 @@ import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { assertCollaboratorMayEmit } from "@/server/governance/collaborator-firewall";
 import { decodeSourceUpload, sourceUploadContentSchema, retainOriginalBytes, verifyOriginal } from "@/server/services/ingestion-pipeline/original";
 import { BrandAssetLifecycleError } from "./engine";
+import { SourceAssetClassificationInputSchema } from "@/domain/source-document";
+
+/** Extend the existing tag writer. No bytes, business kind, lifecycle state,
+ * selected identity, supersession or physical-file version changes here. */
+export async function classifyAssetOriginal(id: string, input: z.infer<typeof SourceAssetClassificationInputSchema>, actorId: string, client: PrismaClient = db) {
+  const spec = SourceAssetClassificationInputSchema.parse(input);
+  return client.$transaction(async tx => {
+    await tx.$queryRaw`SELECT id FROM "BrandAsset" WHERE id = ${id} FOR UPDATE`;
+    const asset = await tx.brandAsset.findUniqueOrThrow({ where: { id } });
+    const actor = await tx.user.findUnique({ where: { id: actorId } });
+    const role = isGodModeEmail(actor?.email) ? "ADMIN" : actor?.role;
+    if (!actor || !role || !await canAccessStrategy(asset.strategyId, { userId: actorId, role, operatorId: actor.operatorId }, tx)) throw new BrandAssetLifecycleError("FORBIDDEN", "Accès refusé à cet actif.");
+    const previous = metadata(asset.metadata);
+    const upload = await tx.fileUpload.findFirst({ where: { entityType: "BRAND_ASSET", entityId: id } });
+    const original = anyAssetOriginalReceiptSchema.safeParse(upload?.storageReceipt);
+    const visible = metadata(previous.original);
+    if (!original.success || original.data.state !== "STORED" || original.data.contentHash !== spec.expectedOriginalHash
+      || visible.state !== "STORED" || visible.contentHash !== original.data.contentHash || visible.byteLength !== original.data.byteLength) throw new BrandAssetLifecycleError("CONFLICT", "L’original reçu diffère du fichier à classer. Relisez cet actif.");
+    const old = metadata(previous._sourceClassification);
+    if (previous._sourceClassification && (!Number.isInteger(old.version) || Number(old.version) < 1)) throw new BrandAssetLifecycleError("CONFLICT", "Le classement conservé est illisible. Relisez cet actif avant de le modifier.");
+    const version = typeof old.version === "number" ? old.version : 0;
+    if (version !== spec.expectedClassificationVersion) throw new BrandAssetLifecycleError("CONFLICT", "Le classement a changé. Relisez cet actif avant de poursuivre.");
+    return tx.brandAsset.update({ where: { id }, data: { metadata: json({ ...previous, _sourceClassification: {
+      schema: "source-classification-v1", ...spec.classification, version: version + 1,
+      by: actorId, at: new Date().toISOString(), reason: spec.reason,
+      history: [...(Array.isArray(old.history) ? old.history : []), ...(version ? [{ ...old, history: undefined }] : [])],
+    } }) } });
+  });
+}
 
 export const assetProvenanceSchema = z.object({
   provider: z.literal("GOOGLE_DRIVE"), externalId: z.string().min(1).max(200),

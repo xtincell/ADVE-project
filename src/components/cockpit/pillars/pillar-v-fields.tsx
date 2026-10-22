@@ -286,8 +286,8 @@ export function PillarVFields({ content, certainty }: { content: Rec; certainty:
 
       <Section title="Catalogue & offre" sub="Chaque produit et sa matrice de valeur 2×2×2 (gain/coût × client/marque × concret/abstrait)">
         <div className="ck-a-grid">
-          <ProofList title="Persona × Segment" items={v.personaSegmentMap} status={st("personaSegmentMap")}
-            cols={[["personaName", "Persona"], ["productNames", "Produits"], ["devotionLevel", "Niveau d'engagement"], ["revenueContributionPct", "% CA"]]} />
+          <ProofList title="Échanges de valeur par acteur" items={v.personaSegmentMap} status={st("personaSegmentMap")}
+            cols={[["personaName", "Acteur"], ["productNames", "Offres concernées"], ["valueToBrand", "Apport à la marque"], ["valueToActor", "Contrepartie"], ["actorCosts", "Coûts pour l’acteur"], ["dependencyConditions", "Conditions de participation"], ["devotionLevel", "Niveau d'engagement"], ["revenueContributionPct", "% CA documenté"]]} />
           <Catalogue items={v.produitsCatalogue} status={st("produitsCatalogue")} />
           <ProductLadder items={v.productLadder} catalogue={v.produitsCatalogue} status={st("productLadder")} />
         </div>

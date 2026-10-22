@@ -318,10 +318,11 @@ function multiYearProjectorCalc(ctx: Ctx): Result {
 function breakEvenCalc(ctx: Ctx): Result {
   const fb = require("@/server/services/financial-brain") as typeof import("@/server/services/financial-brain");
   const be = fb.calculateBreakeven({
-    fixedCosts: num(ctx, "fixed_costs", 0),
-    variableCostPerUnit: num(ctx, "variable_cost_per_unit", 0),
-    pricePerUnit: num(ctx, "price_per_unit", 0),
+    fixedCosts: num(ctx, "fixed_costs", NaN),
+    variableCostPerUnit: num(ctx, "variable_cost_per_unit", NaN),
+    pricePerUnit: num(ctx, "price_per_unit", NaN),
     monthlyVolume: num(ctx, "monthly_volume", 0) || undefined,
+    costPeriod: ctx.cost_period === "MONTH" || ctx.cost_period === "YEAR" ? ctx.cost_period : undefined,
   });
   return {
     break_even_units: be.breakEvenUnits,
@@ -329,7 +330,12 @@ function breakEvenCalc(ctx: Ctx): Result {
     break_even_months: be.breakEvenMonths,
     contribution_margin: be.contributionMargin,
     margin_of_safety: be.marginOfSafety,
-    summary: `Point mort: ${be.breakEvenUnits} unites (${be.breakEvenRevenue.toLocaleString()} FCFA)${be.breakEvenMonths ? ` soit ~${be.breakEvenMonths} mois` : ""}`,
+    status: be.status,
+    issues: be.issues,
+    revenue_at_whole_units: be.revenueAtWholeUnits,
+    summary: be.status === "COMPUTED"
+      ? `Seuil : ${be.breakEvenUnits} unités ; CA théorique ${be.breakEvenRevenue!.toLocaleString()}. Devise et période à lire dans le modèle source.`
+      : `Seuil non calculable : ${be.issues.join(" ; ")}`,
   };
 }
 

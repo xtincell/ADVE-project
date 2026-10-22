@@ -16,7 +16,9 @@ import { ADVE_KEYS } from "@/domain";
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
-import { UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
+import { UNTRUSTED_NOTICE, wrapUntrusted } from "@/server/services/utils/untrusted-content";
+import { loadBrandSourceContext, renderSourceContext } from "@/server/services/notoria/source-context";
+import type { SourceReceipt } from "@/domain/source-certainty";
 import { db } from "@/lib/db";
 import { setNestedValue } from "@/lib/pillar-path";
 import { PILLAR_SCHEMAS, type PillarKey } from "@/lib/types/pillar-schemas";
@@ -46,6 +48,7 @@ async function savePillar(
   operationType: "MERGE_DEEP" | "REPLACE_FULL" | "SET_FIELDS" = "MERGE_DEEP",
   expectedPillarVersions?: NonNullable<PillarWriteRequest["options"]>["expectedPillarVersions"],
   context?: { intentId?: string; userId?: string },
+  sourceReceipts: SourceReceipt[] = [],
 ) {
   // LOI 1 — writePillarAndScore reconcile Pillar.completionLevel cache
   // (D-2 invariant). writePillar seul laisse le cache divergent, ce qui
@@ -61,7 +64,8 @@ async function savePillar(
           ? { type: "SET_FIELDS", fields: Object.entries(content).filter(([, value]) => value !== undefined).map(([path, value]) => ({ path, value })) }
         : { type: "MERGE_DEEP", patch: content },
       author: { system: "MESTOR", reason: "RTIS cascade — actualizePillar", ...context },
-      options: { targetStatus: "AI_PROPOSED", confidenceDelta: confidence * 0.1, expectedPillarVersions },
+      options: { targetStatus: "AI_PROPOSED", confidenceDelta: confidence * 0.1, expectedPillarVersions,
+        sourceReceipts, requiredSourceIds: sourceReceipts.map(source => source.sourceId) },
     });
     // Ne JAMAIS avaler un échec d'écriture en silence : sinon actualizePillar
     // renvoie updated=true alors que le blob n'a PAS été persisté (bug observé :
@@ -440,6 +444,17 @@ export async function actualizePillar(
     // transaction. A long provider call cannot publish an obsolete calculation.
     const versions = new Map(snapshot.map(p => [p.key.toUpperCase(), p.currentVersion]));
     const expectedPillarVersions = Object.fromEntries(dependencies.map(k => [k.toLowerCase(), versions.get(k) ?? null]));
+    const sourceContext = dependencies.length ? await loadBrandSourceContext(strategyId, {
+      query: pillarKey === "R" ? "risques modèle économique personas partenaires clients hypothèses études"
+        : pillarKey === "T" ? "étude marché terrain personas prix hypothèses validation TAM SAM SOM"
+        : "actions canaux publics partenaires clients modèle économique contraintes production",
+      ensureIndexed: false,
+    }) : null;
+    const sourceReceipts = [...new Map((sourceContext?.excerpts ?? []).flatMap(excerpt => excerpt.contentHash
+      ? [[excerpt.sourceId, { sourceId: excerpt.sourceId, contentHash: excerpt.contentHash }] as const] : [])).values()];
+    const documentaryContext = sourceContext && !sourceContext.empty
+      ? wrapUntrusted("Documents courants de la marque", renderSourceContext(sourceContext), { max: 32_000 })
+      : "Aucun extrait documentaire exploitable fourni. Ne pas prétendre avoir vérifié les documents.";
 
     let newContent: Record<string, unknown>;
     let confidence: number;
@@ -452,7 +467,7 @@ export async function actualizePillar(
 
       const response = await callCascadeLLM(
         RTIS_PROMPTS.R,
-        `Voici les données ADVE actuelles de la stratégie:\n\n${adveContext}\n\nProduis le pilier R (Risk) en JSON.`,
+        `Voici les données ADVE actuelles de la stratégie:\n\n${adveContext}\n\n${documentaryContext}\n\nConfronte les piliers aux sources datées ; distingue les observations, propositions et décisions. Produis le pilier R (Risk) en JSON.`,
         strategyId,
       );
       newContent = extractJSON(response);
@@ -461,7 +476,7 @@ export async function actualizePillar(
     } else if (pillarKey === "T") {
       // Step 2 only: Generate T pillar via Protocole Track using prepared Seshat data
       const { executeProtocoleTrack } = await import("@/server/services/rtis-protocols/track");
-      const tResult = await executeProtocoleTrack(strategyId);
+      const tResult = await executeProtocoleTrack(strategyId, { documentaryContext });
       if (tResult.error || Object.keys(tResult.content).length === 0) {
         throw new Error(`[protocole-track] ${tResult.error ?? "empty content returned"}`);
       }
@@ -475,7 +490,7 @@ export async function actualizePillar(
       // perdu). On génère donc le catalogue SECTION PAR SECTION via le gateway
       // (→ Ollama en 100% local), chaque fragment petit et parseable.
       const { generateICatalogueSequenced } = await import("./i-pillar-sequenced");
-      const catalogue = await generateICatalogueSequenced({ strategyId, pillars });
+      const catalogue = await generateICatalogueSequenced({ strategyId, pillars, documentaryContext });
       // Filet : si TOUTES les sections ont échoué (LLM indisponible), on remonte
       // une erreur honnête plutôt que de sauvegarder un catalogue creux.
       const allEmpty =
@@ -550,6 +565,8 @@ Retourne le pilier ${pillarKey} complet en JSON.`;
 
             const filled = await runChunkedFieldGeneration({
               strategyId,
+              documentaryContext,
+              sourceReceipts,
               pillarKey: pillarKey.toLowerCase(),
               currentContent: newContent,
               allPillars: allPillarsLower,
@@ -591,9 +608,9 @@ Retourne le pilier ${pillarKey} complet en JSON.`;
     let saved: PillarWriteResult;
     if (pillarKey === "I") {
       const existingI = (pillars[pillarKey] ?? {}) as Record<string, unknown>;
-      saved = await savePillar(strategyId, pillarKey, { ...existingI, ...newContent }, confidence, "REPLACE_FULL", expectedPillarVersions, context);
+      saved = await savePillar(strategyId, pillarKey, { ...existingI, ...newContent }, confidence, "REPLACE_FULL", expectedPillarVersions, context, sourceReceipts);
     } else if (pillarKey === "R" || pillarKey === "T") {
-      saved = await savePillar(strategyId, pillarKey, newContent, confidence, "SET_FIELDS", expectedPillarVersions, context);
+      saved = await savePillar(strategyId, pillarKey, newContent, confidence, "SET_FIELDS", expectedPillarVersions, context, sourceReceipts);
     } else {
       saved = await savePillar(strategyId, pillarKey, newContent, confidence, "MERGE_DEEP", undefined, context);
     }

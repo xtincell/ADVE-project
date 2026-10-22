@@ -334,15 +334,21 @@ export interface BreakEvenInput {
   variableCostPerUnit: number;
   pricePerUnit: number;
   monthlyVolume?: number;
+  /** Period covered by fixedCosts; never inferred from the volume label. */
+  costPeriod?: "MONTH" | "YEAR";
 }
 
 export interface BreakEvenAnalysis {
-  breakEvenUnits: number;
-  breakEvenRevenue: number;
+  status: "COMPUTED" | "INSUFFICIENT_DATA" | "NO_FINITE_BREAK_EVEN";
+  issues: string[];
+  breakEvenUnits: number | null;
+  /** Exact theoretical threshold before rounding indivisible units. */
+  breakEvenRevenue: number | null;
+  revenueAtWholeUnits: number | null;
   breakEvenMonths: number | null;
-  marginOfSafety: number;
-  contributionMargin: number;
-  contributionMarginRatio: number;
+  marginOfSafety: number | null;
+  contributionMargin: number | null;
+  contributionMarginRatio: number | null;
 }
 
 // ─── Elasticity ─────────────────────────────────────────────────────────────

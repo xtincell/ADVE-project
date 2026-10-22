@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { PILLAR_KEYS, ADVE_KEYS } from "@/domain";
 import { ProductSystemSchema } from "@/domain/product-system";
+import { BRAND_ACTOR_ROLES } from "@/domain/brand-actors";
 import {
   ARCHETYPES, SCHWARTZ_VALUES, LIFE_FORCE_8, AARRR_STAGES,
   DEVOTION_LEVELS, CHANNELS, TOUCHPOINT_TYPES, RITUAL_TYPES,
@@ -279,6 +280,7 @@ export const PillarASchema = z.object({
 const PersonaSchema = z.object({
   id: entityId.optional(),                                  // FK target for I.PotentialAction.targetsPersonaIds (ADR-0088)
   name: textShort,
+  actorRoles: z.array(z.enum(BRAND_ACTOR_ROLES)).optional(),
   age: z.number().int().min(1).max(120).optional(),
   csp: textShort.optional(),
   location: textShort.optional(),
@@ -589,6 +591,10 @@ export const PillarVSchema = z.object({
     productNames: z.array(z.string().min(1)),                // Ref V.produitsCatalogue[].nom
     devotionLevel: z.enum(DEVOTION_LEVELS).optional(),       // Quel niveau Devotion ce persona peut atteindre
     revenueContributionPct: z.number().min(0).max(100).optional(),
+    valueToBrand: z.array(z.string().min(1)).optional(),
+    valueToActor: z.array(z.string().min(1)).optional(),
+    actorCosts: z.array(z.string().min(1)).optional(),
+    dependencyConditions: z.array(z.string().min(1)).optional(),
   })).optional(),
 
   // Catalogue produits (1-50)

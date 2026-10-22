@@ -176,7 +176,7 @@ const SECTION_DATA_MAP: Record<string, string> = {
 
 // ── Persona lens meta (reader) ──
 const PERSONA_META: Record<PresentationPersona, { label: string; icon: LucideIcon; desc: string; eyebrow: string }> = {
-  consultant: { label: "Consultant", icon: Briefcase, desc: "Analyse complète — diagnostic 8 piliers, frameworks Big 4 et distinctives.", eyebrow: "Proposition stratégique · analyse" },
+  consultant: { label: "Consultant", icon: Briefcase, desc: "Vue des huit piliers et des cadres d’analyse. Chaque rubrique reste dépendante des données du dossier.", eyebrow: "Proposition stratégique · analyse" },
   client: { label: "Client", icon: Users, desc: "L'essentiel pour décider — synthèse, valeur, plan et budget.", eyebrow: "Proposition stratégique · pour décision" },
   creative: { label: "Creative", icon: Palette, desc: "Territoire & exécution — plateforme, création et production.", eyebrow: "Proposition stratégique · brief créatif" },
 };
@@ -342,6 +342,7 @@ export function PresentationLayout({ document: doc, defaultPersona, shareToken }
             <header className="ck-ogen__cover">
               <p className="ck-ogen__cover-eyebrow">{pmeta.eyebrow}</p>
               <h1 className="ck-ogen__cover-h">{doc.meta.brandName}</h1>
+              {(doc.meta.stalePillars?.length ?? 0) > 0 && <p className="mt-3 text-sm text-foreground-secondary">À réactualiser : {doc.meta.stalePillars!.join(", ")}. Les sources ont évolué ; ce document peut encore reprendre des analyses antérieures.</p>}
               <p className="ck-ogen__cover-lead">{coverLead}</p>
               <p className="ck-ogen__cover-meta">
                 {doc.meta.operatorName ? `par ${doc.meta.operatorName} · ` : ""}généré le {new Date(doc.meta.generatedAt).toLocaleDateString("fr-FR")}

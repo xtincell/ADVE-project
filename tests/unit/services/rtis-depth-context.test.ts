@@ -10,6 +10,13 @@ import { fieldStatusFor } from "@/domain/field-provenance";
 import { buildContext } from "@/server/services/mestor/i-pillar-sequenced";
 import { PillarDSchema } from "@/lib/types/pillar-schemas";
 
+/** Decode the explicit data envelope; domain notices precede it for D/V. */
+function readPillarEnvelope(out: string) {
+  const start = out.indexOf("⟦DONNÉE⟧ PILIER ");
+  expect(start).toBeGreaterThanOrEqual(0);
+  return JSON.parse(out.slice(out.indexOf("\n", start) + 1, out.lastIndexOf("\n")));
+}
+
 describe("projectForContext — prose capée, structure intacte", () => {
   it("cape une string longue (feuille), garde les courtes", () => {
     expect((projectForContext("x".repeat(600), 400) as string).length).toBe(401); // 400 + "…"
@@ -37,7 +44,7 @@ describe("serializePillar — la matrice profonde n'est plus tronquée (Phase 4)
         detail: "d".repeat(500), targetsPersonaIds: ["profile-7"], budget: 0 }))]));
     const out = serializePillar("I", { catalogueParCanal, _fieldProvenance: { catalogueParCanal: "INFERRED" } });
     expect(out.length).toBeGreaterThan(64_000);
-    const data = JSON.parse(out.slice(out.indexOf("\n") + 1, out.lastIndexOf("\n")));
+    const data = readPillarEnvelope(out);
     expect(Object.values(data.catalogueParCanal.valeur).flat()).toHaveLength(42);
     expect(data.catalogueParCanal.valeur.RETAIL_DISTRIBUTION[6]).toMatchObject({
       id: "initiative-42", targetsPersonaIds: ["profile-7"], budget: 0,
@@ -66,7 +73,7 @@ describe("serializePillar — la matrice profonde n'est plus tronquée (Phase 4)
       tail: { id: "last-reference" }, _fieldProvenance: { personas: "SOURCE" } };
     const out = serializePillar("D", content);
     expect(out.length).toBeGreaterThan(24_000);
-    const payload = JSON.parse(out.slice(out.indexOf("\n") + 1, out.lastIndexOf("\n")));
+    const payload = readPillarEnvelope(out);
     expect(payload.personas.valeur[7].id).toBe("p-7");
     expect(payload.tail.valeur.id).toBe("last-reference");
     expect(payload.tail.statut).toBe("UNKNOWN");
@@ -82,7 +89,7 @@ describe("serializePillar — la matrice profonde n'est plus tronquée (Phase 4)
         rituel: "INFERRED", décision: "HUMAN", source: "SOURCE",
       } };
     const out = serializePillar("e", content, fieldStatusFor({ décision: "INFERRED" }, "e", content._fieldProvenance));
-    const payload = JSON.parse(out.slice(out.indexOf("\n") + 1, out.lastIndexOf("\n")));
+    const payload = readPillarEnvelope(out);
     expect(payload.rituel).toEqual({ statut: "INFERRED", origine: "Déduit — à vérifier",
       valeur: [{ description: "5 questions, 5 axes" }] });
     expect(payload.kpis).toEqual({ statut: "UNKNOWN", origine: "Origine inconnue", valeur: ["1 200 inscrits"] });
@@ -97,7 +104,7 @@ describe("serializePillar — la matrice profonde n'est plus tronquée (Phase 4)
     const content = { catalogue: Array.from({ length: 12 }, (_, i) => ({ nom: `Produit-${i}`,
       prose: "détail ".repeat(120), gain: `gain ${i}` })), absent: null, zéro: 0 };
     const out = serializePillar("v", content, () => "SOURCE");
-    const payload = JSON.parse(out.slice(out.indexOf("\n") + 1, out.lastIndexOf("\n")));
+    const payload = readPillarEnvelope(out);
     expect(payload.catalogue.valeur).toHaveLength(12);
     expect(payload.catalogue.valeur[11].gain).toBe("gain 11");
     expect(payload.catalogue.valeur[11].prose).toHaveLength(401);
@@ -107,7 +114,7 @@ describe("serializePillar — la matrice profonde n'est plus tronquée (Phase 4)
 
   it("a legacy source certainty is retained without inventing a field provenance", () => {
     const out = serializePillar("a", { preuve: "Assertion héritée" }, () => "OFFICIAL");
-    const payload = JSON.parse(out.slice(out.indexOf("\n") + 1, out.lastIndexOf("\n")));
+    const payload = readPillarEnvelope(out);
     expect(payload.preuve.statut).toBe("OFFICIAL");
     expect(payload.preuve.origine).toBe("Qualification héritée — provenance de champ non établie");
     expect(payload.preuve.valeur).toBe("Assertion héritée");

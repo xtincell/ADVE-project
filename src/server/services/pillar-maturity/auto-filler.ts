@@ -16,6 +16,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
+import { deriveActorProductLinks } from "@/domain/brand-actors";
 import { loadBrandSources, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
 import { setNestedValue, resolvePillarPath } from "@/lib/pillar-path";
 import { findEmptyLeafPaths, findEmptyArrayCellPaths, isNonFabricableLeaf, buildFieldAnchor } from "@/lib/types/pillar-maturity-contracts";
@@ -26,6 +27,7 @@ import { getContract } from "./contracts-loader";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { serializePillar } from "@/server/services/utils/pillar-context";
+import { loadBrandSourceContext, renderSourceContext } from "@/server/services/notoria/source-context";
 
 // ─── Enrichissement surgical des matrices (Phase 3) ───────────────────────────
 
@@ -714,12 +716,7 @@ function deriveCrossPillar(
     if (path === "pricingJustification" && d.positionnement) return `Pricing justifie par le positionnement : ${d.positionnement}`;
     if (path === "personaSegmentMap" && Array.isArray(d.personas) && d.personas.length > 0) {
       const v = allPillars.v ?? {};
-      const produits = Array.isArray(v.produitsCatalogue) ? v.produitsCatalogue : [];
-      return (d.personas as Array<Record<string, unknown>>).slice(0, 3).map((p, i) => ({
-        personaName: p.name ?? `Persona ${i + 1}`,
-        productNames: produits.slice(0, 2).map((pr: any) => pr.nom ?? "Produit"),
-        devotionLevel: p.devotionPotential ?? "SPECTATEUR",
-      }));
+      return deriveActorProductLinks(d.personas, v.produitsCatalogue);
     }
   }
 
@@ -1026,6 +1023,7 @@ Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`
  */
 export async function runChunkedFieldGeneration(args: {
   sourceReceipts?: SourceReceipt[];
+  documentaryContext?: string;
   strategyId: string;
   pillarKey: string;
   currentContent: Record<string, unknown>;
@@ -1046,17 +1044,17 @@ export async function runChunkedFieldGeneration(args: {
   const financialCtx = await buildFinancialContext(allPillars, missingReqs);
   const hasFinancialFields = missingReqs.some(r => r.path.startsWith("unitEconomics"));
 
-  // Load sources context (ADVE-project V3.3 correction)
-  const sources = await loadBrandSources(strategyId, { processingStatus: { in: ["EXTRACTED", "PROCESSED"] } });
-  args.sourceReceipts?.push(...sources.map((s) => ({ sourceId: s.id, contentHash: s.contentHash })));
-
-  const sourcesContext = sources
-    .map(s => s.rawContent)
-    .filter(Boolean)
-    .join("\n\n---\n\n");
-  const sourcesBlock = sourcesContext.trim()
-    ? wrapUntrusted("DOCUMENTS SOURCES DE LA MARQUE", sourcesContext, { max: 8000 })
-    : "";
+  // Reuse the current, topic-selected editions. The former first-8K join
+  // discarded dates/statuses and cited every file, including unread pieces.
+  let sourcesBlock = args.documentaryContext ?? "";
+  if (args.documentaryContext === undefined) {
+    const sources = await loadBrandSourceContext(strategyId, {
+      query: `Compléter ${pillarKey} : ${missingReqs.map(r => r.path).join(" ")}`,
+      ensureIndexed: false,
+    });
+    args.sourceReceipts?.push(...sources.excerpts.flatMap(s => s.contentHash ? [{ sourceId: s.sourceId, contentHash: s.contentHash }] : []));
+    sourcesBlock = sources.empty ? "" : wrapUntrusted("DOCUMENTS SOURCES DE LA MARQUE", renderSourceContext(sources), { max: 32_000 });
+  }
 
   // Determine if the risk of truncation is high (modèle owl ou complexité totale > 15)
   const totalComplexity = missingReqs.reduce((sum, r) => sum + (VALIDATOR_COMPLEXITY[r.validator] ?? 1), 0);

@@ -67,7 +67,7 @@ function MultiEnumEditor({ value, def, onChange }: { value: unknown; def: Extrac
               : "bg-background text-foreground-muted border-border hover:text-foreground-secondary"
           }`}
         >
-          {opt}
+          {def.optionLabels?.[opt] ?? opt}
         </button>
       ))}
     </div>

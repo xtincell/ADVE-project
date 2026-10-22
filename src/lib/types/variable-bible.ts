@@ -322,8 +322,8 @@ export const BIBLE_D: Record<string, VariableSpec> = {
   },
   personas: {
     description: "Les profils types des différents publics de la marque",
-    format: "Array d'objets { id, name, age, csp, location, motivations (texte), fears (texte), hiddenDesire, jobsToBeDone[], devotionPotential (enum Devotion), rank (si connu) }",
-    rules: ["2 minimum ; conserver tous les profils sourcés utiles", "Rank 1 = persona principal lorsque cette priorité est établie ; sinon laisser le rang absent", "Chaque persona doit avoir motivations + fears minimum"],
+    format: "Array d'objets { id, name, actorRoles[] (COMMUNICATION_AUDIENCE, USER, PAYER, PARTNER, SUPPLIER, PRESCRIBER, DISTRIBUTOR), age, csp, location, motivations, fears, hiddenDesire, jobsToBeDone[], devotionPotential, rank (si connu) }",
+    rules: ["2 minimum ; conserver tous les profils sourcés utiles", "Rank 1 = persona principal lorsque cette priorité est établie ; sinon laisser le rang absent", "Chaque persona doit avoir motivations + fears minimum", "Rôles cumulables et sourcés : public de communication, utilisateur, payeur, partenaire, fournisseur, prescripteur ou distributeur ne sont pas équivalents", "Un partenaire co-crée la valeur et dépend de contreparties ; un fournisseur fournit une prestation. Le paiement ou le bénéfice mutuel seuls ne tranchent pas le rôle", "Ne pas inventer un achat, un revenu ou une fidélité pour un profil non payeur ; laisser le rôle absent si inconnu", "Une catégorie de profils ne prouve aucun partenaire signé ni client acquis"],
     editableMode: "STRATEGIC_REWRITE", derivedFrom: "a.publicCible",
     feedsInto: ["v.personaSegmentMap", "e.superfanPortrait"],
   },
@@ -478,10 +478,10 @@ export const BIBLE_V: Record<string, VariableSpec> = {
     rules: ["Rempli uniquement si le modèle est freemium"],
   },
   personaSegmentMap: {
-    description: "Quel persona (D) achète quel produit (V) à quel niveau Devotion",
-    format: "Array d'objets { personaName (ref D.personas), productNames[] (ref V.produits), devotionLevel (enum), revenueContributionPct }",
+    description: "Quel acteur (D) apporte et reçoit quelle valeur, autour de quelles offres (V)",
+    format: "Array d'objets { personaName (ref D.personas), productNames[] (refs V.produits, vide si sans offre), devotionLevel?, revenueContributionPct?, valueToBrand[], valueToActor[], actorCosts[], dependencyConditions[] }",
     editableMode: "STRATEGIC_REWRITE", derivedFrom: "d.personas + v.produitsCatalogue",
-    rules: ["Chaque persona de D doit avoir au moins 1 produit", "La somme des revenueContributionPct ≈ 100%"],
+    rules: ["Décrire les échanges monétaires et non monétaires pour chaque rôle utile, sans imposer un achat à chaque persona", "Un partenaire peut apporter audience, trafic, contenu ou offre et recevoir du trafic ou un accès : expliciter ses coûts et les conditions de viabilité", "Ne pas déduire la cible de communication du payeur : un festival peut communiquer aux visiteurs et vendre aux sponsors", "Ne renseigner la part de revenu et un niveau d’engagement que s’ils sont établis ; pas de zéro inventé pour un acteur non payeur", "La somme des revenueContributionPct est comparable seulement sur un même revenu, une même période et un périmètre complet", "Une intention de partenariat ou un profil type ne prouve pas un contrat actif"],
   },
   productLadder: {
     description: "L'échelle de produits par tier (entrée de gamme → premium)",

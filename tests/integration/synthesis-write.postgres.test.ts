@@ -492,3 +492,22 @@ describe("the shared S writer conserves snapshots and human review", () => {
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });
+
+it("Oracle transporte les données présentes et la péremption sans modifier les sources", async () => {
+  const f = await fixture();
+  await db.pillar.createMany({ data: [
+    { strategyId: f.strategy.id, key: "a", content: { secteur: "Restauration", equipeDirigeante: [{ nom: "Fondatrice documentaire", role: "Produit" }] } },
+    { strategyId: f.strategy.id, key: "v", content: { businessModel: "Accès gratuit déclaré", economicModels: [{ modele: "Services aux lieux envisagés" }] } },
+  ] });
+  await db.pillar.update({ where: { id: f.i.id }, data: { staleAt: new Date(), content: { assetsProduisibles: [{ asset: "Film proposé", type: "VIDEO", usage: "Acquisition" }] } } });
+  const before = await db.pillar.findMany({ where: { strategyId: f.strategy.id }, orderBy: { id: "asc" } });
+  const callsBefore = draftProvider.callLLM.mock.calls.length;
+  const { assemblePresentation } = await import("@/server/services/strategy-presentation");
+  const doc = await assemblePresentation(f.strategy.id);
+  expect(doc.meta.stalePillars).toContain("Innovation");
+  expect(doc.sections.contexteDefi.businessContext.businessModel).toBe("Accès gratuit déclaré");
+  expect(doc.sections.productionLivrables.proposedAssets?.[0]?.asset).toBe("Film proposé");
+  expect(doc.sections.equipe.equipeDirigeante[0]?.nom).toBe("Fondatrice documentaire");
+  expect(await db.pillar.findMany({ where: { strategyId: f.strategy.id }, orderBy: { id: "asc" } })).toEqual(before);
+  expect(draftProvider.callLLM.mock.calls.length).toBe(callsBefore);
+});

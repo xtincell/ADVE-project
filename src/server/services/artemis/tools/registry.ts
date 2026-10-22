@@ -3338,6 +3338,7 @@ import { CREATIVE_INTELLIGENCE_TOOLS } from "./creative-intelligence-tools";
 // (pas CORE) — préserve la cardinalité 56 du test `glory-tools.test.ts`.
 import { SALES_RESPONSE_TREE_TOOLS } from "./sales-response-tree-tools";
 import { SEQUENCE_GAP_TOOLS } from "./sequence-gap-tools";
+import { FINANCIAL_DOCUMENT_TOOLS } from "./financial-document-tools";
 
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
@@ -3372,6 +3373,7 @@ export const EXTENDED_GLORY_TOOLS: GloryToolDef[] = [
   ...CREATIVE_INTELLIGENCE_TOOLS,
   ...SALES_RESPONSE_TREE_TOOLS,
   ...SEQUENCE_GAP_TOOLS, // 6 outils comblant les refs fantômes des séquences (scan NEFER 2026-06-30)
+  ...FINANCIAL_DOCUMENT_TOOLS,
 ];
 
 // Public API canonical export — `ALL_GLORY_TOOLS` = `CORE_GLORY_TOOLS` = 56 tools

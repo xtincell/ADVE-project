@@ -432,8 +432,12 @@ export async function composeBenchmarkReferenceFinder(strategyId: string): Promi
   };
 }
 
-const ASYNC_GLORY_COMPOSERS: Record<string, (strategyId: string) => Promise<Blob>> = {
+const ASYNC_GLORY_COMPOSERS: Record<string, (strategyId: string, input: Record<string, string>) => Promise<Blob>> = {
   "benchmark-reference-finder": composeBenchmarkReferenceFinder,
+  "break-even-calculator": async (strategyId, input) => {
+    const { composeSourcedBreakEven } = await import("@/server/services/financial-brain/break-even-source");
+    return composeSourcedBreakEven(strategyId, input);
+  },
 };
 
 // ── Registry + dispatch ──────────────────────────────────────────────────────
@@ -464,11 +468,12 @@ export interface DeterministicGloryResult {
 export async function composeGloryDeterministic(
   slug: string,
   strategyId: string,
+  input: Record<string, string> = {},
 ): Promise<DeterministicGloryResult> {
   // Composer async adossé à Seshat (lit le corpus DB, pas l'ADVERTIS seul).
   const asyncComposer = ASYNC_GLORY_COMPOSERS[slug];
   if (asyncComposer) {
-    const output = await asyncComposer(strategyId);
+    const output = await asyncComposer(strategyId, input);
     return { output, ok: true };
   }
 

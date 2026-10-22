@@ -11,31 +11,54 @@ type Source = { id: string; fileName: string | null; fileType?: string | null; c
 export function DocumentLibrary({ sources, onRead, canManage = false, onSaved }: { sources: Source[]; onRead: (id: string) => void; canManage?: boolean; onSaved?: () => void }) {
   const [decision, setDecision] = useState<Source | null>(null);
   const [search, setSearch] = useState("");
+  const [scope, setScope] = useState("BUSINESS");
+  const [history, setHistory] = useState(false);
+  const [page, setPage] = useState(0);
+  const formats = new Map<string, Source[]>();
+  for (const source of sources) if (source.representation) formats.set(source.representation.canonicalSourceId, [...(formats.get(source.representation.canonicalSourceId) ?? []), source]);
   const grouped = new Map<string, Source[]>();
-  for (const source of sources) if (source.document) grouped.set(source.document.family, [...(grouped.get(source.document.family) ?? []), source]);
+  for (const source of sources) if (source.document) {
+    const technical = ["TECHNICAL", "ASSET"].includes(source.document.kind);
+    if (scope === "BUSINESS" && technical || scope === "TECHNICAL" && !technical) continue;
+    if (!history && ["ARCHIVED", "SUPERSEDED"].includes(source.document.status)) continue;
+    grouped.set(source.document.family, [...(grouped.get(source.document.family) ?? []), source]);
+  }
+  const matching = [...grouped].filter(([family, rows]) => (family + " " + rows.flatMap(r => [r.fileName, ...(r.document?.tags ?? []),
+    ...(r.original?.aliases?.map(a => a.fileName) ?? []), ...(formats.get(r.id) ?? []).map(s => s.fileName)]).join(" ")).toLocaleLowerCase().includes(search.toLocaleLowerCase()));
+  const pages = Math.max(1, Math.ceil(matching.length / 25));
+  const currentPage = Math.min(page, pages - 1);
   return <section aria-labelledby="document-library-title" className="space-y-3 rounded-lg border border-border p-4">
     <h2 id="document-library-title" className="text-lg font-semibold">Dossier documentaire</h2>
     <p className="text-sm text-foreground-secondary">Études, modèles économiques, identité, présentations et autres pièces. Les propositions attendent une décision ; leur dépôt ne modifie pas votre stratégie.</p>
     {grouped.size === 0 && <p className="text-sm text-foreground-muted">Aucun document classé ici. Classez vos pièces depuis les sources de marque.</p>}
-    <label className="block text-sm">Rechercher un document<input className="mt-1 w-full rounded border border-border bg-surface-raised px-3 py-2 text-foreground" value={search} onChange={e => setSearch(e.target.value)} /></label>
+    <div className="flex flex-wrap items-end gap-3 text-sm">
+      <label className="min-w-48 flex-1">Rechercher un document<input className="mt-1 w-full rounded border border-border bg-surface-raised px-3 py-2 text-foreground" value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} /></label>
+      <label>Afficher<select aria-label="Périmètre documentaire" className="mt-1 block rounded border border-border bg-surface-raised px-3 py-2 text-foreground" value={scope} onChange={e => { setScope(e.target.value); setPage(0); }}><option value="BUSINESS">Documents métier</option><option value="TECHNICAL">Technique et création</option><option value="ALL">Tout le dossier</option></select></label>
+      <label className="flex gap-2 py-2"><input type="checkbox" checked={history} onChange={e => { setHistory(e.target.checked); setPage(0); }} />Inclure les archives et anciennes éditions</label>
+    </div>
+    <p className="text-sm text-foreground-secondary">{matching.length} documents suivis · {history ? "historique inclus" : "versions de travail et propositions"} · page {currentPage + 1}/{pages}</p>
+    {matching.length === 0 && <p className="text-sm text-foreground-muted">Aucun document dans ce filtre. Les ressources techniques et les archives sont accessibles avec les filtres ci-dessus.</p>}
     {decision && <DocumentDecisionDialog source={decision} onClose={() => setDecision(null)} onSaved={() => onSaved?.()} />}
-    {[...grouped].filter(([family, rows]) => (family + " " + rows.flatMap(r => [r.fileName, ...(r.original?.aliases?.map(a => a.fileName) ?? []), ...sources.filter(s => s.representation?.canonicalSourceId === r.id).map(s => s.fileName)]).join(" ")).toLocaleLowerCase().includes(search.toLocaleLowerCase())).map(([family, rows]) => <article key={family} className="space-y-2 rounded border border-border p-3">
+    {matching.slice(currentPage * 25, (currentPage + 1) * 25).map(([family, rows]) => <article key={family} className="space-y-2 rounded border border-border p-3">
       <h3 className="font-medium">{family}</h3>
       {orderDocumentEditions(rows).map(source => <div key={source.id} className="flex flex-wrap items-start justify-between gap-2 border-t border-border py-2 text-sm">
         <div><p>{DOCUMENT_KIND_LABEL[source.document!.kind]} · {source.document!.label}</p>
           <p className="text-foreground-secondary">{DOCUMENT_STATUS_LABEL[source.document!.status]}</p>
+          {source.document!.tags?.length ? <p className="text-xs text-foreground-secondary">{source.document!.tags!.join(" · ")}</p> : null}
           {source.document!.sourceUrl && <a className="text-xs text-accent underline" href={source.document!.sourceUrl} target="_blank" rel="noopener noreferrer">Source d’origine</a>}
           {source.document!.clarifications?.map((c, i) => <p key={i} className="text-xs text-foreground-secondary">Précision du {new Date(c.at).toLocaleDateString("fr-FR")} : {c.text}</p>)}
+          {Boolean(source.document!.filingCorrections?.length) && <details className="text-xs text-foreground-muted"><summary>Historique du classement</summary>{source.document!.filingCorrections!.map((c, i) => <p key={i}>{new Date(c.at).toLocaleDateString("fr-FR")} · Ancienne famille : {c.previousFamily}. {c.reason}</p>)}</details>}
           {source.document!.clarifications?.length ? <details className="text-xs text-foreground-muted"><summary>Annotation initiale conservée</summary><p>{source.document!.changeSummary}</p></details>
             : <p className="text-xs text-foreground-muted">Lors du dépôt : {source.document!.changeSummary}</p>}
           {source.document!.decisions?.at(-1) && <p className="text-xs text-foreground-secondary">Dernière décision : {source.document!.decisions!.at(-1)!.reason}</p>}
           {source.original?.aliases?.length ? <div className="mt-2 space-y-1 text-xs text-foreground-secondary"><p>Même fichier reçu sous d’autres noms ou emplacements :</p>{source.original.aliases.map((alias, i) => <p key={i}>{alias.fileName}{alias.sourceUrl ? <> · <a href={alias.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-accent underline">Emplacement déclaré</a></> : null}</p>)}</div> : null}
-          {sources.some(s => s.representation?.canonicalSourceId === source.id) && <div className="mt-2 space-y-1 text-xs text-foreground-secondary"><p>Autres formats de cette version · une seule édition documentaire</p>{sources.filter(s => s.representation?.canonicalSourceId === source.id).map(format => <div key={format.id} className="space-y-1"><Button variant="outline" size="sm" onClick={() => onRead(format.id)}>{format.fileName ?? "Consulter le format"}{format.fileType ? ` · ${format.fileType}` : ""}</Button><p>{format.representation!.reason}</p></div>)}</div>}
+          {formats.has(source.id) && <div className="mt-2 space-y-1 text-xs text-foreground-secondary"><p>Autres formats de cette version · une seule édition documentaire</p>{formats.get(source.id)!.map(format => <div key={format.id} className="space-y-1"><Button variant="outline" size="sm" onClick={() => onRead(format.id)}>{format.fileName ?? "Consulter le format"}{format.fileType ? ` · ${format.fileType}` : ""}</Button><p>{format.representation!.reason}</p></div>)}</div>}
         </div>
         <div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => onRead(source.id)}>Consulter cette édition</Button>
         {canManage && !source.shared && <Button variant="outline" size="sm" onClick={() => setDecision(source)}>Préciser sa place</Button>}</div>
       </div>)}
     </article>)}
+    {pages > 1 && <div className="flex items-center justify-between"><Button variant="outline" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Précédent</Button><span className="text-sm">{currentPage + 1} / {pages}</span><Button variant="outline" disabled={currentPage >= pages - 1} onClick={() => setPage(currentPage + 1)}>Suivant</Button></div>}
   </section>;
 }
 
@@ -88,17 +111,19 @@ export function DocumentEditionDialog({ source, sources, onClose, onSaved }: {
 }
 
 function DocumentDecisionDialog({ source, onClose, onSaved }: { source: Source; onClose: () => void; onSaved: () => void }) {
-  const [status, setStatus] = useState<"CLARIFY" | "REFERENCE" | "ARCHIVED">("CLARIFY");
+  const [status, setStatus] = useState<"CLARIFY" | "REFERENCE" | "ARCHIVED" | "TAGS">("CLARIFY");
   const [reason, setReason] = useState("");
+  const [tags, setTags] = useState(source.document?.tags?.join(", ") ?? "");
   const current = trpc.ingestion.getSource.useQuery({ id: source.id }, { staleTime: 0, refetchOnMount: "always" });
   const mutation = trpc.ingestion.updateSource.useMutation({ onSuccess: () => { onSaved(); onClose(); } });
   return <Modal open onClose={onClose} title="Place de cette édition" size="lg"><form className="space-y-4 text-sm" onSubmit={e => {
     e.preventDefault(); if (current.data && !current.isFetching) mutation.mutate({ id: source.id, expectedSourceHash: current.data.contentHash,
-      ...(status === "CLARIFY" ? { documentClarification: reason } : { documentDecision: { status, reason } }) });
+      ...(status === "TAGS" ? { documentTags: { tags: tags.split(",").map(t => t.trim()).filter(Boolean), reason } } : status === "CLARIFY" ? { documentClarification: reason } : { documentDecision: { status, reason } }) });
   }}>
     <p>{source.fileName} · {source.document?.label}</p>
-    <label className="block space-y-1"><span>Action</span><select className="w-full rounded border border-border bg-surface-raised p-2" value={status} onChange={e => setStatus(e.target.value as typeof status)}><option value="CLARIFY">Ajouter une précision, sans changer son usage</option><option value="REFERENCE">Définir comme référence de travail</option><option value="ARCHIVED">Conserver dans les archives</option></select></label>
-    <label className="block space-y-1"><span>{status === "CLARIFY" ? "Précision à conserver" : "Décision et motif"}</span><textarea required rows={4} maxLength={4000} className="w-full rounded border border-border bg-surface-raised p-2" value={reason} onChange={e => setReason(e.target.value)} /></label>
+    <label className="block space-y-1"><span>Action</span><select className="w-full rounded border border-border bg-surface-raised p-2" value={status} onChange={e => setStatus(e.target.value as typeof status)}><option value="CLARIFY">Ajouter une précision, sans changer son usage</option><option value="TAGS">Corriger les étiquettes</option><option value="REFERENCE">Définir comme référence de travail</option><option value="ARCHIVED">Conserver dans les archives</option></select></label>
+    {status === "TAGS" && <label className="block space-y-1"><span>Étiquettes séparées par des virgules</span><input value={tags} onChange={e => setTags(e.target.value)} className="w-full rounded border border-border bg-surface-raised p-2" /></label>}
+    <label className="block space-y-1"><span>{status === "CLARIFY" ? "Précision à conserver" : "Décision et motif"}</span><textarea required rows={4} maxLength={status === "TAGS" ? 1000 : 4000} className="w-full rounded border border-border bg-surface-raised p-2" value={reason} onChange={e => setReason(e.target.value)} /></label>
     <p className="text-foreground-secondary">{status === "CLARIFY" ? "La précision sera datée et attribuée à votre compte. L’usage, les éditions et l’annotation initiale restent conservés." : "La décision sera datée et attribuée à votre compte. Les éditions restent conservées. Les fondamentaux de la marque ne sont pas modifiés par ce choix."}</p>
     {(mutation.error || current.error) && <p role="alert" className="text-error">{(mutation.error ?? current.error)?.message}</p>}
     <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onClose}>Annuler</Button><Button type="submit" disabled={!current.data || current.isFetching || mutation.isPending}>{status === "CLARIFY" ? "Conserver cette précision" : "Enregistrer la décision"}</Button></div>

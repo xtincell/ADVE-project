@@ -98,10 +98,10 @@ export interface DeterministicSectionResult {
 
 // ── Helpers purs ───────────────────────────────────────────────────────
 
-function str(v: unknown, max = 400): string | null {
+function str(v: unknown): string | null {
   if (typeof v !== "string") return null;
   const t = v.trim();
-  return t.length === 0 ? null : t.slice(0, max);
+  return t.length === 0 ? null : t;
 }
 
 function arr(v: unknown): unknown[] {
@@ -240,7 +240,7 @@ function compose7S(ctx: ComposerContext): Blob {
   const s = ctx.pillars.s ?? {};
   const i = ctx.pillars.i ?? {};
 
-  const vision = str(s.visionStrategique, 300);
+  const vision = str(s.visionStrategique);
   const roadmapPhases = arr(s.roadmap).length;
   const equipe = arr(a.equipeDirigeante);
   const valeurs = names(arr(a.valeurs));
@@ -280,8 +280,8 @@ function compose7S(ctx: ComposerContext): Blob {
         initiatives.length > 0 ? `${initiatives.length} initiative(s)` +
           (canaux.length > 0 ? ` sur ${canaux.length} canal/canaux : ${canaux.slice(0, 5).join(", ")}` : " — Canaux à préciser") : null,
         [canaux.length > 0 ? canaux : null, ctx.campaigns.length > 0 ? ctx.campaigns : null],
-        "Catalogue d'actions vide ou aucune campagne",
-        "Générez votre catalogue d'actions depuis le plan d'actions",
+        initiatives.length === 0 ? "Catalogue d’actions non renseigné" : "Aucune campagne enregistrée à partir du catalogue",
+        initiatives.length === 0 ? "Renseignez votre catalogue d’actions" : "Choisissez les actions à préparer ; leur présence au catalogue ne lance pas de campagne",
       ),
       shared_values: dim(
         valeurs.length > 0 ? `Valeurs hiérarchisées : ${valeurs.slice(0, 5).join(" · ")}` : null,
@@ -308,6 +308,7 @@ function compose7S(ctx: ComposerContext): Blob {
         "Détaillez les compétences de chaque profil de l'équipe dirigeante",
       ),
     },
+    scoreLabel: "Présence des informations dans le dossier, sur 10 ; ce score ne mesure pas l’efficacité de l’organisation.",
   };
 }
 
@@ -340,8 +341,10 @@ function composeBcgPortfolio(ctx: ComposerContext): Blob {
       dogs: [],
     },
     bcgHealthScore: Math.round((quadrantsFilled / 3) * 100) / 10, // /10
+    bcgHealthScale: 10,
+    scoreLabel: "Couverture documentaire des quadrants",
     methodologie:
-      "Classement déterministe : offres V = vaches à lait ; offres investies dans la roadmap S = étoiles ; innovations I = dilemmes. Aucun produit n'est classé 'poids mort' sans donnée de performance mesurée.",
+      "Projection exploratoire du portefeuille : offres V = vaches à lait ; offres citées dans la roadmap S = étoiles ; innovations I = dilemmes. Ces catégories issues des documents ne prouvent ni revenu courant, ni croissance, ni part de marché relative. Elles restent à confronter aux mesures. Aucun produit n’est classé poids mort sans donnée de performance.",
   };
 }
 
@@ -396,7 +399,7 @@ function composeGreenhouse(ctx: ComposerContext): Blob {
   const profiles = equipe.map((m) => ({
     nom: str(m.nom ?? m.name) ?? "Profil",
     role: str(m.role ?? m.poste) ?? null,
-    competences: names(arr(m.competences ?? m.skills)),
+    competences: names(arr(m.competencesCles ?? m.competences ?? m.skills)),
   }));
   const roles = [...new Set(profiles.map((p) => p.role).filter(Boolean))];
   const canaux = i.catalogueParCanal && typeof i.catalogueParCanal === "object" ? Object.keys(i.catalogueParCanal as Blob) : [];
@@ -407,6 +410,7 @@ function composeGreenhouse(ctx: ComposerContext): Blob {
     deloitteGreenhouse: {
       team_profiles: profiles,
       complementarity_score: Math.round((roles.length / Math.max(1, profiles.length)) * 10 * 10) / 10,
+      scoreLabel: "Diversité des rôles déclarés, sur 10 ; ne mesure pas les compétences ou la performance de l’équipe.",
       execution_capacity: `${ctx.campaigns.filter((c) => c.status === "ACTIVE" || c.status === "IN_PROGRESS").length} campagne(s) active(s) / ${ctx.campaigns.length} totale(s)`,
       skill_gaps: gaps.length > 0 ? gaps.map((g) => `Canal ${g} sans compétence interne déclarée`) : ["Aucun gap détecté sur les canaux déclarés"],
     },
@@ -425,7 +429,7 @@ function compose3Horizons(ctx: ComposerContext): Blob {
   const unassigned = names(selected.filter((it) => it.timeframe === undefined), ["action"]);
   const h3 = [
     ...names(arr(i.innovationsProduit)),
-    ...(str(s.visionStrategique, 200) ? [str(s.visionStrategique, 200)!] : []),
+    ...(str(s.visionStrategique) ? [str(s.visionStrategique)!] : []),
   ];
 
   const classified = h1.length + h2.length + h3.length;
@@ -442,6 +446,7 @@ function compose3Horizons(ctx: ComposerContext): Blob {
       allocation: { h1: pct(h1.length), h2: pct(h2.length), h3: pct(h3.length) },
       unassigned: { label: "Échéances à préciser", items: unassigned },
       coverage: { totalCount: total, classifiedCount: classified, unassignedCount: unassigned.length },
+      methodologie: "Classement exploratoire : actions sélectionnées à court terme en H1, phases suivantes en H2, innovations et vision en H3. Les pourcentages comptent les éléments du dossier ; ils ne mesurent pas une allocation financière ni des délais de réalisation.",
     },
   };
 }
@@ -478,7 +483,7 @@ function composeStrategyPalette(ctx: ComposerContext): Blob {
         signaux_faibles: weakSignals,
         concurrents_declares: concurrents,
       },
-      justification: `Classement déterministe : turbulence observée=${turbulence} (seuil 4), densité concurrentielle=${concurrents} (seuil 3).`,
+      justification: `Hypothèse de posture à valider : la règle utilise ${turbulence} tendances/signaux (seuil 4) et ${concurrents} concurrents déclarés (seuil 3). Ces compteurs ne mesurent pas directement la prévisibilité ni la malléabilité du marché.`,
     },
   };
 }
@@ -560,18 +565,20 @@ function composeManipulationMatrix(ctx: ComposerContext): Blob {
     facilitator: num(mix?.facilitator) ?? 0.25,
     entertainer: num(mix?.entertainer) ?? 0.25,
   };
-  const dominant = Object.entries(weights).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "facilitator";
+  const ranked = Object.entries(weights).sort((a, b) => b[1] - a[1]);
+  const complete = !!mix && Object.keys(weights).every(k => num(mix[k]) !== null);
+  const dominant = complete && ranked[0]![1] > ranked[1]![1] ? ranked[0]![0] : null;
 
   return {
     manipulationMatrix: {
       evaluations: Object.entries(weights).map(([mode, weight]) => ({
         mode,
         weight,
-        observed: mode === dominant ? "Mode dominant du mix stratégique déclaré" : "Présent dans le mix",
+        observed: !complete ? "Répartition exploratoire complétée par défaut — à valider" : mode === dominant ? "Part la plus élevée du mix déclaré" : "Part du mix déclaré",
       })),
       summary: {
         dominantMode: dominant,
-        mixSource: mix ? "Strategy.manipulationMix déclaré" : "Mix uniforme implicite (0.25 par mode — à back-filler)",
+        mixSource: complete ? "Mix déclaré dans le dossier ; aucune performance d’audience n’en est déduite." : "Mix incomplet ou absent : répartition exploratoire de départ, sans décision de marque validée.",
         rituelsDeclares: rituels.slice(0, 6),
         touchpointsDeclares: touchpoints.slice(0, 6),
       },
@@ -616,9 +623,9 @@ async function composeOverton(ctx: ComposerContext): Promise<Blob> {
   const s = ctx.pillars.s ?? {};
   const d = ctx.pillars.d ?? {};
   const fo = (s.fenetreOverton ?? {}) as Blob;
-  const current = str(fo.perceptionActuelle, 300);
-  const target = str(fo.perceptionCible, 300);
-  const positionnement = str(d.positionnement, 300);
+  const current = str(fo.perceptionActuelle);
+  const target = str(fo.perceptionCible);
+  const positionnement = str(d.positionnement);
 
   const axes: Array<Blob> = [];
   if (current || target) {
@@ -626,7 +633,7 @@ async function composeOverton(ctx: ComposerContext): Promise<Blob> {
       name: "Perception sectorielle (fenêtre Overton)",
       current_position: current ?? "Non mesurée",
       target_position: target ?? "Non définie",
-      gap: str(fo.ecart, 300) ?? (current && target ? "Écart qualitatif déclaré entre perception actuelle et cible" : "Données partielles"),
+      gap: str(fo.ecart) ?? (current && target ? "Écart qualitatif déclaré entre perception actuelle et cible" : "Données partielles"),
     });
   }
   if (positionnement) {
@@ -674,21 +681,38 @@ function composeTarsisSignals(ctx: ComposerContext): Blob {
   const tarsisLike = ctx.signals.filter(
     (sg) => sg.type.toUpperCase().includes("TARSIS") || sg.type.toUpperCase().includes("WEAK") || sg.type.toUpperCase().includes("SIGNAL"),
   );
-  if (tarsisLike.length === 0) return {};
-
-  const signals = tarsisLike.slice(0, 12).map((sg) => {
+  const recorded = tarsisLike.map((sg) => {
     const data = (sg.data ?? {}) as Blob;
     return {
-      description: str(data.description ?? data.summary ?? data.title, 300) ?? sg.type,
+      description: str(data.description ?? data.summary ?? data.title) ?? sg.type,
       category: str(data.category) ?? sg.type,
       impact: num(data.impact) ?? num(data.impactScore) ?? null,
       horizon: str(data.horizon) ?? null,
-      action: str(data.action ?? data.recommendation, 200) ?? null,
+      action: str(data.action ?? data.recommendation) ?? null,
       confidence: num(data.confidence) ?? null,
       detectedAt: sg.createdAt.toISOString(),
+      qualification: "Signal enregistré dans le dossier ; sa date d’enregistrement n’est pas nécessairement la date de l’événement.",
     };
   });
-
+  const t = ctx.pillars.t ?? {};
+  const analyzed = arr(t.weakSignalAnalysis).flatMap(raw => {
+    if (!raw || typeof raw !== "object") return [];
+    const w = raw as Blob;
+    const description = str(w.thesis ?? w.rawEvent);
+    return description ? [{ description, category: str(w.taxonomy ?? w.category) ?? "Analyse du dossier",
+      impact: num(w.impactScore ?? w.impact), horizon: str(w.horizon), action: str(w.recommendedAction ?? w.recommendation ?? w.action),
+      confidence: num(w.confidence), detectedAt: null, qualification: "Analyse du marché issue du dossier, à vérifier avec ses sources ; aucune observation datée ajoutée." }] : [];
+  });
+  const declared = names(arr((t.marketReality as Blob | undefined)?.weakSignals)).map(description => ({
+    description, category: "Signal déclaré", impact: null, horizon: null, action: null, confidence: null, detectedAt: null,
+    qualification: "Signal mentionné dans la lecture de marché ; date, origine et validation à préciser.",
+  }));
+  const seen = new Set<string>();
+  const signals = [...recorded, ...analyzed, ...declared].filter(sg => {
+    if (seen.has(sg.description)) return false;
+    seen.add(sg.description); return true;
+  });
+  if (signals.length === 0) return {};
   return { tarsisWeakSignals: { signals, top3: signals.slice(0, 3) } };
 }
 

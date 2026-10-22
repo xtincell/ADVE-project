@@ -917,7 +917,7 @@ Maintiennent la mission viable techniquement. Mémoires long terme, transports, 
 |---|---|---|---|
 | `llm-gateway/` | Engine controller existant : routage, Headroom, rate-policy et coûts ; extension Luna 460 et refus à expiration 461 reçus au périmètre source/API, réserve UI/charge restante | INFRASTRUCTURE | ✅ existant, correction livrée au périmètre |
 | `model-policy/` | Résolution gouvernée `purpose → model` (cache + Prisma `ModelPolicy`) | INFRASTRUCTURE | ✅ existant |
-| `financial-brain/` | **Thot** — fuel manager, capacity tracking | THOT | ✅ existant |
+| `financial-brain/` | **Thot** — fuel manager, capacity tracking ; calcul de seuil et composition financière depuis une source versionnée (ADR-0226) | THOT | ✅ existant |
 | `budget-allocator/` | Allocation budget par mission | THOT | ✅ existant |
 | `approval-workflow/` | Workflow d'approbation pré-action | MESTOR | ✅ existant |
 | `sla-tracker/` | SLO/SLA tracking par Intent kind | INFRASTRUCTURE | ✅ existant |

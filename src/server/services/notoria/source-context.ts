@@ -28,7 +28,7 @@
  * avec `wrapUntrusted` (OWASP LLM01).
  */
 
-import { sourceIsUsable, documentContext, documentIdentity } from "@/domain/source-document";
+import { sourceIsUsable, documentContext, documentIdentity, documentEdition } from "@/domain/source-document";
 import { db } from "@/lib/db";
 import { sourceScope, sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
 import { compareCertainty, isSourceCertainty, type SourceCertainty } from "@/domain/source-certainty";
@@ -135,9 +135,10 @@ function selectPassages(raw: string, query: string | undefined, budget: number):
   const kept: typeof paras = [];
   let used = 0;
   for (const p of ranked) {
-    if (used + p.body.length > budget) continue;
+    const separator = kept.length ? "\n\n[…]\n\n".length : 0;
+    if (used + separator + p.body.length > budget) continue;
     kept.push(p);
-    used += p.body.length + 2;
+    used += separator + p.body.length;
     if (used >= budget) break;
   }
   if (kept.length === 0) return { text: text.slice(0, budget), offset: 0 };
@@ -168,6 +169,7 @@ async function retrieveSemantic(
   budget: number,
   maxDocuments: number,
   ensureIndexed: boolean,
+  currentSources: ReadonlyMap<string, { rawData: unknown; fingerprint: string }>,
 ): Promise<SourceExcerpt[] | null> {
   // L'indexation N'EST PAS un effet de bord de la lecture.
   //
@@ -214,9 +216,15 @@ async function retrieveSemantic(
   for (const h of ordered) {
     if (remaining < MIN_EXCERPT) break;
     if (!h.sourceId) continue;
+    const current = currentSources.get(h.sourceId);
+    // A cached fragment cannot lose the edition's status or survive an update
+    // between the source snapshot and semantic retrieval.
+    if (!current || h.contentHash !== current.fingerprint) continue;
     if (!documents.has(h.sourceId) && documents.size >= maxDocuments) continue;
-    const text = h.text.length > remaining ? h.text.slice(0, remaining) : h.text;
-    if (!text) continue;
+    const notice = documentContext(current.rawData);
+    const passage = h.text.slice(0, Math.max(0, remaining - notice.length));
+    if (!passage) continue;
+    const text = notice + passage;
     documents.add(h.sourceId);
     excerpts.push({
       sourceId: h.sourceId,
@@ -245,6 +253,8 @@ export async function loadBrandSourceContext(
     query?: string;
     budget?: number;
     maxDocuments?: number;
+    /** Code/configuration remains consultable but is not business evidence. */
+    includeTechnical?: boolean;
     /**
      * Indexer les sources non encore indexées avant de lire. **Faux par
      * défaut** : réservé aux chemins ASYNCHRONES (enrichissement, mission
@@ -268,7 +278,9 @@ export async function loadBrandSourceContext(
     select: { id: true, fileName: true, fileType: true, sourceType: true, certainty: true, rawContent: true, rawData: true, extractedFields: true, updatedAt: true },
   });
 
-  const usable = rows.filter((r) => sourceIsUsable(r.rawData) && (r.rawContent ?? "").trim().length > 0);
+  const usable = rows.filter((r) => sourceIsUsable(r.rawData)
+    && (opts.includeTechnical || documentEdition(r.rawData)?.kind !== "TECHNICAL")
+    && (r.rawContent ?? "").trim().length > 0);
   // OFFICIAL > DECLARED > INFERRED > ARBITRARY, puis le plus récent.
   //
   // `compareCertainty(a, b)` rend POSITIF quand `a` est plus fiable ; dans un
@@ -304,6 +316,7 @@ export async function loadBrandSourceContext(
       budget,
       maxDocuments,
       opts.ensureIndexed ?? false,
+      new Map(usable.map(row => [row.id, { rawData: row.rawData, fingerprint: sourceFingerprint(row) }])),
     );
     if (semantic) {
       const used = new Set(semantic.map((e) => e.sourceId)).size;

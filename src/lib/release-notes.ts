@@ -34,8 +34,12 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
-    version: "6.27.520", date: "2026-10-21", headline: "Des choix et des livrables mieux distingués",
-    highlights: [{ emoji: "🧭", title: "Votre plan part des choix courants", body: "Les actions antérieures restent consultables sans être présentées comme retenues dans le nouveau plan. Une source modifiée ou une étape échouée empêche de présenter la suite comme un nouveau calcul réussi. Le document distingue désormais ses données disponibles des sections réellement rédigées et à jour." }],
+    version: "6.27.520", date: "2026-10-22", headline: "Des documents reliés à leurs sources et hypothèses",
+    highlights: [
+      { emoji: "🧭", title: "Des acteurs et des choix mieux distingués", body: "Votre audience, vos partenaires et vos clients payeurs gardent leurs rôles et leurs échanges. Les actions antérieures restent consultables sans devenir des choix courants ; une source modifiée ou une étape échouée empêche de présenter la suite comme un nouveau calcul réussi." },
+      { emoji: "🗂️", title: "Retrouver la bonne version", body: "Recherchez vos documents par étiquette et parcourez leurs versions. Les propositions restent à valider ; les archives et ressources techniques gardent une place distincte des documents de travail." },
+      { emoji: "📊", title: "Une fiche de rentabilité vérifiable", body: "Depuis un modèle financier préparé dans vos documents, produisez une fiche Word avec calculs, graphique et sources. Les hypothèses et coûts historiques restent signalés ; une donnée manquante ne devient pas une charge nulle. Chaque édition reste consultable avec ses hypothèses." },
+    ],
   },
   {
     version: "6.27.519", date: "2026-10-21", headline: "Un calcul terminé correspond à ses résultats",

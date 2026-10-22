@@ -1,12 +1,16 @@
 /** Existing amendment, real persistence and documentary fences; isolated DB only. */
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
+vi.mock("@/lib/auth/config", () => ({ auth: vi.fn() }));
+vi.mock("next-auth", () => ({}));
 vi.mock("@/server/services/oracle-section", () => ({ markAllSectionsStale: vi.fn(async () => ({})) }));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
 import { db } from "@/lib/db";
 import { operatorAmendPillar } from "@/server/services/mestor/operator-amend";
 import { resolveBrandSource, setSourceUse } from "@/server/services/ingestion-pipeline/source-usage";
 import type { Intent } from "@/server/services/mestor/intents";
+import { pillarRouter } from "@/server/trpc/routers/pillar";
+import { mapContexteDefi, mapPropositionValeur } from "@/server/services/strategy-presentation/section-mappers";
 type Amend = Extract<Intent, { kind: "OPERATOR_AMEND_PILLAR" }>;
 let userId: string, operatorId: string;
 const strategies: string[] = [];
@@ -52,6 +56,30 @@ async function fixture(human = false) {
   return { brand, pillar, source, receipt, intent };
 }
 describe("documentary amendments through Mestor", () => {
+  it("amende les rôles et échanges par la route gouvernée sans transformer un profil en contrat", async () => {
+    const f = await fixture();
+    const profiles = [
+      { name: "Audience des blogueurs", motivations: "Découvrir des lieux", actorRoles: ["COMMUNICATION_AUDIENCE", "USER"] },
+      { name: "Blogueurs foodies", motivations: "Partager leurs découvertes", actorRoles: ["PARTNER", "PRESCRIBER"] },
+      { name: "Restaurateurs", motivations: "Être découverts", actorRoles: ["PAYER"] },
+    ];
+    await db.pillar.create({ data: { strategyId: f.brand.id, key: "d", content: { personas: profiles.map(({ actorRoles: _, ...p }) => p) } } });
+    const caller = pillarRouter.createCaller({ db, headers: undefined, session: { user: { id: userId, role: "ADMIN" }, expires: new Date(Date.now() + 60_000).toISOString() } });
+    const common = { strategyId: f.brand.id, mode: "STRATEGIC_REWRITE" as const,
+      reason: "Instruction humaine de recette : distinguer public, clients et partenaires, sans contrat ou revenu inventé.", expectedVersion: 1 };
+    expect((await caller.amend({ ...common, pillarKey: "D", field: "personas", proposedValue: profiles })).status).toBe("OK");
+    const exchange = { personaName: "Blogueurs foodies", productNames: [], valueToBrand: ["Audience et contenus"], valueToActor: ["Contreparties à définir"], dependencyConditions: ["Accord gagnant-gagnant à établir"] };
+    expect((await caller.amend({ ...common, pillarKey: "V", field: "personaSegmentMap", proposedValue: [exchange] })).status).toBe("OK");
+    const pillars = await db.pillar.findMany({ where: { strategyId: f.brand.id } });
+    expect(pillars.find(p => p.key === "d")?.content).toMatchObject({ personas: profiles });
+    expect(pillars.find(p => p.key === "v")?.content).toMatchObject({ personaSegmentMap: [exchange], promesseDeValeur: "Valeur précédente" });
+    const presentation = { pillars, campaigns: [], gloryOutputs: [], businessContext: {} };
+    expect(mapContexteDefi(presentation).personas[1]?.actorRoles).toContain("Partenaire");
+    expect(mapPropositionValeur(presentation).valueExchanges?.[0]?.valueToBrand).toEqual(["Audience et contenus"]);
+    expect(await db.contract.count({ where: { strategyId: f.brand.id } })).toBe(0);
+    expect(await db.aICostLog.count({ where: { strategyId: f.brand.id } })).toBe(0);
+    expect(await db.intentEmission.count({ where: { strategyId: f.brand.id, intentKind: "OPERATOR_AMEND_PILLAR" } })).toBe(2);
+  });
   it("persists the read source version without inventing human review or source grounding", async () => {
     const f = await fixture(); const result = await operatorAmendPillar(f.intent);
     expect(result.status).toBe("OK");

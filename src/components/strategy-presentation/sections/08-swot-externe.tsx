@@ -55,8 +55,9 @@ export function SwotExterne({ data }: Props) {
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Brand-Market Fit</h3>
           <div className="rounded-lg border border-border bg-background/50 p-4">
             {data.brandMarketFit.score != null && (
-              <p className="text-lg font-bold text-sky-400">{data.brandMarketFit.score}/10</p>
+              <p className="text-lg font-bold text-sky-400">{data.brandMarketFit.score}{data.brandMarketFit.scoreMax != null ? `/${data.brandMarketFit.scoreMax}` : " — échelle à préciser"}</p>
             )}
+            {data.brandMarketFit.provenance && <p className="mt-1 text-sm text-foreground-secondary">{data.brandMarketFit.provenance}</p>}
             {data.brandMarketFit.gaps.length > 0 && (
               <div className="mt-2">
                 <p className="text-xs font-medium text-foreground-muted">Gaps</p>

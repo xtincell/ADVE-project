@@ -12,6 +12,7 @@
 import { useState } from "react";
 import { getFieldLabel } from "@/lib/types/field-labels";
 import { cataloguePriceLabel } from "@/domain/product-catalog";
+import { brandActorRoleLabels } from "@/domain/brand-actors";
 import { brandValueLabel, brandValueRank, str } from "./pillars/pillar-kit";
 import { getVariableSpec } from "@/lib/types/variable-bible";
 import { getVariableId } from "@/lib/types/variable-ids";
@@ -623,6 +624,7 @@ export function PersonasCard({ personas, onFocus }: { personas: Array<Record<str
               </div>
             </div>
             <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-2xs text-foreground-muted mb-2">
+              <span>{brandActorRoleLabels(p.actorRoles).join(" · ") || "Rôles à qualifier"}</span>
               {p.age ? <span>{String(p.age)} ans</span> : null}
               {p.csp ? <span>{String(p.csp)}</span> : null}
               {p.location ? <span>{String(p.location)}</span> : null}

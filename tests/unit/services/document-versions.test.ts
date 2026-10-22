@@ -4,7 +4,7 @@ vi.mock("@/server/services/ingestion-pipeline/source-usage", async original => (
   ...await original<object>(), invalidateSourceDerivatives: vi.fn(async () => {}),
 }));
 import { documentEdition, documentRepresentation, orderDocumentEditions, sourceIsUsable, documentContext } from "@/domain/source-document";
-import { registerDocumentEdition, registerDocumentRepresentation, decideDocumentEdition, clarifyDocumentEdition } from "@/server/services/ingestion-pipeline/document-versions";
+import { registerDocumentEdition, registerDocumentRepresentation, decideDocumentEdition, clarifyDocumentEdition, labelDocumentEdition, correctResourceDocumentFiling } from "@/server/services/ingestion-pipeline/document-versions";
 import { sourceFingerprint, type SourceDb } from "@/server/services/ingestion-pipeline/source-usage";
 
 const raw = (id: string) => ({ id, strategyId: "own", fileName: id, sourceType: "FILE", rawContent: `${id}: prix déclarés, pas de ventes prouvées`, rawData: {}, processingStatus: "EXTRACTED" });
@@ -12,7 +12,7 @@ function fixture() {
   const rows = [raw("old"), raw("new"), raw("next")];
   const db = { $queryRaw: vi.fn(async () => []), brandDataSource: {
     findUniqueOrThrow: vi.fn(async ({ where }: any) => rows.find(r => r.id === where.id)!),
-    findMany: vi.fn(async ({ where }: any) => rows.filter(r => r.strategyId === where.strategyId)),
+    findMany: vi.fn(async ({ where }: any) => rows.filter(r => r.strategyId === where.strategyId && (!where.rawData || documentEdition(r.rawData)?.family === where.rawData.equals))),
     update: vi.fn(async ({ where, data }: any) => { const r = rows.find(r => r.id === where.id)!; Object.assign(r, data); return r; }),
   } } as unknown as SourceDb;
   const classify = async (id: string, status: "REFERENCE" | "PROPOSED" | "ARCHIVED", previous?: string) => registerDocumentEdition(db, {
@@ -24,6 +24,48 @@ function fixture() {
   return { rows, db, classify };
 }
 describe("document lineage and strategic authority", () => {
+  it("repairs an unrelated resource folder collision with attributed history, without rewriting bytes or text", async () => {
+    const f = fixture();
+    await registerDocumentEdition(f.db, { id: "old", expectedSourceHash: sourceFingerprint(f.rows[0]!), document: {
+      family: "README", kind: "ASSET", label: "Logo v1", status: "PROPOSED", changeSummary: "Classement initial." } });
+    await registerDocumentEdition(f.db, { id: "new", expectedSourceHash: sourceFingerprint(f.rows[1]!), document: {
+      family: "README", kind: "ASSET", label: "Carnet v1", status: "PROPOSED", changeSummary: "Même nom de fichier, autre sujet.",
+      previous: { sourceId: "old", contentHash: sourceFingerprint(f.rows[0]!) } } });
+    const before = structuredClone(f.rows);
+    const input = { id: "new", expectedSourceHash: sourceFingerprint(f.rows[1]!), userId: "owner",
+      filing: { family: "Carnet — README", kind: "ASSET" as const, label: "Carnet v1", status: "PROPOSED" as const, tags: ["Carnet"], reason: "Dossiers et contenus différents ; aucune nouvelle décision créative." } };
+    await correctResourceDocumentFiling(f.db, input);
+    const doc = documentEdition(f.rows[1]!.rawData)!;
+    expect(doc).toMatchObject({ family: "Carnet — README", edition: 2, status: "PROPOSED", tags: ["Carnet"] });
+    expect(doc.previousSourceId).toBeUndefined(); expect(doc.decisions).toBeUndefined();
+    expect(doc.filingCorrections?.[0]).toMatchObject({ by: "owner", previousFamily: "README", previousSourceId: "old", reason: input.filing.reason });
+    expect(f.rows[0]).toEqual(before[0]); expect(f.rows[1]!.rawContent).toBe(before[1]!.rawContent);
+    await expect(correctResourceDocumentFiling(f.db, input)).rejects.toThrow("SOURCE_CHANGED");
+  });
+  it("never turns resource filing correction into adoption or reclassification of a business model", async () => {
+    const f = fixture(); await f.classify("old", "PROPOSED"); const before = structuredClone(f.rows);
+    await expect(correctResourceDocumentFiling(f.db, { id: "old", expectedSourceHash: sourceFingerprint(f.rows[0]!), userId: "owner",
+      filing: { family: "New", kind: "ASSET", label: "v1", status: "REFERENCE", reason: "Not a business adoption path." } })).rejects.toThrow("réservée aux ressources");
+    expect(f.rows).toEqual(before);
+  });
+
+  it("labels a retained proposal with a current receipt without adopting or rewriting it", async () => {
+    const f = fixture(); await f.classify("old", "REFERENCE"); await f.classify("new", "PROPOSED", "old");
+    const before = structuredClone(f.rows);
+    const input = { id: "new", expectedSourceHash: sourceFingerprint(f.rows[1]!), userId: "owner", tags: ["Finances", "Catalyse", "Finances"], reason: "Étiquettes documentaires, sans décision de modèle." };
+    await labelDocumentEdition(f.db, input);
+    const doc = documentEdition(f.rows[1]!.rawData)!;
+    expect(doc).toMatchObject({ status: "PROPOSED", edition: 2, previousSourceId: "old", tags: ["Finances", "Catalyse"] });
+    expect(doc.decisions).toBeUndefined(); expect(f.rows[0]).toEqual(before[0]);
+    expect(f.rows[1]!.rawContent).toBe(before[1]!.rawContent);
+    expect(doc.clarifications?.at(-1)).toMatchObject({ by: "owner", text: expect.stringContaining(input.reason) });
+    await expect(labelDocumentEdition(f.db, input)).rejects.toThrow("SOURCE_CHANGED");
+  });
+  it("restricts family reads in PostgreSQL instead of loading the complete brand corpus", async () => {
+    const f = fixture(); await f.classify("old", "REFERENCE");
+    expect(f.db.brandDataSource.findMany).toHaveBeenCalledWith({ where: { strategyId: "own", rawData: { path: ["_document", "family"], equals: "BMC" } } });
+    for (const [args] of vi.mocked(f.db.brandDataSource.findMany).mock.calls) expect(args?.where).toHaveProperty("rawData");
+  });
   it("places a late historical deposit before its declared successor without replacing reference or proposal", async () => {
     const f = fixture(); await f.classify("old", "REFERENCE"); await f.classify("new", "PROPOSED", "old");
     const before = structuredClone(f.rows.slice(0, 2));

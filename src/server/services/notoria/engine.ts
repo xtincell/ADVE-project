@@ -30,6 +30,7 @@ import type {
   RecoSource,
 } from "./types";
 import { MISSION_CONFIG } from "./types";
+import { serializePillar } from "@/server/services/utils/pillar-context";
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -59,12 +60,6 @@ async function loadPillars(
   const map: Record<string, unknown> = {};
   for (const p of pillars) map[p.key.toUpperCase()] = p.content;
   return map;
-}
-
-function serializePillar(key: string, content: unknown): string {
-  if (!content || typeof content !== "object") return `[${key}] Vide`;
-  // LOT 1b — contenu pilier (donnée non fiable) balisé anti-injection.
-  return wrapUntrusted(`PILIER ${key}`, JSON.stringify(content, null, 2), { max: 8000 });
 }
 
 function describeSchemaFields(key: string): string {

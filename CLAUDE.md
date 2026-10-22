@@ -1,3 +1,21 @@
+## Candidate520 — corpus et fiche financière (22 octobre2026)
+
+Les sources versionnées portent leurs étiquettes et les ressources homonymes leur
+contexte de dossier ; correction attribuée conservée, jamais adoption implicite.
+`financial-brain` réutilise le calculateur canonique ; une source FINANCE qualifiée
+alimente l’outil Glory existant, puis le Word FIN-06 privé. ADR-0226 Proposed.
+La recette synthétique n’est pas la fiche SPAWT : corpus et réception réelle restent
+ouverts jusqu’aux reçus applicatifs ; aucune rentabilité observée n’est déduite.
+
+## 520 candidate — fidélité des lecteurs et rôles des acteurs (2026-10-21)
+
+D.personas.actorRoles distingue les rôles cumulables ; V.personaSegmentMap porte
+apports/contreparties/coûts/conditions sans achat imposé. Mêmes entités/autorités,
+7 Neteru inchangés ; contexte qualifié, questionnaire et lecteurs existants.
+Le modèle documentaire ne prouve aucun contrat signé ou revenu. [ADR-0225](docs/governance/adr/0225-actor-roles-and-value-exchanges.md).
+520 n’est pas déployée ; réception entière Core/Oracle/MVP ouverte. Les amendements
+SPAWT humains appliqués sous 519 restent distincts de la réception du code candidat.
+
 ## 519 validée localement — production ouverte ; 518 livrée (2026-10-21)
 
 auth.register refuse toute identité existante, y compris sans mot de passe ;

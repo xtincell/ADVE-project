@@ -1,3 +1,11 @@
+## 520 candidate — corpus classé et exploitation financière (2026-10-22)
+
+Extension des sources, de Glory et du calculateur existants (ADR-0226 Proposed),
+sans nouveau Neter ni journal comptable. Les homonymes techniques/créatifs gardent
+leur contexte et un historique de correction ; les modèles métier gardent leurs
+parcours de décision. Fiche Catalyse déterministe et Word reçus sur cas synthétique ;
+corpus complet, fiche SPAWT réelle et déploiement restent à recevoir séparément.
+
 ## 509 livrée au périmètre technique — reprise qualité M03 active (2026-10-20)
 
 Le service paid-fulfillment fournit la même lecture de droit enregistré (PAID du

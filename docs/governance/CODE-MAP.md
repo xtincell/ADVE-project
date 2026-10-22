@@ -56,11 +56,12 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 54 modules (src/domain, cœur métier pur)
+## Domain — 56 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
 - **barre-brand-context**
+- **brand-actors**
 - **brand-asset-kinds** — BrandAsset.kind — taxonomie complète des actifs de marque.
 - **brand-nature-archetypes** — Phase 18 (ADR-0061) — `BRAND_NATURE_ARCHETYPES` source de vérité unique.
 - **brand-scores** — src/domain/brand-scores.ts — Layer 0. Les TROIS mesures d'une marque, nommées
@@ -81,6 +82,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **entity-ids**
 - **external-metric**
 - **field-provenance** — FieldProvenance — qui a posé la valeur d'un champ de pilier ADVE.
+- **financial-document**
 - **forecast** — ADR-0156 — Moteur de forecast déterministe (pur, zéro IO, zéro LLM).
 - **identity-graph** — ADR-0147 — Identity Graph : cœur déterministe (Layer 0, pur, zéro-LLM, zéro-IO).
 - **intent-progress** — src/domain/intent-progress.ts — IntentPhase + IntentProgressEvent.

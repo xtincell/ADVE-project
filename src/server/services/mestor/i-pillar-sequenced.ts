@@ -198,10 +198,11 @@ export async function generateICatalogueSequenced(args: {
   strategyId?: string;
   pillars: Record<string, unknown>;
   onProgress?: (msg: string) => void;
+  documentaryContext?: string;
 }): Promise<ICatalogue> {
   const { strategyId, pillars, onProgress } = args;
   const grounding = buildEconomicGrounding(pillars);
-  const context = buildContext(pillars) + grounding.block;
+  const context = buildContext(pillars) + grounding.block + (args.documentaryContext ? `\n\n${args.documentaryContext}` : "");
   const log = (m: string) => { onProgress?.(m); console.log(`[i-seq] ${m}`); };
 
   // ── 1. Catalogue par canal — 1 appel par canal (le gros morceau) ──────────

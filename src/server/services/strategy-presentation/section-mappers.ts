@@ -9,6 +9,8 @@
 
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
 import { unitEconomicsNote, unitEconomicsRatio } from "@/domain/unit-economics";
+import { brandActorRoleLabels } from "@/domain/brand-actors";
+import { coerceProvenance, FIELD_PROVENANCE_LABEL } from "@/domain/field-provenance";
 import { resolveCultIndexTier } from "@/domain/cult-index-tier";
 import { cataloguePriceLabel, productLadderPriceLabel } from "@/domain/product-catalog";
 import { TIER_MIN_DEPTH } from "@/domain/superfan-conditions";
@@ -152,6 +154,7 @@ export function mapContexteDefi(strategy: any): ContexteDefiSection {
   const bCtx = (strategy.businessContext as Record<string, unknown>) ?? {};
   const pillarA = getPillarContent(strategy, "a");
   const pillarD = getPillarContent(strategy, "d");
+  const pillarV = getPillarContent(strategy, "v");
 
   const enemy = pillarA?.enemy as Record<string, unknown> | null;
   const prophecy = pillarA?.prophecy as Record<string, unknown> | null;
@@ -166,6 +169,7 @@ export function mapContexteDefi(strategy: any): ContexteDefiSection {
       const px = p as Record<string, unknown>;
       return {
         nom: pickStr(px, ["nom", "name", "titre", "label"]),
+        actorRoles: brandActorRoleLabels(px.actorRoles),
         trancheAge: pickStr(px, ["trancheAge", "age", "tranche", "ageRange"]),
         csp: pickStr(px, ["csp", "profession", "metier", "occupation", "income"]),
         insightCle: pickStr(px, ["insightCle", "insight", "hiddenDesire", "whatTheyActuallyBuy"]),
@@ -194,11 +198,11 @@ export function mapContexteDefi(strategy: any): ContexteDefiSection {
 
   return {
     businessContext: {
-      sector: safeStr(bCtx.sector),
-      businessModel: safeStr(bCtx.businessModel),
-      positioningArchetype: safeStr(bCtx.positioningArchetype),
-      economicModels: safeArr(bCtx.economicModels) as string[],
-      salesChannels: safeArr(bCtx.salesChannels) as string[],
+      sector: safeStr(pillarA?.secteur) ?? safeStr(bCtx.sector) ?? safeStr(strategy.client?.sector),
+      businessModel: safeStr(pillarV?.businessModel) ?? safeStr(bCtx.businessModel),
+      positioningArchetype: safeStr(pillarV?.positioningArchetype) ?? safeStr(bCtx.positioningArchetype),
+      economicModels: safeArr(pillarV?.economicModels ?? bCtx.economicModels).map(m => typeof m === "string" ? m : pickStr(m, ["modele", "name", "model"])).filter(Boolean),
+      salesChannels: pickArr(pillarV, ["salesChannel"]).length > 0 ? pickArr(pillarV, ["salesChannel"]) : pickArr(bCtx, ["salesChannels"]),
     },
     enemy: enemy
       ? {
@@ -287,7 +291,6 @@ export function mapPlateformeStrategique(strategy: any): PlateformeStrategiqueSe
   // Messaging framework dérivé des personas RÉELLES (multi-clés). Vide si pas
   // de personas — aucune audience/CTA inventée.
   const messagingFramework = safeArr(pillarD?.personas)
-    .slice(0, 3)
     .map((p: unknown) => {
       const px = p as Record<string, unknown>;
       return {
@@ -466,7 +469,10 @@ export function mapProductionLivrables(strategy: any): ProductionLivrablesSectio
   // fictif (defaultGloryOutputsByLayer "manifesto-forge" qui faisait croire que
   // des outils avaient tourné). Si rien n'a été produit, les couches restent
   // vides — état honnête.
-  return { missions, gloryOutputsByLayer };
+  const proposedAssets = arr(getPillarContent(strategy, "i")?.assetsProduisibles).map((a: any) => ({
+    asset: pickStr(a, ["asset", "name", "nom"]), type: str(a.type), usage: str(a.usage),
+  })).filter(a => a.asset);
+  return { missions, gloryOutputsByLayer, proposedAssets };
 }
 
 // ─── 08: Medias & Distribution ──────────────────────────────────────────────
@@ -490,19 +496,16 @@ export function mapMediasDistribution(strategy: any): MediasDistributionSection 
   // Actions média RÉELLES : campagnes (ATL/MEDIA/DIGITAL) → catalogue I
   // (canaux média) → calendrier annuel I (name/budget/drivers). Aucune action
   // inventée (defaultMediaActions supprimé).
-  let mediaActions = strategy.campaigns.flatMap((c: any) =>
+  let mediaActions: MediasDistributionSection["mediaActions"] = strategy.campaigns.flatMap((c: any) =>
     c.actions
       .filter((a: any) => a.category === "ATL" || a.category === "MEDIA" || a.category === "DIGITAL")
       .map((a: any) => ({ name: a.name, category: a.category, budget: a.budget, driverName: null as string | null })),
   );
   if (mediaActions.length === 0) {
-    const catalogue = (iContent?.catalogueParCanal ?? {}) as Record<string, any[]>;
     const MEDIA_CHANNELS = ["DIGITAL", "MEDIA_TRADITIONNEL", "MEDIA", "PR_INFLUENCE", "ATL"];
-    mediaActions = MEDIA_CHANNELS.flatMap((canal) =>
-      arr(catalogue[canal]).slice(0, 4).map((a: any) => ({
-        name: str(a.action ?? a.name), category: canal, budget: null as number | null, driverName: null as string | null,
-      })),
-    ).filter((a: any) => a.name).slice(0, 10);
+    mediaActions = collectNormalizedInitiatives(iContent).filter(a => MEDIA_CHANNELS.includes(a.channel)).map(a => ({
+      name: a.action, category: a.channel, budget: a.budget ?? null, budgetLabel: initiativeCost(a), proposed: true, driverName: null,
+    }));
   }
   if (mediaActions.length === 0) {
     mediaActions = arr(iContent?.annualCalendar).map((e: any) => ({
@@ -752,7 +755,7 @@ export function mapTimelineGouvernance(strategy: any): TimelineGouvernanceSectio
   // ── Gouvernance : équipe campagnes → teamStructure déclarée (I/S) →
   // propriétaire seul. Plus d'équipe fictive (defaultTeamMembers).
   const owner = { name: strategy.user.name, email: strategy.user.email };
-  const declaredTeam = [...arr(iContent?.teamStructure), ...arr(sContent?.teamStructure)].map((t: any) => ({
+  const declaredTeam = [...arr(iContent?.teamStructure), ...arr(sContent?.teamStructure), ...arr(getPillarContent(strategy, "a")?.equipeDirigeante)].map((t: any) => ({
     name: pickStr(t, ["name", "nom"]), role: pickStr(t, ["title", "role", "responsibility", "responsabilite"]), email: null as string | null,
   })).filter((t: any) => t.name);
   const finalTeam = uniqueTeam.length > 0
@@ -769,7 +772,6 @@ export function mapTimelineGouvernance(strategy: any): TimelineGouvernanceSectio
 // ─── 12: Equipe ─────────────────────────────────────────────────────────────
 
 export function mapEquipe(strategy: any): EquipeSection {
-  const owner = { name: strategy.user.name, email: strategy.user.email, image: strategy.user.image };
 
   const teamMembers = strategy.campaigns.flatMap((c: any) =>
     c.teamMembers.map((tm: any) => ({
@@ -799,11 +801,7 @@ export function mapEquipe(strategy: any): EquipeSection {
   })).filter((t: any) => t.name);
   const finalTeam = uniqueTeam.length > 0
     ? uniqueTeam
-    : declaredTeamEq.length > 0
-      ? declaredTeamEq
-      : (owner.name || owner.email)
-        ? [{ name: owner.name ?? "Propriétaire", role: "Strategy Owner", email: owner.email ?? null, image: owner.image ?? null }]
-        : [];
+    : declaredTeamEq;
 
   // Opérateur RÉEL (relationnel) — null si absent (plus de "LaFusee" fabriqué).
   const operator = strategy.operator
@@ -818,7 +816,7 @@ export function mapEquipe(strategy: any): EquipeSection {
   const equipeDirigeante = rawEquipe.map((m: any) => ({
     nom: pickStr(m, ["nom", "name"]),
     role: pickStr(m, ["role", "title", "poste"]),
-    bio: pickStr(m, ["bio", "description", "responsibility", "responsabilite"]),
+    bio: pickStr(m, ["bio", "description", "responsibility", "responsabilite"]) || pickArr(m, ["responsabilites"]).join(" · "),
     experiencePasse: pickArr(m, ["experiencePasse", "experience"]),
     competencesCles: pickArr(m, ["competencesCles", "skills", "competences"]),
     credentials: pickArr(m, ["credentials", "certifications"]),
@@ -868,18 +866,14 @@ export function mapEquipe(strategy: any): EquipeSection {
 // ─── 13: Conditions & Prochaines Etapes ─────────────────────────────────────
 
 export function mapConditionsEtapes(strategy: any): ConditionsEtapesSection {
-  // Generate client context from strategy owner when no client record
+  // A software account is not evidence of the contracting client.
   const client = strategy.client
     ? {
         contactName: strategy.client.contactName,
         contactEmail: strategy.client.contactEmail,
         sector: strategy.client.sector,
       }
-    : {
-        contactName: strategy.user.name ?? strategy.name ?? null,
-        contactEmail: strategy.user.email ?? null,
-        sector: str((strategy.businessContext as any)?.sector) || null,
-      };
+    : null;
 
   // ── Contrats : RÉELS uniquement. L'ancien fallback `defaultContracts`
   // fabriquait un contrat "ACTIVE" fictif affiché au client — supprimé
@@ -980,6 +974,7 @@ export function checkSectionCompleteness(doc: StrategyPresentationDocument): Com
 // ─── NEW SECTION MAPPERS (v3 Oracle enrichment) ─────────────────────────────
 
 export function mapPropositionValeur(strategy: any): PropositionValeurSection {
+  const dContent = getPillarContent(strategy, "d");
   const vContent = getPillarContent(strategy, "v") as any;
   const eContent = getPillarContent(strategy, "e") as any;
   const iContent = getPillarContent(strategy, "i") as any;
@@ -1026,6 +1021,18 @@ export function mapPropositionValeur(strategy: any): PropositionValeurSection {
   }
 
   return {
+    valueExchanges: arr(vContent?.personaSegmentMap).map((exchange: any) => {
+      const actor = pickStr(exchange, ["personaName"]);
+      const persona = arr(dContent?.personas).find((p: any) => pickStr(p, ["name", "nom"]) === actor);
+      return {
+        actor, actorRoles: brandActorRoleLabels(persona?.actorRoles),
+        productNames: pickArr(exchange, ["productNames"]),
+        valueToBrand: pickArr(exchange, ["valueToBrand"]),
+        valueToActor: pickArr(exchange, ["valueToActor"]),
+        actorCosts: pickArr(exchange, ["actorCosts"]),
+        dependencyConditions: pickArr(exchange, ["dependencyConditions"]),
+      };
+    }),
     pricing,
     proofPoints,
     guarantees,
@@ -1051,7 +1058,7 @@ export function mapExperienceEngagement(strategy: any): ExperienceEngagementSect
     return {
       nom: pickStr(t, ["nom", "name", "titre"]) || canal,
       canal,
-      qualite: pickStr(t, ["qualite", "quality"]) || "standard",
+      qualite: pickStr(t, ["qualite", "quality"]),
       stadeAarrr: pickStr(t, ["stadeAarrr", "aarrStage", "stade"]),
     };
   }).filter((t: any) => t.nom || t.canal);
@@ -1073,7 +1080,7 @@ export function mapExperienceEngagement(strategy: any): ExperienceEngagementSect
   const currentDistribution: Record<string, number> = devSnap
     ? { spectateur: devSnap.spectateur, interesse: devSnap.interesse, participant: devSnap.participant, engage: devSnap.engage, ambassadeur: devSnap.ambassadeur, evangeliste: devSnap.evangeliste }
     : {};
-  const devotionPathway = hasPathway ? { currentDistribution, conversionTriggers: realTriggers, barriers: realBarriers } : null;
+  const devotionPathway = hasPathway ? { currentDistribution, score: devSnap?.devotionScore ?? null, conversionTriggers: realTriggers, barriers: realBarriers } : null;
 
   // Community strategy : champs canoniques E (communityStrategy → principes +
   // communityBuilding). Vide ("") si rien de déclaré — plus de phrase générique.
@@ -1124,7 +1131,10 @@ export function mapSwotInterne(strategy: any): SwotInterneSection {
   // génériques inventés).
   const mitigations = arr(rContent?.mitigationPriorities).map((m: any) => ({
     risque: pickStr(m, ["risk", "risque"]), action: pickStr(m, ["action", "mitigation"]),
-    priorite: pickStr(m, ["priority", "priorite"]) || "MEDIUM",
+    priorite: pickStr(m, ["priority", "priorite"]),
+    owner: pickStr(m, ["owner", "responsable"]),
+    timeline: pickStr(m, ["timeline", "echeance"]),
+    investment: pickStr(m, ["investment", "investissement"]),
   })).filter((m: any) => m.risque || m.action);
 
   return {
@@ -1204,12 +1214,15 @@ export function mapSwotExterne(strategy: any): SwotExterneSection {
   const brandMarketFit = bmfScore !== null
     ? {
         score: bmfScore,
+        scoreMax: 100,
+        provenance: FIELD_PROVENANCE_LABEL[coerceProvenance(tContent?._fieldProvenance?.brandMarketFitScore)],
         gaps: [str(percGap.gapDescription)].filter(Boolean),
         opportunities: arr(tContent?.marketReality?.weakSignals).map(str).filter(Boolean).slice(0, 4),
       }
     : tContent?.brandMarketFit
       ? {
           score: tContent.brandMarketFit.score ?? null,
+          scoreMax: safeNum(tContent.brandMarketFit.scoreMax ?? tContent.brandMarketFit.scale),
           gaps: arr(tContent.brandMarketFit.gaps).map(str),
           opportunities: arr(tContent.brandMarketFit.opportunities).map(str),
         }
@@ -1242,15 +1255,15 @@ export function mapSignauxOpportunites(strategy: any): SignauxOpportunitesSectio
   // les Signal rows DB, puis defaults.
   const analyzedSignals = arr(tContent?.weakSignalAnalysis).map((w: any) => ({
     signal: str(w.thesis ?? w.rawEvent),
-    source: str(w.rawEvent && w.thesis ? `Observé : ${str(w.rawEvent)}` : "Tarsis — analyse signaux faibles"),
-    severity: str(w.urgency ?? w.impactCategory ?? "MEDIUM"),
+    source: ["Analyse du dossier à vérifier", str(w.sourceRef), str(w.rawEvent)].filter(Boolean).join(" — "),
+    severity: str(w.urgency ?? w.impactCategory),
     detectedAt: "",
   })).filter((w: any) => w.signal);
 
   const marketWeakSignals = arr(tContent?.marketReality?.weakSignals).map((s: unknown) => ({
     signal: str(s),
-    source: "Veille marché (pilier T)",
-    severity: "MEDIUM",
+    source: "Signal mentionné dans la lecture de marché ; origine et date à préciser",
+    severity: "",
     detectedAt: "",
   })).filter((w: any) => w.signal);
 
@@ -1263,7 +1276,7 @@ export function mapSignauxOpportunites(strategy: any): SignauxOpportunitesSectio
       detectedAt: s.createdAt ? new Date(s.createdAt).toLocaleDateString("fr-FR") : "",
     }));
 
-  const weakSignals = [...analyzedSignals, ...marketWeakSignals, ...dbSignals].slice(0, 8);
+  const weakSignals = [...analyzedSignals, ...marketWeakSignals, ...dbSignals];
 
   // ── Opportunités : recommandations des analyses Tarsis + activations du
   // catalogue I, puis Signal rows DB, puis defaults.

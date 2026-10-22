@@ -8,6 +8,7 @@ import crypto from "crypto";
 import { db } from "@/lib/db";
 import { classifyBrand, createEmptyVector, PILLAR_NAMES, sanitizeVector } from "@/lib/types/advertis-vector";
 import type { AdvertisVector } from "@/lib/types/advertis-vector";
+import { PILLAR_METADATA, type PillarKey } from "@/domain/pillars";
 import {
   mapExecutiveSummary,
   mapContexteDefi,
@@ -288,6 +289,7 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
       brandName: strategy.name,
       operatorName: strategy.operator?.name ?? null,
       generatedAt: new Date().toISOString(),
+      stalePillars: strategy.pillars.filter(p => p.staleAt != null).map(p => PILLAR_METADATA[p.key.toUpperCase() as PillarKey]?.displayName ?? p.key),
       vector,
       classification,
     },

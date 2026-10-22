@@ -58,6 +58,27 @@ const input = (strategyId: string, externalId = randomUUID(), bytes = png) => ({
 const get = (assetId: string, query = "") => GET(new Request(`http://localhost/api/brand-assets/${assetId}/original${query}`), { params: Promise.resolve({ assetId }) });
 
 describe.sequential("private asset originals through the existing vault", () => {
+  it("files a received original with versioned labels without selecting it or rewriting its bytes", async () => {
+    const s = await brand(), a = await caller().create(input(s.id));
+    const beforeUpload = await db.fileUpload.findFirstOrThrow({ where: { entityType: "BRAND_ASSET", entityId: a.id } });
+    const request = { id: a.id, sourceClassification: {
+      expectedOriginalHash: createHash("sha256").update(png).digest("hex"), expectedClassificationVersion: 0,
+      classification: { family: "Identité de recette", kind: "ASSET" as const, label: "v2 à examiner", status: "PROPOSED" as const, tags: ["Logo", "Test synthétique"] },
+      reason: "Classement documentaire de recette ; aucune identité choisie.",
+    } };
+    const filed = await caller().updateTags(request);
+    expect(filed).toMatchObject({ state: a.state, version: a.version, kind: a.kind, parentBrandAssetId: a.parentBrandAssetId });
+    expect(filed.metadata).toMatchObject({ _sourceClassification: { version: 1, family: "Identité de recette", tags: ["Logo", "Test synthétique"] } });
+    expect(await db.fileUpload.findUniqueOrThrow({ where: { id: beforeUpload.id } })).toEqual(beforeUpload);
+    await expect(caller().updateTags(request)).rejects.toThrow("classement a changé");
+    await expect(caller(1).updateTags({ ...request, sourceClassification: { ...request.sourceClassification, expectedClassificationVersion: 1 } })).rejects.toThrow();
+    await expect(caller().updateTags({ ...request, sourceClassification: { ...request.sourceClassification, expectedClassificationVersion: 1, expectedOriginalHash: "0".repeat(64) } })).rejects.toThrow("original reçu diffère");
+    const next = await caller().updateTags({ ...request, sourceClassification: { ...request.sourceClassification, expectedClassificationVersion: 1,
+      classification: { ...request.sourceClassification.classification, label: "v2 — lecture précisée" } } });
+    expect(next.metadata).toMatchObject({ _sourceClassification: { version: 2, history: [{ version: 1, label: "v2 à examiner" }] } });
+    expect((await readAssetOriginal(a.id))?.bytes.equals(png)).toBe(true);
+    expect((await resolveBrandIdentity(s.id)).logo).toBeNull();
+  });
   it("retains exact encrypted bytes without selecting a logo or adding automatic tags", async () => {
     const s = await brand(), a = await caller().create(input(s.id));
     expect(a.state).toBe("CANDIDATE"); expect(a.pillarTags).toEqual({ d: 1, level: "production", assetType: "LOGO" });
