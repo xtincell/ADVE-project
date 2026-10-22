@@ -25,12 +25,32 @@ source existante et téléchargements exacts reçus. DB : trois actifs/trois sou
 deux éditions/un format, originaux/reçus/états/versions d’actifs conservés, zéro IA,
 pilier ou contexte créé. Preuves P23 `documents522-final-gauntlet-results.json`,
 `documents522-stress-full-received.json`, `documents522-native-received.json` et
-`documents522-native-db-received.json`. Commit/CI/image/runtime522 et admission des
+`documents522-native-db-received.json`. PR1064 ouverte ; CI après amendement,
+image/runtime522 et admission des
 quatre grands documents réels encore ouverts ; les reçus historiques505 ne les
 remplacent pas.
 
+Amendement522 avant fusion PR1064 : le lot documentaire atteint423/425.
+Deux XLSX réels restent refusés lors de l’étiquetage malgré reprise séquentielle :
+13feuilles, dont14468lignes d’avis,19461739octets JSON et10670491octets de texte
+par pièce (`large-xlsx522-local-cost.json`). Ce corpus d’avis n’est pas un nombre
+de clients acquis. Les refus30s, observés sur32–42s, sont conservés dans NEW
+`documents-521-last-two-reconcile-20261022.log`.
+
+Seule la transaction existante `documentTags` passe de30s à120s bornés ; permissions,
+hash, atomicité et invalidation restent inchangés. Aucun autre délai ni modèle
+modifié. C’est une capacité fonctionnelle ciblée, pas une résolution de cause
+racine, de performance ou du VPS, ni un SLO. Typage exit0 et PostgreSQL
+`document-versions`6/6 reçus, dont cellules volumineuses conservées et refus de
+l’empreinte périmée (`documents522-label-capacity-postgres.log`). Les suites
+précédentes25/3 et17/2 restent reçues sur le candidat antérieur ; la relance6/1
+remplace l’ancien5/1 de versions, soit un périmètre courant43/5, sans relance
+commune de ces43 tests. Les contrôles natifs/build/FULL précédents ne sont pas
+présentés comme rejoués sur cet amendement. CI de l’amendement, image/runtime522,
+récupération effective des deux XLSX et des quatre grandes pièces restent ouverts.
+
 Matériels1920/1920 et classements reçus ; cinq anciens diagnostics rapprochés sans
-rejeu aveugle, alias résolu.425 est la population documentaire toujours en cours,
+rejeu aveugle, alias résolu.423/425 entrées documentaires reçues ;425 est la population,
 dont techniques/créatifs, pas425 documents métier reçus. E14 réconcilie Vanessa/
 Grâce ; V47 retire CAC120B2C/LTV350000B2B/ratio23 incompatibles au profit d’inconnues,
 sources jointes et Gold60000 conservés. Nouveaux BMC proposés non adoptés.

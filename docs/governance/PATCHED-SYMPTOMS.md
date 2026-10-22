@@ -49,15 +49,39 @@ originaux/reçus/états/versions conservés, zéro IA/pilier/contexte créé ; h
 tardif, PDF corrigé, format lié, lien et téléchargements exacts reçus.
 
 P23 `documents522-{final-gauntlet-results,stress-full-received,native-received,native-db-received}.json`.
-Commit/CI/image/runtime522, quatre pièces réelles et reprise des quatre icônes
+CI de l’amendement PR1064/image/runtime522, quatre pièces réelles et reprise des quatre icônes
 restent [en réception](RESIDUAL-DEBT.md) ; [ADR0227 Proposed](adr/0227-retained-original-document-uses.md).
 Aucune production505 déduite du candidat historique conservé.
+
+Amendement522 avant fusion PR1064 : le lot documentaire atteint423/425.
+Deux XLSX réels restent refusés lors de l’étiquetage malgré reprise séquentielle :
+13feuilles, dont14468lignes d’avis,19461739octets JSON et10670491octets de texte
+par pièce (`large-xlsx522-local-cost.json`). Ce corpus d’avis n’est pas un nombre
+de clients acquis. Les refus30s, observés sur32–42s, sont conservés dans NEW
+`documents-521-last-two-reconcile-20261022.log`.
+
+Seule la transaction existante `documentTags` passe de30s à120s bornés ; permissions,
+hash, atomicité et invalidation restent inchangés. Aucun autre délai ni modèle
+modifié. C’est une capacité fonctionnelle ciblée, pas une résolution de cause
+racine, de performance ou du VPS, ni un SLO. Typage exit0 et PostgreSQL
+`document-versions`6/6 reçus, dont cellules volumineuses conservées et refus de
+l’empreinte périmée (`documents522-label-capacity-postgres.log`). Les suites
+précédentes25/3 et17/2 restent reçues sur le candidat antérieur ; la relance6/1
+remplace l’ancien5/1 de versions, soit un périmètre courant43/5, sans relance
+commune de ces43 tests. Les contrôles natifs/build/FULL précédents ne sont pas
+présentés comme rejoués sur cet amendement. CI de l’amendement, image/runtime522,
+récupération effective des deux XLSX et des quatre grandes pièces restent ouverts.
+
+Hypothèse : les étiquettes traversent la source structurée volumineuse sous charge
+et dépassent le budget30s ; la cause racine reste à diagnostiquer. La capacité après
+livraison et la charge70%steal/transaction financière5s restent dans
+[RESIDUAL-DEBT](RESIDUAL-DEBT.md), pas des symptômes déclarés résolus.
 
 Réconciliations de données distinctes du code522 : E14 Vanessa/Grâce et V47
 CAC120B2C/LTV350000B2B/ratio23 retirés au profit d’inconnues avec sources jointes ;
 Gold60000 conservé, nouveaux BMC proposés non adoptés.1920/1920 matériels et
 classements reçus, cinq anciens diagnostics rapprochés sans rejeu aveugle, alias
-résolu.425 est la population documentaire encore en cours, pas un reçu de425
+résolu.423/425 entrées documentaires reçues ;425 est la population, pas un reçu de425
 pièces métier. Aucun Core/Oracle ou chantier macro clos.
 
 2026-10-22 · **521 livrée — libellés et sources financières lisibles** : `NO_VAT`

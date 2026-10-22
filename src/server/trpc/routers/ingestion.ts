@@ -274,7 +274,9 @@ export const ingestionRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await assertSourceAccess(ctx.session.user.id, input.id);
       if (input.resourceFiling) return ctx.db.$transaction(tx => correctResourceDocumentFiling(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, userId: ctx.session.user.id, filing: input.resourceFiling! }), { timeout: 30_000 });
-      if (input.documentTags) return ctx.db.$transaction(tx => labelDocumentEdition(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, userId: ctx.session.user.id, ...input.documentTags! }), { timeout: 30_000 });
+      // A compressed workbook can retain tens of MiB of cells. Keep the same
+      // atomic hash fence and invalidation, with a bounded import-sized budget.
+      if (input.documentTags) return ctx.db.$transaction(tx => labelDocumentEdition(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, userId: ctx.session.user.id, ...input.documentTags! }), { timeout: 120_000 });
       if (input.documentRepresentation) return ctx.db.$transaction(tx => registerDocumentRepresentation(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, representation: input.documentRepresentation!, userId: ctx.session.user.id }), { timeout: 30_000 });
       if (input.documentClarification) return ctx.db.$transaction(tx => clarifyDocumentEdition(tx, { id: input.id, expectedSourceHash: input.expectedSourceHash!, userId: ctx.session.user.id, clarification: input.documentClarification! }), { timeout: 30_000 });
       if (input.use) {

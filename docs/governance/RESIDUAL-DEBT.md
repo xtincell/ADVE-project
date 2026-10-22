@@ -16,7 +16,35 @@ originaux, états/versions conservés, zéro IA/pilier/contexte créé. Preuves 
 `documents522-{final-gauntlet-results,stress-full-received,native-received,native-db-received}.json`.
 L’ancienne attente de contrôle local est retirée, pas transformée en livraison.
 
-**Fermer le reste** : recevoir commit/CI/image/runtime522 et conservation, puis
+Amendement522 avant fusion PR1064 : le lot documentaire atteint423/425.
+Deux XLSX réels restent refusés lors de l’étiquetage malgré reprise séquentielle :
+13feuilles, dont14468lignes d’avis,19461739octets JSON et10670491octets de texte
+par pièce (`large-xlsx522-local-cost.json`). Ce corpus d’avis n’est pas un nombre
+de clients acquis. Les refus30s, observés sur32–42s, sont conservés dans NEW
+`documents-521-last-two-reconcile-20261022.log`.
+
+Seule la transaction existante `documentTags` passe de30s à120s bornés ; permissions,
+hash, atomicité et invalidation restent inchangés. Aucun autre délai ni modèle
+modifié. C’est une capacité fonctionnelle ciblée, pas une résolution de cause
+racine, de performance ou du VPS, ni un SLO. Typage exit0 et PostgreSQL
+`document-versions`6/6 reçus, dont cellules volumineuses conservées et refus de
+l’empreinte périmée (`documents522-label-capacity-postgres.log`). Les suites
+précédentes25/3 et17/2 restent reçues sur le candidat antérieur ; la relance6/1
+remplace l’ancien5/1 de versions, soit un périmètre courant43/5, sans relance
+commune de ces43 tests. Les contrôles natifs/build/FULL précédents ne sont pas
+présentés comme rejoués sur cet amendement. CI de l’amendement, image/runtime522,
+récupération effective des deux XLSX et des quatre grandes pièces restent ouverts.
+
+**Fermer la capacité restante** : recevoir la CI de l’amendement PR1064 et son
+runtime exact, relire les deux sources pour exclure un succès inconnu, puis reprendre
+séquentiellement leurs étiquettes et contrôler données, empreinte et index. La
+réception après déploiement ferme la capacité de ces deux pièces seulement.
+Responsable C2-01/lot522 existants ; effort recette bornée ; **déclencheur immédiat**
+après livraison522, avant clôture du lot documentaire. Diagnostiquer séparément la
+charge et le steal CPU hôte observé vers70% ; la transaction financière5s expirée
+et la latence restent en reprise, sans promesse d’exploitabilité commerciale.
+
+**Fermer le reste** : recevoir CI/image/runtime522 et conservation, puis
 l’admission des quatre grands PDF/PPTX réels déjà au coffre. Requalifier leurs
 versions/statuts/formats selon le dossier Drive courant avant dépôt, préserver
 FileUpload/objet/manifeste et décisions, recevoir texte utile et original exact.
@@ -31,8 +59,8 @@ Intent/fournisseur/manager et aucun succès futur déduit.
 
 1920/1920 originaux matériels et classements reçus, cinq anciens diagnostics
 rapprochés de l’état courant sans rejouer leurs écritures inconnues ; alias résolu.
-425 est la population documentaire en cours, comprenant techniques/créatifs, pas
-425 documents métier reçus. Présence au coffre, texte lisible, classement, index
+423/425 entrées documentaires sont reçues ;425 reste la population, comprenant
+techniques/créatifs, pas425 documents métier reçus. Présence au coffre, texte lisible, classement, index
 et conseil restent des étapes distinctes. **Fermer** selon C2-01 ci-dessous :
 dépôts/rejeux restants, familles/versions/formats/statuts, index utile et usage
 ADVE sur pièces prioritaires. Responsable et effort inchangés ; **déclencheur**

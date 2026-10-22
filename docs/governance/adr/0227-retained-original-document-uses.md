@@ -101,15 +101,33 @@ reçus/originaux/états/versions d’actifs, zéro IA/pilier/contexte créé. Pr
 `documents522-{final-gauntlet-results,stress-full-received,native-received,native-db-received}.json`
 et logs PostgreSQL ciblés. Recette fictive locale, pas un SLO ou une production.
 
-Commit/CI/image/runtime522 et admission des quatre pièces SPAWT réelles restent
+Amendement522 avant fusion PR1064 : le lot documentaire atteint423/425.
+Deux XLSX réels restent refusés lors de l’étiquetage malgré reprise séquentielle :
+13feuilles, dont14468lignes d’avis,19461739octets JSON et10670491octets de texte
+par pièce (`large-xlsx522-local-cost.json`). Ce corpus d’avis n’est pas un nombre
+de clients acquis. Les refus30s, observés sur32–42s, sont conservés dans NEW
+`documents-521-last-two-reconcile-20261022.log`.
+
+Seule la transaction existante `documentTags` passe de30s à120s bornés ; permissions,
+hash, atomicité et invalidation restent inchangés. Aucun autre délai ni modèle
+modifié. C’est une capacité fonctionnelle ciblée, pas une résolution de cause
+racine, de performance ou du VPS, ni un SLO. Typage exit0 et PostgreSQL
+`document-versions`6/6 reçus, dont cellules volumineuses conservées et refus de
+l’empreinte périmée (`documents522-label-capacity-postgres.log`). Les suites
+précédentes25/3 et17/2 restent reçues sur le candidat antérieur ; la relance6/1
+remplace l’ancien5/1 de versions, soit un périmètre courant43/5, sans relance
+commune de ces43 tests. Les contrôles natifs/build/FULL précédents ne sont pas
+présentés comme rejoués sur cet amendement. CI de l’amendement, image/runtime522,
+récupération effective des deux XLSX et des quatre grandes pièces restent ouverts.
+
+CI de l’amendement PR1064/image/runtime522 et admission des quatre pièces SPAWT réelles restent
 à recevoir : requalifier leurs versions/statuts/formats depuis le Drive courant,
 puis recevoir texte utile et original exact sans copier les octets ni adopter
 une proposition. Le candidat505 et ses reçus historiques restent conservés.
 Déclencheur immédiat sur les pièces bloquées ; responsable/effort et plan de
 fermeture dans [RESIDUAL-DEBT](../RESIDUAL-DEBT.md).
 
-Population documentaire425 incluant ressources techniques/créatives, ingestion
-active ; matériels1920/1920 et classements reçus, cinq anciens diagnostics
+Population documentaire425 incluant ressources techniques/créatives,423/425 reçues ; matériels1920/1920 et classements reçus, cinq anciens diagnostics
 rapprochés sans rejeu aveugle, alias résolu. E14/V47 conservés, nouveaux BMC
 proposés non adoptés. Aucun corpus intégral, conseil complet, Core/Oracle/MVP ou
 chantier macro reçu par cet ADR. CODB et lenteur restent des dettes distinctes ;

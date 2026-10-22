@@ -22,7 +22,26 @@ mêmes originaux/reçus/états/versions d’actifs, zéro IA/pilier/contexte cr�
 Preuves P23 `documents522-{final-gauntlet-results,stress-full-received,native-received,native-db-received}.json`
 et logs PostgreSQL ciblés. Recette fictive locale, aucun SLO global.
 
-**Fermer le lot restant** : commit/CI/image/runtime522 exacts et conservation,
+Amendement522 avant fusion PR1064 : le lot documentaire atteint423/425.
+Deux XLSX réels restent refusés lors de l’étiquetage malgré reprise séquentielle :
+13feuilles, dont14468lignes d’avis,19461739octets JSON et10670491octets de texte
+par pièce (`large-xlsx522-local-cost.json`). Ce corpus d’avis n’est pas un nombre
+de clients acquis. Les refus30s, observés sur32–42s, sont conservés dans NEW
+`documents-521-last-two-reconcile-20261022.log`.
+
+Seule la transaction existante `documentTags` passe de30s à120s bornés ; permissions,
+hash, atomicité et invalidation restent inchangés. Aucun autre délai ni modèle
+modifié. C’est une capacité fonctionnelle ciblée, pas une résolution de cause
+racine, de performance ou du VPS, ni un SLO. Typage exit0 et PostgreSQL
+`document-versions`6/6 reçus, dont cellules volumineuses conservées et refus de
+l’empreinte périmée (`documents522-label-capacity-postgres.log`). Les suites
+précédentes25/3 et17/2 restent reçues sur le candidat antérieur ; la relance6/1
+remplace l’ancien5/1 de versions, soit un périmètre courant43/5, sans relance
+commune de ces43 tests. Les contrôles natifs/build/FULL précédents ne sont pas
+présentés comme rejoués sur cet amendement. CI de l’amendement, image/runtime522,
+récupération effective des deux XLSX et des quatre grandes pièces restent ouverts.
+
+**Fermer le lot restant** : CI de l’amendement PR1064/image/runtime522 exacts et conservation,
 puis admission des quatre grands PDF/PPTX SPAWT réels à partir des actifs présents.
 Relire leur état Drive courant avant de qualifier version/statut/format ; recevoir
 texte utile et téléchargement exact sans adopter la proposition ou dupliquer
@@ -32,8 +51,8 @@ bornés, **déclencheur immédiat** sur les quatre pièces bloquées, avant clô
 corpus. Les contrôles505 historiques ne reçoivent pas la production522.
 
 1920/1920 matériels et classements reçus, cinq anciens diagnostics rapprochés de
-l’état courant sans rejeu aveugle ; alias résolu.425 reste la population documentaire
-en cours, dont techniques/créatifs, pas425 documents métier reçus. E14/V47,
+l’état courant sans rejeu aveugle ; alias résolu.423/425 entrées reçues ;425 reste
+la population documentaire, dont techniques/créatifs, pas425 documents métier reçus. E14/V47,
 Gold60000 et inconnues financières conservés, nouveaux BMC proposés non adoptés.
 Core/Oracle/MVP, corpus entier, CODB, lenteur et sept chantiers restent ouverts.
 
