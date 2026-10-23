@@ -164,6 +164,13 @@ runtime. Aucun PSP/vente/MVP entier reçu. Preuves privées de livraison : `rele
 
 ## Entrées actives
 
+2026-10-23 · **523 — régénération de CODE-MAP** : sous Windows, `gen-code-map.ts` écrivait
+des chemins à antislashs (281 lignes corrompues par régénération), et le déclencheur du hook
+pre-commit (`src/server/services/` et `src/server/trpc/routers/` ancrés par `$`) ne
+correspondait à aucun fichier réel : la carte n'était jamais régénérée pour un service ou
+un routeur modifié. Chemins POSIX et motifs `.*`. Cause : outillage écrit et vérifié sur un
+seul OS, et regex de déclenchement jamais exercée sur un chemin réel.
+
 2026-10-23 · **523 — embeddings Seshat superposés pendant l'import du corpus** : chaque
 source indexée lançait son propre passage `embedBrandContext` sur toute la file de sa
 marque. Pendant l'import SPAWT (~7 000 fragments `BRAND_SOURCE`, 20-22/10), des dizaines
