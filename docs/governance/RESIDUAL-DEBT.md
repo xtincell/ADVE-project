@@ -67,6 +67,15 @@ et recette ciblée du corpus, **déclencheur immédiat** après livraison520 et 
 toute annonce d’absorption intégrale. Core/Oracle/MVP et sept chantiers entiers
 restent distincts et ouverts ; aucun pourcentage inventé.
 
+**Étape lente observée et corrigée (2026-10-23, 523)** : la vectorisation des
+fragments. Un passage par source indexée, superposés sur la même file, sans borne
+ni rythme, a saturé le CPU partagé du VPS et déclenché le bridage de l'hébergeur ;
+7 115 fragments `BRAND_SOURCE` restaient sans vecteur le 23/10 à 00h UTC. Correctif
+à la source : passage unique, bornes, pause par lot, lots `/api/embed`. **Reste** :
+après livraison523, relever les bilans `[seshat:embedder] passage` du journal, la
+décrue des 7 115 fragments et le steal de l'hôte ; rejouer un lot témoin de sources.
+Déclencheur : première relève de production après livraison523.
+
 ## Calculateur CODB legacy — seuil non recevable (2026-10-22)
 
 **Où/quoi** : `src/server/services/glory-tools/calculators.ts::codbCalculator`.

@@ -164,6 +164,19 @@ runtime. Aucun PSP/vente/MVP entier reçu. Preuves privées de livraison : `rele
 
 ## Entrées actives
 
+2026-10-23 · **523 — embeddings Seshat superposés pendant l'import du corpus** : chaque
+source indexée lançait son propre passage `embedBrandContext` sur toute la file de sa
+marque. Pendant l'import SPAWT (~7 000 fragments `BRAND_SOURCE`, 20-22/10), des dizaines
+de passages ont vectorisé les mêmes fragments sur l'Ollama CPU partagé du VPS, des
+heures durant, jusqu'au bridage de la VM par l'hébergeur (steal ~70 %). Le chemin
+natif jetait en plus les vecteurs d'un appel au premier dépassement du plafond, et
+l'ops-sweep attendait le rattrapage au-delà des 120 s de l'ops-daemon (« ops-sweep
+injoignable » au journal). Corrigé : passage unique par process, bornes et pause
+par lot, arrêt au premier vecteur manquant, `/api/embed` par lots avec lot partiel
+rendu, reprise des vecteurs de même `contentHash`, rattrapage du sweep lancé sans
+être attendu. Cause : déclencheur fire-and-forget par source sans
+coordination, sur un chemin d'embedding pensé pour un service dédié et non partagé.
+
 2026-10-20 · **511 livré — identité revendiquée et autorité partagée au selfserve** : trois défauts reproduits sur fixtures (hashnull revendiqué sur email seul, double consommation concurrente de reset, homonymes fusionnés/accès entre deux TPE). auth.register refuse tout existant, reset existant consommé atomiquement token/date ; nouveau fondateur sans operatorId partagé, propriété Strategy.userId gardée, Client réutilisé seulement sous même propriétaire, opérateurs existants inchangés. Résultat login ou récupération préremplie, register conflict vers récupération, indisponibilité sans transport/accusé demande si armé sans mail prétendu livré. Six PG initiaux puis sept avec refus sans transport/identité inchangée, harnais corrigé séparément ; census admin readonly réservé selfserve production509 zéroop/zéroassocié, aucune mutation réelle. Cause : email/nom et affectation technique partagée traités comme preuve de contrôle/droit. 511 livré, natif reçu localement ; transport externe ouvert, M04offre/CRM et M05coût/différés/admission ouverts, pas PSP/vente/MVP entier. [Plan unique M04/C7](RESIDUAL-DEBT.md). **Blocage de remise M04 confirmé** : lecture seule du runtime509 le 20 octobre
 à21:39UTC : sendEmail sélectionne provider=log, aucun EMAIL_FROM configuré.
 Aucun transport transactionnel actif : le titulaire ne recevrait pas son lien,
