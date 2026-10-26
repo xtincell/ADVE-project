@@ -159,6 +159,13 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   const filtered = { press: 0, discovery: 0, maps: 0, site: 0, citations: 0, adversarial: 0 };
   /** Évidence (texte du hit Brave) par profil social DÉCOUVERT — pour la passe adversariale. */
   const discoveredSocialEvidence = new Map<string, string>();
+  /**
+   * Raison d'admission par profil découvert — la PREUVE, transportée jusqu'aux
+   * faits (2026-07-30). « @chococamfmcg » (authentique, marché confirmé) et
+   * « @dovvmusic » (homonyme) se ressemblent de l'extérieur : sans cette
+   * trace, ni le lecteur ni un audit ne peuvent les départager.
+   */
+  const socialAdmissions: Record<string, import("@/server/services/seshat/signal-gateway").AdmissionReason> = {};
 
   // ── 0ter. Run Google Business DÉMARRÉ tôt (pattern async 2 temps) ──
   // L'actor Apify prend 30-60 s : démarré ici, il travaille chez Apify
@@ -416,19 +423,25 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
   const addDiscovered = (p: SocialProfile, evidence: string) => {
     const key = `${p.platform}:${(p.handle ?? p.url).toLowerCase()}`;
     if (seenSocial.has(key)) return;
-    if (
-      p.handle &&
-      gate.discriminants.length > 0 &&
-      assessHandleExtension(p.handle, input.companyName) === "extended" &&
-      gate.judge(evidence).matchedDiscriminants.length === 0 &&
-      !compactTextHasDiscriminant(p.handle, gate.discriminants)
-    ) {
+    const extension = p.handle ? assessHandleExtension(p.handle, input.companyName) : "unrelated";
+    const discriminated =
+      gate.judge(evidence).matchedDiscriminants.length > 0 ||
+      (!!p.handle && compactTextHasDiscriminant(p.handle, gate.discriminants));
+    if (p.handle && gate.discriminants.length > 0 && extension === "extended" && !discriminated) {
       filtered.discovery += 1;
       return;
     }
     footprint.socials.push(p);
     seenSocial.add(key);
     discoveredSocialEvidence.set(key, evidence.slice(0, 300));
+    // La raison suit le profil : « nom exact » n'est pas le même niveau de
+    // certitude que « nom étendu, marché confirmé ».
+    socialAdmissions[key] =
+      extension === "exact"
+        ? "ADMITTED_EXACT_NAME"
+        : discriminated
+          ? "ADMITTED_DISCRIMINATED"
+          : "ADMITTED_EXACT_NAME";
   };
 
   // ── 2.0. Réseaux tirés de la recherche de marque DÉJÀ en vol (0bis) ──
@@ -1087,6 +1100,7 @@ export async function enrichPublicFootprint(input: EnrichPublicFootprintInput): 
       proposer: proposerStatus,
       siteFromProposer,
       audienceAnomalies: audienceAnomalies.length > 0 ? audienceAnomalies : undefined,
+      socialAdmissions: Object.keys(socialAdmissions).length > 0 ? socialAdmissions : undefined,
       totalMs: Date.now() - t0,
       errors: [...footprint.errors, ...errors],
     },
