@@ -17,7 +17,7 @@
  */
 
 import { readFileSync, readdirSync, writeFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 
 const ROOT = join(__dirname, "..");
 
@@ -46,7 +46,9 @@ function listFiles(dir: string, pattern: RegExp): string[] {
       let s;
       try { s = statSync(full); } catch { continue; }
       if (s.isDirectory()) walk(full);
-      else if (pattern.test(e)) files.push(relative(ROOT, full));
+      // Chemins POSIX quel que soit l'OS : sous Windows, `relative` rend des
+      // antislashs et la régénération du hook pre-commit corrompait la carte.
+      else if (pattern.test(e)) files.push(relative(ROOT, full).split(sep).join("/"));
     }
   }
   walk(join(ROOT, dir));

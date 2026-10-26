@@ -1,4 +1,33 @@
-## 522 — recette locale close, livraison et quatre pièces réelles restantes (2026-10-22)
+## 524 — livraison du candidat522 sur523 encore ouverte (2026-10-26)
+
+Le raccord testé sous522 est repris dans PR1064 sur523/PR1067 Seshat. Numéro524
+distingue la nouvelle base de livraison du candidat historique. Les réceptions
+locales522 restent attribuées à522 ; CI finale/image/runtime524/conservation et
+pièces réelles non reçus. Aucun modèle/service/routeur/Intent/page supplémentaire.
+Dernier corpus inchangé :423/425 entrées documentaires,1920classifications matérielles.
+
+Contrôles combinés524 reçus : six contrôles exit0 dans
+`documents524-final-gauntlet-results.json`,1730tests/174fichiers gouvernance/UI/
+Seshat, PostgreSQL43/5 relancés ensemble et verts
+(`documents524-postgres-received.log`), build webpack524 exit0. Le premier essai
+PostgreSQL sans configuration n’avait sélectionné aucun test ; log conservé.
+Serveur compilé524 rétabli sur3399. Recette navigateur fraîche524 non reçue :
+`getTab16` sur l’ancien onglet d’erreur est refusé par la politique navigateur,
+« requested URL protocol is not allowed » ; aucun contournement. Le natif522 reste
+une preuve antérieure du raccord, jamais renommée524. Recette native524 à recevoir
+directement en production après livraison ; CI finale/image/runtime/conservation
+restent ouverts, ainsi que les trois livrables MVP.
+
+**Fermer** : recevoir CI finale et parcours natifs524 en production après livraison,
+image/runtime524 exacts et conservation ; reprendre ensuite les deux XLSX et les
+quatre grandes pièces après lecture de l’état courant. Responsable lot existant/
+PR1064 ; effort recette bornée ; **déclencheur immédiat** après livraison pour
+le natif de production. Aucun succès inconnu rejoué aveuglément. Conserver les dettes charge/latence,
+transaction financière et réception de la vectorisation523, sans SLO déduit.
+Priorité opérateur : MVP scoreur/fiche ADVE complète/Oracle, puis reste du Shinkiro ;
+la présente mise à jour ne reçoit ni le MVP ni les sept chantiers.
+
+## Candidat522 — recette locale reçue, livraison restante sous524 (checkpoint2026-10-22)
 
 Port du candidat505 conservé séparément vers521, [ADR0227 Proposed](adr/0227-retained-original-document-uses.md).
 Contrôles locaux522 clos au périmètre reçu : quatre rouges puis33 verts ciblés,
@@ -16,7 +45,7 @@ originaux, états/versions conservés, zéro IA/pilier/contexte créé. Preuves 
 `documents522-{final-gauntlet-results,stress-full-received,native-received,native-db-received}.json`.
 L’ancienne attente de contrôle local est retirée, pas transformée en livraison.
 
-Amendement522 avant fusion PR1064 : le lot documentaire atteint423/425.
+Checkpoint amendement522, avant reprise sous524 dans PR1064 : le lot documentaire atteint423/425.
 Deux XLSX réels restent refusés lors de l’étiquetage malgré reprise séquentielle :
 13feuilles, dont14468lignes d’avis,19461739octets JSON et10670491octets de texte
 par pièce (`large-xlsx522-local-cost.json`). Ce corpus d’avis n’est pas un nombre
@@ -32,25 +61,25 @@ l’empreinte périmée (`documents522-label-capacity-postgres.log`). Les suites
 précédentes25/3 et17/2 restent reçues sur le candidat antérieur ; la relance6/1
 remplace l’ancien5/1 de versions, soit un périmètre courant43/5, sans relance
 commune de ces43 tests. Les contrôles natifs/build/FULL précédents ne sont pas
-présentés comme rejoués sur cet amendement. CI de l’amendement, image/runtime522,
+présentés comme rejoués sur cet amendement. CI finale après intégration, image/runtime524,
 récupération effective des deux XLSX et des quatre grandes pièces restent ouverts.
 
 **Fermer la capacité restante** : recevoir la CI de l’amendement PR1064 et son
 runtime exact, relire les deux sources pour exclure un succès inconnu, puis reprendre
 séquentiellement leurs étiquettes et contrôler données, empreinte et index. La
 réception après déploiement ferme la capacité de ces deux pièces seulement.
-Responsable C2-01/lot522 existants ; effort recette bornée ; **déclencheur immédiat**
-après livraison522, avant clôture du lot documentaire. Diagnostiquer séparément la
+Responsable C2-01/lot524 issu du candidat522 ; effort recette bornée ; **déclencheur immédiat**
+après livraison524, avant clôture du lot documentaire. Diagnostiquer séparément la
 charge et le steal CPU hôte observé vers70% ; la transaction financière5s expirée
 et la latence restent en reprise, sans promesse d’exploitabilité commerciale.
 
-**Fermer le reste** : recevoir CI/image/runtime522 et conservation, puis
+**Fermer le reste** : recevoir CI/image/runtime524 et conservation, puis
 l’admission des quatre grands PDF/PPTX réels déjà au coffre. Requalifier leurs
 versions/statuts/formats selon le dossier Drive courant avant dépôt, préserver
 FileUpload/objet/manifeste et décisions, recevoir texte utile et original exact.
 Reprendre les quatre icônes par la réparation reçue OTHER→TECHNICAL : FILE de
 code/prompt autorisés, même statut, hash courant, aucune décision préalable ;
-garder fermée la voie métier/BMC. Responsable C2-01/lot522 existants ; effort
+garder fermée la voie métier/BMC. Responsable C2-01/lot524 issu du candidat522 ; effort
 livraison et recette bornés, **déclencheur immédiat** sur les pièces bloquées,
 avant réception intégrale du corpus. Aucun nouveau modèle/service/router/page/
 Intent/fournisseur/manager et aucun succès futur déduit.
@@ -88,16 +117,19 @@ Le bouton réel521 produit et télécharge le nouveau Word SPAWT sans TVA collec
 lisibles ; `finance521-spawt-native-word-received.json`. Synthétique local et
 anciens Word520 gardent leurs preuves distinctes, pas de SLO global.
 
-**Défaut restant constaté** : seconde génération TVA conditionnelle refusée par
-transaction5s expirée sur `brandDataSource.findFirst` après6917ms pendant ingestion
-à deux workers. Échec conservé ; nouvelle variante521 non reçue, même si l’ancien
-calcul11Gold existe. **Fermer** par lecture préalable des sorties pour exclure une
-réussite inconnue, reprise séquentielle après admissions, téléchargement et lecture
-de toutes les pages. Mesurer la transaction lente sur le même chemin sous charge,
+**Premier refus conservé** : TVA conditionnelle, transaction5s expirée sur
+`brandDataSource.findFirst` après6917ms pendant ingestion à deux workers. La reprise
+a ensuite produit nativement la variante le22octobre à17h17 (Douala), sortie
+`cmvjqvj7f003q01nme177twww`, puis Word reçu et seuil11Gold :
+`finance521-spawt-native-vat-word-received.json`. L’attente de production et de
+téléchargement de cette variante est retirée ; **reste** le contrôle visuel de
+toutes ses pages et sources, sans relancer une génération déjà reçue. **Fermer**
+par inspection du fichier reçu, corrections de présentation si constatées et
+nouvelle réception visuelle au besoin. Mesurer la transaction lente sur le même chemin sous charge,
 corriger la cause observée et recevoir un lot témoin sans délai arbitrairement
-augmenté ni autre manager. Responsable lot521/C2-01 existants ; effort recette
-ciblée et diagnostic de charge, **déclencheur immédiat** après admissions et avant
-clôture Catalyse. Coûts350kCF/18kCV/60kGold et seuils9/11 restent hypothèses,
+augmenté ni autre manager. Responsable lot financier521/C2-01 existants ; effort recette
+ciblée et diagnostic de charge ; **déclencheur immédiat** pour la lecture du Word
+reçu, puis lot témoin sous charge après admissions, avant clôture Catalyse. Coûts350kCF/18kCV/60kGold et seuils9/11 restent hypothèses,
 pas dépenses, TVA applicable ou rentabilité globale. Aucun corpus/Core/Oracle/
 MVP ou chantier entier reçu.
 
@@ -117,7 +149,7 @@ variante TVA18% incluse conditionnelle →11. Hypothèses et budgets à valider,
 dépenses mesurées ou régime fiscal constaté ; aucune rentabilité globale reçue.
 Les cinq pages de chacun des deux Word520 ont été vues intégralement ; défaut
 `NO_VAT` confirmé ; correction521 ensuite reçue en production pour le Word sans TVA ; variante
-conditionnelle et charge restent en reprise, distinctes de l’absorption.
+conditionnelle ensuite reçue, contrôle visuel et charge encore ouverts, distincts de l’absorption.
 Nouveau BMC proposé, trois personas et Gold60000 conservés.
 
 Recensement22octobre : 2346 fichiers/350 dossiers, 349 connus relus et nouveau
@@ -144,6 +176,15 @@ et recette ciblée du corpus, **déclencheur immédiat** après livraison520 et 
 toute annonce d’absorption intégrale. Core/Oracle/MVP et sept chantiers entiers
 restent distincts et ouverts ; aucun pourcentage inventé.
 
+**Étape lente observée et corrigée (2026-10-23, 523)** : la vectorisation des
+fragments. Un passage par source indexée, superposés sur la même file, sans borne
+ni rythme, a saturé le CPU partagé du VPS et déclenché le bridage de l'hébergeur ;
+7 115 fragments `BRAND_SOURCE` restaient sans vecteur le 23/10 à 00h UTC. Correctif
+à la source : passage unique, bornes, pause par lot, lots `/api/embed`. **Reste** :
+après livraison523, relever les bilans `[seshat:embedder] passage` du journal, la
+décrue des 7 115 fragments et le steal de l'hôte ; rejouer un lot témoin de sources.
+Déclencheur : première relève de production après livraison523.
+
 ## Calculateur CODB legacy — seuil non recevable (2026-10-22)
 
 **Où/quoi** : `src/server/services/glory-tools/calculators.ts::codbCalculator`.
@@ -166,7 +207,7 @@ consommateurs, correction dédiée et recette, séparés de la livraison520.
 séquence financière livrée, ou à la prochaine reprise du périmètre financier.
 Aucun nouveau calculateur, service ou gestionnaire à créer.
 
-## Coordination ADR505 — renumérotation reçue, port522 encore ouvert (2026-10-22)
+## Coordination ADR505 — renumérotation reçue, candidat522 repris sous524 (2026-10-22)
 
 ADR0224 courant reste retained-intake-originals. La proposition documentaire de
 l’ancien checkout505 est reprise sous ADR0227 Proposed dans ce checkout ; candidat

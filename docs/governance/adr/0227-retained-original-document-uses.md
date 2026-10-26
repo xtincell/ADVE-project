@@ -1,12 +1,20 @@
 # ADR-0227 — Usage documentaire d’un original déjà conservé au coffre
 
-**Status** : Proposed — recette locale522 reçue, livraison et pièces réelles ouvertes
+**Status** : Proposed — candidat522 testé, livraison524 sur523 et pièces réelles ouvertes
 **Date** : 2026-10-22
+**Updated** : 2026-10-26 — reprise sous524 sur la base523/PR1067
 **Phase** : 7 — C2, exploitation des originaux et classement documentaire
 **Depends on** : ADR-0197, ADR-0198, ADR-0219, ADR-0220, ADR-0222, ADR-0223, ADR-0226
 **Supersedes** : aucun ; reprend la proposition historique du candidat505, pas ADR0224 courant
 
 ## Contexte
+
+La livraison est reprise sous524 dans PR1064 après intégration de523/PR1067
+Seshat. Aucun modèle/service/routeur/Intent/page supplémentaire. Les reçus locaux
+522 restent attribués au candidat522 ; ils ne prouvent pas les contrôles de la
+base fusionnée, la CI finale, l’image/runtime524 ou la conservation après livraison.
+Ces réceptions et celles des pièces réelles restent ouvertes. Dernier corpus
+inchangé :423/425 entrées documentaires et1920classifications matérielles.
 
 Quatre grands PDF/PPTX SPAWT sont déjà conservés au coffre avec leurs originaux,
 mais ne sont pas reçus comme sources documentaires lisibles et classées. Les
@@ -101,7 +109,7 @@ reçus/originaux/états/versions d’actifs, zéro IA/pilier/contexte créé. Pr
 `documents522-{final-gauntlet-results,stress-full-received,native-received,native-db-received}.json`
 et logs PostgreSQL ciblés. Recette fictive locale, pas un SLO ou une production.
 
-Amendement522 avant fusion PR1064 : le lot documentaire atteint423/425.
+Checkpoint amendement522, avant reprise sous524 dans PR1064 : le lot documentaire atteint423/425.
 Deux XLSX réels restent refusés lors de l’étiquetage malgré reprise séquentielle :
 13feuilles, dont14468lignes d’avis,19461739octets JSON et10670491octets de texte
 par pièce (`large-xlsx522-local-cost.json`). Ce corpus d’avis n’est pas un nombre
@@ -117,15 +125,22 @@ l’empreinte périmée (`documents522-label-capacity-postgres.log`). Les suites
 précédentes25/3 et17/2 restent reçues sur le candidat antérieur ; la relance6/1
 remplace l’ancien5/1 de versions, soit un périmètre courant43/5, sans relance
 commune de ces43 tests. Les contrôles natifs/build/FULL précédents ne sont pas
-présentés comme rejoués sur cet amendement. CI de l’amendement, image/runtime522,
+présentés comme rejoués sur cet amendement. CI finale après intégration, image/runtime524,
 récupération effective des deux XLSX et des quatre grandes pièces restent ouverts.
 
-CI de l’amendement PR1064/image/runtime522 et admission des quatre pièces SPAWT réelles restent
+CI finale PR1064 après intégration/image/runtime524 et admission des quatre pièces SPAWT réelles restent
 à recevoir : requalifier leurs versions/statuts/formats depuis le Drive courant,
 puis recevoir texte utile et original exact sans copier les octets ni adopter
 une proposition. Le candidat505 et ses reçus historiques restent conservés.
 Déclencheur immédiat sur les pièces bloquées ; responsable/effort et plan de
 fermeture dans [RESIDUAL-DEBT](../RESIDUAL-DEBT.md).
+
+Mise à jour financière indépendante : la variante TVA521 a été produite nativement
+le22octobre à17h17 (Douala), sortie `cmvjqvj7f003q01nme177twww`, puis Word reçu
+(`finance521-spawt-native-vat-word-received.json`). Le premier refus reste conservé ;
+contrôle visuel encore en attente, aucune fiabilité/latence ou fiscalité validée.
+Priorité opérateur : MVP scoreur/fiche ADVE complète/Oracle, puis reste du Shinkiro ;
+ce raccord et son ADR ne reçoivent pas ce MVP.
 
 Population documentaire425 incluant ressources techniques/créatives,423/425 reçues ; matériels1920/1920 et classements reçus, cinq anciens diagnostics
 rapprochés sans rejeu aveugle, alias résolu. E14/V47 conservés, nouveaux BMC

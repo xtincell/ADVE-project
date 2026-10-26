@@ -1,4 +1,30 @@
-## 522 reçue localement — livraison et quatre pièces réelles ouvertes (22 octobre2026)
+## 524 en préparation — candidat522 repris sur523, MVP prioritaire (26 octobre2026)
+
+PR1064 reprend le raccord documentaire déjà testé sous522 après intégration de
+la base523/PR1067 Seshat. Les preuves522 ci-dessous restent celles du candidat ;
+aucune recette native fraîche524, image/runtime524 ou conservation après
+déploiement reçue. Aucun modèle/service/routeur/Intent/page ajouté.
+
+Contrôles combinés524 reçus : six contrôles exit0 dans
+`documents524-final-gauntlet-results.json`,1730tests/174fichiers gouvernance/UI/
+Seshat, PostgreSQL43/5 relancés ensemble et verts
+(`documents524-postgres-received.log`), build webpack524 exit0. Le premier essai
+PostgreSQL sans configuration n’avait sélectionné aucun test ; log conservé.
+Serveur compilé524 rétabli sur3399. Recette navigateur fraîche524 non reçue :
+`getTab16` sur l’ancien onglet d’erreur est refusé par la politique navigateur,
+« requested URL protocol is not allowed » ; aucun contournement. Le natif522 reste
+une preuve antérieure du raccord, jamais renommée524. Recette native524 à recevoir
+directement en production après livraison ; CI finale/image/runtime/conservation
+restent ouverts, ainsi que les trois livrables MVP.
+
+
+Dernier corpus reçu inchangé :423/425 entrées documentaires et1920classifications
+matérielles, sans nouvelle réception. Priorité opérateur explicite : MVP scoreur,
+fiche ADVE complète et Oracle, puis reste du Shinkiro. Ni patch documentaire ni
+nouveau numéro ne reçoivent le MVP ou les sept chantiers. Charge/latence/CODB et
+réception de la vectorisation523 restent distincts, planifiés en RESIDUAL-DEBT.
+
+## Candidat522 reçu localement — livraison reprise sous524 (checkpoint22octobre2026)
 
 Port borné du candidat505 conservé séparément sur521 ; conflit d’import résolu en
 conservant les deux capacités. ADR-0227 Proposed reprend l’usage documentaire de
@@ -26,11 +52,11 @@ deux éditions/un format, originaux/reçus/états/versions d’actifs conservés
 pilier ou contexte créé. Preuves P23 `documents522-final-gauntlet-results.json`,
 `documents522-stress-full-received.json`, `documents522-native-received.json` et
 `documents522-native-db-received.json`. PR1064 ouverte ; CI après amendement,
-image/runtime522 et admission des
+image/runtime524 et admission des
 quatre grands documents réels encore ouverts ; les reçus historiques505 ne les
 remplacent pas.
 
-Amendement522 avant fusion PR1064 : le lot documentaire atteint423/425.
+Checkpoint amendement522, avant reprise sous524 dans PR1064 : le lot documentaire atteint423/425.
 Deux XLSX réels restent refusés lors de l’étiquetage malgré reprise séquentielle :
 13feuilles, dont14468lignes d’avis,19461739octets JSON et10670491octets de texte
 par pièce (`large-xlsx522-local-cost.json`). Ce corpus d’avis n’est pas un nombre
@@ -46,7 +72,7 @@ l’empreinte périmée (`documents522-label-capacity-postgres.log`). Les suites
 précédentes25/3 et17/2 restent reçues sur le candidat antérieur ; la relance6/1
 remplace l’ancien5/1 de versions, soit un périmètre courant43/5, sans relance
 commune de ces43 tests. Les contrôles natifs/build/FULL précédents ne sont pas
-présentés comme rejoués sur cet amendement. CI de l’amendement, image/runtime522,
+présentés comme rejoués sur cet amendement. CI finale après intégration, image/runtime524,
 récupération effective des deux XLSX et des quatre grandes pièces restent ouverts.
 
 Matériels1920/1920 et classements reçus ; cinq anciens diagnostics rapprochés sans
@@ -74,11 +100,13 @@ conservés par lectures séquentielles, pas un snapshot atomique. P23
 Le bouton réel de production crée la fiche SPAWT sans TVA collectée puis son Word :
 37contrôles remplis, URL sources conservées, code `NO_VAT` absent ; cinq pages toutes
 vues lisibles. Sortie `cmvjplqrc000201nmyzm4w10m`,
-`finance521-spawt-native-word-received.json`. Variante TVA conditionnelle refusée par transaction5s expirée sur
-`brandDataSource.findFirst` après6917ms sous ingestion à deux workers ; échec
-conservé, reprise séquentielle après lecture des sorties pour exclure un succès
-inconnu. Fiabilité/latence non reçues.350kCF/18kCV/60kGold et9/11 restent hypothèses documentées, pas charges
-mesurées, régime fiscal constaté ou rentabilité globale. Aucun corpus/Core/Oracle/
+`finance521-spawt-native-word-received.json`. Le premier refus TVA conditionnelle
+(transaction5s expirée sur `brandDataSource.findFirst` après6917ms sous ingestion
+à deux workers) reste conservé. La variante a ensuite été produite nativement
+le22octobre à17h17 (Douala), sortie `cmvjqvj7f003q01nme177twww`, puis Word reçu :
+`finance521-spawt-native-vat-word-received.json`. Seuil11Gold reçu ; contrôle visuel
+encore en attente. Fiabilité/latence non reçues.350kCF/18kCV/60kGold et9/11 restent
+hypothèses documentées, pas charges mesurées, régime fiscal ou rentabilité globale. Aucun corpus/Core/Oracle/
 MVP ou chantier entier reçu par cette livraison.
 
 ## 520 livrée — corpus et fiche financière reçus à un périmètre borné (22 octobre2026)
@@ -96,7 +124,7 @@ fiches Catalyse SPAWT réelles, zéro appel IA : scénario documenté350kCF/18kC
 60kprix →9Gold mensuels ; variante TVA18% incluse, conditionnelle →11. Word privé
 exporté, 37 champs remplis et les cinq pages de chacune des deux fiches520 vues
 intégralement ; défaut `NO_VAT` confirmé, correction reçue sur synthétique local521,
-Word SPAWT sans TVA reçu ensuite sur521 ; variante conditionnelle encore en réception. Ces valeurs ne sont ni dépenses
+Word SPAWT sans TVA reçu ensuite sur521 ; variante conditionnelle produite, contrôle visuel encore en attente. Ces valeurs ne sont ni dépenses
 constatées, ni TVA validée, ni rentabilité globale. ADR-0226 reste Proposed.
 
 Recensement22octobre : 2346 fichiers/350 dossiers (349 connus relus et nouveau

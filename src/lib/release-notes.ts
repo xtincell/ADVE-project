@@ -34,7 +34,7 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
-    version: "6.27.522", date: "2026-10-22", headline: "Un document déjà conservé rejoint vos sources",
+    version: "6.27.524", date: "2026-10-26", headline: "Un document déjà conservé rejoint vos sources",
     highlights: [
       { emoji: "📂", title: "Retrouver le même original", body: "Depuis vos actifs, rattachez un document déjà conservé à son édition ou retrouvez sa source existante sans le déposer à nouveau. Son original, son historique et vos décisions restent conservés." },
       { emoji: "📖", title: "Une lecture manuelle possible", body: "Si un PDF ne contient pas de texte lisible, la page le signale avant tout classement. Vous pouvez renseigner sa lecture puis le relier à la bonne édition ; un autre format reste rattaché au même document." },

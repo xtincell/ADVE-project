@@ -1223,6 +1223,16 @@ export interface EmbedResult {
  */
 const EMBED_TIMEOUT_MS = 20_000;
 
+/**
+ * Taille d'un lot sur l'Ollama natif (`/api/embed`).
+ *
+ * Petit à dessein : le plafond de patience porte sur le LOT, et l'Ollama de
+ * production tourne sur un CPU partagé et bridé (~2-4 s par fragment de 2 500
+ * caractères). Quatre fragments tiennent sous 20 s ; un lot qui dépasse ne
+ * perd que lui-même, pas ce que les lots précédents ont déjà rendu.
+ */
+const OLLAMA_NATIVE_EMBED_BATCH = 4;
+
 const OLLAMA_DIM_BY_MODEL: Record<string, number> = {
   "nomic-embed-text": 768,
 
@@ -1361,24 +1371,50 @@ async function embedViaOllama(
     return { embeddings, dim, model, provider: "ollama", inputTokens: 0 };
   }
 
-  // ── Ollama natif local (/api/embeddings, un prompt à la fois) ──
+  // ── Ollama natif local (/api/embed, par petits lots) ──
+  //
+  // Constaté du 2026-10-21 au 23 en production : ce chemin envoyait un texte à
+  // la fois à `/api/embeddings` et levait au premier dépassement du plafond de
+  // patience. Tout ce que l'appel avait déjà calculé était jeté, puis recalculé
+  // au passage suivant, sur un CPU partagé que ces passages saturaient.
+  //
+  // `/api/embed` accepte un tableau : un aller-retour par lot. Quand un lot
+  // échoue pour indisponibilité APRÈS d'autres lots réussis, les vecteurs déjà
+  // reçus sont rendus et les entrées restantes restent vides (`[]`) : l'appelant
+  // ne retient que ce qui a un vecteur. Un échec dès le premier lot lève comme
+  // avant, pour que la cascade de repli s'applique.
   const embeddings: number[][] = [];
-  for (const text of inputs) {
-    const res = await fetch(`${rawBase}/api/embeddings`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model, prompt: text }),
-      signal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
-    });
-    if (!res.ok) {
-      const errText = await res.text().catch(() => res.statusText);
-      throw new Error(`Ollama embeddings ${res.status}: ${errText}`);
+  for (let i = 0; i < inputs.length; i += OLLAMA_NATIVE_EMBED_BATCH) {
+    const slice = inputs.slice(i, i + OLLAMA_NATIVE_EMBED_BATCH);
+    try {
+      const res = await fetch(`${rawBase}/api/embed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model, input: slice }),
+        signal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
+      });
+      if (!res.ok) {
+        const errText = await res.text().catch(() => res.statusText);
+        throw new Error(`Ollama embeddings ${res.status}: ${errText}`);
+      }
+      const json = (await res.json()) as { embeddings?: number[][] };
+      const vectors = json.embeddings ?? [];
+      if (vectors.length !== slice.length || vectors.some((v) => !Array.isArray(v) || v.length === 0)) {
+        throw new Error(
+          `Ollama returned ${vectors.length}/${slice.length} usable embeddings for caller=${caller}`,
+        );
+      }
+      embeddings.push(...vectors);
+    } catch (err) {
+      if (embeddings.length > 0 && isEmbedProviderUnavailable(err)) {
+        console.warn(
+          `[llm-gateway.embed] Ollama indisponible après ${embeddings.length}/${inputs.length} vecteurs (${err instanceof Error ? err.message : err}) — lot partiel rendu pour caller=${caller}`,
+        );
+        while (embeddings.length < inputs.length) embeddings.push([]);
+        break;
+      }
+      throw err;
     }
-    const json = (await res.json()) as { embedding?: number[] };
-    if (!json.embedding || json.embedding.length === 0) {
-      throw new Error(`Ollama returned empty embedding for caller=${caller}`);
-    }
-    embeddings.push(json.embedding);
   }
 
   return { embeddings, dim, model, provider: "ollama", inputTokens: 0 };

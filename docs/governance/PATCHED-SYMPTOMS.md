@@ -28,7 +28,15 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
-2026-10-22 · **522 reçue localement — même original, usage documentaire conservé** :
+2026-10-26 · **Livraison524 préparée, candidat522 conservé** : le raccord
+documentaire déjà testé dans PR1064 rejoint la base523/PR1067 Seshat. Les preuves
+locales522 restent historiques ; réception sur la base fusionnée, CI finale,
+image/runtime524, conservation et pièces réelles encore ouvertes. Aucun nouveau
+modèle/service/routeur/Intent/page. Derniers reçus inchangés :423/425 documents,
+1920classifications matérielles. Le patch ne reçoit pas le MVP ; priorité scoreur/
+fiche ADVE complète/Oracle avant reprise du reste du Shinkiro. [Plan et déclencheur](RESIDUAL-DEBT.md).
+
+2026-10-22 · **Candidat522 reçu localement — même original, usage documentaire conservé** :
 quatre grands PDF/PPTX SPAWT restent à admettre en production ; le port505→522
 corrige localement le passage coffre→Sources sans recopier FileUpload/objets/
 manifestes. Hypothèse : rôle d’actif et usage documentaire d’un même original
@@ -49,11 +57,11 @@ originaux/reçus/états/versions conservés, zéro IA/pilier/contexte créé ; h
 tardif, PDF corrigé, format lié, lien et téléchargements exacts reçus.
 
 P23 `documents522-{final-gauntlet-results,stress-full-received,native-received,native-db-received}.json`.
-CI de l’amendement PR1064/image/runtime522, quatre pièces réelles et reprise des quatre icônes
+CI finale PR1064 après intégration/image/runtime524, quatre pièces réelles et reprise des quatre icônes
 restent [en réception](RESIDUAL-DEBT.md) ; [ADR0227 Proposed](adr/0227-retained-original-document-uses.md).
 Aucune production505 déduite du candidat historique conservé.
 
-Amendement522 avant fusion PR1064 : le lot documentaire atteint423/425.
+Checkpoint amendement522, avant reprise sous524 dans PR1064 : le lot documentaire atteint423/425.
 Deux XLSX réels restent refusés lors de l’étiquetage malgré reprise séquentielle :
 13feuilles, dont14468lignes d’avis,19461739octets JSON et10670491octets de texte
 par pièce (`large-xlsx522-local-cost.json`). Ce corpus d’avis n’est pas un nombre
@@ -69,7 +77,7 @@ l’empreinte périmée (`documents522-label-capacity-postgres.log`). Les suites
 précédentes25/3 et17/2 restent reçues sur le candidat antérieur ; la relance6/1
 remplace l’ancien5/1 de versions, soit un périmètre courant43/5, sans relance
 commune de ces43 tests. Les contrôles natifs/build/FULL précédents ne sont pas
-présentés comme rejoués sur cet amendement. CI de l’amendement, image/runtime522,
+présentés comme rejoués sur cet amendement. CI finale après intégration, image/runtime524,
 récupération effective des deux XLSX et des quatre grandes pièces restent ouverts.
 
 Hypothèse : les étiquettes traversent la source structurée volumineuse sous charge
@@ -97,12 +105,15 @@ nouveau Word SPAWT sans TVA collectée,37contrôles/URL sources, code absent,
 cinq pages toutes vues lisibles. P23 `production521-{received,data-preserved}.json`
 et `finance521-spawt-native-word-received.json`. Livraison/conservation closes.
 
-Seconde génération TVA conditionnelle refusée par transaction5s expirée sur
-`brandDataSource.findFirst` après6917ms sous ingestion à deux workers : échec
-conservé, nouveau rendu521 non reçu. Hypothèse de contention/charge à diagnostiquer,
-pas cause racine déclarée. [Plan et reprise séquentielle](RESIDUAL-DEBT.md) après
-lecture des sorties pour exclure un succès inconnu ; aucune fiabilité globale,
-absorption intégrale, Core/Oracle/MVP ou rentabilité déduite.
+Premier refus TVA conditionnelle, transaction5s expirée sur
+`brandDataSource.findFirst` après6917ms sous ingestion à deux workers, conservé.
+La reprise produit ensuite nativement la variante le22octobre à17h17 (Douala),
+sortie `cmvjqvj7f003q01nme177twww`, puis Word reçu/seuil11Gold :
+`finance521-spawt-native-vat-word-received.json`. Contrôle visuel encore en attente ;
+l’attente de génération/téléchargement est retirée, pas la dette de charge/latence.
+[Plan et inspection du fichier reçu](RESIDUAL-DEBT.md), sans relancer le résultat
+reçu ; aucune fiabilité globale, absorption intégrale, Core/Oracle/MVP ou rentabilité
+déduite.
 
 ## Clôture technique520 — réceptions bornées, corpus et Core ouverts (2026-10-22)
 
@@ -125,7 +136,7 @@ Deux fiches Catalyse SPAWT produites et exportées par Glory520, zéro appel IA,
 ne prouvent ni dépenses actuelles, ni fiscalité applicable, ni rentabilité globale.
 Les cinq pages de chacun des deux Word520 ont été vues intégralement, défaut
 `NO_VAT` confirmé ; rendu corrigé reçu ensuite sur production521 pour le Word SPAWT sans TVA ;
-variante conditionnelle et charge encore en reprise. Trois personas/
+variante conditionnelle ensuite reçue, contrôle visuel et charge ouverts. Trois personas/
 Gold60000 conservés, nouveau BMC proposé. Corpus2346fichiers/350dossiers recensé ;
 1920 matériels reçus (1092+828), population425 documentaire encore en réception,
 comprenant techniques/créatifs ; classements matériels reçus, corpus documentaire ouvert. L’alias de cohorte est résolu par
@@ -219,6 +230,26 @@ M05coût/admission restent au plan ;19sites statiques ne comptent pas les appels
 runtime. Aucun PSP/vente/MVP entier reçu. Preuves privées de livraison : `release/preuves-mvp-commercial-20261020/production509-{received,data-preserved,public-api-received}.json`, `pr509-green-before-merge.json`, `postmerge509-received.json` ; plan de reprise `release/preuves-rapport-commercial-20261020/mvp-report-root-plan.json`.
 
 ## Entrées actives
+
+2026-10-23 · **523 — régénération de CODE-MAP** : sous Windows, `gen-code-map.ts` écrivait
+des chemins à antislashs (281 lignes corrompues par régénération), et le déclencheur du hook
+pre-commit (`src/server/services/` et `src/server/trpc/routers/` ancrés par `$`) ne
+correspondait à aucun fichier réel : la carte n'était jamais régénérée pour un service ou
+un routeur modifié. Chemins POSIX et motifs `.*`. Cause : outillage écrit et vérifié sur un
+seul OS, et regex de déclenchement jamais exercée sur un chemin réel.
+
+2026-10-23 · **523 — embeddings Seshat superposés pendant l'import du corpus** : chaque
+source indexée lançait son propre passage `embedBrandContext` sur toute la file de sa
+marque. Pendant l'import SPAWT (~7 000 fragments `BRAND_SOURCE`, 20-22/10), des dizaines
+de passages ont vectorisé les mêmes fragments sur l'Ollama CPU partagé du VPS, des
+heures durant, jusqu'au bridage de la VM par l'hébergeur (steal ~70 %). Le chemin
+natif jetait en plus les vecteurs d'un appel au premier dépassement du plafond, et
+l'ops-sweep attendait le rattrapage au-delà des 120 s de l'ops-daemon (« ops-sweep
+injoignable » au journal). Corrigé : passage unique par process, bornes et pause
+par lot, arrêt au premier vecteur manquant, `/api/embed` par lots avec lot partiel
+rendu, reprise des vecteurs de même `contentHash`, rattrapage du sweep lancé sans
+être attendu. Cause : déclencheur fire-and-forget par source sans
+coordination, sur un chemin d'embedding pensé pour un service dédié et non partagé.
 
 2026-10-20 · **511 livré — identité revendiquée et autorité partagée au selfserve** : trois défauts reproduits sur fixtures (hashnull revendiqué sur email seul, double consommation concurrente de reset, homonymes fusionnés/accès entre deux TPE). auth.register refuse tout existant, reset existant consommé atomiquement token/date ; nouveau fondateur sans operatorId partagé, propriété Strategy.userId gardée, Client réutilisé seulement sous même propriétaire, opérateurs existants inchangés. Résultat login ou récupération préremplie, register conflict vers récupération, indisponibilité sans transport/accusé demande si armé sans mail prétendu livré. Six PG initiaux puis sept avec refus sans transport/identité inchangée, harnais corrigé séparément ; census admin readonly réservé selfserve production509 zéroop/zéroassocié, aucune mutation réelle. Cause : email/nom et affectation technique partagée traités comme preuve de contrôle/droit. 511 livré, natif reçu localement ; transport externe ouvert, M04offre/CRM et M05coût/différés/admission ouverts, pas PSP/vente/MVP entier. [Plan unique M04/C7](RESIDUAL-DEBT.md). **Blocage de remise M04 confirmé** : lecture seule du runtime509 le 20 octobre
 à21:39UTC : sendEmail sélectionne provider=log, aucun EMAIL_FROM configuré.
