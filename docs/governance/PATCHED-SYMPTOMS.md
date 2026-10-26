@@ -28,32 +28,30 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
-### Lot525 en préparation — ne vaut pas entrée de réparation reçue (2026-10-26)
+### Lot 525 — correctifs locaux reçus, livraison non reçue (2026-10-26)
 
-Les symptômes523 sont reproduits nativement :35sections dites à jour avec sept
-piliers périmés, composite documentaire160/200 confondu avec force39,5/200 et NPS−86
-proxy sans enquête. Hypothèse : les lecteurs assimilent présence, classification
-et mesure de marché et réutilisent un artefact proxy comme une enquête client.
-Le diff525 prépare gate `RTIS_CASCADE`, bandeau stale, lecture du dernier verdict
-et NPS client déclaré avec échantillon/date, sans écrire de nouveaux résultats.
-Le repli en erreur est reçu localement par cinq cas d’assemblage ; H7 reste ouvert
-jusqu’à la réception des lecteurs et du pipeline réel.
+Symptômes reproduits nativement sur 523 : 35 sections dites à jour avec sept
+piliers périmés, composite documentaire de 160/200 confondu avec force de 39,5/200,
+NPS −86 proxy sans enquête. Hypothèse : les lecteurs assimilent présence,
+classification et mesure de marché et réutilisent un proxy comme une enquête.
+Le candidat reprend `RTIS_CASCADE`, signale les analyses périmées, lit le dernier
+verdict et conserve le NPS client déclaré avec échantillon/date. Aucun nouveau
+résultat ou asset historique réécrit à la lecture.
 
-Ce paragraphe décrit un lot en réception, pas une réparation livrée. Lecteurs
-natifs, API, pipeline réel, CI/image/runtime525 et conservation encore ouverts.
+Repli NPS reçu localement : cinq cas d’assemblage, réintroduction du proxy avec
+deux rouges puis restauration et cinq verts. Code-map, typage, deux lints et cycles
+exit 0 ; 1 748 tests / 176 fichiers verts ; build webpack terminé exit 0.
+API sous rôle USER réel : assemble 200 / 166 ms, readiness 200 / 86 ms,
+listSections 200 / 78 ms, absence de verdict et NPS non mesuré préservés.
+Preuves : `mvp525-received-gauntlet-results.json`,
+`mvp525-nps-regression-{red,green}.log` et `mvp525-http-received.json`.
 
-Réception locale525 bornée : code-map, typage, lint, lint gouvernance et cycles
-exit0 ; gouvernance/UI/cibles1748tests/176fichiers verts
-(`mvp525-received-gauntlet-results.json`). Les cinq cas d’assemblage couvrent
-lecture du dernier verdict sans changement, absence de verdict, neutralisation
-NPS si contexte ou composition refuse et conservation d’une vraie enquête.
-Réintroduire le proxy provoque deux rouges, puis restauration→cinq verts
-(`mvp525-nps-regression-{red,green}.log`). API et UI525 ne sont pas encore reçues ;
-les tests ne reçoivent ni pipeline réel, ni livraison, ni MVP.
- Les anciens assets restent en base. [Plan, responsable et déclencheur](RESIDUAL-DEBT.md).
-MVP scoreur/fiche ADVE complète/Oracle encore ouverts. Transférer le constat vers
-une entrée de réparation seulement après preuves, sans clore NPS réel, Glory,
-Friesland régional ou charge VPS.
+UI 525 encore non reçue : même refus de protocole du navigateur local que pour
+524, sans contournement. Réception native à faire en production après livraison ;
+H7, pipeline réel, CI/image/runtime et conservation restent ouverts. Les API ne
+prouvent pas les écrans ou un SLO. Le MVP scoreur / fiche ADVE complète / Oracle,
+NPS réel, Glory, Friesland régional et charge VPS ne sont pas clos.
+[Plan, responsable et déclencheur](RESIDUAL-DEBT.md).
 
 2026-10-26 · **Livraison524 préparée, candidat522 conservé** : le raccord
 documentaire déjà testé dans PR1064 rejoint la base523/PR1067 Seshat. Les preuves
