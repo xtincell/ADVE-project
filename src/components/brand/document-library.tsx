@@ -3,6 +3,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { Modal } from "@/components/shared/modal";
 import { Button } from "@/components/primitives/button";
+import Link from "next/link";
 import { DOCUMENT_KINDS, DOCUMENT_KIND_LABEL, DOCUMENT_STATUS_LABEL, orderDocumentEditions, type DocumentEdition, type DocumentRepresentation } from "@/domain/source-document";
 
 type Source = { id: string; fileName: string | null; fileType?: string | null; contentHash?: string; document?: DocumentEdition | null; representation?: DocumentRepresentation | null; shared?: boolean; indexedChunks?: number;
@@ -63,8 +64,9 @@ export function DocumentLibrary({ sources, onRead, canManage = false, onSaved }:
 }
 
 /** Classifies an already retained original. Adds lineage; never copies its text. */
-export function DocumentEditionDialog({ source, sources, onClose, onSaved }: {
-  source: Source; sources: Source[]; onClose: () => void; onSaved: () => void;
+export function DocumentEditionDialog({ source, sources, sourcesPending = false, sourcesError, onClose, onSaved }: {
+  source: Source & { retainedAsset?: { assetId: string; contentHash: string; strategyId: string } }; sources: Source[]; onClose: () => void; onSaved: (sourceId?: string) => void;
+  sourcesPending?: boolean; sourcesError?: string;
 }) {
   const [family, setFamily] = useState("");
   const [kind, setKind] = useState<typeof DOCUMENT_KINDS[number]>("OTHER");
@@ -73,24 +75,37 @@ export function DocumentEditionDialog({ source, sources, onClose, onSaved }: {
   const [changeSummary, setChangeSummary] = useState("");
   const [position, setPosition] = useState<"NEXT" | "HISTORICAL" | "FORMAT">("NEXT");
   const [targetId, setTargetId] = useState("");
-  const current = trpc.ingestion.getSource.useQuery({ id: source.id }, { staleTime: 0, refetchOnMount: "always" });
+  const current = trpc.ingestion.getSource.useQuery({ id: source.id }, { enabled: !source.retainedAsset, staleTime: 0, refetchOnMount: "always" });
   const mutation = trpc.ingestion.updateSource.useMutation({ onSuccess: () => { onSaved(); onClose(); } });
+  const [manualReading, setManualReading] = useState<{ sourceId: string; message: string } | null>(null);
+  const retainedMutation = trpc.ingestion.uploadFile.useMutation({ onSuccess: data => {
+    if ("needsManualReading" in data && data.needsManualReading) setManualReading({ sourceId: data.sourceId, message: data.readingError ?? "Le texte doit être lu manuellement." });
+    else { onSaved(data.sourceId); onClose(); }
+  } });
   const latest = sources.filter(s => s.document?.family === family.trim() && !s.document.beforeSourceId).sort((a, b) => b.document!.edition - a.document!.edition)[0];
   const targets = sources.filter(s => s.id !== source.id && s.document && !s.shared && (!family.trim() || s.document.family === family.trim()));
   const target = targets.find(s => s.id === targetId);
   const field = "w-full rounded border border-border bg-surface-raised px-3 py-2 text-foreground";
   return <Modal open onClose={onClose} title="Classer une édition documentaire" size="lg">
-    <form className="space-y-4 text-sm" onSubmit={e => { e.preventDefault(); if (!current.data || current.isFetching) return;
-      if (position === "FORMAT") {
-        if (target?.contentHash) mutation.mutate({ id: source.id, expectedSourceHash: current.data.contentHash,
-          documentRepresentation: { canonical: { sourceId: target.id, contentHash: target.contentHash }, reason: changeSummary } });
-      } else mutation.mutate({ id: source.id, expectedSourceHash: current.data.contentHash, document: {
-        family, kind: latest?.document?.kind ?? kind, label, status: position === "HISTORICAL" ? "ARCHIVED" : status, changeSummary,
+    <form className="space-y-4 text-sm" onSubmit={e => { e.preventDefault(); if (sourcesPending || sourcesError || (!source.retainedAsset && (!current.data || current.isFetching))) return;
+      const document = { family, kind: latest?.document?.kind ?? kind, label, status: position === "HISTORICAL" ? "ARCHIVED" as const : status, changeSummary,
         ...(position === "HISTORICAL" && target?.contentHash ? { before: { sourceId: target.id, contentHash: target.contentHash } }
-          : latest?.contentHash ? { previous: { sourceId: latest.id, contentHash: latest.contentHash } } : {}),
-      } });
+          : latest?.contentHash ? { previous: { sourceId: latest.id, contentHash: latest.contentHash } } : {}) };
+      const representation = target?.contentHash ? { canonical: { sourceId: target.id, contentHash: target.contentHash }, reason: changeSummary } : null;
+      if (source.retainedAsset) {
+        retainedMutation.mutate({ strategyId: source.retainedAsset.strategyId,
+          retainedAsset: { assetId: source.retainedAsset.assetId, contentHash: source.retainedAsset.contentHash }, prepareAnalysis: false,
+          ...(position === "FORMAT" && representation ? { documentRepresentation: representation } : { document }) });
+        return;
+      }
+      if (position === "FORMAT") {
+        if (representation) mutation.mutate({ id: source.id, expectedSourceHash: current.data!.contentHash, documentRepresentation: representation });
+      } else mutation.mutate({ id: source.id, expectedSourceHash: current.data!.contentHash, document });
     }}>
       <p>{source.fileName}</p>
+      {sourcesPending && <p role="status">Chargement du dossier documentaire…</p>}
+      {sourcesError && <p role="alert" className="text-error">Le dossier documentaire ne peut pas être chargé : {sourcesError}</p>}
+      {source.retainedAsset && <p className="text-foreground-secondary">L’original est déjà conservé au coffre. Vous choisissez sa place dans le dossier, sans renvoyer le fichier, lancer d’analyse assistée ou modifier les fondamentaux.</p>}
       <label className="block space-y-1"><span>Ce que vous ajoutez</span><select value={position} onChange={e => { setPosition(e.target.value as typeof position); setTargetId(""); }} className={field}><option value="NEXT">Une nouvelle version</option><option value="HISTORICAL">Une version antérieure, reçue après les autres</option><option value="FORMAT">Un autre format de la même version</option></select></label>
       <label className="block space-y-1"><span>Document suivi</span><input required value={family} onChange={e => setFamily(e.target.value)} list="document-families" className={field} placeholder="Exemple : Modèle économique SPAWT" /></label>
       <datalist id="document-families">{[...new Set(sources.flatMap(s => s.document ? [s.document.family] : []))].map(f => <option key={f} value={f} />)}</datalist>
@@ -104,8 +119,9 @@ export function DocumentEditionDialog({ source, sources, onClose, onSaved }: {
       </>}
       <label className="block space-y-1"><span>{position === "FORMAT" ? "Pourquoi ces fichiers représentent la même version" : "Ce qui change et ce qui reste à décider"}</span><textarea required value={changeSummary} onChange={e => setChangeSummary(e.target.value)} rows={3} className={field} /></label>
       <p className="text-foreground-secondary">{position === "FORMAT" ? "Les deux fichiers restent consultables. Ce format ne crée pas de nouvelle édition et ne compte pas comme une preuve supplémentaire dans les analyses." : position === "HISTORICAL" ? "Cette pièce rejoint l’historique à la place choisie. Les références de travail et propositions actuelles restent inchangées." : status === "REFERENCE" ? "Ce choix remplace la référence précédente dans les recherches. Il ne valide pas les assertions du document et n’amende pas votre stratégie." : "Une proposition reste distincte de la référence de travail. Les éditions antérieures restent conservées."}</p>
-      {(mutation.error || current.error) && <p role="alert" className="text-error">{(mutation.error ?? current.error)?.message}</p>}
-      <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onClose}>Annuler</Button><Button type="submit" disabled={!current.data || current.isFetching || mutation.isPending || (position !== "NEXT" && !target)}>{position === "FORMAT" ? "Conserver ce format" : "Conserver cette édition"}</Button></div>
+      {(mutation.error || retainedMutation.error || (!source.retainedAsset && current.error)) && <p role="alert" className="text-error">{(mutation.error ?? retainedMutation.error ?? current.error)?.message}</p>}
+      {manualReading && <div role="status" className="space-y-2 rounded border border-warning/30 bg-warning/10 p-3 text-warning"><p>Original conservé, texte non lu : {manualReading.message}</p><p>Aucun classement ni analyse appliqué. Ajoutez ou corrigez le texte de référence dans Sources, puis classez le document.</p><Link className="underline" href={`/cockpit/brand/sources?strategy=${encodeURIComponent(source.retainedAsset!.strategyId)}&source=${encodeURIComponent(manualReading.sourceId)}&mode=edit`}>Ouvrir la source à compléter</Link></div>}
+      <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onClose}>Annuler</Button><Button type="submit" disabled={sourcesPending || Boolean(sourcesError) || Boolean(manualReading) || (!source.retainedAsset && (!current.data || current.isFetching)) || mutation.isPending || retainedMutation.isPending || (position !== "NEXT" && !target)}>{retainedMutation.isPending ? "Lecture du document…" : position === "FORMAT" ? "Conserver ce format" : "Conserver cette édition"}</Button></div>
     </form>
   </Modal>;
 }

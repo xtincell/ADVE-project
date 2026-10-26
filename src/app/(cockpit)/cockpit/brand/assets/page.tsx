@@ -4,6 +4,9 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { ORIGINAL_CHUNK_BYTES, MAX_CHUNKED_ORIGINAL_BYTES } from "@/domain/source-original";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useBrandWriteAccess } from "@/components/cockpit/use-can-operate";
+import { DocumentEditionDialog } from "@/components/brand/document-library";
 import { PUBLIC_BRAND_FORMAT, PUBLIC_BRAND_IDENTITY_FORMAT } from "@/domain/public-brand";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
@@ -78,6 +81,9 @@ function assetUiType(a: { kind?: string | null; pillarTags?: unknown }): string 
 
 export default function AssetsPage() {
   const strategyId = useCurrentStrategyId();
+  const router = useRouter();
+  const { canOperateOnBrand } = useBrandWriteAccess(strategyId);
+  const [documentAsset, setDocumentAsset] = useState<{ id: string; fileName: string; retainedAsset: { assetId: string; contentHash: string; strategyId: string } } | null>(null);
   const toast = useToast();
   const [search, setSearch] = useState("");
   const [pillarFilter, setPillarFilter] = useState<string>("all");
@@ -86,6 +92,8 @@ export default function AssetsPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showUpload, setShowUpload] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
+  const selectedOriginal = trpc.brandVault.get.useQuery({ id: selectedAsset ?? "" }, { enabled: !!selectedAsset });
+  const documentSources = trpc.ingestion.listSources.useQuery({ strategyId: strategyId ?? "" }, { enabled: !!strategyId && !!documentAsset });
 
   // Upload form state
   const [uploadForm, setUploadForm] = useState({
@@ -606,6 +614,14 @@ export default function AssetsPage() {
         {assetsQuery.isFetchingNextPage ? "Chargement…" : "Afficher les suivants"}
       </button>}
 
+      {documentAsset && <DocumentEditionDialog source={documentAsset}
+        sources={(documentSources.data ?? []) as unknown as Parameters<typeof DocumentEditionDialog>[0]["sources"]}
+        sourcesPending={documentSources.isFetching || documentSources.isLoading} sourcesError={documentSources.error?.message}
+        onClose={() => setDocumentAsset(null)} onSaved={sourceId => {
+          void utils.ingestion.listSources.invalidate();
+          if (sourceId && strategyId) router.push(`/cockpit/brand/sources?strategy=${encodeURIComponent(strategyId)}&source=${encodeURIComponent(sourceId)}`);
+        }} />}
+
       {/* Upload Modal */}
       <Modal
         open={showUpload}
@@ -816,6 +832,20 @@ export default function AssetsPage() {
                     {meta?.original ? <>
                       <p className="mt-2">Original {meta.original.state === "STORED" ? "conservé et vérifié" : "en cours de conservation"} · {meta.original.byteLength.toLocaleString("fr-FR")} octets</p>
                       <p className="mt-1 break-all font-mono text-xs">SHA-256 : {meta.original.contentHash}</p>
+                      {canOperateOnBrand && strategyId && selectedOriginal.data?.documentarySource && <button
+                        type="button" className="mt-3 rounded border border-border px-3 py-2 text-foreground"
+                        onClick={() => {
+                          const source = selectedOriginal.data!.documentarySource!;
+                          setSelectedAsset(null);
+                          router.push(`/cockpit/brand/sources?strategy=${encodeURIComponent(strategyId)}&source=${encodeURIComponent(source.id)}${source.processingStatus === "FAILED" ? "&mode=edit" : ""}`);
+                        }}>{selectedOriginal.data.documentarySource.processingStatus === "FAILED" ? "Compléter la lecture du document" : "Consulter dans le dossier documentaire"}</button>}
+                      {canOperateOnBrand && strategyId && !selectedOriginal.data?.documentarySource && meta.original.state === "STORED" && selectedOriginal.data?.originalFileName && /\.(pdf|docx|pptx|txt|md|json|csv|xlsx)$/i.test(selectedOriginal.data.originalFileName) && <button
+                        type="button" className="mt-3 rounded border border-border px-3 py-2 text-foreground"
+                        onClick={() => {
+                          setDocumentAsset({ id: selectedAssetData.id, fileName: selectedOriginal.data!.originalFileName!,
+                            retainedAsset: { assetId: selectedAssetData.id, contentHash: meta.original!.contentHash, strategyId } });
+                          setSelectedAsset(null);
+                        }}>Ajouter au dossier documentaire</button>}
                     </> : <p className="mt-2">Aucun reçu d’original privé pour cet actif.</p>}
                   </>;
                 })()}

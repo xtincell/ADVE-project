@@ -3,7 +3,7 @@ const h = vi.hoisted(() => ({ auth: vi.fn(), source: vi.fn(), scope: vi.fn(), ac
 vi.mock("@/lib/auth/config", () => ({ auth: h.auth }));
 vi.mock("@/server/services/ingestion-pipeline/source-usage", () => ({ resolveBrandSource: h.source }));
 vi.mock("@/server/services/operator-isolation", () => ({ canAccessStrategy: h.access, getOperatorContext: h.scope }));
-vi.mock("@/server/services/ingestion-pipeline/original", () => ({ readSourceOriginal: h.original }));
+vi.mock("@/server/services/ingestion-pipeline/original", () => ({ streamSourceOriginal: h.original }));
 import { GET } from "@/app/api/brand-sources/[sourceId]/original/route";
 const request = () => GET(new Request("http://localhost/api/brand-sources/source-a/original"), { params: Promise.resolve({ sourceId: "source-a" }) });
 beforeEach(() => {
@@ -12,7 +12,7 @@ beforeEach(() => {
   h.source.mockResolvedValue({ consumerStrategyId: "brand-a" });
   h.scope.mockResolvedValue({ userId: "owner", role: "USER", operatorId: null });
   h.access.mockResolvedValue(true);
-  h.original.mockResolvedValue({ bytes: Buffer.from("original bytes"), fileName: "brief\"\r\n<script>.txt", receipt: { contentHash: "hash" } });
+  h.original.mockImplementation(async () => ({ body: (async function* () { yield Buffer.from("original "); yield Buffer.from("bytes"); })(), fileName: "brief\"\r\n<script>.txt", receipt: { contentHash: "hash", byteLength: 14 } }));
 });
 describe("original download authorization", () => {
   it("requires a session before reading source metadata", async () => {
@@ -38,6 +38,8 @@ describe("original download authorization", () => {
     expect(response.status).toBe(200); expect(await response.text()).toBe("original bytes");
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(response.headers.get("content-type")).toBe("application/octet-stream");
+    expect(response.headers.get("content-length")).toBe("14");
+    expect(response.headers.get("x-content-sha256")).toBe("hash");
     expect(response.headers.get("content-disposition")).toContain("attachment;");
     expect(response.headers.get("content-disposition")).not.toMatch(/[\r\n]/);
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");

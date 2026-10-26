@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.524", date: "2026-10-26", headline: "Un document déjà conservé rejoint vos sources",
+    highlights: [
+      { emoji: "📂", title: "Retrouver le même original", body: "Depuis vos actifs, rattachez un document déjà conservé à son édition ou retrouvez sa source existante sans le déposer à nouveau. Son original, son historique et vos décisions restent conservés." },
+      { emoji: "📖", title: "Une lecture manuelle possible", body: "Si un PDF ne contient pas de texte lisible, la page le signale avant tout classement. Vous pouvez renseigner sa lecture puis le relier à la bonne édition ; un autre format reste rattaché au même document." },
+    ],
+  },
+  {
     version: "6.27.521", date: "2026-10-22", headline: "Une fiche financière plus facile à relire",
     highlights: [{ emoji: "📋", title: "La bonne édition et ses hypothèses", body: "Le scénario consulté porte son nom et sa base fiscale en français. Les éditions conservées sont identifiables, et la fiche Word reprend l’adresse des pièces sources disponibles. Les montants, calculs et hypothèses restent ceux de l’édition choisie." }],
   },

@@ -1,25 +1,113 @@
-## 521 candidate reçue localement — livraison ouverte (22 octobre2026)
+## 524 en préparation — candidat522 repris sur523, MVP prioritaire (26 octobre2026)
 
-Le correctif traduit `NO_VAT` en « sans TVA collectée » dans UI/Word/graphique,
-explicite modèle et historique, et conserve l’URL source dans l’annexe Word.
-Aucun calcul, writer, modèle métier, route, Neter ou tarif nouveau ; aucune
-réécriture des résultats conservés ni régime fiscal applicable déduit du libellé.
+PR1064 reprend le raccord documentaire déjà testé sous522 après intégration de
+la base523/PR1067 Seshat. Les preuves522 ci-dessous restent celles du candidat ;
+aucune recette native fraîche524, image/runtime524 ou conservation après
+déploiement reçue. Aucun modèle/service/routeur/Intent/page ajouté.
 
-Réception locale finale : 1674tests/170fichiers verts (169/1671 gouvernance et
-3Word), tsc régénéré, deux lints, cycles et build production exit0. Le refus initial
-Next dev généré corrompu/cache préservé hors source reste historique ; typage clos.
-USER local réel sur version compilée finale : page200, DOM2169ms, titre observé
-4027ms, fenêtre non tronquée, zéro réponse≥500/exception, pas un SLO. Le changement
-d’édition recale la source sur HT puis retour sans TVA collectée. Une édition
-synthétique produite par le formulaire et téléchargée nativement conserve37
-contrôles remplis, URL source et libellés français ; quatre pages toutes vues
-sans clipping, `NO_VAT` absent. P23 `finance521-native-word-received.json`,
-`finance521-final-native-received.json` et `finance521-final-*.log`.
+Contrôles combinés524 reçus : six contrôles exit0 dans
+`documents524-final-gauntlet-results.json`,1730tests/174fichiers gouvernance/UI/
+Seshat, PostgreSQL43/5 relancés ensemble et verts
+(`documents524-postgres-received.log`), build webpack524 exit0. Le premier essai
+PostgreSQL sans configuration n’avait sélectionné aucun test ; log conservé.
+Serveur compilé524 rétabli sur3399. Recette navigateur fraîche524 non reçue :
+`getTab16` sur l’ancien onglet d’erreur est refusé par la politique navigateur,
+« requested URL protocol is not allowed » ; aucun contournement. Le natif522 reste
+une preuve antérieure du raccord, jamais renommée524. Recette native524 à recevoir
+directement en production après livraison ; CI finale/image/runtime/conservation
+restent ouverts, ainsi que les trois livrables MVP.
 
-Attentes locales de typage/build/rendu synthétique closes ; CI/merge/image/prod521,
-conservation après bascule et Word réels SPAWT521 restent à recevoir. Les deux
-Word SPAWT520 lus sur cinq pages chacun ne sont pas la recette synthétique521.
-Corpus/Core/Oracle/MVP et sept chantiers entiers restent ouverts.
+
+Dernier corpus reçu inchangé :423/425 entrées documentaires et1920classifications
+matérielles, sans nouvelle réception. Priorité opérateur explicite : MVP scoreur,
+fiche ADVE complète et Oracle, puis reste du Shinkiro. Ni patch documentaire ni
+nouveau numéro ne reçoivent le MVP ou les sept chantiers. Charge/latence/CODB et
+réception de la vectorisation523 restent distincts, planifiés en RESIDUAL-DEBT.
+
+## Candidat522 reçu localement — livraison reprise sous524 (checkpoint22octobre2026)
+
+Port borné du candidat505 conservé séparément sur521 ; conflit d’import résolu en
+conservant les deux capacités. ADR-0227 Proposed reprend l’usage documentaire de
+l’original au coffre ; ADR0224 courant reste consacré aux originaux d’intake.
+Writer `ingestion.uploadFile`, mêmes rôles et rétention, FileUpload d’actif,
+objets et manifestes conservés sans copie physique. Droits, hash et intégrité
+revérifiés ; le rejeu ne remplace pas texte corrigé ou décision. PDF image FAILED
+visible puis correction manuelle et classement, IA facultative sans OCR implicite.
+Pas de nouvelle page, routeur, service, modèle, Intent, fournisseur ou manager.
+
+La réparation OTHER→TECHNICAL est reçue localement : quatre rouges puis33 verts
+ciblés ; seulement FILE de code/prompt autorisés, même statut, hash courant et
+aucune décision préalable. Documents métier/BMC gardent leurs refus. Contrôles522 :
+1717tests/172fichiers gouvernance/UI, typage/deux lints/cycles/code-map et build
+webpack exit0 ; PostgreSQL25/3 puis consommateurs d’originaux17/2. Premier refus
+Turbopack/symlink externe conservé, aucun symlink changé. FULL sous ADMIN dédié
+séparé du USER : zéro finding,276probes HTTP reçus, cinq routes démo404 non reçues,
+zéro renvoi d’authentification ; ces probes ne prouvent pas les écrans.
+
+USER réel local/compilation522 : page200, DOM150ms/titre observé549ms, fenêtre
+complète, zéro réponse≥500/exception, pas un SLO. Deux éditions dont historique
+déposé tard ; PDF image FAILED puis texte manuel et format lié, retour actif vers
+source existante et téléchargements exacts reçus. DB : trois actifs/trois sources,
+deux éditions/un format, originaux/reçus/états/versions d’actifs conservés, zéro IA,
+pilier ou contexte créé. Preuves P23 `documents522-final-gauntlet-results.json`,
+`documents522-stress-full-received.json`, `documents522-native-received.json` et
+`documents522-native-db-received.json`. PR1064 ouverte ; CI après amendement,
+image/runtime524 et admission des
+quatre grands documents réels encore ouverts ; les reçus historiques505 ne les
+remplacent pas.
+
+Checkpoint amendement522, avant reprise sous524 dans PR1064 : le lot documentaire atteint423/425.
+Deux XLSX réels restent refusés lors de l’étiquetage malgré reprise séquentielle :
+13feuilles, dont14468lignes d’avis,19461739octets JSON et10670491octets de texte
+par pièce (`large-xlsx522-local-cost.json`). Ce corpus d’avis n’est pas un nombre
+de clients acquis. Les refus30s, observés sur32–42s, sont conservés dans NEW
+`documents-521-last-two-reconcile-20261022.log`.
+
+Seule la transaction existante `documentTags` passe de30s à120s bornés ; permissions,
+hash, atomicité et invalidation restent inchangés. Aucun autre délai ni modèle
+modifié. C’est une capacité fonctionnelle ciblée, pas une résolution de cause
+racine, de performance ou du VPS, ni un SLO. Typage exit0 et PostgreSQL
+`document-versions`6/6 reçus, dont cellules volumineuses conservées et refus de
+l’empreinte périmée (`documents522-label-capacity-postgres.log`). Les suites
+précédentes25/3 et17/2 restent reçues sur le candidat antérieur ; la relance6/1
+remplace l’ancien5/1 de versions, soit un périmètre courant43/5, sans relance
+commune de ces43 tests. Les contrôles natifs/build/FULL précédents ne sont pas
+présentés comme rejoués sur cet amendement. CI finale après intégration, image/runtime524,
+récupération effective des deux XLSX et des quatre grandes pièces restent ouverts.
+
+Matériels1920/1920 et classements reçus ; cinq anciens diagnostics rapprochés sans
+rejeu aveugle, alias résolu.423/425 entrées documentaires reçues ;425 est la population,
+dont techniques/créatifs, pas425 documents métier reçus. E14 réconcilie Vanessa/
+Grâce ; V47 retire CAC120B2C/LTV350000B2B/ratio23 incompatibles au profit d’inconnues,
+sources jointes et Gold60000 conservés. Nouveaux BMC proposés non adoptés.
+Core/Oracle/MVP, corpus complet, sept chantiers, CODB et lenteur restent ouverts.
+
+## 521 livrée — fiche SPAWT sans TVA reçue en production (22 octobre2026)
+
+Le libellé fiscal français, le modèle/historique identifiables et les URL sources
+Word sont reçus sans modifier montants, calculs, writers ou résultats conservés.
+Contrôles locaux, recette synthétique, quinze checks PR1063 et postmerge restent
+reçus séparément ; preuves locales `finance521-final-*.log` et
+`finance521-native-word-received.json`, pas un substitut à la production.
+
+Source `5f1ec2cb5e4158b47813908855affdec3661b9ff`, image/runtime521 exacts au digest
+`759cd426096dbaf9b3cf8ebb273bcdcf763df3b7190ddd7312d12c5da049bd0b`, login200,
+mêmes volumes, relais Luna/90s et OpenRouter absent.375sources/2083actifs,
+états/originaux/huit piliers/racine Friesland, six paiements et baseline du scoreur
+conservés par lectures séquentielles, pas un snapshot atomique. P23
+`production521-received.json` et `production521-data-preserved.json`.
+
+Le bouton réel de production crée la fiche SPAWT sans TVA collectée puis son Word :
+37contrôles remplis, URL sources conservées, code `NO_VAT` absent ; cinq pages toutes
+vues lisibles. Sortie `cmvjplqrc000201nmyzm4w10m`,
+`finance521-spawt-native-word-received.json`. Le premier refus TVA conditionnelle
+(transaction5s expirée sur `brandDataSource.findFirst` après6917ms sous ingestion
+à deux workers) reste conservé. La variante a ensuite été produite nativement
+le22octobre à17h17 (Douala), sortie `cmvjqvj7f003q01nme177twww`, puis Word reçu :
+`finance521-spawt-native-vat-word-received.json`. Seuil11Gold reçu ; contrôle visuel
+encore en attente. Fiabilité/latence non reçues.350kCF/18kCV/60kGold et9/11 restent
+hypothèses documentées, pas charges mesurées, régime fiscal ou rentabilité globale. Aucun corpus/Core/Oracle/
+MVP ou chantier entier reçu par cette livraison.
 
 ## 520 livrée — corpus et fiche financière reçus à un périmètre borné (22 octobre2026)
 
@@ -35,14 +123,15 @@ implicite. Le calculateur canonique et l’outil Glory existants produisent deux
 fiches Catalyse SPAWT réelles, zéro appel IA : scénario documenté350kCF/18kCV/
 60kprix →9Gold mensuels ; variante TVA18% incluse, conditionnelle →11. Word privé
 exporté, 37 champs remplis et les cinq pages de chacune des deux fiches520 vues
-intégralement ; défaut `NO_VAT` confirmé, correction521 non encore reçue nativement. Ces valeurs ne sont ni dépenses
+intégralement ; défaut `NO_VAT` confirmé, correction reçue sur synthétique local521,
+Word SPAWT sans TVA reçu ensuite sur521 ; variante conditionnelle produite, contrôle visuel encore en attente. Ces valeurs ne sont ni dépenses
 constatées, ni TVA validée, ni rentabilité globale. ADR-0226 reste Proposed.
 
 Recensement22octobre : 2346 fichiers/350 dossiers (349 connus relus et nouveau
 Shoot vide), 102 originaux nouveaux/modifiés reçus localement. Plan ventilé :
-425 documents/1920 matériels/un alias dans les entités existantes. Les1092 matériels
-du premier lot sont reçus ; les 828 ressources supplémentaires et le lot de 425 documents
-restent en réception. L’alias Drive de la cohorte est résolu normalement vers le
+425 entrées documentaires/1920 matériels/un alias dans les entités existantes.
+Les1920 matériels (1092+828) et leurs classements sont reçus ; les425 entrées documentaires, dont
+techniques/créatifs, restent en réception selon le relevé daté ci-dessus. L’alias Drive de la cohorte est résolu normalement vers le
 dossier « SPAWT — Cohorte Catalyse » déjà recensé, sans original dupliqué
 (`alias-canonique-received.json`). Dépôt applicatif,
 classement, rapprochement des anciennes familles/étiquettes, index utile et usage

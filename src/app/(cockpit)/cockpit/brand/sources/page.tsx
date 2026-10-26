@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 
 /**
  * Sources de marque — Le dossier complet des données brutes
@@ -870,8 +871,15 @@ function BrandBookIngestModal({
 }
 
 export default function SourcesPage() {
+  return <Suspense fallback={<SkeletonPage />}><SourcesContent /></Suspense>;
+}
+
+function SourcesContent() {
   const strategyId = useCurrentStrategyId();
-  const { canOperateOnBrand } = useBrandWriteAccess(strategyId);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const openedReceipt = useRef<string | null>(null);
+  const { canOperateOnBrand, accessReady } = useBrandWriteAccess(strategyId);
   // Founder = lecture (liste + certitude) ; édition/purge/suppression =
   // gestes opérateur (lot 12, audit 2026-07-11 [M05-05]).
   const canOperate = useCanOperate();
@@ -1005,6 +1013,20 @@ export default function SourcesPage() {
       sourcesQuery.refetch();
     }
   }
+
+  const requestedSource = searchParams.get("source");
+  const requestedMode = searchParams.get("mode");
+  useEffect(() => {
+    if (!requestedSource || openedReceipt.current === `${strategyId}:${requestedSource}`) return;
+    if (requestedMode === "edit" && !accessReady) return;
+    const selected = sourcesQuery.data?.find(row => row.id === requestedSource);
+    if (!selected) return;
+    if (requestedMode === "edit" && canOperateOnBrand && !selected.shared && !selected.document && !selected.representation) setEditSourceId(requestedSource);
+    else setReadSourceId(requestedSource);
+    openedReceipt.current = `${strategyId}:${requestedSource}`;
+    const next = new URLSearchParams(searchParams.toString()); next.delete("source"); next.delete("mode");
+    router.replace(`/cockpit/brand/sources${next.size ? `?${next}` : ""}`);
+  }, [requestedSource, requestedMode, strategyId, sourcesQuery.data, canOperateOnBrand, accessReady, searchParams, router]);
 
   if (!strategyId) return <SkeletonPage />;
   if (sourcesQuery.isLoading) return <SkeletonPage />;
