@@ -28,6 +28,33 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### Lot525 en préparation — ne vaut pas entrée de réparation reçue (2026-10-26)
+
+Les symptômes523 sont reproduits nativement :35sections dites à jour avec sept
+piliers périmés, composite documentaire160/200 confondu avec force39,5/200 et NPS−86
+proxy sans enquête. Hypothèse : les lecteurs assimilent présence, classification
+et mesure de marché et réutilisent un artefact proxy comme une enquête client.
+Le diff525 prépare gate `RTIS_CASCADE`, bandeau stale, lecture du dernier verdict
+et NPS client déclaré avec échantillon/date, sans écrire de nouveaux résultats.
+Le repli en erreur est reçu localement par cinq cas d’assemblage ; H7 reste ouvert
+jusqu’à la réception des lecteurs et du pipeline réel.
+
+Ce paragraphe décrit un lot en réception, pas une réparation livrée. Lecteurs
+natifs, API, pipeline réel, CI/image/runtime525 et conservation encore ouverts.
+
+Réception locale525 bornée : code-map, typage, lint, lint gouvernance et cycles
+exit0 ; gouvernance/UI/cibles1748tests/176fichiers verts
+(`mvp525-received-gauntlet-results.json`). Les cinq cas d’assemblage couvrent
+lecture du dernier verdict sans changement, absence de verdict, neutralisation
+NPS si contexte ou composition refuse et conservation d’une vraie enquête.
+Réintroduire le proxy provoque deux rouges, puis restauration→cinq verts
+(`mvp525-nps-regression-{red,green}.log`). API et UI525 ne sont pas encore reçues ;
+les tests ne reçoivent ni pipeline réel, ni livraison, ni MVP.
+ Les anciens assets restent en base. [Plan, responsable et déclencheur](RESIDUAL-DEBT.md).
+MVP scoreur/fiche ADVE complète/Oracle encore ouverts. Transférer le constat vers
+une entrée de réparation seulement après preuves, sans clore NPS réel, Glory,
+Friesland régional ou charge VPS.
+
 2026-10-26 · **Livraison524 préparée, candidat522 conservé** : le raccord
 documentaire déjà testé dans PR1064 rejoint la base523/PR1067 Seshat. Les preuves
 locales522 restent historiques ; réception sur la base fusionnée, CI finale,

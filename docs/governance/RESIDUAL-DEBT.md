@@ -1,3 +1,52 @@
+## 525 — fidélité de l’Oracle et mesures réelles en réception (2026-10-26)
+
+**Constat réel523** :35sections annoncées à jour malgré sept piliers périmés ;
+composite documentaire160/200 mélangé à la force révélée39,5/200 ; NPS−86 issu
+d’un proxy Devotion sans enquête. Le correctif525 est en préparation sous
+Propulsion/Artemis, lecture des résultats existants Seshat. Aucun modèle/service/
+routeur/Intent/page/fournisseur ajouté, aucune réécriture historique à la lecture.
+
+**Contrat à recevoir** : gate canonique `RTIS_CASCADE`, stale advisory permettant
+le rafraîchissement des fondations utilisables sans prétendre fraîcheur ; sections
+rédigées et actualité distinctes, bandeau d’analyses périmées. Force issue du dernier
+`ScoreVerdict` enregistré, avec couverture/date, composite documentaire séparé ;
+pas de recalcul de marché à la lecture. NPS client seulement depuis
+`A.indexReputation` de sourceNPS, score valide, échantillon positif et date de
+mesure ; pas de conversion Devotion/eNPS salarié, pas de répartition de répondants
+inventée. [Méthode Bain](https://www.netpromotersystem.com/about/measuring-your-net-promoter-score/).
+Motivations de personas = pistes d’enquête, pas réponses clients observées.
+
+**Écart de repli à fermer** : la recomposition en lecture des anciens assets
+proxy doit les masquer même si le contexte ou le composeur refuse. Le diff initial conservait leur projection brute sur ces erreurs ; le candidat
+neutralise désormais le proxy avant le chargement du contexte. Les cinq cas d’assemblage et le rouge/vert reçoivent ce repli localement ; API,
+lecteurs natifs et pipeline réel restent ouverts, sans fermeture H7 anticipée. Assets historiques conservés, aucune mutation du
+résultat enregistré. H7 reste ouvert dans PROPAGATION-MAP jusqu’aux tests et à la
+réception des lecteurs.
+
+Réception locale525 bornée : code-map, typage, lint, lint gouvernance et cycles
+exit0 ; gouvernance/UI/cibles1748tests/176fichiers verts
+(`mvp525-received-gauntlet-results.json`). Les cinq cas d’assemblage couvrent
+lecture du dernier verdict sans changement, absence de verdict, neutralisation
+NPS si contexte ou composition refuse et conservation d’une vraie enquête.
+Réintroduire le proxy provoque deux rouges, puis restauration→cinq verts
+(`mvp525-nps-regression-{red,green}.log`). API et UI525 ne sont pas encore reçues ;
+les tests ne reçoivent ni pipeline réel, ni livraison, ni MVP.
+
+**Fermer525** : recevoir la fin de build et API/UI, puis
+les lecteurs natifs et exports concernés sous rôle réel ; comparer force/verdict,
+composite, couverture, dates et absences. Exercer stale advisory→rafraîchissement
+et échec conservé, sans recalcul implicite ni faux succès. Lire ensuite le pipeline
+réel SPAWT, recevoir CI/image/runtime et conservation. Responsable Artemis/lot525
+existant ; effort correction et recette bornées des lecteurs ; **déclencheur
+immédiat** sur les constats523, priorité au MVP scoreur/fiche ADVE complète/Oracle.
+Aucun de ces trois livrables ni le MVP entier reçu à ce checkpoint.
+
+Restes distincts : RTIS/Oracle réellement périmés, concepts Glory anciens, NPS
+client réel absent et équipe/périmètre Friesland régional à recevoir. Charge VPS
+(steal observé vers70%), latence et réception Seshat523 restent dans leurs plans,
+ce lot de fidélité ne les ferme pas. PR1064/524 fusionnée `dc7aad6c0`, image exacte reçue sur le VPS et préflight de
+déploiement lancé ; runtime524 et525 non reçus par cette documentation.
+
 ## 524 — livraison du candidat522 sur523 encore ouverte (2026-10-26)
 
 Le raccord testé sous522 est repris dans PR1064 sur523/PR1067 Seshat. Numéro524

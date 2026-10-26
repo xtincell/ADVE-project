@@ -517,10 +517,30 @@ Sévérité : 🔴 à corriger · 🟡 par-design mais flaggé honnête · 🟢 
 | **H3** | mix manipulation 0.25 implicite quand `manipulationMix` null | 🟡 flaggé | `deterministic-composers.ts:530-547` |
 | **H5** | Oracle §22/§23 `summary = draft.placeholder` (Imhotep/Anubis draft) | 🟡 ouvert | `deterministic-composers.ts:186-214` |
 | **H6** | ceiling de palier (superfans/cult/âge/Tarsis) = non-ADVE | ⚪ par-design (plafond, jamais source) | `advertis-scorer/index.ts:171-239` |
-| **H7** | NPS proxy depuis Devotion Ladder | 🟡 flaggé | `deterministic-composers.ts:326-365` |
+| **H7** | NPS proxy depuis Devotion Ladder ou eNPS salarié ; NPS client distinct | 🟡 ouvert — tests locaux525 reçus, lecteurs/pipeline encore à recevoir | `strategy-presentation/deterministic-composers.ts::composeBainNps` · `hasLegacyNpsProxy` |
 | **H8** | deux topologies de dépendance pilier divergentes (`domain/pillars.ts` linéaire vs `staleness-propagator` canonique) — dormante (réf. seulement par test) | 🔴 ouvert · réconcilier | `domain/pillars.ts:200-206` |
 | **H9** | prompts Glory sans garde de staleness → peut lire un RTIS périmé | 🟡 ouvert | `artemis/tools/engine.ts:49-95` |
 | **H4** | Tarsis weak signals = intel marché externe | 🟢 **dé-mocké** (2026-06-14) : signal réel dérivé des digests RSS `EXTERNAL_FEED_DIGEST`, zéro credential requise ; **câblé au cron** (2026-07-13, ADR-0134) : registre `Sector` provisionné + refresh sectoriel via `refreshSectorsFromRecentDigests` (external-feeds). Restent absents (honnêtes) : `vocabularyOverlap`/`embeddingDelta` (embeddings requis) | `seshat/tarsis/connector.ts` · `seshat/tarsis/sector-refresh.ts` |
+
+**H7 — contrat525 testé localement, lecteurs/pipeline non reçus (2026-10-26).** L’entrée client existante
+est `A.indexReputation` : sourceNPS, score valide, échantillon positif et date de
+mesure. Le NPS est la différence des proportions de promoteurs et détracteurs à
+la question de recommandation0–10 ; un engagement Devotion ou un eNPS salarié
+ne mesure pas ce signal client. [Source primaire Bain](https://www.netpromotersystem.com/about/measuring-your-net-promoter-score/).
+La distribution des répondants n’est pas déduite du score total ; les motivations
+personas restent des pistes d’enquête, pas des réponses observées.
+
+Circuit proposé : source client déclarée→composeur déterministe existant→section
+NPS du rapport. Les anciens assets identifiés proxy restent en base, leur projection
+seule est recomposée à la lecture sans réécriture historique ; l’échec du contexte
+ou du composeur doit également masquer le proxy. Le repli contexte/composition est reçu localement (cinq cas d’assemblage,
+réintroduction du proxy→deux rouges puis restauration→cinq verts). Contrôles
+locaux5251748tests/176fichiers verts ; API/UI et pipeline réel restent à recevoir
+avant clôture H7, sans transformer les tests en réception de production. NPS client réel absent au checkpoint ;
+aucune campagne d’enquête ou adoption stratégique inventée. Même lot525 : sections
+rédigées≠actualité canonique `RTIS_CASCADE` ; force du `ScoreVerdict` existant≠
+composite documentaire. Aucun nouveau writer, modèle, service, routeur, Intent,
+page ou fournisseur. [Reprise et réception](RESIDUAL-DEBT.md), MVP non reçu.
 
 ### 6b. Trous de circuit (entrées / gouvernance) — Q3 non-bypass affaibli
 

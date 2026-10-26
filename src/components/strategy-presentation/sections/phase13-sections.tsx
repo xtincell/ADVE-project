@@ -321,31 +321,33 @@ export function BcgPortfolio({ data, strategyId }: Props) {
 }
 
 export function BainNps({ data }: Props) {
-  const nps = (data.bainNps ?? null) as { score?: number; promoters?: number; drivers?: { promoters?: string[]; detractors?: string[] } } | null;
+  const nps = (data.bainNps ?? null) as { score?: number | null; promoters?: number | null; methode?: string; driversLabel?: string; drivers?: { promoters?: string[]; detractors?: string[] } } | null;
   return (
     <SectionShell
       tier="BIG4_BASELINE"
       title="Bain Net Promoter System"
-      description="NPS calculation + segmentation Promoters/Passives/Detractors + cohort drift."
+      description="Recommandation des clients, mesurée par enquête."
     >
       {nps ? (
         <Stack direction="col" gap={3}>
           <KeyValueGrid
             entries={[
-              ["NPS Score", <Badge key="s" tone="accent">{nps.score ?? "—"}</Badge>],
-              ["Promoters", `${nps.promoters ?? "—"}%`],
+              ["NPS client", <Badge key="s" tone="accent">{nps.score ?? "Non mesuré"}</Badge>],
+              ["Promoteurs", nps.promoters == null ? "Non renseigné" : `${nps.promoters}%`],
             ]}
           />
+          {nps.methode ? <Text variant="caption" tone="muted">{nps.methode}</Text> : null}
+          {nps.driversLabel ? <Text variant="caption" tone="muted">{nps.driversLabel}</Text> : null}
           {nps.drivers ? (
             <Grid cols={2} gap={3}>
               <Stack direction="col" gap={1}>
-                <Heading level={5}>Drivers Promoters</Heading>
+                <Heading level={5}>Motivations à explorer</Heading>
                 {(nps.drivers.promoters ?? []).map((d, i) => (
                   <Text key={i} variant="caption">+ {d}</Text>
                 ))}
               </Stack>
               <Stack direction="col" gap={1}>
-                <Heading level={5}>Drivers Detractors</Heading>
+                <Heading level={5}>Freins à explorer</Heading>
                 {(nps.drivers.detractors ?? []).map((d, i) => (
                   <Text key={i} variant="caption">- {d}</Text>
                 ))}

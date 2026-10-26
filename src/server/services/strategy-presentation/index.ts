@@ -42,6 +42,7 @@ import {
   hasDeterministicComposer,
   loadComposerContext,
   composeSectionContent,
+  hasLegacyNpsProxy,
 } from "./deterministic-composers";
 
 // ─── Prisma Include (single comprehensive query) ────────────────────────────
@@ -135,6 +136,13 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
   // persisté, identique au dashboard.
   const vector: AdvertisVector = { ...baseVector };
   const classification = classifyBrand(vector.composite);
+  // Same persisted verdict as the leaderboard; never derive market strength
+  // from documentary completion or silently recompute it while reading.
+  const verdict = await db.scoreVerdict.findFirst({
+    where: { subjectStrategyId: strategyId }, orderBy: [{ computedAt: "desc" }, { id: "desc" }],
+    select: { force: true, tier: true, coveragePct: true, epreuveCount: true, computedAt: true },
+  });
+  const revealedScore = verdict ? { ...verdict, computedAt: verdict.computedAt.toISOString() } : null;
 
   // Phase 13 (B5/B6) — charger les BrandAssets des sections BrandAsset-driven
   // (BIG4 + DISTINCTIFS + Neteru Ground actifs Imhotep/Anubis) pour exposer
@@ -247,6 +255,11 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
   // vide (EmptyState honnête — aucune invention). Contexte chargé UNE fois.
   const hasOwnKeys = (v: unknown): boolean =>
     !!v && typeof v === "object" && !Array.isArray(v) && Object.keys(v as object).length > 0;
+  // Reject the false historical proxy before any fallible context loading.
+  // A failed recomposition must leave an honest empty state, never revive it.
+  if (hasLegacyNpsProxy(phase13ByIdRaw["bain-nps"])) {
+    phase13ByIdRaw["bain-nps"] = {};
+  }
   const needsCompose = phase13Sections.filter(
     (s) => hasDeterministicComposer(s.id) && !hasOwnKeys(phase13ByIdRaw[s.id]),
   );
@@ -292,10 +305,11 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
       stalePillars: strategy.pillars.filter(p => p.staleAt != null).map(p => PILLAR_METADATA[p.key.toUpperCase() as PillarKey]?.displayName ?? p.key),
       vector,
       classification,
+      revealedScore,
     },
     sections: {
       // Phase 1: ADVE
-      executiveSummary: safeMap("executive-summary", () => mapExecutiveSummary(strategy, vector, classification), { vector, classification, cultIndex: null, devotionScore: null, superfanCount: 0, brandName: strategy.name, topStrengths: [], topWeaknesses: [], highlights: [] }),
+      executiveSummary: { ...safeMap("executive-summary", () => mapExecutiveSummary(strategy, vector, classification), { vector, classification, cultIndex: null, devotionScore: null, superfanCount: 0, brandName: strategy.name, topStrengths: [], topWeaknesses: [], highlights: [] }), revealedScore },
       contexteDefi: safeMap("contexte-defi", () => mapContexteDefi(strategy), { businessContext: { sector: null, businessModel: null, positioningArchetype: null, economicModels: [], salesChannels: [] }, enemy: null, prophecy: null, client: null, personas: [] }),
       plateformeStrategique: safeMap("plateforme-strategique", () => mapPlateformeStrategique(strategy), { archetype: null, citationFondatrice: null, doctrine: null, ikigai: null, valeurs: [], positionnement: null, promesseMaitre: null, sousPromesses: [], tonDeVoix: null, assetsLinguistiques: null, messagingFramework: [] }),
       propositionValeur: safeMap("proposition-valeur", () => mapPropositionValeur(strategy), { pricing: null, proofPoints: [], guarantees: [], innovationPipeline: [], unitEconomics: null }),
