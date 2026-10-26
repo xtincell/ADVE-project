@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.525", date: "2026-10-26", headline: "Un rapport plus clair sur ses données et ses mesures",
+    highlights: [
+      { emoji: "📋", title: "Voir ce qui doit être réactualisé", body: "Les sections rédigées sont distinguées des analyses à réactualiser. Le document indique quand certaines conclusions reposent encore sur des données antérieures." },
+      { emoji: "📊", title: "Distinguer préparation et résultats", body: "La force de marque reprend le dernier résultat enregistré dans le classement, avec sa couverture et sa date. Le profil documentaire reste présenté séparément. Le score de recommandation client reste non mesuré tant que sa mesure, son échantillon et sa date ne sont pas renseignés." },
+    ],
+  },
+  {
     version: "6.27.524", date: "2026-10-26", headline: "Un document déjà conservé rejoint vos sources",
     highlights: [
       { emoji: "📂", title: "Retrouver le même original", body: "Depuis vos actifs, rattachez un document déjà conservé à son édition ou retrouvez sa source existante sans le déposer à nouveau. Son original, son historique et vos décisions restent conservés." },

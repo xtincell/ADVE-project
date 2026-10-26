@@ -1,3 +1,16 @@
+## v6.27.525 — fix(oracle): distingue données présentes, force et mesures réelles (2026-10-26)
+
+**Candidate reçue localement pour les calculs et API ; lecture native et livraison encore ouvertes.**
+
+- Constat natif sur la production 523 : l’Oracle annonce 35 sections à jour alors que sept piliers sont périmés ; le rapport rapproche un composite documentaire de 160/200 d’une force révélée de 39,5/200 ; le NPS −86 vient d’un proxy Devotion sans enquête. Ces observations ne reçoivent pas le correctif 525.
+- Propulsion/Artemis réutilise le gate canonique `RTIS_CASCADE` : des fondations périmées encore utilisables restent advisory pour permettre leur rafraîchissement, sans les déclarer actuelles. Le lecteur distingue sections rédigées et fraîcheur, avec analyses à réactualiser. Aucun gate parallèle ni écriture des piliers à la lecture.
+- Le rapport lit le dernier `ScoreVerdict` existant pour la force révélée, sa couverture et sa date ; le composite documentaire demeure explicitement distinct. La lecture ne crée ni verdict, ni épreuve, ni score de marché. Une donnée absente ou sans épreuve ne devient pas une preuve de force.
+- NPS client : source déclarée `A.indexReputation.source=NPS`, score borné, échantillon positif et date de mesure. Ni engagement ni eNPS salarié ne remplacent l’enquête de recommandation ; le score total ne permet pas d’inventer la répartition des répondants. Les motivations des personas restent des pistes d’enquête. [Méthode primaire Bain](https://www.netpromotersystem.com/about/measuring-your-net-promoter-score/).
+- Les anciens assets proxy restent en base ; seule leur projection est recomposée à la lecture. Le proxy est neutralisé avant le chargement du contexte, y compris si contexte ou composition refuse. Cinq cas d’assemblage reçus ; réintroduire le proxy provoque deux rouges, puis restauration et cinq verts (`mvp525-nps-regression-{red,green}.log`). [H7](docs/governance/PROPAGATION-MAP.md) reste ouvert pour les lecteurs et le pipeline réel.
+- Réception locale 525 : code-map, typage, lint, lint gouvernance et cycles sans erreur ; 1 748 tests / 176 fichiers verts (`mvp525-received-gauntlet-results.json`), build webpack terminé avec exit 0. API sous rôle USER réel : assemble HTTP 200 en 166 ms, readiness HTTP 200 en 86 ms, listSections HTTP 200 en 78 ms. Absence de verdict et NPS non mesuré préservés (`mvp525-http-received.json`), sans réception d’écran ou SLO déduit.
+- UI 525 encore à recevoir en production : même refus de protocole du navigateur local que pour 524, sans contournement. Pipeline réel, CI/image/runtime et conservation 525 restent ouverts. Aucun modèle, service, routeur, Intent, page ou fournisseur ajouté. PR #1064 / 524 fusionnée `dc7aad6c0`, image exacte reçue et bascule queued ; runtime 524 non reçu à ce checkpoint.
+- Priorité au MVP scoreur / fiche ADVE complète / Oracle, toujours ouverts. RTIS périmé, anciens concepts Glory, NPS client réel absent, périmètre Friesland régional et capacité/latence VPS restent dans le plan de reprise ; aucun MVP entier reçu par ce lot.
+
 ## v6.27.524 — fix(sources): reprend le raccord documentaire sur la base523 (2026-10-26)
 
 **Le raccord testé dans le candidat522 rejoint la base523 sans perdre son historique ni les correctifs Seshat.**

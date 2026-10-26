@@ -28,6 +28,31 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### Lot 525 — correctifs locaux reçus, livraison non reçue (2026-10-26)
+
+Symptômes reproduits nativement sur 523 : 35 sections dites à jour avec sept
+piliers périmés, composite documentaire de 160/200 confondu avec force de 39,5/200,
+NPS −86 proxy sans enquête. Hypothèse : les lecteurs assimilent présence,
+classification et mesure de marché et réutilisent un proxy comme une enquête.
+Le candidat reprend `RTIS_CASCADE`, signale les analyses périmées, lit le dernier
+verdict et conserve le NPS client déclaré avec échantillon/date. Aucun nouveau
+résultat ou asset historique réécrit à la lecture.
+
+Repli NPS reçu localement : cinq cas d’assemblage, réintroduction du proxy avec
+deux rouges puis restauration et cinq verts. Code-map, typage, deux lints et cycles
+exit 0 ; 1 748 tests / 176 fichiers verts ; build webpack terminé exit 0.
+API sous rôle USER réel : assemble 200 / 166 ms, readiness 200 / 86 ms,
+listSections 200 / 78 ms, absence de verdict et NPS non mesuré préservés.
+Preuves : `mvp525-received-gauntlet-results.json`,
+`mvp525-nps-regression-{red,green}.log` et `mvp525-http-received.json`.
+
+UI 525 encore non reçue : même refus de protocole du navigateur local que pour
+524, sans contournement. Réception native à faire en production après livraison ;
+H7, pipeline réel, CI/image/runtime et conservation restent ouverts. Les API ne
+prouvent pas les écrans ou un SLO. Le MVP scoreur / fiche ADVE complète / Oracle,
+NPS réel, Glory, Friesland régional et charge VPS ne sont pas clos.
+[Plan, responsable et déclencheur](RESIDUAL-DEBT.md).
+
 2026-10-26 · **Livraison524 préparée, candidat522 conservé** : le raccord
 documentaire déjà testé dans PR1064 rejoint la base523/PR1067 Seshat. Les preuves
 locales522 restent historiques ; réception sur la base fusionnée, CI finale,

@@ -1,3 +1,52 @@
+## 525 — fidélité de l’Oracle : API reçues, lecteurs natifs et livraison ouverts (2026-10-26)
+
+**Constat réel en production 523** : 35 sections annoncées à jour malgré sept
+piliers périmés ; composite documentaire de 160/200 mélangé à la force révélée de
+39,5/200 ; NPS −86 issu d’un proxy Devotion sans enquête. Le correctif 525 relève de
+Propulsion/Artemis, lecture des résultats existants Seshat. Aucun modèle, service,
+routeur, Intent, page ou fournisseur ajouté, aucune réécriture historique à la lecture.
+
+**Contrat** : gate canonique `RTIS_CASCADE`, stale advisory permettant le
+rafraîchissement des fondations utilisables sans prétendre fraîcheur. Sections
+rédigées et actualité distinctes, bandeau d’analyses périmées. Force issue du dernier
+`ScoreVerdict`, avec couverture/date ; composite documentaire séparé et aucun
+recalcul de marché à la lecture. NPS client déclaré depuis `A.indexReputation`,
+source `NPS`, score valide, échantillon positif et date de mesure ; ni conversion
+Devotion/eNPS salarié ni répartition de répondants inventée.
+[Méthode Bain](https://www.netpromotersystem.com/about/measuring-your-net-promoter-score/).
+Les motivations de personas restent des pistes d’enquête, pas des réponses clients.
+
+**Repli corrigé localement** : le diff initial conservait l’ancien proxy lorsque le
+contexte ou le composeur refusait. Le candidat le neutralise avant ces opérations ;
+cinq cas d’assemblage couvrent dernier verdict inchangé, absence de verdict,
+refus du contexte ou de la composition et conservation d’une vraie enquête.
+Réintroduction du proxy : deux rouges, puis restauration et cinq verts.
+Les assets historiques restent en base, sans mutation du résultat enregistré.
+
+**Reçus locaux 525** : code-map, typage, lint, lint gouvernance et cycles exit 0 ;
+1 748 tests / 176 fichiers verts (`mvp525-received-gauntlet-results.json`) et build
+webpack terminé exit 0. Sous rôle USER réel : assemble HTTP 200 / 166 ms,
+readiness HTTP 200 / 86 ms, listSections HTTP 200 / 78 ms ; absence de verdict et
+NPS non mesuré préservés (`mvp525-http-received.json`). Ce sont des API, pas une
+preuve d’écran ou un SLO. UI locale toujours non reçue : même refus de protocole
+navigateur que pour 524, sans contournement. H7 reste ouvert jusqu’aux lecteurs et
+au pipeline réel ; tests/API ne reçoivent pas le MVP.
+
+**Fermer 525** : recevoir les lecteurs natifs et exports concernés en production
+sous rôle réel ; comparer force/verdict, composite, couverture, dates et absences.
+Exercer stale advisory → rafraîchissement et échec conservé, sans recalcul implicite
+ni faux succès. Lire ensuite le pipeline réel SPAWT ; recevoir CI, image/runtime et
+conservation. Responsable Artemis / lot 525 existant ; effort correction et recette
+bornées ; **déclencheur immédiat** après livraison pour les lecteurs en production.
+Priorité au MVP scoreur / fiche ADVE complète / Oracle ; aucun de ces trois
+livrables ni le MVP entier reçu à ce checkpoint.
+
+Restes distincts : RTIS/Oracle réellement périmés, anciens concepts Glory, NPS
+client réel absent, équipe/périmètre Friesland régional à recevoir. Charge VPS
+(steal observé vers 70 %), latence et réception Seshat 523 restent dans leurs plans.
+PR #1064 / 524 fusionnée `dc7aad6c0`, image exacte reçue sur le VPS et bascule queued ;
+runtime 524 et 525 non reçus par cette documentation.
+
 ## 524 — livraison du candidat522 sur523 encore ouverte (2026-10-26)
 
 Le raccord testé sous522 est repris dans PR1064 sur523/PR1067 Seshat. Numéro524
