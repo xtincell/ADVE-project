@@ -33,7 +33,8 @@ concurrency:
 jobs:
   golden-path:
     name: Golden Path E2E (7 steps)
-    runs-on: ubuntu-latest
+    # Playwright 1.59 does not support the ubuntu-latest 26.04 image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     services:

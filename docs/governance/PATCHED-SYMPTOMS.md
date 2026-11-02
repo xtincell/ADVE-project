@@ -28,6 +28,20 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### Statut du 2 novembre — correctif CI préparé, pas E2E reçue
+
+Golden Path refuse l’installation de Chromium avant navigateur : Ubuntu 26.04
+n’est pas pris en charge par Playwright 1.59.1. Le workflow épingle Ubuntu 24.04,
+sans changer les sept étapes ou leurs assertions ; la réception du prochain run
+PR #1082 reste dans [RESIDUAL-DEBT](RESIDUAL-DEBT.md), pas dans les réparations
+fonctionnelles reçues. Aucune note client ajoutée pour ce correctif invisible.
+
+Le timeout client 600 s de la cascade n’est pas un résultat serveur FAILED :
+`OK` persistant reçu séparément, 465 s, A/D/V/E conservés, R/T/I COMPLETE et S à
+25 %. Ne pas rejouer. Les projections S constantes, CF/CV omis dans T et risques
+`ai_estimate` CONFIRMED sont des défauts ouverts ; aucun patch produit reçu pour
+ces points, ni sélection des 40 recommandations ou du budget estimé ambitieux.
+
 ### Lot 525 — correctifs locaux reçus, livraison non reçue (2026-10-26)
 
 Symptômes reproduits nativement sur 523 : 35 sections dites à jour avec sept

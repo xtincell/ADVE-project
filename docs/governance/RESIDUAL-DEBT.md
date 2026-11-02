@@ -1,3 +1,51 @@
+## Checkpoint du 2 novembre — cascade 524 reçue, CI 525 et qualité encore ouvertes
+
+**Reçu serveur, transport distinct** : la cascade de production 524 est `OK` à
+09 h 28 min 58 s (Douala), durée 465 s, 26 appels via `openai-codex-oauth` ; contenus
+A/D/V/E exacts conservés. R v7, T v6, I v4 : COMPLETE, 100 %, non périmés.
+S v5 : INTAKE, 25 %, non périmée mais incomplète. Le POST client expire à 600 s ;
+le résultat persistant et les lectures actuelles sont reçus séparément. Cette
+opération terminée ne doit pas être rejouée. Preuve P26 :
+`spawt-cascade524-observed-received.json`. Le défaut de retour client reste distinct
+d’une panne de calcul, sans SLO déduit.
+
+**Reste qualité, pas incident corrigé** : zéro initiative sélectionnée ; 40
+initiatives RECOMMENDED, 40 estimations non affectées dans le temps. La route
+ambitieuse à 101 000 000 XAF ne devient ni choix, ni engagement, ni budget adopté.
+Les projections S +10/+30/+70 reposent sur des constantes et un `baseCultIndex=60`
+supposé. La triangulation T annonce les unit economics non renseignées alors
+qu’un scénario CF/CV est documenté ; des risques issus de `ai_estimate` sont marqués
+CONFIRMED. **Fermer** : reprendre les composeurs/lecteurs existants pour qualifier
+les projections comme scénarios ou les laisser inconnues, restituer CF/CV comme
+hypothèses sourcées et conserver la certitude réelle des estimations de risque.
+Comparer les sources, sorties et statuts avant/après, puis recevoir les lecteurs
+et exports sous rôle réel ; ne pas promouvoir une hypothèse en mesure pour remplir
+un champ. Responsable Guidance/Propulsion et lot existants ; effort audit borné
+et correction de fidélité ; **déclencheur immédiat** avant toute réception métier
+de S, de la fiche ADVE ou de l’Oracle. Aucun de ces défauts déclaré corrigé.
+
+**Arithmétique reçue, hypothèses non ratifiées** : prix 60 000, coût variable
+18 000, contribution 42 000 FCFA ; charges fixes 350 000 / 42 000 = 8,333… → 9 Gold.
+Prix TTC / TVA conditionnelle 18 % → 11 Gold. P26
+`break-even-arithmetic-check-20261102.json`. Ce contrôle ne valide ni charges
+réelles, ni assujettissement fiscal, ni rentabilité globale ; pas de nouvelle
+formule ou application financière créée.
+
+**CI Golden Path 525 — réception restante** : l’installation de Chromium refuse
+Ubuntu 26.04 avec Playwright 1.59.1 avant navigateur et avant les sept étapes
+(`golden525-nov02-failed.log`). Seul `runs-on` passe de `ubuntu-latest` à
+`ubuntu-24.04` dans le workflow existant ; aucun test, seuil ou assertion retiré.
+**Fermer** par réception du run PR #1082 sur la source exacte : installation,
+exécution réelle des sept étapes et artefacts du résultat. Responsable lane CI
+existante ; effort correction de configuration et recette ; **déclencheur immédiat**
+au prochain run. Le correctif préparé n’est pas encore une E2E verte ni un MVP reçu.
+
+Production 524 reçue ; code 525 toujours à livrer et lire en production. Les
+constats du 26 octobre ci-dessous restent des checkpoints historiques ; la mention
+R/T/I périmés ne décrit plus l’état après cascade du 2 novembre. S, qualité Oracle,
+Glory, NPS réel, Friesland régional, corpus complet et capacité restent ouverts.
+Priorité : MVP scoreur / fiche ADVE complète / Oracle, puis reste du Shinkiro.
+
 ## 525 — fidélité de l’Oracle : API reçues, lecteurs natifs et livraison ouverts (2026-10-26)
 
 **Constat réel en production 523** : 35 sections annoncées à jour malgré sept
