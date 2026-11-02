@@ -2107,6 +2107,36 @@ d'invariants spécifiques (cf. `tests/integration/`).
 
 # ANNEXE CANON L — LEXIQUE NORMATIF
 
+### North Star définie et objectif complet — candidat 529 (2026-11-02)
+
+**Définition principale** : unique indicateur explicitement nommé North Star /
+étoile polaire dans E. Le candidat 529 conserve sa définition et sa qualification
+en S même si cible ou fréquence reste nulle. Des candidates multiples restent
+ambiguës, y compris si une seule possède une cible. **Objectif complet** du
+dashboard : nom, cible et fréquence disponibles ; ce filtre reste distinct de
+la conservation de la définition. Aucun de ces états ne prouve une mesure,
+une décision adoptée ou la complétude de l’ADVE.
+
+Les inconnues de la carte S renvoient à la qualification dans Engagement puis
+au recalcul ; elles ne créent pas un second socle. Objectif/actions de roadmap
+conservent leur texte complet ; les exigences de cardinalité restent inchangées.
+Listes, détails clavier et fréquence mobile sont candidats à recevoir, sans
+promesse de qualification des campagnes ou de réception de la chaîne entière.
+
+528 est reçue en production et en lecture native au périmètre tracé ; son reçu
+a révélé ces défauts de projection/lisibilité. Oracle 528 section 16 est reçu
+nativement pour définitions, qualifications et inconnues, pas pour ses analyses
+périmées ni le livrable entier. 529 reste candidat : suite unitaire/PostgreSQL,
+typage/lints, cycles et build complet reçus localement. HTTP compilé USER reçu sur
+fixture synthétique existante : définition principale avec cible/cadence nulles,
+objectifs/définitions et autres sept piliers/dates/exécution conservés, sans rejeu
+ingestion/amendement. Pages HTTP 200, hydratation/UI non reçue et aucun
+contournement du refus navigateur local ; natif/CI/production 529 ouverts,
+mesures locales sans SLO. Qualification
+réelle ADVE entière puis cascade, titres/slugs de campagne, devis et MVP restent
+à recevoir. [ADR-0229 Proposed](adr/0229-source-qualified-strategy-and-campaign-projections.md).
+Les checkpoints datés ci-dessous conservent leur état historique.
+
 ### Indicateur, objectif et mesure — qualification candidate 528 (2026-11-02)
 
 **Indicateur défini** : nom et définition documentés ; unité, fenêtre d’observation

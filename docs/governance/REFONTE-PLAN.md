@@ -1,3 +1,37 @@
+## 529 — recevoir conservation et lisibilité, sans clore la qualification (2026-11-02)
+
+528 est reçue en production avec conservation du contenu métier comparé ;
+diagnostics E recalculés, réconciliation via Agent et recalcul S reçus. Les
+sources de l’amendement restent PROPOSED. La lecture native constate perte de la
+définition North Star dans S et densité de prose ; les campagnes restent à qualifier.
+La lecture native 528 de la section 16 d’Oracle reçoit définitions,
+qualifications et inconnues conservées ; elle ne reçoit pas Oracle entier,
+dont les analyses restent périmées.
+
+Le candidat 529 sépare définition principale et objectif complet : unique North
+Star explicite conservée avec inconnues, dashboard limité aux objectifs complets,
+ambiguïté non résolue arbitrairement. Objectif/actions de roadmap sans texte coupé,
+cardinalité inchangée. Listes, détails clavier et suivi mobile sont à recevoir.
+Contrôles locaux 529 reçus : 5 034 unitaires / 481 fichiers, PostgreSQL
+527 tests / 32 fichiers, tsc exit 0, lint et lint:governance sans erreur
+(24 avertissements préexistants), cycles sans dépendance circulaire. Le premier
+lancement PostgreSQL visait une configuration inexistante : erreur de commande
+conservée, puis suite complète verte avec la bonne configuration ; aucun défaut
+produit déduit. Build complet reçu exit 0. HTTP compilé sous USER reçu sur la
+fixture synthétique 528 existante, sans rejouer ingestion ou amendement : refresh S
+259 ms, assemblage 96 ms ; North Star définie avec cible/cadence nulles conservées,
+six objectifs complets / sept définitions, autres sept piliers, dates et exécution
+inchangés. Deux pages HTTP 200 en 246 / 38 ms ; hydratation/UI non reçue, cible
+navigateur locale précédemment refusée sans contournement. Mesures locales sans
+SLO ; natif, CI/image/runtime 529 encore ouverts.
+
+**Recevoir** sur lectures desktop/mobile et clavier : définition conservée,
+inconnues orientées vers E, ambiguïté visible, texte complet et rythme de suivi
+accessible ; ensuite qualification ADVE réelle entière et cascade. Responsable
+Core / UI existant ; effort : recette bornée ; **déclencheur** avant livraison 529
+et toute déclaration de complétude. Titres/slugs de campagne, devis et MVP gardent
+leurs lots existants ouverts, sans nouveau modèle ou moteur. ADR-0229 reste Proposed.
+
 ## 528 — qualifier le socle avant de recevoir la chaîne (2026-11-02)
 
 527 est reçue en production et en lecture native au périmètre des projections

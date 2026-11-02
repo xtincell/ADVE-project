@@ -16,12 +16,24 @@ import { initiativeBudgetLabel, ROUTE_SPECS } from "@/lib/strategy/roadmap-route
 
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import {
-  Section, ACard, EmptyBody, EmptyValue, ObjCard, ProofList,
+  Section, ACard, EmptyBody, EmptyValue, ProofList,
   isEmpty, asArr, asRec, str, makeStatusFor, type Rec,
 } from "./pillar-kit";
 
 const FREQUENCY_LABEL: Record<string, string> = { DAILY: "Quotidien", WEEKLY: "Hebdomadaire", MONTHLY: "Mensuel", QUARTERLY: "Trimestriel", YEARLY: "Annuel", ONE_SHOT: "Une fois", ROLLING: "En continu" };
-const NORTH_STAR_FIELDS: Array<[string, string]> = [["name", "Nom"], ["definition", "Définition"], ["qualification", "Qualification"], ["target", "Cible"], ["unit", "Unité"], ["targetContext", "Périmètre de l’objectif"], ["observationWindow", "Fenêtre d’observation"], ["frequency", "Fréquence"], ["sourceNotes", "Précisions de la source"], ["currentValue", "Valeur mesurée"]];
+const KPI_DETAIL_FIELDS: Array<[string, string]> = [["definition", "Définition"], ["observationWindow", "Fenêtre d’observation"], ["targetContext", "Périmètre de l’objectif"], ["sourceNotes", "Précisions de la source"]];
+const kpiQualification = (k: Rec) => k.qualification === "PROPOSED" ? "Proposition à valider" : k.qualification === "DECLARED" ? "Objectif déclaré" : "Qualification non renseignée";
+const kpiTarget = (value: unknown) => /^-?\d+(\.\d+)?$/.test(str(value))
+  ? new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 10 }).format(Number(value)) : str(value);
+
+function KpiSourceDetails({ value }: { value: Rec }) {
+  const fields = KPI_DETAIL_FIELDS.filter(([key]) => !isEmpty(value[key]));
+  if (!fields.length) return null;
+  return <details className="ck-s-details">
+    <summary>Définition et sources</summary>
+    <dl>{fields.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{str(value[key])}</dd></div>)}</dl>
+  </details>;
+}
 
 function SStatement({ label, value, status, big }: { label: string; value: unknown; status?: string; big?: boolean }) {
   return (
@@ -99,7 +111,7 @@ function Roadmap({ items, status }: { items: unknown; status?: string }) {
                 {!isEmpty(p.objectifDevotion) ? <span className="ck-fc__tag" data-tone="pink">→ {str(p.objectifDevotion)}</span> : null}
                 {!isEmpty(p.budget) || !isEmpty(p.budgetSummary) ? <span className="ck-s-phase__budget">{initiativeBudgetLabel(p.budget, p.budgetSummary)}</span> : null}
               </div>
-              {!isEmpty(p.actions) ? <div className="ck-s-phase__acts">{(Array.isArray(p.actions) ? p.actions : []).map((a, j) => <span className="ck-s-phase__a" key={j}>{str(a)}</span>)}</div> : null}
+              {!isEmpty(p.actions) ? <ol className="ck-s-phase__acts">{(Array.isArray(p.actions) ? p.actions : []).map((a, j) => <li className="ck-s-phase__a" key={j}>{str(a)}</li>)}</ol> : null}
             </div>
           ))}
         </div>
@@ -148,14 +160,13 @@ function KpiDashboard({ items, status }: { items: unknown; status?: string }) {
           {arr.map((k, i) => (
             <div className="ck-s-kpi" key={i}>
               <span className="ck-s-kpi__pillar">{str(k.pillar)}</span>
-              <span className="ck-s-kpi__name">{str(k.name)}
-                <span className="block text-xs text-foreground-muted">{[
-                  k.qualification === "PROPOSED" ? "Proposition à valider" : k.qualification === "DECLARED" ? "Objectif déclaré" : "Qualification non renseignée",
-                  str(k.definition), str(k.observationWindow), str(k.sourceNotes),
-                ].filter(Boolean).join(" · ")}</span>
-              </span>
-              <span className="ck-s-kpi__target">{[str(k.target), str(k.unit), str(k.targetContext)].filter(Boolean).join(" · ")}</span>
-              <span className="ck-s-kpi__freq">{FREQUENCY_LABEL[str(k.frequency)] ?? str(k.frequency)}</span>
+              <div className="ck-s-kpi__body">
+                <p className="ck-s-kpi__name">{str(k.name)}</p>
+                <p className="ck-s-kpi__qualification">{kpiQualification(k)}</p>
+                <KpiSourceDetails value={k} />
+              </div>
+              <span className="ck-s-kpi__target">{[kpiTarget(k.target), str(k.unit)].filter(Boolean).join(" · ")}</span>
+              <span className="ck-s-kpi__freq"><span>Suivi</span>{FREQUENCY_LABEL[str(k.frequency)] ?? str(k.frequency)}</span>
             </div>
           ))}
         </div>
@@ -163,6 +174,23 @@ function KpiDashboard({ items, status }: { items: unknown; status?: string }) {
       )}
     </ACard>
   );
+}
+
+function NorthStarCard({ value, status }: { value: unknown; status?: string }) {
+  const k = asRec(value);
+  const fields = [
+    ["Cible", isEmpty(k.target) ? "À définir dans Engagement" : [kpiTarget(k.target), str(k.unit)].filter(Boolean).join(" · ")],
+    ["Fréquence de suivi", isEmpty(k.frequency) ? "À définir dans Engagement" : FREQUENCY_LABEL[str(k.frequency)] ?? str(k.frequency)],
+    ["Valeur mesurée", isEmpty(k.currentValue) ? "Mesure non disponible" : str(k.currentValue)],
+  ];
+  return <ACard title="North Star KPI" status={status} empty={isEmpty(value)}>
+    {isEmpty(value) ? <p className="text-sm text-foreground-muted">L’indicateur principal n’est pas encore identifié sans ambiguïté dans Engagement. Compléter la fondation puis recalculer.</p> : <>
+      <p className="ck-s-kpi__name">{str(k.name)}</p>
+      <p className="ck-s-kpi__qualification">{kpiQualification(k)}</p>
+      <dl className="ck-s-north-star">{fields.map(([label, text]) => <div key={label}><dt>{label}</dt><dd>{text}</dd></div>)}</dl>
+      <KpiSourceDetails value={k} />
+    </>}
+  </ACard>;
 }
 
 // ── Budget (ventilation + par dévotion) ────────────────────────────────
@@ -256,7 +284,7 @@ export function PillarSFields({ content, certainty }: { content: Rec; certainty:
           <ProofList title="Axes stratégiques" items={v.axesStrategiques} status={st("axesStrategiques")}
             cols={[["axe", "Axe"], ["pillarsLinked", "Piliers liés"], ["kpis", "KPIs"]]} />
           <ACard title="Facteurs clés de succès" status={st("facteursClesSucces")} empty={isEmpty(v.facteursClesSucces)}>
-            {isEmpty(v.facteursClesSucces) ? <EmptyBody /> : <div className="ck-fc__tags">{(Array.isArray(v.facteursClesSucces) ? v.facteursClesSucces : []).map((f, i) => <span className="ck-fc__tag" data-tone="pink" key={i}>{str(f)}</span>)}</div>}
+            {isEmpty(v.facteursClesSucces) ? <EmptyBody /> : <ol className="ck-s-prose-list">{(Array.isArray(v.facteursClesSucces) ? v.facteursClesSucces : []).map((f, i) => <li key={i}>{str(f)}</li>)}</ol>}
           </ACard>
           <Sprint90 items={v.sprint90Days} status={st("sprint90Days")} />
           <Roadmap items={v.roadmap} status={st("roadmap")} />
@@ -270,11 +298,7 @@ export function PillarSFields({ content, certainty }: { content: Rec; certainty:
       <Section title="Pilotage & budget" sub="Le dashboard KPI, la North Star, le budget et l'équipe mobilisée">
         <div className="ck-a-grid">
           <KpiDashboard items={v.kpiDashboard} status={st("kpiDashboard")} />
-          <ObjCard title="North Star KPI" value={isEmpty(v.northStarKPI) ? v.northStarKPI : {
-            ...asRec(v.northStarKPI), currentValue: isEmpty(asRec(v.northStarKPI).currentValue) ? "Mesure non disponible" : asRec(v.northStarKPI).currentValue,
-            qualification: asRec(v.northStarKPI).qualification === "PROPOSED" ? "Proposition à valider" : asRec(v.northStarKPI).qualification === "DECLARED" ? "Objectif déclaré" : "Qualification non renseignée",
-          }} status={st("northStarKPI")}
-            fields={NORTH_STAR_FIELDS.filter(([key]) => ["name", "target", "frequency", "currentValue"].includes(key) || !isEmpty(asRec(v.northStarKPI)[key]))} />
+          <NorthStarCard value={v.northStarKPI} status={st("northStarKPI")} />
           <BudgetPanel breakdown={v.budgetBreakdown} byDevotion={v.budgetByDevotion} total={v.globalBudget} summary={asRec(v.computed).budgetSummary} status={st(!isEmpty(v.budgetBreakdown) ? "budgetBreakdown" : typeof v.globalBudget === "number" ? "globalBudget" : "computed")} />
           <ProofList title="Équipe documentée" items={v.teamStructure} status={st("teamStructure")}
             cols={[["name", "Nom"], ["title", "Titre"], ["responsibility", "Profil / contribution documentée"]]} />

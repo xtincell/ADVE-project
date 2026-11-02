@@ -1,6 +1,6 @@
 # ADR-0229 — ADVE qualifié, projections S et cadres de campagne
 
-**Status** : Proposed — projections 527 reçues ; qualification 528 et chaîne complète à recevoir
+**Status** : Proposed — 528 reçue au périmètre tracé ; lisibilité 529 et chaîne complète à recevoir
 **Date** : 2026-11-02
 **Phase** : 7 — continuité des sources vers stratégie et cadres de campagne
 **Depends on** : ADR-0023, ADR-0088, ADR-0089, ADR-0119, ADR-0120, ADR-0228
@@ -30,6 +30,49 @@ Faits/mesures, hypothèses/desiderata et décisions adoptées restent distingué
 Un input de partie prenante porte auteur, date, périmètre et statut ; l’attribution
 ne vaut ni vérité observée ni décision adoptée. Les pièces, propositions et reçus
 existants suffisent à ce contrat, sans nouveau modèle stakeholder ou base miroir.
+
+## Réception courante 528 et amendement candidat 529
+
+528 est reçue en production, source `ad6f9b8b0667085aba3e25dd3f5d0eb21e2d2c35`,
+digest `50deb3e2899707a58cf071b33dabac64c0323abf4c8374fcdd22ee6715194f91`.
+Contenu métier comparé conservé exactement ; seuls les diagnostics E dérivés de
+validation ont été recalculés. Réconciliation E via Agent et recalcul S reçus ;
+les sources de cet amendement restent PROPOSED, sans adoption humaine fabriquée.
+La lecture native 528 constate une définition North Star perdue dans S, une
+prose dense et des campagnes encore à qualifier. Les preuves métier restent
+privées hors checkout. Cette réception ne reçoit ni ADVE entière ni le MVP.
+La lecture native 528 de la section 16 d’Oracle reçoit définitions,
+qualifications et inconnues conservées ; elle ne reçoit pas Oracle entier,
+dont les analyses restent périmées.
+
+Le candidat 529 conserve la définition de l’unique North Star explicitement
+nommée parmi E.kpis, même avec cible/fréquence nulles. Le dashboard S continue
+d’exiger nom, cible et fréquence. Les candidates multiples restent ambiguës ;
+une seule cible chiffrée ne suffit pas à arbitrer entre elles. Définition et
+métadonnées ne deviennent ni mesure ni décision ; les inconnues renvoient à E.
+
+La roadmap conserve objectif et actions sans coupe à 200 caractères ni limite
+courte de schéma ; les seuils de cardinalité restent inchangés. L’UI S propose
+une largeur de lecture utile, de vraies listes d’actions/FCS, détails de définition /
+fenêtre / contexte / source au clavier et suivi visible sur mobile. L’état
+« mesure non disponible » reste un affichage, sans mutation du socle.
+Contrôles locaux 529 reçus : 5 034 unitaires / 481 fichiers, PostgreSQL
+527 tests / 32 fichiers, tsc exit 0, lint et lint:governance sans erreur
+(24 avertissements préexistants), cycles sans dépendance circulaire. Le premier
+lancement PostgreSQL visait une configuration inexistante : erreur de commande
+conservée, puis suite complète verte avec la bonne configuration ; aucun défaut
+produit déduit. Build complet reçu exit 0. HTTP compilé sous USER reçu sur la
+fixture synthétique 528 existante, sans rejouer ingestion ou amendement : refresh S
+259 ms, assemblage 96 ms ; North Star définie avec cible/cadence nulles conservées,
+six objectifs complets / sept définitions, autres sept piliers, dates et exécution
+inchangés. Deux pages HTTP 200 en 246 / 38 ms ; hydratation/UI non reçue, cible
+navigateur locale précédemment refusée sans contournement. Mesures locales sans
+SLO ; natif, CI/image/runtime 529 encore ouverts.
+
+Les titres/slugs de campagne, qualification réelle ADVE entière puis cascade,
+devis et MVP gardent leurs lots ouverts. Aucun nouveau modèle, routeur, service,
+Intent ou gestionnaire d’appels ; ADR Proposed pour la chaîne entière.
+Le checkpoint 528 suivant décrit les réceptions locales antérieures à sa livraison.
 
 ## Réception courante et qualification candidate 528
 

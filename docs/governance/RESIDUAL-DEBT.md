@@ -1,3 +1,41 @@
+## 529 — définition principale et lisibilité S, candidat à recevoir (2026-11-02)
+
+**Reçu 528** : production, conservation exacte du contenu métier comparé hormis
+diagnostics E dérivés de validation ; réconciliation E via Agent et recalcul S.
+Les sources de cet amendement restent PROPOSED. La lecture native confirme
+la perte de la définition North Star dans S, une prose dense et des campagnes
+non qualifiées. Aucun contenu client privé n’est reproduit ici.
+La lecture native 528 de la section 16 d’Oracle reçoit définitions,
+qualifications et inconnues conservées ; elle ne reçoit pas Oracle entier,
+dont les analyses restent périmées.
+
+**Candidat 529** : North Star unique même sans cible/fréquence, dashboard seulement
+objectifs complets ; texte objectif/actions de roadmap intégral, cardinalité
+inchangée ; listes lisibles, détails accessibles au clavier et cadence mobile.
+Contrôles locaux 529 reçus : 5 034 unitaires / 481 fichiers, PostgreSQL
+527 tests / 32 fichiers, tsc exit 0, lint et lint:governance sans erreur
+(24 avertissements préexistants), cycles sans dépendance circulaire. Le premier
+lancement PostgreSQL visait une configuration inexistante : erreur de commande
+conservée, puis suite complète verte avec la bonne configuration ; aucun défaut
+produit déduit. Build complet reçu exit 0. HTTP compilé sous USER reçu sur la
+fixture synthétique 528 existante, sans rejouer ingestion ou amendement : refresh S
+259 ms, assemblage 96 ms ; North Star définie avec cible/cadence nulles conservées,
+six objectifs complets / sept définitions, autres sept piliers, dates et exécution
+inchangés. Deux pages HTTP 200 en 246 / 38 ms ; hydratation/UI non reçue, cible
+navigateur locale précédemment refusée sans contournement. Mesures locales sans
+SLO ; natif, CI/image/runtime 529 encore ouverts.
+
+**Fermer** par recette desktop/mobile et clavier, contrôle de la définition / des
+nulls / des ambiguïtés et du texte conservé, puis livraison et conservation réelles.
+Responsable Core / UI existant ; effort : recette bornée ; **déclencheur** avant
+réception du correctif 529. Conserver les inconnues et ne pas assimiler la carte
+à une mesure, une décision ou une complétude ADVE.
+
+Qualification réelle de l’intégralité ADVE puis cascade, titres/slugs de campagne,
+devis et les trois MVP restent ouverts. La chaîne documentation + inputs
+attribués → ADVE qualifié → RTIS dérivé reste exigée ; ADR-0229 Proposed pour ce
+tout. La lisibilité ne ferme ni ces lots ni les dettes de latence/VPS déjà tracées.
+
 ## 528 — objectifs qualifiés et chaîne complète encore à recevoir (2026-11-02)
 
 **Reçu 527** : production et lecture native des projections/roadmap, conservation

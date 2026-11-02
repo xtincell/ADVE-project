@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.529", date: "2026-11-02", headline: "Un plan plus lisible, sans perdre votre indicateur principal",
+    highlights: [
+      { emoji: "🧭", title: "Garder votre indicateur principal à préciser", body: "Lorsqu’un seul indicateur principal est explicitement identifié, le plan conserve sa définition même si sa cible ou son rythme de suivi reste à décider. Les informations manquantes restent indiquées dans Engagement." },
+      { emoji: "📋", title: "Parcourir les actions et les objectifs", body: "La feuille de route et les facteurs de succès se lisent en listes. Les objectifs et les actions gardent leur texte complet ; les précisions des indicateurs se déplient au clavier et leur rythme de suivi reste visible sur mobile." },
+    ],
+  },
+  {
     version: "6.27.528", date: "2026-11-02", headline: "Des objectifs qui gardent leur statut et leurs limites",
     highlights: [
       { emoji: "🎯", title: "Distinguer proposition et objectif déclaré", body: "Votre plan et votre rapport indiquent si un objectif est proposé ou déclaré. Son unité, sa fenêtre d’observation et ses précisions disponibles restent visibles, sans présenter une cible comme un résultat mesuré." },

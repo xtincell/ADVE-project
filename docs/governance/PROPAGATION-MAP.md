@@ -9,6 +9,33 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Définition principale → S lisible — 528 reçue, candidat 529 (2026-11-02)
+
+528 est reçue en production : conservation du contenu métier comparé, diagnostics
+E recalculés, réconciliation via Agent et recalcul S ; sources de l’amendement
+PROPOSED. La lecture native révèle une définition North Star perdue en S et une
+prose dense. Ces reçus bornés ne reçoivent pas ADVE entière ou le MVP.
+
+Candidat 529 : E.kpis → définitions nommées ; objectifs nom/cible/fréquence →
+dashboard S ; unique North Star explicitement nommée → northStarKPI avec ses
+métadonnées et cible/fréquence nulles si inconnues. Plusieurs candidates →
+ambiguïté, aucun arbitrage par ordre ou par cible renseignée. Une définition
+conservée n’est ni objectif complet ni mesure ; le socle E reste à qualifier.
+Objectifs/actions I → roadmap S sans coupe de texte, cardinalité inchangée →
+listes et détails clavier/mobile. Aucun nouvel appel, service, routeur ou modèle.
+Suite locale reçue : 5 034 unitaires / 481 fichiers, PostgreSQL 527 tests /
+32 fichiers, typage/lints sans erreur et cycles sans dépendance circulaire.
+Build complet exit 0 et HTTP compilé USER reçus sur fixture synthétique existante :
+North Star définie avec cible/cadence nulles, six objectifs / sept définitions et
+autres sept piliers/dates/exécution conservés, sans rejeu ingestion/amendement.
+Pages HTTP 200, hydratation/UI non reçue ; natif/CI/production 529 ouverts,
+latences locales sans SLO et aucun contournement navigateur.
+La section 16 d’Oracle 528 reçoit nativement définitions,
+qualifications et inconnues ; analyses périmées, Oracle entier non reçu.
+Titres/slugs campagnes, qualification réelle ADVE/cascade, devis et MVP restent
+à recevoir. [ADR-0229 Proposed](adr/0229-source-qualified-strategy-and-campaign-projections.md)
+et [dette](RESIDUAL-DEBT.md) ; les checkpoints suivants restent historiques.
+
 ### Qualification des objectifs — 527 reçue, candidat 528 (2026-11-02)
 
 527 est reçue en production/lecture native pour les projections sourcées et la

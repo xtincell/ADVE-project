@@ -1409,9 +1409,9 @@ export const PillarSSchema = z.object({
   // ── Roadmap orientée superfan (jalons temporels) ──────────────────────
   roadmap: z.array(z.object({
     phase: textShort,
-    objectif: textShort,
+    objectif: textMedium,
     objectifDevotion: z.string().min(1).optional(),          // Ex: "spectateur → intéressé"
-    actions: z.array(textShort).optional(),
+    actions: z.array(z.string().min(1)).optional(),
     budget: currency.optional(),
     budgetSummary: InitiativeBudgetSummarySchema.optional(),
     canonType: z.enum(CAMPAIGN_CANON_TYPES).optional(),
@@ -1492,14 +1492,14 @@ export const PillarSSchema = z.object({
   }).optional(),
   northStarKPI: z.object({
     name: z.string().min(1),                                 // Ex: "Progression Devotion Ladder"
-    target: z.string().min(1),
+    target: z.union([z.string().min(1), z.null()]),
     qualification: z.enum(["PROPOSED", "DECLARED"]).optional(),
     definition: textMedium.optional(),
     unit: textShort.optional(),
     observationWindow: textShort.optional(),
     targetContext: textShort.optional(),
     sourceNotes: textMedium.optional(),
-    frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY"]),
+    frequency: z.union([z.enum(["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY"]), z.null()]),
     currentValue: z.string().optional(),
   }).optional(),
 

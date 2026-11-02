@@ -54,6 +54,14 @@ describe("source irrigation into S", () => {
       expect.objectContaining({ phase: "Campagne à qualifier", actionRefs: ["unknown"] }),
     ]));
   });
+  it("retains complete campaign objectives and action descriptions instead of cutting them to a short field", () => {
+    const objectif = "Documenter le premier usage utile et ses conditions de validation. ".repeat(6);
+    const action = "Préparer un pilote documenté avec les partenaires et relire les retours. ".repeat(6);
+    const s = generateStrategy({ i: { catalogueParCanal: { DIRECT: [{ id: "long-pilot", action,
+      objectif, format: "Pilote", campaignCanonType: "GTM_90" }] } } }, "TARGET");
+    expect(s.roadmap).toEqual([expect.objectContaining({ objectif, actions: [action], actionRefs: ["long-pilot"] })]);
+    expect(PillarSSchema.shape.roadmap.unwrap().element.safeParse((s.roadmap as unknown[])[0]).success).toBe(true);
+  });
 });
 
 describe("action cost bounds and monetary periods", () => {

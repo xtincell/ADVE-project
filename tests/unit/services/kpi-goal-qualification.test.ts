@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PillarESchema } from "@/lib/types/pillar-schemas";
+import { PillarESchema, PillarSSchema } from "@/lib/types/pillar-schemas";
 import { getContract } from "@/server/services/pillar-maturity/contracts-loader";
 import { isFieldSatisfied } from "@/server/services/pillar-maturity/assessor";
 import { generateStrategy } from "@/server/services/rtis-protocols/strategy";
@@ -47,7 +47,10 @@ describe("a documented KPI is distinct from its target, window and monitoring ca
   it("projects only qualified goals to S, retaining their proposition and observation window", () => {
     const result = generateStrategy({ e: { kpis: [definition, goal] } }, "TARGET");
     expect(result.kpiDashboard).toEqual([{ name: goal.name, target: "18", frequency: "WEEKLY", pillar: "E", qualification: "PROPOSED", definition: goal.definition, unit: "%", observationWindow: goal.observationWindow, targetContext: goal.targetContext, sourceNotes: goal.sourceNotes }]);
-    expect(result.northStarKPI).toBeUndefined();
+    expect(result.northStarKPI).toEqual({ name: definition.name, target: null, frequency: null,
+      qualification: "PROPOSED", definition: definition.definition, sourceNotes: definition.sourceNotes });
+    expect(PillarSSchema.shape.northStarKPI.safeParse(result.northStarKPI).success).toBe(true);
+    expect(result.northStarKPI).not.toHaveProperty("currentValue");
   });
   it("retains a genuine zero goal and does not add observations or human adoption", () => {
     const result = mapKpisMesure(strategy([{ ...goal, target: 0 }]));
@@ -57,5 +60,10 @@ describe("a documented KPI is distinct from its target, window and monitoring ca
   it("retains all qualified metadata for an explicitly targeted North Star", () => {
     const result = generateStrategy({ e: { kpis: [{ ...definition, target: 42, frequency: "MONTHLY", unit: "sorties", observationWindow: "Sur une cohorte de 12 jours" }] } }, "TARGET");
     expect(result.northStarKPI).toEqual({ name: definition.name, target: "42", frequency: "MONTHLY", qualification: "PROPOSED", definition: definition.definition, sourceNotes: definition.sourceNotes, unit: "sorties", observationWindow: "Sur une cohorte de 12 jours" });
+  });
+  it("does not hide a conflict behind the only North Star with a quantified target", () => {
+    const result = generateStrategy({ e: { kpis: [definition, { ...goal, name: "Second North Star" }] } }, "TARGET");
+    expect(result.northStarKPI).toBeUndefined();
+    expect(result.kpiDashboard).toHaveLength(1);
   });
 });
