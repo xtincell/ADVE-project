@@ -109,7 +109,8 @@ async function commercialAgent(input: Record<string, unknown>) {
 }
 
 async function salesDecisionResult(work:()=>Promise<unknown>,dealId:string){
-  try{return await work();}catch(error){
+  try{return await work();}catch(cause){
+    const error=cause instanceof z.ZodError?new TRPCError({code:"BAD_REQUEST",message:"Commande commerciale invalide : "+cause.issues.map(issue=>`${issue.path.join(".")} : ${issue.message}`).join(" ; ").slice(0,3000)}):cause;
     if(!(error instanceof TRPCError)||!["PRECONDITION_FAILED","CONFLICT","FORBIDDEN","BAD_REQUEST"].includes(error.code))throw error;
     const current=await db.deal.findUniqueOrThrow({where:{id:dealId},select:{revision:true,commercial:true}});
     const state=current.commercial as {node?:string;nextAction?:string}|null;
@@ -210,10 +211,12 @@ export const tools: ToolDefinition[] = [
       const deal = await db.deal.findUniqueOrThrow({ where: { id: String(input.dealId) } });
       if (deal.sellerStrategyId !== input.strategyId) throw new Error("Affaire hors de cette marque.");
       const { salesStepSchema } = await import("@/server/services/crm-engine/commercial");
-      const step = salesStepSchema.parse(input.step);
-      if (["MANDATE", "PAYMENT", "HANDOVER"].includes(step.command.type)) throw new Error("Décision réservée au mandant.");
-      const { applySalesStep } = await import("@/server/services/crm-engine");
-      return salesDecisionResult(()=>applySalesStep(deal.id, step, actor),deal.id);
+      return salesDecisionResult(async()=>{
+        const step=salesStepSchema.parse(input.step);
+        if (["MANDATE", "PAYMENT", "HANDOVER"].includes(step.command.type)) throw new TRPCError({code:"FORBIDDEN",message:"Décision réservée au mandant."});
+        const {applySalesStep}=await import("@/server/services/crm-engine");
+        return applySalesStep(deal.id,step,actor);
+      },deal.id);
     },
   },
 
