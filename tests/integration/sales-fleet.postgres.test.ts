@@ -156,6 +156,38 @@ describe("sales holders, dispatch receipts and incoming customer messages", () =
     expect((await db.deal.findUniqueOrThrow({ where: { id: row.id } })).revision).toBe(paid.revision + 1);
     await fleet.completeRun(profile.mcpKeyId!, claim.run!.id, claim.run!.leaseToken, { status: "DONE", result: "Delivery independently confirmed after payment.", tokensUsed: 0 });
   });
+  it("keeps the latest seller replies visible and chronological after more than two hundred manager messages", async () => {
+    const profile = await fleet.saveSalesRepresentative(actor, { strategyId: brandId, name: "Long-lived seller", mode: "AI" }); profiles.push(profile.id);
+    const origin = new Date("2026-01-01T00:00:00.000Z").getTime();
+    const records = Array.from({ length: 205 }, (_, index) => ({
+      id: `tail-${profile.id}-${String(index).padStart(3, "0")}`,
+      conversationId: profile.conversationId!, senderName: index === 204 ? profile.name : "Supervision", channel: "SALES_MANAGER",
+      content: index === 204 ? "Latest seller reply after the initial two hundred messages." : `Manager instruction ${index}`,
+      createdAt: new Date(origin + index * 1000),
+    }));
+    // Physical insertion order differs from conversational chronology.
+    await db.message.createMany({ data: [...records].reverse() });
+    const first = await fleet.getSalesRepresentative(actor, profile.id);
+    expect(first.messages).toHaveLength(200);
+    expect(first.messages.at(-1)?.content).toBe("Latest seller reply after the initial two hundred messages.");
+    expect(first.messages[0]?.id).toBe(records[5]!.id);
+    expect(first.messages.some(row => row.id === records[0]!.id)).toBe(false);
+    const followUp = await db.message.create({ data: { conversationId: profile.conversationId!, senderName: profile.name, channel: "SALES_MANAGER", content: "New seller reply received after refreshing the long conversation.", createdAt: new Date(origin + 206000) } });
+    const refreshed = await fleet.getSalesRepresentative(actor, profile.id);
+    expect(refreshed.messages).toHaveLength(200);
+    expect(refreshed.messages.at(-1)?.id).toBe(followUp.id);
+    expect(refreshed.messages[0]?.id).toBe(records[6]!.id);
+    expect(refreshed.messages.every((message, index) => index === 0 || refreshed.messages[index - 1]!.createdAt <= message.createdAt)).toBe(true);
+    const sameTime = new Date(origin + 207000);
+    await db.message.createMany({ data: [
+      { id: `tail-${profile.id}-z`, conversationId: profile.conversationId!, senderName: profile.name, channel: "SALES_MANAGER", content: "Concurrent reply z", createdAt: sameTime },
+      { id: `tail-${profile.id}-a`, conversationId: profile.conversationId!, senderName: profile.name, channel: "SALES_MANAGER", content: "Concurrent reply a", createdAt: sameTime },
+    ] });
+    const concurrent = await fleet.getSalesRepresentative(actor, profile.id);
+    expect(concurrent.messages).toHaveLength(200);
+    expect(concurrent.messages.slice(-2).map(message => message.content)).toEqual(["Concurrent reply a", "Concurrent reply z"]);
+    expect(concurrent.messages[0]?.id).toBe(records[8]!.id);
+  });
   it("keeps human work on the same roster and manager conversation without model claims", async () => {
     const human = await fleet.saveSalesRepresentative(actor, { strategyId: brandId, name: "Named human", mode: "HUMAN", humanUserId: actor.id }); profiles.push(human.id);
     await fleet.setSalesRepresentativeStatus(actor, human.id, "ACTIVE");
