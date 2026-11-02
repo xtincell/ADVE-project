@@ -309,8 +309,8 @@ export const newsletterRouter = createTRPCRouter({
         campaign,
         messages: messages.map((m) => ({
           id: m.id,
-          recipient: m.contact.email,
-          name: m.contact.name,
+          recipient: m.contact?.email ?? "",
+          name: m.contact?.name ?? null,
           status: m.status,
           sentAt: m.createdAt,
         })),

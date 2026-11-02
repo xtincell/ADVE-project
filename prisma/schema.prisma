@@ -1289,7 +1289,8 @@ model CrmContact {
 /// Message CRM (email transactionnel sortant ou note entrante consignée).
 model CrmMessage {
   id          String  @id @default(cuid())
-  contactId   String
+  contactId   String?
+  salesDealId String?
   direction   String // OUT | IN
   channel     String  @default("EMAIL")
   subject     String?
@@ -1301,10 +1302,12 @@ model CrmMessage {
   sentBy      String? // User.id opérateur
   campaignId  String? // NewsletterCampaign si envoi de masse
 
-  contact CrmContact @relation(fields: [contactId], references: [id])
+  contact CrmContact? @relation(fields: [contactId], references: [id])
 
   createdAt DateTime @default(now())
 
+  @@unique([salesDealId, providerRef, direction])
+  @@index([salesDealId, createdAt])
   @@index([contactId, createdAt])
   @@index([campaignId])
   @@index([status])
@@ -3768,6 +3771,8 @@ model Deal {
   commercial Json?
   paymentReference String? @unique
   revision Int @default(0)
+  customerAccessTokenHash String? @unique
+  customerAccessTokenEncrypted String?
 
   strategy Strategy? @relation(fields: [strategyId], references: [id])
   user     User?     @relation(fields: [userId], references: [id])
@@ -7162,4 +7167,53 @@ model RecipeApplication {
   recipe           KnowledgeEntry   @relation(fields: [recipeId], references: [id])
 
   @@index([strategyId, createdAt])
+}
+
+/// Human or AI holder of one brand sales portfolio; credentials are server-only.
+model SalesRepresentative {
+  id String @id @default(cuid())
+  strategyId String
+  operatorId String?
+  name String
+  mode String
+  status String @default("DRAFT")
+  humanUserId String?
+  mcpKeyId String? @unique
+  encryptedApiKey String?
+  conversationId String? @unique
+  maxTurns Int @default(12)
+  maxTokens Int @default(60000)
+  dailyTokenBudget Int @default(150000)
+  dailyRunLimit Int @default(10)
+  lastWorkerSeenAt DateTime?
+  budgetDay String?
+  dailyTokensReserved Int @default(0)
+  dailyRunsClaimed Int @default(0)
+  revision Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  runs SalesRun[]
+  @@index([strategyId, status])
+  @@index([operatorId])
+}
+
+/// Bounded invocation receipt consumed by the existing Galahad sales role.
+model SalesRun {
+  id String @id @default(cuid())
+  representativeId String
+  representative SalesRepresentative @relation(fields: [representativeId], references: [id])
+  dealId String?
+  requestId String @unique
+  instruction String @db.Text
+  status String @default("QUEUED")
+  leaseToken String?
+  claimRequestId String? @unique
+  claimedAt DateTime?
+  completedAt DateTime?
+  result String? @db.Text
+  tokensUsed Int?
+  reservedTokens Int @default(0)
+  createdAt DateTime @default(now())
+  @@index([representativeId, status, createdAt])
+  @@index([dealId])
 }

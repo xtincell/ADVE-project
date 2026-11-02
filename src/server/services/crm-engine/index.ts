@@ -670,8 +670,8 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
         where: { id: messageId }, include: { contact: { select: { strategyId: true, email: true } } },
       }) : null;
       if (!message || message.direction !== "IN" || message.status !== "RECEIVED" ||
-          message.contact.strategyId !== deal.sellerStrategyId ||
-          message.contact.email.toLowerCase() !== deal.contactEmail?.toLowerCase()) {
+          (message.salesDealId ? message.salesDealId !== deal.id :
+            (message.contact?.strategyId !== deal.sellerStrategyId || !deal.contactEmail || message.contact?.email.toLowerCase() !== deal.contactEmail.toLowerCase()))) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’agent doit référencer une réponse reçue de cet acheteur pour cette marque." });
       }
     }

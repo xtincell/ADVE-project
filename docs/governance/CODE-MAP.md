@@ -117,7 +117,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Prisma — 232 models, 71 enums
+## Prisma — 234 models, 71 enums
 
 ### Models
 
@@ -136,7 +136,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **MissionActivity** (22 fields) — Activité d'une mission — couche d'exécution pilotable par mission (pipeline staged). Chaque activité = création d'asset 
 - **MissionApplication** (15 fields) — Vague 7 — candidature d'un talent/agence à une mission ouverte. Le flux remplace l'auto-acceptation : candidater → revue
 - **CrmContact** (16 fields) — Vague 7 — instantané followers/mentions par plateforme (traque unifiée). strategyId null = comptes propres de La Fusée /
-- **CrmMessage** (14 fields) — Message CRM (email transactionnel sortant ou note entrante consignée).
+- **CrmMessage** (15 fields) — Message CRM (email transactionnel sortant ou note entrante consignée).
 - **NewsletterCampaign** (13 fields) — Campagne newsletter (The Upgrade) — composer, tester, envoyer aux opt-in.
 - **FollowerSnapshot** (9 fields)
 - **BrandFootprintSnapshot** (13 fields) — ADR-0151 — base de marques de Seshat (répertoire d'empreintes publiques). Chaque recherche `/scorer` (marque hors-platef
@@ -229,7 +229,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **PaymentOrder** (14 fields)
 - **IntakePayment** (17 fields)
 - **Subscription** (15 fields) — Subscription for monthly tiers (COCKPIT_MONTHLY / RETAINER_*).
-- **Deal** (24 fields)
+- **Deal** (26 fields)
 - **FunnelMapping** (7 fields)
 - **MarketStudy** (15 fields)
 - **ResearchWave** (13 fields)
@@ -353,6 +353,8 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **CreativeAnalysis** (12 fields)
 - **PatternEvidence** (12 fields)
 - **RecipeApplication** (21 fields)
+- **SalesRepresentative** (22 fields) — Human or AI holder of one brand sales portfolio; credentials are server-only.
+- **SalesRun** (15 fields) — Bounded invocation receipt consumed by the existing Galahad sales role.
 
 ### Enums
 
@@ -690,7 +692,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Pages — 281 (par deck)
+## Pages — 282 (par deck)
 
 ### Agency (12)
 
@@ -943,7 +945,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (45)
+### Public (46)
 
 - `/(marketing)`
 - `/agence`
@@ -981,6 +983,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - `/realisations`
 - `/register`
 - `/reset-password`
+- `/sales/[token]`
 - `/scorer`
 - `/services`
 - `/shared/guidelines/[token]`

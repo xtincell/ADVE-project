@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.531", date: "2026-11-02", headline: "Piloter vos vendeurs et retrouver leurs échanges clients",
+    highlights: [
+      { emoji: "🤝", title: "Une flotte à votre main", body: "Nommez vos vendeurs humains ou IA, affectez leur marque, activez ou suspendez leur travail. Vos consignes et leurs résultats restent dans le pipeline." },
+      { emoji: "💬", title: "Une conversation qui suit l’affaire", body: "Le client peut échanger dans son espace privé. Retrouvez ses réponses, l’offre, l’étape et la prochaine action ; reprenez la main quand vous en avez besoin." },
+    ],
+  },
+  {
     version: "6.27.530", date: "2026-11-02", headline: "Un poste commercial pour conduire et reprendre vos ventes",
     highlights: [
       { emoji: "🤝", title: "Confier une offre précise à votre vendeur", body: "Dans le pipeline, rattachez l’affaire à la marque vendeuse, choisissez l’offre et ses conditions, puis désignez le commercial et le responsable de livraison." },

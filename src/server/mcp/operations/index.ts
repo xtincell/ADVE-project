@@ -17,6 +17,7 @@
 // ============================================================================
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { db } from "@/lib/db";
 import * as campaignManager from "@/server/services/campaign-manager";
 import type { CampaignState } from "@/server/services/campaign-manager/state-machine";
@@ -102,7 +103,18 @@ async function commercialAgent(input: Record<string, unknown>) {
   if (!key?.isActive || key.scopeStrategyId !== input.strategyId || key.scopeKind !== "BRAND" || (key.expiresAt && key.expiresAt <= new Date())) {
     throw new Error("Mandat d’accès expiré ou révoqué.");
   }
+  const profile = await db.salesRepresentative.findUnique({ where: { mcpKeyId: auth.apiKeyId }, select: { status: true } });
+  if (profile && profile.status !== "ACTIVE") throw new Error("Commercial suspendu ou non activé.");
   return { id: `mcp:${auth.apiKeyId}`, admin: false };
+}
+
+async function salesDecisionResult(work:()=>Promise<unknown>,dealId:string){
+  try{return await work();}catch(error){
+    if(!(error instanceof TRPCError)||!["PRECONDITION_FAILED","CONFLICT","FORBIDDEN","BAD_REQUEST"].includes(error.code))throw error;
+    const current=await db.deal.findUniqueOrThrow({where:{id:dealId},select:{revision:true,commercial:true}});
+    const state=current.commercial as {node?:string;nextAction?:string}|null;
+    return {status:"REFUSED",errorCode:error.code,message:error.message,currentState:{node:state?.node??"DISCOVERY",revision:current.revision,nextAction:state?.nextAction??null}};
+  }
 }
 
 export const tools: ToolDefinition[] = [
@@ -112,7 +124,8 @@ export const tools: ToolDefinition[] = [
     inputSchema: z.object({ strategyId: z.string() }),
     handler: async input => {
       const actor = await commercialAgent(input);
-      const rows = await db.deal.findMany({ where: { sellerStrategyId: String(input.strategyId) }, orderBy: { updatedAt: "desc" } });
+      const scopedDeal = (input.__auth as {salesDealId?:string|null}|undefined)?.salesDealId;
+      const rows = await db.deal.findMany({ where: { sellerStrategyId: String(input.strategyId), ...(scopedDeal?{id:scopedDeal}:{}) }, orderBy: { updatedAt: "desc" } });
       const { salesStateSchema } = await import("@/server/services/crm-engine/commercial");
       const assigned = rows.filter(row => {
         const state = salesStateSchema.safeParse(row.commercial);
@@ -122,17 +135,22 @@ export const tools: ToolDefinition[] = [
         where: { dealId: { in: assigned.map(row => row.id) } }, orderBy: { performedAt: "asc" },
       });
       const inbound = await db.crmMessage.findMany({
-        where: { direction: "IN", status: "RECEIVED", contact: {
-          strategyId: String(input.strategyId),
-          email: { in: assigned.flatMap(deal => deal.contactEmail ? [deal.contactEmail] : []) },
-        } },
-        select: { id: true, body: true, subject: true, channel: true, createdAt: true, contact: { select: { email: true } } },
+        where: { direction: "IN", status: "RECEIVED", OR: [
+          { salesDealId: { in: assigned.map(deal => deal.id) } },
+          { salesDealId: null, contact: { strategyId: String(input.strategyId), email: { in: assigned.flatMap(deal => deal.contactEmail ? [deal.contactEmail] : []) } } },
+        ] },
+        select: { id: true, salesDealId: true, body: true, subject: true, channel: true, createdAt: true, contact: { select: { email: true } } },
         orderBy: { createdAt: "asc" },
       });
-      return { deals: assigned.map(deal => ({ deal,
-        history: activities.filter(item => item.dealId === deal.id),
-        replies: inbound.filter(item => item.contact.email.toLowerCase() === deal.contactEmail?.toLowerCase()),
-      })) };
+      return { deals: assigned.map(row => {
+        const {customerAccessTokenHash:_hash,customerAccessTokenEncrypted:_secret,...deal}=row;
+        const history=activities.filter(item=>item.dealId===deal.id);
+        const replies=inbound.filter(item=>item.salesDealId?item.salesDealId===deal.id:item.contact?.email.toLowerCase()===deal.contactEmail?.toLowerCase());
+        return {deal,historyEarlierCount:Math.max(0,history.length-8),replyEarlierCount:Math.max(0,replies.length-8),
+          history:history.slice(-8).map(item=>({id:item.id,activityType:item.activityType,description:item.description,performedAt:item.performedAt,
+            metadata:item.activityType.startsWith("SALES_WEB")||item.activityType.startsWith("SALES_EMAIL")?{body:(item.metadata as {body?:string}|null)?.body}:undefined})),
+          replies:replies.slice(-8)};
+      }) };
     },
   },
   {
@@ -182,10 +200,55 @@ export const tools: ToolDefinition[] = [
       const step = salesStepSchema.parse(input.step);
       if (["MANDATE", "PAYMENT", "HANDOVER"].includes(step.command.type)) throw new Error("Décision réservée au mandant.");
       const { applySalesStep } = await import("@/server/services/crm-engine");
-      return applySalesStep(deal.id, step, actor);
+      return salesDecisionResult(()=>applySalesStep(deal.id, step, actor),deal.id);
     },
   },
 
+  {
+    name: "sales_claim_run",
+    description: "Réserver une instruction commerciale bornée ; zéro appel modèle si file vide. Rejouer requestId après timeout.",
+    inputSchema: z.object({ strategyId:z.string(),requestId:z.string().uuid() }),
+    handler: async input => {
+      const auth=input.__auth as {scopeKind?:string;scopeStrategyId?:string;apiKeyId?:string}|undefined;
+      if(auth?.scopeKind!=="BRAND"||auth.scopeStrategyId!==input.strategyId||!auth.apiKeyId)throw new Error("Clé commerciale requise.");
+      const {claimRun}=await import("@/server/services/crm-engine/fleet");
+      return claimRun(auth.apiKeyId,String(input.requestId));
+    },
+  },
+  {
+    name: "sales_complete_run",
+    description: "Conserver le résultat d'une instruction déjà réservée, même après suspension. Aucun nouvel effet client.",
+    inputSchema: z.object({strategyId:z.string(),runId:z.string(),leaseToken:z.string(),status:z.enum(["DONE","FAILED","AMBIGUOUS"]),result:z.string().max(20000),tokensUsed:z.number().int().nonnegative().optional()}),
+    handler: async input => {
+      const auth=input.__auth as {scopeKind?:string;scopeStrategyId?:string;apiKeyId?:string}|undefined;
+      if(auth?.scopeKind!=="BRAND"||auth.scopeStrategyId!==input.strategyId||!auth.apiKeyId)throw new Error("Clé commerciale requise.");
+      const {completeRun}=await import("@/server/services/crm-engine/fleet");
+      return completeRun(auth.apiKeyId,String(input.runId),String(input.leaseToken),{status:input.status as "DONE"|"FAILED"|"AMBIGUOUS",result:String(input.result),tokensUsed:input.tokensUsed as number|undefined});
+    },
+  },
+  {
+    name: "sales_send_message",
+    description: "Répondre au client sur sa conversation web. La réponse est réellement visible dans le même dossier.",
+    inputSchema:z.object({strategyId:z.string(),dealId:z.string(),requestId:z.string().uuid(),text:z.string().trim().min(1).max(12000),channel:z.literal("WEB")}),
+    handler:async input=>{
+      const actor=await commercialAgent(input);
+      const deal=await db.deal.findUniqueOrThrow({where:{id:String(input.dealId)}});
+      if(deal.sellerStrategyId!==input.strategyId)throw new Error("Affaire hors marque.");
+      const {sendSalesWebMessage}=await import("@/server/services/crm-engine/customer");
+      return sendSalesWebMessage(deal.id,actor,{requestId:String(input.requestId),text:String(input.text)});
+    },
+  },
+
+  {
+    name:"sales_customer_link",description:"Retrouver le lien sécurisé de conversation du client mandaté pour le lui transmettre sur un canal autorisé.",
+    inputSchema:z.object({strategyId:z.string(),dealId:z.string()}),
+    handler:async input=>{
+      const actor=await commercialAgent(input);const deal=await db.deal.findUniqueOrThrow({where:{id:String(input.dealId)}});
+      const {salesStateSchema}=await import("@/server/services/crm-engine/commercial");const state=salesStateSchema.parse(deal.commercial??{});
+      if(deal.sellerStrategyId!==input.strategyId||state.mandate?.sellerId!==actor.id||!state.mandate.channels.includes("WEB")||state.contactStopped||new Date(state.mandate.expiresAt)<=new Date())throw new Error("Lien client hors mandat.");
+      const {issueCustomerAccess}=await import("@/server/services/crm-engine/customer");return issueCustomerAccess(deal.id);
+    },
+  },
   // ---- Découverte : les campagnes d'une marque ----
   {
     name: "campaign_list",
