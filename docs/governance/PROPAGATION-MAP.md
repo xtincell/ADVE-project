@@ -9,6 +9,35 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Qualification des objectifs — 527 reçue, candidat 528 (2026-11-02)
+
+527 est reçue en production/lecture native pour les projections sourcées et la
+roadmap, conservation comparée reçue et exécution non armée. Cela ne valide pas
+sémantiquement les objectifs hérités des données initiales. Les reçus métier
+restent privés hors checkout ; les checkpoints candidats ci-dessous sont historiques.
+
+Circuit candidat 528 : documents courants + inputs attribués → propositions /
+amendements ADVE gouvernés → E.kpis qualifiés → S → Oracle. Une définition peut
+porter target/frequency nulls ; elle reste un brouillon incomplet pour la maturité.
+S exige nom/cible/fréquence pour projeter un objectif ; qualification PROPOSED /
+DECLARED, définition, unité, fenêtre d’observation, contexte de cible et notes
+source sont conservés lorsqu’ils existent. Oracle montre aussi les définitions E
+sans cible décidée, sans ranimer une ancienne cible S ni inventer une mesure.
+La qualification absente reste visible ; un objectif déclaré ne prouve pas une
+observation, et une fréquence proposée ne devient pas une décision adoptée.
+
+Le contrat commun Notoria retire minimum de recommandations et remplissage
+impératif. Une information structurante manquante revient à ADVE avant cascade ;
+la consultation documentaire RTIS assure alignement/traçabilité. Aucun nouveau
+modèle, routeur, Intent, provider ou moteur d’appels. HTTP local reçu sur fixture
+privée : ingestion PROPOSED sous USER → amendement attribué Agent → S et Oracle,
+métadonnées/inconnues conservées et aucune adoption humaine ou mesure inventée.
+MCP via fixture ADMIN existante, droits du USER simple préservés ; autres piliers,
+dates et exécution inchangés. Natif, livraison 528 et réconciliation du dossier
+réel encore ouverts ; chaîne qualifiée entière et MVP encore à recevoir :
+[ADR-0229 Proposed](adr/0229-source-qualified-strategy-and-campaign-projections.md),
+[dette et déclencheur](RESIDUAL-DEBT.md).
+
 ### Documentation/input → ADVE qualifié → RTIS dérivé — contrat 527 à recevoir (2026-11-02)
 
 Documentation riche doit garantir ADVE complet ; ADVE complet doit garantir RTIS

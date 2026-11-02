@@ -239,3 +239,4 @@ exiger le label avant merge via une protection de branche.
 
 2026-11-02 | #1109 | Codex | Core I → S : préférences et scénarios fonctionnels, demande opérateur | Alexandre
 | 2026-11-02 | #1110 | fix/strategy-source-completion527 | Raccord ADVE→S et cadres de campagne ; bornes/cadences/unités conservées ; lacune nécessaire remontée à ADVE. Correctif de maturité opérateur, sans nouvelle SSOT ni chaîne d’appels. |
+| 2026-11-02 | #1112 | fix(core) — objectifs documentés et qualification ADVE | NEFER — mandat opérateur | Correction de maturité demandée : information manquante remontée à ADVE, propositions et inconnues conservées puis dérivation vers S/Oracle ; retrait des quotas de remplissage Notoria. Extension des JSON et lecteurs existants, sans modèle/service/router/Intent ni provider nouveau. Réception locale bornée, recette de marque réelle et livraison finale encore ouvertes. Hors phases0–9 ; justification et label out-of-scope dans la PR. |

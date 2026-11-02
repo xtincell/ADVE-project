@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.528", date: "2026-11-02", headline: "Des objectifs qui gardent leur statut et leurs limites",
+    highlights: [
+      { emoji: "🎯", title: "Distinguer proposition et objectif déclaré", body: "Votre plan et votre rapport indiquent si un objectif est proposé ou déclaré. Son unité, sa fenêtre d’observation et ses précisions disponibles restent visibles, sans présenter une cible comme un résultat mesuré." },
+      { emoji: "🔎", title: "Conserver les informations à préciser", body: "Un indicateur peut garder sa définition même si sa cible ou sa fréquence reste à décider. Ces informations manquantes restent visibles ; elles ne sont pas remplacées par une valeur inventée pour compléter le dossier." },
+    ],
+  },
+  {
     version: "6.27.527", date: "2026-11-02", headline: "Un plan qui conserve les précisions de vos sources",
     highlights: [
       { emoji: "📋", title: "Retrouver vos objectifs et votre équipe", body: "Le plan reprend les objectifs dont la cible et la fréquence sont renseignées, ainsi que les membres et responsabilités déjà déclarés. Un objectif principal ambigu ou un responsable manquant reste à préciser." },

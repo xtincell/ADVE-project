@@ -2107,6 +2107,36 @@ d'invariants spécifiques (cf. `tests/integration/`).
 
 # ANNEXE CANON L — LEXIQUE NORMATIF
 
+### Indicateur, objectif et mesure — qualification candidate 528 (2026-11-02)
+
+**Indicateur défini** : nom et définition documentés ; unité, fenêtre d’observation
+et contexte explicités quand établis. **Objectif proposé** (PROPOSED) : cible ou
+cadence suggérée à valider. **Objectif déclaré** (DECLARED) : objectif attribué,
+qui ne vaut ni mesure vérifiée ni résultat atteint. **Mesure** : observation
+étayée, distincte de ces objectifs. Une donnée initiale/historique ne valide
+aucun de ces statuts par sa seule présence ; qualification absente reste inconnue.
+
+Une cible/fréquence explicitement nulle est un brouillon acceptable dans le
+candidat 528, qui ne satisfait pas la complétude. Un vrai zéro documenté reste
+zéro ; ni remplissage obligatoire ni quota de recommandations ne justifie une
+invention. Fenêtre d’observation, cadence de suivi et horizon/contexte de cible
+restent distincts. E → S → Oracle doit conserver qualification et métadonnées ;
+S projette les objectifs dotés de nom/cible/fréquence, Oracle conserve également
+les définitions E dont la cible reste à décider, sans fabriquer une mesure.
+
+527 est reçue en production et lecture native au périmètre des projections /
+roadmap avec conservation comparée. Cette réception structurelle ne reçoit pas
+la validité sémantique des objectifs hérités ni la chaîne entière. 528 a reçu ses
+contrôles finaux et une recette HTTP locale sur fixture privée : définitions
+incomplètes, objectifs qualifiés, attribution Agent, métadonnées et inconnues
+conservés jusqu’aux lecteurs, sans mesure ou adoption humaine inventée. Natif,
+CI/image/production 528 et réconciliation du dossier réel restent ouverts.
+Documentation + inputs attribués → ADVE qualifié → RTIS dérivé reste le contrat ;
+les pièces consultées en RTIS contrôlent alignement et traçabilité.
+[ADR-0229 Proposed](adr/0229-source-qualified-strategy-and-campaign-projections.md)
+porte cette réception encore ouverte, sans nouveau modèle stakeholder ni MVP clos.
+Les états candidats 527/526 qui suivent sont des checkpoints historiques.
+
 ### Complétude qualifiée et input de partie prenante — contrat 527 à recevoir
 
 **Chaîne de référence** : documentation + inputs attribués → ADVE qualifié → RTIS

@@ -65,7 +65,13 @@ export function generateStrategy(pillars: Record<string, Record<string, unknown>
   const kpiDashboard = rows(pillars.e?.kpis).flatMap((kpi) => {
     const name = text(kpi.name), target = text(kpi.target) ?? (typeof kpi.target === "number" && Number.isFinite(kpi.target) ? String(kpi.target) : undefined);
     const frequency = sourceFrequency(kpi.frequency);
-    return name && target && frequency ? [{ name, target, frequency, pillar: "E" as const }] : [];
+    if (!name || !target || !frequency) return [];
+    const qualification = kpi.qualification === "PROPOSED" || kpi.qualification === "DECLARED" ? kpi.qualification : undefined;
+    return [{ name, target, frequency, pillar: "E" as const,
+      ...(qualification ? { qualification } : {}),
+      ...Object.fromEntries(["definition", "unit", "observationWindow", "targetContext", "sourceNotes"]
+        .flatMap(key => text(kpi[key]) ? [[key, kpi[key]]] : [])),
+    }];
   });
   const northStars = kpiDashboard.filter(kpi => /\bnorth[\s-]*star\b|\betoile polaire\b/i.test(kpi.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "")));
   // Multiple explicit candidates need a decision; array ordering is not one.
@@ -131,7 +137,7 @@ export function generateStrategy(pillars: Record<string, Record<string, unknown>
       ...(a.objectif ? { kpi: a.objectif } : {}), priority: index + 1, ...(a.devotionImpact ? { devotionImpact: a.devotionImpact } : {}) })),
     fenetreOverton, axesStrategiques, facteursClesSucces, ...(selectedBudget.totalBudget !== undefined ? { globalBudget: selectedBudget.totalBudget } : {}), budgetByDevotion,
     syntheseExecutive: `${selected.length} action(s) proposée(s) pour ce scénario depuis le catalogue. ${initiativeBudgetLabel(selectedBudget.totalBudget, selectedBudget.budgetSummary)}. ${selectedBudget.budgetSummary.unassignedTimeframeCount} horizon(s) à préciser. Ces montants ne constituent pas une dépense mesurée.`,
-    kpiDashboard, ...(northStar ? { northStarKPI: { name: northStar.name, target: northStar.target, frequency: northStar.frequency } } : {}),
+    kpiDashboard, ...(northStar ? { northStarKPI: Object.fromEntries(Object.entries(northStar).filter(([key]) => key !== "pillar")) } : {}),
     ...(teamStructure.length ? { teamStructure } : {}), devotionFunnel: [],
     recommandationsPrioritaires: selected.map((a, index) => ({ recommendation: a.action, source: "I", priority: index + 1 })),
   };

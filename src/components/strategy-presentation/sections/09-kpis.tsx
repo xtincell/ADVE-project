@@ -17,8 +17,14 @@ export function KpisMesure({ data }: Props) {
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">KPIs methode ADVE</h3>
           <DataTable
-            headers={["KPI", "Type", "Cible", "Frequence"]}
-            rows={data.kpis.map((k) => [k.name, k.metricType, k.target, k.frequency])}
+            headers={["Indicateur", "Type", "Objectif", "Suivi", "Qualification"]}
+            rows={data.kpis.map((k) => [
+              [k.name, k.definition, k.observationWindow, k.sourceNotes].filter(Boolean).join(" · "),
+              k.metricType,
+              k.target ? [k.target, k.unit, k.targetContext].filter(Boolean).join(" · ") : "Cible à définir dans la fondation",
+              k.frequency || "Fréquence à définir dans la fondation",
+              k.qualification === "PROPOSED" ? "Proposition à valider" : k.qualification === "DECLARED" ? "Objectif déclaré" : "Qualification non renseignée",
+            ])}
           />
         </div>
       )}

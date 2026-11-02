@@ -1,6 +1,6 @@
 # ADR-0229 — ADVE qualifié, projections S et cadres de campagne
 
-**Status** : Proposed — doctrine opérateur actée, chaîne qualifiée et livraison 527 à recevoir
+**Status** : Proposed — projections 527 reçues ; qualification 528 et chaîne complète à recevoir
 **Date** : 2026-11-02
 **Phase** : 7 — continuité des sources vers stratégie et cadres de campagne
 **Depends on** : ADR-0023, ADR-0088, ADR-0089, ADR-0119, ADR-0120, ADR-0228
@@ -31,13 +31,56 @@ Un input de partie prenante porte auteur, date, périmètre et statut ; l’attr
 ne vaut ni vérité observée ni décision adoptée. Les pièces, propositions et reçus
 existants suffisent à ce contrat, sans nouveau modèle stakeholder ou base miroir.
 
+## Réception courante et qualification candidate 528
+
+527 est reçue en production, source `79c912dd1a6dff7475ff5883dbe27d6c1e6d081f`,
+digest `9886144552a2f473b5661846d8695d628a3976d553095ac2bf358abbe4c62e80`.
+Conservation comparée, actualisation S seule et lecture native de la roadmap
+reçues ; exécution non armée. Les objectifs hérités des données initiales ne
+sont pas validés sémantiquement par cette réception. Preuves métier privées
+hors checkout ; les checkpoints locaux 527 ci-dessous restent historiques.
+
+Le candidat 528 accepte une définition E.kpis avec target/frequency nulls sans
+faire compter ces lacunes complètes. La cible peut être textuelle ou numérique
+finie ; un zéro documenté reste zéro. Qualification PROPOSED / DECLARED,
+definition, unit, observationWindow, targetContext et sourceNotes conservent les
+limites de la source. Une fenêtre n’est pas une fréquence, une cible future
+n’est pas une mesure, une proposition n’est pas une adoption humaine.
+
+S ne projette que les objectifs dotés de nom/cible/fréquence, avec leurs
+métadonnées et leur qualification lorsqu’établies, y compris pour une North Star
+unique explicitement nommée. Oracle conserve les définitions E, même sans cible
+décidée, plutôt que ranimer des objectifs S antérieurs. Les lecteurs présentent
+la qualification et les lacunes ; l’indication de mesure indisponible relève de
+l’affichage, sans valeur mesurée ajoutée au socle.
+
+Notoria partage ce contrat ADVE/docs/inputs attribués au-delà de I et retire
+quotas minimaux et injonctions de remplir toutes les cellules. Une lacune doit
+être expliquée et réconciliée via les propositions/amendements ADVE existants,
+puis cascade ; aucun socle RTIS parallèle, modèle, routeur, Intent ou provider
+nouveau. La qualification et la complétude de toute la chaîne restent à recevoir.
+Contrôles locaux finaux reçus : 5 032 unitaires / 481 fichiers, PostgreSQL
+527 tests / 32 fichiers, typage vert, lints sans erreur (24 avertissements
+préexistants), cycles sans dépendance circulaire. HTTP local reçu sur fixture
+privée : ingestion PROPOSED sous USER, amendement ADVE attribué Agent puis S et
+Oracle avec définition, unité, fenêtre, contexte, notes et qualification conservés.
+Définitions incomplètes et objectifs qualifiés restent distincts ; autres piliers,
+dates et exécution préservés, aucune mesure ou adoption humaine inventée.
+
+MCP passe par une fixture ADMIN existante ; l’énumération d’outils refusée au USER
+simple reste la politique. Première recette interrompue sur cette attente erronée
+avant amendement, puis reprise documentée sans rejouer les uploads, créer une clé
+ou découvrir un défaut produit. Latences locales observées seulement, aucun SLO
+production. Natif, CI/image/production 528 et réconciliation réelle restent à
+recevoir ; ADR Proposed pour la chaîne complète.
+
 ## Contexte
 
 La 526 reçue en production compose trois scénarios et distingue les préférences
-de l’exécution. Sa réception réelle SPAWT reste S à 45 %, scénarios 3/5/12 : elle
-ne reçoit ni S complète ni MVP. Les champs qualifiés E.kpis et A.equipeDirigeante existent
-mais n’irriguent pas encore tout S ; les initiatives n’ont pas toutes une famille
-de campagne, une cadence, une période de coût ou des bornes qualifiées.
+de l’exécution. La 527 reçoit les projections des champs E.kpis et
+A.equipeDirigeante ; elle ne reçoit pas la validité sémantique des objectifs
+hérités ni S complète. Les initiatives réelles n’ont pas toutes une famille de
+campagne, une cadence, une période de coût ou des bornes qualifiées.
 
 Additionner un coût mensuel à un coût ponctuel, réduire une fourchette à un point
 ou assimiler LONG_TERM à ALWAYS_ON produit une fausse précision. Lire les seules
