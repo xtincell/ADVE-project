@@ -1,5 +1,13 @@
 ## v6.27.529 — fix(strategy): conserver la North Star et rendre S lisible (2026-11-02)
 
+## [6.27.530] — Poste commercial et continuité agentique
+
+- Affaires rattachées à la marque vendeuse et au portefeuille dès la prospection, avec contact par téléphone ou email.
+- Mandats, arbres versionnés, décisions, paiements liés et remises conservés dans le CRM existant.
+- Outils Operations MCP pour le portefeuille, les décisions, le règlement natif et l’email autorisé.
+- Rejeu, concurrence et envoi incertain journalisés. Prévisions séparées par devise.
+- Migration additive et réception de production requises. Recette commerciale locale synthétique documentée dans ADR-0230.
+
 **Candidat : définition principale conservée malgré des inconnues, roadmap sans texte coupé et lecture S aérée.**
 
 - Traçabilité de périmètre : PR #1113 et justification `out-of-scope` ; CI exacte et livraison finales à recevoir.

@@ -14,6 +14,8 @@
 
 export interface SendEmailInput {
   to: string;
+  /** Sales outbox must keep uncertain attempts on one transport. */
+  allowFallback?: boolean;
   subject: string;
   html: string;
   text?: string;
@@ -200,8 +202,10 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
       const result = await provider.fn();
       if (result.ok) return result;
       lastError = result.error;
+      if (input.allowFallback === false) return result;
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err);
+      if (input.allowFallback === false) break;
     }
   }
   return { ok: false, provider: "CHAIN", error: `Tous les providers email ont échoué — dernier: ${lastError}` };

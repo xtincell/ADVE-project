@@ -93,7 +93,99 @@ async function assertMissionInStrategy(missionId: string, strategyId: string): P
 // Tools
 // ---------------------------------------------------------------------------
 
+async function commercialAgent(input: Record<string, unknown>) {
+  const auth = input.__auth as { scopeKind?: string; scopeStrategyId?: string; apiKeyId?: string } | undefined;
+  if (auth?.scopeKind !== "BRAND" || auth.scopeStrategyId !== input.strategyId || !auth.apiKeyId) {
+    throw new Error("Une clé d’agent limitée à la marque est nécessaire.");
+  }
+  const key = await db.mcpApiKey.findUnique({ where: { id: auth.apiKeyId }, select: { isActive: true, scopeKind: true, scopeStrategyId: true, expiresAt: true } });
+  if (!key?.isActive || key.scopeStrategyId !== input.strategyId || key.scopeKind !== "BRAND" || (key.expiresAt && key.expiresAt <= new Date())) {
+    throw new Error("Mandat d’accès expiré ou révoqué.");
+  }
+  return { id: `mcp:${auth.apiKeyId}`, admin: false };
+}
+
 export const tools: ToolDefinition[] = [
+  {
+    name: "sales_portfolio",
+    description: "Retrouver les affaires confiées à cet agent, leurs offres, preuves et prochaines actions sur tous les canaux.",
+    inputSchema: z.object({ strategyId: z.string() }),
+    handler: async input => {
+      const actor = await commercialAgent(input);
+      const rows = await db.deal.findMany({ where: { sellerStrategyId: String(input.strategyId) }, orderBy: { updatedAt: "desc" } });
+      const { salesStateSchema } = await import("@/server/services/crm-engine/commercial");
+      const assigned = rows.filter(row => {
+        const state = salesStateSchema.safeParse(row.commercial);
+        return state.success && state.data.mandate?.sellerId === actor.id;
+      });
+      const activities = await db.cRMActivity.findMany({
+        where: { dealId: { in: assigned.map(row => row.id) } }, orderBy: { performedAt: "asc" },
+      });
+      const inbound = await db.crmMessage.findMany({
+        where: { direction: "IN", status: "RECEIVED", contact: {
+          strategyId: String(input.strategyId),
+          email: { in: assigned.flatMap(deal => deal.contactEmail ? [deal.contactEmail] : []) },
+        } },
+        select: { id: true, body: true, subject: true, channel: true, createdAt: true, contact: { select: { email: true } } },
+        orderBy: { createdAt: "asc" },
+      });
+      return { deals: assigned.map(deal => ({ deal,
+        history: activities.filter(item => item.dealId === deal.id),
+        replies: inbound.filter(item => item.contact.email.toLowerCase() === deal.contactEmail?.toLowerCase()),
+      })) };
+    },
+  },
+  {
+    name: "sales_sync_payment",
+    description: "Relire le règlement natif lié par le mandant. Un paiement en attente reste en attente. Ne crée ni débit ni nouveau paiement.",
+    inputSchema: z.object({ strategyId: z.string(), dealId: z.string(), requestId: z.string().uuid(), expectedRevision: z.number().int().nonnegative() }),
+    handler: async input => {
+      const actor = await commercialAgent(input);
+      const deal = await db.deal.findUniqueOrThrow({ where: { id: String(input.dealId) } });
+      const { salesStateSchema } = await import("@/server/services/crm-engine/commercial");
+      const state = salesStateSchema.parse(deal.commercial);
+      if (deal.sellerStrategyId !== input.strategyId || state.mandate?.sellerId !== actor.id) throw new Error("Affaire hors mandat.");
+      if (!deal.paymentReference) throw new Error("Le mandant doit lier le paiement natif de cette offre.");
+      const payment = await db.intakePayment.findUniqueOrThrow({ where: { reference: deal.paymentReference } });
+      if (payment.status !== "PAID" || !payment.paidAt) return { status: payment.status, dealId: deal.id };
+      if (state.node === "PAID" || state.node === "DELIVERED") return { status: "PAID", dealId: deal.id };
+      const { applySalesStep } = await import("@/server/services/crm-engine");
+      return applySalesStep(deal.id, {
+        requestId: String(input.requestId), expectedRevision: Number(input.expectedRevision),
+        channel: state.mandate.channels[0]!,
+        command: { type: "PAYMENT", amount: payment.amount, currency: payment.currency, evidence: `IntakePayment:${payment.reference}` },
+      }, { id: "finance:native-payment", admin: true });
+    },
+  },
+  {
+    name: "sales_send_email",
+    description: "Envoyer au seul contact de l’affaire mandatée via le transport email existant. requestId stable. Un résultat incertain exige un rapprochement avant nouvel envoi.",
+    inputSchema: z.object({ strategyId: z.string(), dealId: z.string(), requestId: z.string().uuid(),
+      subject: z.string().trim().min(1).max(200), text: z.string().trim().min(1).max(20000) }),
+    handler: async input => {
+      const actor = await commercialAgent(input);
+      const deal = await db.deal.findUniqueOrThrow({ where: { id: String(input.dealId) } });
+      if (deal.sellerStrategyId !== input.strategyId) throw new Error("Affaire hors de cette marque.");
+      const { sendSalesEmail } = await import("@/server/services/crm-engine");
+      return sendSalesEmail(deal.id, actor, { requestId: String(input.requestId), subject: String(input.subject), text: String(input.text) });
+    },
+  },
+  {
+    name: "sales_decide",
+    description: "Conduire une affaire mandatée jusqu’à l’accord et la remise. requestId stable au rejeu, expectedRevision relue. Le règlement est attesté par la finance.",
+    inputSchema: z.object({ strategyId: z.string(), dealId: z.string(), step: z.unknown() }),
+    handler: async input => {
+      const actor = await commercialAgent(input);
+      const deal = await db.deal.findUniqueOrThrow({ where: { id: String(input.dealId) } });
+      if (deal.sellerStrategyId !== input.strategyId) throw new Error("Affaire hors de cette marque.");
+      const { salesStepSchema } = await import("@/server/services/crm-engine/commercial");
+      const step = salesStepSchema.parse(input.step);
+      if (["MANDATE", "PAYMENT", "HANDOVER"].includes(step.command.type)) throw new Error("Décision réservée au mandant.");
+      const { applySalesStep } = await import("@/server/services/crm-engine");
+      return applySalesStep(deal.id, step, actor);
+    },
+  },
+
   // ---- Découverte : les campagnes d'une marque ----
   {
     name: "campaign_list",
