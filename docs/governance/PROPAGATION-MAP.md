@@ -9,6 +9,71 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Reprise de provenance ciblée sur main — candidat 531 (2026-11-02)
+
+Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration
+de main `4b09965aae5b5ac9ec59367c0f9ff3ca95f5fea2` (CRM #1114 et version #1115).
+La livraison commerciale 530 et son ADR0230 sont conservés ; la provenance
+ciblée est désormais ADR0231. PR réelle : #1116, branche
+`fix/adve-completion-irrigation530`. Tous les reçus 530 ci-dessous sont
+préintégration. Réception combinée 531 reçue : 5 092 unitaires / 485 fichiers,
+PostgreSQL sérialisé 534 tests / 33 fichiers en 260,45 s, build exact UI exit 0,
+lint et gouvernance sans erreur (24 avertissements préexistants). Timeout initial
+et marge du grand document restent tracés, sans réception sous charge.
+HTTP compilé : USER intake/lecture/S, MCP via ADMIN existant séparé, garde USER
+préservée ; amendement 249 ms, refresh 213 ms, assemblage 163 ms. Source PROPOSED,
+feuille INFERRED, parent HUMAN, voisins, autres piliers et exécution conservés ;
+ratio calculé depuis les prémisses synthétiques. Pages HTTP 200 en 308 / 155 ms,
+hydratation/native non reçue, latences locales sans SLO.
+Stress compilé exact exit 0 : 276 pages HTTP reçues / 5 non reçues / 0 échec,
+3 requêtes, 7 forges/transitions, 0 finding ; aucune réception native par ces probes.
+Arbres source du CRM en production et de main comparés identiques ; contenu CRM
+conservé. CI/image/runtime 531, chaîne réelle ADVE/RTIS et MVP toujours ouverts.
+Le circuit document → proposition/amendement ADVE → calcul → lecteurs et ses
+gardes restent ceux d’ADR0231 ; sa recette synthétique combinée relève des reçus
+531 ci-dessus, sans recevoir la chaîne réelle entière. Les checkpoints 530
+suivants restent historiques.
+
+### Complétion ADVE et origine au chemin exact — candidat 530 (2026-11-02)
+
+Contrat de réception : ADVE rempli ⇒ aucune valeur attendue vide ou inconnue en
+aval. Source documentée → calcul → postulat de départ inféré dans ADVE → calcul
+des dépendances ; lacunes et omissions restent un brouillon incomplet à réconcilier,
+avec unité, périmètre, dépendances et qualification du postulat. Un postulat ne
+devient ni mesure, fait biographique, devis réel ou décision humaine. Le contrat
+commun est consommé par Notoria, Mestor/cascade, auto-filler et quick-intake,
+sans nouveau socle I/S ou moteur d’appels.
+
+Chemin exact + version attendue → SET_FIELDS → garde d’origine existante →
+valeur effectivement persistée → lecteur d’origine le plus précis → confirmation
+de la seule cellule inférée. Le parent HUMAN reste HUMAN ; son complément porte
+sa propre origine et ses voisins/identités restent conservés. Scalaire non vide
+ou liste non vide de scalaires seulement pour ce traitement ; objets/records
+restent en revue normale. Remplacement/suppression ne contournent pas un enfant
+protégé. Redéclarer INFERRED un parent inchangé conserve toute cellule HUMAN ;
+la gateway borne les chemins et valeurs au schéma canonique de champ. Domaine
+héberge l’unique implémentation de chemin, lib la réexporte.
+L’auto-filler contrôle le schéma et ne compte pas une proposition non persistée.
+
+Contrôles locaux et build reçus avant le dernier delta : 5 082 unitaires / 483 fichiers,
+PostgreSQL 528 / 32 puis ciblés 53 / 3, typage/lints sans erreur et cycles sans
+dépendance circulaire. HTTP compilé sur fixture : document PROPOSED sous USER →
+MCP via ADMIN existant séparé → amendement → S/Oracle ; source PROPOSED, feuille
+INFERRED et parent HUMAN conservés. Refus de découverte MCP USER puis reprise
+sans réingestion ni élargissement de droits. Pages HTTP 200, hydratation/native
+non reçue ; pas de contournement navigateur ni SLO. Stress compilé terminé
+exit 0 : 276 pages reçues / 5 non reçues / 0 échec, 3 requêtes, 7 forges/transitions,
+0 finding, sans réception native par ces probes.
+Dernier delta, après ces build/HTTP/stress : l’origine la plus précise est
+comparée après retrait du préfixe legacy, afin qu’un parent préfixé HUMAN ne
+masque pas une cellule INFERRED. Ciblé final 54 tests / 3 fichiers verts,
+contre-épreuve rouge puis restauration verte 16 / 1. Le parcours HTTP aux chemins
+nus reste reçu pour l’état précédent ; aucun build/HTTP/stress exact de ce
+nouveau head annoncé. CI/image/runtime exacts et chaîne réelle encore requis. Aucun nouvel objet
+métier ou circuit de décision. [ADR-0231 Proposed](adr/0231-surgical-field-provenance-under-validated-objects.md),
+[réception et déclencheur](RESIDUAL-DEBT.md). Aucun ADVE/RTIS/MVP complet reçu.
+Les checkpoints datés suivants restent historiques.
+
 ### Définition principale → S lisible — 528 reçue, candidat 529 (2026-11-02)
 
 528 est reçue en production : conservation du contenu métier comparé, diagnostics

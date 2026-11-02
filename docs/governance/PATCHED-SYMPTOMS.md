@@ -28,6 +28,81 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 531 — reprise documentaire après intégration (2026-11-02)
+
+Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration
+de main `4b09965aae5b5ac9ec59367c0f9ff3ca95f5fea2` (CRM #1114 et version #1115).
+La livraison commerciale 530 et son ADR0230 sont conservés ; la provenance
+ciblée est désormais ADR0231. PR réelle : #1116, branche
+`fix/adve-completion-irrigation530`. Tous les reçus 530 ci-dessous sont
+préintégration. Réception combinée 531 reçue : 5 092 unitaires / 485 fichiers,
+PostgreSQL sérialisé 534 tests / 33 fichiers en 260,45 s, build exact UI exit 0,
+lint et gouvernance sans erreur (24 avertissements préexistants). Timeout initial
+et marge du grand document restent tracés, sans réception sous charge.
+HTTP compilé : USER intake/lecture/S, MCP via ADMIN existant séparé, garde USER
+préservée ; amendement 249 ms, refresh 213 ms, assemblage 163 ms. Source PROPOSED,
+feuille INFERRED, parent HUMAN, voisins, autres piliers et exécution conservés ;
+ratio calculé depuis les prémisses synthétiques. Pages HTTP 200 en 308 / 155 ms,
+hydratation/native non reçue, latences locales sans SLO.
+Stress compilé exact exit 0 : 276 pages HTTP reçues / 5 non reçues / 0 échec,
+3 requêtes, 7 forges/transitions, 0 finding ; aucune réception native par ces probes.
+Arbres source du CRM en production et de main comparés identiques ; contenu CRM
+conservé. CI/image/runtime 531, chaîne réelle ADVE/RTIS et MVP toujours ouverts.
+Les contrôles du checkpoint 530 suivant ne constituent pas une réception 531 ;
+les reçus combinés ci-dessus sont distincts. Aucun défaut CRM supplémentaire
+déduit de l’intégration.
+
+### 531 — revue des cellules proposée au bon chemin, candidat
+
+Symptôme : content[path] ne relit pas une cellule profonde ; une prévisualisation
+courte et un badge parent HUMAN peuvent masquer le complément à confirmer.
+Le candidat utilise le résolveur canonique, ouvre la valeur entière par FocusModal
+et distingue « Revoir l’ensemble » de « Valider » la cellule. Badges UI mixtes
+sans modifier l’autorité du writer. Hypothèse : grain du lecteur de revue et
+agrégation d’affichage restés au champ de tête après passage aux origines fines.
+Quatre cas UI ajoutés, ciblé 30 / 6 vert avant l’ultime préfixe ; contre-épreuve
+de lecture racine rouge puis restauration verte 4 / 1 reçue. Combiné avant UI :
+5 088 / 484 verts. Premier PostgreSQL 533 / 534, timeout 120 s conservé ; reprise
+entière 534 tests / 33 fichiers verts en 260,45 s sans compilation concurrente,
+limites inchangées. Grand document 111,86 s sous 120 s, marge faible : profilage
+après gros œuvre dans RESIDUAL-DEBT, aucune réception sous charge. Full UI
+5 092 / 485, build exact et HTTP/stress compilés reçus au périmètre ci-dessus ;
+natif/CI/production ouverts.
+
+### 530 — cellules sous validation globale, correctif candidat (2026-11-02)
+
+Symptôme : une lacune sous un objet HUMAN est bloquée par la protection globale,
+ou le complément inféré hérite à tort du statut du parent. Le candidat pose une
+origine au chemin exact, garde identités/voisins, confirme la seule cellule et
+refuse les contournements par remplacement/suppression. Auto-filler sur chemins
+versionnés et schéma canonique, succès compté au persisté ; résolveur partagé
+vers domain. Hypothèse : grain top-level de protection/provenance différent du
+grain des chemins d’écriture et de revue.
+Complément borné à un scalaire ou une liste de scalaires non vides ; objets et
+listes de records restent soumis à la revue normale. Une redéclaration INFERRED
+d’un parent inchangé conserve l’origine HUMAN de ses cellules ; chemins et
+valeurs sont aussi bornés par le schéma canonique de champ. Le premier refus
+global de positions d’allowlist/CODE-MAP est conservé, puis positions existantes
+corrigées/carte régénérée sans nouvelle exception. Suite 5 082 unitaires /
+483 fichiers et reconstruction webpack exit 0 reçues avant le dernier delta ; PostgreSQL 528 / 32 puis
+53 / 3, typage/lints sans erreur et cycles sans dépendance circulaire. Quatre
+contre-épreuves rouges puis restaurées vertes couvrent chirurgie, contrat, parent
+inchangé et bornage scalaire.
+HTTP compilé reçu sur fixture : document PROPOSED, amendement, calcul S/Oracle,
+source PROPOSED / feuille INFERRED / parent HUMAN conservés. Découverte MCP sous
+USER refusée selon la politique, reprise via ADMIN existant séparé sans
+réingestion ni nouveaux droits. Pages HTTP 200, hydratation/native non reçue,
+refus navigateur sans contournement ; latences locales sans SLO. Stress compilé
+exit 0 : 276 pages reçues / 5 non reçues / 0 échec, 3 requêtes, 7 forges/transitions,
+0 finding ; aucune réception native par ces probes.
+Dernier delta, après ces build/HTTP/stress : l’origine la plus précise est
+comparée après retrait du préfixe legacy, afin qu’un parent préfixé HUMAN ne
+masque pas une cellule INFERRED. Ciblé final 54 tests / 3 fichiers verts,
+contre-épreuve rouge puis restauration verte 16 / 1. Le parcours HTTP aux chemins
+nus reste reçu pour l’état précédent ; aucun build/HTTP/stress exact de ce
+nouveau head annoncé. CI/image/runtime exacts et chaîne réelle encore requis.
+Aucune complétude ou adoption humaine déduite de ce candidat.
+
 ### 529 — North Star et texte S, correctif candidat (2026-11-02)
 
 Natif 528 reçu : définition North Star perdue en S faute de cible/fréquence,

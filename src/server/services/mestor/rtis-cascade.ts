@@ -28,7 +28,7 @@ import { Prisma } from "@prisma/client";
 import { runMarketIntelligence } from "@/server/services/market-intelligence";
 import type { PillarWriteRequest, PillarWriteResult } from "@/server/services/pillar-gateway";
 import type { RouteKey } from "@/lib/strategy/roadmap-routes";
-import { serializePillar, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
+import { serializePillar, ADVE_SOURCE_ALIGNMENT_CONTRACT, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
 export { projectForContext, serializePillar } from "@/server/services/utils/pillar-context";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -142,6 +142,7 @@ function describeSchemaFields(key: "A" | "D" | "V" | "E"): string {
 // ── RTIS System Prompts ────────────────────────────────────────────────────
 
 const SYSTEM_BASE = `Tu es Mestor, le moteur d'intelligence stratégique du framework ADVE-RTIS (Authenticité, Distinction, Valeur, Engagement, Risk, Track, Implementation, Synthèse).
+${ADVE_SOURCE_ALIGNMENT_CONTRACT}
 Tu analyses les données des piliers de marque et produis des actualisations structurées en JSON.
 TOUJOURS répondre en JSON valide uniquement, sans commentaire ni explication autour.`;
 

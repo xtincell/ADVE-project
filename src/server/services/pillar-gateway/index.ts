@@ -34,6 +34,7 @@ import { assertCollaboratorMayEmit } from "@/server/governance/collaborator-fire
 import { type PillarKey, getPillarDependents } from "@/lib/types/advertis-vector";
 import { validatePillarPartial } from "@/lib/types/pillar-schemas";
 import { validateAgainstBible } from "@/lib/types/variable-bible";
+import { getFieldZod } from "@/lib/types/pillar-maturity-contracts";
 import { createVersion } from "@/server/services/pillar-versioning";
 import * as auditTrail from "@/server/services/audit-trail";
 import { assertCurrentSourceReceipts, readSourceReceipts, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
@@ -364,7 +365,8 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
         if (author.system !== "OPERATOR" || options.fieldProvenance?.[field] !== "HUMAN" || !inferredFieldPaths(previousContent, certainty, pillarKey).includes(field)) {
           throw new Error("FIELD_CONFIRMATION_CONFLICT: ce champ n'est plus une valeur inférée à confirmer — recharger.");
         }
-        confirmedCertainty = Object.fromEntries(Object.entries(certainty).filter(([path]) => provenanceTopKey(path, pillarKey) !== field));
+        confirmedCertainty = Object.fromEntries(Object.entries(certainty).filter(([path]) =>
+          field.includes(".") || field.includes("[") ? path !== field && path !== `${pillarKey}.${field}` : provenanceTopKey(path, pillarKey) !== field));
       }
 
       // ── GUARD: validationStatus ──────────────────────────────────
@@ -517,6 +519,11 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
         const existingProvenance = (previousContent._fieldProvenance ?? null) as Record<string, unknown> | null;
         const defaultProv = provenanceFromAuthorSystem(author.system);
         const explicit = options?.fieldProvenance;
+        const surgicalPaths = operation.type === "SET_FIELDS" && options?.expectedVersion !== undefined
+          ? operation.fields.filter(field => {
+            const schema = getFieldZod(pillarKey, field.path) as { safeParse: (value: unknown) => { success: boolean } } | null;
+            return schema?.safeParse(field.value).success;
+          }).map(f => f.path) : [];
         const guard = applyProvenanceGuard({
           previousContent,
           newContent,
@@ -526,6 +533,7 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
           // par laquelle une confirmation d'un champ inchangé pose sa provenance.
           declaredFor: (path) => explicit?.[path],
           declaredPaths: Object.keys(explicit ?? {}),
+          surgicalPaths,
         });
         // Le garde rend le contenu ARBITRÉ — c'est lui qui fait foi, pas le
         // candidat.

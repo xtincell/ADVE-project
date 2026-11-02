@@ -1,3 +1,74 @@
+## 531 — recevoir la combinaison avec main (2026-11-02)
+
+Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration
+de main `4b09965aae5b5ac9ec59367c0f9ff3ca95f5fea2` (CRM #1114 et version #1115).
+La livraison commerciale 530 et son ADR0230 sont conservés ; la provenance
+ciblée est désormais ADR0231. PR réelle : #1116, branche
+`fix/adve-completion-irrigation530`. Tous les reçus 530 ci-dessous sont
+préintégration. Réception combinée 531 reçue : 5 092 unitaires / 485 fichiers,
+PostgreSQL sérialisé 534 tests / 33 fichiers en 260,45 s, build exact UI exit 0,
+lint et gouvernance sans erreur (24 avertissements préexistants). Timeout initial
+et marge du grand document restent tracés, sans réception sous charge.
+HTTP compilé : USER intake/lecture/S, MCP via ADMIN existant séparé, garde USER
+préservée ; amendement 249 ms, refresh 213 ms, assemblage 163 ms. Source PROPOSED,
+feuille INFERRED, parent HUMAN, voisins, autres piliers et exécution conservés ;
+ratio calculé depuis les prémisses synthétiques. Pages HTTP 200 en 308 / 155 ms,
+hydratation/native non reçue, latences locales sans SLO.
+Stress compilé exact exit 0 : 276 pages HTTP reçues / 5 non reçues / 0 échec,
+3 requêtes, 7 forges/transitions, 0 finding ; aucune réception native par ces probes.
+Arbres source du CRM en production et de main comparés identiques ; contenu CRM
+conservé. CI/image/runtime 531, chaîne réelle ADVE/RTIS et MVP toujours ouverts.
+
+**Fermer** après les contrôles/build/HTTP/stress locaux reçus par CI/image/runtime
+exacts et conservation après livraison des deux périmètres intégrés. Responsable
+Core/irrigation existant ; effort recette bornée ; **déclencheur** avant réception
+de la PR #1116 et toute déclaration de complétude. Les contrôles du candidat
+530 sont conservés pour leur état antérieur, sans transfert de réception à 531.
+
+## 530 — compléter le socle sans diluer ses décisions (2026-11-02)
+
+Candidat : grain d’origine au chemin exact sous un parent validé, écriture
+SET_FIELDS avec version attendue, identités/voisins conservés, confirmation
+limitée au complément et refus des contournements par remplacement/suppression.
+Le résolveur canonique rejoint domain avec re-export lib. Auto-filler propose
+les chemins exacts, contrôle le schéma et compte les valeurs réellement écrites.
+
+Le contrat de réception source → calcul → postulat inféré ADVE → dépendances
+est partagé par Notoria/Mestor/auto-filler/quick-intake. Un brouillon peut être
+incomplet ; ADVE reçu rempli doit produire toutes ses valeurs attendues. Les
+postulats restent justifiés/qualifiés, sans mesure, devis ou adoption fabriqués.
+Réceptions locales avant le dernier delta : 5 082 unitaires / 483 fichiers, maxWorkers 4 sans
+restriction de périmètre ; PostgreSQL 528 tests / 32 fichiers puis 53 ciblés /
+3 fichiers. Typage exit 0, lints sans erreur (24 avertissements préexistants),
+cycles sans dépendance circulaire, reconstruction webpack finale exit 0. Refus
+Turbopack sur symlink externe conservé, sans modification de ce symlink. Quatre
+contre-épreuves rouges puis restaurées vertes : chirurgie, contrat, parent inchangé
+et bornage scalaire.
+HTTP compilé reçu : document PROPOSED sous USER, puis MCP via ADMIN existant séparé ;
+amendement 175 ms, S 157 ms, Oracle 104 ms. Source PROPOSED, feuille INFERRED et
+parent HUMAN conservés, ratio calculé depuis les prémisses de la fixture. Le
+refus de découverte MCP sous USER a arrêté la première recette, puis reprise sans
+réingestion ni droits créés/élargis. Deux pages HTTP 200 en 222 / 118 ms,
+hydratation/native non reçue ; ancienne cible navigateur refusée sans contournement.
+Latences locales sans SLO. Stress compilé terminé exit 0 : 276 pages reçues,
+5 non reçues, 0 échec ; 3 requêtes, 7 forges/transitions et 0 finding. Ces probes
+HTTP ne reçoivent pas l’interface native. CI/PR/image/runtime 530, chaîne réelle
+ADVE/RTIS et MVP restent ouverts.
+Dernier delta, après ces build/HTTP/stress : l’origine la plus précise est
+comparée après retrait du préfixe legacy, afin qu’un parent préfixé HUMAN ne
+masque pas une cellule INFERRED. Ciblé final 54 tests / 3 fichiers verts,
+contre-épreuve rouge puis restauration verte 16 / 1. Le parcours HTTP aux chemins
+nus reste reçu pour l’état précédent ; aucun build/HTTP/stress exact de ce
+nouveau head annoncé. CI/image/runtime exacts et chaîne réelle encore requis.
+
+**Recevoir** : chemins vides sous HUMAN, valeurs voisines et identités, 0/false /
+collections vides, enfants protégés, confirmation de la seule cellule, version
+périmée et comptage du persisté ; puis toute la chaîne réelle ADVE→RTIS→lecteurs.
+Responsables Core/gateway et irrigation existants ; effort audit et recette
+bornés ; **déclencheur** avant livraison 530 et déclaration de complétude.
+[ADR-0231 Proposed](adr/0231-surgical-field-provenance-under-validated-objects.md)
+complète ADR-0229 ; titres/slugs de campagne, devis et MVP restent des lots ouverts.
+
 ## 529 — recevoir conservation et lisibilité, sans clore la qualification (2026-11-02)
 
 528 est reçue en production avec conservation du contenu métier comparé ;

@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 56 modules (src/domain, cœur métier pur)
+## Domain — 57 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
@@ -92,6 +92,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **overton-graph** — ADR-0148 — Overton Graph : cœur déterministe (Layer 0, pur, zéro-LLM zéro-IO).
 - **overton-radar-signal** — OvertonRadarSignal — Layer-0 presentational view-model for `<OvertonRadar>`
 - **pillar-entity-ids**
+- **pillar-path** — PILLAR-PATH — Résolution de chemin ADVE profonde, unifiée (feuille, pure).
 - **pillar-reference-edges** — pillar-reference-edges.ts — intégrité des arêtes de référence inter-piliers
 - **pillars** — src/domain/pillars.ts — Single source of truth for ADVERTIS pillars.
 - **portfolio-barre**
