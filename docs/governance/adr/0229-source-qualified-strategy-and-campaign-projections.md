@@ -146,3 +146,8 @@ Le lecteur S reprend cette contribution, ou le profil `bio` déjà renseigné da
 sans exiger une seconde description ni affecter une action à une personne.
 Les tests sont synthétiques dans le dépôt public ; les données du dossier réel
 restent dans les preuves privées.
+
+La recherche documentaire ADVE est également qualifiée par les thèmes métier de
+chaque pilier (fondation/équipe, personas, économie, engagement), au lieu des
+lettres de stockage. Même lecteur scopé/versionné, aucune voie parallèle de
+qualification ou d’amendement. Cette correction soutient la mise à jour amont.
