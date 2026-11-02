@@ -56,7 +56,7 @@ describe("sales holders, dispatch receipts and incoming customer messages", () =
     expect(ai.status).toBe("DRAFT");
     const raw = await db.salesRepresentative.findUniqueOrThrow({ where: { id: ai.id } });
     const key = await db.mcpApiKey.findUniqueOrThrow({ where: { id: raw.mcpKeyId! } });
-    expect(key.scopeStrategyId).toBe(brandId); expect(key.scopeKind).toBe("BRAND"); expect(key.server).toBe("*"); expect(key.permissions).toEqual({ managedBy: "sales-fleet", allowedTools: ["operations.sales_portfolio", "operations.sales_decide", "operations.sales_send_email", "operations.sales_send_message", "operations.sales_sync_payment", "operations.sales_claim_run", "operations.sales_complete_run", "operations.sales_customer_link", "advertis.getBrandCard", "advertis.getPillarContent", "intelligence.rag_search"] }); expect(key.ratePerCallUsd).toBe(0); expect(key.isActive).toBe(false);
+    expect(key.scopeStrategyId).toBe(brandId); expect(key.scopeKind).toBe("BRAND"); expect(key.server).toBe("*"); expect(key.permissions).toEqual({ managedBy: "sales-fleet", allowedTools: ["operations.sales_portfolio", "operations.sales_decide", "operations.sales_send_email", "operations.sales_send_message", "operations.sales_sync_payment", "operations.sales_request_payment", "operations.sales_claim_run", "operations.sales_complete_run", "operations.sales_customer_link", "advertis.getBrandCard", "advertis.getPillarContent", "intelligence.rag_search"] }); expect(key.ratePerCallUsd).toBe(0); expect(key.isActive).toBe(false);
     expect(decryptTokenPayload<{ apiKey: string }>(raw.encryptedApiKey!).apiKey).toHaveLength(64);
     await expect(fleet.listSalesRepresentatives({ id: "other", admin: false, operatorId: "other" }, brandId)).rejects.toThrow();
     await expect(queue(ai.id)).rejects.toThrow("Activer");
@@ -141,7 +141,7 @@ describe("sales holders, dispatch receipts and incoming customer messages", () =
       const response = await operationsPost(new Request("http://localhost/api/mcp/operations", { method: "POST", headers: {
         "content-type": "application/json", "x-api-key": secret, "x-sales-run-id": claim.run!.id, "x-sales-run-lease": claim.run!.leaseToken,
       }, body: JSON.stringify({ tool: "sales_decide", params: { strategyId: brandId, dealId: row.id, step: {
-        requestId: randomUUID(), expectedRevision: paid.revision, channel: "WEB", command: { type: "DELIVER", evidence: "Customer confirmation checked.", customerMessageId, nextAction: "Review the synthetic result.", nextDeadline: "2030-01-01T00:00:00.000Z" },
+        requestId: randomUUID(), expectedRevision: paid.revision, channel: "WEB", command: { type: "DELIVER", evidence: "Customer confirmation checked.", customerMessageId },
       } } }) }));
       expect(response.status).toBe(200);
       return response.json();

@@ -10,9 +10,12 @@ import { TRPCError } from "@trpc/server";
 import { salesStepSchema } from "@/server/services/crm-engine/commercial";
 import { assertStrategyRead } from "./_strategy-read-guard";
 import { z } from "zod";
-import { createTRPCRouter, operatorProcedure } from "../init";
+import { createTRPCRouter, operatorProcedure, protectedProcedure } from "../init";
 import * as crm from "@/server/services/crm-engine";
 import * as fleet from "@/server/services/crm-engine/fleet";
+import { authorizeSalesPortfolio, listAuthorizedSalesPortfolios } from "@/server/services/crm-engine/portfolio";
+import { authorizeSalesPortfolioInput } from "@/server/services/crm-engine/portfolio-contract";
+import * as salesPayments from "@/server/services/crm-engine/payments";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { getOperatorContext } from "@/server/services/operator-isolation";
 /* lafusee:governed-active */
@@ -47,32 +50,73 @@ async function fleetActor(ctx: { session: { user: { id: string; role?: string | 
   const scope = await callerOperatorScope(ctx);
   return { id: ctx.session.user.id, admin: ctx.session.user.role === "ADMIN", operatorId: scope };
 }
+type SalesAccessContext = Parameters<typeof assertDealAccess>[0];
+/** Route-level chokepoints resolve keyed entities before delegating to the scoped service. */
+async function assertSalesBrandRead(ctx: SalesAccessContext, strategyId: string): Promise<fleet.FleetActor> {
+  const actor = await fleetActor(ctx);
+  await fleet.assertFleetBrand(actor, strategyId);
+  return actor;
+}
+async function assertSalesRepresentativeAccess(ctx: SalesAccessContext, representativeId: string, strategyId?: string): Promise<fleet.FleetActor> {
+  const profile = await ctx.db.salesRepresentative.findUniqueOrThrow({ where: { id: representativeId }, select: { strategyId: true } });
+  if (strategyId && profile.strategyId !== strategyId) throw new TRPCError({ code: "FORBIDDEN", message: "Vendeur hors de cette marque." });
+  return assertSalesBrandRead(ctx, profile.strategyId);
+}
+async function assertSalesRunAccess(ctx: SalesAccessContext, runId: string): Promise<fleet.FleetActor> {
+  const run = await ctx.db.salesRun.findUniqueOrThrow({ where: { id: runId }, select: { representativeId: true } });
+  return assertSalesRepresentativeAccess(ctx, run.representativeId);
+}
+async function assertSalesDealAccess(ctx: SalesAccessContext, dealId: string): Promise<fleet.FleetActor> {
+  const deal = await ctx.db.deal.findUniqueOrThrow({ where: { id: dealId }, select: { sellerStrategyId: true } });
+  if (!deal.sellerStrategyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Rattacher une marque vendeuse avant cette demande." });
+  return assertSalesBrandRead(ctx, deal.sellerStrategyId);
+}
 // ============================================================================
 // DEAL LIFECYCLE (opérateur/ADMIN uniquement)
 // ============================================================================
 
 export const crmRouter = createTRPCRouter({
-  listSalesRepresentatives: operatorProcedure.input(z.object({ strategyId: z.string() })).query(async ({ ctx, input }) =>
-    fleet.listSalesRepresentatives(await fleetActor(ctx), input.strategyId)),
-  salesRosterOptions: operatorProcedure.input(z.object({ strategyId: z.string() })).query(async ({ ctx, input }) =>
-    fleet.salesRosterOptions(await fleetActor(ctx), input.strategyId)),
-  getSalesRepresentative: operatorProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) =>
-    fleet.getSalesRepresentative(await fleetActor(ctx), input.id)),
-  saveSalesRepresentative: governedProcedure({ kind: "LEGACY_CRM_UPDATE_DEAL", requireOperator: true,
+  requestSalesPayment: governedProcedure({
+    kind: "LEGACY_CRM_UPDATE_DEAL", caller: "crm:requestSalesPayment",
+    inputSchema: z.object({ dealId: z.string().min(1), requestId: z.string().uuid(), expectedRevision: z.number().int().nonnegative() }).strict(),
+  }).mutation(async ({ ctx, input }) => salesPayments.requestSalesPayment(input.dealId, input.requestId, input.expectedRevision, await assertSalesDealAccess(ctx, input.dealId))),
+  listCommercialPaymentRequests: protectedProcedure.input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => salesPayments.listCommercialPaymentRequests(input.strategyId, await assertSalesBrandRead(ctx, input.strategyId))),
+  reconcileSalesPayment: governedProcedure({
+    kind: "LEGACY_CRM_UPDATE_DEAL", caller: "crm:reconcileSalesPayment", inputSchema: salesPayments.reconcileSalesPaymentInput,
+  }).mutation(async ({ ctx, input }) => salesPayments.reconcileSalesPayment(input, await assertSalesDealAccess(ctx, input.dealId))),
+  authorizeSalesPortfolio: governedProcedure({
+    kind: "LEGACY_CRM_CREATE_DEAL", inputSchema: authorizeSalesPortfolioInput,
+    caller: "crm:authorizeSalesPortfolio",
+  }).mutation(async ({ ctx, input }) => authorizeSalesPortfolio(await assertSalesBrandRead(ctx, input.strategyId), input, ctx.intentId)),
+  listAuthorizedSalesPortfolios: protectedProcedure.input(z.object({ strategyId: z.string(), representativeId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const actor = await assertSalesBrandRead(ctx, input.strategyId);
+      if (input.representativeId) await assertSalesRepresentativeAccess(ctx, input.representativeId, input.strategyId);
+      return listAuthorizedSalesPortfolios(actor, input);
+    }),
+  listSalesRepresentatives: protectedProcedure.input(z.object({ strategyId: z.string() })).query(async ({ ctx, input }) =>
+    fleet.listSalesRepresentatives(await assertSalesBrandRead(ctx, input.strategyId), input.strategyId)),
+  salesRosterOptions: protectedProcedure.input(z.object({ strategyId: z.string() })).query(async ({ ctx, input }) =>
+    fleet.salesRosterOptions(await assertSalesBrandRead(ctx, input.strategyId), input.strategyId)),
+  getSalesRepresentative: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) =>
+    fleet.getSalesRepresentative(await assertSalesRepresentativeAccess(ctx, input.id), input.id)),
+  saveSalesRepresentative: governedProcedure({ kind: "LEGACY_CRM_UPDATE_DEAL", requireOperator: false,
     inputSchema: fleet.representativeInput, caller: "crm:saveSalesRepresentative",
-  }).mutation(async ({ ctx, input }) => fleet.saveSalesRepresentative(await fleetActor(ctx), input)),
-  setSalesRepresentativeStatus: governedProcedure({ kind: "LEGACY_CRM_UPDATE_DEAL", requireOperator: true,
+  }).mutation(async ({ ctx, input }) => fleet.saveSalesRepresentative(await assertSalesBrandRead(ctx, input.strategyId), input)),
+  setSalesRepresentativeStatus: governedProcedure({ kind: "LEGACY_CRM_UPDATE_DEAL", requireOperator: false,
     inputSchema: z.object({ id: z.string(), status: z.enum(["DRAFT", "ACTIVE", "PAUSED"]) }), caller: "crm:setSalesRepresentativeStatus",
-  }).mutation(async ({ ctx, input }) => fleet.setSalesRepresentativeStatus(await fleetActor(ctx), input.id, input.status)),
-  dispatchSalesRepresentative: governedProcedure({ kind: "LEGACY_CRM_UPDATE_DEAL", requireOperator: true,
+  }).mutation(async ({ ctx, input }) => fleet.setSalesRepresentativeStatus(await assertSalesRepresentativeAccess(ctx, input.id), input.id, input.status)),
+  dispatchSalesRepresentative: governedProcedure({ kind: "LEGACY_CRM_UPDATE_DEAL", requireOperator: false,
     inputSchema: z.object({ id: z.string(), dealId: z.string().optional(), instruction: z.string().trim().min(2).max(12000), requestId: z.string().uuid() }), caller: "crm:dispatchSalesRepresentative",
   }).mutation(async ({ ctx, input }) => {
-    if (input.dealId) await assertDealAccess(ctx, input.dealId);
-    return fleet.dispatchSalesRepresentative(await fleetActor(ctx), input);
+    const actor = await assertSalesRepresentativeAccess(ctx, input.id);
+    // The service additionally checks the deal's selling brand and exact mandate principal.
+    return fleet.dispatchSalesRepresentative(actor, input);
   }),
-  resolveSalesRun: governedProcedure({ kind: "LEGACY_CRM_UPDATE_DEAL", requireOperator: true,
+  resolveSalesRun: governedProcedure({ kind: "LEGACY_CRM_UPDATE_DEAL", requireOperator: false,
     inputSchema: z.object({ runId: z.string(), status: z.enum(["DONE", "FAILED"]), result: z.string().trim().min(2).max(20000) }), caller: "crm:resolveSalesRun",
-  }).mutation(async ({ ctx, input }) => fleet.resolveSalesRun(await fleetActor(ctx), input)),
+  }).mutation(async ({ ctx, input }) => fleet.resolveSalesRun(await assertSalesRunAccess(ctx, input.runId), input)),
   recordInboundSalesMessage: governedProcedure({ kind: "LEGACY_CRM_ADD_NOTE", requireOperator: true,
     inputSchema: z.object({ dealId: z.string(), channel: z.enum(["EMAIL", "WHATSAPP", "PHONE", "SMS", "WEB", "SOCIAL", "IN_PERSON"]), body: z.string().trim().min(1).max(20000), subject: z.string().max(200).optional(), externalId: z.string().trim().min(1).max(200) }), caller: "crm:recordInboundSalesMessage",
   }).mutation(async ({ ctx, input }) => {
@@ -99,9 +143,9 @@ export const crmRouter = createTRPCRouter({
   listSalesMessages: operatorProcedure.input(z.object({ dealId: z.string() })).query(async ({ ctx, input }) => {
     await assertDealAccess(ctx, input.dealId);
     const [incoming, outgoing] = await Promise.all([
-      ctx.db.crmMessage.findMany({ where: { salesDealId: input.dealId }, orderBy: { createdAt: "asc" }, take: 200,
+      ctx.db.crmMessage.findMany({ where: { salesDealId: input.dealId }, orderBy: [{ createdAt: "desc" },{id:"desc"}], take: 200,
         select: { id: true, direction: true, channel: true, subject: true, body: true, status: true, createdAt: true } }),
-      ctx.db.cRMActivity.findMany({ where: { dealId: input.dealId, activityType: { in: ["SALES_WEB_SENT", "SALES_EMAIL_SENT", "SALES_EMAIL_UNCERTAIN", "SALES_EMAIL_PENDING"] } }, orderBy: { performedAt: "asc" }, take: 200 }),
+      ctx.db.cRMActivity.findMany({ where: { dealId: input.dealId, activityType: { in: ["SALES_WEB_SENT", "SALES_EMAIL_SENT", "SALES_EMAIL_UNCERTAIN", "SALES_EMAIL_PENDING"] } }, orderBy: [{ performedAt: "desc" },{id:"desc"}], take: 200 }),
     ]);
     return [...incoming, ...outgoing.map(activity => ({ id: activity.id, direction: "OUT", channel: activity.activityType.startsWith("SALES_WEB") ? "WEB" : "EMAIL", subject: activity.description, body: String((activity.metadata as { body?: string } | null)?.body ?? ""), status: activity.activityType.endsWith("SENT") ? "SENT" : activity.activityType.endsWith("UNCERTAIN") ? "UNCERTAIN" : "PENDING", createdAt: activity.performedAt }))].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   }),

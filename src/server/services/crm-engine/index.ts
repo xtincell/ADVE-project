@@ -7,6 +7,7 @@
 
 import { TRPCError } from "@trpc/server";
 import { createHash } from "node:crypto";
+import type { Prisma } from "@prisma/client";
 import { advanceSale, salesStateSchema, saleStage, type SalesStep, type SalesActor } from "./commercial";
 import { db } from "@/lib/db";
 import { scopeStrategies } from "@/server/services/operator-isolation";
@@ -69,7 +70,8 @@ export async function createDealFromIntake(intakeId: string): Promise<string> {
 /**
  * Create a manual deal (not from intake)
  */
-export async function createDeal(data: {
+export interface CreateDealInput {
+  id?: string;
   contactName: string;
   contactEmail?: string;
   contactPhone?: string;
@@ -80,10 +82,16 @@ export async function createDeal(data: {
   currency?: string;
   source?: string;
   notes?: string;
-}): Promise<string> {
-  return db.$transaction(async tx => {
+  performedBy?: string;
+  creationDescription?: string;
+  creationMetadata?: Prisma.InputJsonObject;
+}
+
+/** Shared transaction boundary for a manual deal or an approved portfolio member. */
+export async function createDealIn(tx: Prisma.TransactionClient, data: CreateDealInput): Promise<string> {
   const deal = await tx.deal.create({
     data: {
+      id: data.id,
       contactName: data.contactName,
       contactEmail: data.contactEmail,
       companyName: data.companyName,
@@ -106,13 +114,16 @@ export async function createDeal(data: {
     data: {
       dealId: deal.id,
       activityType: "DEAL_CREATED",
-      description: `Deal créé manuellement (${data.companyName})`,
-      metadata: { source: data.source ?? "MANUAL" },
+      description: data.creationDescription ?? `Deal créé manuellement (${data.companyName})`,
+      performedBy: data.performedBy,
+      metadata: { source: data.source ?? "MANUAL", ...data.creationMetadata },
     },
   });
 
   return deal.id;
-  });
+}
+export async function createDeal(data: CreateDealInput): Promise<string> {
+  return db.$transaction(tx => createDealIn(tx, data));
 }
 
 /**
@@ -661,6 +672,10 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
       throw new TRPCError({ code: "CONFLICT", message: "Le dossier a évolué. Relire avant de décider." });
     }
     const previous = salesStateSchema.parse(deal.commercial ?? {});
+    const {assertSalesEffectIn}=await import("./outbound-authority");
+    await assertSalesEffectIn(tx,deal,actor);
+    const {prepareSalesPlanIn}=await import("./scheduling");
+    step=await prepareSalesPlanIn(tx,dealId,previous,step,actor);
     const command = step.command;
     if(deal.sellerStrategyId&&!actor.id.startsWith("mcp:")&&!["MANDATE","HANDOVER","STOP","PAYMENT","DELIVER"].includes(command.type)){
       const {assertHumanSalesActive}=await import("./fleet");await assertHumanSalesActive(deal.sellerStrategyId,actor.id);
@@ -678,6 +693,11 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’agent doit référencer une réponse reçue de cet acheteur pour cette marque." });
       }
     }
+    if(previous.mandate?.collection && ["PAYMENT","DELIVER"].includes(command.type)) {
+      const payment=deal.paymentReference?await tx.intakePayment.findUnique({where:{reference:deal.paymentReference}}):null;
+      const {paymentMajorAmount}=await import("./payments");
+      if(!payment||payment.tierKey!=="SALES_COLLECTION"||payment.intakeToken!==`sales-deal:${deal.id}`||payment.status!=="PAID"||!payment.paidAt||paymentMajorAmount(payment)!==previous.mandate.amount||payment.currency!==previous.mandate.currency)throw new TRPCError({code:"PRECONDITION_FAILED",message:"Le règlement individuel doit être rapproché par la finance avant cette étape."});
+    }
     if(actor.id.startsWith("mcp:") && command.type === "DELIVER") {
       const message=command.customerMessageId?await tx.crmMessage.findUnique({where:{id:command.customerMessageId},include:{contact:{select:{strategyId:true,email:true}}}}):null;
       const paid=await tx.cRMActivity.findFirst({where:{dealId,activityType:"SALES_DECISION",metadata:{path:["command","type"],equals:"PAYMENT"}},orderBy:{performedAt:"desc"},select:{performedAt:true}});
@@ -694,7 +714,7 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
     const changed = await tx.deal.updateMany({
       where: { id: dealId, revision: step.expectedRevision },
       data: {
-        commercial: JSON.parse(JSON.stringify(next)), paymentReference: next.mandate?.intakePaymentReference ?? null, stage, revision: { increment: 1 },
+        commercial: JSON.parse(JSON.stringify(next)), paymentReference: next.mandate?.intakePaymentReference ?? deal.paymentReference, stage, revision: { increment: 1 },
         wonAt: stage === "WON" ? (deal.wonAt ?? new Date()) : deal.wonAt,
         value: ["PARTNER", "AUDIENCE"].includes(next.node) ? 0 : (next.mandate?.amount ?? deal.value),
         currency: next.mandate?.currency ?? deal.currency,
@@ -726,19 +746,9 @@ export async function sendSalesEmail(dealId: string, actor: SalesActor, input: {
     throw new TRPCError({ code: "FORBIDDEN", message: "L’envoi exige un destinataire et un mandat email actif." });
   }
   const fingerprint = createHash("sha256").update(JSON.stringify(input)).digest("hex");
-  const existing = await db.cRMActivity.findUnique({ where: { id: input.requestId } });
-  if (existing) {
-    const saved = existing.metadata as { fingerprint?: string };
-    if (existing.dealId !== dealId || existing.performedBy !== actor.id || saved.fingerprint !== fingerprint) {
-      throw new TRPCError({ code: "CONFLICT", message: "Référence d’envoi déjà utilisée." });
-    }
-    return existing;
-  }
-  // A unique primary key also serializes two simultaneous attempts with the same reference.
-  await db.cRMActivity.create({ data: {
-    id: input.requestId, dealId, performedBy: actor.id, activityType: "SALES_EMAIL_PENDING",
-    description: input.subject, metadata: { fingerprint, to: deal.contactEmail, body: input.text },
-  } });
+  const {reserveSalesOutbound}=await import('./outbound-authority');
+  const reservation=await reserveSalesOutbound(dealId,actor,{requestId:input.requestId,fingerprint,channel:'EMAIL',body:input.text,subject:input.subject});
+  if(reservation.replay)return reservation.receipt;
   const { sendBrandEmail } = await import("@/server/services/anubis/brand-email");
   const htmlEscapes: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
   const html = input.text.replace(/[&<>"]/g, char => htmlEscapes[char]!).replace(/\n/g, "<br>");
@@ -750,7 +760,7 @@ export async function sendSalesEmail(dealId: string, actor: SalesActor, input: {
   }
   return db.cRMActivity.update({ where: { id: input.requestId }, data: {
     activityType: result.ok ? "SALES_EMAIL_SENT" : "SALES_EMAIL_UNCERTAIN",
-    metadata: { fingerprint, to: deal.contactEmail, body: input.text,
-      provider: result.provider, providerRef: result.ok ? result.providerRef : null },
+    metadata: { ...(reservation.receipt.metadata as Prisma.InputJsonObject),
+      provider: result.provider, providerRef: result.ok ? result.providerRef : null, ...(result.ok?{confirmedAt:new Date().toISOString()}:{}) },
   } });
 }

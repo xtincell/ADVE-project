@@ -10,11 +10,11 @@ import { defineManifest } from "@/server/governance/manifest";
 export const manifest = defineManifest({
   service: "crm-engine",
   governor: "INFRASTRUCTURE",
-  version: "1.2.0",
+  version: "1.3.0",
   acceptsIntents: [],
   emits: [],
   capabilities: [
-    ...["listSalesRepresentatives", "salesRosterOptions", "getSalesRepresentative", "saveSalesRepresentative", "setSalesRepresentativeStatus", "dispatchSalesRepresentative", "resolveSalesRun", "recordInboundSalesMessage", "claimRun", "completeRun"].map(name => ({
+    ...["authorizeSalesPortfolio", "listAuthorizedSalesPortfolios", "requestSalesPayment", "listCommercialPaymentRequests", "reconcileSalesPayment", "listSalesRepresentatives", "salesRosterOptions", "getSalesRepresentative", "saveSalesRepresentative", "setSalesRepresentativeStatus", "dispatchSalesRepresentative", "resolveSalesRun", "recordInboundSalesMessage", "claimRun", "completeRun"].map(name => ({
       name,
       inputSchema: z.object({ strategyId: z.string().optional() }).passthrough(),
       outputSchema: z.unknown(),

@@ -2,15 +2,21 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { TRPCError } from '@trpc/server';
 import { db } from '@/lib/db';
+import type {Prisma} from '@prisma/client';
 import { salesStateSchema, type SalesActor } from './commercial';
 import {encryptTokenPayload,decryptTokenPayload} from '@/server/services/oauth-integrations';
 const hash = (value:string) => createHash('sha256').update(value).digest('hex');
-export async function issueCustomerAccess(dealId:string):Promise<{path:string}> {
-  const deal=await db.deal.findUniqueOrThrow({where:{id:dealId}});
+export async function issueCustomerAccess(dealId:string,actor?:SalesActor):Promise<{path:string}> {
+  return db.$transaction(tx=>issueCustomerAccessIn(tx,dealId,actor));
+}
+/** Same private conversation, prepared atomically with its authorised dossier. */
+export async function issueCustomerAccessIn(client:Prisma.TransactionClient,dealId:string,actor?:SalesActor):Promise<{path:string}> {
+  const deal=await client.deal.findUniqueOrThrow({where:{id:dealId}});
   if(deal.customerAccessTokenEncrypted&&deal.customerAccessTokenHash){const {token}=decryptTokenPayload<{token:string}>(deal.customerAccessTokenEncrypted);return {path:`/sales/${token}`};}
+  if(actor){const {assertSalesEffectIn}=await import('./outbound-authority');await assertSalesEffectIn(client,deal,actor);}
   const token=randomBytes(32).toString('hex');
-  const saved=await db.deal.updateMany({where:{id:dealId,customerAccessTokenEncrypted:null},data:{customerAccessTokenHash:hash(token),customerAccessTokenEncrypted:encryptTokenPayload({token})}});
-  if(saved.count!==1)return issueCustomerAccess(dealId);
+  const saved=await client.deal.updateMany({where:{id:dealId,customerAccessTokenEncrypted:null},data:{customerAccessTokenHash:hash(token),customerAccessTokenEncrypted:encryptTokenPayload({token})}});
+  if(saved.count!==1)return issueCustomerAccessIn(client,dealId,actor);
   return {path:`/sales/${token}`};
 }
 export async function resolveCustomerDeal(token:string) {
@@ -23,9 +29,12 @@ export async function customerConversation(token:string) {
   const deal=await resolveCustomerDeal(token);
   const state=salesStateSchema.parse(deal.commercial??{});
   const brand=await db.strategy.findUnique({where:{id:deal.sellerStrategyId!},select:{name:true}});
-  const inbound=await db.crmMessage.findMany({where:{salesDealId:deal.id,direction:'IN'},orderBy:{createdAt:'asc'},take:200,select:{id:true,body:true,createdAt:true,channel:true}});
-  const outbound=await db.cRMActivity.findMany({where:{dealId:deal.id,activityType:{in:['SALES_WEB_SENT','SALES_EMAIL_SENT']}},orderBy:{performedAt:'asc'},take:200,select:{id:true,metadata:true,performedAt:true}});
-  return {brand:brand?.name??'Équipe commerciale',state:state.node,offer:state.mandate?{name:state.mandate.offerName,terms:state.mandate.terms,amount:state.mandate.amount,currency:state.mandate.currency,paymentInstructions:state.mandate.paymentInstructions}:null,
+  const inbound=await db.crmMessage.findMany({where:{salesDealId:deal.id,direction:'IN'},orderBy:[{createdAt:'desc'},{id:'desc'}],take:200,select:{id:true,body:true,createdAt:true,channel:true}});
+  const outbound=await db.cRMActivity.findMany({where:{dealId:deal.id,activityType:{in:['SALES_WEB_SENT','SALES_EMAIL_SENT']}},orderBy:[{performedAt:'desc'},{id:'desc'}],take:200,select:{id:true,metadata:true,performedAt:true}});
+  const payment=deal.paymentReference?await db.intakePayment.findUnique({where:{reference:deal.paymentReference},select:{reference:true,status:true,amount:true,currency:true,tierKey:true,intakeToken:true,paidAt:true}}):null;
+  const {paymentMajorAmount}=await import('./payments');
+  const customerPayment=payment?.tierKey==='SALES_COLLECTION'&&payment.intakeToken===`sales-deal:${deal.id}`?{reference:payment.reference,status:payment.status,amount:paymentMajorAmount(payment),currency:payment.currency,beneficiary:state.mandate?.beneficiary??'',paidAt:payment.paidAt}:null;
+  return {payment:customerPayment,brand:brand?.name??'Équipe commerciale',state:state.node,offer:state.mandate?{name:state.mandate.offerName,terms:state.mandate.terms,amount:state.mandate.amount,currency:state.mandate.currency,paymentInstructions:state.mandate.paymentInstructions}:null,
     stopped:!!state.contactStopped,messages:[...inbound.map(m=>({id:m.id,role:'customer' as const,body:m.body,at:m.createdAt})),...outbound.map(m=>({id:m.id,role:'seller' as const,body:String((m.metadata as {body?:string}|null)?.body??''),at:m.performedAt}))].sort((a,b)=>a.at.getTime()-b.at.getTime())};
 }
 export async function receiveCustomerMessage(token:string,input:{body:string;requestId:string}) {
@@ -44,7 +53,6 @@ export async function sendSalesWebMessage(dealId:string,actor:SalesActor,input:{
   const state=salesStateSchema.parse(deal.commercial??{});const mandate=state.mandate;
   if(!mandate||mandate.sellerId!==actor.id||!mandate.channels.includes('WEB')||new Date(mandate.expiresAt)<=new Date()||state.contactStopped||state.node==='STOPPED'||!deal.customerAccessTokenHash)throw new TRPCError({code:'FORBIDDEN',message:'Conversation web hors mandat.'});
   const fingerprint=hash(JSON.stringify(input));
-  const replay=await db.cRMActivity.findUnique({where:{id:input.requestId}});
-  if(replay){if(replay.dealId!==dealId||replay.performedBy!==actor.id||(replay.metadata as {fingerprint?:string})?.fingerprint!==fingerprint)throw new TRPCError({code:'CONFLICT',message:'Référence de message déjà utilisée.'});return replay;}
-  return db.cRMActivity.create({data:{id:input.requestId,dealId,performedBy:actor.id,activityType:'SALES_WEB_SENT',description:'Réponse au client',metadata:{fingerprint,body:input.text,channel:'WEB'}}});
+  const {reserveSalesOutbound}=await import('./outbound-authority');
+  return (await reserveSalesOutbound(dealId,actor,{requestId:input.requestId,fingerprint,channel:'WEB',body:input.text})).receipt;
 }
