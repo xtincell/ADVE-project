@@ -2,6 +2,8 @@
 
 **Candidat : préserver les choix validés, tracer les compléments et recevoir uniquement ce qui est réellement écrit.**
 
+- Traçabilité : PR #1116, label et justification `out-of-scope` ; CI exacte, image et réception530 encore ouvertes.
+
 - Contrat partagé : ADVE rempli ⇒ aucune valeur attendue vide ou inconnue en aval. Source documentée → calcul → postulat de départ inféré dans ADVE, puis dépendances calculées ; lacunes de brouillon à résoudre au socle avant réception. Notoria, Mestor/cascade, auto-filler et quick-intake partagent le contrat, sans présenter hypothèse, mesure et adoption comme équivalentes.
 - SET_FIELDS exact avec expectedVersion peut compléter une cellule manquante sous un objet HUMAN tout en conservant identités, conteneurs et valeurs voisines. Origine explicite au chemin, parent inchangé ; zéro, false et collection vide restent des choix. Remplacement/suppression ne peuvent contourner un enfant protégé par un parent moins autoritaire.
 - Bornage du complément ciblé : scalaire non vide ou liste non vide de scalaires ; objet et liste de records refusés par ce parcours, sans nouvelle identité implicite. Le contrat de planification précise qu’une omission reste un brouillon incomplet, jamais une réception finale.
