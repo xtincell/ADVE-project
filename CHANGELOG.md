@@ -12,6 +12,8 @@
 
 - **Contrôles finaux locaux** : 5 003 tests unitaires / 477 fichiers, puis 1 671 contrôles de gouvernance / 169 fichiers, typage et lint sans erreur (24 avertissements préexistants), aucun cycle, build webpack exit 0. La réintroduction de la présélection I obligatoire fait échouer deux tests ; restauration verte (`scenarios526-regression-{red,green}.log`). Le stress sur application compilée reçoit cette fois HTTP et DB : 276 pages HTTP reçues, cinq non reçues, zéro échec ; trois requêtes readonly, forges et transitions éprouvées, zéro finding (`documents526-stress-http-full-received.json`). Ce reçu serveur ne remplace pas la recette native de production encore ouverte.
 
+- Traçabilité de livraison : PR #1109, correction opérateur du Core I → S ; preuve native et production encore à recevoir.
+
 ## v6.27.525 — fix(oracle): distingue données présentes, force et mesures réelles (2026-10-26)
 
 **Candidate reçue localement pour les calculs et API ; lecture native et livraison encore ouvertes.**
