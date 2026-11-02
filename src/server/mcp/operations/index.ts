@@ -121,7 +121,18 @@ export const tools: ToolDefinition[] = [
       const activities = await db.cRMActivity.findMany({
         where: { dealId: { in: assigned.map(row => row.id) } }, orderBy: { performedAt: "asc" },
       });
-      return { deals: assigned.map(deal => ({ deal, history: activities.filter(item => item.dealId === deal.id) })) };
+      const inbound = await db.crmMessage.findMany({
+        where: { direction: "IN", status: "RECEIVED", contact: {
+          strategyId: String(input.strategyId),
+          email: { in: assigned.flatMap(deal => deal.contactEmail ? [deal.contactEmail] : []) },
+        } },
+        select: { id: true, body: true, subject: true, channel: true, createdAt: true, contact: { select: { email: true } } },
+        orderBy: { createdAt: "asc" },
+      });
+      return { deals: assigned.map(deal => ({ deal,
+        history: activities.filter(item => item.dealId === deal.id),
+        replies: inbound.filter(item => item.contact.email.toLowerCase() === deal.contactEmail?.toLowerCase()),
+      })) };
     },
   },
   {

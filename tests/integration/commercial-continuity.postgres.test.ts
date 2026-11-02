@@ -43,6 +43,9 @@ afterAll(async () => {
     await db.mcpApiKey.deleteMany({ where: { scopeStrategyId: brandId } });
     await db.intakePayment.deleteMany({ where: { reference: { in: fixturePayments } } });
     await db.intentEmission.deleteMany({ where: { strategyId: brandId } });
+    const contacts = await db.crmContact.findMany({ where: { strategyId: brandId }, select: { id: true } });
+    await db.crmMessage.deleteMany({ where: { contactId: { in: contacts.map(contact => contact.id) } } });
+    await db.crmContact.deleteMany({ where: { strategyId: brandId } });
     await db.pillar.deleteMany({ where: { strategyId: brandId } });
     await db.strategy.delete({ where: { id: brandId } });
     await db.user.deleteMany({ where: { id: { in: [adminId, sellerId, deliveryId, otherId] } } });
@@ -106,11 +109,14 @@ describe("commercial continuity through the governed router and PostgreSQL", () 
   it("runs the agent through the real MCP HTTP entry point with a scoped key and an independent payment receipt", async () => {
     const secret = randomUUID();
     const paymentReference = randomUUID();
+    const buyerEmail = randomUUID() + "@example.invalid";
+    const buyerContact = await db.crmContact.create({ data: { email: buyerEmail, name: "Acheteur fictif", strategyId: brandId } });
+    const buyerReply = await db.crmMessage.create({ data: { contactId: buyerContact.id, direction: "IN", status: "RECEIVED", channel: "EMAIL", body: "J’accepte les conditions Gold de la recette." } });
     fixturePayments.push(paymentReference);
     await db.intakePayment.create({ data: { reference: paymentReference, intakeToken: randomUUID(), amount: 60000, currency: "XOF", provider: "CINETPAY" } });
     const key = await db.mcpApiKey.create({ data: { name: "Owned autonomous recipe", keyHash: createHash("sha256").update(secret).digest("hex"),
       server: "operations", scopeKind: "BRAND", scopeStrategyId: brandId, ratePerCallUsd: 0 } });
-    dealId = await caller(sellerId).createDeal({ sellerStrategyId: brandId, companyName: "Acheteur autonome de recette", contactName: "Acheteur fictif", contactEmail: "buyer@example.invalid", contactPhone: "+00000001" });
+    dealId = await caller(sellerId).createDeal({ sellerStrategyId: brandId, companyName: "Acheteur autonome de recette", contactName: "Acheteur fictif", contactEmail: buyerEmail, contactPhone: "+00000001" });
     await step(adminId, { type: "MANDATE", mandate: {
       offerId: "gold", offerVersion: "1", offerName: "Gold", terms: "Conditions de recette approuvées.", outboundEmailEnabled: true, intakePaymentReference: paymentReference,
       amount: 60000, currency: "XOF", sellerId: `mcp:${key.id}`, deliveryOwnerId: `mcp:${key.id}`, beneficiary: "Marque de recette",
@@ -145,9 +151,20 @@ describe("commercial continuity through the governed router and PostgreSQL", () 
       const decisions: Record<string, SalesStep["command"]> = {
         DISCOVERY: { type: "QUALIFY", role: "BUYER", need: "Demande du client fictif." },
         QUALIFIED: { type: "PROPOSE" },
-        PROPOSAL: { type: "ACCEPT", evidence: "Acceptation donnée par l’acheteur simulé." },
+        PROPOSAL: { type: "ACCEPT", evidence: "Acceptation donnée par l’acheteur simulé.", customerMessageId: buyerReply.id },
         PAID: { type: "DELIVER", evidence: "Remise synthétique acceptée par le client.", nextAction: "Revoir la valeur livrée.", nextDeadline: "2027-01-01T00:00:00.000Z" },
       };
+      if (state.node === "PROPOSAL") {
+        const refused = await POST(new Request("http://localhost/api/mcp/operations", { method: "POST",
+          headers: { "content-type": "application/json", "x-api-key": secret },
+          body: JSON.stringify({ tool: "sales_decide", params: { strategyId: brandId, dealId, step: {
+            requestId: randomUUID(), expectedRevision: current.revision, channel: "EMAIL",
+            command: { type: "ACCEPT", evidence: "Unsupported model inference." },
+          } } }),
+        }));
+        const refusal = await refused.text();
+        expect(refused.status !== 200 || /error/i.test(refusal)).toBe(true);
+      }
       await invoke("sales_decide", { dealId, step: { requestId: randomUUID(), expectedRevision: current.revision,
         channel: turn % 2 ? "WHATSAPP" : "EMAIL", command: decisions[state.node] } });
     }

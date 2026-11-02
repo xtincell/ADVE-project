@@ -661,6 +661,20 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
       throw new TRPCError({ code: "CONFLICT", message: "Le dossier a évolué. Relire avant de décider." });
     }
     const previous = salesStateSchema.parse(deal.commercial ?? {});
+    const command = step.command;
+    const branchAcceptance = command.type === "BRANCH" &&
+      previous.mandate?.conversationTree?.nodes.find(node => node.id === previous.treeNodeId)?.choices.find(choice => choice.id === command.choiceId)?.decision?.type === "ACCEPT";
+    if (actor.id.startsWith("mcp:") && (command.type === "ACCEPT" || branchAcceptance)) {
+      const messageId = (command.type === "ACCEPT" || command.type === "BRANCH") ? command.customerMessageId : undefined;
+      const message = messageId ? await tx.crmMessage.findUnique({
+        where: { id: messageId }, include: { contact: { select: { strategyId: true, email: true } } },
+      }) : null;
+      if (!message || message.direction !== "IN" || message.status !== "RECEIVED" ||
+          message.contact.strategyId !== deal.sellerStrategyId ||
+          message.contact.email.toLowerCase() !== deal.contactEmail?.toLowerCase()) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’agent doit référencer une réponse reçue de cet acheteur pour cette marque." });
+      }
+    }
     let next;
     try {
       next = advanceSale(previous, step, actor, new Date());
