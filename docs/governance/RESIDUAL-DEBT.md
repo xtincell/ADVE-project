@@ -1,3 +1,43 @@
+## 532 — réception intermédiaire 4d3, futur candidat 533 (2026-11-02)
+
+Checkpoint intermédiaire Oracle 532 sur main
+`4d3c1c3d13bdc5de7bee747ad8c4c28d4ddfb6a9` (CRM/flotte/conversation, PR #1117),
+avant intégration de `cf9242321` / PR #1119 qui a pris la version 532. Le correctif
+Oracle deviendra candidat 533 après cette prochaine intégration ; aucune version
+532 libre ou livraison Oracle 532 n’est annoncée. PR draft réelle #1118, label
+out-of-scope et abonnement SUBSCRIBED reçus ; entrée/note CRM 531 et ADR0232
+préservés. Les preuves `e9c3eb335` restent préintégration ; les reçus ci-après
+appartiennent uniquement à l’étape 4d3, pas au futur head 533.
+
+Migration additive CRM appliquée à la seule base locale gardée. PostgreSQL
+initial : 543 tests / 34 fichiers verts, 12 cas bloqués en beforeAll par la garde
+dans deux fichiers ; garde conservée, puis base locale dédiée au parcours flotte,
+migrations appliquées et ciblé 12 / 2 vert. Couverture en deux passes distinctes
+543 + 12, aucune exécution unique agrégée affirmée. Tests combinés 4d3 :
+5 099 / 487 verts, typage exit 0, lints sans erreur (24 avertissements préexistants),
+cycles sans dépendance circulaire, CODE-MAP régénérée ; webpack local heap 8 Go
+exit 0. HTTP USER : assemblage 159 ms, vraie route PDF 318 ms, 57 pages,
+marqueurs canoniques ciblés présents, piliers strictement inchangés avant/après.
+Trois pages HTTP 200 en 375 / 46 / 56 ms ; hydratation/native non reçue. Mise en
+page PDF non relue pour cette passe, aucune réception visuelle des 57 pages ni
+transfert de la revue préintégration. Stress compilé exit 0 : 276 HTTP reçues /
+5 non reçues / 0 échec, 3 requêtes, 7 forges/transitions et 0 finding ; probes
+HTTP distinctes d’une réception native, latences locales sans SLO.
+
+L’égalité d’arbre source production parallèle `1d59935cea6217702d745d86a334655548e3d112`
+et main 4d3 reste un constat de base, sans réception du correctif Oracle déduite.
+Ces preuves ne reçoivent ni CI/image/runtime/livraison Oracle 532 ni le head final
+533. Les quatre lecteurs corrigés réutilisent les capacités existantes, sans
+nouveau service/modèle/tool dans ce correctif ; finance et chaîne réelle
+ADVE/RTIS/MVP demeurent ouvertes, preuves et données privées hors checkout.
+
+**Fermer** après intégration de cf924 par contrôles/build/lecteurs/exports/stress
+du head exact 533, puis CI/image/runtime et conservation après livraison. Responsable Core /
+Oracle et intégration existants ; effort recette bornée ; **déclencheur** avant
+réception de la PR #1118. Les preuves préintégration ne reçoivent pas la combinaison.
+La dette financière reste à reprendre après livraison du correctif Oracle repris
+sous 533, sans montant inventé.
+
 ## 532 — lecture Oracle candidate et cadre financier à reprendre (2026-11-02)
 
 **Lecture Oracle** : les objets A/E valides perdaient doctrine, freins/réponses,

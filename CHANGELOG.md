@@ -1,13 +1,18 @@
 ## v6.27.532 — fix(oracle): lire les formes ADVE canoniques sans perdre leur contenu (2026-11-02)
 
-**Candidat : rendre les informations déjà présentes dans la source, sans réécrire la marque ou fabriquer une mesure.**
+**Checkpoint intermédiaire 4d3 : les informations déjà présentes restent conservées ; reprise prévue sous 533 après cf924.**
+
+- Intégration du lot CRM/flotte/conversation #1117, main `4d3c1c3d13bdc5de7bee747ad8c4c28d4ddfb6a9`, note 531 et ADR0232 conservés. PR draft réelle #1118, label out-of-scope et abonnement SUBSCRIBED reçus par lecture ; mandat opérateur « ADVE rempli ⇒ aucune sortie attendue vide », correction des quatre lectures, sans nouveau service dans le correctif Oracle.
+- Les preuves `e9c3eb335` restent préintégration. Étape 4d3 reçue : 5 099 tests / 487 fichiers, typage exit 0, lint/gouvernance sans erreur (24 avertissements préexistants), cycles sans dépendance circulaire et build webpack local heap 8 Go exit 0. PostgreSQL en deux passes 543 / 34 puis 12 / 2 après blocage de garde beforeAll ; garde conservée, aucun résultat unique agrégé affirmé.
+- HTTP intermédiaire USER : assemblage 159 ms, vraie route PDF 318 ms / 57 pages, marqueurs canoniques ciblés conservés et piliers strictement inchangés. Pages HTTP 200 en 375 / 46 / 56 ms ; hydratation/native et mise en page PDF non relues pour cette passe, pas de réception visuelle des 57 pages. Stress compilé exit 0 : 276 HTTP reçues / 5 non reçues / 0 échec, 3 requêtes, 7 forges/transitions, 0 finding ; latences locales sans SLO, pas de natif par ces probes.
+- Main `cf9242321` / PR #1119 a pris 532 : Oracle sera repris en candidat 533 après intégration. Ces preuves 4d3 ne reçoivent ni CI/image/runtime/livraison Oracle 532 ni le futur head final 533. Finance, chaîne réelle ADVE/RTIS et MVP ouverts ; entrée/note CRM 531 et ADR0232 préservés.
 
 - Doctrine A structurée lue depuis texte, dogmes, principes et pratiques ; les formes textuelles historiques restent admises. Freins E structurés avec niveau, barrière et réponse proposée conservés, puis réellement consommés par l’interface.
 - Principes communautaires avec application, plateformes structurées et liste de mécanismes de développement lus dans leurs formes canoniques ; coupe aux trois premiers principes retirée. La synthèse déclarée s’ajoute à ces éléments sans les masquer ; nom/type/compteur de plateforme explicites conservés, y compris zéro, avec qualification déclarée plutôt que mesure fabriquée.
 - Points de contact : rôle canonique présent dans le lecteur et le tableau ; la qualité héritée ne s’affiche que si elle est documentée. Sources conservées, aucun LLM, écriture ou nouveau modèle/service/tool dans ce correctif de lecture. [ADR-0229](docs/governance/adr/0229-source-qualified-strategy-and-campaign-projections.md) reste le cadre de l’irrigation ; pas de nouvelle décision architecturale.
 - Dette préexistante séparée : auto-filler financier sur defaults sectoriels/multiplicateurs et unité de marge nette discordante avec l’UI ; reprise après 532 via cadre financier ADVE/cohorte/horizon et moteur existant, sans nouveau montant inventé ni correctif financier revendiqué ici.
 
-Premières reproductions : trois refus sur quatre cas avec les branches A/E
+Checkpoint Oracle préintégration (`e9c3eb335`) : premières reproductions, trois refus sur quatre cas avec les branches A/E
 validées par leurs schémas ; correction suivie de 20 tests / 3 fichiers verts.
 La première fixture de rôle utilisait un channelRef hors schéma, corrigé avant
 une vraie contre-épreuve rouge sur le lecteur de rôle. Ciblé final reçu : 31 tests /
@@ -45,7 +50,14 @@ ouverture de la valeur entière reçues ; aucun « Valider » cliqué. Ce reçu 
 constitue ni adoption humaine ni réception native 532 ou de l’ADVE/MVP entier.
 Données, identités et captures métier restent privées hors checkout.
 
-## v6.27.531 — fix(adve): compléter une cellule sans valider tout son objet (2026-11-02)
+## v6.27.531 — Flotte commerciale, conversation client et compléments ADVE (2 novembre 2026)
+
+- Supervision des vendeurs humains/IA dans le pipeline : activation, pause, consignes, résultats et reprise humaine.
+- STI éditable visuellement ; affectations nominatives et conversations client liées à l’affaire, y compris sans email.
+- Consommateur Galahad réutilisé, exécutions bornées et persistées ; droits par marque/affaire, idempotence, interruption explicite et réservations de consommation.
+- Conversation web sécurisée avec réveil du vendeur, email de marque existant, adaptateur entrant signé et réveil sur règlement confirmé ; autres transports restent visibles selon leur raccordement réel.
+
+### Compléter une cellule sans valider tout son objet
 
 **Candidat : préserver les choix validés, tracer les compléments et recevoir uniquement ce qui est réellement écrit.**
 

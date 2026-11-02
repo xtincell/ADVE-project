@@ -2,7 +2,7 @@
  * Manifest — crm-engine.
  *
  * APOGEE classification (cf. SERVICE-MAP.md): INFRASTRUCTURE governance,
- * mission contribution = GROUND_INFRASTRUCTURE. Exposes 16 capabilities mirroring the public surface of `index.ts`.
+ * mission contribution = GROUND_INFRASTRUCTURE. Exposes relationship and bounded sales-fleet capabilities in the existing CRM.
  */
 import { z } from "zod";
 import { defineManifest } from "@/server/governance/manifest";
@@ -10,10 +10,19 @@ import { defineManifest } from "@/server/governance/manifest";
 export const manifest = defineManifest({
   service: "crm-engine",
   governor: "INFRASTRUCTURE",
-  version: "1.1.0",
+  version: "1.2.0",
   acceptsIntents: [],
   emits: [],
   capabilities: [
+    ...["listSalesRepresentatives", "salesRosterOptions", "getSalesRepresentative", "saveSalesRepresentative", "setSalesRepresentativeStatus", "dispatchSalesRepresentative", "resolveSalesRun", "recordInboundSalesMessage", "claimRun", "completeRun"].map(name => ({
+      name,
+      inputSchema: z.object({ strategyId: z.string().optional() }).passthrough(),
+      outputSchema: z.unknown(),
+      sideEffects: name.startsWith("list") || name.startsWith("get") || name === "salesRosterOptions" ? ["DB_READ" as const] : ["DB_READ" as const, "DB_WRITE" as const],
+      qualityTier: "B" as const,
+      missionContribution: "GROUND_INFRASTRUCTURE" as const,
+      groundJustification: "Sales holders, customer replies and bounded work receipts share the existing CRM and delegated authority.",
+    })),
     {
       name: "createDealFromIntake",
       inputSchema: z.object({ strategyId: z.string().optional() }).passthrough(),

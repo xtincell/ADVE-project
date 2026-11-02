@@ -43,6 +43,11 @@ export interface McpAuthResult {
   scopeStrategyId?: string | null;
   /** API-key server restriction, retained during aggregate discovery. */
   scopeServer?: string;
+  allowedTools?: string[];
+  salesProfileId?: string;
+  salesProfileStatus?: string;
+  salesRunId?: string;
+  salesDealId?: string | null;
 }
 
 /**
@@ -90,12 +95,26 @@ export async function authenticateMcpRequest(
         (serverName === "*" && record.server.trim().length > 0)) &&
       (!record.expiresAt || record.expiresAt > new Date())
     ) {
+      let salesContext: Partial<McpAuthResult> = {};
+      if ((record.permissions as {managedBy?:string}|null)?.managedBy === "sales-fleet") {
+        const profile = await db.salesRepresentative.findUnique({where:{mcpKeyId:record.id},select:{id:true,status:true}});
+        if(!profile)return {ok:false,response:NextResponse.json({error:"Unknown sales holder"},{status:401})};
+        salesContext={salesProfileId:profile.id,salesProfileStatus:profile.status};
+        const runId=request.headers.get("x-sales-run-id"), lease=request.headers.get("x-sales-run-lease");
+        if(runId||lease){
+          const run=runId?await db.salesRun.findUnique({where:{id:runId},select:{id:true,representativeId:true,status:true,leaseToken:true,dealId:true,claimedAt:true}}):null;
+          if(!run||run.representativeId!==profile.id||run.status!=="RUNNING"||!lease||run.leaseToken!==lease||!run.claimedAt||run.claimedAt.getTime()<Date.now()-15*60000)return {ok:false,response:NextResponse.json({error:"Sales run scope denied"},{status:403})};
+          salesContext={...salesContext,salesRunId:run.id,salesDealId:run.dealId};
+        }
+      }
       db.mcpApiKey
         .update({ where: { id: record.id }, data: { lastUsedAt: new Date() } })
         .catch(() => {});
       return {
         ok: true,
+        ...salesContext,
         apiKeyId: record.id,
+        allowedTools: Array.isArray((record.permissions as {allowedTools?:unknown}|null)?.allowedTools) ? ((record.permissions as {allowedTools:unknown[]}).allowedTools.filter((name):name is string => typeof name === "string")) : undefined,
         ratePerCallUsd: record.ratePerCallUsd,
         scopeKind: normalizeScopeKind(record.scopeKind),
         scopeStrategyId: record.scopeStrategyId,
@@ -139,6 +158,11 @@ export function scopeMcpParams(
   rawParams: Record<string, unknown>,
 ): { denied: NextResponse; params?: undefined } | { denied?: undefined; params: Record<string, unknown> } {
   let deniedDetail = isMcpServerAllowed(gate.scopeServer, server) ? null : "Cette clé est limitée à un autre serveur.";
+  if (gate.allowedTools && !gate.allowedTools.includes(tool) && !gate.allowedTools.includes(`${server}.${tool}`)) deniedDetail = "Cet outil ne fait pas partie du mandat de cette clé.";
+  if(gate.salesProfileId && !["sales_claim_run","sales_complete_run"].includes(tool)) {
+    if(gate.salesProfileStatus!=="ACTIVE"||!gate.salesRunId)deniedDetail="Cette action exige une exécution commerciale active.";
+    if(gate.salesDealId && rawParams.dealId && rawParams.dealId!==gate.salesDealId)deniedDetail="Cette exécution concerne une autre affaire.";
+  }
   if (gate.scopeKind === "BRAND") {
     const requested = typeof rawParams.strategyId === "string" ? rawParams.strategyId : null;
     if (requested && requested !== gate.scopeStrategyId) {
@@ -169,6 +193,7 @@ export function scopeMcpParams(
         scopeStrategyId: gate.scopeStrategyId ?? null,
         userId: gate.userId ?? null,
         apiKeyId: gate.apiKeyId ?? null,
+        ...(gate.salesProfileId ? {salesRunId:gate.salesRunId??null,salesDealId:gate.salesDealId??null}:{}),
       },
     },
   };

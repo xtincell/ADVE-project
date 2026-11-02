@@ -45,7 +45,7 @@ export const salesCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("OBJECTION"), evidence: text }),
   z.object({ type: z.literal("ACCEPT"), evidence: text, customerMessageId: text.optional() }),
   z.object({ type: z.literal("PAYMENT"), evidence: text, amount: z.number().finite().nonnegative(), currency: z.string().regex(/^[A-Z]{3}$/) }),
-  z.object({ type: z.literal("DELIVER"), evidence: text, nextAction: text, nextDeadline: z.string().datetime() }),
+  z.object({ type: z.literal("DELIVER"), evidence: text, customerMessageId: text.optional(), nextAction: text, nextDeadline: z.string().datetime() }),
   z.object({ type: z.literal("STOP"), evidence: text }),
   z.object({ type: z.literal("HANDOVER"), sellerId: text }),
   z.object({ type: z.literal("BRANCH"), choiceId: text, evidence: text, customerMessageId: text.optional() }),

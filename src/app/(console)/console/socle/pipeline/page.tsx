@@ -1,5 +1,6 @@
 "use client";
 
+import { CrmSalesFleet } from "@/components/console/crm-sales-fleet";
 import { CrmSalesDesk } from "@/components/console/crm-sales-desk";
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
@@ -123,6 +124,7 @@ export default function PipelinePage() {
         ]}
       />
 
+      <CrmSalesFleet />
       <CrmSalesDesk />
       <label className="block text-sm">Devise des prévisions
         <select value={currency} onChange={event => setCurrency(event.target.value)} className="ml-3 rounded border border-border bg-background p-2">

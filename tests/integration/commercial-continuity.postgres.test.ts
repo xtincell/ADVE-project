@@ -22,7 +22,7 @@ beforeAll(async () => {
   const op = await db.operator.create({ data: { name: "Commercial fixture", slug: randomUUID(), status: "ACTIVE", licenseType: "OWNER", licensedAt: new Date(), licenseExpiry: new Date("2030-01-01") } });
   fixtureOperatorIds.push(op.id);
   const createUser = async (name: string, operatorId?: string) => db.user.create({ data: { name, email: randomUUID() + "@example.invalid", operatorId } });
-  adminId = (await createUser("Mandant")).id;
+  adminId = (await createUser("Mandant", op.id)).id;
   sellerId = (await createUser("Commercial autonome", op.id)).id;
   deliveryId = (await createUser("Livraison", op.id)).id;
   const other = await db.operator.create({ data: { name: "Autre", slug: randomUUID(), status: "ACTIVE", licenseType: "OWNER", licensedAt: new Date(), licenseExpiry: new Date("2030-01-01") } });
@@ -82,6 +82,9 @@ describe("commercial continuity through the governed router and PostgreSQL", () 
     } }, "ADMIN");
     await expect(caller(sellerId).updateDeal({ dealId, contactEmail: "redirect@example.invalid" })).rejects.toThrow("destinataire");
     await caller(sellerId).addNote({ dealId, content: "Préparer la conversation sans changer le destinataire." });
+    await expect(step(sellerId,{type:"HANDOVER",sellerId:deliveryId})).rejects.toThrow();
+    await step(adminId,{type:"HANDOVER",sellerId:deliveryId},"USER");
+    await step(adminId,{type:"HANDOVER",sellerId},"USER");
     await step(sellerId, { type: "QUALIFY", role: "BUYER", need: "Faire découvrir le restaurant." }, "USER", "PHONE");
     await step(sellerId, { type: "PROPOSE" }, "USER", "WHATSAPP");
     await step(sellerId, { type: "OBJECTION", evidence: "Le client demande une garantie de réservations." });
@@ -150,11 +153,12 @@ describe("commercial continuity through the governed router and PostgreSQL", () 
         await invoke("sales_sync_payment", { dealId, requestId: randomUUID(), expectedRevision: current.revision });
         continue;
       }
+      const deliveryReply = state.node === "PAID" ? await db.crmMessage.create({data:{contactId:buyerContact.id,salesDealId:dealId,direction:"IN",status:"RECEIVED",channel:"WEB",body:"Je confirme la réception et l’acceptation de la prestation synthétique."}}) : null;
       const decisions: Record<string, SalesStep["command"]> = {
         DISCOVERY: { type: "QUALIFY", role: "BUYER", need: "Demande du client fictif." },
         QUALIFIED: { type: "PROPOSE" },
         PROPOSAL: { type: "ACCEPT", evidence: "Acceptation donnée par l’acheteur simulé.", customerMessageId: buyerReply.id },
-        PAID: { type: "DELIVER", evidence: "Remise synthétique acceptée par le client.", nextAction: "Revoir la valeur livrée.", nextDeadline: "2027-01-01T00:00:00.000Z" },
+        PAID: { type: "DELIVER", evidence: "Remise synthétique acceptée par le client.", customerMessageId: deliveryReply?.id, nextAction: "Revoir la valeur livrée.", nextDeadline: "2027-01-01T00:00:00.000Z" },
       };
       if (state.node === "PROPOSAL") {
         const refused = await POST(new Request("http://localhost/api/mcp/operations", { method: "POST",
