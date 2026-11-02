@@ -28,6 +28,47 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 531 — reprise documentaire après intégration (2026-11-02)
+
+Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration
+de main `4b09965aae5b5ac9ec59367c0f9ff3ca95f5fea2` (CRM #1114 et version #1115).
+La livraison commerciale 530 et son ADR0230 sont conservés ; la provenance
+ciblée est désormais ADR0231. PR réelle : #1116, branche
+`fix/adve-completion-irrigation530`. Tous les reçus 530 ci-dessous sont
+préintégration. Réception combinée 531 reçue : 5 092 unitaires / 485 fichiers,
+PostgreSQL sérialisé 534 tests / 33 fichiers en 260,45 s, build exact UI exit 0,
+lint et gouvernance sans erreur (24 avertissements préexistants). Timeout initial
+et marge du grand document restent tracés, sans réception sous charge.
+HTTP compilé : USER intake/lecture/S, MCP via ADMIN existant séparé, garde USER
+préservée ; amendement 249 ms, refresh 213 ms, assemblage 163 ms. Source PROPOSED,
+feuille INFERRED, parent HUMAN, voisins, autres piliers et exécution conservés ;
+ratio calculé depuis les prémisses synthétiques. Pages HTTP 200 en 308 / 155 ms,
+hydratation/native non reçue, latences locales sans SLO.
+Stress compilé exact exit 0 : 276 pages HTTP reçues / 5 non reçues / 0 échec,
+3 requêtes, 7 forges/transitions, 0 finding ; aucune réception native par ces probes.
+Arbres source du CRM en production et de main comparés identiques ; contenu CRM
+conservé. CI/image/runtime 531, chaîne réelle ADVE/RTIS et MVP toujours ouverts.
+Les contrôles du checkpoint 530 suivant ne constituent pas une réception 531 ;
+les reçus combinés ci-dessus sont distincts. Aucun défaut CRM supplémentaire
+déduit de l’intégration.
+
+### 531 — revue des cellules proposée au bon chemin, candidat
+
+Symptôme : content[path] ne relit pas une cellule profonde ; une prévisualisation
+courte et un badge parent HUMAN peuvent masquer le complément à confirmer.
+Le candidat utilise le résolveur canonique, ouvre la valeur entière par FocusModal
+et distingue « Revoir l’ensemble » de « Valider » la cellule. Badges UI mixtes
+sans modifier l’autorité du writer. Hypothèse : grain du lecteur de revue et
+agrégation d’affichage restés au champ de tête après passage aux origines fines.
+Quatre cas UI ajoutés, ciblé 30 / 6 vert avant l’ultime préfixe ; contre-épreuve
+de lecture racine rouge puis restauration verte 4 / 1 reçue. Combiné avant UI :
+5 088 / 484 verts. Premier PostgreSQL 533 / 534, timeout 120 s conservé ; reprise
+entière 534 tests / 33 fichiers verts en 260,45 s sans compilation concurrente,
+limites inchangées. Grand document 111,86 s sous 120 s, marge faible : profilage
+après gros œuvre dans RESIDUAL-DEBT, aucune réception sous charge. Full UI
+5 092 / 485, build exact et HTTP/stress compilés reçus au périmètre ci-dessus ;
+natif/CI/production ouverts.
+
 ### 530 — cellules sous validation globale, correctif candidat (2026-11-02)
 
 Symptôme : une lacune sous un objet HUMAN est bloquée par la protection globale,

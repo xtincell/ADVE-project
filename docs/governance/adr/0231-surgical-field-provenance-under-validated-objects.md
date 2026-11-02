@@ -1,12 +1,35 @@
-# ADR-0230 — Complétion ciblée et provenance sous un objet validé
+# ADR-0231 — Complétion ciblée et provenance sous un objet validé
 
-**Status** : Proposed — candidat 530, réception finale et livraison ouvertes
+**Status** : Proposed — candidat 531 après main, réceptions combinées et chaîne ouvertes
 **Date** : 2026-11-02
 **Phase** : 7 — complétion ADVE et irrigation qualifiée
 **Depends on** : ADR-0023, ADR-0032, ADR-0172, ADR-0229
 **Supersedes** : aucun ; étend le grain des origines sans réécrire les décisions passées
 
 ## Contexte
+
+Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration
+de main `4b09965aae5b5ac9ec59367c0f9ff3ca95f5fea2` (CRM #1114 et version #1115).
+La livraison commerciale 530 et son ADR0230 sont conservés ; la provenance
+ciblée est désormais ADR0231. PR réelle : #1116, branche
+`fix/adve-completion-irrigation530`. Tous les reçus 530 ci-dessous sont
+préintégration. Réception combinée 531 reçue : 5 092 unitaires / 485 fichiers,
+PostgreSQL sérialisé 534 tests / 33 fichiers en 260,45 s, build exact UI exit 0,
+lint et gouvernance sans erreur (24 avertissements préexistants). Timeout initial
+et marge du grand document restent tracés, sans réception sous charge.
+HTTP compilé : USER intake/lecture/S, MCP via ADMIN existant séparé, garde USER
+préservée ; amendement 249 ms, refresh 213 ms, assemblage 163 ms. Source PROPOSED,
+feuille INFERRED, parent HUMAN, voisins, autres piliers et exécution conservés ;
+ratio calculé depuis les prémisses synthétiques. Pages HTTP 200 en 308 / 155 ms,
+hydratation/native non reçue, latences locales sans SLO.
+Stress compilé exact exit 0 : 276 pages HTTP reçues / 5 non reçues / 0 échec,
+3 requêtes, 7 forges/transitions, 0 finding ; aucune réception native par ces probes.
+Arbres source du CRM en production et de main comparés identiques ; contenu CRM
+conservé. CI/image/runtime 531, chaîne réelle ADVE/RTIS et MVP toujours ouverts.
+Le numéro 0230 commercial est conservé intact ; ce contrat a été renuméroté
+0231 après collision de numéros. La rubrique « Réceptions 530 préintégration »
+plus bas conserve son dernier delta d’origine ; les contrôles combinés 531 ne
+sont pas déduits de ces preuves antérieures.
 
 Un objet ou catalogue validé HUMAN peut encore contenir une cellule vide. Une
 protection au seul champ de tête bloque alors tout complément, tandis qu’un
@@ -59,6 +82,27 @@ Une origine moins autoritaire ne peut les écraser ou transférer leur autorité
 La protection couvre aussi les origines sans changement de valeur : redéclarer
 INFERRED un parent inchangé ne retire pas l’origine HUMAN d’une de ses cellules.
 
+### Revoir les compléments sans confondre affichage et autorité
+
+Le candidat 531 lit les valeurs de revue avec resolvePillarPath, y compris les
+feuilles d’objet/tableau. « Lire la valeur entière » réutilise FocusModal ;
+« Revoir l’ensemble » indique que l’éditeur existant porte le parent, alors que
+la confirmation « Valider » vise toujours la seule cellule inférée.
+makeStatusFor dérive les badges de présentation « Compléments proposés » ou
+« Informations complétées » pour le parent d’origines mixtes. Ces badges ne
+modifient ni fieldStatusFor d’autorité du writer ni les origines persistées.
+
+Quatre cas UI ajoutés ; ciblé DS/vocabulaire/domain 30 tests / 6 fichiers reçu
+avant le dernier ajustement de préfixe d’affichage. Contre-épreuve de lecture
+racine rouge puis restauration verte 4 / 1 reçue ; aucune réception native déduite.
+Suite combinée antérieure à l’UI : 5 088 unitaires / 484 fichiers verts. Premier
+PostgreSQL 533 / 534, timeout 120 s conservé ; reprise entière sans compilation
+concurrente ni changement de limites : 534 tests / 33 fichiers verts en 260,45 s.
+Grand document en 111,86 s sous 120 s, marge de 8,14 s seulement ; profilage après
+gros œuvre dans RESIDUAL-DEBT, aucune réception sous charge. Suite finale UI
+5 092 / 485, build exact, HTTP et stress compilés reçus au périmètre ci-dessus ;
+natif, CI et production restent ouverts.
+
 ### Un chemin canonique et un succès réellement persisté
 
 L’implémentation pure de chemin vit dans domain ; lib conserve un re-export de
@@ -81,7 +125,7 @@ puis rechargé ; une proposition ne peut pas contourner le parcours gouverné pa
 un remplacement complet. Ni complétude structurelle ni marque HUMAN héritée ne
 prouve une mesure ou une adoption de tous les postulats.
 
-Réceptions locales avant le dernier delta : 5 082 unitaires / 483 fichiers, maxWorkers 4 sans
+Réceptions 530 préintégration, avant le dernier delta : 5 082 unitaires / 483 fichiers, maxWorkers 4 sans
 restriction de périmètre ; PostgreSQL 528 tests / 32 fichiers puis 53 ciblés /
 3 fichiers. Typage exit 0, lints sans erreur (24 avertissements préexistants),
 cycles sans dépendance circulaire et reconstruction webpack finale exit 0.
@@ -111,5 +155,6 @@ Tests anti-drift concernés : field-provenance, pillar-provenance-guard,
 brand-source-single-index et amend-source.postgres. Revoir aussi le refus des
 remplacements/suppressions, les identités et valeurs voisines, versions périmées,
 valeurs IA non conformes et comptage sur contenu effectivement persisté.
-Aucun nouveau modèle Prisma, routeur, service, Intent, provider ou gestionnaire
-d’appels ; aucun ADVE/RTIS complet, Oracle entier, MVP ou chantier global reçu.
+Ce contrat ADVE n’ajoute aucun modèle Prisma, routeur, service, Intent, provider
+ou gestionnaire d’appels ; aucun ADVE/RTIS complet, Oracle entier, MVP ou chantier
+global reçu.

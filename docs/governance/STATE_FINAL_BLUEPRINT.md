@@ -2107,6 +2107,22 @@ d'invariants spécifiques (cf. `tests/integration/`).
 
 # ANNEXE CANON L — LEXIQUE NORMATIF
 
+### Attribution des réceptions après intégration — candidat 531 (2026-11-02)
+
+La provenance ciblée du candidat 530 est reprise en 531 après fusion de main
+(CRM #1114 / version #1115). ADR0230 appartient à la continuité commerciale et
+reste intact ; le contrat de provenance ciblée devient ADR0231. Les notions
+et reçus 530 ci-dessous restent attribués à leur code préintégration, jamais au
+nouveau head combiné. 531 reçoit localement 5 092 unitaires / 485 fichiers,
+PostgreSQL 534 / 33, build UI exact exit 0, lint/gouvernance sans erreur, HTTP
+compilé à origines/voisins/piliers/exécution conservés et stress exact exit 0
+(276 pages HTTP reçues, 5 non reçues, 0 échec, 3 requêtes, 7 forges/transitions,
+0 finding). Arbres source CRM production/main identiques ; contenu conservé.
+Pages/probes HTTP ne reçoivent pas hydratation/native, capacité sous charge ou
+SLO ; marge du grand document encore à profiler après gros œuvre. CI/image/runtime,
+PR #1116 et chaîne réelle ouverts. Aucun ADVE/RTIS, Oracle, MVP ou chantier entier
+reçu. Les archives datées conservent leur sens historique.
+
 ### Modèle rempli et origine précise — contrat candidat 530 (2026-11-02)
 
 **ADVE rempli** : modèle de travail qualifié dont les prémisses attendues sont
@@ -2143,7 +2159,7 @@ masque pas une cellule INFERRED. Ciblé final 54 tests / 3 fichiers verts,
 contre-épreuve rouge puis restauration verte 16 / 1. Le parcours HTTP aux chemins
 nus reste reçu pour l’état précédent ; aucun build/HTTP/stress exact de ce
 nouveau head annoncé. CI/image/runtime exacts et chaîne réelle encore requis.
-[ADR-0230 Proposed](adr/0230-surgical-field-provenance-under-validated-objects.md).
+[ADR-0231 Proposed](adr/0231-surgical-field-provenance-under-validated-objects.md).
 Aucun ADVE/RTIS complet, Oracle entier, MVP ou chantier global reçu.
 
 ### North Star définie et objectif complet — candidat 529 (2026-11-02)

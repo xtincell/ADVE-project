@@ -7,6 +7,18 @@
 **Supersedes** : aucun ; complète le contrat préférences/scénarios sans modifier ses réceptions
 
 
+## Addendum candidat 531 — reprise après intégration de main
+
+Le correctif du checkpoint 530 ci-dessous est repris sous 531 dans la PR #1116,
+après intégration CRM #1114 / version #1115. ADR0230 commercial est conservé ;
+le contrat de provenance ciblée est [ADR-0231 Proposed](0231-surgical-field-provenance-under-validated-objects.md).
+Tous les reçus 530 restent préintégration. 531 reçoit localement 5 092 unitaires /
+485 fichiers, PostgreSQL 534 / 33, build UI exact, HTTP compilé à origines conservées
+et stress exact exit 0 borné à 276 pages HTTP / 5 non reçues / 0 échec, sans finding.
+Lint/gouvernance sans erreur ; contenu CRM conservé par comparaison des arbres
+source production/main. Natif, CI/image/runtime et chaîne entière restent ouverts.
+Aucune réception ADVE/RTIS/MVP entière ou de capacité sous charge.
+
 ## Addendum candidat 530 — compléter les prémisses au bon grain
 
 ADVE rempli doit produire toutes ses valeurs attendues en aval : une inconnue
@@ -15,7 +27,7 @@ Source documentée → calcul → postulat de départ inféré dans ADVE, puis c
 dépendances ; les limites du modèle et les postulats restent explicités, sans
 mesure, fait biographique, devis ou adoption fabriqués. Aucun socle I/S parallèle.
 
-[ADR-0230 Proposed](0230-surgical-field-provenance-under-validated-objects.md)
+[ADR-0231 Proposed](0231-surgical-field-provenance-under-validated-objects.md)
 borne la complétion au chemin exact sous un parent validé : version attendue,
 identités/voisins conservés, origine propre et confirmation séparée, enfants
 protégés contre remplacement/suppression. Le contrat partagé rejoint les

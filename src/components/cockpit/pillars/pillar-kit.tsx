@@ -14,7 +14,7 @@
  */
 
 import type { ReactNode } from "react";
-import { FIELD_PROVENANCE_LABEL } from "@/domain/field-provenance";
+import { FIELD_PROVENANCE_LABEL, fieldStatusFor } from "@/domain/field-provenance";
 import { SOURCE_CERTAINTY_LABEL } from "@/domain/source-certainty";
 
 // ── Helpers ────────────────────────────────────────────────────────────
@@ -33,6 +33,8 @@ const STATUS_LABEL: Record<string, [string, string]> = {
   OFFICIAL: [SOURCE_CERTAINTY_LABEL.OFFICIAL, "info"],
   ARBITRARY: [SOURCE_CERTAINTY_LABEL.ARBITRARY, "orange"],
   INFERRED: [FIELD_PROVENANCE_LABEL.INFERRED, "orange"],
+  PARTIALLY_INFERRED: ["Compléments proposés", "orange"],
+  MIXED: ["Informations complétées", "info"],
   CALCULATED: ["Calculé", "info"],
   EMPTY: ["À saisir", "muted"],
 };
@@ -42,7 +44,21 @@ const STATUS_LABEL: Record<string, [string, string]> = {
  * d'une approbation. La provenance du gateway prime sur une ancienne certitude.
  * Sans trace de provenance, conserver uniquement le marqueur legacy explicite.
  */
-export { fieldStatusFor as makeStatusFor } from "@/domain/field-provenance";
+/** Display a mixed parent without changing the authority used by the writer. */
+export function makeStatusFor(certainty: Record<string, string> | null | undefined, pillarKey: string, provenance?: unknown) {
+  const status = fieldStatusFor(certainty, pillarKey, provenance);
+  const origins = provenance && typeof provenance === "object" && !Array.isArray(provenance) ? provenance as Rec : {};
+  const prefix = `${pillarKey.toLowerCase()}.`;
+  const children = Object.keys(origins).map(path => path.startsWith(prefix) ? path.slice(prefix.length) : path);
+  return (path: string): string | undefined => {
+    const own = status(path);
+    const bare = path.startsWith(prefix) ? path.slice(prefix.length) : path;
+    const different = children.filter(child => child.startsWith(`${bare}.`) || child.startsWith(`${bare}[`))
+      .map(status).filter(child => child !== undefined && child !== own);
+    if (different.length) return own === "INFERRED" || different.includes("INFERRED") ? "PARTIALLY_INFERRED" : "MIXED";
+    return own;
+  };
+}
 
 export function asRec(v: unknown): Rec {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as Rec) : {};

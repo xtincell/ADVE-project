@@ -3751,7 +3751,7 @@ model Deal {
   strategyId   String?
   userId       String?
   contactName  String
-  contactEmail String
+  contactEmail String?
   companyName  String
   stage        DealStage @default(LEAD)
   value        Float?
@@ -3761,6 +3761,13 @@ model Deal {
   notes        String?
   wonAt        DateTime?
   lostReason   String?
+  /// Owner of the selling portfolio, independent of the buyer strategy.
+  operatorId String?
+  sellerStrategyId String?
+  contactPhone String?
+  commercial Json?
+  paymentReference String? @unique
+  revision Int @default(0)
 
   strategy Strategy? @relation(fields: [strategyId], references: [id])
   user     User?     @relation(fields: [userId], references: [id])
@@ -3768,6 +3775,8 @@ model Deal {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([operatorId])
+  @@index([sellerStrategyId])
   @@index([stage])
   @@index([strategyId])
 }

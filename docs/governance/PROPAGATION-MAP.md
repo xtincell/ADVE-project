@@ -9,6 +9,31 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Reprise de provenance ciblée sur main — candidat 531 (2026-11-02)
+
+Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration
+de main `4b09965aae5b5ac9ec59367c0f9ff3ca95f5fea2` (CRM #1114 et version #1115).
+La livraison commerciale 530 et son ADR0230 sont conservés ; la provenance
+ciblée est désormais ADR0231. PR réelle : #1116, branche
+`fix/adve-completion-irrigation530`. Tous les reçus 530 ci-dessous sont
+préintégration. Réception combinée 531 reçue : 5 092 unitaires / 485 fichiers,
+PostgreSQL sérialisé 534 tests / 33 fichiers en 260,45 s, build exact UI exit 0,
+lint et gouvernance sans erreur (24 avertissements préexistants). Timeout initial
+et marge du grand document restent tracés, sans réception sous charge.
+HTTP compilé : USER intake/lecture/S, MCP via ADMIN existant séparé, garde USER
+préservée ; amendement 249 ms, refresh 213 ms, assemblage 163 ms. Source PROPOSED,
+feuille INFERRED, parent HUMAN, voisins, autres piliers et exécution conservés ;
+ratio calculé depuis les prémisses synthétiques. Pages HTTP 200 en 308 / 155 ms,
+hydratation/native non reçue, latences locales sans SLO.
+Stress compilé exact exit 0 : 276 pages HTTP reçues / 5 non reçues / 0 échec,
+3 requêtes, 7 forges/transitions, 0 finding ; aucune réception native par ces probes.
+Arbres source du CRM en production et de main comparés identiques ; contenu CRM
+conservé. CI/image/runtime 531, chaîne réelle ADVE/RTIS et MVP toujours ouverts.
+Le circuit document → proposition/amendement ADVE → calcul → lecteurs et ses
+gardes restent ceux d’ADR0231 ; sa recette synthétique combinée relève des reçus
+531 ci-dessus, sans recevoir la chaîne réelle entière. Les checkpoints 530
+suivants restent historiques.
+
 ### Complétion ADVE et origine au chemin exact — candidat 530 (2026-11-02)
 
 Contrat de réception : ADVE rempli ⇒ aucune valeur attendue vide ou inconnue en
@@ -45,7 +70,7 @@ masque pas une cellule INFERRED. Ciblé final 54 tests / 3 fichiers verts,
 contre-épreuve rouge puis restauration verte 16 / 1. Le parcours HTTP aux chemins
 nus reste reçu pour l’état précédent ; aucun build/HTTP/stress exact de ce
 nouveau head annoncé. CI/image/runtime exacts et chaîne réelle encore requis. Aucun nouvel objet
-métier ou circuit de décision. [ADR-0230 Proposed](adr/0230-surgical-field-provenance-under-validated-objects.md),
+métier ou circuit de décision. [ADR-0231 Proposed](adr/0231-surgical-field-provenance-under-validated-objects.md),
 [réception et déclencheur](RESIDUAL-DEBT.md). Aucun ADVE/RTIS/MVP complet reçu.
 Les checkpoints datés suivants restent historiques.
 

@@ -1,3 +1,30 @@
+## 531 — recevoir la combinaison avec main (2026-11-02)
+
+Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration
+de main `4b09965aae5b5ac9ec59367c0f9ff3ca95f5fea2` (CRM #1114 et version #1115).
+La livraison commerciale 530 et son ADR0230 sont conservés ; la provenance
+ciblée est désormais ADR0231. PR réelle : #1116, branche
+`fix/adve-completion-irrigation530`. Tous les reçus 530 ci-dessous sont
+préintégration. Réception combinée 531 reçue : 5 092 unitaires / 485 fichiers,
+PostgreSQL sérialisé 534 tests / 33 fichiers en 260,45 s, build exact UI exit 0,
+lint et gouvernance sans erreur (24 avertissements préexistants). Timeout initial
+et marge du grand document restent tracés, sans réception sous charge.
+HTTP compilé : USER intake/lecture/S, MCP via ADMIN existant séparé, garde USER
+préservée ; amendement 249 ms, refresh 213 ms, assemblage 163 ms. Source PROPOSED,
+feuille INFERRED, parent HUMAN, voisins, autres piliers et exécution conservés ;
+ratio calculé depuis les prémisses synthétiques. Pages HTTP 200 en 308 / 155 ms,
+hydratation/native non reçue, latences locales sans SLO.
+Stress compilé exact exit 0 : 276 pages HTTP reçues / 5 non reçues / 0 échec,
+3 requêtes, 7 forges/transitions, 0 finding ; aucune réception native par ces probes.
+Arbres source du CRM en production et de main comparés identiques ; contenu CRM
+conservé. CI/image/runtime 531, chaîne réelle ADVE/RTIS et MVP toujours ouverts.
+
+**Fermer** après les contrôles/build/HTTP/stress locaux reçus par CI/image/runtime
+exacts et conservation après livraison des deux périmètres intégrés. Responsable
+Core/irrigation existant ; effort recette bornée ; **déclencheur** avant réception
+de la PR #1116 et toute déclaration de complétude. Les contrôles du candidat
+530 sont conservés pour leur état antérieur, sans transfert de réception à 531.
+
 ## 530 — compléter le socle sans diluer ses décisions (2026-11-02)
 
 Candidat : grain d’origine au chemin exact sous un parent validé, écriture
@@ -39,7 +66,7 @@ collections vides, enfants protégés, confirmation de la seule cellule, version
 périmée et comptage du persisté ; puis toute la chaîne réelle ADVE→RTIS→lecteurs.
 Responsables Core/gateway et irrigation existants ; effort audit et recette
 bornés ; **déclencheur** avant livraison 530 et déclaration de complétude.
-[ADR-0230 Proposed](adr/0230-surgical-field-provenance-under-validated-objects.md)
+[ADR-0231 Proposed](adr/0231-surgical-field-provenance-under-validated-objects.md)
 complète ADR-0229 ; titres/slugs de campagne, devis et MVP restent des lots ouverts.
 
 ## 529 — recevoir conservation et lisibilité, sans clore la qualification (2026-11-02)

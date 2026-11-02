@@ -1,3 +1,43 @@
+## 531 — réceptions après intégration encore ouvertes (2026-11-02)
+
+Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration
+de main `4b09965aae5b5ac9ec59367c0f9ff3ca95f5fea2` (CRM #1114 et version #1115).
+La livraison commerciale 530 et son ADR0230 sont conservés ; la provenance
+ciblée est désormais ADR0231. PR réelle : #1116, branche
+`fix/adve-completion-irrigation530`. Tous les reçus 530 ci-dessous sont
+préintégration. Réception combinée 531 reçue : 5 092 unitaires / 485 fichiers,
+PostgreSQL sérialisé 534 tests / 33 fichiers en 260,45 s, build exact UI exit 0,
+lint et gouvernance sans erreur (24 avertissements préexistants). Timeout initial
+et marge du grand document restent tracés, sans réception sous charge.
+HTTP compilé : USER intake/lecture/S, MCP via ADMIN existant séparé, garde USER
+préservée ; amendement 249 ms, refresh 213 ms, assemblage 163 ms. Source PROPOSED,
+feuille INFERRED, parent HUMAN, voisins, autres piliers et exécution conservés ;
+ratio calculé depuis les prémisses synthétiques. Pages HTTP 200 en 308 / 155 ms,
+hydratation/native non reçue, latences locales sans SLO.
+Stress compilé exact exit 0 : 276 pages HTTP reçues / 5 non reçues / 0 échec,
+3 requêtes, 7 forges/transitions, 0 finding ; aucune réception native par ces probes.
+Arbres source du CRM en production et de main comparés identiques ; contenu CRM
+conservé. CI/image/runtime 531, chaîne réelle ADVE/RTIS et MVP toujours ouverts.
+Contre-épreuve UI lecture racine rouge puis restauration verte 4 / 1 reçue ;
+PostgreSQL repris sans compilation concurrente ni changement de limites,
+premier timeout de 120 s conservé.
+
+**Fermer** après les contrôles/build/HTTP/stress locaux reçus par CI/image/runtime
+exacts et conservation après livraison des deux périmètres intégrés. Responsable
+Core/irrigation existant ; effort recette bornée ; **déclencheur** avant réception
+de la PR #1116 et toute déclaration de complétude. Les contrôles du candidat
+530 sont conservés pour leur état antérieur, sans transfert de réception à 531.
+
+**Faible marge sur grand document** : passage isolé en 111,86 s sous le plafond
+120 s (8,14 s de marge), sans réception sous charge. **Fermer** par profilage borné
+du cas conservé : durée par étape de lecture/désérialisation, scellement/empreinte,
+écriture/transaction et contention base/CPU/IO ; comparer un passage isolé puis
+une concurrence contrôlée, conserver taille et invariants, sans relever une limite
+pour masquer le coût. Responsable Core/admission et infrastructure existants ;
+effort : une passe de profilage ciblée ; **déclencheur** après livraison du gros
+œuvre fonctionnel, avant toute réception de capacité sous charge ou engagement
+de latence. La reprise verte ne ferme ni cette dette ni la contention VPS déjà tracée.
+
 ## 530 — réception ciblée puis chaîne entière encore ouvertes (2026-11-02)
 
 Un objet HUMAN peut garder des cellules vides ; sa protection globale bloque les
@@ -37,7 +77,7 @@ la cascade et ses lecteurs. Responsable Core/gateway et irrigation existants ;
 effort audit et recette bornés ; **déclencheur** avant réception 530, puis avant
 toute déclaration d’ADVE rempli ou de sortie finale sans valeur attendue manquante.
 Un postulat ne devient ni mesure réelle, fait biographique, devis ou adoption.
-[ADR-0230 Proposed](adr/0230-surgical-field-provenance-under-validated-objects.md).
+[ADR-0231 Proposed](adr/0231-surgical-field-provenance-under-validated-objects.md).
 Qualification réelle ADVE entière, titres/slugs de campagne, devis et MVP restent
 ouverts ; les dettes de latence/VPS et de fiabilité déjà tracées ne sont pas fermées.
 Aucune donnée métier privée reproduite ici.
