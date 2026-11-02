@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { Bot, UserRound, Pause, Play, Send, ArrowRight, Plus } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
+import { MarkdownContent } from "@/components/shared/markdown-content";
 
 const field = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 const button = "inline-flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
@@ -107,7 +108,7 @@ export function CrmSalesFleet() {
             <section aria-labelledby="sales-orders-title" className="min-w-0 space-y-3">
               <h4 id="sales-orders-title" className="font-medium">Lui parler</h4>
               <div className="max-h-80 space-y-3 overflow-y-auto rounded-lg border border-border p-3" aria-live="polite" aria-label="Conversation avec le vendeur">
-                {detail.data?.messages.length ? detail.data.messages.map(message => <article key={message.id} className="space-y-1 border-b border-border pb-3 last:border-0 last:pb-0"><p className="text-xs text-foreground-muted">{message.senderName} · {date(message.createdAt)}</p><p className="whitespace-pre-wrap break-words text-sm">{message.content}</p></article>) : <p className="text-sm text-foreground-muted">Donnez une consigne au vendeur. Ses réponses et les résultats de ses missions restent ici.</p>}
+                {detail.data?.messages.length ? detail.data.messages.map(message => <article key={message.id} className="space-y-1 border-b border-border pb-3 last:border-0 last:pb-0"><p className="text-xs text-foreground-muted">{message.senderName} · {date(message.createdAt)}</p><MarkdownContent>{message.content}</MarkdownContent></article>) : <p className="text-sm text-foreground-muted">Donnez une consigne au vendeur. Ses réponses et les résultats de ses missions restent ici.</p>}
               </div>
               <form className="space-y-3" onSubmit={async event => {
                 event.preventDefault(); const form = new FormData(event.currentTarget); const target = event.currentTarget; setError("");
@@ -131,7 +132,7 @@ export function CrmSalesFleet() {
               <ol className="max-h-[36rem] space-y-3 overflow-y-auto">{detail.data?.runs.map(run => <li key={run.id} className="space-y-2 rounded-lg border border-border p-3">
                 <div className="flex flex-wrap justify-between gap-2 text-xs"><span className={run.status === "AMBIGUOUS" || run.status === "FAILED" ? "text-amber-400" : "text-foreground-muted"}>{statusNames[run.status] ?? run.status}</span><span>{date(run.createdAt)}</span></div>
                 <p className="whitespace-pre-wrap break-words text-sm">{run.instruction}</p>
-                {run.result && <p className="whitespace-pre-wrap break-words border-t border-border pt-2 text-sm">{run.result}</p>}
+                {run.result && <MarkdownContent className="border-t border-border pt-2">{run.result}</MarkdownContent>}
                 {run.status === "AMBIGUOUS" && <p className="text-xs text-amber-400">Vérifiez le dernier échange avant de confier une nouvelle mission.</p>}
                 {((profile.mode === "HUMAN" && run.status === "QUEUED") || ["FAILED", "AMBIGUOUS"].includes(run.status)) && <details>
                   <summary className="cursor-pointer text-sm underline">Consigner le résultat humain</summary>

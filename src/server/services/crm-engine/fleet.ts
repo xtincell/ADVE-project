@@ -80,9 +80,9 @@ export async function getSalesRepresentative(actor: FleetActor, id: string) {
   const profile = await assertFleetProfile(actor, id);
   const [runs, messages] = await Promise.all([
     db.salesRun.findMany({ where: { representativeId: id }, orderBy: { createdAt: "desc" }, take: 100 }),
-    db.message.findMany({ where: { conversationId: profile.conversationId ?? "__none__" }, orderBy: { createdAt: "asc" }, take: 200 }),
+    db.message.findMany({ where: { conversationId: profile.conversationId ?? "__none__" }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 200 }),
   ]);
-  return { profile: publicProfile(profile), runs: runs.map(({ leaseToken: _lease, ...run }) => run), messages };
+  return { profile: publicProfile(profile), runs: runs.map(({ leaseToken: _lease, ...run }) => run), messages: messages.reverse() };
 }
 async function queueIn(tx: Tx, profile: SalesRepresentative, input: { requestId: string; instruction: string; dealId?: string }, actorId?: string) {
   const replay = await tx.salesRun.findUnique({ where: { requestId: input.requestId } });

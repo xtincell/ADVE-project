@@ -1,3 +1,9 @@
+## v6.27.532 — Conserver les dernières réponses du vendeur dans un fil prolongé (2 novembre 2026)
+
+- La supervision reprend les 200 messages les plus récents du dialogue dirigeant-vendeur et les présente chronologiquement, avec un ordre stable pour les messages horodatés à la même milliseconde.
+- Réponses et résultats du vendeur présentés avec le lecteur Markdown partagé, en conservant leur contenu enregistré.
+- Régression PostgreSQL sur un fil de plus de 200 messages : dernière réponse visible, actualisation après nouvelle réponse, éviction des plus anciennes lignes et ordre des réponses simultanées.
+
 ## v6.27.531 — Flotte commerciale, conversation client et compléments ADVE (2 novembre 2026)
 
 - Supervision des vendeurs humains/IA dans le pipeline : activation, pause, consignes, résultats et reprise humaine.

@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.532", date: "2026-11-02", headline: "Retrouver les dernières réponses de vos vendeurs",
+    highlights: [
+      { emoji: "💬", title: "Un fil qui reste à jour", body: "Les échanges les plus récents restent visibles dans leur ordre de conversation, même après de nombreux messages. Une nouvelle réponse du vendeur apparaît à la prochaine actualisation du fil." },
+      { emoji: "📋", title: "Lire les réponses structurées", body: "Les titres, listes et mises en évidence du vendeur sont présentés dans la conversation et ses résultats de mission. Le texte enregistré reste conservé." },
+    ],
+  },
+  {
     version: "6.27.531", date: "2026-11-02", headline: "Piloter vos ventes et compléter les informations de marque",
     highlights: [
       { emoji: "🤝", title: "Une flotte à votre main", body: "Nommez vos vendeurs humains ou IA, affectez leur marque, activez ou suspendez leur travail. Vos consignes et leurs résultats restent dans le pipeline." },
