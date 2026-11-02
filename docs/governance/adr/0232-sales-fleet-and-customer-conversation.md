@@ -1,4 +1,6 @@
-# ADR 0231 — Supervision des vendeurs et conversation client
+# ADR 0232 — Supervision des vendeurs et conversation client
+
+> Renumérotation 2026-11-02 : le numéro0231 est déjà reçu dans main pour la provenance des cellules ADVE ; le dossier commercial utilise0232 après intégration parallèle.
 
 Statut : Proposed, réception complète en cours.
 
