@@ -28,67 +28,21 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
-### 532 — checkpoint intermédiaire 4d3 avant candidat 533 (2026-11-02)
+### 533 — formes ADVE canoniques restituées par Oracle (2026-11-02)
 
-Checkpoint intermédiaire Oracle 532 sur main
-`4d3c1c3d13bdc5de7bee747ad8c4c28d4ddfb6a9` (CRM/flotte/conversation, PR #1117),
-avant intégration de `cf9242321` / PR #1119 qui a pris la version 532. Le correctif
-Oracle deviendra candidat 533 après cette prochaine intégration ; aucune version
-532 libre ou livraison Oracle 532 n’est annoncée. PR draft réelle #1118, label
-out-of-scope et abonnement SUBSCRIBED reçus ; entrée/note CRM 531 et ADR0232
-préservés. Les preuves `e9c3eb335` restent préintégration ; les reçus ci-après
-appartiennent uniquement à l’étape 4d3, pas au futur head 533.
-
-Migration additive CRM appliquée à la seule base locale gardée. PostgreSQL
-initial : 543 tests / 34 fichiers verts, 12 cas bloqués en beforeAll par la garde
-dans deux fichiers ; garde conservée, puis base locale dédiée au parcours flotte,
-migrations appliquées et ciblé 12 / 2 vert. Couverture en deux passes distinctes
-543 + 12, aucune exécution unique agrégée affirmée. Tests combinés 4d3 :
-5 099 / 487 verts, typage exit 0, lints sans erreur (24 avertissements préexistants),
-cycles sans dépendance circulaire, CODE-MAP régénérée ; webpack local heap 8 Go
-exit 0. HTTP USER : assemblage 159 ms, vraie route PDF 318 ms, 57 pages,
-marqueurs canoniques ciblés présents, piliers strictement inchangés avant/après.
-Trois pages HTTP 200 en 375 / 46 / 56 ms ; hydratation/native non reçue. Mise en
-page PDF non relue pour cette passe, aucune réception visuelle des 57 pages ni
-transfert de la revue préintégration. Stress compilé exit 0 : 276 HTTP reçues /
-5 non reçues / 0 échec, 3 requêtes, 7 forges/transitions et 0 finding ; probes
-HTTP distinctes d’une réception native, latences locales sans SLO.
-
-L’égalité d’arbre source production parallèle `1d59935cea6217702d745d86a334655548e3d112`
-et main 4d3 reste un constat de base, sans réception du correctif Oracle déduite.
-Ces preuves ne reçoivent ni CI/image/runtime/livraison Oracle 532 ni le head final
-533. Les quatre lecteurs corrigés réutilisent les capacités existantes, sans
-nouveau service/modèle/tool dans ce correctif ; finance et chaîne réelle
-ADVE/RTIS/MVP demeurent ouvertes, preuves et données privées hors checkout.
-Le checkpoint suivant reste celui d’Oracle avant intégration ; les reçus 4d3
-ci-dessus sont intermédiaires et ne reçoivent pas le futur head 533. Aucune
-régression CRM déduite de cette fusion documentaire.
-
-### 532 — objets canoniques absents d’Oracle, correctif candidat (2026-11-02)
-
-Symptôme : une doctrine objet passait pour absente ; freins/principes/plateformes
-structurés perdaient leur texte, freins non consommés par l’UI, principes coupés
-à trois et rôle canonique absent du tableau de contacts. Hypothèse : lecteurs
-adaptés à d’anciennes chaînes de texte plutôt qu’aux formes canoniques A/E.
-Le candidat conserve les informations et variantes textuelles héritées, rend
-freins/réponses et rôle ; qualité legacy seulement si renseignée. Aucune écriture
-ou analyse IA ajoutée. Premiers refus 3 / 4, puis 20 / 3 verts ; fixture de rôle
-hors schéma corrigée puis vraie contre-épreuve de lecteur rouge. Ciblé final
-31 / 7 vert : synthèse explicite + listes complètes, type et compteur de plateforme
-déclarés, zéro conservé ; HTML statique/export reçus. Vitest complet reçu :
-5 097 tests / 486 fichiers, hors unit inclus ; 5 059 / 484 antérieurs limités
-aux unit ne sont pas le périmètre complet. Typage/lints sans erreur, cycles sans
-dépendance circulaire. Refus heap V8 conservé puis webpack local 8 Go exit 0,
-sans changement produit/prod. HTTP compilé USER et vraie route PDF reçus ;
-marqueurs ciblés retrouvés dans le PDF de 57 pages, contrôle visuel des seules pages
-3, 4 et 14 sans coupure/chevauchement, piliers inchangés avant/après. Pages
-client HTTP 200, hydratation/native non reçue. Copie de base avec contenu métier
-préexistant, surcharges CANON532 seules synthétiques ; preuves privées hors checkout.
-Stress compilé exit 0 : 276 HTTP reçues / 5 non reçues / 0 échec, 3 requêtes,
-7 forges/transitions, 0 finding ; aucune réception native par ces probes.
-Natif/livraison 532 ouverts. Defaults financiers et marge coefficient/%
-dans RESIDUAL-DEBT pour reprise après 532 ; aucune réparation financière ou
-complétude ADVE/RTIS/MVP déduite de cette lecture.
+Objets doctrine/freins/principes/plateformes perdus, principes coupés, rôle ignoré :
+adaptateurs de chaînes historiques incompatibles avec les formes A/E. Quatre
+lecteurs/rendus réparés, sans écriture source ni LLM ; qualité legacy seulement
+renseignée, synthèse/listes et compteur zéro conservés.
+Exact 533 : 5 099 tests / 487 fichiers, PG commercial 22 / 3 garde intacte, tsc/lints /
+cycles et build 8 GiB reçus. HTTP/PDF : marqueurs ciblés dans 57 pages, piliers inchangés.
+Layout 533 reçu sur 3/4/14 seulement, sans coupure/chevauchement ; HTTP ≠ natif réel/SLO.
+Stress exact 276 HTTP/5 non reçues/0 échec/0 finding, 3 requêtes/7 forges-transitions.
+E9 5 097/486 et 4d3 5 099/487 restent antérieurs ; autres PG 543/34+12/2 en deux passes.
+Base locale à contenu métier préexistant, surcharges ciblées synthétiques ;
+preuves privées hors checkout. CI/image/runtime et chaîne ADVE/RTIS/MVP ouverts.
+Finance après livraison 533 ; labels bruts des taxonomies en finition UX après
+gros œuvre, avant Oracle global : plan/owner/trigger dans RESIDUAL-DEBT, non corrigés ici.
 
 ### 531 — reprise documentaire après intégration (2026-11-02)
 

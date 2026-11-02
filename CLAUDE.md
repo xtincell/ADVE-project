@@ -1,86 +1,26 @@
-## 532 — checkpoint intermédiaire 4d3 avant reprise sous 533 (2 novembre 2026)
+## 533 — Oracle reçu localement, livraison ouverte (2 novembre 2026)
 
-Checkpoint intermédiaire Oracle 532 sur main
-`4d3c1c3d13bdc5de7bee747ad8c4c28d4ddfb6a9` (CRM/flotte/conversation, PR #1117),
-avant intégration de `cf9242321` / PR #1119 qui a pris la version 532. Le correctif
-Oracle deviendra candidat 533 après cette prochaine intégration ; aucune version
-532 libre ou livraison Oracle 532 n’est annoncée. PR draft réelle #1118, label
-out-of-scope et abonnement SUBSCRIBED reçus ; entrée/note CRM 531 et ADR0232
-préservés. Les preuves `e9c3eb335` restent préintégration ; les reçus ci-après
-appartiennent uniquement à l’étape 4d3, pas au futur head 533.
+Sur cf924/PR #1119 : quatre lectures A/E (doctrine, freins, communauté, contacts)
+corrigées, sources inchangées, aucun nouveau service ou LLM dans ce correctif.
+CRM 532/ADR0232 conservés ; PR #1118, out-of-scope et SUBSCRIBED reçus.
+Réceptions exactes 533 : 5 099 tests / 487 fichiers sur périmètre complet ;
+PG commercial ciblé 22 / 3, garde intacte (autres cas attribués à 4d3), tsc exit 0,
+lints sans erreur/24 avertissements préexistants, cycles 0, CODE-MAP générée,
+build webpack local heap 8 GiB exit 0.
+USER compilé : assemblage 158 ms, vraie route PDF 267 ms/57 pages, marqueurs
+canoniques ciblés présents ; piliers exactement inchangés avant/après.
+PDF533 pages 3/4/14 visuellement reçues sans coupure/chevauchement, pas layout des 57 pages.
+Trois pages HTTP 200 en 294/44/43 ms, sans hydratation/native réelle ou SLO.
+Stress exact exit 0 : 276 HTTP reçues/5 non reçues/0 échec, 3 requêtes,
+7 forges/transitions, 0 finding ; probes HTTP distinctes d’une réception native.
 
-Migration additive CRM appliquée à la seule base locale gardée. PostgreSQL
-initial : 543 tests / 34 fichiers verts, 12 cas bloqués en beforeAll par la garde
-dans deux fichiers ; garde conservée, puis base locale dédiée au parcours flotte,
-migrations appliquées et ciblé 12 / 2 vert. Couverture en deux passes distinctes
-543 + 12, aucune exécution unique agrégée affirmée. Tests combinés 4d3 :
-5 099 / 487 verts, typage exit 0, lints sans erreur (24 avertissements préexistants),
-cycles sans dépendance circulaire, CODE-MAP régénérée ; webpack local heap 8 Go
-exit 0. HTTP USER : assemblage 159 ms, vraie route PDF 318 ms, 57 pages,
-marqueurs canoniques ciblés présents, piliers strictement inchangés avant/après.
-Trois pages HTTP 200 en 375 / 46 / 56 ms ; hydratation/native non reçue. Mise en
-page PDF non relue pour cette passe, aucune réception visuelle des 57 pages ni
-transfert de la revue préintégration. Stress compilé exit 0 : 276 HTTP reçues /
-5 non reçues / 0 échec, 3 requêtes, 7 forges/transitions et 0 finding ; probes
-HTTP distinctes d’une réception native, latences locales sans SLO.
-
-L’égalité d’arbre source production parallèle `1d59935cea6217702d745d86a334655548e3d112`
-et main 4d3 reste un constat de base, sans réception du correctif Oracle déduite.
-Ces preuves ne reçoivent ni CI/image/runtime/livraison Oracle 532 ni le head final
-533. Les quatre lecteurs corrigés réutilisent les capacités existantes, sans
-nouveau service/modèle/tool dans ce correctif ; finance et chaîne réelle
-ADVE/RTIS/MVP demeurent ouvertes, preuves et données privées hors checkout.
-
-## 532 — lecture des formes canoniques dans Oracle, candidat (2 novembre 2026)
-
-Sources A/E inchangées : correctif de lecture/rendu/export, sans écriture ni LLM.
-Doctrine structurée, freins/réponses, principes/application, plateformes et liste
-de mécanismes de développement sont à préserver ; pas de coupe à trois principes.
-Le rôle canonique des points de contact remplace une demande de qualité hors
-schéma ; qualité legacy seulement si documentée. Synthèse + listes et métadonnées
-de plateforme sont conservées ensemble, y compris un compteur déclaré nul,
-sans mesure fabriquée.
-Premières reproductions : trois refus sur quatre cas avec les branches A/E
-validées par leurs schémas ; correction suivie de 20 tests / 3 fichiers verts.
-La première fixture de rôle utilisait un channelRef hors schéma, corrigé avant
-une vraie contre-épreuve rouge sur le lecteur de rôle. Ciblé final reçu : 31 tests /
-7 fichiers verts, DS/vocabulaire inclus ; synthèse explicite + tous les principes /
-listes et compteur de plateforme à zéro conservés. Rendu HTML statique/export
-reçu ; Vitest complet : 5 097 tests / 486 fichiers verts, commande sans restriction
-tests/unit (hors unit inclus). Premier lancement limité à tests/unit : 5 059 /
-484, conservé sans le présenter comme complet. Typage exit 0, lint/gouvernance
-sans erreur (24 avertissements préexistants), cycles sans dépendance circulaire.
-Premier build webpack refusé par la limite de heap V8, log conservé ; reprise
-locale heap 8 Go reçue exit 0, environnement de commande seulement, sans
-changement produit/production. HTTP compilé via USER existant : assemblage 151 ms,
-vraie route PDF USER 200 en 256 ms, 57 pages. Extraction pypdf retrouve tous les
-marqueurs ciblés (doctrine complète, freins/réponses, synthèse/principes/application,
-plateforme/type/compteur déclaré, mécanismes et rôles). Mise en page visuellement
-reçue seulement pour les pages 3, 4 et 14, sans coupure/chevauchement observé ;
-pas réception de la mise en page des 57 pages. Trois pages client HTTP 200 en
-319 / 39 / 42 ms, sans hydratation/native locale reçue ; piliers strictement
-identiques avant/après lectures et export, latences locales sans SLO.
-La recette utilise une copie locale de base contenant du contenu métier
-préexistant ; seules les surcharges CANON532 et leurs prémisses numériques sont
-synthétiques. Nouveaux tests du dépôt : exemples synthétiques sans marque ;
-preuves, PDF et captures privés hors checkout. Stress compilé 532 exit 0 :
-276 réponses HTTP reçues / 5 non reçues / 0 échec, 3 requêtes, 7 forges/transitions,
-0 finding ; aucune réception native par ces probes. Natif, CI/image/runtime et
-chaîne réelle ADVE/RTIS/MVP entière restent ouverts.
-
-Production 531 reçue pour identité runtime/source/digest, volumes/provider et
-conservation exacte du contenu comparé. Compléments A issus des rôles documentés
-écrits par le parcours MCP gouverné : source toujours PROPOSED, parent HUMAN,
-feuilles INFERRED, voisins et autres piliers conservés, aucune carrière passée
-inventée. Lecture native 531 des profils et du badge « Compléments proposés »,
-ouverture de la valeur entière reçues ; aucun « Valider » cliqué. Ce reçu ne
-constitue ni adoption humaine ni réception native 532 ou de l’ADVE/MVP entier.
-Données, identités et captures métier restent privées hors checkout.
-Le contrat ADVE rempli ⇒ aucune sortie attendue vide, via source/calcul/postulat
-amont, reste à recevoir sur la chaîne réelle entière. Prochain lot financier après 532 :
-cohorte/horizon/unités et defaults de l’auto-filler, via les moteurs existants.
-Les checkpoints datés ci-dessous gardent leur attribution ; aucune donnée métier
-privée n’est recopiée ici.
+Attributions antérieures : e9 = 5 097/486 ; 4d3 = 5 099/487, PG 543/34 + 12/2
+en deux passes, non livré. Layout e9 limité à 3/4/14, non relu en 4d3.
+Base locale à contenu métier préexistant, seules surcharges CANON532 synthétiques ;
+tests du dépôt sans marque, preuves/PDF/captures privés hors checkout.
+CI/image/runtime 533, natif réel et chaîne ADVE/RTIS/MVP entière encore ouverts.
+ADVE rempli doit irriguer chaque valeur attendue depuis source/calcul/postulat amont.
+Finance après livraison 533 et libellés métier en finition UX : RESIDUAL-DEBT.
 
 ## 531 — reprise après intégration commerciale, candidat (2 novembre 2026)
 

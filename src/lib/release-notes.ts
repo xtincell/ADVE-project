@@ -34,10 +34,17 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
-    version: "6.27.532", date: "2026-11-02", headline: "Un rapport qui restitue les informations déjà renseignées",
+    version: "6.27.533", date: "2026-11-02", headline: "Un rapport qui restitue les informations déjà renseignées",
     highlights: [
       { emoji: "📖", title: "Retrouver vos principes et votre communauté", body: "Le rapport reprend le texte de référence, les principes, leurs règles d’application et les informations de communauté disponibles. Leur présentation structurée ne les fait plus disparaître du document." },
       { emoji: "🧭", title: "Lire les freins et le rôle de chaque contact", body: "Les freins à l’engagement et leurs réponses proposées sont visibles. Les points de contact montrent leur rôle ; une appréciation de qualité apparaît seulement lorsqu’elle a été renseignée." },
+    ],
+  },
+  {
+    version: "6.27.532", date: "2026-11-02", headline: "Retrouver les dernières réponses de vos vendeurs",
+    highlights: [
+      { emoji: "💬", title: "Un fil qui reste à jour", body: "Les échanges les plus récents restent visibles dans leur ordre de conversation, même après de nombreux messages. Une nouvelle réponse du vendeur apparaît à la prochaine actualisation du fil." },
+      { emoji: "📋", title: "Lire les réponses structurées", body: "Les titres, listes et mises en évidence du vendeur sont présentés dans la conversation et ses résultats de mission. Le texte enregistré reste conservé." },
     ],
   },
   {

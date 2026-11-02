@@ -1,87 +1,30 @@
-## 532 — réception intermédiaire 4d3, futur candidat 533 (2026-11-02)
+## 533 — livraison Oracle et finitions encore ouvertes (2026-11-02)
 
-Checkpoint intermédiaire Oracle 532 sur main
-`4d3c1c3d13bdc5de7bee747ad8c4c28d4ddfb6a9` (CRM/flotte/conversation, PR #1117),
-avant intégration de `cf9242321` / PR #1119 qui a pris la version 532. Le correctif
-Oracle deviendra candidat 533 après cette prochaine intégration ; aucune version
-532 libre ou livraison Oracle 532 n’est annoncée. PR draft réelle #1118, label
-out-of-scope et abonnement SUBSCRIBED reçus ; entrée/note CRM 531 et ADR0232
-préservés. Les preuves `e9c3eb335` restent préintégration ; les reçus ci-après
-appartiennent uniquement à l’étape 4d3, pas au futur head 533.
+Local exact 533 reçu : tests 5 099 / 487, PG commercial ciblé 22 / 3 garde intacte,
+tsc/lints/cycles et build webpack 8 GiB verts. Autres PG attribués à 4d3 (543/34 +
+12/2 en deux passes) ; e9/4d3 restent des états antérieurs, pas une PG 533 globale.
+HTTP/PDF533 reçu, marqueurs ciblés dans 57 pages, piliers inchangés ; layout reçu
+seulement pages 3/4/14. Stress 276 HTTP/5 non reçues/0 échec/0 finding ; pas natif ou SLO.
+**Fermer** par CI/image/runtime et conservation livrée ; responsable Oracle/Core,
+effort recette bornée, **déclencheur** avant réception PR #1118 et Oracle global.
+Aucune chaîne ADVE/RTIS/MVP entière reçue ; détails dans les preuves privées.
 
-Migration additive CRM appliquée à la seule base locale gardée. PostgreSQL
-initial : 543 tests / 34 fichiers verts, 12 cas bloqués en beforeAll par la garde
-dans deux fichiers ; garde conservée, puis base locale dédiée au parcours flotte,
-migrations appliquées et ciblé 12 / 2 vert. Couverture en deux passes distinctes
-543 + 12, aucune exécution unique agrégée affirmée. Tests combinés 4d3 :
-5 099 / 487 verts, typage exit 0, lints sans erreur (24 avertissements préexistants),
-cycles sans dépendance circulaire, CODE-MAP régénérée ; webpack local heap 8 Go
-exit 0. HTTP USER : assemblage 159 ms, vraie route PDF 318 ms, 57 pages,
-marqueurs canoniques ciblés présents, piliers strictement inchangés avant/après.
-Trois pages HTTP 200 en 375 / 46 / 56 ms ; hydratation/native non reçue. Mise en
-page PDF non relue pour cette passe, aucune réception visuelle des 57 pages ni
-transfert de la revue préintégration. Stress compilé exit 0 : 276 HTTP reçues /
-5 non reçues / 0 échec, 3 requêtes, 7 forges/transitions et 0 finding ; probes
-HTTP distinctes d’une réception native, latences locales sans SLO.
+**Finance préexistante** : defaults sectoriels/multiplicateurs, cohorte/horizon
+non qualifiés ; margeNette coefficient rendue en %. Aucun montant inventé ici.
+**Fermer** par prémisses ADVE sourcées/calculées/inférées, cohorte/horizon,
+unité/devise/période et convention marge cohérente source/calcul/UI/export ;
+financial-brain/Thot existants, sans nouveau moteur. Distinguer modèle/objectif /
+mesure/adoption, puis recalculer. Responsable Core/V et moteur financier,
+effort audit/cas de calcul bornés, **déclencheur** après livraison 533, avant
+réception des unit economics et du livrable financier réel.
 
-L’égalité d’arbre source production parallèle `1d59935cea6217702d745d86a334655548e3d112`
-et main 4d3 reste un constat de base, sans réception du correctif Oracle déduite.
-Ces preuves ne reçoivent ni CI/image/runtime/livraison Oracle 532 ni le head final
-533. Les quatre lecteurs corrigés réutilisent les capacités existantes, sans
-nouveau service/modèle/tool dans ce correctif ; finance et chaîne réelle
-ADVE/RTIS/MVP demeurent ouvertes, preuves et données privées hors checkout.
-
-**Fermer** après intégration de cf924 par contrôles/build/lecteurs/exports/stress
-du head exact 533, puis CI/image/runtime et conservation après livraison. Responsable Core /
-Oracle et intégration existants ; effort recette bornée ; **déclencheur** avant
-réception de la PR #1118. Les preuves préintégration ne reçoivent pas la combinaison.
-La dette financière reste à reprendre après livraison du correctif Oracle repris
-sous 533, sans montant inventé.
-
-## 532 — lecture Oracle candidate et cadre financier à reprendre (2026-11-02)
-
-**Lecture Oracle** : les objets A/E valides perdaient doctrine, freins/réponses,
-principes/application et plateformes/mécanismes dans les adaptations textuelles ;
-le tableau de contacts ignorait le rôle canonique. Candidat 532 sans écriture de
-source ni LLM ; synthèse et éléments canoniques conservés ensemble, avec type et
-compteur déclarés explicites, y compris zéro. Ciblé final 31 tests / 7 fichiers
-reçu en rendu statique/export ; Vitest complet 5 097 tests / 486 fichiers verts
-(hors unit inclus), premier lancement tests/unit 5 059 / 484 conservé comme partiel.
-Typage/lints sans erreur, cycles sans dépendance circulaire. Refus heap V8 conservé,
-reprise webpack locale heap 8 Go exit 0 sans changement produit/production.
-HTTP compilé USER et vraie route PDF reçus, marqueurs ciblés conservés dans le
-PDF de 57 pages, piliers strictement inchangés avant/après. Mise en page reçue
-sur les pages 3, 4 et 14 seulement ; trois pages client HTTP 200 sans hydratation /
-native reçue. Copie de base à contenu métier préexistant, surcharges CANON532
-seules synthétiques, preuves privées hors checkout. Stress compilé exit 0 :
-276 HTTP reçues / 5 non reçues / 0 échec, 3 requêtes, 7 forges/transitions,
-0 finding ; aucune réception native déduite. Natif et CI/image/runtime 532 ouverts.
-**Fermer** après ces reçus locaux par parcours natif et livraison exacts, sans
-étendre la réception visuelle à 57 pages. Responsable Oracle /
-Core existant ; effort recette bornée ; **déclencheur** avant réception du lot 532.
-Aucun Oracle entier, ADVE/RTIS complet ou MVP reçu par ce correctif mécanique.
-Conservation 531 et lecture native de compléments A proposés reçues au périmètre
-décrit dans CLAUDE ; aucune confirmation humaine ou réception native 532 déduite.
-
-**Dette préexistante — prémisses financières et unité de marge** : l’auto-filler
-financier utilise encore des defaults sectoriels, pays/positionnement et modèles
-économiques pour proposer CAC/LTV/revenu/budget ou payback ; ces montants ne
-sont pas déduits d’une cohorte et d’un horizon qualifiés. margeNette y est un
-coefficient tandis que son rendu V ajoute un signe %. Ce correctif 532 ne répare
-ni ces conventions ni la sémantique des montants existants, qu’il conserve.
-
-**Fermer** par cadrage financier ADVE sur les sources et postulats amont : unité,
-devise/période, cohorte, horizon, coûts/revenus et qualification des prémisses ;
-utiliser financial-brain/Thot et les calculs existants. Distinguer estimation de
-modèle, objectif, mesure et décision ; remplacer les defaults non justifiés par
-prémisses traçables avant recalcul des dépendances. Choisir une convention de
-marge cohérente entre source, calcul, UI et export, tester ratio/coefficient/%
-sans inventer de chiffre métier. Responsable Core/V et moteur financier existant ;
-effort audit de conventions + cas de calcul bornés ; **déclencheur** après livraison
-532, à la prochaine passe du cadre financier ADVE, avant réception des unit economics
-et du livrable financier réel. Aucun nouveau moteur de coûts requis.
-Le contrat source → calcul → postulat qualifié amont demeure ; la présence de
-champs remplis ne reçoit pas leur validité financière ou la chaîne entière.
+**Finition Oracle — taxonomies brutes dans l’export legacy** (EVANGELISTE/OTHER).
+**Fermer** en réutilisant le lexique métier existant sans modifier les enums
+stockés, avec cas d’enum testés en rendu/export. Responsable Oracle/UI,
+effort passe de labels ciblée, **déclencheur** UX après gros œuvre fonctionnel,
+avant réception globale Oracle. Aucune réparation de labels dans ce lot.
+ADVE rempli doit irriguer toutes les valeurs attendues ; les champs présents
+ne prouvent ni validité financière ni complétude. Aucune donnée réelle copiée au dépôt.
 
 ## 531 — réceptions après intégration encore ouvertes (2026-11-02)
 
