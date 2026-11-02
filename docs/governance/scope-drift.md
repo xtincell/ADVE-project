@@ -238,3 +238,4 @@ exiger le label avant merge via une protection de branche.
 | 2026-10-26 | #1082 | C6-03 · fidélité des mesures et fraîcheur Oracle | Codex — mandat MVP La Fusée | Contrôle de rafraîchissement canonique, verdict existant et NPS client sourcé. Aucun modèle, service, routeur, page, Intent ou fournisseur ajouté. Build et API USER locaux reçus ; réception native et pipeline réel ouverts. |
 
 2026-11-02 | #1109 | Codex | Core I → S : préférences et scénarios fonctionnels, demande opérateur | Alexandre
+| 2026-11-02 | #1110 | fix/strategy-source-completion527 | Raccord ADVE→S et cadres de campagne ; bornes/cadences/unités conservées ; lacune nécessaire remontée à ADVE. Correctif de maturité opérateur, sans nouvelle SSOT ni chaîne d’appels. |

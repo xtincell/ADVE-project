@@ -18,6 +18,8 @@
 
 - Dernière garde sur les bornes nulles : une fourchette0–0 INFERRED ne devient pas une gratuité ; une valeur SOURCE/HUMAN reste conservée. Ciblé30/3 et typage finaux verts. Le build/stress local précède cette garde pure ; le build CI/image du head final reste obligatoire avant production.
 
+- PR1110 ouverte en draft ; scope-drift rattaché au vrai numéro. Les contrôles du head, l’image exacte, la conservation et la réception native de production restent des gates, sans réception globale déduite des tests locaux.
+
 ## v6.27.526 — fix(strategy): déduit les scénarios depuis les préférences du catalogue (2026-11-02)
 
 **Candidat local : I exprime les préférences, S compose les choix de stratégie, l’opérateur retient une ambition.**
