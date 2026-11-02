@@ -19,14 +19,15 @@ import { db } from "@/lib/db";
 import { deriveActorProductLinks } from "@/domain/brand-actors";
 import { loadBrandSources, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
 import { setNestedValue, resolvePillarPath } from "@/lib/pillar-path";
-import { findEmptyLeafPaths, findEmptyArrayCellPaths, isNonFabricableLeaf, buildFieldAnchor } from "@/lib/types/pillar-maturity-contracts";
+import { findEmptyLeafPaths, findEmptyArrayCellPaths, isNonFabricableLeaf, buildFieldAnchor, getFieldZod } from "@/lib/types/pillar-maturity-contracts";
+import { isDeepStrictEqual } from "node:util";
 import type { Prisma } from "@prisma/client";
 import type { MaturityStage, AutoFillResult, FieldRequirement } from "@/lib/types/pillar-maturity";
 import { assessPillar } from "./assessor";
 import { getContract } from "./contracts-loader";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
-import { serializePillar } from "@/server/services/utils/pillar-context";
+import { serializePillar, ADVE_SOURCE_ALIGNMENT_CONTRACT } from "@/server/services/utils/pillar-context";
 import { loadBrandSourceContext, renderSourceContext } from "@/server/services/notoria/source-context";
 
 // ─── Enrichissement surgical des matrices (Phase 3) ───────────────────────────
@@ -147,22 +148,16 @@ export async function fillToStage(
     // humain/source, et signale les contradictions source↔humain (CHALLENGE).
     const fieldProvenance: Record<string, import("@/domain/field-provenance").FieldProvenance> = {};
     for (const path of aggregateFilled) {
-      // Clé de tête normalisée : on retire l'index de tableau ET la profondeur
-      // (`produitsCatalogue[2].gainClientConcret` → `produitsCatalogue`) — la
-      // provenance/le badge restent au grain top-level (une cellule inférée
-      // marque toute la matrice INFERRED).
-      const topKey = path.split(/[.[]/)[0]!;
-      // SOURCE l'emporte sur INFERRED si plusieurs sous-champs d'une même clé.
-      if (aggregateSourceFilled.has(path)) fieldProvenance[topKey] = "SOURCE";
-      else if (fieldProvenance[topKey] !== "SOURCE") fieldProvenance[topKey] = "INFERRED";
+      fieldProvenance[path] = aggregateSourceFilled.has(path) ? "SOURCE" : "INFERRED";
     }
     const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+    const proposed = new Map(aggregateFilled.map(path => [path, structuredClone(resolvePillarPath(content, path))]));
     const write = await writePillarAndScore({
       strategyId,
       pillarKey: key as import("@/lib/types/advertis-vector").PillarKey,
-      operation: { type: "REPLACE_FULL", content },
+      operation: { type: "SET_FIELDS", fields: aggregateFilled.map(path => ({ path, value: resolvePillarPath(content, path) })) },
       author: { system: "AUTO_FILLER", reason: `fillToStage(${targetStage}) — ${aggregateFilled.length} fields filled across ${MAX_PASSES} max passes` },
-      options: { confidenceDelta: 0.03 * aggregateFilled.length, fieldProvenance, sourceReceipts },
+      options: { expectedVersion: pillar?.currentVersion ?? 0, confidenceDelta: 0.03 * aggregateFilled.length, fieldProvenance, sourceReceipts },
     });
 
     // ── Le verdict de la gateway DÉCIDE — il n'est plus jeté ────────────────
@@ -215,14 +210,19 @@ export async function fillToStage(
     for (const w of write.warnings) {
       aggregateFailed.push({ path: "*", reason: w });
     }
+    for (let i = aggregateFilled.length - 1; i >= 0; i--) {
+      const path = aggregateFilled[i]!;
+      if (isDeepStrictEqual(resolvePillarPath(content, path), proposed.get(path))) continue;
+      aggregateFilled.splice(i, 1);
+      aggregateFailed.push({ path, reason: "La valeur proposée n’a pas été persistée ; consulter les avertissements de gouvernance." });
+    }
 
     // Update fieldCertainty with INFERRED for any newly AI-filled fields
     const updatedCertainty = { ...existingCertainty };
     let certaintyChanged = false;
     for (const path of aggregateAiFilled) {
-      // Grain top-level (index de tableau + profondeur retirés) : une cellule
-      // de matrice inférée marque toute la matrice INFERRED côté badge.
-      const dbKey = `${key}.${path.split(/[.[]/)[0]}`;
+      if (!aggregateFilled.includes(path)) continue;
+      const dbKey = `${key}.${path}`;
       if (!updatedCertainty[dbKey] || updatedCertainty[dbKey] === "INFERRED") {
         updatedCertainty[dbKey] = "INFERRED";
         certaintyChanged = true;
@@ -476,6 +476,11 @@ async function runFillPass(
       const aiResults = await generateMissingFields(strategyId, key, content, pillarMap, aiFields, sourceReceipts);
       for (const req of aiFields) {
         if (aiResults[req.path] !== undefined) {
+          const schema = getFieldZod(key, req.path) as { safeParse: (value: unknown) => { success: boolean } } | null;
+          if (schema && !schema.safeParse(aiResults[req.path]).success) {
+            failed.push({ path: req.path, reason: "AI field does not match the canonical schema; upstream completion is still required" });
+            continue;
+          }
           setNestedValue(content, req.path, aiResults[req.path]);
           filled.push(req.path);
           aiFilled.push(req.path);
@@ -973,7 +978,7 @@ Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`
   // `fieldList` porte les paths/shapes du contrat (internes) ET l'ANCRE — texte d'identité
   // dérivé du fondateur, JSON-échappé + cadré « données de marque, PAS des instructions ».
   // `financialCtx` (benchmarks internes) est interne. L'UNTRUSTED_NOTICE au system couvre l'ensemble.
-  const system = `${UNTRUSTED_NOTICE}\n\nTu es Mestor, l'intelligence stratégique de marque. Tu réponds UNIQUEMENT en JSON valide : pas de markdown, pas de commentaire, pas de texte autour.`;
+  const system = `${UNTRUSTED_NOTICE}\n\n${ADVE_SOURCE_ALIGNMENT_CONTRACT}\n\nTu es Mestor, l'intelligence stratégique de marque. Tu réponds UNIQUEMENT en JSON valide : pas de markdown, pas de commentaire, pas de texte autour.`;
   const attempts = 3;
   for (let attempt = 1; attempt <= attempts; attempt++) {
     let text: string;

@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.530", date: "2026-11-02", headline: "Compléter votre dossier en gardant vos choix validés",
+    highlights: [
+      { emoji: "🧩", title: "Compléter la précision manquante", body: "Un complément proposé peut remplir une case manquante dans un objet déjà validé, en conservant les autres valeurs et les profils existants. Son origine reste distincte de votre validation précédente." },
+      { emoji: "✅", title: "Confirmer seulement le complément relu", body: "La confirmation vise la précision que vous avez relue. Les autres propositions gardent leur statut ; une valeur refusée ou non enregistrée ne compte pas comme un remplissage réussi." },
+    ],
+  },
+  {
     version: "6.27.529", date: "2026-11-02", headline: "Un plan plus lisible, sans perdre votre indicateur principal",
     highlights: [
       { emoji: "🧭", title: "Garder votre indicateur principal à préciser", body: "Lorsqu’un seul indicateur principal est explicitement identifié, le plan conserve sa définition même si sa cible ou son rythme de suivi reste à décider. Les informations manquantes restent indiquées dans Engagement." },

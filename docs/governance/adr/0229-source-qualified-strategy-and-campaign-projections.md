@@ -7,6 +7,21 @@
 **Supersedes** : aucun ; complète le contrat préférences/scénarios sans modifier ses réceptions
 
 
+## Addendum candidat 530 — compléter les prémisses au bon grain
+
+ADVE rempli doit produire toutes ses valeurs attendues en aval : une inconnue
+reste acceptable en brouillon, pas comme réception finale d’un modèle complet.
+Source documentée → calcul → postulat de départ inféré dans ADVE, puis calcul des
+dépendances ; les limites du modèle et les postulats restent explicités, sans
+mesure, fait biographique, devis ou adoption fabriqués. Aucun socle I/S parallèle.
+
+[ADR-0230 Proposed](0230-surgical-field-provenance-under-validated-objects.md)
+borne la complétion au chemin exact sous un parent validé : version attendue,
+identités/voisins conservés, origine propre et confirmation séparée, enfants
+protégés contre remplacement/suppression. Le contrat partagé rejoint les
+parcours existants ; aucune complétude ADVE/RTIS/MVP ou livraison 530 reçue.
+Les checkpoints qui suivent restent attribués à leurs réceptions datées.
+
 ## Chaîne de référence — correction opérateur prioritaire
 
 **Documentation + inputs des parties prenantes → ADVE qualifié → RTIS dérivé.**

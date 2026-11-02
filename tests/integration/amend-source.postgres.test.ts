@@ -11,6 +11,8 @@ import { resolveBrandSource, setSourceUse } from "@/server/services/ingestion-pi
 import type { Intent } from "@/server/services/mestor/intents";
 import { pillarRouter } from "@/server/trpc/routers/pillar";
 import { mapContexteDefi, mapPropositionValeur } from "@/server/services/strategy-presentation/section-mappers";
+import { fieldStatusFor, inferredFieldPaths } from "@/domain/field-provenance";
+import { serializePillar } from "@/server/services/utils/pillar-context";
 type Amend = Extract<Intent, { kind: "OPERATOR_AMEND_PILLAR" }>;
 let userId: string, operatorId: string;
 const strategies: string[] = [];
@@ -56,6 +58,37 @@ async function fixture(human = false) {
   return { brand, pillar, source, receipt, intent };
 }
 describe("documentary amendments through Mestor", () => {
+  it("completes a human product cell and confirms only that cell with real history and fences", async () => {
+    const f = await fixture();
+    const path = "produitsCatalogue[0].gainClientConcret";
+    const catalogue = [{ id: randomUUID(), nom: "Offre de recette", gainClientConcret: "", gainClientAbstrait: "Confiance" }];
+    await db.pillar.update({ where: { id: f.pillar.id }, data: { content: {
+      produitsCatalogue: catalogue, _fieldProvenance: { produitsCatalogue: "HUMAN" },
+    } } });
+    const result = await operatorAmendPillar({ ...f.intent, field: path, proposedValue: "Réduire le temps de recherche" });
+    expect(result.status).toBe("OK");
+    const after = await db.pillar.findUniqueOrThrow({ where: { id: f.pillar.id } });
+    expect(after.currentVersion).toBe(2);
+    const content = after.content as Record<string, unknown>;
+    expect(content.produitsCatalogue).toEqual([{ ...catalogue[0], gainClientConcret: "Réduire le temps de recherche" }]);
+    expect(content._fieldProvenance).toEqual({ produitsCatalogue: "HUMAN", [path]: "INFERRED" });
+    expect(inferredFieldPaths(content, {}, "v")).toEqual([path]);
+    expect(fieldStatusFor({}, "v", content._fieldProvenance)(path)).toBe("INFERRED");
+    expect(serializePillar("v", content)).toContain("Ces cellules portent leur propre origine");
+    const history = await db.pillarVersion.findFirstOrThrow({ where: { pillarId: f.pillar.id }, orderBy: { version: "desc" } });
+    expect(history).toBeTruthy();
+    const reco = await db.recommendation.findFirstOrThrow({ where: { strategyId: f.brand.id } });
+    expect(reco.currentSnapshot).toBe(""); expect(reco.reviewedBy).toBeNull();
+    const caller = pillarRouter.createCaller({ db, headers: undefined, session: { user: { id: userId, role: "ADMIN" }, expires: new Date(Date.now() + 60_000).toISOString() } });
+    expect(await caller.confirmInferredField({ strategyId: f.brand.id, pillarKey: "V", fieldPath: path, expectedVersion: 2 })).toMatchObject({ ok: true, provenanceLocked: path });
+    const confirmed = await db.pillar.findUniqueOrThrow({ where: { id: f.pillar.id } });
+    expect((confirmed.content as Record<string, unknown>)._fieldProvenance).toEqual({ produitsCatalogue: "HUMAN", [path]: "HUMAN" });
+    const refused = await operatorAmendPillar({ ...f.intent, field: path, proposedValue: "Une promesse différente", expectedVersion: 3 });
+    expect(refused.status).toBe("FAILED"); expect(refused.summary).toContain("FIELD_PROVENANCE_REFUSED");
+    expect((await db.pillar.findUniqueOrThrow({ where: { id: f.pillar.id } })).currentVersion).toBe(3);
+    expect(await db.campaign.count({ where: { strategyId: f.brand.id } })).toBe(0);
+    expect(await db.aICostLog.count({ where: { strategyId: f.brand.id } })).toBe(0);
+  });
   it("amende les rôles et échanges par la route gouvernée sans transformer un profil en contrat", async () => {
     const f = await fixture();
     const profiles = [

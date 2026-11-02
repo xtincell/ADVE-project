@@ -35,12 +35,12 @@ const SRC = join(ROOT, "src");
 const ALLOWED_BARE_CALLERS: ReadonlyArray<{ file: string; line: number; reason: string }> = [
   {
     file: "src/server/services/pillar-gateway/index.ts",
-    line: 743,
+    line: 751,
     reason: "Transaction atomique interne (batch et projection) — writePillar utilise la transaction partagée ; scoring, cache et événements suivent le commit (ADR-0198, reçu PostgreSQL).",
   },
   {
     file: "src/server/services/pillar-gateway/index.ts",
-    line: 787,
+    line: 795,
     reason: "Implémentation interne de writePillarAndScore — appelle writePillar puis cache reconcile + scoring + event.",
   },
   {
@@ -57,7 +57,7 @@ const ALLOWED_BARE_CALLERS: ReadonlyArray<{ file: string; line: number; reason: 
   },
   {
     file: "src/server/services/quick-intake/infer-needs-human-fields.ts",
-    line: 501,
+    line: 503,
     reason:
       "Inférence needs-human fields (reroute C2) — bare writePillar VOLONTAIRE : draft AI_PROPOSED mi-intake, scoré à l'activation comme le reste du flux. Validation + PillarVersion + cascade + author trail appliqués ; fieldCertainty (métadonnée) écrite séparément.",
   },

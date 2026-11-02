@@ -99,6 +99,78 @@ describe("provenanceFromAuthorSystem", () => {
   });
 });
 
+describe("complétion chirurgicale — cellules manquantes sous une matrice validée", () => {
+  const previous = { produitsCatalogue: [{ id: "product-a", nom: "Offre", gainClientConcret: "", gainClientAbstrait: "Confiance" }] };
+  const path = "produitsCatalogue[0].gainClientConcret";
+  const candidate = { produitsCatalogue: [{ ...previous.produitsCatalogue[0], gainClientConcret: "Économiser une heure" }] };
+  const complete = (changes: Partial<Parameters<typeof applyProvenanceGuard>[0]> = {}) => applyProvenanceGuard({
+    previousContent: previous, newContent: candidate,
+    existingProvenance: { produitsCatalogue: "HUMAN" }, incomingFor: () => "INFERRED", surgicalPaths: [path], ...changes,
+  });
+  it("remplit une cellule sans retaguer ni changer le catalogue humain", () => {
+    const result = complete();
+    expect(result.content).toEqual(candidate);
+    expect(result.provenance).toEqual({ produitsCatalogue: "HUMAN", [path]: "INFERRED" });
+    expect(result.denied).toEqual([]);
+    expect(previous.produitsCatalogue[0]!.gainClientConcret).toBe("");
+  });
+  it("sans chemins précis, le remplacement global reste refusé", () => {
+    expect(complete({ surgicalPaths: [] }).content).toEqual(previous);
+  });
+  it("une complétion ne transporte ni changement d’identité ni nouvel item", () => {
+    for (const next of [
+      { produitsCatalogue: [{ ...candidate.produitsCatalogue[0], nom: "Autre offre" }] },
+      { produitsCatalogue: [...candidate.produitsCatalogue, { id: "new", nom: "Ajout" }] },
+    ]) {
+      const result = complete({ newContent: next });
+      expect(result.content).toEqual(previous);
+      expect(result.denied).toContain("produitsCatalogue");
+    }
+  });
+  it("une cellule scalaire vide ne devient pas un objet ou une liste d’identités", () => {
+    for (const next of [{ nom: "Inventé" }, [{ nom: "Inventé" }], ["Texte", { nom: "Inventé" }]]) {
+      const result = complete({ previousContent: { model: { input: null } }, newContent: { model: { input: next } },
+        existingProvenance: { model: "HUMAN" }, surgicalPaths: ["model.input"] });
+      expect(result.content).toEqual({ model: { input: null } });
+    }
+  });
+  it("protège les cellules remplies, y compris 0, false et le choix d’une collection vide", () => {
+    for (const value of ["Promesse validée", 0, false, []]) {
+      const old = { model: { input: value } };
+      const result = complete({ previousContent: old, newContent: { model: { input: "Remplacement" } },
+        existingProvenance: { model: "HUMAN" }, surgicalPaths: ["model.input"] });
+      expect(result.content).toEqual(old); expect(result.denied).toContain("model.input");
+    }
+  });
+  it("une révision de postulat ne change pas les cellules humaines voisines", () => {
+    const result = complete({ previousContent: candidate, newContent: { produitsCatalogue: [{ ...candidate.produitsCatalogue[0], gainClientConcret: "Deux heures" }] },
+      existingProvenance: { produitsCatalogue: "HUMAN", [path]: "INFERRED" } });
+    expect(result.content.produitsCatalogue).toMatchObject([{ gainClientConcret: "Deux heures", nom: "Offre", gainClientAbstrait: "Confiance" }]);
+    expect(result.provenance.produitsCatalogue).toBe("HUMAN");
+  });
+  it("la confirmation d’une cellule ne confirme pas ses sœurs proposées", () => {
+    const other = "produitsCatalogue[0].gainClientAbstrait";
+    const result = complete({ previousContent: candidate, existingProvenance: { produitsCatalogue: "HUMAN", [path]: "INFERRED", [other]: "INFERRED" },
+      incomingFor: () => "HUMAN", declaredFor: p => p === path ? "HUMAN" : undefined });
+    expect(result.provenance[path]).toBe("HUMAN"); expect(result.provenance[other]).toBe("INFERRED");
+  });
+  it("un générateur ne contourne pas un enfant humain via un parent inféré ou omis", () => {
+    for (const next of [{}, { model: { input: "Autre" } }]) {
+      const result = complete({ previousContent: { model: { input: "Relu" } }, newContent: next,
+        existingProvenance: { model: "INFERRED", "model.input": "HUMAN" }, surgicalPaths: [] });
+      expect(result.content).toEqual({ model: { input: "Relu" } });
+      expect(result.denied).toContain("model.input");
+    }
+  });
+  it("une déclaration inchangée de parent ne dégrade pas l’autorité d’un enfant", () => {
+    const same = { model: { input: "Relu" } };
+    const result = complete({ previousContent: same, newContent: same,
+      existingProvenance: { model: "INFERRED", "model.input": "HUMAN" }, surgicalPaths: [],
+      declaredFor: path => path === "model" ? "INFERRED" : undefined });
+    expect(result.provenance["model.input"]).toBe("HUMAN");
+  });
+});
+
 describe("suppression par OMISSION — arbitrée comme une écriture", () => {
   it("un écrivain dérivé ne peut pas effacer un champ HUMAN en l'omettant", () => {
     const r = applyProvenanceGuard({

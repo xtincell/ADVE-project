@@ -28,6 +28,40 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 530 — cellules sous validation globale, correctif candidat (2026-11-02)
+
+Symptôme : une lacune sous un objet HUMAN est bloquée par la protection globale,
+ou le complément inféré hérite à tort du statut du parent. Le candidat pose une
+origine au chemin exact, garde identités/voisins, confirme la seule cellule et
+refuse les contournements par remplacement/suppression. Auto-filler sur chemins
+versionnés et schéma canonique, succès compté au persisté ; résolveur partagé
+vers domain. Hypothèse : grain top-level de protection/provenance différent du
+grain des chemins d’écriture et de revue.
+Complément borné à un scalaire ou une liste de scalaires non vides ; objets et
+listes de records restent soumis à la revue normale. Une redéclaration INFERRED
+d’un parent inchangé conserve l’origine HUMAN de ses cellules ; chemins et
+valeurs sont aussi bornés par le schéma canonique de champ. Le premier refus
+global de positions d’allowlist/CODE-MAP est conservé, puis positions existantes
+corrigées/carte régénérée sans nouvelle exception. Suite 5 082 unitaires /
+483 fichiers et reconstruction webpack exit 0 reçues avant le dernier delta ; PostgreSQL 528 / 32 puis
+53 / 3, typage/lints sans erreur et cycles sans dépendance circulaire. Quatre
+contre-épreuves rouges puis restaurées vertes couvrent chirurgie, contrat, parent
+inchangé et bornage scalaire.
+HTTP compilé reçu sur fixture : document PROPOSED, amendement, calcul S/Oracle,
+source PROPOSED / feuille INFERRED / parent HUMAN conservés. Découverte MCP sous
+USER refusée selon la politique, reprise via ADMIN existant séparé sans
+réingestion ni nouveaux droits. Pages HTTP 200, hydratation/native non reçue,
+refus navigateur sans contournement ; latences locales sans SLO. Stress compilé
+exit 0 : 276 pages reçues / 5 non reçues / 0 échec, 3 requêtes, 7 forges/transitions,
+0 finding ; aucune réception native par ces probes.
+Dernier delta, après ces build/HTTP/stress : l’origine la plus précise est
+comparée après retrait du préfixe legacy, afin qu’un parent préfixé HUMAN ne
+masque pas une cellule INFERRED. Ciblé final 54 tests / 3 fichiers verts,
+contre-épreuve rouge puis restauration verte 16 / 1. Le parcours HTTP aux chemins
+nus reste reçu pour l’état précédent ; aucun build/HTTP/stress exact de ce
+nouveau head annoncé. CI/image/runtime exacts et chaîne réelle encore requis.
+Aucune complétude ou adoption humaine déduite de ce candidat.
+
 ### 529 — North Star et texte S, correctif candidat (2026-11-02)
 
 Natif 528 reçu : définition North Star perdue en S faute de cible/fréquence,

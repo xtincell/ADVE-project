@@ -22,8 +22,13 @@ export function serializePillar(key: string, content: unknown, fieldStatus?: (fi
       .filter(([field]) => !field.startsWith("_"))
       .map(([field, valeur]) => {
         const statut = status(field) ?? "UNKNOWN";
+        const origins = (content as Record<string, unknown>)._fieldProvenance;
+        const complements = origins && typeof origins === "object" && !Array.isArray(origins)
+          ? Object.entries(origins).filter(([path]) => path.startsWith(`${field}.`) || path.startsWith(`${field}[`))
+            .map(([path, origin]) => ({ path, statut: origin, origine: isFieldProvenance(origin) ? FIELD_PROVENANCE_LABEL[origin] : "Origine inconnue" })) : [];
         return [field, { statut, origine: isFieldProvenance(statut) ? FIELD_PROVENANCE_LABEL[statut]
-          : "Qualification héritée — provenance de champ non établie", valeur }];
+          : "Qualification héritée — provenance de champ non établie", valeur,
+          ...(complements.length ? { complements: { regle: "Ces cellules portent leur propre origine ; le statut du parent ne les valide pas.", cellules: complements } } : {}) }];
       }))
     : projected;
   const json = JSON.stringify(qualified, null, 2);
@@ -40,9 +45,11 @@ export function serializePillar(key: string, content: unknown, fieldStatus?: (fi
 
 /** A rich corpus grounds ADVE; missing facts are not a completion quota. */
 export const ADVE_SOURCE_ALIGNMENT_CONTRACT = `Les documents courants et les desiderata attribués alimentent un ADVE qualifié, dont R/T/I/S sont dérivés. Si une information nécessaire n’est pas déductible de l’ADVE, identifier le champ A/D/V/E à réconcilier par le parcours de proposition/amendement existant, puis recalculer ses dépendances. Ne pas créer de prémisse concurrente dans I/S.
+CONTRAT DE RÉCEPTION : ADVE rempli ⇒ aucune valeur attendue vide ou inconnue en aval. Un vide signale un branchement absent, une mauvaise interprétation ou une formule de calcul/déduction/inférence incomplète ; il ne constitue pas une sortie finale acceptable.
+Compléter le modèle de travail dans cet ordre : source documentée → calcul → postulat de départ inféré dans ADVE. Quand les sources ne fixent pas une prémisse nécessaire, proposer un postulat cohérent avec l’identité, les publics, le modèle économique, les moyens et les objectifs. Utiliser les moteurs, références et parcours d’amendement existants ; ne pas laisser une inconnue comme point d’arrivée. Donner sa justification, son unité, son périmètre, ses dépendances et sa qualification inférée. Les valeurs qui en dépendent doivent ensuite être calculées depuis ce socle, et réactualisées lorsque le postulat change.
 Respecter les décisions humaines existantes et la qualification de chaque source. Un document PROPOSED, un postulat, une piste ou un souhait de stakeholder reste une proposition à valider ; un document REFERENCE ne vaut ni adoption ni exécution. Les désiderata conservent auteur, date, périmètre et statut. Ne pas mélanger les informations privées ou d’autres projets contenues dans une pièce composite.
 Une donnée initiale ou historique sans preuve actuelle n’est pas une validation. Distinguer observation mesurée, objectif déclaré et hypothèse proposée. Pour un indicateur, séparer définition, cible, unité, fenêtre d’observation et cadence de suivi. Une fenêtre de 14 jours n’impose pas une fréquence de suivi ; un objectif à M12 n’est pas un résultat atteint ou une date de lancement.
-Reprendre les informations disponibles avec leurs sources et leurs limites, sans inventer chiffre, cible, date, personne ou cadence pour satisfaire une forme ou un minimum. Si une cible ou fréquence n’est pas établie, conserver null lorsque le schéma le permet et expliquer la lacune dans la justification ; sinon ne pas proposer de valeur fabriquée. Une déduction ou cadence suggérée reste explicitement une proposition, jamais une décision humaine. Aucun quota de recommandations ou de champs ne justifie une invention.`;
+Reprendre les informations disponibles avec leurs sources et leurs limites. Une cible, une cadence ou un coût de travail peuvent être des postulats de départ justifiés ; ne jamais les présenter comme mesures, devis réels, faits biographiques ou décisions humaines. Un brouillon peut porter null, mais il n’est alors pas rempli : inférer la prémisse ADVE nécessaire avant de recevoir sa complétude et l’irrigation. Une déduction reste explicitement une proposition tant qu’elle n’est pas adoptée. Ni un quota de recommandations ni un indicateur de remplissage ne justifie une valeur sans raison ou une fausse observation.`;
 
 /** Shared source contract for the existing I generators. No provider or call
  * orchestration: source versions, campaign purpose, cadence and cost unit are
@@ -57,4 +64,4 @@ Pour chaque action, conserver les informations de planification alignées sur ce
 - timeframe facultatif : SPRINT_90, PHASE_1, PHASE_2 ou LONG_TERM. Un ancien calendrier archivé ne fixe pas le calendrier courant.
 - budgetRange facultatif : {min: nombre, max: nombre}, bornes issues du document ou d’un chiffrage de référence effectivement fourni ; conserver la fourchette sans choisir un milieu. Ne pas transformer un tarif unitaire en enveloppe totale.
 - budgetPeriod facultatif : ONE_OFF, PER_OCCURRENCE, MONTHLY, QUARTERLY, YEARLY ou UNSPECIFIED. La périodicité du coût est distincte de la cadence de campagne ; une mise en place ponctuelle et une diffusion mensuelle sont des responsabilités séparées.
-Ne pas inventer de fourchette, de date, de devis, de responsable ni de fréquence pour remplir un champ. Les hypothèses restent des propositions, jamais des mesures ou décisions. Si l’information existe dans le contexte documentaire courant, la reprendre au lieu de l’omettre. Si elle manque réellement, omettre le champ et rendre cette limite explicite. Conserver les identifiants des actions existantes quand l’action est inchangée ; ne pas générer de préférence humaine.`;
+Ne pas inventer de devis réel, de responsable engagé ni de décision humaine. Les fourchettes, horizons relatifs et fréquences de travail peuvent être déduits d’un modèle proposé et justifié dans ADVE ; ils restent des hypothèses, jamais des mesures ou décisions. Si l’information existe dans le contexte documentaire courant, la reprendre au lieu de l’omettre. Si une prémisse manque, compléter d’abord le champ ADVE concerné par source, calcul ou postulat qualifié, puis dériver. Un champ omis signale un brouillon incomplet à réconcilier, jamais une irrigation reçue. Conserver les identifiants des actions existantes quand l’action est inchangée ; ne pas générer de préférence humaine.`;

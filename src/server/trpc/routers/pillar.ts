@@ -44,7 +44,7 @@ import { scoreObject } from "@/server/services/advertis-scorer";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import { transitionPillarStatus } from "@/server/services/pillar-gateway/validation-status";
 import { assertWritten } from "./_pillar-write-guard";
-import { getNestedArray } from "@/lib/pillar-path";
+import { getNestedArray, resolvePillarPath } from "@/lib/pillar-path";
 import type { PillarKey as PK } from "@/lib/types/advertis-vector";
 import { triggerNextStageFrameworks } from "@/server/services/artemis";
 import {
@@ -1298,14 +1298,16 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
       }
       const certainty = (pillar.fieldCertainty as Record<string, string> | null) ?? {};
       const content = (pillar.content ?? {}) as Record<string, unknown>;
-      const topKey = provenanceTopKey(input.fieldPath, input.pillarKey);
-      if (!inferredFieldPaths(content, certainty, input.pillarKey).includes(topKey)) {
+      const paths = inferredFieldPaths(content, certainty, input.pillarKey);
+      const bare = input.fieldPath.replace(new RegExp(`^${input.pillarKey.toLowerCase()}\\.`), "");
+      const topKey = paths.includes(bare) ? bare : provenanceTopKey(input.fieldPath, input.pillarKey);
+      if (!paths.includes(topKey)) {
         return { ok: true, alreadyConfirmed: true };
       }
       const w = await writePillarAndScore({
           strategyId: input.strategyId,
           pillarKey: input.pillarKey.toLowerCase() as Lowercase<PillarKey>,
-          operation: { type: "SET_FIELDS", fields: [{ path: topKey, value: content[topKey] }] },
+          operation: { type: "SET_FIELDS", fields: [{ path: topKey, value: resolvePillarPath(content, topKey) }] },
           author: {
             system: "OPERATOR",
             userId: ctx.session.user.id,
