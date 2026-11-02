@@ -1,3 +1,4 @@
+import { projectFinancialPillar, resolveUnitEconomics } from "@/domain/unit-economics";
 import { ADVE_STORAGE_KEYS } from "@/domain";
 
 /**
@@ -114,10 +115,11 @@ function scanVulnerabilities(
   // V — Vulnérabilités financières
   if (!v.produitsCatalogue || (Array.isArray(v.produitsCatalogue) && v.produitsCatalogue.length === 0))
     flags.push({ pillar: "v", field: "produitsCatalogue", severity: "CRITICAL", reason: "Aucun produit/service dans le catalogue" });
-  const ue = (v.unitEconomics ?? {}) as Record<string, unknown>;
-  if (!ue.cac && !ue.ltv) flags.push({ pillar: "v", field: "unitEconomics", severity: "HIGH", reason: "Pas de CAC ni LTV — viabilité financière inconnue" });
+  const ue = resolveUnitEconomics(v);
+  if (ue._financialContext) flags.push({ pillar: "v", field: "financialModel", severity: "MEDIUM", reason: "Modèle financier calculé depuis les prémisses ADVE : valider les hypothèses par les coûts, acquisitions et revenus observés. Aucun financement ni résultat terrain n’est prouvé par cette projection." });
+  if (ue.cac == null && ue.ltv == null) flags.push({ pillar: "v", field: "unitEconomics", severity: "HIGH", reason: "Pas de CAC ni LTV — viabilité financière inconnue" });
   if (typeof ue.ltv === "number" && typeof ue.cac === "number" && ue.cac > 0 && (ue.ltv as number) / (ue.cac as number) < 3)
-    flags.push({ pillar: "v", field: "unitEconomics.ltvCacRatio", severity: "HIGH", reason: `LTV/CAC ratio < 3 (${((ue.ltv as number) / (ue.cac as number)).toFixed(1)}) — acquisition non rentable` });
+    flags.push({ pillar: "v", field: "unitEconomics.ltvCacRatio", severity: "HIGH", reason: `LTV/CAC ratio < 3 (${((ue.ltv as number) / (ue.cac as number)).toFixed(1)}) — marge de sécurité d’acquisition à examiner, sans conclure à une perte observée` });
 
   // E — Vulnérabilités d'engagement
   if (!e.touchpoints || (Array.isArray(e.touchpoints) && e.touchpoints.length < 3))
@@ -336,7 +338,8 @@ export async function executeProtocoleRisk(strategyId: string): Promise<Protocol
     });
     const pillars: Record<string, Record<string, unknown> | null> = { a: null, d: null, v: null, e: null };
     for (const p of dbPillars) {
-      pillars[p.key] = (p.content ?? null) as Record<string, unknown> | null;
+      const content = (p.content ?? null) as Record<string, unknown> | null;
+      pillars[p.key] = p.key === "v" && content ? projectFinancialPillar(content) : content;
     }
 
     // Step 1: Scan déterministe (CALC — zéro LLM)

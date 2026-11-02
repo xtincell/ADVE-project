@@ -28,6 +28,9 @@ import type { Intent, IntentResult } from "./intents";
 import { applyPillarCoherenceGate } from "@/server/services/notoria/gates";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import { db } from "@/lib/db";
+import { FinancialWorkingModelSchema } from "@/domain/financial-document";
+import { documentEdition, sourceIsUsable } from "@/domain/source-document";
+import { resolveBrandSource } from "@/server/services/ingestion-pipeline/source-usage";
 import { SourceReceiptSchema } from "@/domain/source-certainty";
 import { resolvePillarPath } from "@/lib/pillar-path";
 
@@ -50,8 +53,10 @@ export async function operatorAmendPillar(intent: AmendIntent, context?: { inten
     reason,
     overrideLocked,
     expectedVersion,
-    sourceReceipts,
+    sourceReceipts: providedSourceReceipts,
   } = intent;
+  let sourceReceipts = providedSourceReceipts;
+  let expectedPillarVersions: { d: number | null } | undefined;
 
   // ── 0. Argument coherence (cheap guards before any DB read) ─────────
   if (sourceReceipts !== undefined && !SourceReceiptSchema.array().safeParse(sourceReceipts).success) {
@@ -96,6 +101,42 @@ export async function operatorAmendPillar(intent: AmendIntent, context?: { inten
       summary: `Conflit de version : attendue ${expectedVersion}, courante ${pillar.currentVersion}. Recharge la page.`,
       reason: "CONCURRENCY_CONFLICT",
     };
+  }
+
+  const currentContent = (pillar.content ?? {}) as Record<string, unknown>;
+  if (pillarKey === "v" && currentContent.financialModel != null && (field === "unitEconomics" || field.startsWith("unitEconomics."))) {
+    return { status: "VETOED", reason: "FINANCIAL_PREMISES_REQUIRED", summary: "Ces résultats sont calculés. Modifiez les hypothèses du modèle financier pour les réactualiser partout." };
+  }
+  if (pillarKey === "v" && field.startsWith("financialModel.")) {
+    return { status: "VETOED", reason: "FINANCIAL_MODEL_WHOLE_REQUIRED", summary: "Relisez puis amendez le modèle financier complet pour conserver ses dépendances et ses références." };
+  }
+  if (pillarKey === "v" && field === "financialModel") {
+    const parsed = FinancialWorkingModelSchema.safeParse(proposedValue);
+    if (!parsed.success || expectedVersion === undefined) return { status: "VETOED", reason: "FINANCIAL_MODEL_INCOMPLETE",
+      summary: "Relisez la version du dossier et complétez les hypothèses financières justifiées avant de les appliquer." };
+    const model = parsed.data;
+    const receipts = [...(sourceReceipts ?? []), model.source, ...[model.breakEven.price, ...model.breakEven.fixedCosts,
+      ...model.breakEven.variableCosts, ...model.projection.monthlyVolumes, model.projection.unitsPerPayerMonth,
+      model.projection.annualRetentionRate, model.projection.cashFlow.openingCash].flatMap(amount => amount.sources)];
+    const hashes = new Map<string, string>();
+    for (const receipt of receipts) {
+      if (hashes.has(receipt.sourceId) && hashes.get(receipt.sourceId) !== receipt.contentHash) return {
+        status: "VETOED", reason: "SOURCE_RECEIPT_CONFLICT", summary: "Deux versions différentes d’une pièce alimentent le même modèle. Relisez et alignez cette référence." };
+      hashes.set(receipt.sourceId, receipt.contentHash);
+    }
+    sourceReceipts = [...hashes].map(([sourceId, contentHash]) => ({ sourceId, contentHash }));
+    try {
+      const basis = await resolveBrandSource(model.source.sourceId, strategyId);
+      if (basis.contentHash !== model.source.contentHash || !sourceIsUsable(basis.source.rawData) || documentEdition(basis.source.rawData)?.kind !== "FINANCE")
+        return { status: "VETOED", reason: "FINANCIAL_REFERENCE_CHANGED", summary: "Choisissez la version actuelle d’un document financier accessible pour relier ces hypothèses." };
+    } catch {
+      return { status: "VETOED", reason: "FINANCIAL_REFERENCE_UNAVAILABLE", summary: "Le document financier n’est plus accessible dans ce dossier. Relisez ses références." };
+    }
+    const d = await db.pillar.findUnique({ where: { strategyId_key: { strategyId, key: "d" } }, select: { content: true, currentVersion: true } });
+    const profiles = (d?.content as { personas?: Array<{ id?: string; actorRoles?: string[] }> } | null)?.personas;
+    if (!Array.isArray(profiles) || !profiles.some(p => p.id === model.breakEven.payerPersonaId && p.actorRoles?.includes("PAYER"))) return {
+      status: "VETOED", reason: "FINANCIAL_PAYER_REQUIRED", summary: "Reliez ce modèle au profil client payeur de la marque ; audience et partenaire ne constituent pas la cohorte facturée." };
+    expectedPillarVersions = { d: d!.currentVersion };
   }
 
   // ── 2. PILLAR_COHERENCE gate ────────────────────────────────────────
@@ -194,6 +235,7 @@ export async function operatorAmendPillar(intent: AmendIntent, context?: { inten
     },
     options: {
       expectedVersion: pillar.currentVersion,
+      expectedPillarVersions,
       sourceReceipts,
       requiredSourceIds: sourceReceipts?.map(r => r.sourceId),
       rejectOnProvenanceRefusal: intent.viaAgent,

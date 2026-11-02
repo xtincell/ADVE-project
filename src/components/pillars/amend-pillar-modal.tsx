@@ -16,6 +16,8 @@ import { useState, useMemo, useEffect, useRef, useId } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { Modal } from "@/components/shared/modal";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { financialModelDraft } from "@/components/shared/financial-model-editor";
+import { FinancialWorkingModelSchema, BreakEvenDocumentModelSchema } from "@/domain/financial-document";
 import { StructuredFieldControl } from "@/components/shared/smart-field-editor";
 import { hasFieldDef } from "@/lib/types/field-registry";
 import { SourceReadDialog } from "@/components/brand/source-read-dialog";
@@ -140,7 +142,8 @@ function AmendPillarEditor({
     reasonTooShort ||
     (mode === "PATCH_DIRECT" && !usesStructured && !proposedValue) ||
     (mode === "LLM_REPHRASE" && !proposedValue) ||
-    amendMutation.isPending;
+    amendMutation.isPending ||
+    (field === "financialModel" && !FinancialWorkingModelSchema.safeParse(structuredDraft).success);
 
   function handlePreview() {
     if (!field || !rephrasePrompt) return;
@@ -303,7 +306,7 @@ function AmendPillarEditor({
           ) : null}
 
           {/* Current value */}
-          {field ? (
+          {field && field !== "financialModel" ? (
             <div className="space-y-1">
               <label className="block text-xs font-medium text-foreground-secondary">Valeur actuelle</label>
               <pre className="max-h-32 overflow-auto rounded-lg border border-white/5 bg-surface-raised px-3 py-2 text-xs text-foreground-muted">
@@ -369,6 +372,7 @@ function AmendPillarEditor({
                   fieldKey={field}
                   value={structuredDraft}
                   onChange={setStructuredDraft}
+                  payerOptions={editable.data?.payerOptions}
                 />
               ) : (
                 <textarea
@@ -387,6 +391,8 @@ function AmendPillarEditor({
               ) : null}
             </div>
           ) : null}
+
+          {field === "financialModel" && <FriendlyWarnings warnings={previewWarning ? [previewWarning] : null} />}
 
           {/* Reason */}
           {field ? (
@@ -415,13 +421,15 @@ function AmendPillarEditor({
             {references.length > 0 && <ul className="space-y-2">{references.map(reference => <li key={reference.sourceId} className="flex flex-wrap items-center justify-between gap-2">
               <span>{reference.label}</span>
               <Button variant="ghost" size="sm" aria-label={`Retirer la référence ${reference.label}`}
-                onClick={() => setReferences(current => current.filter(item => item.sourceId !== reference.sourceId))}>Retirer</Button>
+                onClick={() => { setReferences(current => current.filter(item => item.sourceId !== reference.sourceId));
+                  if (field === "financialModel" && (structuredDraft as { source?: SourceReceipt } | null)?.source?.sourceId === reference.sourceId) setStructuredDraft({ ...financialModelDraft(structuredDraft), source: undefined });
+                }}>Retirer</Button>
             </li>)}</ul>}
             <Button variant="outline" size="sm" onClick={() => setSourcesOpen(value => !value)}>{sourcesOpen ? "Masquer les documents" : "Ajouter un document"}</Button>
             {sourcesOpen && <div className="space-y-2">
               {(sources.isLoading || sources.isFetching) ? <p role="status">Chargement des documents…</p> : sources.error ? <FriendlyError error={sources.error} /> :
                 !sources.data?.length ? <p className="text-foreground-secondary">Aucun document accessible dans ce dossier.</p> :
-                  <ul className="max-h-48 space-y-2 overflow-y-auto">{sources.data.map(source => {
+                  <ul className="max-h-48 space-y-2 overflow-y-auto">{sources.data.filter(source => field !== "financialModel" || source.document?.kind === "FINANCE").map(source => {
                     const label = source.fileName || "Document sans titre";
                     return <li key={source.id}><Button variant="ghost" size="sm" aria-label={`Consulter ${label}`}
                       onClick={() => setReadingSource({ id: source.id, label })}>{label}</Button></li>;
@@ -475,8 +483,25 @@ function AmendPillarEditor({
       </Modal>
 
       {readingSource && <SourceReadDialog sourceId={readingSource.id} strategyId={strategyId}
-        onClose={() => setReadingSource(null)} onCite={receipt => {
+        onClose={() => setReadingSource(null)} onCite={(receipt, document) => {
           if (!active.current || receipt.sourceId !== readingSource.id) return;
+          if (field === "financialModel") {
+            if (document?.kind !== "FINANCE") { setPreviewWarning("Choisissez un document financier pour le modèle."); setReadingSource(null); setSourcesOpen(true); return; }
+            const next = financialModelDraft(structuredDraft);
+            // An unfilled draft may start from the structured financial edition
+            // actually read. Subsequent attachments never overwrite edited premises.
+            if (!structuredDraft) {
+              try {
+                const parsed: unknown = JSON.parse(document.rawContent);
+                const working = FinancialWorkingModelSchema.safeParse(parsed);
+                const basis = BreakEvenDocumentModelSchema.safeParse(parsed);
+                if (working.success) Object.assign(next, working.data);
+                else if (basis.success) next.breakEven = basis.data;
+              } catch { /* A prose edition remains a reference for manual premises. */ }
+            }
+            setStructuredDraft({ ...next, source: receipt });
+            setPreviewWarning(null);
+          }
           setReferences(current => [...current.filter(reference => reference.sourceId !== receipt.sourceId), { ...receipt, label: readingSource.label }]);
           setReadingSource(null);
           setSourcesOpen(false);

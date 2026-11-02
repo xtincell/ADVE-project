@@ -47,19 +47,19 @@ export async function exportBreakEvenDocx(doc: SourcedBreakEvenDocument, generat
     "breakeven.rate.source": "(P − CV) / P · calcul",
     "breakeven.units": doc.base.status === "NO_FINITE_BREAK_EVEN" ? "Pas de seuil fini" : n(doc.base.breakEvenUnits),
     "breakeven.units.source": "CF / (P − CV), arrondi au supérieur",
-    "breakeven.revenue": n(doc.base.breakEvenRevenue), "breakeven.revenue.source": "CF / taux décimal · calcul",
+    "breakeven.revenue": doc.base.status === "NO_FINITE_BREAK_EVEN" ? "Pas de seuil fini" : n(doc.base.breakEvenRevenue), "breakeven.revenue.source": "CF / taux décimal · calcul",
     "scenario.1.name": doc.scenarios[1]!.label, "scenario.1.assumption": "Prix × 0,80 ; autres coûts inchangés",
     "scenario.1.result": n(doc.scenarios[1]!.analysis.breakEvenUnits) + " unités / mois",
     "scenario.2.name": doc.scenarios[2]!.label, "scenario.2.assumption": "Charges fixes × 0,70 ; autres entrées inchangées",
     "scenario.2.result": n(doc.scenarios[2]!.analysis.breakEvenUnits) + " unités / mois",
-    "timing.opening_units": doc.model.growth ? `${n(doc.model.growth.initialUnits)} en M${doc.model.growth.firstMonth}` : "Non chiffré",
+    "timing.opening_units": doc.financialProjection ? `${n(doc.financialProjection.monthlyVolumes[0])} en M1` : doc.model.growth ? `${n(doc.model.growth.initialUnits)} en M${doc.model.growth.firstMonth}` : "Non chiffré",
     "timing.opening_units.source": "Hypothèse du modèle [S1]",
-    "timing.growth": doc.model.growth ? `${n(doc.model.growth.monthlyIncrease)} unités supplémentaires par mois` : "Non chiffrée",
-    "timing.growth.source": "Projection, pas de ventes prouvées",
-    "timing.threshold_date": doc.firstProfitableMonth === null ? "Non déterminable" : `M${doc.firstProfitableMonth}`,
+    "timing.growth": doc.financialProjection ? doc.financialProjection.monthlyVolumes.map((value, i) => `M${i + 1} : ${n(value)}`).join(" ; ") : doc.model.growth ? `${n(doc.model.growth.monthlyIncrease)} unités supplémentaires par mois` : "Non chiffrée",
+    "timing.growth.source": doc.financialProjection?.projectionNote ?? "Projection, pas de ventes prouvées",
+    "timing.threshold_date": doc.firstProfitableMonth === null ? (doc.financialProjection ? "Non atteint sur les douze mois proposés" : "Non déterminable") : `M${doc.firstProfitableMonth}`,
     "timing.threshold_date.source": doc.delayNote,
-    "timing.cash_balance": "Non calculé : calendrier d’encaissements et de décaissements requis",
-    "timing.cash_balance.source": "Le seuil économique ne prouve pas la trésorerie disponible",
+    "timing.cash_balance": doc.financialProjection ? `${n(doc.financialProjection.cashBalances[11])} ${doc.model.currency} à M12 (projection)` : "Non calculé : calendrier d’encaissements et de décaissements requis",
+    "timing.cash_balance.source": doc.financialProjection ? `Solde initial ${n(doc.financialProjection.openingCash)} ${doc.model.currency} ; encaissement décalé de ${doc.financialProjection.revenueDelayMonths} mois, paiement de ${doc.financialProjection.costDelayMonths} mois. ${doc.financialProjection.cashNote} Aucune banque observée.` : "Le seuil économique ne prouve pas la trésorerie disponible",
     "breakeven.decision": doc.missing.length ? `À chiffrer : ${doc.missing.join(" ; ")}. Aucun zéro supposé.`
       : `Seuil conditionnel au périmètre déclaré. CA à unités entières : ${n(doc.base.revenueAtWholeUnits)} ${doc.model.currency}/mois. ${doc.model.exclusions.join(" ; ")}`,
   };
@@ -108,6 +108,7 @@ export async function exportBreakEvenDocx(doc: SourcedBreakEvenDocument, generat
     append('<w:p><w:r><w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="5700000" cy="2964000"/><wp:docPr id="9001" name="Seuil de rentabilité" descr="Courbes des revenus et coûts du scénario mensuel"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="break-even.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdBreakEvenChart"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="5700000" cy="2964000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>');
     append(para(`Revenus = P × q ; coûts totaux = CF + CV × q. Le croisement correspond au seuil théorique ; les clients indivisibles sont arrondis au supérieur.`));
   } else append(para("Graphique non produit : les données ne permettent pas de calculer un seuil fini."));
+  append(para(doc.basisNote));
   append(para("Hypothèses et exclusions", true));
   for (const t of [...doc.model.assumptions, ...doc.model.exclusions]) append(para("• " + t));
   append(para("Détail des entrées", true));

@@ -1,3 +1,4 @@
+import { projectFinancialPillar, resolveUnitEconomics, unitEconomicsMetricRows, unitEconomicsNote } from "@/domain/unit-economics";
 import { ADVE_STORAGE_KEYS } from "@/domain";
 
 /**
@@ -201,9 +202,9 @@ function buildTriangulation(
   if (trendAnalysis) sourcedFields++; else aiFields++;
 
   // financialBenchmarks — depuis V.unitEconomics
-  const ue = (v.unitEconomics ?? {}) as Record<string, unknown>;
+  const ue = resolveUnitEconomics(v);
   const financialBenchmarks = (typeof ue.cac === "number" || typeof ue.ltv === "number")
-    ? `CAC: ${ue.cac ?? "N/A"}, LTV: ${ue.ltv ?? "N/A"}, ratio: ${typeof ue.ltvCacRatio === "number" ? ue.ltvCacRatio.toFixed(1) : "N/A"}.`
+    ? [...unitEconomicsMetricRows(ue).filter(r => r.value !== "—").map(r => `${r.label} : ${r.value}`), unitEconomicsNote(ue)].filter(Boolean).join("\n")
     : undefined;
   if (financialBenchmarks) sourcedFields++; else aiFields++;
 
@@ -411,7 +412,8 @@ export async function executeProtocoleTrack(strategyId: string, opts: { document
     });
     const pillars: Record<string, Record<string, unknown> | null> = { a: null, d: null, v: null, e: null, r: null };
     for (const p of dbPillars) {
-      pillars[p.key] = (p.content ?? null) as Record<string, unknown> | null;
+      const content = (p.content ?? null) as Record<string, unknown> | null;
+      pillars[p.key] = p.key === "v" && content ? projectFinancialPillar(content) : content;
     }
 
     const a = pillars.a ?? {};

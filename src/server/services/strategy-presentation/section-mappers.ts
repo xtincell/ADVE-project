@@ -8,7 +8,7 @@
  */
 
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
-import { unitEconomicsNote, unitEconomicsRatio } from "@/domain/unit-economics";
+import { projectFinancialPillar, unitEconomicsNote, unitEconomicsRatio, type FinancialMetricContext } from "@/domain/unit-economics";
 import { brandActorRoleLabels } from "@/domain/brand-actors";
 import { coerceProvenance, FIELD_PROVENANCE_LABEL } from "@/domain/field-provenance";
 import { resolveCultIndexTier } from "@/domain/cult-index-tier";
@@ -54,7 +54,8 @@ import type {
 
 function getPillarContent(strategy: any, key: string): Record<string, unknown> | null {
   const pillar = strategy.pillars.find((p: any) => p.key === key);
-  return (pillar?.content as Record<string, unknown>) ?? null;
+  const content = (pillar?.content as Record<string, unknown>) ?? null;
+  return key === "v" && content ? projectFinancialPillar(content) : content;
 }
 
 function getGloryOutput(strategy: any, toolSlug: string): Record<string, unknown> | null {
@@ -667,6 +668,10 @@ export function mapBudget(strategy: any): BudgetSection {
           roiEstime: safeNum(ue.roiEstime),
           budgetCom: safeNum(ue.budgetCom),
           caVise: safeNum(ue.caVise),
+          ...(safeNum(ue.paybackPeriod) !== null ? { paybackPeriod: safeNum(ue.paybackPeriod) } : {}),
+          ...(safeStr(ue.pointMort) ? { pointMort: safeStr(ue.pointMort) } : {}),
+          ...(typeof ue.currency === "string" ? { currency: ue.currency } : {}),
+          ...(ue._financialContext ? { _financialContext: ue._financialContext as FinancialMetricContext } : {}),
         }
       : null,
     campaignBudgets,
@@ -1057,6 +1062,8 @@ export function mapPropositionValeur(strategy: any): PropositionValeurSection {
       ltv: vContent.unitEconomics.ltv ?? null,
       ltvCacRatio: unitEconomicsRatio(vContent.unitEconomics.cac, vContent.unitEconomics.ltv, vContent.unitEconomics.ltvCacRatio),
       ...(unitEconomicsNote(vContent.unitEconomics) ? { commentaire: unitEconomicsNote(vContent.unitEconomics) } : {}),
+      ...(vContent.unitEconomics.currency ? { currency: vContent.unitEconomics.currency } : {}),
+      ...(vContent.unitEconomics._financialContext ? { _financialContext: vContent.unitEconomics._financialContext } : {}),
     } : null,
   };
 }

@@ -1,3 +1,4 @@
+import { resolveUnitEconomics } from "@/domain/unit-economics";
 /**
  * Semantic Structural Scorer — Real validation, not just field counting
  * Scores pillar content based on CdC ontology requirements
@@ -164,7 +165,7 @@ function scoreV(c: Record<string, unknown>, b: ScoreBreakdown[]): number {
   b.push({ component: "Produits", score: Math.min(5, pr >= 1 ? 2 + Math.min(3, pr - 1) : 0), maxScore: 5, details: `${pr}` }); t += Math.min(5, pr >= 1 ? 2 + Math.min(3, pr - 1) : 0);
   const ld = arrLen(c.productLadder);
   b.push({ component: "Ladder", score: Math.min(3, ld >= 2 ? 2 : ld), maxScore: 3, details: `${ld} tiers` }); t += Math.min(3, ld >= 2 ? 2 : ld);
-  const ue = (c.unitEconomics ?? {}) as Record<string,unknown>;
+  const ue = resolveUnitEconomics(c);
   let ueS = 0;
   if (typeof ue.cac === "number") ueS++;
   if (typeof ue.ltv === "number") ueS++;
@@ -172,7 +173,7 @@ function scoreV(c: Record<string, unknown>, b: ScoreBreakdown[]): number {
   if (typeof ue.budgetCom === "number") ueS++;
   if (typeof ue.caVise === "number") ueS++;
   b.push({ component: "Unit Eco", score: ueS, maxScore: 5, details: `${ueS}/5` }); t += ueS;
-  const adj = (typeof ue.ltv === "number" && typeof ue.cac === "number" && (ue.cac as number) > 0 && (ue.ltv as number)/(ue.cac as number) >= 3 ? 2 : 0);
+  const adj = (!ue._financialContext && typeof ue.ltv === "number" && typeof ue.cac === "number" && (ue.cac as number) > 0 && (ue.ltv as number)/(ue.cac as number) >= 3 ? 2 : 0);
   b.push({ component: "Ajustements", score: adj, maxScore: 3, details: "" }); t += adj;
   // 8 brand-level value/cost quadrants (4 pts — 0.5 per quadrant)
   const quadrants = ["valeurMarqueTangible","valeurMarqueIntangible","valeurClientTangible","valeurClientIntangible","coutMarqueTangible","coutMarqueIntangible","coutClientTangible","coutClientIntangible"];

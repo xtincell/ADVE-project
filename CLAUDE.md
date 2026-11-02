@@ -1,3 +1,23 @@
+## 534 — cohérence financière locale reçue, livraison ouverte (2 novembre 2026)
+
+V qualifié → FinancialBrain commun → lecteurs/contextes/exports, éditeur manuel
+et provenance pillar.sources/checkpoints conservés ; model.source = édition de base.
+Projection conditionnelle, ni performance prouvée ni budget Thot disponible ;
+legacy conservé sans deuxième calcul, déficit/zéro/non-applicabilité explicites.
+Final : 5 121 tests/491 fichiers, PG ciblé 20/2 source/V/PAYER/concurrence D refusée
+réellement sans version V ou recommendation APPLIED, valeurs humaines conservées.
+Tsc exit 0, lints 0 erreur/24 anciens avertissements, cycles 0, build final 8 GiB
+exit 0 ; deux rouges zéro/non-applicabilité puis ciblé consommateurs 8 verts.
+Copie isolée : MCP une écriture, fiche/Word 37 contrôles/cinq pages inspectées.
+Relecture finale compilée sans mutation : Oracle USER 136 ms, Word 672 ms sans
+inconnu, cross-validator 44 ms, éditeur 35 ms, contenu/métadonnées inchangés.
+Trois pages HTTP 200, stress sans finding ; aucun natif réel, ADVE production
+écrit ou SLO. CI/image/runtime, modèle réel/cascade RTIS et chaîne entière ouverts.
+Legacy optionnel ≠ readiness financière de tous dossiers : admission/complétude
+à recevoir avant Oracle/ADVE/MVP entiers ; autres champs A/dossiers régionaux,
+campagnes/devis/taxonomies et sept chantiers ouverts. Données privées hors checkout.
+[ADR-0233 Proposed](docs/governance/adr/0233-financial-working-model-projection.md).
+
 ## 533 — Oracle reçu localement, livraison ouverte (2 novembre 2026)
 
 Sur cf924/PR #1119 : quatre lectures A/E (doctrine, freins, communauté, contacts)

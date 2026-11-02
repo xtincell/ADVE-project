@@ -1,11 +1,14 @@
 /** Existing amendment, real persistence and documentary fences; isolated DB only. */
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { financialModelFixture } from "../fixtures/financial-model";
+import { resolveUnitEconomics } from "@/domain/unit-economics";
 import { randomUUID } from "node:crypto";
 vi.mock("@/lib/auth/config", () => ({ auth: vi.fn() }));
 vi.mock("next-auth", () => ({}));
 vi.mock("@/server/services/oracle-section", () => ({ markAllSectionsStale: vi.fn(async () => ({})) }));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
 import { db } from "@/lib/db";
+import * as gateway from "@/server/services/pillar-gateway";
 import { operatorAmendPillar } from "@/server/services/mestor/operator-amend";
 import { resolveBrandSource, setSourceUse } from "@/server/services/ingestion-pipeline/source-usage";
 import type { Intent } from "@/server/services/mestor/intents";
@@ -57,6 +60,75 @@ async function fixture(human = false) {
     expectedVersion: 1, sourceReceipts: [receipt] } satisfies Amend;
   return { brand, pillar, source, receipt, intent };
 }
+async function financialFixture() {
+  const f = await fixture();
+  await db.pillar.update({ where: { id: f.pillar.id }, data: { content: { unitEconomics: { cac: null, ltv: null, ltvCacRatio: null }, _fieldProvenance: { unitEconomics: "HUMAN" } } } });
+  const d = await db.pillar.create({ data: { strategyId: f.brand.id, key: "d", content: { personas: [{ id: "payer-fixture", name: "Client payeur de recette", actorRoles: ["PAYER"] }] } } });
+  await db.brandDataSource.update({ where: { id: f.source.id }, data: { fileType: "JSON", rawData: { _document: {
+    schema: "document-edition-v1", family: "Modèle financier de recette", kind: "FINANCE", label: "v1", status: "PROPOSED", edition: 1,
+    recordedAt: new Date().toISOString(), changeSummary: "Prémisses synthétiques, aucun argent réel" } } } });
+  const receipt = { sourceId: f.source.id, contentHash: (await resolveBrandSource(f.source.id, f.brand.id)).contentHash };
+  const model = financialModelFixture(); model.source = receipt;
+  const intent: Amend = { ...f.intent, field: "financialModel", proposedValue: model, sourceReceipts: undefined, mode: "STRATEGIC_REWRITE" };
+  return { ...f, d, receipt, model, intent };
+}
+
+describe("financial premises through the existing governed amendment", () => {
+  it("admet les prémisses avec leur source et calcule en lecture sans écraser les anciennes valeurs humaines", async () => {
+    const f = await financialFixture();
+    const result = await operatorAmendPillar(f.intent);
+    expect(result).toMatchObject({ status: "OK" });
+    const after = await db.pillar.findUniqueOrThrow({ where: { id: f.pillar.id } });
+    const value = after.content as Record<string, unknown>;
+    expect(value.unitEconomics).toEqual({ cac: null, ltv: null, ltvCacRatio: null });
+    expect(value._fieldProvenance).toMatchObject({ unitEconomics: "HUMAN", financialModel: "INFERRED" });
+    expect(resolveUnitEconomics(value)).toMatchObject({ cac: 7000, caVise: 11700000 });
+    expect(after.sources).toContainEqual(f.receipt);
+    expect(after.currentVersion).toBe(2);
+    expect((await db.pillar.findUniqueOrThrow({ where: { id: f.d.id } })).currentVersion).toBe(1);
+    expect(await db.pillarVersion.count({ where: { pillarId: f.pillar.id } })).toBe(1);
+    expect(await db.aICostLog.count({ where: { strategyId: f.brand.id } })).toBe(0);
+    expect(await db.campaign.count({ where: { strategyId: f.brand.id } })).toBe(0);
+  });
+  it("refuse un reçu périmé sans créer de recommandation ni de version", async () => {
+    const f = await financialFixture(); f.model.source.contentHash = "b".repeat(64);
+    const result = await operatorAmendPillar(f.intent);
+    expect(result).toMatchObject({ status: "VETOED", reason: "FINANCIAL_REFERENCE_CHANGED" });
+    expect(await db.recommendation.count({ where: { strategyId: f.brand.id } })).toBe(0);
+    expect(await db.pillarVersion.count({ where: { pillarId: f.pillar.id } })).toBe(0);
+  });
+  it("refuse de calculer la cohorte payeuse sur le profil trafic", async () => {
+    const f = await financialFixture();
+    await db.pillar.update({ where: { id: f.d.id }, data: { content: { personas: [{ id: "payer-fixture", actorRoles: ["USER", "COMMUNICATION_AUDIENCE"] }] } } });
+    const result = await operatorAmendPillar(f.intent);
+    expect(result).toMatchObject({ status: "VETOED", reason: "FINANCIAL_PAYER_REQUIRED" });
+    expect(await db.recommendation.count({ where: { strategyId: f.brand.id } })).toBe(0);
+  });
+  it("abandonne le modèle si les profils D changent après leur lecture", async () => {
+    const f = await financialFixture();
+    const realWrite = gateway.writePillarAndScore;
+    const writer = vi.spyOn(gateway, "writePillarAndScore").mockImplementationOnce(async request => {
+      await db.pillar.update({ where: { id: f.d.id }, data: { currentVersion: { increment: 1 } } });
+      return realWrite(request);
+    });
+    try {
+      const result = await operatorAmendPillar(f.intent);
+      expect(result).toMatchObject({ status: "FAILED" });
+      expect(result.summary).toContain("PILLAR_SOURCE_VERSION_CONFLICT");
+      expect((await db.pillar.findUniqueOrThrow({ where: { id: f.pillar.id } })).currentVersion).toBe(1);
+      expect(await db.pillarVersion.count({ where: { pillarId: f.pillar.id } })).toBe(0);
+      expect(await db.recommendation.count({ where: { strategyId: f.brand.id, status: "APPLIED" } })).toBe(0);
+    } finally { writer.mockRestore(); }
+  });
+  it("renvoie un amendement du résultat calculé vers les prémisses", async () => {
+    const f = await financialFixture();
+    expect((await operatorAmendPillar(f.intent)).status).toBe("OK");
+    const result = await operatorAmendPillar({ ...f.intent, field: "unitEconomics.cac", proposedValue: 1, expectedVersion: 2 });
+    expect(result).toMatchObject({ status: "VETOED", reason: "FINANCIAL_PREMISES_REQUIRED" });
+    expect((await db.pillar.findUniqueOrThrow({ where: { id: f.pillar.id } })).currentVersion).toBe(2);
+  });
+});
+
 describe("documentary amendments through Mestor", () => {
   it("completes a human product cell and confirms only that cell with real history and fences", async () => {
     const f = await fixture();

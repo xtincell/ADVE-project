@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.534", date: "2026-11-02", headline: "Un modèle financier commun pour votre marque",
+    highlights: [
+      { emoji: "🧮", title: "Relier vos hypothèses aux résultats", body: "À partir des prix, charges, volumes et profil payeur renseignés, le dossier et les documents partagent le même calcul. Les hypothèses gardent leur qualification, leur justification et leurs références disponibles." },
+      { emoji: "📊", title: "Simuler la trésorerie du scénario", body: "La projection tient compte du solde initial et des délais d’encaissement et de paiement renseignés. Les résultats restent conditionnés aux hypothèses ; le budget réellement disponible suit ses validations." },
+    ],
+  },
+  {
     version: "6.27.533", date: "2026-11-02", headline: "Un rapport qui restitue les informations déjà renseignées",
     highlights: [
       { emoji: "📖", title: "Retrouver vos principes et votre communauté", body: "Le rapport reprend le texte de référence, les principes, leurs règles d’application et les informations de communauté disponibles. Leur présentation structurée ne les fait plus disparaître du document." },

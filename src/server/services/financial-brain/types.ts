@@ -329,27 +329,7 @@ export interface ScenarioAnalysis {
 
 // ─── Break-Even ─────────────────────────────────────────────────────────────
 
-export interface BreakEvenInput {
-  fixedCosts: number;
-  variableCostPerUnit: number;
-  pricePerUnit: number;
-  monthlyVolume?: number;
-  /** Period covered by fixedCosts; never inferred from the volume label. */
-  costPeriod?: "MONTH" | "YEAR";
-}
-
-export interface BreakEvenAnalysis {
-  status: "COMPUTED" | "INSUFFICIENT_DATA" | "NO_FINITE_BREAK_EVEN";
-  issues: string[];
-  breakEvenUnits: number | null;
-  /** Exact theoretical threshold before rounding indivisible units. */
-  breakEvenRevenue: number | null;
-  revenueAtWholeUnits: number | null;
-  breakEvenMonths: number | null;
-  marginOfSafety: number | null;
-  contributionMargin: number | null;
-  contributionMarginRatio: number | null;
-}
+export type { BreakEvenInput, BreakEvenAnalysis } from "@/domain/financial-document";
 
 // ─── Elasticity ─────────────────────────────────────────────────────────────
 

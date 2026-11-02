@@ -2107,6 +2107,19 @@ d'invariants spécifiques (cf. `tests/integration/`).
 
 # ANNEXE CANON L — LEXIQUE NORMATIF
 
+### Modèle financier de travail — proposition 534 (2026-11-02)
+
+V.financialModel versionne les prémisses qualifiées de même cohorte D PAYER,
+FinancialBrain commun projette les lecteurs. pillar.sources/checkpoints restent
+la provenance ; model.source édition de base, cache legacy sans second calcul.
+Déficit/zéro/non-applicabilité connus explicites, CAC plafond/ROI de modèle et
+trésorerie conditionnelle ne prouvent ni performance ni budget disponible Thot.
+Raccords/fences et cohérence locale reçus : final 5 121/491, PG ciblé 20/2,
+8 cas consommateurs verts, build/parcours finaux sans mutation. CI/image/runtime,
+natif, modèle réel/cascade RTIS et chaîne entière ouverts ; compatibilité legacy
+optionnelle ≠ readiness de toutes sorties, admission/complétude à recevoir sur
+les autres dossiers avant wholeMVP. [ADR-0233 Proposed](adr/0233-financial-working-model-projection.md).
+
 ### Attribution des réceptions après intégration — candidat 531 (2026-11-02)
 
 La provenance ciblée du candidat 530 est reprise en 531 après fusion de main

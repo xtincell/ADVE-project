@@ -9,6 +9,22 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Prémisses V → calcul partagé → lecteurs — reçu local 534 (2026-11-02)
+
+Édition qualifiée/cohorte D PAYER → V.financialModel → FinancialBrain pur →
+V/Oracle/export/Glory/RTIS/maturité/cross-validator/I/budget-allocator.
+pillar.sources/checkpoints restent la provenance ; model.source simple édition.
+Legacy conservé sans seconde base, projection conditionnelle ni performance
+prouvée ni budget Thot disponible ; déficit/zéro/non-applicabilité explicites.
+Final 5 121/491, PG ciblé 20/2 dont concurrence D réellement refusée, 8 cas
+consommateurs verts, build final et parcours MCP/fiche/Word/Oracle reçus.
+Relecture finale sans mutation, contenu/métadonnées exacts ; HTTP/stress sans
+natif réel ou SLO. Dettes locales raccord/fences fermées, pas de registre ajouté.
+CI/image/runtime et modèle réel/cascade RTIS restent ouverts ; legacy optionnel
+ne suffit pas à recevoir toutes les sorties d’autres dossiers. Admission et
+complétude avant Oracle/ADVE/MVP entiers, plan dans RESIDUAL-DEBT.
+Données et artefacts privés hors checkout. [ADR-0233 Proposed](adr/0233-financial-working-model-projection.md).
+
 ### ADVE canonique → Oracle — 533 reçu localement (2026-11-02)
 
 A.doctrine et E.freins/communauté/contacts → quatre lecteurs existants → Oracle/PDF,

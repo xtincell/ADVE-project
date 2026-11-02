@@ -1,3 +1,4 @@
+import { projectFinancialPillar } from "@/domain/unit-economics";
 /**
  * PROTOCOLE STRATEGY (S) — deterministic projection of the chosen I set.
  * Reads A/D/V/E/R/T/I/S; proposes scenario subsets without changing I or arming execution.
@@ -240,7 +241,8 @@ export async function executeProtocoleStrategy(strategyId: string, transaction?:
     });
     const pillars: Record<string, Record<string, unknown> | null> = {};
     for (const p of dbPillars) {
-      pillars[p.key] = (p.content ?? null) as Record<string, unknown> | null;
+      const content = (p.content ?? null) as Record<string, unknown> | null;
+      pillars[p.key] = p.key === "v" && content ? projectFinancialPillar(content) : content;
     }
     // An explicit route decision is part of this calculation, not a preliminary
     // persisted S version. Source initiatives remain untouched.

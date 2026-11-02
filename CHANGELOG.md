@@ -1,3 +1,13 @@
+## v6.27.534 — refactor(finance): projeter le même modèle V dans les lecteurs existants (2026-11-02)
+
+**Modèle financier partagé et parcours locaux reçus, sans transformer les projections en performance ou budget réellement disponible.**
+
+- V.financialModel qualifié : édition de base, même cohorte D PAYER, prix/charges/volumes/horizons, communication comprise aux coûts et trésorerie conditionnelle. pillar.sources/checkpoints restent la provenance ; model.source identifie seulement l’édition de base, aucun registre parallèle.
+- FinancialBrain factorisé, lecteurs V/Oracle/export/Glory/RTIS/maturité/cross-validator/I/allocator raccordés ; defaults sectoriels retirés, legacy conservé sans seconde base. Déficit et non-applicabilité connus explicites, zéro conservé, ROI non borné à 100 %, aucun bonus de performance prouvée ou budget Thot disponible issu du modèle proposé.
+- Contrôles finaux : suite complète 5 121 tests/491 fichiers, PG ciblé 20/2 dont concurrence D réellement refusée sans version V ou recommendation APPLIED, valeurs humaines conservées ; tsc exit 0, deux lints 0 erreur/24 avertissements préexistants, cycles 0, build final webpack heap 8 GiB exit 0. Deux contre-épreuves zéro/non-applicabilité rouges puis ciblé consommateurs 8 tests verts.
+- Copie isolée : MCP réel une écriture, fiche Glory depuis V/Word 37 contrôles et cinq pages rendues/inspectées, Oracle cohérent. Relecture finale compilée sans mutation : Oracle USER 136 ms, Word 672 ms/37 champs sans inconnu, cross-validator 44 ms, éditeur 35 ms (PAYER correct, résultats calculés non éditables) ; contenu/métadonnées inchangés. Trois pages HTTP 200, aucun natif réel ; stress sans finding, latences locales sans SLO.
+- Dettes locales fences/consommateurs fermées ; natif/CI/image/runtime 534, modèle réel de production/cascade RTIS, autres dossiers et Oracle/ADVE/MVP entiers ouverts. financialModel optionnel pour compatibilité legacy ne reçoit pas toutes les sorties financières des autres dossiers : admission/complétude à recevoir avant wholeMVP. [ADR-0233 Proposed](docs/governance/adr/0233-financial-working-model-projection.md), aucun numéro PR inventé ni chiffre métier privé publié.
+
 ## v6.27.533 — fix(oracle): lire les formes ADVE canoniques sans perdre leur contenu (2026-11-02)
 
 **Réception locale exacte 533 obtenue ; livraison, natif réel et Oracle entier restent ouverts.**

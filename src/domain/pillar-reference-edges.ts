@@ -91,6 +91,12 @@ export function assessPillarReferences(p: PillarBag, options: { strictS?: boolea
   // ── Pools de cibles ──
   const personaNames = new Set(arr(D.personas).map((x) => nameKey(x.name ?? x.nom)).filter(Boolean));
   const personaIds = new Set(arr(D.personas).map((x) => asStr(x.id)).filter(Boolean));
+  const financial = (V.financialModel ?? {}) as Rec;
+  const financialBasis = (financial.breakEven ?? {}) as Rec;
+  if (financialBasis.payerPersonaId) {
+    const payers = new Set(arr(D.personas).filter(p => Array.isArray(p.actorRoles) && p.actorRoles.includes("PAYER")).map(p => asStr(p.id)).filter(Boolean));
+    check("V.financialModel.payer → D.personas client payeur", "V.financialModel.breakEven.payerPersonaId", asStr(financialBasis.payerPersonaId), payers);
+  }
   const riskIds = new Set(arr(R.probabilityImpactMatrix).map((x) => asStr(x.id)).filter(Boolean));
   const blockerIds = new Set(arr(R.overtonBlockers).map((x) => asStr(x.id)).filter(Boolean));
   const hypothesisIds = new Set(arr(T.hypothesisValidation).map((x) => asStr(x.id)).filter(Boolean));

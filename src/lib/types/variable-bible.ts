@@ -430,10 +430,17 @@ export const BIBLE_V: Record<string, VariableSpec> = {
     format: "Array d'objets { nom, categorie (enum), prix (scalaire optionnel), conditionsTarifaires? (texte déclaré : périodes, HT/TTC, options, état de publication), cout, margeUnitaire, gainClientConcret, lienPromesse, segmentCible, phaseLifecycle (enum) }",
     rules: ["1 minimum, 50 maximum", "gainClientConcret = bénéfice tangible, pas marketing", "segmentCible = ref D.personas", "conditionsTarifaires conserve les termes sourcés ou saisis ; jamais inventer prix, fiscalité, période ou disponibilité", "Un prix absent reste inconnu ; gratuit exige zéro explicite. Des conditions ne sont pas un panier moyen"],
   },
+  financialModel: {
+    description: "Hypothèses du modèle financier : cohorte payeuse, charges, prix et trajectoire",
+    format: "Modèle structuré versionné, montants justifiés et document de référence",
+    rules: ["Prémisses dans V ; tous les lecteurs partagent le même calcul", "Prévisions et plafond CAC proposés, jamais observations ou autorisation de dépense", "Communication identifiée au sein des charges, sans double comptage"],
+    editableMode: "STRATEGIC_REWRITE",
+    feedsInto: ["v.unitEconomics", "r", "t", "i", "s"],
+  },
   unitEconomics: {
     description: "Les métriques économiques unitaires de la marque",
     format: "Objet { cac (coût acquisition), ltv (lifetime value), ltvCacRatio (calculé), pointMort, margeNette, budgetCom (annuel), caVise (CA annuel visé) }",
-    rules: ["cac et ltv en devise locale (XAF)", "ltvCacRatio ≥ 3 = sain, < 3 = alarme", "budgetCom et caVise sont des objectifs annuels"],
+    rules: ["Même cohorte, devise et horizon pour CAC et LTV", "Avec financialModel : résultats calculés, réviser les prémisses au lieu des résultats", "budgetCom et caVise sont des objectifs annuels ; un ratio prévisionnel ne prouve pas une performance terrain"],
   },
   productSystem: {
     description: "Le SYSTÈME/mécanisme interne du produit — ce qui le fait fonctionner et crée de la valeur structurellement (distinct du catalogue/économie). Ex. le « Système Palais » de SPAWT.",

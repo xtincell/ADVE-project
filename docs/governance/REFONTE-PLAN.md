@@ -1,3 +1,18 @@
+## 534 — raccord financier local reçu, suite réelle ouverte (2026-11-02)
+
+[ADR-0233 Proposed](adr/0233-financial-working-model-projection.md) : entrée V versionnée,
+calcul FinancialBrain et lecteurs communs ; provenance pillar.sources/checkpoints,
+model.source édition de base, aucun nouveau moteur ou registre.
+Final 5 121/491, PG ciblé 20/2 incluant refus réel de concurrence D, 8 cas
+consommateurs verts, typage/lints/cycles/build final et parcours locaux reçus.
+Relecture compilée sans mutation, contenu/métadonnées exacts ; dettes locales
+fences/raccord/zéro/non-applicabilité fermées, aucun natif ou production écrit.
+**Suite** : CI/image/runtime, modèle réel et cascade RTIS, natif et admission des
+modèles/complétude sur les autres dossiers ; legacy optionnel ne reçoit pas la
+readiness globale. Responsable Core/V/FinancialBrain, effort recette bornée,
+**déclencheur** livraison exacte puis avant Oracle/ADVE/MVP entiers. Campagnes,
+devis, taxonomies et sept chantiers ouverts ; aucun chiffre métier publié.
+
 ## 531 — recevoir la combinaison avec main (2026-11-02)
 
 Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration

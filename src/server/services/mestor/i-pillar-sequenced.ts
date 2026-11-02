@@ -1,3 +1,4 @@
+import { resolveUnitEconomics, unitEconomicsNote } from "@/domain/unit-economics";
 /**
  * I-Pillar Sequenced Generation — « éclater et séquencer l'output »
  *
@@ -76,7 +77,8 @@ const fcfaShort = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)
 function buildEconomicGrounding(pillars: Record<string, unknown>): { block: string; budgetCom: number | null } {
   const v = (pillars.V ?? {}) as Record<string, unknown>;
   const t = (pillars.T ?? {}) as Record<string, unknown>;
-  const ue = (v.unitEconomics ?? {}) as Record<string, unknown>;
+  const ue = resolveUnitEconomics(v);
+  const currency = typeof ue.currency === "string" ? ue.currency : "FCFA";
   const budgetCom = typeof ue.budgetCom === "number" && ue.budgetCom > 0 ? ue.budgetCom : null;
   const caVise = typeof ue.caVise === "number" ? ue.caVise : null;
   const tam = (t.tamSamSom ?? {}) as Record<string, { value?: unknown }>;
@@ -89,9 +91,10 @@ function buildEconomicGrounding(pillars: Record<string, unknown>): { block: stri
   const trends = Array.isArray(mr.macroTrends) ? mr.macroTrends.slice(0, 4).map((t) => sanitizeInline(t, { max: 200 })) : [];
   const lines = [
     "REPÈRES ÉCONOMIQUES & MARCHÉ : provenance dans le contexte qualifié ci-dessus. Leur présence ne prouve ni validation ni disponibilité pour engagement.",
-    budgetCom != null ? `- Budget marketing annuel enregistré : ${fcfaShort(budgetCom)} FCFA (enveloppe de simulation ; confirmation requise avant engagement)` : "- Budget marketing : non renseigné (V.unitEconomics.budgetCom)",
-    caVise != null ? `- CA visé : ${fcfaShort(caVise)} FCFA` : null,
+    budgetCom != null ? `- Budget marketing annuel enregistré : ${fcfaShort(budgetCom)} ${currency} (enveloppe de simulation ; confirmation requise avant engagement)` : "- Budget marketing : non renseigné (V.unitEconomics.budgetCom)",
+    caVise != null ? `- CA visé : ${fcfaShort(caVise)} ${currency}` : null,
     (tamVal != null || samVal != null) ? `- Marché : TAM ${tamVal != null ? fcfaShort(tamVal) : "?"}${samVal != null ? ` / SAM ${fcfaShort(samVal)}` : ""}` : null,
+    unitEconomicsNote(ue),
     bmf != null ? `- Brand-Market Fit : ${bmf}/100` : null,
     trends.length ? `- Tendances marché (T) : ${trends.join(" ; ")}` : null,
   ].filter(Boolean);

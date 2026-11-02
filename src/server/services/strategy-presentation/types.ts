@@ -24,6 +24,8 @@
  * l'auto-trigger pendant l'enrichissement Oracle — cf. ADR-0014).
  */
 
+import type { FinancialMetricContext } from "@/domain/unit-economics";
+
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
 import type { BrandAssetKind } from "@/domain/brand-asset-kinds";
 import type { CultIndexTier } from "@/domain/cult-index-tier";
@@ -478,6 +480,10 @@ export interface BudgetSection {
     roiEstime: number | null;
     budgetCom: number | null;
     caVise: number | null;
+    paybackPeriod?: number | null;
+    pointMort?: string | null;
+    currency?: string;
+    _financialContext?: FinancialMetricContext;
   } | null;
   campaignBudgets: Array<{
     name: string;
@@ -623,6 +629,8 @@ export interface PropositionValeurSection {
     ltv: number | null;
     ltvCacRatio: number | null;
     commentaire?: string | null;
+    currency?: string;
+    _financialContext?: FinancialMetricContext;
   } | null;
 }
 

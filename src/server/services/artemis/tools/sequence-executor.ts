@@ -1,3 +1,4 @@
+import { projectFinancialPillar } from "@/domain/unit-economics";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 /**
@@ -138,7 +139,8 @@ async function executePillarStep(
     where: { strategyId_key: { strategyId, key: ref } },
   });
   if (!pillar) return {};
-  const content = (pillar.content as Record<string, unknown>) ?? {};
+  const raw = (pillar.content as Record<string, unknown>) ?? {};
+  const content = pillar.key.toLowerCase() === "v" ? projectFinancialPillar(raw) : raw;
   return { [`pillar_${ref}`]: content, ...content };
 }
 
@@ -705,7 +707,8 @@ async function loadFullStrategyContext(strategyId: string): Promise<SequenceCont
   // The PillarResolver handles deep dot-notation access for pillarBindings.
   // This surfacing ensures the SequenceContext has flat access to every field.
   for (const pillar of strategy.pillars) {
-    const c = (pillar.content as Record<string, unknown>) ?? {};
+    const raw = (pillar.content as Record<string, unknown>) ?? {};
+    const c = pillar.key.toLowerCase() === "v" ? projectFinancialPillar(raw) : raw;
     ctx[`pillar_${pillar.key}`] = c;
     ctx[`pillar_${pillar.key}_confidence`] = pillar.confidence;
 

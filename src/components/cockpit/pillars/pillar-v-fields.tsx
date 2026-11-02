@@ -9,7 +9,8 @@
  */
 
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
-import { unitEconomicsNote, unitEconomicsRatio } from "@/domain/unit-economics";
+import { FinancialWorkingModelSchema } from "@/domain/financial-document";
+import { projectFinancialPillar, unitEconomicsMetricRows, unitEconomicsNote } from "@/domain/unit-economics";
 import { cataloguePriceLabel, productLadderPriceLabel, resolveProductRef } from "@/domain/product-catalog";
 import {
   Section, ACard, EmptyBody, EmptyValue, TagRow, ObjCard, ProofList,
@@ -148,26 +149,45 @@ function ProductLadder({ items, catalogue, status }: { items: unknown; catalogue
   );
 }
 
+function FinancialPremises({ value, status }: { value: unknown; status?: string }) {
+  const parsed = FinancialWorkingModelSchema.safeParse(value);
+  if (!parsed.success) return <ACard title="Hypothèses financières" status={status} empty={false}><p>Complétez les prémisses du modèle pour recalculer ses résultats.</p></ACard>;
+  const { breakEven: b, projection: p } = parsed.data;
+  const n = (value: number | null) => value === null ? "À préciser" : value.toLocaleString("fr-FR", { maximumFractionDigits: 2 });
+  const origin = (value: string) => value === "ASSUMPTION" ? "Hypothèse proposée" : value === "HISTORICAL" ? "Repère historique" : "Valeur documentée";
+  const charges = (rows: typeof b.fixedCosts, indexes: number[]) => rows.map((row, i) => ({
+    poste: row.label, montant: `${n(row.value)} ${b.currency}`, origine: origin(row.qualification), justification: row.note,
+    communication: indexes.includes(i) ? "Incluse dans le budget de communication" : "Autre charge du modèle",
+  }));
+  return <ACard title="Hypothèses du modèle financier" status={status} empty={false} span>
+    <p>{b.title} · {b.payer} · {b.unit}</p><p>{b.scope}</p>
+    <p>Prix : {n(b.price.value)} {b.currency} · {origin(b.price.qualification)}. {b.price.note}</p>
+    <details><summary>Charges et coût de service</summary>
+      <ProofList title="Charges fixes mensuelles" items={charges(b.fixedCosts, p.marketingFixedCostIndexes)} cols={[["poste", "Poste"], ["montant", "Montant"], ["origine", "Origine"], ["communication", "Périmètre"], ["justification", "Justification"]]} />
+      <ProofList title="Charges par unité vendue" items={charges(b.variableCosts, p.marketingVariableCostIndexes)} cols={[["poste", "Poste"], ["montant", "Montant"], ["origine", "Origine"], ["communication", "Périmètre"], ["justification", "Justification"]]} />
+    </details>
+    <details><summary>Trajectoire et valeur du client</summary>
+      <p>{p.note}</p><p>Unités par client et par mois : {n(p.unitsPerPayerMonth.value)}. Rétention annuelle : {n(p.annualRetentionRate.value! * 100)} %. Horizon : {p.ltvHorizonMonths} mois. Récupération maximale du CAC proposée : {p.acquisitionPaybackCeilingMonths} mois.</p>
+      <ProofList title="Objectifs mensuels" items={p.monthlyVolumes.map((a, i) => ({ mois: `M${i + 1}`, volume: n(a.value), origine: origin(a.qualification), justification: a.note }))} cols={[["mois", "Mois"], ["volume", "Volume proposé"], ["origine", "Origine"], ["justification", "Justification"]]} />
+    </details>
+    <details><summary>Trésorerie, hypothèses et exclusions</summary>
+      <p>Solde initial proposé : {n(p.cashFlow.openingCash.value)} {b.currency}. Encaissements décalés de {p.cashFlow.revenueDelayMonths} mois ; paiements de {p.cashFlow.costDelayMonths} mois. {p.cashFlow.note}</p>
+      <ul>{[...b.assumptions, ...b.exclusions].map((t, i) => <li key={i}>{t}</li>)}</ul>
+    </details>
+  </ACard>;
+}
+
 function UnitEconomics({ value, status }: { value: unknown; status?: string }) {
   const empty = isEmpty(value);
   const o = asRec(value);
-  const ratio = unitEconomicsRatio(o.cac, o.ltv, o.ltvCacRatio);
-  const displayed: Rec = { ...o, ltvCacRatio: ratio };
   const note = unitEconomicsNote(o);
-  const amount = (x: unknown) => typeof x === "number" ? `${new Intl.NumberFormat("fr-FR").format(x)} F` : str(x);
-  const K: Array<[string, string, (x: unknown) => string]> = [
-    ["cac", "CAC", amount], ["ltv", "LTV", amount], ["ltvCacRatio", "LTV / CAC calculé", (x) => `${str(x)}x`],
-    ["margeNette", "Marge nette", (x) => `${str(x)} %`], ["roiEstime", "ROI estimé", str], ["paybackPeriod", "Payback", (x) => `${str(x)} mois`],
-    ["budgetCom", "Budget com", amount], ["caVise", "CA visé", amount],
-  ];
+  const metrics = unitEconomicsMetricRows(o).filter(r => r.value !== "—");
   return (
     <ACard title="Unit Economics" status={status} empty={empty} span>
       {empty ? <EmptyBody /> : (
         <div className="ck-v-econ">
-          {K.map(([k, label, fmt]) => (!isEmpty(displayed[k]) ? (
-            <div className="ck-v-econ__c" key={k}><span className="ck-v-econ__k">{label}</span><span className="ck-v-econ__v">{fmt(displayed[k])}</span></div>
-          ) : null))}
-          {note ? <p className="col-span-full whitespace-pre-line text-xs text-foreground-muted">{note}</p> : null}
+          {metrics.map(r => <div className="ck-v-econ__c" key={r.key}><span className="ck-v-econ__k">{r.label}</span><span className="ck-v-econ__v">{r.value}</span></div>)}
+          {note ? <details className="col-span-full text-xs text-foreground-muted"><summary className="cursor-pointer">Hypothèses et périmètre du calcul</summary><p className="mt-2 whitespace-pre-line">{note}</p></details> : null}
         </div>
       )}
     </ACard>
@@ -264,7 +284,7 @@ function ProductSystem({ value, catalogue, status }: { value: unknown; catalogue
 }
 
 export function PillarVFields({ content, certainty }: { content: Rec; certainty: Record<string, string> | null | undefined }) {
-  const v = content;
+  const v = projectFinancialPillar(content);
   const st = makeStatusFor(certainty, "v", content._fieldProvenance);
   const schemaKeys = Object.keys((PILLAR_SCHEMAS.V as { shape?: Record<string, unknown> }).shape ?? {});
   const total = schemaKeys.length;
@@ -301,7 +321,8 @@ export function PillarVFields({ content, certainty }: { content: Rec; certainty:
 
       <Section title="Économie & valeur" sub="Unit economics et la matrice valeur / coût">
         <div className="ck-a-grid">
-          <UnitEconomics value={v.unitEconomics} status={st("unitEconomics")} />
+          {v.financialModel != null && <FinancialPremises value={v.financialModel} status={st("financialModel")} />}
+          <UnitEconomics value={v.unitEconomics} status={st(v.financialModel ? "financialModel" : "unitEconomics")} />
           <ValueCostMatrix v={v} status={st("valeurClientTangible")} />
         </div>
       </Section>
