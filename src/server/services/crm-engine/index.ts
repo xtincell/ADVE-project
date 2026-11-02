@@ -686,3 +686,43 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
     return tx.deal.findUniqueOrThrow({ where: { id: dealId } });
   });
 }
+
+
+/** Reserve before transport. An uncertain attempt is retained for reconciliation. */
+export async function sendSalesEmail(dealId: string, actor: SalesActor, input: { requestId: string; subject: string; text: string }) {
+  const deal = await db.deal.findUniqueOrThrow({ where: { id: dealId } });
+  const state = salesStateSchema.parse(deal.commercial);
+  const mandate = state.mandate;
+  if (!mandate || mandate.sellerId !== actor.id || !mandate.outboundEmailEnabled ||
+      !mandate.channels.includes("EMAIL") || new Date(mandate.expiresAt) <= new Date() ||
+      state.contactStopped || state.node === "STOPPED" || !deal.contactEmail) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "L’envoi exige un destinataire et un mandat email actif." });
+  }
+  const fingerprint = createHash("sha256").update(JSON.stringify(input)).digest("hex");
+  const existing = await db.cRMActivity.findUnique({ where: { id: input.requestId } });
+  if (existing) {
+    const saved = existing.metadata as { fingerprint?: string };
+    if (existing.dealId !== dealId || existing.performedBy !== actor.id || saved.fingerprint !== fingerprint) {
+      throw new TRPCError({ code: "CONFLICT", message: "Référence d’envoi déjà utilisée." });
+    }
+    return existing;
+  }
+  // A unique primary key also serializes two simultaneous attempts with the same reference.
+  await db.cRMActivity.create({ data: {
+    id: input.requestId, dealId, performedBy: actor.id, activityType: "SALES_EMAIL_PENDING",
+    description: input.subject, metadata: { fingerprint, to: deal.contactEmail, body: input.text },
+  } });
+  const { sendEmail } = await import("@/server/services/email");
+  const html = input.text.replace(/[&<>"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char]!)).replace(/\n/g, "<br>");
+  let result;
+  try {
+    result = await sendEmail({ to: deal.contactEmail, subject: input.subject, text: input.text, html, tag: "sales", allowFallback: false });
+  } catch {
+    return db.cRMActivity.update({ where: { id: input.requestId }, data: { activityType: "SALES_EMAIL_UNCERTAIN" } });
+  }
+  return db.cRMActivity.update({ where: { id: input.requestId }, data: {
+    activityType: result.ok ? "SALES_EMAIL_SENT" : "SALES_EMAIL_UNCERTAIN",
+    metadata: { fingerprint, to: deal.contactEmail, body: input.text,
+      provider: result.provider, providerRef: result.ok ? result.providerRef : null },
+  } });
+}

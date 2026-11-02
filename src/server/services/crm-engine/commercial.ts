@@ -36,6 +36,7 @@ export const mandateSchema = z.object({
   channels: z.array(salesChannel).min(1),
   conversationTree: conversationTreeSchema.optional(),
   intakePaymentReference: text.optional(),
+  outboundEmailEnabled: z.boolean().optional(),
 });
 export const salesCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("MANDATE"), mandate: mandateSchema }),

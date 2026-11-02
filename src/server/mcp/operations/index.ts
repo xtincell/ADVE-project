@@ -147,6 +147,19 @@ export const tools: ToolDefinition[] = [
     },
   },
   {
+    name: "sales_send_email",
+    description: "Envoyer au seul contact de l’affaire mandatée via le transport email existant. requestId stable. Un résultat incertain exige un rapprochement avant nouvel envoi.",
+    inputSchema: z.object({ strategyId: z.string(), dealId: z.string(), requestId: z.string().uuid(),
+      subject: z.string().trim().min(1).max(200), text: z.string().trim().min(1).max(20000) }),
+    handler: async input => {
+      const actor = await commercialAgent(input);
+      const deal = await db.deal.findUniqueOrThrow({ where: { id: String(input.dealId) } });
+      if (deal.sellerStrategyId !== input.strategyId) throw new Error("Affaire hors de cette marque.");
+      const { sendSalesEmail } = await import("@/server/services/crm-engine");
+      return sendSalesEmail(deal.id, actor, { requestId: String(input.requestId), subject: String(input.subject), text: String(input.text) });
+    },
+  },
+  {
     name: "sales_decide",
     description: "Conduire une affaire mandatée jusqu’à l’accord et la remise. requestId stable au rejeu, expectedRevision relue. Le règlement est attesté par la finance.",
     inputSchema: z.object({ strategyId: z.string(), dealId: z.string(), step: z.unknown() }),

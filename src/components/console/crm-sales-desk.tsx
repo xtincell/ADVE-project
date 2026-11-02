@@ -109,6 +109,7 @@ export function CrmSalesDesk() {
                   conversationTree = source ? conversationTreeSchema.parse(JSON.parse(source)) : undefined;
                 } catch { setError("Vérifier les étapes et les réponses de l’arbre."); return; }
                 void act({ type: "MANDATE", mandate: {
+                  outboundEmailEnabled: form.get("outboundEmail") === "on",
                   conversationTree, intakePaymentReference: input(form, "paymentRef") || undefined,
                   offerId, offerName: offer.nom, offerVersion: String(pillar.currentVersion),
                   amount: Number(input(form, "amount")), currency: input(form, "currency"),
@@ -133,6 +134,7 @@ export function CrmSalesDesk() {
                 <label>Identifiant du titulaire<input className={fieldClass} name="seller" defaultValue={session?.user.id} required /></label>
                 <label>Identifiant du responsable de remise<input className={fieldClass} name="delivery" defaultValue={session?.user.id} required /></label>
                 <label>Instructions de règlement<textarea className={fieldClass} name="payment" required /></label>
+                <label className="flex gap-2"><input type="checkbox" name="outboundEmail" />Autoriser l’envoi au contact email de cette affaire</label>
                 <label>Référence du paiement La Fusée, si applicable<input className={fieldClass} name="paymentRef" /></label>
                 <details className="sm:col-span-2"><summary>Arbre de conversation approuvé</summary>
                   <p className="text-sm text-foreground-muted">Étapes, questions et réponses propres à la marque. Le titulaire retrouve cet arbre sur chaque canal.</p>
@@ -180,8 +182,8 @@ export function CrmSalesDesk() {
                 {(!sale.mandate.conversationTree && sale.node === "PROPOSAL") && <option value="ACCEPT">Consigner l’accord explicite</option>}
                 {admin && sale.node === "ACCEPTED" && <option value="PAYMENT">Rapprocher un règlement</option>}
                 {sale.node === "PAID" && <option value="DELIVER">Attester la remise</option>}
-                {sale.node !== "STOPPED" && <option value="STOP">Arrêter le contact</option>}
-                {admin && !sale.contactStopped && sale.node !== "STOPPED" && <option value="HANDOVER">Transférer le dossier</option>}
+                <option value="STOP">Arrêter le contact</option>
+                {admin && !sale.contactStopped && <option value="HANDOVER">Transférer le dossier</option>}
               </select></label>
               <label>Observation, référence de preuve ou identifiant de reprise<textarea className={fieldClass} name="evidence" /></label>
               {admin && sale.node === "ACCEPTED" && <div className="grid gap-3 sm:grid-cols-2">

@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
+const sendEmail = vi.hoisted(() => vi.fn(async () => ({ ok: true, provider: "BREVO", providerRef: "synthetic-message" })));
+vi.mock("@/server/services/email", () => ({ sendEmail }));
 vi.mock("next-auth", () => ({}));
 vi.mock("@/lib/auth/config", () => ({ auth: vi.fn(async () => null) }));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
@@ -107,9 +109,9 @@ describe("commercial continuity through the governed router and PostgreSQL", () 
     await db.intakePayment.create({ data: { reference: paymentReference, intakeToken: randomUUID(), amount: 60000, currency: "XOF", provider: "CINETPAY" } });
     const key = await db.mcpApiKey.create({ data: { name: "Owned autonomous recipe", keyHash: createHash("sha256").update(secret).digest("hex"),
       server: "operations", scopeKind: "BRAND", scopeStrategyId: brandId, ratePerCallUsd: 0 } });
-    dealId = await caller(sellerId).createDeal({ sellerStrategyId: brandId, companyName: "Acheteur autonome de recette", contactName: "Acheteur fictif", contactPhone: "+00000001" });
+    dealId = await caller(sellerId).createDeal({ sellerStrategyId: brandId, companyName: "Acheteur autonome de recette", contactName: "Acheteur fictif", contactEmail: "buyer@example.invalid", contactPhone: "+00000001" });
     await step(adminId, { type: "MANDATE", mandate: {
-      offerId: "gold", offerVersion: "1", offerName: "Gold", terms: "Conditions de recette approuvées.", intakePaymentReference: paymentReference,
+      offerId: "gold", offerVersion: "1", offerName: "Gold", terms: "Conditions de recette approuvées.", outboundEmailEnabled: true, intakePaymentReference: paymentReference,
       amount: 60000, currency: "XOF", sellerId: `mcp:${key.id}`, deliveryOwnerId: `mcp:${key.id}`, beneficiary: "Marque de recette",
       expiresAt: "2030-01-01T00:00:00.000Z", paymentInstructions: "Référence de règlement de recette.", channels: ["PHONE", "WHATSAPP", "EMAIL"],
     } }, "ADMIN");
@@ -119,6 +121,16 @@ describe("commercial continuity through the governed router and PostgreSQL", () 
       expect(response.status).toBe(200);
       return response.json();
     };
+    const outbound = { dealId, requestId: randomUUID(), subject: "Prise de contact de recette", text: "Question commerciale adressée au client fictif." };
+    await invoke("sales_send_email", outbound);
+    await invoke("sales_send_email", outbound);
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    sendEmail.mockImplementationOnce(async () => { throw new Error("Transport result unknown"); });
+    const uncertain = { ...outbound, requestId: randomUUID() };
+    await invoke("sales_send_email", uncertain);
+    const retained = await invoke("sales_send_email", uncertain);
+    expect(JSON.stringify(retained)).toContain("SALES_EMAIL_UNCERTAIN");
+    expect(sendEmail).toHaveBeenCalledTimes(2);
     // The driver decides from the server state. The buyer and finance are separate fixtures.
     for (let turn = 0; turn < 8; turn++) {
       const current = await db.deal.findUniqueOrThrow({ where: { id: dealId } });
