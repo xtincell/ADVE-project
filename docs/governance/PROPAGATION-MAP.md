@@ -9,6 +9,32 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Formes ADVE → texte et interface Oracle — candidat 532 (2026-11-02)
+
+Sources A/E → lecteurs existants → sections Oracle → rendu/export. Le candidat
+lit doctrine structurée, freins/niveau/réponse, principes/application,
+plateformes/mécanismes et rôle des points de contact sans les confondre avec une
+absence. Pas de coupe arbitraire à trois principes ; qualité legacy seulement si
+renseignée. Synthèse + listes et nom/type/compteur de plateforme déclarés conservés
+ensemble, y compris zéro sans mesure fabriquée. Aucune source écrite, aucun appel
+LLM, service ou modèle ajouté ; contrat ADVE qualifié → RTIS → lecteurs inchangé.
+Ciblé final 31 / 7 reçu sur HTML statique/export ; Vitest complet reçu à 5 097 /
+486, hors unit inclus (premier run unit 5 059 / 484 conservé comme partiel),
+typage/lints sans erreur et cycles sans dépendance circulaire. Refus heap V8
+conservé puis webpack local 8 Go exit 0, sans changement produit/prod. HTTP USER
+→ assemblage → vraie route PDF reçu : tous les marqueurs ciblés conservés dans
+le PDF de 57 pages, piliers inchangés avant/après. Mise en page reçue sur les seules pages
+3, 4 et 14 ; pages client HTTP 200, hydratation/native non reçue. Copie de base
+avec contenu métier préexistant, surcharges CANON532 seules synthétiques ;
+preuves privées hors checkout. Stress compilé exit 0 : 276 HTTP reçues /
+5 non reçues / 0 échec, 3 requêtes, 7 forges/transitions et 0 finding, sans preuve
+native. Natif/livraison 532 et chaîne réelle encore ouverts. Conservation et lecture native 531 des compléments proposés reçues
+séparément ; parent HUMAN/feuilles INFERRED conservés, aucune confirmation
+opérateur ou réception native 532 déduite.
+Le défaut de prémisses financières et d’unité marge coefficient/% reste en
+[dette avec reprise après 532](RESIDUAL-DEBT.md), via moteurs existants.
+Aucun ADVE/RTIS ou MVP entier reçu par ce seul correctif de lecture.
+
 ### Reprise de provenance ciblée sur main — candidat 531 (2026-11-02)
 
 Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration

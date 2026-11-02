@@ -1,3 +1,48 @@
+## 532 — lecture Oracle candidate et cadre financier à reprendre (2026-11-02)
+
+**Lecture Oracle** : les objets A/E valides perdaient doctrine, freins/réponses,
+principes/application et plateformes/mécanismes dans les adaptations textuelles ;
+le tableau de contacts ignorait le rôle canonique. Candidat 532 sans écriture de
+source ni LLM ; synthèse et éléments canoniques conservés ensemble, avec type et
+compteur déclarés explicites, y compris zéro. Ciblé final 31 tests / 7 fichiers
+reçu en rendu statique/export ; Vitest complet 5 097 tests / 486 fichiers verts
+(hors unit inclus), premier lancement tests/unit 5 059 / 484 conservé comme partiel.
+Typage/lints sans erreur, cycles sans dépendance circulaire. Refus heap V8 conservé,
+reprise webpack locale heap 8 Go exit 0 sans changement produit/production.
+HTTP compilé USER et vraie route PDF reçus, marqueurs ciblés conservés dans le
+PDF de 57 pages, piliers strictement inchangés avant/après. Mise en page reçue
+sur les pages 3, 4 et 14 seulement ; trois pages client HTTP 200 sans hydratation /
+native reçue. Copie de base à contenu métier préexistant, surcharges CANON532
+seules synthétiques, preuves privées hors checkout. Stress compilé exit 0 :
+276 HTTP reçues / 5 non reçues / 0 échec, 3 requêtes, 7 forges/transitions,
+0 finding ; aucune réception native déduite. Natif et CI/image/runtime 532 ouverts.
+**Fermer** après ces reçus locaux par parcours natif et livraison exacts, sans
+étendre la réception visuelle à 57 pages. Responsable Oracle /
+Core existant ; effort recette bornée ; **déclencheur** avant réception du lot 532.
+Aucun Oracle entier, ADVE/RTIS complet ou MVP reçu par ce correctif mécanique.
+Conservation 531 et lecture native de compléments A proposés reçues au périmètre
+décrit dans CLAUDE ; aucune confirmation humaine ou réception native 532 déduite.
+
+**Dette préexistante — prémisses financières et unité de marge** : l’auto-filler
+financier utilise encore des defaults sectoriels, pays/positionnement et modèles
+économiques pour proposer CAC/LTV/revenu/budget ou payback ; ces montants ne
+sont pas déduits d’une cohorte et d’un horizon qualifiés. margeNette y est un
+coefficient tandis que son rendu V ajoute un signe %. Ce correctif 532 ne répare
+ni ces conventions ni la sémantique des montants existants, qu’il conserve.
+
+**Fermer** par cadrage financier ADVE sur les sources et postulats amont : unité,
+devise/période, cohorte, horizon, coûts/revenus et qualification des prémisses ;
+utiliser financial-brain/Thot et les calculs existants. Distinguer estimation de
+modèle, objectif, mesure et décision ; remplacer les defaults non justifiés par
+prémisses traçables avant recalcul des dépendances. Choisir une convention de
+marge cohérente entre source, calcul, UI et export, tester ratio/coefficient/%
+sans inventer de chiffre métier. Responsable Core/V et moteur financier existant ;
+effort audit de conventions + cas de calcul bornés ; **déclencheur** après livraison
+532, à la prochaine passe du cadre financier ADVE, avant réception des unit economics
+et du livrable financier réel. Aucun nouveau moteur de coûts requis.
+Le contrat source → calcul → postulat qualifié amont demeure ; la présence de
+champs remplis ne reçoit pas leur validité financière ou la chaîne entière.
+
 ## 531 — réceptions après intégration encore ouvertes (2026-11-02)
 
 Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration

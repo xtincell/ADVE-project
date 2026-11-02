@@ -627,7 +627,7 @@ export interface PropositionValeurSection {
 }
 
 export interface ExperienceEngagementSection {
-  touchpoints: Array<{ nom: string; canal: string; qualite: string; stadeAarrr: string }>;
+  touchpoints: Array<{ nom: string; canal: string; role?: string; qualite: string; stadeAarrr: string }>;
   rituels: Array<{ nom: string; frequence: string; description: string; adoptionScore: number | null }>;
   devotionPathway: {
     currentDistribution: Record<string, number>;

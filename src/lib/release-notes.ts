@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.532", date: "2026-11-02", headline: "Un rapport qui restitue les informations déjà renseignées",
+    highlights: [
+      { emoji: "📖", title: "Retrouver vos principes et votre communauté", body: "Le rapport reprend le texte de référence, les principes, leurs règles d’application et les informations de communauté disponibles. Leur présentation structurée ne les fait plus disparaître du document." },
+      { emoji: "🧭", title: "Lire les freins et le rôle de chaque contact", body: "Les freins à l’engagement et leurs réponses proposées sont visibles. Les points de contact montrent leur rôle ; une appréciation de qualité apparaît seulement lorsqu’elle a été renseignée." },
+    ],
+  },
+  {
     version: "6.27.531", date: "2026-11-02", headline: "Compléter votre dossier en gardant vos choix validés",
     highlights: [
       { emoji: "🧩", title: "Compléter la précision manquante", body: "Un complément proposé peut remplir une case manquante dans un objet déjà validé, en conservant les autres valeurs et les profils existants. Son origine reste distincte de votre validation précédente." },

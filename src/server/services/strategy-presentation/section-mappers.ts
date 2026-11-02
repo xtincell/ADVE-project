@@ -273,6 +273,12 @@ export function mapPlateformeStrategique(strategy: any): PlateformeStrategiqueSe
   const ikigai = pillarA?.ikigai as Record<string, unknown> | null;
   const tonDeVoix = pillarD?.tonDeVoix as Record<string, unknown> | null;
   const assets = pillarD?.assetsLinguistiques as Record<string, unknown> | null;
+  const doctrine = typeof pillarA?.doctrine === "string" ? safeStr(pillarA.doctrine)
+    : pillarA?.doctrine && typeof pillarA.doctrine === "object"
+      ? [pickStr(pillarA.doctrine, ["texte"]),
+        ...(["dogmas", "principles", "practices"] as const).map(key => pickArr(pillarA.doctrine, [key]).join("\n"))]
+        .filter(Boolean).join("\n\n") || null
+      : null;
   // Valeurs RÉELLES (audit galileo) — clés variées : `valeur`/`value`/`customName`,
   // `rang`/`rank`. On ne fabrique PLUS de valeurs Schwartz génériques
   // (defaultValeurs) qui écrasaient les vraies valeurs de marque.
@@ -305,7 +311,7 @@ export function mapPlateformeStrategique(strategy: any): PlateformeStrategiqueSe
   return {
     archetype: safeStr(pillarA?.archetype),
     citationFondatrice: safeStr(pillarA?.citationFondatrice),
-    doctrine: safeStr(pillarA?.doctrine),
+    doctrine,
     ikigai: ikigai
       ? {
           love: safeStr(ikigai.love) ?? "",
@@ -1067,6 +1073,7 @@ export function mapExperienceEngagement(strategy: any): ExperienceEngagementSect
     return {
       nom: pickStr(t, ["nom", "name", "titre"]) || canal,
       canal,
+      role: pickStr(t, ["role"]),
       qualite: pickStr(t, ["qualite", "quality"]),
       stadeAarrr: pickStr(t, ["stadeAarrr", "aarrStage", "stade"]),
     };
@@ -1084,7 +1091,9 @@ export function mapExperienceEngagement(strategy: any): ExperienceEngagementSect
   const realTriggers = arr(eContent?.conversionTriggers).map((t: any) => ({
     from: pickStr(t, ["fromLevel", "from"]), to: pickStr(t, ["toLevel", "to"]), trigger: str(t.trigger),
   })).filter((t: any) => t.trigger);
-  const realBarriers = arr(eContent?.barriersEngagement ?? eContent?.barriers).map(str).filter(Boolean);
+  const realBarriers = arr(eContent?.barriersEngagement ?? eContent?.barriers).map((b: unknown) =>
+    typeof b === "string" ? b : [pickStr(b, ["level"]), pickStr(b, ["barrier"]), pickStr(b, ["mitigation"])]
+      .filter(Boolean).join(" — ")).filter(Boolean);
   const hasPathway = !!devSnap || realTriggers.length > 0 || realBarriers.length > 0;
   const currentDistribution: Record<string, number> = devSnap
     ? { spectateur: devSnap.spectateur, interesse: devSnap.interesse, participant: devSnap.participant, engage: devSnap.engage, ambassadeur: devSnap.ambassadeur, evangeliste: devSnap.evangeliste }
@@ -1094,14 +1103,21 @@ export function mapExperienceEngagement(strategy: any): ExperienceEngagementSect
   // Community strategy : champs canoniques E (communityStrategy → principes +
   // communityBuilding). Vide ("") si rien de déclaré — plus de phrase générique.
   const cb = (eContent?.communityBuilding ?? {}) as any;
-  const principes = arr(eContent?.principesCommunautaires).map(str).filter(Boolean);
+  const principes = arr(eContent?.principesCommunautaires).map((p: unknown) => typeof p === "string" ? p
+    : [pickStr(p, ["principle"]), pickStr(p, ["enforcement"])].filter(Boolean).join(" — ")).filter(Boolean);
+  const platforms = arr(cb.platforms).map((p: unknown) => {
+    if (typeof p === "string") return p;
+    const platform = p as Record<string, unknown> | null;
+    return [pickStr(platform, ["name"]), pickStr(platform, ["type"]),
+      typeof platform?.memberCount === "number" && Number.isFinite(platform.memberCount)
+        ? `${platform.memberCount} membre(s) déclaré(s)` : ""].filter(Boolean).join(" · ");
+  }).filter(Boolean);
   const cbParts = [
-    Array.isArray(cb.platforms) && cb.platforms.length > 0 ? `Plateformes : ${cb.platforms.map(str).join(", ")}` : "",
-    str(cb.growthMechanics),
+    platforms.length ? `Plateformes : ${platforms.join(", ")}` : "",
+    pickArr(cb, ["growthMechanics"]).join(" · "),
   ].filter(Boolean);
-  const communityStrategy = str(eContent?.communityStrategy ?? eContent?.community)
-    || [principes.slice(0, 3).join(" · "), ...cbParts].filter(Boolean).join(" — ")
-    || null;
+  const communityStrategy = [pickStr(eContent, ["communityStrategy", "community"]), principes.join(" · "), ...cbParts]
+    .filter(Boolean).join(" — ") || null;
 
   return {
     touchpoints,

@@ -28,6 +28,32 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 532 — objets canoniques absents d’Oracle, correctif candidat (2026-11-02)
+
+Symptôme : une doctrine objet passait pour absente ; freins/principes/plateformes
+structurés perdaient leur texte, freins non consommés par l’UI, principes coupés
+à trois et rôle canonique absent du tableau de contacts. Hypothèse : lecteurs
+adaptés à d’anciennes chaînes de texte plutôt qu’aux formes canoniques A/E.
+Le candidat conserve les informations et variantes textuelles héritées, rend
+freins/réponses et rôle ; qualité legacy seulement si renseignée. Aucune écriture
+ou analyse IA ajoutée. Premiers refus 3 / 4, puis 20 / 3 verts ; fixture de rôle
+hors schéma corrigée puis vraie contre-épreuve de lecteur rouge. Ciblé final
+31 / 7 vert : synthèse explicite + listes complètes, type et compteur de plateforme
+déclarés, zéro conservé ; HTML statique/export reçus. Vitest complet reçu :
+5 097 tests / 486 fichiers, hors unit inclus ; 5 059 / 484 antérieurs limités
+aux unit ne sont pas le périmètre complet. Typage/lints sans erreur, cycles sans
+dépendance circulaire. Refus heap V8 conservé puis webpack local 8 Go exit 0,
+sans changement produit/prod. HTTP compilé USER et vraie route PDF reçus ;
+marqueurs ciblés retrouvés dans le PDF de 57 pages, contrôle visuel des seules pages
+3, 4 et 14 sans coupure/chevauchement, piliers inchangés avant/après. Pages
+client HTTP 200, hydratation/native non reçue. Copie de base avec contenu métier
+préexistant, surcharges CANON532 seules synthétiques ; preuves privées hors checkout.
+Stress compilé exit 0 : 276 HTTP reçues / 5 non reçues / 0 échec, 3 requêtes,
+7 forges/transitions, 0 finding ; aucune réception native par ces probes.
+Natif/livraison 532 ouverts. Defaults financiers et marge coefficient/%
+dans RESIDUAL-DEBT pour reprise après 532 ; aucune réparation financière ou
+complétude ADVE/RTIS/MVP déduite de cette lecture.
+
 ### 531 — reprise documentaire après intégration (2026-11-02)
 
 Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration
