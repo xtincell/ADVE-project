@@ -1,3 +1,26 @@
+## 528 — qualification des objectifs, candidat local (2 novembre 2026)
+
+La 527 est reçue en production, source `79c912dd1a6dff7475ff5883dbe27d6c1e6d081f`, digest `9886144552a2f473b5661846d8695d628a3976d553095ac2bf358abbe4c62e80`. Conservation des sources, actifs, piliers, paiements et périmètres comparés reçue ; actualisation S seule et lecture native de la roadmap reçues, sans armer l’exécution. Les objectifs hérités des données initiales ne sont pas pour autant validés sémantiquement. Les preuves et données métier restent privées hors checkout.
+
+Le candidat 528 distingue définition d’indicateur, objectif PROPOSED / DECLARED,
+unité, fenêtre d’observation, cible et fréquence. Cible/fréquence nulles restent
+valides comme brouillon, pas complètes pour la maturité. S ne projette que les
+objectifs dotés de nom/cible/fréquence ; Oracle montre les définitions et lacunes,
+sans fabriquer valeur mesurée ou adoption humaine. Notoria reprend le contrat
+ADVE/docs/inputs attribués et retire quotas et remplissage obligatoire.
+
+Documentation + inputs attribués → ADVE qualifié → RTIS dérivé reste la chaîne
+requise. Un manque du socle revient aux propositions/amendements ADVE existants
+avant cascade ; les documents RTIS contrôlent alignement et traçabilité.
+Contrôles locaux finaux reçus : 5 032 unitaires / 481 fichiers, dont six cas KPI et la garde HARD ; PostgreSQL 527 tests / 32 fichiers, typage vert, lints sans erreur (24 avertissements préexistants), cycles sans dépendance circulaire. Recette HTTP locale reçue sur fixture privée : ingestion PROPOSED sous USER, amendement ADVE via Agent puis refresh S et lecture USER ; métadonnées et inconnues conservées jusque dans Oracle, sans mesure ou adoption humaine inventée. La réconciliation du dossier réel, le natif, la CI, l’image et la production 528 restent ouverts.
+
+Aucun modèle, routeur, Intent, provider ou moteur d’appels nouveau. ADR-0229 reste
+Proposed pour la chaîne complète. Objectifs hérités à qualifier, annotations I,
+pont S/campagnes vers La Barre, devis et calendrier opérationnel restent à recevoir.
+Priorité : scoreur, fiche ADVE complète et Oracle ; aucun MVP ou chantier global clos.
+Les checkpoints candidats 527/526 ci-dessous conservent leur état historique ;
+la réception courante ci-dessus prime pour leur état de livraison.
+
 ## 527 — projections sourcées et cadres, candidat non reçu (2 novembre 2026)
 
 Chaîne opérateur : documentation + inputs parties prenantes → ADVE qualifié →

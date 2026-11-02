@@ -1,3 +1,25 @@
+## 528 — qualifier le socle avant de recevoir la chaîne (2026-11-02)
+
+527 est reçue en production et en lecture native au périmètre des projections
+sourcées et de la roadmap ; conservation comparée reçue, exécution non armée.
+Cette réception structurelle ne valide pas les objectifs hérités des données
+initiales ni l’intégralité ADVE/RTIS. Preuves métier privées hors checkout.
+
+528 est un candidat local : cible/fréquence inconnues conservées sans compter
+complètes ; objectifs proposés/déclarés et métadonnées de définition/suivi
+qualifiés jusque dans les lecteurs concernés. Notoria ne doit plus satisfaire
+un quota ou remplir une cellule par invention. Documentation et inputs attribués
+qualifient ADVE ; RTIS en dérive et consulte les pièces pour l’alignement.
+Contrôles locaux finaux reçus : 5 032 unitaires / 481 fichiers, dont six cas KPI et la garde HARD ; PostgreSQL 527 tests / 32 fichiers, typage vert, lints sans erreur (24 avertissements préexistants), cycles sans dépendance circulaire. Recette HTTP locale reçue sur fixture privée : ingestion PROPOSED sous USER, amendement ADVE via Agent puis refresh S et lecture USER ; métadonnées et inconnues conservées jusque dans Oracle, sans mesure ou adoption humaine inventée. La réconciliation du dossier réel, le natif, la CI, l’image et la production 528 restent ouverts.
+
+**Recevoir** : réconciliation ADVE gouvernée des éditions courantes et objectifs,
+puis cascade et comparaison S/Oracle ; vérifier nulls, vrai zéro, qualification,
+unité, fenêtre, cadence et absence de résultat inventé. Responsable : Core /
+irrigation existant ; effort : audit et recette bornés ; **déclencheur** avant
+proposition réelle ou déclaration de complétude. ADR-0229 reste Proposed.
+Les ponts campagnes vers La Barre, devis et calendrier gardent leurs lots existants.
+Scoreur, fiche ADVE complète et Oracle restent les MVP prioritaires non reçus.
+
 ## 527 — recevoir la chaîne de qualification puis les projections (2026-11-02)
 
 Doctrine opérateur : documentation + inputs attribués des parties prenantes →

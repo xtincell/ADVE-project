@@ -30,7 +30,7 @@ import type {
   RecoSource,
 } from "./types";
 import { MISSION_CONFIG } from "./types";
-import { serializePillar, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
+import { serializePillar, ADVE_SOURCE_ALIGNMENT_CONTRACT, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
 
 // A pillar letter is a storage key, not a documentary question. Keep the same
 // scoped reader and version controls; ask it for the actual upstream substance.
@@ -92,7 +92,8 @@ function describeSchemaFields(key: string): string {
 
 const SYSTEM_BASE = `Tu es Notoria, le moteur de recommandation des NETERU.
 Tu produis des recommandations GRANULAIRES pour enrichir les fiches ADVERTIS des marques.
-Chaque recommandation cible un champ precis et utilise l'operation la plus precise possible.`;
+Chaque recommandation cible un champ precis et utilise l'operation la plus precise possible.
+- ${ADVE_SOURCE_ALIGNMENT_CONTRACT}`;
 
 const RECO_SYSTEM = `${SYSTEM_BASE}
 
@@ -135,7 +136,7 @@ Regles:
 - Pour MODIFY : proposedValue = l'item modifie complet, targetMatch requis
 - Pour REMOVE : proposedValue = null, targetMatch requis
 - Si un champ est deja excellent, NE le mentionne PAS
-- 5 a 20 recommandations par pilier, triees par impact decroissant`;
+- Recommandations etayees uniquement, triees par impact decroissant ; aucun minimum impose.`;
 
 const SESHAT_SYSTEM = `${SYSTEM_BASE}
 
@@ -295,7 +296,7 @@ async function generateRecosForPillar(
         ? `\nSous-champs imbriques vides (operation EXTEND sur l'objet parent — preserve les sous-champs deja remplis, une reco EXTEND par parent) :\n${[...nestedByParent.entries()].map(([p, leaves]) => `  - ${p} : ${leaves.join(", ")}`).join("\n")}\n`
         : "") +
       cellsSection +
-      `\nToutes ces feuilles/cellules DOIVENT etre remplies. C'est la PRIORITE #1 — ne laisse AUCUNE entree vide listee ci-dessus.`
+      `\nTraiter ces lacunes en priorite si les sources ou une deduction qualifiee les etayent. Une information non etablie reste inconnue et expliquee ; ne jamais fabriquer une valeur pour remplir une cellule.`
     : "\nTous les champs sont remplis en profondeur. Concentre-toi sur l'enrichissement et la correction.";
 
   const prompt = `SHAPE EXACTE du pilier ${targetKey.toUpperCase()} (arborescence complète, sous-clés + valeurs d'enum RÉELLES — respecte EXACTEMENT cette structure, n'invente aucune clé):
@@ -316,7 +317,7 @@ ${extraContext ? `\nContexte supplementaire:\n${extraContext}` : ""}${fewShotBlo
 
 Produis les recommandations d'enrichissement GRANULAIRES pour le pilier ${targetKey.toUpperCase()}.
 IMPORTANT:
-1. PRIORITE #1 : remplir les champs VIDES (operation SET) — chaque champ vide = une reco obligatoire
+1. PRIORITE #1 : reconcilier les champs VIDES depuis des sources ou deductions qualifiees ; aucune recommandation fabriquee pour satisfaire un quota
 2. PRIORITE #2 : enrichir/corriger les champs existants (ADD/MODIFY/EXTEND)
 3. Chaque proposedValue DOIT respecter le format defini dans la BIBLE DE FORMAT
 4. Respecter les regles min/max de la bible (ex: valeurs max 3, pas 7)`;

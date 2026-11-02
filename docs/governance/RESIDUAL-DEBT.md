@@ -1,3 +1,33 @@
+## 528 — objectifs qualifiés et chaîne complète encore à recevoir (2026-11-02)
+
+**Reçu 527** : production et lecture native des projections/roadmap, conservation
+comparée et actualisation S seule, sans exécution armée. Les objectifs hérités
+des données initiales ne sont pas validés sémantiquement par cette réception.
+Aucun contenu métier privé n’est recopié ici.
+
+**Candidat 528, pas dette fermée** : cible/fréquence nulles ne comptent pas comme
+complètes ; définition, unité, fenêtre d’observation, objectif PROPOSED / DECLARED
+et contexte restent qualifiés. Notoria retire quota et impératif de remplissage,
+sans nouvel appel, writer parallèle ou modèle. Suite finale locale reçue :
+5 032 unitaires / 481 fichiers, PostgreSQL 527 tests / 32 fichiers, typage et lints
+sans erreur, cycles sans dépendance circulaire. HTTP local reçu : proposition
+documentaire sous USER, amendement via Agent, refresh S et lecteurs conservent
+qualification, métadonnées et inconnues ; autres piliers, dates et exécution
+inchangés. MCP utilise une fixture ADMIN existante, sans étendre les droits USER.
+Natif, CI/image/production 528 et réconciliation du dossier réel restent ouverts.
+Les latences locales observées ne reçoivent aucun SLO production.
+
+**Fermer** par réconciliation ADVE gouvernée des objectifs hérités et des sources
+courantes, cascade puis comparaison des lecteurs et de leur qualification ;
+conserver les inconnues sans inventer mesures, cadence, cible ou adoption.
+Responsable Core / irrigation existant ; effort audit et recette bornés ;
+**déclencheur** avant proposition stratégique réelle ou réception de complétude.
+Documentation riche → ADVE qualifié complet → RTIS complet est une exigence de
+chaîne, pas une preuve par compte de champs. ADR-0229 reste Proposed pour ce tout.
+Annotations I réelles, pont S/campagnes → La Barre, devis, calendrier/owners et
+les trois MVP restent ouverts. Les dettes de latence, transaction financière et
+contention VPS antérieurement tracées ne sont pas résolues par ce candidat.
+
 ## 527 — complétion depuis les sources, candidat sans réception (2026-11-02)
 
 La réception 526 est distincte : source `582de907849cc5659231b6a867060e048799a962`,

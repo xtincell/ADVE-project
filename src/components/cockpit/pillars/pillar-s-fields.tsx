@@ -21,6 +21,7 @@ import {
 } from "./pillar-kit";
 
 const FREQUENCY_LABEL: Record<string, string> = { DAILY: "Quotidien", WEEKLY: "Hebdomadaire", MONTHLY: "Mensuel", QUARTERLY: "Trimestriel", YEARLY: "Annuel", ONE_SHOT: "Une fois", ROLLING: "En continu" };
+const NORTH_STAR_FIELDS: Array<[string, string]> = [["name", "Nom"], ["definition", "Définition"], ["qualification", "Qualification"], ["target", "Cible"], ["unit", "Unité"], ["targetContext", "Périmètre de l’objectif"], ["observationWindow", "Fenêtre d’observation"], ["frequency", "Fréquence"], ["sourceNotes", "Précisions de la source"], ["currentValue", "Valeur mesurée"]];
 
 function SStatement({ label, value, status, big }: { label: string; value: unknown; status?: string; big?: boolean }) {
   return (
@@ -147,8 +148,13 @@ function KpiDashboard({ items, status }: { items: unknown; status?: string }) {
           {arr.map((k, i) => (
             <div className="ck-s-kpi" key={i}>
               <span className="ck-s-kpi__pillar">{str(k.pillar)}</span>
-              <span className="ck-s-kpi__name">{str(k.name)}</span>
-              <span className="ck-s-kpi__target">{str(k.target)}</span>
+              <span className="ck-s-kpi__name">{str(k.name)}
+                <span className="block text-xs text-foreground-muted">{[
+                  k.qualification === "PROPOSED" ? "Proposition à valider" : k.qualification === "DECLARED" ? "Objectif déclaré" : "Qualification non renseignée",
+                  str(k.definition), str(k.observationWindow), str(k.sourceNotes),
+                ].filter(Boolean).join(" · ")}</span>
+              </span>
+              <span className="ck-s-kpi__target">{[str(k.target), str(k.unit), str(k.targetContext)].filter(Boolean).join(" · ")}</span>
               <span className="ck-s-kpi__freq">{FREQUENCY_LABEL[str(k.frequency)] ?? str(k.frequency)}</span>
             </div>
           ))}
@@ -264,8 +270,11 @@ export function PillarSFields({ content, certainty }: { content: Rec; certainty:
       <Section title="Pilotage & budget" sub="Le dashboard KPI, la North Star, le budget et l'équipe mobilisée">
         <div className="ck-a-grid">
           <KpiDashboard items={v.kpiDashboard} status={st("kpiDashboard")} />
-          <ObjCard title="North Star KPI" value={v.northStarKPI} status={st("northStarKPI")}
-            fields={[["name", "Nom"], ["target", "Cible"], ["frequency", "Fréquence"], ["currentValue", "Valeur actuelle"]]} />
+          <ObjCard title="North Star KPI" value={isEmpty(v.northStarKPI) ? v.northStarKPI : {
+            ...asRec(v.northStarKPI), currentValue: isEmpty(asRec(v.northStarKPI).currentValue) ? "Mesure non disponible" : asRec(v.northStarKPI).currentValue,
+            qualification: asRec(v.northStarKPI).qualification === "PROPOSED" ? "Proposition à valider" : asRec(v.northStarKPI).qualification === "DECLARED" ? "Objectif déclaré" : "Qualification non renseignée",
+          }} status={st("northStarKPI")}
+            fields={NORTH_STAR_FIELDS.filter(([key]) => ["name", "target", "frequency", "currentValue"].includes(key) || !isEmpty(asRec(v.northStarKPI)[key]))} />
           <BudgetPanel breakdown={v.budgetBreakdown} byDevotion={v.budgetByDevotion} total={v.globalBudget} summary={asRec(v.computed).budgetSummary} status={st(!isEmpty(v.budgetBreakdown) ? "budgetBreakdown" : typeof v.globalBudget === "number" ? "globalBudget" : "computed")} />
           <ProofList title="Équipe documentée" items={v.teamStructure} status={st("teamStructure")}
             cols={[["name", "Nom"], ["title", "Titre"], ["responsibility", "Profil / contribution documentée"]]} />

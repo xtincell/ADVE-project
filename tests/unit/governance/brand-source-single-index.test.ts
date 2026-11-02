@@ -43,6 +43,16 @@ const INDEXER = "src/server/services/seshat/context-store/indexer.ts";
 const ENGINE = "src/server/services/notoria/engine.ts";
 
 describe("index documentaire unique", () => {
+  it("la réconciliation ADVE refuse les quotas et partage la qualification des sources avec I", () => {
+    const engine = read(ENGINE);
+    const commonSystem = engine.slice(engine.indexOf("const SYSTEM_BASE"), engine.indexOf("const RECO_SYSTEM"));
+    expect(commonSystem).toContain("- ${ADVE_SOURCE_ALIGNMENT_CONTRACT}");
+    expect(engine).not.toContain("chaque champ vide = une reco obligatoire");
+    expect(engine).not.toContain("5 a 20 recommandations par pilier");
+    expect(engine).not.toContain("ne laisse AUCUNE entree vide");
+    const shared = read("src/server/services/utils/pillar-context.ts");
+    expect(shared).toContain("INITIATIVE_PLANNING_SOURCE_CONTRACT = `${ADVE_SOURCE_ALIGNMENT_CONTRACT}");
+  });
   it("plus personne n'écrit de nœud SOURCE_CHUNK", () => {
     const rag = read(SOURCE_RAG);
     // Le kind survit en LECTURE (les nœuds déjà en base restent lisibles),

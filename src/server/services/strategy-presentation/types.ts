@@ -429,6 +429,12 @@ export interface KpisMesureSection {
     metricType: string;
     target: string;
     frequency: string;
+    qualification?: "PROPOSED" | "DECLARED";
+    definition?: string;
+    unit?: string;
+    observationWindow?: string;
+    targetContext?: string;
+    sourceNotes?: string;
   }>;
   devotion: {
     spectateur: number;

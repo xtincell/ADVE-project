@@ -530,22 +530,28 @@ export function mapKpisMesure(strategy: any): KpisMesureSection {
   // KPIs RÉELS : E.kpis → tableau de bord S (kpiDashboard / northStarKPI) →
   // vide. On ne fabrique PLUS 12 KPIs génériques (defaultKpis "Notoriete
   // assistee…") qui n'ont aucun lien avec la marque.
-  let kpis = safeArr(pillarE?.kpis).map((k: unknown) => {
+  let kpis = safeArr(pillarE?.kpis).map((k: unknown): KpisMesureSection["kpis"][number] => {
     const kx = k as Record<string, unknown>;
     return {
       name: pickStr(kx, ["name", "nom", "kpi", "metric"]),
       metricType: pickStr(kx, ["metricType", "type", "unit"]),
       target: pickStr(kx, ["target", "cible", "objectif", "goal"]),
       frequency: pickStr(kx, ["frequency", "frequence", "cadence"]),
+      ...(kx.qualification === "PROPOSED" || kx.qualification === "DECLARED" ? { qualification: kx.qualification } : {}),
+      ...Object.fromEntries(["definition", "unit", "observationWindow", "targetContext", "sourceNotes"]
+        .flatMap(key => typeof kx[key] === "string" && kx[key] ? [[key, kx[key]]] : [])),
     };
   }).filter((k) => k.name);
   if (kpis.length === 0) {
     const dash = arr(pillarS?.kpiDashboard).length > 0 ? arr(pillarS?.kpiDashboard) : arr(pillarS?.northStarKPI);
-    kpis = dash.map((k: any) => ({
+    kpis = dash.map((k: any): KpisMesureSection["kpis"][number] => ({
       name: pickStr(k, ["name", "nom", "kpi", "metric", "label"]),
       metricType: pickStr(k, ["metricType", "type", "unit"]),
       target: pickStr(k, ["target", "cible", "objectif", "goal", "value"]),
       frequency: pickStr(k, ["frequency", "frequence", "cadence"]),
+      ...(k.qualification === "PROPOSED" || k.qualification === "DECLARED" ? { qualification: k.qualification } : {}),
+      ...Object.fromEntries(["definition", "unit", "observationWindow", "targetContext", "sourceNotes"]
+        .flatMap(key => typeof k[key] === "string" && k[key] ? [[key, k[key]]] : [])),
     })).filter((k: any) => k.name);
   }
 

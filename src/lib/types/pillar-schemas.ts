@@ -717,8 +717,17 @@ const RitualSchema = z.object({
 const KPISchema = z.object({
   name: textShort,
   metricType: z.enum(["ENGAGEMENT", "FINANCIAL", "BEHAVIORAL", "SATISFACTION"]),
-  target: z.number(),
-  frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY"]),
+  // A documented indicator can precede the decision on its target/cadence.
+  // Explicit null is not zero and still fails the completion contract.
+  // Keep these keys required for maturity introspection (not optional leaves).
+  target: z.union([z.number().finite(), z.string().trim().min(1), z.null()]),
+  frequency: z.union([z.enum(["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY"]), z.null()]),
+  qualification: z.enum(["PROPOSED", "DECLARED"]).optional(),
+  definition: textMedium.optional(),
+  unit: textShort.optional(),
+  observationWindow: textShort.optional(),
+  targetContext: textShort.optional(),
+  sourceNotes: textMedium.optional(),
 });
 
 /** PILIER E COMPLET */
@@ -1436,6 +1445,12 @@ export const PillarSSchema = z.object({
     pillar: z.enum(PILLAR_KEYS),
     target: textShort,
     frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY"]),
+    qualification: z.enum(["PROPOSED", "DECLARED"]).optional(),
+    definition: textMedium.optional(),
+    unit: textShort.optional(),
+    observationWindow: textShort.optional(),
+    targetContext: textShort.optional(),
+    sourceNotes: textMedium.optional(),
   })).min(5).optional(),
 
   // ── Score de coherence ────────────────────────────────────────────────
@@ -1478,6 +1493,12 @@ export const PillarSSchema = z.object({
   northStarKPI: z.object({
     name: z.string().min(1),                                 // Ex: "Progression Devotion Ladder"
     target: z.string().min(1),
+    qualification: z.enum(["PROPOSED", "DECLARED"]).optional(),
+    definition: textMedium.optional(),
+    unit: textShort.optional(),
+    observationWindow: textShort.optional(),
+    targetContext: textShort.optional(),
+    sourceNotes: textMedium.optional(),
     frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY"]),
     currentValue: z.string().optional(),
   }).optional(),

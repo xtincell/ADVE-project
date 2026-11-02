@@ -28,6 +28,32 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 528 — qualification et remplissage, correctif candidat (2026-11-02)
+
+Symptôme : une définition documentée peut être rejetée faute de cible/cadence,
+ou une injonction de complétude pousser à les fabriquer ; les lecteurs risquent
+alors de confondre proposition, objectif déclaré et mesure. Le candidat conserve
+les nulls sans les compter complets, porte les qualifications disponibles vers
+S/Oracle et retire les quotas/impératifs de remplissage Notoria. Hypothèse :
+confusion entre validité du brouillon, maturité du socle et validation métier.
+Suite finale locale reçue : 5 032 unitaires / 481 fichiers, PostgreSQL 527 tests /
+32 fichiers, typage vert, lints sans erreur et cycles sans dépendance circulaire.
+HTTP local reçu : brouillon documentaire PROPOSED, amendement ADVE attribué Agent,
+projection S et métadonnées Oracle, inconnues et autres piliers/dates/exécution
+conservés. Réconciliation réelle, natif et livraison 528 restent dans
+RESIDUAL-DEBT ; pas de réparation globale acquise.
+La 527 est depuis reçue en production/lecture native au périmètre des projections
+et de la roadmap ; cela ne valide pas sémantiquement les objectifs hérités.
+
+Contre-épreuve bornée reçue : ancienne consigne de quota et contrat absent →
+rouge attendu, restauration exacte puis 18 tests / 2 fichiers verts. PostgreSQL
+527 tests / 32 fichiers reçu avant les derniers détails de projection. Définition
+E→S et qualification/fenêtre North Star complétées puis couvertes par la suite
+finale locale ci-dessus ; ces contrôles ne constituent pas une preuve native.
+La première recette HTTP s’est arrêtée avant amendement sur une attente MCP USER
+erronée ; reprise avec fixture ADMIN existante, droits USER inchangés et uploads
+non rejoués. Ce diagnostic de recette ne constitue pas un défaut produit découvert.
+
 ### 527 — défauts visés, aucun correctif reçu (2026-11-02)
 
 La 526 réelle laisse S à 45 % : objectifs E et équipe A déclarés n’y figurent pas
