@@ -25,7 +25,7 @@ import { db } from "@/lib/db";
 import { DEVOTION_LEVELS } from "@/lib/types/taxonomies";
 import { PillarISchema } from "@/lib/types/pillar-schemas";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
-import { serializePillar } from "@/server/services/utils/pillar-context";
+import { serializePillar, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
 
 // ADR-0063 / PR-K3-ter — sous-schémas. Le mega-appel (5 champs) est ÉCLATÉ en
 // 3 sous-appels focalisés ; chacun valide sa sous-partie. `.pick().partial()`
@@ -155,6 +155,8 @@ Pour chaque action, indique :
 - devotionImpact : quel niveau de la Devotion Ladder elle active (SPECTATEUR/INTERESSE/PARTICIPANT/ENGAGE/AMBASSADEUR/EVANGELISTE)
 - overtonShift : comment elle déplace la perception du marché
 - targetsPersonaIds / mitigatesRiskIds : seulement les UUID des profils D / risques R réellement concernés dans le contexte. N'invente aucun identifiant ; une liste vide est permise. Une cible documentaire n'est pas un client acquis et une action proposée n'est pas une décision.
+
+${INITIATIVE_PLANNING_SOURCE_CONTRACT}
 
 Sois EXHAUSTIF mais ancré dans les données. Retourne UNIQUEMENT du JSON valide, sans markdown.`;
 

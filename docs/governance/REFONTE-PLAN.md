@@ -1,3 +1,24 @@
+## 527 — recevoir la chaîne de qualification puis les projections (2026-11-02)
+
+Doctrine opérateur : documentation + inputs attribués des parties prenantes →
+ADVE qualifié → RTIS dérivé. Documentation riche doit garantir ADVE complet,
+puis ADVE complet garantir RTIS complet ; exigence de chaîne encore à recevoir,
+pas complétude par nombre de champs. Les pièces consultées dans RTIS contrôlent
+alignement/traçabilité. Toute nouveauté structurante revient en proposition et
+écriture ADVE gouvernées avant cascade ; pas de socle documentaire I/S parallèle.
+Faits/mesures, desiderata et décisions adoptées conservent auteur/date/périmètre/
+statut, via les capacités existantes sans modèle stakeholder supplémentaire.
+
+Le candidat projette KPI/équipe depuis A/E, annotations I, familles/cadences et
+budgets comparables jusque dans les cadres. 58 ciblés / 7 fichiers reçus après les
+premiers refus ; gauntlet final, lecteurs réels, CI/image/runtime 527 ouverts.
+**Fermer** par réception de toute la chaîne, qualification ADVE des éditions SPAWT
+courantes puis cascade/lecteurs/cadres ; responsables Core et lot existants,
+effort audit et recette bornés, **déclencheur** avant proposition réelle et
+réception de complétude. [ADR-0229 Proposed](adr/0229-source-qualified-strategy-and-campaign-projections.md).
+526 reste reçue à S 45 %, routes 3/5/12 ; pas de Whole S ou MVP. Devis, catégories,
+calendrier/owners, ponctuel et pont S/campagnes → La Barre restent à recevoir.
+
 ## 526 — préférences I et scénarios S, candidat à recevoir (2026-11-02)
 
 Décision opérateur : I conserve FAVORITE / NEUTRAL / REJECTED ; S fait les

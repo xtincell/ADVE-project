@@ -1,6 +1,6 @@
 # ADR-0228 — Préférences du catalogue I et scénarios dérivés par S
 
-**Status** : Proposed — préférences/scénarios en candidat 526 ; acceptation à la livraison, devis futur séparé
+**Status** : Accepted — contrat préférences/scénarios reçu en 526 ; volets devis §§5–6 toujours Proposed/non livrés
 **Date** : 2026-11-02
 **Phase** : 7 — continuité Core I → S → choix de scénario
 **Depends on** : ADR-0023, ADR-0060, ADR-0087, ADR-0088, ADR-0089, ADR-0093, ADR-0214, ADR-0215
@@ -9,7 +9,16 @@
 
 ## Périmètres et condition d’acceptation
 
-- **Lot 526, §§1–4** : préférences I, composition des trois scénarios S, séparation
+**Réception datée du périmètre 526** : source
+`582de907849cc5659231b6a867060e048799a962`, image/runtime exacts au digest
+`9ae79420818361e0dfc175c872c85f1723e5b8ad6b2f6f23e20df60cda01ab4e` ; recalcul réel
+et lecture native SPAWT, scénarios 3/5/12 et préférences non armées. S reste à
+45 %, sans réception Whole S/MVP (`production526-received.json`,
+`spawt526-s-received.json`, `spawt526-native-received.json`). Accepted porte sur le
+raccord livré, pas sur l’intégralité des formulations de cadrage ou le devis futur.
+Le candidat 527 est séparé dans [ADR-0229 Proposed](0229-source-qualified-strategy-and-campaign-projections.md).
+
+- **Périmètre initial 526, §§1–4, checkpoints ci-dessous** : préférences I, composition des trois scénarios S, séparation
   des décisions et lecteurs. Code candidat sur `fix/strategy-scenarios526`, base
   `a2f38e1c9` après 525 ; reçus locaux bornés conservés, passe finale et livraison
   encore ouvertes. Le numéro ou les cartes de scénario ne prouvent pas 100 %.

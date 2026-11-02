@@ -667,7 +667,7 @@ export interface FenetreOvertonSection {
   perceptionCible: string | null;
   ecart: string | null;
   strategieDeplacment: Array<{ etape: string; action: string; canal: string; horizon: string }>;
-  roadmap: Array<{ phase: string; objectif: string; livrables: string[]; budget: number | null; budgetSummary?: import("@/lib/types/pillar-schemas").InitiativeBudgetSummary; duree: string }>;
+  roadmap: Array<{ phase: string; objectif: string; livrables: string[]; budget: number | null; budgetSummary?: import("@/lib/types/pillar-schemas").InitiativeBudgetSummary; duree: string; canonType?: string; cadence?: string; actionRefs?: string[] }>;
   jalons: Array<{ date: string; milestone: string; critereSucces: string }>;
   // ADR-0088 — 3 trajectoires de roadmap pure-computed (S.computed.roadmapRoutes)
   // ADR-0089 — chaque route porte son jeu de stratégie calculé + état sélectionné
@@ -681,7 +681,7 @@ export interface FenetreOvertonSection {
     targetCultIndex: number | null;
     description: string;
     initiativeCount: number | null;
-    initiatives?: Array<{ id: string; action: string; objectif?: string; timeframe?: string; budget?: number }>;
+    initiatives?: Array<{ id: string; action: string; objectif?: string; timeframe?: string; budget?: number; budgetRange?: { min: number; max: number }; budgetPeriod?: string; budgetBasis?: string; campaignCanonType?: string; cadence?: string }>;
     totalBudget: number | null;
     budgetSummary?: import("@/lib/types/pillar-schemas").InitiativeBudgetSummary;
     projectionAssumptions?: { riskCoverage?: number; baseCultIndex?: number };

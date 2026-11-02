@@ -63,6 +63,25 @@ const choose = (f: Fixture, selected: boolean) => setBrandActionStatus({ strateg
 const readI = (f: Fixture) => db.pillar.findUniqueOrThrow({ where: { id: f.i.id } });
 
 describe("one operator choice survives the whole existing action path", () => {
+  it("retains source cost bounds, monthly units and campaign cadence through the stored projection and saved S without activating execution", async () => {
+    const f = await fixture();
+    const { budget: _oldAmount, timeframe: _oldHorizon, ...identity } = f.initiative;
+    await db.pillar.update({ where: { id: f.i.id }, data: { content: { catalogueParCanal: { DIGITAL: [{
+      ...identity, budgetRange: { min: 200, max: 400 }, budgetPeriod: "MONTHLY", cadence: "MONTHLY", campaignCanonType: "ALWAYS_ON",
+    }] }, _fieldProvenance: { catalogueParCanal: "SOURCE" } } } });
+    await syncBrandActionsFromBlob(f.strategy.id);
+    const projected = await db.brandAction.findUniqueOrThrow({ where: { id: f.action.id } });
+    expect(projected).toMatchObject({ budgetMin: 200, budgetMax: 400, selected: false, timingStart: null, timingEnd: null });
+    expect(projected.metadata).toMatchObject({ budgetRange: { min: 200, max: 400 }, budgetPeriod: "MONTHLY", cadence: "MONTHLY", campaignCanonType: "ALWAYS_ON" });
+    const result = await actualizePillar(f.strategy.id, "S"); expect(result.updated).toBe(true);
+    const saved = await db.pillar.findUniqueOrThrow({ where: { id: f.s.id } });
+    const s = saved.content as Record<string, any>;
+    expect(s.computed.totalBudget).toBeUndefined();
+    expect(s.computed.budgetSummary.amountGroups).toEqual([{ period: "MONTHLY", min: 200, max: 400, rangeCount: 1, knownCount: 1, unknownCount: 0 }]);
+    expect(s.roadmap).toEqual([expect.objectContaining({ canonType: "ALWAYS_ON", cadence: "MONTHLY", actionRefs: [f.initiative.id] })]);
+    expect((await db.brandAction.findUniqueOrThrow({ where: { id: f.action.id } })).selected).toBe(false);
+    expect(provider.callLLM).not.toHaveBeenCalled();
+  });
   it("one typed recommendation reconciles all source copies, the operational row and the full saved plan", async () => {
     const f = await fixture();
     await db.pillar.update({ where: { id: f.i.id }, data: { content: {
@@ -181,7 +200,8 @@ describe("one operator choice survives the whole existing action path", () => {
     const s = (await db.pillar.findUniqueOrThrow({ where: { id: f.s.id } })).content as any;
     expect(s.globalBudget).toBeUndefined(); expect(s.computed.totalBudget).toBeUndefined();
     expect(s.computed.budgetSummary).toMatchObject({ unknownCount: 1, declaredCount: 1, estimatedCount: 1, knownSubtotal: 500_000 });
-    expect(s.roadmap).toHaveLength(1); expect(s.roadmap[0].phase).toBe("Échéance à préciser");
+    expect(s.roadmap).toHaveLength(1); expect(s.roadmap[0].phase).toBe("Campagne à qualifier");
+    expect(s.roadmap[0].canonType).toBeUndefined();
     expect(s.roadmap[0].budget).toBeUndefined();
     expect(s.selectedFromI.every((a: any) => a.phase === undefined)).toBe(true);
     expect(s.fenetreOverton.strategieDeplacement.every((a: any) => a.horizon === undefined)).toBe(true);

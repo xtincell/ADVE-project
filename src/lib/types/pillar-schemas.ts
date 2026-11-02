@@ -200,6 +200,7 @@ export const PillarASchema = z.object({
   equipeDirigeante: z.array(z.object({
     nom: textShort,
     role: textShort,                        // CEO, CTO, CMO, COO, CFO, etc.
+    responsabilites: textShort.optional(), // documented contribution, not an action assignment
     bio: textMedium,                         // Parcours en 2-3 phrases
     experiencePasse: z.array(z.string().min(1)).min(1),  // Postes/entreprises precedents
     competencesCles: z.array(z.string().min(1)).min(2),  // Skills techniques et business
@@ -1164,6 +1165,10 @@ export function initiativePreference(value: unknown): InitiativePreference {
 }
 export const INITIATIVE_STATUSES = ["DRAFT", "RECOMMENDED", "SELECTED_FOR_ROADMAP", "REJECTED"] as const;
 export const INITIATIVE_TIMEFRAMES = ["SPRINT_90", "PHASE_1", "PHASE_2", "LONG_TERM"] as const;
+export const CAMPAIGN_CANON_TYPES = ["GTM_90", "ANNUAL", "ALWAYS_ON", "PUNCTUAL"] as const;
+export const INITIATIVE_CADENCES = ["ONE_SHOT", "DAILY", "WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY", "ROLLING"] as const;
+export const INITIATIVE_BUDGET_PERIODS = ["ONE_OFF", "PER_OCCURRENCE", "MONTHLY", "QUARTERLY", "YEARLY", "UNSPECIFIED"] as const;
+export const InitiativeBudgetRangeSchema = z.object({ min: currency, max: currency }).refine(v => v.max >= v.min, "La borne haute doit être supérieure ou égale à la borne basse");
 
 // Three roadmap trajectories (ADR-0088) — Conservateur / Cible (recommandé) /
 // Ambitieux. Projections are PURE-COMPUTED (no LLM) from the relational
@@ -1172,13 +1177,15 @@ export const ROADMAP_ROUTE_KEYS = ["CONSERVATIVE", "TARGET", "AMBITIOUS"] as con
 
 /** Derived coverage of existing initiative budgets, never a measured expense. */
 export const InitiativeBudgetSummarySchema = z.object({
-  knownSubtotal: currency,
-  declaredSubtotal: currency,
-  estimatedSubtotal: currency,
+  knownSubtotal: currency.nullable(), // null when different budget periods cannot be summed
+  declaredSubtotal: currency.nullable(),
+  estimatedSubtotal: currency.nullable(),
   declaredCount: z.number().int().min(0),
   estimatedCount: z.number().int().min(0),
   unknownCount: z.number().int().min(0),
   unassignedTimeframeCount: z.number().int().min(0),
+  amountGroups: z.array(z.object({ period: z.enum(INITIATIVE_BUDGET_PERIODS), min: currency, max: currency,
+    rangeCount: z.number().int().min(0), knownCount: z.number().int().min(0), unknownCount: z.number().int().min(0) })).optional(),
 });
 export type InitiativeBudgetSummary = z.infer<typeof InitiativeBudgetSummarySchema>;
 
@@ -1195,6 +1202,10 @@ const PotentialActionSchema = z.object({
   preference: z.enum(INITIATIVE_PREFERENCES).optional(),       // operator catalogue preference, never scheduling
   status: z.enum(INITIATIVE_STATUSES).optional(),            // selection workflow
   budget: currency.optional(),                               // numeric — feeds S.computed.totalBudget
+  budgetRange: InitiativeBudgetRangeSchema.optional(),        // source bounds; never collapsed to a midpoint
+  budgetPeriod: z.enum(INITIATIVE_BUDGET_PERIODS).optional(),  // monetary unit, independent of campaign cadence
+  campaignCanonType: z.enum(CAMPAIGN_CANON_TYPES).optional(),
+  cadence: z.enum(INITIATIVE_CADENCES).optional(),
   budgetEstime: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),// qualitative anchor → numeric budget (normalizeInitiative)
   channel: textShort.optional(),                             // self-describing canal (sinon = clé du conteneur)
   timeframe: z.enum(INITIATIVE_TIMEFRAMES).optional(),       // roadmap phase, feeds S.computed.budgetByPhase
@@ -1394,6 +1405,9 @@ export const PillarSSchema = z.object({
     actions: z.array(textShort).optional(),
     budget: currency.optional(),
     budgetSummary: InitiativeBudgetSummarySchema.optional(),
+    canonType: z.enum(CAMPAIGN_CANON_TYPES).optional(),
+    cadence: z.enum(INITIATIVE_CADENCES).optional(),
+    actionRefs: z.array(z.string().min(1)).optional(),
     duree: textShort.optional(),
   })).min(3).optional(),
 
@@ -1521,7 +1535,9 @@ export const PillarSSchema = z.object({
       selectionBasis: z.literal("CATALOGUE_COVERAGE_RULES_V1").optional(),
       initiatives: z.array(z.object({ id: z.string().min(1), action: z.string(), objectif: z.string().optional(),
         channel: z.string().optional(), preference: z.enum(INITIATIVE_PREFERENCES), budget: currency.optional(),
-        budgetBasis: z.string().optional(), timeframe: z.enum(INITIATIVE_TIMEFRAMES).optional(), mitigatesRiskIds: z.array(z.string()),
+        budgetBasis: z.string().optional(), budgetRange: InitiativeBudgetRangeSchema.optional(), budgetPeriod: z.enum(INITIATIVE_BUDGET_PERIODS).optional(),
+        campaignCanonType: z.enum(CAMPAIGN_CANON_TYPES).optional(), cadence: z.enum(INITIATIVE_CADENCES).optional(),
+        timeframe: z.enum(INITIATIVE_TIMEFRAMES).optional(), mitigatesRiskIds: z.array(z.string()),
       })).optional(),
       selectionReasons: z.array(z.object({ initiativeId: z.string().min(1), reasons: z.array(z.string()) })).optional(),
       totalBudget: currency.optional(),                      // Σ budget du jeu
@@ -1718,7 +1734,11 @@ export interface NormalizedInitiative {
   preference: InitiativePreference;
   timeframe?: (typeof INITIATIVE_TIMEFRAMES)[number];
   budget?: number;
-  budgetBasis: "DECLARED" | "QUALITATIVE_ESTIMATE" | "UNKNOWN";
+  budgetRange?: z.infer<typeof InitiativeBudgetRangeSchema>;
+  budgetPeriod?: (typeof INITIATIVE_BUDGET_PERIODS)[number];
+  campaignCanonType?: (typeof CAMPAIGN_CANON_TYPES)[number];
+  cadence?: (typeof INITIATIVE_CADENCES)[number];
+  budgetBasis: "DECLARED" | "DECLARED_RANGE" | "QUALITATIVE_ESTIMATE" | "UNKNOWN";
   budgetEstime?: "LOW" | "MEDIUM" | "HIGH";
   pilierImpact?: (typeof ADVE_KEYS)[number];
   devotionImpact?: string;
@@ -1753,14 +1773,18 @@ export function normalizeInitiative(
       ? o.budgetEstime
       : undefined;
   const unverifiedZero = o.budget === 0 && ctx.sourceProvenance === "INFERRED";
+  const parsedRange = InitiativeBudgetRangeSchema.safeParse(o.budgetRange);
+  const budgetRange = parsedRange.success
+    && !(ctx.sourceProvenance === "INFERRED" && parsedRange.data.min === 0 && parsedRange.data.max === 0)
+    ? parsedRange.data : undefined;
   const budget =
     !unverifiedZero && typeof o.budget === "number" && Number.isFinite(o.budget) && o.budget >= 0
       ? o.budget
-      : budgetEstime
+      : !budgetRange && budgetEstime
         ? BUDGET_ESTIME_FCFA[budgetEstime]
         : undefined;
   const budgetBasis = !unverifiedZero && typeof o.budget === "number" && Number.isFinite(o.budget) && o.budget >= 0
-    ? "DECLARED" : budgetEstime ? "QUALITATIVE_ESTIMATE" : "UNKNOWN";
+    ? "DECLARED" : budgetRange ? "DECLARED_RANGE" : budgetEstime ? "QUALITATIVE_ESTIMATE" : "UNKNOWN";
   const status = (INITIATIVE_STATUSES as readonly string[]).includes(o.status as string)
     ? (o.status as NormalizedInitiative["status"])
     : "DRAFT";
@@ -1783,6 +1807,10 @@ export function normalizeInitiative(
     timeframe,
     budget,
     budgetBasis,
+    ...(budgetRange ? { budgetRange } : {}),
+    ...((INITIATIVE_BUDGET_PERIODS as readonly unknown[]).includes(o.budgetPeriod) ? { budgetPeriod: o.budgetPeriod as NormalizedInitiative["budgetPeriod"] } : {}),
+    ...((CAMPAIGN_CANON_TYPES as readonly unknown[]).includes(o.campaignCanonType) ? { campaignCanonType: o.campaignCanonType as NormalizedInitiative["campaignCanonType"] } : {}),
+    ...((INITIATIVE_CADENCES as readonly unknown[]).includes(o.cadence) ? { cadence: o.cadence as NormalizedInitiative["cadence"] } : {}),
     ...(budgetEstime ? { budgetEstime } : {}),
     ...(isNonEmptyStr(o.pilierImpact) ? { pilierImpact: o.pilierImpact as NormalizedInitiative["pilierImpact"] } : {}),
     ...(devotionImpact ? { devotionImpact } : {}),

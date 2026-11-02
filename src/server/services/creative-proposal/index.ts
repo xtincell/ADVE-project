@@ -22,7 +22,7 @@ import {
   type CreativeDirectionDraft,
 } from "@/lib/types/creative-proposal";
 import { routeInitiativeSet, aggregateInitiativeSet, ROUTE_SPECS, type RouteKey } from "@/lib/strategy/roadmap-routes";
-import { canonTypeForTimeframe } from "@/server/services/campaign-canon/plan";
+import { canonTypeForInitiative } from "@/server/services/campaign-canon/plan";
 import { executeStructuredLLMCall } from "@/server/services/utils/llm-structured";
 
 const CANON_TYPES = ["GTM_90", "ANNUAL", "ALWAYS_ON"] as const;
@@ -120,26 +120,10 @@ export async function validateCreativeProposal(id: string, validatedBy?: string)
     return { proposalId: id, status: "VALIDATED", routeKey, actionsAttached: attached, briefsGenerated: 0, frames: frameIds.length, alreadyValidated: true };
   }
 
-  // 1) Frames canon de la route — auto-amorçage si absents.
-  let frames = await db.campaign.findMany({
-    where: { strategyId: proposal.strategyId, routeKey, canonType: { in: [...CANON_TYPES] } },
-    select: { id: true, canonType: true },
-  });
-  if (frames.length === 0) {
-    const { generateCanonicalCampaigns } = await import("@/server/services/campaign-canon");
-    await generateCanonicalCampaigns({ strategyId: proposal.strategyId, routeKey });
-    frames = await db.campaign.findMany({
-      where: { strategyId: proposal.strategyId, routeKey, canonType: { in: [...CANON_TYPES] } },
-      select: { id: true, canonType: true },
-    });
-  }
-  const frameByCanonType = new Map<string, string>(frames.map((f) => [f.canonType ?? "ANNUAL", f.id]));
-  const fallbackFrameId = frameByCanonType.get("ANNUAL") ?? frames[0]?.id ?? null;
-
   // 2) Jeu d'initiatives de la route (ADR-0089) depuis les BrandAction matérialisés.
   const actions = await db.brandAction.findMany({
     where: { strategyId: proposal.strategyId },
-    select: { id: true, selected: true, status: true, metadata: true, sourceInitiativeId: true },
+    select: { id: true, selected: true, status: true, metadata: true, sourceInitiativeId: true, campaignId: true },
   });
   const synthesis = await db.pillar.findUnique({ where: { strategyId_key: { strategyId: proposal.strategyId, key: "s" } }, select: { content: true, staleAt: true } });
   const computed = ((synthesis?.content as Record<string, unknown> | null)?.computed ?? {}) as Record<string, unknown>;
@@ -150,15 +134,49 @@ export async function validateCreativeProposal(id: string, validatedBy?: string)
   const selectedActions = actions.filter(a => a.sourceInitiativeId && routeIds.has(a.sourceInitiativeId) && !["EXECUTED", "CANCELLED"].includes(a.status));
   if (selectedActions.length !== routeIds.size) throw new Error("STRATEGY_ACTION_RECONCILIATION_REQUIRED: synchronisez le catalogue et vérifiez les actions terminées ou annulées avant production.");
 
+  const typeByAction = new Map(selectedActions.map(a => {
+    const meta = (a.metadata ?? {}) as Record<string, unknown>;
+    const canonType = canonTypeForInitiative({ id: a.id,
+      timeframe: typeof meta.timeframe === "string" ? meta.timeframe : null,
+      campaignCanonType: typeof meta.campaignCanonType === "string" ? meta.campaignCanonType : undefined,
+      cadence: typeof meta.cadence === "string" ? meta.cadence : undefined });
+    if (!canonType) throw new Error("CAMPAIGN_CLASSIFICATION_REQUIRED: rattachez les actions à leur campagne de lancement, annuelle, permanente ou ponctuelle avant production.");
+    return [a.id, canonType];
+  }));
+  const punctualActions = selectedActions.filter(a => typeByAction.get(a.id) === "PUNCTUAL");
+  const punctualIds = punctualActions.flatMap(a => a.campaignId ? [a.campaignId] : []);
+  const punctualFrames = punctualIds.length ? await db.campaign.findMany({
+    where: { strategyId: proposal.strategyId, id: { in: punctualIds }, canonType: "PUNCTUAL" }, select: { id: true },
+  }) : [];
+  const punctualFrameIds = new Set(punctualFrames.map(f => f.id));
+  if (punctualActions.some(a => !a.campaignId || !punctualFrameIds.has(a.campaignId))) {
+    throw new Error("PUNCTUAL_CAMPAIGN_REQUIRED: l’activation ponctuelle doit être liée à son cadre dans cette marque avant production.");
+  }
+
+  // 1) Frames canon de la route — auto-amorçage si absents.
+  const needsCanonFrames = selectedActions.some(a => typeByAction.get(a.id) !== "PUNCTUAL");
+  let frames = needsCanonFrames ? await db.campaign.findMany({
+    where: { strategyId: proposal.strategyId, routeKey, canonType: { in: [...CANON_TYPES] } },
+    select: { id: true, canonType: true },
+  }) : [];
+  if (needsCanonFrames && frames.length === 0) {
+    const { generateCanonicalCampaigns } = await import("@/server/services/campaign-canon");
+    await generateCanonicalCampaigns({ strategyId: proposal.strategyId, routeKey });
+    frames = await db.campaign.findMany({
+      where: { strategyId: proposal.strategyId, routeKey, canonType: { in: [...CANON_TYPES] } },
+      select: { id: true, canonType: true },
+    });
+  }
+  const frameByCanonType = new Map<string, string>(frames.map((f) => [f.canonType ?? "ANNUAL", f.id]));
+  const frameByAction = new Map(selectedActions.map(a => [a.id, typeByAction.get(a.id) === "PUNCTUAL" ? a.campaignId : frameByCanonType.get(typeByAction.get(a.id)!)]));
+  if ([...frameByAction.values()].some(id => !id)) throw new Error("CAMPAIGN_FRAME_REQUIRED: le cadre de campagne prévu est indisponible.");
+
   // 3) Rattache + génère les briefs de production.
   const { generateBriefFromBrandAction } = await import("@/server/services/campaign-manager");
   let attached = 0;
   let briefs = 0;
   for (const a of selectedActions) {
-    const meta = (a.metadata ?? {}) as Record<string, unknown>;
-    const timeframe = typeof meta.timeframe === "string" ? meta.timeframe : null;
-    const frameId = frameByCanonType.get(canonTypeForTimeframe(timeframe)) ?? fallbackFrameId;
-    if (!frameId) continue;
+    const frameId = frameByAction.get(a.id)!;
     await db.brandAction.update({
       where: { id: a.id },
       data: { campaignId: frameId, selected: true, status: "ACCEPTED" },
@@ -178,7 +196,7 @@ export async function validateCreativeProposal(id: string, validatedBy?: string)
     data: { status: "VALIDATED", validatedAt: new Date(), validatedBy: validatedBy ?? null },
   });
 
-  return { proposalId: id, status: "VALIDATED", routeKey, actionsAttached: attached, briefsGenerated: briefs, frames: frames.length, alreadyValidated: false };
+  return { proposalId: id, status: "VALIDATED", routeKey, actionsAttached: attached, briefsGenerated: briefs, frames: frames.length + punctualFrameIds.size, alreadyValidated: false };
 }
 
 export async function listCreativeProposalsByStrategy(strategyId: string) {

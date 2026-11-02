@@ -28,7 +28,7 @@ import { Prisma } from "@prisma/client";
 import { runMarketIntelligence } from "@/server/services/market-intelligence";
 import type { PillarWriteRequest, PillarWriteResult } from "@/server/services/pillar-gateway";
 import type { RouteKey } from "@/lib/strategy/roadmap-routes";
-import { serializePillar } from "@/server/services/utils/pillar-context";
+import { serializePillar, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
 export { projectForContext, serializePillar } from "@/server/services/utils/pillar-context";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -451,7 +451,7 @@ export async function actualizePillar(
     const sourceContext = dependencies.length ? await loadBrandSourceContext(strategyId, {
       query: pillarKey === "R" ? "risques modèle économique personas partenaires clients hypothèses études"
         : pillarKey === "T" ? "étude marché terrain personas prix hypothèses validation TAM SAM SOM"
-        : "actions canaux publics partenaires clients modèle économique contraintes production",
+        : "campagnes lancement GTM roadmap programme annuel boucles mensuelles récurrence calendrier budgets fourchettes coût ponctuel mensuel actions canaux publics partenaires clients contraintes production",
       ensureIndexed: false,
     }) : null;
     const sourceReceipts = [...new Map((sourceContext?.excerpts ?? []).flatMap(excerpt => excerpt.contentHash

@@ -22,7 +22,7 @@
 import { callLLM } from "@/server/services/llm-gateway";
 import { extractJSON } from "@/server/services/utils/llm";
 import { sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
-import { serializePillar } from "@/server/services/utils/pillar-context";
+import { serializePillar, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
 
 // Canaux du catalogue I (cf. RTIS_PROMPTS.I dans rtis-cascade.ts)
 export const I_CHANNELS = [
@@ -218,6 +218,7 @@ export async function generateICatalogueSequenced(args: {
       strategyId, context, arrayKey: "actions", maxOutputTokens: 2400, tag: `canal-${canal}`, onProgress: log,
       instruction: `Pour le CANAL « ${canal} », génère un inventaire de 5 à 8 actions marketing CONCRÈTES, spécifiques à CETTE marque (pas générique).
 Chaque action = objet { "action": string, "format": string, "objectif": string, "pilierImpact": "A"|"D"|"V"|"E", "budgetEstime": "LOW"|"MEDIUM"|"HIGH" }.
+${INITIATIVE_PLANNING_SOURCE_CONTRACT}
 Ajoute targetsPersonaIds et mitigatesRiskIds : copie seulement les UUID des profils D et des risques R effectivement concernés dans le contexte. Une liste vide est permise si aucun lien n'est justifié ; n'invente aucun identifiant. Une cible documentaire n'est pas un client acquis, un risque n'est pas un fait validé et une action proposée n'est pas une décision.
 Réponds STRICTEMENT au format : { "actions": [ …5 à 8 objets… ] }`,
     });
@@ -226,7 +227,7 @@ Réponds STRICTEMENT au format : { "actions": [ …5 à 8 objets… ] }`,
       ...a,
       channel: canal,
       status: "RECOMMENDED",
-      budgetEstime: VALID_BUDGET.has(String(a.budgetEstime)) ? a.budgetEstime : "MEDIUM",
+      ...(VALID_BUDGET.has(String(a.budgetEstime)) ? { budgetEstime: a.budgetEstime } : {}),
     }));
     log(`canal ${canal}: ${actions.length} actions`);
   }

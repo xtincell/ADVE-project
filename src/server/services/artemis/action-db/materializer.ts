@@ -151,6 +151,10 @@ export async function syncBrandActionsFromBlob(strategyId: string, transaction?:
         overtonShift: init.overtonShift ?? null,
         budgetEstime: init.budgetEstime ?? null,
         budgetBasis: init.budgetBasis,
+        budgetRange: init.budgetRange ?? null,
+        budgetPeriod: init.budgetPeriod ?? null,
+        campaignCanonType: init.campaignCanonType ?? null,
+        cadence: init.cadence ?? null,
         timeframe: init.timeframe ?? null,
         initiativeStatus: init.status,
         initiativePreference: init.preference,
@@ -160,6 +164,8 @@ export async function syncBrandActionsFromBlob(strategyId: string, transaction?:
         // Projection baseline, never an authority: lets a later source budget
         // refresh distinguish its own old estimate from an operational override.
         projectedBudget: init.budget ?? null,
+        projectedBudgetMin: init.budgetRange?.min ?? init.budget ?? null,
+        projectedBudgetMax: init.budgetRange?.max ?? init.budget ?? null,
         projectedPriority: mapPriority(init),
       } satisfies Record<string, unknown>;
 
@@ -168,8 +174,8 @@ export async function syncBrandActionsFromBlob(strategyId: string, transaction?:
         description: init.objectif || null,
         touchpoint: mapTouchpoint(init),
         aarrrIntent: inferAarrr(init),
-        budgetMin: init.budget ?? null,
-        budgetMax: init.budget ?? null,
+        budgetMin: init.budgetRange?.min ?? init.budget ?? null,
+        budgetMax: init.budgetRange?.max ?? init.budget ?? null,
         budgetCurrency: currency,
         priority: mapPriority(init),
         selected,
@@ -188,8 +194,8 @@ export async function syncBrandActionsFromBlob(strategyId: string, transaction?:
         selected: previous.selected,
         status: ["ACCEPTED", "SCHEDULED", "EXECUTED", "CANCELLED"].includes(previous.status) ? previous.status : data.status,
         priority: previous.priority === null || previousMetadata.projectedPriority === previous.priority ? data.priority : previous.priority,
-        budgetMin: emptyBudget || previousMetadata.projectedBudget === previous.budgetMin ? data.budgetMin : previous.budgetMin,
-        budgetMax: emptyBudget || previousMetadata.projectedBudget === previous.budgetMax ? data.budgetMax : previous.budgetMax,
+        budgetMin: emptyBudget || (previousMetadata.projectedBudgetMin ?? previousMetadata.projectedBudget) === previous.budgetMin ? data.budgetMin : previous.budgetMin,
+        budgetMax: emptyBudget || (previousMetadata.projectedBudgetMax ?? previousMetadata.projectedBudget) === previous.budgetMax ? data.budgetMax : previous.budgetMax,
         budgetCurrency: previous.budgetCurrency,
       } : data;
       await tx.brandAction.upsert({

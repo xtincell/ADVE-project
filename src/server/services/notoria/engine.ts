@@ -30,7 +30,7 @@ import type {
   RecoSource,
 } from "./types";
 import { MISSION_CONFIG } from "./types";
-import { serializePillar } from "@/server/services/utils/pillar-context";
+import { serializePillar, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -290,6 +290,7 @@ ${schemaDesc}
 
 BIBLE DE FORMAT (regles de fond pour chaque champ):
 ${bibleInstructions}
+${targetKey === "i" ? INITIATIVE_PLANNING_SOURCE_CONTRACT : ""}
 
 Pilier ${targetKey.toUpperCase()} actuel (${filledFields.length}/${allSchemaKeys.length} champs remplis):
 ${JSON.stringify(currentContent, null, 2)}
@@ -644,7 +645,9 @@ export async function generateBatch(
   // un budget explicite, et porte l'identifiant de chaque source pour que ce
   // qui en est tiré reste vérifiable en aval.
   const sourceCtx = await loadBrandSourceContext(strategyId, {
-    query: targets.join(" "),
+    query: missionType === "I_GENERATION"
+      ? "campagnes lancement go-to-market roadmap programme annuel boucle mensuelle récurrence calendrier budgets fourchettes production média talent logistique technologie actions partenaires trafic client"
+      : targets.join(" "),
     // Mission ASYNCHRONE : ici, payer une passe d'indexation est acceptable —
     // c'est le seul endroit qui rattrape un document deposé jamais indexé.
     ensureIndexed: true,

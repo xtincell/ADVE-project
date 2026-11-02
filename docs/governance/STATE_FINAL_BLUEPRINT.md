@@ -2107,6 +2107,23 @@ d'invariants spécifiques (cf. `tests/integration/`).
 
 # ANNEXE CANON L — LEXIQUE NORMATIF
 
+### Complétude qualifiée et input de partie prenante — contrat 527 à recevoir
+
+**Chaîne de référence** : documentation + inputs attribués → ADVE qualifié → RTIS
+dérivé. Documentation riche doit garantir ADVE complet ; ADVE complet doit garantir
+RTIS complet. Cette exigence doit être reçue sur toute la chaîne ; ni présence de
+champs ni cardinalité de cartes ne prouvent la complétude. Les documents consultés
+pendant RTIS contrôlent alignement et traçabilité, sans contourner un champ ADVE
+absent. Une nouveauté structurante remonte en proposition/écriture ADVE gouvernée
+avant cascade.
+
+**Input de partie prenante** : fait déclaré, hypothèse ou desideratum attribué
+avec auteur, date, périmètre et statut ; l’attribution ne vaut ni mesure vérifiée
+ni décision adoptée. Les capacités existantes de sources/propositions/amendements
+portent cette qualification, sans modèle stakeholder ou base miroir supplémentaire.
+[ADR-0229 Proposed](adr/0229-source-qualified-strategy-and-campaign-projections.md) ;
+implémentation et réception 527 restent ouvertes, aucun Whole S ou MVP déduit.
+
 ### Contrat candidat 526 — préférence d’initiative et scénario stratégique (2026-11-02)
 
 **Préférence d’initiative** : avis attribué sur une initiative I, FAVORITE, NEUTRAL

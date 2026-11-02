@@ -7,12 +7,21 @@
  * d'exécution sont dérivés en aval par les outils — ici, un seul budget conseillé.
  */
 
+import { aggregateInitiativeSet } from "@/lib/strategy/roadmap-routes";
+import { CAMPAIGN_CANON_TYPES, INITIATIVE_CADENCES, type InitiativeBudgetSummary } from "@/lib/types/pillar-schemas";
+
 export interface InitiativeLite {
   id: string;
   /** SPRINT_90 | PHASE_1 | PHASE_2 | LONG_TERM | null */
   timeframe?: string | null;
   budgetMin?: number | null;
   budgetMax?: number | null;
+  budget?: number;
+  budgetRange?: { min: number; max: number };
+  budgetPeriod?: string;
+  budgetBasis?: string;
+  campaignCanonType?: string;
+  cadence?: string;
 }
 
 export interface CanonTemplateLite {
@@ -31,25 +40,40 @@ export interface PlannedCampaign {
   aarrrPrimary: string;
   aarrrSecondary: string;
   isAlwaysOn: boolean;
-  startDate: Date;
+  startDate: Date | null;
   endDate: Date | null;
-  recommendedBudget: number;
+  recommendedBudget: number | null;
+  budgetSummary: InitiativeBudgetSummary;
   actionIds: string[];
 }
 
-/** Mappe le timeframe d'une initiative → la campagne canon cible. PUR. */
-export function canonTypeForTimeframe(timeframe: string | null | undefined): "GTM_90" | "ANNUAL" | "ALWAYS_ON" {
-  switch (timeframe) {
-    case "SPRINT_90":
-      return "GTM_90";
-    case "LONG_TERM":
-      return "ALWAYS_ON";
-    case "PHASE_1":
-    case "PHASE_2":
-      return "ANNUAL";
-    default:
-      return "ANNUAL"; // défaut prudent : la consolidation annuelle
-  }
+/** A time horizon is not a recurrence. Long term is never proof of always-on. */
+export function canonTypeForTimeframe(timeframe: string | null | undefined): "GTM_90" | "ANNUAL" | null {
+  if (timeframe === "SPRINT_90") return "GTM_90";
+  if (["PHASE_1", "PHASE_2"].includes(timeframe ?? "")) return "ANNUAL";
+  return null;
+}
+
+/** Preserve an explicit campaign family. Cadence and monetary period remain
+ * independent: a monthly campaign can have both setup and recurring costs. */
+export function canonTypeForInitiative(i: InitiativeLite): string | null {
+  if ((CAMPAIGN_CANON_TYPES as readonly unknown[]).includes(i.campaignCanonType)) return i.campaignCanonType!;
+  if (i.timeframe === "SPRINT_90") return "GTM_90";
+  if (i.cadence !== "ONE_SHOT" && (INITIATIVE_CADENCES as readonly unknown[]).includes(i.cadence)) return "ALWAYS_ON";
+  const horizon = canonTypeForTimeframe(i.timeframe);
+  if (horizon) return horizon;
+  if (i.cadence === "ONE_SHOT") return "PUNCTUAL";
+  return null;
+}
+
+export function campaignInitiativeBudget(i: InitiativeLite): Record<string, unknown> {
+  const min = i.budgetRange?.min ?? i.budgetMin;
+  const max = i.budgetRange?.max ?? i.budgetMax;
+  const bounded = typeof min === "number" && Number.isFinite(min) && min >= 0
+    && typeof max === "number" && Number.isFinite(max) && max >= min;
+  return { id: i.id, timeframe: i.timeframe, budgetPeriod: i.budgetPeriod, budgetBasis: i.budgetBasis,
+    ...(bounded && min !== max ? { budgetRange: { min, max } }
+      : { budget: typeof i.budget === "number" ? i.budget : bounded ? min : undefined }) };
 }
 
 /**
@@ -67,27 +91,23 @@ function addDays(d: Date, days: number): Date {
   return x;
 }
 
-function initiativeBudget(i: InitiativeLite): number {
-  const v = i.budgetMax ?? i.budgetMin ?? 0;
-  return Number.isFinite(v) && v > 0 ? v : 0;
-}
-
 /**
  * Produit le plan des 3 campagnes canon. PUR. Une campagne par template ; les
  * initiatives sont réparties par timeframe ; le budget conseillé = somme des
- * budgets d'initiatives (× multiplicateur tier), sinon part du budget global.
+ * budgets d'initiatives comparables. Les bornes et périodes restent explicites ;
+ * les coefficients de templates/tier ne remplacent pas les coûts source.
  */
 export function planCanonicalCampaigns(opts: {
   initiatives: InitiativeLite[];
   templates: CanonTemplateLite[];
   tierOrdinal: number;
-  startDate: Date;
+  startDate: Date | null;
   globalBudget?: number | null;
 }): PlannedCampaign[] {
-  const mult = tierBudgetMultiplier(opts.tierOrdinal);
   const byType = new Map<string, InitiativeLite[]>();
   for (const i of opts.initiatives) {
-    const t = canonTypeForTimeframe(i.timeframe);
+    const t = canonTypeForInitiative(i);
+    if (!t) continue;
     const arr = byType.get(t) ?? [];
     arr.push(i);
     byType.set(t, arr);
@@ -97,10 +117,11 @@ export function planCanonicalCampaigns(opts: {
     .sort((a, b) => a.canonType.localeCompare(b.canonType))
     .map((tpl) => {
       const assigned = byType.get(tpl.canonType) ?? [];
-      const summed = assigned.reduce((s, i) => s + initiativeBudget(i), 0);
-      const base = summed > 0 ? summed : (opts.globalBudget ?? 0) * tpl.budgetShare;
-      const recommendedBudget = Math.round(base * mult);
-      const endDate = tpl.isAlwaysOn || tpl.durationDays == null ? null : addDays(opts.startDate, tpl.durationDays);
+      const amounts = aggregateInitiativeSet(assigned.map(campaignInitiativeBudget), []);
+      // A template share or brand tier cannot alter actual source costs. No
+      // action, unknown cost, range or recurring unit => no scalar envelope.
+      const recommendedBudget = assigned.length ? amounts.totalBudget ?? null : null;
+      const endDate = !opts.startDate || tpl.isAlwaysOn || tpl.durationDays == null ? null : addDays(opts.startDate, tpl.durationDays);
       return {
         canonType: tpl.canonType,
         label: tpl.label,
@@ -110,6 +131,7 @@ export function planCanonicalCampaigns(opts: {
         startDate: opts.startDate,
         endDate,
         recommendedBudget,
+        budgetSummary: amounts.budgetSummary,
         actionIds: assigned.map((i) => i.id),
       };
     });

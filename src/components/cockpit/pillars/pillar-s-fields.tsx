@@ -20,6 +20,8 @@ import {
   isEmpty, asArr, asRec, str, makeStatusFor, type Rec,
 } from "./pillar-kit";
 
+const FREQUENCY_LABEL: Record<string, string> = { DAILY: "Quotidien", WEEKLY: "Hebdomadaire", MONTHLY: "Mensuel", QUARTERLY: "Trimestriel", YEARLY: "Annuel", ONE_SHOT: "Une fois", ROLLING: "En continu" };
+
 function SStatement({ label, value, status, big }: { label: string; value: unknown; status?: string; big?: boolean }) {
   return (
     <ACard title={label} status={status} empty={isEmpty(value)}>
@@ -57,7 +59,7 @@ function OvertonMilestones({ items, status }: { items: unknown; status?: string 
   const arr = asArr(items);
   return (
     <ACard title="Jalons d'Overton" status={status} empty={empty} span>
-      {empty ? <EmptyBody /> : (
+      {empty ? <p className="text-sm text-foreground-muted">Les jalons ne sont pas encore déductibles du socle de marque. Vérifier et compléter les objectifs et perceptions de l’ADVE, puis recalculer le plan. Aucun résultat constaté n’est inventé.</p> : (
         <div className="ck-s-miles">
           {arr.map((m, i) => (
             <div className="ck-s-mile" key={i}>
@@ -89,6 +91,7 @@ function Roadmap({ items, status }: { items: unknown; status?: string }) {
               <div className="ck-s-phase__head">
                 <span className="ck-s-phase__name">{str(p.phase)}</span>
                 {!isEmpty(p.duree) ? <span className="ck-s-phase__when">{str(p.duree)}</span> : null}
+                {!isEmpty(p.cadence) ? <span className="ck-s-phase__when">{FREQUENCY_LABEL[str(p.cadence)] ?? str(p.cadence)}</span> : null}
               </div>
               {!isEmpty(p.objectif) ? <p className="ck-s-phase__obj">{str(p.objectif)}</p> : null}
               <div className="ck-s-phase__meta">
@@ -111,7 +114,7 @@ function Sprint90({ items, status }: { items: unknown; status?: string }) {
   const arr = asArr(items);
   return (
     <ACard title="Sprint 90 jours" status={status} empty={empty} span>
-      {empty ? <EmptyBody /> : (
+      {empty ? <p className="text-sm text-foreground-muted">L’horizon de 90 jours n’est pas encore déductible des informations de marque. Compléter les objectifs, contraintes et moyens dans l’ADVE, puis recalculer. Les actions proposées restent conservées.</p> : (
         <div className="ck-s-sprint">
           {arr.map((a, i) => (
             <div className="ck-s-sprint__row" key={i}>
@@ -137,17 +140,20 @@ function KpiDashboard({ items, status }: { items: unknown; status?: string }) {
   const arr = asArr(items);
   return (
     <ACard title="Dashboard KPI" status={status} empty={empty} span>
-      {empty ? <p className="text-sm text-foreground-muted">Les objectifs des actions sont détaillés dans le plan. Leurs cibles chiffrées et fréquences de mesure restent à définir.</p> : (
+      {empty ? <p className="text-sm text-foreground-muted">Aucun objectif avec cible et fréquence n’a pu être repris depuis Engagement. Compléter ces champs du socle ADVE à partir des sources, puis recalculer le suivi.</p> : (
+        <>
+        <p className="mb-3 text-sm text-foreground-muted">Objectifs repris d’Engagement. Ces cibles ne sont pas des résultats mesurés.</p>
         <div className="ck-s-kpis">
           {arr.map((k, i) => (
             <div className="ck-s-kpi" key={i}>
               <span className="ck-s-kpi__pillar">{str(k.pillar)}</span>
               <span className="ck-s-kpi__name">{str(k.name)}</span>
               <span className="ck-s-kpi__target">{str(k.target)}</span>
-              <span className="ck-s-kpi__freq">{str(k.frequency)}</span>
+              <span className="ck-s-kpi__freq">{FREQUENCY_LABEL[str(k.frequency)] ?? str(k.frequency)}</span>
             </div>
           ))}
         </div>
+        </>
       )}
     </ACard>
   );
@@ -155,7 +161,7 @@ function KpiDashboard({ items, status }: { items: unknown; status?: string }) {
 
 // ── Budget (ventilation + par dévotion) ────────────────────────────────
 
-function BudgetPanel({ breakdown, byDevotion, total, status }: { breakdown: unknown; byDevotion: unknown; total: unknown; status?: string }) {
+function BudgetPanel({ breakdown, byDevotion, total, summary, status }: { breakdown: unknown; byDevotion: unknown; total: unknown; summary: unknown; status?: string }) {
   const empty = isEmpty(breakdown) && isEmpty(byDevotion);
   const bk = asRec(breakdown);
   const bd = asRec(byDevotion);
@@ -164,7 +170,8 @@ function BudgetPanel({ breakdown, byDevotion, total, status }: { breakdown: unkn
   const BD: Array<[string, string]> = [["acquisition", "Acquisition"], ["conversion", "Conversion"], ["retention", "Rétention"], ["evangelisation", "Évangélisation"]];
   return (
     <ACard title={"Budget" + (totalN ? ` · ${new Intl.NumberFormat("fr-FR").format(totalN)} FCFA` : "")} status={status} empty={empty} span>
-      {empty ? <EmptyBody /> : (
+      <p className="mb-3 text-sm text-foreground-muted">{initiativeBudgetLabel(total, summary)}. Estimations des actions retenues ; les devis et dépenses restent distincts.</p>
+      {empty ? <p className="text-sm text-foreground-muted">La ventilation production, média, talent, logistique et technologie n’est pas encore déductible des moyens renseignés. Vérifier et compléter le socle ADVE, puis recalculer le chiffrage des actions. Aucun montant n’est affecté arbitrairement à une catégorie.</p> : (
         <div className="ck-s-budget">
           <div className="ck-s-budget__col">
             <span className="ck-s-budget__h">Ventilation</span>
@@ -249,8 +256,8 @@ export function PillarSFields({ content, certainty }: { content: Rec; certainty:
           <Roadmap items={v.roadmap} status={st("roadmap")} />
           <ProofList title="Actions du scénario courant" items={v.selectedFromI} status={st("selectedFromI")}
             cols={[["action", "Action"], ["phase", "Phase"], ["priority", "Priorité"]]} />
-          <ProofList title="Actions rejetées dans le catalogue" items={v.rejectedFromI} status={st("rejectedFromI")}
-            cols={[["action", "Action"], ["reason", "Raison"]]} />
+          {isEmpty(v.rejectedFromI) ? <ACard title="Actions rejetées dans le catalogue" empty={false}><p className="text-sm text-foreground-muted">Aucune action rejetée dans le catalogue. Les actions absentes de ce scénario restent disponibles pour les autres scénarios.</p></ACard> :
+            <ProofList title="Actions rejetées dans le catalogue" items={v.rejectedFromI} status={st("rejectedFromI")} cols={[["action", "Action"], ["reason", "Raison"]]} />}
         </div>
       </Section>
 
@@ -259,9 +266,9 @@ export function PillarSFields({ content, certainty }: { content: Rec; certainty:
           <KpiDashboard items={v.kpiDashboard} status={st("kpiDashboard")} />
           <ObjCard title="North Star KPI" value={v.northStarKPI} status={st("northStarKPI")}
             fields={[["name", "Nom"], ["target", "Cible"], ["frequency", "Fréquence"], ["currentValue", "Valeur actuelle"]]} />
-          <BudgetPanel breakdown={v.budgetBreakdown} byDevotion={v.budgetByDevotion} total={v.globalBudget} status={st("budgetBreakdown")} />
-          <ProofList title="Équipe mobilisée" items={v.teamStructure} status={st("teamStructure")}
-            cols={[["name", "Nom"], ["title", "Titre"], ["responsibility", "Responsabilité"]]} />
+          <BudgetPanel breakdown={v.budgetBreakdown} byDevotion={v.budgetByDevotion} total={v.globalBudget} summary={asRec(v.computed).budgetSummary} status={st(!isEmpty(v.budgetBreakdown) ? "budgetBreakdown" : typeof v.globalBudget === "number" ? "globalBudget" : "computed")} />
+          <ProofList title="Équipe documentée" items={v.teamStructure} status={st("teamStructure")}
+            cols={[["name", "Nom"], ["title", "Titre"], ["responsibility", "Profil / contribution documentée"]]} />
         </div>
         <p className="ck-a-foot">{filled} / {total} champs canoniques renseignés · score de cohérence {coherence}/100 · pilier S (calculé)</p>
       </Section>

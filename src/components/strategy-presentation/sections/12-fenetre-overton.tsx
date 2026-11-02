@@ -2,7 +2,7 @@
 
 import type { FenetreOvertonSection } from "@/server/services/strategy-presentation/types";
 import { DataTable } from "../shared/data-table";
-import { initiativeBudgetLabel } from "@/lib/strategy/roadmap-routes";
+import { initiativeBudgetLabel, aggregateInitiativeSet } from "@/lib/strategy/roadmap-routes";
 
 interface Props { data: FenetreOvertonSection }
 
@@ -79,7 +79,7 @@ export function FenetreOverton({ data }: Props) {
                 )}
                 <p className="mt-3 text-xs text-foreground-secondary">{r.description}</p>
                 {r.initiatives?.length ? <details className="mt-3 text-xs text-foreground-secondary"><summary className="cursor-pointer">Actions du scénario</summary>
-                  <ol className="mt-2 space-y-2">{r.initiatives.map(a => <li key={a.id}><strong>{a.action}</strong>{a.objectif ? <p>{a.objectif}</p> : null}</li>)}</ol>
+                  <ol className="mt-2 space-y-2">{r.initiatives.map(a => <li key={a.id}><strong>{a.action}</strong>{a.objectif ? <p>{a.objectif}</p> : null}<p>{initiativeBudgetLabel(undefined, aggregateInitiativeSet([a], []).budgetSummary)}</p></li>)}</ol>
                 </details> : null}
               </div>
             );
