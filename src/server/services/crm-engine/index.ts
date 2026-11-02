@@ -713,7 +713,8 @@ export async function sendSalesEmail(dealId: string, actor: SalesActor, input: {
     description: input.subject, metadata: { fingerprint, to: deal.contactEmail, body: input.text },
   } });
   const { sendEmail } = await import("@/server/services/email");
-  const html = input.text.replace(/[&<>"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char]!)).replace(/\n/g, "<br>");
+  const htmlEscapes: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
+  const html = input.text.replace(/[&<>"]/g, char => htmlEscapes[char]!).replace(/\n/g, "<br>");
   let result;
   try {
     result = await sendEmail({ to: deal.contactEmail, subject: input.subject, text: input.text, html, tag: "sales", allowFallback: false });
