@@ -68,7 +68,7 @@ export const salesCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("OBJECTION"), evidence: text }),
   z.object({ type: z.literal("ACCEPT"), evidence: text, customerMessageId: text.optional() }),
   z.object({ type: z.literal("PAYMENT"), evidence: text, amount: z.number().finite().nonnegative(), currency: z.string().regex(/^[A-Z]{3}$/) }),
-  z.object({ type: z.literal("DELIVER"), evidence: text, customerMessageId: text.optional(), nextAction: text, nextDeadline: z.string().datetime() }),
+  z.object({ type: z.literal("DELIVER"), evidence: text, customerMessageId: text.optional(), nextAction: text.optional(), nextDeadline: z.string().datetime().optional() }),
   z.object({ type: z.literal("STOP"), evidence: text }),
   z.object({ type: z.literal("HANDOVER"), sellerId: text }),
   z.object({ type: z.literal("PLAN_NEXT_ACTION"), action: text,
@@ -177,12 +177,13 @@ export function advanceSale(previous: SalesState, step: SalesStep, actor: SalesA
       requireCondition(previous.node === "ACCEPTED", "Accord nécessaire avant rapprochement.");
       requireCondition(command.amount === mandate.amount && command.currency === mandate.currency, "Le règlement doit correspondre au montant et à la devise convenus.");
       return { ...previous, node: "PAID", payment: command.evidence, nextAction: "Remettre la prestation au client.", nextPlan: undefined, nextDeadline: undefined };
-    case "DELIVER":
+    case "DELIVER": {
       requireCondition(actor.admin || actor.id === mandate.deliveryOwnerId, "La remise doit être attestée par le responsable de livraison.");
       requireCondition(previous.node === "PAID", "Vérifier le règlement avant cette remise.");
-      return { ...previous, node: "DELIVERED", delivery: command.evidence, nextAction: command.nextAction, nextDeadline: command.nextDeadline,
-        nextPlan: { id: step.requestId, basis: "OWNER", purpose: "VALUE_REVIEW", action: command.nextAction,
-          channel: step.channel, dueAt: command.nextDeadline, sellerId: mandate.sellerId, createdAt: now.toISOString() } };
+      return { ...previous, node: "DELIVERED", delivery: command.evidence, nextAction: command.nextAction ?? "Prestation remise au client.", nextDeadline: command.nextDeadline,
+        nextPlan: command.nextDeadline ? { id: step.requestId, basis: "OWNER", purpose: "VALUE_REVIEW", action: command.nextAction ?? "Revue interne de la prestation remise.",
+          channel: step.channel, dueAt: command.nextDeadline, sellerId: mandate.sellerId, createdAt: now.toISOString() } : undefined };
+    }
   }
 }
 

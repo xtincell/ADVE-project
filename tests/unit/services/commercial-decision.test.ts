@@ -38,6 +38,13 @@ describe("commercial decision boundaries", () => {
     expect(() => advanceSale(stopped, step({ type: "PROPOSE" }), actor, now)).toThrow();
     expect(advanceSale(stopped, step({ type: "PAYMENT", evidence: "Finance", amount: 60000, currency: "XOF" }), { id: "finance", admin: true }, now).node).toBe("PAID");
   });
+  it("records a proved delivery without inventing a future appointment", () => {
+    const paid=salesStateSchema.parse({mandate,node:"PAID",payment:"Native confirmed"});
+    const delivered=advanceSale(paid,step({type:"DELIVER",evidence:"Customer received the prepared asset"}),{id:"delivery",admin:false},now);
+    expect(delivered.node).toBe("DELIVERED");expect(delivered.delivery).toContain("received");
+    expect(delivered.nextDeadline).toBeUndefined();expect(delivered.nextPlan).toBeUndefined();
+    expect(delivered.nextAction).not.toContain("Remettre");
+  });
   it("retains fulfilment rights after the selling mandate expires", () => {
     const previous = salesStateSchema.parse({ mandate: { ...mandate, expiresAt: "2020-01-01T00:00:00.000Z" }, node: "PAID" });
     const result = advanceSale(previous, step({ type: "DELIVER", evidence: "Réception", nextAction: "Revue de valeur", nextDeadline: "2027-01-01T00:00:00.000Z" }), { id: "delivery", admin: false }, now);

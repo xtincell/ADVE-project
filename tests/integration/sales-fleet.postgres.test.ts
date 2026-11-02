@@ -141,7 +141,7 @@ describe("sales holders, dispatch receipts and incoming customer messages", () =
       const response = await operationsPost(new Request("http://localhost/api/mcp/operations", { method: "POST", headers: {
         "content-type": "application/json", "x-api-key": secret, "x-sales-run-id": claim.run!.id, "x-sales-run-lease": claim.run!.leaseToken,
       }, body: JSON.stringify({ tool: "sales_decide", params: { strategyId: brandId, dealId: row.id, step: {
-        requestId: randomUUID(), expectedRevision: paid.revision, channel: "WEB", command: { type: "DELIVER", evidence: "Customer confirmation checked.", customerMessageId, nextAction: "Review the synthetic result.", nextDeadline: "2030-01-01T00:00:00.000Z" },
+        requestId: randomUUID(), expectedRevision: paid.revision, channel: "WEB", command: { type: "DELIVER", evidence: "Customer confirmation checked.", customerMessageId },
       } } }) }));
       expect(response.status).toBe(200);
       return response.json();

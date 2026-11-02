@@ -88,7 +88,14 @@ function project(deal: Deal, state: SalesState, payment: IntakePayment, canRecon
 async function serial<T>(run: (tx: Tx) => Promise<T>): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try { return await db.$transaction(run, { isolationLevel: "Serializable" }); }
-    catch (cause) { if (attempt < 3 && ["P2034", "P2002"].includes((cause as { code?: string }).code ?? "")) continue; throw cause; }
+    catch (cause) {
+      const error = cause as { code?: string; name?: string; cause?: { kind?: string; originalCode?: string } };
+      // Prisma 7 may expose the adapter's rolled-back 40001 directly at COMMIT,
+      // before it is translated to P2034. Never retry an unknown commit outcome.
+      const adapterConflict = error.name === "DriverAdapterError" && error.cause?.kind === "TransactionWriteConflict" && error.cause.originalCode === "40001";
+      if (attempt < 3 && (["P2034", "P2002"].includes(error.code ?? "") || adapterConflict)) continue;
+      throw cause;
+    }
   }
 }
 async function replayIn(tx: Tx, requestId: string, fingerprint: string, actorId: string, dealId: string) {

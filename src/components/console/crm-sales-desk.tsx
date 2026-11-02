@@ -172,7 +172,11 @@ export function CrmSalesDesk() {
                 case "OBJECTION": case "ACCEPT": case "STOP": void act({ type, evidence }); break;
                 case "PAYMENT": void act({ type, evidence, amount: Number(input(form, "amount")), currency: input(form, "currency") }); break;
                 case "HANDOVER": void act({ type, sellerId: input(form, "handoverSeller") }); break;
-                case "DELIVER": void act({ type, evidence, nextAction: input(form, "nextAction"), nextDeadline: new Date(input(form, "nextDeadline")).toISOString() }); break;
+                case "DELIVER": {
+                  const nextDeadline = input(form, "nextDeadline");
+                  void act({ type, evidence, nextAction: input(form, "nextAction") || undefined, nextDeadline: nextDeadline ? new Date(nextDeadline).toISOString() : undefined });
+                  break;
+                }
               }
             }}>
               <label>Décision<select className={fieldClass} name="decision" onChange={event => setDecision(event.target.value)}>
@@ -196,8 +200,9 @@ export function CrmSalesDesk() {
                 <label>Devise reçue<input className={fieldClass} name="currency" /></label>
               </div>}
               {sale.node === "PAID" && <>
-                <label>Prochaine action<input className={fieldClass} name="nextAction" required /></label>
-                <label>Prochaine échéance<input className={fieldClass} name="nextDeadline" type="datetime-local" required /></label>
+                <label>Action de suivi (facultative)<input className={fieldClass} name="nextAction" /></label>
+                <label>Échéance de suivi (facultative)<input className={fieldClass} name="nextDeadline" type="datetime-local" /></label>
+                <p className="text-xs text-foreground-muted">Laissez ces champs vides pour terminer la remise sans planifier de suivi.</p>
               </>}
               <button className="rounded bg-primary px-4 py-2 text-primary-foreground" disabled={update.isPending}>Enregistrer la décision</button>
             </form>
