@@ -37,3 +37,17 @@ export function serializePillar(key: string, content: unknown, fieldStatus?: (fi
   const notice = ["D", "V"].includes(key.toUpperCase()) ? `${BRAND_ACTOR_CONTEXT_NOTICE}\n` : "";
   return notice + wrapUntrusted(`PILIER ${key}`, json, { max });
 }
+
+/** Shared source contract for the existing I generators. No provider or call
+ * orchestration: source versions, campaign purpose, cadence and cost unit are
+ * distinct and optional when the actual evidence is absent. */
+export const INITIATIVE_PLANNING_SOURCE_CONTRACT = `Les piliers ADVE qualifiés constituent le socle de R/T/I/S. Déduire les actions depuis ce socle et les analyses R/T ; les documents courants contrôlent leur alignement et leur traçabilité, ils ne constituent pas un socle parallèle pour masquer un manque ADVE.
+INVARIANT : si une information nécessaire ne peut pas être déduite de l’ADVE, c’est l’ADVE qui doit être mis à jour. Identifier le champ A/D/V/E concerné, les sources ou inputs attribués qui peuvent le compléter et le parcours de proposition/amendement existant ; ne pas demander de ressaisir cette lacune dans I ou S, ni la masquer par un fallback. Conserver le travail existant pendant la réconciliation, puis recalculer les étapes dépendantes.
+Si un document apporte ou contredit une information fondamentale sur la marque, signaler l’écart et proposer sa réconciliation dans A/D/V/E par le parcours gouverné avant d’en faire une prémisse stratégique. Un desideratum de stakeholder est un souhait ou une contrainte proposée, identifié par son auteur, sa date, son périmètre et son statut ; il ne devient ni décision adoptée ni observation marché par simple présence dans un fichier. Ne pas mélanger les informations privées ou d’autres projets contenues dans un document composite.
+Pour chaque action, conserver les informations de planification alignées sur ce socle et les documents courants :
+- campaignCanonType facultatif : GTM_90 (lancement/traction), ANNUAL (programme annuel), ALWAYS_ON (boucle permanente), PUNCTUAL (activation ponctuelle).
+- cadence facultative : ONE_SHOT, DAILY, WEEKLY, MONTHLY, QUARTERLY, YEARLY ou ROLLING. Une série hebdomadaire peut appartenir à un lancement borné ; un horizon long ne signifie pas permanent.
+- timeframe facultatif : SPRINT_90, PHASE_1, PHASE_2 ou LONG_TERM. Un ancien calendrier archivé ne fixe pas le calendrier courant.
+- budgetRange facultatif : {min: nombre, max: nombre}, bornes issues du document ou d’un chiffrage de référence effectivement fourni ; conserver la fourchette sans choisir un milieu. Ne pas transformer un tarif unitaire en enveloppe totale.
+- budgetPeriod facultatif : ONE_OFF, PER_OCCURRENCE, MONTHLY, QUARTERLY, YEARLY ou UNSPECIFIED. La périodicité du coût est distincte de la cadence de campagne ; une mise en place ponctuelle et une diffusion mensuelle sont des responsabilités séparées.
+Ne pas inventer de fourchette, de date, de devis, de responsable ni de fréquence pour remplir un champ. Les hypothèses restent des propositions, jamais des mesures ou décisions. Si l’information existe dans le contexte documentaire courant, la reprendre au lieu de l’omettre. Si elle manque réellement, omettre le champ et rendre cette limite explicite. Conserver les identifiants des actions existantes quand l’action est inchangée ; ne pas générer de préférence humaine.`;

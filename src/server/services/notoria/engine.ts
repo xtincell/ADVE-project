@@ -30,7 +30,20 @@ import type {
   RecoSource,
 } from "./types";
 import { MISSION_CONFIG } from "./types";
-import { serializePillar } from "@/server/services/utils/pillar-context";
+import { serializePillar, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
+
+// A pillar letter is a storage key, not a documentary question. Keep the same
+// scoped reader and version controls; ask it for the actual upstream substance.
+const SOURCE_QUERIES: Record<string, string> = {
+  a: "identité marque fondation histoire mission valeurs doctrine équipe dirigeante biographies expériences compétences responsabilités",
+  d: "positionnement proposition distinction personas segments partenaires audience trafic clients concurrents marché charte marque",
+  v: "modèle économique offres prix produits segments partenaires financeurs charges financement budget marge revenus coûts seuil rentabilité break-even",
+  e: "expérience parcours communauté rituels rites de passage engagement canaux objectifs KPI cibles fréquence North Star fidélisation conversion",
+  r: "risques contraintes vulnérabilités forces faiblesses hypothèses dépendances",
+  t: "études marché entretiens terrain prix traction hypothèses validation concurrence",
+  i: "campagnes lancement go-to-market roadmap programme annuel boucle mensuelle récurrence calendrier budgets fourchettes production média talent logistique technologie actions partenaires trafic client",
+  s: "synthèse stratégie programmes campagnes priorités contraintes objectifs moyens jalons calendrier",
+};
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -290,6 +303,7 @@ ${schemaDesc}
 
 BIBLE DE FORMAT (regles de fond pour chaque champ):
 ${bibleInstructions}
+${targetKey === "i" ? INITIATIVE_PLANNING_SOURCE_CONTRACT : ""}
 
 Pilier ${targetKey.toUpperCase()} actuel (${filledFields.length}/${allSchemaKeys.length} champs remplis):
 ${JSON.stringify(currentContent, null, 2)}
@@ -644,7 +658,7 @@ export async function generateBatch(
   // un budget explicite, et porte l'identifiant de chaque source pour que ce
   // qui en est tiré reste vérifiable en aval.
   const sourceCtx = await loadBrandSourceContext(strategyId, {
-    query: targets.join(" "),
+    query: targets.map(key => SOURCE_QUERIES[key.toLowerCase()] ?? "documentation actuelle de la marque").join(" "),
     // Mission ASYNCHRONE : ici, payer une passe d'indexation est acceptable —
     // c'est le seul endroit qui rattrape un document deposé jamais indexé.
     ensureIndexed: true,

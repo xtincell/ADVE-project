@@ -1,3 +1,37 @@
+## 527 — projections sourcées et cadres, candidat non reçu (2 novembre 2026)
+
+Chaîne opérateur : documentation + inputs parties prenantes → ADVE qualifié →
+RTIS dérivé. Richesse documentaire doit garantir la qualification complète du
+socle puis sa dérivation complète, à recevoir sur toute la chaîne. Consultation
+documentaire RTIS = alignement/traçabilité ; nouveauté structurante → proposition
+ADVE gouvernée puis cascade, jamais un second socle I/S. Désiderata attribués avec
+auteur/date/périmètre/statut, distincts des faits et décisions adoptées.
+
+Branche `fix/strategy-source-completion527`, base 526 reçue. Champs I optionnels
+budgetRange/budgetPeriod/campaignCanonType/cadence conservés ; S reprend les KPI E
+avec cible/fréquence, North Star unique explicitement nommé et équipe A déclarée,
+sans owners inventés. Famille, cadence, horizon et période monétaire sont distincts ;
+les bornes ne deviennent pas un midpoint, pas d’annualisation ou de somme scalaire
+non comparable. Cadres depuis S frais/IDs exacts, conseil nullable sans tier/part
+de template ni écrasement d’un budget adopté/live ; garde créative avant effets.
+
+[ADR-0229 Proposed](docs/governance/adr/0229-source-qualified-strategy-and-campaign-projections.md) ;
+Réception locale527 : 5022 unitaires/480fichiers verts ; PostgreSQL526/32 puis39/1 dont un nouveau cas de bornes/cadence/période. Typage, deux lints sans erreur (24avertissements préexistants), cycles et build reçus. Stress compilé :276pages reçues,5non reçues,0échec ; trois requêtes en lecture,sept forges/transitions,0finding. Les passes HTTP sautée/interrompue sont conservées hors réception. USER réel sur copie privée : six cibles KPI, NorthStar et trois profils A→S, autres piliers et exécution/dates conservés, mêmes références dans roadmap/Oracle ; HTML200, pas de réception native. P23 source527-gauntlet-received.json et source527-http-received.json. CI/image/runtime527 et complétude ADVE/RTIS/MVP restent ouverts. Version bumpée par le parent vers 527,
+main distant 526 vérifié avant cette préparation ; aucune version changée ici.
+Note client 527 préparée pour livraison, pas preuve d’une capacité en production.
+
+526 reçue : source `582de907849cc5659231b6a867060e048799a962`, digest
+`9ae79420818361e0dfc175c872c85f1723e5b8ad6b2f6f23e20df60cda01ab4e` ; S réel 45 %,
+scénarios 3/5/12 et préférences non armées (`spawt526-s-received.json`,
+`spawt526-native-received.json`). Ce reçu ne reçoit pas S entière ou le MVP.
+Avant proposition SPAWT : relire éditions courantes et inputs attribués, qualifier
+les nouveautés dans ADVE par les writers existants puis dériver les annotations I ;
+le GTM archivé de juillet n’est pas le plan actuel.
+Ponctuel, calendrier/owners, catégories et devis gardent leurs réceptions propres.
+Le pont S/campagnes → La Barre n’est pas reçu : son brand-context lit encore ADVE.
+Prévoir une projection sourcée et gouvernée sur les rails existants, pas un dump S
+dans le contexte marque ou une base supplémentaire.
+
 ## 526 — candidat préférences/scénarios, réception finale ouverte (2 novembre 2026)
 
 Branche `fix/strategy-scenarios526`, base `a2f38e1c9`. I porte FAVORITE / NEUTRAL /

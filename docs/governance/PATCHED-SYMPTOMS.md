@@ -28,6 +28,32 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 527 — défauts visés, aucun correctif reçu (2026-11-02)
+
+La 526 réelle laisse S à 45 % : objectifs E et équipe A déclarés n’y figurent pas
+encore, cadence/famille des initiatives restent peu qualifiées. Le candidat
+projette les sources existantes ; il retire midpoint, addition de périodes et
+multiplicateurs de cadrage qui altéraient les coûts, ainsi que le filtrage canon
+par selected=true distinct du scénario S. Hypothèse : perte d’unités/provenance et
+confusion entre horizon, récurrence et décision d’exécution dans les projections.
+
+Premiers refus conservés ; 58 tests ciblés / 7 fichiers reçus ensuite, gauntlet
+complet en cours. UI et production 527 non reçues. Ces changements
+restent candidats, sans réception fonctionnelle ou de livraison globale. Chaîne
+SPAWT à recevoir : pièces/inputs attribués → ADVE qualifié → RTIS dérivé, pas
+injection directe dans I/S pour contourner le socle ou recycler un GTM archivé.
+Reprise des contrôles, sans vert final annoncé : première passe unitaire
+5 016 verts / 2 refus ; version transitoire pendant bump et comparaison structurelle
+Buffer de 5 Mio. Le profil synthétique de 162 437 099 octets est effectivement
+chiffré/scellé/relu en 5 619 ms. Correctif de test préparé : `Buffer.equals` sur
+les mêmes octets, taille/hash et budget 30 s inchangés ; reprise isolée encore
+ouverte. Hypothèse de cause du timeout : coût du comparateur structurel, pas
+affirmation de panne du stockage. Premier PostgreSQL 525/526, libellé legacy
+rectifié en « Campagne à qualifier », classe absente toujours vérifiée.
+
+[Plans et déclencheurs](RESIDUAL-DEBT.md) ; calendrier, ponctuel, catégories et
+devis restent à recevoir, aucun S entier ou MVP accepté.
+
 ### 526 — réparations au niveau candidat, livraison non reçue (2026-11-02)
 
 S dépendait d’une présélection I, laissant des scénarios vides malgré un catalogue
@@ -202,6 +228,10 @@ original dupliqué ; `alias-canonique-received.json` ferme ce seul repère.
 Preuves P23 `production520-{received,data-preserved}.json` et NEW
 `catalyse-spawt-app-calculations-received.json`, `catalyse-word-*-received.json`.
 [Finalisation et déclencheurs](RESIDUAL-DEBT.md), aucun chantier macro clôturé.
+
+Réception du comparateur527 :6tests verts, cas162437099octets en6322ms ;
+Buffer.equals conserve égalité exacte, taille/hash et seuil30s. La source
+du timeout était le parcours structurel du Buffer, pas le stockage à relâcher.
 
 ## Clôture technique 506/507 — 2026-10-20
 

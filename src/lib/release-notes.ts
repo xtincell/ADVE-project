@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.527", date: "2026-11-02", headline: "Un plan qui conserve les précisions de vos sources",
+    highlights: [
+      { emoji: "📋", title: "Retrouver vos objectifs et votre équipe", body: "Le plan reprend les objectifs dont la cible et la fréquence sont renseignées, ainsi que les membres et responsabilités déjà déclarés. Un objectif principal ambigu ou un responsable manquant reste à préciser." },
+      { emoji: "📅", title: "Lire les rythmes et les budgets séparément", body: "Les familles de campagne et les cadences disponibles accompagnent les actions. Les fourchettes gardent leurs bornes ; coûts ponctuels et coûts par période restent séparés. Une estimation conseillée ne remplace pas un budget déjà adopté." },
+    ],
+  },
+  {
     version: "6.27.526", date: "2026-11-02", headline: "Vos préférences orientent trois scénarios de stratégie",
     highlights: [
       { emoji: "⭐", title: "Favori, neutre ou rejeté", body: "Exprimez vos préférences dans le catalogue. Un favori reste une préférence ; une action rejetée sort des propositions jusqu’à sa réintégration. Ce choix ne programme et ne publie rien." },

@@ -13,8 +13,10 @@ import {
   computeRoadmapRoutes,
   routeInitiativeSet,
   aggregateInitiativeSet,
+  initiativeBudgetLabel,
   type RouteKey,
 } from "@/lib/strategy/roadmap-routes";
+import { canonTypeForInitiative } from "@/server/services/campaign-canon/plan";
 
 // Re-export for backward compatibility (authoritative server compute).
 export { computeRoadmapRoutes };
@@ -38,18 +40,54 @@ type Tf = (typeof INITIATIVE_TIMEFRAMES)[number];
 const TF_PHASE_LABEL: Record<Tf, string> = { SPRINT_90: "Sprint 90 jours", PHASE_1: "Phase 1", PHASE_2: "Phase 2", LONG_TERM: "Long terme" };
 const PILLAR_LABEL: Record<string, string> = { A: "Authenticité", D: "Distinction", V: "Valeur", E: "Engagement" };
 
-function generateStrategy(pillars: Record<string, Record<string, unknown> | null>, routeKey: RouteKey): Record<string, unknown> {
+/** Source targets are goals, never measurements. Do not guess a cadence or
+ * choose an arbitrary KPI as the North Star when the source does not name it. */
+function sourceFrequency(value: unknown): "DAILY" | "WEEKLY" | "MONTHLY" | "QUARTERLY" | undefined {
+  if (typeof value !== "string") return undefined;
+  const key = value.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const frequencies: Record<string, "DAILY" | "WEEKLY" | "MONTHLY" | "QUARTERLY"> = {
+    DAILY: "DAILY", QUOTIDIEN: "DAILY", QUOTIDIENNE: "DAILY", WEEKLY: "WEEKLY", HEBDOMADAIRE: "WEEKLY", HEBDO: "WEEKLY",
+    MONTHLY: "MONTHLY", MENSUEL: "MONTHLY", MENSUELLE: "MONTHLY", QUARTERLY: "QUARTERLY", TRIMESTRIEL: "QUARTERLY", TRIMESTRIELLE: "QUARTERLY",
+  };
+  return frequencies[key];
+}
+
+export function generateStrategy(pillars: Record<string, Record<string, unknown> | null>, routeKey: RouteKey): Record<string, unknown> {
   const matrix = Array.isArray(pillars.r?.probabilityImpactMatrix) ? pillars.r!.probabilityImpactMatrix as Array<Record<string, unknown>> : [];
   const selected = routeInitiativeSet(routeKey, collectNormalizedInitiatives(pillars.i) as unknown as Array<Record<string, unknown>>, { riskMatrix: matrix }) as unknown as ReturnType<typeof collectNormalizedInitiatives>;
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const identity = (id: string) => ({ sourceRef: id, ...(uuid.test(id) ? { sourceInitiativeId: id } : {}) });
   const aggregate = (actions: typeof selected) => aggregateInitiativeSet(actions as unknown as Array<Record<string, unknown>>, []);
   const selectedBudget = aggregate(selected);
-  const roadmap = [...INITIATIVE_TIMEFRAMES, undefined].flatMap(tf => {
-    const actions = selected.filter(a => a.timeframe === tf);
+  const rows = (value: unknown): Array<Record<string, unknown>> => Array.isArray(value)
+    ? value.filter((row): row is Record<string, unknown> => !!row && typeof row === "object" && !Array.isArray(row)) : [];
+  const text = (value: unknown) => typeof value === "string" && value.trim() ? value : undefined;
+  const kpiDashboard = rows(pillars.e?.kpis).flatMap((kpi) => {
+    const name = text(kpi.name), target = text(kpi.target) ?? (typeof kpi.target === "number" && Number.isFinite(kpi.target) ? String(kpi.target) : undefined);
+    const frequency = sourceFrequency(kpi.frequency);
+    return name && target && frequency ? [{ name, target, frequency, pillar: "E" as const }] : [];
+  });
+  const northStars = kpiDashboard.filter(kpi => /\bnorth[\s-]*star\b|\betoile polaire\b/i.test(kpi.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "")));
+  // Multiple explicit candidates need a decision; array ordering is not one.
+  const northStar = northStars.length === 1 ? northStars[0] : undefined;
+  const teamStructure = rows(pillars.a?.equipeDirigeante).flatMap(member => {
+    const name = text(member.nom), title = text(member.role), responsibility = text(member.responsabilites) ?? text(member.bio);
+    return name && title && responsibility ? [{ name, title, responsibility }] : [];
+  });
+  const campaignGroups = new Map<string, typeof selected>();
+  for (const action of selected) {
+    const key = [canonTypeForInitiative(action) ?? "UNASSIGNED", action.cadence ?? "", action.budgetPeriod ?? ""].join(":");
+    const group = campaignGroups.get(key) ?? []; group.push(action); campaignGroups.set(key, group);
+  }
+  const campaignLabels: Record<string, string> = { GTM_90: "Lancement / traction 90 jours", ANNUAL: "Programme annuel", ALWAYS_ON: "Boucle permanente", PUNCTUAL: "Activation ponctuelle" };
+  const roadmap = [...campaignGroups.values()].map(actions => {
     const amounts = aggregate(actions);
-    return actions.length ? [{ phase: tf ? TF_PHASE_LABEL[tf] : "Échéance à préciser", objectif: actions.map(a => a.objectif).filter(Boolean).join(" ; ").slice(0, 200),
-      actions: actions.map(a => a.action), ...(amounts.totalBudget !== undefined ? { budget: amounts.totalBudget } : {}), budgetSummary: amounts.budgetSummary }] : [];
+    const first = actions[0]!, canonType = canonTypeForInitiative(first);
+    return { phase: canonType ? campaignLabels[canonType] : "Campagne à qualifier", ...(canonType ? { canonType } : {}),
+      ...(first.cadence ? { cadence: first.cadence } : {}),
+      objectif: actions.map(a => a.objectif).filter(Boolean).join(" ; ").slice(0, 200),
+      actions: actions.map(a => a.action), actionRefs: actions.map(a => a.id),
+      ...(amounts.totalBudget !== undefined ? { budget: amounts.totalBudget } : {}), budgetSummary: amounts.budgetSummary };
   });
   const axesStrategiques = [...new Set(selected.map(a => a.pilierImpact).filter(Boolean))].map(key => ({
     axe: `Activer ${PILLAR_LABEL[key!] ?? key}`, pillarsLinked: [key, "S"],
@@ -92,8 +130,10 @@ function generateStrategy(pillars: Record<string, Record<string, unknown> | null
     sprint90Days: selected.filter(a => a.timeframe === "SPRINT_90").map((a, index) => ({ ...identity(a.id), action: a.action,
       ...(a.objectif ? { kpi: a.objectif } : {}), priority: index + 1, ...(a.devotionImpact ? { devotionImpact: a.devotionImpact } : {}) })),
     fenetreOverton, axesStrategiques, facteursClesSucces, ...(selectedBudget.totalBudget !== undefined ? { globalBudget: selectedBudget.totalBudget } : {}), budgetByDevotion,
-    syntheseExecutive: `${selected.length} action(s) proposée(s) pour ce scénario depuis le catalogue. Montants chiffrés : ${selectedBudget.budgetSummary.knownSubtotal}, dont ${selectedBudget.budgetSummary.estimatedCount} estimation(s). ${selectedBudget.budgetSummary.unknownCount} budget(s) et ${selectedBudget.budgetSummary.unassignedTimeframeCount} échéance(s) à préciser. Ces montants ne constituent pas une dépense mesurée.`,
-    kpiDashboard: [], devotionFunnel: [],
+    syntheseExecutive: `${selected.length} action(s) proposée(s) pour ce scénario depuis le catalogue. ${initiativeBudgetLabel(selectedBudget.totalBudget, selectedBudget.budgetSummary)}. ${selectedBudget.budgetSummary.unassignedTimeframeCount} horizon(s) à préciser. Ces montants ne constituent pas une dépense mesurée.`,
+    kpiDashboard, ...(northStar ? { northStarKPI: { name: northStar.name, target: northStar.target, frequency: northStar.frequency } } : {}),
+    ...(teamStructure.length ? { teamStructure } : {}), devotionFunnel: [],
+    recommandationsPrioritaires: selected.map((a, index) => ({ recommendation: a.action, source: "I", priority: index + 1 })),
   };
 }
 

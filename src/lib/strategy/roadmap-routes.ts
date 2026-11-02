@@ -1,7 +1,7 @@
 /** Deterministic scenario proposals from the existing catalogue. No LLM,
  * performance forecast or execution authorization. ADR-0228. */
 
-import { initiativePreference, ROADMAP_ROUTE_KEYS, INITIATIVE_TIMEFRAMES, type InitiativeBudgetSummary } from "@/lib/types/pillar-schemas";
+import { initiativePreference, ROADMAP_ROUTE_KEYS, INITIATIVE_TIMEFRAMES, InitiativeBudgetRangeSchema, INITIATIVE_BUDGET_PERIODS, type InitiativeBudgetSummary } from "@/lib/types/pillar-schemas";
 
 export type RouteKey = (typeof ROADMAP_ROUTE_KEYS)[number];
 
@@ -131,25 +131,46 @@ export function aggregateInitiativeSet(
     declaredCount: 0, estimatedCount: 0, unknownCount: 0, unassignedTimeframeCount: 0 };
   const budgetByPhase: Record<string, number> = {};
   const unknownPhases = new Set<string>();
+  const groups = new Map<string, NonNullable<InitiativeBudgetSummary["amountGroups"]>[number]>();
+  const phasedPeriods = new Map<string, Set<string>>();
   for (const a of set) {
     const budget = budgetOf(a);
+    const parsedRange = InitiativeBudgetRangeSchema.safeParse(a.budgetRange);
+    const range = parsedRange.success ? parsedRange.data : undefined;
+    const period = (INITIATIVE_BUDGET_PERIODS as readonly unknown[]).includes(a.budgetPeriod)
+      ? a.budgetPeriod as (typeof INITIATIVE_BUDGET_PERIODS)[number] : "UNSPECIFIED";
+    const group = groups.get(period) ?? { period, min: 0, max: 0, rangeCount: 0, knownCount: 0, unknownCount: 0 };
+    groups.set(period, group);
+    if (range || budget !== undefined) {
+      group.min += range?.min ?? budget!; group.max += range?.max ?? budget!; group.knownCount++;
+      if (range) group.rangeCount++;
+    } else group.unknownCount++;
     const tf = typeof a.timeframe === "string" && (INITIATIVE_TIMEFRAMES as readonly string[]).includes(a.timeframe) ? a.timeframe : undefined;
+    if (tf) { const units = phasedPeriods.get(tf) ?? new Set<string>(); units.add(period); phasedPeriods.set(tf, units); }
     if (!tf) budgetSummary.unassignedTimeframeCount++;
+    if (range) { if (tf) unknownPhases.add(tf); continue; }
     if (budget === undefined) {
       budgetSummary.unknownCount++;
       if (tf) unknownPhases.add(tf);
       continue;
     }
-    budgetSummary.knownSubtotal += budget;
+    budgetSummary.knownSubtotal! += budget;
     if (a.budgetBasis === "QUALITATIVE_ESTIMATE") {
-      budgetSummary.estimatedCount++; budgetSummary.estimatedSubtotal += budget;
+      budgetSummary.estimatedCount++; budgetSummary.estimatedSubtotal! += budget;
     } else {
-      budgetSummary.declaredCount++; budgetSummary.declaredSubtotal += budget;
+      budgetSummary.declaredCount++; budgetSummary.declaredSubtotal! += budget;
     }
     if (tf) budgetByPhase[tf] = (budgetByPhase[tf] ?? 0) + budget;
   }
   for (const phase of unknownPhases) delete budgetByPhase[phase];
-  const totalBudget = budgetSummary.unknownCount === 0 ? budgetSummary.knownSubtotal : undefined;
+  for (const [phase, units] of phasedPeriods) if (units.size > 1) delete budgetByPhase[phase];
+  const hasRange = [...groups.values()].some(g => g.rangeCount > 0);
+  if (hasRange || [...groups.keys()].some(p => p !== "UNSPECIFIED")) budgetSummary.amountGroups = [...groups.values()].sort((a, b) => a.period.localeCompare(b.period));
+  if (groups.size > 1) { budgetSummary.knownSubtotal = null; budgetSummary.declaredSubtotal = null; budgetSummary.estimatedSubtotal = null; }
+  // Recurring unit costs need an explicit number of periods before they can
+  // become a plan envelope. Never silently multiply a monthly cost by twelve.
+  const isEnvelope = [...groups.keys()].every(p => p === "UNSPECIFIED" || p === "ONE_OFF");
+  const totalBudget = budgetSummary.unknownCount === 0 && !hasRange && groups.size <= 1 && isEnvelope ? budgetSummary.knownSubtotal ?? undefined : undefined;
   const initiativeIds = set
     .map((a) => a.id)
     .filter((id): id is string => typeof id === "string");
@@ -169,6 +190,12 @@ export function aggregateInitiativeSet(
 /** Shared client wording for complete/partial amounts and qualitative estimates. */
 export function initiativeBudgetLabel(total: unknown, summary: unknown): string {
   const s = summary && typeof summary === "object" ? summary as Partial<InitiativeBudgetSummary> : undefined;
+  if (s?.amountGroups?.length) return s.amountGroups.map(g => {
+    const fmt = (n: number) => new Intl.NumberFormat("fr-FR").format(n);
+    const period = { ONE_OFF: "ponctuel", PER_OCCURRENCE: "par occurrence", MONTHLY: "par mois", QUARTERLY: "par trimestre", YEARLY: "par an", UNSPECIFIED: "période à préciser" }[g.period];
+    const amount = g.knownCount > 0 ? `${g.min === g.max ? fmt(g.min) : `${fmt(g.min)}–${fmt(g.max)}`} F${g.unknownCount ? " chiffrés" : ""}` : "";
+    return [amount, period, ...(g.unknownCount ? [`${g.unknownCount} budget(s) à préciser`] : [])].filter(Boolean).join(" · ");
+  }).join(" ; ");
   const amount = typeof total === "number" && Number.isFinite(total) ? total
     : typeof s?.knownSubtotal === "number" && (s.declaredCount ?? 0) + (s.estimatedCount ?? 0) > 0 ? s.knownSubtotal : undefined;
   const parts = amount !== undefined ? [`${new Intl.NumberFormat("fr-FR").format(amount)} F${(s?.unknownCount ?? 0) > 0 ? " chiffrés" : ""}`]
@@ -228,6 +255,8 @@ export function computeRoadmapRoutes(input: {
       }));
       route.initiatives = set.map(a => ({ id: a.id, action: a.action, objectif: a.objectif, channel: a.channel,
         preference: initiativePreference(a), ...(typeof a.budget === "number" ? { budget: a.budget } : {}),
+        ...(a.budgetRange ? { budgetRange: a.budgetRange } : {}), ...(a.budgetPeriod ? { budgetPeriod: a.budgetPeriod } : {}),
+        ...(a.campaignCanonType ? { campaignCanonType: a.campaignCanonType } : {}), ...(a.cadence ? { cadence: a.cadence } : {}),
         budgetBasis: a.budgetBasis, ...(a.timeframe ? { timeframe: a.timeframe } : {}),
         mitigatesRiskIds: Array.isArray(a.mitigatesRiskIds) ? a.mitigatesRiskIds : [],
       }));

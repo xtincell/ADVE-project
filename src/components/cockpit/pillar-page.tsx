@@ -20,7 +20,7 @@ import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import type { PillarKey as PillarStorageKey } from "@/lib/types/advertis-vector";
 import type { PillarKey } from "@/domain/pillars";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
-import { computeRoadmapRoutes, initiativeBudgetLabel } from "@/lib/strategy/roadmap-routes";
+import { computeRoadmapRoutes, initiativeBudgetLabel, aggregateInitiativeSet } from "@/lib/strategy/roadmap-routes";
 import {
   AutoField, FocusModal, isInlineField, InlineBadge, getFieldLabel,
 } from "./field-renderers";
@@ -789,7 +789,7 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
                 Trois sélections proposées depuis votre catalogue, vos préférences et vos risques. Retenir un scénario compose votre plan ; les budgets estimés restent à confirmer.
               </p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid items-start gap-3 sm:grid-cols-3">
               {routes.map((r) => {
                 const key = String(r.key ?? "");
                 const isSelected = key === selectedKey;
@@ -823,7 +823,7 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
                         <p className="font-semibold text-foreground">{String(a.action)}</p>
                         {a.objectif ? <p className="mt-1">{String(a.objectif)}</p> : null}
                         <p className="mt-1">{String(a.channel ?? "Canal à préciser")} · {a.timeframe === "SPRINT_90" ? "Sprint 90 jours" : a.timeframe === "PHASE_1" ? "Phase 1" : a.timeframe === "PHASE_2" ? "Phase 2" : a.timeframe === "LONG_TERM" ? "Long terme" : "Échéance à préciser"}</p>
-                        <p>{typeof a.budget === "number" ? `${a.budgetBasis === "QUALITATIVE_ESTIMATE" ? "Estimation · " : "Montant déclaré · "}${new Intl.NumberFormat("fr-FR").format(a.budget)} FCFA` : "Budget à préciser"}</p>
+                        <p>{initiativeBudgetLabel(undefined, aggregateInitiativeSet([a], []).budgetSummary)}{a.budgetBasis === "QUALITATIVE_ESTIMATE" ? " · Estimation indicative" : ""}</p>
                         <p className="mt-1 text-foreground-muted">{reasons.find(x => x.initiativeId === a.id)?.reasons.join(" · ")}</p>
                       </li>)}</ol>
                     </details> : null}

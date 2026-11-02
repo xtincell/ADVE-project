@@ -755,7 +755,10 @@ export function mapTimelineGouvernance(strategy: any): TimelineGouvernanceSectio
   // ── Gouvernance : équipe campagnes → teamStructure déclarée (I/S) →
   // propriétaire seul. Plus d'équipe fictive (defaultTeamMembers).
   const owner = { name: strategy.user.name, email: strategy.user.email };
-  const declaredTeam = [...arr(iContent?.teamStructure), ...arr(sContent?.teamStructure), ...arr(getPillarContent(strategy, "a")?.equipeDirigeante)].map((t: any) => ({
+  const strategyTeam = [...arr(iContent?.teamStructure), ...arr(sContent?.teamStructure)];
+  // S already projects A's documented team. A is a fallback, not three more
+  // people to concatenate into the same Oracle roster.
+  const declaredTeam = (strategyTeam.length ? strategyTeam : arr(getPillarContent(strategy, "a")?.equipeDirigeante)).map((t: any) => ({
     name: pickStr(t, ["name", "nom"]), role: pickStr(t, ["title", "role", "responsibility", "responsabilite"]), email: null as string | null,
   })).filter((t: any) => t.name);
   const finalTeam = uniqueTeam.length > 0
@@ -1420,6 +1423,9 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
     budget: typeof r.budget === "number" ? r.budget : null,
     budgetSummary: InitiativeBudgetSummarySchema.safeParse(r.budgetSummary).success ? r.budgetSummary : undefined,
     duree: str(r.duree ?? r.duration),
+    ...(typeof r.canonType === "string" ? { canonType: r.canonType } : {}),
+    ...(typeof r.cadence === "string" ? { cadence: r.cadence } : {}),
+    ...(Array.isArray(r.actionRefs) ? { actionRefs: r.actionRefs.filter((id: unknown) => typeof id === "string") } : {}),
   })).filter((r: any) => r.phase || r.objectif);
   if (roadmap.length === 0) {
     roadmap = arr(iContent?.annualCalendar).map((e: any) => ({

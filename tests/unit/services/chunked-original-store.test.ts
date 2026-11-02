@@ -40,7 +40,9 @@ it("resumes and streams the corpus maximum original without assembling a whole-f
   const firstCipher = await readFile(join(directory, manifest.chunks[0]!.objectKey + ".enc"));
   for (let i = 5; i < manifest.chunks.length; i++) await retainOriginalChunk(store, plan(manifest.chunks[i]!), Buffer.alloc(manifest.chunks[i]!.byteLength, i));
   await retainOriginalChunk(store, plan(manifest.chunks[0]!), Buffer.alloc(ORIGINAL_CHUNK_BYTES));
-  expect(await readFile(join(directory, manifest.chunks[0]!.objectKey + ".enc"))).toEqual(firstCipher);
+  // Compare exact bytes natively. Structural equality enumerates millions of
+  // Buffer properties and can exhaust the test budget before streaming begins.
+  expect((await readFile(join(directory, manifest.chunks[0]!.objectKey + ".enc"))).equals(firstCipher)).toBe(true);
   await sealOriginalChunks(store, rootKey, manifest);
   let received = 0, largestYield = 0; const recovered = createHash("sha256");
   for await (const bytes of readOriginalChunks(store, rootKey, manifest)) {

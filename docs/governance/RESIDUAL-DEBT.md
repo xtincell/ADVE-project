@@ -1,3 +1,86 @@
+## 527 — complétion depuis les sources, candidat sans réception (2026-11-02)
+
+La réception 526 est distincte : source `582de907849cc5659231b6a867060e048799a962`,
+image/runtime reçus ; SPAWT S à 45 %, scénarios réels 3/5/12 et préférences non
+armées. Elle laisse ouverts KPI/équipe/campagnes et tout S ; elle ne reçoit pas 527.
+
+**Contrat de complétude à recevoir** : documentation + inputs parties prenantes
+→ ADVE qualifié → RTIS dérivé. Une documentation riche doit garantir ADVE complet,
+puis ADVE complet doit garantir RTIS complet ; pas de preuve par compte de champs
+ou de cartes. **Fermer** les trous d’absorption, de qualification et de mapping
+avant de contourner un champ ADVE absent : proposition/écriture gouvernée du socle,
+puis cascade et comparaison des lecteurs sur toute la chaîne. Les pièces consultées
+en RTIS contrôlent alignement et traçabilité, sans source de vérité concurrente.
+Désiderata attribués (auteur/date/périmètre/statut), faits/mesures et décisions
+adoptées restent distincts ; aucun nouveau modèle stakeholder requis. Responsable
+Core/irrigation existant ; effort audit et recette de bout en bout ; **déclencheur**
+avant réception de complétude ADVE/RTIS ou proposition stratégique réelle.
+
+**Candidat 527** : projection E.kpis cible/fréquence, North Star unique nommé,
+équipe A déclarée et recommandations du scénario I. Famille/cadence/période et
+bornes de coût conservent leurs sources, sans moyenne ou annualisation implicite.
+Cadres sur S frais/IDs exacts, recommandé nullable sans coefficient de template/
+tier, budget adopté/live conservé ; garde créative avant matérialisation.
+Premiers ciblés reçus : 58 tests / 7 fichiers, gauntlet complet en cours
+(`source527-second-tests.log`). Les premiers refus sont conservés ; aucun contrôle
+final, API/UI, CI ou production de ces changements reçu. [ADR-0229 Proposed](adr/0229-source-qualified-strategy-and-campaign-projections.md).
+
+**Contrôles en reprise, pas verts finaux** : 5 016 unitaires verts / 2 refus à la
+première passe (version intermédiaire note 527 / APP_VERSION 526, comparateur
+structurel Buffer 5 Mio). Premier PostgreSQL 525/526, libellé legacy remplacé par
+« Campagne à qualifier » avec absence de classification conservée. Profil
+synthétique de 162 437 099 octets chiffré/scellé/relu en 5 619 ms ; `Buffer.equals`
+remplace le seul comparateur, mêmes octets/taille/hash et limite 30 s. **Fermer**
+par la recette isolée puis contrôle final sur source cohérente ; ne pas augmenter
+les délais ni déclarer le stockage reçu globalement à partir de ce profil.
+Responsable lot/tests existants ; effort reprise bornée ; **déclencheur immédiat**
+avant livraison. Les refus initiaux restent conservés.
+
+Une clarification de périmètre de source privée est reçue par ingestion.updateSource,
+rawContent/statut conservés et aucune écriture ADVE. P23
+`spawt527-roadmap-scope-received.json` ne reçoit ni ADVE complet ni RTIS ; la suite
+reste qualification du socle, cascade et lecture, sans contenu privé dans ces docs.
+
+**Fermer la capacité technique** : recevoir sources KPI/équipe et ambiguïté North
+Star, conservation des annotations I dans les routes/projections, fourchettes et
+unités sans faux scalaire, S frais/IDs exacts vers cadres. Vérifier budget adopté/
+live et programmation antérieure intacts ; classification inconnue et ponctuel
+sans cadre cohérent refusés avant toute écriture. Dates seulement explicites ou
+proposées comme telles, jamais présentées comme calendrier reçu ; aucun owner
+inventé. Recevoir tests, APIs, lecteurs natifs et refus sous rôle réel, CI/image/
+runtime et conservation. Responsable lot 527 existant ; effort correction et
+recette bornées ; **déclencheur immédiat** sur le candidat avant livraison.
+
+**Fermer l’usage SPAWT** : reprendre les éditions documentaires courantes avant
+de proposer le plan, sans recycler le GTM archivé de juillet. Qualifier les informations structurantes de famille,
+cadence, période et bornes dans ADVE via propositions/writers existants, puis
+recevoir leur dérivation I et leurs versions ; ne pas injecter les documents dans
+I comme socle parallèle. Montrer les inconnues et les lacunes à traiter.
+Le générateur GTM_90/ANNUAL/ALWAYS_ON ne reçoit pas le flux ponctuel : rattacher au
+cadre PUNCTUAL explicite existant et cohérent, sinon refuser avant effet. Réception
+des catégories de coûts et calendrier réel encore ouverte. Responsable Core /
+lot existant ; effort qualification documentaire puis recette ; **déclencheur**
+avant proposition SPAWT et avant clôture métier de S. Devis importés non livrés,
+pas de nouveau moteur, pas de Whole S, Oracle entier ou MVP reçu.
+
+**Pont S/campagnes → La Barre — non reçu** : le brand-context courant lit ADVE,
+pas la roadmap S. **Fermer** par une projection minimale du scénario/source et des
+références de campagnes dans le circuit projet/campagne existant, avec périmètre,
+versions, droits et inconnues conservés ; ne pas exposer tout S au contexte marque
+ni dupliquer une base. Recevoir lecture/propagation et changement de scénario
+sans écriture hors périmètre. Responsable circuit La Barre/La Fusée existant ;
+effort audit du contrat puis raccord borné ; **déclencheur** après qualification
+I/roadmap, avant annonce de continuité du cycle. Aucun résultat de ce pont reçu.
+
+**Reçu localement, pas clôturé** : Réception locale527 : 5022 unitaires/480fichiers verts ; PostgreSQL526/32 puis39/1 dont un nouveau cas de bornes/cadence/période. Typage, deux lints sans erreur (24avertissements préexistants), cycles et build reçus. Stress compilé :276pages reçues,5non reçues,0échec ; trois requêtes en lecture,sept forges/transitions,0finding. Les passes HTTP sautée/interrompue sont conservées hors réception. USER réel sur copie privée : six cibles KPI, NorthStar et trois profils A→S, autres piliers et exécution/dates conservés, mêmes références dans roadmap/Oracle ; HTML200, pas de réception native. P23 source527-gauntlet-received.json et source527-http-received.json. CI/image/runtime527 et complétude ADVE/RTIS/MVP restent ouverts.
+
+La vérification structurelle du snapshot réel relève A94%,V89%,E96% et S45%
+(source526), D/R/T/I100% structurels. Ces nombres ne prouvent pas les faits.
+Reprendre valeurs/profils A, personaSegmentMap et paramètres économiques V,
+rites E depuis leurs sources qualifiées, sans profils ou budgets fabriqués.
+Le relevé privé `adve-rtis-upstream-contract527.json` relie les manques au contrat ;
+la couverture des dérivations restantes est un travail à recevoir, pas un constat enterré.
+
 ## 526 — anciens défauts S corrigés en candidat, réception finale restante (2026-11-02)
 
 Le candidat remplace la présélection I obligatoire par les préférences FAVORITE /

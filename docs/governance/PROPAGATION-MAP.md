@@ -9,6 +9,22 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Documentation/input → ADVE qualifié → RTIS dérivé — contrat 527 à recevoir (2026-11-02)
+
+Documentation riche doit garantir ADVE complet ; ADVE complet doit garantir RTIS
+complet. Une information disponible dans les sources mais absente du socle est un
+trou d’absorption/qualification à corriger, pas un motif pour nourrir I/S par un
+second socle documentaire. Les pièces consultées pendant RTIS servent surtout
+alignement, justification et traçabilité. Nouveauté structurante ou desideratum →
+proposition/écriture ADVE gouvernée → cascade. Auteur, date, périmètre et statut
+distinguent inputs des parties prenantes, faits/mesures et décisions adoptées ;
+pas de nouveau modèle stakeholder requis. Toute cette chaîne reste à recevoir,
+sans maturité déduite d’un nombre de champs ou de cartes.
+Le mapping A/E → S du candidat est conforme à ce circuit ; les données I SPAWT
+et le pont campagnes/roadmap → La Barre ne sont pas encore reçus pour 527.
+[ADR-0229 Proposed](adr/0229-source-qualified-strategy-and-campaign-projections.md),
+[reprise et réception](RESIDUAL-DEBT.md). Pas de Whole S ou MVP reçu.
+
 ### Préférence I → scénarios S → décision opérateur — candidat 526 (2026-11-02)
 
 [ADR-0228](adr/0228-initiative-preferences-and-strategy-scenarios.md) amende le contrat
