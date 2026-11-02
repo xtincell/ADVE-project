@@ -40,6 +40,7 @@ export async function receiveCustomerMessage(token:string,input:{body:string;req
 }
 export async function sendSalesWebMessage(dealId:string,actor:SalesActor,input:{requestId:string;text:string}) {
   const deal=await db.deal.findUniqueOrThrow({where:{id:dealId}});
+  if(deal.sellerStrategyId&&!actor.id.startsWith('mcp:')){const {assertHumanSalesActive}=await import('./fleet');await assertHumanSalesActive(deal.sellerStrategyId,actor.id);}
   const state=salesStateSchema.parse(deal.commercial??{});const mandate=state.mandate;
   if(!mandate||mandate.sellerId!==actor.id||!mandate.channels.includes('WEB')||new Date(mandate.expiresAt)<=new Date()||state.contactStopped||state.node==='STOPPED'||!deal.customerAccessTokenHash)throw new TRPCError({code:'FORBIDDEN',message:'Conversation web hors mandat.'});
   const fingerprint=hash(JSON.stringify(input));

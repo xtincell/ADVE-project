@@ -6,6 +6,8 @@ vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() }
 import { db } from "@/lib/db";
 import * as fleet from "@/server/services/crm-engine/fleet";
 import { decryptTokenPayload } from "@/server/services/oauth-integrations";
+import { applySalesStep } from "@/server/services/crm-engine";
+import { POST as operationsPost } from "@/app/api/mcp/operations/route";
 
 const actor: fleet.FleetActor = { id: "", admin: true, operatorId: null };
 let brandId: string, secondBrandId: string, ai: Awaited<ReturnType<typeof fleet.saveSalesRepresentative>>;
@@ -23,8 +25,10 @@ afterAll(async () => {
   await db.salesRun.deleteMany({ where: { representativeId: { in: profiles } } });
   await db.salesRepresentative.deleteMany({ where: { id: { in: profiles } } });
   await db.conversation.deleteMany({ where: { id: { in: rows.flatMap(row => row.conversationId ? [row.conversationId] : []) } } });
+  await db.mcpApiCall.deleteMany({ where: { apiKeyId: { in: rows.flatMap(row => row.mcpKeyId ? [row.mcpKeyId] : []) } } });
   await db.mcpApiKey.deleteMany({ where: { id: { in: rows.flatMap(row => row.mcpKeyId ? [row.mcpKeyId] : []) } } });
   await db.crmMessage.deleteMany({ where: { salesDealId: { in: deals } } });
+  await db.cRMActivity.deleteMany({ where: { dealId: { in: deals } } });
   await db.deal.deleteMany({ where: { id: { in: deals } } });
   await db.crmContact.deleteMany({ where: { strategyId: { in: [brandId, secondBrandId] } } });
   await db.strategy.deleteMany({ where: { id: { in: [brandId, secondBrandId] } } });
@@ -122,6 +126,35 @@ describe("sales holders, dispatch receipts and incoming customer messages", () =
     await fleet.completeRun(profile.mcpKeyId!, run.id, run.leaseToken, result);
     expect((await db.salesRepresentative.findUniqueOrThrow({ where: { id: profile.id } })).dailyTokensReserved).toBe(profile.maxTokens);
     expect((await fleet.claimRun(profile.mcpKeyId!, randomUUID())).run).toBeNull();
+  });
+  it("requires a received post-payment buyer confirmation before an AI can attest delivery through HTTP MCP", async () => {
+    const profile = await createAI();
+    const row = await deal(brandId, profile.principalId!);
+    await db.deal.update({ where: { id: row.id }, data: { commercial: { node: "ACCEPTED", mandate: { ...mandate(profile.principalId!), deliveryOwnerId: profile.principalId! }, agreement: "Synthetic prior agreement." } } });
+    const earlier = await db.crmMessage.create({ data: { salesDealId: row.id, direction: "IN", channel: "WEB", status: "RECEIVED", body: "Prior agreement, not a post-payment delivery receipt.", createdAt: new Date(Date.now() - 60000) } });
+    const paid = await applySalesStep(row.id, { requestId: randomUUID(), expectedRevision: row.revision, channel: "WEB", command: { type: "PAYMENT", amount: 60000, currency: "XOF", evidence: "Independently recorded synthetic settlement." } }, { id: actor.id, admin: true });
+    await fleet.dispatchSalesRepresentative(actor, { id: profile.id, dealId: row.id, requestId: randomUUID(), instruction: "Verify actual buyer confirmation before recording any delivery." });
+    const claim = await fleet.claimRun(profile.mcpKeyId!, randomUUID());
+    const stored = await db.salesRepresentative.findUniqueOrThrow({ where: { id: profile.id } });
+    const secret = decryptTokenPayload<{ apiKey: string }>(stored.encryptedApiKey!).apiKey;
+    const invoke = async (customerMessageId?: string) => {
+      const response = await operationsPost(new Request("http://localhost/api/mcp/operations", { method: "POST", headers: {
+        "content-type": "application/json", "x-api-key": secret, "x-sales-run-id": claim.run!.id, "x-sales-run-lease": claim.run!.leaseToken,
+      }, body: JSON.stringify({ tool: "sales_decide", params: { strategyId: brandId, dealId: row.id, step: {
+        requestId: randomUUID(), expectedRevision: paid.revision, channel: "WEB", command: { type: "DELIVER", evidence: "Customer confirmation checked.", customerMessageId, nextAction: "Review the synthetic result.", nextDeadline: "2030-01-01T00:00:00.000Z" },
+      } } }) }));
+      expect(response.status).toBe(200);
+      return response.json();
+    };
+    expect(JSON.stringify(await invoke())).toContain("REFUSED");
+    expect(JSON.stringify(await invoke(earlier.id))).toContain("REFUSED");
+    const unchanged = await db.deal.findUniqueOrThrow({ where: { id: row.id } });
+    expect((unchanged.commercial as { node: string }).node).toBe("PAID");
+    expect(unchanged.revision).toBe(paid.revision);
+    const accepted = await db.crmMessage.create({ data: { salesDealId: row.id, direction: "IN", channel: "WEB", status: "RECEIVED", body: "I confirm that the synthetic delivery was received and accepted." } });
+    expect(JSON.stringify(await invoke(accepted.id))).toContain("DELIVERED");
+    expect((await db.deal.findUniqueOrThrow({ where: { id: row.id } })).revision).toBe(paid.revision + 1);
+    await fleet.completeRun(profile.mcpKeyId!, claim.run!.id, claim.run!.leaseToken, { status: "DONE", result: "Delivery independently confirmed after payment.", tokensUsed: 0 });
   });
   it("keeps human work on the same roster and manager conversation without model claims", async () => {
     const human = await fleet.saveSalesRepresentative(actor, { strategyId: brandId, name: "Named human", mode: "HUMAN", humanUserId: actor.id }); profiles.push(human.id);

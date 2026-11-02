@@ -40,7 +40,7 @@ export async function listSalesRepresentatives(actor: FleetActor, strategyId: st
 export async function salesRosterOptions(actor: FleetActor, strategyId: string) {
   const brand = await assertFleetBrand(actor, strategyId);
   const users = await db.user.findMany({ where: { OR: [{ id: brand.userId }, { id: actor.id }, ...(brand.operatorId ? [{ operatorId: brand.operatorId }] : [])] }, select: { id: true, name: true, email: true }, orderBy: { name: "asc" } });
-  return { users };
+  return { users, canManage: actor.admin || brand.userId === actor.id };
 }
 export async function saveSalesRepresentative(actor: FleetActor, raw: z.input<typeof representativeInput>) {
   const input = representativeInput.parse(raw);
@@ -209,4 +209,10 @@ export async function recordInboundSalesMessage(input: { dealId: string; channel
     const run = await db.salesRun.findUnique({ where: { requestId: `inbound:${message.id}` } });
     return { message, run };
   }
+}
+
+/** Pausing a named human prevents new sales effects while preserving legacy callers and receipts. */
+export async function assertHumanSalesActive(strategyId:string,userId:string){
+  const holder=await db.salesRepresentative.findFirst({where:{strategyId,humanUserId:userId,mode:"HUMAN"},select:{status:true}});
+  if(holder&&holder.status!=="ACTIVE")throw new TRPCError({code:"FORBIDDEN",message:"Ce vendeur humain est en pause. Réactiver son poste ou transmettre l’affaire."});
 }

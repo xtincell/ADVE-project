@@ -30,3 +30,5 @@ CREATE INDEX "SalesRun_representativeId_status_createdAt_idx" ON "SalesRun"("rep
 CREATE INDEX "SalesRun_dealId_idx" ON "SalesRun"("dealId");
 CREATE UNIQUE INDEX "SalesRun_claimRequestId_key" ON "SalesRun"("claimRequestId");
 CREATE UNIQUE INDEX "CrmMessage_salesDealId_providerRef_direction_key" ON "CrmMessage"("salesDealId", "providerRef", "direction");
+
+CREATE UNIQUE INDEX "SalesRepresentative_strategyId_humanUserId_key" ON "SalesRepresentative"("strategyId","humanUserId");

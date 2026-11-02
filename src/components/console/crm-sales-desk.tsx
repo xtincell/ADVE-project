@@ -48,7 +48,7 @@ export function CrmSalesDesk() {
   const catalogue = (pillar?.content as { produitsCatalogue?: { id?: string; nom: string; prix?: number; conditionsTarifaires?: string }[] } | undefined)?.produitsCatalogue ?? [];
   const [offerId, setOfferId] = useState("");
   const offer = catalogue.find(item => item.id === offerId);
-  const admin = session?.user.role === "ADMIN";
+  const admin = session?.user.role === "ADMIN" || !!people.data?.canManage;
 
   async function refresh() {
     await Promise.all([utils.crm.invalidate(), utils.strategy.list.invalidate()]);

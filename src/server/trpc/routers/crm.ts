@@ -201,7 +201,8 @@ export const crmRouter = createTRPCRouter({
           if (principal.role !== "ADMIN" && principal.operatorId !== deal.operatorId) throw new TRPCError({ code: "FORBIDDEN", message: "Titulaire hors de l’équipe." });
         }
       }
-      return crm.applySalesStep(dealId, salesStep, { id: ctx.session.user.id, admin: ctx.session.user.role === "ADMIN" });
+      const owner = await ctx.db.strategy.findUniqueOrThrow({ where: { id: deal.sellerStrategyId }, select: { userId: true } });
+      return crm.applySalesStep(dealId, salesStep, { id: ctx.session.user.id, admin: ctx.session.user.role === "ADMIN" || owner.userId === ctx.session.user.id });
     }
     if (deal.commercial && [data.value, data.contactEmail, data.contactName, data.companyName].some(value => value !== undefined)) {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Les conditions et le destinataire appartiennent au mandat approuvé." });

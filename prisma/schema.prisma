@@ -1302,7 +1302,7 @@ model CrmMessage {
   sentBy      String? // User.id opérateur
   campaignId  String? // NewsletterCampaign si envoi de masse
 
-  contact CrmContact? @relation(fields: [contactId], references: [id])
+  contact CrmContact? @relation(fields: [contactId], references: [id], onDelete: Restrict)
 
   createdAt DateTime @default(now())
 
@@ -7195,6 +7195,7 @@ model SalesRepresentative {
   runs SalesRun[]
   @@index([strategyId, status])
   @@index([operatorId])
+  @@unique([strategyId, humanUserId])
 }
 
 /// Bounded invocation receipt consumed by the existing Galahad sales role.
