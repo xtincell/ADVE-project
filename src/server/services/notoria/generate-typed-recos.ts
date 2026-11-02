@@ -27,10 +27,6 @@ import { parseRecommendationPayload, type RecommendationPayload } from "@/lib/ty
 type Blob = Record<string, unknown>;
 type Timeframe = (typeof INITIATIVE_TIMEFRAMES)[number];
 const HIGH_SEVERITY = 67;
-const TIMEFRAME_LABELS: Record<Timeframe, string> = {
-  SPRINT_90: "90 jours", PHASE_1: "première phase", PHASE_2: "deuxième phase", LONG_TERM: "long terme",
-};
-
 function coerceTimeframe(v: unknown): Timeframe {
   return (INITIATIVE_TIMEFRAMES as readonly string[]).includes(v as string) ? (v as Timeframe) : "PHASE_1";
 }
@@ -62,48 +58,34 @@ export function buildTypedRecommendations(pillars: Record<string, Blob | null | 
 
   // Rule 1 — promote RECOMMENDED initiatives into the roadmap.
   for (const init of initiatives) {
-    if (init.status === "RECOMMENDED" && typeof init.id === "string" && choiceProvenance[`initiatives.${init.id}.status`] !== "HUMAN") {
+    if (init.preference === "NEUTRAL" && init.status === "RECOMMENDED" && typeof init.id === "string" && choiceProvenance[`initiatives.${init.id}.status`] !== "HUMAN" && choiceProvenance[`initiatives.${init.id}.preference`] !== "HUMAN") {
       const timeframe = coerceTimeframe(init.timeframe);
       out.push({
         payload: { kind: "SELECT_INITIATIVE", initiativeId: init.id, timeframe },
         targetPillarKey: "i",
         targetField: "catalogueParCanal",
         operation: "MODIFY",
-        explain: `Proposer de retenir « ${init.action} » dans le plan (${TIMEFRAME_LABELS[timeframe]}${init.timeframe ? "" : " — échéance proposée, à valider"}).`,
+        explain: `Proposer « ${init.action} » comme favori du catalogue. La stratégie décidera de son inclusion et de son horizon.`,
         confidence: 0.7,
       });
     }
   }
 
   // FK set of risk ids mitigated by a SELECTED initiative.
-  const mitigatedBySelected = new Set<string>();
   const mitigatedByAny = new Set<string>();
-  const selectedIds = new Set(initiatives.filter(init => init.status === "SELECTED_FOR_ROADMAP").map(init => init.id));
   for (const init of rawInitiatives) {
     if (!init || typeof init !== "object") continue;
     const ids = Array.isArray(init.mitigatesRiskIds) ? (init.mitigatesRiskIds as string[]) : [];
     for (const id of ids) {
       mitigatedByAny.add(id);
-      if (typeof init.id === "string" && selectedIds.has(init.id)) mitigatedBySelected.add(id);
     }
   }
 
   for (const risk of matrix) {
     if (typeof risk.id !== "string" || risk.status !== "UNMITIGATED") continue;
 
-    // Rule 2 — a covered (by a selected initiative) risk should be marked mitigated.
-    if (mitigatedBySelected.has(risk.id)) {
-      out.push({
-        payload: { kind: "SET_RISK_STATUS", riskId: risk.id, status: "MITIGATED" },
-        targetPillarKey: "r",
-        targetField: "probabilityImpactMatrix",
-        operation: "MODIFY",
-        explain: `Le risque « ${String(risk.risk ?? risk.id)} » est associé à une action retenue. Proposer de le marquer « Atténué ».`,
-        confidence: 0.8,
-      });
-      continue;
-    }
-
+    // A planned/preferred action is not an executed mitigation. Risk status
+    // remains unchanged until an explicit, evidenced risk decision is made.
     // Rule 3 — high-severity, uncovered risk → propose a mitigating initiative.
     const severity = typeof risk.severity === "number" ? risk.severity : 0;
     if (severity >= HIGH_SEVERITY && !mitigatedByAny.has(risk.id)) {

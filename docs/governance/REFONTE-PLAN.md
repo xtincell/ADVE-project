@@ -1,3 +1,24 @@
+## 526 — préférences I et scénarios S, candidat à recevoir (2026-11-02)
+
+Décision opérateur : I conserve FAVORITE / NEUTRAL / REJECTED ; S fait les
+arbitrages de couverture depuis le catalogue éligible. Conservateur, Cible et
+Ambitieux ne demandent plus une sélection I préalable. Rejets exclus, favoris
+favorisés sans obligation, neutres éligibles ; scénario proposé ≠ exécution.
+Nouveaux calculs sans croissance/indice/revenu non étayés. Même ensemble d’actions
+pour S, raisons, budgets, horizons, vision/axes T/I et lecteurs en aval.
+
+**Fermer le lot 526** : recevoir les contrôles du code final, mutation de préférence
+sans effet d’exécution, recalcul/scénario et affichage des détails/limites, puis
+continuité I → S → Oracle sous rôle réel ; recevoir CI, image/runtime et conservation.
+Responsable lot 526 / circuits existants ; effort correction et recette bornées ;
+**déclencheur immédiat** sur le candidat avant livraison. Les premiers tests ne
+ferment ni qualité des conseils, ni dossier réel, ni MVP. [Contrat et séparation des périmètres](adr/0228-initiative-preferences-and-strategy-scenarios.md).
+
+Le lot coûts reste distinct : le prototype pur ne raccorde pas le devis importé,
+Thot et les snapshots aux coûts courants S. Devis par responsabilité, bundle et
+reste estimé restent le contrat à recevoir, sans mission fictive ni nouveau moteur.
+Pas de nouvelle entité Prisma, routeur, service, Intent ou gestionnaire d’appels.
+
 ## Checkpoint du 2 novembre — reprise CI 525 et réception métier après cascade 524
 
 Production 524 reçue. La cascade serveur réelle est `OK` (465 s, 26 appels), A/D/V/E

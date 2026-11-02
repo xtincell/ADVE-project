@@ -52,9 +52,9 @@ describe("creative-proposal — toRouteInitiative + jeu de route (ADR-0089)", ()
     ({ id, selected, status, metadata: timeframe ? { timeframe } : {} });
 
   it("mappe selected→SELECTED_FOR_ROADMAP, PROPOSED→RECOMMENDED, extrait le timeframe", () => {
-    expect(toRouteInitiative(ba("a", true, "ACCEPTED", "SPRINT_90"))).toEqual({ id: "a", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90" });
-    expect(toRouteInitiative(ba("b", false, "PROPOSED", "PHASE_1"))).toEqual({ id: "b", status: "RECOMMENDED", timeframe: "PHASE_1" });
-    expect(toRouteInitiative(ba("c", false, "CANCELLED", null))).toEqual({ id: "c", status: "CANCELLED", timeframe: null });
+    expect(toRouteInitiative(ba("a", true, "ACCEPTED", "SPRINT_90"))).toEqual({ id: "a", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90", preference:"FAVORITE" });
+    expect(toRouteInitiative(ba("b", false, "PROPOSED", "PHASE_1"))).toEqual({ id: "b", status: "RECOMMENDED", timeframe: "PHASE_1", preference:"NEUTRAL" });
+    expect(toRouteInitiative(ba("c", false, "CANCELLED", null))).toEqual({ id: "c", status: "CANCELLED", timeframe: null, preference:"NEUTRAL" });
   });
 
   it("les 3 niveaux d'exécution sélectionnent des jeux distincts", () => {
@@ -62,14 +62,14 @@ describe("creative-proposal — toRouteInitiative + jeu de route (ADR-0089)", ()
       ba("short", true, "ACCEPTED", "SPRINT_90"),  // selected court-terme
       ba("mid", true, "ACCEPTED", "PHASE_2"),       // selected long-terme
       ba("reco", false, "PROPOSED", "PHASE_1"),     // recommended
-    ].map(toRouteInitiative);
+    ].map((a,n) => ({...toRouteInitiative(a),targetsPersonaIds:[String(n)]}));
 
     const conservative = routeInitiativeSet("CONSERVATIVE", actions).map((a) => a.id);
     const target = routeInitiativeSet("TARGET", actions).map((a) => a.id);
     const ambitious = routeInitiativeSet("AMBITIOUS", actions).map((a) => a.id);
 
     expect(conservative).toEqual(["short"]);              // selected + court-terme uniquement
-    expect(target.sort()).toEqual(["mid", "short"]);      // toutes les selected
+    expect(target.sort()).toEqual(["mid", "reco", "short"]);      // toutes les selected
     expect(ambitious.sort()).toEqual(["mid", "reco", "short"]); // selected + recommended
   });
 });
@@ -77,20 +77,20 @@ describe("creative-proposal — toRouteInitiative + jeu de route (ADR-0089)", ()
 describe("creative-proposal — summarizeExecutionLevels (preview Voie A déterministe)", () => {
   it("keeps missing operational amounts distinct from zero and carries estimate coverage", () => {
     const initiatives = [
-      { id: "unknown", status: "SELECTED_FOR_ROADMAP" },
-      { id: "zero", status: "SELECTED_FOR_ROADMAP" },
-      { id: "estimated", status: "SELECTED_FOR_ROADMAP", budgetBasis: "QUALITATIVE_ESTIMATE" },
+      { id: "unknown", status: "SELECTED_FOR_ROADMAP", targetsPersonaIds:["a"] },
+      { id: "zero", status: "SELECTED_FOR_ROADMAP", targetsPersonaIds:["b"] },
+      { id: "estimated", status: "SELECTED_FOR_ROADMAP", targetsPersonaIds:["c"], budgetBasis: "QUALITATIVE_ESTIMATE" },
     ];
     const levels = summarizeExecutionLevels(initiatives, new Map([["zero", 0], ["estimated", 500_000]]), new Map());
     expect(levels[1]).toMatchObject({ totalBudget: null, actionCount: 3,
       budgetSummary: { knownSubtotal: 500_000, declaredCount: 1, estimatedCount: 1, unknownCount: 1 } });
-    expect(levels[0]).toMatchObject({ totalBudget: 0, actionCount: 0 });
+    expect(levels[0]).toMatchObject({ totalBudget: 0, actionCount: 1 });
   });
-  it("compte + budgète les actions par niveau + passe le growth stocké", () => {
+  it("compte + budgète les actions par niveau + ignore le growth historique non démontré", () => {
     const initiatives = [
-      { id: "short", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90" },
-      { id: "mid", status: "SELECTED_FOR_ROADMAP", timeframe: "PHASE_2" },
-      { id: "reco", status: "RECOMMENDED", timeframe: "PHASE_1" },
+      { id: "short", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90",targetsPersonaIds:["a"] },
+      { id: "mid", status: "SELECTED_FOR_ROADMAP", timeframe: "PHASE_2",targetsPersonaIds:["b"] },
+      { id: "reco", status: "RECOMMENDED", timeframe: "PHASE_1",targetsPersonaIds:["c"] },
     ];
     const budgetById = new Map([["short", 100], ["mid", 200], ["reco", 50]]);
     const storedByKey = new Map<string, Record<string, unknown>>([["TARGET", { projectedGrowthPct: 30, selected: true }]]);
@@ -102,7 +102,7 @@ describe("creative-proposal — summarizeExecutionLevels (preview Voie A déterm
     const amb = levels.find((l) => l.key === "AMBITIOUS")!;
 
     expect([cons.actionCount, cons.totalBudget, cons.projectedGrowthPct]).toEqual([1, 100, null]); // short ; pas de stored
-    expect([tgt.actionCount, tgt.totalBudget, tgt.projectedGrowthPct, tgt.selected]).toEqual([2, 300, 30, true]);
+    expect([tgt.actionCount, tgt.totalBudget, tgt.projectedGrowthPct, tgt.selected]).toEqual([3, 350, null, true]);
     expect([amb.actionCount, amb.totalBudget]).toEqual([3, 350]);
   });
 });

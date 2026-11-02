@@ -173,9 +173,20 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
   // catalogue. Later generation can add/update proposals without selecting or
   // deselecting the human's actions. Legacy top-level authority stays intact.
   const decisionPaths = new Set([...Object.keys(provenance), ...(input.declaredPaths ?? [])]
-    .filter(path => /^initiatives\.[^.]+\.status$/.test(path)));
-  for (const path of decisionPaths) {
+    .filter(path => /^initiatives\.[^.]+\.(?:status|preference)$/.test(path)));
+  // A legacy human selection also protects the preference it represents when
+  // a new-format recommendation explicitly tries to change that preference.
+  for (const path of [...decisionPaths]) {
+    if (!path.endsWith(".status") || provenance[path] !== "HUMAN") continue;
     const id = path.slice("initiatives.".length, -".status".length);
+    if (!collectInitiatives(newContent).some(raw => raw && typeof raw === "object" && normalizeInitiative(raw).id === id && Object.hasOwn(raw, "preference"))) continue;
+    const preferencePath = `initiatives.${id}.preference`;
+    decisionPaths.add(preferencePath);
+    provenance[preferencePath] ??= "HUMAN";
+  }
+  for (const path of decisionPaths) {
+    const field = path.endsWith(".preference") ? "preference" : "status";
+    const id = path.slice("initiatives.".length, -(field.length + 1));
     const previous = collectNormalizedInitiatives(previousContent).find(init => init.id === id);
     const next = collectNormalizedInitiatives(content).find(init => init.id === id);
     const declared = input.declaredFor?.(path);
@@ -185,13 +196,13 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
     const decision = decideOverwrite(incoming, "HUMAN");
     if (decision === "ALLOW") { if (next) provenance[path] = incoming; continue; }
     const representations = collectInitiatives(content).map(raw => normalizeInitiative(raw)).filter(init => init.id === id);
-    if (representations.length && representations.every(init => init.status === previous.status)) continue;
+    if (representations.length && representations.every(init => init[field] === previous[field])) continue;
     // Reverting the protected value is a refusal, not a successfully applied
     // choice. Strict transactions must observe it and roll back all effects.
     (decision === "DENY" ? denied : challenged).push(path);
     if (next) {
       mapInitiativeEntries(content, raw => normalizeInitiative(raw).id === id
-        ? { ...(typeof raw === "object" && raw ? raw : { action: raw }), id, status: previous.status } : raw);
+        ? { ...(typeof raw === "object" && raw ? raw : { action: raw }), id, [field]: previous[field] } : raw);
     } else {
       let original: unknown;
       mapInitiativeEntries(structuredClone(previousContent), raw => { if (normalizeInitiative(raw).id === id && original === undefined) original = raw; return raw; });
@@ -215,8 +226,9 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
   // depuis longtemps, dans ce qui est présenté comme « la liste de travail de
   // l'opérateur ».
   for (const key of Object.keys(provenance)) {
-    if (/^initiatives\.[^.]+\.status$/.test(key)) {
-      const id = key.slice("initiatives.".length, -".status".length);
+    if (/^initiatives\.[^.]+\.(?:status|preference)$/.test(key)) {
+      const field = key.endsWith(".preference") ? "preference" : "status";
+      const id = key.slice("initiatives.".length, -(field.length + 1));
       if (!collectNormalizedInitiatives(content).some(init => init.id === id)) delete provenance[key];
     } else if (!(key in content)) delete provenance[key];
   }

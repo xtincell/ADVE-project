@@ -1153,6 +1153,15 @@ export const PillarTSchema = z.object({
 // Initiative workflow (ADR-0088). DRAFT → RECOMMENDED (AI/Notoria) →
 // SELECTED_FOR_ROADMAP (operator picks for S) | REJECTED. Pillar S aggregates
 // budgets/coverage over SELECTED_FOR_ROADMAP initiatives only.
+// Catalogue preference is independent of execution/plan status. Legacy choices
+// are projected as preferences; a recommendation alone is not a human favorite.
+export const INITIATIVE_PREFERENCES = ["FAVORITE", "NEUTRAL", "REJECTED"] as const;
+export type InitiativePreference = (typeof INITIATIVE_PREFERENCES)[number];
+export function initiativePreference(value: unknown): InitiativePreference {
+  const row = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  if ((INITIATIVE_PREFERENCES as readonly unknown[]).includes(row.preference)) return row.preference as InitiativePreference;
+  return row.status === "REJECTED" ? "REJECTED" : row.status === "SELECTED_FOR_ROADMAP" ? "FAVORITE" : "NEUTRAL";
+}
 export const INITIATIVE_STATUSES = ["DRAFT", "RECOMMENDED", "SELECTED_FOR_ROADMAP", "REJECTED"] as const;
 export const INITIATIVE_TIMEFRAMES = ["SPRINT_90", "PHASE_1", "PHASE_2", "LONG_TERM"] as const;
 
@@ -1183,6 +1192,7 @@ const PotentialActionSchema = z.object({
   overtonShift: z.string().min(1).optional(),                // Comment cette action déplace la perception
   // ── Structured backbone (ADR-0088) — optional for back-compat, backfilled ──
   id: entityId.optional(),                                   // stable identity, referenced by S.sourceInitiativeId
+  preference: z.enum(INITIATIVE_PREFERENCES).optional(),       // operator catalogue preference, never scheduling
   status: z.enum(INITIATIVE_STATUSES).optional(),            // selection workflow
   budget: currency.optional(),                               // numeric — feeds S.computed.totalBudget
   budgetEstime: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),// qualitative anchor → numeric budget (normalizeInitiative)
@@ -1486,7 +1496,8 @@ export const PillarSSchema = z.object({
       target: z.string().min(1),
       gapScore: percentage.optional(),
     })).optional(),
-    coherenceScore: percentage.optional(),                   // dérivé R.coherenceRisks
+    coherenceScore: percentage.optional(),                   // legacy score, not inferred from a count
+    coherenceIssueCount: z.number().int().nonnegative().optional(),
     // 3 trajectoires de roadmap (ADR-0088) — projections PURES, jamais LLM.
     // ADR-0089 : chaque route porte aussi son JEU DE STRATÉGIE calculé
     // (sous-ensemble d'initiatives + enveloppe budget + posture risque) —
@@ -1496,17 +1507,23 @@ export const PillarSSchema = z.object({
       label: z.string().min(1),
       recommended: z.boolean(),
       selected: z.boolean().optional(),                      // ambition retenue par l'opérateur (ADR-0089)
-      projectedGrowthPct: z.number(),                        // ex: +22 / +58 / +115
+      projectedGrowthPct: z.number().optional(),                        // ex: +22 / +58 / +115
       projectedRevenue: currency.optional(),                 // CA projeté 12 mois (si baseRevenue connu)
-      targetCultIndex: percentage,                           // Cult Index cible 0-100
+      targetCultIndex: percentage.optional(),                           // Cult Index cible 0-100
       description: z.string().min(1),                         // résumé court (template déterministe)
       projectionAssumptions: z.object({
         riskCoverage: percentage.optional(),
         baseCultIndex: percentage.optional(),
       }).optional(),                                        // absent baselines used by the existing scenario policy
       // ── Jeu de stratégie par route (ADR-0089, pure-computed) ──
-      initiativeIds: z.array(entityId).optional(),           // initiatives du jeu (FK → I PotentialAction.id)
+      initiativeIds: z.array(z.string().min(1)).optional(),           // initiatives du jeu (FK → I PotentialAction.id)
       initiativeCount: z.number().int().min(0).optional(),
+      selectionBasis: z.literal("CATALOGUE_COVERAGE_RULES_V1").optional(),
+      initiatives: z.array(z.object({ id: z.string().min(1), action: z.string(), objectif: z.string().optional(),
+        channel: z.string().optional(), preference: z.enum(INITIATIVE_PREFERENCES), budget: currency.optional(),
+        budgetBasis: z.string().optional(), timeframe: z.enum(INITIATIVE_TIMEFRAMES).optional(), mitigatesRiskIds: z.array(z.string()),
+      })).optional(),
+      selectionReasons: z.array(z.object({ initiativeId: z.string().min(1), reasons: z.array(z.string()) })).optional(),
       totalBudget: currency.optional(),                      // Σ budget du jeu
       budgetSummary: InitiativeBudgetSummarySchema.optional(),
       budgetByPhase: z.partialRecord(z.enum(INITIATIVE_TIMEFRAMES), currency).optional(), // absent phase is not zero
@@ -1698,6 +1715,7 @@ export interface NormalizedInitiative {
   objectif: string;
   channel: string;
   status: (typeof INITIATIVE_STATUSES)[number];
+  preference: InitiativePreference;
   timeframe?: (typeof INITIATIVE_TIMEFRAMES)[number];
   budget?: number;
   budgetBasis: "DECLARED" | "QUALITATIVE_ESTIMATE" | "UNKNOWN";
@@ -1723,7 +1741,7 @@ const isNonEmptyStr = (v: unknown): v is string => typeof v === "string" && v.le
 /** Normalise une action brute vers le format étendu unifié. */
 export function normalizeInitiative(
   raw: unknown,
-  ctx: { channel?: string; devotionLevel?: string; overtonPhase?: string } = {},
+  ctx: { channel?: string; devotionLevel?: string; overtonPhase?: string; sourceProvenance?: unknown } = {},
 ): NormalizedInitiative {
   // Forme compacte (union ADR-0168) : une action écrite en chaîne nue. On la lit
   // comme le texte de l'action (sinon toutes les chaînes s'effondraient sur un même
@@ -1734,13 +1752,14 @@ export function normalizeInitiative(
     o.budgetEstime === "LOW" || o.budgetEstime === "MEDIUM" || o.budgetEstime === "HIGH"
       ? o.budgetEstime
       : undefined;
+  const unverifiedZero = o.budget === 0 && ctx.sourceProvenance === "INFERRED";
   const budget =
-    typeof o.budget === "number" && Number.isFinite(o.budget) && o.budget >= 0
+    !unverifiedZero && typeof o.budget === "number" && Number.isFinite(o.budget) && o.budget >= 0
       ? o.budget
       : budgetEstime
         ? BUDGET_ESTIME_FCFA[budgetEstime]
         : undefined;
-  const budgetBasis = typeof o.budget === "number" && Number.isFinite(o.budget) && o.budget >= 0
+  const budgetBasis = !unverifiedZero && typeof o.budget === "number" && Number.isFinite(o.budget) && o.budget >= 0
     ? "DECLARED" : budgetEstime ? "QUALITATIVE_ESTIMATE" : "UNKNOWN";
   const status = (INITIATIVE_STATUSES as readonly string[]).includes(o.status as string)
     ? (o.status as NormalizedInitiative["status"])
@@ -1760,6 +1779,7 @@ export function normalizeInitiative(
     objectif: isNonEmptyStr(o.objectif) ? o.objectif : "",
     channel,
     status,
+    preference: initiativePreference(o),
     timeframe,
     budget,
     budgetBasis,
@@ -1796,25 +1816,54 @@ export function collectNormalizedInitiatives(iContent: unknown): NormalizedIniti
   if (!iContent || typeof iContent !== "object") return [];
   const c = iContent as Record<string, unknown>;
   const byId = new Map<string, NormalizedInitiative>();
+  const provenance = (c._fieldProvenance ?? {}) as Record<string, unknown>;
   const add = (raw: unknown, ctx: Parameters<typeof normalizeInitiative>[1]) => {
     const n = normalizeInitiative(raw, ctx);
+    if (ctx?.sourceProvenance === "INFERRED" && raw && typeof raw === "object" && Object.hasOwn(raw, "preference")
+      && provenance[`initiatives.${n.id}.preference`] !== "HUMAN") {
+      const { preference: _unconfirmedPreference, ...definition } = raw as Record<string, unknown>;
+      n.preference = initiativePreference(definition);
+    }
     if (!n.action.trim()) return; // Read projection skips invalid entries; the original source stays intact.
     if (!byId.has(n.id)) byId.set(n.id, n); // catalogue d'abord → le canal réel gagne
   };
   const cat = (c.catalogueParCanal as Record<string, unknown>) ?? {};
   for (const [channel, arr] of Object.entries(cat)) {
-    if (Array.isArray(arr)) for (const raw of arr) add(raw, { channel });
+    if (Array.isArray(arr)) for (const raw of arr) add(raw, { channel, sourceProvenance: provenance.catalogueParCanal });
   }
   const dev = (c.actionsByDevotionLevel as Record<string, unknown>) ?? {};
   for (const [level, arr] of Object.entries(dev)) {
-    if (Array.isArray(arr)) for (const raw of arr) add(raw, { devotionLevel: level });
+    if (Array.isArray(arr)) for (const raw of arr) add(raw, { devotionLevel: level, sourceProvenance: provenance.actionsByDevotionLevel });
   }
   if (Array.isArray(c.actionsByOvertonPhase)) {
     for (const ph of c.actionsByOvertonPhase as Array<Record<string, unknown>>) {
-      if (Array.isArray(ph?.actions)) for (const raw of ph.actions) add(raw, { overtonPhase: isNonEmptyStr(ph.phase) ? ph.phase : "" });
+      if (Array.isArray(ph?.actions)) for (const raw of ph.actions) add(raw, { overtonPhase: isNonEmptyStr(ph.phase) ? ph.phase : "", sourceProvenance: provenance.actionsByOvertonPhase });
     }
   }
   return [...byId.values()];
+}
+
+/** Carry explicit human preferences into a regenerated catalogue by exact ID.
+ * The normal provenance guard still rejects contradictory unprepared writes. */
+export function retainHumanInitiativePreferences(previous: Record<string, unknown>, candidate: Record<string, unknown>): Record<string, unknown> {
+  const output = structuredClone(candidate);
+  const provenance = (previous._fieldProvenance ?? {}) as Record<string, unknown>;
+  for (const prior of collectNormalizedInitiatives(previous)) {
+    if (provenance[`initiatives.${prior.id}.preference`] !== "HUMAN") continue;
+    let found = false;
+    mapInitiativeEntries(output, raw => {
+      if (normalizeInitiative(raw).id !== prior.id) return raw;
+      found = true; return { ...(typeof raw === "object" && raw ? raw : { action: raw }), preference: prior.preference };
+    });
+    if (!found) {
+      const original = collectInitiatives(previous).find(raw => normalizeInitiative(raw).id === prior.id);
+      const catalogue = (output.catalogueParCanal ?? {}) as Record<string, unknown>;
+      if (!catalogue || Array.isArray(catalogue) || typeof catalogue !== "object" || (catalogue[prior.channel] !== undefined && !Array.isArray(catalogue[prior.channel]))) throw new Error("INITIATIVE_SOURCE_SHAPE_INVALID");
+      catalogue[prior.channel] = [...(catalogue[prior.channel] as unknown[] ?? []), original];
+      output.catalogueParCanal = catalogue;
+    }
+  }
+  return output;
 }
 
 /**

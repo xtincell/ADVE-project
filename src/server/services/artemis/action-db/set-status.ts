@@ -21,6 +21,7 @@ import { withPillarTransaction, type PillarWriteRequest } from "@/server/service
 
 export type BrandActionStatusOp =
   | { type: "SELECT"; actionId: string; selected: boolean }
+  | { type: "PREFERENCE"; actionId: string; preference: "FAVORITE" | "NEUTRAL" | "REJECTED" }
   | { type: "TIMING"; actionId: string; timingStart: string | null; timingEnd?: string | null }
   | { type: "AUTOSCHEDULE"; startDate?: string; cadenceDays?: number; onlyUnscheduled?: boolean };
 
@@ -49,9 +50,46 @@ export async function setBrandActionStatus(args: {
     await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${strategyId} FOR UPDATE`;
     await tx.$queryRaw`SELECT id FROM "BrandAction" WHERE "strategyId" = ${strategyId} FOR UPDATE`;
 
-    if (op.type === "SELECT" || op.type === "TIMING") {
+    if (op.type === "SELECT" || op.type === "TIMING" || op.type === "PREFERENCE") {
       const action = await tx.brandAction.findFirst({ where: { id: op.actionId, strategyId } });
       if (!action) throw new Error("ACTION_NOT_FOUND: action introuvable pour cette marque.");
+      if (op.type === "PREFERENCE") {
+        const pillar = await tx.pillar.findUnique({ where: { strategyId_key: { strategyId, key: "i" } } });
+        const content = structuredClone((pillar?.content ?? {}) as Record<string, unknown>);
+        let sourceId = action.sourceInitiativeId;
+        if (!sourceId && action.source !== "MATERIALIZED") {
+          sourceId = randomUUID();
+          const catalogue = (content.catalogueParCanal ?? {}) as Record<string, unknown>;
+          const group = action.touchpoint ?? "GENERAL";
+          if (catalogue[group] !== undefined && !Array.isArray(catalogue[group])) throw new Error("INITIATIVE_SOURCE_SHAPE_INVALID");
+          catalogue[group] = [...(catalogue[group] as unknown[] ?? []), { id: sourceId, action: action.title,
+            ...(action.description ? { objectif: action.description } : {}) }];
+          content.catalogueParCanal = catalogue;
+        }
+        if (!sourceId || sourceId.includes(".")) throw new Error("INITIATIVE_SOURCE_MISSING: rattachez cette action au catalogue avant de choisir une préférence.");
+        const persistentId = sourceId; // Explicit preference edits preserve the identity used by every reader.
+        const changedKeys = new Set<string>();
+        let found = false;
+        mapInitiativeEntries(content, (raw, key) => {
+          if (normalizeInitiative(raw).id !== sourceId) return raw;
+          found = true; changedKeys.add(key);
+          return { ...(raw && typeof raw === "object" ? raw : { action: raw }), id: persistentId, preference: op.preference };
+        });
+        if (!found) throw new Error("INITIATIVE_SOURCE_MISSING: cette action n’est plus dans le catalogue courant.");
+        await write({ strategyId, pillarKey: "i",
+          operation: { type: "SET_FIELDS", fields: [...changedKeys].map(path => ({ path, value: content[path] })) },
+          author: { system: "MESTOR", userId: args.userId, intentId: args.intentId, reason: `Préférence de catalogue : ${op.preference}` },
+          options: { expectedVersion: pillar?.currentVersion ?? 1, shapeGate: true, targetStatus: "AI_PROPOSED",
+            rejectOnProvenanceRefusal: true, fieldProvenance: { ...Object.fromEntries([...changedKeys].flatMap(key => {
+              const previous = (content._fieldProvenance as Record<string, unknown> | undefined)?.[key];
+              return previous === "HUMAN" || previous === "SOURCE" ? [[key, previous]] : [];
+            })), [`initiatives.${persistentId}.preference`]: "HUMAN" } },
+        });
+        if (persistentId !== action.sourceInitiativeId) await tx.brandAction.update({ where: { id: action.id }, data: { sourceInitiativeId: persistentId } });
+        // A catalogue preference never selects, schedules, cancels or arms a
+        // publication. S owns its proposal; the execution row remains untouched.
+        return { op: "PREFERENCE" as const, updated: 1 };
+      }
       if (op.type === "SELECT") {
         if (action.status === "CANCELLED" && op.selected) throw new Error("ACTION_TERMINAL: une action annulée ne peut être retenue sans décision de reprise.");
         const pillar = await tx.pillar.findUnique({ where: { strategyId_key: { strategyId, key: "i" } } });
@@ -90,7 +128,10 @@ export async function setBrandActionStatus(args: {
             operation: { type: "SET_FIELDS", fields: [...changedKeys].map(path => ({ path, value: content[path] })) },
             author: { system: "MESTOR", userId: args.userId, intentId: args.intentId, reason: `Choix opérateur d'action : ${status}` },
             options: { expectedVersion: pillar?.currentVersion ?? 1, shapeGate: true, targetStatus: "AI_PROPOSED",
-              rejectOnProvenanceRefusal: true, fieldProvenance: { [`initiatives.${sourceId}.status`]: "HUMAN" } } };
+              rejectOnProvenanceRefusal: true, fieldProvenance: { ...Object.fromEntries([...changedKeys].flatMap(key => {
+                const previous = provenance[key];
+                return previous === "HUMAN" || previous === "SOURCE" ? [[key, previous]] : [];
+              })), [`initiatives.${sourceId}.status`]: "HUMAN" } } };
           await write(request);
         } else if (pillar?.validationStatus === "LOCKED" && action.selected !== op.selected) {
           throw new Error("INITIATIVE_SOURCE_LOCKED");

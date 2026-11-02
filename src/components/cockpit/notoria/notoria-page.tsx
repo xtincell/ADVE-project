@@ -51,8 +51,8 @@ function typedProposalLabel(value: unknown): string | null {
   const payload = parseRecommendationPayload(value);
   if (!payload) return null;
   switch (payload.kind) {
-    case "SELECT_INITIATIVE": return "Retenir l’action dans le plan et appliquer l’échéance proposée.";
-    case "REJECT_INITIATIVE": return `Écarter l’action du plan : ${payload.reason}`;
+    case "SELECT_INITIATIVE": return "Mettre l’action en favori dans le catalogue, sans la planifier.";
+    case "REJECT_INITIATIVE": return `Rejeter l’action du catalogue des propositions : ${payload.reason}`;
     case "ADD_INITIATIVE": return `Ajouter l’action « ${payload.initiative.action} » aux propositions.`;
     case "LINK_RISK": return "Associer l’action au risque indiqué.";
     case "SET_RISK_STATUS": return `Marquer le risque « ${{ UNMITIGATED: "Non atténué", MITIGATED: "Atténué", ACCEPTED: "Accepté" }[payload.status]} ».`;

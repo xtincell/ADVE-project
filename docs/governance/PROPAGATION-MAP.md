@@ -9,6 +9,25 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Préférence I → scénarios S → décision opérateur — candidat 526 (2026-11-02)
+
+[ADR-0228](adr/0228-initiative-preferences-and-strategy-scenarios.md) amende le contrat
+courant proposé, sans réécrire les réceptions 441/442 ci-dessous. I conserve les
+préférences FAVORITE / NEUTRAL / REJECTED ; S déduit trois ensembles depuis le
+catalogue éligible et la couverture des risques/besoins/canaux, sans présélection
+I obligatoire. Favori favorise sans imposer, neutre reste éligible, rejet reste
+exclu jusqu’à réintégration explicite. Ancien choix retenu se lit comme favori
+legacy sans nouveau consentement ; recommandation IA ne devient pas favori humain.
+
+Choix d’ambition, approbation S et activation restent distincts. Les mêmes IDs et
+versions nourrissent actions, raisons, textes, budgets et horizons du scénario,
+puis lecteurs et Oracle ; aucune préférence ne programme ou publie. Les nouveaux
+calculs n’inventent pas croissance, revenu ou Cult Index. Code final, API/natif,
+continuité aval, CI/image/runtime et conservation 526 restent à recevoir.
+Le raccord devis ne fait pas partie du circuit reçu de ce candidat : prototype
+pur séparé, [contrat futur et reprise](RESIDUAL-DEBT.md). Aucun nouveau writer,
+service, modèle, Intent ou manager d’appels créé. MVP non reçu.
+
 ### ANUBIS Comms/MCP → refus fidèle et droits de découverte conservés — 448 source/CI/image reçues (2026-10-12)
 
 Enveloppe explicite ok:false/error → résultat/provenance conservés/ERROR et isError

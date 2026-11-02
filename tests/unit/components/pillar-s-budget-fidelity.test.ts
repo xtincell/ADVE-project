@@ -18,8 +18,8 @@ describe("computed S displays the available budget, not an invented complete amo
   });
   it("labels a partial subtotal with unknown budgets, estimates and horizons", () => {
     const computed = computePillarS({ i: { catalogueParCanal: { DIGITAL: [
-      { action: "Unknown", status: "SELECTED_FOR_ROADMAP" },
-      { action: "Estimate", status: "SELECTED_FOR_ROADMAP", budgetEstime: "LOW" },
+      { action: "Unknown", status: "SELECTED_FOR_ROADMAP",targetsPersonaIds:["a"] },
+      { action: "Estimate", status: "SELECTED_FOR_ROADMAP", budgetEstime: "LOW",targetsPersonaIds:["b"] },
     ] } }, r: null, t: null });
     const { container } = render(React.createElement(PillarSFields, { certainty: null, content: { computed } }));
     const text = container.querySelector(".ck-s-computed__cells")?.textContent;
@@ -29,14 +29,14 @@ describe("computed S displays the available budget, not an invented complete amo
   });
   it("Oracle carries the same coverage and projection assumptions into its rendered output", () => {
     const computed = computePillarS({ i: { catalogueParCanal: { DIGITAL: [
-      { action: "Unknown", status: "SELECTED_FOR_ROADMAP" },
+      { action: "Unknown", status: "SELECTED_FOR_ROADMAP",targetsPersonaIds:["a"] },
     ] } }, r: null, t: null });
     const data = mapFenetreOverton({ pillars: [{ key: "s", content: { computed } }] });
     const { container } = render(React.createElement(FenetreOverton, { data }));
     expect(container.textContent).toContain("1 budget à préciser");
-    expect(container.textContent).toContain("Scénarios hypothétiques");
-    expect(container.textContent).toContain("Couverture des risques supposée : 30 %");
-    expect(container.textContent).toContain("Indice actuel supposé : 60/100");
+    expect(container.textContent).toContain("Scénarios proposés depuis le catalogue");
+    expect(container.textContent).not.toContain("Couverture des risques supposée");
+    expect(container.textContent).not.toContain("60/100");
     expect(container.textContent).not.toContain("Budget engagé");
   });
 });

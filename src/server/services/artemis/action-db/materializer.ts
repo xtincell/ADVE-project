@@ -79,11 +79,11 @@ function inferAarrr(init: NormalizedInitiative): string | null {
 function mapStatus(init: NormalizedInitiative): { status: string; selected: boolean } {
   switch (init.status) {
     case "SELECTED_FOR_ROADMAP":
-      return { status: "ACCEPTED", selected: true };
+      return { status: "PROPOSED", selected: false };
     case "RECOMMENDED":
       return { status: "PROPOSED", selected: false };
     case "REJECTED":
-      return { status: "CANCELLED", selected: false };
+      return { status: "PROPOSED", selected: false };
     default:
       return { status: "DRAFT", selected: false };
   }
@@ -153,6 +153,7 @@ export async function syncBrandActionsFromBlob(strategyId: string, transaction?:
         budgetBasis: init.budgetBasis,
         timeframe: init.timeframe ?? null,
         initiativeStatus: init.status,
+        initiativePreference: init.preference,
         mitigatesRiskIds: init.mitigatesRiskIds,
         targetsPersonaIds: init.targetsPersonaIds,
         materializedFrom: "I_BLOB",
@@ -184,8 +185,8 @@ export async function syncBrandActionsFromBlob(strategyId: string, transaction?:
       const emptyBudget = previous?.budgetMin === null && previous?.budgetMax === null;
       const update = previous ? {
         ...data,
-        selected: data.selected,
-        status: ["SCHEDULED", "EXECUTED", "CANCELLED"].includes(previous.status) ? previous.status : data.status,
+        selected: previous.selected,
+        status: ["ACCEPTED", "SCHEDULED", "EXECUTED", "CANCELLED"].includes(previous.status) ? previous.status : data.status,
         priority: previous.priority === null || previousMetadata.projectedPriority === previous.priority ? data.priority : previous.priority,
         budgetMin: emptyBudget || previousMetadata.projectedBudget === previous.budgetMin ? data.budgetMin : previous.budgetMin,
         budgetMax: emptyBudget || previousMetadata.projectedBudget === previous.budgetMax ? data.budgetMax : previous.budgetMax,

@@ -20,7 +20,7 @@ import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import type { PillarKey as PillarStorageKey } from "@/lib/types/advertis-vector";
 import type { PillarKey } from "@/domain/pillars";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
-import { computeRoadmapRoutes, initiativeBudgetLabel, roadmapAssumptionsLabel } from "@/lib/strategy/roadmap-routes";
+import { computeRoadmapRoutes, initiativeBudgetLabel } from "@/lib/strategy/roadmap-routes";
 import {
   AutoField, FocusModal, isInlineField, InlineBadge, getFieldLabel,
 } from "./field-renderers";
@@ -786,15 +786,15 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
             <div className="mb-3">
               <div className="text-sm font-semibold text-foreground">Ambition stratégique</div>
               <p className="mt-1 text-2xs text-foreground-muted">
-                Trois scénarios selon vos actions et vos risques. Les projections sont des hypothèses de travail, pas des résultats mesurés. Retenir une ambition recalcule votre plan.
+                Trois sélections proposées depuis votre catalogue, vos préférences et vos risques. Retenir un scénario compose votre plan ; les budgets estimés restent à confirmer.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               {routes.map((r) => {
                 const key = String(r.key ?? "");
                 const isSelected = key === selectedKey;
-                const growth = typeof r.projectedGrowthPct === "number" ? r.projectedGrowthPct : null;
-                const cult = typeof r.targetCultIndex === "number" ? r.targetCultIndex : null;
+                const scenarioActions = Array.isArray(r.initiatives) ? r.initiatives as Array<Record<string, unknown>> : [];
+                const reasons = Array.isArray(r.selectionReasons) ? r.selectionReasons as Array<{ initiativeId: string; reasons: string[] }> : [];
                 const count = typeof r.initiativeCount === "number" ? r.initiativeCount : null;
                 const budget = typeof r.totalBudget === "number" ? r.totalBudget : null;
                 const coverage = typeof r.riskCoverage === "number" ? r.riskCoverage : null;
@@ -811,13 +811,22 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
                       </span>
                     ) : null}
                     <div className="text-xs font-semibold text-foreground">{String(r.label ?? key)}</div>
-                    <div className={`mt-1 text-2xl font-extrabold ${isSelected ? "text-accent" : "text-foreground"}`}>{growth !== null ? `+${growth}%` : "Projection à préciser"}</div>
+                    <div className={`mt-1 text-2xl font-extrabold ${isSelected ? "text-accent" : "text-foreground"}`}>{count !== null ? `${count} action${count > 1 ? "s" : ""}` : "Scénario à recalculer"}</div>
                     <div className="mt-1 space-y-0.5 text-2xs text-foreground-muted">
-                      {cult != null ? <div>Indice d'attachement cible : <span className="font-bold text-foreground">{cult}/100</span></div> : null}
                       {count != null ? <div>{count} initiative{count > 1 ? "s" : ""} · {initiativeBudgetLabel(budget, r.budgetSummary)}</div> : null}
-                      {roadmapAssumptionsLabel(r.projectionAssumptions) ? <div>{roadmapAssumptionsLabel(r.projectionAssumptions)}</div> : null}
-                      {coverage != null ? <div>{coverage}% des risques couverts</div> : null}
+                      {coverage != null ? <div>{coverage}% des risques associés à une action proposée</div> : null}
+                      <p>{String(r.description ?? "")}</p>
                     </div>
+                    {scenarioActions.length ? <details className="mt-3 text-2xs text-foreground-secondary">
+                      <summary className="cursor-pointer text-accent">Voir les {scenarioActions.length} actions et leurs critères</summary>
+                      <ol className="mt-2 space-y-3">{scenarioActions.map(a => <li key={String(a.id)} className="border-t border-border-subtle pt-2">
+                        <p className="font-semibold text-foreground">{String(a.action)}</p>
+                        {a.objectif ? <p className="mt-1">{String(a.objectif)}</p> : null}
+                        <p className="mt-1">{String(a.channel ?? "Canal à préciser")} · {a.timeframe === "SPRINT_90" ? "Sprint 90 jours" : a.timeframe === "PHASE_1" ? "Phase 1" : a.timeframe === "PHASE_2" ? "Phase 2" : a.timeframe === "LONG_TERM" ? "Long terme" : "Échéance à préciser"}</p>
+                        <p>{typeof a.budget === "number" ? `${a.budgetBasis === "QUALITATIVE_ESTIMATE" ? "Estimation · " : "Montant déclaré · "}${new Intl.NumberFormat("fr-FR").format(a.budget)} FCFA` : "Budget à préciser"}</p>
+                        <p className="mt-1 text-foreground-muted">{reasons.find(x => x.initiativeId === a.id)?.reasons.join(" · ")}</p>
+                      </li>)}</ol>
+                    </details> : null}
                     <button
                       type="button"
                       disabled={!canWriteStrategy || pillar?.validationStatus === "LOCKED" || isSelected || selectRouteMutation.isPending}
@@ -828,7 +837,7 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
                           : "bg-white/5 text-foreground-secondary hover:bg-accent/20 hover:text-accent"
                       } disabled:opacity-70`}
                     >
-                      {isSelected ? "Ambition retenue ✓" : selectRouteMutation.isPending ? "Sélection…" : "Retenir cette ambition"}
+                      {isSelected ? "Scénario courant ✓" : selectRouteMutation.isPending ? "Sélection…" : "Retenir cette ambition"}
                     </button>
                   </div>
                 );

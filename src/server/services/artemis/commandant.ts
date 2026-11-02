@@ -1008,9 +1008,18 @@ async function setBrandActionStatusHandler(
   const summary =
     res.op === "AUTOSCHEDULE"
       ? `${res.updated} action(s) planifiée(s) (${res.protectedPublications ?? 0} publication(s) armée(s) préservée(s))`
+      : res.op === "PREFERENCE" ? `${res.updated} préférence(s) de catalogue enregistrée(s)`
       : res.op === "SELECT"
         ? `${res.updated} action(s) ${intent.op.type === "SELECT" && intent.op.selected ? "retenue(s)" : "retirée(s)"}`
         : `${res.updated} échéance(s) ajustée(s)`;
+  if (intent.op.type === "PREFERENCE") {
+    // Reuse the governed deterministic S writer after the I transaction commits.
+    // A refused recompute never makes the preference itself disappear.
+    const { emitIntent } = await import("@/server/services/mestor/intents");
+    const derived = await emitIntent({ kind: "SYNTHESIZE_S", strategyId: intent.strategyId }, { caller: "artemis:catalogue-preference" });
+    return { status: "OK", summary: `${summary}. ${derived.status === "OK" ? "Scénarios recalculés." : "Le plan doit être recalculé."}`,
+      tool: "artemis:set-brand-action-status", output: { ...res, synthesisUpdated: derived.status === "OK", synthesisReason: derived.reason } };
+  }
   return { status: "OK", summary, tool: "artemis:set-brand-action-status", output: res };
 }
 

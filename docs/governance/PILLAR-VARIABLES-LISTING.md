@@ -8,19 +8,19 @@ Ce document descend **récursivement** dans tout l'arbre Zod (objets imbriqués,
 
 - **8 piliers** : 4 ADVE fondateurs (A·D·V·E, édités manuellement) + 4 RTIS dérivés (R·T·I·S, régénérés via cascade — jamais édités à la main, cf. ADR-0023).
 - **157 champs de premier niveau** (ce que montre la page Console).
-- **969 entrées totales** une fois l'arbre déplié récursivement (objets + sous-champs + éléments d'array + options d'union + records).
+- **990 entrées totales** une fois l'arbre déplié récursivement (objets + sous-champs + éléments d'array + options d'union + records).
 - **157/157 champs de premier niveau documentés** dans la Variable Bible.
 
 | Pilier | Nom | Champs niveau 1 | Entrées dépliées | Documentés (N1) |
 |---|---|---:|---:|---:|
 | **A** (ADVE) | Authenticité | 32 | 122 | 32/32 |
-| **D** (ADVE) | Distinction | 17 | 209 | 17/17 |
-| **V** (ADVE) | Valeur | 26 | 143 | 26/26 |
+| **D** (ADVE) | Distinction | 17 | 210 | 17/17 |
+| **V** (ADVE) | Valeur | 26 | 147 | 26/26 |
 | **E** (ADVE) | Engagement | 23 | 112 | 23/23 |
 | **R** (RTIS) | Risk | 9 | 54 | 9/9 |
 | **T** (RTIS) | Track | 14 | 87 | 14/14 |
-| **I** (RTIS) | Innovation | 16 | 94 | 16/16 |
-| **S** (RTIS) | Strategy | 20 | 148 | 20/20 |
+| **I** (RTIS) | Innovation | 16 | 95 | 16/16 |
+| **S** (RTIS) | Strategy | 20 | 163 | 20/20 |
 
 ---
 
@@ -168,6 +168,7 @@ _ADVE — fondateur (édition manuelle)_
 | `personas` | `array<object>` | ✓ | min 2 car. | Les profils types des différents publics de la marque |
 |   `personas[].id` | `string` | — | string_format |  |
 |   `personas[].name` | `string` | ✓ | min 1 car. · max 200 car. |  |
+|   `personas[].actorRoles` | `array<enum>` | — | valeurs: COMMUNICATION_AUDIENCE, USER, PAYER, PARTNER, SUPPLIER, PRESCRIBER, DISTRIBUTOR |  |
 |   `personas[].age` | `number` | — | safeint · > 1 · < 120 |  |
 |   `personas[].csp` | `string` | — | min 1 car. · max 200 car. |  |
 |   `personas[].location` | `string` | — | min 1 car. · max 200 car. |  |
@@ -388,11 +389,15 @@ _ADVE — fondateur (édition manuelle)_
 |   `freeLayer.whatIsPaid` | `string` | ✓ | min 1 car. |  |
 |   `freeLayer.conversionLever` | `string` | ✓ | min 1 car. |  |
 | `pricingJustification` | `string` | — | min 1 car. | Pourquoi CE prix pour CE positionnement |
-| `personaSegmentMap` | `array<object>` | — |  | Quel persona (D) achète quel produit (V) à quel niveau Devotion |
+| `personaSegmentMap` | `array<object>` | — |  | Quel acteur (D) apporte et reçoit quelle valeur, autour de quelles offres (V) |
 |   `personaSegmentMap[].personaName` | `string` | ✓ | min 1 car. |  |
 |   `personaSegmentMap[].productNames` | `array<string>` | ✓ |  |  |
 |   `personaSegmentMap[].devotionLevel` | `enum` | — | valeurs: SPECTATEUR, INTERESSE, PARTICIPANT, ENGAGE, AMBASSADEUR, EVANGELISTE |  |
 |   `personaSegmentMap[].revenueContributionPct` | `number` | — | > 0 · < 100 |  |
+|   `personaSegmentMap[].valueToBrand` | `array<string>` | — |  |  |
+|   `personaSegmentMap[].valueToActor` | `array<string>` | — |  |  |
+|   `personaSegmentMap[].actorCosts` | `array<string>` | — |  |  |
+|   `personaSegmentMap[].dependencyConditions` | `array<string>` | — |  |  |
 | `produitsCatalogue` | `array<object>` | ✓ | min 1 car. · max 50 car. | Le catalogue complet des produits/services de la marque |
 |   `produitsCatalogue[].id` | `string` | — | min 1 car. · max 200 car. |  |
 |   `produitsCatalogue[].nom` | `string` | ✓ | min 1 car. · max 200 car. |  |
@@ -849,6 +854,7 @@ _RTIS — dérivé (régénéré par cascade)_
 |     `catalogueParCanal.{clé}[].devotionImpact` | `enum` | — | valeurs: SPECTATEUR, INTERESSE, PARTICIPANT, ENGAGE, AMBASSADEUR, EVANGELISTE |  |
 |     `catalogueParCanal.{clé}[].overtonShift` | `string` | — | min 1 car. |  |
 |     `catalogueParCanal.{clé}[].id` | `string` | — | string_format |  |
+|     `catalogueParCanal.{clé}[].preference` | `enum` | — | valeurs: FAVORITE, NEUTRAL, REJECTED |  |
 |     `catalogueParCanal.{clé}[].status` | `enum` | — | valeurs: DRAFT, RECOMMENDED, SELECTED_FOR_ROADMAP, REJECTED |  |
 |     `catalogueParCanal.{clé}[].budget` | `number` | — | > 0 |  |
 |     `catalogueParCanal.{clé}[].budgetEstime` | `enum` | — | valeurs: LOW, MEDIUM, HIGH |  |
@@ -1031,20 +1037,35 @@ _RTIS — dérivé (régénéré par cascade)_
 |     `computed.overtonPosition(opt2).target` | `string` | ✓ | min 1 car. |  |
 |     `computed.overtonPosition(opt2).gapScore` | `number` | — | > 0 · < 100 |  |
 |   `computed.coherenceScore` | `number` | — | > 0 · < 100 |  |
+|   `computed.coherenceIssueCount` | `number` | — | safeint · > 0 |  |
 |   `computed.roadmapRoutes` | `array<object>` | — | exactement 3 car. |  |
 |     `computed.roadmapRoutes[].key` | `enum` | ✓ | valeurs: CONSERVATIVE, TARGET, AMBITIOUS |  |
 |     `computed.roadmapRoutes[].label` | `string` | ✓ | min 1 car. |  |
 |     `computed.roadmapRoutes[].recommended` | `boolean` | ✓ |  |  |
 |     `computed.roadmapRoutes[].selected` | `boolean` | — |  |  |
-|     `computed.roadmapRoutes[].projectedGrowthPct` | `number` | ✓ |  |  |
+|     `computed.roadmapRoutes[].projectedGrowthPct` | `number` | — |  |  |
 |     `computed.roadmapRoutes[].projectedRevenue` | `number` | — | > 0 |  |
-|     `computed.roadmapRoutes[].targetCultIndex` | `number` | ✓ | > 0 · < 100 |  |
+|     `computed.roadmapRoutes[].targetCultIndex` | `number` | — | > 0 · < 100 |  |
 |     `computed.roadmapRoutes[].description` | `string` | ✓ | min 1 car. |  |
 |     `computed.roadmapRoutes[].projectionAssumptions` | `object` | — |  |  |
 |       `computed.roadmapRoutes[].projectionAssumptions.riskCoverage` | `number` | — | > 0 · < 100 |  |
 |       `computed.roadmapRoutes[].projectionAssumptions.baseCultIndex` | `number` | — | > 0 · < 100 |  |
 |     `computed.roadmapRoutes[].initiativeIds` | `array<string>` | — |  |  |
 |     `computed.roadmapRoutes[].initiativeCount` | `number` | — | safeint · > 0 |  |
+|     `computed.roadmapRoutes[].selectionBasis` | `literal` | — | CATALOGUE_COVERAGE_RULES_V1 |  |
+|     `computed.roadmapRoutes[].initiatives` | `array<object>` | — |  |  |
+|       `computed.roadmapRoutes[].initiatives[].id` | `string` | ✓ | min 1 car. |  |
+|       `computed.roadmapRoutes[].initiatives[].action` | `string` | ✓ |  |  |
+|       `computed.roadmapRoutes[].initiatives[].objectif` | `string` | — |  |  |
+|       `computed.roadmapRoutes[].initiatives[].channel` | `string` | — |  |  |
+|       `computed.roadmapRoutes[].initiatives[].preference` | `enum` | ✓ | valeurs: FAVORITE, NEUTRAL, REJECTED |  |
+|       `computed.roadmapRoutes[].initiatives[].budget` | `number` | — | > 0 |  |
+|       `computed.roadmapRoutes[].initiatives[].budgetBasis` | `string` | — |  |  |
+|       `computed.roadmapRoutes[].initiatives[].timeframe` | `enum` | — | valeurs: SPRINT_90, PHASE_1, PHASE_2, LONG_TERM |  |
+|       `computed.roadmapRoutes[].initiatives[].mitigatesRiskIds` | `array<string>` | ✓ |  |  |
+|     `computed.roadmapRoutes[].selectionReasons` | `array<object>` | — |  |  |
+|       `computed.roadmapRoutes[].selectionReasons[].initiativeId` | `string` | ✓ | min 1 car. |  |
+|       `computed.roadmapRoutes[].selectionReasons[].reasons` | `array<string>` | ✓ |  |  |
 |     `computed.roadmapRoutes[].totalBudget` | `number` | — | > 0 |  |
 |     `computed.roadmapRoutes[].budgetSummary` | `object` | — |  |  |
 |       `computed.roadmapRoutes[].budgetSummary.knownSubtotal` | `number` | ✓ | > 0 |  |

@@ -1,17 +1,7 @@
-/**
- * Roadmap routes — PURE, client-safe (Layer: lib). No db, no LLM, no React.
- *
- * The 3 strategic ambitions of pillar S (Conservateur / Cible / Ambitieux)
- * are a deterministic projection of execution *momentum* (risk coverage +
- * committed initiatives). Extracted from `rtis-protocols/strategy.ts` so the
- * cockpit S editor can render the 3-route selector as a fallback when the
- * stored `S.computed.roadmapRoutes` is empty (e.g. a hand-authored canon S
- * that never ran the protocol) — the selector must never silently disappear.
- *
- * Re-exported by the server strategy protocol for the authoritative compute.
- */
+/** Deterministic scenario proposals from the existing catalogue. No LLM,
+ * performance forecast or execution authorization. ADR-0228. */
 
-import { ROADMAP_ROUTE_KEYS, INITIATIVE_TIMEFRAMES, type InitiativeBudgetSummary } from "@/lib/types/pillar-schemas";
+import { initiativePreference, ROADMAP_ROUTE_KEYS, INITIATIVE_TIMEFRAMES, type InitiativeBudgetSummary } from "@/lib/types/pillar-schemas";
 
 export type RouteKey = (typeof ROADMAP_ROUTE_KEYS)[number];
 
@@ -57,38 +47,71 @@ interface RouteSpec {
   key: RouteKey;
   label: string;
   recommended: boolean;
-  growthBase: number;
-  growthSpan: number;
-  cultBump: number;
   description: string;
 }
 
 export const ROUTE_SPECS: RouteSpec[] = [
-  { key: "CONSERVATIVE", label: "Conservateur", recommended: false, growthBase: 10, growthSpan: 20, cultBump: 8, description: "Statu quo + optimisations marginales." },
-  { key: "TARGET", label: "Cible", recommended: true, growthBase: 30, growthSpan: 46.67, cultBump: 16, description: "Activation Engagement + cascade R+T." },
-  { key: "AMBITIOUS", label: "Ambitieux", recommended: false, growthBase: 70, growthSpan: 75, cultBump: 25, description: "Programme superfans + expansion régionale." },
+  { key: "CONSERVATIVE", label: "Conservateur", recommended: false, description: "Traiter les risques prioritaires avec un ensemble resserré d’actions." },
+  { key: "TARGET", label: "Cible", recommended: true, description: "Étendre la couverture aux risques, publics et objectifs du catalogue." },
+  { key: "AMBITIOUS", label: "Ambitieux", recommended: false, description: "Élargir les canaux et les étapes d’engagement utiles, sans ajouter les doublons." },
 ];
 
-const clampPct = (n: number) => Math.max(0, Math.min(100, n));
 
-// ── ADR-0089 : jeu de stratégie par route (PURE) ──────────────────────
-//   CONSERVATIVE : SELECTED_FOR_ROADMAP court-terme (SPRINT_90 / PHASE_1)
-//   TARGET       : toutes les SELECTED_FOR_ROADMAP
-//   AMBITIOUS    : SELECTED + RECOMMENDED
+// ADR-0228: S selects proposals; catalogue preferences do not preselect a plan.
 
 export function routeInitiativeSet(
   key: RouteKey,
   initiatives: Array<Record<string, unknown>>,
+  context: { riskMatrix?: Array<Record<string, unknown>> } = {},
 ): Array<Record<string, unknown>> {
-  const selected = initiatives.filter((a) => a.status === "SELECTED_FOR_ROADMAP");
-  switch (key) {
-    case "CONSERVATIVE":
-      return selected.filter((a) => a.timeframe === "SPRINT_90" || a.timeframe === "PHASE_1");
-    case "TARGET":
-      return selected;
-    case "AMBITIOUS":
-      return [...selected, ...initiatives.filter((a) => a.status === "RECOMMENDED")];
-  }
+  // Preferences are input, never a preselected plan. A rejected entry needs
+  // explicit reintegration; an AI recommendation is an ordinary candidate.
+  const eligible = initiatives.filter(a => typeof a.id === "string"
+    && initiativePreference(a) !== "REJECTED"
+    && !["CANCELLED", "EXECUTED"].includes(String(a.status)));
+  const matrix = context.riskMatrix ?? [];
+  const riskIds = new Set(matrix.flatMap(r => typeof r.id === "string" ? [r.id] : []));
+  const critical = new Set(matrix.filter(r => Number(r.severity) >= 67
+    || (r.impact === "HIGH" && r.probability !== "LOW"))
+    .flatMap(r => typeof r.id === "string" ? [`risk:${r.id}`] : []));
+  const strings = (v: unknown) => Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  const features = (a: Record<string, unknown>) => new Set([
+    ...strings(a.mitigatesRiskIds).filter(id => !matrix.length || riskIds.has(id)).map(id => `risk:${id}`),
+    ...strings(a.targetsPersonaIds).map(id => `persona:${id}`),
+    ...(typeof a.pilierImpact === "string" ? [`pillar:${a.pilierImpact}`] : []),
+    ...(typeof a.channel === "string" ? [`channel:${a.channel}`] : []),
+    ...(typeof a.devotionImpact === "string" ? [`devotion:${a.devotionImpact}`] : []),
+  ]);
+  const featureMap = new Map(eligible.map(a => [a.id, features(a)]));
+  const allFeatures = new Set([...featureMap.values()].flatMap(f => [...f]));
+  const baseObjectives = new Set([...allFeatures].filter(f => !f.startsWith("channel:") && !f.startsWith("devotion:")));
+  // Coverage first, then catalogue preference, then known cost. No arbitrary
+  // action quota, fabricated budget ceiling or percentage of the catalogue.
+  const cost = (a: Record<string, unknown>) => typeof a.budget === "number" && Number.isFinite(a.budget) && a.budget >= 0 ? a.budget : Infinity;
+  const compare = (a: Record<string, unknown>, b: Record<string, unknown>) =>
+    Number(initiativePreference(b) === "FAVORITE") - Number(initiativePreference(a) === "FAVORITE")
+    || cost(a) - cost(b) || String(a.id).localeCompare(String(b.id));
+  const selected: Array<Record<string, unknown>> = [];
+  const covered = new Set<string>();
+  const include = (a: Record<string, unknown>) => { selected.push(a); for (const f of featureMap.get(a.id) ?? []) covered.add(f); };
+  const extend = (objectives: Set<string>, pool: typeof eligible) => {
+    while ([...objectives].some(f => !covered.has(f))) {
+      const ranked = pool.filter(a => !selected.some(x => x.id === a.id)).map(a => ({ a,
+        gain: [...(featureMap.get(a.id) ?? [])].filter(f => objectives.has(f) && !covered.has(f)).length,
+      })).filter(x => x.gain > 0).sort((a, b) => b.gain - a.gain || compare(a.a, b.a));
+      if (!ranked[0]) break;
+      include(ranked[0].a);
+    }
+  };
+  const shortTerm = eligible.filter(a => a.timeframe !== "LONG_TERM" && a.timeframe !== "PHASE_2");
+  extend(critical, shortTerm);
+  if (!selected.length && shortTerm.length) include([...shortTerm].sort(compare)[0]!);
+  if (key === "CONSERVATIVE") return selected;
+  extend(baseObjectives, eligible);
+  if (!selected.length && eligible.length) include([...eligible].sort(compare)[0]!);
+  if (key === "TARGET") return selected;
+  extend(allFeatures, eligible);
+  return selected;
 }
 
 export function aggregateInitiativeSet(
@@ -175,36 +198,39 @@ export function computeRoadmapRoutes(input: {
   /** ADR-0089 — ambition retenue ; marque `selected` sur la route correspondante. */
   selectedRouteKey?: RouteKey;
 }): Array<Record<string, unknown>> {
-  const cov = (input.riskCoverage ?? 30) / 100;
-  const sel = Math.min(input.selectedInitiativeCount, 20) / 20;
-  const momentum = Math.max(0, Math.min(1, cov * 0.5 + sel * 0.5));
-  const baseCult = input.baseCultIndex ?? 60;
+
 
   return ROUTE_SPECS.map((r) => {
-    const projectedGrowthPct = Math.round(r.growthBase + r.growthSpan * momentum);
-    const targetCultIndex = Math.round(clampPct(baseCult + r.cultBump * (0.6 + 0.4 * momentum)));
+
+
     const route: Record<string, unknown> = {
       key: r.key,
       label: r.label,
       recommended: r.recommended,
-      projectedGrowthPct,
-      targetCultIndex,
+
       description: r.description,
-      projectionAssumptions: {
-        ...(input.riskCoverage === undefined ? { riskCoverage: 30 } : {}),
-        ...(input.baseCultIndex === undefined ? { baseCultIndex: 60 } : {}),
-      },
+      projectionAssumptions: {},
     };
-    if (typeof input.baseRevenue === "number" && input.baseRevenue > 0) {
-      route.projectedRevenue = Math.round(input.baseRevenue * (1 + projectedGrowthPct / 100));
-    }
     if (input.selectedRouteKey) {
       route.selected = r.key === input.selectedRouteKey;
     }
     if (input.initiatives) {
-      const set = routeInitiativeSet(r.key, input.initiatives);
+      const set = routeInitiativeSet(r.key, input.initiatives, { riskMatrix: input.riskMatrix });
       const agg = aggregateInitiativeSet(set, input.riskMatrix ?? []);
       route.initiativeIds = agg.initiativeIds;
+      route.selectionBasis = "CATALOGUE_COVERAGE_RULES_V1";
+      route.selectionReasons = set.map(a => ({ initiativeId: a.id,
+        reasons: [initiativePreference(a) === "FAVORITE" ? "Favori du catalogue" : "Candidat neutre du catalogue",
+          ...(Array.isArray(a.mitigatesRiskIds) && a.mitigatesRiskIds.length ? ["Liens aux risques à traiter"] : []),
+          ...(Array.isArray(a.targetsPersonaIds) && a.targetsPersonaIds.length ? ["Publics ciblés"] : []),
+          ...(a.pilierImpact ? [`Objectif ${a.pilierImpact}`] : []),
+          ...(a.channel ? [`Canal ${a.channel}`] : [])],
+      }));
+      route.initiatives = set.map(a => ({ id: a.id, action: a.action, objectif: a.objectif, channel: a.channel,
+        preference: initiativePreference(a), ...(typeof a.budget === "number" ? { budget: a.budget } : {}),
+        budgetBasis: a.budgetBasis, ...(a.timeframe ? { timeframe: a.timeframe } : {}),
+        mitigatesRiskIds: Array.isArray(a.mitigatesRiskIds) ? a.mitigatesRiskIds : [],
+      }));
       route.initiativeCount = agg.initiativeCount;
       if (agg.totalBudget !== undefined) route.totalBudget = agg.totalBudget;
       route.budgetSummary = agg.budgetSummary;
@@ -213,4 +239,14 @@ export function computeRoadmapRoutes(input: {
     }
     return route;
   });
+}
+
+/** Membership of the saved current scenario, not operational execution flags.
+ * Legacy routes must be recalculated before they can be used as this contract. */
+export function currentScenarioIds(s: unknown): Set<string> {
+  const content = s && typeof s === "object" ? s as Record<string, unknown> : {};
+  const computed = content.computed as Record<string, unknown> | undefined;
+  const routes = Array.isArray(computed?.roadmapRoutes) ? computed.roadmapRoutes as Array<Record<string, unknown>> : [];
+  const route = routes.find(r => r.key === computed?.selectedRouteKey && r.selectionBasis === "CATALOGUE_COVERAGE_RULES_V1");
+  return new Set(Array.isArray(route?.initiativeIds) ? route.initiativeIds.filter((id): id is string => typeof id === "string") : []);
 }

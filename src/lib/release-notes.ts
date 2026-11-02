@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.526", date: "2026-11-02", headline: "Vos préférences orientent trois scénarios de stratégie",
+    highlights: [
+      { emoji: "⭐", title: "Favori, neutre ou rejeté", body: "Exprimez vos préférences dans le catalogue. Un favori reste une préférence ; une action rejetée sort des propositions jusqu’à sa réintégration. Ce choix ne programme et ne publie rien." },
+      { emoji: "🧭", title: "Comparer avant de choisir", body: "Les scénarios Conservateur, Cible et Ambitieux proposent des actions selon vos besoins, vos risques et vos préférences. Consultez leurs raisons, leurs budgets estimés et leurs échéances connues ou à préciser, puis retenez une ambition. Ces propositions ne promettent pas une croissance mesurée." },
+    ],
+  },
+  {
     version: "6.27.525", date: "2026-10-26", headline: "Un rapport plus clair sur ses données et ses mesures",
     highlights: [
       { emoji: "📋", title: "Voir ce qui doit être réactualisé", body: "Les sections rédigées sont distinguées des analyses à réactualiser. Le document indique quand certaines conclusions reposent encore sur des données antérieures." },

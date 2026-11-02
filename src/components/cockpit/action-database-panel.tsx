@@ -13,7 +13,7 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { Loader2, RefreshCw, Star, Layers, Plus, Sparkles } from "lucide-react";
+import { Loader2, RefreshCw, Layers, Plus, Sparkles } from "lucide-react";
 
 const TOUCHPOINT_LABELS: Record<string, string> = {
   DIGITAL: "Digital",
@@ -107,11 +107,11 @@ export function ActionDatabasePanel({ strategyId, canWrite = false, canSync = fa
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Layers className="h-4 w-4 text-accent" />
-          <span className="text-sm font-semibold text-foreground">Base d'actions</span>
+          <span className="text-sm font-semibold text-foreground">Catalogue d’actions</span>
           {summary ? (
             <span className="rounded-full bg-white/5 px-2 py-0.5 text-2xs text-foreground-muted">
               {summary.total} action{summary.total > 1 ? "s" : ""}
-              {` · ${summary.currentCatalogueCount} au catalogue courant · ${summary.currentSelectedCount} retenue${summary.currentSelectedCount > 1 ? "s" : ""}`}
+              {` · ${summary.currentCatalogueCount} au catalogue courant · ${summary.currentFavoriteCount} favori(s) · ${summary.currentRejectedCount} rejetée(s)`}
             </span>
           ) : null}
         </div>
@@ -146,6 +146,7 @@ export function ActionDatabasePanel({ strategyId, canWrite = false, canSync = fa
         </p>
       ) : null}
 
+      <p className="mb-3 text-xs text-foreground-muted">Vos préférences orientent les scénarios de stratégie. Un favori n’est pas une action planifiée ; une action rejetée reste au catalogue et sort des propositions.</p>
       {/* Propose actions (Phase 24) — generate-more (IA, brand-aware) or manual */}
       {showPropose && canWrite ? (
         <div className="mb-3 rounded-lg border border-accent/20 bg-accent/[0.04] p-3">
@@ -272,15 +273,17 @@ export function ActionDatabasePanel({ strategyId, canWrite = false, canSync = fa
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => selectMutation.mutate({ strategyId, actionId: a.id, selected: !retained })}
+                    <select
+                      aria-label={`Préférence pour ${a.title}`}
+                      value={a.preference}
+                      onChange={e => { if (canWrite && !needsReconciliation && !selectMutation.isPending) selectMutation.mutate({ strategyId, actionId: a.id, preference: e.target.value as "FAVORITE" | "NEUTRAL" | "REJECTED" }); }}
                       disabled={!canWrite || needsReconciliation || selectMutation.isPending}
-                      title={needsReconciliation ? "Choix antérieur à requalifier dans le catalogue courant" : !canWrite ? "Lecture seule sur ces actions" : retained ? "Retirer du plan" : "Retenir pour le plan"}
-                      className="flex-shrink-0"
+                      className="rounded border border-white/10 bg-background px-1.5 py-1 text-2xs text-foreground"
                     >
-                      <Star className={`h-3 w-3 ${retained ? "fill-accent text-accent" : "text-foreground-muted hover:text-accent"}`} />
-                    </button>
+                      <option value="FAVORITE">Favori</option>
+                      <option value="NEUTRAL">Neutre</option>
+                      <option value="REJECTED">Rejeté</option>
+                    </select>
                     <span className="truncate text-xs font-medium text-foreground">{a.title}</span>
                   </div>
                   {a.description ? (

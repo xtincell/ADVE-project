@@ -681,6 +681,7 @@ export interface FenetreOvertonSection {
     targetCultIndex: number | null;
     description: string;
     initiativeCount: number | null;
+    initiatives?: Array<{ id: string; action: string; objectif?: string; timeframe?: string; budget?: number }>;
     totalBudget: number | null;
     budgetSummary?: import("@/lib/types/pillar-schemas").InitiativeBudgetSummary;
     projectionAssumptions?: { riskCoverage?: number; baseCultIndex?: number };

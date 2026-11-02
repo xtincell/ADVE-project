@@ -46,7 +46,7 @@ async function fixture() {
   brands.push(strategy.id);
   const initiativeId = randomUUID();
   const initiative = { id: initiativeId, action: "One actual synthetic initiative", format: "Text", objectif: "Fixture objective",
-    budget: 1000, status: "RECOMMENDED", timeframe: "SPRINT_90", mitigatesRiskIds: [], targetsPersonaIds: [] };
+    budget: 1000, status: "RECOMMENDED", timeframe: "SPRINT_90", mitigatesRiskIds: [] as string[], targetsPersonaIds: [] as string[] };
   const i = await db.pillar.create({ data: { strategyId: strategy.id, key: "i", content: { catalogueParCanal: { DIGITAL: [initiative] } },
     currentVersion: 1, confidence: null, validationStatus: "AI_PROPOSED" } });
   const s = await db.pillar.create({ data: { strategyId: strategy.id, key: "s", content: composedSynthesis(),
@@ -75,8 +75,8 @@ describe("one operator choice survives the whole existing action path", () => {
     const result = await dispatchTypedRecos(f.strategy.id, rows.map(r => ({ id: r.id, proposedValue: r.proposedValue })));
     expect(result.appliedRecoIds).toEqual(rows.map(r => r.id));
     const i = await readI(f);
-    for (const raw of collectInitiatives(i.content) as Array<Record<string, unknown>>) expect(raw.status).toBe("SELECTED_FOR_ROADMAP");
-    expect(await db.brandAction.findUniqueOrThrow({ where: { id: f.action.id } })).toMatchObject({ selected: true, status: "ACCEPTED" });
+    for (const raw of collectInitiatives(i.content) as Array<Record<string, unknown>>) { expect(raw.preference).toBe("FAVORITE"); expect(raw.status).toBe("RECOMMENDED"); }
+    expect(await db.brandAction.findUniqueOrThrow({ where: { id: f.action.id } })).toMatchObject({ selected: false, status: "PROPOSED", timingStart:null });
     const s = await db.pillar.findUniqueOrThrow({ where: { id: f.s.id } });
     expect(s.content).toMatchObject({ selectedFromI: [{ sourceInitiativeId: f.initiative.id }],
       computed: { selectedInitiativeCount: 1, totalBudget: 1000 }, _sourcePillarVersions: { i: 2, s: 1 } });
@@ -110,6 +110,16 @@ describe("one operator choice survives the whole existing action path", () => {
     expect(await db.recommendation.findUniqueOrThrow({ where: { id: reco.id } })).toMatchObject({ status: "ACCEPTED", appliedAt: null });
     expect(await readI(f)).toEqual(before);
     expect(await db.pillarVersion.count({ where: { pillarId: f.s.id } })).toBe(0);
+  });
+
+  it("an accepted old recommendation cannot override a newer explicit preference", async () => {
+    const f=await fixture();
+    await setBrandActionStatus({strategyId:f.strategy.id,op:{type:"PREFERENCE",actionId:f.action.id,preference:"REJECTED"}});
+    const before=await readI(f);const row=await db.brandAction.findUniqueOrThrow({where:{id:f.action.id}});
+    const result=await dispatchTypedRecos(f.strategy.id,[{id:"old-favorite",proposedValue:{kind:"SELECT_INITIATIVE",initiativeId:f.initiative.id,timeframe:"SPRINT_90"}}]);
+    expect(result.appliedRecoIds).toEqual([]);expect(result.warnings.join(" ")).toContain("FIELD_PROVENANCE_REFUSED");
+    expect(await readI(f)).toEqual(before);expect(await db.brandAction.findUniqueOrThrow({where:{id:f.action.id}})).toEqual(row);
+    expect(await db.pillarVersion.count({where:{pillarId:f.s.id}})).toBe(0);
   });
 
   it.each(["i", "a"] as const)("refuses the old complete read snapshot when source %s changes before the typed transaction", async key => {
@@ -153,8 +163,10 @@ describe("one operator choice survives the whole existing action path", () => {
     const f = await fixture();
     const { budget: _budget, timeframe: _timeframe, ...unknown } = f.initiative;
     const zero = { ...unknown, id: randomUUID(), action: "Declared zero", budget: 0 };
+    unknown.targetsPersonaIds=[unknown.id]; zero.targetsPersonaIds=[zero.id];
     const estimate = { ...unknown, id: randomUUID(), action: "Qualitative estimate", budgetEstime: "LOW" };
-    await db.pillar.update({ where: { id: f.i.id }, data: { content: { catalogueParCanal: { DIGITAL: [unknown, zero, estimate] } } } });
+    estimate.targetsPersonaIds=[estimate.id];
+    await db.pillar.update({ where: { id: f.i.id }, data: { content: { catalogueParCanal: { DIGITAL: [unknown, zero, estimate] },_fieldProvenance:{catalogueParCanal:"SOURCE"} } } });
     await syncBrandActionsFromBlob(f.strategy.id);
     const actions = await db.brandAction.findMany({ where: { strategyId: f.strategy.id } });
     expect(actions.find(a => a.sourceInitiativeId === unknown.id)).toMatchObject({ budgetMin: null, budgetMax: null,
@@ -197,12 +209,31 @@ describe("one operator choice survives the whole existing action path", () => {
     expect(await db.pillar.findUniqueOrThrow({ where: { id: f.s.id } })).toMatchObject({ currentVersion: 2,
       content: { computed: { selectedInitiativeCount: 1 }, _sourcePillarVersions: { i: 2, s: 1 } } });
   });
-  it("never treats command IDs as an unrecorded choice", async () => {
-    const f = await fixture();
-    const result = await execute({ kind: "SYNTHESIZE_S", strategyId: f.strategy.id, selectedActionIds: [f.action.id] });
-    expect(result.status).toBe("FAILED"); expect(result.summary).toContain("SYNTHESIS_CHOICE_REQUIRED");
-    expect(await readI(f)).toEqual(f.i);
-    expect(await db.pillarVersion.count({ where: { pillarId: f.s.id } })).toBe(0);
+  it("request IDs cannot select or arm an action, but S may propose an admissible neutral candidate", async () => {
+    const f=await fixture();const result=await execute({kind:"SYNTHESIZE_S",strategyId:f.strategy.id,selectedActionIds:[f.action.id]});
+    expect(result.status,result.summary).toBe("OK");expect(await readI(f)).toEqual(f.i);
+    expect(await db.brandAction.findUniqueOrThrow({where:{id:f.action.id}})).toEqual(f.action);
+    expect((await db.pillar.findUniqueOrThrow({where:{id:f.s.id}})).content).toMatchObject({selectedFromI:[{sourceInitiativeId:f.initiative.id}]});
+  });
+  it("refuses command IDs outside this brand or rejected in the catalogue", async () => {
+    const f=await fixture(), foreign=await fixture();
+    for (const id of [foreign.action.id,randomUUID()]) {
+      const result=await execute({kind:"SYNTHESIZE_S",strategyId:f.strategy.id,selectedActionIds:[id]});
+      expect(result.status).toBe("FAILED");expect(result.summary).toContain("SYNTHESIS_CHOICE_REQUIRED");
+    }
+    await setBrandActionStatus({strategyId:f.strategy.id,op:{type:"PREFERENCE",actionId:f.action.id,preference:"REJECTED"}});
+    const result=await execute({kind:"SYNTHESIZE_S",strategyId:f.strategy.id,selectedActionIds:[f.action.id]});
+    expect(result.status).toBe("FAILED");expect(result.summary).toContain("SYNTHESIS_CHOICE_REQUIRED");
+    expect(await db.pillarVersion.count({where:{pillarId:f.s.id}})).toBe(0);
+  });
+
+  it("request IDs cannot force an admissible but redundant action into the scenario", async () => {
+    const f=await fixture();const extra={...f.initiative,id:randomUUID(),action:"Expensive redundant variant",budget:9000};
+    await db.pillar.update({where:{id:f.i.id},data:{content:{catalogueParCanal:{DIGITAL:[f.initiative,extra]}}}});
+    await syncBrandActionsFromBlob(f.strategy.id);const row=await db.brandAction.findUniqueOrThrow({where:{strategyId_sourceInitiativeId:{strategyId:f.strategy.id,sourceInitiativeId:extra.id}}});
+    const result=await execute({kind:"SYNTHESIZE_S",strategyId:f.strategy.id,selectedActionIds:[row.id]});
+    expect(result.status).toBe("FAILED");expect(result.summary).toContain("SYNTHESIS_CHOICE_REQUIRED");
+    expect(await db.pillarVersion.count({where:{pillarId:f.s.id}})).toBe(0);
   });
   it("refuses stale source versions before saving or archiving a computed plan", async () => {
     const f = await fixture(); const source = await executeProtocoleStrategy(f.strategy.id);
@@ -359,14 +390,14 @@ describe("one operator choice survives the whole existing action path", () => {
     expect(await db.brandAction.count({ where: { strategyId: f.strategy.id } })).toBe(2);
     expect((await executeProtocoleStrategy(f.strategy.id)).content).toMatchObject({ computed: { selectedInitiativeCount: 1 } });
   });
-  it("projects a versioned source selection rather than retaining an obsolete projection flag", async () => {
+  it("a legacy source selection is a preference and never arms execution on refresh", async () => {
     const f = await fixture();
     const result = await writePillarAndScore({ strategyId: f.strategy.id, pillarKey: "i",
       operation: { type: "SET_FIELDS", fields: [{ path: "catalogueParCanal", value: { DIGITAL: [
         { ...f.initiative, status: "SELECTED_FOR_ROADMAP" },
       ] } }] }, author: { system: "MESTOR", reason: "Synthetic typed source choice" }, options: { expectedVersion: 1, shapeGate: true } });
     expect(result.success).toBe(true); await syncBrandActionsFromBlob(f.strategy.id);
-    expect(await db.brandAction.findUniqueOrThrow({ where: { id: f.action.id } })).toMatchObject({ selected: true, status: "ACCEPTED" });
+    expect(await db.brandAction.findUniqueOrThrow({ where: { id: f.action.id } })).toMatchObject({ selected: false, status: "PROPOSED" });
   });
   it("serializes a refresh and a human choice without losing either half", async () => {
     const f = await fixture();
@@ -415,11 +446,11 @@ describe("one operator choice survives the whole existing action path", () => {
     expect(await db.brandAction.findUniqueOrThrow({ where: { id: f.action.id } })).toEqual(actionBefore);
     expect(provider.callLLM).not.toHaveBeenCalled();
   });
-  it("leaves a non-selected proposal out of S, preserving its actual source status", async () => {
+  it("S may propose a neutral source while preserving its actual source status", async () => {
     const f = await fixture(); provider.callLLM.mockClear(); const before = await readI(f);
     const output = await executeProtocoleStrategy(f.strategy.id);
     expect(output.error).toBeUndefined();
-    expect(output.content).toMatchObject({ computed: { selectedInitiativeCount: 0, totalBudget: 0 }, selectedFromI: [] });
+    expect(output.content).toMatchObject({ computed: { selectedInitiativeCount: 1, totalBudget: 1000 }, selectedFromI: [{sourceInitiativeId:f.initiative.id}] });
     expect(await readI(f)).toEqual(before); expect(provider.callLLM).not.toHaveBeenCalled();
   });
 });

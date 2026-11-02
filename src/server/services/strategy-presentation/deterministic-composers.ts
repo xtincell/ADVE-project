@@ -23,7 +23,7 @@
 
 import { db } from "@/lib/db";
 import { collectNormalizedInitiatives } from "@/lib/types/pillar-schemas";
-import { aggregateCampaignBudgets, campaignBudgetLabel } from "@/lib/strategy/roadmap-routes";
+import { aggregateCampaignBudgets, campaignBudgetLabel, currentScenarioIds } from "@/lib/strategy/roadmap-routes";
 import { resolveCultIndexTier } from "@/domain/cult-index-tier";
 import type { SectionMeta } from "./types";
 // Import depuis section-writeback (module feuille) : cassait le cycle
@@ -423,7 +423,8 @@ function compose3Horizons(ctx: ComposerContext): Blob {
   const initiatives = collectNormalizedInitiatives(i);
 
   const isShort = (it: (typeof initiatives)[number]) => it.timeframe === "SPRINT_90" || it.timeframe === "PHASE_1";
-  const selected = initiatives.filter((it) => it.status === "SELECTED_FOR_ROADMAP");
+  const ids = currentScenarioIds(s);
+  const selected = initiatives.filter(it => ids.has(it.id));
   const h1 = names(selected.filter(isShort), ["action", "titre", "title", "nom"]);
   const h2 = names(selected.filter((it) => it.timeframe === "PHASE_2" || it.timeframe === "LONG_TERM"), ["action", "titre", "title", "nom"]);
   const unassigned = names(selected.filter((it) => it.timeframe === undefined), ["action"]);
