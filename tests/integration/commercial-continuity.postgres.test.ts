@@ -182,4 +182,18 @@ describe("commercial continuity through the governed router and PostgreSQL", () 
     await expect(caller(sellerId).updateDeal({ dealId, salesStep: { ...action, command: { type: "QUALIFY", role: "PARTNER", need: "Other meaning." } } })).rejects.toThrow();
   });
 
+  it("keeps the partner and audience relationships outside projected sales value", async () => {
+    dealId = await caller(sellerId).createDeal({ sellerStrategyId: brandId, companyName: "Partenaire de recette", contactName: "Créateur", contactPhone: "+00000003" });
+    await step(adminId, { type: "MANDATE", mandate: {
+      offerId: "gold", offerVersion: "1", offerName: "Gold", terms: "Rôles à qualifier.",
+      amount: 60000, currency: "XOF", sellerId, deliveryOwnerId: deliveryId, beneficiary: "Marque",
+      expiresAt: "2030-01-01T00:00:00.000Z", paymentInstructions: "Référence", channels: ["EMAIL"],
+    } }, "ADMIN");
+    await step(sellerId, { type: "QUALIFY", role: "PARTNER", need: "Apporter une audience qualifiée." });
+    const row = await caller(sellerId).getDeal({ id: dealId });
+    expect(row.value).toBe(0);
+    expect(salesStateSchema.parse(row.commercial).node).toBe("PARTNER");
+    await expect(step(sellerId, { type: "PROPOSE" })).rejects.toThrow();
+  });
+
 });

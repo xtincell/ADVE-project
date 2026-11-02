@@ -673,7 +673,8 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
       data: {
         commercial: JSON.parse(JSON.stringify(next)), paymentReference: next.mandate?.intakePaymentReference ?? null, stage, revision: { increment: 1 },
         wonAt: stage === "WON" ? (deal.wonAt ?? new Date()) : deal.wonAt,
-        value: next.mandate?.amount ?? deal.value, currency: next.mandate?.currency ?? deal.currency,
+        value: ["PARTNER", "AUDIENCE"].includes(next.node) ? 0 : (next.mandate?.amount ?? deal.value),
+        currency: next.mandate?.currency ?? deal.currency,
       },
     });
     if (changed.count !== 1) throw new TRPCError({ code: "CONFLICT", message: "Une autre décision vient d’être enregistrée." });
