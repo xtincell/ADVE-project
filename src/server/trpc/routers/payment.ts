@@ -646,7 +646,7 @@ export const paymentRouter = createTRPCRouter({
     .query(({ ctx, input }) => {
       const status = input?.status ?? "PENDING";
       return ctx.db.intakePayment.findMany({
-        where: { provider: "MANUAL_WA", ...(status === "all" ? {} : { status }) },
+        where: { provider: "MANUAL_WA", OR: [{ tierKey: null }, { tierKey: { not: "SALES_COLLECTION" } }], ...(status === "all" ? {} : { status }) },
         orderBy: { createdAt: "desc" },
         take: 200,
       });
@@ -657,6 +657,7 @@ export const paymentRouter = createTRPCRouter({
     .input(z.object({ reference: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const payment = await ctx.db.intakePayment.findUnique({ where: { reference: input.reference } });
+      if (payment?.tierKey === "SALES_COLLECTION") throw new Error("Utiliser le rapprochement financier de l’affaire commerciale.");
       if (!payment || payment.provider !== "MANUAL_WA" || payment.status !== "PENDING") {
         throw new Error("Paiement manuel introuvable ou déjà traité.");
       }
@@ -684,6 +685,7 @@ export const paymentRouter = createTRPCRouter({
     .input(z.object({ reference: z.string(), reason: z.string().max(500).optional() }))
     .mutation(async ({ ctx, input }) => {
       const payment = await ctx.db.intakePayment.findUnique({ where: { reference: input.reference } });
+      if (payment?.tierKey === "SALES_COLLECTION") throw new Error("Utiliser le rapprochement financier de l’affaire commerciale.");
       if (!payment || payment.provider !== "MANUAL_WA" || payment.status !== "PENDING") {
         throw new Error("Paiement manuel introuvable ou déjà traité.");
       }

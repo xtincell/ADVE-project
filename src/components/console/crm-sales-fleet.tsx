@@ -5,6 +5,8 @@ import { useSession } from "next-auth/react";
 import { Bot, UserRound, Pause, Play, Send, ArrowRight, Plus } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { MarkdownContent } from "@/components/shared/markdown-content";
+import { CrmSalesPortfolio } from "./crm-sales-portfolio";
+import type { SalesCatalogueOffer } from "./crm-sales-mandate-fields";
 
 const field = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 const button = "inline-flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
@@ -33,6 +35,13 @@ export function CrmSalesFleet() {
   const profile = detail.data?.profile;
   const scopedDeals = deals.data?.filter(deal => deal.sellerStrategyId === strategyId) ?? [];
   const activeCount = profiles.data?.filter(item => item.status === "ACTIVE").length ?? 0;
+  const brand = brands.data?.find(item => item.id === strategyId);
+  const offerPillar = brand?.pillars.find(item => item.key === "v");
+  const catalogue = (offerPillar?.content as { produitsCatalogue?: SalesCatalogueOffer[] } | null)?.produitsCatalogue ?? [];
+  const principals = [
+    ...(options.data?.users.filter(user => options.data?.financeUserIds.includes(user.id)).map(user => ({ id: user.id, label: user.name ?? user.email ?? "Membre de l’équipe" })) ?? []),
+    ...(profiles.data?.filter(item => item.principalId && item.status === "ACTIVE" && (item.mode === "AI" || options.data?.financeUserIds.includes(item.principalId!))).map(item => ({ id: item.principalId!, label: `${item.name} · ${item.mode === "AI" ? "IA" : "humain"}` })) ?? []),
+  ].filter((item, index, all) => all.findIndex(person => person.id === item.id) === index);
 
   async function refresh() { await utils.crm.invalidate(); }
   async function setStatus(next: "ACTIVE" | "PAUSED") {
@@ -104,6 +113,7 @@ export function CrmSalesFleet() {
             <button type="button" className={button} disabled={status.isPending} onClick={() => void setStatus(profile.status === "ACTIVE" ? "PAUSED" : "ACTIVE")}>{profile.status === "ACTIVE" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}{profile.status === "ACTIVE" ? "Mettre en pause" : "Activer le vendeur"}</button>
           </div>
           {profile.status !== "ACTIVE" && <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">Ce vendeur ne prend pas de nouvelle mission. Activez-le, puis confiez-lui les affaires dont le mandat de vente est approuvé.</p>}
+          <CrmSalesPortfolio key={profile.id} strategyId={strategyId} representative={profile} catalogue={catalogue} offerVersion={offerPillar ? String(offerPillar.currentVersion) : ""} principals={principals} defaultPrincipalId={options.data?.brandOwnerId} canManage={Boolean(options.data && (session?.user.role === "ADMIN" || options.data.canManage))} />
           <div className="grid gap-4 xl:grid-cols-2">
             <section aria-labelledby="sales-orders-title" className="min-w-0 space-y-3">
               <h4 id="sales-orders-title" className="font-medium">Lui parler</h4>

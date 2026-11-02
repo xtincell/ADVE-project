@@ -39,8 +39,10 @@ export async function listSalesRepresentatives(actor: FleetActor, strategyId: st
 }
 export async function salesRosterOptions(actor: FleetActor, strategyId: string) {
   const brand = await assertFleetBrand(actor, strategyId);
-  const users = await db.user.findMany({ where: { OR: [{ id: brand.userId }, { id: actor.id }, ...(brand.operatorId ? [{ operatorId: brand.operatorId }] : [])] }, select: { id: true, name: true, email: true }, orderBy: { name: "asc" } });
-  return { users, canManage: actor.admin || brand.userId === actor.id };
+  const users = await db.user.findMany({ where: { OR: [{ id: brand.userId }, { id: actor.id }, ...(brand.operatorId ? [{ operatorId: brand.operatorId }] : [])] }, select: { id: true, name: true, email: true, operatorId: true }, orderBy: { name: "asc" } });
+  return { users: users.map(({ operatorId: _operator, ...user }) => user),
+    financeUserIds: users.filter(user => user.id === brand.userId || Boolean(brand.operatorId && user.operatorId === brand.operatorId)).map(user => user.id),
+    brandOwnerId: brand.userId, canManage: actor.admin || brand.userId === actor.id };
 }
 export async function saveSalesRepresentative(actor: FleetActor, raw: z.input<typeof representativeInput>) {
   const input = representativeInput.parse(raw);
@@ -59,7 +61,7 @@ export async function saveSalesRepresentative(actor: FleetActor, raw: z.input<ty
   // Fail before any write if the existing credential encryption key is unavailable.
   const encryptedApiKey = secret ? encryptTokenPayload({ apiKey: secret }) : null;
   return db.$transaction(async tx => {
-    const key = secret ? await tx.mcpApiKey.create({ data: { name: `Commercial · ${input.name}`, keyHash: createHash("sha256").update(secret).digest("hex"), server: "*", scopeKind: "BRAND", scopeStrategyId: input.strategyId, permissions: { managedBy: "sales-fleet", allowedTools: ["operations.sales_portfolio", "operations.sales_decide", "operations.sales_send_email", "operations.sales_send_message", "operations.sales_sync_payment", "operations.sales_claim_run", "operations.sales_complete_run", "operations.sales_customer_link", "advertis.getBrandCard", "advertis.getPillarContent", "intelligence.rag_search"] }, ratePerCallUsd: 0, isActive: false } }) : null;
+    const key = secret ? await tx.mcpApiKey.create({ data: { name: `Commercial · ${input.name}`, keyHash: createHash("sha256").update(secret).digest("hex"), server: "*", scopeKind: "BRAND", scopeStrategyId: input.strategyId, permissions: { managedBy: "sales-fleet", allowedTools: ["operations.sales_portfolio", "operations.sales_decide", "operations.sales_send_email", "operations.sales_send_message", "operations.sales_sync_payment", "operations.sales_request_payment", "operations.sales_claim_run", "operations.sales_complete_run", "operations.sales_customer_link", "advertis.getBrandCard", "advertis.getPillarContent", "intelligence.rag_search"] }, ratePerCallUsd: 0, isActive: false } }) : null;
     const conversation = await tx.conversation.create({ data: { strategyId: input.strategyId, title: input.name, channel: "SALES_MANAGER", participants: [actor.id], status: "ACTIVE" } });
     const profile = await tx.salesRepresentative.create({ data: { strategyId: input.strategyId, operatorId: brand.operatorId, name: input.name, mode: input.mode, humanUserId: input.mode === "HUMAN" ? input.humanUserId : null, mcpKeyId: key?.id, encryptedApiKey, conversationId: conversation.id, maxTurns: input.maxTurns, maxTokens: input.maxTokens, dailyTokenBudget: input.dailyTokenBudget, dailyRunLimit: input.dailyRunLimit } });
     await tx.conversation.update({ where: { id: conversation.id }, data: { externalRef: profile.id } });
@@ -84,7 +86,7 @@ export async function getSalesRepresentative(actor: FleetActor, id: string) {
   ]);
   return { profile: publicProfile(profile), runs: runs.map(({ leaseToken: _lease, ...run }) => run), messages: messages.reverse() };
 }
-async function queueIn(tx: Tx, profile: SalesRepresentative, input: { requestId: string; instruction: string; dealId?: string }, actorId?: string) {
+export async function queueSalesRunIn(tx: Tx, profile: SalesRepresentative, input: { requestId: string; instruction: string; dealId?: string }, actorId?: string) {
   const replay = await tx.salesRun.findUnique({ where: { requestId: input.requestId } });
   if (replay) {
     if (replay.representativeId !== profile.id || replay.instruction !== input.instruction || replay.dealId !== (input.dealId ?? null)) throw new TRPCError({ code: "CONFLICT", message: "Référence déjà utilisée pour une autre instruction." });
@@ -103,7 +105,7 @@ async function queueIn(tx: Tx, profile: SalesRepresentative, input: { requestId:
 }
 export async function queueRun(representativeId: string, input: { requestId: string; instruction: string; dealId?: string }, actorId?: string) {
   try {
-    return await db.$transaction(async tx => queueIn(tx, await tx.salesRepresentative.findUniqueOrThrow({ where: { id: representativeId } }), input, actorId));
+    return await db.$transaction(async tx => queueSalesRunIn(tx, await tx.salesRepresentative.findUniqueOrThrow({ where: { id: representativeId } }), input, actorId));
   } catch (error) {
     if ((error as { code?: string }).code !== "P2002") throw error;
     const replay = await db.salesRun.findUnique({ where: { requestId: input.requestId } });
@@ -144,9 +146,19 @@ export async function claimRun(keyId: string, requestId: string) {
     const today = new Date().toISOString().slice(0, 10);
     const tokens = profile.budgetDay === today ? profile.dailyTokensReserved : 0;
     const count = profile.budgetDay === today ? profile.dailyRunsClaimed : 0;
-    if (tokens + profile.maxTokens > profile.dailyTokenBudget || count >= profile.dailyRunLimit) return { run: null };
-    const next = await tx.salesRun.findFirst({ where: { representativeId: profile.id, status: "QUEUED" }, orderBy: { createdAt: "asc" } });
+    const { validateDatedSalesRunIn } = await import("./scheduling");
+    // Stale deadlines are terminal receipts, so they neither send nor block the next valid job.
+    let next: SalesRun | null = null;
+    const queued = await tx.salesRun.findMany({ where: { representativeId: profile.id, status: "QUEUED" }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], take: 25 });
+    for (const candidate of queued) {
+      const validity = await validateDatedSalesRunIn(tx, candidate, new Date());
+      if (validity.allowed) { next = candidate; break; }
+      await tx.salesRun.updateMany({ where: { id: candidate.id, status: "QUEUED" }, data: {
+        status: "FAILED", result: validity.reason ?? "Échéance devenue sans objet : aucun effet exécuté.", completedAt: new Date(), tokensUsed: 0,
+      } });
+    }
     if (!next) return { run: null };
+    if (tokens + profile.maxTokens > profile.dailyTokenBudget || count >= profile.dailyRunLimit) return { run: null };
     const claimed = await tx.salesRun.updateMany({ where: { id: next.id, status: "QUEUED" }, data: { status: "RUNNING", leaseToken: randomUUID(), claimRequestId: requestId, claimedAt: new Date(), reservedTokens: profile.maxTokens } });
     if (claimed.count !== 1) return { run: null };
     await tx.salesRepresentative.update({ where: { id: profile.id }, data: { budgetDay: today, dailyTokensReserved: tokens + profile.maxTokens, dailyRunsClaimed: count + 1 } });
@@ -199,7 +211,7 @@ export async function recordInboundSalesMessage(input: { dealId: string; channel
     const message = await tx.crmMessage.create({ data: { id: "sales-in-" + createHash("sha256").update(JSON.stringify([deal.id, input.externalId])).digest("hex"), contactId: contact?.id, salesDealId: deal.id, direction: "IN", channel: input.channel, body: input.body, subject: input.subject, providerRef: input.externalId, provider: actorId ? "MANUAL" : "SALES_PORTAL", status: "RECEIVED", sentBy: actorId } });
     const mandate = salesStateSchema.parse(deal.commercial ?? {}).mandate;
     const profile = mandate?.sellerId.startsWith("mcp:") ? await tx.salesRepresentative.findUnique({ where: { mcpKeyId: mandate.sellerId.slice(4) } }) : null;
-    const run = profile?.status === "ACTIVE" ? await queueIn(tx, profile, { requestId: `inbound:${message.id}`, dealId: deal.id, instruction: `Nouvelle réponse du client sur ${input.channel}, message ${message.id}. Relire l’affaire et cette réponse, répondre selon le mandat et le canal autorisé. Ne pas inventer de paiement ni de livraison.` }) : null;
+    const run = profile?.status === "ACTIVE" ? await queueSalesRunIn(tx, profile, { requestId: `inbound:${message.id}`, dealId: deal.id, instruction: `Nouvelle réponse du client sur ${input.channel}, message ${message.id}. Relire l’affaire et cette réponse, répondre selon le mandat et le canal autorisé. Ne pas inventer de paiement ni de livraison.` }) : null;
     return { message, run };
   }); } catch (error) {
     if ((error as { code?: string }).code !== "P2002") throw error;

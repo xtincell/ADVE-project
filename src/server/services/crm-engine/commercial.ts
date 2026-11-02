@@ -28,6 +28,25 @@ export const conversationTreeSchema = z.object({
     }
   }
 });
+export const outreachPolicySchema = z.object({
+  firstContactAt: z.string().datetime(),
+  followUpAfterDays: z.array(z.number().int().min(1).max(30)).max(3),
+  dailyOutboundLimit: z.number().int().min(1).max(10),
+  minIntervalHours: z.number().finite().min(1).max(720),
+});
+export const collectionSchema = z.object({
+  mode: z.literal("MANUAL"), destinationRef: text,
+  attestedBy: text, attestedAt: z.string().datetime(), financeOwnerId: text,
+});
+export const salesPlanSchema = z.object({
+  id: z.string().min(1).max(200),
+  basis: z.enum(["OWNER", "CUSTOMER_REQUEST", "APPROVED_CADENCE"]),
+  purpose: z.enum(["FIRST_CONTACT", "FOLLOW_UP", "VALUE_REVIEW"]),
+  action: text, channel: salesChannel, dueAt: z.string().datetime(),
+  sellerId: text, createdAt: z.string().datetime(),
+  anchorMessageId: text.optional(), anchorSentAt: z.string().datetime().optional(),
+  cadenceIndex: z.number().int().min(0).max(2).optional(),
+});
 export const mandateSchema = z.object({
   offerId: text, offerVersion: text, offerName: text, terms: text,
   amount: z.number().finite().nonnegative(), currency: z.string().regex(/^[A-Z]{3}$/),
@@ -37,6 +56,10 @@ export const mandateSchema = z.object({
   conversationTree: conversationTreeSchema.optional(),
   intakePaymentReference: text.optional(),
   outboundEmailEnabled: z.boolean().optional(),
+  portfolioAuthorizationId: z.string().uuid().optional(),
+  portfolioMemberId: text.optional(),
+  outreachPolicy: outreachPolicySchema.optional(),
+  collection: collectionSchema.optional(),
 });
 export const salesCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("MANDATE"), mandate: mandateSchema }),
@@ -48,6 +71,10 @@ export const salesCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("DELIVER"), evidence: text, customerMessageId: text.optional(), nextAction: text, nextDeadline: z.string().datetime() }),
   z.object({ type: z.literal("STOP"), evidence: text }),
   z.object({ type: z.literal("HANDOVER"), sellerId: text }),
+  z.object({ type: z.literal("PLAN_NEXT_ACTION"), action: text,
+    nextDeadline: z.string().datetime().optional(),
+    basis: z.enum(["OWNER", "CUSTOMER_REQUEST", "APPROVED_CADENCE"]),
+    purpose: z.enum(["FOLLOW_UP", "VALUE_REVIEW"]), customerMessageId: text.optional() }),
   z.object({ type: z.literal("BRANCH"), choiceId: text, evidence: text, customerMessageId: text.optional() }),
 ]);
 export const salesStepSchema = z.object({
@@ -61,10 +88,12 @@ export const salesStateSchema = z.object({
   treeNodeId: text.optional(),
   need: text.optional(), agreement: text.optional(), payment: text.optional(), delivery: text.optional(),
   nextAction: text.optional(), nextDeadline: z.string().datetime().optional(),
+  nextPlan: salesPlanSchema.optional(),
+  cadenceSuspended: z.boolean().optional(),
 });
 export type SalesState = z.infer<typeof salesStateSchema>;
 export type SalesStep = z.infer<typeof salesStepSchema>;
-export interface SalesActor { id: string; admin: boolean }
+export interface SalesActor { id: string; admin: boolean; salesRunId?: string; salesRequestId?: string }
 
 function requireCondition(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -87,7 +116,7 @@ export function advanceSale(previous: SalesState, step: SalesStep, actor: SalesA
   if (command.type === "STOP") {
     const contracted = ["ACCEPTED", "PAID", "DELIVERED"].includes(previous.node);
     return { ...previous, contactStopped: true, node: contracted ? previous.node : "STOPPED",
-      nextAction: contracted ? previous.nextAction : "Respecter le refus de contact.", nextDeadline: undefined };
+      nextAction: contracted ? previous.nextAction : "Respecter le refus de contact.", nextDeadline: undefined, nextPlan: undefined };
   }
   const fulfillment = command.type === "PAYMENT" || command.type === "DELIVER";
   if (!fulfillment) {
@@ -97,7 +126,7 @@ export function advanceSale(previous: SalesState, step: SalesStep, actor: SalesA
   }
   if (command.type === "HANDOVER") {
     requireCondition(actor.admin, "La passation doit être autorisée par le mandant.");
-    return { ...previous, mandate: { ...mandate, sellerId: command.sellerId } };
+    return { ...previous, mandate: { ...mandate, sellerId: command.sellerId }, nextDeadline: undefined, nextPlan: undefined, cadenceSuspended: true };
   }
   if (command.type === "BRANCH") {
     const tree = mandate.conversationTree;
@@ -117,6 +146,19 @@ export function advanceSale(previous: SalesState, step: SalesStep, actor: SalesA
   requireCondition(!mandate.conversationTree || fromBranch ||
     !["QUALIFY", "PROPOSE", "OBJECTION", "ACCEPT"].includes(command.type), "Suivre l’arbre de vente approuvé.");
   switch (command.type) {
+    case "PLAN_NEXT_ACTION": {
+      requireCondition(command.nextDeadline && new Date(command.nextDeadline) > now, "Une prochaine action exige une date future explicite.");
+      requireCondition(new Date(command.nextDeadline) < new Date(mandate.expiresAt), "La prochaine action doit précéder la fin du mandat.");
+      requireCondition(command.basis !== "OWNER" || actor.admin, "Une date propriétaire doit être approuvée par le mandant.");
+      requireCondition(command.basis !== "CUSTOMER_REQUEST" || command.customerMessageId, "Référencer le rendez-vous réellement demandé par le client.");
+      requireCondition(command.basis !== "APPROVED_CADENCE" || mandate.outreachPolicy, "Aucune cadence de relance n’a été approuvée.");
+      requireCondition(command.purpose !== "VALUE_REVIEW" || previous.node === "DELIVERED", "Une revue de valeur suit une remise prouvée.");
+      requireCondition(command.purpose !== "FOLLOW_UP" || !["PARTNER", "AUDIENCE", "ACCEPTED", "PAID", "DELIVERED"].includes(previous.node), "Cette étape n’autorise pas une nouvelle sollicitation commerciale.");
+      return { ...previous, nextAction: command.action, nextDeadline: command.nextDeadline,
+        nextPlan: { id: step.requestId, basis: command.basis, purpose: command.purpose,
+          action: command.action, channel: step.channel, dueAt: command.nextDeadline,
+          sellerId: mandate.sellerId, createdAt: now.toISOString(), anchorMessageId: command.customerMessageId } };
+    }
     case "QUALIFY":
       requireCondition(previous.node === "DISCOVERY" || previous.node === "QUALIFIED", "Qualification déjà dépassée.");
       return { ...previous, need: command.need, node: command.role === "BUYER" ? "QUALIFIED" : command.role,
@@ -129,16 +171,18 @@ export function advanceSale(previous: SalesState, step: SalesStep, actor: SalesA
       return { ...previous, node: "OBJECTION", nextAction: "Traiter l’objection dans le mandat ou solliciter le décideur." };
     case "ACCEPT":
       requireCondition(previous.node === "PROPOSAL", "Un accord concerne une proposition explicite.");
-      return { ...previous, node: "ACCEPTED", agreement: command.evidence, nextAction: mandate.paymentInstructions };
+      return { ...previous, node: "ACCEPTED", agreement: command.evidence, nextAction: mandate.paymentInstructions, nextPlan: undefined, nextDeadline: undefined };
     case "PAYMENT":
       requireCondition(actor.admin, "Le rapprochement financier est réservé au mandant.");
       requireCondition(previous.node === "ACCEPTED", "Accord nécessaire avant rapprochement.");
       requireCondition(command.amount === mandate.amount && command.currency === mandate.currency, "Le règlement doit correspondre au montant et à la devise convenus.");
-      return { ...previous, node: "PAID", payment: command.evidence, nextAction: "Remettre la prestation au client." };
+      return { ...previous, node: "PAID", payment: command.evidence, nextAction: "Remettre la prestation au client.", nextPlan: undefined, nextDeadline: undefined };
     case "DELIVER":
       requireCondition(actor.admin || actor.id === mandate.deliveryOwnerId, "La remise doit être attestée par le responsable de livraison.");
       requireCondition(previous.node === "PAID", "Vérifier le règlement avant cette remise.");
-      return { ...previous, node: "DELIVERED", delivery: command.evidence, nextAction: command.nextAction, nextDeadline: command.nextDeadline };
+      return { ...previous, node: "DELIVERED", delivery: command.evidence, nextAction: command.nextAction, nextDeadline: command.nextDeadline,
+        nextPlan: { id: step.requestId, basis: "OWNER", purpose: "VALUE_REVIEW", action: command.nextAction,
+          channel: step.channel, dueAt: command.nextDeadline, sellerId: mandate.sellerId, createdAt: now.toISOString() } };
   }
 }
 
