@@ -121,7 +121,7 @@ export const tools: ToolDefinition[] = [
       const activities = await db.cRMActivity.findMany({
         where: { dealId: { in: assigned.map(row => row.id) } }, orderBy: { performedAt: "asc" },
       });
-      return assigned.map(deal => ({ deal, history: activities.filter(item => item.dealId === deal.id) }));
+      return { deals: assigned.map(deal => ({ deal, history: activities.filter(item => item.dealId === deal.id) })) };
     },
   },
   {

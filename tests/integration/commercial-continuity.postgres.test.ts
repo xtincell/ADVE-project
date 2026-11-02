@@ -13,18 +13,40 @@ const caller = (id: string, role: "ADMIN" | "USER" = "USER") => crmRouter.create
   db, headers: undefined, session: { user: { id, role }, expires: new Date(Date.now() + 3600000).toISOString() },
 });
 let dealId: string;
+const fixtureOperatorIds: string[] = [];
+const fixturePayments: string[] = [];
 beforeAll(async () => {
   const op = await db.operator.create({ data: { name: "Commercial fixture", slug: randomUUID(), status: "ACTIVE", licenseType: "OWNER", licensedAt: new Date(), licenseExpiry: new Date("2030-01-01") } });
+  fixtureOperatorIds.push(op.id);
   const createUser = async (name: string, operatorId?: string) => db.user.create({ data: { name, email: randomUUID() + "@example.invalid", operatorId } });
   adminId = (await createUser("Mandant")).id;
   sellerId = (await createUser("Commercial autonome", op.id)).id;
   deliveryId = (await createUser("Livraison", op.id)).id;
   const other = await db.operator.create({ data: { name: "Autre", slug: randomUUID(), status: "ACTIVE", licenseType: "OWNER", licensedAt: new Date(), licenseExpiry: new Date("2030-01-01") } });
+  fixtureOperatorIds.push(other.id);
   otherId = (await createUser("Autre vendeur", other.id)).id;
   brandId = (await db.strategy.create({ data: { name: "Marque de recette", userId: adminId, operatorId: op.id } })).id;
   await db.pillar.create({ data: { strategyId: brandId, key: "v", content: { produitsCatalogue: [{ id: "gold", nom: "Gold" }] } } });
 });
-afterAll(async () => { await db.$disconnect(); });
+afterAll(async () => {
+  if (process.env.KEEP_COMMERCIAL_FIXTURES !== "1" && brandId) {
+    const owned = await db.deal.findMany({ where: { sellerStrategyId: brandId }, select: { id: true } });
+    const ids = owned.map(item => item.id);
+    await db.cRMActivity.deleteMany({ where: { dealId: { in: ids } } });
+    await db.funnelMapping.deleteMany({ where: { dealId: { in: ids } } });
+    await db.deal.deleteMany({ where: { id: { in: ids } } });
+    const keys = await db.mcpApiKey.findMany({ where: { scopeStrategyId: brandId }, select: { id: true } });
+    await db.mcpApiCall.deleteMany({ where: { apiKeyId: { in: keys.map(key => key.id) } } });
+    await db.mcpApiKey.deleteMany({ where: { scopeStrategyId: brandId } });
+    await db.intakePayment.deleteMany({ where: { reference: { in: fixturePayments } } });
+    await db.intentEmission.deleteMany({ where: { strategyId: brandId } });
+    await db.pillar.deleteMany({ where: { strategyId: brandId } });
+    await db.strategy.delete({ where: { id: brandId } });
+    await db.user.deleteMany({ where: { id: { in: [adminId, sellerId, deliveryId, otherId] } } });
+    await db.operator.deleteMany({ where: { id: { in: fixtureOperatorIds } } });
+  }
+  await db.$disconnect();
+});
 
 async function step(userId: string, command: SalesStep["command"], role: "ADMIN" | "USER" = "USER", channel: SalesStep["channel"] = "EMAIL") {
   const client = caller(userId, role);
@@ -81,6 +103,7 @@ describe("commercial continuity through the governed router and PostgreSQL", () 
   it("runs the agent through the real MCP HTTP entry point with a scoped key and an independent payment receipt", async () => {
     const secret = randomUUID();
     const paymentReference = randomUUID();
+    fixturePayments.push(paymentReference);
     await db.intakePayment.create({ data: { reference: paymentReference, intakeToken: randomUUID(), amount: 60000, currency: "XOF", provider: "CINETPAY" } });
     const key = await db.mcpApiKey.create({ data: { name: "Owned autonomous recipe", keyHash: createHash("sha256").update(secret).digest("hex"),
       server: "operations", scopeKind: "BRAND", scopeStrategyId: brandId, ratePerCallUsd: 0 } });
