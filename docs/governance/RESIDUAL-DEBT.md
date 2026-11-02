@@ -31,14 +31,22 @@ Prix TTC / TVA conditionnelle 18 % → 11 Gold. P26
 réelles, ni assujettissement fiscal, ni rentabilité globale ; pas de nouvelle
 formule ou application financière créée.
 
-**CI Golden Path 525 — réception restante** : l’installation de Chromium refuse
-Ubuntu 26.04 avec Playwright 1.59.1 avant navigateur et avant les sept étapes
-(`golden525-nov02-failed.log`). Seul `runs-on` passe de `ubuntu-latest` à
-`ubuntu-24.04` dans le workflow existant ; aucun test, seuil ou assertion retiré.
-**Fermer** par réception du run PR #1082 sur la source exacte : installation,
-exécution réelle des sept étapes et artefacts du résultat. Responsable lane CI
-existante ; effort correction de configuration et recette ; **déclencheur immédiat**
-au prochain run. Le correctif préparé n’est pas encore une E2E verte ni un MVP reçu.
+**CI Golden Path 525 — attente d’installation close** : après épinglage Ubuntu
+24.04, le [run Golden Path PR #1082](https://github.com/xtincell/ADVE-project/actions/runs/41414616545/job/125175335954)
+est SUCCESS. Le premier refus Ubuntu 26.04 / Playwright 1.59.1 reste conservé
+(`golden525-nov02-failed.log`) ; étapes et assertions inchangées. Ce reçu CI ne
+reçoit pas le MVP ou le parcours client de production.
+
+**CI Lighthouse 525 — résultat encore attendu** : le [run précédent](https://github.com/xtincell/ADVE-project/actions/runs/41414616465/job/125175335668)
+échoue au build, avant audit : Turbopack ne résout pas la requête interne Google
+Font de JetBrains Mono (`lighthouse525-nov02-failed.log`). Le seul correctif du
+workflow est `npm run build -- --webpack`, compilateur de l’image de production ;
+aucun seuil, URL auditée ou assertion supprimé. Hypothèse : divergence de chemin
+de compilation, pas résultat d’accessibilité ou de performance mesuré.
+**Fermer** par build puis audit Lighthouse réels sur le nouveau commit PR #1082,
+avec rapports et seuils existants. Responsable lane CI existante ; effort recette
+bornée ; **déclencheur immédiat** au prochain run. Aucun vert Lighthouse, SLO ou
+MVP déduit de ce changement de commande.
 
 Production 524 reçue ; code 525 toujours à livrer et lire en production. Les
 constats du 26 octobre ci-dessous restent des checkpoints historiques ; la mention

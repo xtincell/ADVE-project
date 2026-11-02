@@ -19,6 +19,8 @@
 - Contrôle production du 2 novembre, avant la cascade ci-dessus : la 524 est en ligne ; les 437 sources, les 2 083 actifs, les contenus des huit piliers, le dossier racine Friesland et les six lignes de paiement comparés à leur état avant bascule sont conservés. Le classement public affiche uniquement SPAWT (39,5/200, couverture 40 %). La restitution partagée contient encore sept analyses périmées et le NPS de substitution −86. La version 525 ne peut pas être reçue sur ces écrans.
 - Priorité au MVP scoreur / fiche ADVE complète / Oracle, toujours ouverts. Depuis le reçu du 2 novembre, R/T/I ne sont plus périmés ; S reste partielle et l’Oracle complet reste à recevoir. Anciennes propositions Glory, NPS client réel absent, périmètre Friesland régional et capacité/latence VPS restent dans le plan ; aucun MVP entier reçu par ce lot.
 
+- Golden Path PR #1082 est désormais vert (run 41414616545) après épinglage Ubuntu 24.04, sans changement des étapes/assertions ; ce reçu CI ne reçoit pas le MVP. Reprise du contrôle Lighthouse du 2 novembre : Turbopack refuse la résolution interne de JetBrains Mono avant le lancement de l’audit. Le workflow utilise désormais le même build webpack déjà exercé localement et dans l’image de production. Aucun seuil, route auditée ou contrôle supprimé ; résultat du nouveau run encore attendu.
+
 ## v6.27.524 — fix(sources): reprend le raccord documentaire sur la base523 (2026-10-26)
 
 **Le raccord testé dans le candidat522 rejoint la base523 sans perdre son historique ni les correctifs Seshat.**

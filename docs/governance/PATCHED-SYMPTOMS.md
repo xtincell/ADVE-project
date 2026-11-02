@@ -28,13 +28,17 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
-### Statut du 2 novembre — correctif CI préparé, pas E2E reçue
+### Statut du 2 novembre — Golden Path reçu, Lighthouse encore ouvert
 
-Golden Path refuse l’installation de Chromium avant navigateur : Ubuntu 26.04
-n’est pas pris en charge par Playwright 1.59.1. Le workflow épingle Ubuntu 24.04,
-sans changer les sept étapes ou leurs assertions ; la réception du prochain run
-PR #1082 reste dans [RESIDUAL-DEBT](RESIDUAL-DEBT.md), pas dans les réparations
-fonctionnelles reçues. Aucune note client ajoutée pour ce correctif invisible.
+L’épinglage Ubuntu 24.04 ferme le refus d’installation Chromium sur Ubuntu 26.04 /
+Playwright 1.59.1 : Golden Path PR #1082 est SUCCESS (run 41414616545), sans changer
+les sept étapes ou leurs assertions. Hypothèse de cause confirmée par le refus
+initial : dérive du runner `ubuntu-latest`, pas échec du parcours applicatif.
+
+Le build Lighthouse refuse ensuite la résolution interne JetBrains Mono par
+Turbopack, avant tout audit (run 41414616465). Commande webpack préparée, seuils et
+URLs inchangés ; aucune réparation d’audit reçue à ce stade.
+[Reprise Lighthouse](RESIDUAL-DEBT.md), sans nouvelle note client ni réception MVP.
 
 Le timeout client 600 s de la cascade n’est pas un résultat serveur FAILED :
 `OK` persistant reçu séparément, 465 s, A/D/V/E conservés, R/T/I COMPLETE et S à
