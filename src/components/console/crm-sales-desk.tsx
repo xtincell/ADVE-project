@@ -155,7 +155,7 @@ export function CrmSalesDesk() {
               <button className="rounded bg-primary px-4 py-2 text-primary-foreground" disabled={update.isPending}>Poursuivre la conversation</button>
             </form>
           )}
-          {sale.mandate && (
+          {sale.mandate && sale.node !== "STOPPED" && (
             <form className="space-y-3" onSubmit={event => {
               event.preventDefault(); const form = new FormData(event.currentTarget);
               const type = input(form, "decision");
@@ -170,16 +170,18 @@ export function CrmSalesDesk() {
               }
             }}>
               <label>Décision<select className={fieldClass} name="decision">
-                {!sale.mandate.conversationTree && <><option value="BUYER">Qualifier un acheteur</option>
-                <option value="PARTNER">Orienter un partenaire</option>
-                <option value="AUDIENCE">Orienter le public</option>
-                <option value="PROPOSE">Présenter l’offre</option>
-                <option value="OBJECTION">Consigner une objection</option>
-                <option value="ACCEPT">Consigner l’accord explicite</option></>}
-                {admin && <option value="PAYMENT">Rapprocher un règlement</option>}
-                <option value="DELIVER">Attester la remise</option>
-                <option value="STOP">Arrêter le contact</option>
-                {admin && <option value="HANDOVER">Transférer le dossier</option>}
+                {(!sale.mandate.conversationTree && ["DISCOVERY", "QUALIFIED"].includes(sale.node)) && <>
+                  <option value="BUYER">Qualifier un acheteur</option>
+                  <option value="PARTNER">Orienter un partenaire</option>
+                  <option value="AUDIENCE">Orienter le public</option>
+                </>}
+                {(!sale.mandate.conversationTree && ["QUALIFIED", "OBJECTION"].includes(sale.node)) && <option value="PROPOSE">Présenter l’offre</option>}
+                {(!sale.mandate.conversationTree && ["PROPOSAL", "OBJECTION"].includes(sale.node)) && <option value="OBJECTION">Consigner une objection</option>}
+                {(!sale.mandate.conversationTree && sale.node === "PROPOSAL") && <option value="ACCEPT">Consigner l’accord explicite</option>}
+                {admin && sale.node === "ACCEPTED" && <option value="PAYMENT">Rapprocher un règlement</option>}
+                {sale.node === "PAID" && <option value="DELIVER">Attester la remise</option>}
+                {sale.node !== "STOPPED" && <option value="STOP">Arrêter le contact</option>}
+                {admin && !sale.contactStopped && sale.node !== "STOPPED" && <option value="HANDOVER">Transférer le dossier</option>}
               </select></label>
               <label>Observation, référence de preuve ou identifiant de reprise<textarea className={fieldClass} name="evidence" /></label>
               {admin && sale.node === "ACCEPTED" && <div className="grid gap-3 sm:grid-cols-2">
