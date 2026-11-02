@@ -2,6 +2,8 @@
 
 **Candidat : définition principale conservée malgré des inconnues, roadmap sans texte coupé et lecture S aérée.**
 
+- Traçabilité de périmètre : PR #1113 et justification `out-of-scope` ; CI exacte et livraison finales à recevoir.
+
 - S conserve l’unique North Star explicitement nommée dans E, y compris avec cible/fréquence nulles ; le dashboard continue de ne projeter que les objectifs complets. Plusieurs candidates restent ambiguës. Définition, qualification et métadonnées sont conservées ; ni mesure, cadence ou décision inventée, ni maturité reçue par la seule présence de la carte.
 - La construction de roadmap.objectif retire la coupe à 200 caractères ; objectif et descriptions d’actions conservent leur texte complet dans le schéma. Les seuils de cardinalité et exigences de fond restent inchangés.
 - UI S candidate : roadmap sur toute la largeur disponible, actions et facteurs clés de succès en listes ; indicateurs avec nom, qualification, cible et suivi lisibles. Définition/fenêtre/contexte/source accessibles dans un details natif au clavier ; fréquence conservée sur mobile. North Star indique les cible/cadence à définir dans Engagement et une mesure indisponible sans l’écrire au socle.
