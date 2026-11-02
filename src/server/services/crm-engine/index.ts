@@ -662,6 +662,9 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
     }
     const previous = salesStateSchema.parse(deal.commercial ?? {});
     const command = step.command;
+    if(deal.sellerStrategyId&&!actor.id.startsWith("mcp:")&&!["MANDATE","HANDOVER","STOP","PAYMENT","DELIVER"].includes(command.type)){
+      const {assertHumanSalesActive}=await import("./fleet");await assertHumanSalesActive(deal.sellerStrategyId,actor.id);
+    }
     const branchAcceptance = command.type === "BRANCH" &&
       previous.mandate?.conversationTree?.nodes.find(node => node.id === previous.treeNodeId)?.choices.find(choice => choice.id === command.choiceId)?.decision?.type === "ACCEPT";
     if (actor.id.startsWith("mcp:") && (command.type === "ACCEPT" || branchAcceptance)) {
@@ -670,10 +673,16 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
         where: { id: messageId }, include: { contact: { select: { strategyId: true, email: true } } },
       }) : null;
       if (!message || message.direction !== "IN" || message.status !== "RECEIVED" ||
-          message.contact.strategyId !== deal.sellerStrategyId ||
-          message.contact.email.toLowerCase() !== deal.contactEmail?.toLowerCase()) {
+          (message.salesDealId ? message.salesDealId !== deal.id :
+            (message.contact?.strategyId !== deal.sellerStrategyId || !deal.contactEmail || message.contact?.email.toLowerCase() !== deal.contactEmail.toLowerCase()))) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’agent doit référencer une réponse reçue de cet acheteur pour cette marque." });
       }
+    }
+    if(actor.id.startsWith("mcp:") && command.type === "DELIVER") {
+      const message=command.customerMessageId?await tx.crmMessage.findUnique({where:{id:command.customerMessageId},include:{contact:{select:{strategyId:true,email:true}}}}):null;
+      const paid=await tx.cRMActivity.findFirst({where:{dealId,activityType:"SALES_DECISION",metadata:{path:["command","type"],equals:"PAYMENT"}},orderBy:{performedAt:"desc"},select:{performedAt:true}});
+      const sameBuyer=message && (message.salesDealId?message.salesDealId===dealId:message.contact?.strategyId===deal.sellerStrategyId&&!!deal.contactEmail&&message.contact?.email.toLowerCase()===deal.contactEmail.toLowerCase());
+      if(!message||!sameBuyer||message.direction!=="IN"||message.status!=="RECEIVED"||!paid||message.createdAt<paid.performedAt)throw new TRPCError({code:"PRECONDITION_FAILED",message:"La remise exige une confirmation reçue de ce client après le règlement. Le paiement seul ne prouve aucune livraison."});
     }
     let next;
     try {
@@ -706,6 +715,9 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
 /** Reserve before transport. An uncertain attempt is retained for reconciliation. */
 export async function sendSalesEmail(dealId: string, actor: SalesActor, input: { requestId: string; subject: string; text: string }) {
   const deal = await db.deal.findUniqueOrThrow({ where: { id: dealId } });
+  if(deal.sellerStrategyId&&!actor.id.startsWith("mcp:")){
+    const {assertHumanSalesActive}=await import("./fleet");await assertHumanSalesActive(deal.sellerStrategyId,actor.id);
+  }
   const state = salesStateSchema.parse(deal.commercial);
   const mandate = state.mandate;
   if (!mandate || mandate.sellerId !== actor.id || !mandate.outboundEmailEnabled ||

@@ -144,7 +144,7 @@ export default function CrmPage() {
               <div key={m.id} className="p-4">
                 <div className="flex items-center gap-2 text-xs">
                   {m.direction === "OUT" ? <Send className="h-3 w-3 text-accent" /> : <Inbox className="h-3 w-3 text-success" />}
-                  <span className="font-medium text-foreground">{m.contact.name ?? m.contact.email}</span>
+                  <span className="font-medium text-foreground">{m.contact?.name ?? m.contact?.email ?? "Conversation commerciale"}</span>
                   <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${m.status === "SENT" ? "bg-success/15 text-success" : m.status === "FAILED" ? "bg-error/15 text-error" : "bg-background-subtle text-foreground-muted"}`}>{m.status}</span>
                   {m.provider && <span className="text-foreground-muted">{m.provider}</span>}
                   <span className="ml-auto text-foreground-muted">{new Date(m.createdAt).toLocaleString("fr-FR")}</span>

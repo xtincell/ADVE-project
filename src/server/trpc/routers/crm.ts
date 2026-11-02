@@ -12,6 +12,7 @@ import { assertStrategyRead } from "./_strategy-read-guard";
 import { z } from "zod";
 import { createTRPCRouter, operatorProcedure } from "../init";
 import * as crm from "@/server/services/crm-engine";
+import * as fleet from "@/server/services/crm-engine/fleet";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { getOperatorContext } from "@/server/services/operator-isolation";
 /* lafusee:governed-active */
@@ -42,11 +43,68 @@ async function assertLegacyStageChange(ctx: Parameters<typeof assertDealAccess>[
   const deal = await assertDealAccess(ctx, dealId);
   if (deal.commercial) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Utiliser les décisions du poste commercial." });
 }
+async function fleetActor(ctx: { session: { user: { id: string; role?: string | null } } }): Promise<fleet.FleetActor> {
+  const scope = await callerOperatorScope(ctx);
+  return { id: ctx.session.user.id, admin: ctx.session.user.role === "ADMIN", operatorId: scope };
+}
 // ============================================================================
 // DEAL LIFECYCLE (opérateur/ADMIN uniquement)
 // ============================================================================
 
 export const crmRouter = createTRPCRouter({
+  listSalesRepresentatives: operatorProcedure.input(z.object({ strategyId: z.string() })).query(async ({ ctx, input }) =>
+    fleet.listSalesRepresentatives(await fleetActor(ctx), input.strategyId)),
+  salesRosterOptions: operatorProcedure.input(z.object({ strategyId: z.string() })).query(async ({ ctx, input }) =>
+    fleet.salesRosterOptions(await fleetActor(ctx), input.strategyId)),
+  getSalesRepresentative: operatorProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) =>
+    fleet.getSalesRepresentative(await fleetActor(ctx), input.id)),
+  saveSalesRepresentative: governedProcedure({ kind: "LEGACY_CRM_UPDATE_DEAL", requireOperator: true,
+    inputSchema: fleet.representativeInput, caller: "crm:saveSalesRepresentative",
+  }).mutation(async ({ ctx, input }) => fleet.saveSalesRepresentative(await fleetActor(ctx), input)),
+  setSalesRepresentativeStatus: governedProcedure({ kind: "LEGACY_CRM_UPDATE_DEAL", requireOperator: true,
+    inputSchema: z.object({ id: z.string(), status: z.enum(["DRAFT", "ACTIVE", "PAUSED"]) }), caller: "crm:setSalesRepresentativeStatus",
+  }).mutation(async ({ ctx, input }) => fleet.setSalesRepresentativeStatus(await fleetActor(ctx), input.id, input.status)),
+  dispatchSalesRepresentative: governedProcedure({ kind: "LEGACY_CRM_UPDATE_DEAL", requireOperator: true,
+    inputSchema: z.object({ id: z.string(), dealId: z.string().optional(), instruction: z.string().trim().min(2).max(12000), requestId: z.string().uuid() }), caller: "crm:dispatchSalesRepresentative",
+  }).mutation(async ({ ctx, input }) => {
+    if (input.dealId) await assertDealAccess(ctx, input.dealId);
+    return fleet.dispatchSalesRepresentative(await fleetActor(ctx), input);
+  }),
+  resolveSalesRun: governedProcedure({ kind: "LEGACY_CRM_UPDATE_DEAL", requireOperator: true,
+    inputSchema: z.object({ runId: z.string(), status: z.enum(["DONE", "FAILED"]), result: z.string().trim().min(2).max(20000) }), caller: "crm:resolveSalesRun",
+  }).mutation(async ({ ctx, input }) => fleet.resolveSalesRun(await fleetActor(ctx), input)),
+  recordInboundSalesMessage: governedProcedure({ kind: "LEGACY_CRM_ADD_NOTE", requireOperator: true,
+    inputSchema: z.object({ dealId: z.string(), channel: z.enum(["EMAIL", "WHATSAPP", "PHONE", "SMS", "WEB", "SOCIAL", "IN_PERSON"]), body: z.string().trim().min(1).max(20000), subject: z.string().max(200).optional(), externalId: z.string().trim().min(1).max(200) }), caller: "crm:recordInboundSalesMessage",
+  }).mutation(async ({ ctx, input }) => {
+    await assertDealAccess(ctx, input.dealId);
+    return fleet.recordInboundSalesMessage(input, ctx.session.user.id);
+  }),
+  createSalesCustomerAccess: governedProcedure({ kind: "LEGACY_CRM_UPDATE_DEAL", requireOperator: true,
+    inputSchema: z.object({ dealId: z.string() }), caller: "crm:createSalesCustomerAccess",
+  }).mutation(async ({ ctx, input }) => {
+    await assertDealAccess(ctx, input.dealId);
+    const { issueCustomerAccess } = await import("@/server/services/crm-engine/customer");
+    return issueCustomerAccess(input.dealId);
+  }),
+  sendSalesCustomerMessage: governedProcedure({ kind: "LEGACY_CRM_ADD_NOTE", requireOperator: true,
+    inputSchema: z.object({ dealId: z.string(), requestId: z.string().uuid(), channel: z.enum(["WEB", "EMAIL"]), body: z.string().trim().min(1).max(20000), subject: z.string().max(200).optional() }), caller: "crm:sendSalesCustomerMessage",
+  }).mutation(async ({ ctx, input }) => {
+    await assertDealAccess(ctx, input.dealId);
+    const actor = { id: ctx.session.user.id, admin: ctx.session.user.role === "ADMIN" };
+    const receipt = input.channel === "EMAIL"
+      ? await crm.sendSalesEmail(input.dealId, actor, { requestId: input.requestId, subject: input.subject ?? "Votre échange commercial", text: input.body })
+      : await (await import("@/server/services/crm-engine/customer")).sendSalesWebMessage(input.dealId, actor, { requestId: input.requestId, text: input.body });
+    return { status: receipt.activityType === "SALES_EMAIL_UNCERTAIN" ? "UNCERTAIN" as const : "SENT" as const, receipt };
+  }),
+  listSalesMessages: operatorProcedure.input(z.object({ dealId: z.string() })).query(async ({ ctx, input }) => {
+    await assertDealAccess(ctx, input.dealId);
+    const [incoming, outgoing] = await Promise.all([
+      ctx.db.crmMessage.findMany({ where: { salesDealId: input.dealId }, orderBy: { createdAt: "asc" }, take: 200,
+        select: { id: true, direction: true, channel: true, subject: true, body: true, status: true, createdAt: true } }),
+      ctx.db.cRMActivity.findMany({ where: { dealId: input.dealId, activityType: { in: ["SALES_WEB_SENT", "SALES_EMAIL_SENT", "SALES_EMAIL_UNCERTAIN", "SALES_EMAIL_PENDING"] } }, orderBy: { performedAt: "asc" }, take: 200 }),
+    ]);
+    return [...incoming, ...outgoing.map(activity => ({ id: activity.id, direction: "OUT", channel: activity.activityType.startsWith("SALES_WEB") ? "WEB" : "EMAIL", subject: activity.description, body: String((activity.metadata as { body?: string } | null)?.body ?? ""), status: activity.activityType.endsWith("SENT") ? "SENT" : activity.activityType.endsWith("UNCERTAIN") ? "UNCERTAIN" : "PENDING", createdAt: activity.performedAt }))].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }),
   createDealFromIntake: governedProcedure({
     kind: "LEGACY_CRM_CREATE_DEAL_FROM_INTAKE",
     requireOperator: true,
@@ -135,10 +193,16 @@ export const crmRouter = createTRPCRouter({
         if (String(pillar?.currentVersion) !== mandate.offerVersion) throw new TRPCError({ code: "CONFLICT", message: "Version d’offre périmée." });
       }
       if (salesStep.command.type === "HANDOVER") {
-        const principal = await getOperatorContext(salesStep.command.sellerId);
-        if (principal.role !== "ADMIN" && principal.operatorId !== deal.operatorId) throw new TRPCError({ code: "FORBIDDEN", message: "Titulaire hors de l’équipe." });
+        if (salesStep.command.sellerId.startsWith("mcp:")) {
+          const key = await ctx.db.mcpApiKey.findUnique({ where: { id: salesStep.command.sellerId.slice(4) }, select: { isActive: true, scopeKind: true, scopeStrategyId: true, expiresAt: true } });
+          if (!key?.isActive || key.scopeKind !== "BRAND" || key.scopeStrategyId !== deal.sellerStrategyId || (key.expiresAt && key.expiresAt <= new Date())) throw new TRPCError({ code: "FORBIDDEN", message: "Vendeur IA inactif ou hors marque." });
+        } else {
+          const principal = await getOperatorContext(salesStep.command.sellerId);
+          if (principal.role !== "ADMIN" && principal.operatorId !== deal.operatorId) throw new TRPCError({ code: "FORBIDDEN", message: "Titulaire hors de l’équipe." });
+        }
       }
-      return crm.applySalesStep(dealId, salesStep, { id: ctx.session.user.id, admin: ctx.session.user.role === "ADMIN" });
+      const owner = await ctx.db.strategy.findUniqueOrThrow({ where: { id: deal.sellerStrategyId }, select: { userId: true } });
+      return crm.applySalesStep(dealId, salesStep, { id: ctx.session.user.id, admin: ctx.session.user.role === "ADMIN" || owner.userId === ctx.session.user.id });
     }
     if (deal.commercial && [data.value, data.contactEmail, data.contactName, data.companyName].some(value => value !== undefined)) {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Les conditions et le destinataire appartiennent au mandat approuvé." });

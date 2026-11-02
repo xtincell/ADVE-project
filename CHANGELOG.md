@@ -1,4 +1,11 @@
-## v6.27.531 — fix(adve): compléter une cellule sans valider tout son objet (2026-11-02)
+## v6.27.531 — Flotte commerciale, conversation client et compléments ADVE (2 novembre 2026)
+
+- Supervision des vendeurs humains/IA dans le pipeline : activation, pause, consignes, résultats et reprise humaine.
+- STI éditable visuellement ; affectations nominatives et conversations client liées à l’affaire, y compris sans email.
+- Consommateur Galahad réutilisé, exécutions bornées et persistées ; droits par marque/affaire, idempotence, interruption explicite et réservations de consommation.
+- Conversation web sécurisée avec réveil du vendeur, email de marque existant, adaptateur entrant signé et réveil sur règlement confirmé ; autres transports restent visibles selon leur raccordement réel.
+
+### Compléter une cellule sans valider tout son objet
 
 **Candidat : préserver les choix validés, tracer les compléments et recevoir uniquement ce qui est réellement écrit.**
 
