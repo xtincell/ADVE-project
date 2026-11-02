@@ -2,6 +2,7 @@
 
 **Candidat local : conserver une définition documentée et ses inconnues, distinguer objectif proposé, objectif déclaré et mesure.**
 
+- Traçabilité de périmètre : PR #1112, justification et label `out-of-scope` reçus ; recette réelle et livraison finales encore ouvertes.
 - E.kpis accepte une cible ou fréquence explicitement nulles, sans zéro ni cadence par défaut ; ces lacunes ne satisfont pas le contrat de complétude. Une cible textuelle ou numérique finie conserve son sens, y compris un vrai zéro. Qualification PROPOSED / DECLARED et métadonnées de définition, unité, fenêtre d’observation, contexte de cible et notes source restent distinguées.
 - S ne reprend comme objectifs que les entrées avec nom, cible et fréquence ; qualification et métadonnées disponibles suivent la projection. Oracle conserve les définitions E, même sans cible décidée, et rend visibles les objectifs à qualifier ainsi que l’absence de mesure. Une fenêtre d’observation ne devient pas cadence et une cible future ne devient pas résultat atteint.
 - Notoria applique le contrat documentation + inputs attribués → ADVE qualifié → RTIS dérivé au-delà de I. Les injonctions à remplir toutes les cellules et le quota minimal de recommandations sont retirés ; une inconnue étayée reste une lacune, pas une valeur inventée. Nouveauté structurante → proposition/amendement ADVE gouverné, puis cascade ; aucun second socle documentaire I/S.
