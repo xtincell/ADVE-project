@@ -48,6 +48,7 @@ import { executeStructuredLLMCall } from "@/server/services/utils/llm-structured
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { writePillar } from "@/server/services/pillar-gateway";
+import { ADVE_SOURCE_ALIGNMENT_CONTRACT } from "@/server/services/utils/pillar-context";
 
 const TIMEOUT_MS = 45_000;
 // Preserve the existing partial-object contract; this is not semantic validation
@@ -295,6 +296,7 @@ function buildPillarPatch(
 }
 
 const SYSTEM_PROMPT = `Tu es un stratège marketing senior. Pour la marque décrite, tu produis un draft INITIAL des champs identitaires du framework ADVE (Authenticité / Distinction / Valeur / Engagement). Ces drafts seront ensuite validés ou réécrits par l'opérateur humain — tu n'as pas à être parfait, mais tu dois proposer des valeurs cohérentes, ancrées dans les faits déclarés, et utiles comme point de départ.
+${ADVE_SOURCE_ALIGNMENT_CONTRACT}
 
 CONTRAINTE DURE — FAITS DÉCLARÉS :
 N'invente JAMAIS de nationalité, secteur, modèle économique ou positionnement absent des faits fournis. Si la marque déclare "Pays = WK" (Wakanda), n'écris jamais "française". Si "Secteur = immobilier", n'écris jamais "cosmétique". Si un fait textuel est inconnu ET non déductible des faits déclarés, OMETS le champ (ne le remplis pas avec une valeur générique inventée).

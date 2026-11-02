@@ -2107,6 +2107,61 @@ d'invariants spécifiques (cf. `tests/integration/`).
 
 # ANNEXE CANON L — LEXIQUE NORMATIF
 
+### Attribution des réceptions après intégration — candidat 531 (2026-11-02)
+
+La provenance ciblée du candidat 530 est reprise en 531 après fusion de main
+(CRM #1114 / version #1115). ADR0230 appartient à la continuité commerciale et
+reste intact ; le contrat de provenance ciblée devient ADR0231. Les notions
+et reçus 530 ci-dessous restent attribués à leur code préintégration, jamais au
+nouveau head combiné. 531 reçoit localement 5 092 unitaires / 485 fichiers,
+PostgreSQL 534 / 33, build UI exact exit 0, lint/gouvernance sans erreur, HTTP
+compilé à origines/voisins/piliers/exécution conservés et stress exact exit 0
+(276 pages HTTP reçues, 5 non reçues, 0 échec, 3 requêtes, 7 forges/transitions,
+0 finding). Arbres source CRM production/main identiques ; contenu conservé.
+Pages/probes HTTP ne reçoivent pas hydratation/native, capacité sous charge ou
+SLO ; marge du grand document encore à profiler après gros œuvre. CI/image/runtime,
+PR #1116 et chaîne réelle ouverts. Aucun ADVE/RTIS, Oracle, MVP ou chantier entier
+reçu. Les archives datées conservent leur sens historique.
+
+### Modèle rempli et origine précise — contrat candidat 530 (2026-11-02)
+
+**ADVE rempli** : modèle de travail qualifié dont les prémisses attendues sont
+établies par source documentée, calcul ou postulat de départ inféré dans ADVE.
+Sa réception exige qu’aucune valeur attendue ne soit vide ou inconnue en aval ;
+une lacune remonte au champ amont, puis ses dépendances sont recalculées. Une
+omission reste un brouillon incomplet. Le postulat garde justification, unité,
+périmètre, dépendances et origine ; il ne vaut jamais mesure, fait biographique,
+devis réel ou décision adoptée.
+
+**Origine précise d’un complément** : marque explicite au chemin d’une cellule,
+qui prime sur l’origine héritée d’un parent. Un parent HUMAN n’adopte pas une
+cellule INFERRED ; confirmer cette seule cellule ne confirme aucune sœur.
+Le candidat 530 complète uniquement par SET_FIELDS versionné et chemins exacts,
+sans changer les identités ou voisins. Complément scalaire non vide ou liste non
+vide de scalaires ; objets/listes de records relèvent de la revue normale.
+Zéro, false et collection vide sont des choix à protéger. Un remplacement ou
+une suppression reste soumis aux enfants protégés ; redéclarer INFERRED un
+parent inchangé ne retire pas l’autorité d’une cellule HUMAN. Chemins et valeurs
+sont bornés au schéma canonique de champ ; succès = valeur persistée.
+
+Ce grain étend les capacités existantes, sans nouveau modèle, routeur, service,
+Intent ou gestionnaire d’appels. Contrôles locaux et build 530 reçus avant le
+dernier delta d’origine ;
+HTTP compilé sur fixture reçoit document PROPOSED → amendement → calcul S/Oracle,
+source PROPOSED / feuille INFERRED / parent HUMAN conservés. ADMIN existant
+séparé pour MCP, découverte USER refusée et droits inchangés ; aucune réingestion.
+Pages HTTP 200 ne reçoivent pas hydratation/native. Stress compilé terminé
+exit 0, probes sans finding et cinq pages non reçues, pas de réception native
+par ces contrôles ni SLO ou contournement navigateur.
+Dernier delta, après ces build/HTTP/stress : l’origine la plus précise est
+comparée après retrait du préfixe legacy, afin qu’un parent préfixé HUMAN ne
+masque pas une cellule INFERRED. Ciblé final 54 tests / 3 fichiers verts,
+contre-épreuve rouge puis restauration verte 16 / 1. Le parcours HTTP aux chemins
+nus reste reçu pour l’état précédent ; aucun build/HTTP/stress exact de ce
+nouveau head annoncé. CI/image/runtime exacts et chaîne réelle encore requis.
+[ADR-0231 Proposed](adr/0231-surgical-field-provenance-under-validated-objects.md).
+Aucun ADVE/RTIS complet, Oracle entier, MVP ou chantier global reçu.
+
 ### North Star définie et objectif complet — candidat 529 (2026-11-02)
 
 **Définition principale** : unique indicateur explicitement nommé North Star /

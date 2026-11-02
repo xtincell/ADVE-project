@@ -21,11 +21,13 @@
  */
 
 import { collectInitiatives, collectNormalizedInitiatives, mapInitiativeEntries, normalizeInitiative } from "@/lib/types/pillar-schemas";
+import { resolvePillarPath, setNestedValue, tokenizePillarPath } from "@/lib/pillar-path";
 
 import {
   type FieldProvenance,
   coerceProvenance,
   decideOverwrite,
+  fieldStatusFor,
 } from "@/domain/field-provenance";
 
 export interface ProvenanceGuardInput {
@@ -51,6 +53,8 @@ export interface ProvenanceGuardInput {
   declaredFor?: (path: string) => FieldProvenance | undefined;
   /** Stable I identity paths declared by a constrained human action decision. */
   declaredPaths?: string[];
+  /** Exact, version-fenced SET_FIELDS paths; never inferred from a full replacement. */
+  surgicalPaths?: string[];
 }
 
 export interface ProvenanceGuardResult {
@@ -88,6 +92,61 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
   const denied: string[] = [];
   const challenged: string[] = [];
   const warnings: string[] = [];
+  const clearChildren = (key: string, authority: FieldProvenance) => {
+    for (const path of Object.keys(provenance)) {
+      if ((path.startsWith(`${key}.`) || path.startsWith(`${key}[`)) && decideOverwrite(authority, provenance[path]!) === "ALLOW") delete provenance[path];
+    }
+  };
+
+  // A filled identity is not an empty matrix cell. Surgical changes must
+  // reconstruct the exact candidate while retaining every other value and
+  // array item. No reordering, removal or new identity can hitch a ride.
+  const surgical = (key: string): boolean => {
+    const paths = (input.surgicalPaths ?? []).filter(path => path.startsWith(`${key}.`) || path.startsWith(`${key}[`));
+    if (!paths.length) return false;
+    const rebuilt = structuredClone(previousContent);
+    for (const path of paths) {
+      const tokens = tokenizePillarPath(path);
+      // Existing arrays only. An inferred cell cannot create a new persona,
+      // product, team member or sparse index under a protected collection.
+      let parent: unknown = previousContent;
+      for (const token of tokens.slice(0, -1)) {
+        if (!parent || typeof parent !== "object" || !Object.hasOwn(parent, token)) return false;
+        parent = (parent as Record<string | number, unknown>)[token];
+      }
+      if (!parent || typeof parent !== "object") return false;
+      const next = resolvePillarPath(newContent, path);
+      const scalar = (value: unknown) => typeof value === "string" ? !!value.trim()
+        : typeof value === "number" ? Number.isFinite(value) : typeof value === "boolean";
+      // A scalar/list-of-scalars cell can be a working premise. A new object
+      // or list of records can introduce identities; use the normal review.
+      if (!scalar(next) && !(Array.isArray(next) && next.length > 0 && next.every(scalar))) return false;
+      setNestedValue(rebuilt, path, next);
+    }
+    if (!jsonEqual(rebuilt[key], newContent[key])) return false;
+    content[key] = structuredClone(previousContent[key]);
+    for (const path of paths) {
+      const prev = resolvePillarPath(previousContent, path);
+      const next = resolvePillarPath(newContent, path);
+      const incoming = incomingFor(path);
+      const existing = coerceProvenance(fieldStatusFor(undefined, "", provenance)(path));
+      // Empty scalars are a gap, not a choice. Empty collections, 0 and false
+      // remain actual choices; they require the normal authority arbitration.
+      const gap = prev == null || (typeof prev === "string" && !prev.trim());
+      const decision = gap ? "ALLOW" : decideOverwrite(incoming, existing);
+      if (jsonEqual(prev, next)) {
+        const declared = input.declaredFor?.(path);
+        if (declared && decideOverwrite(declared, existing) === "ALLOW") provenance[path] = declared;
+      } else if (decision === "ALLOW") {
+        setNestedValue(content, path, structuredClone(next));
+        provenance[path] = incoming;
+      } else {
+        (decision === "DENY" ? denied : challenged).push(path);
+        warnings.push(`Provenance: cellule "${path}" conservée (${decision}) — ${incoming} ne peut remplacer ${existing}.`);
+      }
+    }
+    return true;
+  };
 
   // On n'examine que les champs top-level présents dans le contenu candidat.
   for (const key of Object.keys(newContent)) {
@@ -95,6 +154,7 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
     if (key.startsWith("_")) continue;
     const prevVal = previousContent[key];
     const nextVal = newContent[key];
+    if (surgical(key)) continue;
 
     // Champ inchangé → rien à arbitrer sur la VALEUR. Mais si l'appelant
     // déclare explicitement une provenance supérieure, c'est une confirmation :
@@ -102,6 +162,7 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
     if (jsonEqual(prevVal, nextVal)) {
       const declared = input.declaredFor?.(key);
       if (declared && decideOverwrite(declared, coerceProvenance(provenance[key])) === "ALLOW") {
+        clearChildren(key, declared);
         provenance[key] = declared;
       }
       continue;
@@ -112,6 +173,26 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
     const decision = decideOverwrite(incoming, existing);
 
     if (decision === "ALLOW") {
+      // A whole-object proposal may not launder a protected child through an
+      // inferred root. Fail closed on its parent, including array reorderings.
+      const protectedChild = Object.keys(provenance).find(path =>
+        (path.startsWith(`${key}.`) || path.startsWith(`${key}[`)) &&
+        (!jsonEqual(resolvePillarPath(previousContent, path), resolvePillarPath(newContent, path)) ||
+          // An index is meaningful only within the original array. A whole
+          // replacement must not transfer a human child's authority to a new
+          // occupant, even if that child's scalar happens to be identical.
+          (path.includes("[") && !jsonEqual(previousContent[key], newContent[key]))) &&
+        decideOverwrite(incoming, provenance[path]!) !== "ALLOW");
+      if (protectedChild) {
+        content[key] = prevVal;
+        const childDecision = decideOverwrite(incoming, provenance[protectedChild]!);
+        (childDecision === "DENY" ? denied : challenged).push(protectedChild);
+        warnings.push(`Provenance: objet "${key}" conservé — cellule protégée "${protectedChild}" (${childDecision}).`);
+        continue;
+      }
+      for (const path of Object.keys(provenance)) {
+        if ((path.startsWith(`${key}.`) || path.startsWith(`${key}[`)) && decideOverwrite(incoming, provenance[path]!) === "ALLOW") delete provenance[path];
+      }
       provenance[key] = incoming;
       continue;
     }
@@ -151,6 +232,15 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
   for (const key of Object.keys(previousContent)) {
     if (key.startsWith("_")) continue;
     if (key in newContent) continue; // déjà arbitré ci-dessus
+    const child = Object.keys(provenance).find(path =>
+      (path.startsWith(`${key}.`) || path.startsWith(`${key}[`)) && decideOverwrite(incomingFor(key), provenance[path]!) !== "ALLOW");
+    if (child) {
+      content[key] = previousContent[key];
+      const decision = decideOverwrite(incomingFor(key), provenance[child]!);
+      (decision === "DENY" ? denied : challenged).push(child);
+      warnings.push(`Provenance: objet "${key}" conservé — suppression d'une cellule protégée "${child}" refusée.`);
+      continue;
+    }
     const existing = coerceProvenance(provenance[key]);
     const decision = decideOverwrite(incomingFor(key), existing);
     if (decision === "ALLOW") continue; // suppression légitime
@@ -230,7 +320,7 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
       const field = key.endsWith(".preference") ? "preference" : "status";
       const id = key.slice("initiatives.".length, -(field.length + 1));
       if (!collectNormalizedInitiatives(content).some(init => init.id === id)) delete provenance[key];
-    } else if (!(key in content)) delete provenance[key];
+    } else if (resolvePillarPath(content, key) === undefined) delete provenance[key];
   }
 
   return { content, provenance, denied, challenged, warnings };

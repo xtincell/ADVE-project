@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.531", date: "2026-11-02", headline: "Compléter votre dossier en gardant vos choix validés",
+    highlights: [
+      { emoji: "🧩", title: "Compléter la précision manquante", body: "Un complément proposé peut remplir une case manquante dans un objet déjà validé, en conservant les autres valeurs et les profils existants. Son origine reste distincte de votre validation précédente." },
+      { emoji: "✅", title: "Confirmer seulement le complément relu", body: "La confirmation vise la précision que vous avez relue. Les autres propositions gardent leur statut ; une valeur refusée ou non enregistrée ne compte pas comme un remplissage réussi." },
+      { emoji: "🔎", title: "Lire le complément avant de le valider", body: "Ouvrez sa valeur entière pour la relire. Le dossier signale les compléments encore proposés ; Valider confirme la seule précision relue, tandis que Revoir l’ensemble ouvre les informations qui l’entourent pour les modifier." },
+    ],
+  },
+  {
     version: "6.27.530", date: "2026-11-02", headline: "Un poste commercial pour conduire et reprendre vos ventes",
     highlights: [
       { emoji: "🤝", title: "Confier une offre précise à votre vendeur", body: "Dans le pipeline, rattachez l’affaire à la marque vendeuse, choisissez l’offre et ses conditions, puis désignez le commercial et le responsable de livraison." },

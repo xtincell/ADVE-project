@@ -296,7 +296,7 @@ async function generateRecosForPillar(
         ? `\nSous-champs imbriques vides (operation EXTEND sur l'objet parent — preserve les sous-champs deja remplis, une reco EXTEND par parent) :\n${[...nestedByParent.entries()].map(([p, leaves]) => `  - ${p} : ${leaves.join(", ")}`).join("\n")}\n`
         : "") +
       cellsSection +
-      `\nTraiter ces lacunes en priorite si les sources ou une deduction qualifiee les etayent. Une information non etablie reste inconnue et expliquee ; ne jamais fabriquer une valeur pour remplir une cellule.`
+      `\nTraiter ces lacunes dans l'ordre source documentée, calcul, puis postulat de départ qualifié dans ADVE. Une inconnue n'est pas un point d'arrivée : établir la prémisse du modèle dans le socle, puis calculer les dépendances. Conserver les identités et décisions déjà renseignées ; les postulats ne deviennent ni faits observés ni adoptions humaines.`
     : "\nTous les champs sont remplis en profondeur. Concentre-toi sur l'enrichissement et la correction.";
 
   const prompt = `SHAPE EXACTE du pilier ${targetKey.toUpperCase()} (arborescence complète, sous-clés + valeurs d'enum RÉELLES — respecte EXACTEMENT cette structure, n'invente aucune clé):

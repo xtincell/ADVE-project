@@ -967,7 +967,8 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
             {confirmInferredMutation.error ? <p role="alert" className="mb-3 text-xs text-error">{confirmInferredMutation.error.message}</p> : null}
             <div className="space-y-1.5">
               {inferredPaths.map((path) => {
-                const value = content[path];
+                const value = resolvePillarPath(content, path);
+                const nested = path.includes(".") || path.includes("[");
                 const pending = confirmInferredMutation.isPending;
                 return (
                   <div key={path} className="flex items-center justify-between gap-2 rounded border border-white/5 bg-white/[0.02] px-3 py-2">
@@ -979,6 +980,10 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
                       <div className="mt-0.5 truncate text-2xs italic text-foreground-muted/80">
                         {renderPreview(value)}
                       </div>
+                      <button type="button" onClick={() => setFocusedItem({ [getFieldLabel(path)]: value })}
+                        className="mt-1 text-2xs text-info underline underline-offset-2">
+                        Lire la valeur entière
+                      </button>
                     </div>
                     <div className="flex shrink-0 gap-1.5">
                       {canOperate ? (
@@ -986,10 +991,10 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
                           type="button"
                           onClick={() => openAmendOnField(path)}
                           className="flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-2xs text-foreground-muted transition-colors hover:border-warning/40 hover:text-warning"
-                          title="Réécrire ce champ"
+                          title={nested ? "Revoir l’objet qui contient cette valeur" : "Réécrire ce champ"}
                         >
                           <Pencil className="h-3 w-3" />
-                          Saisir
+                          {nested ? "Revoir l’ensemble" : "Saisir"}
                         </button>
                       ) : null}
                       <button

@@ -57,6 +57,17 @@ describe("revue des champs — même autorité pour le lecteur et la confirmatio
     expect(fieldStatusFor({}, "a")("vision")).toBeUndefined();
     expect(inferredFieldPaths({ vision: "À revoir", _fieldProvenance: { vision: "UNKNOWN" } }, { vision: "INFERRED" }, "a")).toEqual([]);
   });
+  it("les compléments canoniques gardent leur grain même dans un objet humain", () => {
+    const content = { model: { input: 50, other: 10 }, _fieldProvenance: { model: "HUMAN", "model.input": "INFERRED" } };
+    const status = fieldStatusFor({}, "v", content._fieldProvenance);
+    expect(status("model")).toBe("HUMAN");
+    expect(status("model.input")).toBe("INFERRED");
+    expect(status("model.other")).toBe("HUMAN");
+    expect(inferredFieldPaths(content, {}, "v")).toEqual(["model.input"]);
+  });
+  it("compare la profondeur sans faire gagner le préfixe historique du parent", () => {
+    expect(fieldStatusFor({}, "v", { "v.x": "HUMAN", "x.y": "INFERRED" })("x.y")).toBe("INFERRED");
+  });
 });
 
 describe("decideOverwrite — qui peut écraser quoi", () => {

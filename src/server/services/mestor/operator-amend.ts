@@ -29,6 +29,7 @@ import { applyPillarCoherenceGate } from "@/server/services/notoria/gates";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import { db } from "@/lib/db";
 import { SourceReceiptSchema } from "@/domain/source-certainty";
+import { resolvePillarPath } from "@/lib/pillar-path";
 
 type AmendIntent = Extract<Intent, { kind: "OPERATOR_AMEND_PILLAR" }>;
 
@@ -278,14 +279,5 @@ export async function operatorAmendPillar(intent: AmendIntent, context?: { inten
 // ── Helpers ───────────────────────────────────────────────────────────
 
 function getNested(obj: Record<string, unknown>, path: string): unknown {
-  const segments = path.split(".");
-  let cur: unknown = obj;
-  for (const s of segments) {
-    if (cur && typeof cur === "object" && s in (cur as Record<string, unknown>)) {
-      cur = (cur as Record<string, unknown>)[s];
-    } else {
-      return undefined;
-    }
-  }
-  return cur;
+  return resolvePillarPath(obj, path);
 }

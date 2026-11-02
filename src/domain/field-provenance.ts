@@ -33,6 +33,7 @@
  */
 
 import { z } from "zod";
+import { resolvePillarPath } from "./pillar-path";
 
 /** Du plus autoritaire (HUMAN) au moins (UNKNOWN). */
 export const FIELD_PROVENANCE_LEVELS = ["HUMAN", "SOURCE", "INFERRED", "UNKNOWN"] as const;
@@ -61,7 +62,7 @@ export function coerceProvenance(value: unknown): FieldProvenance {
   return isFieldProvenance(value) ? value : "UNKNOWN";
 }
 
-/** Même grain que le gateway : confirmer une feuille confirme son champ de tête. */
+/** Legacy fallback; explicit canonical leaf origins keep their own grain. */
 export function provenanceTopKey(path: string, pillarKey: string): string {
   const prefix = `${pillarKey.toLowerCase()}.`;
   return (path.startsWith(prefix) ? path.slice(prefix.length) : path).split(/[.[]/)[0] ?? "";
@@ -76,7 +77,12 @@ export function fieldStatusFor(certainty: Record<string, string> | null | undefi
   return (path: string): string | undefined => {
     const bare = path.startsWith(prefix) ? path.slice(prefix.length) : path;
     const top = provenanceTopKey(bare, pillarKey);
-    const raw = origins[top] ?? origins[`${prefix}${top}`] ?? origins[bare] ?? origins[`${prefix}${bare}`];
+    const normalizedPath = (key: string) => key.startsWith(prefix) ? key.slice(prefix.length) : key;
+    const ancestor = Object.keys(origins).filter(key => {
+      const normalized = normalizedPath(key);
+      return bare === normalized || bare.startsWith(`${normalized}.`) || bare.startsWith(`${normalized}[`);
+    }).sort((a, b) => normalizedPath(b).length - normalizedPath(a).length)[0];
+    const raw = ancestor === undefined ? undefined : origins[ancestor];
     if (raw !== undefined) return coerceProvenance(raw);
     return fc[bare] ?? fc[`${prefix}${bare}`] ?? fc[top] ?? fc[`${prefix}${top}`];
   };
@@ -88,8 +94,12 @@ export function inferredFieldPaths(content: Record<string, unknown>, certainty: 
   const origins = provenance && typeof provenance === "object" && !Array.isArray(provenance) ? provenance : {};
   const status = fieldStatusFor(certainty, pillarKey, provenance);
   const paths = [...Object.keys(certainty ?? {}), ...Object.keys(origins)];
-  return [...new Set(paths.filter(path => status(path) === "INFERRED").map(path => provenanceTopKey(path, pillarKey)))]
-    .filter(key => key && !key.startsWith("_") && Object.hasOwn(content, key) && content[key] != null && content[key] !== "")
+  const prefix = `${pillarKey.toLowerCase()}.`;
+  return [...new Set(paths.filter(path => status(path) === "INFERRED").map(path => {
+    const bare = path.startsWith(prefix) ? path.slice(prefix.length) : path;
+    return Object.hasOwn(origins, bare) || Object.hasOwn(origins, `${prefix}${bare}`) ? bare : provenanceTopKey(path, pillarKey);
+  }))]
+    .filter(key => key && !key.startsWith("_") && resolvePillarPath(content, key) != null && resolvePillarPath(content, key) !== "")
     .sort();
 }
 

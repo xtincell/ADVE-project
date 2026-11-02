@@ -1,3 +1,87 @@
+## 531 — réceptions après intégration encore ouvertes (2026-11-02)
+
+Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration
+de main `4b09965aae5b5ac9ec59367c0f9ff3ca95f5fea2` (CRM #1114 et version #1115).
+La livraison commerciale 530 et son ADR0230 sont conservés ; la provenance
+ciblée est désormais ADR0231. PR réelle : #1116, branche
+`fix/adve-completion-irrigation530`. Tous les reçus 530 ci-dessous sont
+préintégration. Réception combinée 531 reçue : 5 092 unitaires / 485 fichiers,
+PostgreSQL sérialisé 534 tests / 33 fichiers en 260,45 s, build exact UI exit 0,
+lint et gouvernance sans erreur (24 avertissements préexistants). Timeout initial
+et marge du grand document restent tracés, sans réception sous charge.
+HTTP compilé : USER intake/lecture/S, MCP via ADMIN existant séparé, garde USER
+préservée ; amendement 249 ms, refresh 213 ms, assemblage 163 ms. Source PROPOSED,
+feuille INFERRED, parent HUMAN, voisins, autres piliers et exécution conservés ;
+ratio calculé depuis les prémisses synthétiques. Pages HTTP 200 en 308 / 155 ms,
+hydratation/native non reçue, latences locales sans SLO.
+Stress compilé exact exit 0 : 276 pages HTTP reçues / 5 non reçues / 0 échec,
+3 requêtes, 7 forges/transitions, 0 finding ; aucune réception native par ces probes.
+Arbres source du CRM en production et de main comparés identiques ; contenu CRM
+conservé. CI/image/runtime 531, chaîne réelle ADVE/RTIS et MVP toujours ouverts.
+Contre-épreuve UI lecture racine rouge puis restauration verte 4 / 1 reçue ;
+PostgreSQL repris sans compilation concurrente ni changement de limites,
+premier timeout de 120 s conservé.
+
+**Fermer** après les contrôles/build/HTTP/stress locaux reçus par CI/image/runtime
+exacts et conservation après livraison des deux périmètres intégrés. Responsable
+Core/irrigation existant ; effort recette bornée ; **déclencheur** avant réception
+de la PR #1116 et toute déclaration de complétude. Les contrôles du candidat
+530 sont conservés pour leur état antérieur, sans transfert de réception à 531.
+
+**Faible marge sur grand document** : passage isolé en 111,86 s sous le plafond
+120 s (8,14 s de marge), sans réception sous charge. **Fermer** par profilage borné
+du cas conservé : durée par étape de lecture/désérialisation, scellement/empreinte,
+écriture/transaction et contention base/CPU/IO ; comparer un passage isolé puis
+une concurrence contrôlée, conserver taille et invariants, sans relever une limite
+pour masquer le coût. Responsable Core/admission et infrastructure existants ;
+effort : une passe de profilage ciblée ; **déclencheur** après livraison du gros
+œuvre fonctionnel, avant toute réception de capacité sous charge ou engagement
+de latence. La reprise verte ne ferme ni cette dette ni la contention VPS déjà tracée.
+
+## 530 — réception ciblée puis chaîne entière encore ouvertes (2026-11-02)
+
+Un objet HUMAN peut garder des cellules vides ; sa protection globale bloque les
+compléments ou fait hériter à tort leur validation. Le candidat 530 introduit le
+grain d’origine précis dans la gateway et les lecteurs existants, sans nouveau
+modèle : chemins exacts/version attendue, identités/voisins conservés et confirmation
+limitée à la cellule. Remplacement et suppression ne contournent pas un enfant
+protégé ; auto-filler contrôle le schéma et ne compte que le contenu persisté.
+Réceptions locales avant le dernier delta : 5 082 unitaires / 483 fichiers, maxWorkers 4 sans
+restriction de périmètre ; PostgreSQL 528 tests / 32 fichiers puis 53 ciblés /
+3 fichiers. Typage exit 0, lints sans erreur (24 avertissements préexistants),
+cycles sans dépendance circulaire, reconstruction webpack finale exit 0. Refus
+Turbopack sur symlink externe conservé, sans modification de ce symlink. Quatre
+contre-épreuves rouges puis restaurées vertes : chirurgie, contrat, parent inchangé
+et bornage scalaire.
+HTTP compilé reçu : document PROPOSED sous USER, puis MCP via ADMIN existant séparé ;
+amendement 175 ms, S 157 ms, Oracle 104 ms. Source PROPOSED, feuille INFERRED et
+parent HUMAN conservés, ratio calculé depuis les prémisses de la fixture. Le
+refus de découverte MCP sous USER a arrêté la première recette, puis reprise sans
+réingestion ni droits créés/élargis. Deux pages HTTP 200 en 222 / 118 ms,
+hydratation/native non reçue ; ancienne cible navigateur refusée sans contournement.
+Latences locales sans SLO. Stress compilé terminé exit 0 : 276 pages reçues,
+5 non reçues, 0 échec ; 3 requêtes, 7 forges/transitions et 0 finding. Ces probes
+HTTP ne reçoivent pas l’interface native. CI/PR/image/runtime 530, chaîne réelle
+ADVE/RTIS et MVP restent ouverts.
+Dernier delta, après ces build/HTTP/stress : l’origine la plus précise est
+comparée après retrait du préfixe legacy, afin qu’un parent préfixé HUMAN ne
+masque pas une cellule INFERRED. Ciblé final 54 tests / 3 fichiers verts,
+contre-épreuve rouge puis restauration verte 16 / 1. Le parcours HTTP aux chemins
+nus reste reçu pour l’état précédent ; aucun build/HTTP/stress exact de ce
+nouveau head annoncé. CI/image/runtime exacts et chaîne réelle encore requis.
+
+**Fermer** : recevoir les refus de versions périmées, valeurs voisines/identités,
+enfants protégés, contenu non conforme et propositions non persistées ; puis
+compléter les prémisses ADVE depuis source/calcul/postulat justifié et recevoir
+la cascade et ses lecteurs. Responsable Core/gateway et irrigation existants ;
+effort audit et recette bornés ; **déclencheur** avant réception 530, puis avant
+toute déclaration d’ADVE rempli ou de sortie finale sans valeur attendue manquante.
+Un postulat ne devient ni mesure réelle, fait biographique, devis ou adoption.
+[ADR-0231 Proposed](adr/0231-surgical-field-provenance-under-validated-objects.md).
+Qualification réelle ADVE entière, titres/slugs de campagne, devis et MVP restent
+ouverts ; les dettes de latence/VPS et de fiabilité déjà tracées ne sont pas fermées.
+Aucune donnée métier privée reproduite ici.
+
 ## 529 — définition principale et lisibilité S, candidat à recevoir (2026-11-02)
 
 **Reçu 528** : production, conservation exacte du contenu métier comparé hormis

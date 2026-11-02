@@ -52,6 +52,12 @@ describe("index documentaire unique", () => {
     expect(engine).not.toContain("ne laisse AUCUNE entree vide");
     const shared = read("src/server/services/utils/pillar-context.ts");
     expect(shared).toContain("INITIATIVE_PLANNING_SOURCE_CONTRACT = `${ADVE_SOURCE_ALIGNMENT_CONTRACT}");
+    expect(shared).toContain("ADVE rempli ⇒ aucune valeur attendue vide ou inconnue en aval");
+    expect(shared).toContain("source documentée → calcul → postulat de départ inféré dans ADVE");
+    expect(engine).not.toContain("Une information non etablie reste inconnue et expliquee");
+    for (const path of ["src/server/services/mestor/rtis-cascade.ts", "src/server/services/quick-intake/infer-needs-human-fields.ts"]) {
+      expect(read(path)).toContain("${ADVE_SOURCE_ALIGNMENT_CONTRACT}");
+    }
   });
   it("plus personne n'écrit de nœud SOURCE_CHUNK", () => {
     const rag = read(SOURCE_RAG);

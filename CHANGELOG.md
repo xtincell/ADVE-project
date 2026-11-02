@@ -1,3 +1,67 @@
+## v6.27.531 — fix(adve): compléter une cellule sans valider tout son objet (2026-11-02)
+
+**Candidat : préserver les choix validés, tracer les compléments et recevoir uniquement ce qui est réellement écrit.**
+
+- Intégration des livraisons commerciales #1114/#1115, sans en retirer le code ni les notes. Leur version530 et ADR0230 sont conservés ; ce candidat devient531 et ADR0231. Les reçus locaux530 ci-dessous restent attribués au correctif précédent intégration ; nouveau head combiné à revalider.
+
+- Traçabilité : PR #1116, label et justification `out-of-scope` ; CI exacte, image et réception531 encore ouvertes.
+
+- Contrat partagé : ADVE rempli ⇒ aucune valeur attendue vide ou inconnue en aval. Source documentée → calcul → postulat de départ inféré dans ADVE, puis dépendances calculées ; lacunes de brouillon à résoudre au socle avant réception. Notoria, Mestor/cascade, auto-filler et quick-intake partagent le contrat, sans présenter hypothèse, mesure et adoption comme équivalentes.
+- SET_FIELDS exact avec expectedVersion peut compléter une cellule manquante sous un objet HUMAN tout en conservant identités, conteneurs et valeurs voisines. Origine explicite au chemin, parent inchangé ; zéro, false et collection vide restent des choix. Remplacement/suppression ne peuvent contourner un enfant protégé par un parent moins autoritaire.
+- Bornage du complément ciblé : scalaire non vide ou liste non vide de scalaires ; objet et liste de records refusés par ce parcours, sans nouvelle identité implicite. Le contrat de planification précise qu’une omission reste un brouillon incomplet, jamais une réception finale.
+- La redéclaration INFERRED d’un parent inchangé conserve l’autorité d’une cellule HUMAN ; le bornage gateway réserve la complétion ciblée aux chemins canoniques dont les valeurs passent le schéma de champ.
+- Lecture d’origine au chemin le plus précis et confirmation versionnée de la seule cellule inférée. La sérialisation distingue le parent validé de ses compléments proposés ; aucune confirmation des sœurs implicite. Implémentation de chemin canonique déplacée vers domain, re-export lib conservé.
+- Revue UI des compléments : résolution du chemin profond, « Lire la valeur entière » via FocusModal existant ; pour une feuille, « Revoir l’ensemble » explicite l’éditeur parent, tandis que « Valider » confirme toujours la cellule exacte. Badges de présentation « Compléments proposés » / « Informations complétées » pour les origines mixtes, sans modifier l’autorité fieldStatusFor du writer.
+- Auto-filler sur chemins exacts/version attendue, valeurs IA contrôlées par schéma canonique, remplissages comptés depuis le contenu réellement persisté. Le correctif ADVE n’ajoute aucun modèle, routeur, service, Intent, provider ou gestionnaire d’appels ; les évolutions Deal/CRM intégrées depuis main sont conservées.
+- [ADR-0231 Proposed](docs/governance/adr/0231-surgical-field-provenance-under-validated-objects.md) borne le grain d’origine. Pas de numéro PR anticipé ou de clôture ADVE/RTIS/MVP ; données et preuves métier privées hors checkout.
+
+Réceptions combinées 531 : 5 092 unitaires / 485 fichiers, PostgreSQL sérialisé
+534 tests / 33 fichiers en 260,45 s, build exact UI exit 0 ; lint/gouvernance sans
+erreur (24 avertissements préexistants). Premier combiné avant UI 5 088 / 484 et
+PostgreSQL 533 / 534 conservés ; le timeout initial sous build massif est distinct
+de la reprise sans compilation concurrente ni changement de limites. Grand
+document 111,86 s sous 120 s (marge 8,14 s), profilage après gros œuvre prévu,
+aucune réception sous charge. Contre-épreuve UI rouge/restaurée verte 4 / 1 reçue.
+HTTP compilé : USER intake/lecture/S et MCP via ADMIN existant séparé, garde USER
+préservée ; amendement 249 ms, refresh 213 ms, assemblage 163 ms. Source PROPOSED,
+feuille INFERRED, parent HUMAN, voisins/autres piliers/exécution conservés,
+ratio calculé depuis les prémisses synthétiques. Pages HTTP 200 en 308 / 155 ms,
+hydratation/native non reçue ; latences locales sans SLO.
+Stress exact compilé exit 0 : 276 pages HTTP reçues / 5 non reçues / 0 échec,
+3 requêtes, 7 forges/transitions, 0 finding ; pas de preuve native par ces probes.
+Arbres source CRM production/main identiques, contenu intégré conservé. Natif,
+CI/image/runtime 531 et chaîne réelle ADVE/RTIS/MVP encore ouverts. Contrat de
+réception inchangé : ADVE rempli ⇒ aucune sortie attendue vide, depuis source,
+calcul ou postulat amont qualifié ; cette fixture ne reçoit pas la chaîne entière.
+
+Réceptions 530 préintégration, avant le dernier delta : 5 082 unitaires / 483 fichiers, maxWorkers 4 sans
+restriction de périmètre ; PostgreSQL 528 tests / 32 fichiers puis 53 ciblés /
+3 fichiers. Typage exit 0, lints sans erreur (24 avertissements préexistants),
+cycles sans dépendance circulaire, reconstruction webpack finale exit 0. Refus
+Turbopack sur symlink externe conservé, sans modification de ce symlink. Quatre
+contre-épreuves rouges puis restaurées vertes : chirurgie, contrat, parent inchangé
+et bornage scalaire.
+HTTP compilé reçu : document PROPOSED sous USER, puis MCP via ADMIN existant séparé ;
+amendement 175 ms, S 157 ms, Oracle 104 ms. Source PROPOSED, feuille INFERRED et
+parent HUMAN conservés, ratio calculé depuis les prémisses de la fixture. Le
+refus de découverte MCP sous USER a arrêté la première recette, puis reprise sans
+réingestion ni droits créés/élargis. Deux pages HTTP 200 en 222 / 118 ms,
+hydratation/native non reçue ; ancienne cible navigateur refusée sans contournement.
+Latences locales sans SLO. Stress compilé terminé exit 0 : 276 pages reçues,
+5 non reçues, 0 échec ; 3 requêtes, 7 forges/transitions et 0 finding. Ces probes
+HTTP ne reçoivent pas l’interface native. CI/PR/image/runtime 531, chaîne réelle
+ADVE/RTIS et MVP restent ouverts.
+Dernier delta, après ces build/HTTP/stress : l’origine la plus précise est
+comparée après retrait du préfixe legacy, afin qu’un parent préfixé HUMAN ne
+masque pas une cellule INFERRED. Ciblé final 54 tests / 3 fichiers verts,
+contre-épreuve rouge puis restauration verte 16 / 1. Le parcours HTTP aux chemins
+nus reste reçu pour l’état précédent ; aucun build/HTTP/stress exact de ce
+nouveau head annoncé. CI/image/runtime exacts et chaîne réelle encore requis.
+Premier lancement global pendant modifications : refus liés à la relocalisation
+des lignes d’allowlist et à CODE-MAP ; positions existantes corrigées et carte
+régénérée, sans nouvelle exception. La suite verte ci-dessus est distincte de ce
+premier refus et reste attribuée au code antérieur au dernier delta d’origine.
+
 ## v6.27.529 — fix(strategy): conserver la North Star et rendre S lisible (2026-11-02)
 
 ## [6.27.530] — Poste commercial et continuité agentique
