@@ -8,8 +8,8 @@ const fixture = vi.hoisted(() => ({ select: vi.fn(), sync: vi.fn(), propose: vi.
 vi.mock("@/lib/trpc/client", () => ({ trpc: {
   useUtils: () => ({ pillar: { get: { invalidate: vi.fn() }, assess: { invalidate: vi.fn() }, readiness: { invalidate: vi.fn() } } }),
   actions: {
-    summary: { useQuery: () => ({ data: { total: 1, selectedCount: 0, currentCatalogueCount: 0, currentSelectedCount: 0, outsideCatalogueSelectedCount: 0, byTouchpoint: {} }, refetch: vi.fn() }) },
-    byStrategy: { useQuery: () => ({ data: [{ id: "one", title: "Action existante", selected: false, inCurrentCatalogue: false, selectedForCurrentPlan: false, status: "PROPOSED", budgetMin: fixture.budget, budgetCurrency: "XAF", metadata: fixture.metadata }], refetch: vi.fn() }) },
+    summary: { useQuery: () => ({ data: { total: 1, selectedCount: 0, currentCatalogueCount: 1, currentFavoriteCount:0,currentRejectedCount:0,currentSelectedCount: 0, outsideCatalogueSelectedCount: 0, byTouchpoint: {} }, refetch: vi.fn() }) },
+    byStrategy: { useQuery: () => ({ data: [{ id: "one", title: "Action existante", selected: false, inCurrentCatalogue: true, preference:"NEUTRAL", selectedForCurrentPlan: false, status: "PROPOSED", budgetMin: fixture.budget, budgetCurrency: "XAF", metadata: fixture.metadata }], refetch: vi.fn() }) },
     sync: { useMutation: () => ({ mutate: fixture.sync, isPending: false }) },
     setSelected: { useMutation: () => ({ mutate: fixture.select, isPending: false }) },
     propose: { useMutation: () => ({ mutate: fixture.propose, isPending: false }) },
@@ -41,8 +41,8 @@ describe("action catalogue — visible calendar permission", () => {
   it("keeps reads available and makes no write gesture without received permissions", () => {
     render(React.createElement(ActionDatabasePanel, { strategyId: "fixture" }));
     expect(screen.getByText("Action existante")).toBeTruthy();
-    const choice = screen.getByTitle("Lecture seule sur ces actions");
-    fireEvent.click(choice);
+    const choice = screen.getByRole("combobox", {name:"Préférence pour Action existante"});
+    fireEvent.change(choice,{target:{value:"FAVORITE"}});
     expect((choice as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByRole("button", { name: "Proposer" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Synchroniser" })).toBeNull();
@@ -51,8 +51,8 @@ describe("action catalogue — visible calendar permission", () => {
 
   it("allows the owner's choice separately from the operator refresh", () => {
     render(React.createElement(ActionDatabasePanel, { strategyId: "fixture", canWrite: true }));
-    fireEvent.click(screen.getByTitle("Retenir pour le plan"));
-    expect(fixture.select).toHaveBeenCalledWith({ strategyId: "fixture", actionId: "one", selected: true });
+    fireEvent.change(screen.getByRole("combobox", {name:"Préférence pour Action existante"}),{target:{value:"FAVORITE"}});
+    expect(fixture.select).toHaveBeenCalledWith({ strategyId: "fixture", actionId: "one", preference:"FAVORITE" });
     expect(screen.queryByRole("button", { name: "Synchroniser" })).toBeNull();
   });
 

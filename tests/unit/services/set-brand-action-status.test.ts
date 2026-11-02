@@ -69,3 +69,25 @@ describe("setBrandActionStatus — AUTOSCHEDULE préserve les publications armé
     expect(touchedIds).not.toContain("armed");
   });
 });
+
+describe("catalogue preference is not execution selection", () => {
+  const id = "11111111-1111-4111-8111-111111111111";
+  it.each(["FAVORITE", "NEUTRAL", "REJECTED"] as const)("writes %s in I without arming or cancelling the action", async preference => {
+    mocks.findFirst.mockResolvedValue({ id: "a1", sourceInitiativeId: id, status: "PROPOSED", selected: false, timingStart: null });
+    mocks.pillarFind.mockResolvedValue({ currentVersion: 4, content: { catalogueParCanal: { DIGITAL: [{ id, action: "Test terrain", format: "Pilote", objectif: "Vérifier la pertinence" }] } } });
+    const result = await setBrandActionStatus({ strategyId: "s1", op: { type: "PREFERENCE", actionId: "a1", preference } });
+    expect(result).toEqual({ op: "PREFERENCE", updated: 1 });
+    expect(mocks.write).toHaveBeenCalledWith(expect.objectContaining({ pillarKey: "i", options: expect.objectContaining({ expectedVersion:4,fieldProvenance:{[`initiatives.${id}.preference`]:"HUMAN"} }) }));
+    const write = mocks.write.mock.calls[0]![0];
+    expect(write.operation.fields[0].value.DIGITAL[0]).toMatchObject({ preference });
+    expect(write.operation.fields[0].value.DIGITAL[0].status).toBeUndefined();
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+  it("refuses a preference on an action whose source no longer exists", async () => {
+    mocks.findFirst.mockResolvedValue({ id: "a1", sourceInitiativeId: id, status: "PROPOSED" });
+    mocks.pillarFind.mockResolvedValue({ currentVersion:4,content:{} });
+    await expect(setBrandActionStatus({strategyId:"s1",op:{type:"PREFERENCE",actionId:"a1",preference:"FAVORITE"}})).rejects.toThrow("INITIATIVE_SOURCE_MISSING");
+    expect(mocks.write).not.toHaveBeenCalled();
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+});

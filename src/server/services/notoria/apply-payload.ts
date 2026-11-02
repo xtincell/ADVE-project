@@ -93,15 +93,16 @@ export function applyPayloadToPillars(
     }
     case "SELECT_INITIATIVE": {
       const found = updateInitiativesById(pillars.i, payload.initiativeId, init => {
-        init.status = "SELECTED_FOR_ROADMAP";
-        init.timeframe = payload.timeframe;
+        // Legacy payload means a catalogue preference under ADR-0228.
+        // It no longer chooses or dates the strategic programme.
+        init.preference = "FAVORITE";
       });
       if (!found) { warnings.push(`SELECT_INITIATIVE: initiative ${payload.initiativeId} not found`); break; }
       changed.add("i");
       break;
     }
     case "REJECT_INITIATIVE": {
-      const found = updateInitiativesById(pillars.i, payload.initiativeId, init => { init.status = "REJECTED"; });
+      const found = updateInitiativesById(pillars.i, payload.initiativeId, init => { init.preference = "REJECTED"; });
       if (!found) { warnings.push(`REJECT_INITIATIVE: initiative ${payload.initiativeId} not found`); break; }
       changed.add("i");
       break;
@@ -192,7 +193,11 @@ export async function dispatchTypedRecos(
           author: { system: "MESTOR", reason: "Notoria: application des recommandations révisées" },
           options: { targetStatus: "AI_PROPOSED", confidenceDelta: 0.05,
             expectedVersion: versions[key] ?? 1, ...(firstWrite ? { expectedPillarVersions: versions } : {}),
-            rejectOnProvenanceRefusal: true, sourceReceipts, requiredSourceIds },
+            rejectOnProvenanceRefusal: true, sourceReceipts, requiredSourceIds,
+            ...(key === "i" ? { fieldProvenance: Object.fromEntries(typed.flatMap(r => {
+              const p = r.payload;
+              return p?.kind === "SELECT_INITIATIVE" || p?.kind === "REJECT_INITIATIVE" ? [[`initiatives.${p.initiativeId}.preference`, "HUMAN" as const]] : [];
+            })) } : {}) },
         }));
         firstWrite = false;
       }

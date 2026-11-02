@@ -28,6 +28,20 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 526 — réparations au niveau candidat, livraison non reçue (2026-11-02)
+
+S dépendait d’une présélection I, laissant des scénarios vides malgré un catalogue
+recommandé ; ses projections fabriquaient croissance/revenu/indice depuis des
+constantes. Le candidat sépare préférence de catalogue, composition du scénario
+et décision d’exécution, avec couverture/raisons et inconnues explicites. Hypothèse
+de cause : statut d’initiative confondu avec choix de plan et maturité commerciale.
+Premiers ciblés reçus, code final et lecteurs à recevoir ; aucune fermeture sur
+la production ou S réelle. [Recette restante](RESIDUAL-DEBT.md).
+
+Le prototype de calcul devis reste séparé du raccord documentaire/Thot à recevoir.
+Il ne prouve ni ingestion, ni substitution de coûts S en production, ni correction
+de la capture LLM/forfait V. Anciennes valeurs et réceptions restent historiques.
+
 ### Statut du 2 novembre — Golden Path reçu, Lighthouse encore ouvert
 
 L’épinglage Ubuntu 24.04 ferme le refus d’installation Chromium sur Ubuntu 26.04 /

@@ -38,6 +38,12 @@ describe("initiative facts survive their existing consumers", () => {
   it("keeps declared zero even when a qualitative estimate is also present", () => {
     expect(normalizeInitiative({ ...items[1], budgetEstime: "HIGH" })).toMatchObject({ budget: 0, budgetBasis: "DECLARED" });
   });
+  it("does not turn an AI placeholder zero into a free action, while preserving human zero", () => {
+    const raw={catalogueParCanal:{DIGITAL:[{action:"Test",budget:0,budgetEstime:"LOW"}]},_fieldProvenance:{catalogueParCanal:"INFERRED"}};
+    expect(collectNormalizedInitiatives(raw)[0]).toMatchObject({budget:500000,budgetBasis:"QUALITATIVE_ESTIMATE"});
+    expect(collectNormalizedInitiatives({...raw,_fieldProvenance:{catalogueParCanal:"HUMAN"}})[0]).toMatchObject({budget:0,budgetBasis:"DECLARED"});
+    expect(raw.catalogueParCanal.DIGITAL[0]!.budget).toBe(0);
+  });
   it("retains the method's qualitative anchor with its origin", () => {
     expect(normalizeInitiative(items[2])).toMatchObject({ budget: 500_000, budgetBasis: "QUALITATIVE_ESTIMATE" });
   });
@@ -56,7 +62,7 @@ describe("initiative facts survive their existing consumers", () => {
       declaredCount: 1, estimatedCount: 1, unknownCount: 1, unassignedTimeframeCount: 3 });
   });
   it("does not present a partially costed plan as a complete total", () => {
-    const c = computePillarS({ i: content, r: null, t: null });
+    const c = computePillarS({ i: { catalogueParCanal: { DIGITAL: items.map((a,n) => ({...a,targetsPersonaIds:[items[n]!.id]})) } }, r: null, t: null });
     expect(c.totalBudget).toBeUndefined();
     expect(c.selectedInitiativeCount).toBe(3);
     expect(c.budgetSummary).toMatchObject({ unknownCount: 1, estimatedCount: 1, declaredCount: 1 });
@@ -64,12 +70,10 @@ describe("initiative facts survive their existing consumers", () => {
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data?.budgetSummary).toEqual(c.budgetSummary);
   });
-  it("keeps the projection policy but exposes assumed baselines", () => {
-    const routes = computeRoadmapRoutes({ selectedInitiativeCount: 0 });
-    expect(routes.map(r => r.projectedGrowthPct)).toEqual([13, 37, 81]);
-    expect(routes[0]?.projectionAssumptions).toEqual({ riskCoverage: 30, baseCultIndex: 60 });
-    const sourced = computeRoadmapRoutes({ selectedInitiativeCount: 12, riskCoverage: 60, baseCultIndex: 80 });
-    expect(sourced[0]?.projectionAssumptions).toEqual({});
+  it("does not invent performance baselines for an empty scenario", () => {
+    const routes=computeRoadmapRoutes({selectedInitiativeCount:0});
+    expect(routes.map(r=>r.projectedGrowthPct)).toEqual([undefined,undefined,undefined]);
+    expect(routes.every(r=>r.targetCultIndex===undefined&&r.projectedRevenue===undefined)).toBe(true);
   });
   it("Oracle retains declared zero and labels a qualitative anchor as an estimate", () => {
     const result = mapCatalogueActions({ pillars: [{ key: "i", content }] });

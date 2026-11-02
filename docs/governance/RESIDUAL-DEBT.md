@@ -1,3 +1,64 @@
+## 526 — anciens défauts S corrigés en candidat, réception finale restante (2026-11-02)
+
+Le candidat remplace la présélection I obligatoire par les préférences FAVORITE /
+NEUTRAL / REJECTED et une composition de trois scénarios selon la couverture.
+Les nouveaux calculs retirent les projections de croissance/revenu/indice issues
+de constantes et d’un comptage d’actions. Ce sont des changements de candidat,
+pas une réception du S réel, de ses anciens assets ou de la production.
+
+**Checkpoint local 526 reçu, pas production** : sous rôle USER réel, copie
+privée des huit piliers SPAWT, rafraîchissement 800 ms, préférence 419 ms,
+assemblage du rapport 198 ms (`scenarios526-http-received.json`). Après un favori
+de recette uniquement, Conservateur/Cible/Ambitieux contiennent 4/5/11 actions,
+avec 5 000 000 / 5 500 000 / 19 000 000 de coûts estimés dans la devise du dossier.
+Même jeu de références S/calendrier, préférence et identité historique conservées,
+A/D/V/E/R/T inchangés ; aucune exécution armée. Ni budget adopté, ni geste de
+production, ni lecture native reçus par ces appels HTTP.
+
+PostgreSQL : 52 tests / 2 fichiers verts (`scenarios526-postgres-live.log`).
+Première passe unitaire reçue : 5 001 tests / 477 fichiers ; la passe finale reste
+à consolider, pas de compte final inventé. Le stress lancé en mode ALL a exit 0
+et zéro finding sur les forges/transitions, mais son préflight HTTP est injoignable :
+phases pages/tRPC sautées. `documents526-stress-full-received.json` et son log ne
+reçoivent donc ni toutes les surfaces ni l’UI. Les mesures HTTP USER ci-dessus
+sont un reçu séparé, pas un SLO.
+
+**Zéros de budget** : un zéro INFERRED IA ne reçoit pas l’autorité d’une gratuité :
+il reste inconnu ou reprend une ancre qualitative existante. Un zéro HUMAN/SOURCE
+reste conservé. Cette correction n’invente pas un devis ni une dépense mesurée.
+
+**Fermer 526** : recevoir sur le code final les refus et succès de préférences,
+réintégration explicite des rejets et absence d’armement de planning ; arbitrages
+sans favori/préselection, cohérence IDs/versions/textes/budgets/horizons et sources
+T/I, puis lecteurs de scénarios et Oracle sous rôle réel. Conserver les inconnues,
+les limites du catalogue et le planning réel ; ne pas forcer des minimums pour
+annoncer 100 %. Recevoir les consommateurs restants (Notoria, créatif/calendrier,
+3 Horizons et diagnostics legacy), CI, image/runtime et conservation. Responsable
+lot 526 / circuits existants ; effort recette bornée ; **déclencheur immédiat**
+avant livraison. Les reçus locaux ci-dessus sont conservés ; ils ne remplacent
+pas la passe finale, les réceptions natives et la conservation de production. [ADR-0228](adr/0228-initiative-preferences-and-strategy-scenarios.md).
+
+**Coûts/devis — futur, non livré dans 526** : helper `resolveQuotedBudget` et test
+retirés du code 526, conservés seulement hors code dans P23
+`quoted-budget-prototype526.ts.txt` et `quoted-budget-prototype526.test.ts.txt`.
+Aucune compilation ou livraison de ce prototype dans 526, aucun raccord d’import
+prestataire, de `ProviderCostRate.sourceRef` ou d’`ActionCostEstimate` au S courant. **Fermer** via les rails Thot/FINANCE existants :
+qualifier document/version/prestataire et couverture exacte, comparer devise/HT-TTC/
+quantité/période, remplacer l’estimation couverte, préserver le reste estimé,
+le bundle indivis et l’historique. Interdire chevauchement/double comptage et
+ventilation arbitraire ; recevoir l’exemple 550 000 sur données, writers et lecteurs
+réels, pas seulement sur fonction pure. Ne créer ni mission ni prestataire fictifs.
+Responsable lot coûts existant ; effort raccord et recette ciblés ; **déclencheur**
+prochaine reprise des budgets S avant de présenter des devis comme coûts courants.
+La capture `potentielBudget` LLM / partage 45/30/15/10 de V reste à résoudre dans ce
+lot ; aucune source changée silencieusement. Les sections devis d’ADR-0228 restent
+Proposed même après une réception préférences/scénarios.
+
+La triangulation CF/CV et la certitude des risques `ai_estimate` CONFIRMED restent
+hors clôture de ce lot ; NPS réel, Glory, Friesland régional et capacité VPS restent
+distincts. Priorité MVP scoreur / fiche ADVE complète / Oracle, puis Shinkiro.
+Aucun MVP reçu par le numéro 526 ou cette phase documentaire.
+
 ## Checkpoint du 2 novembre — cascade 524 reçue, CI 525 et qualité encore ouvertes
 
 **Reçu serveur, transport distinct** : la cascade de production 524 est `OK` à

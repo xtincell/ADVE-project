@@ -1,6 +1,6 @@
 "use client";
 
-import { initiativeBudgetLabel } from "@/lib/strategy/roadmap-routes";
+import { initiativeBudgetLabel, ROUTE_SPECS } from "@/lib/strategy/roadmap-routes";
 
 /**
  * Pilier S (Stratégie) — renderer bespoke.
@@ -43,7 +43,7 @@ function FenetreOverton({ value, status }: { value: unknown; status?: string }) 
             <div className="ck-s-overton__box ok"><span>Perception cible</span>{str(o.perceptionCible)}</div>
           </div>
           {!isEmpty(o.ecart) ? <p className="ck-s-overton__gap"><i>Écart à combler</i>{str(o.ecart)}</p> : null}
-          {!isEmpty(o.strategieDeplacement) ? <p className="ck-s-overton__strat"><i>Stratégie de déplacement</i>{str(o.strategieDeplacement)}</p> : null}
+          {!isEmpty(o.strategieDeplacement) ? <div className="ck-s-overton__strat"><i>Stratégie de déplacement</i>{Array.isArray(o.strategieDeplacement) ? <ol>{asArr(o.strategieDeplacement).map((step, i) => <li key={i}>{str(step.action)} · {str(step.canal)} · {str(step.horizon) || "Échéance à préciser"}</li>)}</ol> : str(o.strategieDeplacement)}</div> : null}
         </div>
       )}
     </ACard>
@@ -137,7 +137,7 @@ function KpiDashboard({ items, status }: { items: unknown; status?: string }) {
   const arr = asArr(items);
   return (
     <ACard title="Dashboard KPI" status={status} empty={empty} span>
-      {empty ? <EmptyBody /> : (
+      {empty ? <p className="text-sm text-foreground-muted">Les objectifs des actions sont détaillés dans le plan. Leurs cibles chiffrées et fréquences de mesure restent à définir.</p> : (
         <div className="ck-s-kpis">
           {arr.map((k, i) => (
             <div className="ck-s-kpi" key={i}>
@@ -200,14 +200,14 @@ function ComputedBanner({ computed, score }: { computed: unknown; score: unknown
     <div className="ck-s-computed">
       <div className="ck-s-computed__score">
         <div className="ck-s-computed__ring" style={{ "--p": pct ?? 0 } as React.CSSProperties}><div className="ck-s-computed__hole" /><span>{pct ?? "—"}<i>/100</i></span></div>
-        <span className="ck-s-computed__lbl">Score de cohérence</span>
+        <span className="ck-s-computed__lbl">{typeof c.coherenceIssueCount === "number" ? `${c.coherenceIssueCount} observation(s) de cohérence à examiner` : "Cohérence non mesurée"}</span>
       </div>
       <div className="ck-s-computed__cells">
-        <div className="ck-s-computed__c"><span>Ambition retenue</span><b>{str(c.selectedRouteKey) || "—"}</b></div>
+        <div className="ck-s-computed__c"><span>Scénario courant</span><b>{ROUTE_SPECS.find(r => r.key === c.selectedRouteKey)?.label ?? "À recalculer"}</b></div>
         <div className="ck-s-computed__c"><span>Initiatives</span><b>{isEmpty(c.selectedInitiativeCount) ? "—" : str(c.selectedInitiativeCount)}</b></div>
         <div className="ck-s-computed__c"><span>Budget du plan</span><b>{initiativeBudgetLabel(totalBudget, c.budgetSummary)}</b></div>
         {typeof asRec(c.budgetSummary).unassignedTimeframeCount === "number" && Number(asRec(c.budgetSummary).unassignedTimeframeCount) > 0 ? <div className="ck-s-computed__c"><span>Échéances à préciser</span><b>{str(asRec(c.budgetSummary).unassignedTimeframeCount)}</b></div> : null}
-        <div className="ck-s-computed__c"><span>Couverture risques</span><b>{isEmpty(c.riskCoverage) ? "—" : `${str(c.riskCoverage)} %`}</b></div>
+        <div className="ck-s-computed__c"><span>Risques associés à une action</span><b>{isEmpty(c.riskCoverage) ? "—" : `${str(c.riskCoverage)} %`}</b></div>
       </div>
     </div>
   );
@@ -247,9 +247,9 @@ export function PillarSFields({ content, certainty }: { content: Rec; certainty:
           </ACard>
           <Sprint90 items={v.sprint90Days} status={st("sprint90Days")} />
           <Roadmap items={v.roadmap} status={st("roadmap")} />
-          <ProofList title="Actions retenues (de I)" items={v.selectedFromI} status={st("selectedFromI")}
+          <ProofList title="Actions du scénario courant" items={v.selectedFromI} status={st("selectedFromI")}
             cols={[["action", "Action"], ["phase", "Phase"], ["priority", "Priorité"]]} />
-          <ProofList title="Actions écartées (de I)" items={v.rejectedFromI} status={st("rejectedFromI")}
+          <ProofList title="Actions rejetées dans le catalogue" items={v.rejectedFromI} status={st("rejectedFromI")}
             cols={[["action", "Action"], ["reason", "Raison"]]} />
         </div>
       </Section>

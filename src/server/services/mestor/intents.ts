@@ -104,6 +104,7 @@ export type Intent =
       operatorId?: string;
       op:
         | { type: "SELECT"; actionId: string; selected: boolean }
+        | { type: "PREFERENCE"; actionId: string; preference: "FAVORITE" | "NEUTRAL" | "REJECTED" }
         | { type: "TIMING"; actionId: string; timingStart: string | null; timingEnd?: string | null }
         | { type: "AUTOSCHEDULE"; startDate?: string; cadenceDays?: number; onlyUnscheduled?: boolean };
     }
@@ -1395,7 +1396,7 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
       return ["s"];
     // Selection is versioned in I; timing alone changes the execution projection.
     case "SET_BRAND_ACTION_STATUS":
-      return intent.op.type === "SELECT" ? ["i"] : [];
+      return intent.op.type === "SELECT" || intent.op.type === "PREFERENCE" ? ["i"] : [];
     // Phase 24 (ADR-0106) — Intention : aval de l'ADVE, ne mute aucun pilier.
     case "CAPTURE_INTENTION":
     case "GENERATE_BRIEF_FROM_INTENTION":

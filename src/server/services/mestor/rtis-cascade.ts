@@ -391,9 +391,9 @@ export async function recalculateSynthesisInTransaction(strategyId: string, tx: 
     const ids = [...new Set(context.selectedActionIds)];
     const actions = await tx.brandAction.findMany({ where: { strategyId, id: { in: ids } } });
     const i = await tx.pillar.findUnique({ where: { strategyId_key: { strategyId, key: "i" } } });
-    const chosen = new Set(collectNormalizedInitiatives(i?.content).filter(a => a.status === "SELECTED_FOR_ROADMAP").map(a => a.id));
-    if (actions.length !== ids.length || actions.some(a => !a.selected || !a.sourceInitiativeId || !chosen.has(a.sourceInitiativeId))) {
-      throw new Error("SYNTHESIS_CHOICE_REQUIRED: conservez d’abord ces choix dans le catalogue, puis recalculez.");
+    const chosen = new Set(collectNormalizedInitiatives(i?.content).filter(a => a.preference !== "REJECTED").map(a => a.id));
+    if (actions.length !== ids.length || actions.some(a => !a.sourceInitiativeId || !chosen.has(a.sourceInitiativeId))) {
+      throw new Error("SYNTHESIS_CHOICE_REQUIRED: ces actions doivent appartenir au catalogue courant et rester admissibles.");
     }
   }
   const calculated = await executeProtocoleStrategy(strategyId, tx, context?.selectedRouteKey);
@@ -401,7 +401,7 @@ export async function recalculateSynthesisInTransaction(strategyId: string, tx: 
   const sources = calculated.content._sourcePillarVersions as Record<string, number | null>;
   const persisted = await write({ strategyId, pillarKey: "s",
     operation: { type: "REPLACE_FULL", content: calculated.content },
-    author: { system: "PROTOCOLE_S", reason: "Recalcul depuis les choix conservés", intentId: context?.intentId, userId: context?.userId },
+    author: { system: "PROTOCOLE_S", reason: "Recalcul des scénarios depuis le catalogue et ses préférences", intentId: context?.intentId, userId: context?.userId },
     options: { expectedVersion: sources.s ?? 1, expectedPillarVersions: sources, ...context?.writeOptions,
       targetStatus: "AI_PROPOSED", shapeGate: true, rejectOnProvenanceRefusal: true },
   });
@@ -608,7 +608,9 @@ Retourne le pilier ${pillarKey} complet en JSON.`;
     let saved: PillarWriteResult;
     if (pillarKey === "I") {
       const existingI = (pillars[pillarKey] ?? {}) as Record<string, unknown>;
-      saved = await savePillar(strategyId, pillarKey, { ...existingI, ...newContent }, confidence, "REPLACE_FULL", expectedPillarVersions, context, sourceReceipts);
+      const { retainHumanInitiativePreferences } = await import("@/lib/types/pillar-schemas");
+      const candidate = retainHumanInitiativePreferences(existingI, { ...existingI, ...newContent });
+      saved = await savePillar(strategyId, pillarKey, candidate, confidence, "REPLACE_FULL", expectedPillarVersions, context, sourceReceipts);
     } else if (pillarKey === "R" || pillarKey === "T") {
       saved = await savePillar(strategyId, pillarKey, newContent, confidence, "SET_FIELDS", expectedPillarVersions, context, sourceReceipts);
     } else {

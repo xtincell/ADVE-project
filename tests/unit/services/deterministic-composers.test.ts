@@ -220,7 +220,7 @@ describe("Oracle composites preserve the same initiative identities and unknown 
 
   it("unknown horizons remain unassigned, never H2 or a fictitious 100% allocation", async () => {
     const original = structuredClone(source);
-    const result = await composeSectionContent(pureContext(source), metaFor("mckinsey-3-horizons"));
+    const result = await composeSectionContent(pureContext(source, {computed:{selectedRouteKey:"TARGET",roadmapRoutes:[{key:"TARGET",selectionBasis:"CATALOGUE_COVERAGE_RULES_V1",initiativeIds:["one","two","three"]}]}}), metaFor("mckinsey-3-horizons"));
     const data = result!.content.mckinsey3Horizons as { h2: { items: string[] }; allocation: Record<string, number>;
       unassigned: { items: string[] }; coverage: { totalCount: number; classifiedCount: number; unassignedCount: number } };
     expect(data.h2.items).toEqual([]);
@@ -237,7 +237,7 @@ describe("Oracle composites preserve the same initiative identities and unknown 
       { id: "later", action: "Long terme", status: "SELECTED_FOR_ROADMAP", timeframe: "LONG_TERM" },
       { id: "unknown", action: "À planifier", status: "SELECTED_FOR_ROADMAP" },
       { id: "draft", action: "Pas retenue", status: "DRAFT", timeframe: "PHASE_1" },
-    ] } }), metaFor("mckinsey-3-horizons"));
+    ] } }, {computed:{selectedRouteKey:"TARGET",roadmapRoutes:[{key:"TARGET",selectionBasis:"CATALOGUE_COVERAGE_RULES_V1",initiativeIds:["h1","h2","later","unknown"]}]}}), metaFor("mckinsey-3-horizons"));
     const data = result!.content.mckinsey3Horizons as { h1: { items: string[] }; h2: { items: string[] };
       allocation: Record<string, number>; coverage: { totalCount: number; classifiedCount: number; unassignedCount: number } };
     expect(data.h1.items).toEqual(["Sprint"]);

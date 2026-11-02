@@ -73,9 +73,9 @@ describe("PillarPage — current state differs from field population", () => {
       { key: "TARGET", label: "Cible", recommended: true },
     ] } };
     render(React.createElement(PillarPage, { pageKey: "roadmap" }));
-    expect(screen.getByText("Projection à préciser")).toBeTruthy();
+    expect(screen.getByText("Scénario à recalculer")).toBeTruthy();
     expect(screen.queryByText("+0%")).toBeNull();
-    expect(screen.getByText(/hypothèses de travail/)).toBeTruthy();
+    expect(screen.getByText(/sélections proposées depuis votre catalogue/)).toBeTruthy();
   });
   it("shows a stale complete pillar as stale, even with a stored approval and 100% fields", () => {
     fixture.readiness.data = current(true);

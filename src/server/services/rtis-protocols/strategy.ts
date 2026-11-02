@@ -1,6 +1,6 @@
 /**
  * PROTOCOLE STRATEGY (S) — deterministic projection of the chosen I set.
- * Reads A/D/V/E/R/T/I/S; never chooses, promotes or writes initiatives.
+ * Reads A/D/V/E/R/T/I/S; proposes scenario subsets without changing I or arming execution.
  * Narrative assistance remains explicit in Notoria. Sparse sources remain a
  * partial draft; the strict review contract is not padded or weakened.
  */
@@ -38,8 +38,9 @@ type Tf = (typeof INITIATIVE_TIMEFRAMES)[number];
 const TF_PHASE_LABEL: Record<Tf, string> = { SPRINT_90: "Sprint 90 jours", PHASE_1: "Phase 1", PHASE_2: "Phase 2", LONG_TERM: "Long terme" };
 const PILLAR_LABEL: Record<string, string> = { A: "Authenticité", D: "Distinction", V: "Valeur", E: "Engagement" };
 
-function generateStrategy(pillars: Record<string, Record<string, unknown> | null>): Record<string, unknown> {
-  const selected = collectNormalizedInitiatives(pillars.i).filter(a => a.status === "SELECTED_FOR_ROADMAP");
+function generateStrategy(pillars: Record<string, Record<string, unknown> | null>, routeKey: RouteKey): Record<string, unknown> {
+  const matrix = Array.isArray(pillars.r?.probabilityImpactMatrix) ? pillars.r!.probabilityImpactMatrix as Array<Record<string, unknown>> : [];
+  const selected = routeInitiativeSet(routeKey, collectNormalizedInitiatives(pillars.i) as unknown as Array<Record<string, unknown>>, { riskMatrix: matrix }) as unknown as ReturnType<typeof collectNormalizedInitiatives>;
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const identity = (id: string) => ({ sourceRef: id, ...(uuid.test(id) ? { sourceInitiativeId: id } : {}) });
   const aggregate = (actions: typeof selected) => aggregateInitiativeSet(actions as unknown as Array<Record<string, unknown>>, []);
@@ -80,34 +81,24 @@ function generateStrategy(pillars: Record<string, Record<string, unknown> | null
     if (actions.length && amount !== undefined) budgetByDevotion[bucket] = amount;
   }
   return {
+    ...(typeof target === "string" && target.trim() ? { visionStrategique: target } : {}),
+    overtonMilestones: selected.filter(a => a.overtonShift && typeof current === "string" && current.trim()).map(a => ({
+      phase: a.timeframe ? TF_PHASE_LABEL[a.timeframe] : "Échéance à préciser", currentPerception: current, targetPerception: a.overtonShift,
+      ...(a.objectif ? { measurementMethod: `Objectif à vérifier : ${a.objectif}` } : {}),
+    })),
+    rejectedFromI: collectNormalizedInitiatives(pillars.i).filter(a => a.preference === "REJECTED").map(a => ({ ...identity(a.id), action: a.action, reason: "Rejetée dans le catalogue" })),
     selectedFromI: selected.map((a, index) => ({ ...identity(a.id), action: a.action, ...(a.timeframe ? { phase: TF_PHASE_LABEL[a.timeframe] } : {}), priority: index + 1 })),
     roadmap,
     sprint90Days: selected.filter(a => a.timeframe === "SPRINT_90").map((a, index) => ({ ...identity(a.id), action: a.action,
       ...(a.objectif ? { kpi: a.objectif } : {}), priority: index + 1, ...(a.devotionImpact ? { devotionImpact: a.devotionImpact } : {}) })),
     fenetreOverton, axesStrategiques, facteursClesSucces, ...(selectedBudget.totalBudget !== undefined ? { globalBudget: selectedBudget.totalBudget } : {}), budgetByDevotion,
-    syntheseExecutive: `${selected.length} action(s) conservée(s) dans le catalogue. Montants chiffrés : ${selectedBudget.budgetSummary.knownSubtotal}, dont ${selectedBudget.budgetSummary.estimatedCount} estimation(s). ${selectedBudget.budgetSummary.unknownCount} budget(s) et ${selectedBudget.budgetSummary.unassignedTimeframeCount} échéance(s) à préciser. Ces montants ne constituent pas une dépense mesurée.`,
-    kpiDashboard: [], devotionFunnel: [], overtonMilestones: [],
+    syntheseExecutive: `${selected.length} action(s) proposée(s) pour ce scénario depuis le catalogue. Montants chiffrés : ${selectedBudget.budgetSummary.knownSubtotal}, dont ${selectedBudget.budgetSummary.estimatedCount} estimation(s). ${selectedBudget.budgetSummary.unknownCount} budget(s) et ${selectedBudget.budgetSummary.unassignedTimeframeCount} échéance(s) à préciser. Ces montants ne constituent pas une dépense mesurée.`,
+    kpiDashboard: [], devotionFunnel: [],
   };
 }
 
-// ── computeRoadmapRoutes : 3 trajectoires (PURE, no LLM) ──────────────
-// Conservateur / Cible (recommandé) / Ambitieux. The numbers are a
-// deterministic projection of execution *momentum* (risk coverage + how many
-// initiatives are selected) — the LLM is NOT pertinent here, so it is never
-// called. Each route = base ambition + momentum-scaled span. Tuned so a
-// momentum of ~0.6 yields roughly +22 / +58 / +115 % growth.
-
-// ── computePillarS : PURE COMPUTED DASHBOARD (ADR-0088 + ADR-0089) ────
-// S accepts no static text input — its numeric dashboard is aggregated from
-// the relational backbone : selected initiatives (status=SELECTED_FOR_ROADMAP)
-// + their budgets/FK risk links, the risk matrix, and T.overtonPosition. Pure,
-// deterministic, reused by executeProtocoleStrategy AND the recommendation
-// apply path (so S recomputes whenever an initiative is selected/linked).
-//
-// ADR-0089 — l'ambition retenue (`selectedRouteKey`, default TARGET) pilote
-// le dashboard principal : les agrégations portent sur le JEU DE STRATÉGIE de
-// la route sélectionnée. La sélection est persistée dans computed et survit
-// aux recomputes (lue depuis le S précédent via `pillars.s`).
+// The same deterministic scenario sets feed both the dashboard and its plan.
+// A source objective is retained verbatim; no sales forecast or KPI is invented.
 
 export function computePillarS(
   pillars: Record<string, Record<string, unknown> | null>,
@@ -121,7 +112,7 @@ export function computePillarS(
   // budgetEstime) → les agrégations budget/risque de S sont cohérentes même
   // quand les actions n'ont qu'un budget qualitatif (canon, génération LLM).
   const initiatives = collectNormalizedInitiatives(i) as unknown as Array<Record<string, unknown>>;
-  const selected = initiatives.filter((a) => a.status === "SELECTED_FOR_ROADMAP");
+
 
   // ADR-0089 — résolution de l'ambition retenue : override explicite >
   // sélection persistée dans le S précédent > default TARGET.
@@ -139,11 +130,11 @@ export function computePillarS(
   // Dashboard principal = agrégations sur le jeu de la route sélectionnée.
   // TARGET (default) = toutes les SELECTED_FOR_ROADMAP — identique au
   // comportement pré-ADR-0089.
-  const activeSet = routeInitiativeSet(selectedRouteKey, initiatives);
+  const activeSet = routeInitiativeSet(selectedRouteKey, initiatives, { riskMatrix: matrix });
   const agg = aggregateInitiativeSet(activeSet, matrix);
 
   // Momentum des projections : toujours le jeu TARGET (scénarios invariants).
-  const targetAgg = selectedRouteKey === "TARGET" ? agg : aggregateInitiativeSet(selected, matrix);
+  const targetAgg = selectedRouteKey === "TARGET" ? agg : aggregateInitiativeSet(routeInitiativeSet("TARGET", initiatives, { riskMatrix: matrix }), matrix);
 
   const overtonPos = t.overtonPosition as Record<string, unknown> | undefined;
   const percGap = t.perceptionGap as Record<string, unknown> | undefined;
@@ -155,9 +146,9 @@ export function computePillarS(
       }
     : undefined;
 
-  // Each unresolved cross-pillar coherence risk costs 15 points (floored at 0).
+  // A count of unresolved observations is not a measured coherence score.
   const coherenceRisks = Array.isArray(r.coherenceRisks) ? (r.coherenceRisks as unknown[]) : undefined;
-  const coherenceScore = coherenceRisks ? Math.max(0, 100 - Math.min(100, coherenceRisks.length * 15)) : undefined;
+  const coherenceIssueCount = coherenceRisks?.length;
 
   const devotionFunnel: unknown[] = [];
 
@@ -165,7 +156,7 @@ export function computePillarS(
   // porte son jeu de stratégie calculé (ADR-0089).
   const roadmapRoutes = computeRoadmapRoutes({
     riskCoverage: targetAgg.riskCoverage,
-    selectedInitiativeCount: selected.length,
+    selectedInitiativeCount: activeSet.length,
     baseRevenue: opts?.baseRevenue,
     baseCultIndex: opts?.baseCultIndex,
     initiatives,
@@ -182,7 +173,7 @@ export function computePillarS(
     selectedInitiativeCount: agg.initiativeCount,
     ...(devotionFunnel ? { devotionFunnel } : {}),
     ...(overtonPosition ? { overtonPosition } : {}),
-    ...(coherenceScore !== undefined ? { coherenceScore } : {}),
+    ...(coherenceIssueCount !== undefined ? { coherenceIssueCount } : {}),
     roadmapRoutes,
     selectedRouteKey,
     computedAt: new Date().toISOString(),
@@ -209,8 +200,11 @@ export async function executeProtocoleStrategy(strategyId: string, transaction?:
       pillars.s = { ...previous, computed: { ...((previous.computed ?? {}) as Record<string, unknown>), selectedRouteKey } };
     }
 
-    const strategyContent = generateStrategy(pillars);
     const ue = (pillars.v?.unitEconomics ?? {}) as Record<string, unknown>;
+    const computed = computePillarS(pillars, {
+      baseRevenue: typeof ue.caVise === "number" ? ue.caVise : undefined,
+    });
+    const strategyContent = generateStrategy(pillars, computed.selectedRouteKey as RouteKey);
     // Absence participates in concurrency checking, including a previously absent S.
     const versions = new Map(dbPillars.map(p => [p.key, p.currentVersion]));
     strategyContent._sourcePillarVersions = Object.fromEntries(PILLAR_STORAGE_KEYS.map(key => [key, versions.get(key) ?? null]));
@@ -218,10 +212,7 @@ export async function executeProtocoleStrategy(strategyId: string, transaction?:
     // Pure computed dashboard (ADR-0088) — aggregations over the relational
     // backbone. Recomputed here and again by the recommendation apply path
     // whenever an initiative is selected/linked.
-    strategyContent.computed = computePillarS(pillars, {
-      roadmap: strategyContent.roadmap as unknown[],
-      baseRevenue: typeof ue.caVise === "number" ? ue.caVise : undefined,
-    });
+    strategyContent.computed = computed;
 
     // Count selectedFromI
     const selectedFromI = (strategyContent.selectedFromI ?? []) as unknown[];

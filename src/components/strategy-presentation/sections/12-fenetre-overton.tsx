@@ -2,14 +2,9 @@
 
 import type { FenetreOvertonSection } from "@/server/services/strategy-presentation/types";
 import { DataTable } from "../shared/data-table";
-import { initiativeBudgetLabel, roadmapAssumptionsLabel } from "@/lib/strategy/roadmap-routes";
+import { initiativeBudgetLabel } from "@/lib/strategy/roadmap-routes";
 
 interface Props { data: FenetreOvertonSection }
-
-function formatRevenueM(v: number | null): string | null {
-  if (v == null) return null;
-  return `${Math.round(v / 1_000_000)} M F`;
-}
 
 export function FenetreOverton({ data }: Props) {
   const dash = data.computedDashboard;
@@ -40,11 +35,10 @@ export function FenetreOverton({ data }: Props) {
       {/* 3 trajectoires de roadmap (ADR-0088) — projections pure-computed.
           ADR-0089 : chaque route porte son jeu de stratégie ; la route
           sélectionnée (ambition retenue par l'opérateur) est mise en avant. */}
-      {data.roadmapRoutes.length > 0 ? <p className="text-xs text-foreground-muted">Scénarios hypothétiques : ces projections ne sont pas des résultats mesurés.</p> : null}
+      {data.roadmapRoutes.length > 0 ? <p className="text-xs text-foreground-muted">Scénarios proposés depuis le catalogue : les actions et budgets ne constituent pas des résultats mesurés.</p> : null}
       {data.roadmapRoutes.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-3">
           {data.roadmapRoutes.map((r) => {
-            const rev = formatRevenueM(r.projectedRevenue);
             const highlight = r.selected || (r.recommended && !data.roadmapRoutes.some((x) => x.selected));
             return (
               <div
@@ -69,15 +63,8 @@ export function FenetreOverton({ data }: Props) {
                 </span>
                 <p className="text-sm font-semibold text-foreground">{r.label}</p>
                 <p className={highlight ? "mt-3 text-4xl font-extrabold text-accent" : "mt-3 text-4xl font-extrabold text-foreground"}>
-                  {r.projectedGrowthPct !== null ? `+${r.projectedGrowthPct}%` : "Projection à préciser"}
+                  {r.initiativeCount !== null ? `${r.initiativeCount} action${r.initiativeCount > 1 ? "s" : ""}` : "Scénario à recalculer"}
                 </p>
-                <p className="mt-2 text-[11px] uppercase tracking-wider text-foreground-muted">
-                  {rev ? `CA projeté 12 mois · ${rev}` : "Croissance projetée 12 mois"}
-                </p>
-                <div className="mt-4 flex items-center justify-between rounded-lg bg-background/60 px-3 py-2">
-                  <span className="text-xs text-foreground-secondary">Indice d’attachement cible</span>
-                  <span className="text-sm font-bold text-foreground">{r.targetCultIndex !== null ? `${r.targetCultIndex}/100` : "À préciser"}</span>
-                </div>
                 {/* Jeu de stratégie de la route (ADR-0089) */}
                 {(r.initiativeCount != null || r.totalBudget != null) && (
                   <div className="mt-2 flex items-center justify-between rounded-lg bg-background/60 px-3 py-2 text-xs">
@@ -91,7 +78,9 @@ export function FenetreOverton({ data }: Props) {
                   </div>
                 )}
                 <p className="mt-3 text-xs text-foreground-secondary">{r.description}</p>
-                {roadmapAssumptionsLabel(r.projectionAssumptions) ? <p className="mt-2 text-xs text-foreground-muted">{roadmapAssumptionsLabel(r.projectionAssumptions)}</p> : null}
+                {r.initiatives?.length ? <details className="mt-3 text-xs text-foreground-secondary"><summary className="cursor-pointer">Actions du scénario</summary>
+                  <ol className="mt-2 space-y-2">{r.initiatives.map(a => <li key={a.id}><strong>{a.action}</strong>{a.objectif ? <p>{a.objectif}</p> : null}</li>)}</ol>
+                </details> : null}
               </div>
             );
           })}

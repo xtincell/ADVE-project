@@ -1416,7 +1416,7 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
   // générique (defaultRoadmap "Phase 1 — Fondations").
   let roadmap: FenetreOvertonSection["roadmap"] = arr(sContent?.roadmap).map((r: any) => ({
     phase: str(r.phase), objectif: str(r.objectif ?? r.objective),
-    livrables: arr(r.livrables ?? r.deliverables).map(str).filter(Boolean),
+    livrables: arr(r.livrables ?? r.deliverables ?? r.actions).map(str).filter(Boolean),
     budget: typeof r.budget === "number" ? r.budget : null,
     budgetSummary: InitiativeBudgetSummarySchema.safeParse(r.budgetSummary).success ? r.budgetSummary : undefined,
     duree: str(r.duree ?? r.duration),
@@ -1439,7 +1439,7 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
   // priorisée est un jalon réel, son KPI = critère de succès). Plus de jalons
   // génériques datés (defaultJalons).
   let jalons = arr(sContent?.jalons ?? sContent?.milestones ?? sContent?.overtonMilestones).map((j: any) => ({
-    date: str(j.date), milestone: str(j.milestone ?? j.label ?? j.targetPerception), critereSucces: str(j.critere ?? j.criteria ?? j.successCriteria),
+    date: str(j.date), milestone: str(j.milestone ?? j.label ?? j.targetPerception), critereSucces: str(j.critere ?? j.criteria ?? j.successCriteria ?? j.measurementMethod),
   })).filter((j: any) => j.milestone);
   if (jalons.length === 0) {
     jalons = arr(iContent?.sprint90Days).map((a: any) => ({
@@ -1463,6 +1463,7 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
     targetCultIndex: num(r.targetCultIndex),
     description: str(r.description),
     initiativeCount: num(r.initiativeCount),
+    initiatives: arr(r.initiatives).filter((a: any) => typeof a.id === "string" && typeof a.action === "string"),
     totalBudget: num(r.totalBudget),
     budgetSummary: summary(r.budgetSummary),
     projectionAssumptions: r.projectionAssumptions && typeof r.projectionAssumptions === "object" ? r.projectionAssumptions : undefined,

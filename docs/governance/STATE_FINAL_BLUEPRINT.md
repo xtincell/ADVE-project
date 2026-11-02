@@ -2107,6 +2107,28 @@ d'invariants spécifiques (cf. `tests/integration/`).
 
 # ANNEXE CANON L — LEXIQUE NORMATIF
 
+### Contrat candidat 526 — préférence d’initiative et scénario stratégique (2026-11-02)
+
+**Préférence d’initiative** : avis attribué sur une initiative I, FAVORITE, NEUTRAL
+ou REJECTED. Favori favorise sans imposer ; neutre reste éligible ; rejet exclut
+jusqu’à réintégration explicite. Ce geste ne sélectionne pas l’exécution, ne
+programme rien et ne publie rien. Une proposition IA n’est pas une préférence
+humaine. Les choix legacy se projettent en préférences sans réécriture historique.
+
+**Scénario stratégique S** : ensemble de candidats composé par les règles existantes
+depuis catalogue éligible, risques, besoins, canaux et préférences ; pas de
+présélection I obligatoire. Conservateur, Cible et Ambitieux expliquent leurs
+arbitrages et limites ; l’opérateur retient une ambition. Scénario proposé, choix,
+approbation et activation restent distincts. Ensemble d’IDs, budgets qualifiés,
+raisons, horizons et textes sont cohérents entre S et ses lecteurs. Les projections
+sans modèle étayé restent absentes, et les inconnues ne deviennent pas zéro.
+
+Périmètre d’[ADR-0228](adr/0228-initiative-preferences-and-strategy-scenarios.md) candidat :
+contrôles finaux et livraison 526 encore ouverts, aucun 100 % ou MVP reçu. Le devis
+par responsabilité et le coût courant Thot restent un contrat futur séparé ;
+le calcul pur prototype ne reçoit pas leur raccord aux données de production.
+Les ADR-0088/0089 et réceptions antérieures restent des états historiques.
+
 ### Acteurs et échanges de valeur — ADR-0225 (2026-10-21, candidat)
 
 Une persona D décrit un acteur de la marque, pas nécessairement un acheteur.

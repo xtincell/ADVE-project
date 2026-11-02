@@ -44,7 +44,7 @@ describe("buildTypedRecommendations (ADR-0088)", () => {
     const initiative = { id: INIT_RECO, action: "Sans échéance", status: "RECOMMENDED" };
     const out = buildTypedRecommendations({ i: { catalogueParCanal: { DIGITAL: [initiative] } } });
     expect(out[0]!.payload).toMatchObject({ timeframe: "PHASE_1" });
-    expect(out[0]!.explain).toContain("échéance proposée");
+    expect(out[0]!.explain).toContain("La stratégie décidera");
     expect(out[0]!.explain).not.toContain("PHASE_1");
     expect(initiative).not.toHaveProperty("timeframe");
   });
@@ -52,8 +52,7 @@ describe("buildTypedRecommendations (ADR-0088)", () => {
   it("preserves risk links from the raw secondary collections while deduplicating choices", () => {
     const action = { id: INIT_SELECTED, action: "Couvrir", status: "SELECTED_FOR_ROADMAP" };
     const out = buildTypedRecommendations({ i: { catalogueParCanal: { DIGITAL: [action] }, actionsByDevotionLevel: { ENGAGE: [{ ...action, status: "RECOMMENDED", mitigatesRiskIds: [RISK_COVERED] }] } }, r: { probabilityImpactMatrix: [{ id: RISK_COVERED, status: "UNMITIGATED" }] } });
-    expect(out).toHaveLength(1);
-    expect(out[0]!.payload).toMatchObject({ kind: "SET_RISK_STATUS", riskId: RISK_COVERED });
+    expect(out.some(c => c.payload.kind === "SET_RISK_STATUS")).toBe(false);
   });
 
   it("does not treat an old selected copy as the current canonical risk decision", () => {
@@ -73,13 +72,9 @@ describe("buildTypedRecommendations (ADR-0088)", () => {
     expect(sel!.payload).toMatchObject({ kind: "SELECT_INITIATIVE", initiativeId: INIT_RECO, timeframe: "PHASE_2" });
   });
 
-  it("Rule 2 — UNMITIGATED risk covered by a SELECTED initiative → SET_RISK_STATUS MITIGATED", () => {
-    const out = buildTypedRecommendations({
-      i: { catalogueParCanal: { PROD: [{ id: INIT_SELECTED, action: "x", format: "f", objectif: "o", status: "SELECTED_FOR_ROADMAP", mitigatesRiskIds: [RISK_COVERED] }] } },
-      r: { probabilityImpactMatrix: [{ id: RISK_COVERED, risk: "r", probability: "HIGH", impact: "HIGH", severity: 100, status: "UNMITIGATED", mitigation: "m" }] },
-    });
-    const set = out.find((c) => c.payload.kind === "SET_RISK_STATUS");
-    expect(set!.payload).toMatchObject({ kind: "SET_RISK_STATUS", riskId: RISK_COVERED, status: "MITIGATED" });
+  it("a proposed or retained action is not evidence of effective risk mitigation", () => {
+    const out = buildTypedRecommendations({i:{catalogueParCanal:{PROD:[{id:INIT_SELECTED,action:"x",format:"f",objectif:"o",status:"SELECTED_FOR_ROADMAP",mitigatesRiskIds:[RISK_COVERED]}]}},r:{probabilityImpactMatrix:[{id:RISK_COVERED,risk:"r",impact:"HIGH",probability:"HIGH",status:"UNMITIGATED"}]}});
+    expect(out.some(c=>c.payload.kind==="SET_RISK_STATUS")).toBe(false);
   });
 
   it("Rule 3 — high-severity uncovered risk → ADD_INITIATIVE carrying the FK", () => {

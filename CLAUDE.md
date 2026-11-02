@@ -1,3 +1,44 @@
+## 526 — candidat préférences/scénarios, réception finale ouverte (2 novembre 2026)
+
+Branche `fix/strategy-scenarios526`, base `a2f38e1c9`. I porte FAVORITE / NEUTRAL /
+REJECTED ; S compose les trois propositions depuis le catalogue éligible, sans
+présélection I obligatoire. Préférence, scénario recommandé, choix d’ambition et
+activation sont distincts ; aucune préférence n’arme `BrandAction.selected`,
+planning ou publication. Une recommandation IA reste neutre, un ancien choix se
+lit comme favori legacy sans fausse provenance humaine.
+
+Nouveaux calculs sans croissance/revenu/Cult Index fabriqués ; ensemble d’actions,
+raisons, budgets, horizons et sources T/I doivent rester cohérents dans tous les
+lecteurs. Zéro IA INFERRED désormais inconnu ou ancré qualitativement ; zéro
+HUMAN/SOURCE conservé.
+
+**Checkpoint local 526 reçu, pas production** : sous rôle USER réel, copie
+privée des huit piliers SPAWT, rafraîchissement 800 ms, préférence 419 ms,
+assemblage du rapport 198 ms (`scenarios526-http-received.json`). Après un favori
+de recette uniquement, Conservateur/Cible/Ambitieux contiennent 4/5/11 actions,
+avec 5 000 000 / 5 500 000 / 19 000 000 de coûts estimés dans la devise du dossier.
+Même jeu de références S/calendrier, préférence et identité historique conservées,
+A/D/V/E/R/T inchangés ; aucune exécution armée. Ni budget adopté, ni geste de
+production, ni lecture native reçus par ces appels HTTP.
+
+PostgreSQL : 52 tests / 2 fichiers verts (`scenarios526-postgres-live.log`).
+Première passe unitaire reçue : 5 001 tests / 477 fichiers ; la passe finale reste
+à consolider, pas de compte final inventé. Le stress lancé en mode ALL a exit 0
+et zéro finding sur les forges/transitions, mais son préflight HTTP est injoignable :
+phases pages/tRPC sautées. `documents526-stress-full-received.json` et son log ne
+reçoivent donc ni toutes les surfaces ni l’UI. Les mesures HTTP USER ci-dessus
+sont un reçu séparé, pas un SLO.
+
+Réception native, passe finale, CI, image/runtime et conservation de production
+restent ouverts. [ADR-0228](docs/governance/adr/0228-initiative-preferences-and-strategy-scenarios.md)
+reste Proposed. Helper et test de devis retirés du code 526, archivés hors code
+P23 `quoted-budget-prototype526*.txt` : ni compilés, ni raccordés ou livrés ici.
+Le volet devis reste futur ; Variable Bible a été rapprochée par le parent.
+
+Version canonique 526, source inchangée en production par cette documentation.
+Anciens défauts de présélection/projections fermés seulement au niveau candidat,
+pas sur le dossier réel. Pas de 100 % ou MVP reçu. [Reprise](docs/governance/RESIDUAL-DEBT.md).
+
 ## État reçu au 2 novembre 2026 — production 524, cascade reçue, MVP ouvert
 
 Production 524 reçue, source `dc7aad6c03a41f055e3d9ec9ae5f8b058b46d582`, image/runtime

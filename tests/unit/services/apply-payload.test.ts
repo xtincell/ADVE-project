@@ -36,8 +36,8 @@ describe("applyPayloadToPillars (ADR-0088)", () => {
     const copies = (collectInitiatives(p.i) as Record<string, unknown>[]).filter(raw => raw.id === INIT);
     expect(copies).toHaveLength(3);
     for (const copy of copies) {
-      if (kind === "SELECT_INITIATIVE") expect(copy).toMatchObject({ status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90", budget: 0 });
-      if (kind === "REJECT_INITIATIVE") expect(copy.status).toBe("REJECTED");
+      if (kind === "SELECT_INITIATIVE") expect(copy).toMatchObject({ preference: "FAVORITE", budget: 0 });
+      if (kind === "REJECT_INITIATIVE") expect(copy.preference).toBe("REJECTED");
       if (kind === "LINK_RISK") expect(copy.mitigatesRiskIds).toEqual([RISK]);
     }
     expect(p.i.actionsByDevotionLevel.ENGAGE[0]!.devotionImpact).toBe("ENGAGE");
@@ -47,12 +47,12 @@ describe("applyPayloadToPillars (ADR-0088)", () => {
     expect(result.warnings).toEqual([]);
   });
 
-  it("SELECT_INITIATIVE sets status + timeframe by id", () => {
+  it("SELECT_INITIATIVE sets catalogue preference without scheduling", () => {
     const p = pillarsWithInitiative();
     const res = applyPayloadToPillars(p, { kind: "SELECT_INITIATIVE", initiativeId: INIT, timeframe: "SPRINT_90" });
     const init = (p.i!.catalogueParCanal as Record<string, Record<string, unknown>[]>).DIGITAL![0]!;
-    expect(init.status).toBe("SELECTED_FOR_ROADMAP");
-    expect(init.timeframe).toBe("SPRINT_90");
+    expect(init.preference).toBe("FAVORITE");
+    expect(init.timeframe).toBeUndefined();
     expect(res.changed.has("i")).toBe(true);
   });
 

@@ -37,7 +37,11 @@ export function toRouteInitiative(a: { id: string; selected: boolean; status: st
     : a.status === "PROPOSED"
       ? "RECOMMENDED"
       : a.status;
-  return { id: a.id, status, timeframe };
+  return { id: a.id, status, timeframe, preference: meta.initiativePreference ?? (a.selected ? "FAVORITE" : "NEUTRAL"),
+    ...(meta.channel ? { channel: meta.channel } : {}), ...(meta.pilierImpact ? { pilierImpact: meta.pilierImpact } : {}),
+    ...(meta.devotionImpact ? { devotionImpact: meta.devotionImpact } : {}),
+    ...(Array.isArray(meta.mitigatesRiskIds) ? { mitigatesRiskIds: meta.mitigatesRiskIds } : {}),
+    ...(Array.isArray(meta.targetsPersonaIds) ? { targetsPersonaIds: meta.targetsPersonaIds } : {}) };
 }
 
 export interface ValidateProposalResult {
@@ -135,11 +139,16 @@ export async function validateCreativeProposal(id: string, validatedBy?: string)
   // 2) Jeu d'initiatives de la route (ADR-0089) depuis les BrandAction matérialisés.
   const actions = await db.brandAction.findMany({
     where: { strategyId: proposal.strategyId },
-    select: { id: true, selected: true, status: true, metadata: true },
+    select: { id: true, selected: true, status: true, metadata: true, sourceInitiativeId: true },
   });
-  const routeSet = routeInitiativeSet(routeKey, actions.map(toRouteInitiative));
-  const routeIds = new Set(routeSet.map((r) => r.id as string));
-  const selectedActions = actions.filter((a) => routeIds.has(a.id));
+  const synthesis = await db.pillar.findUnique({ where: { strategyId_key: { strategyId: proposal.strategyId, key: "s" } }, select: { content: true, staleAt: true } });
+  const computed = ((synthesis?.content as Record<string, unknown> | null)?.computed ?? {}) as Record<string, unknown>;
+  const routes = Array.isArray(computed.roadmapRoutes) ? computed.roadmapRoutes as Array<Record<string, unknown>> : [];
+  const route = routes.find(r => r.key === routeKey && r.selectionBasis === "CATALOGUE_COVERAGE_RULES_V1");
+  if (!route || synthesis?.staleAt) throw new Error("STRATEGY_RECALCULATION_REQUIRED: recalculez le plan avant de lancer la production.");
+  const routeIds = new Set(Array.isArray(route.initiativeIds) ? route.initiativeIds as string[] : []);
+  const selectedActions = actions.filter(a => a.sourceInitiativeId && routeIds.has(a.sourceInitiativeId) && !["EXECUTED", "CANCELLED"].includes(a.status));
+  if (selectedActions.length !== routeIds.size) throw new Error("STRATEGY_ACTION_RECONCILIATION_REQUIRED: synchronisez le catalogue et vérifiez les actions terminées ou annulées avant production.");
 
   // 3) Rattache + génère les briefs de production.
   const { generateBriefFromBrandAction } = await import("@/server/services/campaign-manager");
@@ -212,7 +221,7 @@ export function summarizeExecutionLevels(
   storedByKey: Map<string, Record<string, unknown>>,
 ): ExecutionLevel[] {
   return ROUTE_SPECS.map((spec) => {
-    const set = routeInitiativeSet(spec.key, initiatives).map(r => ({ ...r, budget: budgetById.get(r.id as string) }));
+    const set = routeInitiativeSet(spec.key, initiatives.map(r => ({ ...r, budget: budgetById.get(r.id as string) })));
     const aggregate = aggregateInitiativeSet(set, []);
     const stored = storedByKey.get(spec.key);
     return {
@@ -220,7 +229,7 @@ export function summarizeExecutionLevels(
       label: spec.label,
       recommended: spec.recommended,
       selected: stored?.selected === true,
-      projectedGrowthPct: stored && typeof stored.projectedGrowthPct === "number" ? (stored.projectedGrowthPct as number) : null,
+      projectedGrowthPct: null,
       actionCount: set.length,
       totalBudget: aggregate.totalBudget ?? null,
       budgetSummary: aggregate.budgetSummary,
@@ -241,14 +250,14 @@ export async function getExecutionLevels(strategyId: string): Promise<ExecutionL
   const computed = ((sPillar?.content as Record<string, unknown> | null)?.computed ?? {}) as Record<string, unknown>;
   const storedRoutes = Array.isArray(computed.roadmapRoutes) ? (computed.roadmapRoutes as Array<Record<string, unknown>>) : [];
   const storedByKey = new Map<string, Record<string, unknown>>(storedRoutes.map((r) => [String(r.key), r]));
-  const budgetById = new Map<string, number | undefined>(actions.map((a) => [a.id, a.budgetMax ?? a.budgetMin ?? undefined]));
-  const initiatives = actions.map(a => {
-    const metadata = a.metadata as Record<string, unknown> | null;
-    const amount = budgetById.get(a.id);
-    return { ...toRouteInitiative(a), budgetBasis: metadata?.budgetBasis === "QUALITATIVE_ESTIMATE"
-      && amount === metadata.projectedBudget ? "QUALITATIVE_ESTIMATE" : "DECLARED" };
+  return ROUTE_SPECS.map(spec => {
+    const route = storedByKey.get(spec.key);
+    return { key: spec.key, label: spec.label, recommended: spec.recommended, selected: route?.selected === true,
+      projectedGrowthPct: null, actionCount: typeof route?.initiativeCount === "number" ? route.initiativeCount : 0,
+      totalBudget: typeof route?.totalBudget === "number" ? route.totalBudget : null,
+      budgetSummary: route?.budgetSummary as ExecutionLevel["budgetSummary"],
+    };
   });
-  return summarizeExecutionLevels(initiatives, budgetById, storedByKey);
 }
 
 // ── Voie A IA — brouillon de direction depuis l'ADVE (ADR-0120) ──────────────────
