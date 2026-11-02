@@ -1,3 +1,8 @@
+## v6.27.535 — Cohérence de la version publique après la livraison commerciale (2 novembre 2026)
+
+- Aligne la constante runtime, le package et son verrou sur535. Le code commercial534 était reçu dans son conteneur, mais l’API et le footer annonçaient encore533 ; la nouvelle image rend la livraison mesurable sur la version publique.
+- Reprend intégralement le portefeuille autorisé, le règlement individuel et la remise prouvée de534. Aucun changement de règle commerciale, de donnée, de modèle ou de transport.
+
 ## v6.27.534 — Portefeuille de vente autorisé, relances datées et règlement individuel (2 novembre 2026)
 
 - Le propriétaire confie jusqu’à cinq prospects explicites en une autorisation : source, marché, offre versionnée, conditions, vendeur, responsable de remise et financier. Les affaires, accès clients et premières missions sont préparés ensemble ; leurs reçus restent consultables après rechargement. Aucun contact global ou newsletter n’est aspiré comme prospect.
