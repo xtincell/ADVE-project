@@ -121,7 +121,7 @@ La Fusée est un OS, traité comme tel. 8 couches concrètes :
 | 3 | **Protocoles** | Intent bus (`mestor.emitIntent`) · NSP SSE · hash-chain SHA256 · MCP bidirectionnel · OAuth 2.1 device flow · `ConnectorResult<T>` · Pattern P22-* | ✅ |
 | 4 | **Substrats** | Yggdrasil per-brand · tenantScopedDb isolation · layering cascade (ADR-0002) · BrandContextNode tree · Variable Bible | ✅ |
 | 5 | **Services système (daemons)** | 7 Neteru + INFRASTRUCTURE | ✅ |
-| 6 | **APIs** | tRPC (127 fichiers, dont 124 routeurs et 3 helpers) · Glory tools (56 CORE / 153 registry) · Frameworks (28) · Sequences (94 dont 91 DRAFT) · Intent kinds (633) — recompte 2026-10-06 sur les registres code (`INTENT_KINDS`, `CORE_GLORY_TOOLS`/`EXTENDED_GLORY_TOOLS`, `ALL_SEQUENCES`, `FRAMEWORKS`) | ✅ |
+| 6 | **APIs** | tRPC (127 fichiers, dont 124 routeurs et 3 helpers) · Glory tools (56 CORE / 154 registry) · Frameworks (28) · Sequences (94 dont 91 DRAFT) · Intent kinds (633) — recompte 2026-11-02 sur les registres code (`INTENT_KINDS`, `CORE_GLORY_TOOLS`/`EXTENDED_GLORY_TOOLS`, `ALL_SEQUENCES`, `FRAMEWORKS`) | ✅ |
 | 7 | **Applications** | Cockpit · Console · Agency · Creator · Intake · Argos (surfaces présentes) | 🟡 (3 surfaces manquantes) |
 | 8 | **Funnel commercial** | Wow-effect onboarding · free analysis · paid PDF · CTA retainer · Cockpit subscription | 🟡 (metrics absents) |
 
@@ -3934,7 +3934,7 @@ Tout ce qui ajoute de l'altitude à la brand. Layer 3 du layering technique. **D
 | Composant | Rôle propulsion |
 |---|---|
 | **ADVERTIS cascade** | La trajectoire à 8 étages — booster (ADVE) → intermédiaire (RT) → supérieur (IS) |
-| **GLORY tools (56 CORE / 153 registre, recompte du 2026-10-14)** (Artemis) | Thrusters spécialisés rédactionnels. Chaque tool est un moteur orienté (concept-generator pousse sur D+I, kv-prompt sur V+I, etc.). Output = brief texte structuré. Tools `brief-to-forge` produisent un `ForgeBrief` avec `forgeSpec` qui handoff downstream à Ptah. |
+| **GLORY tools (56 CORE / 154 registre, recompte du 2026-11-02)** (Artemis) | Thrusters spécialisés rédactionnels. Chaque tool est un moteur orienté (concept-generator pousse sur D+I, kv-prompt sur V+I, etc.). Output = brief texte structuré. Tools `brief-to-forge` produisent un `ForgeBrief` avec `forgeSpec` qui handoff downstream à Ptah. |
 | **GLORY sequences (94)** (Artemis) | Manœuvres orchestrées — combinaisons de thrusters dans un ordre topologique (skill tree) |
 | **Forge Ptah** (NOUVEAU, ADR-0009) | **Phase de matérialisation downstream Artemis**. Consomme les `ForgeBrief` Artemis et produit les assets concrets (image/vidéo/audio/icône/design layered/stock ingéré/asset refiné/asset classifié) via providers externes (Magnific, Adobe Firefly, Figma, Canva). Cf. `src/server/services/ptah/`. |
 | **Notoria pipeline** | Chaîne de production des livrables — assemble les outputs avant insertion en mission |
