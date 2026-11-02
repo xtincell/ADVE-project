@@ -128,7 +128,10 @@ export async function setBrandActionStatus(args: {
             operation: { type: "SET_FIELDS", fields: [...changedKeys].map(path => ({ path, value: content[path] })) },
             author: { system: "MESTOR", userId: args.userId, intentId: args.intentId, reason: `Choix opérateur d'action : ${status}` },
             options: { expectedVersion: pillar?.currentVersion ?? 1, shapeGate: true, targetStatus: "AI_PROPOSED",
-              rejectOnProvenanceRefusal: true, fieldProvenance: { [`initiatives.${sourceId}.status`]: "HUMAN" } } };
+              rejectOnProvenanceRefusal: true, fieldProvenance: { ...Object.fromEntries([...changedKeys].flatMap(key => {
+                const previous = provenance[key];
+                return previous === "HUMAN" || previous === "SOURCE" ? [[key, previous]] : [];
+              })), [`initiatives.${sourceId}.status`]: "HUMAN" } } };
           await write(request);
         } else if (pillar?.validationStatus === "LOCKED" && action.selected !== op.selected) {
           throw new Error("INITIATIVE_SOURCE_LOCKED");

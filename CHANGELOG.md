@@ -12,7 +12,10 @@
 
 - **Contrôles finaux locaux** : 5 003 tests unitaires / 477 fichiers, puis 1 671 contrôles de gouvernance / 169 fichiers, typage et lint sans erreur (24 avertissements préexistants), aucun cycle, build webpack exit 0. La réintroduction de la présélection I obligatoire fait échouer deux tests ; restauration verte (`scenarios526-regression-{red,green}.log`). Le stress sur application compilée reçoit cette fois HTTP et DB : 276 pages HTTP reçues, cinq non reçues, zéro échec ; trois requêtes readonly, forges et transitions éprouvées, zéro finding (`documents526-stress-http-full-received.json`). Ce reçu serveur ne remplace pas la recette native de production encore ouverte.
 
+- Reprise CI PR #1109 : sept échecs PostgreSQL conservés, dont deux régressions de garde corrigées en candidat. Une recommandation ne gagne pas HUMAN contre une préférence ou un statut déjà humain, y compris la préférence héritée ; les IDs fournis ne forcent pas une action hors scénario calculé. Anciens tests de refus intacts, 36 cas verts au premier checkpoint avant deux nouveaux cas ; réception finale CI et production toujours ouvertes.
 - Traçabilité de livraison : PR #1109, correction opérateur du Core I → S ; preuve native et production encore à recevoir.
+
+- Après correction de la garde : 526 tests PostgreSQL / 32 fichiers, dont 38 cas de décision, puis 5 004 tests unitaires / 477 fichiers verts ; typage, les deux lint et cycles reçus sans erreur. Les refus humains anciens restent testés ; identifiants étrangers, rejetés et redondants ne forcent pas le scénario. Les préférences générées ne deviennent pas favorites humaines sans leur reçu. CI du nouveau commit et production encore à recevoir.
 
 ## v6.27.525 — fix(oracle): distingue données présentes, force et mesures réelles (2026-10-26)
 

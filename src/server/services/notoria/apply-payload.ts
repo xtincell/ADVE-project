@@ -196,7 +196,13 @@ export async function dispatchTypedRecos(
             rejectOnProvenanceRefusal: true, sourceReceipts, requiredSourceIds,
             ...(key === "i" ? { fieldProvenance: Object.fromEntries(typed.flatMap(r => {
               const p = r.payload;
-              return p?.kind === "SELECT_INITIATIVE" || p?.kind === "REJECT_INITIATIVE" ? [[`initiatives.${p.initiativeId}.preference`, "HUMAN" as const]] : [];
+              if (p.kind !== "SELECT_INITIATIVE" && p.kind !== "REJECT_INITIATIVE") return [];
+              const provenance = (pillars.i?._fieldProvenance ?? {}) as Record<string, unknown>;
+              // A reviewed suggestion is not permission to override a later
+              // human decision. The existing guard must arbitrate that conflict.
+              if (provenance[`initiatives.${p.initiativeId}.preference`] === "HUMAN"
+                || provenance[`initiatives.${p.initiativeId}.status`] === "HUMAN") return [];
+              return [[`initiatives.${p.initiativeId}.preference`, "HUMAN" as const]];
             })) } : {}) },
         }));
         firstWrite = false;

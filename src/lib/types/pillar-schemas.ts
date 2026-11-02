@@ -1741,7 +1741,7 @@ const isNonEmptyStr = (v: unknown): v is string => typeof v === "string" && v.le
 /** Normalise une action brute vers le format étendu unifié. */
 export function normalizeInitiative(
   raw: unknown,
-  ctx: { channel?: string; devotionLevel?: string; overtonPhase?: string; budgetProvenance?: unknown } = {},
+  ctx: { channel?: string; devotionLevel?: string; overtonPhase?: string; sourceProvenance?: unknown } = {},
 ): NormalizedInitiative {
   // Forme compacte (union ADR-0168) : une action écrite en chaîne nue. On la lit
   // comme le texte de l'action (sinon toutes les chaînes s'effondraient sur un même
@@ -1752,7 +1752,7 @@ export function normalizeInitiative(
     o.budgetEstime === "LOW" || o.budgetEstime === "MEDIUM" || o.budgetEstime === "HIGH"
       ? o.budgetEstime
       : undefined;
-  const unverifiedZero = o.budget === 0 && ctx.budgetProvenance === "INFERRED";
+  const unverifiedZero = o.budget === 0 && ctx.sourceProvenance === "INFERRED";
   const budget =
     !unverifiedZero && typeof o.budget === "number" && Number.isFinite(o.budget) && o.budget >= 0
       ? o.budget
@@ -1816,23 +1816,28 @@ export function collectNormalizedInitiatives(iContent: unknown): NormalizedIniti
   if (!iContent || typeof iContent !== "object") return [];
   const c = iContent as Record<string, unknown>;
   const byId = new Map<string, NormalizedInitiative>();
+  const provenance = (c._fieldProvenance ?? {}) as Record<string, unknown>;
   const add = (raw: unknown, ctx: Parameters<typeof normalizeInitiative>[1]) => {
     const n = normalizeInitiative(raw, ctx);
+    if (ctx?.sourceProvenance === "INFERRED" && raw && typeof raw === "object" && Object.hasOwn(raw, "preference")
+      && provenance[`initiatives.${n.id}.preference`] !== "HUMAN") {
+      const { preference: _unconfirmedPreference, ...definition } = raw as Record<string, unknown>;
+      n.preference = initiativePreference(definition);
+    }
     if (!n.action.trim()) return; // Read projection skips invalid entries; the original source stays intact.
     if (!byId.has(n.id)) byId.set(n.id, n); // catalogue d'abord → le canal réel gagne
   };
-  const provenance = (c._fieldProvenance ?? {}) as Record<string, unknown>;
   const cat = (c.catalogueParCanal as Record<string, unknown>) ?? {};
   for (const [channel, arr] of Object.entries(cat)) {
-    if (Array.isArray(arr)) for (const raw of arr) add(raw, { channel, budgetProvenance: provenance.catalogueParCanal });
+    if (Array.isArray(arr)) for (const raw of arr) add(raw, { channel, sourceProvenance: provenance.catalogueParCanal });
   }
   const dev = (c.actionsByDevotionLevel as Record<string, unknown>) ?? {};
   for (const [level, arr] of Object.entries(dev)) {
-    if (Array.isArray(arr)) for (const raw of arr) add(raw, { devotionLevel: level, budgetProvenance: provenance.actionsByDevotionLevel });
+    if (Array.isArray(arr)) for (const raw of arr) add(raw, { devotionLevel: level, sourceProvenance: provenance.actionsByDevotionLevel });
   }
   if (Array.isArray(c.actionsByOvertonPhase)) {
     for (const ph of c.actionsByOvertonPhase as Array<Record<string, unknown>>) {
-      if (Array.isArray(ph?.actions)) for (const raw of ph.actions) add(raw, { overtonPhase: isNonEmptyStr(ph.phase) ? ph.phase : "", budgetProvenance: provenance.actionsByOvertonPhase });
+      if (Array.isArray(ph?.actions)) for (const raw of ph.actions) add(raw, { overtonPhase: isNonEmptyStr(ph.phase) ? ph.phase : "", sourceProvenance: provenance.actionsByOvertonPhase });
     }
   }
   return [...byId.values()];

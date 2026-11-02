@@ -387,9 +387,11 @@ export async function recalculateSynthesisInTransaction(strategyId: string, tx: 
   const { executeProtocoleStrategy } = await import("@/server/services/rtis-protocols/strategy");
   const { collectNormalizedInitiatives } = await import("@/lib/types/pillar-schemas");
   await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${strategyId} FOR UPDATE`;
+  let requested: Array<{ sourceInitiativeId: string | null }> = [];
   if (context?.selectedActionIds?.length) {
     const ids = [...new Set(context.selectedActionIds)];
     const actions = await tx.brandAction.findMany({ where: { strategyId, id: { in: ids } } });
+    requested = actions;
     const i = await tx.pillar.findUnique({ where: { strategyId_key: { strategyId, key: "i" } } });
     const chosen = new Set(collectNormalizedInitiatives(i?.content).filter(a => a.preference !== "REJECTED").map(a => a.id));
     if (actions.length !== ids.length || actions.some(a => !a.sourceInitiativeId || !chosen.has(a.sourceInitiativeId))) {
@@ -398,6 +400,8 @@ export async function recalculateSynthesisInTransaction(strategyId: string, tx: 
   }
   const calculated = await executeProtocoleStrategy(strategyId, tx, context?.selectedRouteKey);
   if (calculated.error) throw new Error(calculated.error);
+  const scenarioIds = new Set((calculated.content.selectedFromI as Array<{ sourceRef: string }> ?? []).map(a => a.sourceRef));
+  if (requested.some(a => !a.sourceInitiativeId || !scenarioIds.has(a.sourceInitiativeId))) throw new Error("SYNTHESIS_CHOICE_REQUIRED: les identifiants demandés ne peuvent imposer une action hors du scénario calculé.");
   const sources = calculated.content._sourcePillarVersions as Record<string, number | null>;
   const persisted = await write({ strategyId, pillarKey: "s",
     operation: { type: "REPLACE_FULL", content: calculated.content },

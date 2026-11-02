@@ -174,6 +174,16 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
   // deselecting the human's actions. Legacy top-level authority stays intact.
   const decisionPaths = new Set([...Object.keys(provenance), ...(input.declaredPaths ?? [])]
     .filter(path => /^initiatives\.[^.]+\.(?:status|preference)$/.test(path)));
+  // A legacy human selection also protects the preference it represents when
+  // a new-format recommendation explicitly tries to change that preference.
+  for (const path of [...decisionPaths]) {
+    if (!path.endsWith(".status") || provenance[path] !== "HUMAN") continue;
+    const id = path.slice("initiatives.".length, -".status".length);
+    if (!collectInitiatives(newContent).some(raw => raw && typeof raw === "object" && normalizeInitiative(raw).id === id && Object.hasOwn(raw, "preference"))) continue;
+    const preferencePath = `initiatives.${id}.preference`;
+    decisionPaths.add(preferencePath);
+    provenance[preferencePath] ??= "HUMAN";
+  }
   for (const path of decisionPaths) {
     const field = path.endsWith(".preference") ? "preference" : "status";
     const id = path.slice("initiatives.".length, -(field.length + 1));

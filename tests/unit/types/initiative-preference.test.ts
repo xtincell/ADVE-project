@@ -26,3 +26,9 @@ describe("regeneration preserves human preference identities",()=>{
   expect(candidate).toEqual(before);
  });
 });
+
+it("never promotes a generated preference to a human favorite without its receipt",()=>{
+ const raw={catalogueParCanal:{DIGITAL:[{id:"ai",action:"Suggestion",status:"RECOMMENDED",preference:"FAVORITE"}]},_fieldProvenance:{catalogueParCanal:"INFERRED"}};
+ expect(collectNormalizedInitiatives(raw)[0]!.preference).toBe("NEUTRAL");
+ expect(collectNormalizedInitiatives({...raw,_fieldProvenance:{...raw._fieldProvenance,"initiatives.ai.preference":"HUMAN"}})[0]!.preference).toBe("FAVORITE");
+});

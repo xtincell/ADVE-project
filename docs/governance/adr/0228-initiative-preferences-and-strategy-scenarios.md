@@ -22,6 +22,8 @@
   Proposed/non reçu pour le volet devis. Les preuves doivent citer leur version,
   et les réceptions 524/525 ne sont pas renommées 526. Aucun numéro de PR anticipé.
 
+Reprise CI PR #1109 : garde contre la promotion HUMAN des recommandations et protection des préférences héritées d’un statut humain corrigées en candidat ; les IDs fournis restent bornés au scénario calculé. Anciens refus conservés, premier checkpoint PostgreSQL de 36 cas verts avant les nouveaux cas ; CI/production ouvertes, ADR toujours Proposed.
+
 ## Contexte
 
 Instruction opérateur du 2 novembre : I porte un catalogue de préférences, S fait
