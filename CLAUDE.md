@@ -1,3 +1,29 @@
+## État reçu au 2 novembre 2026 — production 524, cascade reçue, MVP ouvert
+
+Production 524 reçue, source `dc7aad6c03a41f055e3d9ec9ae5f8b058b46d582`, image/runtime
+exacts et mêmes volumes (`production524-received.json`). Le checkpoint avant cascade
+conserve 437 sources, 2 083 actifs, huit piliers, Friesland et six paiements ; il ne
+signifie pas que R/T/I/S sont inchangés après leur recalcul volontaire.
+
+Cascade serveur `OK`, terminée le 2 novembre à 09 h 28 min 58 s (Douala), 465 s,
+26 appels via `openai-codex-oauth` ; A/D/V/E exacts conservés. R v7, T v6 et I v4
+COMPLETE à 100 %, non périmés ; S v5 INTAKE à 25 %, aucune initiative sélectionnée.
+40 recommandations et 40 estimations sans période ; route ambitieuse
+101 000 000 XAF estimés, pas budget adopté. Le POST client a expiré à 600 s,
+mais résultat serveur persistant reçu : ne pas rejouer. P26
+`spawt-cascade524-observed-received.json`.
+
+Seuil arithmétique reçu : 60 000 − 18 000 = 42 000 ; 350 000 / 42 000 → 9 Gold,
+variante TTC / TVA conditionnelle 18 % → 11. Projections S sur constantes / base 60 supposée,
+scénario CF/CV omis de la triangulation T et risques `ai_estimate` CONFIRMED restent
+non corrigés. [Plans et déclencheurs](docs/governance/RESIDUAL-DEBT.md).
+
+PR #1082 / 525 corrige seulement le runner Golden Path `ubuntu-latest` vers
+`ubuntu-24.04` : échec Playwright 1.59.1 sur Ubuntu 26.04 avant navigateur,
+prochain run encore à recevoir. Aucun test assoupli, aucune nouvelle note client CI.
+Priorité inchangée : MVP scoreur / fiche ADVE complète / Oracle, puis Shinkiro.
+Les états anciens ci-dessous restent datés ; aucun MVP entier reçu.
+
 ## 524 en préparation — candidat522 repris sur523, MVP prioritaire (26 octobre2026)
 
 PR1064 reprend le raccord documentaire déjà testé sous522 après intégration de

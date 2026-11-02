@@ -1,7 +1,5 @@
 "use client";
 
-import { ADVE_STORAGE_KEYS } from "@/domain";
-
 import { useState, useEffect, useMemo } from "react";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { useCanOperate } from "@/components/cockpit/use-can-operate";
@@ -80,14 +78,11 @@ export default function PropositionPage() {
     { strategyId: strategyId ?? "" }, { enabled: !!strategyId, refetchOnWindowFocus: true },
   );
 
-  const adveAllComplete = useMemo(() => {
-    const p = maturity.data?.pillars as Record<string, { currentStage?: string }> | undefined;
-    if (!p) return false;
-    return (ADVE_STORAGE_KEYS).every((k) => {
-      const stage = p[k]?.currentStage;
-      return (stage === "ENRICHED" || stage === "COMPLETE") && readiness.data?.byPillar[k.toUpperCase() as "A" | "D" | "V" | "E"]?.stale === false;
-    });
-  }, [maturity.data, readiness.data]);
+  // The canonical refresh gate tolerates stale but usable foundations:
+  // rerouting them to foundation preparation prevents the very refresh needed.
+  const adveAllComplete = readiness.data?.gates.RTIS_CASCADE.ok === true;
+  const stalePillars = Object.values(readiness.data?.byPillar ?? {})
+    .filter((pillar) => pillar.stale).map((pillar) => pillar.pillarKey);
 
   const rtisReady = useMemo(() => {
     const p = maturity.data?.pillars as Record<string, { currentStage?: string }> | undefined;
@@ -212,8 +207,14 @@ export default function PropositionPage() {
             contiennent tout ce qu'on en attend), pas celui des générations
             réussies — les deux étaient appelés « assemblé » indifféremment. */}
         <h2 className="ck-oracle-hero__h">
-          <span className="hl">{writtenSections}</span> de vos {totalSections} sections sont rédigées et à jour.
+          <span className="hl">{writtenSections}</span> de vos {totalSections} sections sont rédigées.
         </h2>
+        {stalePillars.length > 0 && (
+          <p className="ck-oracle-hero__p">
+            Analyses à réactualiser : {stalePillars.join(", ")}. Le document peut encore reprendre des
+            conclusions antérieures, même si ses sections ont été rédigées.
+          </p>
+        )}
         {staleSections > 0 && (
           <p className="ck-oracle-hero__p">
             {staleSections} section{staleSections > 1 ? "s" : ""} à réactualiser : un pilier de votre marque a
@@ -229,7 +230,7 @@ export default function PropositionPage() {
             Y partielles / Z vides » cinq centimètres plus bas, puis encore
             « X complets / Y ratés / Z périmés » dans le panneau. */}
         <div className="ck-oracle-hero__stats">
-          <div><span className="k">Rédigées et à jour</span><b className="text-success">{writtenSections}/{totalSections}</b></div>
+          <div><span className="k">Rédigées</span><b className="text-success">{writtenSections}/{totalSections}</b></div>
           <div><span className="k">Nourries par vos piliers</span><b>{completeSections}/{totalSections}</b></div>
           <div><span className="k">À approfondir</span><b>{partialSections + emptySections}</b></div>
         </div>
@@ -241,7 +242,7 @@ export default function PropositionPage() {
             en matière. Un chiffre qui ne dit pas ce qu'il compte est une boîte
             noire, même juste. */}
         <p className="mt-2 text-xs text-foreground-muted">
-          « Rédigées et à jour » compte les résultats enregistrés depuis la dernière évolution de vos données.
+          « Rédigées » compte les résultats enregistrés. Leur rédaction ne valide pas les analyses qui les alimentent.
           « Nourries par vos piliers » compte les sections dont les données attendues sont renseignées ;
           cela ne signifie pas qu&apos;elles sont déjà rédigées ou validées. Ouvrez une section pour lire son contenu.
         </p>

@@ -216,6 +216,7 @@ export function getSectionsByTier(tier: SectionTier): SectionMeta[] {
 export interface ExecutiveSummarySection {
   vector: AdvertisVector;
   classification: BrandClassification;
+  revealedScore?: { force: number; tier: string; coveragePct: number; epreuveCount: number; computedAt: string } | null;
   /**
    * Cult Index — score /100 + palier de maturité culturelle.
    *
@@ -723,6 +724,7 @@ export interface StrategyPresentationDocument {
     stalePillars?: string[];
     vector: AdvertisVector;
     classification: BrandClassification;
+    revealedScore?: ExecutiveSummarySection["revealedScore"];
   };
   sections: {
     // Phase 1: ADVE

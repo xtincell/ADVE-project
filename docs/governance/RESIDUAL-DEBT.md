@@ -1,3 +1,108 @@
+## Checkpoint du 2 novembre — cascade 524 reçue, CI 525 et qualité encore ouvertes
+
+**Reçu serveur, transport distinct** : la cascade de production 524 est `OK` à
+09 h 28 min 58 s (Douala), durée 465 s, 26 appels via `openai-codex-oauth` ; contenus
+A/D/V/E exacts conservés. R v7, T v6, I v4 : COMPLETE, 100 %, non périmés.
+S v5 : INTAKE, 25 %, non périmée mais incomplète. Le POST client expire à 600 s ;
+le résultat persistant et les lectures actuelles sont reçus séparément. Cette
+opération terminée ne doit pas être rejouée. Preuve P26 :
+`spawt-cascade524-observed-received.json`. Le défaut de retour client reste distinct
+d’une panne de calcul, sans SLO déduit.
+
+**Reste qualité, pas incident corrigé** : zéro initiative sélectionnée ; 40
+initiatives RECOMMENDED, 40 estimations non affectées dans le temps. La route
+ambitieuse à 101 000 000 XAF ne devient ni choix, ni engagement, ni budget adopté.
+Les projections S +10/+30/+70 reposent sur des constantes et un `baseCultIndex=60`
+supposé. La triangulation T annonce les unit economics non renseignées alors
+qu’un scénario CF/CV est documenté ; des risques issus de `ai_estimate` sont marqués
+CONFIRMED. **Fermer** : reprendre les composeurs/lecteurs existants pour qualifier
+les projections comme scénarios ou les laisser inconnues, restituer CF/CV comme
+hypothèses sourcées et conserver la certitude réelle des estimations de risque.
+Comparer les sources, sorties et statuts avant/après, puis recevoir les lecteurs
+et exports sous rôle réel ; ne pas promouvoir une hypothèse en mesure pour remplir
+un champ. Responsable Guidance/Propulsion et lot existants ; effort audit borné
+et correction de fidélité ; **déclencheur immédiat** avant toute réception métier
+de S, de la fiche ADVE ou de l’Oracle. Aucun de ces défauts déclaré corrigé.
+
+**Arithmétique reçue, hypothèses non ratifiées** : prix 60 000, coût variable
+18 000, contribution 42 000 FCFA ; charges fixes 350 000 / 42 000 = 8,333… → 9 Gold.
+Prix TTC / TVA conditionnelle 18 % → 11 Gold. P26
+`break-even-arithmetic-check-20261102.json`. Ce contrôle ne valide ni charges
+réelles, ni assujettissement fiscal, ni rentabilité globale ; pas de nouvelle
+formule ou application financière créée.
+
+**CI Golden Path 525 — attente d’installation close** : après épinglage Ubuntu
+24.04, le [run Golden Path PR #1082](https://github.com/xtincell/ADVE-project/actions/runs/41414616545/job/125175335954)
+est SUCCESS. Le premier refus Ubuntu 26.04 / Playwright 1.59.1 reste conservé
+(`golden525-nov02-failed.log`) ; étapes et assertions inchangées. Ce reçu CI ne
+reçoit pas le MVP ou le parcours client de production.
+
+**CI Lighthouse 525 — résultat encore attendu** : le [run précédent](https://github.com/xtincell/ADVE-project/actions/runs/41414616465/job/125175335668)
+échoue au build, avant audit : Turbopack ne résout pas la requête interne Google
+Font de JetBrains Mono (`lighthouse525-nov02-failed.log`). Le seul correctif du
+workflow est `npm run build -- --webpack`, compilateur de l’image de production ;
+aucun seuil, URL auditée ou assertion supprimé. Hypothèse : divergence de chemin
+de compilation, pas résultat d’accessibilité ou de performance mesuré.
+**Fermer** par build puis audit Lighthouse réels sur le nouveau commit PR #1082,
+avec rapports et seuils existants. Responsable lane CI existante ; effort recette
+bornée ; **déclencheur immédiat** au prochain run. Aucun vert Lighthouse, SLO ou
+MVP déduit de ce changement de commande.
+
+Production 524 reçue ; code 525 toujours à livrer et lire en production. Les
+constats du 26 octobre ci-dessous restent des checkpoints historiques ; la mention
+R/T/I périmés ne décrit plus l’état après cascade du 2 novembre. S, qualité Oracle,
+Glory, NPS réel, Friesland régional, corpus complet et capacité restent ouverts.
+Priorité : MVP scoreur / fiche ADVE complète / Oracle, puis reste du Shinkiro.
+
+## 525 — fidélité de l’Oracle : API reçues, lecteurs natifs et livraison ouverts (2026-10-26)
+
+**Constat réel en production 523** : 35 sections annoncées à jour malgré sept
+piliers périmés ; composite documentaire de 160/200 mélangé à la force révélée de
+39,5/200 ; NPS −86 issu d’un proxy Devotion sans enquête. Le correctif 525 relève de
+Propulsion/Artemis, lecture des résultats existants Seshat. Aucun modèle, service,
+routeur, Intent, page ou fournisseur ajouté, aucune réécriture historique à la lecture.
+
+**Contrat** : gate canonique `RTIS_CASCADE`, stale advisory permettant le
+rafraîchissement des fondations utilisables sans prétendre fraîcheur. Sections
+rédigées et actualité distinctes, bandeau d’analyses périmées. Force issue du dernier
+`ScoreVerdict`, avec couverture/date ; composite documentaire séparé et aucun
+recalcul de marché à la lecture. NPS client déclaré depuis `A.indexReputation`,
+source `NPS`, score valide, échantillon positif et date de mesure ; ni conversion
+Devotion/eNPS salarié ni répartition de répondants inventée.
+[Méthode Bain](https://www.netpromotersystem.com/about/measuring-your-net-promoter-score/).
+Les motivations de personas restent des pistes d’enquête, pas des réponses clients.
+
+**Repli corrigé localement** : le diff initial conservait l’ancien proxy lorsque le
+contexte ou le composeur refusait. Le candidat le neutralise avant ces opérations ;
+cinq cas d’assemblage couvrent dernier verdict inchangé, absence de verdict,
+refus du contexte ou de la composition et conservation d’une vraie enquête.
+Réintroduction du proxy : deux rouges, puis restauration et cinq verts.
+Les assets historiques restent en base, sans mutation du résultat enregistré.
+
+**Reçus locaux 525** : code-map, typage, lint, lint gouvernance et cycles exit 0 ;
+1 748 tests / 176 fichiers verts (`mvp525-received-gauntlet-results.json`) et build
+webpack terminé exit 0. Sous rôle USER réel : assemble HTTP 200 / 166 ms,
+readiness HTTP 200 / 86 ms, listSections HTTP 200 / 78 ms ; absence de verdict et
+NPS non mesuré préservés (`mvp525-http-received.json`). Ce sont des API, pas une
+preuve d’écran ou un SLO. UI locale toujours non reçue : même refus de protocole
+navigateur que pour 524, sans contournement. H7 reste ouvert jusqu’aux lecteurs et
+au pipeline réel ; tests/API ne reçoivent pas le MVP.
+
+**Fermer 525** : recevoir les lecteurs natifs et exports concernés en production
+sous rôle réel ; comparer force/verdict, composite, couverture, dates et absences.
+Exercer stale advisory → rafraîchissement et échec conservé, sans recalcul implicite
+ni faux succès. Lire ensuite le pipeline réel SPAWT ; recevoir CI, image/runtime et
+conservation. Responsable Artemis / lot 525 existant ; effort correction et recette
+bornées ; **déclencheur immédiat** après livraison pour les lecteurs en production.
+Priorité au MVP scoreur / fiche ADVE complète / Oracle ; aucun de ces trois
+livrables ni le MVP entier reçu à ce checkpoint.
+
+Restes distincts : RTIS/Oracle réellement périmés, anciens concepts Glory, NPS
+client réel absent, équipe/périmètre Friesland régional à recevoir. Charge VPS
+(steal observé vers 70 %), latence et réception Seshat 523 restent dans leurs plans.
+PR #1064 / 524 fusionnée `dc7aad6c0`, image exacte reçue sur le VPS et bascule queued ;
+runtime 524 et 525 non reçus par cette documentation.
+
 ## 524 — livraison du candidat522 sur523 encore ouverte (2026-10-26)
 
 Le raccord testé sous522 est repris dans PR1064 sur523/PR1067 Seshat. Numéro524

@@ -162,6 +162,7 @@ import {
   composeSectionContent,
   composeSectionDeterministic,
   hasDeterministicComposer,
+  hasLegacyNpsProxy,
   isAnyLLMProviderConfigured,
 } from "@/server/services/strategy-presentation/deterministic-composers";
 import { SECTION_REGISTRY } from "@/server/services/strategy-presentation/types";
@@ -345,12 +346,43 @@ describe("shapes consommées par les composants §22-35", () => {
     expect(content.bcgPortfolio.dogs).toEqual([]);
   });
 
-  it("§26 bainNps : proxy déterministe depuis la Devotion Ladder", async () => {
+  it("§26 bainNps : l’engagement ne constitue pas une enquête NPS", async () => {
     const r = await composeSectionDeterministic("strat-fixture-1", metaFor("bain-nps"));
-    const nps = (r!.payload.content as { bainNps: { score: number; methode: string } }).bainNps;
-    // (ambassadeur 4 + evangeliste 1 − spectateur 50) / 100 = −45
-    expect(nps.score).toBe(-45);
-    expect(nps.methode).toContain("Devotion");
+    const nps = (r!.payload.content as { bainNps: { score: number | null; methode: string } }).bainNps;
+    expect(nps.score).toBeNull();
+    expect(nps.methode).toContain("NPS client non mesuré");
+  });
+
+  it.each([-100, 0, 100])("preserves a declared customer NPS of %s with sample and date", async (score) => {
+    const result = await composeSectionContent({ ...pureContext({}), pillars: { a: {
+      indexReputation: { source: "NPS", score, sampleSize: 80, lastMeasured: "2026-10-22" },
+    } } }, metaFor("bain-nps"));
+    if (!result) throw new Error("Bain composer unavailable");
+    expect(result.content.bainNps).toMatchObject({ score, promoters: null });
+    expect((result.content.bainNps as { methode: string }).methode).toContain("80 réponses");
+  });
+
+  it.each([
+    { source: "Google", score: 4.8, sampleSize: 80, lastMeasured: "2026-10-22" },
+    { source: "NPS", score: 101, sampleSize: 80, lastMeasured: "2026-10-22" },
+    { source: "NPS", score: 20, sampleSize: 0, lastMeasured: "2026-10-22" },
+    { source: "NPS", score: 20, sampleSize: 1.5, lastMeasured: "2026-10-22" },
+    { source: "NPS", score: 20, sampleSize: 80, lastMeasured: "unknown" },
+    { source: "NPS", score: 20, sampleSize: 80 },
+  ])("does not turn an unsupported reputation measure into customer NPS: %j", async (indexReputation) => {
+    const result = await composeSectionContent({ ...pureContext({}), pillars: { a: {
+      indexReputation, eNps: { score: 70, sampleSize: 20, lastMeasured: "2026-10-22" },
+    } } }, metaFor("bain-nps"));
+    if (!result) throw new Error("Bain composer unavailable");
+    expect(result.content.bainNps).toMatchObject({ score: null, promoters: null });
+  });
+
+  it("identifies only explicitly labelled historical NPS proxies for recomposition", () => {
+    expect(hasLegacyNpsProxy({ bainNps: { score: -86, methode: "Proxy Devotion Ladder" } })).toBe(true);
+    expect(hasLegacyNpsProxy({ bainNps: { score: 50, methode: "eNPS déclaré" } })).toBe(true);
+    expect(hasLegacyNpsProxy({ bainNps: { score: 50, methode: "NPS client déclaré : enquête" } })).toBe(false);
+    expect(hasLegacyNpsProxy({ bainNps: { score: 50 } })).toBe(false);
+    expect(hasLegacyNpsProxy(null)).toBe(false);
   });
 
   it("§28 mckinsey3Horizons : allocation somme à ~100", async () => {

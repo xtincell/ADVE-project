@@ -349,24 +349,21 @@ function composeBcgPortfolio(ctx: ComposerContext): Blob {
 }
 
 function composeBainNps(ctx: ComposerContext): Blob {
+  const a = ctx.pillars.a ?? {};
   const e = ctx.pillars.e ?? {};
   const d = ctx.pillars.d ?? {};
-  const declared = num((ctx.pillars.a ?? {}).eNps) ?? num(e.eNps);
-
-  let score: number | null = declared;
-  let methode = "eNPS déclaré par l'opérateur";
-  const snap = ctx.devotionSnapshot;
-  if (score === null && snap) {
-    const total =
-      snap.spectateur + snap.interesse + snap.participant + snap.engage + snap.ambassadeur + snap.evangeliste;
-    if (total > 0) {
-      // Proxy déterministe : promoteurs = ambassadeurs+évangélistes ;
-      // détracteurs = spectateurs (audience non convertie).
-      // lafusee:allow-adhoc-completion — score NPS proxy (Devotion Ladder), pas de la complétion pillaire
-      score = Math.round(((snap.ambassadeur + snap.evangeliste - snap.spectateur) / total) * 100);
-      methode = "Proxy déterministe depuis la Devotion Ladder (promoteurs = ambassadeurs+évangélistes, détracteurs = spectateurs)";
-    }
-  }
+  const declared = a.indexReputation as Blob | undefined;
+  const candidate = num(declared?.score);
+  // Only the existing declared customer NPS, with its sample and date, is
+  // usable here. Engagement levels and employee eNPS are different measures.
+  const measured = declared?.source === "NPS" && candidate !== null
+    && candidate >= -100 && candidate <= 100
+    && Number.isInteger(declared.sampleSize) && Number(declared.sampleSize) > 0
+    && typeof declared.lastMeasured === "string" && Number.isFinite(Date.parse(declared.lastMeasured));
+  const score = measured ? candidate : null;
+  const methode = measured
+    ? `NPS client déclaré : ${declared.sampleSize} réponses, relevé du ${declared.lastMeasured}.`
+    : "NPS client non mesuré dans le dossier. Une enquête de recommandation est nécessaire ; les niveaux d’engagement ne permettent pas de le calculer.";
 
   const personas = arr(d.personas) as Blob[];
   const promoterDrivers = personas.flatMap((p) => names(arr(p.motivations))).slice(0, 5);
@@ -375,19 +372,22 @@ function composeBainNps(ctx: ComposerContext): Blob {
     ...names(arr(e.barriersEngagement)),
   ].slice(0, 5);
 
-  if (score === null && promoterDrivers.length === 0 && detractorDrivers.length === 0) return {};
-
-  const snapTotal = snap
-    ? snap.spectateur + snap.interesse + snap.participant + snap.engage + snap.ambassadeur + snap.evangeliste
-    : 0;
   return {
     bainNps: {
       score,
-      promoters: snap && snapTotal > 0 ? Math.round(((snap.ambassadeur + snap.evangeliste) / snapTotal) * 100) : null,
+      promoters: null, // a total NPS does not imply the response distribution
       drivers: { promoters: promoterDrivers, detractors: detractorDrivers },
+      driversLabel: "Pistes d’enquête issues des personas, à vérifier auprès des répondants",
       methode,
     },
   };
+}
+
+/** Preserve old assets while refusing their explicitly identified false NPS proxy. */
+export function hasLegacyNpsProxy(content: unknown): boolean {
+  if (!content || typeof content !== "object") return false;
+  const nps = (content as Blob).bainNps as Blob | undefined;
+  return typeof nps?.methode === "string" && /Devotion Ladder|eNPS déclaré/i.test(nps.methode);
 }
 
 function composeGreenhouse(ctx: ComposerContext): Blob {

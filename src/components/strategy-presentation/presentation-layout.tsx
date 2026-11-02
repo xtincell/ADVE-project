@@ -254,7 +254,7 @@ export function PresentationLayout({ document: doc, defaultPersona, shareToken }
   const pmeta = PERSONA_META[persona];
 
   const coverLead = persona === "consultant"
-    ? `Score ${doc.meta.vector.composite}/200 · ${doc.meta.classification} · diagnostic ${visibleSections.length} sections`
+    ? `${doc.meta.revealedScore && doc.meta.revealedScore.epreuveCount > 0 ? `Force révélée ${doc.meta.revealedScore.force}/200 · couverture ${doc.meta.revealedScore.coveragePct}%` : "Force révélée : preuves insuffisantes"} · diagnostic ${visibleSections.length} sections`
     : persona === "client"
       ? "La promesse, la valeur et le plan — l'essentiel pour décider, en clair."
       : "Le territoire de marque — plateforme, création et exécution.";

@@ -118,7 +118,7 @@ export function mapExecutiveSummary(
 
   const compositeClamped = Math.min(200, Math.max(0, vector.composite));
   const highlights: string[] = [];
-  highlights.push(`Marque classifiée ${classification} — score composite ${compositeClamped.toFixed(0)}/200`);
+  highlights.push(`Profil documentaire ${classification} — composite ${compositeClamped.toFixed(0)}/200. La force révélée du classement dépend des preuves de marché.`);
   if (derivedCultIndex) {
     highlights.push(`Cult Index : ${derivedCultIndex.score.toFixed(1)} — Tier ${derivedCultIndex.tier}`);
   }

@@ -1,3 +1,23 @@
+## Checkpoint du 2 novembre — reprise CI 525 et réception métier après cascade 524
+
+Production 524 reçue. La cascade serveur réelle est `OK` (465 s, 26 appels), A/D/V/E
+conservés ; R v7, T v6, I v4 COMPLETE à 100 %, non périmés. S v5 reste INTAKE à
+25 %, sans initiative sélectionnée : 40 RECOMMENDED et 40 estimations sans période,
+route ambitieuse 101 000 000 XAF non adoptée. Le transport client a expiré à 600 s ;
+le résultat persistant est reçu séparément, sans rejeu.
+
+**Prochaines réceptions** : Golden Path PR #1082 sur Ubuntu 24.04 après refus
+Playwright 1.59.1 sur 26.04 avant navigateur ; qualité S/T/Oracle à corriger sur les
+rails existants (projections constantes / base 60 supposée, scénario CF/CV omis, estimations de
+risque données CONFIRMED). Arithmétique 9 Gold / variante TVA conditionnelle 11
+vérifiée, pas hypothèses ratifiées. Responsable lots CI et Guidance/Propulsion
+existants ; effort correction et recette bornées ; **déclencheur immédiat** au run
+et avant réception métier des livrables. [Détail et preuves](RESIDUAL-DEBT.md).
+
+MVP scoreur / fiche ADVE complète / Oracle restent prioritaires et ouverts ; ce
+checkpoint ne ferme ni MVP, ni corpus, ni les sept chantiers. Les anciennes
+attentes runtime 524 ci-dessous restent historiques, pas l’état courant.
+
 ## 524 — reprendre le raccord sur523, puis recevoir le MVP (2026-10-26)
 
 PR1064 porte désormais la livraison524 du raccord testé dans le candidat522,

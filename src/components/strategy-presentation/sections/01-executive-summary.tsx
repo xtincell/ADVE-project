@@ -19,18 +19,21 @@ export function ExecutiveSummary({ data }: Props) {
         <RadarMini vector={data.vector} size={200} />
         <div className="flex-1 space-y-4">
           <div>
-            <p className="text-xs uppercase tracking-wider text-foreground-muted">Classification</p>
+            <p className="text-xs uppercase tracking-wider text-foreground-muted">Profil documentaire</p>
             <p className="text-3xl font-black" style={{ color: data.classification === "ICONE" ? "rgb(232, 75, 34)" : data.classification === "CULTE" ? "rgb(245, 124, 0)" : "rgb(158, 158, 158)" }}>
               {data.classification}
             </p>
             <p className="text-sm text-foreground-secondary">{data.brandName}</p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <MetricCard label="Composite" value={`${composite.toFixed(0)}/200`} />
+            <MetricCard label="Composite documentaire" value={`${composite.toFixed(0)}/200`} />
             <MetricCard label="Confiance" value={`${(typeof data.vector.confidence === "number" && !isNaN(data.vector.confidence) ? (data.vector.confidence * 100).toFixed(0) : "—")}%`} />
             <MetricCard label="Cult Index" value={data.cultIndex?.score.toFixed(1) ?? "—"} subtitle={data.cultIndex?.tier ?? ""} />
             <MetricCard label="Superfans" value={data.superfanCount} />
           </div>
+          <MetricCard label="Force révélée — classement"
+            value={data.revealedScore && data.revealedScore.epreuveCount > 0 ? `${data.revealedScore.force}/200` : "Preuves insuffisantes"}
+            subtitle={data.revealedScore ? `${data.revealedScore.coveragePct}% des terrains documentés · calcul du ${new Date(data.revealedScore.computedAt).toLocaleDateString("fr-FR")}` : "Aucun calcul enregistré"} />
         </div>
       </div>
 
