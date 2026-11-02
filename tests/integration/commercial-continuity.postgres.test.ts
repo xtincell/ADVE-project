@@ -80,6 +80,8 @@ describe("commercial continuity through the governed router and PostgreSQL", () 
       expiresAt: "2030-01-01T00:00:00.000Z", paymentInstructions: "Attendre le rapprochement de la référence de recette.",
       channels: ["PHONE", "EMAIL", "WHATSAPP"],
     } }, "ADMIN");
+    await expect(caller(sellerId).updateDeal({ dealId, contactEmail: "redirect@example.invalid" })).rejects.toThrow("destinataire");
+    await caller(sellerId).addNote({ dealId, content: "Préparer la conversation sans changer le destinataire." });
     await step(sellerId, { type: "QUALIFY", role: "BUYER", need: "Faire découvrir le restaurant." }, "USER", "PHONE");
     await step(sellerId, { type: "PROPOSE" }, "USER", "WHATSAPP");
     await step(sellerId, { type: "OBJECTION", evidence: "Le client demande une garantie de réservations." });

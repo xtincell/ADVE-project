@@ -76,12 +76,14 @@ export const crmRouter = createTRPCRouter({
   }).mutation(async ({ ctx, input }) => {
     if (!input.contactEmail && !input.contactPhone) throw new TRPCError({ code: "BAD_REQUEST", message: "Téléphone ou email nécessaire." });
     let operatorId = await callerOperatorScope(ctx);
+    const callerOperatorId = operatorId;
     if (input.sellerStrategyId) {
       await assertStrategyRead(ctx.session.user.id, input.sellerStrategyId);
       const seller = await ctx.db.strategy.findUniqueOrThrow({
         where: { id: input.sellerStrategyId }, select: { operatorId: true, client: { select: { operatorId: true } } },
       });
       operatorId = seller.operatorId ?? seller.client?.operatorId ?? operatorId;
+      if (callerOperatorId !== null && operatorId !== callerOperatorId) throw new TRPCError({ code: "FORBIDDEN", message: "Marque hors de votre portefeuille de vente." });
     }
     return crm.createDeal({ ...input, operatorId: operatorId ?? undefined });
   }),
@@ -138,7 +140,9 @@ export const crmRouter = createTRPCRouter({
       }
       return crm.applySalesStep(dealId, salesStep, { id: ctx.session.user.id, admin: ctx.session.user.role === "ADMIN" });
     }
-    if (deal.commercial && data.value !== undefined) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le prix appartient au mandat approuvé." });
+    if (deal.commercial && [data.value, data.contactEmail, data.contactName, data.companyName].some(value => value !== undefined)) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Les conditions et le destinataire appartiennent au mandat approuvé." });
+    }
     return crm.updateDeal(dealId, data);
   }),
 
