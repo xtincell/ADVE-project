@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
-const sendEmail = vi.hoisted(() => vi.fn(async () => ({ ok: true, provider: "BREVO", providerRef: "synthetic-message" })));
+const sendEmail = vi.hoisted(() => vi.fn(async (_input?: unknown) => ({ ok: true, provider: "BREVO", providerRef: "synthetic-message" })));
 vi.mock("@/server/services/email", () => ({ sendEmail }));
+vi.mock("@/server/services/anubis/brand-email", () => ({ sendBrandEmail: (_strategyId: string, input: unknown) => sendEmail(input) }));
 vi.mock("next-auth", () => ({}));
 vi.mock("@/lib/auth/config", () => ({ auth: vi.fn(async () => null) }));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));

@@ -695,7 +695,7 @@ export async function sendSalesEmail(dealId: string, actor: SalesActor, input: {
   const mandate = state.mandate;
   if (!mandate || mandate.sellerId !== actor.id || !mandate.outboundEmailEnabled ||
       !mandate.channels.includes("EMAIL") || new Date(mandate.expiresAt) <= new Date() ||
-      state.contactStopped || state.node === "STOPPED" || !deal.contactEmail) {
+      state.contactStopped || state.node === "STOPPED" || !deal.contactEmail || !deal.sellerStrategyId) {
     throw new TRPCError({ code: "FORBIDDEN", message: "L’envoi exige un destinataire et un mandat email actif." });
   }
   const fingerprint = createHash("sha256").update(JSON.stringify(input)).digest("hex");
@@ -712,12 +712,12 @@ export async function sendSalesEmail(dealId: string, actor: SalesActor, input: {
     id: input.requestId, dealId, performedBy: actor.id, activityType: "SALES_EMAIL_PENDING",
     description: input.subject, metadata: { fingerprint, to: deal.contactEmail, body: input.text },
   } });
-  const { sendEmail } = await import("@/server/services/email");
+  const { sendBrandEmail } = await import("@/server/services/anubis/brand-email");
   const htmlEscapes: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
   const html = input.text.replace(/[&<>"]/g, char => htmlEscapes[char]!).replace(/\n/g, "<br>");
   let result;
   try {
-    result = await sendEmail({ to: deal.contactEmail, subject: input.subject, text: input.text, html, tag: "sales", allowFallback: false });
+    result = await sendBrandEmail(deal.sellerStrategyId, { to: deal.contactEmail, subject: input.subject, text: input.text, html, tag: "sales", allowFallback: false });
   } catch {
     return db.cRMActivity.update({ where: { id: input.requestId }, data: { activityType: "SALES_EMAIL_UNCERTAIN" } });
   }
