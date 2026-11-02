@@ -7,14 +7,15 @@ import { DevotionPyramid } from "../shared/devotion-pyramid";
 interface Props { data: ExperienceEngagementSection }
 
 export function ExperienceEngagement({ data }: Props) {
+  const showQuality = data.touchpoints.some(t => !!t.qualite);
   return (
     <div className="space-y-6">
       {data.touchpoints.length > 0 && (
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Points de contact</h3>
           <DataTable
-            headers={["Touchpoint", "Canal", "Qualite", "Stade AARRR"]}
-            rows={data.touchpoints.map((t) => [t.nom, t.canal, t.qualite, t.stadeAarrr])}
+            headers={["Touchpoint", "Canal", "Rôle", "Stade AARRR", ...(showQuality ? ["Qualité documentée"] : [])]}
+            rows={data.touchpoints.map((t) => [t.nom, t.canal, t.role ?? "", t.stadeAarrr, ...(showQuality ? [t.qualite] : [])])}
           />
         </div>
       )}
@@ -51,6 +52,14 @@ export function ExperienceEngagement({ data }: Props) {
                   <span className="text-foreground-muted">: {ct.trigger}</span>
                 </div>
               ))}
+            </div>
+          )}
+          {data.devotionPathway.barriers.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-xs font-medium text-foreground-muted">Freins et réponses proposées</p>
+              <ul className="list-disc space-y-2 pl-5 text-sm text-foreground-secondary">
+                {data.devotionPathway.barriers.map((barrier, i) => <li key={i}>{barrier}</li>)}
+              </ul>
             </div>
           )}
         </div>

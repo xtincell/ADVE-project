@@ -28,6 +28,22 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 533 — formes ADVE canoniques restituées par Oracle (2026-11-02)
+
+Objets doctrine/freins/principes/plateformes perdus, principes coupés, rôle ignoré :
+adaptateurs de chaînes historiques incompatibles avec les formes A/E. Quatre
+lecteurs/rendus réparés, sans écriture source ni LLM ; qualité legacy seulement
+renseignée, synthèse/listes et compteur zéro conservés.
+Exact 533 : 5 099 tests / 487 fichiers, PG commercial 22 / 3 garde intacte, tsc/lints /
+cycles et build 8 GiB reçus. HTTP/PDF : marqueurs ciblés dans 57 pages, piliers inchangés.
+Layout 533 reçu sur 3/4/14 seulement, sans coupure/chevauchement ; HTTP ≠ natif réel/SLO.
+Stress exact 276 HTTP/5 non reçues/0 échec/0 finding, 3 requêtes/7 forges-transitions.
+E9 5 097/486 et 4d3 5 099/487 restent antérieurs ; autres PG 543/34+12/2 en deux passes.
+Base locale à contenu métier préexistant, surcharges ciblées synthétiques ;
+preuves privées hors checkout. CI/image/runtime et chaîne ADVE/RTIS/MVP ouverts.
+Finance après livraison 533 ; labels bruts des taxonomies en finition UX après
+gros œuvre, avant Oracle global : plan/owner/trigger dans RESIDUAL-DEBT, non corrigés ici.
+
 ### 531 — reprise documentaire après intégration (2026-11-02)
 
 Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration

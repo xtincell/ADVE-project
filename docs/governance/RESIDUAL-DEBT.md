@@ -1,3 +1,31 @@
+## 533 — livraison Oracle et finitions encore ouvertes (2026-11-02)
+
+Local exact 533 reçu : tests 5 099 / 487, PG commercial ciblé 22 / 3 garde intacte,
+tsc/lints/cycles et build webpack 8 GiB verts. Autres PG attribués à 4d3 (543/34 +
+12/2 en deux passes) ; e9/4d3 restent des états antérieurs, pas une PG 533 globale.
+HTTP/PDF533 reçu, marqueurs ciblés dans 57 pages, piliers inchangés ; layout reçu
+seulement pages 3/4/14. Stress 276 HTTP/5 non reçues/0 échec/0 finding ; pas natif ou SLO.
+**Fermer** par CI/image/runtime et conservation livrée ; responsable Oracle/Core,
+effort recette bornée, **déclencheur** avant réception PR #1118 et Oracle global.
+Aucune chaîne ADVE/RTIS/MVP entière reçue ; détails dans les preuves privées.
+
+**Finance préexistante** : defaults sectoriels/multiplicateurs, cohorte/horizon
+non qualifiés ; margeNette coefficient rendue en %. Aucun montant inventé ici.
+**Fermer** par prémisses ADVE sourcées/calculées/inférées, cohorte/horizon,
+unité/devise/période et convention marge cohérente source/calcul/UI/export ;
+financial-brain/Thot existants, sans nouveau moteur. Distinguer modèle/objectif /
+mesure/adoption, puis recalculer. Responsable Core/V et moteur financier,
+effort audit/cas de calcul bornés, **déclencheur** après livraison 533, avant
+réception des unit economics et du livrable financier réel.
+
+**Finition Oracle — taxonomies brutes dans l’export legacy** (EVANGELISTE/OTHER).
+**Fermer** en réutilisant le lexique métier existant sans modifier les enums
+stockés, avec cas d’enum testés en rendu/export. Responsable Oracle/UI,
+effort passe de labels ciblée, **déclencheur** UX après gros œuvre fonctionnel,
+avant réception globale Oracle. Aucune réparation de labels dans ce lot.
+ADVE rempli doit irriguer toutes les valeurs attendues ; les champs présents
+ne prouvent ni validité financière ni complétude. Aucune donnée réelle copiée au dépôt.
+
 ## 531 — réceptions après intégration encore ouvertes (2026-11-02)
 
 Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration

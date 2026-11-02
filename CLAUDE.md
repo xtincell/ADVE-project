@@ -1,3 +1,27 @@
+## 533 — Oracle reçu localement, livraison ouverte (2 novembre 2026)
+
+Sur cf924/PR #1119 : quatre lectures A/E (doctrine, freins, communauté, contacts)
+corrigées, sources inchangées, aucun nouveau service ou LLM dans ce correctif.
+CRM 532/ADR0232 conservés ; PR #1118, out-of-scope et SUBSCRIBED reçus.
+Réceptions exactes 533 : 5 099 tests / 487 fichiers sur périmètre complet ;
+PG commercial ciblé 22 / 3, garde intacte (autres cas attribués à 4d3), tsc exit 0,
+lints sans erreur/24 avertissements préexistants, cycles 0, CODE-MAP générée,
+build webpack local heap 8 GiB exit 0.
+USER compilé : assemblage 158 ms, vraie route PDF 267 ms/57 pages, marqueurs
+canoniques ciblés présents ; piliers exactement inchangés avant/après.
+PDF533 pages 3/4/14 visuellement reçues sans coupure/chevauchement, pas layout des 57 pages.
+Trois pages HTTP 200 en 294/44/43 ms, sans hydratation/native réelle ou SLO.
+Stress exact exit 0 : 276 HTTP reçues/5 non reçues/0 échec, 3 requêtes,
+7 forges/transitions, 0 finding ; probes HTTP distinctes d’une réception native.
+
+Attributions antérieures : e9 = 5 097/486 ; 4d3 = 5 099/487, PG 543/34 + 12/2
+en deux passes, non livré. Layout e9 limité à 3/4/14, non relu en 4d3.
+Base locale à contenu métier préexistant, seules surcharges CANON532 synthétiques ;
+tests du dépôt sans marque, preuves/PDF/captures privés hors checkout.
+CI/image/runtime 533, natif réel et chaîne ADVE/RTIS/MVP entière encore ouverts.
+ADVE rempli doit irriguer chaque valeur attendue depuis source/calcul/postulat amont.
+Finance après livraison 533 et libellés métier en finition UX : RESIDUAL-DEBT.
+
 ## 531 — reprise après intégration commerciale, candidat (2 novembre 2026)
 
 Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration

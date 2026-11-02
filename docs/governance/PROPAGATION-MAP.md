@@ -9,6 +9,22 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### ADVE canonique → Oracle — 533 reçu localement (2026-11-02)
+
+A.doctrine et E.freins/communauté/contacts → quatre lecteurs existants → Oracle/PDF,
+avec réponses, rôles, synthèse/listes et compteur déclaré zéro ; sources inchangées,
+aucun service/modèle/tool ou LLM nouveau dans ce correctif. CRM 532/ADR0232 conservés.
+Exact 533 : 5 099/487, PG commercial 22 / 3 garde intacte, tsc/lints/cycles/build 8 GiB reçus.
+E9=5 097/486 ; 4d3=5 099/487 et PG 543/34+12/2 en deux passes restent antérieurs.
+HTTP USER/PDF 533 : marqueurs ciblés dans 57 pages et piliers inchangés. Layout 533
+reçu seulement sur 3/4/14, sans coupure/chevauchement ; aucune réception visuelle des 57 pages.
+Stress 276 HTTP reçues/5 non reçues/0 échec, 3 requêtes/7 forges-transitions/0 finding,
+aucune hydratation/native réelle ou SLO déduit des probes.
+Base locale à contenu métier préexistant, seules surcharges CANON532 synthétiques ;
+preuves privées hors checkout. Source→calcul→postulat amont reste requis pour chaque
+valeur attendue. CI/image/runtime, chaîne réelle ADVE/RTIS/MVP toujours ouverts.
+Finance après livraison 533 et libellés legacy en passe UX : RESIDUAL-DEBT.
+
 ### Reprise de provenance ciblée sur main — candidat 531 (2026-11-02)
 
 Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration

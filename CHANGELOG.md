@@ -1,3 +1,15 @@
+## v6.27.533 — fix(oracle): lire les formes ADVE canoniques sans perdre leur contenu (2026-11-02)
+
+**Réception locale exacte 533 obtenue ; livraison, natif réel et Oracle entier restent ouverts.**
+
+- Doctrine A, freins/réponses E, principes/application/plateformes/mécanismes et rôles des contacts conservés dans quatre lecteurs/rendus existants. Synthèse + listes sans coupe, compteur déclaré zéro, qualité legacy seulement documentée ; aucun LLM, écriture source ou nouveau service/modèle/tool dans ce correctif.
+- Sur cf924/PR #1119 : entrée/note CRM 532 et ADR0232 enrichi conservés, PR réelle #1118/out-of-scope/SUBSCRIBED reçus. Exact 533 : 5 099 tests / 487 fichiers, PG commercial ciblé 22 / 3 (garde intacte, autres cas aux reçus 4d3), tsc 0, lints 0 erreur/24 avertissements, cycles 0, CODE-MAP générée, webpack local heap 8 GiB exit 0.
+- USER compilé : assemblage 158 ms, vraie route PDF 267 ms/57 pages, marqueurs canoniques ciblés présents, piliers exactement inchangés. Pages 3/4/14 du PDF 533 rendues/inspectées sans coupure ni chevauchement, pas layout des 57 pages. Trois pages HTTP 200 en 294/44/43 ms sans hydratation/native réelle, aucun SLO.
+- Stress exact exit 0 : 276 HTTP reçues/5 non reçues/0 échec, 3 requêtes, 7 forges/transitions, 0 finding ; probes ≠ natif. CI/image/runtime 533 et chaîne réelle ADVE/RTIS/MVP ouverts.
+- E9 préintégration : 5 097/486, PDF 57 pages/layout 3/4/14 ; 4d3 intermédiaire non livré : 5 099/487, PG 543/34 puis 12/2 en deux passes, layout non relu. Ces preuves restent attribuées à leurs états, indépendamment des nouveaux reçus 533.
+- Copie locale à contenu métier préexistant, seules surcharges CANON532 synthétiques ; tests du dépôt sans marque, preuves/PDF/captures privés hors checkout. ADVE rempli doit irriguer chaque valeur attendue depuis source/calcul/postulat amont.
+- Finance defaults/cohorte/horizon et marge coefficient vs UI % : cadrage après livraison 533 via financial-brain/Thot, sans montant inventé. Labels bruts de taxonomies legacy : finition UX après gros œuvre avant Oracle global, via lexique existant ; plans et déclencheurs dans RESIDUAL-DEBT, aucun correctif financier ou de labels ici.
+
 ## v6.27.532 — Conserver les dernières réponses du vendeur dans un fil prolongé (2 novembre 2026)
 
 - La supervision reprend les 200 messages les plus récents du dialogue dirigeant-vendeur et les présente chronologiquement, avec un ordre stable pour les messages horodatés à la même milliseconde.
