@@ -1,3 +1,42 @@
+## 529 — North Star conservée et lisibilité S, candidat (2 novembre 2026)
+
+528 est reçue en production, source `ad6f9b8b0667085aba3e25dd3f5d0eb21e2d2c35`,
+digest `50deb3e2899707a58cf071b33dabac64c0323abf4c8374fcdd22ee6715194f91`.
+Contenu métier comparé conservé exactement ; seuls les diagnostics E dérivés de
+validation ont été recalculés. Réconciliation E via Agent et recalcul S reçus ;
+les sources de cet amendement restent PROPOSED, sans adoption humaine fabriquée.
+La lecture native 528 constate une définition North Star perdue dans S, une
+prose dense et des campagnes encore à qualifier. Les preuves métier restent
+privées hors checkout. Cette réception ne reçoit ni ADVE entière ni le MVP.
+La lecture native 528 de la section 16 d’Oracle reçoit définitions,
+qualifications et inconnues conservées ; elle ne reçoit pas Oracle entier,
+dont les analyses restent périmées.
+
+Le candidat 529 conserve la définition de l’unique North Star explicite de E
+même sans cible/fréquence ; le dashboard reste limité aux objectifs complets.
+Les candidates multiples restent ambiguës ; null ne devient ni mesure ni décision.
+Roadmap objectif/actions sans troncature ni limite courte de texte, cardinalité
+inchangée. UI S : listes et largeur de lecture, principaux KPI séparés des détails,
+details natif au clavier et fréquence mobile ; cible/cadence à définir en Engagement.
+Contrôles locaux 529 reçus : 5 034 unitaires / 481 fichiers, PostgreSQL
+527 tests / 32 fichiers, tsc exit 0, lint et lint:governance sans erreur
+(24 avertissements préexistants), cycles sans dépendance circulaire. Le premier
+lancement PostgreSQL visait une configuration inexistante : erreur de commande
+conservée, puis suite complète verte avec la bonne configuration ; aucun défaut
+produit déduit. Build complet reçu exit 0. HTTP compilé sous USER reçu sur la
+fixture synthétique 528 existante, sans rejouer ingestion ou amendement : refresh S
+259 ms, assemblage 96 ms ; North Star définie avec cible/cadence nulles conservées,
+six objectifs complets / sept définitions, autres sept piliers, dates et exécution
+inchangés. Deux pages HTTP 200 en 246 / 38 ms ; hydratation/UI non reçue, cible
+navigateur locale précédemment refusée sans contournement. Mesures locales sans
+SLO ; natif, CI/image/runtime 529 encore ouverts.
+
+Documentation + inputs attribués → ADVE qualifié → RTIS dérivé reste le circuit.
+La qualification réelle ADVE entière puis cascade, titres/slugs de campagne, devis
+et les trois MVP restent ouverts ; ADR-0229 Proposed. Aucun nouveau modèle,
+routeur, service, Intent ou gestionnaire d’appels. Les checkpoints datés ci-dessous
+conservent leur état historique ; la réception courante 528 ci-dessus prime.
+
 ## 528 — qualification des objectifs, candidat local (2 novembre 2026)
 
 La 527 est reçue en production, source `79c912dd1a6dff7475ff5883dbe27d6c1e6d081f`, digest `9886144552a2f473b5661846d8695d628a3976d553095ac2bf358abbe4c62e80`. Conservation des sources, actifs, piliers, paiements et périmètres comparés reçue ; actualisation S seule et lecture native de la roadmap reçues, sans armer l’exécution. Les objectifs hérités des données initiales ne sont pas pour autant validés sémantiquement. Les preuves et données métier restent privées hors checkout.

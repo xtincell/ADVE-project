@@ -62,18 +62,21 @@ export function generateStrategy(pillars: Record<string, Record<string, unknown>
   const rows = (value: unknown): Array<Record<string, unknown>> => Array.isArray(value)
     ? value.filter((row): row is Record<string, unknown> => !!row && typeof row === "object" && !Array.isArray(row)) : [];
   const text = (value: unknown) => typeof value === "string" && value.trim() ? value : undefined;
-  const kpiDashboard = rows(pillars.e?.kpis).flatMap((kpi) => {
+  const kpiDefinitions = rows(pillars.e?.kpis).flatMap((kpi) => {
     const name = text(kpi.name), target = text(kpi.target) ?? (typeof kpi.target === "number" && Number.isFinite(kpi.target) ? String(kpi.target) : undefined);
     const frequency = sourceFrequency(kpi.frequency);
-    if (!name || !target || !frequency) return [];
+    if (!name) return [];
     const qualification = kpi.qualification === "PROPOSED" || kpi.qualification === "DECLARED" ? kpi.qualification : undefined;
-    return [{ name, target, frequency, pillar: "E" as const,
+    return [{ name, target: target ?? null, frequency: frequency ?? null, pillar: "E" as const,
       ...(qualification ? { qualification } : {}),
       ...Object.fromEntries(["definition", "unit", "observationWindow", "targetContext", "sourceNotes"]
         .flatMap(key => text(kpi[key]) ? [[key, kpi[key]]] : [])),
     }];
   });
-  const northStars = kpiDashboard.filter(kpi => /\bnorth[\s-]*star\b|\betoile polaire\b/i.test(kpi.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "")));
+  // The dashboard contains actionable goals. A documented North Star definition
+  // remains useful even while its numeric goal or monitoring cadence is pending.
+  const kpiDashboard = kpiDefinitions.filter(kpi => kpi.target !== null && kpi.frequency !== null);
+  const northStars = kpiDefinitions.filter(kpi => /\bnorth[\s-]*star\b|\betoile polaire\b/i.test(kpi.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "")));
   // Multiple explicit candidates need a decision; array ordering is not one.
   const northStar = northStars.length === 1 ? northStars[0] : undefined;
   const teamStructure = rows(pillars.a?.equipeDirigeante).flatMap(member => {
@@ -91,7 +94,7 @@ export function generateStrategy(pillars: Record<string, Record<string, unknown>
     const first = actions[0]!, canonType = canonTypeForInitiative(first);
     return { phase: canonType ? campaignLabels[canonType] : "Campagne à qualifier", ...(canonType ? { canonType } : {}),
       ...(first.cadence ? { cadence: first.cadence } : {}),
-      objectif: actions.map(a => a.objectif).filter(Boolean).join(" ; ").slice(0, 200),
+      objectif: actions.map(a => a.objectif).filter(Boolean).join(" ; "),
       actions: actions.map(a => a.action), actionRefs: actions.map(a => a.id),
       ...(amounts.totalBudget !== undefined ? { budget: amounts.totalBudget } : {}), budgetSummary: amounts.budgetSummary };
   });

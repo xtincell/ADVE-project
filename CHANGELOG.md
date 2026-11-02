@@ -1,3 +1,37 @@
+## v6.27.529 — fix(strategy): conserver la North Star et rendre S lisible (2026-11-02)
+
+**Candidat : définition principale conservée malgré des inconnues, roadmap sans texte coupé et lecture S aérée.**
+
+- S conserve l’unique North Star explicitement nommée dans E, y compris avec cible/fréquence nulles ; le dashboard continue de ne projeter que les objectifs complets. Plusieurs candidates restent ambiguës. Définition, qualification et métadonnées sont conservées ; ni mesure, cadence ou décision inventée, ni maturité reçue par la seule présence de la carte.
+- La construction de roadmap.objectif retire la coupe à 200 caractères ; objectif et descriptions d’actions conservent leur texte complet dans le schéma. Les seuils de cardinalité et exigences de fond restent inchangés.
+- UI S candidate : roadmap sur toute la largeur disponible, actions et facteurs clés de succès en listes ; indicateurs avec nom, qualification, cible et suivi lisibles. Définition/fenêtre/contexte/source accessibles dans un details natif au clavier ; fréquence conservée sur mobile. North Star indique les cible/cadence à définir dans Engagement et une mesure indisponible sans l’écrire au socle.
+- Aucun modèle, routeur, service, Intent ou gestionnaire d’appels ajouté. Titres/slugs de campagne, qualification réelle ADVE entière puis cascade, devis et MVP restent des réceptions ouvertes. [ADR-0229 Proposed](docs/governance/adr/0229-source-qualified-strategy-and-campaign-projections.md) reste proposé pour la chaîne entière.
+
+Contrôles locaux 529 reçus : 5 034 unitaires / 481 fichiers, PostgreSQL
+527 tests / 32 fichiers, tsc exit 0, lint et lint:governance sans erreur
+(24 avertissements préexistants), cycles sans dépendance circulaire. Le premier
+lancement PostgreSQL visait une configuration inexistante : erreur de commande
+conservée, puis suite complète verte avec la bonne configuration ; aucun défaut
+produit déduit. Build complet reçu exit 0. HTTP compilé sous USER reçu sur la
+fixture synthétique 528 existante, sans rejouer ingestion ou amendement : refresh S
+259 ms, assemblage 96 ms ; North Star définie avec cible/cadence nulles conservées,
+six objectifs complets / sept définitions, autres sept piliers, dates et exécution
+inchangés. Deux pages HTTP 200 en 246 / 38 ms ; hydratation/UI non reçue, cible
+navigateur locale précédemment refusée sans contournement. Mesures locales sans
+SLO ; natif, CI/image/runtime 529 encore ouverts.
+
+528 est reçue en production, source `ad6f9b8b0667085aba3e25dd3f5d0eb21e2d2c35`,
+digest `50deb3e2899707a58cf071b33dabac64c0323abf4c8374fcdd22ee6715194f91`.
+Contenu métier comparé conservé exactement ; seuls les diagnostics E dérivés de
+validation ont été recalculés. Réconciliation E via Agent et recalcul S reçus ;
+les sources de cet amendement restent PROPOSED, sans adoption humaine fabriquée.
+La lecture native 528 constate une définition North Star perdue dans S, une
+prose dense et des campagnes encore à qualifier. Les preuves métier restent
+privées hors checkout. Cette réception ne reçoit ni ADVE entière ni le MVP.
+La lecture native 528 de la section 16 d’Oracle reçoit définitions,
+qualifications et inconnues conservées ; elle ne reçoit pas Oracle entier,
+dont les analyses restent périmées.
+
 ## v6.27.528 — fix(adve): qualifier les objectifs sans fabriquer leur complétude (2026-11-02)
 
 **Candidat local : conserver une définition documentée et ses inconnues, distinguer objectif proposé, objectif déclaré et mesure.**

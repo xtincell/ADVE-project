@@ -28,6 +28,29 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 529 — North Star et texte S, correctif candidat (2026-11-02)
+
+Natif 528 reçu : définition North Star perdue en S faute de cible/fréquence,
+prose dense et roadmap objectif coupé à 200 caractères. Hypothèse : même filtre
+pour une définition et un objectif complet, schéma court et listes rendues en tags.
+Le candidat conserve l’unique définition explicite avec nulls sans toucher au
+filtre des objectifs complets ; les candidates multiples restent ambiguës. Il
+retire la coupe de texte et les limites courtes des descriptions, garde les seuils
+de cardinalité et propose listes/détails clavier/suivi mobile. Contrôles reçus :
+5 034 unitaires / 481 fichiers, PostgreSQL 527 tests / 32 fichiers, typage et lints
+sans erreur, cycles sans dépendance circulaire. Le mauvais nom de configuration
+PostgreSQL du premier lancement est conservé comme erreur de commande, sans
+inventer de défaut produit. Build complet exit 0 et HTTP compilé USER reçus sur
+la fixture synthétique existante, sans rejouer ingestion/amendement. North Star
+définie avec cible/cadence nulles, objectifs/définitions, autres sept piliers,
+dates et exécution conservés. Pages HTTP 200, hydratation/UI non reçue ; aucun
+contournement du refus navigateur local. Natif/CI/production 529 ouverts,
+latences locales sans SLO.
+La section 16 d’Oracle 528 est reçue nativement pour définitions, qualifications
+et inconnues seulement ; ses analyses périmées empêchent de recevoir Oracle entier.
+Qualification de campagne et ADVE entière restent dans RESIDUAL-DEBT ; pas de
+réparation globale, de mesure ou de décision déduite de cette mise en forme.
+
 ### 528 — qualification et remplissage, correctif candidat (2026-11-02)
 
 Symptôme : une définition documentée peut être rejetée faute de cible/cadence,
