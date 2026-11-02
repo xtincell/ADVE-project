@@ -5,6 +5,9 @@
  * CdC: Annexe E §4.2 — Pipeline commercial (Quick Intake → Deal → Brand Instance)
  */
 
+import { TRPCError } from "@trpc/server";
+import { createHash } from "node:crypto";
+import { advanceSale, salesStateSchema, saleStage, type SalesStep, type SalesActor } from "./commercial";
 import { db } from "@/lib/db";
 import { scopeStrategies } from "@/server/services/operator-isolation";
 
@@ -68,14 +71,18 @@ export async function createDealFromIntake(intakeId: string): Promise<string> {
  */
 export async function createDeal(data: {
   contactName: string;
-  contactEmail: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  operatorId?: string;
+  sellerStrategyId?: string;
   companyName: string;
   value?: number;
   currency?: string;
   source?: string;
   notes?: string;
 }): Promise<string> {
-  const deal = await db.deal.create({
+  return db.$transaction(async tx => {
+  const deal = await tx.deal.create({
     data: {
       contactName: data.contactName,
       contactEmail: data.contactEmail,
@@ -85,23 +92,27 @@ export async function createDeal(data: {
       value: data.value,
       currency: data.currency ?? "XAF",
       notes: data.notes,
+      contactPhone: data.contactPhone,
+      operatorId: data.operatorId,
+      sellerStrategyId: data.sellerStrategyId,
     },
   });
 
-  await db.funnelMapping.create({
+  await tx.funnelMapping.create({
     data: { dealId: deal.id, step: "LEAD" },
   });
 
-  await db.cRMActivity.create({
+  await tx.cRMActivity.create({
     data: {
       dealId: deal.id,
       activityType: "DEAL_CREATED",
       description: `Deal créé manuellement (${data.companyName})`,
       metadata: { source: data.source ?? "MANUAL" },
     },
-  }).catch(() => {});
+  });
 
   return deal.id;
+  });
 }
 
 /**
@@ -402,20 +413,13 @@ export async function getDealDetails(dealId: string) {
 /**
  * Get pipeline overview with counts and values per stage
  */
-export async function getPipelineOverview(operatorId?: string | null) {
-  // Anti-IDOR (audit 2026-07-22) : scope opérateur via la relation strategy.
-  // Round-3 : `Deal.strategyId` est NULLABLE (peuplé seulement à la conversion
-  // WON) — un filtre relation-to-one SEUL excluait tous les deals pré-conversion
-  // (LEAD/QUALIFIED/…) → l'opérateur voyait un pipeline VIDE (régression). Les
-  // deals pré-conversion n'ont AUCUN lien opérateur en base (`createDeal` ne pose
-  // ni userId ni strategyId) : on les inclut donc (partagés, faute de colonne
-  // `Deal.operatorId` — vraie isolation tracée RESIDUAL-DEBT) et on scope les
-  // deals convertis par la marque. `operatorId` absent (ADMIN) → global assumé.
+export async function getPipelineOverview(operatorId?: string | null, currency = "XAF") {
+  // Ownership exists before conversion. Preserve only attributable legacy history.
   const strategyScope = operatorId
-    ? { OR: [{ strategyId: null }, { strategy: scopeStrategies({ operatorId, userId: "", role: "FIXER" }) }] }
+    ? { OR: [{ operatorId }, { operatorId: null, strategy: scopeStrategies({ operatorId, userId: "", role: "FIXER" }) }] }
     : {};
   const deals = await db.deal.findMany({
-    where: { ...strategyScope },
+    where: { ...strategyScope, currency },
     orderBy: { createdAt: "desc" },
     include: {
       strategy: { select: { id: true, name: true } },
@@ -449,10 +453,9 @@ export async function listDeals(options?: {
   operatorId?: string | null;
   limit?: number;
 }) {
-  // Cf. getPipelineOverview : deals pré-conversion (strategyId null) inclus,
-  // sinon l'opérateur voit une liste vide (régression round-3).
+  // Preserve the operator scope before and after conversion.
   const strategyScope = options?.operatorId
-    ? { OR: [{ strategyId: null }, { strategy: scopeStrategies({ operatorId: options.operatorId, userId: "", role: "FIXER" }) }] }
+    ? { OR: [{ operatorId: options.operatorId }, { operatorId: null, strategy: scopeStrategies({ operatorId: options.operatorId, userId: "", role: "FIXER" }) }] }
     : {};
 
   return db.deal.findMany({
@@ -476,22 +479,22 @@ export async function listDeals(options?: {
  * Revenue forecast: weighted pipeline value by stage probability.
  * Shows: total pipeline, weighted forecast, average deal size, win rate.
  */
-export async function getRevenueForecast(operatorId?: string | null) {
+export async function getRevenueForecast(operatorId?: string | null, currency = "XAF") {
   // Anti-IDOR (audit 2026-07-22) : scope opérateur (prévisions = valeurs des deals).
   // Cf. getPipelineOverview : deals pré-conversion (strategyId null) inclus.
   const strategyScope = operatorId
-    ? { OR: [{ strategyId: null }, { strategy: scopeStrategies({ operatorId, userId: "", role: "FIXER" }) }] }
+    ? { OR: [{ operatorId }, { operatorId: null, strategy: scopeStrategies({ operatorId, userId: "", role: "FIXER" }) }] }
     : {};
   const deals = await db.deal.findMany({
-    where: { stage: { notIn: ["LOST"] }, ...strategyScope },
+    where: { stage: { notIn: ["LOST"] }, ...strategyScope, currency },
   });
 
   const wonDeals = await db.deal.findMany({
-    where: { stage: "WON", ...strategyScope },
+    where: { stage: "WON", ...strategyScope, currency },
   });
 
   const lostDeals = await db.deal.count({
-    where: { stage: "LOST", ...strategyScope },
+    where: { stage: "LOST", ...strategyScope, currency },
   });
 
   // Weighted pipeline
@@ -535,7 +538,7 @@ export async function getRevenueForecast(operatorId?: string | null) {
   return {
     totalPipeline: Math.round(totalPipeline),
     weightedForecast: Math.round(weightedForecast),
-    currency: "XAF",
+    currency,
     byStage,
     winRate: Math.round(winRate * 10) / 10,
     avgDealSize: Math.round(avgDealSize),
@@ -553,9 +556,13 @@ export async function getRevenueForecast(operatorId?: string | null) {
 /**
  * Conversion metrics: stage-by-stage rates, average durations, bottleneck detection.
  */
-export async function getConversionMetrics() {
+export async function getConversionMetrics(operatorId?: string | null) {
+  const deals = await db.deal.findMany({ where: operatorId
+    ? { OR: [{ operatorId }, { operatorId: null, strategy: scopeStrategies({ operatorId, userId: "", role: "FIXER" }) }] }
+    : {}, select: { id: true } });
+  const dealFilter = { dealId: { in: deals.map(deal => deal.id) } };
   const funnelData = await db.funnelMapping.findMany({
-    where: { exitedAt: { not: null } },
+    where: { ...dealFilter, exitedAt: { not: null } },
   });
 
   // Group by step
@@ -579,8 +586,8 @@ export async function getConversionMetrics() {
   for (let i = 0; i < STAGE_ORDER.length - 1; i++) {
     const from = STAGE_ORDER[i]!;
     const to = STAGE_ORDER[i + 1]!;
-    const enteredFrom = await db.funnelMapping.count({ where: { step: from } });
-    const enteredTo = await db.funnelMapping.count({ where: { step: to } });
+    const enteredFrom = await db.funnelMapping.count({ where: { ...dealFilter, step: from } });
+    const enteredTo = await db.funnelMapping.count({ where: { ...dealFilter, step: to } });
     conversionRates[`${from}_to_${to}`] = enteredFrom > 0 ? Math.round((enteredTo / enteredFrom) * 100) : 0;
   }
 
@@ -632,4 +639,50 @@ function estimateDealValue(sector?: string | null, businessModel?: string | null
   const multiplier = modelMultiplier[businessModel ?? ""] ?? 1.0;
 
   return Math.round(base * multiplier);
+}
+
+
+/** A decision, its state and its journal commit together or not at all. */
+export async function applySalesStep(dealId: string, step: SalesStep, actor: SalesActor) {
+  const fingerprint = createHash("sha256").update(JSON.stringify(step)).digest("hex");
+  return db.$transaction(async tx => {
+    const deal = await tx.deal.findUniqueOrThrow({ where: { id: dealId } });
+    const replay = await tx.cRMActivity.findFirst({
+      where: { dealId, metadata: { path: ["salesRequestId"], equals: step.requestId } },
+    });
+    if (replay) {
+      const metadata = replay.metadata as { fingerprint?: string; actorId?: string };
+      if (metadata.fingerprint !== fingerprint || metadata.actorId !== actor.id) {
+        throw new TRPCError({ code: "CONFLICT", message: "Référence déjà utilisée pour une autre décision." });
+      }
+      return deal;
+    }
+    if (deal.revision !== step.expectedRevision) {
+      throw new TRPCError({ code: "CONFLICT", message: "Le dossier a évolué. Relire avant de décider." });
+    }
+    const previous = salesStateSchema.parse(deal.commercial ?? {});
+    let next;
+    try {
+      next = advanceSale(previous, step, actor, new Date());
+    } catch (error) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: (error as Error).message });
+    }
+    const stage = saleStage(next);
+    const changed = await tx.deal.updateMany({
+      where: { id: dealId, revision: step.expectedRevision },
+      data: {
+        commercial: JSON.parse(JSON.stringify(next)), paymentReference: next.mandate?.intakePaymentReference ?? null, stage, revision: { increment: 1 },
+        wonAt: stage === "WON" ? (deal.wonAt ?? new Date()) : deal.wonAt,
+        value: next.mandate?.amount ?? deal.value, currency: next.mandate?.currency ?? deal.currency,
+      },
+    });
+    if (changed.count !== 1) throw new TRPCError({ code: "CONFLICT", message: "Une autre décision vient d’être enregistrée." });
+    await tx.cRMActivity.create({ data: {
+      dealId, performedBy: actor.id, activityType: "SALES_DECISION",
+      description: step.command.type,
+      metadata: { salesRequestId: step.requestId, fingerprint, actorId: actor.id, channel: step.channel,
+        command: JSON.parse(JSON.stringify(step.command)), from: previous.node, to: next.node },
+    } });
+    return tx.deal.findUniqueOrThrow({ where: { id: dealId } });
+  });
 }

@@ -229,7 +229,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **PaymentOrder** (14 fields)
 - **IntakePayment** (17 fields)
 - **Subscription** (15 fields) — Subscription for monthly tiers (COCKPIT_MONTHLY / RETAINER_*).
-- **Deal** (18 fields)
+- **Deal** (24 fields)
 - **FunnelMapping** (7 fields)
 - **MarketStudy** (15 fields)
 - **ResearchWave** (13 fields)

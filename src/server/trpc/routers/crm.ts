@@ -1,22 +1,14 @@
 /**
- * CRM Router — Deals, funnel tracking, intake conversion, notes, activities,
- * revenue forecasting, conversion metrics.
- *
- * CdC: Annexe E §4.2 — Pipeline commercial (Quick Intake -> Deal -> Brand Instance)
- * Phase 0: Quick Intake complete -> Deal auto, pipeline visible, revenue forecasting
- *
- * Anti-IDOR (audit adversarial 2026-07-22) : le CRM d'agence est réservé aux
- * OPÉRATEURS/ADMIN (`operatorProcedure`) — auparavant `protectedProcedure`, tout
- * compte authentifié (founder/creator/guilde) lisait+écrivait TOUT le pipeline
- * (contacts, emails, valeurs). Les lectures agrégées sont scopées à l'opérateur
- * appelant (DB-résolu) ; ADMIN voit tout. `convertToStrategy` n'accepte plus un
- * `operatorId` client (escalade : créer une Strategy sous un opérateur arbitraire)
- * → l'opérateur est dérivé du serveur.
- * Reste tracé (RESIDUAL-DEBT §IDOR round-2) : ownership deal↔opérateur par-deal
- * sur les ops keyées `dealId` (cross-opérateur, théorique en mono-opérateur ;
- * exige des signatures crm-engine par-deal) + scope `getConversionMetrics`.
+ * CRM portfolio and commercial decisions.
+ * New deals belong to their selling operator from the first contact.
+ * Converted legacy deals retain their strategy scope; unassigned history is
+ * reserved for administration. Every keyed read and write checks the portfolio.
+ * Commercial state changes use an approved mandate and a revisioned journal.
  */
 
+import { TRPCError } from "@trpc/server";
+import { salesStepSchema } from "@/server/services/crm-engine/commercial";
+import { assertStrategyRead } from "./_strategy-read-guard";
 import { z } from "zod";
 import { createTRPCRouter, operatorProcedure } from "../init";
 import * as crm from "@/server/services/crm-engine";
@@ -34,6 +26,22 @@ async function callerOperatorScope(ctx: {
   return opCtx.operatorId ?? "__no_operator__";
 }
 
+async function assertDealAccess(ctx: { session: { user: { id: string; role?: string | null } }; db: typeof import("@/lib/db").db }, dealId: string) {
+  const deal = await ctx.db.deal.findUniqueOrThrow({ where: { id: dealId } });
+  const scope = await callerOperatorScope(ctx);
+  if (scope !== null) {
+    if (deal.operatorId ? deal.operatorId !== scope : !deal.strategyId) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Affaire hors de votre portefeuille." });
+    }
+    if (!deal.operatorId && deal.strategyId) await assertStrategyRead(ctx.session.user.id, deal.strategyId);
+    if (deal.sellerStrategyId) await assertStrategyRead(ctx.session.user.id, deal.sellerStrategyId);
+  }
+  return deal;
+}
+async function assertLegacyStageChange(ctx: Parameters<typeof assertDealAccess>[0], dealId: string) {
+  const deal = await assertDealAccess(ctx, dealId);
+  if (deal.commercial) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Utiliser les décisions du poste commercial." });
+}
 // ============================================================================
 // DEAL LIFECYCLE (opérateur/ADMIN uniquement)
 // ============================================================================
@@ -44,14 +52,20 @@ export const crmRouter = createTRPCRouter({
     requireOperator: true,
     inputSchema: z.object({ intakeId: z.string() }),
     caller: "crm:createDealFromIntake",
-  }).mutation(({ input }) => crm.createDealFromIntake(input.intakeId)),
+  }).mutation(async ({ ctx, input }) => {
+    const intake = await ctx.db.quickIntake.findUniqueOrThrow({ where: { id: input.intakeId } });
+    if (ctx.session.user.role !== "ADMIN") throw new TRPCError({ code: "FORBIDDEN", message: "Rattachement intake réservé au mandant." });
+    return crm.createDealFromIntake(intake.id);
+  }),
 
   createDeal: governedProcedure({
     kind: "LEGACY_CRM_CREATE_DEAL",
     requireOperator: true,
     inputSchema: z.object({
       contactName: z.string().min(1),
-      contactEmail: z.string().email(),
+      contactEmail: z.string().email().optional(),
+      contactPhone: z.string().trim().min(3).optional(),
+      sellerStrategyId: z.string().optional(),
       companyName: z.string().min(1),
       value: z.number().optional(),
       currency: z.string().default("XAF"),
@@ -59,7 +73,18 @@ export const crmRouter = createTRPCRouter({
       notes: z.string().optional(),
     }),
     caller: "crm:createDeal",
-  }).mutation(({ input }) => crm.createDeal(input)),
+  }).mutation(async ({ ctx, input }) => {
+    if (!input.contactEmail && !input.contactPhone) throw new TRPCError({ code: "BAD_REQUEST", message: "Téléphone ou email nécessaire." });
+    let operatorId = await callerOperatorScope(ctx);
+    if (input.sellerStrategyId) {
+      await assertStrategyRead(ctx.session.user.id, input.sellerStrategyId);
+      const seller = await ctx.db.strategy.findUniqueOrThrow({
+        where: { id: input.sellerStrategyId }, select: { operatorId: true, client: { select: { operatorId: true } } },
+      });
+      operatorId = seller.operatorId ?? seller.client?.operatorId ?? operatorId;
+    }
+    return crm.createDeal({ ...input, operatorId: operatorId ?? undefined });
+  }),
 
   updateDeal: governedProcedure({
     kind: "LEGACY_CRM_UPDATE_DEAL",
@@ -71,10 +96,49 @@ export const crmRouter = createTRPCRouter({
       companyName: z.string().optional(),
       value: z.number().optional(),
       notes: z.string().optional(),
+      salesStep: salesStepSchema.optional(),
     }),
     caller: "crm:updateDeal",
-  }).mutation(({ input }) => {
-    const { dealId, ...data } = input;
+  }).mutation(async ({ ctx, input }) => {
+    const { dealId, salesStep, ...data } = input;
+    const deal = await assertDealAccess(ctx, dealId);
+    if (salesStep) {
+      if (!deal.sellerStrategyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Rattacher la marque vendeuse avant le mandat." });
+      if (salesStep.command.type === "MANDATE") {
+        const mandate = salesStep.command.mandate;
+        for (const userId of [mandate.sellerId, mandate.deliveryOwnerId]) {
+          if (userId.startsWith("mcp:")) {
+            const key = await ctx.db.mcpApiKey.findUnique({ where: { id: userId.slice(4) }, select: { isActive: true, scopeKind: true, scopeStrategyId: true, expiresAt: true } });
+            if (!key?.isActive || key.scopeKind !== "BRAND" || key.scopeStrategyId !== deal.sellerStrategyId || (key.expiresAt && key.expiresAt <= new Date())) {
+              throw new TRPCError({ code: "FORBIDDEN", message: "Clé de l’agent inactive ou hors marque." });
+            }
+            continue;
+          }
+          const principal = await getOperatorContext(userId);
+          if (principal.role !== "ADMIN" && (!deal.operatorId || principal.operatorId !== deal.operatorId)) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Titulaire hors de l’équipe vendeuse." });
+          }
+        }
+        if (mandate.intakePaymentReference) {
+          const payment = await ctx.db.intakePayment.findUnique({ where: { reference: mandate.intakePaymentReference } });
+          if (!payment || payment.amount !== mandate.amount || payment.currency !== mandate.currency) {
+            throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le paiement lié doit correspondre aux conditions approuvées." });
+          }
+        }
+        const pillar = await ctx.db.pillar.findFirst({ where: { strategyId: deal.sellerStrategyId, key: "v" } });
+        const catalogue = (pillar?.content as { produitsCatalogue?: Array<{ id?: string; nom?: string }> } | null)?.produitsCatalogue ?? [];
+        if (!catalogue.some(product => product.id === mandate.offerId && product.nom === mandate.offerName)) {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’offre doit appartenir au catalogue de la marque vendeuse." });
+        }
+        if (String(pillar?.currentVersion) !== mandate.offerVersion) throw new TRPCError({ code: "CONFLICT", message: "Version d’offre périmée." });
+      }
+      if (salesStep.command.type === "HANDOVER") {
+        const principal = await getOperatorContext(salesStep.command.sellerId);
+        if (principal.role !== "ADMIN" && principal.operatorId !== deal.operatorId) throw new TRPCError({ code: "FORBIDDEN", message: "Titulaire hors de l’équipe." });
+      }
+      return crm.applySalesStep(dealId, salesStep, { id: ctx.session.user.id, admin: ctx.session.user.role === "ADMIN" });
+    }
+    if (deal.commercial && data.value !== undefined) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le prix appartient au mandat approuvé." });
     return crm.updateDeal(dealId, data);
   }),
 
@@ -83,7 +147,7 @@ export const crmRouter = createTRPCRouter({
     requireOperator: true,
     inputSchema: z.object({ dealId: z.string(), notes: z.string().optional() }),
     caller: "crm:advanceDeal",
-  }).mutation(({ input }) => crm.advanceDeal(input.dealId, input.notes)),
+  }).mutation(async ({ ctx, input }) => { await assertLegacyStageChange(ctx, input.dealId); return crm.advanceDeal(input.dealId, input.notes); }),
 
   moveDealToStage: governedProcedure({
     kind: "LEGACY_CRM_MOVE_DEAL_TO_STAGE",
@@ -94,14 +158,14 @@ export const crmRouter = createTRPCRouter({
       notes: z.string().optional(),
     }),
     caller: "crm:moveDealToStage",
-  }).mutation(({ input }) => crm.moveDealToStage(input.dealId, input.stage, input.notes)),
+  }).mutation(async ({ ctx, input }) => { await assertLegacyStageChange(ctx, input.dealId); return crm.moveDealToStage(input.dealId, input.stage, input.notes); }),
 
   loseDeal: governedProcedure({
     kind: "LEGACY_CRM_LOSE_DEAL",
     requireOperator: true,
     inputSchema: z.object({ dealId: z.string(), reason: z.string() }),
     caller: "crm:loseDeal",
-  }).mutation(({ input }) => crm.loseDeal(input.dealId, input.reason)),
+  }).mutation(async ({ ctx, input }) => { await assertLegacyStageChange(ctx, input.dealId); return crm.loseDeal(input.dealId, input.reason); }),
 
   /**
    * Convert a WON deal into a Strategy (Brand Instance). L'`operatorId` est
@@ -117,6 +181,8 @@ export const crmRouter = createTRPCRouter({
     }),
     caller: "crm:convertToStrategy",
   }).mutation(async ({ ctx, input }) => {
+    const deal = await assertDealAccess(ctx, input.dealId);
+    if (deal.commercial) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "La vente de cette offre conserve le compte acheteur existant." });
     const operatorId = (await callerOperatorScope(ctx)) ?? undefined;
     return crm.convertDealToStrategy(input.dealId, input.userId, operatorId);
   }),
@@ -134,13 +200,11 @@ export const crmRouter = createTRPCRouter({
       noteType: z.enum(["GENERAL", "CALL", "MEETING", "EMAIL", "FOLLOWUP"]).default("GENERAL"),
     }),
     caller: "crm:addNote",
-  }).mutation(({ ctx, input }) =>
-    crm.addNote(input.dealId, ctx.session.user.id, input.content, input.noteType),
-  ),
+  }).mutation(async ({ ctx, input }) => { await assertDealAccess(ctx, input.dealId); return crm.addNote(input.dealId, ctx.session.user.id, input.content, input.noteType); }),
 
   listNotes: operatorProcedure
     .input(z.object({ dealId: z.string() }))
-    .query(({ input }) => crm.listNotes(input.dealId)),
+    .query(async ({ ctx, input }) => { await assertDealAccess(ctx, input.dealId); return crm.listNotes(input.dealId); }),
 
   addActivity: governedProcedure({
     kind: "LEGACY_CRM_ADD_ACTIVITY",
@@ -151,13 +215,11 @@ export const crmRouter = createTRPCRouter({
       description: z.string().min(1),
     }),
     caller: "crm:addActivity",
-  }).mutation(({ ctx, input }) =>
-    crm.addActivity(input.dealId, input.activityType, input.description, ctx.session.user.id),
-  ),
+  }).mutation(async ({ ctx, input }) => { await assertDealAccess(ctx, input.dealId); return crm.addActivity(input.dealId, input.activityType, input.description, ctx.session.user.id); }),
 
   listActivities: operatorProcedure
     .input(z.object({ dealId: z.string() }))
-    .query(({ input }) => crm.listActivities(input.dealId)),
+    .query(async ({ ctx, input }) => { await assertDealAccess(ctx, input.dealId); return crm.listActivities(input.dealId); }),
 
   // ============================================================================
   // QUERIES (opérateur/ADMIN uniquement, scopées opérateur)
@@ -165,11 +227,12 @@ export const crmRouter = createTRPCRouter({
 
   getDealDetails: operatorProcedure
     .input(z.object({ id: z.string() }))
-    .query(({ input }) => crm.getDealDetails(input.id)),
+    .query(async ({ ctx, input }) => { await assertDealAccess(ctx, input.id); return crm.getDealDetails(input.id); }),
 
   getDeal: operatorProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertDealAccess(ctx, input.id);
       return ctx.db.deal.findUniqueOrThrow({
         where: { id: input.id },
         include: {
@@ -188,17 +251,17 @@ export const crmRouter = createTRPCRouter({
       crm.listDeals({ stage: input.stage, limit: input.limit, operatorId: await callerOperatorScope(ctx) }),
     ),
 
-  getPipeline: operatorProcedure.query(async ({ ctx }) =>
-    crm.getPipelineOverview(await callerOperatorScope(ctx)),
+  getPipeline: operatorProcedure.input(z.object({ currency: z.string().regex(/^[A-Z]{3}$/).default("XAF") }).optional()).query(async ({ ctx, input }) =>
+    crm.getPipelineOverview(await callerOperatorScope(ctx), input?.currency),
   ),
 
   // ============================================================================
   // FORECASTING & METRICS
   // ============================================================================
 
-  getRevenueForecast: operatorProcedure.query(async ({ ctx }) =>
-    crm.getRevenueForecast(await callerOperatorScope(ctx)),
+  getRevenueForecast: operatorProcedure.input(z.object({ currency: z.string().regex(/^[A-Z]{3}$/).default("XAF") }).optional()).query(async ({ ctx, input }) =>
+    crm.getRevenueForecast(await callerOperatorScope(ctx), input?.currency),
   ),
 
-  getConversionMetrics: operatorProcedure.query(() => crm.getConversionMetrics()),
+  getConversionMetrics: operatorProcedure.query(async ({ ctx }) => crm.getConversionMetrics(await callerOperatorScope(ctx))),
 });
