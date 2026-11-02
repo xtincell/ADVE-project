@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.530", date: "2026-11-02", headline: "Un poste commercial pour conduire et reprendre vos ventes",
+    highlights: [
+      { emoji: "🤝", title: "Confier une offre précise à votre vendeur", body: "Dans le pipeline, rattachez l’affaire à la marque vendeuse, choisissez l’offre et ses conditions, puis désignez le commercial et le responsable de livraison." },
+      { emoji: "🧭", title: "Reprendre la conversation au bon endroit", body: "Le dossier conserve l’étape, l’arbre de vente et l’historique des échanges. L’accord, le paiement vérifié et la remise restent distincts, avec la prochaine action visible." },
+    ],
+  },
+  {
     version: "6.27.529", date: "2026-11-02", headline: "Un plan plus lisible, sans perdre votre indicateur principal",
     highlights: [
       { emoji: "🧭", title: "Garder votre indicateur principal à préciser", body: "Lorsqu’un seul indicateur principal est explicitement identifié, le plan conserve sa définition même si sa cible ou son rythme de suivi reste à décider. Les informations manquantes restent indiquées dans Engagement." },
