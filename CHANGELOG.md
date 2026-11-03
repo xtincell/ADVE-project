@@ -1,4 +1,5 @@
 ## v6.27.538 — fix(irrigation): restituer le contenu et refuser les faux succès (2026-11-03)
+- Clôture documentaire de production : PR #1127 ; source applicative et image de PR #1126 conservées.
 
 **Les lecteurs conservent la matière disponible sans transformer un brouillon en validation ni un contenu périmé en absence. Technique538 reçue en production ; réception métier complète ouverte.**
 
