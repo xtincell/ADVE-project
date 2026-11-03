@@ -20,8 +20,16 @@ métadonnées des piliers inchangés. Stress compilé : 277 reçues, 5 non reçu
 0 finding. Ces preuves ne reçoivent ni écran natif, ni SLO, ni production.
 Dernier delta UI : liste de rejets calculée vide distincte du champ absent,
 badge CALCULATED ; gouvernance/composant1 682 tests/170 fichiers verts après ce delta.
-Build final536 en cours ; les réceptions compilées précédentes ne couvrent pas
-ce dernier badge. Cascade réelle I, jalons Overton et compléments ADVE/roadmap ouverts.
+Reconstruction finale536 après badge exit0 (`source536-build-final.log`). Relecture
+exacte `source536-postbadge-http-received.json` sans mutation : Oracle106 ms,
+Word630 ms/37 contrôles sans inconnu, validation35 ms, éditeur31 ms et trois
+routes HTTP200 en198/65/77 ms ; contenu/métadonnées des piliers inchangés.
+Le rendu natif et la production restent non reçus, aucune latence ne vaut SLO.
+CI PostgreSQL : 597/598, ancien test exigeant l’absence de score corrigé pour
+contrôler score structurel/couverture non évaluée et confiance0 ; gardes KPI/objectifs
+conservées. Ciblé corrigé39/39 vert en2,53 s ; ce delta porte seulement
+l’assertion et la documentation, pas le métier compilé. CI complète verte non reçue.
+Cascade réelle I, jalons Overton et compléments ADVE/roadmap restent ouverts.
 
 Avant intégration, `source534-*` : 5 121/491, PG ciblé 20/2 (source/V/PAYER/concurrence D réellement
 refusée), valeurs humaines conservées ; deux contre-épreuves rouges puis 8 tests
@@ -54,9 +62,10 @@ omis des actions I est complété ; le sprint vérifie les identifiants de mitig
 Les tests du raccord et le recalcul via `pillar.actualize` prouvent ce raccord en
 fixture possédée : S seul modifié, score71 (20/28 évalués), 3 contrôles non évalués
 conservés, même synthèse dans Oracle. Pas de réparation reçue des données production.
-**Fermer** : reconstruction/réception du dernier badge, puis génération/cascade
-réelle ADVE → R/T/I → S, avec horizons, références, jalons Overton et calculs
-contrôlés, puis lecture serveur et écran hydraté. Une information
+**Fermer** : recevoir CI/image/runtime exacts et génération/cascade réelle
+ADVE → R/T/I → S, avec horizons, références, jalons Overton et calculs contrôlés,
+puis lecture serveur et écran hydraté. Reconstruction et relecture HTTP du dernier
+badge sont reçues localement ; elles ne ferment pas son observation native. Une information
 inférable manquante remonte au socle ADVE comme postulat qualifié, puis les
 dépendances sont recalculées sur les rails existants. Aucun remplissage manuel de S.
 **Responsable** : Core/Mestor et lecteurs S existants ; **effort** : recette bornée

@@ -50,8 +50,16 @@ métadonnées des piliers inchangés. Stress compilé : 277 reçues, 5 non reçu
 0 finding. Ces preuves ne reçoivent ni écran natif, ni SLO, ni production.
 Dernier delta UI : liste de rejets calculée vide distincte du champ absent,
 badge CALCULATED ; gouvernance/composant1 682 tests/170 fichiers verts après ce delta.
-Build final536 en cours ; les réceptions compilées précédentes ne couvrent pas
-ce dernier badge. Cascade réelle I, jalons Overton et compléments ADVE/roadmap ouverts.
+Reconstruction finale536 après badge exit0 (`source536-build-final.log`). Relecture
+exacte `source536-postbadge-http-received.json` sans mutation : Oracle106 ms,
+Word630 ms/37 contrôles sans inconnu, validation35 ms, éditeur31 ms et trois
+routes HTTP200 en198/65/77 ms ; contenu/métadonnées des piliers inchangés.
+Le rendu natif et la production restent non reçus, aucune latence ne vaut SLO.
+CI PostgreSQL : 597/598, ancien test exigeant l’absence de score corrigé pour
+contrôler score structurel/couverture non évaluée et confiance0 ; gardes KPI/objectifs
+conservées. Ciblé corrigé39/39 vert en2,53 s ; ce delta porte seulement
+l’assertion et la documentation, pas le métier compilé. CI complète verte non reçue.
+Cascade réelle I, jalons Overton et compléments ADVE/roadmap restent ouverts.
 
 Defaults/cohortes dispersées, marge coefficient/% et ROI borné : modèle V et calcul
 FinancialBrain commun raccordés, legacy conservé. Zéro et non-applicabilité connus
@@ -75,7 +83,8 @@ que le S enregistré. Score, couverture et détail des contrôles sont transmis
 au cockpit et à Oracle ; zéro legacy conservé, mitigation seulement si référence
 résolue. Quatre tests service/rendu nouveaux verts, inclus dans les5 148 tests/498 fichiers
 de l’état compilé précédent ; build536 exit0. Recalcul local S et lecture Oracle
-reçus, S seul modifié. Le dernier badge attend la reconstruction finale536.
+reçus, S seul modifié. Dernier badge reconstruit et relecture compilée536 reçue ;
+natif et production restent ouverts.
 L'extension du format I réutilise le gestionnaire d'appels existant, plafond de
 sortie4 800 ; ni nouvelle génération réelle ni réparation des références existantes
 reçues. Reprise réelle et natif restent ouverts dans RESIDUAL-DEBT.
@@ -88,7 +97,8 @@ Cause : une liste vide calculée et un champ absent traversaient le même rendu.
 Le cas tableau vide affiche « Aucune action rejetée » avec statut CALCULATED ;
 l'absence conserve son traitement normal. Les actions non retenues dans le scénario
 ne sont pas présentées comme rejetées. Gouvernance/composant1 682/170 verts après
-ce delta ; reconstruction finale536 en cours, natif et production non reçus.
+ce delta ; reconstruction finale536 exit0 et relecture compilée sans mutation
+reçues. Natifs et production non reçus ; CI en reprise, aucune clôture globale.
 
 
 ### 530 — cellules sous validation globale, correctif candidat (2026-11-02)

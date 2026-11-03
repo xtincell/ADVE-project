@@ -31,8 +31,16 @@ métadonnées des piliers inchangés. Stress compilé : 277 reçues, 5 non reçu
 0 finding. Ces preuves ne reçoivent ni écran natif, ni SLO, ni production.
 Dernier delta UI : liste de rejets calculée vide distincte du champ absent,
 badge CALCULATED ; gouvernance/composant1 682 tests/170 fichiers verts après ce delta.
-Build final536 en cours ; les réceptions compilées précédentes ne couvrent pas
-ce dernier badge. Cascade réelle I, jalons Overton et compléments ADVE/roadmap ouverts.
+Reconstruction finale536 après badge exit0 (`source536-build-final.log`). Relecture
+exacte `source536-postbadge-http-received.json` sans mutation : Oracle106 ms,
+Word630 ms/37 contrôles sans inconnu, validation35 ms, éditeur31 ms et trois
+routes HTTP200 en198/65/77 ms ; contenu/métadonnées des piliers inchangés.
+Le rendu natif et la production restent non reçus, aucune latence ne vaut SLO.
+CI PostgreSQL : 597/598, ancien test exigeant l’absence de score corrigé pour
+contrôler score structurel/couverture non évaluée et confiance0 ; gardes KPI/objectifs
+conservées. Ciblé corrigé39/39 vert en2,53 s ; ce delta porte seulement
+l’assertion et la documentation, pas le métier compilé. CI complète verte non reçue.
+Cascade réelle I, jalons Overton et compléments ADVE/roadmap restent ouverts.
 
 Candidat536 : `computePillarS` évalue le S nouvellement généré avec
 `validatePillarCrossReferences` puis `summarizeCrossReferences`, fonctions communes
