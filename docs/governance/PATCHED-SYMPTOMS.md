@@ -28,6 +28,17 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 540 — contexte métier sans positionnement tarifaire (2026-11-03)
+
+L’avancement intake appelait `extractKeyFromOption` sur `biz_positioning` absent
+alors que l’API peut recevoir le modèle métier seul : exception `.split` avant
+la sauvegarde. La lecture vérifie maintenant que le positionnement est une
+chaîne non vide et conserve sinon la valeur déjà enregistrée. Reproduction et
+réception PostgreSQL dans `intake-overton.postgres.test.ts`, sans appel externe.
+Commit dédié `fix(intake): tolerate absent business positioning`.
+Hypothèse de cause : contrat de formulaire obligatoire appliqué implicitement
+à un flux API partiel. Aucun défaut restant connu sur ce cas.
+
 ### 539 — états, lecture, focus et digest mal raccordés (2026-11-03)
 
 Notoria utilisait une autorisation de calcul pour dessiner une coche de production ;

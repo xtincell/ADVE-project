@@ -680,6 +680,7 @@ export interface CatalogueActionsSection {
 }
 
 export interface FenetreOvertonSection {
+  positioning?: import("@/domain/overton-positioning").OvertonPositioning;
   perceptionActuelle: string | null;
   perceptionCible: string | null;
   ecart: string | null;

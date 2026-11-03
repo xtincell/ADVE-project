@@ -65,6 +65,7 @@ const INTAKE_S: FieldRequirement[] = [];
 // ─── ENRICHED Stage (after RTIS cascade) ────────────────────────────────────
 
 const ENRICHED_A: FieldRequirement[] = [
+  { path: "overtonPositions", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "ai_generation", description: "Conviction, catégorie et marque : publics, départs inférés ou déclarés, cibles et vérifications selon les six zones Overton" },
   ...INTAKE_A,
   { path: "valeurs", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "ai_generation", description: "1-3 valeurs Schwartz (max 3)" },
   { path: "herosJourney", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "ai_generation", description: "3+ actes du parcours du heros" },

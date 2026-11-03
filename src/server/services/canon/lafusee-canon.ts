@@ -38,6 +38,59 @@ export const PILLAR_A = {
     "« On ne vend pas des moyens, on vend un état final mesuré. De la poussière à l'étoile. » — Alexandre Djengue, fondateur d'UPgraders",
   promesseFondamentale:
     "Transformer des marques en icônes culturelles en industrialisant l'accumulation de superfans qui font basculer la fenêtre d'Overton de leur secteur.",
+  overtonPositions: [
+  {
+    "id": "preuve-avant-promesse",
+    "kind": "CONVICTION",
+    "statement": "Un budget de marque doit être piloté par des effets traçables plutôt que par la seule activité facturée.",
+    "audience": "Dirigeants de marques africaines francophones",
+    "baseline": {
+      "zone": "ACCEPTABLE",
+      "basis": "INFERRED",
+      "reason": "Hypothèse de cadrage tirée de la doctrine et de la promesse du canon, sans mesure de soutien.",
+      "sourceRefs": [
+        "canon.lafusee.A.doctrine",
+        "canon.lafusee.A.promesseFondamentale"
+      ],
+      "verification": "Interroger le public défini sur la légitimité de la proposition et documenter les essais, objections et alternatives, avec date et échantillon."
+    },
+    "targetZone": "POPULAR"
+  },
+  {
+    "id": "pilotage-de-marque",
+    "kind": "CATEGORY",
+    "statement": "Une infrastructure de pilotage de marque permet au dirigeant de décider à partir de preuves.",
+    "audience": "Dirigeants de marques africaines francophones",
+    "baseline": {
+      "zone": "ACCEPTABLE",
+      "basis": "INFERRED",
+      "reason": "Hypothèse de cadrage tirée de la doctrine et de la promesse du canon, sans mesure de soutien.",
+      "sourceRefs": [
+        "canon.lafusee.A.doctrine",
+        "canon.lafusee.A.promesseFondamentale"
+      ],
+      "verification": "Interroger le public défini sur la légitimité de la proposition et documenter les essais, objections et alternatives, avec date et échantillon."
+    },
+    "targetZone": "POPULAR"
+  },
+  {
+    "id": "lafusee-instrument",
+    "kind": "BRAND",
+    "statement": "La Fusée peut devenir l’instrument de référence du dirigeant pour ce pilotage.",
+    "audience": "Dirigeants de marques africaines francophones",
+    "baseline": {
+      "zone": "ACCEPTABLE",
+      "basis": "INFERRED",
+      "reason": "Hypothèse de cadrage tirée de la doctrine et de la promesse du canon, sans mesure de soutien.",
+      "sourceRefs": [
+        "canon.lafusee.A.doctrine",
+        "canon.lafusee.A.promesseFondamentale"
+      ],
+      "verification": "Interroger le public défini sur la légitimité de la proposition et documenter les essais, objections et alternatives, avec date et échantillon."
+    },
+    "targetZone": "POPULAR"
+  }
+],
   missionStatement:
     "Fournir au marché créatif africain l'infrastructure méthodologique et technologique (protocole ADVE/RTIS, 7 Neteru, score /200) qui remplace l'artisanat par une trajectoire prouvable, du palier LATENT au palier ICONE.",
   doctrine: {

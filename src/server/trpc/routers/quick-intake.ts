@@ -23,6 +23,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@
 // ============================================================================
 
 import { z } from "zod";
+import { EntryOvertonClaimSchema } from "@/domain/overton-positioning";
 import { listIntakeDocuments, retainIntakeDocuments, readRetainedIntakeDocuments } from "@/server/services/quick-intake/document-input";
 import { readIntakeReportAccess } from "@/server/services/quick-intake/paid-fulfillment";
 import { previewIntakeDiagnostic, intakePillarFields, intakeEvidenceEntries, intakeReportContent } from "@/server/services/quick-intake/report-composer";
@@ -450,6 +451,7 @@ export const quickIntakeRouter = createTRPCRouter({
       businessModel: z.string().optional(),
       economicModel: z.string().optional(),
       positioning: z.string().optional(),
+      overtonClaim: EntryOvertonClaimSchema.optional(),
       source: z.string().optional(),
       // Attribution funnel (vague E) : UTM/referrer/click-ids structurés,
       // bornés (12 clés max côté client, valeurs ≤ 300 chars).
@@ -637,7 +639,10 @@ export const quickIntakeRouter = createTRPCRouter({
         where: { shareToken: input.token },
         select: { convertedToId: true },
       });
-      if (!intake?.convertedToId) return { status: "PENDING" as const };
+      if (!intake?.convertedToId) return { status: "PENDING" as const, overton: null };
+      const { readOvertonPositioning } = await import("@/domain/overton-positioning");
+      const pillars = await ctx.db.pillar.findMany({ where: { strategyId: intake.convertedToId, key: { in: ["a", "d"] } }, select: { key: true, content: true } });
+      const overton = readOvertonPositioning(Object.fromEntries(pillars.map(p => [p.key, p.content])));
       try {
         const { scoreBrand } = await import("@/server/services/seshat/scoreur");
         const { ARENA_LABELS } = await import("@/domain/scoreur");
@@ -645,6 +650,7 @@ export const quickIntakeRouter = createTRPCRouter({
         const measured = verdict.arenas.filter((a) => a.epreuveCount > 0).length;
         return {
           status: "OK" as const,
+          overton,
           force: Math.round(verdict.force * 10) / 10,
           outOf: 200,
           tier: verdict.tier,
@@ -663,7 +669,7 @@ export const quickIntakeRouter = createTRPCRouter({
           cappedReason: verdict.cappedReason,
         };
       } catch {
-        return { status: "PENDING" as const };
+        return { status: "PENDING" as const, overton };
       }
     }),
 
@@ -1648,7 +1654,7 @@ export const quickIntakeRouter = createTRPCRouter({
       const updatedIntake = await ctx.db.quickIntake.update({
         where: { id: input.id },
         data: {
-          responses: input.responses as Prisma.InputJsonValue,
+          responses: { ...input.responses, ...((intake.responses as Record<string, unknown> | null)?._overton && !input.responses._overton ? { _overton: (intake.responses as Record<string, unknown>)._overton } : {}) } as Prisma.InputJsonValue,
           ...(bizModel !== undefined ? { businessModel: bizModel } : {}),
           ...(bizPositioning !== undefined ? { positioning: bizPositioning } : {}),
           ...(bizNature !== undefined ? { brandNature: bizNature } : {}),

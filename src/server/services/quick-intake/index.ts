@@ -50,6 +50,7 @@ function classifyIntakeBrand(score: number): string {
   if (score <= 90) return "CULTE";
   return "ICONE";
 }
+import { EntryOvertonClaimSchema, entryOvertonConcept, type EntryOvertonClaim } from "@/domain/overton-positioning";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import { getAdaptiveQuestions, getBusinessContextQuestions } from "./question-bank";
@@ -72,6 +73,7 @@ export interface QuickIntakeStartInput {
   businessModel?: string;
   economicModel?: string;
   positioning?: string;
+  overtonClaim?: EntryOvertonClaim;
   source?: string;
   /** Attribution funnel (vague E) : UTM/referrer/click-ids structurés. */
   attribution?: Record<string, string>;
@@ -98,6 +100,7 @@ interface CanonicalIntakeContext {
   businessModel: string | null;
   economicModel: string | null;
   positioning: string | null;
+  overtonClaim?: EntryOvertonClaim;
 }
 
 /**
@@ -117,6 +120,10 @@ function sealCanonicalPillarFields(
   const sealed: Record<string, unknown> = { ...content };
   if (pillar === "a") {
     sealed.nomMarque = ctx.companyName;
+    if (ctx.overtonClaim) {
+      const others = Array.isArray(sealed.overtonPositions) ? sealed.overtonPositions.filter(p => p && typeof p === "object" && p.id !== "entry-conviction") : [];
+      sealed.overtonPositions = [entryOvertonConcept(ctx.overtonClaim), ...others];
+    }
     if (ctx.sector) sealed.secteur = ctx.sector;
     if (ctx.country) sealed.pays = ctx.country;
   }
@@ -178,7 +185,7 @@ export async function start(input: QuickIntakeStartInput) {
       source: input.source ?? (input.attribution?.utm_source || input.attribution?.ref),
       ...(input.attribution ? { attribution: input.attribution as Prisma.InputJsonValue } : {}),
       method: input.method ?? "LONG",
-      responses: {} as Prisma.InputJsonValue,
+      responses: (input.overtonClaim ? { _overton: input.overtonClaim } : {}) as Prisma.InputJsonValue,
       status: "IN_PROGRESS",
     },
   });
@@ -290,7 +297,7 @@ export async function advance(input: QuickIntakeAdvanceInput) {
   const allSteps = ["biz", "a", "d", "v", "e"];
   const answeredSteps = new Set(
     Object.entries(mergedResponses)
-      .filter(([, v]) => hasSubstantiveAnswer(v))
+      .filter(([k, v]) => allSteps.includes(k.split("_")[0] ?? k) && hasSubstantiveAnswer(v))
       .map(([key]) => key.split("_")[0]),
   );
   const nextPillar = allSteps.find((p) => !answeredSteps.has(p));
@@ -301,7 +308,8 @@ export async function advance(input: QuickIntakeAdvanceInput) {
     const bizData = (mergedResponses.biz ?? mergedResponses) as Record<string, unknown>;
     if (bizData.biz_model) {
       const bizModel = extractKeyFromOption(bizData.biz_model as string);
-      const bizPositioning = extractKeyFromOption(bizData.biz_positioning as string);
+      const bizPositioning = typeof bizData.biz_positioning === "string" && bizData.biz_positioning.trim()
+        ? extractKeyFromOption(bizData.biz_positioning) : undefined;
       const bizNature = bizData.biz_nature
         ? extractKeyFromOption(bizData.biz_nature as string)
         : undefined;
@@ -432,7 +440,7 @@ export async function complete(token: string) {
   // — exactly the empty-ADVE bug.
   const incomingResponses = (intake.responses as Record<string, unknown>) ?? {};
   const phasesWithContent = Object.entries(incomingResponses)
-    .filter(([, v]) => hasSubstantiveAnswer(v))
+    .filter(([k, v]) => ADVE_STORAGE_KEYS.some(key => key === (k.split("_")[0] ?? k)) && hasSubstantiveAnswer(v))
     .map(([k]) => k.split("_")[0] ?? k);
   if (phasesWithContent.length === 0) {
     throw new IncompleteIntakeError(phasesWithContent);
@@ -578,6 +586,7 @@ export async function complete(token: string) {
     businessModel: intake.businessModel,
     economicModel: intake.economicModel,
     positioning: intake.positioning,
+    overtonClaim: EntryOvertonClaimSchema.safeParse(responses._overton).success ? EntryOvertonClaimSchema.parse(responses._overton) : undefined,
   };
   const structuredContents = await extractStructuredPillarContent(responses, canonicalContext, { strategyId: strategy.id });
 
@@ -669,7 +678,7 @@ export async function complete(token: string) {
     if (sealedContent && Object.keys(sealedContent).length > 0) {
       const normalized = normalizePillarForIntake(pillar, sealedContent);
       const fieldProvenance = intakeFieldOrigins(pillar, normalized as Record<string, unknown>, responses[pillar],
-        pillar === "a" ? ["nomMarque", ...(canonicalContext.sector ? ["secteur"] : []), ...(canonicalContext.country ? ["pays"] : [])]
+        pillar === "a" ? ["nomMarque", ...(canonicalContext.sector ? ["secteur"] : []), ...(canonicalContext.country ? ["pays"] : []), ...(canonicalContext.overtonClaim && Array.isArray(normalized.overtonPositions) && normalized.overtonPositions.length === 1 ? ["overtonPositions"] : [])]
           : pillar === "v" ? [...(canonicalContext.businessModel ? ["businessModel"] : []), ...(canonicalContext.positioning ? ["positioningArchetype"] : []), ...(canonicalContext.economicModel ? ["economicModels"] : [])]
             : pillar === "e" && webFootprint ? ["webPresence"] : []);
       await writeGateway({
@@ -1302,6 +1311,7 @@ export async function regenerateAnalysis(
     businessModel: intake.businessModel,
     economicModel: intake.economicModel,
     positioning: intake.positioning,
+    overtonClaim: EntryOvertonClaimSchema.safeParse(responses._overton).success ? EntryOvertonClaimSchema.parse(responses._overton) : undefined,
   };
 
   // ── Parité complete() : l'empreinte se COLLECTE quand elle manque ──
@@ -1423,7 +1433,7 @@ export async function regenerateAnalysis(
       author: { system: "INGESTION", reason: `Quick intake regeneration: pillar ${pillar}` },
       options: { confidenceDelta: 0.05, fieldProvenance: intakeFieldOrigins(pillar,
         normalized as Record<string, unknown>, responses[pillar],
-        pillar === "a" ? ["nomMarque", ...(canonicalContext.sector ? ["secteur"] : []), ...(canonicalContext.country ? ["pays"] : [])]
+        pillar === "a" ? ["nomMarque", ...(canonicalContext.sector ? ["secteur"] : []), ...(canonicalContext.country ? ["pays"] : []), ...(canonicalContext.overtonClaim && Array.isArray(normalized.overtonPositions) && normalized.overtonPositions.length === 1 ? ["overtonPositions"] : [])]
           : pillar === "v" ? [...(canonicalContext.businessModel ? ["businessModel"] : []), ...(canonicalContext.positioning ? ["positioningArchetype"] : []), ...(canonicalContext.economicModel ? ["economicModels"] : [])]
             : pillar === "e" && webFootprint ? ["webPresence"] : []) },
     });

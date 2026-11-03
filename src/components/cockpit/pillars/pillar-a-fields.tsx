@@ -13,6 +13,8 @@
  * `fieldCertainty`. Les champs vides restent VISIBLES (« à saisir / à générer »).
  */
 
+import { OvertonPositioningView } from "@/components/shared/overton-positioning";
+import { readOvertonPositioning } from "@/domain/overton-positioning";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import {
   Section, ACard, EmptyBody, EmptyValue, TagRow, ObjCard, ProofList, MetricObj, MetricNum,
@@ -275,6 +277,8 @@ export function PillarAFields({
           <Statement label="Mission statement" value={v.missionStatement} status={st("missionStatement")} />
         </div>
       </Section>
+
+      <OvertonPositioningView value={readOvertonPositioning({ a: content })} compact />
 
       <Section title="ADN identitaire" sub="Archétypes, ikigai, citation fondatrice">
         <div className="ck-a-grid">

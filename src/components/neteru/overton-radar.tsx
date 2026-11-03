@@ -48,6 +48,8 @@ import { useId, useMemo, type ReactNode } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Radar as RadarIcon, PlugZap, CloudOff, Timer, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { OvertonPositioningView } from "@/components/shared/overton-positioning";
+import type { OvertonPositioning } from "@/domain/overton-positioning";
 import type { ConnectorResult, ConnectorDegradationReason, OvertonRadarSignal, OvertonStrategyPlan } from "@/domain";
 
 export type { OvertonRadarSignal } from "@/domain";
@@ -75,6 +77,7 @@ interface OvertonRadarProps extends VariantProps<typeof overtonRadarVariants> {
   /** Typed pivot signal — drives every visual state (P22-1, no UI-only flags). */
   readonly signal: ConnectorResult<OvertonRadarSignal>;
   readonly strategyPlan?: OvertonStrategyPlan;
+  readonly positioning?: OvertonPositioning;
   readonly instance: "full" | "teaser";
   readonly density?: "comfortable" | "compact";
   readonly className?: string;
@@ -388,7 +391,7 @@ function EvidenceFeed({ signal, instance }: { signal: OvertonRadarSignal; instan
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-export function OvertonRadar({ signal, strategyPlan, instance, density, className }: OvertonRadarProps) {
+export function OvertonRadar({ signal, strategyPlan, positioning, instance, density, className }: OvertonRadarProps) {
   // P22-1 invariant 1 : exhaustive state handling — no default/else fall-through.
   let body: ReactNode;
   const titleId = useId();
@@ -448,6 +451,7 @@ export function OvertonRadar({ signal, strategyPlan, instance, density, classNam
           <span>{mocked ? "Démo" : observedAt ? `Veille sectorielle · ${new Date(observedAt).toLocaleDateString()}` : "—"}</span>
         </div>
       </header>
+      {positioning && <div className="mb-5"><OvertonPositioningView value={positioning} compact={instance === "teaser"} /></div>}
       {strategyPlan && <div className="mb-5 rounded-lg border border-border p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h4 className="font-semibold">Le déplacement visé par votre stratégie</h4><span className="text-xs text-warning">{strategyPlan.stale ? "Plan à réactualiser" : "Postulat stratégique · à vérifier"}</span></div>
         <div className="grid gap-4 md:grid-cols-2">

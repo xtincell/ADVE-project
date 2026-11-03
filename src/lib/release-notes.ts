@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.540", date: "2026-11-03", headline: "Suivre ce que votre marque veut faire accepter",
+    highlights: [
+      { emoji: "🧭", title: "Trois sujets, six repères", body: "Distinguez l’idée que vous défendez, la place de votre catégorie et celle de votre marque. Chaque sujet possède un public, un départ, une cible et les preuves à rechercher." },
+      { emoji: "🔎", title: "Relier le plan aux observations", body: "Le plan et le rapport reprennent les mêmes repères. Une hypothèse reste identifiable jusqu’à sa vérification ; une preuve manquante ne signifie pas que votre idée est rejetée." },
+      { emoji: "🚀", title: "Commencer dès le premier diagnostic", body: "Vous pouvez formuler votre conviction dès l’entrée et conserver ce repère dans votre dossier, même si votre diagnostic est encore partiel. Cette déclaration ne gonfle pas votre score mesuré." },
+    ],
+  },
+  {
     version: "6.27.539", date: "2026-11-03", headline: "Savoir quoi relancer et lire sans interruption",
     highlights: [
       { emoji: "🧭", title: "Comprendre où en est votre dossier", body: "Les analyses déjà produites sont distinguées de celles qui doivent être actualisées. Le bouton de reprise explique les effets du calcul avant son lancement ; rechercher de nouvelles propositions reste une action distincte." },

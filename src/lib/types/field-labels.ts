@@ -142,6 +142,7 @@ const LABELS: Record<string, string> = {
   sacredRituals: "Rituels sacres", canon: "Canon", extensionRules: "Regles d'extension",
   captureSystem: "Systeme de capture", sharedHatred: "Haine partagee",
   bondingRituals: "Rituels de cohesion", fraternityFuel: "Carburant de fraternite",
+  overtonPositions: "Conviction, catégorie et marque",
   overtonMap: "Carte Overton", ourPosition: "Notre position",
   enemyPosition: "Position ennemie", battleground: "Terrain de combat",
   shiftDirection: "Direction du shift", enemyBrands: "Marques ennemies",

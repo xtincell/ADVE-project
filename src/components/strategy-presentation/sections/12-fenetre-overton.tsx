@@ -1,6 +1,7 @@
 "use client";
 
 import type { FenetreOvertonSection } from "@/server/services/strategy-presentation/types";
+import { OvertonPositioningView } from "@/components/shared/overton-positioning";
 import { DataTable } from "../shared/data-table";
 import { initiativeBudgetLabel, aggregateInitiativeSet } from "@/lib/strategy/roadmap-routes";
 
@@ -10,6 +11,7 @@ export function FenetreOverton({ data }: Props) {
   const dash = data.computedDashboard;
   return (
     <div className="space-y-6">
+      {data.positioning && <OvertonPositioningView value={data.positioning} />}
       {/* Tableau de bord calculé (ADR-0088) — agrégations, aucune saisie */}
       {dash && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

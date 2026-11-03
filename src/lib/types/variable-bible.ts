@@ -180,6 +180,18 @@ export const BIBLE_A: Record<string, VariableSpec> = {
     format: "Array d'objets { value (enum Schwartz parmi les 10: POUVOIR, ACCOMPLISSEMENT, HEDONISME, STIMULATION, AUTONOMIE, UNIVERSALISME, BIENVEILLANCE, TRADITION, CONFORMITE, SECURITE), customName, rank, justification (50+ chars), costOfHolding }",
     rules: ["3 maximum (une marque forte se concentre)", "Minimum 1 valeur", "Chaque valeur doit avoir une justification spécifique, pas générique", "Le costOfHolding = ce que ça coûte de maintenir cette valeur", "Les tensions entre valeurs (tensionWith) enrichissent l'identité"],
   },
+  overtonPositions: {
+    description: "Les positions traçables de la conviction incarnée, de la catégorie et de la marque, par public et territoire",
+    format: "Array { id stable, kind CONVICTION|CATEGORY|BRAND, statement, audience, countryCode?, editorialRole?, opposedStatement?, baseline { zone, basis DECLARED|INFERRED, reason, sourceRefs[], verification }, targetZone }. Zones : UNTHINKABLE, RADICAL, ACCEPTABLE, SENSIBLE, POPULAR, POLICY.",
+    rules: [
+      "Séparer la conviction défendue, la place de la catégorie et la préférence pour la marque ; ne jamais substituer l'une à l'autre.",
+      "Déduire le postulat de départ de l'ADVE et de sa documentation, expliquer ce choix et donner une consigne de vérification. Une inférence n'est pas un résultat observé.",
+      "Repères : impensable = illégitime ; radical = minoritaire mais discuté ; acceptable = option légitime ; raisonnable = utile et justifié ; populaire = soutien large dans un public défini ; institué = pratiques, règles ou standards durables.",
+      "Conserver l'id lors d'une révision ; une hausse de visibilité, l'absence d'article ou une note ADVE ne prouve jamais une migration d'acceptabilité.",
+      "La cible peut être plus basse ou plus haute que le départ. Aucun montant, date d'observation ni pourcentage de soutien ne doit être inventé.",
+    ],
+    feedsInto: ["s.overtonMilestones", "s.fenetreOverton", "t.overtonPosition"],
+  },
   enemy: {
     description: "L'ennemi déclaré de la marque — ce contre quoi elle se bat",
     format: "Objet { name, manifesto, narrative, overtonMap { ourPosition, enemyPosition, battleground, shiftDirection } }",
