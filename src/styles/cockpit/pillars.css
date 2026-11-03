@@ -658,12 +658,21 @@
 
 /* sprint 90j */
 .ck-s-sprint { display: flex; flex-direction: column; gap: 8px; }
-.ck-s-sprint__row { display: grid; grid-template-columns: auto 1.4fr auto; gap: 12px; align-items: center; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 11px 14px; background: var(--surface-page); }
+.ck-s-sprint__row { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; align-items: start; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 11px 14px; background: var(--surface-page); }
 @media (max-width: 640px){ .ck-s-sprint__row { grid-template-columns: auto 1fr; } .ck-s-sprint__meta { grid-column: 2; } }
 .ck-s-sprint__p { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 13px; background: #f472b6; color: var(--up-ink-1); flex: none; }
-.ck-s-sprint__action { font-weight: 600; font-size: 13.5px; color: var(--text-primary); }
-.ck-s-sprint__meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.ck-s-sprint__kpi { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+.ck-s-sprint__action { margin: 0; min-width: 0; font-weight: 600; font-size: 15px; line-height: 1.65; overflow-wrap: anywhere; color: var(--text-primary); }
+.ck-s-sprint__meta { grid-column: 2; display: flex; flex-wrap: wrap; gap: 10px; align-items: start; min-width: 0; }
+.ck-s-sprint__kpi { flex-basis: 100%; margin: 0; font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; color: var(--text-secondary); }
+.ck-s-sprint__kpi strong { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 3px; }
+.ck-s-targets { display: grid; gap: 18px; }
+.ck-s-targets section { border: 1px solid var(--border); border-radius: var(--radius-md); padding: 18px; min-width: 0; }
+.ck-s-targets h4 { font-size: 16px; font-weight: 600; margin-bottom: 5px; }
+.ck-s-targets p { font-size: 13px; line-height: 1.6; color: var(--text-secondary); }
+.ck-s-targets dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
+.ck-s-targets dt { color: var(--text-muted); font-size: 12px; }
+.ck-s-targets dd { font-family: var(--font-mono); font-size: 22px; margin: 4px 0 0; }
+@media (max-width: 640px) { .ck-s-targets dl { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .ck-s-sprint__risk { font-family: var(--font-mono); font-size: 10.5px; color: #f472b6; }
 
 /* dashboard KPI */

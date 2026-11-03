@@ -193,12 +193,12 @@ const ENRICHED_I: FieldRequirement[] = [
 
 const ENRICHED_S: FieldRequirement[] = [
   { path: "fenetreOverton", validator: "is_object", derivable: true, derivationSource: "rtis_cascade", description: "Fenetre d'Overton — COEUR DE S (perception actuelle/cible/ecart + strategie deplacement)" },
-  { path: "axesStrategiques", validator: "min_items", validatorArg: 2, derivable: true, derivationSource: "rtis_cascade", description: "2+ axes strategiques" },
-  { path: "sprint90Days", validator: "min_items", validatorArg: 5, derivable: true, derivationSource: "rtis_cascade", description: "5+ actions planifiees avec devotionImpact" },
+  { path: "axesStrategiques", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "rtis_cascade", description: "Axes issus des actions retenues, sans quota artificiel" },
+  { path: "sprint90Days", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "rtis_cascade", description: "Actions retenues pour le sprint, avec critere de reussite" },
   { path: "facteursClesSucces", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "rtis_cascade", description: "3+ facteurs cles de succes" },
-  { path: "roadmap", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "rtis_cascade", description: "3+ phases de roadmap avec objectifDevotion" },
+  { path: "roadmap", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "rtis_cascade", description: "Phases utiles aux actions retenues avec objectifDevotion" },
   // Transitions I→S
-  { path: "selectedFromI", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "rtis_cascade", description: "3+ actions choisies depuis I.catalogue avec tracabilite" },
+  { path: "selectedFromI", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "rtis_cascade", description: "Actions choisies depuis I.catalogue avec tracabilite" },
   { path: "devotionFunnel", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "rtis_cascade", description: "Objectifs Devotion quantifies par phase" },
   { path: "overtonMilestones", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "rtis_cascade", description: "Jalons de deplacement de la fenetre d'Overton" },
 ];
@@ -248,8 +248,8 @@ const NEEDS_HUMAN_BY_PILLAR: Record<string, Set<string>> = {
 const COMPLETE_OPTIONAL_BY_PILLAR: Record<string, Set<string>> = {
   a: new Set<string>(),
   d: new Set<string>(),
-  v: new Set<string>(["productSystem", "financialModel"]),
-  e: new Set<string>(),
+  v: new Set<string>(["productSystem", "financialModel", "strategyBudgetModel"]),
+  e: new Set<string>(["devotionProjection"]),
   r: new Set<string>(),
   t: new Set<string>(),
   i: new Set<string>(),
@@ -751,7 +751,7 @@ export function deriveSchemaRequirements(pillarKey: string): FieldRequirement[] 
     reqs.push({
       path,
       validator: validatorFinal,
-      validatorArg: arg,
+      validatorArg: pillarKey.toLowerCase() === "s" && path === "rejectedFromI" ? 0 : arg,
       derivable: !isHuman,
       derivationSource: isHuman ? undefined : "ai_generation",
       description: `Schema ${pillarKey.toUpperCase()}.${path}`,

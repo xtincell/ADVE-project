@@ -91,7 +91,7 @@ export function isFieldSatisfied(content: Record<string, unknown>, req: FieldReq
       if (!Array.isArray(value)) {
         return typeof value === "object" && value !== null && Object.keys(value).length > 0;
       }
-      if (value.length < 1) return false;
+      if (value.length < (req.validatorArg === 0 ? 0 : 1)) return false;
       const required = req.requiredItemKeys ?? [];
       if (required.length === 0) return true; // dégrade en "≥1 item"
       const cellFilled = (v: unknown): boolean => {

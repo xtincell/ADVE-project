@@ -1,3 +1,12 @@
+## v6.27.537 — 2026-11-03 — Stratégie chiffrée et sprint lisible
+
+- La maturité de Stratégie suit les actions retenues : un sprint court ne requiert plus cinq actions artificielles pour être complet.
+
+- Les hypothèses V/E documentées alimentent le budget du scénario, ses cinq postes, les objectifs d’engagement et leur financement. Fourchettes, horizons, périodes et propositions restent explicites.
+- Le cockpit et le budget Oracle présentent la même projection. Le sprint conserve toute la largeur pour l’action, son critère de réussite et son budget.
+- Les modèles sont admis par l’amendement existant avec sources/version ; le parcours audience vérifie son persona D. Aucun résultat observé ni accord humain n’est fabriqué.
+- Une liste explicite sans action rejetée satisfait le champ correspondant. ADR-0235 ; réception production suivie séparément.
+
 ## v6.27.536 — Finance ADVE et cohérence de la stratégie (3 novembre 2026)
 
 - Les prémisses financières versionnées dans V alimentent FinancialBrain, les lecteurs V, Oracle, Catalyse, exports, bindings, contexte RTIS, maturité, contrôles et allocation. Même cohorte payeuse, devise et horizon ; communication comprise dans les charges, trésorerie conditionnelle. Les valeurs humaines antérieures sont conservées et les versions/source contrôlées avant amendement.

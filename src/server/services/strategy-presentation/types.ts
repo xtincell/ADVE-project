@@ -500,6 +500,9 @@ export interface BudgetSection {
    * que l'opérateur ait chiffré son enveloppe via `OPERATOR_AMEND_PILLAR`.
    */
   globalBudget: number | null;
+  strategyBudgetSummary?: import("@/lib/types/pillar-schemas").InitiativeBudgetSummary;
+  budgetByDevotion?: Record<string, number>;
+  devotionFunnel?: Array<Record<string, unknown>>;
   /**
    * Phase 18 (ADR-0043) — Ventilation budgétaire par poste, lu depuis
    * `pillarS.budgetBreakdown`. Optionnel, présent si renseigné.

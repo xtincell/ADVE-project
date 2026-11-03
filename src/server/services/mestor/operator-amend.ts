@@ -28,7 +28,8 @@ import type { Intent, IntentResult } from "./intents";
 import { applyPillarCoherenceGate } from "@/server/services/notoria/gates";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import { db } from "@/lib/db";
-import { FinancialWorkingModelSchema } from "@/domain/financial-document";
+import { FinancialWorkingModelSchema, StrategyBudgetModelSchema } from "@/domain/financial-document";
+import { DevotionProjectionSchema } from "@/domain/devotion-ladder";
 import { documentEdition, sourceIsUsable } from "@/domain/source-document";
 import { resolveBrandSource } from "@/server/services/ingestion-pipeline/source-usage";
 import { SourceReceiptSchema } from "@/domain/source-certainty";
@@ -104,6 +105,32 @@ export async function operatorAmendPillar(intent: AmendIntent, context?: { inten
   }
 
   const currentContent = (pillar.content ?? {}) as Record<string, unknown>;
+  const planningField = pillarKey === "v" ? "strategyBudgetModel" : pillarKey === "e" ? "devotionProjection" : null;
+  if (planningField && field.startsWith(`${planningField}.`)) return {
+    status: "VETOED", reason: "PLANNING_MODEL_WHOLE_REQUIRED", summary: "Amendez les hypothèses de planification ensemble pour conserver leurs références et dépendances." };
+  if (planningField && field === planningField) {
+    const parsed = planningField === "strategyBudgetModel"
+      ? StrategyBudgetModelSchema.safeParse(proposedValue) : DevotionProjectionSchema.safeParse(proposedValue);
+    if (!parsed.success || expectedVersion === undefined) return {
+      status: "VETOED", reason: "PLANNING_MODEL_INCOMPLETE", summary: "Relisez la version et complétez les hypothèses de planification justifiées." };
+    const model = parsed.data;
+    const amounts = "spectators" in model ? [model.spectators, ...Object.values(model.rates)] : [];
+    const receipts = [...(sourceReceipts ?? []), model.source, ...amounts.flatMap(a => a.sources)];
+    const hashes = new Map<string, string>();
+    for (const receipt of receipts) {
+      if (hashes.has(receipt.sourceId) && hashes.get(receipt.sourceId) !== receipt.contentHash) return {
+        status: "VETOED", reason: "SOURCE_RECEIPT_CONFLICT", summary: "Alignez les versions des pièces avant de modifier les hypothèses." };
+      hashes.set(receipt.sourceId, receipt.contentHash);
+    }
+    sourceReceipts = [...hashes].map(([sourceId, contentHash]) => ({ sourceId, contentHash }));
+    if ("cohortPersonaId" in model) {
+      const d = await db.pillar.findUnique({ where: { strategyId_key: { strategyId, key: "d" } }, select: { content: true, currentVersion: true } });
+      const profiles = (d?.content as { personas?: Array<{ id?: string; actorRoles?: string[] }> } | null)?.personas;
+      if (!profiles?.some(p => p.id === model.cohortPersonaId && p.actorRoles?.includes("COMMUNICATION_AUDIENCE"))) return {
+        status: "VETOED", reason: "PLANNING_AUDIENCE_REQUIRED", summary: "Reliez ce parcours au persona audience défini dans la Distinction." };
+      expectedPillarVersions = { d: d!.currentVersion };
+    }
+  }
   if (pillarKey === "v" && currentContent.financialModel != null && (field === "unitEconomics" || field.startsWith("unitEconomics."))) {
     return { status: "VETOED", reason: "FINANCIAL_PREMISES_REQUIRED", summary: "Ces résultats sont calculés. Modifiez les hypothèses du modèle financier pour les réactualiser partout." };
   }

@@ -1,6 +1,46 @@
 import { z } from "zod";
 import { SourceReceiptSchema } from "./source-certainty";
 
+export const STRATEGY_COST_CATEGORIES = ["production", "media", "talent", "logistics", "technology"] as const;
+export const PlanningRangeSchema = z.object({ min: z.number().finite().nonnegative(), max: z.number().finite().nonnegative() })
+  .refine(v => v.max >= v.min, "La borne haute doit couvrir la borne basse.");
+const planningWindow = z.object({ startMonth: z.number().int().positive(), endMonth: z.number().int().positive() })
+  .refine(v => v.endMonth >= v.startMonth, "La fin précède le début.");
+/** Explicit ADVE premises, never an approved spend or a second ledger. */
+export const StrategyBudgetModelSchema = z.object({
+  schema: z.literal("adve-strategy-budget-v1"), source: SourceReceiptSchema,
+  currency: z.string().regex(/^[A-Z]{3}$/), qualification: z.enum(["PROPOSED", "DECLARED"]),
+  horizonMonths: z.number().int().positive().max(120), daysPerMonth: z.number().int().min(28).max(31),
+  envelopePolicy: z.literal("UPPER_BOUND"), note: z.string().trim().min(1),
+  phaseWindows: z.record(z.enum(["SPRINT_90", "PHASE_1", "PHASE_2", "LONG_TERM"]), planningWindow),
+  profiles: z.array(z.object({
+    channel: z.string().trim().min(1), fallbackRange: PlanningRangeSchema,
+    fallbackPeriod: z.enum(["ONE_OFF", "MONTHLY", "QUARTERLY", "YEARLY"]).optional(),
+    adHocOccurrences: z.number().int().positive(), note: z.string().trim().min(1),
+    categoryShares: z.record(z.enum(STRATEGY_COST_CATEGORIES), z.number().finite().min(0).max(1)),
+  })).min(1),
+}).superRefine((v, ctx) => {
+  const channels = new Set<string>();
+  v.profiles.forEach((p, i) => {
+    if (channels.has(p.channel)) ctx.addIssue({ code: "custom", path: ["profiles", i, "channel"], message: "Canal dupliqué." });
+    channels.add(p.channel);
+    if (Math.abs(Object.values(p.categoryShares).reduce((s, x) => s + x, 0) - 1) > 1e-8)
+      ctx.addIssue({ code: "custom", path: ["profiles", i, "categoryShares"], message: "La ventilation doit couvrir exactement 100 %." });
+  });
+  for (const [key, window] of Object.entries(v.phaseWindows)) if (window.endMonth > v.horizonMonths)
+    ctx.addIssue({ code: "custom", path: ["phaseWindows", key], message: "La phase dépasse l’horizon du modèle." });
+});
+export const StrategyBudgetEnvelopeSchema = z.object({
+  min: z.number().nonnegative(), max: z.number().nonnegative(), currency: z.string(), horizonMonths: z.number(),
+  qualification: z.enum(["PROPOSED", "DECLARED"]), note: z.string(), source: SourceReceiptSchema,
+  byCategory: z.record(z.enum(STRATEGY_COST_CATEGORIES), PlanningRangeSchema),
+  byPhase: z.record(z.string(), PlanningRangeSchema),
+  lines: z.array(z.object({ sourceRef: z.string(), action: z.string(), occurrences: z.number(),
+    min: z.number(), max: z.number(), period: z.string(), phase: z.string(),
+    byCategory: z.record(z.enum(STRATEGY_COST_CATEGORIES), PlanningRangeSchema) })),
+});
+export type StrategyBudgetEnvelope = z.infer<typeof StrategyBudgetEnvelopeSchema>;
+
 /** A versioned FINANCE source, not a new ledger or an adopted business model. */
 export const FinancialAmountSchema = z.object({
   value: z.number().finite().nonnegative().nullable(),

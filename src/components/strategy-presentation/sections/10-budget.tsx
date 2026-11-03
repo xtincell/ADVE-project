@@ -1,5 +1,6 @@
 "use client";
 
+import { BudgetPanel, DevotionTargets } from "@/components/cockpit/pillars/pillar-s-fields";
 import type { BudgetSection } from "@/server/services/strategy-presentation/types";
 import { MetricCard } from "../shared/metric-card";
 import { DataTable } from "../shared/data-table";
@@ -23,6 +24,8 @@ export function BudgetDisplay({ data }: Props) {
           {ue.commentaire ? <p className="mt-2 whitespace-pre-line text-xs text-foreground-muted">{ue.commentaire}</p> : null}
         </div>
       )}
+      {data.globalBudget !== null || data.strategyBudgetSummary ? <BudgetPanel breakdown={data.budgetBreakdown} byDevotion={data.budgetByDevotion} total={data.globalBudget} summary={data.strategyBudgetSummary} status="CALCULATED" /> : null}
+      <DevotionTargets items={data.devotionFunnel} />
       {data.campaignBudgets.length > 0 && (
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Budgets par campagne</h3>

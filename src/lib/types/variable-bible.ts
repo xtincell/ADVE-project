@@ -425,6 +425,7 @@ export const BIBLE_D: Record<string, VariableSpec> = {
 // ── PILIER V — VALEUR ─────────────────────────────────────────────────
 
 export const BIBLE_V: Record<string, VariableSpec> = {
+  strategyBudgetModel: { description: "Prémisses de chiffrage du plan : horizon, fenêtres de phase et ventilation des responsabilités par canal", format: "Objet versionné : source, currency, qualification, horizonMonths, daysPerMonth, envelopePolicy UPPER_BOUND, phaseWindows, profiles (channel, fallbackRange, categoryShares, adHocOccurrences, note), note", editableMode: "STRATEGIC_REWRITE", rules: ["Postulats qualifiés et sourcés ; une estimation ne vaut ni devis ni dépense", "Ventilation exacte de 100 % ; borne haute prudente distincte de la fourchette"] },
   produitsCatalogue: {
     description: "Le catalogue complet des produits/services de la marque",
     format: "Array d'objets { nom, categorie (enum), prix (scalaire optionnel), conditionsTarifaires? (texte déclaré : périodes, HT/TTC, options, état de publication), cout, margeUnitaire, gainClientConcret, lienPromesse, segmentCible, phaseLifecycle (enum) }",
@@ -557,6 +558,7 @@ export const BIBLE_V: Record<string, VariableSpec> = {
 // ── PILIER E — ENGAGEMENT ─────────────────────────────────────────────
 
 export const BIBLE_E: Record<string, VariableSpec> = {
+  devotionProjection: { description: "Prémisses du parcours chiffré de la cohorte audience, distinct des clients payeurs et des partenaires", format: "Objet : source, qualification, cohortPersonaId, cohort, observationWindow, spectators, rates (interest, participation, engagement, advocacy, prescription), phases (phase, scale, note), note", editableMode: "STRATEGIC_REWRITE", rules: ["Coefficients qualifiés entre 0 et 1 ; objectifs sans observation fabriquée", "La projection est calculée dans S et les lecteurs Oracle"] },
   promesseExperience: {
     description: "L'expérience que chaque interaction avec la marque garantit",
     format: "1 phrase, orientée sensation/émotion du client",
