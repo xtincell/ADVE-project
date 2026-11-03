@@ -28,6 +28,10 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 536 — plafond mémoire du build Lighthouse (2026-11-03)
+
+Le job125842391344/run41613896170 échoue par OOM TypeScript après webpack réussi : plafond Node4 GiB trop bas pour ce build. Ajustement borné à `NODE_OPTIONS=--max-old-space-size=6144`, déjà utilisé par le Dockerfile, sans supprimer de contrôle ni modifier le runtime VPS. Hypothèse de cause : écart de capacité mémoire entre les deux recettes de build. Réception CI du head corrigé encore ouverte ; prochain run comme déclencheur, suivi dans RESIDUAL-DEBT.
+
 ### 536 — prémisses financières reprises, preuves antérieures attribuées (2026-11-03)
 
 Candidat 536 après les livraisons commerciales #1120/e09a808fa et #1122/f77fe2dc8,

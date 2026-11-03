@@ -60,6 +60,9 @@ jobs:
       # Match the production image compiler; Turbopack's JetBrains font query
       # failed before Lighthouse could run (41414616465, 2026-11-02).
       - run: npm run build -- --webpack
+        env:
+          # Match Dockerfile: TypeScript compilation exceeds Node's default 4 GiB.
+          NODE_OPTIONS: --max-old-space-size=6144
       # `output: standalone` (next.config.ts) : `next start` refuse de servir —
       # on lance server.js émis par le build, avec static/ et public/ copiés à
       # côté, exactement comme le Dockerfile de prod.

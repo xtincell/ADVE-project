@@ -1,3 +1,7 @@
+## CI536 — réception Lighthouse après ajustement mémoire (2026-11-03)
+
+Le run41613896170, job125842391344, termine webpack puis manque de mémoire pendant TypeScript avec un plafond Node de4 GiB (`pr536-lighthouse-failure`). Le build Lighthouse est aligné sur `NODE_OPTIONS=--max-old-space-size=6144`, comme le Dockerfile ; aucun contrôle supprimé et aucune modification du runtime VPS. **Fermer** par réception verte du job sur le head corrigé ; **responsable** : livraison/CI existante, **effort** : un run ciblé, **déclencheur** : prochain run CI. Réception encore ouverte ; la compilation webpack seule ne la remplace pas.
+
 ## 536 — validation intégrée, roadmap et readiness globale ouvertes (2026-11-03)
 
 Candidat 536 après les livraisons commerciales #1120/e09a808fa et #1122/f77fe2dc8,
