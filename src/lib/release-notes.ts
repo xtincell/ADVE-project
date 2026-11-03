@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.541", date: "2026-11-03", headline: "Réactualiser votre Oracle en un clic",
+    highlights: [
+      { emoji: "🔄", title: "Reprendre les sections à actualiser", body: "Le bouton principal reprend les sections périmées, manquantes ou en échec et conserve celles qui sont déjà à jour. Les options permettent toujours de choisir une autre portée." },
+      { emoji: "📖", title: "Lire un état fidèle à votre document", body: "Les sections rédigées restent comptées même lorsqu’elles doivent être actualisées. Un journal vide dans votre onglet ne laisse plus croire que le document attend sa première génération." },
+    ],
+  },
+  {
     version: "6.27.540", date: "2026-11-03", headline: "Suivre ce que votre marque veut faire accepter",
     highlights: [
       { emoji: "🧭", title: "Trois sujets, six repères", body: "Distinguez l’idée que vous défendez, la place de votre catégorie et celle de votre marque. Chaque sujet possède un public, un départ, une cible et les preuves à rechercher." },

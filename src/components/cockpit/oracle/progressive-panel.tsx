@@ -22,7 +22,7 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { useOracleStream } from "@/hooks/use-oracle-stream";
@@ -52,6 +52,9 @@ const SCOPE_OPTIONS: ReadonlyArray<{ value: AssembleScope; label: string; hint: 
 
 export interface OracleProgressivePanelProps {
   strategyId: string;
+  assemblyPending?: boolean;
+  generationAllowed?: boolean;
+  onActivityChange?: (busy: boolean) => void;
   /**
    * Matière réellement présente par section (`strategyPresentation.completeness`),
    * indexée par identifiant de section.
@@ -67,7 +70,7 @@ export interface OracleProgressivePanelProps {
 }
 
 export function OracleProgressivePanel(props: OracleProgressivePanelProps): React.ReactElement {
-  const { strategyId, contentFillById } = props;
+  const { strategyId, contentFillById, assemblyPending = false, generationAllowed = true, onActivityChange } = props;
 
   // ── Data : DB persisté + live stream ──────────────────────────────
   const sectionsQuery = trpc.oracle.listSections.useQuery(
@@ -121,9 +124,11 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
     return tally;
   }, [sections]);
 
-  const isAssemblerRunning = assembleMutation.isPending || stream.assemblerState.phase === "running";
-  const anyMutationPending =
-    generateMutation.isPending || retryMutation.isPending || assembleMutation.isPending;
+  const localActivity = generateMutation.isPending || retryMutation.isPending || assembleMutation.isPending || stream.assemblerState.phase === "running";
+  const isAssemblerRunning = assemblyPending || assembleMutation.isPending || stream.assemblerState.phase === "running";
+  const anyMutationPending = assemblyPending || localActivity || stats.generating > 0;
+  useEffect(() => { onActivityChange?.(localActivity); }, [localActivity, onActivityChange]);
+  const advancedCount = scope === "ALL" ? sections.length : scope === "MISSING" ? stats.pending : stats.stale + stats.failed;
   // Founders are not operators: oracle.* generation is operator-only (init.ts).
   // Disable the controls + show a read-only banner instead of click→FORBIDDEN.
   // Since ADR-0125 there is no legacy founder-triggerable generation path.
@@ -168,12 +173,14 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
           </p>
         ) : null}
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <details className="mt-3">
+          <summary className="cursor-pointer text-sm text-foreground-secondary">Options de rédaction par section</summary>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => assembleMutation.mutate({ strategyId, scope })}
-            disabled={anyMutationPending || !canOperate}
-            className="flex items-center gap-2 rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-error disabled:opacity-40"
+            disabled={anyMutationPending || !canOperate || !generationAllowed || advancedCount === 0}
+            className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-raised disabled:opacity-40"
             title={`Rédige les sections (${scope === "ALL" ? "toutes" : scope === "MISSING" ? "les manquantes" : "celles à réactualiser"}) — chacune est produite puis vérifiée séparément.`}
           >
             {isAssemblerRunning ? (
@@ -222,11 +229,14 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
 
           {stream.error && (
             <span className="rounded-md border border-warning/40 bg-warning/15 px-2 py-1 text-2xs text-warning">
-              stream: {stream.error}
+              Suivi en direct interrompu. Les états enregistrés restent disponibles.
             </span>
           )}
         </div>
 
+        </details>
+
+        {assembleMutation.error && <p role="alert" className="mt-2 text-sm text-error">La rédaction a échoué : {assembleMutation.error.message}</p>}
         {/* Assembler progress bar (live) */}
         {stream.assemblerState.phase === "running" && stream.assemblerState.total ? (
           <div className="mt-3 space-y-1">
@@ -255,7 +265,12 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
       </div>
 
       {/* Live console */}
-      <OracleLiveConsole log={stream.log} isStreaming={stream.isStreaming} />
+      {(stream.log.length > 0 || anyMutationPending) && (
+        <details open={anyMutationPending}>
+          <summary className="cursor-pointer text-sm text-foreground-secondary">Journal de cette session</summary>
+          <OracleLiveConsole log={stream.log} isStreaming={stream.isStreaming} emptyHint="Actualisation demandée — en attente du premier résultat…" />
+        </details>
+      )}
 
       {/* Section grid */}
       <div className="grid gap-2 sm:grid-cols-2">
@@ -277,7 +292,7 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
               lastError={dbSection.lastError as { errorCode?: string | null; errorMessage?: string | null } | null}
               isStale={dbSection.staleAt != null}
               contentFill={contentFillById?.[meta.id]}
-              disabled={!canOperate || anyMutationPending || isAssemblerRunning}
+              disabled={!canOperate || !generationAllowed || anyMutationPending || isAssemblerRunning}
               onAction={(mode) => {
                 if (mode === "RETRY") {
                   retryMutation.mutate({ strategyId, sectionId: dbSection.sectionId });
