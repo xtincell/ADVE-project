@@ -54,7 +54,13 @@ function similarity(a: string, b: string): number {
 export async function validateCrossReferences(
   strategyId: string, client: Pick<Prisma.TransactionClient, "pillar"> = db,
 ): Promise<CrossRefValidation[]> {
-  const p = await loadPillars(strategyId, client);
+  return validatePillarCrossReferences(await loadPillars(strategyId, client));
+}
+
+/** Same checks for a persisted dossier and a newly calculated S, before writing it. */
+export function validatePillarCrossReferences(pillars: PillarMap): CrossRefValidation[] {
+  const p: PillarMap = Object.fromEntries(Object.entries(pillars).map(([key, value]) =>
+    [key.toUpperCase(), key.toUpperCase() === "V" && value ? projectFinancialPillar(value) : value]));
   const results: CrossRefValidation[] = [];
 
   // 1. A.archetype → D.directionArtistique.lsiMatrix.concepts
@@ -410,7 +416,11 @@ export async function getCrossRefSummary(strategyId: string): Promise<{
   skipped: number;
   score: number;
 }> {
-  const results = await validateCrossReferences(strategyId);
+  return summarizeCrossReferences(await validateCrossReferences(strategyId));
+}
+
+/** Ratio of passed checks, with coverage alongside it; never a market performance score. */
+export function summarizeCrossReferences(results: CrossRefValidation[]) {
   const valid = results.filter((r) => r.status === "VALID").length;
   const invalid = results.filter((r) => r.status === "INVALID").length;
   const skipped = results.filter((r) => r.status === "SKIPPED").length;

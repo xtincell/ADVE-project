@@ -31,7 +31,10 @@ describe("canonical scenario dashboard",()=>{
  it("derives perception from T and reports observations without inventing a coherence score",()=>{
   const p=pillars();p.t={overtonPosition:{currentPerception:"New"},perceptionGap:{targetPerception:"Trusted",gapScore:80}};p.r!.coherenceRisks=["Observation"];
   const out=computePillarS(p);expect(out.overtonPosition).toEqual({current:"New",target:"Trusted",gapScore:80});
-  expect(out.coherenceScore).toBeUndefined();expect(out.coherenceIssueCount).toBe(1);
+  expect(typeof out.coherenceScore).toBe("number");expect(out.coherenceIssueCount).toBe(1);
+  const before = out.coherenceScore;
+  p.r!.coherenceRisks = Array.from({ length: 20 }, () => "Observation");
+  expect(computePillarS(p).coherenceScore).toBe(before);
  });
  it("keeps missing pillars empty and falls back from an invalid route key",()=>{
   const out=computePillarS({i:null,r:null,t:null,s:{computed:{selectedRouteKey:"TURBO"}}});

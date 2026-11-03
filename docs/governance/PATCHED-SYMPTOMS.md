@@ -28,11 +28,30 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
-### 535 — prémisses financières reprises, preuves 534 attribuées (2026-11-02)
+### 536 — prémisses financières reprises, preuves antérieures attribuées (2026-11-03)
 
-Reprise sous 535 après intégration commerciale #1120/e09a808fa, conservée avec
-son ADR0233. Notre ADR devient 0234 ; PR réelle #1121. Les métriques `source534-*`
-ci-dessous sont préintégration ; validation du head 535 encore ouverte.
+Candidat 536 après les livraisons commerciales #1120/e09a808fa et #1122/f77fe2dc8,
+conservées avec leur ADR0233. ADR financier0234 ; PR réelle #1121. Le runtime
+535 reçu en production est commercial ; le modèle financier de marque reste à appliquer.
+Les métriques `source534-*` ci-dessous sont préintégration. Le candidat535 a reçu
+5 144 unitaires/496 fichiers, typage/lints et build ; PostgreSQL principal576/577
+avec un timeout grand document, ciblé financier20/20, flotte12/12 et paiements9/9.
+Ces reçus ne valident pas le head536, sa livraison ou son écran. Ciblé536 :
+quatre nouveaux tests service/rendu verts ; PostgreSQL72/4 et grand document16/1
+en 60,9 s. Cette dernière reprise suit le redémarrage de la base locale éteinte ;
+elle ne constate aucun incident de production ni capacité sous charge.
+État536 compilé avant le dernier correctif de badge : 5 148 unitaires/498 fichiers,
+build production exit0, typage/lints verts (24 avertissements préexistants).
+`pillar.actualize` sur fixture possédée : S seul modifié, score71, 31 contrôles
+(20 conformes, 8 écarts, 3 non évalués), synthèse reçue dans Oracle, appels273/88 ms.
+Relecture financière compilée sans mutation : Oracle58 ms, Word845 ms/37 contrôles
+sans inconnu, validation13 ms, éditeur14 ms ; HTTP200 en17/33/20 ms, contenu et
+métadonnées des piliers inchangés. Stress compilé : 277 reçues, 5 non reçues,
+0 finding. Ces preuves ne reçoivent ni écran natif, ni SLO, ni production.
+Dernier delta UI : liste de rejets calculée vide distincte du champ absent,
+badge CALCULATED ; gouvernance/composant1 682 tests/170 fichiers verts après ce delta.
+Build final536 en cours ; les réceptions compilées précédentes ne couvrent pas
+ce dernier badge. Cascade réelle I, jalons Overton et compléments ADVE/roadmap ouverts.
 
 Defaults/cohortes dispersées, marge coefficient/% et ROI borné : modèle V et calcul
 FinancialBrain commun raccordés, legacy conservé. Zéro et non-applicabilité connus
@@ -43,6 +62,33 @@ Relecture compilée finale sans mutation, contenu/métadonnées exacts ; dettes 
 correspondantes fermées. HTTP/stress ne reçoivent pas natif, SLO ou ADVE production.
 CI/image/runtime, modèle réel/cascade RTIS et Oracle/ADVE/MVP entiers ouverts ;
 legacy optionnel ≠ readiness globale, plan dans RESIDUAL-DEBT. Données privées.
+
+
+### 536 — score de cohérence et format de génération I, candidat (2026-11-03)
+
+Symptôme : bandeau S sans score, compteur d'observations distinct affiché à côté,
+et actions générées sans champs nécessaires au sprint et à la classification.
+Cause : `computePillarS` ne raccordait pas le calcul existant ; le format I
+séquencé omettait horizon/famille/cadence/fourchette/période/dévotion/Overton.
+Le validateur est factorisé sans nouveau moteur ; il évalue le nouveau S plutôt
+que le S enregistré. Score, couverture et détail des contrôles sont transmis
+au cockpit et à Oracle ; zéro legacy conservé, mitigation seulement si référence
+résolue. Quatre tests service/rendu nouveaux verts, inclus dans les5 148 tests/498 fichiers
+de l’état compilé précédent ; build536 exit0. Recalcul local S et lecture Oracle
+reçus, S seul modifié. Le dernier badge attend la reconstruction finale536.
+L'extension du format I réutilise le gestionnaire d'appels existant, plafond de
+sortie4 800 ; ni nouvelle génération réelle ni réparation des références existantes
+reçues. Reprise réelle et natif restent ouverts dans RESIDUAL-DEBT.
+
+
+### 536 — aucun rejet calculé distingué d'une origine absente (2026-11-03)
+
+Symptôme : `rejectedFromI: []` issu du calcul affichait « Origine inconnue ».
+Cause : une liste vide calculée et un champ absent traversaient le même rendu.
+Le cas tableau vide affiche « Aucune action rejetée » avec statut CALCULATED ;
+l'absence conserve son traitement normal. Les actions non retenues dans le scénario
+ne sont pas présentées comme rejetées. Gouvernance/composant1 682/170 verts après
+ce delta ; reconstruction finale536 en cours, natif et production non reçus.
 
 
 ### 530 — cellules sous validation globale, correctif candidat (2026-11-02)

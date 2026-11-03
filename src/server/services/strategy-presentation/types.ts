@@ -710,6 +710,7 @@ export interface FenetreOvertonSection {
     riskCoverage: number | null;
     selectedInitiativeCount: number | null;
     coherenceScore: number | null;
+    coherenceSummary?: { total: number; valid: number; invalid: number; skipped: number; score: number };
     budgetByPhase: Array<{ phase: string; budget: number }>;
   } | null;
 }

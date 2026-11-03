@@ -235,13 +235,27 @@ function ComputedBanner({ computed, score }: { computed: unknown; score: unknown
     const number = Number(value);
     return Number.isFinite(number) ? number : null;
   };
-  const pct = numericScore(score) ?? numericScore(c.coherenceScore);
+  const pct = c.coherenceSummary
+    ? numericScore(c.coherenceScore) ?? numericScore(score)
+    : numericScore(score) ?? numericScore(c.coherenceScore);
+  const summary = asRec(c.coherenceSummary);
+  const checks = Array.isArray(c.coherenceChecks) ? c.coherenceChecks.map(asRec) : [];
   const totalBudget = typeof c.totalBudget === "number" ? c.totalBudget : null;
   return (
     <div className="ck-s-computed">
       <div className="ck-s-computed__score">
         <div className="ck-s-computed__ring" style={{ "--p": pct ?? 0 } as React.CSSProperties}><div className="ck-s-computed__hole" /><span>{pct ?? "—"}<i>/100</i></span></div>
-        <span className="ck-s-computed__lbl">{typeof c.coherenceIssueCount === "number" ? `${c.coherenceIssueCount} observation(s) de cohérence à examiner` : "Cohérence non mesurée"}</span>
+        <span className="ck-s-computed__lbl">{typeof summary.valid === "number"
+          ? `${summary.valid} contrôles conformes · ${summary.invalid} écarts · ${summary.skipped} non évalués`
+          : "Cohérence à recalculer"}</span>
+        {checks.length > 0 ? <details className="mt-3 text-xs text-foreground-secondary">
+          <summary className="cursor-pointer">Comprendre le score</summary>
+          <p className="mt-2">Contrôles conformes ÷ contrôles évalués × 100. Les contrôles non évalués restent visibles ; ce score ne mesure pas les résultats de la marque.</p>
+          <ul className="mt-2 space-y-2">{checks.map(check => <li key={String(check.ruleId)}>
+            <strong>{str(check.rule)} — {check.status === "VALID" ? "Conforme" : check.status === "INVALID" ? "Écart" : "Non évalué"}</strong>
+            <p>{str(check.message)}</p>
+          </li>)}</ul>
+        </details> : null}
       </div>
       <div className="ck-s-computed__cells">
         <div className="ck-s-computed__c"><span>Scénario courant</span><b>{ROUTE_SPECS.find(r => r.key === c.selectedRouteKey)?.label ?? "À recalculer"}</b></div>
@@ -262,7 +276,8 @@ export function PillarSFields({ content, certainty }: { content: Rec; certainty:
   const schemaKeys = Object.keys((PILLAR_SCHEMAS.S as { shape?: Record<string, unknown> }).shape ?? {});
   const total = schemaKeys.length;
   const filled = schemaKeys.filter((k) => !isEmpty(v[k])).length;
-  const coherence = isEmpty(v.coherenceScore) ? "—" : str(v.coherenceScore);
+  const currentCoherence = asRec(v.computed).coherenceSummary ? asRec(v.computed).coherenceScore : v.coherenceScore;
+  const coherence = isEmpty(currentCoherence) ? "—" : str(currentCoherence);
 
   return (
     <>
@@ -290,7 +305,7 @@ export function PillarSFields({ content, certainty }: { content: Rec; certainty:
           <Roadmap items={v.roadmap} status={st("roadmap")} />
           <ProofList title="Actions du scénario courant" items={v.selectedFromI} status={st("selectedFromI")}
             cols={[["action", "Action"], ["phase", "Phase"], ["priority", "Priorité"]]} />
-          {isEmpty(v.rejectedFromI) ? <ACard title="Actions rejetées dans le catalogue" empty={false}><p className="text-sm text-foreground-muted">Aucune action rejetée dans le catalogue. Les actions absentes de ce scénario restent disponibles pour les autres scénarios.</p></ACard> :
+          {Array.isArray(v.rejectedFromI) && v.rejectedFromI.length === 0 ? <ACard title="Actions rejetées dans le catalogue" status="CALCULATED" empty={false}><p className="text-sm text-foreground-muted">Aucune action rejetée dans le catalogue. Les actions absentes de ce scénario restent disponibles pour les autres scénarios.</p></ACard> :
             <ProofList title="Actions rejetées dans le catalogue" items={v.rejectedFromI} status={st("rejectedFromI")} cols={[["action", "Action"], ["reason", "Raison"]]} />}
         </div>
       </Section>

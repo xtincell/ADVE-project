@@ -1,15 +1,34 @@
-## 535 — validation intégrée et readiness globale ouvertes (2026-11-02)
+## 536 — validation intégrée, roadmap et readiness globale ouvertes (2026-11-03)
 
-Reprise sous 535 après intégration commerciale #1120/e09a808fa, conservée avec
-son ADR0233. Notre ADR devient 0234 ; PR réelle #1121. Les métriques `source534-*`
-ci-dessous sont préintégration ; validation du head 535 encore ouverte.
+Candidat 536 après les livraisons commerciales #1120/e09a808fa et #1122/f77fe2dc8,
+conservées avec leur ADR0233. ADR financier0234 ; PR réelle #1121. Le runtime
+535 reçu en production est commercial ; le modèle financier de marque reste à appliquer.
+Les métriques `source534-*` ci-dessous sont préintégration. Le candidat535 a reçu
+5 144 unitaires/496 fichiers, typage/lints et build ; PostgreSQL principal576/577
+avec un timeout grand document, ciblé financier20/20, flotte12/12 et paiements9/9.
+Ces reçus ne valident pas le head536, sa livraison ou son écran. Ciblé536 :
+quatre nouveaux tests service/rendu verts ; PostgreSQL72/4 et grand document16/1
+en 60,9 s. Cette dernière reprise suit le redémarrage de la base locale éteinte ;
+elle ne constate aucun incident de production ni capacité sous charge.
+État536 compilé avant le dernier correctif de badge : 5 148 unitaires/498 fichiers,
+build production exit0, typage/lints verts (24 avertissements préexistants).
+`pillar.actualize` sur fixture possédée : S seul modifié, score71, 31 contrôles
+(20 conformes, 8 écarts, 3 non évalués), synthèse reçue dans Oracle, appels273/88 ms.
+Relecture financière compilée sans mutation : Oracle58 ms, Word845 ms/37 contrôles
+sans inconnu, validation13 ms, éditeur14 ms ; HTTP200 en17/33/20 ms, contenu et
+métadonnées des piliers inchangés. Stress compilé : 277 reçues, 5 non reçues,
+0 finding. Ces preuves ne reçoivent ni écran natif, ni SLO, ni production.
+Dernier delta UI : liste de rejets calculée vide distincte du champ absent,
+badge CALCULATED ; gouvernance/composant1 682 tests/170 fichiers verts après ce delta.
+Build final536 en cours ; les réceptions compilées précédentes ne couvrent pas
+ce dernier badge. Cascade réelle I, jalons Overton et compléments ADVE/roadmap ouverts.
 
 Avant intégration, `source534-*` : 5 121/491, PG ciblé 20/2 (source/V/PAYER/concurrence D réellement
 refusée), valeurs humaines conservées ; deux contre-épreuves rouges puis 8 tests
 consommateurs verts, typage/lints/cycles/build final et parcours MCP/fiche/Word /
 Oracle reçus. Relecture finale compilée sans mutation, contenu/métadonnées exacts.
 Dettes locales fences/consommateurs/zéro/non-applicabilité supprimées.
-**Suite réelle** : natif/CI/image/runtime 535, modèle de marque en production,
+**Suite réelle** : natif/CI/image/runtime536, modèle de marque en production,
 cascade RTIS réelle, autres champs A/dossiers régionaux et Oracle/ADVE/MVP entiers.
 Responsable Core/V/FinancialBrain, effort recette bornée ; **déclencheur** après
 livraison exacte, avant réception financière globale. Aucun SLO ou argent Thot
@@ -24,10 +43,35 @@ cas rendu/export ; owner Oracle/UI, **après gros œuvre, avant Oracle global**.
 Campagnes/devis et sept chantiers ouverts, aucun chiffre financier réel publié.
 
 
+## Roadmap — calcul corrigé en candidat, dérivation réelle à recevoir (2026-11-03)
+
+La lecture réelle du dossier et les captures montrent une complétude partielle,
+un score absent malgré des observations, des horizons non transmis aux actions
+retenues et des références de risques périmées. La cause du score est corrigée
+en candidat536 : validateur commun appliqué au S généré, formule/contrôles et
+couverture exposés, score identique à la racine S et lu dans Oracle. Le format
+omis des actions I est complété ; le sprint vérifie les identifiants de mitigation.
+Les tests du raccord et le recalcul via `pillar.actualize` prouvent ce raccord en
+fixture possédée : S seul modifié, score71 (20/28 évalués), 3 contrôles non évalués
+conservés, même synthèse dans Oracle. Pas de réparation reçue des données production.
+**Fermer** : reconstruction/réception du dernier badge, puis génération/cascade
+réelle ADVE → R/T/I → S, avec horizons, références, jalons Overton et calculs
+contrôlés, puis lecture serveur et écran hydraté. Une information
+inférable manquante remonte au socle ADVE comme postulat qualifié, puis les
+dépendances sont recalculées sur les rails existants. Aucun remplissage manuel de S.
+**Responsable** : Core/Mestor et lecteurs S existants ; **effort** : recette bornée
+du dossier ; **déclencheur** : après livraison exacte du candidat536, avant réception
+ADVE/Oracle/MVP. Seuls les résultats reçus ferment les cellules concernées.
+Les preuves privées restent hors checkout. La réception financière seule ne ferme
+ni la dérivation complète, ni ADVE/Oracle/MVP entiers, ni les sept chantiers.
+
+
 ## Performance — marge faible sur grand document, toujours ouverte
 
-**Faible marge sur grand document** : passage isolé en 111,86 s sous le plafond
-120 s (8,14 s de marge), sans réception sous charge. **Fermer** par profilage borné
+**Faible marge sur grand document** : passage antérieur isolé en111,86 s sous le
+plafond120 s, puis timeout du candidat535. Reprise ciblée536 : 16/1 verts en60,9 s
+après redémarrage de la base locale éteinte ; aucun plafond augmenté. Ces passages
+ne reçoivent pas la capacité sous charge. **Fermer** par profilage borné
 du cas conservé : durée par étape de lecture/désérialisation, scellement/empreinte,
 écriture/transaction et contention base/CPU/IO ; comparer un passage isolé puis
 une concurrence contrôlée, conserver taille et invariants, sans relever une limite

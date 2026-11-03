@@ -1511,6 +1511,7 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
         riskCoverage: num(computed.riskCoverage),
         selectedInitiativeCount: num(computed.selectedInitiativeCount),
         coherenceScore: num(computed.coherenceScore),
+        ...(computed.coherenceSummary ? { coherenceSummary: computed.coherenceSummary } : {}),
         budgetByPhase: Object.entries((computed.budgetByPhase ?? {}) as Record<string, unknown>)
           .filter(([, b]) => typeof b === "number")
           .map(([phase, b]) => ({ phase, budget: b as number })),

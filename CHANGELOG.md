@@ -1,17 +1,19 @@
-## v6.27.535 — refactor(finance): projeter le même modèle V dans les lecteurs existants (2026-11-02)
+## v6.27.536 — Finance ADVE et cohérence de la stratégie (3 novembre 2026)
 
-Reprise sous 535 après intégration commerciale #1120/e09a808fa, conservée avec
-son ADR0233. Notre ADR devient 0234 ; PR réelle #1121. Les métriques `source534-*`
-ci-dessous sont préintégration ; validation du head 535 encore ouverte.
+- Les prémisses financières versionnées dans V alimentent FinancialBrain, les lecteurs V, Oracle, Catalyse, exports, bindings, contexte RTIS, maturité, contrôles et allocation. Même cohorte payeuse, devise et horizon ; communication comprise dans les charges, trésorerie conditionnelle. Les valeurs humaines antérieures sont conservées et les versions/source contrôlées avant amendement.
+- L’éditeur existant expose les prémisses et renvoie les résultats calculés à leur origine. Zéro explicite, déficit et non-applicabilité mathématique restent distincts d’une valeur absente. Aucun bonus de performance prouvée ni budget disponible n’est déduit d’une projection proposée.
+- Stratégie calcule son score avec le validateur commun sur le plan courant. Contrôles conformes, écarts et non-évalués sont enregistrés, expliqués dans le cockpit et repris dans l’Oracle. Le nombre d’observations de risque reste distinct du score ; les mitigations du sprint doivent résoudre un risque courant.
+- Le générateur I demande explicitement horizons relatifs, familles de campagne, cadences, progression, déplacements de perception et fourchettes nécessaires à S. Les propositions restent issues du socle ADVE ; la génération réelle et les champs de roadmap restants sont encore à recevoir.
+- Une liste calculée sans action rejetée est affichée comme telle, sans badge « Origine inconnue ». Une liste absente reste distincte de zéro rejet.
+- Livraison commerciale 535/PR1122 conservée. [ADR-0234](docs/governance/adr/0234-financial-working-model-projection.md), PR1121 ; aucun nouveau service, fournisseur IA, gestionnaire d’appels ou migration.
+- Validation locale536 : 5 148 tests unitaires/498 fichiers ; PostgreSQL ciblé72/4 et document original16/1 ; typage sans erreur, lints sans erreur/24 avertissements préexistants, zéro cycle, build production réussi. Les preuves534 et535 antérieures ne sont pas présentées comme réception536.
+- Application compilée, copie privée isolée : recalcul S sauvegardé en273ms, détail de cohérence lu dans Oracle en88ms et sept autres piliers inchangés. Réception financière en lecture : Oracle58ms, Word845ms/37contrôles sans inconnu du modèle de recette, contrôles13ms, éditeur14ms ; contenu et métadonnées des piliers conservés. Trois pages protégées HTTP200 en17/33/20ms. Stress :277pages HTTP reçues,5non reçues, zéro finding. Ces mesures locales ne prouvent ni le rendu natif, ni un SLO.
+- Réception native, CI/image/runtime536, modèle réel SPAWT/cascade, autres dossiers et Oracle/ADVE/MVP entiers restent ouverts. Le modèle optionnel préserve le legacy sans certifier la complétude de tous les dossiers. Données et artefacts privés restent hors du dépôt.
 
-**Financier repris sous 535 après l’intégration commerciale ; preuves 534 attribuées, head intégré à valider.**
+## v6.27.535 — Cohérence de la version publique après la livraison commerciale (2 novembre 2026)
 
-- V.financialModel qualifié : édition de base, même cohorte D PAYER, prix/charges/volumes/horizons, communication comprise aux coûts et trésorerie conditionnelle. pillar.sources/checkpoints restent la provenance ; model.source identifie seulement l’édition de base, aucun registre parallèle.
-- FinancialBrain factorisé, lecteurs V/Oracle/export/Glory/RTIS/maturité/cross-validator/I/allocator raccordés ; defaults sectoriels retirés, legacy conservé sans seconde base. Déficit et non-applicabilité connus explicites, zéro conservé, ROI non borné à 100 %, aucun bonus de performance prouvée ou budget Thot disponible issu du modèle proposé.
-- Contrôles financiers préintégration `source534-*` : suite complète 5 121 tests/491 fichiers, PG ciblé 20/2 dont concurrence D réellement refusée sans version V ou recommendation APPLIED, valeurs humaines conservées ; tsc exit 0, deux lints 0 erreur/24 avertissements préexistants, cycles 0, build final webpack heap 8 GiB exit 0. Deux contre-épreuves zéro/non-applicabilité rouges puis ciblé consommateurs 8 tests verts.
-- Copie isolée : MCP réel une écriture, fiche Glory depuis V/Word 37 contrôles et cinq pages rendues/inspectées, Oracle cohérent. Relecture finale compilée sans mutation : Oracle USER 136 ms, Word 672 ms/37 champs sans inconnu, cross-validator 44 ms, éditeur 35 ms (PAYER correct, résultats calculés non éditables) ; contenu/métadonnées inchangés. Trois pages HTTP 200, aucun natif réel ; stress sans finding, latences locales sans SLO.
-- Dettes locales fences/consommateurs fermées ; natif/CI/image/runtime 535, modèle réel de production/cascade RTIS, autres dossiers et Oracle/ADVE/MVP entiers ouverts. financialModel optionnel pour compatibilité legacy ne reçoit pas toutes les sorties financières des autres dossiers : admission/complétude à recevoir avant wholeMVP. [ADR-0234 Proposed](docs/governance/adr/0234-financial-working-model-projection.md), aucun numéro PR inventé ni chiffre métier privé publié.
-
+- Aligne la constante runtime, le package et son verrou sur535. Le code commercial534 était reçu dans son conteneur, mais l’API et le footer annonçaient encore533 ; la nouvelle image rend la livraison mesurable sur la version publique.
+- Reprend intégralement le portefeuille autorisé, le règlement individuel et la remise prouvée de534. Aucun changement de règle commerciale, de donnée, de modèle ou de transport.
 
 ## v6.27.534 — Portefeuille de vente autorisé, relances datées et règlement individuel (2 novembre 2026)
 

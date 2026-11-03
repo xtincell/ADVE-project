@@ -1534,7 +1534,11 @@ export const PillarSSchema = z.object({
       target: z.string().min(1),
       gapScore: percentage.optional(),
     })).optional(),
-    coherenceScore: percentage.optional(),                   // legacy score, not inferred from a count
+    coherenceScore: percentage.optional(),                   // existing cross-validator passed/applicable ratio
+    coherenceSummary: z.object({ total: z.number().int().nonnegative(), valid: z.number().int().nonnegative(),
+      invalid: z.number().int().nonnegative(), skipped: z.number().int().nonnegative(), score: percentage }).optional(),
+    coherenceChecks: z.array(z.object({ rule: z.string(), ruleId: z.number().int(), from: z.string(), to: z.string(),
+      status: z.enum(["VALID", "INVALID", "SKIPPED"]), message: z.string() })).optional(),
     coherenceIssueCount: z.number().int().nonnegative().optional(),
     // 3 trajectoires de roadmap (ADR-0088) — projections PURES, jamais LLM.
     // ADR-0089 : chaque route porte aussi son JEU DE STRATÉGIE calculé

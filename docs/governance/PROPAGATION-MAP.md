@@ -9,11 +9,42 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
-### Prémisses V → lecteurs — 535, head intégré à valider (2026-11-02)
+### Prémisses V → lecteurs — candidat536, chaîne à recevoir (2026-11-03)
 
-Reprise sous 535 après intégration commerciale #1120/e09a808fa, conservée avec
-son ADR0233. Notre ADR devient 0234 ; PR réelle #1121. Les métriques `source534-*`
-ci-dessous sont préintégration ; validation du head 535 encore ouverte.
+Candidat 536 après les livraisons commerciales #1120/e09a808fa et #1122/f77fe2dc8,
+conservées avec leur ADR0233. ADR financier0234 ; PR réelle #1121. Le runtime
+535 reçu en production est commercial ; le modèle financier de marque reste à appliquer.
+Les métriques `source534-*` ci-dessous sont préintégration. Le candidat535 a reçu
+5 144 unitaires/496 fichiers, typage/lints et build ; PostgreSQL principal576/577
+avec un timeout grand document, ciblé financier20/20, flotte12/12 et paiements9/9.
+Ces reçus ne valident pas le head536, sa livraison ou son écran. Ciblé536 :
+quatre nouveaux tests service/rendu verts ; PostgreSQL72/4 et grand document16/1
+en 60,9 s. Cette dernière reprise suit le redémarrage de la base locale éteinte ;
+elle ne constate aucun incident de production ni capacité sous charge.
+État536 compilé avant le dernier correctif de badge : 5 148 unitaires/498 fichiers,
+build production exit0, typage/lints verts (24 avertissements préexistants).
+`pillar.actualize` sur fixture possédée : S seul modifié, score71, 31 contrôles
+(20 conformes, 8 écarts, 3 non évalués), synthèse reçue dans Oracle, appels273/88 ms.
+Relecture financière compilée sans mutation : Oracle58 ms, Word845 ms/37 contrôles
+sans inconnu, validation13 ms, éditeur14 ms ; HTTP200 en17/33/20 ms, contenu et
+métadonnées des piliers inchangés. Stress compilé : 277 reçues, 5 non reçues,
+0 finding. Ces preuves ne reçoivent ni écran natif, ni SLO, ni production.
+Dernier delta UI : liste de rejets calculée vide distincte du champ absent,
+badge CALCULATED ; gouvernance/composant1 682 tests/170 fichiers verts après ce delta.
+Build final536 en cours ; les réceptions compilées précédentes ne couvrent pas
+ce dernier badge. Cascade réelle I, jalons Overton et compléments ADVE/roadmap ouverts.
+
+Candidat536 : `computePillarS` évalue le S nouvellement généré avec
+`validatePillarCrossReferences` puis `summarizeCrossReferences`, fonctions communes
+au validateur existant. Score = contrôles conformes / contrôles évalués × 100 ;
+la couverture et les non-évalués restent visibles, sans compter les observations
+R comme des points. Racine S et tableau calculé concordent ; Oracle reprend score
+et couverture. Un zéro legacy explicite reste prioritaire sans reçu de calcul.
+Le sprint ne qualifie une mitigation que si son identifiant de risque résout.
+Le format du générateur I séquencé demande désormais horizon, famille/cadence,
+fourchette/période budgétaire, dévotion et déplacement de perception ; plafond de
+sortie porté de2 400 à4 800 via le gestionnaire existant. Génération réelle,
+références réparées en données et disparition des lacunes ne sont pas encore reçues.
 
 Édition qualifiée/cohorte D PAYER → V.financialModel → FinancialBrain pur →
 V/Oracle/export/Glory/RTIS/maturité/cross-validator/I/budget-allocator.
