@@ -1,6 +1,6 @@
 # ADR-0236 — Prémisses inférées utilisables et vérification de marque
 
-**Status** : Proposed — doctrine opérateur explicite, candidat538 testé localement ; réception métier complète et production non reçues
+**Status** : Proposed — doctrine opérateur explicite, technique538 reçue en production ; réception métier complète ouverte
 **Date** : 2026-11-03
 **Phase** : 7 — complétion ADVE et irrigation qualifiée
 **Depends on** : ADR-0023, ADR-0225, ADR-0229, ADR-0231, ADR-0235
@@ -135,12 +135,27 @@ complète (source538-native-confirm-received.json et historique privé). Cet
 exercice reçoit le parcours et sa trace ; il n’est pas une adoption des
 prémisses du dossier réel ni une confirmation en production.
 
-Pour la réception métier, vérifier sur le dossier réel les références résolues,
-le registre limité aux profils utilisés, la parité des consommateurs et la trace
-de confirmation ; conserver les refus rempli/0/false/preuves/non-applicabilité,
+Production538 reçue : PR1126/merge df1fb29dd153c2d44ce6ee1a4b96d60d8ccefe7d,
+16/16 CI, build41649969200 et image/runtime exacts, montages/Luna conservés,
+OpenRouter absent. Digest :
+`sha256:546aeedbc18cc786e24f4764c6c19e540f30191dc88da9951b08658ffed0320d`.
+Égalité exacte de toutes les données comparées ; six lectures HTTP200. Le natif
+reçoit consignes E/V, usage direct et 14 indicateurs ; Oracle compte35 sections
+rédigées/alimentées mais0 à jour/35 périmées. Gazette dépliée jusqu’à la fin,
+sans collecte externe. Le contexte courant reçoit22 références, quatre profils
+et une copie commune. Aucune confirmation humaine de production automatisée.
+Preuves privées P23 : pr538-checks-current.json, merge538-received.json,
+build538-completed.json, image538-build-digest.json, production538-received.json,
+production538-data-after-received.json, production538-readers-received.json,
+production538-native-*.json, production538-kpi-detail-received.json et
+source538-current-spawt-context-received.json.
+
+Pour la réception métier, vérifier la parité des consommateurs et la trace
+de confirmation sur le dossier réel ; conserver les refus rempli/0/false/preuves/non-applicabilité,
 conflit et schéma. Recevoir l’usage immédiat des propositions HUMAN/SOURCE vides
 admises INFERRED, la confirmation réelle avec acteur/version/consigne et l’échange
 partenaire documenté sans achat, sans accepter un échange incomplet. Puis recevoir
-cascade, conservation, huit piliers/35 sections et lecteurs après livraison.
-CI/image/runtime538, mobile, Oracle entier et MVP restent ouverts ; 538 n’est pas
-déployée. Données de marque, propositions et preuves restent privées hors checkout.
+cascade, huit piliers complets et35 sections fraîches. CI/image/runtime,
+conservation et lecture native538 sont reçus au périmètre ci-dessus ; mobile,
+Gazette presse/images, Oracle frais et MVP restent ouverts. Données de marque,
+propositions et preuves restent privées hors checkout.

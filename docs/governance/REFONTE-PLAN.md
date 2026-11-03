@@ -45,9 +45,10 @@ une largeur1 578px : mobile non reçu, réglage réinitialisé. Preuves privées
 source538-factorized-unit.log, source538-exact-postgres.log,
 source538-enum-targeted-green.log, source538-exact-build.log,
 source538-stress-exact-final-received.json et source538-user-http-received.json.
-538 reste candidate non déployée ; CI/image/runtime/conservation, confirmation
-humaine réelle, cascade et totalité ADVE/Oracle/MVP/global ouverts. Reprise des
-formes legacy dans RESIDUAL-DEBT.
+Ce checkpoint local reste historique : CI/image/runtime, conservation et lecture
+native538 sont désormais reçus dans ADR-0236. Confirmation réelle, ADVE huit
+piliers, Oracle35 frais, Gazette presse/images, mobile et MVP restent ouverts.
+Reprise des formes legacy dans RESIDUAL-DEBT.
 
 ## 537 — recevoir budgets, progression et sprint depuis ADVE (2026-11-03)
 

@@ -1,15 +1,17 @@
-## 538 candidat — refus fidèles et lecteurs Gazette/Oracle (3 novembre 2026)
+## 538 reçue techniquement — refus fidèles et lecteurs Gazette/Oracle (3 novembre 2026)
 
-État courant : 537 est reçue techniquement en production au merge PR1124
-`e3e484514d2d07f41bb9b894d4db7922095f6422`, avec image/runtime et montages conservés.
-Les données stockées comparées restent identiques ; les écarts de validation
-dérivée sont reproduits avec le code exact sur le contenu antérieur, sans
-revendiquer une égalité brute des réponses. Les amendements ADVE réels sont en
-cours : aucune réception complète des huit piliers ou des 35 sections n’en découle.
-Les paragraphes537 suivants décrivent le checkpoint local antérieur ; leur
-attente de livraison technique est supersédée par ce reçu, pas leurs limites métier.
+État courant : 538 est reçue techniquement en production, PR1126 fusionnée en
+`df1fb29dd153c2d44ce6ee1a4b96d60d8ccefe7d`, 16/16 contrôles CI verts et build
+41649969200 reçu. Image/runtime exacts, montages et relais Luna conservés,
+OpenRouter absent ; égalité exacte de toutes les données comparées. Six lectures
+HTTP200 et lecture native desktop reçues : consignes E/V, 14 indicateurs, Oracle
+35 rédigées/35 alimentées mais 0 à jour/35 périmées, Gazette intégrale sans collecte
+externe déclenchée. Aucune confirmation humaine de production automatisée.
+ADVE huit piliers, Oracle frais, Gazette presse/images et mobile restent ouverts.
+Les checkpoints locaux ci-dessous restent historiques ; leurs attentes techniques
+sont closes au périmètre de ce reçu, pas leurs limites métier. Détail : ADR-0236.
 
-538 reste candidate locale : Gazette conserve extrait et contenu complet,
+538 conserve dans Gazette extrait et contenu complet,
 contexte de veille Strategy/ADVE et aperçus éditeur réels via Brave/lecture HTML
 existants, bornés à trois articles avec concordance éditeur/titre. Oracle distingue
 matière rédigée, fraîcheur et approbation, sans contrat ou image inventés.
@@ -44,9 +46,9 @@ dans les fenêtres observées. Confirmation native sur la seule fixture : E v3�
 cinq rites inchangés, origine INFERRED→HUMAN et historique avec version relue3
 et consigne RITUALS complète ; aucune adoption du dossier réel déduite. Oracle fixture : 0 section rédigée, 33/35 alimentées,
 sans réception du rapport réel. Mobile non reçu : la largeur est restée 1 578 px
-malgré la demande 390 px, puis le réglage a été réinitialisé. Production538 non
-déployée ; complétude huit piliers/35 sections et conservation après livraison
-restent ouvertes. Reçus exacts et limites dans ADR-0236 et RESIDUAL-DEBT.
+malgré la demande 390 px, puis le réglage a été réinitialisé. La réception
+technique de production en tête ferme l’attente de livraison/conservation ;
+complétude métier et mobile restent ouverts dans ADR-0236 et RESIDUAL-DEBT.
 
 ## 537 — prémisses de planification et sorties S à recevoir (3 novembre2026)
 

@@ -84,8 +84,9 @@ Aucune adoption du dossier réel déduite. Oracle fixture0 rédigée/
 33 sur35 alimentées ne reçoit pas le rapport réel. La tentative390px est restée
 à1 578px ; mobile non reçu et réglage réinitialisé.
 
-Correctifs présents dans le candidat reçu localement au périmètre ci-dessus ;
-production538 non déployée, aucun ADVE complet, Oracle entier ou MVP annoncé.
+Checkpoint local historique ci-dessus. Technique538, conservation et lecture
+native de production reçues selon ADR-0236 ; ADVE huit piliers, Oracle frais,
+Gazette presse/images, mobile et MVP restent ouverts.
 Les formats ADVE legacy
 invalides restent une dette distincte avec normalisation sémantique contrôlée
 par source/version, schémas stricts, cascade et recette huit piliers/35 sections

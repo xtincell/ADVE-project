@@ -1,14 +1,16 @@
 ## 538 — recevoir les lecteurs Gazette/Oracle et normaliser les formes ADVE legacy (2026-11-03)
 
-**Candidat testé localement, réception production ouverte** : Gazette conserve observation intégrale et
+**Technique538 reçue, réception métier ouverte** : Gazette conserve observation intégrale et
 extrait, diagnostics détaillés dédoublonnés, sujets de veille effectifs et pays
 Strategy ; résumés et images reçus du RSS suivent les lecteurs existants. Oracle
 sépare présence du contenu, fraîcheur et approbation : STALE n’est pas vide,
 DRAFT n’est pas une absence de matière et ACTIVE ne suffit pas à prouver son
 contenu. Les prochaines étapes peuvent alimenter Conditions sans inventer un
 contrat. Ces changements ne reçoivent ni la fraîcheur générale ni la qualité de
-l’intégralité du rapport. Les contrôles locaux exacts sont reçus ci-dessous ;
-538 n’est pas déployée. Jusqu’à trois aperçus d’articles par rafraîchissement réutilisent Brave
+l’intégralité du rapport. CI16/16, PR1126/merge df1fb29dd, image/runtime exacts,
+montages/Luna et égalité exacte des données comparées sont reçus en production.
+Six lectures HTTP200 ; détail des preuves dans ADR-0236. Jusqu’à trois aperçus
+d’articles par rafraîchissement réutilisent Brave
 et la lecture HTML protégée existants, avec concordance éditeur/titre ; seuls les
 résumés et images réellement reçus sont conservés.
 
@@ -21,7 +23,7 @@ conservée puis premier PostgreSQL 18/18 vert ; dernier reçu PostgreSQL 21/21
 vert. Cela ne reçoit pas l’ensemble des amendements réels. Preuves privées :
 source538-bible-counterfactual-red.log et source538-exact-postgres.log.
 
-**État technique537 reçu** : PR1124/merge e3e484514d2d07f41bb9b894d4db7922095f6422,
+**Reçu historique537** : PR1124/merge e3e484514d2d07f41bb9b894d4db7922095f6422,
 image/runtime537 et montages reçus. Les données stockées comparées sont inchangées ;
 les différences de validation dérivée ont été reproduites avec le code exact sur
 le contenu antérieur. Aucune égalité brute de réponse revendiquée. Les amendements
@@ -71,7 +73,8 @@ détail E local. Le bouton « Valider tel quel » est reçu sur la seule fixture
 E v3→v4, cinq rites inchangés, INFERRED→HUMAN, liste3→2 et historique relu
 avec version3/consigne RITUALS complète (source538-native-confirm-received.json,
 historique privé). Restent la confirmation et la cascade sur le dossier réel ;
-aucune adoption en production n’est déduite de cet exercice. Aucun gain chiffré de coût/contexte ni réception production déduit.
+aucune adoption en production n’est déduite de cet exercice. Le contexte courant
+reçoit22 références/quatre profils/une copie commune ; aucun gain de coût chiffré.
 
 **Réception native locale bornée** : Engagement, Oracle et Gazette consultés
 sur desktop ; cinq rites avec consignes lisibles et dépliage Gazette reçus.
@@ -80,21 +83,18 @@ Aucune exception ni réponse500 dans les fenêtres observées. Oracle de fixture
 La tentative de largeur390px est restée à1 578px malgré l’outil : mobile non
 reçu, réglage réinitialisé. Les temps locaux de ces vues ne constituent pas un SLO.
 
-**Recette à fermer** : confirmer le comportement sur le dossier réel et après
-livraison, sans faux succès ni effet de bord ; vérifier identité éditeur/titre, limite de
-trois aperçus et conservation en cas d’échec de collecte. Conserver le texte
-intégral derrière l’extrait, ouvrir
-les détails et la source, recevoir un seul diagnostic courant par marque sans
-fuite entre dossiers, puis vérifier sujets/pays et articles réellement collectés.
-Comparer la Gazette au contexte Strategy/ADVE ; aucune image ou information
-absente de la source ne doit être inventée. Pour Oracle, contrôler contenu
-présent/vide, STALE/COMPLETE, DRAFT/ACTIVE, clé canonique de chaque carte et
-absence réelle de contrat avec prochaines étapes renseignées. Complétude de
-contenu, approbation et résultat observé restent des états distincts.
-**Responsables** : Jehuty/Seshat, assembleur et lecteurs Oracle existants.
-**Effort** : recette bornée des projections et de leurs surfaces, puis CI/image/
-runtime/conservation. **Déclencheur** : avant réception538 ; reçu local et
-production restent distincts. Gazette/Oracle entiers, MVP et sept chantiers ouverts.
+**Lecture native de production reçue** : consignes E/V, usage direct, version
+et14 indicateurs lisibles ; aucune confirmation humaine automatisée. Oracle :
+35 rédigées/35 alimentées, mais0 à jour/35 périmées. Gazette intégrale dépliée
+jusqu’à la fin, sans rafraîchissement externe. La lecture est reçue, pas sa
+fraîcheur générale ni la collecte presse/images.
+
+**Recette restante** : compléter/normaliser ADVE, cascader puis recevoir huit
+piliers complets et35 sections fraîches ; collecter et recevoir les vrais articles
+et images Gazette (éditeur/titre, bornes et conservation sur échec), puis mobile.
+**Responsables** : Core/Mestor, Jehuty/Seshat et lecteurs existants.
+**Déclencheur** : maintenant que538 est livrée, avant réception métier complète.
+CI/image/runtime/conservation fermés ; MVP et sept chantiers restent ouverts.
 
 **Formats ADVE legacy — dette préexistante, non réparée en538** : certaines
 formes stockées ne satisfont pas les schémas stricts, alors que leur contenu peut
