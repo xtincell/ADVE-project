@@ -23,6 +23,7 @@ import { provenanceTopKey } from "@/domain/field-provenance";
 const DESTRUCTIVE_FIELDS = new Set<string>([
   "d.personas",
   "v.unitEconomics",
+  "v.financialModel",
   "v.businessModel.coreEngine",
   "a.noyauIdentitaire",
 ]);
@@ -44,6 +45,7 @@ function isDestructiveField(pillarKey: string, field: string): boolean {
 // (v.unitEconomics.*, v.prix, v.cout) plus the explicit list below.
 const FINANCIAL_FIELDS = new Set([
   "unitEconomics",
+  "financialModel",
   "budgetCom",
   "caVise",
   "margeNette",
@@ -54,7 +56,7 @@ const FINANCIAL_FIELDS = new Set([
   "pricingJustification",
 ]);
 
-const FINANCIAL_PILLAR_PREFIXES = ["v.unitEconomics", "v.prix", "v.cout"];
+const FINANCIAL_PILLAR_PREFIXES = ["v.unitEconomics", "v.financialModel", "v.prix", "v.cout"];
 
 function isFinancialField(pillarKey: string, field: string): boolean {
   if (FINANCIAL_FIELDS.has(field)) return true;

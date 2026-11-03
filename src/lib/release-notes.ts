@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.536", date: "2026-11-03", headline: "Des calculs financiers et stratégiques explicables",
+    highlights: [
+      { emoji: "🧮", title: "Relier vos hypothèses aux résultats", body: "À partir des prix, charges, volumes et profil payeur renseignés, le dossier et les documents partagent le même calcul. Les hypothèses gardent leur qualification, leur justification et leurs références disponibles." },
+      { emoji: "📊", title: "Simuler la trésorerie du scénario", body: "La projection tient compte du solde initial et des délais d’encaissement et de paiement renseignés. Les résultats restent conditionnés aux hypothèses ; le budget réellement disponible suit ses validations." },
+      { emoji: "🧭", title: "Comprendre le score de cohérence", body: "Le score du plan est calculé à partir des contrôles évalués. Vous pouvez consulter les contrôles conformes, les écarts et ceux qui restent non évalués ; le rapport reprend le même résultat et sa couverture. Une liste vide d’actions rejetées indique clairement qu’aucune action n’a été écartée." },
+    ],
+  },
+  {
     version: "6.27.533", date: "2026-11-02", headline: "Un rapport qui restitue les informations déjà renseignées",
     highlights: [
       { emoji: "📖", title: "Retrouver vos principes et votre communauté", body: "Le rapport reprend le texte de référence, les principes, leurs règles d’application et les informations de communauté disponibles. Leur présentation structurée ne les fait plus disparaître du document." },

@@ -1,3 +1,4 @@
+import { projectFinancialPillar } from "@/domain/unit-economics";
 /**
  * PROTOCOLE STRATEGY (S) — deterministic projection of the chosen I set.
  * Reads A/D/V/E/R/T/I/S; proposes scenario subsets without changing I or arming execution.
@@ -17,6 +18,7 @@ import {
   type RouteKey,
 } from "@/lib/strategy/roadmap-routes";
 import { canonTypeForInitiative } from "@/server/services/campaign-canon/plan";
+import { summarizeCrossReferences, validatePillarCrossReferences } from "@/server/services/cross-validator";
 
 // Re-export for backward compatibility (authoritative server compute).
 export { computeRoadmapRoutes };
@@ -137,7 +139,9 @@ export function generateStrategy(pillars: Record<string, Record<string, unknown>
     selectedFromI: selected.map((a, index) => ({ ...identity(a.id), action: a.action, ...(a.timeframe ? { phase: TF_PHASE_LABEL[a.timeframe] } : {}), priority: index + 1 })),
     roadmap,
     sprint90Days: selected.filter(a => a.timeframe === "SPRINT_90").map((a, index) => ({ ...identity(a.id), action: a.action,
-      ...(a.objectif ? { kpi: a.objectif } : {}), priority: index + 1, ...(a.devotionImpact ? { devotionImpact: a.devotionImpact } : {}) })),
+      ...(a.objectif ? { kpi: a.objectif } : {}), priority: index + 1,
+      isRiskMitigation: a.mitigatesRiskIds.some(id => matrix.some(risk => risk.id === id)),
+      ...(a.devotionImpact ? { devotionImpact: a.devotionImpact } : {}) })),
     fenetreOverton, axesStrategiques, facteursClesSucces, ...(selectedBudget.totalBudget !== undefined ? { globalBudget: selectedBudget.totalBudget } : {}), budgetByDevotion,
     syntheseExecutive: `${selected.length} action(s) proposée(s) pour ce scénario depuis le catalogue. ${initiativeBudgetLabel(selectedBudget.totalBudget, selectedBudget.budgetSummary)}. ${selectedBudget.budgetSummary.unassignedTimeframeCount} horizon(s) à préciser. Ces montants ne constituent pas une dépense mesurée.`,
     kpiDashboard, ...(northStar ? { northStarKPI: Object.fromEntries(Object.entries(northStar).filter(([key]) => key !== "pillar")) } : {}),
@@ -213,6 +217,12 @@ export function computePillarS(
     selectedRouteKey,
   });
 
+  // Validate the plan being produced, not the previous stored S. The existing
+  // cross-validator owns the formula; risk observations are a different count.
+  const coherenceChecks = validatePillarCrossReferences({ ...pillars,
+    s: generateStrategy(pillars, selectedRouteKey) });
+  const coherenceSummary = summarizeCrossReferences(coherenceChecks);
+
   return {
     ...(agg.totalBudget !== undefined ? { totalBudget: agg.totalBudget } : {}),
     budgetSummary: agg.budgetSummary,
@@ -223,6 +233,9 @@ export function computePillarS(
     ...(devotionFunnel ? { devotionFunnel } : {}),
     ...(overtonPosition ? { overtonPosition } : {}),
     ...(coherenceIssueCount !== undefined ? { coherenceIssueCount } : {}),
+    coherenceScore: coherenceSummary.score,
+    coherenceSummary,
+    coherenceChecks,
     roadmapRoutes,
     selectedRouteKey,
     computedAt: new Date().toISOString(),
@@ -240,7 +253,8 @@ export async function executeProtocoleStrategy(strategyId: string, transaction?:
     });
     const pillars: Record<string, Record<string, unknown> | null> = {};
     for (const p of dbPillars) {
-      pillars[p.key] = (p.content ?? null) as Record<string, unknown> | null;
+      const content = (p.content ?? null) as Record<string, unknown> | null;
+      pillars[p.key] = p.key === "v" && content ? projectFinancialPillar(content) : content;
     }
     // An explicit route decision is part of this calculation, not a preliminary
     // persisted S version. Source initiatives remain untouched.
@@ -262,6 +276,7 @@ export async function executeProtocoleStrategy(strategyId: string, transaction?:
     // backbone. Recomputed here and again by the recommendation apply path
     // whenever an initiative is selected/linked.
     strategyContent.computed = computed;
+    strategyContent.coherenceScore = computed.coherenceScore;
 
     // Count selectedFromI
     const selectedFromI = (strategyContent.selectedFromI ?? []) as unknown[];

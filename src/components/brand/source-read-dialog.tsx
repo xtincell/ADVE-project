@@ -9,7 +9,7 @@ import type { SourceReceipt } from "@/domain/source-certainty";
 export function SourceReadDialog({ sourceId, strategyId, onClose, onCite }: {
   sourceId: string; strategyId: string; onClose: () => void;
   /** Explicit local draft attachment; opening/reading is never a validation. */
-  onCite?: (receipt: SourceReceipt) => void;
+  onCite?: (receipt: SourceReceipt, document?: { rawContent: string; kind?: string }) => void;
 }) {
   const source = trpc.ingestion.getSource.useQuery({ id: sourceId, strategyId }, {
     staleTime: 0, refetchOnMount: "always",
@@ -32,7 +32,7 @@ export function SourceReadDialog({ sourceId, strategyId, onClose, onCite }: {
       {onCite && <Button disabled={loading || Boolean(source.error) || !source.data?.rawContent?.trim() || !source.data.contentHash}
         onClick={() => {
           if (!loading && !source.error && source.data?.rawContent?.trim() && source.data.contentHash) {
-            onCite({ sourceId: source.data.id, contentHash: source.data.contentHash });
+            onCite({ sourceId: source.data.id, contentHash: source.data.contentHash }, { rawContent: source.data.rawContent, kind: source.data.document?.kind });
           }
         }}>Utiliser cette version comme référence</Button>}
     </div>

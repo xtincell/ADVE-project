@@ -1,3 +1,4 @@
+import { projectFinancialPillar } from "@/domain/unit-economics";
 import { FIELD_PROVENANCE_LABEL, fieldStatusFor, isFieldProvenance } from "@/domain/field-provenance";
 import { wrapUntrusted } from "./untrusted-content";
 import { BRAND_ACTOR_CONTEXT_NOTICE } from "@/domain/brand-actors";
@@ -15,13 +16,15 @@ export function projectForContext(value: unknown, leafMax: number): unknown {
 /** The same bounded, authority-qualified context for individual and sequenced readers. */
 export function serializePillar(key: string, content: unknown, fieldStatus?: (field: string) => string | undefined): string {
   if (!content || typeof content !== "object") return `[${key}] Vide`;
+  if (key.toLowerCase() === "v" && !Array.isArray(content)) content = projectFinancialPillar(content as Record<string, unknown>);
   const projected = projectForContext(content, 400);
   const status = fieldStatus ?? fieldStatusFor(undefined, key, (content as Record<string, unknown>)._fieldProvenance);
   const qualified = projected && !Array.isArray(projected)
     ? Object.fromEntries(Object.entries(projected as Record<string, unknown>)
       .filter(([field]) => !field.startsWith("_"))
       .map(([field, valeur]) => {
-        const statut = status(field) ?? "UNKNOWN";
+        const calculated = key.toLowerCase() === "v" && field === "unitEconomics" && (content as Record<string, unknown>).financialModel != null;
+        const statut = calculated ? "INFERRED" : status(field) ?? "UNKNOWN";
         const origins = (content as Record<string, unknown>)._fieldProvenance;
         const complements = origins && typeof origins === "object" && !Array.isArray(origins)
           ? Object.entries(origins).filter(([path]) => path.startsWith(`${field}.`) || path.startsWith(`${field}[`))

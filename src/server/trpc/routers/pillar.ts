@@ -1085,10 +1085,15 @@ export const pillarRouter = createTRPCRouter({
         select: { content: true, validationStatus: true, currentVersion: true },
       });
       const content = (pillar?.content as Record<string, unknown> | null) ?? {};
-      const fields = listEditableFields(pillarKeyLower);
+      const fields = listEditableFields(pillarKeyLower).filter(f => !(pillarKeyLower === "v" && content.financialModel != null && f.field === "unitEconomics"));
+      const profiles = pillarKeyLower === "v" ? await ctx.db.pillar.findUnique({ where: { strategyId_key: { strategyId: input.strategyId, key: "d" } }, select: { content: true } }) : null;
+      const personas = (profiles?.content as { personas?: Array<{ id?: string; name?: string; nom?: string; actorRoles?: string[] }> } | null)?.personas;
+      const payerOptions = Array.isArray(personas) ? personas.filter(p => p.id && p.actorRoles?.includes("PAYER"))
+        .map(p => ({ id: p.id!, name: p.name || p.nom || "Client payeur" })) : [];
       return {
         version: pillar?.currentVersion ?? 1,
         validationStatus: pillar?.validationStatus ?? "DRAFT",
+        payerOptions,
         fields: fields.map((f) => ({
           field: f.field,
           mode: getEditableMode(pillarKeyLower, f.spec),

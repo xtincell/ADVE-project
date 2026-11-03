@@ -1,3 +1,4 @@
+import { projectFinancialPillar } from "@/domain/unit-economics";
 /**
  * PROTOCOLE INNOVATION (I) — Agent spécialisé de l'essaim MESTOR
  *
@@ -288,7 +289,8 @@ export async function executeProtocoleInnovation(strategyId: string): Promise<Pr
     });
     const pillars: Record<string, Record<string, unknown> | null> = {};
     for (const p of dbPillars) {
-      pillars[p.key] = (p.content ?? null) as Record<string, unknown> | null;
+      const content = (p.content ?? null) as Record<string, unknown> | null;
+      pillars[p.key] = p.key === "v" && content ? projectFinancialPillar(content) : content;
     }
 
     // Step 1: Plateforme de marque (COMPOSE)

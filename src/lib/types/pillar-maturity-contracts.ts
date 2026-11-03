@@ -1,3 +1,4 @@
+import { projectFinancialPillar } from "@/domain/unit-economics";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 /**
@@ -247,7 +248,7 @@ const NEEDS_HUMAN_BY_PILLAR: Record<string, Set<string>> = {
 const COMPLETE_OPTIONAL_BY_PILLAR: Record<string, Set<string>> = {
   a: new Set<string>(),
   d: new Set<string>(),
-  v: new Set<string>(["productSystem"]),
+  v: new Set<string>(["productSystem", "financialModel"]),
   e: new Set<string>(),
   r: new Set<string>(),
   t: new Set<string>(),
@@ -507,6 +508,7 @@ export function listSchemaLeafPaths(pillarKey: string, maxDepth = 4): SchemaLeaf
  * notoria et l'auto-filler → une seule notion de « feuille vide » dans tout l'OS.
  */
 export function findEmptyLeafPaths(pillarKey: string, content: Record<string, unknown>): SchemaLeaf[] {
+  if (pillarKey.toLowerCase() === "v") content = projectFinancialPillar(content);
   const needsHuman = NEEDS_HUMAN_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
   // Champs SCHÉMA légitimement optionnels (ex. `v.productSystem`, ADR-0170) : le
   // contrat COMPLETE les exclut déjà (pas de fabrication forcée d'un « Système Palais »
@@ -544,6 +546,9 @@ export function findEmptyLeafPaths(pillarKey: string, content: Record<string, un
     if (needsHuman.has(leaf.topKey)) continue;
     if (completeOptional.has(leaf.topKey)) continue;
     if (leaf.path.includes(".") && ancestorNotDescendable(leaf.path)) continue;
+    // Known non-applicability is a computed outcome, not a missing premise.
+    const ue = content.unitEconomics as { _financialContext?: { outcomes?: Record<string, string> } } | undefined;
+    if (leaf.path.startsWith("unitEconomics.") && ue?._financialContext?.outcomes?.[leaf.path.slice("unitEconomics.".length)]) continue;
     if (isEmpty(resolvePillarPath(content, leaf.path))) out.push(leaf);
   }
   return out;
@@ -611,6 +616,7 @@ export function isNonFabricableLeaf(leaf: { path: string; topKey: string; scalar
 }
 
 export function findEmptyArrayCellPaths(pillarKey: string, content: Record<string, unknown>): SchemaLeaf[] {
+  if (pillarKey.toLowerCase() === "v") content = projectFinancialPillar(content);
   const needsHuman = NEEDS_HUMAN_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
   const completeOptional = COMPLETE_OPTIONAL_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
   const evidenceArrays = EVIDENCE_ARRAY_TOPKEYS[pillarKey.toLowerCase()] ?? new Set<string>();

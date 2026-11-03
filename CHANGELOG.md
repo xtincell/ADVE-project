@@ -1,3 +1,17 @@
+## v6.27.536 — Finance ADVE et cohérence de la stratégie (3 novembre 2026)
+
+- Les prémisses financières versionnées dans V alimentent FinancialBrain, les lecteurs V, Oracle, Catalyse, exports, bindings, contexte RTIS, maturité, contrôles et allocation. Même cohorte payeuse, devise et horizon ; communication comprise dans les charges, trésorerie conditionnelle. Les valeurs humaines antérieures sont conservées et les versions/source contrôlées avant amendement.
+- L’éditeur existant expose les prémisses et renvoie les résultats calculés à leur origine. Zéro explicite, déficit et non-applicabilité mathématique restent distincts d’une valeur absente. Aucun bonus de performance prouvée ni budget disponible n’est déduit d’une projection proposée.
+- Stratégie calcule son score avec le validateur commun sur le plan courant. Contrôles conformes, écarts et non-évalués sont enregistrés, expliqués dans le cockpit et repris dans l’Oracle. Le nombre d’observations de risque reste distinct du score ; les mitigations du sprint doivent résoudre un risque courant.
+- Le générateur I demande explicitement horizons relatifs, familles de campagne, cadences, progression, déplacements de perception et fourchettes nécessaires à S. Les propositions restent issues du socle ADVE ; la génération réelle et les champs de roadmap restants sont encore à recevoir.
+- La compilation du contrôle Lighthouse utilise la même limite de mémoire Node que le Dockerfile (6 Gio) : le contrôle mourait à4 Gio avant son audit. Aucun contrôle retiré ni ressource du VPS modifiée.
+- Le test PostgreSQL de choix parcimonieux vérifie le score structurel et sa couverture, tout en conservant les interdictions d’inventer objectifs, KPI ou confiance mesurée.
+- Une liste calculée sans action rejetée est affichée comme telle, sans badge « Origine inconnue ». Une liste absente reste distincte de zéro rejet.
+- Livraison commerciale 535/PR1122 conservée. [ADR-0234](docs/governance/adr/0234-financial-working-model-projection.md), PR1121 ; aucun nouveau service, fournisseur IA, gestionnaire d’appels ou migration.
+- Validation locale536 : 5 148 tests unitaires/498 fichiers ; PostgreSQL ciblé72/4 et document original16/1 ; typage sans erreur, lints sans erreur/24 avertissements préexistants, zéro cycle, build production réussi. Les preuves534 et535 antérieures ne sont pas présentées comme réception536.
+- Application compilée, copie privée isolée : recalcul S sauvegardé en273ms, détail de cohérence lu dans Oracle en88ms et sept autres piliers inchangés. Réception financière en lecture : Oracle58ms, Word845ms/37contrôles sans inconnu du modèle de recette, contrôles13ms, éditeur14ms ; contenu et métadonnées des piliers conservés. Trois pages protégées HTTP200 en17/33/20ms. Stress :277pages HTTP reçues,5non reçues, zéro finding. Ces mesures locales ne prouvent ni le rendu natif, ni un SLO.
+- Réception native, CI/image/runtime536, modèle réel SPAWT/cascade, autres dossiers et Oracle/ADVE/MVP entiers restent ouverts. Le modèle optionnel préserve le legacy sans certifier la complétude de tous les dossiers. Données et artefacts privés restent hors du dépôt.
+
 ## v6.27.535 — Cohérence de la version publique après la livraison commerciale (2 novembre 2026)
 
 - Aligne la constante runtime, le package et son verrou sur535. Le code commercial534 était reçu dans son conteneur, mais l’API et le footer annonçaient encore533 ; la nouvelle image rend la livraison mesurable sur la version publique.

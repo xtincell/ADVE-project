@@ -7,6 +7,7 @@ vi.mock("@/lib/auth/config", () => ({ auth: vi.fn() }));
 vi.mock("next-auth", () => ({}));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
 import { gloryRouter } from "@/server/trpc/routers/glory";
+import { financialModelFixture } from "../fixtures/financial-model";
 let brand: string, other: string, actor: string, operatorId: string;
 const docs: string[] = [];
 beforeAll(async () => {
@@ -43,6 +44,24 @@ async function source(payerPersonaId = "payer", strategyId = brand) {
   return { sourceId: row.id, expectedSourceHash: sourceFingerprint(row) };
 }
 describe.sequential("sourced financial document on owned PostgreSQL", () => {
+  it("calcule depuis le modèle V courant, la pièce documentaire servant à l’alignement et à la preuve", async () => {
+    const input = await source(); const model = financialModelFixture();
+    model.source = { sourceId: input.sourceId, contentHash: input.expectedSourceHash };
+    model.breakEven.currency = "XOF"; model.breakEven.payerPersonaId = "payer";
+    model.breakEven.price = { ...model.breakEven.price, value: 16000, note: "Prix proposé révisé dans l’ADVE pour cette recette." };
+    const pillar = await db.pillar.create({ data: { strategyId: brand, key: "v", content: JSON.parse(JSON.stringify({ financialModel: model })), currentVersion: 1 } });
+    try {
+      const before = await db.pillar.findUniqueOrThrow({ where: { id: pillar.id } });
+      const output = await composeSourcedBreakEven(brand, input);
+      expect(output.base.breakEvenUnits).toBe(40);
+      expect(output.model.price.value).toBe(16000);
+      expect(output.firstProfitableMonth).toBe(4);
+      expect(await db.pillar.findUniqueOrThrow({ where: { id: pillar.id } })).toEqual(before);
+      await db.pillar.update({ where: { id: pillar.id }, data: { currentVersion: { increment: 1 } } });
+      await expect(db.$transaction(tx => assertBreakEvenDocumentCurrent(tx, brand, output))).rejects.toThrow("PILLAR_CHANGED");
+    } finally { await db.pillar.delete({ where: { id: pillar.id } }); }
+  });
+
   it("composes only the selected current edition, preserving the proposal and pillar", async () => {
     const input = await source(); const before = await db.pillar.findMany({ where: { strategyId: brand } });
     const output = await composeSourcedBreakEven(brand, input);

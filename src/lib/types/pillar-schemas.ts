@@ -8,6 +8,7 @@ import { z } from "zod";
 import { PILLAR_KEYS, ADVE_KEYS } from "@/domain";
 import { ProductSystemSchema } from "@/domain/product-system";
 import { BRAND_ACTOR_ROLES } from "@/domain/brand-actors";
+import { FinancialWorkingModelSchema } from "@/domain/financial-document";
 import {
   ARCHETYPES, SCHWARTZ_VALUES, LIFE_FORCE_8, AARRR_STAGES,
   DEVOTION_LEVELS, CHANNELS, TOUCHPOINT_TYPES, RITUAL_TYPES,
@@ -566,7 +567,8 @@ const UnitEconomicsSchema = z.object({
   ltvCacRatio: z.number().optional(), // Derived
   pointMort: textShort.optional(),
   margeNette: z.number().optional(), // Derived
-  roiEstime: percentage.optional(),
+  // A return is expressed in percentage points, not a bounded share.
+  roiEstime: z.number().finite().optional(),
   paybackPeriod: z.number().optional(), // months
   budgetCom: currency, // V7 — annual marketing budget
   caVise: currency, // V8 — targeted annual revenue
@@ -606,6 +608,7 @@ export const PillarVSchema = z.object({
 
   // Unit Economics
   unitEconomics: UnitEconomicsSchema,
+  financialModel: FinancialWorkingModelSchema.optional(),
 
   // ── Système produit (ADR-0170 — « penser produit dans le pilier Valeur ») ──
   // Le MÉCANISME interne du produit (axes, archétypes, progression, modes,
@@ -1531,7 +1534,11 @@ export const PillarSSchema = z.object({
       target: z.string().min(1),
       gapScore: percentage.optional(),
     })).optional(),
-    coherenceScore: percentage.optional(),                   // legacy score, not inferred from a count
+    coherenceScore: percentage.optional(),                   // existing cross-validator passed/applicable ratio
+    coherenceSummary: z.object({ total: z.number().int().nonnegative(), valid: z.number().int().nonnegative(),
+      invalid: z.number().int().nonnegative(), skipped: z.number().int().nonnegative(), score: percentage }).optional(),
+    coherenceChecks: z.array(z.object({ rule: z.string(), ruleId: z.number().int(), from: z.string(), to: z.string(),
+      status: z.enum(["VALID", "INVALID", "SKIPPED"]), message: z.string() })).optional(),
     coherenceIssueCount: z.number().int().nonnegative().optional(),
     // 3 trajectoires de roadmap (ADR-0088) — projections PURES, jamais LLM.
     // ADR-0089 : chaque route porte aussi son JEU DE STRATÉGIE calculé
@@ -1619,6 +1626,22 @@ export type PillarContent =
   | PillarIContent
   | PillarSContent;
 
+/** The working model is the financial input contract when present. Stored
+ * legacy metrics remain inspectable, but are not a second calculation basis. */
+function validationSchemaFor(key: PillarKey, content: unknown): z.ZodObject {
+  return key === "V" && content && typeof content === "object"
+    && (content as Record<string, unknown>).financialModel !== undefined
+    ? PillarVSchema.omit({ unitEconomics: true }) : PILLAR_SCHEMAS[key];
+}
+
+function retainLegacyFinancialRows(key: PillarKey, content: unknown, parsed: Record<string, unknown>) {
+  if (key === "V" && content && typeof content === "object"
+    && Object.hasOwn(content, "financialModel") && Object.hasOwn(content, "unitEconomics")) {
+    return { ...parsed, unitEconomics: (content as Record<string, unknown>).unitEconomics };
+  }
+  return parsed;
+}
+
 /**
  * Validate pillar content against its schema
  * Returns { success: true, data } or { success: false, errors }
@@ -1632,11 +1655,11 @@ export function validatePillarContent(key: PillarKey, content: unknown): {
   data?: PillarContent;
   errors?: Array<{ path: string; message: string; code?: string; expected?: string; received?: string }>;
 } {
-  const schema = PILLAR_SCHEMAS[key];
+  const schema = validationSchemaFor(key, content);
   const result = schema.safeParse(content);
 
   if (result.success) {
-    return { success: true, data: result.data as PillarContent };
+    return { success: true, data: retainLegacyFinancialRows(key, content, result.data) as PillarContent };
   }
 
   return {
@@ -1661,12 +1684,12 @@ export function validatePillarPartial(key: PillarKey, content: unknown): {
   errors?: Array<{ path: string; message: string }>;
   completionPercentage: number;
 } {
-  const schema = PILLAR_SCHEMAS[key];
+  const schema = validationSchemaFor(key, content);
   const partialSchema = schema.partial();
   const result = partialSchema.safeParse(content);
 
   // Calculate completion percentage
-  const totalFields = Object.keys(schema.shape).length;
+  const totalFields = Object.keys(PILLAR_SCHEMAS[key].shape).length;
   const filledFields = content && typeof content === "object"
     ? Object.entries(content as Record<string, unknown>).filter(([, v]) =>
         v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)
@@ -1676,7 +1699,7 @@ export function validatePillarPartial(key: PillarKey, content: unknown): {
   const completionPercentage = Math.round((filledFields / totalFields) * 100);
 
   if (result.success) {
-    return { success: true, data: result.data as Partial<PillarContent>, completionPercentage };
+    return { success: true, data: retainLegacyFinancialRows(key, content, result.data) as Partial<PillarContent>, completionPercentage };
   }
 
   return {

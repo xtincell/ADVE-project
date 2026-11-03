@@ -12,6 +12,7 @@ it.each(["HT", "TTC", "NO_VAT"] as const)("exports the modular form with readabl
     unit: "abonnement", taxBasis, scope: "Recette synthétique", price: amount(15000), fixedCosts: [{ label: "CF", ...amount(315000) }],
     variableCosts: [{ label: "CV", ...amount(8000) }], assumptions: ["Sans ventes reçues"], exclusions: ["Trésorerie"],
   }), evidence: [{ sourceId: "model", contentHash: "a".repeat(64), fileName: "Modèle de recette.json", document: { schema: "document-edition-v1", family: "Fiche de recette", kind: "FINANCE", label: "Recette", status: "PROPOSED", edition: 1, recordedAt: "2026-10-21T00:00:00Z", changeSummary: "Cas synthétique", sourceUrl: "https://example.org/finance/recette?version=1&format=source" }, historical: false }],
+  financialProjection: null, calculationBasis: "DOCUMENTARY_LEGACY", basisNote: "Scénario documentaire de recette.",
   pillarVersions: { v: 1 }, sourceReceipt: { sourceId: "model", contentHash: "a".repeat(64) } };
   const bytes = await exportBreakEvenDocx(doc, new Date("2026-10-21T00:00:00Z"));
   const zip = await JSZip.loadAsync(bytes);

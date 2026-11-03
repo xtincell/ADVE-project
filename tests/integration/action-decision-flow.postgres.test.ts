@@ -281,7 +281,12 @@ describe("one operator choice survives the whole existing action path", () => {
     const result = await executeProtocoleStrategy(f.strategy.id);
     expect(result.content).toMatchObject({ axesStrategiques: [], facteursClesSucces: [], kpiDashboard: [], devotionFunnel: [], budgetByDevotion: {} });
     expect(result.content.northStarKPI).toBeUndefined();
-    expect(result.content.computed).not.toHaveProperty("coherenceScore");
+    const computed = result.content.computed as Record<string, unknown>;
+    const coverage = computed.coherenceSummary as { score: number; skipped: number };
+    expect(computed.coherenceScore).toEqual(expect.any(Number));
+    expect(result.content.coherenceScore).toBe(coverage.score);
+    expect(coverage.skipped).toBeGreaterThan(0);
+    expect(result.confidence).toBe(0); // structural consistency is not measured brand confidence
     expect(result.content.roadmap).toHaveLength(1);
     expect(result.content.sprint90Days).toMatchObject([{ sourceInitiativeId: f.initiative.id }]);
     expect((result.content.sprint90Days as object[])[0]).not.toHaveProperty("devotionImpact");

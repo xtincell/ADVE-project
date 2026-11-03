@@ -33,6 +33,7 @@ import { jsPDF } from "jspdf";
 import { resolveBrandTheme, type BrandTheme } from "@/server/services/brand-theme";
 import { SECTION_REGISTRY } from "./types";
 import { getFieldLabel } from "@/lib/types/field-labels";
+import { unitEconomicsMetricRows, unitEconomicsNote } from "@/domain/unit-economics";
 
 export interface ExportOpts {
   /** When set, the export pulls from this snapshot instead of the live state. */
@@ -90,6 +91,12 @@ function isEmptyValue(v: unknown): boolean {
 export function renderValue(value: unknown, indent = "", depth = 0, context = ""): string[] {
   if (isEmptyValue(value)) return [];
   if (depth > 6) return [`${indent}…`];
+  if ((context === "unitEconomics" || context.endsWith(".unitEconomics")) && value && typeof value === "object" && !Array.isArray(value)) {
+    const ue = value as Record<string, unknown>;
+    const rows = unitEconomicsMetricRows(ue).filter(r => r.value !== "—");
+    const note = unitEconomicsNote(ue);
+    return [...rows.map(r => `${indent}${r.label} : ${r.value}`), ...(note ? [`${indent}${note}`] : [])];
+  }
 
   if (typeof value === "string") return [`${indent}${value}`];
   if (typeof value === "number" || typeof value === "boolean") {

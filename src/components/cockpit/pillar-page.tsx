@@ -14,6 +14,7 @@ import { inferredFieldPaths } from "@/domain/field-provenance";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { resolvePillarPath } from "@/lib/pillar-path";
+import { projectFinancialPillar } from "@/domain/unit-economics";
 import { listEditableFields } from "@/lib/types/variable-bible";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
@@ -198,6 +199,8 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
 
   // ── ADR-0030 — open amend modal pre-targeted on a specific field ──
   function openAmendOnField(fieldPath: string) {
+    if (config.pillarKey === "v" && (fieldPath === "unitEconomics" || fieldPath.startsWith("unitEconomics."))
+      && (pillarQuery.data?.pillar?.content as Record<string, unknown> | null)?.financialModel != null) fieldPath = "financialModel";
     const entry = listEditableFields(config.pillarKey).find(f =>
       fieldPath === f.field || fieldPath.startsWith(`${f.field}.`) || fieldPath.startsWith(`${f.field}[`));
     if (!entry) {
@@ -324,7 +327,8 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
   if (pillarQuery.isLoading) return <SkeletonPage />;
 
   const pillar = pillarQuery.data?.pillar;
-  const content = (pillar?.content ?? {}) as Record<string, unknown>;
+  const rawContent = (pillar?.content ?? {}) as Record<string, unknown>;
+  const content = config.pillarKey === "v" ? projectFinancialPillar(rawContent) : rawContent;
   const isFilled = (v: unknown) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0);
   const editableFields = listEditableFields(config.pillarKey);
   const focusedPaths = focusPaths.filter(path => path.split(".")[0]?.toLowerCase() === config.pillarKey);

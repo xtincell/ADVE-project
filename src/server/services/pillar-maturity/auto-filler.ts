@@ -1,4 +1,4 @@
-import { unitEconomicsRatio } from "@/domain/unit-economics";
+import { resolveUnitEconomics, unitEconomicsRatio } from "@/domain/unit-economics";
 import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -583,81 +583,13 @@ async function deriveByCalculation(
     return Math.round((total / (matrix.length * 9)) * 100);
   }
 
-  // ── Pillar V: Deterministic unit economics via Financial Brain ─────────
-  // These calculations replace LLM generation for financial fields.
-  // Context: sector/country/positioning from pillar A/D, benchmarks from financial-brain.
+  // A current ADVE model is the sole financial calculation basis. Legacy
+  // inputs can yield their qualified quotient, never a sector/country default.
   if (path.startsWith("unitEconomics.")) {
-    const a = _allPillars.a ?? {};
-    const d = _allPillars.d ?? {};
-    const sector = (a.secteur as string ?? "SERVICES").toUpperCase();
-    const country = a.pays as string ?? "Cameroun";
-    const positioning = (d.positionnement as string ?? "MAINSTREAM").toUpperCase();
-    const businessModel = (a.businessModel as string ?? "B2C").toUpperCase();
-    const ue = (content.unitEconomics ?? {}) as Record<string, unknown>;
-
-    // Lazy-import to avoid circular deps and keep zero-cost when not needed
-    const fb = await import("@/server/services/financial-brain");
-
-    const COUNTRY_MULT: Record<string, number> = {
-      Cameroun: 1.0, "Cote d'Ivoire": 1.05, Senegal: 0.95, RDC: 0.6, Gabon: 2.0,
-      "Afrique du Sud": 3.0,
-      Congo: 1.1, Nigeria: 0.8, Ghana: 0.9, France: 8.0, USA: 10.0, Maroc: 1.5, Tunisie: 1.3,
-    };
-    const BIZ_MODEL_CAC: Record<string, number> = { B2C: 1.0, B2B: 2.5, B2B2C: 1.8, D2C: 0.7, MARKETPLACE: 0.5 };
-    const POS_MULT: Record<string, number> = { ULTRA_LUXE: 10.0, LUXE: 5.0, PREMIUM: 2.5, MASSTIGE: 1.5, MAINSTREAM: 1.0, VALUE: 0.6, LOW_COST: 0.3 };
-    const cm = COUNTRY_MULT[country] ?? 1.0;
-    const bm = BIZ_MODEL_CAC[businessModel] ?? 1.0;
-    const pm = POS_MULT[positioning] ?? 1.0;
-
-    // Sector benchmarks (mid-range)
-    const SECTORS: Record<string, { cacMid: number; ltvMid: number; grossMargin: number; revMid: number }> = {
-      FMCG: { cacMid: 2750, ltvMid: 82500, grossMargin: 0.35, revMid: 275_000_000 },
-      TECH: { cacMid: 55000, ltvMid: 2550000, grossMargin: 0.65, revMid: 510_000_000 },
-      SERVICES: { cacMid: 110000, ltvMid: 5250000, grossMargin: 0.55, revMid: 165_000_000 },
-      RETAIL: { cacMid: 11000, ltvMid: 275000, grossMargin: 0.40, revMid: 110_000_000 },
-      HOSPITALITY: { cacMid: 27500, ltvMid: 1050000, grossMargin: 0.45, revMid: 275_000_000 },
-      EDUCATION: { cacMid: 55000, ltvMid: 2600000, grossMargin: 0.50, revMid: 105_000_000 },
-      BANQUE: { cacMid: 275000, ltvMid: 10250000, grossMargin: 0.60, revMid: 5_250_000_000 },
-      MODE: { cacMid: 27500, ltvMid: 525000, grossMargin: 0.55, revMid: 255_000_000 },
-      GAMING: { cacMid: 15500, ltvMid: 255000, grossMargin: 0.70, revMid: 502_500_000 },
-      STARTUP: { cacMid: 52500, ltvMid: 1025000, grossMargin: 0.60, revMid: 102_500_000 },
-    };
-    const sd = SECTORS[sector] ?? SECTORS.SERVICES!;
-
-    if (path === "unitEconomics.ltvCacRatio") {
-      return unitEconomicsRatio(ue?.cac, ue?.ltv, ue?.ltvCacRatio) ?? undefined;
-    }
-    if (path === "unitEconomics.cac") {
-      return Math.round(sd.cacMid * cm * bm);
-    }
-    if (path === "unitEconomics.ltv") {
-      return Math.round(sd.ltvMid * cm * pm);
-    }
-    if (path === "unitEconomics.caVise") {
-      return Math.round(sd.revMid * cm * pm);
-    }
-    if (path === "unitEconomics.budgetCom") {
-      const caVise = typeof ue.caVise === "number" ? ue.caVise : Math.round(sd.revMid * cm * pm);
-      const reco = await fb.recommendBudget({
-        sector, country, positioning, businessModel,
-        estimatedRevenue: caVise,
-      });
-      return reco.recommended;
-    }
-    if (path === "unitEconomics.margeNette") {
-      return Math.round(sd.grossMargin * 0.65 * 100) / 100;
-    }
-    if (path === "unitEconomics.roiEstime") {
-      const cac = typeof ue.cac === "number" ? ue.cac : Math.round(sd.cacMid * cm * bm);
-      const ltv = typeof ue.ltv === "number" ? ue.ltv : Math.round(sd.ltvMid * cm * pm);
-      return cac > 0 ? Math.round(((ltv - cac) / cac) * 100) : 0;
-    }
-    if (path === "unitEconomics.paybackPeriod") {
-      const cac = typeof ue.cac === "number" ? ue.cac : Math.round(sd.cacMid * cm * bm);
-      const margin = sd.grossMargin * 0.65;
-      const monthlyRev = typeof ue.caVise === "number" ? ue.caVise / 12 / 100 : sd.revMid * cm / 12 / 100;
-      return monthlyRev > 0 && margin > 0 ? Math.min(36, Math.round(cac / (monthlyRev * margin))) : 24;
-    }
+    const ue = resolveUnitEconomics(content);
+    const key = path.slice("unitEconomics.".length);
+    if (content.financialModel != null) return ue[key] ?? undefined;
+    if (key === "ltvCacRatio") return unitEconomicsRatio(ue.cac, ue.ltv, ue.ltvCacRatio) ?? undefined;
     return undefined;
   }
 

@@ -1,3 +1,4 @@
+import { projectFinancialPillar, resolveUnitEconomics } from "@/domain/unit-economics";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 /**
@@ -30,6 +31,12 @@ import { getContracts } from "./contracts-loader";
  * Check if a field requirement is satisfied by the pillar content.
  */
 export function isFieldSatisfied(content: Record<string, unknown>, req: FieldRequirement): boolean {
+  if (content.financialModel != null && req.path.startsWith("unitEconomics.")) {
+    const ue = resolveUnitEconomics(content);
+    const context = ue._financialContext as { outcomes?: Record<string, string> } | undefined;
+    if (context?.outcomes?.[req.path.slice("unitEconomics.".length)]) return true;
+    content = projectFinancialPillar(content);
+  }
   const value = resolvePillarPath(content, req.path);
 
   switch (req.validator) {
@@ -174,6 +181,7 @@ export function assessPillar(
   content: Record<string, unknown> | null,
   contract?: PillarMaturityContract,
 ): PillarAssessment {
+  if (pillarKey.toLowerCase() === "v" && content) content = projectFinancialPillar(content);
   const ct = contract ?? getContracts()[pillarKey.toLowerCase()];
   if (!ct || !content) {
     return {

@@ -16,7 +16,8 @@ import { BRAND_ACTOR_ROLES, BRAND_ACTOR_ROLE_LABELS } from "@/domain/brand-actor
 export type FieldDef =
   | { kind: "enum"; options: readonly string[]; label: string; nullable?: boolean }
   | { kind: "text"; label: string; maxLength?: number; multiline?: boolean; placeholder?: string }
-  | { kind: "number"; label: string; min?: number; max?: number; unit?: string }
+  | { kind: "number"; label: string; min?: number; max?: number; unit?: string; displayScale?: number }
+  | { kind: "financial-model"; label: string }
   | { kind: "multi-enum"; options: readonly string[]; label: string; optionLabels?: Readonly<Record<string, string>> }
   | { kind: "object"; label: string; fields: Record<string, FieldDef> }
   | { kind: "array-of-objects"; label: string; itemLabel?: string; itemFields: Record<string, FieldDef> }
@@ -271,14 +272,16 @@ const PILLAR_V: Record<string, FieldDef> = {
       position: numberField("Position", { min: 1 }),
     },
   },
+  financialModel: { kind: "financial-model", label: "Hypothèses du modèle financier" },
   unitEconomics: {
     kind: "object", label: "Unit Economics",
     fields: {
       cac: numberField("CAC", { min: 0, unit: "FCFA" }),
       ltv: numberField("LTV", { min: 0, unit: "FCFA" }),
       ltvCacRatio: numberField("Ratio LTV/CAC", { min: 0 }),
-      pointMort: numberField("Point mort", { min: 0 }),
-      margeNette: numberField("Marge nette", { min: 0, max: 100, unit: "%" }),
+      pointMort: textField("Point mort et unité"),
+      margeNette: numberField("Marge nette", { max: 100, unit: "%", displayScale: 100 }),
+      roiEstime: numberField("ROI estimé", { unit: "%" }),
       paybackPeriod: numberField("Payback period", { min: 0, unit: "mois" }),
       budgetCom: numberField("Budget com", { min: 0, unit: "FCFA/an" }),
       caVise: numberField("CA vise", { min: 0, unit: "FCFA/an" }),

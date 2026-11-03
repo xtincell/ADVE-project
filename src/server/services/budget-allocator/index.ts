@@ -12,6 +12,7 @@
  * Output: Complete plan (media mix, channel allocation, timeline, KPIs, production costs)
  */
 
+import { resolveUnitEconomics } from "@/domain/unit-economics";
 import { db } from "@/lib/db";
 import { catalogueReferencePrice } from "@/domain/product-catalog";
 import type { DriverChannel } from "@prisma/client";
@@ -526,13 +527,14 @@ export async function generateBudgetPlan(strategyId: string, overrideBudget?: nu
   const pillarD = (strategy.pillars.find((p: any) => p.key === "d")?.content as Record<string, unknown>) ?? {};
 
   // Resolve budget: override > pillar V budgetCom > businessContext declaredBudget > 0
-  const ue = (pillarV.unitEconomics as Record<string, unknown>) ?? {};
+  const ue = resolveUnitEconomics(pillarV);
   const budget = overrideBudget
     ?? (typeof ue.budgetCom === "number" ? ue.budgetCom : null)
     ?? (typeof bCtx.declaredBudget === "number" ? bCtx.declaredBudget : 0);
 
-  const currency = "XAF";
+  const currency = typeof ue.currency === "string" ? ue.currency : "XAF";
   const warnings: string[] = [];
+  if (ue._financialContext) warnings.push("Enveloppe calculée depuis les hypothèses du modèle ADVE ; la simulation ne constitue pas une autorisation de dépense.");
 
   if (budget === 0) {
     warnings.push("Aucun budget detecte — utilise 0 FCFA. Renseignez pillar V.unitEconomics.budgetCom ou businessContext.declaredBudget.");

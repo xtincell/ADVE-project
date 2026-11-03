@@ -1,3 +1,67 @@
+## 536 — financier et roadmap à recevoir sur le head intégré (3 novembre 2026)
+
+Candidat 536 après les livraisons commerciales #1120/e09a808fa et #1122/f77fe2dc8,
+conservées avec leur ADR0233. ADR financier0234 ; PR réelle #1121. Le runtime
+535 reçu en production est commercial ; le modèle financier de marque reste à appliquer.
+Les métriques `source534-*` ci-dessous sont préintégration. Le candidat535 a reçu
+5 144 unitaires/496 fichiers, typage/lints et build ; PostgreSQL principal576/577
+avec un timeout grand document, ciblé financier20/20, flotte12/12 et paiements9/9.
+Ces reçus ne valident pas le head536, sa livraison ou son écran. Ciblé536 :
+quatre nouveaux tests service/rendu verts ; PostgreSQL72/4 et grand document16/1
+en 60,9 s. Cette dernière reprise suit le redémarrage de la base locale éteinte ;
+elle ne constate aucun incident de production ni capacité sous charge.
+État536 compilé avant le dernier correctif de badge : 5 148 unitaires/498 fichiers,
+build production exit0, typage/lints verts (24 avertissements préexistants).
+`pillar.actualize` sur fixture possédée : S seul modifié, score71, 31 contrôles
+(20 conformes, 8 écarts, 3 non évalués), synthèse reçue dans Oracle, appels273/88 ms.
+Relecture financière compilée sans mutation : Oracle58 ms, Word845 ms/37 contrôles
+sans inconnu, validation13 ms, éditeur14 ms ; HTTP200 en17/33/20 ms, contenu et
+métadonnées des piliers inchangés. Stress compilé : 277 reçues, 5 non reçues,
+0 finding. Ces preuves ne reçoivent ni écran natif, ni SLO, ni production.
+Dernier delta UI : liste de rejets calculée vide distincte du champ absent,
+badge CALCULATED ; gouvernance/composant1 682 tests/170 fichiers verts après ce delta.
+Reconstruction finale536 après badge exit0 (`source536-build-final.log`). Relecture
+exacte `source536-postbadge-http-received.json` sans mutation : Oracle106 ms,
+Word630 ms/37 contrôles sans inconnu, validation35 ms, éditeur31 ms et trois
+routes HTTP200 en198/65/77 ms ; contenu/métadonnées des piliers inchangés.
+Le rendu natif et la production restent non reçus, aucune latence ne vaut SLO.
+CI PostgreSQL : 597/598, ancien test exigeant l’absence de score corrigé pour
+contrôler score structurel/couverture non évaluée et confiance0 ; gardes KPI/objectifs
+conservées. Ciblé corrigé39/39 vert en2,53 s ; ce delta porte seulement
+l’assertion et la documentation, pas le métier compilé. CI complète verte non reçue.
+Cascade réelle I, jalons Overton et compléments ADVE/roadmap restent ouverts.
+
+Candidat536 : `computePillarS` évalue le S nouvellement généré avec
+`validatePillarCrossReferences` puis `summarizeCrossReferences`, fonctions communes
+au validateur existant. Score = contrôles conformes / contrôles évalués × 100 ;
+la couverture et les non-évalués restent visibles, sans compter les observations
+R comme des points. Racine S et tableau calculé concordent ; Oracle reprend score
+et couverture. Un zéro legacy explicite reste prioritaire sans reçu de calcul.
+Le sprint ne qualifie une mitigation que si son identifiant de risque résout.
+Le format du générateur I séquencé demande désormais horizon, famille/cadence,
+fourchette/période budgétaire, dévotion et déplacement de perception ; plafond de
+sortie porté de2 400 à4 800 via le gestionnaire existant. Génération réelle,
+références réparées en données et disparition des lacunes ne sont pas encore reçues.
+
+V qualifié → FinancialBrain commun → lecteurs/contextes/exports, éditeur manuel
+et provenance pillar.sources/checkpoints conservés ; model.source = édition de base.
+Projection conditionnelle, ni performance prouvée ni budget Thot disponible ;
+legacy conservé sans deuxième calcul, déficit/zéro/non-applicabilité explicites.
+Avant intégration, `source534-*` : 5 121 tests/491 fichiers, PG ciblé 20/2 source/V/PAYER/concurrence D refusée
+réellement sans version V ou recommendation APPLIED, valeurs humaines conservées.
+Tsc exit 0, lints 0 erreur/24 anciens avertissements, cycles 0, build final 8 GiB
+exit 0 ; deux rouges zéro/non-applicabilité puis ciblé consommateurs 8 verts.
+Copie isolée : MCP une écriture, fiche/Word 37 contrôles/cinq pages inspectées.
+Relecture finale compilée sans mutation : Oracle USER 136 ms, Word 672 ms sans
+inconnu, cross-validator 44 ms, éditeur 35 ms, contenu/métadonnées inchangés.
+Trois pages HTTP 200, stress sans finding ; aucun natif réel, ADVE production
+écrit ou SLO. CI/image/runtime, modèle réel/cascade RTIS et chaîne entière ouverts.
+Legacy optionnel ≠ readiness financière de tous dossiers : admission/complétude
+à recevoir avant Oracle/ADVE/MVP entiers ; autres champs A/dossiers régionaux,
+campagnes/devis/taxonomies et sept chantiers ouverts. Données privées hors checkout.
+[ADR-0234 Proposed](docs/governance/adr/0234-financial-working-model-projection.md).
+
+
 ## 533 — Oracle reçu localement, livraison ouverte (2 novembre 2026)
 
 Sur cf924/PR #1119 : quatre lectures A/E (doctrine, freins, communauté, contacts)

@@ -28,6 +28,7 @@ export function FenetreOverton({ data }: Props) {
           <div className="rounded-lg border border-background bg-background/40 p-4">
             <p className="text-[10px] font-bold uppercase tracking-wider text-foreground-muted">Cohérence</p>
             <p className="mt-1 text-lg font-bold text-foreground">{dash.coherenceScore != null ? `${dash.coherenceScore}/100` : "—"}</p>
+            {dash.coherenceSummary ? <p className="mt-1 text-xs text-foreground-muted">{dash.coherenceSummary.valid} conformes · {dash.coherenceSummary.invalid} écarts · {dash.coherenceSummary.skipped} non évalués. Ratio des contrôles conformes parmi les contrôles évalués.</p> : null}
           </div>
         </div>
       )}

@@ -1,3 +1,4 @@
+import { resolveUnitEconomics, unitEconomicsNote } from "@/domain/unit-economics";
 /**
  * I-Pillar Sequenced Generation — « éclater et séquencer l'output »
  *
@@ -76,7 +77,8 @@ const fcfaShort = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)
 function buildEconomicGrounding(pillars: Record<string, unknown>): { block: string; budgetCom: number | null } {
   const v = (pillars.V ?? {}) as Record<string, unknown>;
   const t = (pillars.T ?? {}) as Record<string, unknown>;
-  const ue = (v.unitEconomics ?? {}) as Record<string, unknown>;
+  const ue = resolveUnitEconomics(v);
+  const currency = typeof ue.currency === "string" ? ue.currency : "FCFA";
   const budgetCom = typeof ue.budgetCom === "number" && ue.budgetCom > 0 ? ue.budgetCom : null;
   const caVise = typeof ue.caVise === "number" ? ue.caVise : null;
   const tam = (t.tamSamSom ?? {}) as Record<string, { value?: unknown }>;
@@ -89,9 +91,10 @@ function buildEconomicGrounding(pillars: Record<string, unknown>): { block: stri
   const trends = Array.isArray(mr.macroTrends) ? mr.macroTrends.slice(0, 4).map((t) => sanitizeInline(t, { max: 200 })) : [];
   const lines = [
     "REPÈRES ÉCONOMIQUES & MARCHÉ : provenance dans le contexte qualifié ci-dessus. Leur présence ne prouve ni validation ni disponibilité pour engagement.",
-    budgetCom != null ? `- Budget marketing annuel enregistré : ${fcfaShort(budgetCom)} FCFA (enveloppe de simulation ; confirmation requise avant engagement)` : "- Budget marketing : non renseigné (V.unitEconomics.budgetCom)",
-    caVise != null ? `- CA visé : ${fcfaShort(caVise)} FCFA` : null,
+    budgetCom != null ? `- Budget marketing annuel enregistré : ${fcfaShort(budgetCom)} ${currency} (enveloppe de simulation ; confirmation requise avant engagement)` : "- Budget marketing : non renseigné (V.unitEconomics.budgetCom)",
+    caVise != null ? `- CA visé : ${fcfaShort(caVise)} ${currency}` : null,
     (tamVal != null || samVal != null) ? `- Marché : TAM ${tamVal != null ? fcfaShort(tamVal) : "?"}${samVal != null ? ` / SAM ${fcfaShort(samVal)}` : ""}` : null,
+    unitEconomicsNote(ue),
     bmf != null ? `- Brand-Market Fit : ${bmf}/100` : null,
     trends.length ? `- Tendances marché (T) : ${trends.join(" ; ")}` : null,
   ].filter(Boolean);
@@ -215,9 +218,10 @@ export async function generateICatalogueSequenced(args: {
   const catalogueParCanal: Record<string, Array<Record<string, unknown>>> = {};
   for (const canal of I_CHANNELS) {
     const actions = await sectionArray({
-      strategyId, context, arrayKey: "actions", maxOutputTokens: 2400, tag: `canal-${canal}`, onProgress: log,
+      strategyId, context, arrayKey: "actions", maxOutputTokens: 4800, tag: `canal-${canal}`, onProgress: log,
       instruction: `Pour le CANAL « ${canal} », génère un inventaire de 5 à 8 actions marketing CONCRÈTES, spécifiques à CETTE marque (pas générique).
-Chaque action = objet { "action": string, "format": string, "objectif": string, "pilierImpact": "A"|"D"|"V"|"E", "budgetEstime": "LOW"|"MEDIUM"|"HIGH" }.
+Chaque action = objet { "action": string, "format": string, "objectif": string, "pilierImpact": "A"|"D"|"V"|"E", "devotionImpact": "SPECTATEUR"|"INTERESSE"|"PARTICIPANT"|"ENGAGE"|"AMBASSADEUR"|"EVANGELISTE", "overtonShift": string, "campaignCanonType": "GTM_90"|"ANNUAL"|"ALWAYS_ON"|"PUNCTUAL", "cadence": "ONE_SHOT"|"DAILY"|"WEEKLY"|"MONTHLY"|"QUARTERLY"|"YEARLY"|"ROLLING", "timeframe": "SPRINT_90"|"PHASE_1"|"PHASE_2"|"LONG_TERM", "budgetRange": { "min": number, "max": number }, "budgetPeriod": "ONE_OFF"|"PER_OCCURRENCE"|"MONTHLY"|"QUARTERLY"|"YEARLY"|"UNSPECIFIED" }.
+Déduis ces paramètres des objectifs, moyens, publics et rythmes présents dans ADVE. L'horizon est relatif au début du plan, pas une date de lancement décidée. Explique dans objectif le résultat attendu et dans overtonShift le déplacement de perception recherché. Ne laisse pas ces paramètres de côté si le socle permet leur déduction ; une prémisse absente doit être réconciliée dans ADVE, jamais inventée comme fait acquis. budgetEstime seul ne remplace pas une fourchette justifiée.
 ${INITIATIVE_PLANNING_SOURCE_CONTRACT}
 Ajoute targetsPersonaIds et mitigatesRiskIds : copie seulement les UUID des profils D et des risques R effectivement concernés dans le contexte. Une liste vide est permise si aucun lien n'est justifié ; n'invente aucun identifiant. Une cible documentaire n'est pas un client acquis, un risque n'est pas un fait validé et une action proposée n'est pas une décision.
 Réponds STRICTEMENT au format : { "actions": [ …5 à 8 objets… ] }`,

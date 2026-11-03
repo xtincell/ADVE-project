@@ -1,3 +1,62 @@
+## 536 — intégration commerciale conservée, financier et roadmap à valider (2026-11-03)
+
+Candidat 536 après les livraisons commerciales #1120/e09a808fa et #1122/f77fe2dc8,
+conservées avec leur ADR0233. ADR financier0234 ; PR réelle #1121. Le runtime
+535 reçu en production est commercial ; le modèle financier de marque reste à appliquer.
+Les métriques `source534-*` ci-dessous sont préintégration. Le candidat535 a reçu
+5 144 unitaires/496 fichiers, typage/lints et build ; PostgreSQL principal576/577
+avec un timeout grand document, ciblé financier20/20, flotte12/12 et paiements9/9.
+Ces reçus ne valident pas le head536, sa livraison ou son écran. Ciblé536 :
+quatre nouveaux tests service/rendu verts ; PostgreSQL72/4 et grand document16/1
+en 60,9 s. Cette dernière reprise suit le redémarrage de la base locale éteinte ;
+elle ne constate aucun incident de production ni capacité sous charge.
+État536 compilé avant le dernier correctif de badge : 5 148 unitaires/498 fichiers,
+build production exit0, typage/lints verts (24 avertissements préexistants).
+`pillar.actualize` sur fixture possédée : S seul modifié, score71, 31 contrôles
+(20 conformes, 8 écarts, 3 non évalués), synthèse reçue dans Oracle, appels273/88 ms.
+Relecture financière compilée sans mutation : Oracle58 ms, Word845 ms/37 contrôles
+sans inconnu, validation13 ms, éditeur14 ms ; HTTP200 en17/33/20 ms, contenu et
+métadonnées des piliers inchangés. Stress compilé : 277 reçues, 5 non reçues,
+0 finding. Ces preuves ne reçoivent ni écran natif, ni SLO, ni production.
+Dernier delta UI : liste de rejets calculée vide distincte du champ absent,
+badge CALCULATED ; gouvernance/composant1 682 tests/170 fichiers verts après ce delta.
+Reconstruction finale536 après badge exit0 (`source536-build-final.log`). Relecture
+exacte `source536-postbadge-http-received.json` sans mutation : Oracle106 ms,
+Word630 ms/37 contrôles sans inconnu, validation35 ms, éditeur31 ms et trois
+routes HTTP200 en198/65/77 ms ; contenu/métadonnées des piliers inchangés.
+Le rendu natif et la production restent non reçus, aucune latence ne vaut SLO.
+CI PostgreSQL : 597/598, ancien test exigeant l’absence de score corrigé pour
+contrôler score structurel/couverture non évaluée et confiance0 ; gardes KPI/objectifs
+conservées. Ciblé corrigé39/39 vert en2,53 s ; ce delta porte seulement
+l’assertion et la documentation, pas le métier compilé. CI complète verte non reçue.
+Cascade réelle I, jalons Overton et compléments ADVE/roadmap restent ouverts.
+
+Candidat536 : `computePillarS` évalue le S nouvellement généré avec
+`validatePillarCrossReferences` puis `summarizeCrossReferences`, fonctions communes
+au validateur existant. Score = contrôles conformes / contrôles évalués × 100 ;
+la couverture et les non-évalués restent visibles, sans compter les observations
+R comme des points. Racine S et tableau calculé concordent ; Oracle reprend score
+et couverture. Un zéro legacy explicite reste prioritaire sans reçu de calcul.
+Le sprint ne qualifie une mitigation que si son identifiant de risque résout.
+Le format du générateur I séquencé demande désormais horizon, famille/cadence,
+fourchette/période budgétaire, dévotion et déplacement de perception ; plafond de
+sortie porté de2 400 à4 800 via le gestionnaire existant. Génération réelle,
+références réparées en données et disparition des lacunes ne sont pas encore reçues.
+
+[ADR-0234 Proposed](adr/0234-financial-working-model-projection.md) : entrée V versionnée,
+calcul FinancialBrain et lecteurs communs ; provenance pillar.sources/checkpoints,
+model.source édition de base, aucun nouveau moteur ou registre.
+Avant intégration, `source534-*` : 5 121/491, PG ciblé 20/2 incluant refus réel de concurrence D, 8 cas
+consommateurs verts, typage/lints/cycles/build final et parcours locaux reçus.
+Relecture compilée sans mutation, contenu/métadonnées exacts ; dettes locales
+fences/raccord/zéro/non-applicabilité fermées, aucun natif ou production écrit.
+**Suite** : CI/image/runtime, modèle réel et cascade RTIS, natif et admission des
+modèles/complétude sur les autres dossiers ; legacy optionnel ne reçoit pas la
+readiness globale. Responsable Core/V/FinancialBrain, effort recette bornée,
+**déclencheur** livraison exacte puis avant Oracle/ADVE/MVP entiers. Campagnes,
+devis, taxonomies et sept chantiers ouverts ; aucun chiffre métier publié.
+
+
 ## 531 — recevoir la combinaison avec main (2026-11-02)
 
 Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration
