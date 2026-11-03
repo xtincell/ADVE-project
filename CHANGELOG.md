@@ -1,6 +1,7 @@
 ## v6.27.539 — fix(cockpit): clarifier la reprise et restituer les observations (2026-11-03)
 
 - PR de livraison réelle : #1128.
+- Réception CI : fixture de cascade alignée sur la requête readiness réellement consommée ; vérifie aussi la conservation explicite de l'ADVE et l'absence de fermeture pendant le calcul.
 
 **Une production existante à réactualiser ne ressemble plus à une étape jamais jouée.**
 

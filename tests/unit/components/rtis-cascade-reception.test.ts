@@ -6,7 +6,7 @@ import { RtisCascadeModal } from "@/components/cockpit/rtis-cascade-modal";
 const f = vi.hoisted(() => ({ success: null as null | ((r: any) => void), result: null as any,
   reset: vi.fn(), refetch: vi.fn(async () => ({})), mutate: vi.fn() }));
 vi.mock("@/lib/trpc/client", () => ({ trpc: { pillar: {
-  maturityReport: { useQuery: () => ({ data: { pillars: Object.fromEntries(["r", "t", "i", "s"].map(k => [k, { currentStage: "COMPLETE" }])) }, refetch: f.refetch }) },
+  readiness: { useQuery: () => ({ data: { byPillar: Object.fromEntries(["R", "T", "I", "S"].map(k => [k, { cacheLevel: "COMPLETE", stale: true }])) }, refetch: f.refetch }) },
   cascadeRTIS: { useMutation: (o: any) => { f.success = o.onSuccess; return { mutate: f.mutate, reset: f.reset, data: f.result }; } },
 } } }));
 beforeEach(() => { vi.clearAllMocks(); vi.stubGlobal("React", React); f.result = null; });
@@ -21,6 +21,8 @@ describe("cascade acceptance uses this run's complete response", () => {
   it("does not finish from the pre-existing complete pillars while the new run is pending", () => {
     const done = open(); expect(done).not.toHaveBeenCalled();
     expect(screen.getByText(/Cascade en cours/)).toBeTruthy();
+    expect(f.mutate).toHaveBeenCalledWith({ strategyId: "synthetic", skipIfReady: true, updateADVE: false, skipT: false });
+    expect(screen.queryByRole("button", { name: "Fermer" })).toBeNull();
   });
   it.each([
     { label: "empty", results: [] },
