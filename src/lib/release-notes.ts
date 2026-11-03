@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.537", date: "2026-11-03", headline: "Un budget de plan lisible et des objectifs d’engagement chiffrés",
+    highlights: [
+      { emoji: "🧮", title: "Comparer les coûts sur le même horizon", body: "Les actions retenues conservent leur fourchette de coût. Le plan indique son horizon et une enveloppe prudente, répartie entre production, média, talent, logistique et technologie. Les hypothèses restent distinctes des devis et dépenses." },
+      { emoji: "📈", title: "Lire les objectifs de votre communauté", body: "Les hypothèses de cohorte et de progression alimentent des cibles chiffrées par étape. Le plan et le rapport utilisent le même calcul ; ces objectifs restent distincts des personnes déjà acquises." },
+      { emoji: "🗓️", title: "Parcourir le sprint plus facilement", body: "Chaque action dispose d’une carte large, avec son critère de réussite et son budget présentés séparément pour faciliter la lecture du plan." },
+    ],
+  },
+  {
     version: "6.27.536", date: "2026-11-03", headline: "Des calculs financiers et stratégiques explicables",
     highlights: [
       { emoji: "🧮", title: "Relier vos hypothèses aux résultats", body: "À partir des prix, charges, volumes et profil payeur renseignés, le dossier et les documents partagent le même calcul. Les hypothèses gardent leur qualification, leur justification et leurs références disponibles." },

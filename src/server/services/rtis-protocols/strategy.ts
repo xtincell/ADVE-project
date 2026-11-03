@@ -1,3 +1,4 @@
+import { projectDevotionFunnel } from "@/domain/devotion-ladder";
 import { projectFinancialPillar } from "@/domain/unit-economics";
 /**
  * PROTOCOLE STRATEGY (S) — deterministic projection of the chosen I set.
@@ -59,7 +60,7 @@ export function generateStrategy(pillars: Record<string, Record<string, unknown>
   const selected = routeInitiativeSet(routeKey, collectNormalizedInitiatives(pillars.i) as unknown as Array<Record<string, unknown>>, { riskMatrix: matrix }) as unknown as ReturnType<typeof collectNormalizedInitiatives>;
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const identity = (id: string) => ({ sourceRef: id, ...(uuid.test(id) ? { sourceInitiativeId: id } : {}) });
-  const aggregate = (actions: typeof selected) => aggregateInitiativeSet(actions as unknown as Array<Record<string, unknown>>, []);
+  const aggregate = (actions: typeof selected) => aggregateInitiativeSet(actions as unknown as Array<Record<string, unknown>>, [], pillars.v?.strategyBudgetModel);
   const selectedBudget = aggregate(selected);
   const rows = (value: unknown): Array<Record<string, unknown>> => Array.isArray(value)
     ? value.filter((row): row is Record<string, unknown> => !!row && typeof row === "object" && !Array.isArray(row)) : [];
@@ -127,7 +128,7 @@ export function generateStrategy(pillars: Record<string, Record<string, unknown>
   for (const bucket of new Set(Object.values(buckets))) {
     const actions = selected.filter(a => a.devotionImpact && buckets[a.devotionImpact] === bucket);
     const amount = aggregate(actions).totalBudget;
-    if (actions.length && amount !== undefined) budgetByDevotion[bucket] = amount;
+    if (amount !== undefined && (actions.length || selectedBudget.budgetSummary.plan)) budgetByDevotion[bucket] = amount;
   }
   return {
     ...(typeof target === "string" && target.trim() ? { visionStrategique: target } : {}),
@@ -142,10 +143,11 @@ export function generateStrategy(pillars: Record<string, Record<string, unknown>
       ...(a.objectif ? { kpi: a.objectif } : {}), priority: index + 1,
       isRiskMitigation: a.mitigatesRiskIds.some(id => matrix.some(risk => risk.id === id)),
       ...(a.devotionImpact ? { devotionImpact: a.devotionImpact } : {}) })),
+    ...(selectedBudget.budgetSummary.plan ? { budgetBreakdown: Object.fromEntries(Object.entries(selectedBudget.budgetSummary.plan.byCategory).map(([k, range]) => [k, range.max])) } : {}),
     fenetreOverton, axesStrategiques, facteursClesSucces, ...(selectedBudget.totalBudget !== undefined ? { globalBudget: selectedBudget.totalBudget } : {}), budgetByDevotion,
     syntheseExecutive: `${selected.length} action(s) proposée(s) pour ce scénario depuis le catalogue. ${initiativeBudgetLabel(selectedBudget.totalBudget, selectedBudget.budgetSummary)}. ${selectedBudget.budgetSummary.unassignedTimeframeCount} horizon(s) à préciser. Ces montants ne constituent pas une dépense mesurée.`,
     kpiDashboard, ...(northStar ? { northStarKPI: Object.fromEntries(Object.entries(northStar).filter(([key]) => key !== "pillar")) } : {}),
-    ...(teamStructure.length ? { teamStructure } : {}), devotionFunnel: [],
+    ...(teamStructure.length ? { teamStructure } : {}), devotionFunnel: projectDevotionFunnel(pillars.e?.devotionProjection),
     recommandationsPrioritaires: selected.map((a, index) => ({ recommendation: a.action, source: "I", priority: index + 1 })),
   };
 }
@@ -184,10 +186,10 @@ export function computePillarS(
   // TARGET (default) = toutes les SELECTED_FOR_ROADMAP — identique au
   // comportement pré-ADR-0089.
   const activeSet = routeInitiativeSet(selectedRouteKey, initiatives, { riskMatrix: matrix });
-  const agg = aggregateInitiativeSet(activeSet, matrix);
+  const agg = aggregateInitiativeSet(activeSet, matrix, pillars.v?.strategyBudgetModel);
 
   // Momentum des projections : toujours le jeu TARGET (scénarios invariants).
-  const targetAgg = selectedRouteKey === "TARGET" ? agg : aggregateInitiativeSet(routeInitiativeSet("TARGET", initiatives, { riskMatrix: matrix }), matrix);
+  const targetAgg = selectedRouteKey === "TARGET" ? agg : aggregateInitiativeSet(routeInitiativeSet("TARGET", initiatives, { riskMatrix: matrix }), matrix, pillars.v?.strategyBudgetModel);
 
   const overtonPos = t.overtonPosition as Record<string, unknown> | undefined;
   const percGap = t.perceptionGap as Record<string, unknown> | undefined;
@@ -203,11 +205,12 @@ export function computePillarS(
   const coherenceRisks = Array.isArray(r.coherenceRisks) ? (r.coherenceRisks as unknown[]) : undefined;
   const coherenceIssueCount = coherenceRisks?.length;
 
-  const devotionFunnel: unknown[] = [];
+  const devotionFunnel = projectDevotionFunnel(pillars.e?.devotionProjection);
 
   // 3 roadmap trajectories — PURE projection, no LLM (ADR-0088). Chaque route
   // porte son jeu de stratégie calculé (ADR-0089).
   const roadmapRoutes = computeRoadmapRoutes({
+    planning: pillars.v?.strategyBudgetModel,
     riskCoverage: targetAgg.riskCoverage,
     selectedInitiativeCount: activeSet.length,
     baseRevenue: opts?.baseRevenue,

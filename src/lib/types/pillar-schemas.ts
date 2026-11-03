@@ -7,8 +7,9 @@
 import { z } from "zod";
 import { PILLAR_KEYS, ADVE_KEYS } from "@/domain";
 import { ProductSystemSchema } from "@/domain/product-system";
+import { DevotionProjectionSchema } from "@/domain/devotion-ladder";
 import { BRAND_ACTOR_ROLES } from "@/domain/brand-actors";
-import { FinancialWorkingModelSchema } from "@/domain/financial-document";
+import { StrategyBudgetModelSchema, StrategyBudgetEnvelopeSchema, FinancialWorkingModelSchema } from "@/domain/financial-document";
 import {
   ARCHETYPES, SCHWARTZ_VALUES, LIFE_FORCE_8, AARRR_STAGES,
   DEVOTION_LEVELS, CHANNELS, TOUCHPOINT_TYPES, RITUAL_TYPES,
@@ -609,6 +610,7 @@ export const PillarVSchema = z.object({
   // Unit Economics
   unitEconomics: UnitEconomicsSchema,
   financialModel: FinancialWorkingModelSchema.optional(),
+  strategyBudgetModel: StrategyBudgetModelSchema.optional(),
 
   // ── Système produit (ADR-0170 — « penser produit dans le pilier Valeur ») ──
   // Le MÉCANISME interne du produit (axes, archétypes, progression, modes,
@@ -735,6 +737,7 @@ const KPISchema = z.object({
 
 /** PILIER E COMPLET */
 export const PillarESchema = z.object({
+  devotionProjection: DevotionProjectionSchema.optional(),
   // ── Fondamentaux engagement (Chantier -1 §-1.2) ─────────────────────
   promesseExperience: z.string().min(1).optional(),          // L'expérience que chaque interaction garantit
   primaryChannel: z.enum(CHANNELS).optional(),               // Canal principal d'engagement (migré de Strategy)
@@ -1189,6 +1192,7 @@ export const ROADMAP_ROUTE_KEYS = ["CONSERVATIVE", "TARGET", "AMBITIOUS"] as con
 
 /** Derived coverage of existing initiative budgets, never a measured expense. */
 export const InitiativeBudgetSummarySchema = z.object({
+  plan: StrategyBudgetEnvelopeSchema.optional(),
   knownSubtotal: currency.nullable(), // null when different budget periods cannot be summed
   declaredSubtotal: currency.nullable(),
   estimatedSubtotal: currency.nullable(),
@@ -1379,7 +1383,7 @@ export const PillarSSchema = z.object({
       riskId: entityId.optional(),                           // FK → R.overtonBlockers[].id mitigé
       hypothesisRef: z.string().optional(),                  // @deprecated (ADR-0088) — use hypothesisId
       hypothesisId: entityId.optional(),                     // FK → T.hypothesisValidation[].id validé
-    })).min(3),
+    })).min(1),
   }).optional(),
 
   // ── Vision & Axes ─────────────────────────────────────────────────────
@@ -1393,7 +1397,7 @@ export const PillarSSchema = z.object({
     axe: textShort,
     pillarsLinked: z.array(z.enum(PILLAR_KEYS)).min(2),
     kpis: z.array(textShort).min(1),
-  })).min(3),
+  })).min(1),
 
   facteursClesSucces: z.array(textShort).min(3),
 
@@ -1407,7 +1411,7 @@ export const PillarSSchema = z.object({
     devotionImpact: z.enum(DEVOTION_LEVELS).optional(),      // Quel niveau Devotion cette action cible
     sourceRef: z.string().optional(),                        // @deprecated (ADR-0088) — text path, use sourceInitiativeId
     sourceInitiativeId: entityId.optional(),                 // FK → I PotentialAction.id (data lineage)
-  })).min(5),
+  })).min(1),
 
   // ── Roadmap orientée superfan (jalons temporels) ──────────────────────
   roadmap: z.array(z.object({
@@ -1421,7 +1425,7 @@ export const PillarSSchema = z.object({
     cadence: z.enum(INITIATIVE_CADENCES).optional(),
     actionRefs: z.array(z.string().min(1)).optional(),
     duree: textShort.optional(),
-  })).min(3).optional(),
+  })).min(1).optional(),
 
   // ── Budget alloue (sous-ensemble de I.potentielBudget) ────────────────
   globalBudget: currency.optional(),
@@ -1473,6 +1477,9 @@ export const PillarSSchema = z.object({
     reason: z.string().min(1),                               // Pourquoi pas maintenant
   })).optional(),
   devotionFunnel: z.array(z.object({
+    qualification: z.enum(["PROPOSED", "DECLARED"]).optional(),
+    cohort: z.string().optional(), cohortPersonaId: z.string().optional(),
+    observationWindow: z.string().optional(), note: z.string().optional(), source: z.unknown().optional(),
     phase: z.string().min(1),                                // Phase roadmap
     spectateurs: z.number().optional(),
     interesses: z.number().optional(),

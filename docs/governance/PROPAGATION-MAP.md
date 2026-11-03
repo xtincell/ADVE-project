@@ -9,64 +9,47 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
-### Prémisses V → lecteurs — candidat536, chaîne à recevoir (2026-11-03)
+### Prémisses V/E → plan S → Oracle — candidat537 (2026-11-03)
 
-Candidat 536 après les livraisons commerciales #1120/e09a808fa et #1122/f77fe2dc8,
-conservées avec leur ADR0233. ADR financier0234 ; PR réelle #1121. Le runtime
-535 reçu en production est commercial ; le modèle financier de marque reste à appliquer.
-Les métriques `source534-*` ci-dessous sont préintégration. Le candidat535 a reçu
-5 144 unitaires/496 fichiers, typage/lints et build ; PostgreSQL principal576/577
-avec un timeout grand document, ciblé financier20/20, flotte12/12 et paiements9/9.
-Ces reçus ne valident pas le head536, sa livraison ou son écran. Ciblé536 :
-quatre nouveaux tests service/rendu verts ; PostgreSQL72/4 et grand document16/1
-en 60,9 s. Cette dernière reprise suit le redémarrage de la base locale éteinte ;
-elle ne constate aucun incident de production ni capacité sous charge.
-État536 compilé avant le dernier correctif de badge : 5 148 unitaires/498 fichiers,
-build production exit0, typage/lints verts (24 avertissements préexistants).
-`pillar.actualize` sur fixture possédée : S seul modifié, score71, 31 contrôles
-(20 conformes, 8 écarts, 3 non évalués), synthèse reçue dans Oracle, appels273/88 ms.
-Relecture financière compilée sans mutation : Oracle58 ms, Word845 ms/37 contrôles
-sans inconnu, validation13 ms, éditeur14 ms ; HTTP200 en17/33/20 ms, contenu et
-métadonnées des piliers inchangés. Stress compilé : 277 reçues, 5 non reçues,
-0 finding. Ces preuves ne reçoivent ni écran natif, ni SLO, ni production.
-Dernier delta UI : liste de rejets calculée vide distincte du champ absent,
-badge CALCULATED ; gouvernance/composant1 682 tests/170 fichiers verts après ce delta.
-Reconstruction finale536 après badge exit0 (`source536-build-final.log`). Relecture
-exacte `source536-postbadge-http-received.json` sans mutation : Oracle106 ms,
-Word630 ms/37 contrôles sans inconnu, validation35 ms, éditeur31 ms et trois
-routes HTTP200 en198/65/77 ms ; contenu/métadonnées des piliers inchangés.
-Le rendu natif et la production restent non reçus, aucune latence ne vaut SLO.
-CI PostgreSQL : 597/598, ancien test exigeant l’absence de score corrigé pour
-contrôler score structurel/couverture non évaluée et confiance0 ; gardes KPI/objectifs
-conservées. Ciblé corrigé39/39 vert en2,53 s ; ce delta porte seulement
-l’assertion et la documentation, pas le métier compilé. CI complète verte non reçue.
-Cascade réelle I, jalons Overton et compléments ADVE/roadmap restent ouverts.
+536 est reçue au périmètre financier et cohérence : PR #1121 fusionnée en
+`28db5c2482673024ad3a554e26b5495683fa3dc5`, seize contrôles CI verts, image/runtime
+6.27.536 reçus. Montages et données métier comparées conservés ; les diagnostics
+dérivés expliquent la différence de réponse, pas une égalité brute revendiquée.
+Modèle financier V appliqué avec anciennes valeurs humaines conservées, sans
+adoption humaine fabriquée ; cascade R/T/I/S reçue, socle ADVE préservé. Lecture
+native de la roadmap reçue pour score, jalons et absence de rejet qualifiée
+Calculé ; Oracle reçu sur les cartes financières ciblées, pas sur tout le rapport.
+Les reçus et données de marque restent privés hors checkout. Les budgets et
+objectifs d’engagement manquants dans S motivent537 ; aucun wholeADVE, wholeOracle,
+MVP ou sept chantiers clos n’est déduit de536.
 
-Candidat536 : `computePillarS` évalue le S nouvellement généré avec
-`validatePillarCrossReferences` puis `summarizeCrossReferences`, fonctions communes
-au validateur existant. Score = contrôles conformes / contrôles évalués × 100 ;
-la couverture et les non-évalués restent visibles, sans compter les observations
-R comme des points. Racine S et tableau calculé concordent ; Oracle reprend score
-et couverture. Un zéro legacy explicite reste prioritaire sans reçu de calcul.
-Le sprint ne qualifie une mitigation que si son identifiant de risque résout.
-Le format du générateur I séquencé demande désormais horizon, famille/cadence,
-fourchette/période budgétaire, dévotion et déplacement de perception ; plafond de
-sortie porté de2 400 à4 800 via le gestionnaire existant. Génération réelle,
-références réparées en données et disparition des lacunes ne sont pas encore reçues.
+| Entrée ADVE | Transformation existante | Sortie et lecture |
+|---|---|---|
+| V.strategyBudgetModel + actions I retenues par scénario | projectStrategyBudget / aggregateInitiativeSet : occurrence, fenêtre et horizon explicites, bornes conservées | S.globalBudget = borne haute ; computed.budgetSummary.plan explique la fourchette et les lignes |
+| Profils V par canal, ventilation couvrant100 % | Répartition des montants et conservation des sommes | S.budgetBreakdown production/média/talent/logistique/technologie |
+| Même chiffrage et niveau d’engagement des actions retenues | Agrégation par objectif d’engagement | S.budgetByDevotion, deuxième vue du même coût |
+| E.devotionProjection, cohorte audience et taux qualifiés | projectDevotionFunnel : spectateurs × échelle de phase puis produits des taux | S.devotionFunnel, cibles conditionnelles sans écriture de populations observées |
+| S et son résumé de calcul | mapBudget et composants partagés BudgetPanel/DevotionTargets | Oracle conserve budget, fourchette, horizon, qualification et cibles |
 
-Édition qualifiée/cohorte D PAYER → V.financialModel → FinancialBrain pur →
-V/Oracle/export/Glory/RTIS/maturité/cross-validator/I/budget-allocator.
-pillar.sources/checkpoints restent la provenance ; model.source simple édition.
-Legacy conservé sans seconde base, projection conditionnelle ni performance
-prouvée ni budget Thot disponible ; déficit/zéro/non-applicabilité explicites.
-Avant intégration, `source534-*` : 5 121/491, PG ciblé 20/2 dont concurrence D réellement refusée, 8 cas
-consommateurs verts, build final et parcours MCP/fiche/Word/Oracle reçus.
-Relecture finale sans mutation, contenu/métadonnées exacts ; HTTP/stress sans
-natif réel ou SLO. Dettes locales raccord/fences fermées, pas de registre ajouté.
-CI/image/runtime et modèle réel/cascade RTIS restent ouverts ; legacy optionnel
-ne suffit pas à recevoir toutes les sorties d’autres dossiers. Admission et
-complétude avant Oracle/ADVE/MVP entiers, plan dans RESIDUAL-DEBT.
-Données et artefacts privés hors checkout. [ADR-0234 Proposed](adr/0234-financial-working-model-projection.md).
+Une prémisse inférable manquante est complétée dans V/E sur les rails gouvernés,
+puis S est recalculé. Pas de source documentaire parallèle en S, pas d’accord de
+dépense déduit du budget, pas de résultat observé déduit d’un objectif. Le raccord
+devis reste un volet distinct d’ADR0228 ; ce candidat ne le déclare pas reçu.
+
+Réception locale finale537, après les deltas de cardinalité et de période :
+5 121 tests unitaires/498 fichiers verts, 17 tests PostgreSQL ciblés, typage et
+lints sans erreur (25 avertissements), zéro cycle, build webpack et stress
+compilé exit 0. Le parcours HTTP compilé reçoit les trois scénarios Conservateur,
+Cible et Ambitieux COMPLETE, à 100 % et frais, avec bornes budgétaires conservées ;
+les quatre racines S sont exactement reprises dans Oracle. La réception native
+finale reçoit la roadmap à 100 % socle/champs, statut Complet, et ADVE ainsi que S
+complets dans Notoria. R/T/I restent périmés dans la seule fixture, où leur
+cascade n’a pas été demandée ; cette observation n’est pas un résultat de production.
+Aucune production touchée. CI/image/runtime et conservation après livraison537
+restent ouverts : 537 n’est pas livrée. Les propositions réelles de complément
+ADVE, qualifiées et sourcées hors checkout, sont préparées mais non appliquées.
+
+[ADR-0235](adr/0235-strategy-planning-premises-and-projections.md).
 
 
 ### ADVE canonique → Oracle — 533 reçu localement (2026-11-02)

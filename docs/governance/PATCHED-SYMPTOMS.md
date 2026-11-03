@@ -28,81 +28,45 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
-### 536 — plafond mémoire du build Lighthouse (2026-11-03)
+### 537 — sorties de budget et progression absentes, candidat (2026-11-03)
 
-Le job125842391344/run41613896170 échoue par OOM TypeScript après webpack réussi : plafond Node4 GiB trop bas pour ce build. Ajustement borné à `NODE_OPTIONS=--max-old-space-size=6144`, déjà utilisé par le Dockerfile, sans supprimer de contrôle ni modifier le runtime VPS. Hypothèse de cause : écart de capacité mémoire entre les deux recettes de build. Réception CI du head corrigé encore ouverte ; prochain run comme déclencheur, suivi dans RESIDUAL-DEBT.
+Après536, S attend encore une enveloppe comparable, sa ventilation et des cibles
+de cohorte. Cause : absence de prémisses structurées de planification V/E plutôt
+qu’un simple défaut de rendu. Le candidat étend les domaines et rails existants :
+horizon/fenêtres/profils V, cohorte/taux/phases E, calcul S et lectures Oracle
+partagées. Fourchettes conservées, borne haute explicitée, deux ventilations du
+même coût ; le sprint expose action, critère et budget sur pleine largeur.
+Deux autres causes ont été corrigées dans le candidat : ENRICHED_S exigeait
+cinq sprintActions quand COMPLETE acceptait une action ; PER_OCCURRENCE ne
+reconnaissait pas ONE_SHOT et certains coûts n’avaient pas de période. Les
+cardinalités dérivées axes/sprint/roadmap/selectedFromI acceptent une entrée,
+sans remplissage artificiel ; vide, malformé et cellules requises gardent leurs
+refus. ONE_SHOT compte une fois ; fallbackPeriod V complète seulement la période
+I absente/UNSPECIFIED, sans remplacer une unité connue. Sans postulat, refus,
+aucune mensualité tacite.
+Réception locale finale après ces deltas : 5 121 tests/498 fichiers, PostgreSQL
+ciblé 17, typage/lints sans erreur (25 avertissements), zéro cycle, build webpack
+et stress compilé exit 0. HTTP reçoit les trois scénarios COMPLETE à 100 %, frais,
+et la parité exacte des quatre sorties Oracle. Native : roadmap à 100 % socle/
+champs, Complet ; ADVE et S complets dans Notoria. R/T/I périmés dans la fixture
+seulement, faute de cascade demandée. La divergence de cardinalité S est reçue
+corrigée localement ; 537 n’est pas livrée. Livraison et données réelles restent
+ouvertes dans RESIDUAL-DEBT. Aucun nouveau service, Intent, route ou chiffre
+métier publié. Compléments ADVE préparés hors checkout et défauts Gazette/Oracle
+restent des travaux ouverts, pas des réparations reçues.
 
-### 536 — prémisses financières reprises, preuves antérieures attribuées (2026-11-03)
+### 536 — finance, cohérence et aucun rejet reçus au périmètre (2026-11-03)
 
-Candidat 536 après les livraisons commerciales #1120/e09a808fa et #1122/f77fe2dc8,
-conservées avec leur ADR0233. ADR financier0234 ; PR réelle #1121. Le runtime
-535 reçu en production est commercial ; le modèle financier de marque reste à appliquer.
-Les métriques `source534-*` ci-dessous sont préintégration. Le candidat535 a reçu
-5 144 unitaires/496 fichiers, typage/lints et build ; PostgreSQL principal576/577
-avec un timeout grand document, ciblé financier20/20, flotte12/12 et paiements9/9.
-Ces reçus ne valident pas le head536, sa livraison ou son écran. Ciblé536 :
-quatre nouveaux tests service/rendu verts ; PostgreSQL72/4 et grand document16/1
-en 60,9 s. Cette dernière reprise suit le redémarrage de la base locale éteinte ;
-elle ne constate aucun incident de production ni capacité sous charge.
-État536 compilé avant le dernier correctif de badge : 5 148 unitaires/498 fichiers,
-build production exit0, typage/lints verts (24 avertissements préexistants).
-`pillar.actualize` sur fixture possédée : S seul modifié, score71, 31 contrôles
-(20 conformes, 8 écarts, 3 non évalués), synthèse reçue dans Oracle, appels273/88 ms.
-Relecture financière compilée sans mutation : Oracle58 ms, Word845 ms/37 contrôles
-sans inconnu, validation13 ms, éditeur14 ms ; HTTP200 en17/33/20 ms, contenu et
-métadonnées des piliers inchangés. Stress compilé : 277 reçues, 5 non reçues,
-0 finding. Ces preuves ne reçoivent ni écran natif, ni SLO, ni production.
-Dernier delta UI : liste de rejets calculée vide distincte du champ absent,
-badge CALCULATED ; gouvernance/composant1 682 tests/170 fichiers verts après ce delta.
-Reconstruction finale536 après badge exit0 (`source536-build-final.log`). Relecture
-exacte `source536-postbadge-http-received.json` sans mutation : Oracle106 ms,
-Word630 ms/37 contrôles sans inconnu, validation35 ms, éditeur31 ms et trois
-routes HTTP200 en198/65/77 ms ; contenu/métadonnées des piliers inchangés.
-Le rendu natif et la production restent non reçus, aucune latence ne vaut SLO.
-CI PostgreSQL : 597/598, ancien test exigeant l’absence de score corrigé pour
-contrôler score structurel/couverture non évaluée et confiance0 ; gardes KPI/objectifs
-conservées. Ciblé corrigé39/39 vert en2,53 s ; ce delta porte seulement
-l’assertion et la documentation, pas le métier compilé. CI complète verte non reçue.
-Cascade réelle I, jalons Overton et compléments ADVE/roadmap restent ouverts.
-
-Defaults/cohortes dispersées, marge coefficient/% et ROI borné : modèle V et calcul
-FinancialBrain commun raccordés, legacy conservé. Zéro et non-applicabilité connus
-restent explicites ; deux rouges puis 8 tests consommateurs verts. Avant intégration, `source534-*` : 5 121/491,
-PG ciblé 20/2 source/V/PAYER/concurrence D refusée sans écriture, valeurs humaines
-conservées, typage/lints/cycles/build final et MCP/fiche/Word/Oracle locaux reçus.
-Relecture compilée finale sans mutation, contenu/métadonnées exacts ; dettes locales
-correspondantes fermées. HTTP/stress ne reçoivent pas natif, SLO ou ADVE production.
-CI/image/runtime, modèle réel/cascade RTIS et Oracle/ADVE/MVP entiers ouverts ;
-legacy optionnel ≠ readiness globale, plan dans RESIDUAL-DEBT. Données privées.
-
-
-### 536 — score de cohérence et format de génération I, candidat (2026-11-03)
-
-Symptôme : bandeau S sans score, compteur d'observations distinct affiché à côté,
-et actions générées sans champs nécessaires au sprint et à la classification.
-Cause : `computePillarS` ne raccordait pas le calcul existant ; le format I
-séquencé omettait horizon/famille/cadence/fourchette/période/dévotion/Overton.
-Le validateur est factorisé sans nouveau moteur ; il évalue le nouveau S plutôt
-que le S enregistré. Score, couverture et détail des contrôles sont transmis
-au cockpit et à Oracle ; zéro legacy conservé, mitigation seulement si référence
-résolue. Quatre tests service/rendu nouveaux verts, inclus dans les5 148 tests/498 fichiers
-de l’état compilé précédent ; build536 exit0. Recalcul local S et lecture Oracle
-reçus, S seul modifié. Dernier badge reconstruit et relecture compilée536 reçue ;
-natif et production restent ouverts.
-L'extension du format I réutilise le gestionnaire d'appels existant, plafond de
-sortie4 800 ; ni nouvelle génération réelle ni réparation des références existantes
-reçues. Reprise réelle et natif restent ouverts dans RESIDUAL-DEBT.
-
-
-### 536 — aucun rejet calculé distingué d'une origine absente (2026-11-03)
-
-Symptôme : `rejectedFromI: []` issu du calcul affichait « Origine inconnue ».
-Cause : une liste vide calculée et un champ absent traversaient le même rendu.
-Le cas tableau vide affiche « Aucune action rejetée » avec statut CALCULATED ;
-l'absence conserve son traitement normal. Les actions non retenues dans le scénario
-ne sont pas présentées comme rejetées. Gouvernance/composant1 682/170 verts après
-ce delta ; reconstruction finale536 exit0 et relecture compilée sans mutation
-reçues. Natifs et production non reçus ; CI en reprise, aucune clôture globale.
+Les causes locales de defaults financiers dispersés, score non raccordé et liste
+vide de rejets traitée comme donnée inconnue sont réparées. Le score utilise les
+contrôles évalués du plan courant avec couverture visible ; [] calculé reste
+une absence de rejet, pas une sélection ni un rejet inventés. L’OOM Lighthouse
+pendant TypeScript a été corrigé au seul plafond build6144, sans contrôle supprimé
+ni changement de mémoire runtime VPS. PR1121/merge28db5c248, seize checks verts,
+image/runtime536, conservation métier, amendement financier et cascade réelle
+reçus ; natif roadmap et cartes financières Oracle reçus à portée bornée.
+Les anciens échecs et reçus locaux restent historiques ; aucune réception S,
+Oracle ou MVP entière déduite. Budget/progression encore ouverts dans la tranche537.
 
 
 ### 530 — cellules sous validation globale, correctif candidat (2026-11-02)

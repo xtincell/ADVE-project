@@ -122,25 +122,26 @@ function Roadmap({ items, status }: { items: unknown; status?: string }) {
 
 // ── Sprint 90 jours ────────────────────────────────────────────────────
 
-function Sprint90({ items, status }: { items: unknown; status?: string }) {
+function Sprint90({ items, status, summary }: { items: unknown; status?: string; summary?: unknown }) {
   const empty = isEmpty(items);
   const arr = asArr(items);
   return (
     <ACard title="Sprint 90 jours" status={status} empty={empty} span>
       {empty ? <p className="text-sm text-foreground-muted">L’horizon de 90 jours n’est pas encore déductible des informations de marque. Compléter les objectifs, contraintes et moyens dans l’ADVE, puis recalculer. Les actions proposées restent conservées.</p> : (
-        <div className="ck-s-sprint">
+        <ol className="ck-s-sprint">
           {arr.map((a, i) => (
-            <div className="ck-s-sprint__row" key={i}>
+            <li className="ck-s-sprint__row" key={str(a.sourceRef) || i}>
               <span className="ck-s-sprint__p">{str(a.priority) || i + 1}</span>
-              <span className="ck-s-sprint__action">{str(a.action)}</span>
+              <p className="ck-s-sprint__action">{str(a.action)}</p>
               <div className="ck-s-sprint__meta">
                 {!isEmpty(a.owner) ? <span className="ck-fc__tag" data-tone="pink">{str(a.owner)}</span> : null}
-                {!isEmpty(a.kpi) ? <span className="ck-s-sprint__kpi">{str(a.kpi)}</span> : null}
+                {!isEmpty(a.kpi) ? <p className="ck-s-sprint__kpi"><strong>Critère de réussite</strong>{str(a.kpi)}</p> : null}
+                {asArr(asRec(asRec(summary).plan).lines).filter(l => l.sourceRef === a.sourceRef).map(l => <p className="ck-s-sprint__kpi" key={str(l.sourceRef)}><strong>Budget estimé de l’action</strong>{moneyRange(l, str(asRec(asRec(summary).plan).currency))}</p>)}
                 {String(a.isRiskMitigation) === "true" ? <span className="ck-s-sprint__risk">⛨ mitigation</span> : null}
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ol>
       )}
     </ACard>
   );
@@ -195,32 +196,55 @@ function NorthStarCard({ value, status }: { value: unknown; status?: string }) {
 
 // ── Budget (ventilation + par dévotion) ────────────────────────────────
 
-function BudgetPanel({ breakdown, byDevotion, total, summary, status }: { breakdown: unknown; byDevotion: unknown; total: unknown; summary: unknown; status?: string }) {
+function moneyRange(value: unknown, currency: string) {
+  const r = asRec(value), fmt = (n: number) => new Intl.NumberFormat("fr-FR").format(n);
+  return typeof r.min === "number" && typeof r.max === "number" ? `${r.min === r.max ? fmt(r.min) : `${fmt(r.min)}–${fmt(r.max)}`} ${currency}` : "";
+}
+
+export function DevotionTargets({ items }: { items: unknown }) {
+  const rows = asArr(items);
+  if (!rows.length) return null;
+  const levels = [["spectateurs", "Spectateurs"], ["interesses", "Intéressés"], ["participants", "Participants"], ["engages", "Engagés"], ["ambassadeurs", "Ambassadeurs"], ["evangelistes", "Prescripteurs"]];
+  return <ACard title="Parcours d’engagement chiffré" status="CALCULATED" empty={false} span>
+    <p className="mb-3 text-sm text-foreground-muted">Objectifs de cohorte calculés depuis les hypothèses de la marque. Ces nombres ne sont pas des personnes déjà acquises ; les étapes successives ne s’additionnent pas.</p>
+    <div className="ck-s-targets">{rows.map((r, i) => <section key={i}>
+      <h4>{str(r.phase)}</h4><p>{str(r.cohort)} · {str(r.observationWindow)}</p>
+      <dl>{levels.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{typeof r[key!] === "number" ? new Intl.NumberFormat("fr-FR").format(r[key!] as number) : "À compléter dans les hypothèses"}</dd></div>)}</dl>
+      <details className="ck-s-details"><summary>Hypothèses et périmètre</summary><p>{r.qualification === "DECLARED" ? "Objectif déclaré. " : "Postulat de départ à valider. "}{str(r.note)}</p></details>
+    </section>)}</div>
+  </ACard>;
+}
+
+export function BudgetPanel({ breakdown, byDevotion, total, summary, status }: { breakdown: unknown; byDevotion: unknown; total: unknown; summary: unknown; status?: string }) {
   const empty = isEmpty(breakdown) && isEmpty(byDevotion);
   const bk = asRec(breakdown);
   const bd = asRec(byDevotion);
   const totalN = typeof total === "number" ? total : null;
+  const plan = asRec(asRec(summary).plan);
+  const currency = str(plan.currency) || "FCFA";
   const BK: Array<[string, string]> = [["production", "Production"], ["media", "Média"], ["talent", "Talent"], ["logistics", "Logistique"], ["technology", "Technologie"], ["contingency", "Contingence"]];
-  const BD: Array<[string, string]> = [["acquisition", "Acquisition"], ["conversion", "Conversion"], ["retention", "Rétention"], ["evangelisation", "Évangélisation"]];
+  const BD: Array<[string, string]> = [["acquisition", "Acquisition"], ["conversion", "Conversion"], ["retention", "Rétention"], ["evangelisation", "Prescription"]];
   return (
-    <ACard title={"Budget" + (totalN ? ` · ${new Intl.NumberFormat("fr-FR").format(totalN)} FCFA` : "")} status={status} empty={empty} span>
+    <ACard title="Budget du scénario" status={status} empty={empty} span>
       <p className="mb-3 text-sm text-foreground-muted">{initiativeBudgetLabel(total, summary)}. Estimations des actions retenues ; les devis et dépenses restent distincts.</p>
+      {!isEmpty(plan) ? <details className="ck-s-details"><summary>Horizon et méthode de calcul</summary><p>{str(plan.note)}</p><p>Enveloppe prudente : {totalN?.toLocaleString("fr-FR")} {currency}, somme des bornes hautes sur {str(plan.horizonMonths)} mois. Ce plafond estimé n’autorise aucune dépense.</p></details> : null}
       {empty ? <p className="text-sm text-foreground-muted">La ventilation production, média, talent, logistique et technologie n’est pas encore déductible des moyens renseignés. Vérifier et compléter le socle ADVE, puis recalculer le chiffrage des actions. Aucun montant n’est affecté arbitrairement à une catégorie.</p> : (
         <div className="ck-s-budget">
           <div className="ck-s-budget__col">
             <span className="ck-s-budget__h">Ventilation</span>
             {isEmpty(breakdown) ? <EmptyValue /> : BK.map(([k, label]) => (!isEmpty(bk[k]) && bk[k] !== "—" ? (
-              <div className="ck-s-budget__r" key={k}><span>{label}</span><b>{str(bk[k])}</b></div>
+              <div className="ck-s-budget__r" key={k}><span>{label}</span><b>{moneyRange(asRec(plan.byCategory)[k], currency) || `${str(bk[k])} ${currency}`}</b></div>
             ) : null))}
           </div>
           <div className="ck-s-budget__col">
-            <span className="ck-s-budget__h">Par étape de dévotion</span>
+            <span className="ck-s-budget__h">Enveloppes hautes par objectif d’engagement</span>
             {isEmpty(byDevotion) ? <EmptyValue /> : BD.map(([k, label]) => (!isEmpty(bd[k]) ? (
-              <div className="ck-s-budget__bar" key={k}><span className="ck-s-budget__bl">{label}</span><div className="ck-s-budget__bt"><div className="ck-s-budget__bf" style={{ width: str(bd[k]) }} /></div><span className="ck-s-budget__bv">{str(bd[k])}</span></div>
+              <div className="ck-s-budget__bar" key={k}><span className="ck-s-budget__bl">{label}</span><div className="ck-s-budget__bt"><div className="ck-s-budget__bf" style={{ width: `${totalN && typeof bd[k] === "number" ? Math.min(100, Number(bd[k]) / totalN * 100) : 0}%` }} /></div><span className="ck-s-budget__bv">{typeof bd[k] === "number" ? Number(bd[k]).toLocaleString("fr-FR") : str(bd[k])} {currency}</span></div>
             ) : null))}
           </div>
         </div>
       )}
+      {asArr(plan.lines).length ? <details className="ck-s-details"><summary>Chiffrage des {asArr(plan.lines).length} actions retenues</summary><ol className="ck-s-prose-list">{asArr(plan.lines).map(l => <li key={str(l.sourceRef)}><p>{str(l.action)}</p><strong>{moneyRange(l, currency)}</strong><p>{str(l.occurrences)} unité(s) budgétaire(s) sur la fenêtre de l’action.</p></li>)}</ol></details> : null}
     </ACard>
   );
 }
@@ -275,7 +299,7 @@ export function PillarSFields({ content, certainty }: { content: Rec; certainty:
   const st = makeStatusFor(certainty, "s", content._fieldProvenance);
   const schemaKeys = Object.keys((PILLAR_SCHEMAS.S as { shape?: Record<string, unknown> }).shape ?? {});
   const total = schemaKeys.length;
-  const filled = schemaKeys.filter((k) => !isEmpty(v[k])).length;
+  const filled = schemaKeys.filter((k) => !isEmpty(v[k]) || (k === "rejectedFromI" && Array.isArray(v[k]))).length;
   const currentCoherence = asRec(v.computed).coherenceSummary ? asRec(v.computed).coherenceScore : v.coherenceScore;
   const coherence = isEmpty(currentCoherence) ? "—" : str(currentCoherence);
 
@@ -301,7 +325,7 @@ export function PillarSFields({ content, certainty }: { content: Rec; certainty:
           <ACard title="Facteurs clés de succès" status={st("facteursClesSucces")} empty={isEmpty(v.facteursClesSucces)}>
             {isEmpty(v.facteursClesSucces) ? <EmptyBody /> : <ol className="ck-s-prose-list">{(Array.isArray(v.facteursClesSucces) ? v.facteursClesSucces : []).map((f, i) => <li key={i}>{str(f)}</li>)}</ol>}
           </ACard>
-          <Sprint90 items={v.sprint90Days} status={st("sprint90Days")} />
+          <Sprint90 items={v.sprint90Days} status={st("sprint90Days")} summary={asRec(v.computed).budgetSummary} />
           <Roadmap items={v.roadmap} status={st("roadmap")} />
           <ProofList title="Actions du scénario courant" items={v.selectedFromI} status={st("selectedFromI")}
             cols={[["action", "Action"], ["phase", "Phase"], ["priority", "Priorité"]]} />
@@ -314,6 +338,7 @@ export function PillarSFields({ content, certainty }: { content: Rec; certainty:
         <div className="ck-a-grid">
           <KpiDashboard items={v.kpiDashboard} status={st("kpiDashboard")} />
           <NorthStarCard value={v.northStarKPI} status={st("northStarKPI")} />
+          <DevotionTargets items={v.devotionFunnel} />
           <BudgetPanel breakdown={v.budgetBreakdown} byDevotion={v.budgetByDevotion} total={v.globalBudget} summary={asRec(v.computed).budgetSummary} status={st(!isEmpty(v.budgetBreakdown) ? "budgetBreakdown" : typeof v.globalBudget === "number" ? "globalBudget" : "computed")} />
           <ProofList title="Équipe documentée" items={v.teamStructure} status={st("teamStructure")}
             cols={[["name", "Nom"], ["title", "Titre"], ["responsibility", "Profil / contribution documentée"]]} />

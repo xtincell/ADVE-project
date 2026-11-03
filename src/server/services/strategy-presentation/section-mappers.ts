@@ -678,6 +678,9 @@ export function mapBudget(strategy: any): BudgetSection {
     totalBudget: campaignBudgetSummary.totalBudget,
     campaignBudgetSummary,
     globalBudget,
+    strategyBudgetSummary: InitiativeBudgetSummarySchema.safeParse((pillarS?.computed as Record<string, unknown>)?.budgetSummary).success ? InitiativeBudgetSummarySchema.parse((pillarS?.computed as Record<string, unknown>).budgetSummary) : undefined,
+    budgetByDevotion: (pillarS?.budgetByDevotion ?? {}) as Record<string, number>,
+    devotionFunnel: Array.isArray(pillarS?.devotionFunnel) ? pillarS.devotionFunnel : [],
     budgetBreakdown,
   };
 }

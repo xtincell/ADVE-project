@@ -1,5 +1,6 @@
 /** Existing amendment, real persistence and documentary fences; isolated DB only. */
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { model as planningModel, projection as audienceProjection } from "../fixtures/strategy-planning";
 import { financialModelFixture } from "../fixtures/financial-model";
 import { resolveUnitEconomics } from "@/domain/unit-economics";
 import { randomUUID } from "node:crypto";
@@ -126,6 +127,31 @@ describe("financial premises through the existing governed amendment", () => {
     const result = await operatorAmendPillar({ ...f.intent, field: "unitEconomics.cac", proposedValue: 1, expectedVersion: 2 });
     expect(result).toMatchObject({ status: "VETOED", reason: "FINANCIAL_PREMISES_REQUIRED" });
     expect((await db.pillar.findUniqueOrThrow({ where: { id: f.pillar.id } })).currentVersion).toBe(2);
+  });
+});
+
+describe("planning premises use the same documentary fences", () => {
+  it("persists the budget model and refuses partial or missing-version amendments", async () => {
+    const f = await fixture();
+    const intent: Amend = { ...f.intent, field: "strategyBudgetModel", proposedValue: { ...planningModel, source: f.receipt }, mode: "STRATEGIC_REWRITE" };
+    expect(await operatorAmendPillar({ ...intent, sourceReceipts: undefined, expectedVersion: undefined })).toMatchObject({ status: "VETOED", reason: "PLANNING_MODEL_INCOMPLETE" });
+    expect(await operatorAmendPillar({ ...intent, field: "strategyBudgetModel.horizonMonths", proposedValue: 3 })).toMatchObject({ status: "VETOED", reason: "PLANNING_MODEL_WHOLE_REQUIRED" });
+    expect(await operatorAmendPillar(intent)).toMatchObject({ status: "OK" });
+    const after = await db.pillar.findUniqueOrThrow({ where: { id: f.pillar.id } });
+    expect(after.currentVersion).toBe(2); expect(after.sources).toContainEqual(f.receipt);
+    expect(after.content).toMatchObject({ strategyBudgetModel: intent.proposedValue, promesseDeValeur: "Valeur précédente" });
+  });
+  it("refuses a payer as audience then admits the correctly qualified audience without observed people", async () => {
+    const f = await financialFixture();
+    const e = await db.pillar.create({ data: { strategyId: f.brand.id, key: "e", content: {} } });
+    const intent: Amend = { ...f.intent, pillarKey: "e", field: "devotionProjection", proposedValue: { ...audienceProjection, source: f.receipt, cohortPersonaId: "payer-fixture" } };
+    expect(await operatorAmendPillar(intent)).toMatchObject({ status: "VETOED", reason: "PLANNING_AUDIENCE_REQUIRED" });
+    await db.pillar.update({ where: { id: f.d.id }, data: { content: { personas: [{ id: "audience-fixture", actorRoles: ["USER", "COMMUNICATION_AUDIENCE"] }] } } });
+    intent.proposedValue = { ...audienceProjection, source: f.receipt, cohortPersonaId: "audience-fixture" };
+    expect(await operatorAmendPillar(intent)).toMatchObject({ status: "OK" });
+    const after = await db.pillar.findUniqueOrThrow({ where: { id: e.id } });
+    expect(after.currentVersion).toBe(2); expect(after.content).toMatchObject({ devotionProjection: intent.proposedValue, _fieldProvenance: { devotionProjection: "INFERRED" } });
+    expect(await db.campaign.count({ where: { strategyId: f.brand.id } })).toBe(0);
   });
 });
 

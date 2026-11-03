@@ -2,6 +2,7 @@
  * performance forecast or execution authorization. ADR-0228. */
 
 import { initiativePreference, ROADMAP_ROUTE_KEYS, INITIATIVE_TIMEFRAMES, InitiativeBudgetRangeSchema, INITIATIVE_BUDGET_PERIODS, type InitiativeBudgetSummary } from "@/lib/types/pillar-schemas";
+import { StrategyBudgetModelSchema, STRATEGY_COST_CATEGORIES, type StrategyBudgetEnvelope } from "@/domain/financial-document";
 
 export type RouteKey = (typeof ROADMAP_ROUTE_KEYS)[number];
 
@@ -55,6 +56,66 @@ export const ROUTE_SPECS: RouteSpec[] = [
   { key: "TARGET", label: "Cible", recommended: true, description: "Étendre la couverture aux risques, publics et objectifs du catalogue." },
   { key: "AMBITIOUS", label: "Ambitieux", recommended: false, description: "Élargir les canaux et les étapes d’engagement utiles, sans ajouter les doublons." },
 ];
+
+/** Normalize every retained action on the ADVE horizon. No implicit annualization,
+ * default allocation, midpoint or permission to spend is introduced here. */
+export function projectStrategyBudget(set: Array<Record<string, unknown>>, value: unknown): StrategyBudgetEnvelope | undefined {
+  const parsed = StrategyBudgetModelSchema.safeParse(value);
+  if (!parsed.success) return undefined;
+  const model = parsed.data;
+  const round = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+  const emptyCategories = () => Object.fromEntries(STRATEGY_COST_CATEGORIES.map(k => [k, { min: 0, max: 0 }])) as StrategyBudgetEnvelope["byCategory"];
+  const plan: StrategyBudgetEnvelope = { min: 0, max: 0, currency: model.currency, horizonMonths: model.horizonMonths,
+    qualification: model.qualification, note: model.note, source: model.source, byCategory: emptyCategories(), byPhase: {}, lines: [] };
+  for (const action of set) {
+    const profile = model.profiles.find(p => p.channel === action.channel) ?? model.profiles.find(p => p.channel === "*");
+    const phase = String(action.timeframe ?? "");
+    const window = model.phaseWindows[phase as keyof typeof model.phaseWindows];
+    if (!profile || !window || typeof action.id !== "string" || typeof action.action !== "string") return undefined;
+    const months = window.endMonth - window.startMonth + 1;
+    const rawPeriod = action.budgetPeriod;
+    const period = String(rawPeriod == null || rawPeriod === "UNSPECIFIED" ? profile.fallbackPeriod ?? "" : rawPeriod);
+    let occurrences: number | undefined;
+    if (period === "ONE_OFF") occurrences = 1;
+    else if (period === "MONTHLY") occurrences = months;
+    else if (period === "QUARTERLY") occurrences = Math.ceil(months / 3);
+    else if (period === "YEARLY") occurrences = Math.ceil(months / 12);
+    else if (period === "PER_OCCURRENCE") {
+      occurrences = ({ DAILY: months * model.daysPerMonth, WEEKLY: Math.ceil(months * model.daysPerMonth / 7),
+        MONTHLY: months, QUARTERLY: Math.ceil(months / 3), YEARLY: Math.ceil(months / 12),
+        AD_HOC: profile.adHocOccurrences, ONE_SHOT: 1 } as Record<string, number>)[String(action.cadence)];
+    }
+    if (occurrences === undefined) return undefined;
+    const parsedRange = InitiativeBudgetRangeSchema.safeParse(action.budgetRange);
+    const amount = typeof action.budget === "number" && Number.isFinite(action.budget) && action.budget >= 0 ? action.budget : undefined;
+    const range = parsedRange.success ? parsedRange.data : amount !== undefined && action.budgetBasis !== "QUALITATIVE_ESTIMATE"
+      ? { min: amount, max: amount } : profile.fallbackRange;
+    const min = round(range.min * occurrences), max = round(range.max * occurrences);
+    const byCategory = emptyCategories();
+    // Allocate whole cents. Split the interval width separately so no
+    // category acquires a negative or reversed range from rounding.
+    const allocate = (total: number) => {
+      const cents = Math.round(total * 100);
+      const parts = STRATEGY_COST_CATEGORIES.map(key => ({ key, exact: cents * profile.categoryShares[key] }));
+      const amounts = Object.fromEntries(parts.map(p => [p.key, Math.floor(p.exact)])) as Record<(typeof STRATEGY_COST_CATEGORIES)[number], number>;
+      let remainder = cents - Object.values(amounts).reduce((sum, n) => sum + n, 0);
+      for (const part of [...parts].sort((a, b) => (b.exact % 1) - (a.exact % 1))) {
+        if (remainder-- <= 0) break;
+        amounts[part.key]++;
+      }
+      return amounts;
+    };
+    const lower = allocate(min), width = allocate(round(max - min));
+    for (const key of STRATEGY_COST_CATEGORIES) byCategory[key] = { min: lower[key] / 100, max: (lower[key] + width[key]) / 100 };
+    plan.lines.push({ sourceRef: action.id, action: action.action, occurrences, min, max, period, phase, byCategory });
+    plan.min = round(plan.min + min); plan.max = round(plan.max + max);
+    const phased = plan.byPhase[phase] ?? { min: 0, max: 0 };
+    plan.byPhase[phase] = { min: round(phased.min + min), max: round(phased.max + max) };
+    for (const category of STRATEGY_COST_CATEGORIES) for (const side of ["min", "max"] as const)
+      plan.byCategory[category][side] = round(plan.byCategory[category][side] + byCategory[category][side]);
+  }
+  return plan;
+}
 
 
 // ADR-0228: S selects proposals; catalogue preferences do not preselect a plan.
@@ -117,6 +178,7 @@ export function routeInitiativeSet(
 export function aggregateInitiativeSet(
   set: Array<Record<string, unknown>>,
   riskMatrix: Array<Record<string, unknown>>,
+  planning?: unknown,
 ): {
   initiativeIds: string[];
   initiativeCount: number;
@@ -170,7 +232,10 @@ export function aggregateInitiativeSet(
   // Recurring unit costs need an explicit number of periods before they can
   // become a plan envelope. Never silently multiply a monthly cost by twelve.
   const isEnvelope = [...groups.keys()].every(p => p === "UNSPECIFIED" || p === "ONE_OFF");
-  const totalBudget = budgetSummary.unknownCount === 0 && !hasRange && groups.size <= 1 && isEnvelope ? budgetSummary.knownSubtotal ?? undefined : undefined;
+  const plan = projectStrategyBudget(set, planning);
+  if (plan) budgetSummary.plan = plan;
+  const totalBudget = plan?.max ?? (budgetSummary.unknownCount === 0 && !hasRange && groups.size <= 1 && isEnvelope ? budgetSummary.knownSubtotal ?? undefined : undefined);
+  if (plan) for (const [phase, range] of Object.entries(plan.byPhase)) budgetByPhase[phase] = range.max;
   const initiativeIds = set
     .map((a) => a.id)
     .filter((id): id is string => typeof id === "string");
@@ -190,6 +255,10 @@ export function aggregateInitiativeSet(
 /** Shared client wording for complete/partial amounts and qualitative estimates. */
 export function initiativeBudgetLabel(total: unknown, summary: unknown): string {
   const s = summary && typeof summary === "object" ? summary as Partial<InitiativeBudgetSummary> : undefined;
+  if (s?.plan) {
+    const p = s.plan, fmt = (n: number) => new Intl.NumberFormat("fr-FR").format(n);
+    return `${p.min === p.max ? fmt(p.min) : `${fmt(p.min)}–${fmt(p.max)}`} ${p.currency} · ${p.horizonMonths} mois · estimation du plan`;
+  }
   if (s?.amountGroups?.length) return s.amountGroups.map(g => {
     const fmt = (n: number) => new Intl.NumberFormat("fr-FR").format(n);
     const period = { ONE_OFF: "ponctuel", PER_OCCURRENCE: "par occurrence", MONTHLY: "par mois", QUARTERLY: "par trimestre", YEARLY: "par an", UNSPECIFIED: "période à préciser" }[g.period];
@@ -224,6 +293,7 @@ export function computeRoadmapRoutes(input: {
   riskMatrix?: Array<Record<string, unknown>>;
   /** ADR-0089 — ambition retenue ; marque `selected` sur la route correspondante. */
   selectedRouteKey?: RouteKey;
+  planning?: unknown;
 }): Array<Record<string, unknown>> {
 
 
@@ -243,7 +313,7 @@ export function computeRoadmapRoutes(input: {
     }
     if (input.initiatives) {
       const set = routeInitiativeSet(r.key, input.initiatives, { riskMatrix: input.riskMatrix });
-      const agg = aggregateInitiativeSet(set, input.riskMatrix ?? []);
+      const agg = aggregateInitiativeSet(set, input.riskMatrix ?? [], input.planning);
       route.initiativeIds = agg.initiativeIds;
       route.selectionBasis = "CATALOGUE_COVERAGE_RULES_V1";
       route.selectionReasons = set.map(a => ({ initiativeId: a.id,
