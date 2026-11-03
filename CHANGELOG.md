@@ -1,5 +1,7 @@
 ## v6.27.539 — fix(cockpit): clarifier la reprise et restituer les observations (2026-11-03)
 
+- PR de livraison réelle : #1128.
+
 **Une production existante à réactualiser ne ressemble plus à une étape jamais jouée.**
 
 - Notoria distingue contenu produit, fraîcheur et possibilité de recalcul. La navigation conserve la marque ; le bouton prioritaire ouvre la cascade existante et décrit ses effets avant lancement. Les propositions ADVE restent une action distincte qui attend une décision.

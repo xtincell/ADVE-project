@@ -251,3 +251,5 @@ exiger le label avant merge via une protection de branche.
 | 2026-11-03 | #1126 | fix/gazette-oracle538 | NEFER — mandat opérateur | Prémisses conceptuelles vides complétables et consignes factorisées par famille, confirmation attribuée/versionnée, Gazette intégrale et fraîcheur Oracle. Extension des rails existants sans nouveau service/Intent/fournisseur. Recette locale unité/PG/build/stress/API/natif reçue ; réception métier globale et production distinctes. |
 
 | 2026-11-03 | #1127 | docs/reception538 | NEFER — mandat opérateur | Clôture documentaire de PR1126 : CI16/16, image/runtime538 exacts, conservation et lecteurs natifs reçus. Aucun code/version/modèle ni nouvelle image. ADVE huit piliers, Oracle frais, collecte Gazette et mobile restent ouverts. |
+
+| 2026-11-03 | #1128 | fix/cockpit-guidance539 | NEFER — mandat opérateur | Notoria distingue production/fraîcheur et expose la reprise avant calcul ; lecteur Gazette sans extrait répété, focus continu et lecture de digest propre à la marque. Plan Overton S/T distinct des observations. Graphe conviction et produits d’appel restent une tranche ouverte, aucun100%global. |
