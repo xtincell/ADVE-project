@@ -55,6 +55,8 @@ export interface ProvenanceGuardInput {
   declaredPaths?: string[];
   /** Exact, version-fenced SET_FIELDS paths; never inferred from a full replacement. */
   surgicalPaths?: string[];
+  /** Schema-checked conceptual premises missing at the read version; proposed pending verification. */
+  inferableMissingPaths?: string[];
 }
 
 export interface ProvenanceGuardResult {
@@ -130,10 +132,11 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
       const next = resolvePillarPath(newContent, path);
       const incoming = incomingFor(path);
       const existing = coerceProvenance(fieldStatusFor(undefined, "", provenance)(path));
-      // Empty scalars are a gap, not a choice. Empty collections, 0 and false
-      // remain actual choices; they require the normal authority arbitration.
+      // Empty scalars are gaps. Schema-approved missing collections may also
+      // become proposals; numeric zero and false remain actual values.
       const gap = prev == null || (typeof prev === "string" && !prev.trim());
-      const decision = gap ? "ALLOW" : decideOverwrite(incoming, existing);
+      const inferredGap = incoming === "INFERRED" && input.inferableMissingPaths?.includes(path);
+      const decision = gap || inferredGap ? "ALLOW" : decideOverwrite(incoming, existing);
       if (jsonEqual(prev, next)) {
         const declared = input.declaredFor?.(path);
         if (declared && decideOverwrite(declared, existing) === "ALLOW") provenance[path] = declared;
@@ -170,7 +173,9 @@ export function applyProvenanceGuard(input: ProvenanceGuardInput): ProvenanceGua
 
     const existing = coerceProvenance(provenance[key]);
     const incoming = incomingFor(key);
-    const decision = decideOverwrite(incoming, existing);
+    const inferredGap = incoming === "INFERRED" && input.inferableMissingPaths?.includes(key) &&
+      (prevVal == null || (typeof prevVal === "string" && !prevVal.trim()) || (Array.isArray(prevVal) && prevVal.length === 0));
+    const decision = inferredGap ? "ALLOW" : decideOverwrite(incoming, existing);
 
     if (decision === "ALLOW") {
       // A whole-object proposal may not launder a protected child through an

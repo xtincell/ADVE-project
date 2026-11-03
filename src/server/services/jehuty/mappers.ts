@@ -29,6 +29,23 @@ function declaredQualification(data: Record<string, unknown>): Pick<JehutyFeedIt
   return { urgency: urgencyByValue[rawUrgency] ?? urgencyBySeverity[severity] ?? null, impact };
 }
 
+/** Editorial previews never replace the complete source observation. */
+export function editorialExcerpt(text: string, max = 300): string {
+  const clean = text.trim().replace(/\s+/g, " ");
+  if (text.trim().length <= max) return text.trim();
+  const cut = clean.slice(0, max - 1);
+  const boundary = cut.lastIndexOf(" ");
+  return `${cut.slice(0, boundary > 0 ? boundary : cut.length)}…`;
+}
+
+function signalHeadline(title: string, data: Record<string, unknown>, type: string): string {
+  if (title.length <= 110) return title;
+  const clause = title.split(/[,;!?]|\.\s/)[0]?.trim();
+  if (clause && clause.length >= 15 && clause.length <= 110) return clause;
+  const pillar = typeof data.pillar === "string" ? ` — pilier ${data.pillar.toUpperCase()}` : "";
+  return `${type === "WEAK_SIGNAL_ALERT" ? "Point de vigilance" : "Signal à examiner"}${pillar}`;
+}
+
 // ── Signal → FeedItem ─────────────────────────────────────────────
 
 const SIGNAL_TYPE_TO_CATEGORY: Record<string, JehutyCategory> = {
@@ -67,9 +84,9 @@ export function mapSignalToFeedItem(
     sourceType: "SIGNAL",
     sourceId: signal.id,
     category,
-    title: title.slice(0, 120),
-    summary: summary.slice(0, 300),
-    ...(signal.type === "EXTERNAL_METRIC" ? { observation: summary } : {}),
+    title: signalHeadline(title, data, signal.type),
+    summary: editorialExcerpt(summary),
+    observation: summary,
     pillarKey: (data.relatedPillars as string[] | undefined)?.[0] ?? (data.pillar as string) ?? undefined,
     strategyId: signal.strategyId,
     strategyName,
@@ -83,7 +100,8 @@ export function mapSignalToFeedItem(
     createdAt: signal.createdAt.toISOString(),
     source: signal.type === "EXTERNAL_METRIC"
       ? typeof data.sourceLabel === "string" && data.sourceLabel.trim() ? data.sourceLabel.trim() : "Mesures reçues"
-      : signal.type,
+      : signal.type === "WEAK_SIGNAL_ALERT" ? "Analyse des signaux de la marque"
+        : signal.type.startsWith("SCORE_") ? "Calcul des piliers de la marque" : "Données de la marque",
   };
 }
 
@@ -193,9 +211,12 @@ export function mapDiagnosticToFeedItem(
         ? "Examen de votre marque : rien d'alarmant détecté"
         : "Examen de votre marque");
   const frameworksUsed = Array.isArray(data.frameworksUsed) ? (data.frameworksUsed as string[]) : [];
+  const findings = Array.isArray(data.diagnosis) ? data.diagnosis as Array<Record<string, unknown>> : [];
+  const prescriptions = Array.isArray(data.prescriptions) ? data.prescriptions.filter((v): v is string => typeof v === "string") : [];
+  const detail = [...findings.map(f => [f.pillar, f.issue, f.rootCause].filter(Boolean).join(" — ")), ...prescriptions].join("\n\n");
   const summary =
-    (data.prescription as string) ??
-    (data.diagnostic as string) ??
+    detail || (data.prescription as string) ||
+    (data.diagnostic as string) ||
     [
       symptoms !== null
         ? `${symptoms} symptôme(s) relevé(s) lors de l'examen automatique de vos fondations.`
@@ -212,7 +233,8 @@ export function mapDiagnosticToFeedItem(
     sourceId: entry.id,
     category: "DIAGNOSTIC",
     title,
-    summary,
+    summary: editorialExcerpt(summary),
+    observation: summary,
     pillarKey: entry.pillarFocus ?? undefined,
     strategyId,
     strategyName,
@@ -234,7 +256,7 @@ export function mapDiagnosticToFeedItem(
  * EXTERNAL_SIGNAL — titre = l'article réel, source = le média.
  */
 export function mapExternalArticleToFeedItem(
-  article: { title?: string; link?: string; source?: string; publishedAt?: string; imageUrl?: string },
+  article: { title?: string; link?: string; source?: string; publishedAt?: string; imageUrl?: string; summary?: string },
   strategyId: string,
   digestCreatedAt: Date,
   curation: CurationRecord,
@@ -246,8 +268,9 @@ export function mapExternalArticleToFeedItem(
     sourceType: "SIGNAL",
     sourceId: article.link ?? "",
     category: "EXTERNAL_SIGNAL",
-    title: (article.title ?? "").slice(0, 120),
-    summary: article.source ? `Vu chez ${article.source}. À lire si votre marché en parle autour de vous.` : "",
+    title: article.title ?? "",
+    summary: article.summary ? editorialExcerpt(article.summary) : article.source ? `Article publié par ${article.source}. Ouvrir la source pour le lire.` : "Ouvrir l’article original.",
+    ...(article.summary ? { observation: article.summary } : {}),
     strategyId,
     urgency: null,
     impact: null,

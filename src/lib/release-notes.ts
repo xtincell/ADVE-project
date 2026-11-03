@@ -34,6 +34,17 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.538", date: "2026-11-03", headline: "Des informations lisibles et des modifications confirmées fidèlement",
+    highlights: [
+      { emoji: "🧩", title: "Avancer avec des hypothèses à vérifier", body: "Une information conceptuelle laissée vide peut recevoir une proposition qui alimente déjà le plan. Le responsable de marque dispose d’une consigne adaptée pour vérifier puis confirmer ou corriger cette hypothèse. Le conseil reçoit cette règle sans répétitions inutiles ; les décisions renseignées et les faits observés restent distincts." },
+      { emoji: "🤝", title: "Décrire la valeur d’un partenariat", body: "Un partenaire peut apporter du trafic ou une autre contribution sans acheter de produit. Ses apports, contreparties, coûts et conditions documentés permettent de décrire cet échange sans le confondre avec un client payeur." },
+      { emoji: "📰", title: "Lire les informations sans les perdre", body: "La Gazette présente un extrait puis permet de déplier le contenu reçu. Les sources restent lisibles, les diagnostics détaillés ne se répètent plus et les images fournies par les flux accompagnent les articles." },
+      { emoji: "🎯", title: "Retrouver votre contexte de veille", body: "Le rafraîchissement reprend le pays de votre marque et ses sujets suivis. Les résumés et images reçus des flux ou retrouvés chez l’éditeur accompagnent l’article lorsqu’ils sont disponibles." },
+      { emoji: "✅", title: "Savoir si une modification a été acceptée", body: "Lorsqu’une modification proposée par un agent dépasse une règle du dossier, elle est refusée sans annoncer une réussite ni créer une nouvelle version. Le contenu précédent reste conservé." },
+      { emoji: "📖", title: "Distinguer contenu rédigé et contenu à jour", body: "Le rapport compte séparément ce qui est rédigé et ce qui doit être réactualisé. Un brouillon contenant de la matière reste visible sans être présenté comme approuvé ; les prochaines étapes restent renseignées même lorsqu’aucun contrat n’a encore été signé." },
+    ],
+  },
+  {
     version: "6.27.537", date: "2026-11-03", headline: "Un budget de plan lisible et des objectifs d’engagement chiffrés",
     highlights: [
       { emoji: "🧮", title: "Comparer les coûts sur le même horizon", body: "Les actions retenues conservent leur fourchette de coût. Le plan indique son horizon et une enveloppe prudente, répartie entre production, média, talent, logistique et technologie. Les hypothèses restent distinctes des devis et dépenses." },

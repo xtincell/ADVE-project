@@ -1,3 +1,126 @@
+## 538 — recevoir les lecteurs Gazette/Oracle et normaliser les formes ADVE legacy (2026-11-03)
+
+**Candidat testé localement, réception production ouverte** : Gazette conserve observation intégrale et
+extrait, diagnostics détaillés dédoublonnés, sujets de veille effectifs et pays
+Strategy ; résumés et images reçus du RSS suivent les lecteurs existants. Oracle
+sépare présence du contenu, fraîcheur et approbation : STALE n’est pas vide,
+DRAFT n’est pas une absence de matière et ACTIVE ne suffit pas à prouver son
+contenu. Les prochaines étapes peuvent alimenter Conditions sans inventer un
+contrat. Ces changements ne reçoivent ni la fraîcheur générale ni la qualité de
+l’intégralité du rapport. Les contrôles locaux exacts sont reçus ci-dessous ;
+538 n’est pas déployée. Jusqu’à trois aperçus d’articles par rafraîchissement réutilisent Brave
+et la lecture HTML protégée existants, avec concordance éditeur/titre ; seuls les
+résumés et images réellement reçus sont conservés.
+
+**Refus d’amendement reçu localement** : un agent pouvait recevoir un succès et
+une version incrémentée alors que la Bible rétablissait son champ interdit.
+La gateway refuse avant écriture quand rejectOnProvenanceRefusal est demandé
+et que le champ proposé déclenche un BLOCK. Contenu précédent, version,
+historique et score restent inchangés sur la régression ciblée. Preuve rouge
+conservée puis premier PostgreSQL 18/18 vert ; dernier reçu PostgreSQL 21/21
+vert. Cela ne reçoit pas l’ensemble des amendements réels. Preuves privées :
+source538-bible-counterfactual-red.log et source538-exact-postgres.log.
+
+**État technique537 reçu** : PR1124/merge e3e484514d2d07f41bb9b894d4db7922095f6422,
+image/runtime537 et montages reçus. Les données stockées comparées sont inchangées ;
+les différences de validation dérivée ont été reproduites avec le code exact sur
+le contenu antérieur. Aucune égalité brute de réponse revendiquée. Les amendements
+ADVE du dossier réel se poursuivent ; huit piliers et 35 sections ne sont pas reçus.
+Cette réception remplace seulement l’attente technique du checkpoint537 ci-dessous.
+
+**Nouveau mandat conceptuel538 — réception ouverte** : remplacer même un choix
+antérieur de laisser un champ conceptuel dérivable vide par une proposition
+INFERRED utilisable immédiatement. Admission SET_FIELDS/expectedVersion/schéma,
+canInferMissingConceptualField et garde de provenance existants ; rempli/0/false,
+preuves et non-applicabilité documentée restent protégés. La consigne
+inferredFieldVerification accompagne le champ dans l’UI et le contexte RTIS ;
+le responsable de marque vérifie puis confirme/corrige, avec acteur réel, version
+relue et consigne journalisés. L’agent ne fabrique aucune confirmation.
+L’échange V sans achat est complet seulement si persona, apports, contreparties,
+coûts et conditions sont documentés. [ADR-0236 Proposed](adr/0236-inferred-premises-and-brand-verification.md).
+
+**Fermer ce delta** : recevoir les vides HUMAN/SOURCE admissibles, l’origine
+INFERRED propre, l’usage immédiat et la consigne de vérification, puis les refus
+rempli/0/false/preuves/non-applicabilité/conflit/schéma. Recevoir la confirmation
+réelle et sa trace, l’échange partenaire complet sans achat fictif et l’échange
+incomplet toujours détecté. **Responsables** : contrats/Core/gateway et lecteurs
+existants ; **effort** : régression ciblée puis cascade et recette huit/35 ;
+**déclencheur** : avant réception métier538. Les contrôles de code sont reçus :
+5 132 tests unitaires/499 fichiers, 21 PostgreSQL, ciblé enums 70/4 verts ; typage
+et lints sans erreur (25 avertissements restants), build exit 0, stress compilé
+sans finding et six requêtes USER HTTP200. Le défaut T du checkpoint5 127/5 128
+ne reproduit plus dans cette suite ; le PG18/18 ci-dessus reste antérieur.
+Les reçus sont privés dans P23, notamment source538-factorized-unit.log,
+source538-exact-postgres.log, source538-enum-targeted-green.log,
+source538-exact-build.log, source538-stress-exact-final-received.json et
+source538-user-http-received.json. La mise en proposition ne normalise pas les
+formes legacy invalides et les tests ne simulent pas une confirmation de marque.
+
+**Consignes factorisées — code reçu localement, réception métier ouverte** : éviter de répéter la responsabilité,
+l’usage et une longue instruction dans chaque cellule du contexte. Règle commune,
+six profils par famille, verificationRef par champ INFERRED et registre unique
+des seuls profils effectivement utilisés. **Fermer** par résolution de toutes les
+références, absence de profil manquant ou inutile, parité conseillers/R/T/I/
+Notoria/auto-fill, UI conservant la consigne complète et confirmation journalisant
+la bonne consigne/version/acteur. Conserver qualifications, données métier et
+limites du postulat. **Responsables** : domaine provenance et constructeurs de
+contexte existants ; **effort** : factorisation bornée et recette transverse des
+consommateurs ; **déclencheur** : avant réception métier538. Le défaut T est
+corrigé dans la suite exacte et la consigne complète est reçue nativement sur le
+détail E local. Le bouton « Valider tel quel » est reçu sur la seule fixture :
+E v3→v4, cinq rites inchangés, INFERRED→HUMAN, liste3→2 et historique relu
+avec version3/consigne RITUALS complète (source538-native-confirm-received.json,
+historique privé). Restent la confirmation et la cascade sur le dossier réel ;
+aucune adoption en production n’est déduite de cet exercice. Aucun gain chiffré de coût/contexte ni réception production déduit.
+
+**Réception native locale bornée** : Engagement, Oracle et Gazette consultés
+sur desktop ; cinq rites avec consignes lisibles et dépliage Gazette reçus.
+Aucune exception ni réponse500 dans les fenêtres observées. Oracle de fixture :
+0 section rédigée, 33/35 alimentées ; ce résultat n’est pas celui du rapport réel.
+La tentative de largeur390px est restée à1 578px malgré l’outil : mobile non
+reçu, réglage réinitialisé. Les temps locaux de ces vues ne constituent pas un SLO.
+
+**Recette à fermer** : confirmer le comportement sur le dossier réel et après
+livraison, sans faux succès ni effet de bord ; vérifier identité éditeur/titre, limite de
+trois aperçus et conservation en cas d’échec de collecte. Conserver le texte
+intégral derrière l’extrait, ouvrir
+les détails et la source, recevoir un seul diagnostic courant par marque sans
+fuite entre dossiers, puis vérifier sujets/pays et articles réellement collectés.
+Comparer la Gazette au contexte Strategy/ADVE ; aucune image ou information
+absente de la source ne doit être inventée. Pour Oracle, contrôler contenu
+présent/vide, STALE/COMPLETE, DRAFT/ACTIVE, clé canonique de chaque carte et
+absence réelle de contrat avec prochaines étapes renseignées. Complétude de
+contenu, approbation et résultat observé restent des états distincts.
+**Responsables** : Jehuty/Seshat, assembleur et lecteurs Oracle existants.
+**Effort** : recette bornée des projections et de leurs surfaces, puis CI/image/
+runtime/conservation. **Déclencheur** : avant réception538 ; reçu local et
+production restent distincts. Gazette/Oracle entiers, MVP et sept chantiers ouverts.
+
+**Formats ADVE legacy — dette préexistante, non réparée en538** : certaines
+formes stockées ne satisfont pas les schémas stricts, alors que leur contenu peut
+être rendu ou compté présent. Le correctif de lecture ne normalise pas ces données
+et un compteur de présence ne les valide pas. Cette reprise prolonge la dette
+historique de désaccord entre formes legacy, maturité et schéma strict tracée
+ci-dessous ; elle n’autorise ni assouplissement des schémas ni remplissage fictif.
+
+**Plan concret** : inventorier chaque chemin incompatible et retrouver sa source,
+son édition et la version du pilier. Proposer une normalisation sémantique vers
+le champ canonique en conservant sens, unités, identités, provenance, qualifications
+et valeurs humaines. Un renommage ou une coercition qui change le sens n’est pas
+une normalisation ; ambiguïtés et contradictions remontent à la revue de source.
+Admettre uniquement sur les rails existants, avec version/source attendues
+vérifiées au moment de l’écriture, originaux conservés et refus en cas de
+changement concurrent. Valider ensuite les schémas stricts, recalculer R/T/I/S
+par la cascade gouvernée, puis recevoir les huit piliers et les 35 sections
+attendues dans leurs lecteurs, avec conservation des données voisines et contrôle
+de fraîcheur. Les accords, contrats et mesures absents ne sont jamais inférés
+comme faits ; les postulats permis restent qualifiés dans ADVE.
+**Responsables** : Core/Mestor et admission documentaire existants, avec Notoria
+et les lecteurs Oracle pour la réception. **Effort** : lot borné par forme
+incompatible, puis une recette de cascade et des consommateurs. **Déclencheur** :
+après livraison538, avant toute déclaration de complétude stricte des huit piliers,
+d’Oracle entier ou de MVP. Les preuves et données de marque restent hors checkout.
+
 ## 537 — recevoir les prémisses et les cinq sorties de planification (2026-11-03)
 
 Les attentes CI536/Lighthouse, livraison financière, application V et cascade réelle
@@ -15,9 +138,10 @@ dans Notoria. R/T/I périmés dans la seule fixture faute de cascade demandée ;
 aucune conclusion sur la production. L’alignement des cardinalités et la période
 explicite/ONE_SHOT sont inclus dans ces réceptions finales.
 
-**Reste à recevoir en537** : CI/image/runtime et conservation après livraison,
-puis application gouvernée et réception sur les données réelles. 537 n’est pas
-livrée. Les cinq sorties locales reçues sont budget global, ventilation en cinq
+**Checkpoint local537 avant livraison** : CI/image/runtime et conservation
+restaient alors à recevoir ; cette attente technique est remplacée par le reçu537
+ci-dessus. L’application gouvernée et la réception sur les données réelles restent
+ouvertes. Les cinq sorties locales reçues sont budget global, ventilation en cinq
 catégories, budget par engagement, progression de cohorte et sprint lisible ;
 la parité avec Oracle ne ferme pas le rapport entier.
 **Fermer** par livraison exacte, conservation et parcours V/E→S→Oracle réel,
@@ -39,7 +163,7 @@ bornés puis une recette de cascade ; **déclencheur** : après livraison537, av
 réception de complétude/MVP. Les modèles optionnels legacy ne dispensent pas des
 résultats obligatoires et ne reçoivent pas les autres marques/régions.
 
-**Gazette/Oracle — défauts audités, non réparés** : les lecteurs serveur Gazette
+**Gazette/Oracle — diagnostic initial537, reprise candidate538 ci-dessus** : les lecteurs serveur Gazette
 tronquent à 120/300 caractères depuis avril ; seul EXTERNAL_METRIC transporte son
 payload complet. L’audit du rapport reçoit du contenu dans 35 sections toutes STALE,
 alors que l’interface annonce 0 rédigée : présence, rédaction et fraîcheur sont

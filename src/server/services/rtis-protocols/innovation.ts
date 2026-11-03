@@ -26,7 +26,7 @@ import { db } from "@/lib/db";
 import { DEVOTION_LEVELS } from "@/lib/types/taxonomies";
 import { PillarISchema } from "@/lib/types/pillar-schemas";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
-import { serializePillar, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
+import { serializePillars, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
 
 // ADR-0063 / PR-K3-ter — sous-schémas. Le mega-appel (5 champs) est ÉCLATÉ en
 // 3 sous-appels focalisés ; chacun valide sa sous-partie. `.pick().partial()`
@@ -127,13 +127,7 @@ async function generateCatalogue(
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : le contenu des
   // piliers A/D/V/E/R/T dérive de la saisie fondateur → chaque bloc est encadré
   // comme DONNÉE (jamais instruction) avant d'entrer dans le prompt.
-  const context = ["a", "d", "v", "e", "r", "t"]
-    .map(k => {
-      const c = pillars[k];
-      if (!c || Object.keys(c).length === 0) return `[${k.toUpperCase()}] Vide`;
-      return serializePillar(k.toUpperCase(), c);
-    })
-    .join("\n\n");
+  const context = serializePillars(["a", "d", "v", "e", "r", "t"].map(k => [k.toUpperCase(), pillars[k]]));
 
   // Extract risks and hypotheses for cross-reference
   const r = pillars.r ?? {};

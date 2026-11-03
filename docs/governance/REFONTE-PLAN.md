@@ -1,3 +1,54 @@
+## 538 — prémisses utilisables, vérification réelle et lecteurs fidèles (2026-11-03)
+
+537 est reçue techniquement en production (mergePR1124 e3e484514, image/runtime,
+montages et données stockées conservés). Les écarts de validation dérivée sont
+reproduits avec le code exact. Les anciens états537 ci-dessous sont des checkpoints,
+pas l’état courant de livraison ; amendements réels et réception huit/35 restent ouverts.
+
+Instruction opérateur : compléter les champs conceptuels dérivables vides,
+y compris les vides HUMAN/SOURCE ou laissés vides par décision, avec une proposition
+INFERRED et une consigne de vérification. Le postulat irrigue immédiatement R/T/I/S
+et les livrables ; le responsable de marque vérifie puis confirme/corrige à la
+version relue. Aucune validation, observation ou affectation humaine fabriquée.
+
+Le candidat étend contrats/gateway/UI/contexte/confirmation existants :
+canInferMissingConceptualField, SET_FIELDS + expectedVersion + schéma exact,
+inferredFieldVerification et trace de confirmation acteur/version/consigne.
+Valeurs remplies, zéro, false, preuves et non-applicabilité documentée restent
+protégés. Un échange V identifié avec apports, contreparties, coûts et conditions
+peut être complet sans produit acheté ; un partenaire n’est pas forcé dans le
+rôle de payeur. [ADR-0236 Proposed](adr/0236-inferred-premises-and-brand-verification.md)
+amende la règle du vide d’ADR0231, sans remplacer ses autres garanties.
+
+**Réception attendue** : vides conceptuels HUMAN/SOURCE → proposition conforme
+INFERRED → usage RTIS avec consigne → confirmation réelle versionnée. Vérifier
+conservation des champs remplis et voisins, 0/false, preuves, non-applicabilité,
+refus de version périmée/schéma invalide et échange partenaire sans achat fictif.
+Puis cascade et réception des huit piliers/35 sections sur données réelles,
+avec rendu natif et conservation. La représentation des consignes évolue à la demande opérateur : règle commune,
+six profils par famille, verificationRef par champ INFERRED et registre unique
+des seuls profils utilisés par contexte. Conseillers/R/T/I/Notoria/auto-fill
+partagent ce format ; l’UI conserve la consigne développée. Recevoir toutes les
+références, aucun profil manquant, la parité des lecteurs et la trace de revue.
+Dernier reçu local538 : 5 132 tests unitaires/499 fichiers et 21 PostgreSQL verts ;
+typage et lints sans erreur (25 avertissements restants), ciblé enums 70/4 vert,
+build exit 0 et stress compilé sans finding. Le défaut T du checkpoint précédent
+5 127/5 128 n’échoue plus dans cette suite ; son échec reste historique. Six
+requêtes USER reçoivent HTTP 200. Natif desktop local reçu pour cinq rites/consignes
+dans Engagement, le dépliage Gazette et la lecture Oracle, sans exception ni
+réponse500 dans les fenêtres observées. Confirmation native sur la seule fixture :
+E v3→v4, cinq rites inchangés, INFERRED→HUMAN, liste3→2 et historique
+avec version relue3/consigne RITUALS complète ; aucune adoption réelle déduite.
+Oracle de fixture : 0 section rédigée,
+33/35 alimentées ; cela ne reçoit pas le rapport réel. La tentative390px a gardé
+une largeur1 578px : mobile non reçu, réglage réinitialisé. Preuves privées P23 :
+source538-factorized-unit.log, source538-exact-postgres.log,
+source538-enum-targeted-green.log, source538-exact-build.log,
+source538-stress-exact-final-received.json et source538-user-http-received.json.
+538 reste candidate non déployée ; CI/image/runtime/conservation, confirmation
+humaine réelle, cascade et totalité ADVE/Oracle/MVP/global ouverts. Reprise des
+formes legacy dans RESIDUAL-DEBT.
+
 ## 537 — recevoir budgets, progression et sprint depuis ADVE (2026-11-03)
 
 536 est reçue au périmètre financier et cohérence : PR #1121 fusionnée en

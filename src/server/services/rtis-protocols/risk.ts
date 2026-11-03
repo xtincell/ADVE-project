@@ -29,7 +29,7 @@ import {
   OvertonBlockerSchema,
 } from "@/lib/types/pillar-schemas";
 import { UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
-import { serializePillar } from "@/server/services/utils/pillar-context";
+import { serializePillars } from "@/server/services/utils/pillar-context";
 
 // ADR-0063 / PR-K3-ter — LLM-response sub-schemas. Items are strictly typed (so
 // malformed rows are dropped by the pruner), but parent-level `.min(N)` count
@@ -258,13 +258,7 @@ async function generateSWOT(
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : le contenu des
   // piliers ADVE dérive de la saisie fondateur → chaque bloc est encadré comme
   // DONNÉE (jamais instruction) avant d'entrer dans le prompt.
-  const adveContext = [...ADVE_STORAGE_KEYS]
-    .map(k => {
-      const c = pillars[k];
-      if (!c || Object.keys(c).length === 0) return `[PILIER ${k.toUpperCase()}] Vide`;
-      return serializePillar(k.toUpperCase(), c);
-    })
-    .join("\n\n");
+  const adveContext = serializePillars([...ADVE_STORAGE_KEYS].map(k => [k.toUpperCase(), pillars[k]]));
 
   // @llm-input-internal: flagsSummary est 100% interne — severity/field/pillar
   // sont des enums/clés calculés et f.reason est une chaîne hardcodée du scan

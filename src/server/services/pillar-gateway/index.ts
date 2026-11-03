@@ -34,7 +34,7 @@ import { assertCollaboratorMayEmit } from "@/server/governance/collaborator-fire
 import { type PillarKey, getPillarDependents } from "@/lib/types/advertis-vector";
 import { validatePillarPartial } from "@/lib/types/pillar-schemas";
 import { validateAgainstBible } from "@/lib/types/variable-bible";
-import { getFieldZod } from "@/lib/types/pillar-maturity-contracts";
+import { getFieldZod, canInferMissingConceptualField } from "@/lib/types/pillar-maturity-contracts";
 import { createVersion } from "@/server/services/pillar-versioning";
 import * as auditTrail from "@/server/services/audit-trail";
 import { assertCurrentSourceReceipts, readSourceReceipts, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
@@ -486,6 +486,13 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
       // BLOCK-level violations prevent write for AI systems (not operators)
       const bibleBlocks = bibleViolations.filter((v) => v.severity === "BLOCK");
       if (bibleBlocks.length > 0 && author.system !== "OPERATOR") {
+        const rejected = bibleBlocks.filter(block =>
+          JSON.stringify(newContent[block.field]) !== JSON.stringify(previousContent[block.field]));
+        if (options?.rejectOnProvenanceRefusal && rejected.length > 0) {
+          return { success: false, version: pillar.currentVersion ?? 0,
+            previousContent, newContent: previousContent, stalePropagated: [], warnings,
+            error: `BIBLE_FIELD_REFUSED: ${rejected.map(block => block.message).join(" | ")}` };
+        }
         // Reject the violating fields by reverting them to previous values
         for (const block of bibleBlocks) {
           if (previousContent[block.field] !== undefined) {
@@ -534,6 +541,8 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
           declaredFor: (path) => explicit?.[path],
           declaredPaths: Object.keys(explicit ?? {}),
           surgicalPaths,
+          inferableMissingPaths: operation.type === "SET_FIELDS" && options?.expectedVersion !== undefined
+            ? operation.fields.filter(f => canInferMissingConceptualField(pillarKey, f.path, previousContent, f.value)).map(f => f.path) : [],
         });
         // Le garde rend le contenu ARBITRÉ — c'est lui qui fait foi, pas le
         // candidat.

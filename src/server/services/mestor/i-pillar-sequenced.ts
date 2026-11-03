@@ -23,7 +23,7 @@ import { resolveUnitEconomics, unitEconomicsNote } from "@/domain/unit-economics
 import { callLLM } from "@/server/services/llm-gateway";
 import { extractJSON } from "@/server/services/utils/llm";
 import { sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
-import { serializePillar, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
+import { serializePillars, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
 
 // Canaux du catalogue I (cf. RTIS_PROMPTS.I dans rtis-cascade.ts)
 export const I_CHANNELS = [
@@ -60,9 +60,7 @@ export const I_OLLAMA_MODEL = process.env.OLLAMA_FAST_MODEL ?? "hermes3:8b";
 export function buildContext(pillars: Record<string, unknown>): string {
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : contenu des
   // piliers (dérivé du fondateur) balisé bloc par bloc ; la clé pilier est interne.
-  return ["A", "D", "V", "E", "R", "T"]
-    .map((k) => serializePillar(k, pillars[k]))
-    .join("\n\n");
+  return serializePillars(["A", "D", "V", "E", "R", "T"].map(k => [k, pillars[k]]));
 }
 
 const fcfaShort = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : String(Math.round(n)));

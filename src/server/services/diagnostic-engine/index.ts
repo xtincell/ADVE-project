@@ -103,6 +103,9 @@ export async function runDiagnostic(strategyId: string): Promise<DiagnosticResul
       data: {
         strategyId,
         symptoms: symptoms.length,
+        symptomDetails: symptoms.map(symptom => ({ ...symptom })),
+        diagnosis: diagnosis.map(finding => ({ ...finding })),
+        prescriptions,
         localization,
         frameworksUsed,
         businessModel: bizContext?.businessModel,

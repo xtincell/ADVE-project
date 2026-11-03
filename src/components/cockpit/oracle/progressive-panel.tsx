@@ -108,9 +108,10 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
   }, [sections]);
 
   const stats = useMemo(() => {
-    const tally = { pending: 0, generating: 0, complete: 0, failed: 0, stale: 0 };
+    const tally = { pending: 0, generating: 0, complete: 0, written: 0, failed: 0, stale: 0 };
     for (const s of sections) {
       const k = s.status as SectionDbStatus;
+      if (s.payloadSize > 2) tally.written++;
       if (k === "PENDING") tally.pending++;
       else if (k === "GENERATING") tally.generating++;
       else if (k === "COMPLETE") tally.complete++;
@@ -154,7 +155,7 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
             </span>
           </div>
           <div className="flex items-center gap-3 text-xs">
-            <span className="text-success">{stats.complete} rédigées</span>
+            <span className="text-success">{stats.written} rédigées · {stats.complete} à jour</span>
             <span className="text-error">{stats.failed} en échec</span>
             <span className="text-warning">{stats.stale} à réactualiser</span>
             <span className="text-foreground-muted">{stats.pending + stats.generating} à produire</span>
@@ -275,7 +276,7 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
               confidence={streamConfidence ?? dbSection.confidence}
               lastError={dbSection.lastError as { errorCode?: string | null; errorMessage?: string | null } | null}
               isStale={dbSection.staleAt != null}
-              contentFill={contentFillById?.[String(dbSection.sectionId)]}
+              contentFill={contentFillById?.[meta.id]}
               disabled={!canOperate || anyMutationPending || isAssemblerRunning}
               onAction={(mode) => {
                 if (mode === "RETRY") {

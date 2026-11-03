@@ -9,6 +9,7 @@ export interface RssItem {
   link: string;
   pubDate: string;
   summary: string;
+  sourceUrl?: string;
   /** Vignette fournie par le flux (media:thumbnail / media:content / enclosure / <img>). */
   imageUrl?: string;
 }
@@ -18,12 +19,12 @@ export interface RssItem {
 function stripMarkup(s: string): string {
   return s
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-    .replace(/<[^>]+>/g, " ")
     .replace(/&(?:amp|#38);/gi, "&")
     .replace(/&(?:lt|#60);/gi, "<")
     .replace(/&(?:gt|#62);/gi, ">")
     .replace(/&(?:quot|#34);/gi, '"')
     .replace(/&(?:#39|apos);/gi, "'")
+    .replace(/<[^>]+>/g, " ")
     .replace(/&[a-z0-9#]+;/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -55,6 +56,7 @@ function blocks(xml: string, tag: string): string[] {
  * ne throw jamais. Retourne une URL http(s) absolue ou "".
  */
 function itemImage(block: string): string {
+  block = block.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '\"').replace(/&amp;/g, "&");
   const patterns = [
     /<media:(?:content|thumbnail)[^>]*\burl="([^"]+)"/i,
     /<enclosure[^>]*\btype="image\/[^"]*"[^>]*\burl="([^"]+)"/i,
@@ -80,9 +82,10 @@ export function parseRssItems(xml: string, limit = 25): RssItem[] {
     if (!title) continue;
     const link = firstField(b, ["link"]) || atomLink(b);
     const pubDate = firstField(b, ["pubDate", "published", "updated", "dc:date"]);
-    const summary = firstField(b, ["description", "summary", "content"]);
+    const summary = firstField(b, ["description", "summary", "content:encoded", "content"]);
     const imageUrl = itemImage(b);
-    items.push(imageUrl ? { title, link, pubDate, summary, imageUrl } : { title, link, pubDate, summary });
+    const sourceUrl = /<source[^>]*url="(https?:[^"]+)"/i.exec(b)?.[1];
+    items.push({ title, link, pubDate, summary, ...(imageUrl ? { imageUrl } : {}), ...(sourceUrl ? { sourceUrl } : {}) });
     if (items.length >= limit) break;
   }
   return items;
@@ -154,9 +157,9 @@ export function buildDigestFromItems(
 export function toFeedItems(
   items: RssItem[],
   limit = 12,
-): Array<{ title: string; link: string; source?: string; publishedAt?: string; imageUrl?: string }> {
+): Array<{ title: string; link: string; source?: string; publishedAt?: string; imageUrl?: string; summary?: string; sourceUrl?: string }> {
   const seen = new Set<string>();
-  const out: Array<{ title: string; link: string; source?: string; publishedAt?: string; imageUrl?: string }> = [];
+  const out: Array<{ title: string; link: string; source?: string; publishedAt?: string; imageUrl?: string; summary?: string; sourceUrl?: string }> = [];
   for (const it of items) {
     const key = it.title.toLowerCase();
     if (!it.title || seen.has(key)) continue;
@@ -165,6 +168,8 @@ export function toFeedItems(
     out.push({
       title: dash > 20 ? it.title.slice(0, dash).trim() : it.title,
       link: it.link,
+      ...(it.sourceUrl ? { sourceUrl: it.sourceUrl } : {}),
+      ...(it.summary && it.summary !== it.title ? { summary: it.summary } : {}),
       ...(dash > 20 ? { source: it.title.slice(dash + 3).trim() } : {}),
       ...(it.pubDate ? { publishedAt: it.pubDate } : {}),
       ...(it.imageUrl ? { imageUrl: it.imageUrl } : {}),

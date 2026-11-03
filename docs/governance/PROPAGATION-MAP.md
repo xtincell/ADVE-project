@@ -9,6 +9,39 @@
 
 ## 1. Doctrine — un circuit fini, gouverné aux entrées
 
+### Lacune conceptuelle → prémisse INFERRED → RTIS → vérification — candidat538 (2026-11-03)
+
+Mandat opérateur explicite : un choix antérieur de laisser vide un champ conceptuel
+dérivable ne bloque plus sa proposition inférée. La vérification du responsable
+de marque suit la prémisse sans bloquer son utilisation ; elle n’est jamais simulée.
+
+| Entrée | Transformation existante | Sortie et garantie |
+|---|---|---|
+| Vide conceptuel A/D/V/E, même HUMAN/SOURCE | canInferMissingConceptualField + schéma canonique du chemin | Proposition non vide admissible ; rempli/0/false/preuves/non-applicabilité exclus |
+| Proposition et version attendue | SET_FIELDS + gateway/garde de provenance | Valeur INFERRED exacte, historique et voisins conservés ; conflit/refus explicite |
+| Prémisse inférée persistée | Profil de vérification + verificationRef + registre des seuls profils utilisés | Règle commune responsabilité/usage ; consigne complète résolue par l’UI, sans répétition par cellule |
+| Choix réel du responsable sur la version relue | confirmInferredField existant | Acteur, version et consigne journalisés ; aucun résultat observé déduit |
+| Échange V sans achat, entièrement documenté | hasDocumentedNonProductExchange | Contreparties du partenaire reconnues ; aucun produit acheté inventé |
+
+Factorisation du candidat testée localement sur instruction opérateur : six profils par famille,
+règle commune responsabilité/usage, une verificationRef par champ INFERRED et
+un seul registre limité aux profils utilisés par contexte. Même format pour
+conseillers/R/T/I/Notoria/auto-fill ; UI avec texte complet et confirmation tracée.
+Aucune affectation nominative inventée ; pas de service, Intent ou registre
+persistant supplémentaire. Dernier reçu local : 5 132 tests/499 fichiers, 21
+PostgreSQL, ciblé enums 70/4 verts ; typage/lints sans erreur (25 avertissements),
+build exit 0, stress sans finding et six requêtes USER HTTP200. Le défaut T
+antérieur ne reproduit plus dans la suite. Natif desktop local : cinq rites avec
+consignes, Gazette dépliée et lecture Oracle reçus, sans exception/réponse500
+dans les fenêtres observées. Confirmation native sur la seule fixture : E v3→v4,
+rites inchangés, INFERRED→HUMAN et historique version relue3/consigne RITUALS
+complète ; aucune adoption du dossier réel déduite. Oracle fixture 0 rédigée/33 sur35 alimentées ne
+reçoit pas le rapport réel. Mobile non reçu ; production538 non déployée,
+confirmation réelle, cascade et réception huit piliers/35 sections ouvertes.
+537 est reçue techniquement ; les
+attentes de livraison dans le checkpoint ci-dessous sont historiques.
+[ADR-0236 Proposed](adr/0236-inferred-premises-and-brand-verification.md).
+
 ### Prémisses V/E → plan S → Oracle — candidat537 (2026-11-03)
 
 536 est reçue au périmètre financier et cohérence : PR #1121 fusionnée en

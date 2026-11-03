@@ -1,3 +1,53 @@
+## 538 candidat — refus fidèles et lecteurs Gazette/Oracle (3 novembre 2026)
+
+État courant : 537 est reçue techniquement en production au merge PR1124
+`e3e484514d2d07f41bb9b894d4db7922095f6422`, avec image/runtime et montages conservés.
+Les données stockées comparées restent identiques ; les écarts de validation
+dérivée sont reproduits avec le code exact sur le contenu antérieur, sans
+revendiquer une égalité brute des réponses. Les amendements ADVE réels sont en
+cours : aucune réception complète des huit piliers ou des 35 sections n’en découle.
+Les paragraphes537 suivants décrivent le checkpoint local antérieur ; leur
+attente de livraison technique est supersédée par ce reçu, pas leurs limites métier.
+
+538 reste candidate locale : Gazette conserve extrait et contenu complet,
+contexte de veille Strategy/ADVE et aperçus éditeur réels via Brave/lecture HTML
+existants, bornés à trois articles avec concordance éditeur/titre. Oracle distingue
+matière rédigée, fraîcheur et approbation, sans contrat ou image inventés.
+La gateway refuse avant écriture un champ proposé bloqué par la Bible lorsque
+rejectOnProvenanceRefusal est demandé : fini le succès/version malgré un champ
+rétabli. Régression rouge et premier PostgreSQL 18/18 conservés comme reçus
+antérieurs ; dernier PostgreSQL 21/21 vert. Formats ADVE legacy à normaliser
+sémantiquement avec source/version, schémas stricts et cascade : plan/déclencheur
+dans RESIDUAL-DEBT. Aucun Oracle entier, MVP ou chantier global annoncé.
+
+Doctrine opérateur supplémentaire en538 : tout vide conceptuel dérivable,
+même précédemment HUMAN/SOURCE ou laissé vide par décision, doit recevoir une
+proposition INFERRED utilisable immédiatement pour les calculs et livrables.
+SET_FIELDS + expectedVersion + schéma exact restent les rails d’admission ;
+rempli/0/false, preuves et non-applicabilité documentée sont conservés. La consigne
+inferredFieldVerification suit la prémisse dans l’UI et le contexte RTIS ; le
+responsable de marque vérifie puis confirme/corrige. La confirmation journalise
+acteur réel, version et consigne sans fabriquer validation ni mesure.
+Un échange V complet sans achat n’exige pas de produit fictif pour son partenaire.
+[ADR-0236 Proposed](docs/governance/adr/0236-inferred-premises-and-brand-verification.md).
+Évolution demandée du système de consigne, testée localement : règle commune de
+responsabilité/usage, six profils par famille, verificationRef par champ INFERRED
+et registre unique des seuls profils utilisés dans chaque contexte. Conseillers,
+R/T/I, Notoria et auto-fill partagent ce contrat ; l’UI développe la consigne
+entière. Dernier reçu local : 5 132 tests unitaires/499 fichiers verts, 21 tests
+PostgreSQL verts, typage et lints sans erreur (25 avertissements restants),
+ciblé enums 70/4 vert, build exit 0 et stress compilé sans finding. Le défaut T
+du checkpoint antérieur 5 127/5 128 n’échoue plus dans cette suite. Six requêtes
+USER reçoivent HTTP 200. Natif desktop local : cinq rites et leurs consignes
+lisibles, Gazette dépliée et Oracle consulté ; aucune exception ni réponse 500
+dans les fenêtres observées. Confirmation native sur la seule fixture : E v3→v4,
+cinq rites inchangés, origine INFERRED→HUMAN et historique avec version relue3
+et consigne RITUALS complète ; aucune adoption du dossier réel déduite. Oracle fixture : 0 section rédigée, 33/35 alimentées,
+sans réception du rapport réel. Mobile non reçu : la largeur est restée 1 578 px
+malgré la demande 390 px, puis le réglage a été réinitialisé. Production538 non
+déployée ; complétude huit piliers/35 sections et conservation après livraison
+restent ouvertes. Reçus exacts et limites dans ADR-0236 et RESIDUAL-DEBT.
+
 ## 537 — prémisses de planification et sorties S à recevoir (3 novembre2026)
 
 536 est reçue au périmètre financier et cohérence : PR #1121 fusionnée en

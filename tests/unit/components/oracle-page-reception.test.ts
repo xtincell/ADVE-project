@@ -2,7 +2,7 @@
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
-const f = vi.hoisted(() => ({ stale: true, canCascade: true, sections: [] as Array<{ status: string }> }));
+const f = vi.hoisted(() => ({ stale: true, canCascade: true, sections: [] as Array<{ status: string; payloadSize: number }> }));
 vi.mock("@/components/cockpit/strategy-context", () => ({ useCurrentStrategyId: () => "synthetic" }));
 vi.mock("@/components/cockpit/use-can-operate", () => ({ useCanOperate: () => true }));
 vi.mock("@/components/shared/notification-toast", () => ({ useToast: () => ({}) }));
@@ -39,10 +39,10 @@ describe("Oracle reception distinguishes its sources from written output", () =>
     expect(text.textContent).toContain("Préparer la fondation");
     expect(text.textContent).not.toContain("Préparer la stratégie");
   });
-  it("counts fresh written output separately from stale previous payloads", () => {
-    f.stale = false; f.sections = [{ status: "COMPLETE" }, { status: "STALE" }];
+  it("retains written stale payloads while disclosing their required refresh", () => {
+    f.stale = false; f.sections = [{ status: "COMPLETE", payloadSize: 500 }, { status: "STALE", payloadSize: 420 }, { status: "PENDING", payloadSize: 0 }];
     const text = document.createElement("div"); text.innerHTML = renderToStaticMarkup(React.createElement(Page));
-    expect(text.textContent).toContain("1 de vos 35 sections sont rédigées.");
+    expect(text.textContent).toContain("2 de vos 35 sections sont rédigées.");
     expect(text.textContent).toContain("1 section à réactualiser");
     expect(text.textContent).toContain("Sa rédaction et sa relecture restent à recevoir");
   });

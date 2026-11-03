@@ -145,6 +145,43 @@ export const FIELD_PROVENANCE_LABEL: Record<FieldProvenance, string> = {
   UNKNOWN: "Origine inconnue",
 };
 
+/** Review duty accompanies a working premise into its readers. Responsibility
+ * is a role, never a fabricated assignment to a person. The existing versioned
+ * confirmation records the actual reviewer; pending review does not block use. */
+export const FIELD_VERIFICATION_RULES = {
+  RITUALS: "Pour chaque transition ou rituel, vérifier le public concerné, le déclencheur, le comportement attendu et les moyens de l’accompagner. Confirmer sa pertinence avec l’équipe ; ne pas le confondre avec un comportement déjà observé.",
+  FINANCIAL: "Vérifier les montants, unités, périodes, inclusions et hypothèses de volume. Confronter les coûts aux pièces disponibles et confirmer les hypothèses utilisables pour le plan ; une estimation ne devient pas un devis.",
+  MEASUREMENT: "Vérifier le public, la définition de chaque indicateur, sa cible, son unité et sa période. Confirmer que les moyens prévus permettent de tester cette cible ; la distinguer d’un résultat mesuré.",
+  ACTORS: "Vérifier le rôle de chaque acteur, son besoin, son apport et sa contrepartie dans les documents et retours terrain. Confirmer les hypothèses retenues sans confondre public, partenaire et client payeur.",
+  TEAM: "Vérifier les identités, fonctions et disponibilités auprès des personnes concernées. Un rôle proposé reste à pourvoir tant qu’une personne réelle ne l’a pas accepté.",
+  GENERAL: "Confronter cette proposition aux documents de marque, aux constats du scan et aux attentes des parties prenantes. Vérifier sa cohérence, puis confirmer ou corriger chaque élément utilisé pour le plan.",
+} as const;
+export type FieldVerificationProfile = keyof typeof FIELD_VERIFICATION_RULES;
+
+export const FIELD_VERIFICATION_RESPONSIBILITY = {
+  "responsable": "Responsable de marque",
+  "usage": "Postulat de travail utilisable pour les calculs et livrables pendant sa vérification. La confirmation engage le choix de cette prémisse, sans la transformer en résultat observé."
+} as const;
+
+export function fieldVerificationProfile(pillarKey: string, path: string): FieldVerificationProfile {
+  const top = provenanceTopKey(path, pillarKey);
+  return /ritesDePassage|rituels|sacraments|hierarchieCommunautaire|pelerinages/.test(top)
+    ? "RITUALS"
+    : /financial|budget|unitEconomics|prix|produitsCatalogue|productLadder/i.test(top)
+      ? "FINANCIAL"
+      : /kpis|devotionProjection|objectifs|aarrr|touchpoint/i.test(top)
+        ? "MEASUREMENT"
+        : /persona|segment|superfan/i.test(top)
+          ? "ACTORS"
+          : /equipe|founder|fondateur|clerge/i.test(top)
+            ? "TEAM"
+            : "GENERAL";
+}
+
+export function inferredFieldVerification(pillarKey: string, path: string) {
+  return { ...FIELD_VERIFICATION_RESPONSIBILITY, instruction: FIELD_VERIFICATION_RULES[fieldVerificationProfile(pillarKey, path)] };
+}
+
 /**
  * Part de la matière d'un pilier qui repose sur du DÉCLARÉ plutôt que sur de
  * l'inféré.

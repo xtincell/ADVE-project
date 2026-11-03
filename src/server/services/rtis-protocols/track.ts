@@ -26,7 +26,7 @@ import { PillarTSchema } from "@/lib/types/pillar-schemas";
 import { loadCountrySectorIntelligence } from "@/server/services/seshat/knowledge/access";
 import type { TamSamSom, TrendTrackerExtraction } from "@/server/services/seshat/knowledge/schemas";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
-import { serializePillar } from "@/server/services/utils/pillar-context";
+import { serializePillar, serializePillars } from "@/server/services/utils/pillar-context";
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
 import { parseAndValidateLLM } from "@/server/services/llm-gateway/parse-validate";
 
@@ -294,13 +294,7 @@ async function generateTrackAnalysis(
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : le contenu des
   // piliers ADVE dérive de la saisie fondateur → chaque bloc encadré comme
   // DONNÉE (jamais instruction).
-  const context = [...ADVE_STORAGE_KEYS]
-    .map(k => {
-      const c = pillars[k];
-      if (!c || Object.keys(c).length === 0) return `[${k.toUpperCase()}] Vide`;
-      return serializePillar(k.toUpperCase(), c);
-    })
-    .join("\n\n");
+  const context = serializePillars([...ADVE_STORAGE_KEYS].map(k => [k.toUpperCase(), pillars[k]]));
 
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : le pilier R dérive
   // lui aussi de l'ADVE fondateur.

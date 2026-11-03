@@ -192,6 +192,7 @@ export const jehutyRouter = createTRPCRouter({
         items.push(mapRecoToFeedItem(reco, curation, strategyNames.get(reco.strategyId)));
       }
 
+      const diagnosticBrands = new Set<string>();
       for (const diag of diagnostics) {
         const data = (diag.data ?? {}) as Record<string, unknown>;
         // Fix fuite 2026-07-20 : un diagnostic SANS data.strategyId (ex :
@@ -201,6 +202,8 @@ export const jehutyRouter = createTRPCRouter({
         // d'autres marques). Règle pure : `diagnosticBelongsToFeed` (testée).
         if (!diagnosticBelongsToFeed(data, strategyId)) continue;
         const diagStrategyId = data.strategyId as string;
+        if (diagnosticBrands.has(diagStrategyId)) continue;
+        diagnosticBrands.add(diagStrategyId);
         const curation = curationMap.get(`DIAGNOSTIC:${diag.id}`);
         items.push(mapDiagnosticToFeedItem(diag, curation, diagStrategyId, strategyNames.get(diagStrategyId)));
       }
@@ -217,14 +220,14 @@ export const jehutyRouter = createTRPCRouter({
             orderBy: { createdAt: "desc" },
             select: { createdAt: true, data: true },
           });
-          const digestItems = ((digest?.data ?? {}) as { items?: Array<{ title?: string; link?: string; source?: string; publishedAt?: string; imageUrl?: string }> }).items ?? [];
+          const digestItems = ((digest?.data ?? {}) as { items?: Array<{ title?: string; link?: string; source?: string; publishedAt?: string; imageUrl?: string; summary?: string }> }).items ?? [];
           const maxAgeMs = 90 * 24 * 60 * 60 * 1000;
           let rank = 0;
           for (const art of digestItems) {
             if (!art.title || !art.link) continue;
             const published = art.publishedAt ? Date.parse(art.publishedAt) : NaN;
             if (Number.isFinite(published) && Date.now() - published > maxAgeMs) continue;
-            if (rank >= 6) break;
+            if (rank >= 12) break;
             rank += 1;
             items.push(mapExternalArticleToFeedItem(art, strategyId, digest!.createdAt, curationMap.get(`EXTERNAL:${art.link}`)));
           }
@@ -408,7 +411,7 @@ export const jehutyRouter = createTRPCRouter({
     kind: "JEHUTY_CURATE",
     inputSchema: z.object({
       strategyId: z.string(),
-      itemType: z.enum(["SIGNAL", "RECOMMENDATION", "DIAGNOSTIC"]),
+      itemType: z.enum(["SIGNAL", "RECOMMENDATION", "DIAGNOSTIC", "EXTERNAL"]),
       itemId: z.string(),
       action: z.enum(["PINNED", "DISMISSED", "NOTORIA_TRIGGERED"]),
       note: z.string().optional(),
@@ -443,7 +446,7 @@ export const jehutyRouter = createTRPCRouter({
     kind: "JEHUTY_CURATE",
     inputSchema: z.object({
       strategyId: z.string(),
-      itemType: z.enum(["SIGNAL", "RECOMMENDATION", "DIAGNOSTIC"]),
+      itemType: z.enum(["SIGNAL", "RECOMMENDATION", "DIAGNOSTIC", "EXTERNAL"]),
       itemId: z.string(),
     }),
   })

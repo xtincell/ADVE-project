@@ -30,7 +30,7 @@ import type {
   RecoSource,
 } from "./types";
 import { MISSION_CONFIG } from "./types";
-import { serializePillar, ADVE_SOURCE_ALIGNMENT_CONTRACT, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
+import { serializePillars, ADVE_SOURCE_ALIGNMENT_CONTRACT, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
 
 // A pillar letter is a storage key, not a documentary question. Keep the same
 // scoped reader and version controls; ask it for the actual upstream substance.
@@ -169,9 +169,7 @@ async function generateRecosForPillar(
 
   // Build source context based on mission type
   const config = MISSION_CONFIG[missionType];
-  const sourceContext = config.sourcePillars
-    .map((k) => serializePillar(k.toUpperCase(), pillars[k.toUpperCase()]))
-    .join("\n\n");
+  const sourceContext = serializePillars(config.sourcePillars.map(k => [k.toUpperCase(), pillars[k.toUpperCase()]]));
   const { recipeContext } = await import("@/server/services/seshat/creative-intelligence");
   const empiricalCreativeContext = missionType === "SESHAT_OBSERVATION" || missionType === "I_GENERATION"
     ? await recipeContext(strategyId) : "";

@@ -25,7 +25,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db";
 import { PILLAR_KEYS, classifyBrand } from "@/lib/types/advertis-vector";
-import { getOrBuildBrandFeed, type BrandFeedArticle } from "@/server/services/seshat/external-feeds/brand-feed";
+import { getOrBuildBrandFeed, loadWatchSubjects, type BrandFeedArticle } from "@/server/services/seshat/external-feeds/brand-feed";
 import { runDiagnostic } from "@/server/services/diagnostic-engine";
 
 export type GazetteSection =
@@ -135,21 +135,26 @@ export async function refreshBrandGazette(
     select: {
       id: true,
       name: true,
+      countryCode: true,
+      businessContext: true,
       advertis_vector: true,
       client: { select: { sector: true, country: true } },
     },
   });
   if (!strategy) throw new Error("Strategy introuvable");
 
-  const sector = strategy.client?.sector ?? null;
-  const countryCode = strategy.client?.country ?? "CM";
+  const context = (strategy.businessContext ?? {}) as Record<string, unknown>;
+  const sector = typeof context.sector === "string" ? context.sector : strategy.client?.sector ?? null;
+  const countryCode = strategy.countryCode ?? strategy.client?.country ?? "CM";
 
   // ── 1. Le monde dehors — veille externe réelle (RSS/Google News) ──────────
   let articles: BrandFeedArticle[] = [];
   try {
+    const { countryDisplayNameFr } = await import("@/server/services/seshat/external-feeds/watch-subjects");
+    const watch = await loadWatchSubjects(prisma, strategyId, strategy.businessContext, countryDisplayNameFr(countryCode));
     const feed = await getOrBuildBrandFeed(
       prisma,
-      { strategyId, name: strategy.name, countryCode, sector },
+      { strategyId, name: strategy.name, countryCode, sector, extraSubjects: watch.subjects },
       { force: opts.force ?? true },
     );
     articles = feed.articles;

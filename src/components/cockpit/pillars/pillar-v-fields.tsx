@@ -10,6 +10,7 @@
 
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import { FinancialWorkingModelSchema } from "@/domain/financial-document";
+import { hasDocumentedNonProductExchange } from "@/domain/brand-actors";
 import { projectFinancialPillar, unitEconomicsMetricRows, unitEconomicsNote } from "@/domain/unit-economics";
 import { cataloguePriceLabel, productLadderPriceLabel, resolveProductRef } from "@/domain/product-catalog";
 import {
@@ -306,7 +307,8 @@ export function PillarVFields({ content, certainty }: { content: Rec; certainty:
 
       <Section title="Catalogue & offre" sub="Chaque produit et sa matrice de valeur 2×2×2 (gain/coût × client/marque × concret/abstrait)">
         <div className="ck-a-grid">
-          <ProofList title="Échanges de valeur par acteur" items={v.personaSegmentMap} status={st("personaSegmentMap")}
+          <ProofList title="Échanges de valeur par acteur" items={asArr(v.personaSegmentMap).map(item => hasDocumentedNonProductExchange(item)
+            ? { ...asRec(item), productNames: ["Sans offre commerciale liée — échange documenté ci-dessous"] } : item)} status={st("personaSegmentMap")}
             cols={[["personaName", "Acteur"], ["productNames", "Offres concernées"], ["valueToBrand", "Apport à la marque"], ["valueToActor", "Contrepartie"], ["actorCosts", "Coûts pour l’acteur"], ["dependencyConditions", "Conditions de participation"], ["devotionLevel", "Niveau d'engagement"], ["revenueContributionPct", "% CA documenté"]]} />
           <Catalogue items={v.produitsCatalogue} status={st("produitsCatalogue")} />
           <ProductLadder items={v.productLadder} catalogue={v.produitsCatalogue} status={st("productLadder")} />

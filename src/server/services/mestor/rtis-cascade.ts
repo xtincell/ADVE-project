@@ -28,7 +28,7 @@ import { Prisma } from "@prisma/client";
 import { runMarketIntelligence } from "@/server/services/market-intelligence";
 import type { PillarWriteRequest, PillarWriteResult } from "@/server/services/pillar-gateway";
 import type { RouteKey } from "@/lib/strategy/roadmap-routes";
-import { serializePillar, ADVE_SOURCE_ALIGNMENT_CONTRACT, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
+import { serializePillar, serializePillars, ADVE_SOURCE_ALIGNMENT_CONTRACT, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
 export { projectForContext, serializePillar } from "@/server/services/utils/pillar-context";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -466,9 +466,7 @@ export async function actualizePillar(
 
     if (pillarKey === "R") {
       // R = analyse(ADVE)
-      const adveContext = [...ADVE_KEYS]
-        .map((k) => serializePillar(k, pillars[k]))
-        .join("\n\n");
+      const adveContext = serializePillars([...ADVE_KEYS].map(k => [k, pillars[k]]));
 
       const response = await callCascadeLLM(
         RTIS_PROMPTS.R,

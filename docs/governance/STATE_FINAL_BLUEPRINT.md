@@ -2107,6 +2107,44 @@ d'invariants spécifiques (cf. `tests/integration/`).
 
 # ANNEXE CANON L — LEXIQUE NORMATIF
 
+### Prémisse conceptuelle et devoir de vérification — candidat538 (2026-11-03)
+
+Sur instruction opérateur explicite, toute lacune conceptuelle dérivable doit
+recevoir une proposition INFERRED, même lorsqu’un humain ou une source avait
+laissé la cellule vide. SET_FIELDS, expectedVersion, schéma exact et garde de
+provenance restent les rails ; origine de la proposition distincte du parent.
+Ce mandat ne remplace pas les valeurs remplies, 0/false, les preuves ou une
+non-applicabilité documentée. Il n’autorise ni contrat ni mesure ni consentement
+inventés. Une collection conceptuelle vide admissible n’est plus un arrêt définitif
+par sa seule origine HUMAN/SOURCE.
+
+Le postulat est utilisable immédiatement par les calculs et livrables. Le
+système de consigne évolue à la demande opérateur : responsabilité/usage communs,
+six profils par famille, verificationRef par champ INFERRED et registre unique
+des seuls profils utilisés dans chaque contexte conseillers/R/T/I/Notoria/auto-fill.
+L’UI développe la consigne complète sous la responsabilité du rôle Responsable
+de marque. Cette factorisation testée localement évite sa répétition sans retirer la
+qualification ni le devoir de vérification. La confirmation réelle existante
+journalise acteur, version relue et consigne ; elle choisit une prémisse pour le
+plan sans attester un résultat observé. L’agent n’accomplit pas cette vérification
+à la place d’un humain. Un échange V non marchand documenté peut être complet
+sans produit acheté ; il préserve la distinction partenaire/audience/payeur.
+
+[ADR-0236 Proposed](adr/0236-inferred-premises-and-brand-verification.md) amende
+ADR0231 uniquement sur le vide conceptuel. Dernier reçu local : 5 132 tests/499
+fichiers, 21 PostgreSQL, ciblé enums 70/4 verts ; typage/lints sans erreur
+(25 avertissements), build exit 0, stress sans finding et six requêtes USER
+HTTP200. Le défaut T antérieur ne reproduit plus dans cette suite. Natif desktop
+local : cinq rites/consignes, Gazette dépliée et lecture Oracle reçus, sans
+exception/réponse500 dans les fenêtres observées. Confirmation native sur la
+seule fixture : E v3→v4, rites inchangés, INFERRED→HUMAN et historique avec
+version relue3/consigne RITUALS complète ; aucune adoption réelle déduite.
+Oracle fixture 0 rédigée/33
+sur35 alimentées ne reçoit pas le rapport réel. Mobile non reçu, production538
+non déployée et réception huit/35 ouverte ; aucune complétude globale déduite.
+537 est reçue techniquement avec conservation du stocké ; le checkpoint suivant
+reste daté.
+
 ### Modèle financier reçu536 et prémisses de planification537 (2026-11-03)
 
 536 est reçue au périmètre financier et cohérence : PR #1121 fusionnée en

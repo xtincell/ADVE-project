@@ -222,6 +222,21 @@ describe("the council reports the evidence it actually received", () => {
     expect(result.contextBlock).not.toContain("mesuré le 2026-10-08");
   });
 
+  it.each(["coordinator", "expert"])("supplies one verification rule for several inferred premises (%s)", async role => {
+    state.pillars = [{ id: "premises", key: "e", currentVersion: 3, content: {
+      ritesDePassage: ["First exploration"], rituels: ["Share a discovery"],
+      sacraments: ["Transmit to a newcomer"],
+      _fieldProvenance: { ritesDePassage: "INFERRED", rituels: "INFERRED", sacraments: "INFERRED" },
+    } }];
+    const result = role === "expert" ? await buildExpertContext("brand-a", "e", "Rites ?")
+      : await buildAssistantContext("brand-a", "Rites ?");
+    for (const value of ["First exploration", "Share a discovery", "Transmit to a newcomer"]) expect(result.contextBlock).toContain(value);
+    expect(result.contextBlock.match(/"verificationRef": "RITUALS"/g)).toHaveLength(3);
+    expect(result.contextBlock.match(/Pour chaque transition ou rituel/g)).toHaveLength(1);
+    expect(result.contextBlock.match(/"responsable": "Responsable de marque"/g)).toHaveLength(1);
+    expect(result.evidence.filter(e => e.reference.kind === "FIELD")).toHaveLength(3);
+  });
+
   it("preserves canonical human field origin over an old inferred label without approving a result", async () => {
     state.pillars = [{ key: "t", content: { preuvesTraction: "50 participants déclarés",
       _fieldProvenance: { preuvesTraction: "HUMAN" } },
