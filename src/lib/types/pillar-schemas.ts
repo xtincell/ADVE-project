@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { PILLAR_KEYS, ADVE_KEYS } from "@/domain";
 import { ProductSystemSchema } from "@/domain/product-system";
+import { OvertonConceptSchema } from "@/domain/overton-positioning";
 import { DevotionProjectionSchema } from "@/domain/devotion-ladder";
 import { BRAND_ACTOR_ROLES } from "@/domain/brand-actors";
 import { StrategyBudgetModelSchema, StrategyBudgetEnvelopeSchema, FinancialWorkingModelSchema } from "@/domain/financial-document";
@@ -107,6 +108,11 @@ const CommunityLevelSchema = z.object({
 
 /** PILIER A COMPLET */
 export const PillarASchema = z.object({
+  // Three distinct positions; a planning postulate is not an observation.
+  overtonPositions: z.array(OvertonConceptSchema).superRefine((rows, ctx) => {
+    if (new Set(rows.map(row => row.id)).size !== rows.length) ctx.addIssue({ code: "custom", message: "Chaque position doit conserver un identifiant distinct." });
+    if (rows.length >= 3 && ["CONVICTION", "CATEGORY", "BRAND"].some(kind => !rows.some(row => row.kind === kind))) ctx.addIssue({ code: "custom", message: "Un cadrage complet distingue conviction, catégorie et marque." });
+  }).optional(),
   // ── Fondamentaux (migrés de Strategy — Chantier -1 §-1.2) ────────────
   nomMarque: z.string().min(1),                           // Le nom de la marque
   accroche: z.string().max(100).optional(),                // Phrase identitaire < 15 mots (pas le slogan pub de D)
@@ -1489,6 +1495,9 @@ export const PillarSSchema = z.object({
     evangelistes: z.number().optional(),
   })).optional(),
   overtonMilestones: z.array(z.object({
+    conceptId: z.string().optional(),
+    zone: z.enum(["UNTHINKABLE", "RADICAL", "ACCEPTABLE", "SENSIBLE", "POPULAR", "POLICY"]).optional(),
+    basis: z.literal("PLANNING").optional(),
     phase: z.string().min(1),
     currentPerception: z.string().min(1),
     targetPerception: z.string().min(1),

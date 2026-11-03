@@ -1,3 +1,17 @@
+## v6.27.540 — feat(overton): tracer conviction, catégorie et marque sur six jalons (2026-11-03)
+
+**Un point de départ explicite, une cible et les preuves attendues précèdent toute conclusion de popularité.**
+
+- Réception locale : 5 190 tests/506 fichiers, PostgreSQL 3 tests/2 fichiers, typage et lint sans erreur. Entrée native contexte→A avec déclaration conservée ; trois concepts de fixture lus dans le radar et dans le mapper Oracle. Cela ne vaut pas réception du dossier SPAWT réel.
+- Correctif voisin : le contexte métier accepte un positionnement tarifaire absent sans exception ; reçu PostgreSQL et consigné dans PATCHED-SYMPTOMS.
+
+- A conserve des concepts stables par public et territoire : conviction, catégorie, marque, rôle éditorial, postulat sourcé et vérification. Contrat de maturité, Bible et canons étendus ; aucune mesure ni approbation humaine inventée.
+- Les six zones existantes deviennent une grille partagée par les fondations, le radar, la stratégie, l’Oracle et les produits d’entrée. La stratégie énumère les jalons dans les deux sens, avec critères de preuve ; elle ne fabrique ni date ni résultat.
+- Scoreur et intake recueillent facultativement un départ déclaré et une cible. Le repère est conservé à la conversion/régénération ; il ne modifie pas le score de présence et ne remplace pas le questionnaire. Le diagnostic d’entrée peut rester partiel.
+- Le writer Seshat existant sépare les pays/publics, conserve et dédouble les preuves, refuse les changements silencieux de proposition et enregistre les transitions atomiquement. Répéter une preuve ou une transition ne les multiplie pas. Le contrôle PostgreSQL a reproduit puis corrigé le doublonnage causé par l’ordre des clés JSONB.
+- Une transition scorée exige des observations au départ et à l’arrivée, sur le même public et territoire. Son effet favorable suit la cible explicite : rendre une pratique impensable peut être un progrès. Un article sectoriel ou une absence de preuve ne devient pas une victoire.
+- ADR-0237 prolonge ADR-0148 : mêmes modèles, mêmes Intents, aucun nouveau gestionnaire d’appels. Réception locale, CI, image et production suivies séparément ; aucune clôture globale Shinkiro déduite de cette tranche.
+
 ## v6.27.539 — fix(cockpit): clarifier la reprise et restituer les observations (2026-11-03)
 
 - PR de livraison réelle : #1128.

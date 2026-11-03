@@ -10,6 +10,7 @@
 
 "use client";
 
+import { OvertonPositioningView } from "@/components/shared/overton-positioning";
 import { trpc } from "@/lib/trpc/client";
 import { Gauge, Lock, TrendingUp, Trophy } from "lucide-react";
 import { useT } from "@/lib/i18n/use-t";
@@ -40,13 +41,14 @@ export function ForceSection({ token }: { token: string }) {
       </section>
     );
   }
-  if (!data || data.status !== "OK") return null;
+  if (!data || data.status !== "OK") return data?.overton ? <OvertonPositioningView value={data.overton} compact /> : null;
 
   const { force, outOf, tier, coveragePct, measuredArenas, totalArenas, terrains, nextUnlock } = data;
   const hasEvidence = measuredArenas > 0;
 
   return (
     <section className="mb-10 print:hidden">
+      <div className="mb-6"><OvertonPositioningView value={data.overton} compact /></div>
       <header className="mb-2 flex items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
           <Gauge className="h-4 w-4 text-primary" />

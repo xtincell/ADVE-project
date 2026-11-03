@@ -1,3 +1,4 @@
+import { readOvertonPositioning, overtonPlanningMilestones } from "@/domain/overton-positioning";
 import { projectDevotionFunnel } from "@/domain/devotion-ladder";
 import { projectFinancialPillar } from "@/domain/unit-economics";
 /**
@@ -132,7 +133,9 @@ export function generateStrategy(pillars: Record<string, Record<string, unknown>
   }
   return {
     ...(typeof target === "string" && target.trim() ? { visionStrategique: target } : {}),
-    overtonMilestones: selected.filter(a => a.overtonShift && typeof current === "string" && current.trim()).map(a => ({
+    overtonMilestones: overtonPlanningMilestones(readOvertonPositioning(pillars)).length
+      ? overtonPlanningMilestones(readOvertonPositioning(pillars))
+      : selected.filter(a => a.overtonShift && typeof current === "string" && current.trim()).map(a => ({
       phase: a.timeframe ? TF_PHASE_LABEL[a.timeframe] : "Échéance à préciser", currentPerception: current, targetPerception: a.overtonShift,
       ...(a.objectif ? { measurementMethod: `Objectif à vérifier : ${a.objectif}` } : {}),
     })),

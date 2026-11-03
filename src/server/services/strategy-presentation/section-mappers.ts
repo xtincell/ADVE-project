@@ -7,6 +7,7 @@
  * Note: Uses `any` for strategy param since Prisma complex includes resist clean typing.
  */
 
+import { readOvertonPositioning } from "@/domain/overton-positioning";
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
 import { projectFinancialPillar, unitEconomicsNote, unitEconomicsRatio, type FinancialMetricContext } from "@/domain/unit-economics";
 import { brandActorRoleLabels } from "@/domain/brand-actors";
@@ -1415,6 +1416,7 @@ export function mapCatalogueActions(strategy: any): CatalogueActionsSection {
 }
 
 export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
+  const positioning = readOvertonPositioning({ a: getPillarContent(strategy, "a"), d: getPillarContent(strategy, "d") });
   const sContent = getPillarContent(strategy, "s") as any;
   const dContent = getPillarContent(strategy, "d") as any;
   const iContent = getPillarContent(strategy, "i") as any;
@@ -1525,6 +1527,7 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
     : null;
 
   return {
+    positioning,
     perceptionActuelle,
     perceptionCible,
     ecart,

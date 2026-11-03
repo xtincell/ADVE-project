@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { readBrandOvertonPositioning } from "@/server/services/seshat/overton-graph";
+import type { OvertonPositioning } from "@/domain/overton-positioning";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
@@ -30,7 +32,7 @@ export type CommunityDashboardResult =
  */
 export type OvertonSignalResult =
   | { state: "TIER_GATE_DENIED"; configureUrl: string }
-  | (ConnectorResult<OvertonRadarSignal> & { strategyPlan?: OvertonStrategyPlan });
+  | (ConnectorResult<OvertonRadarSignal> & { strategyPlan?: OvertonStrategyPlan; positioning?: OvertonPositioning });
 
 /**
  * Read the canonical sector slug for a Strategy from `businessContext.sector`
@@ -144,7 +146,7 @@ export const cockpitRouter = createTRPCRouter({
           // ADR-0127 — polity de la marque pour la résolution d'axe.
           marketScale: true,
           countryCode: true,
-          pillars: { where: { key: { in: ["d", "t", "s"] } }, select: { key: true, content: true, staleAt: true } },
+          pillars: { where: { key: { in: ["a", "d", "t", "s"] } }, select: { key: true, content: true, staleAt: true } },
         },
       });
       if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
@@ -176,11 +178,12 @@ export const cockpitRouter = createTRPCRouter({
       const s = strategy.pillars.find((p) => p.key === "s");
       const t = strategy.pillars.find((p) => p.key === "t");
       const strategyPlan = readOvertonStrategyPlan(s?.content, t?.content, !!(s?.staleAt || t?.staleAt));
+      const positioning = await readBrandOvertonPositioning(ctx.db, strategy.id, Object.fromEntries(strategy.pillars.map(p => [p.key, p.content])), strategy.countryCode, strategy.marketScale);
       const sectorSlug = extractSectorSlug(strategy.businessContext);
       if (!sectorSlug) {
         // Cause discriminée (audit 2026-07-16) : secteur non renseigné = action
         // à la main du founder, pas « attendez que le signal arrive ».
-        return { state: "DEGRADED", reason: "MISSING_PREREQUISITE", strategyPlan };
+        return { state: "DEGRADED", reason: "MISSING_PREREQUISITE", strategyPlan, positioning };
       }
       // Audit 2026-07-16 `overton-deferred-stale-operator-guard` : le guard
       // `!strategy.operatorId` était MORT depuis le dé-mock du connecteur
@@ -193,9 +196,9 @@ export const cockpitRouter = createTRPCRouter({
       // P22-1 invariant 1 : exhaustive — no default/else.
       switch (signal.state) {
         case "DEFERRED_AWAITING_CREDENTIALS":
-          return { ...signal, strategyPlan };
+          return { ...signal, strategyPlan, positioning };
         case "DEGRADED":
-          return { ...signal, strategyPlan };
+          return { ...signal, strategyPlan, positioning };
         case "LIVE": {
           // ADR-0127 — l'axe est résolu pour la POLITY de la marque (échelle ×
           // pays), avec fallback honnête vers l'axe global du secteur. Le
@@ -219,7 +222,7 @@ export const cockpitRouter = createTRPCRouter({
             mocked: signal.data._mocked,
             axisPolityResolution: resolved?.resolution ?? null,
           };
-          return { state: "LIVE", data, observedAt: signal.observedAt, strategyPlan };
+          return { state: "LIVE", data, observedAt: signal.observedAt, strategyPlan, positioning };
         }
       }
     }),

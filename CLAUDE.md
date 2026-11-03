@@ -1,5 +1,10 @@
 ## 539 candidate — reprise cockpit, lecteur et raccord radar (3 novembre 2026)
 
+> Overton540 : voir ADR-0237. Le cadrage conviction/catégorie/marque vient de A et irrigue
+> radar, S, Oracle et entrée partielle. Six zones, preuves qualifiées, cible dans les deux
+> sens ; aucun postulat promu en mesure. Seshat/Intents/modèles existants, BRAINS inchangé.
+
+
 539 distingue dans Notoria le contenu déjà produit de sa fraîcheur et des permissions de calcul.
 La cascade existante est expliquée avant lancement ; ADVE conservé, Gazette/Oracle distincts.
 Dialog ne vole plus le focus à chaque frappe ; le lecteur Gazette déplie le corps sans doublon.

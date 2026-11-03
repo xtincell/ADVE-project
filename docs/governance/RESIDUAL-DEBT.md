@@ -1,21 +1,20 @@
-## 539/540 — relier les convictions aux preuves Overton et aux produits d’appel (2026-11-03)
+## 540 — recevoir les preuves et la mesure de popularité (2026-11-03)
 
-Le raccord539 lit les articles du digest de marque et le plan S/T sans inventer de mesure.
-Il ne reçoit pas le moteur de popularité. L’opérateur demande un concept traçable incarné
-par la marque, une position initiale, des jalons précis et une première lecture dans les
-produits d’appel. SPAWT : moteur de décision culinaire, rôle éditorialiste donnant voix
-aux créateurs foodies qui construisent leur communauté (orientation déclarée, pas résultat).
+Le candidat540 implémente le cadrage A, six jalons, lecture partielle d’entrée, raccords
+radar/S/Oracle, identité par public/pays et writers atomiques/idempotents. Le référentiel
+est testable sans LLM ; la réception production et l’amendement SPAWT restent à recevoir.
 
-**Plan de résolution** : étendre le graphe Overton existant/ADR0148 et ses writers gouvernés ;
-séparer conviction, catégorie et marque par pays/public. Garder UNTHINKABLE, RADICAL,
-ACCEPTABLE, SENSIBLE, POPULAR, POLICY. Relier les postulats ADVE, baseline, preuves favorables
-et contraires datées, zone courante et cible, sans transformer absence de preuve en rejet.
-Corriger identité par périmètre, conservation/dédoublonnage des preuves et transitions
-atomiques avant ingestion automatisée. Brancher radar, stratégie, Oracle, intake et scoreur
-sur la même lecture partielle ; aucun bonus de résultat observé issu d’une hypothèse.
-**Déclencheur** : mandat actuel, après réception technique539. Effort : tranche métier séparée,
-tests domaine/PG/isolation puis lecture native/prod. Admission via ADVE existant, pas de
-surcouche ni second moteur. La fraîcheur RTIS/Oracle réelle et la recette globale restent ouvertes.
+**Reste à recevoir** : collecte automatisée de preuves favorables/contraires pour chaque
+concept, évaluation de leur représentativité et calibration de popularité. L’absence de
+preuve n’est ni un rejet ni un score nul. Le radar utilise les preuves disponibles, sans
+inventer une étude, une image, une adoption ou une causalité.
+**Plan** : réutiliser les feeds/Argos et le graphe Seshat, extraire source/date/public/pays/
+méthode/zone, faire relire les qualifications et mesurer les désaccords sur un corpus daté.
+Comparer SPAWT et Bonnet Rouge par territoire ; définir échantillonnage et critères de
+soutien avant de présenter une zone POPULAR comme conclusion représentative.
+**Déclencheur** : premier corpus qualifié reçu dans ce mandat après livraison540 ; une tranche
+terrain séparée, sans nouveau moteur. La fraîcheur RTIS/Oracle réelle et la recette globale
+restent des critères indépendants.
 
 ## 538 — recevoir les lecteurs Gazette/Oracle et normaliser les formes ADVE legacy (2026-11-03)
 

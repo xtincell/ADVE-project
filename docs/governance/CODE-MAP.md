@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 57 modules (src/domain, cœur métier pur)
+## Domain — 58 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
@@ -90,6 +90,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **lifecycle** — src/domain/lifecycle.ts — Strategy lifecycle state machine.
 - **market-scale** — src/domain/market-scale.ts — Layer 0. Échelle de marché déclarée d'une marque
 - **overton-graph** — ADR-0148 — Overton Graph : cœur déterministe (Layer 0, pur, zéro-LLM zéro-IO).
+- **overton-positioning**
 - **overton-radar-signal** — OvertonRadarSignal — Layer-0 presentational view-model for `<OvertonRadar>`
 - **pillar-entity-ids**
 - **pillar-path** — PILLAR-PATH — Résolution de chemin ADVE profonde, unifiée (feuille, pure).

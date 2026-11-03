@@ -71,7 +71,7 @@ function OvertonPanelInner({ strategyId }: { strategyId: string }) {
   }
 
   // The radar owns every connector-state branch (Story 7.3) — pass through.
-  return <OvertonRadar signal={data} strategyPlan={data.strategyPlan} instance="full" density="comfortable" />;
+  return <OvertonRadar signal={data} strategyPlan={data.strategyPlan} positioning={data.positioning} instance="full" density="comfortable" />;
 }
 
 export function OvertonPanel() {

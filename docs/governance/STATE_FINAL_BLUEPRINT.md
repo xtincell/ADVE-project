@@ -1,4 +1,11 @@
 # STATE_FINAL_BLUEPRINT — La Fusée d'UPgraders
+
+> Extension Overton — 2026-11-03, ADR-0237 : conviction, catégorie et marque sont des
+> propositions distinctes dans A, par public/territoire, avec départ déclaré ou inféré,
+> cible et vérification. Six jalons partagés jusque dans l’intake/scoreur ; les preuves
+> datées du graphe Seshat qualifient les mouvements, sans bonus issu des postulats.
+> Un déplacement favorable suit la cible explicite dans les deux sens. Aucun nouveau Neter.
+
 ## 📖 LA BIBLE DU PROJET — monolithe canon unique
 
 > **Document canon absolu de l'Industry OS — LA BIBLE DU PROJET.** *Monolithe consolidé (2026-05) : absorbe en ANNEXES CANON (L/P/A/MI/F/M) le **Lexique**, le **Panthéon**, **APOGEE**, la **Mission**, le **Framework technique** et la **Manipulation Matrix** — sources converties en stubs de redirection. Lecteurs d'audit/test repointés ici (`neteru-coherence`, `audit-pantheon-completeness`, `audit-neteru-narrative`). Les cartes auto-générées (CODE-MAP, INTENT-CATALOG, SERVICE/ROUTER/PAGE/COMPONENT-MAP), les 87 ADR immuables et CLAUDE.md restent séparés par nécessité technique (génération / immuabilité / auto-load agent).* Produit le 2026-05-16 par NEFER après audit exhaustif du repo + 9 itérations doctrinales avec Alexandre "Xtincell" DJengue, CEO d'UPgraders, concepteur de la méthode ADVERTIS. Ferme closure-roadmap target #11 (STATE_FINAL_BLUEPRINT). Source de vérité pour toute décision architecturale, économique, ou produit future.

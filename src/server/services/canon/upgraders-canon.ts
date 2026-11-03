@@ -41,6 +41,11 @@ import {
 export const PILLAR_A = {
   ...LF_A,
   nomMarque: "UPgraders",
+  overtonPositions: LF_A.overtonPositions.map(position => position.kind === "BRAND" ? {
+    ...position, id: "upgraders-operateur",
+    statement: "UPgraders peut devenir l’opérateur de référence des dirigeants qui demandent des effets de marque traçables.",
+    baseline: { ...position.baseline, sourceRefs: ["canon.upgraders.A.description", "canon.upgraders.D.positionnement"] },
+  } : position),
   accroche: "De la Poussière à l'Étoile",
   description:
     "UPgraders est l'agence-opérateur (« fixer ») du marché créatif africain francophone : la société qui transforme des marques en icônes culturelles en les pilotant sur une trajectoire mesurée. Marque ombrelle de La Fusée (l'Industry OS qu'elle a construit et opère) et d'Argos (sa propriété média de référence), UPgraders vend l'état final prouvé, pas des moyens.",

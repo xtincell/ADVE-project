@@ -24,6 +24,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { useT } from "@/lib/i18n/use-t";
+import { OvertonEntry } from "@/components/shared/overton-entry";
+import type { EntryOvertonClaim } from "@/domain/overton-positioning";
 import { ScoreBadge } from "@/components/shared/score-badge";
 import { measuredScoreCoverage } from "@/domain/brand-scores";
 import {
@@ -428,6 +430,7 @@ export default function ScorerPage() {
   const { t, locale } = useT();
   const [brandName, setBrandName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [overtonClaim, setOvertonClaim] = useState<EntryOvertonClaim | null>(null);
   const [socialLinksRaw, setSocialLinksRaw] = useState("");
 
   // Helpers i18n : formatage nombres/dates aligné sur la locale UI + interpolation.
@@ -480,6 +483,7 @@ export default function ScorerPage() {
     `/intake?company=${encodeURIComponent(brandName.trim())}` +
     (websiteUrl.trim() ? `&website=${encodeURIComponent(websiteUrl.trim())}` : "") +
     (socialLinksRaw.trim() ? `&social=${encodeURIComponent(socialLinksRaw.trim())}` : "") +
+    (overtonClaim ? `&overton=${encodeURIComponent(JSON.stringify(overtonClaim))}` : "") +
     `&source=scorer`;
 
   const dims = (result?.dimensions ?? []) as Dim[];
@@ -558,7 +562,7 @@ export default function ScorerPage() {
             <Input
               placeholder={t("scorer.form.brandPlaceholder")}
               value={brandName}
-              onChange={(e) => setBrandName(e.target.value)}
+              onChange={(e) => { setBrandName(e.target.value); setOvertonClaim(null); }}
               required
             />
             <div className="flex flex-col gap-1">
@@ -1041,6 +1045,7 @@ export default function ScorerPage() {
               </CardBody>
             </Card>
           ) : null}
+        <OvertonEntry key={brandName.trim()} brand={brandName.trim()} onChange={setOvertonClaim} />
         </article>
       ) : null}
 
