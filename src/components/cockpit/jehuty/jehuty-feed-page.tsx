@@ -600,8 +600,15 @@ interface LeadStoryProps {
   isApplyPending?: boolean;
 }
 
-function ReceivedObservation({ text }: { text: string }) {
-  return <details className="mt-5 rounded-lg border border-border-subtle p-4"><summary className="cursor-pointer text-sm text-foreground-secondary focus-visible:outline-2 focus-visible:outline-accent">Lire le contenu complet</summary><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground-secondary">{text}</p></details>;
+function ReceivedObservation({ text, summary, lead = false }: { text?: string | null; summary?: string | null; lead?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const content = text?.trim() || summary?.trim() || "";
+  const preview = summary?.trim() || content;
+  const canExpand = content !== preview && content.length > preview.length;
+  return <div className="max-w-[68ch]">
+    <p className={`whitespace-pre-wrap break-words font-serif text-foreground-secondary leading-relaxed ${lead ? "text-lg" : "text-base"}`}>{expanded || !canExpand ? content : preview}</p>
+    {canExpand && <button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="mt-3 text-sm text-accent underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-accent">{expanded ? "Réduire" : "Lire le contenu complet"}</button>}
+  </div>;
 }
 
 function LeadStory({
@@ -611,9 +618,6 @@ function LeadStory({
   const Icon = CATEGORY_ICONS[item.category];
   const isPinned = item.curation?.action === "PINNED";
   const isTriggered = item.curation?.action === "NOTORIA_TRIGGERED";
-  const summary = item.summary?.trim() ?? "";
-  const dropCap = summary.charAt(0);
-  const restSummary = summary.slice(1);
   const hasDetails = Boolean(item.advantages?.length || item.disadvantages?.length);
 
   return (
@@ -640,9 +644,9 @@ function LeadStory({
           <span>{new Date(item.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
         </div>
 
+        {item.source && <p className="mb-3 text-sm text-foreground-secondary">{item.externalUrl ? <a href={item.externalUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{item.source} · Consulter la source</a> : item.source}</p>}
         <h3
-          className="font-display font-semibold tracking-tight leading-[1.05] text-foreground mb-5"
-          style={{ fontSize: "var(--text-3xl)" }}
+          className="max-w-[28ch] font-display font-semibold tracking-tight leading-tight text-2xl md:text-3xl text-foreground mb-4"
         >
           {item.externalUrl ? (
             <a href={item.externalUrl} target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline">
@@ -653,21 +657,7 @@ function LeadStory({
           )}
         </h3>
 
-        {summary && (
-          <p
-            className="font-serif text-foreground-secondary leading-[1.55] max-w-[58ch]"
-            style={{ fontSize: "var(--text-lg)" }}
-          >
-            <span
-              className="float-left font-display font-semibold leading-[0.85] mr-2 mt-1 text-accent"
-              style={{ fontSize: "calc(var(--text-3xl) * 1.7)" }}
-            >
-              {dropCap}
-            </span>
-            {restSummary}
-          </p>
-        )}
-        {item.observation && <ReceivedObservation text={item.observation} />}
+        <ReceivedObservation text={item.observation} summary={item.summary} lead />
 
         <div className="mt-6 flex items-center gap-6 flex-wrap">
           <DispatchActions
@@ -682,11 +672,7 @@ function LeadStory({
             onApply={onApply}
             isApplyPending={isApplyPending}
           />
-          {item.source && (
-            <span className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60 ml-auto">
-              source · {item.source}
-            </span>
-          )}
+
         </div>
       </div>
 
@@ -817,10 +803,7 @@ function Dispatch({
         )}
       </h3>
 
-      <p className="font-serif text-foreground-secondary leading-snug text-base flex-1" style={{ fontSize: "var(--text-base)" }}>
-        {item.summary}
-      </p>
-      {item.observation && <ReceivedObservation text={item.observation} />}
+      <ReceivedObservation text={item.observation} summary={item.summary} />
 
       {hasDetails && (
         <button

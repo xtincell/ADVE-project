@@ -74,6 +74,7 @@ export function FeedbackButton() {
               {KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
             </Select>
             <Textarea
+              aria-label="Votre message"
               placeholder="Décrivez le bug ou votre idée…"
               value={message}
               onChange={(e) => setMessage(e.target.value)}

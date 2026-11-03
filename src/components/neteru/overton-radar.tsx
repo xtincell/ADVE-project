@@ -48,7 +48,7 @@ import { useId, useMemo, type ReactNode } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Radar as RadarIcon, PlugZap, CloudOff, Timer, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ConnectorResult, ConnectorDegradationReason, OvertonRadarSignal } from "@/domain";
+import type { ConnectorResult, ConnectorDegradationReason, OvertonRadarSignal, OvertonStrategyPlan } from "@/domain";
 
 export type { OvertonRadarSignal } from "@/domain";
 
@@ -74,6 +74,7 @@ const overtonRadarVariants = cva(
 interface OvertonRadarProps extends VariantProps<typeof overtonRadarVariants> {
   /** Typed pivot signal — drives every visual state (P22-1, no UI-only flags). */
   readonly signal: ConnectorResult<OvertonRadarSignal>;
+  readonly strategyPlan?: OvertonStrategyPlan;
   readonly instance: "full" | "teaser";
   readonly density?: "comfortable" | "compact";
   readonly className?: string;
@@ -177,8 +178,7 @@ function RadarPlot({
   const radius = size * 0.42;
 
   const allTags = useMemo(() => {
-    const set = new Set([...Object.keys(signal.sectorAxis?.tags ?? {}), ...Object.keys(signal.brandTags)]);
-    return Array.from(set).slice(0, 8);
+    return Object.keys(signal.sectorAxis?.tags ?? {}).filter((tag) => Number.isFinite(signal.brandTags[tag]) && Number.isFinite(signal.sectorAxis?.tags[tag])).slice(0, 8);
   }, [signal.sectorAxis, signal.brandTags]);
 
   const deflection = useMemo(() => {
@@ -200,13 +200,13 @@ function RadarPlot({
     };
   }, [allTags, signal.brandTags, signal.sectorAxis]);
 
-  if (!signal.sectorAxis || allTags.length === 0) {
+  if (!signal.sectorAxis || allTags.length < 3) {
     return (
       <HonestState
         instance={instance}
         icon={Timer}
         title={DEGRADED_COPY.INSUFFICIENT_DATA.title}
-        description="Aucune donnée sectorielle observée pour l'instant. Le radar se dessine dès les premières observations de votre secteur."
+        description="La comparaison graphique nécessite au moins trois axes mesurés communs à votre marque et au secteur. La position visée et les articles disponibles restent consultables ci-dessous."
       />
     );
   }
@@ -237,19 +237,19 @@ function RadarPlot({
           {`Déflexion ${deflection.magnitude.toFixed(2)}, alignement ${(deflection.alignment * 100).toFixed(0)} %, sur ${allTags.length} axes : ${allTags.join(", ")}.`}
         </desc>
         {[0.25, 0.5, 0.75, 1].map((r) => (
-          <circle key={r} cx={center} cy={center} r={radius * r} fill="none" stroke="rgb(82 82 91)" strokeWidth={0.5} strokeDasharray="2 3" />
+          <circle key={r} cx={center} cy={center} r={radius * r} fill="none" stroke="var(--color-border)" strokeWidth={0.5} strokeDasharray="2 3" />
         ))}
         {allTags.map((tag, i) => {
           const p = point(i, radius);
           return (
             <g key={tag}>
-              <line x1={center} y1={center} x2={p.x} y2={p.y} stroke="rgb(82 82 91)" strokeWidth={0.5} />
+              <line x1={center} y1={center} x2={p.x} y2={p.y} stroke="var(--color-border)" strokeWidth={0.5} />
               <text
                 x={p.x + Math.cos(angle(i)) * 14}
                 y={p.y + Math.sin(angle(i)) * 14}
                 textAnchor="middle"
                 fontSize={instance === "teaser" ? 8 : 10}
-                fill="rgb(161 161 170)"
+                fill="var(--color-foreground-muted)"
               >
                 {tag}
               </text>
@@ -257,9 +257,9 @@ function RadarPlot({
           );
         })}
         {/* Sector polygon (background reference) — dashed = "where the sector is". */}
-        <polygon points={polygon(sectorValues)} fill="rgb(99 102 241 / 0.18)" stroke="rgb(129 140 248)" strokeWidth={1} strokeDasharray="3 2" />
+        <polygon points={polygon(sectorValues)} fill="var(--color-info)" fillOpacity={0.18} stroke="var(--color-info)" strokeWidth={1} strokeDasharray="3 2" />
         {/* Brand polygon (foreground) — solid rocket-red = "where you pull it". */}
-        <polygon points={polygon(brandValues)} fill="rgb(225 29 72 / 0.30)" stroke="rgb(244 63 94)" strokeWidth={2} />
+        <polygon points={polygon(brandValues)} fill="var(--color-accent)" fillOpacity={0.3} stroke="var(--color-accent)" strokeWidth={2} />
       </svg>
 
       {/* Offscreen text-equivalent data table (UX-DR21 — colour not sole carrier). */}
@@ -317,7 +317,7 @@ function EvidenceFeed({ signal, instance }: { signal: OvertonRadarSignal; instan
       <div className="mt-3 space-y-2">
         <div className="grid grid-cols-2 gap-2">
           <MetricCell label="Reprise de vocab." value={signal.vocabularyOverlap !== undefined ? signal.vocabularyOverlap * 100 : undefined} suffix="%" />
-          <MetricCell label="Δ embedding" value={signal.embeddingDelta} />
+          <MetricCell label="Déplacement sectoriel" value={signal.embeddingDelta} />
         </div>
         {topItem && (
           <p className="rounded-lg border border-border bg-background/40 p-2 text-xs text-foreground-secondary">
@@ -334,13 +334,13 @@ function EvidenceFeed({ signal, instance }: { signal: OvertonRadarSignal; instan
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-2">
         <MetricCell label="Reprise de vocab." value={signal.vocabularyOverlap !== undefined ? signal.vocabularyOverlap * 100 : undefined} suffix="%" />
-        <MetricCell label="Δ embedding" value={signal.embeddingDelta} />
+        <MetricCell label="Déplacement sectoriel" value={signal.embeddingDelta} />
       </div>
 
       <div>
         <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-foreground-muted">Imitations datées</div>
         {claims.length === 0 ? (
-          <p className="text-xs italic text-foreground-secondary">Aucune imitation détectée sur la fenêtre.</p>
+          <p className="text-xs italic text-foreground-secondary">Aucune imitation documentée dans les observations reçues.</p>
         ) : (
           <ol className="space-y-1.5">
             {claims.slice(0, 5).map((c) => (
@@ -355,10 +355,19 @@ function EvidenceFeed({ signal, instance }: { signal: OvertonRadarSignal; instan
         )}
       </div>
 
+      {(signal.sectorArticles?.length ?? 0) > 0 && <div>
+        <h4 className="mb-2 text-sm font-semibold">Articles collectés pour votre veille</h4>
+        <p className="mb-3 text-xs text-foreground-secondary">Ces articles éclairent votre marché. Ils ne prouvent pas à eux seuls que votre marque déplace les perceptions.</p>
+        <ul className="space-y-3">{signal.sectorArticles!.slice(0, 8).map((article) => <li key={article.sourceUrl}>
+          <a className="text-sm text-accent underline underline-offset-4" href={article.sourceUrl} target="_blank" rel="noopener noreferrer">{article.headline}</a>
+          <p className="text-xs text-foreground-secondary">{article.publication}{article.publishedAt ? ` · ${new Date(article.publishedAt).toLocaleDateString("fr-FR")}` : " · Date de publication non fournie par la source"}</p>
+        </li>)}</ul>
+      </div>}
+
       <div>
         <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-foreground-muted">Presse non payée</div>
         {press.length === 0 ? (
-          <p className="text-xs italic text-foreground-secondary">Aucune mention presse organique sur la fenêtre.</p>
+          <p className="text-xs italic text-foreground-secondary">Aucune mention organique qualifiée dans les observations reçues.</p>
         ) : (
           <ul className="space-y-1.5">
             {press.slice(0, 4).map((p) => (
@@ -379,7 +388,7 @@ function EvidenceFeed({ signal, instance }: { signal: OvertonRadarSignal; instan
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-export function OvertonRadar({ signal, instance, density, className }: OvertonRadarProps) {
+export function OvertonRadar({ signal, strategyPlan, instance, density, className }: OvertonRadarProps) {
   // P22-1 invariant 1 : exhaustive state handling — no default/else fall-through.
   let body: ReactNode;
   const titleId = useId();
@@ -439,6 +448,16 @@ export function OvertonRadar({ signal, instance, density, className }: OvertonRa
           <span>{mocked ? "Démo" : observedAt ? `Veille sectorielle · ${new Date(observedAt).toLocaleDateString()}` : "—"}</span>
         </div>
       </header>
+      {strategyPlan && <div className="mb-5 rounded-lg border border-border p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h4 className="font-semibold">Le déplacement visé par votre stratégie</h4><span className="text-xs text-warning">{strategyPlan.stale ? "Plan à réactualiser" : "Postulat stratégique · à vérifier"}</span></div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div><p className="mb-1 text-xs text-foreground-muted">Perception de départ du plan</p><p className="text-sm leading-relaxed">{strategyPlan.current || "À compléter dans le diagnostic de marché"}</p></div>
+          <div><p className="mb-1 text-xs text-foreground-muted">Perception visée</p><p className="text-sm leading-relaxed">{strategyPlan.target || "À compléter dans la stratégie"}</p></div>
+        </div>
+        {strategyPlan.gap && <p className="mt-3 text-sm text-foreground-secondary">{strategyPlan.gap}</p>}
+        {instance === "full" && strategyPlan.milestones.length > 0 && <details className="mt-4"><summary className="cursor-pointer text-sm text-accent">Voir les {strategyPlan.milestones.length} jalons et leur vérification</summary><ol className="mt-3 space-y-3">{strategyPlan.milestones.map((milestone, index) => <li key={`${index}-${milestone.phase}`} className="text-sm"><strong>{milestone.phase}</strong><p>{milestone.targetPerception}</p>{milestone.measurementMethod && <p className="text-foreground-secondary">À vérifier : {milestone.measurementMethod}</p>}</li>)}</ol></details>}
+        <p className="mt-3 text-xs text-foreground-muted">Source : votre plan stratégique et son diagnostic de marché. Ces objectifs ne sont pas des déplacements déjà mesurés.</p>
+      </div>}
       {body}
     </section>
   );

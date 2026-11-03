@@ -20,3 +20,6 @@ export * from "./brand-scores";
 export * from "./cult-index-tier";
 export * from "./field-provenance";
 export * from "./market-scale";
+
+export { readOvertonStrategyPlan } from "./overton-radar-signal";
+export type { OvertonStrategyPlan, OvertonSectorArticle } from "./overton-radar-signal";
