@@ -40,7 +40,7 @@ export async function fulfillPaidIntakeReport(reference: string): Promise<void> 
       where: { reference },
       select: { status: true, intakeToken: true, tierKey: true },
     });
-    if (!payment || payment.status !== "PAID" || !payment.intakeToken) return;
+    if (!payment || payment.status !== "PAID" || !payment.intakeToken || payment.tierKey === "SALES_COLLECTION") return;
 
     // ── Toujours : rapport premium (comportement historique) ──
     const { premiumReextractAfterPayment } = await import("./index");

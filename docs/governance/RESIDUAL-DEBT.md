@@ -1,11 +1,15 @@
-## 534 — local financier reçu, readiness globale ouverte (2026-11-02)
+## 535 — validation intégrée et readiness globale ouvertes (2026-11-02)
 
-Final local : 5 121/491, PG ciblé 20/2 (source/V/PAYER/concurrence D réellement
+Reprise sous 535 après intégration commerciale #1120/e09a808fa, conservée avec
+son ADR0233. Notre ADR devient 0234 ; PR réelle #1121. Les métriques `source534-*`
+ci-dessous sont préintégration ; validation du head 535 encore ouverte.
+
+Avant intégration, `source534-*` : 5 121/491, PG ciblé 20/2 (source/V/PAYER/concurrence D réellement
 refusée), valeurs humaines conservées ; deux contre-épreuves rouges puis 8 tests
 consommateurs verts, typage/lints/cycles/build final et parcours MCP/fiche/Word /
 Oracle reçus. Relecture finale compilée sans mutation, contenu/métadonnées exacts.
 Dettes locales fences/consommateurs/zéro/non-applicabilité supprimées.
-**Suite réelle** : natif/CI/image/runtime 534, modèle de marque en production,
+**Suite réelle** : natif/CI/image/runtime 535, modèle de marque en production,
 cascade RTIS réelle, autres champs A/dossiers régionaux et Oracle/ADVE/MVP entiers.
 Responsable Core/V/FinancialBrain, effort recette bornée ; **déclencheur** après
 livraison exacte, avant réception financière globale. Aucun SLO ou argent Thot
@@ -18,6 +22,7 @@ autres dossiers ; owner Core/V/maturité, effort qualification/recette bornée,
 **Taxonomies legacy** (EVANGELISTE/OTHER) : lexique existant, enums stockés conservés,
 cas rendu/export ; owner Oracle/UI, **après gros œuvre, avant Oracle global**.
 Campagnes/devis et sept chantiers ouverts, aucun chiffre financier réel publié.
+
 
 ## Performance — marge faible sur grand document, toujours ouverte
 

@@ -1,12 +1,16 @@
-# ADR-0233 — Prémisses financières V et projection commune
+# ADR-0234 — Prémisses financières V et projection commune
 
-**Status** : Proposed — cohérence locale reçue, CI/merge encore ouverts
+**Status** : Proposed — preuves 534 préintégration, head 535 et CI/merge ouverts
 **Date** : 2026-11-02
 **Phase** : 7 — qualification financière ADVE et irrigation
 **Depends on** : ADR-0032, ADR-0172, ADR-0226, ADR-0229, ADR-0231
 **Supersedes** : aucun ; factorise FinancialBrain, conserve les données legacy
 
 ## Contexte
+
+Reprise sous 535 après intégration commerciale #1120/e09a808fa, conservée avec
+son ADR0233. Notre ADR devient 0234 ; PR réelle #1121. Les métriques `source534-*`
+ci-dessous sont préintégration ; validation du head 535 encore ouverte.
 
 Defaults sectoriels et conventions hétérogènes de cohorte/horizon/marge peuvent
 faire diverger les lecteurs. Une projection proposée ne prouve ni performance
@@ -65,7 +69,7 @@ ni recommendation APPLIED. Aucun nouveau writer ou registre.
 
 ## Conséquences et réception
 
-Final : suite complète 5 121 tests/491 fichiers, PG ciblé 20/2 source/V/D et valeurs
+Préintégration `source534-*` : suite complète 5 121 tests/491 fichiers, PG ciblé 20/2 source/V/D et valeurs
 humaines conservées, deux contre-épreuves zéro/non-applicabilité rouges puis
 8 tests consommateurs verts. Typage/lints sans erreur (24 avertissements
 préexistants), cycles 0 et build webpack heap 8 GiB exit 0. MCP réel en copie
@@ -78,4 +82,4 @@ réel en production et cascade RTIS restent à recevoir. FinancialModel optionne
 pour legacy ne prouve pas toutes les sorties : admission/complétude des autres
 dossiers avant wholeMVP, dette globale dans RESIDUAL-DEBT. Modèle/données réels
 et artefacts privés hors checkout, exemples du dépôt synthétiques sans marque.
-Aucun chiffre métier publié ou numéro PR anticipé, statut Proposed jusqu’à CI/merge.
+Aucun chiffre métier publié ou numéro PR anticipé, statut Proposed jusqu’à CI/merge du head intégré 535.

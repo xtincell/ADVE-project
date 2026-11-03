@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { CrmSalesTreeEditor } from "./crm-sales-tree-editor";
+import { CrmSalesMandateFields, salesChannels as channels, salesChannelNames } from "./crm-sales-mandate-fields";
+import { CrmSalesPayment } from "./crm-sales-payment";
 import { useSession } from "next-auth/react";
 import { trpc } from "@/lib/trpc/client";
 import { conversationTreeSchema, salesStateSchema, type SalesStep } from "@/server/services/crm-engine/commercial";
 
-const channels = ["PHONE", "EMAIL", "WHATSAPP", "SMS", "WEB", "SOCIAL", "IN_PERSON"] as const;
-const channelNames = ["Téléphone", "Email", "WhatsApp", "SMS", "Chat web", "Réseau social", "Face à face"];
 const stateNames: Record<string, string> = { DISCOVERY: "À qualifier", QUALIFIED: "Acheteur qualifié", PARTNER: "Partenariat", AUDIENCE: "Public à informer", PROPOSAL: "Offre présentée", OBJECTION: "Objection à traiter", ACCEPTED: "Accord obtenu", PAID: "Règlement confirmé", DELIVERED: "Prestation remise", STOPPED: "Contact arrêté" };
 const fieldClass = "w-full rounded border border-border bg-background px-3 py-2 text-sm";
 
@@ -78,7 +77,7 @@ export function CrmSalesDesk() {
         </label>
         <label>Point de contact
           <select className={fieldClass} value={channel} onChange={event => setChannel(event.target.value as typeof channel)}>
-            {channels.map((item, index) => <option key={item} value={item}>{channelNames[index]}</option>)}
+            {channels.map(item => <option key={item} value={item}>{salesChannelNames[item]}</option>)}
           </select>
         </label>
       </div>
@@ -116,6 +115,7 @@ export function CrmSalesDesk() {
             <p>{sale.mandate.terms}</p>
             <p>Mandat valable jusqu’au {new Date(sale.mandate.expiresAt).toLocaleString("fr-FR")}</p>
           </div>}
+          {sale.mandate?.collection && deal.sellerStrategyId && <CrmSalesPayment key={deal.id} dealId={deal.id} strategyId={deal.sellerStrategyId} revision={deal.revision} node={sale.node} canRequest={admin || session?.user.id === sale.mandate.sellerId} />}
           {!deal.sellerStrategyId && <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
             <p>Cette affaire historique ne désigne pas encore de marque vendeuse. Préparez une affaire de vente pour lui confier une offre et un vendeur.</p>
             <button type="button" className="rounded border border-border px-3 py-2" onClick={() => { setSelected(""); setDecision(""); }}>Préparer une affaire de vente</button>
@@ -141,27 +141,9 @@ export function CrmSalesDesk() {
                   paymentInstructions: input(form, "payment"), expiresAt: new Date(input(form, "expiry")).toISOString(), channels: form.getAll("channels") as (typeof channels)[number][],
                 } });
               }}>
-                <label>Offre du catalogue<select className={fieldClass} value={offerId} onChange={event => setOfferId(event.target.value)} required>
-                  <option value="">Choisir</option>{catalogue.filter(item => item.id).map(item => <option key={item.id} value={item.id}>{item.nom}</option>)}
-                </select></label>
-                <fieldset className="sm:col-span-2"><legend>Points de contact autorisés</legend>
-                  <div className="flex flex-wrap gap-3">{channels.map((item, index) => <label key={item} className="flex gap-2">
-                    <input type="checkbox" name="channels" value={item} defaultChecked={item === channel} />{channelNames[index]}
-                  </label>)}</div>
-                </fieldset>
-                <label>Prix autorisé<input className={fieldClass} name="amount" type="number" min="0" step="0.01" required /></label>
-                <label>Devise<input className={fieldClass} name="currency" pattern="[A-Z]{3}" placeholder="XOF" required /></label>
-                <label>Validité<input className={fieldClass} name="expiry" type="datetime-local" required /></label>
-                <label>Conditions et résultat promis<textarea className={fieldClass} name="terms" defaultValue={offer?.conditionsTarifaires} required /></label>
-                <label>Entité bénéficiaire<input className={fieldClass} name="beneficiary" required /></label>
-                <label>Vendeur titulaire<select className={fieldClass} name="seller" defaultValue={session?.user.id} required>{principalOptions.map(person => <option key={person.id} value={person.id}>{person.label}</option>)}</select></label>
-                <label>Responsable de remise<select className={fieldClass} name="delivery" defaultValue={session?.user.id} required>{principalOptions.map(person => <option key={person.id} value={person.id}>{person.label}</option>)}</select></label>
-                <label>Instructions de règlement<textarea className={fieldClass} name="payment" required /></label>
+                <CrmSalesMandateFields catalogue={catalogue} offerId={offerId} onOfferChange={setOfferId} offerVersion={pillar ? String(pillar.currentVersion) : undefined} principals={principalOptions} defaultPrincipalId={session?.user.id} defaultChannel={channel} />
                 <label className="flex gap-2"><input type="checkbox" name="outboundEmail" />Autoriser l’envoi au contact email de cette affaire</label>
                 <label>Référence du paiement La Fusée, si applicable<input className={fieldClass} name="paymentRef" /></label>
-                <details className="sm:col-span-2"><summary>Arbre de conversation approuvé</summary>
-                  <CrmSalesTreeEditor />
-                </details>
                 <button className="rounded bg-primary px-4 py-2 text-primary-foreground" disabled={update.isPending}>Approuver ces conditions</button>
               </form>
             </details>
@@ -190,7 +172,11 @@ export function CrmSalesDesk() {
                 case "OBJECTION": case "ACCEPT": case "STOP": void act({ type, evidence }); break;
                 case "PAYMENT": void act({ type, evidence, amount: Number(input(form, "amount")), currency: input(form, "currency") }); break;
                 case "HANDOVER": void act({ type, sellerId: input(form, "handoverSeller") }); break;
-                case "DELIVER": void act({ type, evidence, nextAction: input(form, "nextAction"), nextDeadline: new Date(input(form, "nextDeadline")).toISOString() }); break;
+                case "DELIVER": {
+                  const nextDeadline = input(form, "nextDeadline");
+                  void act({ type, evidence, nextAction: input(form, "nextAction") || undefined, nextDeadline: nextDeadline ? new Date(nextDeadline).toISOString() : undefined });
+                  break;
+                }
               }
             }}>
               <label>Décision<select className={fieldClass} name="decision" onChange={event => setDecision(event.target.value)}>
@@ -202,20 +188,21 @@ export function CrmSalesDesk() {
                 {(!sale.mandate.conversationTree && ["QUALIFIED", "OBJECTION"].includes(sale.node)) && <option value="PROPOSE">Présenter l’offre</option>}
                 {(!sale.mandate.conversationTree && ["PROPOSAL", "OBJECTION"].includes(sale.node)) && <option value="OBJECTION">Consigner une objection</option>}
                 {(!sale.mandate.conversationTree && sale.node === "PROPOSAL") && <option value="ACCEPT">Consigner l’accord explicite</option>}
-                {admin && sale.node === "ACCEPTED" && <option value="PAYMENT">Rapprocher un règlement</option>}
+                {admin && sale.node === "ACCEPTED" && !sale.mandate.collection && <option value="PAYMENT">Rapprocher un règlement</option>}
                 {sale.node === "PAID" && <option value="DELIVER">Attester la remise</option>}
                 <option value="STOP">Arrêter le contact</option>
                 {admin && !sale.contactStopped && <option value="HANDOVER">Transférer le dossier</option>}
               </select></label>
               <label>Observation ou référence de preuve<textarea className={fieldClass} name="evidence" /></label>
               {decision === "HANDOVER" && <label>Reprendre avec<select className={fieldClass} name="handoverSeller" required>{principalOptions.map(person => <option key={person.id} value={person.id}>{person.label}</option>)}</select></label>}
-              {admin && sale.node === "ACCEPTED" && <div className="grid gap-3 sm:grid-cols-2">
+              {admin && sale.node === "ACCEPTED" && !sale.mandate.collection && <div className="grid gap-3 sm:grid-cols-2">
                 <label>Montant effectivement reçu<input className={fieldClass} name="amount" type="number" step="0.01" min="0" /></label>
                 <label>Devise reçue<input className={fieldClass} name="currency" /></label>
               </div>}
               {sale.node === "PAID" && <>
-                <label>Prochaine action<input className={fieldClass} name="nextAction" required /></label>
-                <label>Prochaine échéance<input className={fieldClass} name="nextDeadline" type="datetime-local" required /></label>
+                <label>Action de suivi (facultative)<input className={fieldClass} name="nextAction" /></label>
+                <label>Échéance de suivi (facultative)<input className={fieldClass} name="nextDeadline" type="datetime-local" /></label>
+                <p className="text-xs text-foreground-muted">Laissez ces champs vides pour terminer la remise sans planifier de suivi.</p>
               </>}
               <button className="rounded bg-primary px-4 py-2 text-primary-foreground" disabled={update.isPending}>Enregistrer la décision</button>
             </form>

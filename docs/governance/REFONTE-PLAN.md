@@ -1,9 +1,13 @@
-## 534 — raccord financier local reçu, suite réelle ouverte (2026-11-02)
+## 535 — intégration commerciale conservée, financier à valider (2026-11-02)
 
-[ADR-0233 Proposed](adr/0233-financial-working-model-projection.md) : entrée V versionnée,
+Reprise sous 535 après intégration commerciale #1120/e09a808fa, conservée avec
+son ADR0233. Notre ADR devient 0234 ; PR réelle #1121. Les métriques `source534-*`
+ci-dessous sont préintégration ; validation du head 535 encore ouverte.
+
+[ADR-0234 Proposed](adr/0234-financial-working-model-projection.md) : entrée V versionnée,
 calcul FinancialBrain et lecteurs communs ; provenance pillar.sources/checkpoints,
 model.source édition de base, aucun nouveau moteur ou registre.
-Final 5 121/491, PG ciblé 20/2 incluant refus réel de concurrence D, 8 cas
+Avant intégration, `source534-*` : 5 121/491, PG ciblé 20/2 incluant refus réel de concurrence D, 8 cas
 consommateurs verts, typage/lints/cycles/build final et parcours locaux reçus.
 Relecture compilée sans mutation, contenu/métadonnées exacts ; dettes locales
 fences/raccord/zéro/non-applicabilité fermées, aucun natif ou production écrit.
@@ -12,6 +16,7 @@ modèles/complétude sur les autres dossiers ; legacy optionnel ne reçoit pas l
 readiness globale. Responsable Core/V/FinancialBrain, effort recette bornée,
 **déclencheur** livraison exacte puis avant Oracle/ADVE/MVP entiers. Campagnes,
 devis, taxonomies et sept chantiers ouverts ; aucun chiffre métier publié.
+
 
 ## 531 — recevoir la combinaison avec main (2026-11-02)
 

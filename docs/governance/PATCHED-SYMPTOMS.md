@@ -28,17 +28,22 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
-### 534 — prémisses et conventions financières reçues localement (2026-11-02)
+### 535 — prémisses financières reprises, preuves 534 attribuées (2026-11-02)
+
+Reprise sous 535 après intégration commerciale #1120/e09a808fa, conservée avec
+son ADR0233. Notre ADR devient 0234 ; PR réelle #1121. Les métriques `source534-*`
+ci-dessous sont préintégration ; validation du head 535 encore ouverte.
 
 Defaults/cohortes dispersées, marge coefficient/% et ROI borné : modèle V et calcul
 FinancialBrain commun raccordés, legacy conservé. Zéro et non-applicabilité connus
-restent explicites ; deux rouges puis 8 tests consommateurs verts. Final 5 121/491,
+restent explicites ; deux rouges puis 8 tests consommateurs verts. Avant intégration, `source534-*` : 5 121/491,
 PG ciblé 20/2 source/V/PAYER/concurrence D refusée sans écriture, valeurs humaines
 conservées, typage/lints/cycles/build final et MCP/fiche/Word/Oracle locaux reçus.
 Relecture compilée finale sans mutation, contenu/métadonnées exacts ; dettes locales
 correspondantes fermées. HTTP/stress ne reçoivent pas natif, SLO ou ADVE production.
 CI/image/runtime, modèle réel/cascade RTIS et Oracle/ADVE/MVP entiers ouverts ;
 legacy optionnel ≠ readiness globale, plan dans RESIDUAL-DEBT. Données privées.
+
 
 ### 530 — cellules sous validation globale, correctif candidat (2026-11-02)
 

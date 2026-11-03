@@ -92,6 +92,12 @@ describe("sales worker run scope at the actual MCP transport", () => {
   });
   it("returns a typed business refusal for premature acceptance, then lets the agent present and accept in the correct order", async () => {
     const current = await db.deal.findUniqueOrThrow({ where: { id: mainDeal } });
+    const malformed=await invoke("sales_decide",{dealId:mainDeal,step:{requestId:randomUUID(),expectedRevision:current.revision,channel:"WEB",command:{type:"PLAN_NEXT_ACTION",action:"Attendre la remise"}}},leased());
+    expect(malformed.status).toBe(200);
+    const malformedBody=await malformed.json();
+    expect(malformedBody.result).toMatchObject({status:"REFUSED",errorCode:"BAD_REQUEST",currentState:{revision:current.revision}});
+    expect(malformedBody.result.message).toContain("command.basis");
+    expect((await db.deal.findUniqueOrThrow({where:{id:mainDeal}})).revision).toBe(current.revision);
     const qualified = await decision(mainDeal, current.revision, { type: "QUALIFY", role: "BUYER", need: "Besoin de visibilité du client fictif." });
     expect(qualified.response.status).toBe(200);
     const revision = qualified.body.result.revision as number;

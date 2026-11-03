@@ -2107,7 +2107,11 @@ d'invariants spécifiques (cf. `tests/integration/`).
 
 # ANNEXE CANON L — LEXIQUE NORMATIF
 
-### Modèle financier de travail — proposition 534 (2026-11-02)
+### Modèle financier de travail — proposition 535 (2026-11-02)
+
+Reprise sous 535 après intégration commerciale #1120/e09a808fa, conservée avec
+son ADR0233. Notre ADR devient 0234 ; PR réelle #1121. Les métriques `source534-*`
+ci-dessous sont préintégration ; validation du head 535 encore ouverte.
 
 V.financialModel versionne les prémisses qualifiées de même cohorte D PAYER,
 FinancialBrain commun projette les lecteurs. pillar.sources/checkpoints restent
@@ -2118,7 +2122,8 @@ Raccords/fences et cohérence locale reçus : final 5 121/491, PG ciblé 20/2,
 8 cas consommateurs verts, build/parcours finaux sans mutation. CI/image/runtime,
 natif, modèle réel/cascade RTIS et chaîne entière ouverts ; compatibilité legacy
 optionnelle ≠ readiness de toutes sorties, admission/complétude à recevoir sur
-les autres dossiers avant wholeMVP. [ADR-0233 Proposed](adr/0233-financial-working-model-projection.md).
+les autres dossiers avant wholeMVP. [ADR-0234 Proposed](adr/0234-financial-working-model-projection.md).
+
 
 ### Attribution des réceptions après intégration — candidat 531 (2026-11-02)
 

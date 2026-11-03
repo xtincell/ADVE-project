@@ -95,7 +95,7 @@ async function assertMissionInStrategy(missionId: string, strategyId: string): P
 // ---------------------------------------------------------------------------
 
 async function commercialAgent(input: Record<string, unknown>) {
-  const auth = input.__auth as { scopeKind?: string; scopeStrategyId?: string; apiKeyId?: string } | undefined;
+  const auth = input.__auth as { scopeKind?: string; scopeStrategyId?: string; apiKeyId?: string; salesRunId?: string; salesRequestId?: string } | undefined;
   if (auth?.scopeKind !== "BRAND" || auth.scopeStrategyId !== input.strategyId || !auth.apiKeyId) {
     throw new Error("Une clé d’agent limitée à la marque est nécessaire.");
   }
@@ -105,11 +105,12 @@ async function commercialAgent(input: Record<string, unknown>) {
   }
   const profile = await db.salesRepresentative.findUnique({ where: { mcpKeyId: auth.apiKeyId }, select: { status: true } });
   if (profile && profile.status !== "ACTIVE") throw new Error("Commercial suspendu ou non activé.");
-  return { id: `mcp:${auth.apiKeyId}`, admin: false };
+  return { id: `mcp:${auth.apiKeyId}`, admin: false, salesRunId:auth.salesRunId, salesRequestId:auth.salesRequestId };
 }
 
 async function salesDecisionResult(work:()=>Promise<unknown>,dealId:string){
-  try{return await work();}catch(error){
+  try{return await work();}catch(cause){
+    const error=cause instanceof z.ZodError?new TRPCError({code:"BAD_REQUEST",message:"Commande commerciale invalide : "+cause.issues.map(issue=>`${issue.path.join(".")} : ${issue.message}`).join(" ; ").slice(0,3000)}):cause;
     if(!(error instanceof TRPCError)||!["PRECONDITION_FAILED","CONFLICT","FORBIDDEN","BAD_REQUEST"].includes(error.code))throw error;
     const current=await db.deal.findUniqueOrThrow({where:{id:dealId},select:{revision:true,commercial:true}});
     const state=current.commercial as {node?:string;nextAction?:string}|null;
@@ -154,6 +155,18 @@ export const tools: ToolDefinition[] = [
     },
   },
   {
+    name: "sales_request_payment",
+    description: "Après accord reçu, préparer le règlement individuel au montant et à la destination approuvés. Aucun débit ni confirmation de paiement.",
+    inputSchema: z.object({strategyId:z.string(),dealId:z.string(),requestId:z.string().uuid(),expectedRevision:z.number().int().nonnegative()}),
+    handler:async input=>{
+      const actor=await commercialAgent(input);
+      const deal=await db.deal.findUniqueOrThrow({where:{id:String(input.dealId)}});
+      if(deal.sellerStrategyId!==input.strategyId)throw new TRPCError({code:'FORBIDDEN',message:'Affaire hors marque.'});
+      const {requestSalesPayment}=await import('@/server/services/crm-engine/payments');
+      return salesDecisionResult(()=>requestSalesPayment(deal.id,String(input.requestId),Number(input.expectedRevision),actor),deal.id);
+    },
+  },
+  {
     name: "sales_sync_payment",
     description: "Relire le règlement natif lié par le mandant. Un paiement en attente reste en attente. Ne crée ni débit ni nouveau paiement.",
     inputSchema: z.object({ strategyId: z.string(), dealId: z.string(), requestId: z.string().uuid(), expectedRevision: z.number().int().nonnegative() }),
@@ -163,16 +176,17 @@ export const tools: ToolDefinition[] = [
       const { salesStateSchema } = await import("@/server/services/crm-engine/commercial");
       const state = salesStateSchema.parse(deal.commercial);
       if (deal.sellerStrategyId !== input.strategyId || state.mandate?.sellerId !== actor.id) throw new Error("Affaire hors mandat.");
-      if (!deal.paymentReference) throw new Error("Le mandant doit lier le paiement natif de cette offre.");
+      if (!deal.paymentReference) return {status:"NOT_REQUESTED",nextAction:"Après accord reçu, utiliser sales_request_payment pour ce mandat."};
       const payment = await db.intakePayment.findUniqueOrThrow({ where: { reference: deal.paymentReference } });
       if (payment.status !== "PAID" || !payment.paidAt) return { status: payment.status, dealId: deal.id };
       if (state.node === "PAID" || state.node === "DELIVERED") return { status: "PAID", dealId: deal.id };
       const { applySalesStep } = await import("@/server/services/crm-engine");
-      return applySalesStep(deal.id, {
+      const {paymentMajorAmount}=await import("@/server/services/crm-engine/payments");
+      return salesDecisionResult(()=>applySalesStep(deal.id, {
         requestId: String(input.requestId), expectedRevision: Number(input.expectedRevision),
-        channel: state.mandate.channels[0]!,
-        command: { type: "PAYMENT", amount: payment.amount, currency: payment.currency, evidence: `IntakePayment:${payment.reference}` },
-      }, { id: "finance:native-payment", admin: true });
+        channel: state.mandate!.channels[0]!,
+        command: { type: "PAYMENT", amount: paymentMajorAmount(payment), currency: payment.currency, evidence: `IntakePayment:${payment.reference}` },
+      }, { ...actor, admin: true }),deal.id);
     },
   },
   {
@@ -185,7 +199,7 @@ export const tools: ToolDefinition[] = [
       const deal = await db.deal.findUniqueOrThrow({ where: { id: String(input.dealId) } });
       if (deal.sellerStrategyId !== input.strategyId) throw new Error("Affaire hors de cette marque.");
       const { sendSalesEmail } = await import("@/server/services/crm-engine");
-      return sendSalesEmail(deal.id, actor, { requestId: String(input.requestId), subject: String(input.subject), text: String(input.text) });
+      return salesDecisionResult(()=>sendSalesEmail(deal.id, actor, { requestId: String(input.requestId), subject: String(input.subject), text: String(input.text) }),deal.id);
     },
   },
   {
@@ -197,10 +211,12 @@ export const tools: ToolDefinition[] = [
       const deal = await db.deal.findUniqueOrThrow({ where: { id: String(input.dealId) } });
       if (deal.sellerStrategyId !== input.strategyId) throw new Error("Affaire hors de cette marque.");
       const { salesStepSchema } = await import("@/server/services/crm-engine/commercial");
-      const step = salesStepSchema.parse(input.step);
-      if (["MANDATE", "PAYMENT", "HANDOVER"].includes(step.command.type)) throw new Error("Décision réservée au mandant.");
-      const { applySalesStep } = await import("@/server/services/crm-engine");
-      return salesDecisionResult(()=>applySalesStep(deal.id, step, actor),deal.id);
+      return salesDecisionResult(async()=>{
+        const step=salesStepSchema.parse(input.step);
+        if (["MANDATE", "PAYMENT", "HANDOVER"].includes(step.command.type)) throw new TRPCError({code:"FORBIDDEN",message:"Décision réservée au mandant."});
+        const {applySalesStep}=await import("@/server/services/crm-engine");
+        return applySalesStep(deal.id,step,actor);
+      },deal.id);
     },
   },
 
@@ -235,7 +251,7 @@ export const tools: ToolDefinition[] = [
       const deal=await db.deal.findUniqueOrThrow({where:{id:String(input.dealId)}});
       if(deal.sellerStrategyId!==input.strategyId)throw new Error("Affaire hors marque.");
       const {sendSalesWebMessage}=await import("@/server/services/crm-engine/customer");
-      return sendSalesWebMessage(deal.id,actor,{requestId:String(input.requestId),text:String(input.text)});
+      return salesDecisionResult(()=>sendSalesWebMessage(deal.id,actor,{requestId:String(input.requestId),text:String(input.text)}),deal.id);
     },
   },
 
@@ -246,7 +262,7 @@ export const tools: ToolDefinition[] = [
       const actor=await commercialAgent(input);const deal=await db.deal.findUniqueOrThrow({where:{id:String(input.dealId)}});
       const {salesStateSchema}=await import("@/server/services/crm-engine/commercial");const state=salesStateSchema.parse(deal.commercial??{});
       if(deal.sellerStrategyId!==input.strategyId||state.mandate?.sellerId!==actor.id||!state.mandate.channels.includes("WEB")||state.contactStopped||new Date(state.mandate.expiresAt)<=new Date())throw new Error("Lien client hors mandat.");
-      const {issueCustomerAccess}=await import("@/server/services/crm-engine/customer");return issueCustomerAccess(deal.id);
+      const {issueCustomerAccess}=await import("@/server/services/crm-engine/customer");return salesDecisionResult(()=>issueCustomerAccess(deal.id,actor),deal.id);
     },
   },
   // ---- Découverte : les campagnes d'une marque ----

@@ -1,10 +1,14 @@
-## 534 — cohérence financière locale reçue, livraison ouverte (2 novembre 2026)
+## 535 — financier intégré, validation du head ouverte (2 novembre 2026)
+
+Reprise sous 535 après intégration commerciale #1120/e09a808fa, conservée avec
+son ADR0233. Notre ADR devient 0234 ; PR réelle #1121. Les métriques `source534-*`
+ci-dessous sont préintégration ; validation du head 535 encore ouverte.
 
 V qualifié → FinancialBrain commun → lecteurs/contextes/exports, éditeur manuel
 et provenance pillar.sources/checkpoints conservés ; model.source = édition de base.
 Projection conditionnelle, ni performance prouvée ni budget Thot disponible ;
 legacy conservé sans deuxième calcul, déficit/zéro/non-applicabilité explicites.
-Final : 5 121 tests/491 fichiers, PG ciblé 20/2 source/V/PAYER/concurrence D refusée
+Avant intégration, `source534-*` : 5 121 tests/491 fichiers, PG ciblé 20/2 source/V/PAYER/concurrence D refusée
 réellement sans version V ou recommendation APPLIED, valeurs humaines conservées.
 Tsc exit 0, lints 0 erreur/24 anciens avertissements, cycles 0, build final 8 GiB
 exit 0 ; deux rouges zéro/non-applicabilité puis ciblé consommateurs 8 verts.
@@ -16,7 +20,8 @@ Trois pages HTTP 200, stress sans finding ; aucun natif réel, ADVE production
 Legacy optionnel ≠ readiness financière de tous dossiers : admission/complétude
 à recevoir avant Oracle/ADVE/MVP entiers ; autres champs A/dossiers régionaux,
 campagnes/devis/taxonomies et sept chantiers ouverts. Données privées hors checkout.
-[ADR-0233 Proposed](docs/governance/adr/0233-financial-working-model-projection.md).
+[ADR-0234 Proposed](docs/governance/adr/0234-financial-working-model-projection.md).
+
 
 ## 533 — Oracle reçu localement, livraison ouverte (2 novembre 2026)
 

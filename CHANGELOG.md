@@ -1,12 +1,26 @@
-## v6.27.534 — refactor(finance): projeter le même modèle V dans les lecteurs existants (2026-11-02)
+## v6.27.535 — refactor(finance): projeter le même modèle V dans les lecteurs existants (2026-11-02)
 
-**Modèle financier partagé et parcours locaux reçus, sans transformer les projections en performance ou budget réellement disponible.**
+Reprise sous 535 après intégration commerciale #1120/e09a808fa, conservée avec
+son ADR0233. Notre ADR devient 0234 ; PR réelle #1121. Les métriques `source534-*`
+ci-dessous sont préintégration ; validation du head 535 encore ouverte.
+
+**Financier repris sous 535 après l’intégration commerciale ; preuves 534 attribuées, head intégré à valider.**
 
 - V.financialModel qualifié : édition de base, même cohorte D PAYER, prix/charges/volumes/horizons, communication comprise aux coûts et trésorerie conditionnelle. pillar.sources/checkpoints restent la provenance ; model.source identifie seulement l’édition de base, aucun registre parallèle.
 - FinancialBrain factorisé, lecteurs V/Oracle/export/Glory/RTIS/maturité/cross-validator/I/allocator raccordés ; defaults sectoriels retirés, legacy conservé sans seconde base. Déficit et non-applicabilité connus explicites, zéro conservé, ROI non borné à 100 %, aucun bonus de performance prouvée ou budget Thot disponible issu du modèle proposé.
-- Contrôles finaux : suite complète 5 121 tests/491 fichiers, PG ciblé 20/2 dont concurrence D réellement refusée sans version V ou recommendation APPLIED, valeurs humaines conservées ; tsc exit 0, deux lints 0 erreur/24 avertissements préexistants, cycles 0, build final webpack heap 8 GiB exit 0. Deux contre-épreuves zéro/non-applicabilité rouges puis ciblé consommateurs 8 tests verts.
+- Contrôles financiers préintégration `source534-*` : suite complète 5 121 tests/491 fichiers, PG ciblé 20/2 dont concurrence D réellement refusée sans version V ou recommendation APPLIED, valeurs humaines conservées ; tsc exit 0, deux lints 0 erreur/24 avertissements préexistants, cycles 0, build final webpack heap 8 GiB exit 0. Deux contre-épreuves zéro/non-applicabilité rouges puis ciblé consommateurs 8 tests verts.
 - Copie isolée : MCP réel une écriture, fiche Glory depuis V/Word 37 contrôles et cinq pages rendues/inspectées, Oracle cohérent. Relecture finale compilée sans mutation : Oracle USER 136 ms, Word 672 ms/37 champs sans inconnu, cross-validator 44 ms, éditeur 35 ms (PAYER correct, résultats calculés non éditables) ; contenu/métadonnées inchangés. Trois pages HTTP 200, aucun natif réel ; stress sans finding, latences locales sans SLO.
-- Dettes locales fences/consommateurs fermées ; natif/CI/image/runtime 534, modèle réel de production/cascade RTIS, autres dossiers et Oracle/ADVE/MVP entiers ouverts. financialModel optionnel pour compatibilité legacy ne reçoit pas toutes les sorties financières des autres dossiers : admission/complétude à recevoir avant wholeMVP. [ADR-0233 Proposed](docs/governance/adr/0233-financial-working-model-projection.md), aucun numéro PR inventé ni chiffre métier privé publié.
+- Dettes locales fences/consommateurs fermées ; natif/CI/image/runtime 535, modèle réel de production/cascade RTIS, autres dossiers et Oracle/ADVE/MVP entiers ouverts. financialModel optionnel pour compatibilité legacy ne reçoit pas toutes les sorties financières des autres dossiers : admission/complétude à recevoir avant wholeMVP. [ADR-0234 Proposed](docs/governance/adr/0234-financial-working-model-projection.md), aucun numéro PR inventé ni chiffre métier privé publié.
+
+
+## v6.27.534 — Portefeuille de vente autorisé, relances datées et règlement individuel (2 novembre 2026)
+
+- Le propriétaire confie jusqu’à cinq prospects explicites en une autorisation : source, marché, offre versionnée, conditions, vendeur, responsable de remise et financier. Les affaires, accès clients et premières missions sont préparés ensemble ; leurs reçus restent consultables après rechargement. Aucun contact global ou newsletter n’est aspiré comme prospect.
+- Reprises depuis les envois réellement confirmés, rendez-vous reçus ou date propriétaire. Le consommateur Galahad existant réveille les échéances ; STOP par contact/marque, pause, passation, nouvelle réponse et incertitude annulent les anciennes reprises avant appel modèle ou effet. Quota de portefeuille et intervalle contact réservés sous verrou de marque, sans écrire les piliers.
+- Après accord, le vendeur demande un règlement individuel depuis les seules conditions figées. La finance authentifiée rapproche montant, devise, référence externe et justificatif ; le modèle ne confirme aucun encaissement. Conversion monétaire explicite pour le nouveau tier SALES_COLLECTION, historique inchangé, aucun fulfillment intake/ADVE déclenché.
+- Une remise prouvée est clôturée sans imposer de date de suivi future. Les conflits de sérialisation PostgreSQL40001 remontés directement par l’adaptateur sont réessayés dans la transaction bornée existante, sans rejouer d’effet réseau.
+- Même poste pour humain et IA ; conversation client normale avec sa référence de règlement. Envoi web et email de marque existant, autres canaux manuels tant que leur connexion n’est pas activée. Revue après remise interne, sans reconduction inventée.
+- Préserve la livraison Oracle/ADVE533 et les dernières réponses CRM532. Aucun modèle LLM, CRM, abonnement fournisseur ou orchestrateur supplémentaire. Les tests isolés et la réception de production ne constituent pas une vente réelle.
 
 ## v6.27.533 — fix(oracle): lire les formes ADVE canoniques sans perdre leur contenu (2026-11-02)
 

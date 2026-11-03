@@ -47,6 +47,7 @@ export interface McpAuthResult {
   salesProfileId?: string;
   salesProfileStatus?: string;
   salesRunId?: string;
+  salesRequestId?: string;
   salesDealId?: string | null;
 }
 
@@ -102,9 +103,9 @@ export async function authenticateMcpRequest(
         salesContext={salesProfileId:profile.id,salesProfileStatus:profile.status};
         const runId=request.headers.get("x-sales-run-id"), lease=request.headers.get("x-sales-run-lease");
         if(runId||lease){
-          const run=runId?await db.salesRun.findUnique({where:{id:runId},select:{id:true,representativeId:true,status:true,leaseToken:true,dealId:true,claimedAt:true}}):null;
+          const run=runId?await db.salesRun.findUnique({where:{id:runId},select:{id:true,representativeId:true,status:true,leaseToken:true,dealId:true,claimedAt:true,requestId:true}}):null;
           if(!run||run.representativeId!==profile.id||run.status!=="RUNNING"||!lease||run.leaseToken!==lease||!run.claimedAt||run.claimedAt.getTime()<Date.now()-15*60000)return {ok:false,response:NextResponse.json({error:"Sales run scope denied"},{status:403})};
-          salesContext={...salesContext,salesRunId:run.id,salesDealId:run.dealId};
+          salesContext={...salesContext,salesRunId:run.id,salesDealId:run.dealId,salesRequestId:run.requestId};
         }
       }
       db.mcpApiKey
@@ -193,7 +194,7 @@ export function scopeMcpParams(
         scopeStrategyId: gate.scopeStrategyId ?? null,
         userId: gate.userId ?? null,
         apiKeyId: gate.apiKeyId ?? null,
-        ...(gate.salesProfileId ? {salesRunId:gate.salesRunId??null,salesDealId:gate.salesDealId??null}:{}),
+        ...(gate.salesProfileId ? {salesRunId:gate.salesRunId??null,salesDealId:gate.salesDealId??null,salesRequestId:gate.salesRequestId??null}:{}),
       },
     },
   };
