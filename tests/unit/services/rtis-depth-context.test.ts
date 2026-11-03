@@ -6,7 +6,8 @@
  */
 import { describe, it, expect } from "vitest";
 import { projectForContext, serializePillar } from "@/server/services/mestor/rtis-cascade";
-import { fieldStatusFor } from "@/domain/field-provenance";
+import { fieldStatusFor, FIELD_VERIFICATION_RULES, FIELD_VERIFICATION_RESPONSIBILITY } from "@/domain/field-provenance";
+import { serializePillars } from "@/server/services/utils/pillar-context";
 import { buildContext } from "@/server/services/mestor/i-pillar-sequenced";
 import { PillarDSchema } from "@/lib/types/pillar-schemas";
 
@@ -91,13 +92,32 @@ describe("serializePillar — la matrice profonde n'est plus tronquée (Phase 4)
     const out = serializePillar("e", content, fieldStatusFor({ décision: "INFERRED" }, "e", content._fieldProvenance));
     const payload = readPillarEnvelope(out);
     expect(payload.rituel).toEqual({ statut: "INFERRED", origine: "Déduit — à vérifier",
-      valeur: [{ description: "5 questions, 5 axes" }] });
+      valeur: [{ description: "5 questions, 5 axes" }], verificationRef: "GENERAL" });
+    expect(out).toContain(FIELD_VERIFICATION_RULES.GENERAL);
+    expect(out).toContain(FIELD_VERIFICATION_RESPONSIBILITY.usage);
     expect(payload.kpis).toEqual({ statut: "UNKNOWN", origine: "Origine inconnue", valeur: ["1 200 inscrits"] });
     expect(payload.décision.statut).toBe("HUMAN");
     expect(payload.source.statut).toBe("SOURCE");
     expect(content.rituel).toEqual([{ description: "5 questions, 5 axes" }]);
     expect(content._fieldProvenance).not.toHaveProperty("kpis");
     expect(payload).not.toHaveProperty("_fieldProvenance");
+  });
+
+  it("factors verification once across pillars and nested cells without dropping data", () => {
+    const records = Array.from({ length: 40 }, (_, i) => ({ id: `profile-${i}`, value: `Value ${i}` }));
+    const content = { personas: records, kpis: [{ name: "Target", target: 12 }],
+      _fieldProvenance: { personas: "HUMAN", "personas[39].value": "INFERRED", kpis: "INFERRED" } };
+    const before = structuredClone(content);
+    const out = serializePillars([["D", content], ["E", content]]);
+    expect(out.split(FIELD_VERIFICATION_RESPONSIBILITY.usage)).toHaveLength(2);
+    expect(out.split(FIELD_VERIFICATION_RULES.ACTORS)).toHaveLength(2);
+    expect(out.split(FIELD_VERIFICATION_RULES.MEASUREMENT)).toHaveLength(2);
+    expect(out).not.toContain(FIELD_VERIFICATION_RULES.FINANCIAL);
+    expect(out.match(/"verificationRef": "ACTORS"/g)).toHaveLength(2);
+    expect(out.match(/"verificationRef": "MEASUREMENT"/g)).toHaveLength(2);
+    expect(out.match(/"id": "profile-39"/g)).toHaveLength(2);
+    expect(out).toContain('"valeur": [');
+    expect(content).toEqual(before);
   });
 
   it("qualified projection retains every catalogue item and empty value", () => {

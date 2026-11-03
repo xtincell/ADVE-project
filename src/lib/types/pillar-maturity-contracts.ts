@@ -1,5 +1,6 @@
 import { projectFinancialPillar } from "@/domain/unit-economics";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
+import { hasDocumentedNonProductExchange } from "@/domain/brand-actors";
 
 /**
  * Pillar Maturity Contracts — The Single Source of Truth
@@ -17,6 +18,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { z } from "zod";
+import { ADVE_STORAGE_KEYS } from "@/domain/pillars";
 import { tokenizePillarPath, resolvePillarPath } from "@/lib/pillar-path";
 import type { FieldRequirement, PillarMaturityContract, MaturityStage, FieldValidator } from "./pillar-maturity";
 import { PILLAR_SCHEMAS } from "./pillar-schemas";
@@ -646,6 +648,7 @@ export function findEmptyArrayCellPaths(pillarKey: string, content: Record<strin
       if (typeof item !== "object" || item === null || Array.isArray(item)) continue; // item non-objet → pas de cellule
       const rec = item as Record<string, unknown>;
       for (const [k, kSchema] of Object.entries(shape)) {
+        if (arrLeaf.path === "personaSegmentMap" && k === "productNames" && hasDocumentedNonProductExchange(rec)) continue;
         if (TECHNICAL_ITEM_KEYS.has(k)) continue; // id/skuRef/… → jamais fabriqués (cohérence FK)
         const rawCtor = (kSchema as { constructor?: { name?: string } })?.constructor?.name ?? "";
         const optional = rawCtor === "ZodOptional" || rawCtor === "ZodDefault" || rawCtor === "ZodNullable";
@@ -760,6 +763,24 @@ export function deriveSchemaRequirements(pillarKey: string): FieldRequirement[] 
     });
   }
   return reqs;
+}
+
+/** An empty conceptual premise must be proposed and verified, even when the
+ * old empty choice was human. Actual zero, false, evidence and documented
+ * non-applicability are values. Exact version-fenced field writes only. */
+export function canInferMissingConceptualField(pillarKey: string, path: string, content: Record<string, unknown>, next: unknown): boolean {
+  const key = pillarKey.toLowerCase();
+  if (!(ADVE_STORAGE_KEYS as readonly string[]).includes(key)) return false;
+  const previous = resolvePillarPath(content, path);
+  const empty = previous == null || (typeof previous === "string" && !previous.trim()) || (Array.isArray(previous) && previous.length === 0);
+  if (!empty || next == null || (typeof next === "string" && !next.trim()) || (Array.isArray(next) && !next.length)) return false;
+  if (EVIDENCE_ARRAY_TOPKEYS[key]?.has(path.split(/[.[]/)[0]!)) return false;
+  const req = deriveSchemaRequirements(key).find(r => r.path === path);
+  const collection = req?.derivable && req.validatorArg !== 0 && ["min_items", "array_items_complete"].includes(req.validator);
+  const leaf = [...findEmptyLeafPaths(key, content), ...findEmptyArrayCellPaths(key, content)]
+    .find(l => l.path === path && !isNonFabricableLeaf(l));
+  if (!collection && !leaf) return false;
+  return !!(getFieldZod(key, path) as z.ZodTypeAny | null)?.safeParse(next).success;
 }
 
 /**

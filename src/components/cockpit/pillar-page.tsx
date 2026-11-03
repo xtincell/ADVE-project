@@ -1,7 +1,7 @@
 "use client";
 
 import { ADVE_STORAGE_KEYS } from "@/domain";
-import { inferredFieldPaths } from "@/domain/field-provenance";
+import { inferredFieldPaths, inferredFieldVerification } from "@/domain/field-provenance";
 
 /**
  * PillarPage — Composant partagé pour les pages pilier du Cockpit
@@ -958,10 +958,10 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
               <div>
                 <div className="flex items-center gap-2 text-sm font-semibold text-warning">
                   <Sparkles className="h-4 w-4" />
-                  {inferredPaths.length} champ{inferredPaths.length > 1 ? "s" : ""} inféré{inferredPaths.length > 1 ? "s" : ""} par l&apos;IA — à valider
+                  {inferredPaths.length} champ{inferredPaths.length > 1 ? "s" : ""} inféré{inferredPaths.length > 1 ? "s" : ""} — à vérifier
                 </div>
                 <p className="mt-1 text-2xs text-foreground-muted">
-                  Relis la valeur proposée. <strong>Valider tel quel</strong> enregistre ta décision pour tout le champ affiché. Utilise <strong>Saisir</strong> pour le réécrire.
+                  Ces postulats alimentent déjà votre plan et vos livrables. Le responsable de marque vérifie chaque proposition, puis la confirme ou la corrige. <strong>Valider tel quel</strong> enregistre sa décision sur la version affichée ; cela ne déclare aucun résultat observé.
                 </p>
               </div>
               <span className="rounded-full bg-warning/15 px-2 py-0.5 text-2xs font-bold text-warning whitespace-nowrap">
@@ -974,8 +974,9 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
                 const value = resolvePillarPath(content, path);
                 const nested = path.includes(".") || path.includes("[");
                 const pending = confirmInferredMutation.isPending;
+                const verification = inferredFieldVerification(upperKey, path);
                 return (
-                  <div key={path} className="flex items-center justify-between gap-2 rounded border border-white/5 bg-white/[0.02] px-3 py-2">
+                  <div key={path} className="flex flex-col items-start justify-between gap-3 rounded border border-white/5 bg-white/[0.02] px-3 py-3 lg:flex-row">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-white">{getFieldLabel(path)}</span>
@@ -988,6 +989,9 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
                         className="mt-1 text-2xs text-info underline underline-offset-2">
                         Lire la valeur entière
                       </button>
+                      <p className="mt-2 max-w-prose text-xs leading-relaxed text-foreground-muted">
+                        <strong className="text-foreground">À vérifier · {verification.responsable} : </strong>{verification.instruction}
+                      </p>
                     </div>
                     <div className="flex shrink-0 gap-1.5">
                       {canOperate ? (
@@ -1014,7 +1018,7 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
                           });
                         }}
                         className="flex items-center gap-1 rounded-md bg-warning/15 px-2.5 py-1 text-2xs font-medium text-warning transition-colors hover:bg-warning/25 disabled:cursor-not-allowed disabled:opacity-50"
-                        title="Garder cette valeur et enregistrer ta validation"
+                        title="Confirmer cette prémisse pour le plan et enregistrer ta vérification à cette version"
                       >
                         <CheckCircle className="h-3 w-3" />
                         Valider tel quel

@@ -18,6 +18,9 @@ import { subjectSourcesFor, sectorHeadTerm } from "./feed-sources";
 import { fetchRssText, parseRssItems, toFeedItems, type RssItem } from "./rss";
 import { rankItemsByRelevance } from "./relevance";
 import { deriveWatchSubjects, effectiveWatchSubjects } from "./watch-subjects";
+import { braveWebSearch } from "@/server/services/seshat/web-search";
+import { fetchSourceUrl } from "@/server/services/artemis/market-research/web-fetcher";
+import { parseHtmlMeta } from "@/server/services/quick-intake/web-footprint";
 import { watchlistSchema } from "@/domain/creative-intelligence";
 
 /**
@@ -79,9 +82,49 @@ export interface BrandFeedArticle {
   title: string;
   link: string;
   source?: string;
+  sourceUrl?: string;
+  discoveryUrl?: string;
   publishedAt?: string;
   /** Vignette réelle fournie par le flux, si présente. */
   imageUrl?: string;
+  /** Extrait réellement reçu du flux, sans rédaction inventée. */
+  summary?: string;
+}
+
+/** Retrieve a publisher's own preview through the existing search/fetch paths.
+ * Max three articles per refresh; never use an aggregator logo as article art.
+ */
+export async function enrichArticlePreview(article: BrandFeedArticle): Promise<BrandFeedArticle> {
+  try {
+    let link = article.link;
+    const hostname = new URL(link).hostname;
+    if (hostname === "news.google.com") {
+      if (!article.sourceUrl) return article;
+      const publisher = new URL(article.sourceUrl).hostname.replace(/^www\./, "");
+      const result = await braveWebSearch(`site:${publisher} "${article.title}"`, { count: 3, allowlistOnly: true });
+      if (result.status !== "OK") return article;
+      const tokens = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/[^a-z0-9]+/).filter(t => t.length > 3);
+      const wanted = [...new Set(tokens(article.title))];
+      const match = result.hits.find(hit => {
+        const host = new URL(hit.url).hostname.replace(/^www\./, "");
+        const found = new Set(tokens(hit.title));
+        return (host === publisher || host.endsWith(`.${publisher}`)) && wanted.length >= 3 &&
+          wanted.filter(t => found.has(t)).length / wanted.length >= 0.7;
+      });
+      if (!match) return article;
+      link = match.url;
+    }
+    const fetched = await fetchSourceUrl(link);
+    if (!fetched.ok || !fetched.text || !fetched.contentType?.includes("html")) return article;
+    const meta = parseHtmlMeta(fetched.text);
+    const image = meta.ogImage ? new URL(meta.ogImage, link) : null;
+    return {
+      ...article, link,
+      ...(link !== article.link ? { discoveryUrl: article.link } : {}),
+      ...(meta.description ? { summary: meta.description } : {}),
+      ...(!article.imageUrl && image && image.protocol === "https:" ? { imageUrl: image.href } : {}),
+    };
+  } catch { return article; }
 }
 
 export interface BrandFeedResult {
@@ -170,7 +213,9 @@ export async function getOrBuildBrandFeed(
   }
 
   // ── Collecte multi-sujets × multi-langue (déterministe) ──────────────────────
-  const sources = subjects.flatMap((s) => subjectSourcesFor(s, brand.countryCode)).slice(0, MAX_SOURCES);
+  const bySubject = subjects.map(s => subjectSourcesFor(s, brand.countryCode));
+  // Cover every ADVE topic before spending the cap on additional languages.
+  const sources = [0, 1, 2, 3].flatMap(i => bySubject.flatMap(rows => rows[i] ? [rows[i]!] : [])).slice(0, MAX_SOURCES);
   const items: RssItem[] = [];
   await Promise.all(
     sources.map(async (src) => {
@@ -204,11 +249,18 @@ export async function getOrBuildBrandFeed(
   const articles = toFeedItems(ranked, 12).map((a) => ({
     title: a.title,
     link: a.link,
+    ...(a.summary ? { summary: a.summary } : {}),
+    ...(a.sourceUrl ? { sourceUrl: a.sourceUrl } : {}),
     ...(a.source ? { source: a.source } : {}),
     ...(a.publishedAt ? { publishedAt: a.publishedAt } : {}),
     ...(a.imageUrl ? { imageUrl: a.imageUrl } : {}),
   }));
 
+  // Sequential search respects the existing free-tier throttle; persisted cache
+  // prevents repeated page retrieval on every Gazette visit.
+  for (let i = 0; i < Math.min(3, articles.length); i++) {
+    articles[i] = await enrichArticlePreview(articles[i]!);
+  }
   const generatedAt = new Date().toISOString();
 
   // ── Persistance best-effort (cache du jour) ─────────────────────────────────

@@ -1,5 +1,6 @@
 import { projectFinancialPillar, resolveUnitEconomics } from "@/domain/unit-economics";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
+import { hasDocumentedNonProductExchange } from "@/domain/brand-actors";
 
 /**
  * Maturity Assessor — Evaluates pillar content against the completion contract.
@@ -107,7 +108,8 @@ export function isFieldSatisfied(content: Record<string, unknown>, req: FieldReq
         // lorsque l'item est un objet.
         if (typeof item !== "object" || item === null) return cellFilled(item);
         const rec = item as Record<string, unknown>;
-        return required.every((k) => cellFilled(rec[k]));
+        return required.every((k) => cellFilled(rec[k]) ||
+          (req.path === "personaSegmentMap" && k === "productNames" && hasDocumentedNonProductExchange(rec)));
       });
     }
 

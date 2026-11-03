@@ -16,10 +16,11 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
+import { fieldStatusFor } from "@/domain/field-provenance";
 import { deriveActorProductLinks } from "@/domain/brand-actors";
 import { loadBrandSources, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
 import { setNestedValue, resolvePillarPath } from "@/lib/pillar-path";
-import { findEmptyLeafPaths, findEmptyArrayCellPaths, isNonFabricableLeaf, buildFieldAnchor, getFieldZod } from "@/lib/types/pillar-maturity-contracts";
+import { findEmptyLeafPaths, findEmptyArrayCellPaths, isNonFabricableLeaf, buildFieldAnchor, getFieldZod, canInferMissingConceptualField } from "@/lib/types/pillar-maturity-contracts";
 import { isDeepStrictEqual } from "node:util";
 import type { Prisma } from "@prisma/client";
 import type { MaturityStage, AutoFillResult, FieldRequirement } from "@/lib/types/pillar-maturity";
@@ -27,8 +28,17 @@ import { assessPillar } from "./assessor";
 import { getContract } from "./contracts-loader";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
-import { serializePillar, ADVE_SOURCE_ALIGNMENT_CONTRACT } from "@/server/services/utils/pillar-context";
+import { serializePillars, ADVE_SOURCE_ALIGNMENT_CONTRACT } from "@/server/services/utils/pillar-context";
 import { loadBrandSourceContext, renderSourceContext } from "@/server/services/notoria/source-context";
+
+/** Source extracts remain sourced. Replacing a previously deliberate conceptual
+ * blank is a proposed premise, with its source receipts and history retained. */
+export function completionProvenance(key: string, path: string, previous: Record<string, unknown>, next: unknown,
+  sourceExtracted: boolean, certainty?: Record<string, string>): "SOURCE" | "INFERRED" {
+  const origin = fieldStatusFor(certainty, key, previous._fieldProvenance)(path);
+  const blankDecision = (origin === "HUMAN" || origin === "SOURCE") && canInferMissingConceptualField(key, path, previous, next);
+  return sourceExtracted && !blankDecision ? "SOURCE" : "INFERRED";
+}
 
 // ─── Enrichissement surgical des matrices (Phase 3) ───────────────────────────
 
@@ -104,6 +114,7 @@ export async function fillToStage(
   });
   const content = ((pillar?.content ?? {}) as Record<string, unknown>);
   const existingCertainty = ((pillar?.fieldCertainty ?? {}) as Record<string, string>);
+  const initialContent = structuredClone(content);
 
   const sourceReceipts: SourceReceipt[] = [];
   const aggregateFilled: string[] = [];
@@ -148,7 +159,8 @@ export async function fillToStage(
     // humain/source, et signale les contradictions source↔humain (CHALLENGE).
     const fieldProvenance: Record<string, import("@/domain/field-provenance").FieldProvenance> = {};
     for (const path of aggregateFilled) {
-      fieldProvenance[path] = aggregateSourceFilled.has(path) ? "SOURCE" : "INFERRED";
+      fieldProvenance[path] = completionProvenance(key, path, initialContent,
+        resolvePillarPath(content, path), aggregateSourceFilled.has(path), existingCertainty);
     }
     const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
     const proposed = new Map(aggregateFilled.map(path => [path, structuredClone(resolvePillarPath(content, path))]));
@@ -805,10 +817,7 @@ function shapeHint(r: FieldRequirement): string {
 export function buildPillarContext(allPillars: Record<string, Record<string, unknown>>): string {
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : contenu des
   // piliers (dérivé du fondateur) balisé bloc par bloc ; la clé pilier est interne.
-  return Object.entries(allPillars)
-    .filter(([, v]) => v && Object.keys(v).length > 0)
-    .map(([k, v]) => serializePillar(k.toUpperCase(), v))
-    .join("\n\n");
+  return serializePillars(Object.entries(allPillars).filter(([, v]) => v && Object.keys(v).length > 0));
 }
 
 async function buildFinancialContext(

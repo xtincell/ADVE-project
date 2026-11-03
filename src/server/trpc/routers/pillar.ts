@@ -27,7 +27,7 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { inferredFieldPaths, provenanceTopKey } from "@/domain/field-provenance";
+import { inferredFieldPaths, provenanceTopKey, inferredFieldVerification } from "@/domain/field-provenance";
 import { SourceReceiptSchema } from "@/domain/source-certainty";
 import type { Prisma } from "@prisma/client";
 import type { Context } from "../context";
@@ -1317,7 +1317,7 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
             system: "OPERATOR",
             userId: ctx.session.user.id,
             intentId: ctx.intentId,
-            reason: `Confirmation opérateur de « ${input.pillarKey.toLowerCase()}.${topKey} » — provenance HUMAN`,
+            reason: `Confirmation opérateur de « ${input.pillarKey.toLowerCase()}.${topKey} » pour le plan, version relue ${input.expectedVersion}. Consigne : ${inferredFieldVerification(input.pillarKey, topKey).instruction}`,
           },
           options: { fieldProvenance: { [topKey]: "HUMAN" }, expectedVersion: input.expectedVersion, confirmInferredField: topKey },
         });

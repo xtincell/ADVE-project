@@ -7,6 +7,18 @@ export const BRAND_ACTOR_ROLES = [
 
 export type BrandActorRole = typeof BRAND_ACTOR_ROLES[number];
 
+/** An explicitly empty offer list is meaningful only with the whole exchange
+ * documented. A partner need not buy a product to contribute value. */
+export function hasDocumentedNonProductExchange(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const row = value as Record<string, unknown>;
+  return typeof row.personaName === "string" && !!row.personaName.trim() &&
+    Array.isArray(row.productNames) && row.productNames.length === 0 &&
+    ["valueToBrand", "valueToActor", "actorCosts", "dependencyConditions"].every(key =>
+      Array.isArray(row[key]) && row[key].length > 0 &&
+      row[key].every(item => typeof item === "string" && !!item.trim()));
+}
+
 export const BRAND_ACTOR_ROLE_LABELS: Record<BrandActorRole, string> = {
   COMMUNICATION_AUDIENCE: "Public de communication",
   USER: "Utilisateur / bénéficiaire",

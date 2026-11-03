@@ -28,6 +28,69 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 538 — contenu tronqué et faux états vides, correctif candidat (2026-11-03)
+
+Les mappers Gazette perdaient le texte après120/300 caractères ; seul le signal
+EXTERNAL_METRIC conservait une observation complète. Le rafraîchissement ignorait
+les sujets effectifs de la marque et privilégiait le pays Client. Le candidat
+sépare aperçu et contenu intégral, donne une source lisible, conserve les détails
+des nouveaux diagnostics et dédoublonne leur lecture. Le même chargeur de sujets
+et le contexte Strategy servent au rafraîchissement ; les résumés/images réellement
+reçus du RSS sont transmis sans enrichissement inventé.
+
+Jusqu’à trois aperçus d’articles par rafraîchissement réutilisent Brave et la
+lecture HTML protégée existants. Le rapprochement des liens d’agrégateur vérifie
+éditeur et titre ; seules description et image réellement reçues sont reprises,
+sans inventer de média ni utiliser le logo d’agrégateur comme illustration.
+
+L’agent amendPillar pouvait annoncer une réussite et une nouvelle version alors
+que la Bible rétablissait une proposition interdite : quatre valeurs pour un
+maximum de trois. La gateway refuse avant écriture lorsque
+rejectOnProvenanceRefusal est demandé et qu’un champ modifié déclenche un BLOCK.
+La régression rouge est conservée puis PostgreSQL 18/18 reçu vert : contenu,
+version, historique et score inchangés après refus. Ce premier reçu ciblé est
+historique ; le dernier PostgreSQL21/21 est vert, sans assouplir les limites métier.
+
+Oracle assimilait COMPLETE à « rédigé », cherchait contentFill avec une clé
+numérique au lieu de la clé canonique et déduisait la présence de matière de
+DRAFT/ACTIVE. Les lecteurs candidats distinguent contenu rendu, fraîcheur et
+approbation ; Conditions peut être alimentée par ses prochaines étapes sans
+contrat fabriqué. Hypothèse de cause commune : projections et compteurs ont
+confondu la matière disponible avec un état de production ou de validation.
+Les gardes d’approbation et les contrats métier ne sont pas relâchés.
+
+Extension doctrinale538 distincte des défauts de lecture : un vide conceptuel
+HUMAN/SOURCE pouvait arrêter l’irrigation malgré la possibilité d’un postulat.
+Sur instruction opérateur, le candidat admet une proposition INFERRED conforme,
+au chemin et à la version attendus, puis transmet la consigne de vérification
+au responsable de marque dans l’UI et le contexte RTIS. L’usage est immédiat,
+la confirmation réelle versionnée reste distincte et journalise acteur/consigne.
+Rempli/0/false/preuves/non-applicabilité sont conservés. V reconnaît un échange
+partenaire documenté sans imposer un produit acheté. ADR0236 précise le périmètre
+et amende le traitement du vide d’ADR0231. Le checkpoint5 127/5 128 avait
+détecté un défaut de contexte T ; il ne reproduit plus dans la suite exacte.
+Sur demande opérateur, les consignes sont factorisées dans le candidat testé
+localement : responsabilité/usage communs, six profils, verificationRef par champ
+et registre unique des profils utilisés par contexte. L’UI garde le texte complet ;
+conseillers/R/T/I/Notoria/auto-fill gardent qualification et consigne résoluble.
+Dernier reçu local : 5 132 tests/499 fichiers, 21 PostgreSQL et ciblé enums70/4
+verts ; typage/lints sans erreur (25 avertissements), build exit0, stress sans
+finding et six requêtes USER HTTP200. PG18 antérieur conservé. Natif desktop
+local : cinq rites/consignes lisibles, Gazette dépliée et lecture Oracle reçus ;
+aucune exception/réponse500 dans les fenêtres observées. Le bouton « Valider tel
+quel » est reçu sur la seule fixture : E v3→v4, cinq rites inchangés, origine
+INFERRED→HUMAN, liste3→2 et historique version relue3/consigne RITUALS complète.
+Aucune adoption du dossier réel déduite. Oracle fixture0 rédigée/
+33 sur35 alimentées ne reçoit pas le rapport réel. La tentative390px est restée
+à1 578px ; mobile non reçu et réglage réinitialisé.
+
+Correctifs présents dans le candidat reçu localement au périmètre ci-dessus ;
+production538 non déployée, aucun ADVE complet, Oracle entier ou MVP annoncé.
+Les formats ADVE legacy
+invalides restent une dette distincte avec normalisation sémantique contrôlée
+par source/version, schémas stricts, cascade et recette huit piliers/35 sections
+dans RESIDUAL-DEBT. Aucune donnée ou valeur métier privée publiée.
+
 ### 537 — sorties de budget et progression absentes, candidat (2026-11-03)
 
 Après536, S attend encore une enveloppe comparable, sa ventilation et des cibles
@@ -50,8 +113,10 @@ et stress compilé exit 0. HTTP reçoit les trois scénarios COMPLETE à 100 %, 
 et la parité exacte des quatre sorties Oracle. Native : roadmap à 100 % socle/
 champs, Complet ; ADVE et S complets dans Notoria. R/T/I périmés dans la fixture
 seulement, faute de cascade demandée. La divergence de cardinalité S est reçue
-corrigée localement ; 537 n’est pas livrée. Livraison et données réelles restent
-ouvertes dans RESIDUAL-DEBT. Aucun nouveau service, Intent, route ou chiffre
+corrigée localement. L’attente technique de ce checkpoint est depuis remplacée
+par la réception image/runtime537 avec données stockées conservées ; les écarts
+de validation dérivée sont reproduits avec le code exact. Les amendements réels
+et la réception huit piliers/35 sections restent ouverts dans RESIDUAL-DEBT. Aucun nouveau service, Intent, route ou chiffre
 métier publié. Compléments ADVE préparés hors checkout et défauts Gazette/Oracle
 restent des travaux ouverts, pas des réparations reçues.
 

@@ -8,7 +8,8 @@
  * schema Zod, stable) : ils verrouillent la MÉCANIQUE, pas les données.
  */
 import { describe, it, expect } from "vitest";
-import { assessPillar } from "@/server/services/pillar-maturity/assessor";
+import { assessPillar, isFieldSatisfied } from "@/server/services/pillar-maturity/assessor";
+import { findEmptyArrayCellPaths, canInferMissingConceptualField } from "@/lib/types/pillar-maturity-contracts";
 import { getContract } from "@/server/services/pillar-maturity/contracts-loader";
 import type { PillarMaturityContract, FieldRequirement } from "@/lib/types/pillar-maturity";
 
@@ -23,6 +24,24 @@ const REQ: FieldRequirement = {
 };
 const missingCat = (content: Record<string, unknown>) =>
   assessPillar("v", content, contractWith(REQ)).missing.includes("cat");
+
+describe("missing conceptual premises can be proposed pending verification", () => {
+  const rites = [{ fromStage: "SPECTATEUR", toStage: "INTERESSE", rituelEntree: "Première découverte proposée" }];
+  it("accepts an empty required collection or text but never a malformed proposal", () => {
+    expect(canInferMissingConceptualField("e", "ritesDePassage", { ritesDePassage: [] }, rites)).toBe(true);
+    expect(canInferMissingConceptualField("e", "primaryChannel", { primaryChannel: "" }, "APP")).toBe(true);
+    expect(canInferMissingConceptualField("e", "ritesDePassage", { ritesDePassage: [] }, [{ rituelEntree: "Incomplet" }])).toBe(false);
+    expect(canInferMissingConceptualField("e", "ritesDePassage", { ritesDePassage: [] }, [])).toBe(false);
+  });
+  it("keeps filled decisions, zero, evidence and known non-product exchange", () => {
+    expect(canInferMissingConceptualField("e", "primaryChannel", { primaryChannel: "EMAIL" }, "APP")).toBe(false);
+    expect(canInferMissingConceptualField("v", "unitEconomics.cac", { unitEconomics: { cac: 0 } }, 100)).toBe(false);
+    expect(canInferMissingConceptualField("a", "preuvesAuthenticite", { preuvesAuthenticite: [] }, ["Une preuve inventée"])).toBe(false);
+    expect(canInferMissingConceptualField("s", "rejectedFromI", { rejectedFromI: [] }, ["Un rejet inventé"])).toBe(false);
+    const row = { personaName: "Partenaire", productNames: [], valueToBrand: ["Trafic"], valueToActor: ["Audience"], actorCosts: ["Temps"], dependencyConditions: ["Participation"] };
+    expect(canInferMissingConceptualField("v", "personaSegmentMap[0].productNames", { personaSegmentMap: [row] }, ["Achat fictif"])).toBe(false);
+  });
+});
 
 describe("array_items_complete — profondeur par item", () => {
   it("item stub (identité seule) → INCOMPLET (c'est le trou que ça ferme)", () => {
@@ -53,6 +72,18 @@ describe("array_items_complete — profondeur par item", () => {
 });
 
 describe("intégration — la matrice produit V est profonde dans le contrat dérivé", () => {
+  it("accepts an explicitly documented non-product exchange without inventing an offer", () => {
+    const req = getContract("v").stages.COMPLETE.find(r => r.path === "personaSegmentMap")!;
+    const row = { personaName: "Stand partenaire", productNames: [], valueToBrand: ["Animation et trafic"],
+      valueToActor: ["Accès au public"], actorCosts: ["Temps de présence"], dependencyConditions: ["Affluence suffisante"] };
+    const content = { personaSegmentMap: [row] };
+    expect(isFieldSatisfied(content, req)).toBe(true);
+    expect(findEmptyArrayCellPaths("v", content).map(c => c.path)).not.toContain("personaSegmentMap[0].productNames");
+    expect(isFieldSatisfied({ personaSegmentMap: [{ personaName: row.personaName, productNames: [] }] }, req)).toBe(false);
+    expect(isFieldSatisfied({ personaSegmentMap: [{ ...row, productNames: undefined }] }, req)).toBe(false);
+    expect(isFieldSatisfied({ personaSegmentMap: [{ ...row, valueToActor: [] }] }, req)).toBe(false);
+    expect(content.personaSegmentMap[0]?.productNames).toEqual([]);
+  });
   it("produitsCatalogue = array_items_complete avec les cellules de la matrice en requiredItemKeys", () => {
     const v = getContract("v");
     const cat = v.stages.COMPLETE.find((r) => r.path === "produitsCatalogue");

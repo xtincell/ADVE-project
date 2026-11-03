@@ -276,3 +276,77 @@ describe("documentary amendments through Mestor", () => {
     expect(await db.pillarVersion.count({ where: { pillarId: f.pillar.id } })).toBe(0);
   });
 });
+
+describe("agent amendments cannot report a Bible-reverted field as success", () => {
+  it("rejects the changed field without version or score side effects", async () => {
+    const f = await fixture();
+    const previous = { valeurs: [{ value: "AUTONOMIE", rank: 1, costOfHolding: "Un coût de recette" }] };
+    const a = await db.pillar.create({ data: { strategyId: f.brand.id, key: "a", content: previous } });
+    const proposed = ["AUTONOMIE", "ACCOMPLISSEMENT", "BIENVEILLANCE", "UNIVERSALISME"].map((value, i) => ({ value, rank: i + 1, costOfHolding: "Un coût de recette" }));
+    const result = await gateway.writePillarAndScore({ strategyId: f.brand.id, pillarKey: "a", operation: { type: "SET_FIELDS", fields: [{ path: "valeurs", value: proposed }] }, author: { system: "MESTOR", userId, reason: "Recette de refus sans effet de bord" }, options: { expectedVersion: 1, sourceReceipts: [f.receipt], rejectOnProvenanceRefusal: true } });
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("BIBLE_FIELD_REFUSED");
+    const after = await db.pillar.findUniqueOrThrow({ where: { id: a.id } });
+    expect(after.currentVersion).toBe(1);
+    expect(after.content).toEqual(previous);
+    expect(await db.pillarVersion.count({ where: { pillarId: a.id } })).toBe(0);
+    expect(await db.scoreSnapshot.count({ where: { strategyId: f.brand.id } })).toBe(0);
+  });
+});
+
+describe("empty human choices become versioned working premises", () => {
+  const rites = [{ fromStage: "SPECTATEUR", toStage: "INTERESSE", rituelEntree: "Découverte proposée à vérifier avec l’équipe" }];
+  async function emptyFixture() {
+    const f = await fixture();
+    const previous = { ritesDePassage: [], primaryChannel: "", promesseExperience: "Promesse conservée",
+      _fieldProvenance: { ritesDePassage: "HUMAN", primaryChannel: "HUMAN", promesseExperience: "HUMAN" } };
+    const e = await db.pillar.create({ data: { strategyId: f.brand.id, key: "e", content: previous } });
+    return { ...f, previous, e };
+  }
+  it("persists inferred rites without inventing review; confirmation records the reviewer and instruction", async () => {
+    const f = await emptyFixture();
+    const result = await operatorAmendPillar({ ...f.intent, pillarKey: "e", field: "ritesDePassage", proposedValue: rites, mode: "STRATEGIC_REWRITE" });
+    expect(result.status).toBe("OK");
+    const after = await db.pillar.findUniqueOrThrow({ where: { id: f.e.id } });
+    expect(after.content).toMatchObject({ ...f.previous, ritesDePassage: rites,
+      _fieldProvenance: { ...f.previous._fieldProvenance, ritesDePassage: "INFERRED" } });
+    expect(after.currentVersion).toBe(2);
+    const reco = await db.recommendation.findFirstOrThrow({ where: { strategyId: f.brand.id } });
+    expect(reco).toMatchObject({ status: "APPLIED", reviewedBy: null, reviewedAt: null });
+    const history = await db.pillarVersion.findFirstOrThrow({ where: { pillarId: f.e.id } });
+    expect(history.content).toMatchObject({ ritesDePassage: [] });
+    const context = serializePillar("e", after.content);
+    expect(context).toContain('"verificationRef": "RITUALS"');
+    expect(context).toContain("Responsable de marque");
+    expect(context).toContain("le déclencheur");
+    expect(context).toContain('"statut": "INFERRED"');
+    const caller = pillarRouter.createCaller({ db, session: { user: { id: userId, role: "ADMIN", operatorId }, expires: new Date(Date.now() + 60000).toISOString() }, headers: new Headers() } as never);
+    expect(await caller.confirmInferredField({ strategyId: f.brand.id, pillarKey: "E", fieldPath: "ritesDePassage", expectedVersion: 2 })).toMatchObject({ ok: true });
+    const confirmation = await db.pillarVersion.findFirstOrThrow({ where: { pillarId: f.e.id, version: 2 } });
+    expect(confirmation.author).toContain(userId);
+    expect(confirmation.reason).toContain("version relue 2");
+    expect(confirmation.reason).toContain("Consigne");
+    const confirmed = await db.pillar.findUniqueOrThrow({ where: { id: f.e.id } });
+    expect((confirmed.content as Record<string, unknown>).ritesDePassage).toEqual(rites);
+    expect(inferredFieldPaths(confirmed.content as Record<string, unknown>, {}, "e")).not.toContain("ritesDePassage");
+  });
+  it("fills empty human text without replacing a populated human neighbour", async () => {
+    const f = await emptyFixture();
+    const accepted = await operatorAmendPillar({ ...f.intent, pillarKey: "e", field: "primaryChannel", proposedValue: "APP", mode: "STRATEGIC_REWRITE" });
+    expect(accepted.status).toBe("OK");
+    const denied = await operatorAmendPillar({ ...f.intent, pillarKey: "e", field: "promesseExperience", proposedValue: "Promesse écrasée", mode: "STRATEGIC_REWRITE", expectedVersion: 2 });
+    expect(denied.status).toBe("FAILED");
+    expect((await db.pillar.findUniqueOrThrow({ where: { id: f.e.id } })).content).toMatchObject({ primaryChannel: "APP", promesseExperience: "Promesse conservée", _fieldProvenance: { primaryChannel: "INFERRED", promesseExperience: "HUMAN" } });
+  });
+  it("refuses unversioned and stale empty replacements before changing the stored choice", async () => {
+    const f = await emptyFixture();
+    const request = { strategyId: f.brand.id, pillarKey: "e" as const,
+      operation: { type: "SET_FIELDS" as const, fields: [{ path: "ritesDePassage", value: rites }] },
+      author: { system: "MESTOR" as const, userId, reason: "Recette du verrou de version" },
+      options: { rejectOnProvenanceRefusal: true } };
+    expect((await gateway.writePillarAndScore(request)).success).toBe(false);
+    expect((await gateway.writePillarAndScore({ ...request, options: { ...request.options, expectedVersion: 2 } })).success).toBe(false);
+    expect((await db.pillar.findUniqueOrThrow({ where: { id: f.e.id } })).content).toEqual(f.previous);
+    expect(await db.pillarVersion.count({ where: { pillarId: f.e.id } })).toBe(0);
+  });
+});

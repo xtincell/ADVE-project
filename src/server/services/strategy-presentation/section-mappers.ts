@@ -990,7 +990,10 @@ export function checkSectionCompleteness(doc: StrategyPresentationDocument): Com
     ),
     "timeline-gouvernance": check(s.timelineGouvernance.campaigns.length > 0, s.timelineGouvernance.teamMembers.length > 0),
     "equipe": check(!!s.equipe.operator || s.equipe.equipeDirigeante.length > 0, s.equipe.equipeDirigeante.length > 0 && !!s.equipe.equipeComplementarite),
-    "conditions-etapes": check(!!s.conditionsEtapes.client, s.conditionsEtapes.contracts.length > 0),
+    // A diagnosed absence of contract is a known state, not missing ADVE.
+    // The section also renders the next steps and explicitly says no contract.
+    "conditions-etapes": check(!!s.conditionsEtapes.client || (s.conditionsEtapes.prochainesEtapes?.length ?? 0) > 0,
+      (s.conditionsEtapes.prochainesEtapes?.length ?? 0) > 0 && (s.conditionsEtapes.prochainesEtapes ?? []).every(step => !!step.action.trim())),
   };
 }
 

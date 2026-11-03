@@ -153,7 +153,7 @@ export default function PropositionPage() {
    * Les deux portaient le même dénominateur 35 sans être nommées : sur SPAWT,
    * 35 sections étaient rédigées et la page n'affichait que « 21/35 ».
    */
-  const writtenSections = oracleRows.filter((s) => s.status === "COMPLETE").length;
+  const writtenSections = oracleRows.filter((s) => s.payloadSize > 2).length;
 
   // ── Ce qu'il faut avant que le diagnostic tienne debout ──
   // Ces trois cartes parlaient en interne : « au moins ENRICHED » (une valeur

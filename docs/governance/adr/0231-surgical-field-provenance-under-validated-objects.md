@@ -6,6 +6,12 @@
 **Depends on** : ADR-0023, ADR-0032, ADR-0172, ADR-0229
 **Supersedes** : aucun ; étend le grain des origines sans réécrire les décisions passées
 
+**Amendement doctrinal du3 novembre2026** : [ADR-0236](0236-inferred-premises-and-brand-verification.md)
+remplace la protection d’un vide conceptuel comme choix définitif par une
+proposition INFERRED utilisable, à vérifier par le responsable de marque. Les
+règles et réceptions ci-dessous restent attribuées à leur état antérieur ; les
+valeurs remplies, preuves et garanties de version/provenance restent protégées.
+
 ## Contexte
 
 Le candidat 531 reprend le correctif ADVE du candidat 530 après intégration

@@ -24,14 +24,14 @@ import { db } from "@/lib/db";
 import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 import { loadStrategyContextForFramework } from "@/server/services/seshat/context-store/strategy-context";
 import { getOracleBrandContextByQuery, formatSourceReferences, type OracleContextBlock } from "@/server/services/seshat/context-store/oracle-augment";
-import { serializePillar } from "@/server/services/utils/pillar-context";
+import { serializePillar, serializeVerificationInstructions } from "@/server/services/utils/pillar-context";
 import { untrustedContentBody, wrapUntrusted } from "@/server/services/utils/untrusted-content";
 import { signalObservation } from "@/domain/signal-observation";
 import { metricObservationTime } from "@/domain/external-metric";
 import { SourceReceiptSchema } from "@/domain/source-certainty";
 import { excerptForQuery, sourceQueryForDocument } from "@/server/services/seshat/context-store/chunker";
 import { COUNCIL_EVIDENCE_NOTICE } from "./personas";
-import { coerceProvenance, fieldStatusFor } from "@/domain/field-provenance";
+import { coerceProvenance, fieldStatusFor, type FieldVerificationProfile } from "@/domain/field-provenance";
 import type { CouncilEvidenceExcerpt } from "./schemas";
 
 /** Budgets déterministes (caractères) — troncature par bloc, jamais silencieuse. */
@@ -60,7 +60,7 @@ function includedEvidence(contextBlock: string, evidence: CouncilEvidenceExcerpt
 /** Carry the existing field authority before the prose can consume its budget. */
 function qualifiedPillar(key: string, pillar: {
   id?: string; currentVersion?: number; content: unknown; fieldCertainty?: unknown; updatedAt?: Date;
-}, max: number): { text: string; evidence: CouncilEvidenceExcerpt[] } {
+}, max: number, verificationProfiles: Set<FieldVerificationProfile>): { text: string; evidence: CouncilEvidenceExcerpt[] } {
   const content = pillar.content && typeof pillar.content === "object" && !Array.isArray(pillar.content)
     ? pillar.content as Record<string, unknown> : {};
   const certainty = pillar.fieldCertainty && typeof pillar.fieldCertainty === "object" && !Array.isArray(pillar.fieldCertainty)
@@ -84,9 +84,11 @@ function qualifiedPillar(key: string, pillar: {
     // Keep each field packet atomic. A clipped leaf/absent packet cannot be
     // cited as an entire original field, and a status table must not eat the
     // whole excerpt budget before any values have reached the caller.
-    const serialized = serializePillar(key, { [field]: value }, (path) => coerceProvenance(status(path)));
+    const profiles = new Set<FieldVerificationProfile>();
+    const serialized = serializePillar(key, { [field]: value, _fieldProvenance: content._fieldProvenance }, (path) => coerceProvenance(status(path)), profiles);
     const packet = `${field} : ${provenance}\nRéférence de citation : ${JSON.stringify(reference)}\n${serialized}`;
     if (packet.length + 1 > remaining) { omitted++; continue; }
+    for (const profile of profiles) verificationProfiles.add(profile);
     remaining -= packet.length + 1;
     lines.push(packet);
     if (pillar.id) {
@@ -204,6 +206,7 @@ export async function buildAssistantContext(
 
   const byKey = new Map(pillars.map((p) => [p.key.toLowerCase(), p]));
   const sections: string[] = [];
+  const verificationProfiles = new Set<FieldVerificationProfile>();
   const evidence: CouncilEvidenceExcerpt[] = [...observationsBlock.evidence];
 
   // Base stratégie (nom, score, business, capacité, résumés) — source canonique.
@@ -217,7 +220,7 @@ export async function buildAssistantContext(
       sections.push(`[Pilier ${k.toUpperCase()}] non renseigné.`);
       continue;
     }
-    const qualified = qualifiedPillar(k, p, FOUNDER_PILLAR_MAX);
+    const qualified = qualifiedPillar(k, p, FOUNDER_PILLAR_MAX, verificationProfiles);
     evidence.push(...qualified.evidence);
     sections.push(
       wrapUntrusted(
@@ -233,7 +236,7 @@ export async function buildAssistantContext(
   for (const k of [...PILLAR_STORAGE_KEYS].filter((k) => !founderSet.includes(k))) {
     const p = byKey.get(k);
     if (!p?.content || Object.keys(p.content as object).length === 0) continue;
-    const qualified = qualifiedPillar(k, p, DERIVED_PILLAR_MAX);
+    const qualified = qualifiedPillar(k, p, DERIVED_PILLAR_MAX, verificationProfiles);
     evidence.push(...qualified.evidence);
     sections.push(
       wrapUntrusted(
@@ -260,7 +263,7 @@ export async function buildAssistantContext(
 
   sections.push(communityBlock);
 
-  const contextBlock = sections.join("\n\n");
+  const contextBlock = serializeVerificationInstructions(verificationProfiles) + sections.join("\n\n");
   const supplied = includedEvidence(contextBlock, evidence);
   return {
     contextBlock,
@@ -341,10 +344,11 @@ export async function buildExpertContext(
   const qualified = qualifiedRag(rag, topic);
   const sourcesSeen = qualified.evidence.length > 0;
   const sections: string[] = [];
+  const verificationProfiles = new Set<FieldVerificationProfile>();
   const evidence = [...observationsBlock.evidence, ...qualified.evidence];
   sections.push(observationsBlock.text);
   if (pillar?.content && Object.keys(pillar.content as object).length > 0) {
-    const qualified = qualifiedPillar(pillarKey, pillar, EXPERT_PILLAR_MAX);
+    const qualified = qualifiedPillar(pillarKey, pillar, EXPERT_PILLAR_MAX, verificationProfiles);
     evidence.push(...qualified.evidence);
     sections.push(
       wrapUntrusted(
@@ -380,7 +384,7 @@ export async function buildExpertContext(
         : "[Documentation] AUCUN document de la marque n'a été retrouvé par cette sélection. Ta critique porte donc sur la cohérence interne, pas sur la conformité aux sources — dis-le explicitement plutôt que d'affirmer qu'un point est vérifié.",
   );
 
-  const contextBlock = sections.join("\n\n");
+  const contextBlock = serializeVerificationInstructions(verificationProfiles) + sections.join("\n\n");
   const supplied = includedEvidence(contextBlock, evidence);
   return { contextBlock, ragUsed: !!qualified.text,
     sourcesSeen: supplied.some((item) => item.reference.kind === "DOCUMENT"), evidence: supplied };

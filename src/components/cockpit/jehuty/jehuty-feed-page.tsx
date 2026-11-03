@@ -188,15 +188,15 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
   const handleCurate = (item: JehutyFeedItem, action: "PINNED" | "DISMISSED") => {
     if (!item.strategyId) return;
     const [sourceType] = item.id.split(":");
-    const itemType = sourceType === "signal" ? "SIGNAL" : sourceType === "reco" ? "RECOMMENDATION" : "DIAGNOSTIC";
-    curateMutation.mutate({ strategyId: item.strategyId, itemType: itemType as "SIGNAL" | "RECOMMENDATION" | "DIAGNOSTIC", itemId: item.sourceId, action });
+    const itemType = sourceType === "ext" ? "EXTERNAL" : sourceType === "signal" ? "SIGNAL" : sourceType === "reco" ? "RECOMMENDATION" : "DIAGNOSTIC";
+    curateMutation.mutate({ strategyId: item.strategyId, itemType: itemType as "SIGNAL" | "RECOMMENDATION" | "DIAGNOSTIC" | "EXTERNAL", itemId: item.sourceId, action });
   };
 
   const handleUnpin = (item: JehutyFeedItem) => {
     if (!item.strategyId) return;
     const [sourceType] = item.id.split(":");
-    const itemType = sourceType === "signal" ? "SIGNAL" : sourceType === "reco" ? "RECOMMENDATION" : "DIAGNOSTIC";
-    removeCurationMutation.mutate({ strategyId: item.strategyId, itemType: itemType as "SIGNAL" | "RECOMMENDATION" | "DIAGNOSTIC", itemId: item.sourceId });
+    const itemType = sourceType === "ext" ? "EXTERNAL" : sourceType === "signal" ? "SIGNAL" : sourceType === "reco" ? "RECOMMENDATION" : "DIAGNOSTIC";
+    removeCurationMutation.mutate({ strategyId: item.strategyId, itemType: itemType as "SIGNAL" | "RECOMMENDATION" | "DIAGNOSTIC" | "EXTERNAL", itemId: item.sourceId });
   };
 
   const handleTriggerNotoria = (item: JehutyFeedItem) => {
@@ -561,7 +561,7 @@ function DispatchActions({
       <button onClick={onDismiss} className="flex items-center gap-1.5 text-foreground-muted hover:text-error transition-colors">
         <X className="h-3 w-3" /> Écarter
       </button>
-      {item.sourceType === "SIGNAL" && (
+      {item.sourceType === "SIGNAL" && !item.externalUrl && (
         <button
           onClick={onNotoria}
           disabled={isNotoriaPending}
@@ -601,7 +601,7 @@ interface LeadStoryProps {
 }
 
 function ReceivedObservation({ text }: { text: string }) {
-  return <details className="mt-5 rounded-lg border border-border-subtle p-4"><summary className="cursor-pointer text-sm text-foreground-secondary focus-visible:outline-2 focus-visible:outline-accent">Consulter l’observation complète</summary><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground-secondary">{text}</p></details>;
+  return <details className="mt-5 rounded-lg border border-border-subtle p-4"><summary className="cursor-pointer text-sm text-foreground-secondary focus-visible:outline-2 focus-visible:outline-accent">Lire le contenu complet</summary><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground-secondary">{text}</p></details>;
 }
 
 function LeadStory({
@@ -620,6 +620,7 @@ function LeadStory({
     <article className={`grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-x-10 gap-y-6 ${isPinned ? "border-l-2 border-accent pl-6" : ""}`}>
       {/* Body */}
       <div>
+        {item.imageUrl && <ArticleThumb src={item.imageUrl} className="mb-5 aspect-[16/9]" />}
         <div className="flex items-center gap-2 font-mono text-2xs uppercase tracking-widest text-foreground-muted mb-3">
           <Icon className="h-3.5 w-3.5 text-accent" />
           <span>{CATEGORY_RUBRIC[item.category]}</span>
@@ -861,6 +862,7 @@ function Dispatch({
         />
       </div>
 
+      {item.source && <p className="mt-3 text-xs text-foreground-muted">Source : {item.source}</p>}
       {isTriggered && (
         <div className="mt-2 font-mono text-2xs uppercase tracking-widest text-accent flex items-center gap-1.5">
           <Zap className="h-3 w-3" /> Recommandation lancée
