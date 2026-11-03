@@ -2,6 +2,8 @@
 
 **Un point de départ explicite, une cible et les preuves attendues précèdent toute conclusion de popularité.**
 
+- PR de livraison réelle : #1129.
+
 - Réception locale : 5 190 tests/506 fichiers, PostgreSQL 3 tests/2 fichiers, typage et lint sans erreur. Entrée native contexte→A avec déclaration conservée ; trois concepts de fixture lus dans le radar et dans le mapper Oracle. Cela ne vaut pas réception du dossier SPAWT réel.
 - Correctif voisin : le contexte métier accepte un positionnement tarifaire absent sans exception ; reçu PostgreSQL et consigné dans PATCHED-SYMPTOMS.
 
