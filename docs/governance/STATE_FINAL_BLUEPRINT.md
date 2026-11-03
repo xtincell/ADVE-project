@@ -2140,10 +2140,10 @@ exception/réponse500 dans les fenêtres observées. Confirmation native sur la
 seule fixture : E v3→v4, rites inchangés, INFERRED→HUMAN et historique avec
 version relue3/consigne RITUALS complète ; aucune adoption réelle déduite.
 Oracle fixture 0 rédigée/33
-sur35 alimentées ne reçoit pas le rapport réel. Mobile non reçu, production538
-non déployée et réception huit/35 ouverte ; aucune complétude globale déduite.
-537 est reçue techniquement avec conservation du stocké ; le checkpoint suivant
-reste daté.
+sur35 alimentées ne reçoit pas le rapport réel. Ce checkpoint local reste
+historique : technique538, conservation et lecture native reçues selon ADR-0236.
+ADVE huit piliers, Oracle frais, Gazette presse/images, mobile et confirmation
+humaine réelle restent ouverts ; aucune complétude globale déduite.
 
 ### Modèle financier reçu536 et prémisses de planification537 (2026-11-03)
 

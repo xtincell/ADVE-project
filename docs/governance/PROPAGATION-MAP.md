@@ -36,10 +36,10 @@ consignes, Gazette dépliée et lecture Oracle reçus, sans exception/réponse50
 dans les fenêtres observées. Confirmation native sur la seule fixture : E v3→v4,
 rites inchangés, INFERRED→HUMAN et historique version relue3/consigne RITUALS
 complète ; aucune adoption du dossier réel déduite. Oracle fixture 0 rédigée/33 sur35 alimentées ne
-reçoit pas le rapport réel. Mobile non reçu ; production538 non déployée,
-confirmation réelle, cascade et réception huit piliers/35 sections ouvertes.
-537 est reçue techniquement ; les
-attentes de livraison dans le checkpoint ci-dessous sont historiques.
+reçoit pas le rapport réel. Ce checkpoint local reste historique : technique538,
+conservation et lecture native de production reçues selon ADR-0236. Confirmation
+réelle, ADVE huit piliers, Oracle frais, Gazette presse/images et mobile ouverts.
+Les attentes techniques537 ci-dessous restent historiques.
 [ADR-0236 Proposed](adr/0236-inferred-premises-and-brand-verification.md).
 
 ### Prémisses V/E → plan S → Oracle — candidat537 (2026-11-03)
