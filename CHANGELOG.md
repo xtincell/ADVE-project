@@ -1,5 +1,7 @@
 ## v6.27.541 — fix(oracle): réactualiser le document depuis son état enregistré (2026-11-03)
 
+- PR de livraison réelle : #1130.
+
 **Un document déjà rédigé dispose d’une action explicite pour reprendre les sections qui en ont besoin.**
 
 - Le bouton principal « Réactualiser l’Oracle » cible les sections périmées, manquantes ou en échec via `oracle.assembleOracle` et sa liste explicite de sections. Les sections déjà à jour restent conservées ; les choix manuels de portée restent accessibles dans les options.
