@@ -253,3 +253,5 @@ exiger le label avant merge via une protection de branche.
 | 2026-11-03 | #1127 | docs/reception538 | NEFER — mandat opérateur | Clôture documentaire de PR1126 : CI16/16, image/runtime538 exacts, conservation et lecteurs natifs reçus. Aucun code/version/modèle ni nouvelle image. ADVE huit piliers, Oracle frais, collecte Gazette et mobile restent ouverts. |
 
 | 2026-11-03 | #1128 | fix/cockpit-guidance539 | NEFER — mandat opérateur | Notoria distingue production/fraîcheur et expose la reprise avant calcul ; lecteur Gazette sans extrait répété, focus continu et lecture de digest propre à la marque. Plan Overton S/T distinct des observations. Graphe conviction et produits d’appel restent une tranche ouverte, aucun100%global. |
+
+| 2026-11-03 | #1129 | feat/overton-concepts540 | NEFER — mandat opérateur | Concepts A par public/pays, six jalons, raccords radar/S/Oracle et entrée partielle. Graphe existant : preuves conservées, transitions atomiques, cible dans les deux sens. Pas de popularité fictive ni de nouveau service/Intent/modèle/fournisseur. Réception métier et terrain distinctes. |
