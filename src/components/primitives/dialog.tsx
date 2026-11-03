@@ -54,6 +54,11 @@ export function Dialog({
   const titleId = React.useId();
   const descId = React.useId();
   const contentRef = React.useRef<HTMLDivElement>(null);
+  // Event handlers may change on every keystroke. Focus belongs to the open
+  // lifecycle, not to the identity of the parent's inline callback.
+  const handleEscape = React.useEffectEvent(() => {
+    if (dismissible) onOpenChange(false);
+  });
 
   React.useEffect(() => {
     if (!open) return;
@@ -63,20 +68,21 @@ export function Dialog({
     lockBodyScroll();
 
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape" && dismissible) onOpenChange(false);
+      if (e.key === "Escape") handleEscape();
     }
     document.addEventListener("keydown", handleKey);
 
-    requestAnimationFrame(() => {
+    const frame = requestAnimationFrame(() => {
       contentRef.current?.focus();
     });
 
     return () => {
+      cancelAnimationFrame(frame);
       document.removeEventListener("keydown", handleKey);
       unlockBodyScroll();
       previousActive?.focus?.();
     };
-  }, [open, onOpenChange, dismissible]);
+  }, [open]);
 
   if (!open) return null;
 

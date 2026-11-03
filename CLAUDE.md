@@ -1,3 +1,13 @@
+## 539 candidate — reprise cockpit, lecteur et raccord radar (3 novembre 2026)
+
+539 distingue dans Notoria le contenu déjà produit de sa fraîcheur et des permissions de calcul.
+La cascade existante est expliquée avant lancement ; ADVE conservé, Gazette/Oracle distincts.
+Dialog ne vole plus le focus à chaque frappe ; le lecteur Gazette déplie le corps sans doublon.
+Le radar relit les digests de marque/items, sépare articles et mentions spontanées et reprend le
+plan S/T même sans mesure. Tests et recette locale reçus ; production539 encore ouverte.
+Le chantier Overton convictions/catégorie/marque, six zones canoniques, preuves et entrée
+intake/scoreur est explicitement ouvert dans RESIDUAL-DEBT. Aucun outil complet ni100%global.
+
 ## 538 reçue techniquement — refus fidèles et lecteurs Gazette/Oracle (3 novembre 2026)
 
 État courant : 538 est reçue techniquement en production, PR1126 fusionnée en

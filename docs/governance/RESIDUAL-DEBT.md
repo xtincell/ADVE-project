@@ -1,3 +1,22 @@
+## 539/540 — relier les convictions aux preuves Overton et aux produits d’appel (2026-11-03)
+
+Le raccord539 lit les articles du digest de marque et le plan S/T sans inventer de mesure.
+Il ne reçoit pas le moteur de popularité. L’opérateur demande un concept traçable incarné
+par la marque, une position initiale, des jalons précis et une première lecture dans les
+produits d’appel. SPAWT : moteur de décision culinaire, rôle éditorialiste donnant voix
+aux créateurs foodies qui construisent leur communauté (orientation déclarée, pas résultat).
+
+**Plan de résolution** : étendre le graphe Overton existant/ADR0148 et ses writers gouvernés ;
+séparer conviction, catégorie et marque par pays/public. Garder UNTHINKABLE, RADICAL,
+ACCEPTABLE, SENSIBLE, POPULAR, POLICY. Relier les postulats ADVE, baseline, preuves favorables
+et contraires datées, zone courante et cible, sans transformer absence de preuve en rejet.
+Corriger identité par périmètre, conservation/dédoublonnage des preuves et transitions
+atomiques avant ingestion automatisée. Brancher radar, stratégie, Oracle, intake et scoreur
+sur la même lecture partielle ; aucun bonus de résultat observé issu d’une hypothèse.
+**Déclencheur** : mandat actuel, après réception technique539. Effort : tranche métier séparée,
+tests domaine/PG/isolation puis lecture native/prod. Admission via ADVE existant, pas de
+surcouche ni second moteur. La fraîcheur RTIS/Oracle réelle et la recette globale restent ouvertes.
+
 ## 538 — recevoir les lecteurs Gazette/Oracle et normaliser les formes ADVE legacy (2026-11-03)
 
 **Technique538 reçue, réception métier ouverte** : Gazette conserve observation intégrale et

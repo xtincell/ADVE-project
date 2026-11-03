@@ -28,6 +28,17 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 539 — états, lecture, focus et digest mal raccordés (2026-11-03)
+
+Notoria utilisait une autorisation de calcul pour dessiner une coche de production ;
+les états sont désormais dérivés séparément de la matière et de sa fraîcheur.
+Gazette répétait extrait puis corps complet : un seul corps remplace maintenant l’extrait.
+Dialog dépendait de l’identité du callback inline : chaque frappe réexécutait le focus.
+L’effet dépend désormais uniquement de l’ouverture, callback courant par useEffectEvent ;
+régression rouge/verte et saisie native continue reçues. Le radar lisait weakSignals alors
+que brand-feed écrit items : lecteur corrigé et isolé par marque/pays. Hypothèse commune :
+contrats de lecture divergents des producteurs ; la tranche graphe Overton reste en RESIDUAL-DEBT.
+
 ### 538 — contenu tronqué et faux états vides, correctif candidat (2026-11-03)
 
 Les mappers Gazette perdaient le texte après120/300 caractères ; seul le signal

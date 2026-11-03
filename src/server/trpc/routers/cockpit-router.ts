@@ -5,7 +5,7 @@ import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { checkPaidTier } from "@/server/services/glory-tools/tier-gate";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import { getOrBuildBrandFeed } from "@/server/services/seshat/external-feeds/brand-feed";
-import { ADVE_KEYS, ADVE_STORAGE_KEYS } from "@/domain";
+import { ADVE_KEYS, ADVE_STORAGE_KEYS, readOvertonStrategyPlan } from "@/domain";
 import { evaluatePillarReadiness } from "@/server/governance/pillar-readiness";
 import {
   shapeCommunityDashboard,
@@ -14,7 +14,7 @@ import {
   EVANGELISTE_THRESHOLD,
   type CommunityDashboard,
 } from "@/server/services/community-dashboard";
-import type { ConnectorResult, OvertonRadarSignal } from "@/domain";
+import type { ConnectorResult, OvertonRadarSignal, OvertonStrategyPlan } from "@/domain";
 /* lafusee:governed-active — router read-only (queries dashboard/overtonSignal/getCommunityDashboard uniquement) ; checkPaidTier = garde tier utilitaire, aucune mutation à gouverner */
 
 /** Founder community dashboard result : paid-tier-denial arm (FR32) over the DTO. */
@@ -30,7 +30,7 @@ export type CommunityDashboardResult =
  */
 export type OvertonSignalResult =
   | { state: "TIER_GATE_DENIED"; configureUrl: string }
-  | ConnectorResult<OvertonRadarSignal>;
+  | (ConnectorResult<OvertonRadarSignal> & { strategyPlan?: OvertonStrategyPlan });
 
 /**
  * Read the canonical sector slug for a Strategy from `businessContext.sector`
@@ -49,7 +49,7 @@ function extractSectorSlug(businessContext: unknown): string | null {
 /**
  * Extract a brand orientation vector (tag → strength in [0,1]) from pillar D
  * (positioning) content. Tries an `axe` / `tags` object. Absent → `{}` (the
- * radar renders a centred brand polygon — honest "no positioning vector yet",
+ * radar keeps the brand polygon absent — honest "no positioning vector yet",
  * never a fabricated orientation).
  */
 function extractBrandTags(pillarDContent: unknown): Record<string, number> {
@@ -59,7 +59,7 @@ function extractBrandTags(pillarDContent: unknown): Record<string, number> {
   if (!source || typeof source !== "object" || Array.isArray(source)) return {};
   const tags: Record<string, number> = {};
   for (const [k, v] of Object.entries(source as Record<string, unknown>)) {
-    if (typeof v === "number") tags[k] = Math.max(0, Math.min(1, v));
+    if (typeof v === "number" && Number.isFinite(v)) tags[k] = Math.max(0, Math.min(1, v));
   }
   return tags;
 }
@@ -144,7 +144,7 @@ export const cockpitRouter = createTRPCRouter({
           // ADR-0127 — polity de la marque pour la résolution d'axe.
           marketScale: true,
           countryCode: true,
-          pillars: { where: { key: "d" }, select: { content: true } },
+          pillars: { where: { key: { in: ["d", "t", "s"] } }, select: { key: true, content: true, staleAt: true } },
         },
       });
       if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
@@ -173,11 +173,14 @@ export const cockpitRouter = createTRPCRouter({
         }
       }
 
+      const s = strategy.pillars.find((p) => p.key === "s");
+      const t = strategy.pillars.find((p) => p.key === "t");
+      const strategyPlan = readOvertonStrategyPlan(s?.content, t?.content, !!(s?.staleAt || t?.staleAt));
       const sectorSlug = extractSectorSlug(strategy.businessContext);
       if (!sectorSlug) {
         // Cause discriminée (audit 2026-07-16) : secteur non renseigné = action
         // à la main du founder, pas « attendez que le signal arrive ».
-        return { state: "DEGRADED", reason: "MISSING_PREREQUISITE" };
+        return { state: "DEGRADED", reason: "MISSING_PREREQUISITE", strategyPlan };
       }
       // Audit 2026-07-16 `overton-deferred-stale-operator-guard` : le guard
       // `!strategy.operatorId` était MORT depuis le dé-mock du connecteur
@@ -185,14 +188,14 @@ export const cockpitRouter = createTRPCRouter({
       // Un founder self-serve voyait À VIE « en attente d'activation » pendant
       // que le signal RSS dormait. Appel inconditionnel.
       const { fetchSectorSignal } = await import("@/server/services/seshat/tarsis/connector");
-      const signal = await fetchSectorSignal(strategy.operatorId ?? "", sectorSlug);
+      const signal = await fetchSectorSignal(strategy.operatorId ?? "", sectorSlug, { strategyId: input.strategyId, countryCode: strategy.countryCode });
 
       // P22-1 invariant 1 : exhaustive — no default/else.
       switch (signal.state) {
         case "DEFERRED_AWAITING_CREDENTIALS":
-          return signal;
+          return { ...signal, strategyPlan };
         case "DEGRADED":
-          return signal;
+          return { ...signal, strategyPlan };
         case "LIVE": {
           // ADR-0127 — l'axe est résolu pour la POLITY de la marque (échelle ×
           // pays), avec fallback honnête vers l'axe global du secteur. Le
@@ -202,7 +205,7 @@ export const cockpitRouter = createTRPCRouter({
             marketScale: strategy.marketScale,
             countryCode: strategy.countryCode,
           });
-          const brandTags = extractBrandTags(strategy.pillars[0]?.content);
+          const brandTags = extractBrandTags(strategy.pillars.find((p) => p.key === "d")?.content);
           const data: OvertonRadarSignal = {
             sectorAxis: resolved
               ? { tags: resolved.axis.tags, confidence: resolved.axis.confidence, samples: resolved.axis.samples }
@@ -212,10 +215,11 @@ export const cockpitRouter = createTRPCRouter({
             embeddingDelta: signal.data.embeddingDelta,
             claimImitations: signal.data.claimImitations,
             unpaidPress: signal.data.unpaidPress,
+            sectorArticles: signal.data.sectorArticles,
             mocked: signal.data._mocked,
             axisPolityResolution: resolved?.resolution ?? null,
           };
-          return { state: "LIVE", data, observedAt: signal.observedAt };
+          return { state: "LIVE", data, observedAt: signal.observedAt, strategyPlan };
         }
       }
     }),

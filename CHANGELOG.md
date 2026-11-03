@@ -1,3 +1,18 @@
+## v6.27.539 — fix(cockpit): clarifier la reprise et restituer les observations (2026-11-03)
+
+- PR de livraison réelle : #1128.
+- Réception CI : fixture de cascade alignée sur la requête readiness réellement consommée ; vérifie aussi la conservation explicite de l'ADVE et l'absence de fermeture pendant le calcul.
+
+**Une production existante à réactualiser ne ressemble plus à une étape jamais jouée.**
+
+- Notoria distingue contenu produit, fraîcheur et possibilité de recalcul. La navigation conserve la marque ; le bouton prioritaire ouvre la cascade existante et décrit ses effets avant lancement. Les propositions ADVE restent une action distincte qui attend une décision.
+- La modale lit la readiness canonique, n'affiche plus un ancien contenu périmé comme actualisé et conserve l'ADVE lors du calcul/recalcul explicite. Gazette et rédaction Oracle restent identifiées comme opérations distinctes.
+- Le lecteur Gazette remplace l'extrait par le contenu reçu à son ouverture, sans répéter deux fois le même article. Le titre, la source et le corps ont des rôles distincts, selon les références Mobbin PlanetScale/Apollo et Substack/Voicenotes consultées.
+- La primitive Dialog ne reprend plus le focus à chaque changement de valeur : callback courant via useEffectEvent et effet d'ouverture indépendant. Régression rouge puis verte, saisie native continue reçue sur fixture isolée, aucun retour envoyé.
+- Le radar relit le digest propre à la marque, au format réellement écrit par brand-feed, puis le secteur/pays public. Les articles sourcés ne sont jamais assimilés à des mentions spontanées. Le plan S/T et ses jalons restent consultables même sans observation ; aucun polygone de marque absent n'est remplacé par des zéros.
+- Extension Overton convictions/catégorie/marque, six zones, preuves datées contradictoires et lecture partielle intake/scoreur : chantier ouvert dans RESIDUAL-DEBT. Le raccord de lecture539 ne prétend pas recevoir cet outil complet.
+- Recette candidate : gouvernance et ciblés 1 728 tests/176 fichiers verts ; typage, lints sans erreur/25 avertissements préexistants, cycles0, build compilé reçu. Recette native USER locale : reprise expliquée, formulaire focus conservé, sans lancer de génération. Livraison CI/image/production et nouvelle tranche Overton restent à recevoir.
+
 ## v6.27.538 — fix(irrigation): restituer le contenu et refuser les faux succès (2026-11-03)
 - Clôture documentaire de production : PR #1127 ; source applicative et image de PR #1126 conservées.
 

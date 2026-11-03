@@ -34,6 +34,15 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.539", date: "2026-11-03", headline: "Savoir quoi relancer et lire sans interruption",
+    highlights: [
+      { emoji: "🧭", title: "Comprendre où en est votre dossier", body: "Les analyses déjà produites sont distinguées de celles qui doivent être actualisées. Le bouton de reprise explique les effets du calcul avant son lancement ; rechercher de nouvelles propositions reste une action distincte." },
+      { emoji: "📰", title: "Déplier un article sans le lire deux fois", body: "La Gazette remplace l’extrait par le texte reçu lorsque vous ouvrez sa lecture complète. Le titre reste court et la source se trouve au début de l’article." },
+      { emoji: "✍️", title: "Écrire un retour sans perdre le curseur", body: "Votre message garde le focus pendant toute la saisie, même lorsque les autres éléments du formulaire se mettent à jour." },
+      { emoji: "📍", title: "Relier le radar au plan et aux sources reçues", body: "Le radar reprend le déplacement de perception prévu et ses jalons. Les articles collectés pour la marque sont consultables, sans les confondre avec des mentions spontanées ou une popularité mesurée." },
+    ],
+  },
+  {
     version: "6.27.538", date: "2026-11-03", headline: "Des informations lisibles et des modifications confirmées fidèlement",
     highlights: [
       { emoji: "🧩", title: "Avancer avec des hypothèses à vérifier", body: "Une information conceptuelle laissée vide peut recevoir une proposition qui alimente déjà le plan. Le responsable de marque dispose d’une consigne adaptée pour vérifier puis confirmer ou corriger cette hypothèse. Le conseil reçoit cette règle sans répétitions inutiles ; les décisions renseignées et les faits observés restent distincts." },

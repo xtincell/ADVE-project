@@ -35,10 +35,10 @@ import { trpc } from "@/lib/trpc/client";
 type Phase = "CONFIRM" | "RUNNING" | "DONE" | "FAILED";
 
 const PILLAR_NAMES = {
-  r: "Risk — Risques & résilience",
-  t: "Track — Tracking marché & traction",
-  i: "Innovation — Actions & roadmap",
-  s: "Strategy — Synthèse stratégique",
+  r: "Risques & résilience",
+  t: "Marché & trajectoire",
+  i: "Catalogue d’actions",
+  s: "Plan stratégique",
 } as const;
 
 type RtisKey = keyof typeof PILLAR_NAMES;
@@ -64,7 +64,7 @@ export function RtisCascadeModal({
   const [elapsed, setElapsed] = useState(0);
 
   // Poll readiness while RUNNING so the user sees R/T/I/S transitioning.
-  const readiness = trpc.pillar.maturityReport.useQuery(
+  const readiness = trpc.pillar.readiness.useQuery(
     { strategyId },
     {
       enabled: open,
@@ -123,26 +123,25 @@ export function RtisCascadeModal({
     : null;
 
   const rtisStatus = useMemo(() => {
-    const pillars = readiness.data?.pillars ?? {};
+    const pillars = readiness.data?.byPillar;
     return PILLAR_KEYS.map((k) => {
-      const r = (pillars as Record<string, { currentStage?: string }>)[k];
-      const stage = r?.currentStage ?? "EMPTY";
-      const ready = stage === "ENRICHED" || stage === "COMPLETE";
-      const inProgress = stage === "INTAKE";
-      return { key: k, stage, ready, inProgress };
+      const pillar = pillars?.[k.toUpperCase() as "R" | "T" | "I" | "S"];
+      const ready = !!pillar && !pillar.stale && pillar.cacheLevel !== "INCOMPLET";
+      return { key: k, ready, inProgress: false };
     });
   }, [readiness.data]);
 
   const startCascade = () => {
     setPhase("RUNNING");
     setElapsed(0);
-    cascade.mutate({ strategyId, skipIfReady: true });
+    cascade.mutate({ strategyId, skipIfReady: true, updateADVE: false, skipT: false });
   };
 
   return (
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
+      dismissible={phase !== "RUNNING"}
       size="lg"
       title={
         <span className="flex items-center gap-2">
@@ -182,7 +181,7 @@ export function RtisCascadeModal({
             <p>
               Le diagnostic est calculé en premier, puis le marché et le
               catalogue d’actions. Le plan reprend les choix conservés dans
-              ce catalogue. La durée dépend des informations à traiter.
+              ce catalogue. Les résultats remplacent les analyses calculées précédentes. La fondation reste conservée. La Gazette et la rédaction de l’Oracle sont des actions séparées. La durée dépend des informations à traiter.
             </p>
           </div>
         </div>
@@ -227,7 +226,7 @@ export function RtisCascadeModal({
                         : "text-xs font-medium text-foreground-muted"
                   }
                 >
-                  {p.ready ? "Prêt" : p.inProgress ? "En cours" : "En attente"}
+                  {p.ready ? "Contenu enregistré à jour" : p.inProgress ? "En cours" : "En attente"}
                 </span>
               </li>
             ))}
@@ -243,9 +242,7 @@ export function RtisCascadeModal({
           {elapsed > 90 && (
             <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs text-foreground-secondary">
               <strong className="text-warning">Plus long que prévu.</strong>{" "}
-              Le calcul attend encore son résultat. Vous pouvez fermer cette
-              fenêtre puis consulter les résultats enregistrés ; aucune fin
-              n’est annoncée avant la réponse du serveur.
+              Le calcul attend encore son résultat. Les contenus enregistrés sont affichés au fil du calcul ; sa fin sera confirmée par le serveur.
             </div>
           )}
         </div>
@@ -384,13 +381,9 @@ export function RtisCascadeModal({
 
         {phase === "RUNNING" && (
           <>
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="rounded-md border border-border px-4 py-2 text-sm text-foreground-secondary hover:bg-surface-raised"
-            >
-              Fermer (la cascade continue)
-            </button>
+            <p className="text-sm text-foreground-secondary">
+              Le calcul est en cours. Attendez le résultat avant de fermer cette fenêtre.
+            </p>
             <button
               type="button"
               disabled
@@ -429,7 +422,7 @@ export function RtisCascadeModal({
                 setElapsed(0);
                 // Réessai avec skipIfReady=false : on force la cascade même si
                 // certains piliers étaient déjà ENRICHED. Le user veut un re-run.
-                cascade.mutate({ strategyId, skipIfReady: false });
+                cascade.mutate({ strategyId, skipIfReady: false, updateADVE: false, skipT: false });
               }}
               disabled={cascade.isPending}
               className="flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent disabled:opacity-50"
