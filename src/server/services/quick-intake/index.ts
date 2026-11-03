@@ -301,7 +301,8 @@ export async function advance(input: QuickIntakeAdvanceInput) {
     const bizData = (mergedResponses.biz ?? mergedResponses) as Record<string, unknown>;
     if (bizData.biz_model) {
       const bizModel = extractKeyFromOption(bizData.biz_model as string);
-      const bizPositioning = extractKeyFromOption(bizData.biz_positioning as string);
+      const bizPositioning = typeof bizData.biz_positioning === "string" && bizData.biz_positioning.trim()
+        ? extractKeyFromOption(bizData.biz_positioning) : undefined;
       const bizNature = bizData.biz_nature
         ? extractKeyFromOption(bizData.biz_nature as string)
         : undefined;
