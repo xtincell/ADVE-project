@@ -1,3 +1,14 @@
+## v6.27.541 — fix(oracle): réactualiser le document depuis son état enregistré (2026-11-03)
+
+- PR de livraison réelle : #1130. La dette540 distingue désormais sa réception technique datée et la mesure terrain encore ouverte.
+
+**Un document déjà rédigé dispose d’une action explicite pour reprendre les sections qui en ont besoin.**
+
+- Le bouton principal « Réactualiser l’Oracle » cible les sections périmées, manquantes ou en échec via `oracle.assembleOracle` et sa liste explicite de sections. Les sections déjà à jour restent conservées ; les choix manuels de portée restent accessibles dans les options.
+- Le document distingue rédaction enregistrée et fraîcheur. Un contenu existant ne reçoit plus un message demandant une première rédaction ; les états de préparation et de génération reprennent l’état courant.
+- Le journal concerne les opérations reçues dans l’onglet. Son absence d’événements ne devient plus « En attente de la première génération » pour un Oracle déjà rédigé.
+- Aucun nouvel assembleur, moteur d’appels ou writer de données de marque. Recette locale reçue : 13 tests de comportement, 1 681 tests de gouvernance, typage/lint/cycles sans erreur ; lancement natif puis réactualisation de 35 sections sur dossier synthétique, état conservé au rechargement (HTTP 200, DOM 82 ms, contrôle visible en 767 ms, 0 réponse ≥500 et 0 erreur de page). CI, déploiement et réception de production restent à recevoir pour cette version.
+
 ## v6.27.540 — feat(overton): tracer conviction, catégorie et marque sur six jalons (2026-11-03)
 
 **Un point de départ explicite, une cible et les preuves attendues précèdent toute conclusion de popularité.**

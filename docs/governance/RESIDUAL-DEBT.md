@@ -1,8 +1,11 @@
 ## 540 — recevoir les preuves et la mesure de popularité (2026-11-03)
 
-Le candidat540 implémente le cadrage A, six jalons, lecture partielle d’entrée, raccords
-radar/S/Oracle, identité par public/pays et writers atomiques/idempotents. Le référentiel
-est testable sans LLM ; la réception production et l’amendement SPAWT restent à recevoir.
+La version540 implémente le cadrage A, six jalons, lecture partielle d’entrée, raccords
+radar/S/Oracle, identité par public/pays et writers atomiques/idempotents. PR1129 et
+image/runtime540 reçus le 3 novembre ; amendement SPAWT des trois concepts, cascade
+et 35 sections Oracle reçus avant l’évolution ultérieure du plan. Ce reçu daté ne
+garantit pas la fraîcheur après une nouvelle modification des sources. Le bouton
+de reprise et son journal font l’objet du correctif541 ; la mesure terrain reste ouverte.
 
 **Reste à recevoir** : collecte automatisée de preuves favorables/contraires pour chaque
 concept, évaluation de leur représentativité et calibration de popularité. L’absence de
