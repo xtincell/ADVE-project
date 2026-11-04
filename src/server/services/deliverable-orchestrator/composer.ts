@@ -1,4 +1,8 @@
-import { ADVE_STORAGE_KEYS } from "@/domain";
+import { isUsableGeneration } from "@/domain/generation-result";
+import { checkLawTwoPreconditions } from "./preconditions";
+import { materialHandoffBlock, type ProductionPin, type ProductionSourceManifest } from "@/domain/production-sources";
+import { claimProductionPreview, readProductionPreview, requireReviewedUpstream, requireReviewedManifest, resolveProductionSources } from "./production-sources";
+import { productionSourceInput } from "./production-prompt";
 
 /**
  * Deliverable Orchestrator — Composer (Phase 17b, ADR-0050 — anciennement ADR-0037).
@@ -22,7 +26,6 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
  * pas (PREVIEW). Le dispatch DB-write viendra avec le router tRPC.
  */
 
-import { db } from "@/lib/db";
 import type { BrandAssetKind } from "@/domain/brand-asset-kinds";
 import { getGloryTool } from "@/server/services/artemis/tools/registry";
 import { resolveRequirements, extractUpstreamKinds } from "./resolver";
@@ -56,6 +59,10 @@ interface ComposeDeliverableInput {
   readonly campaignId?: string;
   readonly overrideManipulationMode?: "peddler" | "dealer" | "facilitator" | "entertainer";
   readonly previewOnly?: boolean;
+  readonly pins?: ProductionPin[];
+  readonly calendarBrief?:{assetId:string;version:number};
+  readonly previewIntentId?: string;
+  readonly creativeProposalId?: string;
   /** Émission parente (COMPOSE_DELIVERABLE) — lignée de la forge (ADR-0136). */
   readonly sourceIntentId?: string;
 }
@@ -81,7 +88,7 @@ export async function composeDeliverable(
 
   // 3. Vault scan sur les kinds upstream
   const upstreamKinds = extractUpstreamKinds(briefDag);
-  const vaultMatches = await matchVault(input.strategyId, upstreamKinds);
+  const vaultMatches = await matchVault(input.strategyId, upstreamKinds, input.campaignId);
 
   // 4. Pre-conditions Loi 2 — manipulationMix.primary + ADVE ACTIVE
   const missingPreconditions = await checkLawTwoPreconditions(input.strategyId);
@@ -102,7 +109,7 @@ export async function composeDeliverable(
   };
 
   // 6. Verdict status
-  if (missingPreconditions.length > 0) {
+  if (missingPreconditions.length && (input.previewOnly === false || missingPreconditions.some(k => k === "STRATEGY_ARCHIVED" || k === "STRATEGY_NOT_FOUND"))) {
     return {
       composition,
       status: "MISSING_PRECONDITIONS",
@@ -114,18 +121,29 @@ export async function composeDeliverable(
   // PREVIEW par défaut (backward-compatible) : le dispatch réel n'a lieu que
   // sur `previewOnly === false` EXPLICITE. Les callers existants passent
   // `previewOnly: true` (router + page forge) → comportement inchangé.
+  const prior=input.previewOnly===false && input.previewIntentId ? await readProductionPreview(input.strategyId,input.previewIntentId):null;
+  const sourceManifest = await resolveProductionSources(input.strategyId, input.pins ?? [], input.campaignId, input.creativeProposalId,input.calendarBrief??prior?.sourceManifest.calendarBrief);
+  const materialBlock = materialHandoffBlock(sourceManifest);
   if (input.previewOnly !== false) {
-    void input.operatorId;
     return {
       composition,
       status: "PREVIEW",
+      previewIntentId: input.sourceIntentId, sourceManifest, materialBlock,
       sequenceExecutionId: null,
       summary: buildPreviewSummary(composition),
     };
   }
 
   // ── DISPATCHED (ADR-0136) — matérialisation réelle du livrable cible ──
-  return dispatchForge(composition, input, targetSlug);
+  if (!input.previewIntentId) throw new Error("Préparez et relisez un aperçu avant de lancer la production.");
+  const reviewed = prior!;
+  if (reviewed.targetKind !== targetKind || reviewed.campaignId !== (input.campaignId ?? null) || reviewed.overrideManipulationMode !== (input.overrideManipulationMode ?? null))
+    throw new Error("Le périmètre de production diffère de l’aperçu ; préparez un nouvel aperçu.");
+  requireReviewedManifest(reviewed.sourceManifest, sourceManifest);
+  requireReviewedUpstream(reviewed.upstreamSnapshot, vaultMatches);
+  if (materialBlock) throw new Error(materialBlock);
+  await claimProductionPreview(input.strategyId, input.previewIntentId, input.sourceIntentId,sourceManifest.calendarBrief);
+  return dispatchForge(composition, input, targetSlug, reviewed.sourceManifest);
 }
 
 /**
@@ -135,14 +153,13 @@ export async function composeDeliverable(
  * moteur de séquence). Honnête sans clés provider : la forge Ptah remonte
  * `DEFERRED_AWAITING_CREDENTIALS` (taskId absent) et le statut le reflète.
  *
- * Portée v1 : le tool cible produit son brief avec le contexte disponible
- * (piliers + briefs upstream réutilisables). La génération automatique des
- * briefs upstream MANQUANTS reste tracée (chantier env-avec-clés, ADR-0136).
+ * Les briefs requis sont résolus et tracés avant toute matérialisation.
  */
 async function dispatchForge(
   composition: DeliverableComposition,
   input: ComposeDeliverableInput,
   targetSlug: string,
+  sourceManifest: ProductionSourceManifest,
 ): Promise<ComposeDeliverableOutput> {
   const tool = getGloryTool(targetSlug);
   if (!tool) {
@@ -155,7 +172,23 @@ async function dispatchForge(
   );
 
   // 1. Exécute le tool producteur (produit le brief + promeut le BrandAsset).
-  const run = await executeTool(targetSlug, input.strategyId, {});
+  const { PillarResolver } = await import("@/server/services/artemis/tools/pillar-resolver");
+  const bindings = tool.pillarBindings ? (await PillarResolver.forStrategy(input.strategyId)).resolveBindingsAsStrings(tool.pillarBindings) : {};
+  const selectedText = productionSourceInput(sourceManifest);
+  const { prepareUpstreamBriefs } = await import("./upstream-cascade");
+  const cascade = await prepareUpstreamBriefs({
+    composition, strategyId: input.strategyId, operatorId: input.operatorId, campaignId: input.campaignId,
+    previewIntentId: input.previewIntentId!, dispatchIntentId: input.sourceIntentId!,
+    sourceText: selectedText, calendarBrief: sourceManifest.calendarBrief,
+  });
+  const sourceText = [selectedText, cascade.text].filter(Boolean).join("\n\n");
+  const calendar=sourceManifest.calendarBrief;
+  const toolInput = { ...bindings, ...(calendar ? {format:calendar.format??"",platform:calendar.platform,theme:calendar.theme??"",angle:calendar.angle??"",
+    creativeFamily:calendar.family??"",creativeMode:calendar.mode,campaign_context:calendar.name,
+    concept:sourceManifest.creativeProposal?.direction || calendar.angle || calendar.theme || calendar.name}:{}), ...(sourceText ? { production_sources: sourceText } : {}) };
+  const run = await executeTool(targetSlug, input.strategyId, toolInput, { production: { previewIntentId: input.previewIntentId!, dispatchIntentId:input.sourceIntentId!, sourceText } });
+
+  if (!isUsableGeneration(run.output)) throw new Error("Le brief n’a pas pu être produit. La tentative reste conservée ; aucun rendu n’a été lancé.");
 
   // 2. Livrable brief-only (pas de forgeOutput) : la sortie du tool EST le
   //    livrable — pas de matérialisation Ptah. Dispatch réussi sans taskId.
@@ -167,6 +200,7 @@ async function dispatchForge(
     return {
       composition,
       status: "DISPATCHED",
+      previewIntentId: input.previewIntentId, sourceManifest, briefOutputId: run.outputId,
       sequenceExecutionId: null,
       summary:
         `Livrable ${composition.targetKind} produit (brief-only via ${targetSlug}, ` +
@@ -177,70 +211,35 @@ async function dispatchForge(
   // 3. Forge : chaîne vers Ptah (matérialisation via provider). Sans clés →
   //    DEFERRED (taskId absent), honnête.
   const context: Record<string, unknown> = {};
-  if (input.overrideManipulationMode) context._manipulationMode = input.overrideManipulationMode;
+  const effectiveMode=input.overrideManipulationMode ?? sourceManifest.mixReview?.primary;
+  if (effectiveMode) context._manipulationMode = effectiveMode;
   if (input.campaignId) context._campaignId = input.campaignId;
 
+  let materialStatus = "DEFERRED";
   const taskId = await chainGloryToPtah({
     tool,
     toolOutput: run.output,
     sourceIntentId: run.intentId ?? input.sourceIntentId ?? `compose:${composition.targetKind}`,
     strategyId: input.strategyId,
-    context,
+    sourceBrandAssetId:calendar?.assetId, context, calendarBrief:calendar,
+    // Glory has already turned the upstream briefs into the final image prompt. Their full audit copies stay with Glory.
+    productionSourceText:productionSourceInput({...sourceManifest,calendarBrief:undefined}),
+    productionArtwork:sourceManifest.productionArtwork,
+    productionReferences:sourceManifest.sources.flatMap(s=>s.transport==="IMAGE_REFERENCE"&&s.role==="REFERENCE"&&s.originalHash?[{assetId:s.assetId,version:s.version,originalHash:s.originalHash}]:[]), onForgeReceipt: status => { materialStatus = status; },
   });
 
   return {
     composition,
     status: "DISPATCHED",
-    sequenceExecutionId: taskId ?? null,
-    summary: taskId
+    sequenceExecutionId: null,
+    generativeTaskId: taskId ?? null,
+    previewIntentId: input.previewIntentId, sourceManifest, briefOutputId: run.outputId,
+    materialStatus,
+    summary: taskId && materialStatus !== "DEFERRED"
       ? `Forge lancée pour ${composition.targetKind} (tool ${targetSlug}, tâche Ptah ${taskId}).`
       : `Forge de ${composition.targetKind} différée (provider non configuré — DEFERRED). ` +
-        `Le brief est produit ; la matérialisation reprendra dès que les clés seront présentes.`,
+        `Le brief est produit ; aucun rendu reçu.${taskId ? ` Tâche : ${taskId}.` : ""}`,
   };
-}
-
-// ── Pre-conditions Loi 2 (séquencement étages APOGEE) ───────────────────
-
-/**
- * Vérifie que la strategy a :
- *   1. `manipulationMix.primary` défini
- *   2. Au moins un pilier ADVE en `state=ACTIVE`
- *
- * Retourne la liste des conditions manquantes (vide = compose autorisé).
- */
-async function checkLawTwoPreconditions(strategyId: string): Promise<string[]> {
-  const missing: string[] = [];
-
-  const strategy = await db.strategy.findUnique({
-    where: { id: strategyId },
-    select: { manipulationMix: true },
-  });
-
-  if (!strategy) {
-    return ["STRATEGY_NOT_FOUND"];
-  }
-
-  // manipulationMix est JSON ; on cherche `.primary` non-null.
-  const mix = strategy.manipulationMix as { primary?: string } | null;
-  if (!mix || !mix.primary) {
-    missing.push("MISSING_MANIPULATION_MIX_PRIMARY");
-  }
-
-  // Au moins un pilier ADVE state=ACTIVE.
-  // Pattern Phase 10/16 — on regarde `Pillar` rows pour ADVE keys.
-  const adveActive = await db.pillar.count({
-    where: {
-      strategyId,
-      key: { in: [...ADVE_STORAGE_KEYS] },
-      state: "ACTIVE",
-    },
-  });
-
-  if (adveActive === 0) {
-    missing.push("MISSING_ACTIVE_ADVE_PILLAR");
-  }
-
-  return missing;
 }
 
 // ── Helpers internes ────────────────────────────────────────────────────

@@ -1,3 +1,9 @@
+## v6.27.546 — Forge, briefs et production du calendrier (2026-11-04)
+
+La Forge exécute les briefs requis, conserve leurs versions et transmet le résultat à Ptah. Le calendrier propose deux pistes par publication par défaut et permet d’en choisir une à quatre. La doctrine de D, les références visuelles privées et les masters éditables accompagnent la production. Une piste peut être corrigée sans remplacer ses sœurs. L’approbation de S gouverne la création des projets issus de la stratégie.
+
+Les sections Glory en échec restent des tentatives. Les livrables et leurs auteurs se consultent par version. La réception d’une image reste distincte de sa relecture et de sa publication. Voir ADR0241 et PR1137.
+
 ## v6.27.545 — feat(vente): règlement du devis et rapport client (2026-11-04)
 
 - PR1136 / ADR0240 : le devis accepté conserve son prix, sa devise et son bénéficiaire. Orange Money et main propre passent par une vérification humaine dans le portail, sans dépendre de CinetPay ; le règlement en ligne réutilise le fournisseur existant après autorisation du compte marchand.

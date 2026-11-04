@@ -52,7 +52,8 @@ describe("ADR-0136 — COMPOSE_DELIVERABLE dispatch", () => {
 
   it("honnêteté sans clés : DEFERRED surfacé, jamais de faux succès", () => {
     const fn = composer.slice(composer.indexOf("async function dispatchForge"));
-    expect(fn).toContain("sequenceExecutionId: taskId ?? null");
+    expect(fn).toContain("generativeTaskId: taskId ?? null");
+    expect(fn).not.toContain("sequenceExecutionId: taskId");
     expect(fn).toMatch(/DEFERRED|différée/);
     // Plus aucun `void input.*` dans le corps de composeDeliverable (dispatch réel).
     expect(composer.includes("void input.previewOnly")).toBe(false);

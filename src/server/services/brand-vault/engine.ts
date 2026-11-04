@@ -26,107 +26,8 @@ export function assertOrdinaryAsset(format: string | null | undefined) {
     "Cette publication se gère depuis Connexions → Page publique, pour conserver son historique.");
 }
 
-/** Mapping outputFormat Glory tool → BrandAsset.kind canonique. */
-export const FORMAT_TO_KIND: Record<string, string> = {
-  // Strategic
-  concepts_list: "BIG_IDEA",
-  claims_list: "CLAIM",
-  claim_hierarchy: "CLAIM",
-  creative_brief: "CREATIVE_BRIEF",
-  kv_brief: "KV_ART_DIRECTION_BRIEF",
-  kv_prompts_list: "KV_PROMPT",
-  value_proposition: "VALUE_PROPOSITION",
-  positioning_statement: "POSITIONING",
-  // Identity
-  name_proposals: "NAMING",
-  tone_charter: "TONE_CHARTER",
-  brand_vocabulary: "BRAND_VOCABULARY",
-  brand_rituals: "BRAND_RITUALS",
-  brand_guidelines: "BRAND_GUIDELINES",
-  brand_validation_report: "BRAND_VALIDATION_REPORT",
-  brand_audit_report: "BRAND_AUDIT_REPORT",
-  // Persona / Audience
-  superfan_journey: "SUPERFAN_JOURNEY",
-  // Visual system
-  chromatic_strategy: "CHROMATIC_STRATEGY",
-  typography_system: "TYPOGRAPHY_SYSTEM",
-  design_tokens: "DESIGN_TOKENS",
-  // Production briefs
-  script: "SCRIPT",
-  dialogue: "DIALOGUE",
-  storyboard: "STORYBOARD",
-  sound_brief: "SOUND_BRIEF",
-  voiceover_brief: "VOICEOVER_BRIEF",
-  casting_brief: "CASTING_BRIEF",
-  vendor_brief: "VENDOR_BRIEF",
-  print_ad_spec: "PRINT_AD_SPEC",
-  packaging_layout: "PACKAGING_LAYOUT",
-  // Copy
-  social_copy_set: "SOCIAL_COPY",
-  long_copy: "LONG_COPY",
-  copy_guidelines_document: "COPY_GUIDELINES",
-  // Pitch / decks
-  pitch_structure: "PITCH",
-  sales_deck: "SALES_DECK",
-  presentation_strategy: "PRESENTATION_STRATEGY",
-  credentials_deck: "CREDENTIALS_DECK",
-  // Calendar / planning
-  content_calendar: "CONTENT_CALENDAR",
-  content_mix: "CONTENT_MIX",
-  // Reports / analysis
-  competitive_analysis: "COMPETITIVE_ANALYSIS",
-  swot_augmented: "SWOT",
-  trend_radar: "TREND_RADAR",
-  semiotic_analysis: "SEMIOTIC_ANALYSIS",
-  benchmark_report: "BENCHMARK_REPORT",
-  evaluation_matrix: "EVALUATION_MATRIX",
-  // Compliance / risk
-  compliance_report: "COMPLIANCE_REPORT",
-  compliance_checklist: "COMPLIANCE_CHECKLIST",
-  risk_matrix: "RISK_MATRIX",
-  crisis_plan: "CRISIS_PLAN",
-  coherence_report: "COHERENCE_REPORT",
-  // Education / community
-  educational_content: "EDUCATIONAL_CONTENT",
-  community_playbook: "COMMUNITY_PLAYBOOK",
-  ugc_framework: "UGC_FRAMEWORK",
-  // Distribution / media
-  distribution_matrix: "DISTRIBUTION_MATRIX",
-  digital_plan: "DIGITAL_PLAN",
-  format_specs: "FORMAT_SPECS",
-  // Financial / ops
-  budget_optimization: "BUDGET_OPTIMIZATION",
-  budget_tracking: "BUDGET_TRACKING",
-  pricing_strategy: "PRICING_STRATEGY",
-  cost_estimate: "COST_ESTIMATE",
-  devis: "DEVIS",
-  roi_metrics: "ROI_METRICS",
-  client_profitability: "CLIENT_PROFITABILITY",
-  project_pnl: "PROJECT_PNL",
-  utilization: "UTILIZATION",
-  resource_plan: "RESOURCE_PLAN",
-  codb: "COST_OF_DOING_BUSINESS",
-  // Architecture / strategy
-  campaign_architecture: "CAMPAIGN_ARCHITECTURE",
-  roadmap_milestones: "ROADMAP",
-  // Misc
-  award_case: "AWARD_CASE",
-  artifacts: "ARTIFACTS",
-  workflow_definition: "WORKFLOW_DEFINITION",
-  visual_landscape_map: "VISUAL_LANDSCAPE_MAP",
-  universe_setup: "UNIVERSE_SETUP",
-  story_sequence: "STORY_SEQUENCE",
-  character_sheet: "CHARACTER_SHEET",
-  direction_memo: "DIRECTION_MEMO",
-  photo_guidelines: "PHOTO_GUIDELINES",
-  simulation_report: "SIMULATION_REPORT",
-  sublimation_report: "SUBLIMATION_REPORT",
-  seasonal_themes: "SEASONAL_THEMES",
-  seo_report: "SEO_REPORT",
-  tone_matrix: "TONE_MATRIX",
-  wordplay_bank: "WORDPLAY_BANK",
-  post_campaign_report: "POST_CAMPAIGN_REPORT",
-};
+import { FORMAT_TO_KIND } from "@/domain/brand-asset-formats";
+export { FORMAT_TO_KIND } from "@/domain/brand-asset-formats";
 
 /** Kinds majeurs pour lesquels une Campaign garde un BrandAsset ACTIVE explicite. */
 export const CAMPAIGN_ACTIVE_KIND_FIELDS: Record<string, string> = {
@@ -232,33 +133,35 @@ export async function createCandidateBatch(args: {
   briefId?: string;
 }) {
   const batchId = `batch-${Date.now()}-${randomBytes(4).toString("hex")}`;
-  const created = [];
-  for (let i = 0; i < args.candidates.length; i++) {
-    const c = args.candidates[i]!;
-    const asset = await createBrandAsset({
-      strategyId: args.strategyId,
-      operatorId: args.operatorId,
-      name: c.name,
-      kind: args.kind,
-      format: args.format,
-      family: "INTELLECTUAL",
-      content: c.content,
-      summary: c.summary,
-      pillarSource: args.pillarSource,
-      manipulationMode: args.manipulationMode,
-      state: "CANDIDATE",
-      batchId,
-      batchSize: args.candidates.length,
-      batchIndex: i,
-      sourceIntentId: args.sourceIntentId,
-      sourceGloryOutputId: args.sourceGloryOutputId,
-      sourceExecutionId: args.sourceExecutionId,
-      campaignId: args.campaignId,
-      briefId: args.briefId,
-    });
-    created.push(asset);
-  }
-  return { batchId, candidates: created };
+  return db.$transaction(async (tx) => {
+    const created = [];
+    for (let i = 0; i < args.candidates.length; i++) {
+      const c = args.candidates[i]!;
+      const asset = await createBrandAsset({
+        strategyId: args.strategyId,
+        operatorId: args.operatorId,
+        name: c.name,
+        kind: args.kind,
+        format: args.format,
+        family: "INTELLECTUAL",
+        content: c.content,
+        summary: c.summary,
+        pillarSource: args.pillarSource,
+        manipulationMode: args.manipulationMode,
+        state: "CANDIDATE",
+        batchId,
+        batchSize: args.candidates.length,
+        batchIndex: i,
+        sourceIntentId: args.sourceIntentId,
+        sourceGloryOutputId: args.sourceGloryOutputId,
+        sourceExecutionId: args.sourceExecutionId,
+        campaignId: args.campaignId,
+        briefId: args.briefId,
+      }, tx);
+      created.push(asset);
+    }
+    return { batchId, candidates: created };
+  });
 }
 
 export class BrandAssetLifecycleError extends Error {

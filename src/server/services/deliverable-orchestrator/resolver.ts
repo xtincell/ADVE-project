@@ -17,7 +17,8 @@
  */
 
 import { EXTENDED_GLORY_TOOLS, getGloryTool } from "@/server/services/artemis/tools/registry";
-import type { BrandAssetKind } from "@/domain/brand-asset-kinds";
+import { FORMAT_TO_KIND } from "@/domain/brand-asset-formats";
+import { BRAND_ASSET_KINDS, type BrandAssetKind } from "@/domain/brand-asset-kinds";
 import { getProducerSlug } from "./target-mapping";
 import {
   ResolverCycleDetectedError,
@@ -45,55 +46,23 @@ export function resolveRequirements(targetKind: BrandAssetKind): {
     throw new TargetNotForgeableError(targetKind);
   }
 
-  // BFS avec coloring DFS pour cycle detection.
-  // visited: kinds dont l'expansion est complète.
-  // visiting: kinds dont l'expansion est en cours (chemin actif). Cycle si on
-  //           retombe sur un kind dans visiting.
-  const visited = new Set<BrandAssetKind>();
-  const visiting = new Set<BrandAssetKind>();
   const nodes = new Map<BrandAssetKind, BriefRequirement>();
-
-  function visit(kind: BrandAssetKind, depth: number, path: BrandAssetKind[]): void {
-    if (visiting.has(kind)) {
-      throw new ResolverCycleDetectedError([...path, kind]);
-    }
-    if (visited.has(kind)) {
-      // Déjà résolu — on garde la profondeur max pour le tri topo.
-      const existing = nodes.get(kind);
-      if (existing && depth > existing.depth) {
-        nodes.set(kind, { ...existing, depth });
-      }
-      return;
-    }
-
-    visiting.add(kind);
-
-    // Lookup producer Glory tool. Pour le target (depth 0) on a déjà targetSlug.
-    // Pour les nœuds upstream, on map kind → slug via target-mapping ; absent =
-    // feuille vault-only.
-    const producerSlug = depth === 0 ? targetSlug : getProducerSlug(kind);
+  const visiting = new Set<BrandAssetKind>();
+  // A shared prerequisite can appear at different depths. Propagate the longest path
+  // to its own dependencies so the published order is also executable in reverse.
+  function visit(kind: BrandAssetKind, depth: number, path: BrandAssetKind[]) {
+    if (visiting.has(kind)) throw new ResolverCycleDetectedError([...path, kind]);
+    const known = nodes.get(kind);
+    if (known && known.depth >= depth) return;
+    const producerSlug = depth === 0 ? targetSlug : getBriefProducer(kind);
     const requires = getRequiresFromTool(producerSlug);
-
-    nodes.set(kind, {
-      kind,
-      producerSlug,
-      depth,
-      requires,
-    });
-
-    for (const upstream of requires) {
-      visit(upstream, depth + 1, [...path, kind]);
-    }
-
+    nodes.set(kind, {kind, depth, producerSlug, requires});
+    visiting.add(kind);
+    for (const dependency of requires) visit(dependency, depth + 1, [...path, kind]);
     visiting.delete(kind);
-    visited.add(kind);
   }
-
   visit(targetKind, 0, []);
-
-  // Tri topologique : depth croissant. Stable via insertion order de la Map.
-  const briefDag = [...nodes.values()].sort((a, b) => a.depth - b.depth);
-
+  const briefDag = [...nodes.values()].sort((a,b)=>a.depth-b.depth);
   return { targetSlug, briefDag };
 }
 
@@ -101,11 +70,22 @@ export function resolveRequirements(targetKind: BrandAssetKind): {
  * Lookup le `forgeOutput.requires` d'un Glory tool par slug.
  * Renvoie `[]` si tool absent ou `forgeOutput` non déclaré ou `requires` undefined.
  */
-function getRequiresFromTool(slug: string | null): readonly BrandAssetKind[] {
-  if (!slug) return [];
-  const tool = getGloryTool(slug);
-  if (!tool || !tool.forgeOutput) return [];
-  return tool.forgeOutput.requires ?? [];
+function getBriefProducer(kind: BrandAssetKind): string | null {
+  const candidates = EXTENDED_GLORY_TOOLS.filter(tool => tool.status === "ACTIVE" && FORMAT_TO_KIND[tool.outputFormat] === kind);
+  // An ambiguous output needs an explicit producer decision or a real active document.
+  return candidates.length === 1 ? candidates[0]!.slug : null;
+}
+
+function getRequiresFromTool(slug: string | null): BrandAssetKind[] {
+  const tool = slug ? getGloryTool(slug) : undefined;
+  if (!tool) return [];
+  const required = new Set<BrandAssetKind>(tool.forgeOutput?.requires ?? []);
+  for (const prerequisite of tool.dependencies ?? []) {
+    const dependency = getGloryTool(prerequisite);
+    const kind = dependency && FORMAT_TO_KIND[dependency.outputFormat];
+    if (kind && BRAND_ASSET_KINDS.includes(kind as BrandAssetKind)) required.add(kind as BrandAssetKind);
+  }
+  return [...required];
 }
 
 /**

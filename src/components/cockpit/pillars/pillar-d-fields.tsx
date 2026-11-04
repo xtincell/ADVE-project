@@ -8,6 +8,7 @@
  * symboles, SWOT flash, ESOV, barrières, ratio histoire/preuve.
  */
 
+import { creativeDirectionDoctrine } from "@/domain/creative-direction";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import { brandActorRoleLabels } from "@/domain/brand-actors";
 import {
@@ -193,6 +194,24 @@ function SacredObjects({ items, status }: { items: unknown; status?: string }) {
 // moodboard, chromaticStrategy, typographySystem, …}` (sortie des Glory
 // créatifs). Le renderer affiche celle qui est présente — aucune n'écrase
 // l'autre, aucune donnée n'est inventée.
+function DoctrineSummary({value}: {value: unknown}) {
+  const result=creativeDirectionDoctrine.safeParse(value);
+  if (!result.success) return null;
+  const {families,rules,sources}=result.data;
+  return <div className="space-y-2 py-2 text-sm">
+    <p className="font-semibold">Choix de direction artistique</p>
+    <p>{families.length} familles d’exécution · {rules.length} règles sourcées</p>
+    <details><summary className="cursor-pointer">Choisir une famille selon le sujet</summary>
+      <ul className="mt-2 space-y-2">{families.map(f=><li key={f.id}><strong>{f.name}</strong> · {f.purpose}</li>)}</ul>
+    </details>
+    <details><summary className="cursor-pointer">Consulter les règles et leur origine</summary>
+      <ul className="mt-2 space-y-2">{rules.map(rule=><li key={rule.id}>{rule.guidance}
+        <span className="block text-xs text-foreground-secondary">{rule.sources.map(id=>{const ref=sources.find(x=>x.id===id);return ref ? ref.label+" · "+ref.locator : id;}).join(" / ")}</span>
+      </li>)}</ul>
+    </details>
+  </div>;
+}
+
 function DirectionArtistique({ value, status }: { value: unknown; status?: string }) {
   const empty = isEmpty(value);
   const obj = asRec(value);
@@ -221,6 +240,7 @@ function DirectionArtistique({ value, status }: { value: unknown; status?: strin
               <div className="ck-a-obj__v"><TagRow items={obj.principes} tone="info" /></div>
             </div>
           ) : null}
+          {Boolean(obj.doctrine) && <DoctrineSummary value={obj.doctrine} />}
           {richPresent.map(([k, label]) => (
             <div className="ck-a-obj__row" key={k}>
               <span className="ck-a-obj__k">{label}</span>

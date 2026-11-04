@@ -1,3 +1,5 @@
+> Production du calendrier et Forge · ADR0241. Entrées publiques de l’atelier : Livrables → Production et Opérations → Forge. Utiliser le registre Glory pour les briefs, la cascade Mestor pour leur exécution et Ptah pour le rendu. Une image candidate ne vaut pas approbation de publication.
+
 ## 545 candidate — règlement du devis et rapport client (4 novembre 2026)
 
 ADR-0240 / PR1136 : le règlement manuel (Orange Money ou main propre) reste

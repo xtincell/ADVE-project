@@ -1,3 +1,45 @@
+## 542 — recevoir les recettes de production audiovisuelle (2026-11-04)
+
+**Acquis.** Le texte a produit un `GloryOutput` réel avec modèle et transport
+enregistrés. Le lecteur local expose la dernière version exploitable et son historique.
+Une sonde OAuth a reçu une image de 1 017 333 octets, puis le relais candidat a
+reçu 1 072 682 octets. La seconde image mesure 1 254 × 1 254 pour une demande de
+1 024 × 1 024. La déclinaison doit mesurer et adapter le rendu avant la remise.
+
+**Raccord image API reçu localement.** Après l’échec initial de l’index
+PostgreSQL, la suite d’admission passe à 52/52. La tâche API corrigée est
+`COMPLETED`. Elle possède une identité courte de 77 caractères, une version
+matérielle et un actif du coffre relié. L’image relue depuis cette version
+fait 1 076 193 octets et mesure 1 254 × 1 254. Le cas de recette est synthétique.
+Les cinq surfaces locales ont ensuite été reçues, dont Assets affichant cette image.
+La modification ultérieure du lecteur imbriqué a trois tests de comportement
+verts. Sa compilation finale et sa relecture native sont reçues : 65 valeurs textuelles sur 65 présentes, HTTP 200, zéro 5xx et zéro exception.
+Le post éditorial SPAWT reste ouvert.
+
+**Manque précis.** Le compositeur recense les dépendances et appelle son outil
+cible avec un objet d’entrée vide. Le moteur générique peut remplacer un champ absent
+par « non disponible ». Pour une recette, l’étape doit résoudre chaque entrée
+obligatoire ou exposer le manque avant tout appel. Les entrées facultatives peuvent
+recevoir un postulat qualifié. Le manifeste doit fixer les versions de la DA et du
+texte, permettre une révision indépendante et relier les sorties à leurs sources
+jusqu’à la remise. Le candidat identifie déjà la tâche Ptah et l’exécution de séquence
+dans deux champs distincts.
+
+**Conduite à recevoir.** Proposer les réglages avec référence, version et raison.
+Conserver tout remplacement explicite au sein d’une nouvelle révision. Exercer le
+mode manuel et l’autonomie par étape avec le même contrat d’entrée et de sortie.
+Une limite d’appels, de coût ou d’autorité doit laisser le travail en attente
+et rendre visible la décision humaine nécessaire. L’ancien dossier doit rester
+reproductible et les branches indépendantes conserver leurs versions.
+
+**Reprise.** Engager le premier des quatre lots du [plan local](../planning/moteur-de-production-social.md)
+sur une recette et deux sources de marque versionnées. Le test de forge exige
+un fichier durable relu. La reprise et la remise ont leurs propres critères,
+sans publication automatique. Les trajectoires vidéo, audio et adaptation ont ensuite
+leurs propres contrats et contrôles. Vidéo et audio sont routés vers Magnific mais
+leurs fichiers effectifs restent à recevoir. Toute mise en ligne attend l’accord
+explicite de l’opérateur.
+
 ## 540 — recevoir les preuves et la mesure de popularité (2026-11-03)
 
 La version540 implémente le cadrage A, six jalons, lecture partielle d’entrée, raccords

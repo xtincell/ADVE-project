@@ -34,6 +34,17 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.546", date: "2026-11-04", headline: "Du planning aux visuels de marque",
+    highlights: [
+      { emoji: "🎨", title: "Produire depuis le calendrier", body: "Chaque publication dispose d’un brief versionné et peut recevoir une à quatre propositions. La planche du calendrier permet de relire les images reçues." },
+      { emoji: "🛠️", title: "Lancer la cascade de la Forge", body: "La Forge affiche les briefs repris, générés ou à corriger et indique quand le visuel est disponible." },
+      { emoji: "📚", title: "Relire une version antérieure", body: "L’historique indique quand chaque section a été produite. Si une tentative échoue, la dernière version exploitable reste consultable. Votre opérateur peut relancer la production depuis le document." },
+      { emoji: "🧭", title: "Suivre la cible de chaque conviction", body: "Le plan regroupe les étapes d’une même conviction entre son point de départ et la cible choisie. À chaque passage, vous retrouvez la preuve à rechercher." },
+      { emoji: "💬", title: "Retrouver une demande", body: "Après l’envoi, le formulaire vous donne une référence. Votre opérateur peut retrouver le message dans la banque de demandes, suivre son traitement et le rouvrir si nécessaire." },
+      { emoji: "📋", title: "Conserver le détail des actions", body: "Le plan accepte le texte développé d’une action du catalogue. Vous pouvez relire la recommandation complète au moment de préparer son exécution." },
+    ],
+  },
+  {
     version: "6.27.541", date: "2026-11-03", headline: "Réactualiser votre Oracle en un clic",
     highlights: [
       { emoji: "🔄", title: "Reprendre les sections à actualiser", body: "Le bouton principal reprend les sections périmées, manquantes ou en échec et conserve celles qui sont déjà à jour. Les options permettent toujours de choisir une autre portée." },

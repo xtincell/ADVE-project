@@ -234,7 +234,7 @@ export function parseContentCalendar(raw: unknown): ContentCalendar | null {
     themesParPhaseOverton.length > 0 ||
     hashtags.signature.length > 0 ||
     hashtags.local.length > 0 ||
-    doNot.length > 0;
+    doNot.length > 0 || (Array.isArray(raw.posts) && raw.posts.some(p=>isRecord(p)&&str(p.date)));
   if (!hasAny) return null;
 
   const postsRaw = Array.isArray(raw.posts) ? raw.posts : [];

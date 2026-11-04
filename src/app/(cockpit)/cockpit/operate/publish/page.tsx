@@ -54,11 +54,14 @@ export default function PublishPage() {
         setLastResults(null);
       } else {
         const ok = r.results.filter((x) => x.state === "PUBLISHED").length;
-        if (ok > 0) toast.success(`Publié sur ${ok} réseau${ok > 1 ? "x" : ""}.`);
+        if (r.mode === "PARTIAL") toast.info(`Envoi partiel. ${ok} réseau(x) confirmé(s), détails ci-dessous.`);
+        else if (r.mode === "UNCONFIRMED") toast.info("Réception à vérifier sur le compte avant toute reprise.");
+        else if (ok > 0) toast.success(`Publié sur ${ok} réseau${ok > 1 ? "x" : ""}.`);
         else toast.error("Aucun réseau n'a accepté la publication — détail ci-dessous.");
         setLastResults(r.results.map((x) => ({ platform: x.platform, state: x.state, detail: x.detail })));
       }
       setText(""); setLinkUrl(""); setImageUrl(""); setScheduleAt(""); setTargets([]);
+      void utils.social.listPublications.invalidate();
       void utils.cockpitDashboard.getOperationsSnapshot.invalidate();
     },
     onError: (e) => toast.error(e.message || "Publication impossible."),

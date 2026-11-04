@@ -192,7 +192,7 @@ export function composeSocialCopy(ctx: GloryComposerContext): Blob {
   // Canon = `onNeditPas` (schema) ; `onNeDitPas` toléré (données legacy).
   const onNeDitPas = strArr(pick(ton, "onNeditPas") ?? pick(ton, "onNeDitPas"));
   const slogan = str(pick(ling, "slogan"));
-  const lexique = strArr(pick(ling, "lexique"));
+  const lexique = names(arr(pick(ling, "lexiquePropre")), ["word"]).concat(strArr(pick(ling, "lexique")));
   const promesse = str(pick(d, "promesseMaitre")) ?? str(pick(d, "positionnement"));
   const elevator = str(pick(a, "originMythElevator")) ?? str(pick(a, "noyauIdentitaire"));
   const rituels = names(arr(pick(e, "rituels")));
@@ -284,7 +284,7 @@ export function composeContentCalendar(ctx: GloryComposerContext): Blob {
   const ling = (pick(d, "assetsLinguistiques") ?? {}) as Blob;
   const ton = (pick(d, "tonDeVoix") ?? {}) as Blob;
   const slogan = str(pick(ling, "slogan"));
-  const lexique = strArr(pick(ling, "lexique"));
+  const lexique = names(arr(pick(ling, "lexiquePropre")), ["word"]).concat(strArr(pick(ling, "lexique")));
   const formats = strArr(pick(i, "formatsDisponibles"));
   const rituels = names(arr(pick(e, "rituels")));
   const assets = names(arr(pick(i, "assetsProduisibles")), ["asset", "name", "nom"]);

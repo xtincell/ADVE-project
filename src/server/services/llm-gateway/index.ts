@@ -115,6 +115,8 @@ export interface GatewayCallOptions {
 
 export interface GatewayResult {
   text: string;
+  model?: string;
+  provider?: string;
   usage: {
     inputTokens: number;
     outputTokens: number;
@@ -1002,7 +1004,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         // (DriverAdapterError, trouvé par le scan fonctionnel : brand-audit-scanner).
         // On l'élimine à la source pour TOUS les consommateurs LLM.
         const cleanText = text.split(String.fromCharCode(0)).join("").replace(/\\u0000/g, "");
-        return { text: cleanText, usage: gatewayUsage };
+        return { text: cleanText, usage: gatewayUsage, model: billedModel, provider: hasOpenAiTextRelay() && provider === "openai" ? "openai-codex-oauth" : provider };
       });
 
       recordProviderSuccess(provider);

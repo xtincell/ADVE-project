@@ -1,6 +1,6 @@
 {
   "name": "lafusee",
-  "version": "6.27.545",
+  "version": "6.27.546",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -111,6 +111,7 @@
     "@trpc/server": "^11.18.0",
     "@types/bcryptjs": "^3.0.0",
     "@types/web-push": "^3.6.4",
+    "@xmldom/xmldom": "0.8.13",
     "ai": "^6.0.177",
     "babel-plugin-react-compiler": "^1.0.0",
     "bcryptjs": "^3.0.3",

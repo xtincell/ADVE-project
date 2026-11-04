@@ -81,6 +81,8 @@ export interface StructuredLLMOptions<T> {
 export interface StructuredLLMResult<T> {
   /** Donnée parsée + validée. */
   data: T;
+  model?: string;
+  provider?: string;
   /** Texte LLM brut de la dernière tentative réussie. */
   rawText: string;
   /** Nombre de tentatives effectuées (1 = succès du premier coup). */
@@ -127,7 +129,7 @@ export async function executeStructuredLLMCall<T>(
   let userPrompt = options.prompt;
 
   for (let attempt = 1; attempt <= 1 + retries; attempt++) {
-    const { text } = await callLLM({
+    const { text, model, provider } = await callLLM({
       images: options.images,
       video: options.video,
       signal: options.signal,
@@ -156,6 +158,7 @@ export async function executeStructuredLLMCall<T>(
       });
       return {
         data: result.data,
+        model, provider,
         rawText: text,
         attempts: attempt,
         warnings: result.warnings,

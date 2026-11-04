@@ -7,6 +7,7 @@
  * Note: Uses `any` for strategy param since Prisma complex includes resist clean typing.
  */
 
+import { isUsableGeneration } from "@/domain/generation-result";
 import { readOvertonPositioning } from "@/domain/overton-positioning";
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
 import { projectFinancialPillar, unitEconomicsNote, unitEconomicsRatio, type FinancialMetricContext } from "@/domain/unit-economics";
@@ -60,7 +61,7 @@ function getPillarContent(strategy: any, key: string): Record<string, unknown> |
 }
 
 function getGloryOutput(strategy: any, toolSlug: string): Record<string, unknown> | null {
-  const output = strategy.gloryOutputs.find((g: any) => g.toolSlug === toolSlug);
+  const output = strategy.gloryOutputs.find((g: any) => g.toolSlug === toolSlug && isUsableGeneration(g.output));
   return (output?.output as Record<string, unknown>) ?? null;
 }
 
@@ -464,6 +465,7 @@ export function mapProductionLivrables(strategy: any): ProductionLivrablesSectio
   };
 
   for (const g of strategy.gloryOutputs) {
+    if (!isUsableGeneration(g.output)) continue;
     const layer = LAYER_SLUGS[g.toolSlug] ?? "HYBRID";
     gloryOutputsByLayer[layer]!.push({
       toolSlug: g.toolSlug,
@@ -857,7 +859,10 @@ export function mapEquipe(strategy: any): EquipeSection {
   } : null;
 
   // ── Berkus aggregate — pull scores from framework results ─────────────
-  const berkusFrameworks = arr(strategy.frameworkResults ?? []);
+  // A historical framework can have a numeric score as its only result.
+  const berkusFrameworks = arr(strategy.frameworkResults).filter((row) =>
+    typeof row.score === "number" && isUsableGeneration({ ...row.output, score: row.score }),
+  );
   const berkusTeam = berkusFrameworks.find((f: any) => f.framework?.slug === "fw-25-berkus-team-assessment");
   const berkusTraction = berkusFrameworks.find((f: any) => f.framework?.slug === "fw-26-berkus-traction");
   const berkusProduct = berkusFrameworks.find((f: any) => f.framework?.slug === "fw-27-berkus-product");

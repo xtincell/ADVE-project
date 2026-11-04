@@ -48,15 +48,17 @@ describe("deliverable-orchestrator/resolver", () => {
       }
     });
 
-    it("treats kinds without producer mapping as vault-only leaves", () => {
-      // BIG_IDEA, CHROMATIC_STRATEGY ne sont PAS dans TARGET_KIND_TO_PRODUCER_SLUG.
-      // Ils doivent apparaître comme leaf (producerSlug=null).
+    it("resolves intellectual producers independently from material targets", () => {
       const { briefDag } = resolveRequirements("KV_VISUAL");
       const bigIdea = briefDag.find((n) => n.kind === "BIG_IDEA");
       const chromatic = briefDag.find((n) => n.kind === "CHROMATIC_STRATEGY");
 
-      expect(bigIdea?.producerSlug).toBeNull();
-      expect(chromatic?.producerSlug).toBeNull();
+      expect(bigIdea?.producerSlug).toBe("concept-generator");
+      expect(chromatic?.producerSlug).toBe("chromatic-strategy-builder");
+      expect(briefDag.find(n=>n.kind==="TYPOGRAPHY_SYSTEM")?.requires).toContain("CHROMATIC_STRATEGY");
+      for(const node of briefDag) for (const required of node.requires) {
+        expect(briefDag.find(n=>n.kind===required)!.depth).toBeGreaterThan(node.depth);
+      }
     });
 
     it("throws TargetNotForgeableError for an unmapped target kind", () => {
@@ -73,8 +75,7 @@ describe("deliverable-orchestrator/resolver", () => {
 
     it("dedupes a kind reached by multiple paths (same depth max)", () => {
       // KV_VISUAL → kv-banana-prompt-generator.requires = [KV_ART_DIRECTION_BRIEF, BIG_IDEA, CHROMATIC_STRATEGY]
-      // KV_ART_DIRECTION_BRIEF n'est pas dans target-mapping, donc leaf.
-      // Pas de path multiple ici → on teste la garantie : chaque kind n'apparaît qu'une fois.
+      // Plusieurs nœuds consommant la palette partagent sa même étape.
       const { briefDag } = resolveRequirements("KV_VISUAL");
       const kindSet = new Set(briefDag.map((n) => n.kind));
       expect(kindSet.size).toBe(briefDag.length);

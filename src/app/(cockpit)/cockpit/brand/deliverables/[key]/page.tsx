@@ -1,13 +1,14 @@
 "use client";
+import { LaunchModal } from "@/components/cockpit/sequence-launcher-panel";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { useToast } from "@/components/shared/notification-toast";
 import { ArrowLeft, Download, Loader2, FileText, CheckCircle } from "lucide-react";
-import { getFieldLabel } from "@/components/cockpit/field-renderers";
+import { DeliverableContentValue } from "@/components/cockpit/deliverable-content-value";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -30,14 +31,15 @@ export default function DeliverableViewPage() {
   const key = params.key as string;
   const printRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
+  const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({});
+  const me = trpc.auth.me.useQuery();
+  const utils = trpc.useUtils();
+  const [showLaunch, setShowLaunch] = useState(false);
+  const launchable = trpc.glory.launchableSequences.useQuery(undefined, { enabled: !!me.data?.canOperate });
+  const sequence = launchable.data?.find(row => row.key === key);
 
   const manifest = trpc.glory.compileDeliverable.useQuery(
-    { strategyId: strategyId ?? "", sequenceKey: key },
-    { enabled: !!strategyId && !!key },
-  );
-
-  const seqOutputs = trpc.glory.getSequenceOutputs.useQuery(
-    { strategyId: strategyId ?? "", sequenceKey: key },
+    { strategyId: strategyId ?? "", sequenceKey: key, selectedVersions },
     { enabled: !!strategyId && !!key },
   );
 
@@ -94,12 +96,11 @@ export default function DeliverableViewPage() {
   }
 
   const m = manifest.data;
-  const outputMap = new Map(
-    (seqOutputs.data?.outputs ?? []).map((o: any) => [o.toolSlug, o])
-  );
+
 
   return (
     <div className="min-h-screen bg-background">
+      {showLaunch && sequence ? <LaunchModal strategyId={strategyId} seq={sequence} onClose={() => setShowLaunch(false)} onSuccess={() => { setSelectedVersions({}); void utils.glory.compileDeliverable.invalidate(); void utils.glory.compilableDeliverables.invalidate(); }} /> : null}
       {/* Toolbar — not included in PDF */}
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background/95 backdrop-blur px-6 py-3">
         <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-foreground-secondary hover:text-foreground transition-colors">
@@ -109,14 +110,15 @@ export default function DeliverableViewPage() {
           <span className="text-sm text-foreground-muted">{m.name}</span>
           {m.isComplete ? (
             <span className="inline-flex items-center gap-1 text-2xs text-success">
-              <CheckCircle className="h-3 w-3" /> Complet
+              <CheckCircle className="h-3 w-3" /> {m.sections.every(section => section.version?.approval === "ACCEPTED") ? "Relecture acceptée" : "Contenu complet · à relire"}
             </span>
           ) : (
             <span className="text-2xs text-warning">{m.meta.completedSteps}/{m.meta.totalSteps} sections</span>
           )}
+          {me.data?.canOperate ? <button disabled={!sequence} onClick={() => setShowLaunch(true)} className="rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-foreground disabled:opacity-50">{m.sections.length ? "Produire une nouvelle version" : "Générer le livrable"}</button> : null}
           <button
             onClick={handleExportPDF}
-            disabled={exporting}
+            disabled={exporting || !m.sections.length}
             className="flex items-center gap-1.5 rounded-lg bg-warning px-4 py-2 text-xs font-semibold text-white hover:bg-warning disabled:opacity-50"
           >
             {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
@@ -133,13 +135,15 @@ export default function DeliverableViewPage() {
           <h1 className="text-4xl font-black text-foreground mb-3">{m.name}</h1>
           <p className="text-lg text-foreground-secondary">{m.meta.strategyName}</p>
           <div className="mt-6 flex items-center justify-center gap-4 text-xs text-foreground-muted">
-            <span>Genere le {new Date(m.meta.generatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</span>
+            <span>{m.meta.generatedAt ? `Version produite le ${new Date(m.meta.generatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}` : "Aucune version exploitable produite"}</span>
             <span>•</span>
             <span>{m.sections.length} sections</span>
           </div>
           <div className="mt-8 h-px bg-gradient-to-r from-transparent via-warning/50 to-transparent" />
         </div>
 
+        {!m.sections.length ? <p className="mb-8 rounded-xl border border-warning/30 p-4 text-warning">Les tentatives enregistrées n’ont pas produit de document exploitable. Lancez une nouvelle production ; les erreurs restent consultables dans l’historique.</p> : null}
+        {m.history.length ? <details className="mb-8 rounded-xl border border-border p-4"><summary className="cursor-pointer text-foreground">Versions et tentatives ({m.history.length})</summary><ul className="mt-3 space-y-3">{m.history.slice().reverse().map(h => <li key={h.id} className="text-sm text-foreground-secondary"><strong>{h.title}</strong> · {h.usable ? `Version ${h.version}` : "Tentative échouée"} · {h.author}{h.engine ? ` (${h.engine})` : ""} · {new Date(h.createdAt).toLocaleString("fr-FR")}{h.usable ? <button className="ml-3 text-accent underline" onClick={() => setSelectedVersions(old => ({ ...old, [h.toolSlug]: h.id }))}>Consulter cette version</button> : null}</li>)}</ul></details> : null}
         {/* Table of contents */}
         <div className="mb-16">
           <h2 className="text-xs uppercase tracking-[0.2em] text-foreground-muted mb-4">Sommaire</h2>
@@ -158,8 +162,7 @@ export default function DeliverableViewPage() {
 
         {/* Sections */}
         {m.sections.map((section, i) => {
-          const output = outputMap.get(section.sourceToolSlug);
-          const content = (output?.output ?? section.content ?? {}) as Record<string, unknown>;
+          const content = section.content;
           const entries = Object.entries(content).filter(([k]) => !k.startsWith("_"));
 
           return (
@@ -169,6 +172,7 @@ export default function DeliverableViewPage() {
                 <span className="text-3xl font-black text-foreground-muted">{String(i + 1).padStart(2, "0")}</span>
                 <div>
                   <h2 className="text-xl font-bold text-foreground">{section.title}</h2>
+                  {section.version ? <p className="mt-1 text-xs text-foreground-secondary">Version {section.version.number} · {section.version.author}{section.version.engine ? ` (${section.version.engine})` : ""} · {new Date(section.version.createdAt).toLocaleString("fr-FR")}</p> : null}
                   <span className={`inline-flex rounded px-1.5 py-0.5 text-[9px] font-bold mt-1 ${SOURCE_COLORS[section.sourceType] ?? "bg-surface-raised text-foreground-secondary"}`}>
                     {section.sourceType}
                   </span>
@@ -184,7 +188,7 @@ export default function DeliverableViewPage() {
                       <h3 className="text-2xs font-bold uppercase tracking-wider text-foreground-muted mb-2">
                         {key.replace(/_/g, " ").replace(/([A-Z])/g, " $1").trim()}
                       </h3>
-                      {renderValue(value)}
+                      {<DeliverableContentValue value={value} />}
                     </div>
                   ))}
                 </div>
@@ -201,85 +205,10 @@ export default function DeliverableViewPage() {
         {/* Footer */}
         <div className="mt-20 pt-8 border-t border-border text-center">
           <p className="text-2xs text-foreground-muted">
-            Document genere par LaFusee Industry OS — {m.meta.sequenceName} — {new Date(m.meta.generatedAt).toLocaleDateString("fr-FR")}
+            Document genere par LaFusee Industry OS — {m.meta.sequenceName} — {(m.meta.generatedAt ? new Date(m.meta.generatedAt).toLocaleDateString("fr-FR") : "Non produit")}
           </p>
         </div>
       </div>
     </div>
   );
-}
-
-// ─── Renderers ──────────────────────────────────────────────────────────────
-
-function renderValue(value: unknown): ReactNode {
-  if (typeof value === "string") {
-    // Long text — render as paragraphs
-    if (value.length > 200) {
-      return (
-        <div className="text-sm text-foreground-secondary leading-relaxed whitespace-pre-wrap">
-          {value}
-        </div>
-      );
-    }
-    return <p className="text-sm text-foreground-secondary">{value}</p>;
-  }
-
-  if (typeof value === "number" || typeof value === "boolean") {
-    return <p className="text-sm text-foreground-secondary font-mono">{String(value)}</p>;
-  }
-
-  if (Array.isArray(value)) {
-    if (value.length === 0) return <p className="text-xs text-foreground-muted italic">Vide</p>;
-
-    // Array of strings
-    if (typeof value[0] === "string") {
-      return (
-        <ul className="space-y-1">
-          {value.map((item, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-foreground-secondary">
-              <span className="text-warning mt-1 shrink-0">•</span>
-              <span>{item as string}</span>
-            </li>
-          ))}
-        </ul>
-      );
-    }
-
-    // Array of objects
-    return (
-      <div className="space-y-2">
-        {value.map((item, i) => (
-          <div key={i} className="rounded-lg border border-border/50 bg-background/30 p-3">
-            {typeof item === "object" && item !== null ? (
-              <div className="space-y-1">
-                {Object.entries(item as Record<string, unknown>).map(([k, v]) => (
-                  <div key={k} className="flex gap-2 text-sm">
-                    <span className="text-foreground-muted shrink-0 min-w-[100px]">{getFieldLabel(k)}:</span>
-                    <span className="text-foreground-secondary">{typeof v === "string" ? v : typeof v === "number" ? v.toLocaleString() : typeof v === "boolean" ? (v ? "Oui" : "Non") : Array.isArray(v) ? (v as unknown[]).map(x => typeof x === "string" ? x : typeof x === "object" && x !== null ? Object.values(x as Record<string, unknown>).filter(s => typeof s === "string").slice(0, 1).join("") || "(item)" : String(x)).slice(0, 5).join(", ") + (v.length > 5 ? ` +${v.length - 5}` : "") : typeof v === "object" && v !== null ? Object.entries(v as Record<string, unknown>).filter(([, x]) => typeof x === "string").slice(0, 3).map(([kk, x]) => `${kk}: ${(x as string).slice(0, 40)}`).join(" · ") || "(structure)" : String(v)}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-foreground-secondary">{String(item)}</p>
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (typeof value === "object" && value !== null) {
-    return (
-      <div className="rounded-lg border border-border/50 bg-background/30 p-4 space-y-2">
-        {Object.entries(value as Record<string, unknown>).map(([k, v]) => (
-          <div key={k}>
-            <span className="text-2xs font-bold text-foreground-muted uppercase">{k.replace(/_/g, " ")}</span>
-            <div className="mt-0.5">{renderValue(v)}</div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return <p className="text-sm text-foreground-muted">{String(value ?? "—")}</p>;
 }

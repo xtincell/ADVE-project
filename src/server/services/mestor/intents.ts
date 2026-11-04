@@ -357,6 +357,11 @@ export type Intent =
       campaignId?: string;
       /** Override le manipulationMode hérité de Strategy.manipulationMix.primary. */
       overrideManipulationMode?: "peddler" | "dealer" | "facilitator" | "entertainer";
+      pins?: import("@/domain/production-sources").ProductionPin[];
+      calendarBrief?:{assetId:string;version:number};
+      calendarPreparation?:import("@/domain/calendar-production").CalendarPreparation;
+      previewIntentId?: string;
+      creativeProposalId?: string;
       /** Mode preview : retourne le DAG résolu + estimation coût sans dispatcher. */
       previewOnly?: boolean;
     }
@@ -651,6 +656,7 @@ export type Intent =
       imageUrl?: string | null;
       scheduleAt?: string | null;
       brandActionId?: string | null;
+      scheduledVersion?: string;
       /** Brief créatif intégré (direction pour illustrer). */
       brief?: string | null;
       /** Copy du visuel (texte DANS l'image). */
@@ -1876,6 +1882,11 @@ export async function emitIntent(
       );
     }
   };
+
+  if (intent.kind === "PTAH_MATERIALIZE_BRIEF") {
+    const { conditionVisualIntent } = await import("@/server/services/creative-direction/material");
+    intent = await conditionVisualIntent(intent);
+  }
 
   // ── Q1 fail-closed — émission hash-chaînée AVANT toute délibération ──
   let emissionId: string;

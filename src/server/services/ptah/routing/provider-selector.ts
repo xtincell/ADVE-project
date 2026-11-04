@@ -7,6 +7,7 @@
  *   3. Fail si tous les providers candidats sont indisponibles (circuit OPEN)
  */
 
+import { productionArtwork } from "@/domain/production-artwork";
 import { PROVIDERS, getProvider } from "../providers";
 import { getProviderHealth } from "../task-store";
 import type { ForgeBrief, ForgeKind, ForgeProvider, ProviderName } from "../types";
@@ -38,6 +39,12 @@ export class NoAvailableProviderError extends Error {
 }
 
 export async function selectProvider(brief: ForgeBrief): Promise<ForgeProvider> {
+  const artwork = brief.forgeSpec.parameters.productionArtwork;
+  if (artwork !== undefined) {
+    const slot=productionArtwork.parse(artwork);
+    if (!["image","icon"].includes(brief.forgeSpec.kind)) throw new Error("Le montage sur master exige une forge image.");
+    if (slot.photoPolicy==="LOCKED_MASTER") return getProvider("master");
+  }
   const allowed = KIND_TO_PROVIDER[brief.forgeSpec.kind];
   const hint = brief.forgeSpec.providerHint;
   // Le `providerHint` n'est honoré QUE s'il fait partie des providers autorisés

@@ -22,7 +22,11 @@ import { CalendarClock, Send, Pencil, Trash2, Image as ImageIcon, Sparkles, Chec
 
 const STATUS_LABEL: Record<string, { label: string; tone: string }> = {
   SCHEDULED: { label: "Planifiée", tone: "info" },
-  EXECUTED: { label: "Publiée", tone: "ok" },
+  PUBLISHED: { label: "Publiée", tone: "ok" },
+  PARTIAL: { label: "Partiellement publiée", tone: "warn" },
+  FAILED: { label: "Échec de l’envoi", tone: "warn" },
+  UNCONFIRMED: { label: "À vérifier sur le compte", tone: "warn" },
+  PUBLISHING: { label: "Envoi sans résultat enregistré", tone: "warn" },
   CANCELLED: { label: "Annulée", tone: "muted" },
 };
 
@@ -32,6 +36,7 @@ const RESULT_LABEL: Record<string, string> = {
   SCOPE_MISSING: "reconnexion requise",
   UNSUPPORTED: "non couvert",
   FAILED: "échec",
+  UNCONFIRMED: "réception à vérifier sur le compte",
 };
 
 function toLocalInput(iso: string | null): string {
@@ -63,8 +68,10 @@ export function PublicationManagerPanel({ strategyId }: { strategyId: string }) 
     onSuccess: (res) => {
       const ok = res.results.filter((r) => r.state === "PUBLISHED").length;
       if (res.mode === "SCHEDULED") toast.success("Publication mise à jour et replanifiée.");
+      else if (res.mode === "PARTIAL") toast.info(`Envoi partiel : ${ok} réseau(x) confirmé(s). Vérifiez le détail ci-dessous.`);
+      else if (res.mode === "UNCONFIRMED") toast.info("Vérifiez la publication sur le compte avant toute reprise.");
       else if (ok > 0) toast.success(`Publiée sur ${ok} réseau${ok > 1 ? "x" : ""}.`);
-      else toast.info("Traitée — voir l'état par réseau (connexion requise ?).");
+      else toast.error("Échec de l’envoi. Consultez le motif par réseau.");
       setEditingId(null);
       setToFire(null);
       refresh();
@@ -95,19 +102,10 @@ export function PublicationManagerPanel({ strategyId }: { strategyId: string }) 
     <div className="space-y-3">
       <h3 className="ck-card__t">Vos publications — voir &amp; corriger</h3>
       {items.map((p) => {
-        // Audit 2026-07-16 `publish-failed-shown-as-published` : une publication
-        // dont TOUS les envois ont échoué était affichée « Publiée » (statut
-        // EXECUTED), sans motif ni retry. Le chip dérive des RÉSULTATS, le motif
-        // réel est rendu, et Modifier/Déclencher restent disponibles.
-        const allFailed =
-          p.status === "EXECUTED" &&
-          p.results.length > 0 &&
-          !p.results.some((r) => r.state === "PUBLISHED");
-        const st = allFailed
-          ? { label: "Échec d'envoi", tone: "warn" }
-          : (STATUS_LABEL[p.status] ?? { label: p.status, tone: "muted" });
+        const st = STATUS_LABEL[p.status] ?? { label: p.status, tone: "muted" };
         const isEditing = editingId === p.brandActionId;
-        const editable = p.status === "SCHEDULED" || allFailed;
+        const editable = p.status === "SCHEDULED" || p.status === "FAILED";
+        const retryable = p.results.some((r) => r.state !== "PUBLISHED" && r.state !== "UNCONFIRMED");
         return (
           <div className="ck-card ck-pub" key={p.brandActionId}>
             <div className="ck-pub__head">
@@ -153,6 +151,11 @@ export function PublicationManagerPanel({ strategyId }: { strategyId: string }) 
                 {p.results.length > 0 && (
                   <div className="ck-pub__results">
                     <p>{p.results.map((r) => `${r.platform} : ${RESULT_LABEL[r.state] ?? r.state}`).join(" · ")}</p>
+                    {p.results.filter((r) => r.state === "PUBLISHED").map((r) => (
+                      <p key={r.platform} className="ck-pub__result-detail">{r.platform} · reçu {r.externalPostId}
+                        {r.permalinkUrl && <> · <a href={r.permalinkUrl} target="_blank" rel="noreferrer">Ouvrir la publication vérifiée</a></>}
+                      </p>
+                    ))}
                     {p.results.filter((r) => r.state !== "PUBLISHED" && r.detail).map((r) => (
                       <p key={r.platform} className="ck-pub__result-detail">
                         {r.platform} — {r.detail}
@@ -160,16 +163,16 @@ export function PublicationManagerPanel({ strategyId }: { strategyId: string }) 
                     ))}
                   </div>
                 )}
-                {editable && (
+                {(editable || (retryable && ["PARTIAL", "UNCONFIRMED"].includes(p.status))) && (
                   <div className="ck-pub__actions">
-                    <Button size="sm" variant="outline" onClick={() => { setEditingId(p.brandActionId); setEditText(p.text); setEditImage(p.imageUrl ?? ""); setEditWhen(toLocalInput(p.scheduledAt)); }}>
+                    {editable && <Button size="sm" variant="outline" onClick={() => { setEditingId(p.brandActionId); setEditText(p.text); setEditImage(p.imageUrl ?? ""); setEditWhen(toLocalInput(p.scheduledAt)); }}>
                       <Pencil /> Modifier
-                    </Button>
+                    </Button>}
                     <Button size="sm" variant="primary" disabled={publish.isPending}
                       onClick={() => setToFire({ id: p.brandActionId, targets: p.targets, text: p.text, imageUrl: p.imageUrl, linkUrl: p.linkUrl, brief: p.brief, visualCopy: p.visualCopy })}>
-                      <Send /> Déclencher maintenant
+                      <Send /> {editable ? "Déclencher maintenant" : "Reprendre les réseaux en échec"}
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setToCancel(p.brandActionId)}><Trash2 /> Annuler</Button>
+                    {editable && <Button size="sm" variant="ghost" onClick={() => setToCancel(p.brandActionId)}><Trash2 /> Annuler</Button>}
                   </div>
                 )}
               </>
@@ -189,7 +192,7 @@ export function PublicationManagerPanel({ strategyId }: { strategyId: string }) 
           });
         }}
         title="Publier maintenant ?"
-        message="La publication part immédiatement sur les réseaux connectés. Les réseaux non connectés resteront en attente."
+        message="Seules les cibles sans envoi confirmé ou incertain seront contactées. Le résultat de chaque réseau sera conservé."
         confirmLabel="Publier maintenant"
         variant="warning"
       />

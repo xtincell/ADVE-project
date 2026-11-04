@@ -9,6 +9,7 @@ import { PILLAR_KEYS, ADVE_KEYS } from "@/domain";
 import { ProductSystemSchema } from "@/domain/product-system";
 import { OvertonConceptSchema } from "@/domain/overton-positioning";
 import { DevotionProjectionSchema } from "@/domain/devotion-ladder";
+import { creativeDirectionDoctrine } from "@/domain/creative-direction";
 import { BRAND_ACTOR_ROLES } from "@/domain/brand-actors";
 import { StrategyBudgetModelSchema, StrategyBudgetEnvelopeSchema, FinancialWorkingModelSchema } from "@/domain/financial-document";
 import {
@@ -376,6 +377,7 @@ export const PillarDSchema = z.object({
 
   // Direction artistique (BRAND pipeline outputs — remplis progressivement par GLORY)
   directionArtistique: z.object({
+    doctrine: creativeDirectionDoctrine.optional(),
     // Forme compacte (canon / humain) — la matière réelle d'un Brand Book
     // (énoncé d'univers + principes directeurs). Coexiste avec les sous-objets
     // riches ci-dessous (sortie des Glory créatifs). Cf. renderer pillar-d-fields.
@@ -1381,7 +1383,7 @@ export const PillarSSchema = z.object({
     ecart: textMedium.optional(),                            // @derived T.perceptionGap
     strategieDeplacement: z.array(z.object({
       etape: textShort,
-      action: textShort,
+      action: textMedium,
       canal: textShort.optional(),
       horizon: textShort.optional(),
       devotionTarget: z.enum(DEVOTION_LEVELS).optional(),    // Quel niveau Devotion cette étape cible
@@ -1600,7 +1602,7 @@ export const PillarSSchema = z.object({
   // ── Legacy compat ─────────────────────────────────────────────────────
   // @deprecated as operator INPUT (ADR-0088) — superseded by `computed`.
   recommandationsPrioritaires: z.array(z.object({
-    recommendation: textShort,
+    recommendation: textMedium,
     source: z.enum(PILLAR_KEYS).optional(),
     priority: rank.optional(),
   })).optional(),
