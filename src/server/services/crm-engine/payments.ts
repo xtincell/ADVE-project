@@ -65,6 +65,7 @@ async function humanIn(tx: Tx, actor: SalesPaymentActor, brand: ScopedBrand) {
 async function collectionIn(tx: Tx, deal: Deal, state: SalesState, brand: ScopedBrand) {
   const mandate = state.mandate;
   if (mandate?.informationOnly) fail("Cette conversation sert uniquement à répondre aux questions. Aucun paiement n’y est autorisé.");
+  if (mandate?.pricingRule && (!state.proposal || state.proposal.amount !== mandate.amount || state.proposal.currency !== mandate.currency)) fail("Préparez la proposition et son prix avant de demander un paiement.");
   if (!mandate?.collection) fail("Confirmez où recevoir le paiement et qui doit le vérifier.");
   const collection = mandate.collection;
   const [attester, finance] = await Promise.all([

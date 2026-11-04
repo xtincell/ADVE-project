@@ -6,9 +6,11 @@ const label = z.string().trim().min(1).max(200);
 export const publicSalesOfferSchema = mandateSchema.pick({
   offerId: true, offerVersion: true, offerName: true, terms: true,
   amount: true, currency: true, deliveryOwnerId: true, beneficiary: true,
-  expiresAt: true, paymentInstructions: true, conversationTree: true,
+  expiresAt: true, paymentInstructions: true, conversationTree: true, pricingRule: true, billing: true,
+  taxTreatment: true, taxRatePct: true, exclusions: true,
 }).extend({
   amount: z.number().finite().nonnegative().optional(),
+  currency: mandateSchema.shape.currency.optional(),
   beneficiary: mandateSchema.shape.beneficiary.optional(),
   paymentInstructions: mandateSchema.shape.paymentInstructions.optional(),
   collection: collectionSchema.omit({ attestedBy: true, attestedAt: true }).strict().optional(),
@@ -38,7 +40,8 @@ export const saveSalesPublicEntryInput = z.object({
     ctx.addIssue({ code: "custom", path: ["collectionAttested"], message: "Confirmez où recevoir les paiements avant de l’autoriser." });
   }
   if (!value.informationOnly) value.offers.forEach((offer, index) => {
-    if (offer.amount === undefined) ctx.addIssue({ code: "custom", path: ["offers", index, "amount"], message: "Renseignez le prix approuvé pour proposer cette offre." });
+    if (!offer.pricingRule && offer.amount === undefined) ctx.addIssue({ code: "custom", path: ["offers", index, "amount"], message: "Renseignez le prix approuvé ou la règle de calcul de cette offre." });
+    if (!offer.pricingRule && !offer.currency) ctx.addIssue({ code: "custom", path: ["offers", index, "currency"], message: "Renseignez la devise du prix fixe." });
     if (!offer.beneficiary) ctx.addIssue({ code: "custom", path: ["offers", index, "beneficiary"], message: "Renseignez le bénéficiaire approuvé pour cette vente." });
     if (!offer.paymentInstructions) ctx.addIssue({ code: "custom", path: ["offers", index, "paymentInstructions"], message: "Renseignez les conditions de paiement approuvées pour cette vente." });
   });

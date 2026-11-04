@@ -2,6 +2,10 @@
 
 PR de livraison : #1133.
 
+- Offre → vendeur : règles de prix approuvées, tarification locale existante et devis Glory reliés au même dossier. Préparation, présentation, accord, paiement et livraison restent distincts et conservent leurs conditions.
+- Les deux calculateurs manquants de l’offre commerciale sont rétablis ; le devis structuré rejoint sa mise en page. Le propriétaire retrouve ces actions depuis Offre avec la marque sélectionnée.
+- Le client peut ouvrir sa proposition et confirmer exactement celle-ci. Reprise identique et concurrence ne multiplient pas les devis ; un ancien accord ne valide pas une proposition nouvellement préparée.
+
 Un nouveau client peut écrire à une marque sans compte, retrouver son vendeur et poursuivre le même échange jusqu’au paiement et à la livraison.
 
 - Le mode « Répondre aux questions » ouvre le dialogue lorsque les prestations ou tarifs restent à confirmer. Aucun prix, accord, paiement ou chiffre d’affaires n’en est déduit.

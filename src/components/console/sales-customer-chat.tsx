@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { MessageCircle, Send } from "lucide-react";
 import { cva } from "class-variance-authority";
 import { MarkdownContent } from "@/components/shared/markdown-content";
+import type { SalesProposal } from "@/server/services/crm-engine/offer-contract";
 
 type Conversation = {
   payment?: null | { reference: string; status: string; amount: number; currency: string; beneficiary: string; paidAt: string | null };
@@ -12,10 +13,14 @@ type Conversation = {
   informationOnly?: boolean;
   replyStatus?: "UP_TO_DATE" | "QUEUED" | "PROCESSING" | "TEAM_REVIEW" | "HUMAN_REPLY";
   state: string;
+  proposal?: (SalesProposal & { documentUrl: string }) | null;
   offer: null | { name: string; terms: string; amount: number; currency: string; paymentInstructions: string };
   messages: Array<{ id: string; role: "customer" | "seller"; body: string; at: string }>;
   stopped: boolean;
 };
+type CustomerMessage = { body: string; requestId: string; proposalId?: string };
+const billingLabel = (billing?: SalesProposal["billing"]) => billing === "MONTHLY" ? "par mois" : billing === "YEARLY" ? "par an" : billing === "ONE_TIME" ? "paiement unique" : "";
+const money = (amount: number, currency: string) => new Intl.NumberFormat("fr-FR", { style: "currency", currency }).format(amount);
 const messageClass = cva("max-w-prose rounded-xl border border-border p-4 sm:p-5", {
   variants: { role: {
     customer: "ml-6 rounded-br-sm bg-muted/40 sm:ml-12",
@@ -35,7 +40,8 @@ export function SalesCustomerChat({ token }: { token: string }) {
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [pending, setPending] = useState<{ body: string; requestId: string } | null>(null);
+  const [pending, setPending] = useState<CustomerMessage | null>(null);
+  const [confirmedProposalId, setConfirmedProposalId] = useState<string | null>(null);
   const followLatest = useRef(true);
   const latest = useRef<HTMLDivElement>(null);
   const lastMessageId = data?.messages.at(-1)?.id;
@@ -60,18 +66,27 @@ export function SalesCustomerChat({ token }: { token: string }) {
     return () => cancelAnimationFrame(frame);
   }, [lastMessageId]);
 
-  async function send() {
-    const message = pending ?? { body: body.trim(), requestId: crypto.randomUUID() };
+  async function send(confirmation?: CustomerMessage) {
+    const message = pending ?? confirmation ?? { body: body.trim(), requestId: crypto.randomUUID() };
     if (!message.body || busy) return;
     setBusy(true); setError(""); setPending(message);
     try {
       const response = await fetch(`/api/sales/${token}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(message) });
-      if (!response.ok) throw Error("Envoi non confirmé. Réessayez pour vérifier le même message.");
-      setPending(null); setBody(""); followLatest.current = true; await load();
+      if (!response.ok) {
+        if ([400, 403, 404, 409, 413, 415].includes(response.status)) {
+          setPending(null); void load().catch(() => {});
+          throw Error(message.proposalId ? "Cette proposition ne peut pas être confirmée. Relisez la conversation avant de poursuivre." : "Ce message n’a pas pu être envoyé. Vérifiez-le avant de réessayer.");
+        }
+        throw Error("Envoi non confirmé. Réessayez pour vérifier le même message.");
+      }
+      if (message.proposalId) setConfirmedProposalId(message.proposalId);
+      setPending(null); if (!message.proposalId) setBody(""); followLatest.current = true; await load();
     } catch (cause) { setError((cause as Error).message); }
     finally { setBusy(false); }
   }
 
+  const proposal = data?.proposal;
+  const shownOffer = proposal ? { name: proposal.offerName, ...proposal } : data?.offer?.currency !== "XXX" ? data?.offer : null;
   return <main className="min-h-screen bg-background text-foreground">
     <div className="mx-auto flex min-h-screen max-w-3xl flex-col px-4 sm:px-6">
       <header className="flex items-center gap-3 border-b border-border py-5 sm:py-6">
@@ -80,10 +95,20 @@ export function SalesCustomerChat({ token }: { token: string }) {
       </header>
       <div className="flex-1 space-y-6 py-6 sm:py-8">
         {data?.informationOnly && <p className="max-w-prose text-sm leading-relaxed text-foreground-muted">L’équipe doit confirmer les prestations et les conditions avant toute souscription.</p>}
-        {!data?.informationOnly && data?.offer && ["PROPOSAL", "OBJECTION", "ACCEPTED", "PAID", "DELIVERED"].includes(data.state) && <details className="rounded-xl border border-border bg-surface-raised p-4 sm:p-5" open>
-          <summary className="cursor-pointer font-medium">{data.offer.name} · {new Intl.NumberFormat("fr-FR", { style: "currency", currency: data.offer.currency }).format(data.offer.amount)}</summary>
-          <div className="mt-4 space-y-3 text-sm"><p className="whitespace-pre-wrap break-words">{data.offer.terms}</p>
-            {["ACCEPTED", "PAID", "DELIVERED"].includes(data.state) && <p className="whitespace-pre-wrap break-words">{data.offer.paymentInstructions}</p>}
+        {data && !data.informationOnly && shownOffer && ["PROPOSAL", "OBJECTION", "ACCEPTED", "PAID", "DELIVERED"].includes(data.state) && <details className="rounded-xl border border-border bg-surface-raised p-4 sm:p-5" open>
+          <summary className="cursor-pointer font-medium">{shownOffer.name} · {money(shownOffer.amount, shownOffer.currency)}{proposal ? ` · ${billingLabel(proposal.billing)}` : ""}</summary>
+          <div className="mt-4 space-y-3 text-sm"><p className="whitespace-pre-wrap break-words">{shownOffer.terms}</p>
+            {proposal && <>
+              <p>Montant total à payer : {money(proposal.amount, proposal.currency)} · {billingLabel(proposal.billing)}</p>
+              <p>Quantité : {proposal.quantity} · Pays : {proposal.countryCode}</p>
+              {proposal.scope.length > 0 && <div><p className="font-medium">Ce qui est prévu</p><ul className="list-disc space-y-1 pl-5">{proposal.scope.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}
+              {proposal.exclusions.length > 0 && <div><p className="font-medium">Ce qui reste à part</p><ul className="list-disc space-y-1 pl-5">{proposal.exclusions.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}
+              <p className="break-all text-xs text-foreground-muted">Référence : {proposal.id}</p>
+              {proposal.documentUrl === `/api/sales/${token}/proposal` && <a className="inline-flex min-h-10 items-center text-sm font-medium underline" href={proposal.documentUrl} target="_blank" rel="noreferrer">Ouvrir le devis</a>}
+              {!data.stopped && data.state === "PROPOSAL" && confirmedProposalId !== proposal.id && <div><button type="button" disabled={busy || Boolean(pending)} onClick={() => void send({ requestId: crypto.randomUUID(), proposalId: proposal.id, body: `Je confirme la proposition ${proposal.id} : ${proposal.offerName}, quantité ${proposal.quantity}, montant total ${money(proposal.amount, proposal.currency)} (${proposal.currency}) ${billingLabel(proposal.billing)}. J’accepte les conditions de la proposition ${proposal.id} affichée ci-dessus.` })} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 py-3 font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">Confirmer cette proposition</button></div>}
+              {confirmedProposalId === proposal.id && <p role="status" className="text-foreground-muted">Votre confirmation a été transmise à l’équipe.</p>}
+            </>}
+            {["ACCEPTED", "PAID", "DELIVERED"].includes(data.state) && data.offer && <p className="whitespace-pre-wrap break-words">{data.offer.paymentInstructions}</p>}
             {data.payment && <section className="space-y-2 border-t border-border pt-3" aria-label="Paiement de l’affaire">
               <p>Référence du paiement : <strong className="break-all">{data.payment.reference}</strong></p><p>Bénéficiaire : {data.payment.beneficiary}</p>
               <p>{data.payment.status === "PAID" ? "Paiement vérifié par l’équipe." : data.payment.status === "FAILED" ? "Le paiement n’est pas confirmé. Demandez à votre interlocuteur." : "L’équipe doit encore vérifier le paiement."}</p>

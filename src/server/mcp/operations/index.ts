@@ -26,6 +26,7 @@ import * as processScheduler from "@/server/services/process-scheduler";
 import * as slaTracker from "@/server/services/sla-tracker";
 import * as teamAllocator from "@/server/services/team-allocator";
 import { listStrategyMissions } from "@/server/mcp/_shared/strategy-activity";
+import { prepareSalesOfferInput } from "@/server/services/crm-engine/offer-contract";
 
 // ---------------------------------------------------------------------------
 // Operations MCP Server
@@ -127,7 +128,7 @@ export const tools: ToolDefinition[] = [
       const actor = await commercialAgent(input);
       const scopedDeal = (input.__auth as {salesDealId?:string|null}|undefined)?.salesDealId;
       const rows = await db.deal.findMany({ where: { sellerStrategyId: String(input.strategyId), ...(scopedDeal?{id:scopedDeal}:{}) }, orderBy: { updatedAt: "desc" } });
-      const { salesStateSchema } = await import("@/server/services/crm-engine/commercial");
+      const { salesStateSchema, mandateSchema } = await import("@/server/services/crm-engine/commercial");
       const assigned = rows.filter(row => {
         const state = salesStateSchema.safeParse(row.commercial);
         return state.success && state.data.mandate?.sellerId === actor.id;
@@ -148,15 +149,23 @@ export const tools: ToolDefinition[] = [
         const {customerAccessTokenHash:_hash,customerAccessTokenEncrypted:_secret,...deal}=row;
         const commercialState=salesStateSchema.parse(deal.commercial??{});
         const history=activities.filter(item=>item.dealId===deal.id);
+        const preparedReceipt = commercialState.proposal ? history.find(item => item.id === `sales-offer:${commercialState.proposal!.id}`) : undefined;
+        const preparedDocument = (preparedReceipt?.metadata as { result?: { proposal?: { id?: string; gloryOutputId?: string; documentUrl?: string } } } | null)?.result?.proposal;
+        const sellerProposal = commercialState.proposal && preparedDocument?.id === commercialState.proposal.id &&
+          preparedDocument.gloryOutputId === commercialState.proposal.gloryOutputId && typeof preparedDocument.documentUrl === "string"
+          ? { ...commercialState.proposal, status: "READY" as const, documentUrl: preparedDocument.documentUrl } : commercialState.proposal;
         const replies=inbound.filter(item=>item.salesDealId?item.salesDealId===deal.id:item.contact?.email.toLowerCase()===deal.contactEmail?.toLowerCase());
         const snapshot = publicSessions.find(session => session.dealId === deal.id)?.approvedOffers;
         const approvedOffers = (Array.isArray(snapshot) ? snapshot : []).flatMap(value => {
-          const candidate = value as { offerId?: unknown; offerName?: unknown; amount?: unknown; currency?: unknown; expiresAt?: unknown; informationOnly?: unknown } | null;
-          return candidate && typeof candidate.offerId === "string" && typeof candidate.offerName === "string" && typeof candidate.amount === "number" && typeof candidate.currency === "string" && typeof candidate.expiresAt === "string"
-            ? [{ offerId: candidate.offerId, offerName: candidate.offerName, expiresAt: candidate.expiresAt,
-              ...(candidate.informationOnly ? { informationOnly: true } : { amount: candidate.amount, currency: candidate.currency }) }] : [];
+          const parsed = mandateSchema.safeParse(value);
+          if (!parsed.success) return [];
+          const candidate = parsed.data;
+          return [{ offerId: candidate.offerId, offerName: candidate.offerName, expiresAt: candidate.expiresAt,
+            ...(candidate.informationOnly ? { informationOnly: true } : candidate.pricingRule
+              ? { pricingRule: candidate.pricingRule, pricingRequired: true }
+              : { amount: candidate.amount, currency: candidate.currency, billing: candidate.billing }) }];
         });
-        const currentState={dealId:deal.id,revision:deal.revision,node:commercialState.node,informationOnly:Boolean(commercialState.mandate?.informationOnly),nextAction:commercialState.nextAction??null,treeNodeId:commercialState.treeNodeId??null};
+        const currentState={dealId:deal.id,revision:deal.revision,node:commercialState.node,informationOnly:Boolean(commercialState.mandate?.informationOnly),pricingRequired:Boolean(commercialState.mandate?.pricingRule&&!commercialState.proposal),nextAction:commercialState.nextAction??null,treeNodeId:commercialState.treeNodeId??null};
         const currentTreeNode=commercialState.mandate?.conversationTree?.nodes.find(node=>node.id===commercialState.treeNodeId)??null;
         if(input.view==="ACTIONABLE"){
           const {conversationTree:_tree,...mandate}=commercialState.mandate??{};
@@ -164,7 +173,7 @@ export const tools: ToolDefinition[] = [
           const evidence=history.filter(item=>["SALES_DELIVERY_READY","SALES_PAYMENT_RECONCILED"].includes(item.activityType)).slice(-2);
           return {contextView:"ACTIONABLE",currentState,approvedOffers,currentTreeNode,
             deal:{id:deal.id,revision:deal.revision,sellerStrategyId:deal.sellerStrategyId,contactName:deal.contactName,stage:deal.stage,paymentReference:deal.paymentReference,
-              commercial:{...commercialState,mandate:{...mandate,conversationTree:undefined}}},
+              commercial:{...commercialState,proposal:sellerProposal,mandate:{...mandate,conversationTree:undefined, ...(commercialState.mandate?.pricingRule&&!commercialState.proposal?{amount:undefined,currency:undefined}:{})}}},
             replies:replies.slice(-2),replyEarlierCount:Math.max(0,replies.length-2),historyEarlierCount:Math.max(0,history.length-sent.length-evidence.length),
             history:[...sent,...evidence].sort((a,b)=>a.performedAt.getTime()-b.performedAt.getTime()).map(item=>({id:item.id,activityType:item.activityType,description:item.description,performedAt:item.performedAt,
               metadata:item.activityType.startsWith("SALES_WEB")||item.activityType.startsWith("SALES_EMAIL")?{body:(item.metadata as {body?:string}|null)?.body}:undefined})),
@@ -173,11 +182,26 @@ export const tools: ToolDefinition[] = [
         return {currentState,
           latestReply:replies.at(-1)??null,approvedOffers,
           currentTreeNode,
-          deal,historyEarlierCount:Math.max(0,history.length-8),replyEarlierCount:Math.max(0,replies.length-8),
+          deal:{...deal,commercial:{...commercialState,proposal:sellerProposal}},historyEarlierCount:Math.max(0,history.length-8),replyEarlierCount:Math.max(0,replies.length-8),
           history:history.slice(-8).map(item=>({id:item.id,activityType:item.activityType,description:item.description,performedAt:item.performedAt,
             metadata:item.activityType.startsWith("SALES_WEB")||item.activityType.startsWith("SALES_EMAIL")?{body:(item.metadata as {body?:string}|null)?.body}:undefined})),
           replies:replies.slice(-8)};
       }) };
+    },
+  },
+  {
+    name: "sales_prepare_offer",
+    description: "Préparer la proposition et son devis avec les prix et conditions approuvés. Aucun prix choisi par le vendeur, aucune présentation ni acceptation automatique.",
+    inputSchema: prepareSalesOfferInput.extend({ strategyId: z.string() }),
+    handler: async input => {
+      const actor = await commercialAgent(input);
+      const dealId = String(input.dealId);
+      const deal = await db.deal.findUniqueOrThrow({ where: { id: dealId }, select: { sellerStrategyId: true } });
+      if (deal.sellerStrategyId !== input.strategyId) throw new TRPCError({ code: "FORBIDDEN", message: "Cette affaire appartient à une autre marque." });
+      const { prepareSalesOffer } = await import("@/server/services/crm-engine/offers");
+      return salesDecisionResult(() => prepareSalesOffer({ dealId, requestId: String(input.requestId), expectedRevision: Number(input.expectedRevision),
+        offerId: String(input.offerId), countryCode: String(input.countryCode), quantity: input.quantity as number | undefined,
+        customerMessageId: input.customerMessageId as string | undefined }, actor), dealId);
     },
   },
   {

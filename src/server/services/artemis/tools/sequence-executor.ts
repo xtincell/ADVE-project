@@ -28,6 +28,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
+import { COMMERCIAL_INPUT_FIELDS, formatCommercialQuoteBrief } from "./commercial-offer";
 // Import directly from source files to avoid circular dependency (index.ts re-exports us)
 import { getGloryTool } from "./registry";
 import { PillarResolver } from "./pillar-resolver";
@@ -212,6 +213,11 @@ async function executeGloryStep(
 
   // Merge priority: atomic > sequence > global (most specific wins)
   const input: Record<string, string> = { ...globalValues, ...sequenceValues, ...atomicValues };
+  if (ref === "devis-generator" || ref === "pricing-strategy-advisor") {
+    // Upstream narrative tools cannot invent a mapping, quantities or terms.
+    for (const field of COMMERCIAL_INPUT_FIELDS) delete input[field];
+    Object.assign(input, context._commercialInputs ?? {});
+  }
 
   // Lazy import to avoid circular dependency (index.ts re-exports us)
   const { executeTool } = await import("./engine");
@@ -256,7 +262,7 @@ async function executeGloryStep(
   // et la cascade Glory→Brief→Forge hash-chain f9cd9de complète est préservée.
   let forgeTaskId: string | undefined;
   const decision = shouldChainPtahForge({
-    hasForgeOutput: !!tool?.forgeOutput,
+    hasForgeOutput: !!tool?.forgeOutput && !(ref === "devis-generator" && typeof output.devis !== "string" && !formatCommercialQuoteBrief(output.devis)),
     oracleEnrichmentMode: context.mode === "ENRICHMENT",
   });
   if (decision.shouldChain && tool) {
@@ -432,7 +438,11 @@ export async function chainGloryToPtah(args: {
 
   // Extraire le briefText du tool output selon briefTextPath (default "prompt")
   const briefTextPath = tool.forgeOutput.briefTextPath ?? "prompt";
-  const briefText = extractBriefText(toolOutput, briefTextPath);
+  const structuredQuote = tool.slug === "devis-generator" && typeof toolOutput.devis !== "string";
+  const briefText = structuredQuote ? formatCommercialQuoteBrief(toolOutput.devis) : extractBriefText(toolOutput, briefTextPath);
+  if (structuredQuote && !briefText) {
+    throw new Error("Complétez le devis et ses conditions avant de demander sa mise en page.");
+  }
   if (!briefText) {
     throw new Error(`Glory tool ${tool.slug} forgeOutput briefText path "${briefTextPath}" returned empty`);
   }
@@ -583,6 +593,14 @@ async function executeCalcStep(
   // polit le draft en narrative cohérente sans modifier les données.
   if (ref.startsWith("draft-")) {
     return executeSectionDraftCalc(ref, strategyId);
+  }
+
+  if (ref === "pricing-strategy-advisor" || ref === "devis-generator") {
+    // The existing Glory path loads current sources and persists GloryOutput.
+    // Do not run a pricing calculation on arbitrary preceding LLM output.
+    const { executeTool } = await import("./engine");
+    const { outputId, output } = await executeTool(ref, strategyId, (context._commercialInputs ?? {}) as Record<string, string>);
+    return { ...output, _gloryOutputId: outputId };
   }
 
   const { calculators } = await import("@/server/services/glory-tools/calculators");
@@ -1013,7 +1031,9 @@ export async function executeSequence(
   // cachés (toujours frais — l'opérateur veut un nouveau livrable). Cache
   // miss en cas de pillar.updatedAt > cachedAt (invalidation automatique
   // après OPERATOR_AMEND_PILLAR ou RTIS_CASCADE).
-  const isEnrichmentMode = initialContext.mode === "ENRICHMENT";
+  // Commercial quotations depend on caller selection, client and live prices,
+  // not just pillar timestamps. Never reuse another client's cached quotation.
+  const isEnrichmentMode = initialContext.mode === "ENRICHMENT" && key !== "OFFRE-V";
   if (isEnrichmentMode) {
     try {
       const { getCachedSequence } = await import("@/server/services/sequence-vault/cache");
@@ -1069,6 +1089,15 @@ export async function executeSequence(
   const briefContext = options?.briefContext ?? {};
 
   const context: SequenceContext = { ...strategyContext, ...briefContext, ...initialContext };
+  const authorizedCommercialInputs: Record<string, string> = {};
+  if (key === "OFFRE-V") {
+    for (const field of COMMERCIAL_INPUT_FIELDS) {
+      const value = initialContext[field] ?? briefContext[field];
+      if (value !== undefined && value !== null) authorizedCommercialInputs[field] = typeof value === "string" ? value : JSON.stringify(value);
+    }
+    // Retain only caller-supplied owner authorization; never model-produced values.
+    context._commercialInputs = Object.freeze(authorizedCommercialInputs);
+  }
 
   // Layer 3 (ATOMIC): Create resolver for precise pillar variable extraction.
   // Loaded once, reused across all GLORY steps in the sequence.
@@ -1088,6 +1117,7 @@ export async function executeSequence(
   const stepResults: StepResult[] = [];
   const gloryOutputIds: string[] = [];
   let hasFailure = false;
+  let commercialQuoteReady = false;
 
   // PREVIEW depth: identify the first ACTIVE step that produces a deliverable
   // (GLORY > ARTEMIS > MESTOR > PILLAR > CALC). Other steps are skipped.
@@ -1117,6 +1147,7 @@ export async function executeSequence(
   }
 
   for (let i = 0; i < seq.steps.length; i++) {
+    if (key === "OFFRE-V") context._commercialInputs = authorizedCommercialInputs;
     const step = seq.steps[i]!;
     const stepStart = Date.now();
 
@@ -1154,6 +1185,14 @@ export async function executeSequence(
 
     journal.stepStart(i, step.ref, step.type);
 
+    if (key === "OFFRE-V" && (step.ref === "client-presentation-strategist" || step.ref === "sales-deck-builder")
+      && !commercialQuoteReady) {
+      stepResults.push({ stepIndex: i, ref: step.ref, type: step.type, status: "SKIPPED", output: {}, durationMs: 0,
+        error: "Complétez les données du devis avant de préparer sa présentation commerciale." });
+      hasFailure = true;
+      continue;
+    }
+
     try {
       let output: Record<string, unknown>;
 
@@ -1178,6 +1217,7 @@ export async function executeSequence(
           break;
         case "CALC":
           output = await executeCalcStep(step.ref, strategyId, context);
+          if (output._gloryOutputId) gloryOutputIds.push(output._gloryOutputId as string);
           break;
         case "SEQUENCE": {
           // Encapsulate a sub-sequence — recursive call with current context
@@ -1232,6 +1272,11 @@ export async function executeSequence(
       const stepDuration = Date.now() - stepStart;
       const outputKeyCount = Object.keys(output).filter(k => !k.startsWith("_")).length;
       journal.stepOk(i, step.ref, step.type, stepDuration, { outputKeys: outputKeyCount });
+
+      if (key === "OFFRE-V" && step.ref === "devis-generator") {
+        commercialQuoteReady = (output.devis as { status?: string } | undefined)?.status === "READY";
+        if (!commercialQuoteReady) hasFailure = true;
+      }
 
       // Merge step output into accumulative context
       for (const key of step.outputKeys) {

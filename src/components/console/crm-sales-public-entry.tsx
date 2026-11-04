@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Copy, ExternalLink, MessageCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { saveSalesPublicEntryInput, type SaveSalesPublicEntryInput } from "@/server/services/crm-engine/public-entry-contract";
-import { CrmSalesMandateFields, type SalesCatalogueOffer, type SalesPrincipalOption } from "./crm-sales-mandate-fields";
+import { CrmSalesMandateFields, readSalesPricingFields, salesTaxLabel, type SalesCatalogueOffer, type SalesPrincipalOption } from "./crm-sales-mandate-fields";
 
 type Entry = Omit<SaveSalesPublicEntryInput, "expectedRevision" | "collectionAttested"> & { revision: number; publicId: string };
 type Props = {
@@ -48,8 +48,8 @@ function PublicEntryForm({ strategyId, brandName, representative, catalogue, off
             const prefix = `offer:${item.key}:`;
             const tree = read(form, prefix + "tree");
             return { offerId: item.id, offerVersion, offerName: offer.nom,
-              ...(!informationOnly ? { amount: Number(read(form, prefix + "amount")), beneficiary: read(form, prefix + "beneficiary"), paymentInstructions: read(form, prefix + "payment") } : {}),
-              currency: read(form, prefix + "currency"), terms: read(form, prefix + "terms"),
+              ...(!informationOnly ? { ...readSalesPricingFields(form, prefix), beneficiary: read(form, prefix + "beneficiary"), paymentInstructions: read(form, prefix + "payment") } : { currency: read(form, prefix + "currency") }),
+              terms: read(form, prefix + "terms"),
               deliveryOwnerId: read(form, prefix + "delivery"), expiresAt: new Date(read(form, prefix + "expiry")).toISOString(),
               ...(tree ? { conversationTree: JSON.parse(tree) } : {}),
               ...(!informationOnly && item.collect ? { collection: { mode: "MANUAL", destinationRef: read(form, prefix + "destinationRef"), financeOwnerId: read(form, prefix + "financeOwner") } } : {}),
@@ -111,7 +111,7 @@ function PublicEntryForm({ strategyId, brandName, representative, catalogue, off
         <div className="sm:col-span-2"><dt className="text-foreground-muted">Accueil publié</dt><dd className="whitespace-pre-wrap break-words">{review.welcome}</dd></div>
         <div><dt className="text-foreground-muted">État après publication</dt><dd>{review.enabled ? "Ouvert aux nouveaux visiteurs" : "Fermé aux nouveaux visiteurs"}</dd></div><div><dt className="text-foreground-muted">Capacité</dt><dd>{review.maxConversationsPerHour} par heure, {review.maxConversationsPerDay} par jour</dd></div>
       </dl>
-      <ol className="space-y-3">{review.offers.map(offer => <li key={offer.offerId} className="rounded-lg border border-border p-3 text-sm"><p className="font-medium">{offer.offerName}{!review.informationOnly && typeof offer.amount === "number" ? ` · ${new Intl.NumberFormat("fr-FR", { style: "currency", currency: offer.currency }).format(offer.amount)}` : ""}</p><p className="mt-2 whitespace-pre-wrap break-words">{offer.terms}</p><p className="mt-2 text-foreground-muted">Catalogue {offer.offerVersion} · valide jusqu’au {date(offer.expiresAt)}</p>{!review.informationOnly && <p className="mt-2">{offer.collection ? `Paiement à ${offer.beneficiary} · ${offer.collection.destinationRef}` : "Paiement à configurer"}</p>}</li>)}</ol>
+      <ol className="space-y-3">{review.offers.map(offer => <li key={offer.offerId} className="rounded-lg border border-border p-3 text-sm"><p className="font-medium">{offer.offerName}{!review.informationOnly && !offer.pricingRule && typeof offer.amount === "number" && offer.currency ? ` · ${new Intl.NumberFormat("fr-FR", { style: "currency", currency: offer.currency }).format(offer.amount)}` : ""}</p>{!review.informationOnly && offer.pricingRule && <p className="mt-2 text-foreground-muted">Tarif calculé selon le pays · {offer.pricingRule.countryCodes.join(", ")} · {offer.pricingRule.maxQuantity ?? 1} unité{(offer.pricingRule.maxQuantity ?? 1) > 1 ? "s" : ""} maximum</p>}{!review.informationOnly && <p className="mt-2 text-foreground-muted">{salesTaxLabel(offer)}</p>}<p className="mt-2 whitespace-pre-wrap break-words">{offer.terms}</p>{offer.exclusions?.length ? <p className="mt-2 whitespace-pre-wrap break-words">Non inclus : {offer.exclusions.join(" ; ")}</p> : null}<p className="mt-2 text-foreground-muted">Catalogue {offer.offerVersion} · valide jusqu’au {date(offer.expiresAt)}</p>{!review.informationOnly && <p className="mt-2">{offer.collection ? `Paiement à ${offer.beneficiary} · ${offer.collection.destinationRef}` : "Paiement à configurer"}</p>}</li>)}</ol>
       {review.informationOnly && <p className="text-sm text-foreground-muted">L’équipe doit confirmer les prestations et les conditions avant toute souscription.</p>}
       <p className="text-sm text-foreground-muted">Le visiteur ouvre son propre dossier. Chaque conversation garde les conditions autorisées au moment de son ouverture.</p>
       <label className="flex items-start gap-2 text-sm"><input type="checkbox" required disabled={pending} />J’autorise la publication de cet accueil et ces {review.informationOnly ? "informations" : "offres"}, et leur traitement par ce vendeur.</label>

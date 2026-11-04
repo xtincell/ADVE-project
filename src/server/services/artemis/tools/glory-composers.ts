@@ -434,6 +434,14 @@ export async function composeBenchmarkReferenceFinder(strategyId: string): Promi
 
 const ASYNC_GLORY_COMPOSERS: Record<string, (strategyId: string, input: Record<string, string>) => Promise<Blob>> = {
   "benchmark-reference-finder": composeBenchmarkReferenceFinder,
+  "pricing-strategy-advisor": async (strategyId, input) => {
+    const { composeCommercialPricing } = await import("./commercial-offer");
+    return composeCommercialPricing(strategyId, input);
+  },
+  "devis-generator": async (strategyId, input) => {
+    const { composeCommercialQuote } = await import("./commercial-offer");
+    return composeCommercialQuote(strategyId, input);
+  },
   "break-even-calculator": async (strategyId, input) => {
     const { composeSourcedBreakEven } = await import("@/server/services/financial-brain/break-even-source");
     return composeSourcedBreakEven(strategyId, input);

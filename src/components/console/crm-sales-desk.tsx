@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { CrmSalesMandateFields, salesChannels as channels, salesChannelNames } from "./crm-sales-mandate-fields";
+import { useEffect, useRef, useState } from "react";
+import { CrmSalesMandateFields, readSalesPricingFields, salesChannels as channels, salesChannelNames } from "./crm-sales-mandate-fields";
 import { CrmSalesPayment } from "./crm-sales-payment";
 import { useSession } from "next-auth/react";
 import { trpc } from "@/lib/trpc/client";
-import { conversationTreeSchema, salesStateSchema, type SalesStep } from "@/server/services/crm-engine/commercial";
+import type { z } from "zod";
+import { conversationTreeSchema, salesStateSchema, type salesStepSchema } from "@/server/services/crm-engine/commercial";
+import type { PrepareSalesOfferInput } from "@/server/services/crm-engine/offer-contract";
 
 const stateNames: Record<string, string> = { DISCOVERY: "À qualifier", QUALIFIED: "Acheteur qualifié", PARTNER: "Partenariat", AUDIENCE: "Public à informer", PROPOSAL: "Offre présentée", OBJECTION: "Objection à traiter", ACCEPTED: "Accord obtenu", PAID: "Paiement confirmé", DELIVERED: "Livraison confirmée", STOPPED: "Contact arrêté" };
 const fieldClass = "w-full rounded border border-border bg-background px-3 py-2 text-sm";
@@ -17,12 +19,21 @@ export function CrmSalesDesk() {
   const deals = trpc.crm.listDeals.useQuery({ limit: 500 });
   const [selected, setSelected] = useState("");
   const [brandId, setBrandId] = useState("");
+  const initialBrandRead = useRef(false);
+  useEffect(() => {
+    if (initialBrandRead.current || !brands.data) return;
+    initialBrandRead.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get("strategy") || params.get("strategyId");
+    if (requested && brands.data.some(brand => brand.id === requested)) setBrandId(current => current || requested);
+  }, [brands.data]);
   const [channel, setChannel] = useState<(typeof channels)[number]>("PHONE");
   const [error, setError] = useState("");
   const [decision, setDecision] = useState("");
   const [customerLink, setCustomerLink] = useState<{ dealId: string; url: string } | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const [pendingReply, setPendingReply] = useState<{ dealId: string; requestId: string; channel: "WEB" | "EMAIL"; body: string; subject?: string } | null>(null);
+  const [pendingOffer, setPendingOffer] = useState<PrepareSalesOfferInput | null>(null);
   const detail = trpc.crm.getDeal.useQuery({ id: selected }, { enabled: Boolean(selected) });
   const history = trpc.crm.listActivities.useQuery({ dealId: selected }, { enabled: Boolean(selected) });
   const create = trpc.crm.createDeal.useMutation();
@@ -36,6 +47,7 @@ export function CrmSalesDesk() {
   const inbound = trpc.crm.recordInboundSalesMessage.useMutation();
   const access = trpc.crm.createSalesCustomerAccess.useMutation();
   const reply = trpc.crm.sendSalesCustomerMessage.useMutation();
+  const prepareOffer = trpc.crm.prepareSalesOffer.useMutation();
   const customerMessages = trpc.crm.listSalesMessages.useQuery({ dealId: selected }, { enabled: Boolean(selected), refetchInterval: 5000 });
   const principalOptions = [
     { id: session?.user.id ?? "", label: `Moi · ${session?.user.name ?? session?.user.email ?? "Responsable"}` },
@@ -48,11 +60,13 @@ export function CrmSalesDesk() {
   const [offerId, setOfferId] = useState("");
   const offer = catalogue.find(item => item.id === offerId);
   const admin = session?.user.role === "ADMIN" || !!people.data?.canManage;
+  const approvedTree = sale?.mandate?.conversationTree;
+  const presentationChoice = approvedTree?.nodes.find(node => node.id === sale?.treeNodeId)?.choices.find(choice => choice.decision?.type === "PROPOSE");
 
   async function refresh() {
     await Promise.all([utils.crm.invalidate(), utils.strategy.list.invalidate()]);
   }
-  async function act(command: SalesStep["command"]) {
+  async function act(command: z.input<typeof salesStepSchema>["command"]) {
     if (!deal) return;
     setError("");
     try {
@@ -72,7 +86,7 @@ export function CrmSalesDesk() {
         <label>Affaire
           <select className={fieldClass} value={selected} onChange={event => setSelected(event.target.value)}>
             <option value="">Créer une affaire</option>
-            {deals.data?.map(item => <option key={item.id} value={item.id}>{item.companyName} · {item.contactName}</option>)}
+            {deals.data?.filter(item => !brandId || item.sellerStrategyId === brandId).map(item => <option key={item.id} value={item.id}>{item.companyName} · {item.contactName}</option>)}
           </select>
         </label>
         <label>Point de contact
@@ -111,7 +125,8 @@ export function CrmSalesDesk() {
           <p className="font-medium">{sale.nextAction ?? "Faire approuver l’offre et ses conditions."}</p>
           {sale.nextDeadline && <p>Prochaine échéance {new Date(sale.nextDeadline).toLocaleString("fr-FR")}</p>}
           {sale.mandate && <div className="space-y-1 text-sm">
-            <p>{sale.mandate.offerName} · {new Intl.NumberFormat("fr-FR", { style: "currency", currency: sale.mandate.currency }).format(sale.mandate.amount)}</p>
+            <p>{sale.mandate.offerName}{!sale.mandate.informationOnly && !sale.mandate.pricingRule ? ` · ${new Intl.NumberFormat("fr-FR", { style: "currency", currency: sale.mandate.currency }).format(sale.mandate.amount)}` : ""}</p>
+            {sale.mandate.pricingRule && !sale.proposal && <p className="text-foreground-muted">Tarif à calculer après le choix du pays.</p>}
             <p>{sale.mandate.terms}</p>
             <p>Conditions de vente valables jusqu’au {new Date(sale.mandate.expiresAt).toLocaleString("fr-FR")}</p>
           </div>}
@@ -135,7 +150,7 @@ export function CrmSalesDesk() {
                   outboundEmailEnabled: form.get("outboundEmail") === "on",
                   conversationTree, intakePaymentReference: input(form, "paymentRef") || undefined,
                   offerId, offerName: offer.nom, offerVersion: String(pillar.currentVersion),
-                  amount: Number(input(form, "amount")), currency: input(form, "currency"),
+                  ...readSalesPricingFields(form),
                   terms: input(form, "terms"), beneficiary: input(form, "beneficiary"),
                   sellerId: input(form, "seller"), deliveryOwnerId: input(form, "delivery"),
                   paymentInstructions: input(form, "payment"), expiresAt: new Date(input(form, "expiry")).toISOString(), channels: form.getAll("channels") as (typeof channels)[number][],
@@ -148,6 +163,38 @@ export function CrmSalesDesk() {
               </form>
             </details>
           )}
+          {sale.mandate && !sale.mandate.informationOnly && (admin || session?.user.id === sale.mandate.sellerId) && sale.node === "QUALIFIED" && !sale.proposal && <form aria-label="Préparer la proposition du client" className="space-y-3 rounded-lg border border-border p-4" onSubmit={async event => {
+            event.preventDefault(); setError("");
+            const form = new FormData(event.currentTarget);
+            const request = pendingOffer?.dealId === deal.id ? pendingOffer : { dealId: deal.id, requestId: crypto.randomUUID(), expectedRevision: deal.revision, offerId: sale.mandate!.offerId, countryCode: input(form, "proposalCountry").toUpperCase(), quantity: Number(input(form, "proposalQuantity")), ...(input(form, "proposalMessage") ? { customerMessageId: input(form, "proposalMessage") } : {}) };
+            setPendingOffer(request);
+            try { await prepareOffer.mutateAsync(request); await refresh(); setPendingOffer(null); }
+            catch (cause) { const code = (cause as { data?: { code?: string } }).data?.code; if (code && !["TIMEOUT", "INTERNAL_SERVER_ERROR"].includes(code)) setPendingOffer(null); setError((cause as Error).message); }
+          }}>
+            <h3 className="font-medium">Préparer la proposition</h3>
+            {sale.need && <p className="whitespace-pre-wrap break-words text-sm"><span className="font-medium">Besoin du client : </span>{sale.need}</p>}
+            <p className="text-sm text-foreground-muted">{sale.mandate.offerName} · Le prix et les conditions viendront de l’offre autorisée. La préparation ne présente pas encore la proposition au client.</p>
+            <fieldset className="grid gap-3 sm:grid-cols-2" disabled={prepareOffer.isPending || pendingOffer?.dealId === deal.id}>
+              {sale.mandate.pricingRule ? <label>Pays du client<select className={fieldClass} name="proposalCountry" required defaultValue={sale.mandate.pricingRule.countryCodes.length === 1 ? sale.mandate.pricingRule.countryCodes[0] : ""}><option value="">Choisir un pays</option>{sale.mandate.pricingRule.countryCodes.map(country => <option key={country} value={country}>{country}</option>)}</select></label> : <label>Pays du client<input className={fieldClass} name="proposalCountry" placeholder="CI" pattern="[A-Za-z]{2}" maxLength={2} required /></label>}
+              <label>Quantité<input className={fieldClass} name="proposalQuantity" type="number" min={1} max={sale.mandate.pricingRule?.maxQuantity ?? 100} defaultValue={1} required /></label>
+              <label className="sm:col-span-2">Réponse client à l’origine de la demande (facultatif)<select className={fieldClass} name="proposalMessage" defaultValue=""><option value="">Le besoin est déjà noté dans l’affaire</option>{customerMessages.data?.filter(message => message.direction === "IN").map(message => <option key={message.id} value={message.id}>{message.body.slice(0, 120)}</option>)}</select></label>
+            </fieldset>
+            <button className="min-h-10 rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50" disabled={prepareOffer.isPending}>{prepareOffer.isPending ? "Préparation…" : pendingOffer?.dealId === deal.id ? "Vérifier cette préparation" : "Calculer et préparer la proposition"}</button>
+          </form>}
+          {sale.proposal && <section aria-label="Proposition préparée" className="space-y-3 rounded-lg border border-border p-4 text-sm">
+            <h3 className="font-medium">{sale.proposal.offerName} · {new Intl.NumberFormat("fr-FR", { style: "currency", currency: sale.proposal.currency }).format(sale.proposal.amount)} · {sale.proposal.billing === "MONTHLY" ? "par mois" : sale.proposal.billing === "YEARLY" ? "par an" : "paiement unique"}</h3>
+            <p>Quantité : {sale.proposal.quantity} · Pays : {sale.proposal.countryCode}</p>
+            <p className="whitespace-pre-wrap break-words">{sale.proposal.terms}</p>
+            {sale.proposal.scope.length > 0 && <div><p className="font-medium">Ce qui est prévu</p><ul className="list-disc space-y-1 pl-5">{sale.proposal.scope.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}
+            {sale.proposal.exclusions.length > 0 && <div><p className="font-medium">Ce qui reste à part</p><ul className="list-disc space-y-1 pl-5">{sale.proposal.exclusions.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}
+            <p className="break-all text-xs text-foreground-muted">Référence : {sale.proposal.id} · Tarif calculé le {new Date(sale.proposal.preparedAt).toLocaleString("fr-FR")}</p>
+            {sale.node === "QUALIFIED" ? <><p className="text-foreground-muted">Cette proposition est préparée. Le client la verra après sa présentation.</p>{approvedTree && !presentationChoice && <p className="text-foreground-muted">Suivez l’étape courante de la conversation avant de présenter la proposition.</p>}<button type="button" className="min-h-10 rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50" disabled={update.isPending || Boolean(approvedTree && !presentationChoice)} onClick={() => {
+              if (approvedTree) {
+                if (!presentationChoice) return;
+                void act({ type: "BRANCH", choiceId: presentationChoice.id, evidence: `Présentation de la proposition ${sale.proposal!.id}` });
+              } else void act({ type: "PROPOSE" });
+            }}>Présenter la proposition au client</button></> : <p className="text-foreground-muted">Les conditions présentées au client sont conservées dans cette proposition.</p>}
+          </section>}
           {sale.mandate?.conversationTree && (
             <form className="space-y-3" onSubmit={event => {
               event.preventDefault(); const form = new FormData(event.currentTarget);
@@ -185,7 +232,7 @@ export function CrmSalesDesk() {
                   <option value="PARTNER">Orienter un partenaire</option>
                   <option value="AUDIENCE">Orienter le public</option>
                 </>}
-                {(!sale.mandate.conversationTree && ["QUALIFIED", "OBJECTION"].includes(sale.node)) && <option value="PROPOSE">Présenter l’offre</option>}
+                {(!sale.mandate.conversationTree && sale.proposal && ["QUALIFIED", "OBJECTION"].includes(sale.node)) && <option value="PROPOSE">Présenter l’offre</option>}
                 {(!sale.mandate.conversationTree && ["PROPOSAL", "OBJECTION"].includes(sale.node)) && <option value="OBJECTION">Noter une objection</option>}
                 {(!sale.mandate.conversationTree && sale.node === "PROPOSAL") && <option value="ACCEPT">Noter l’accord du client</option>}
                 {admin && sale.node === "ACCEPTED" && !sale.mandate.collection && <option value="PAYMENT">Vérifier un paiement</option>}

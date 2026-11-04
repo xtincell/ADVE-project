@@ -1,5 +1,11 @@
 ## 543 candidate — entrée publique de vente (4 novembre 2026)
 
+543 relie aussi les règles de prix approuvées au moteur monétisation existant et
+au devis Glory déterministe. `sales_prepare_offer` conserve la proposition dans
+le dossier ; le même STI la présente, reçoit le message d’accord et conserve son
+prix pour le paiement. Voir ADR-0238 et la section Offre pour les accès existants.
+La preuve des outils isolés ne remplace pas le parcours Luna ni la production.
+
 ADR-0238 : `/talk/[publicId]` rejoint le vendeur et le STI existants. Publication
 par le responsable de marque, offres et conditions conservées, admission anonyme
 avec reprise protégée et limites persistantes. Deux migrations additives, aucun

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { SalesCustomerChat } from "@/components/console/sales-customer-chat";
 
 vi.mock("@/components/shared/markdown-content", () => ({ MarkdownContent: ({ children }: { children: React.ReactNode }) => React.createElement("div", {}, children) }));
@@ -48,5 +48,36 @@ describe("the private dossier continues the public sales conversation", () => {
     await screen.findByText("L’équipe doit confirmer les prestations et les conditions avant toute souscription.");
     expect(screen.queryByText(/Gold/)).toBeNull(); expect(screen.queryByText(conversation.offer.terms)).toBeNull();
     expect(screen.queryByLabelText("Paiement de l’affaire")).toBeNull();
+  });
+
+  it("shows the frozen proposal and sends a bounded confirmation of that exact version without claiming a payment", async () => {
+    const token = "f".repeat(64);
+    const proposal = { id: "00000000-0000-4000-8000-000000000001", offerId: "gold", offerName: "Gold", amount: 120000, unitPrice: 60000, currency: "XOF", billing: "MONTHLY", quantity: 2, countryCode: "CI", terms: "C".repeat(4000), scope: ["Deux établissements"], exclusions: ["Achat média"], preparedAt: "2026-11-04T10:00:00Z", sourceVersion: "catalogue-4", gloryOutputId: "quote", documentUrl: `/api/sales/${token}/proposal` };
+    const fetcher = vi.fn(async (_url: string, options?: RequestInit) => ({ ok: true, json: async () => options?.method === "POST" ? { received: true } : { ...conversation, state: "PROPOSAL", proposal } }));
+    vi.stubGlobal("fetch", fetcher); render(React.createElement(SalesCustomerChat, { token }));
+    await screen.findByRole("button", { name: "Confirmer cette proposition" });
+    expect(screen.getByText(/Gold · 120.?000.*par mois/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Ouvrir le devis" }).getAttribute("href")).toBe(proposal.documentUrl);
+    expect(screen.queryByText(conversation.offer.terms)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Confirmer cette proposition" }));
+    await screen.findByText("Votre confirmation a été transmise à l’équipe.");
+    const sent = JSON.parse(String(fetcher.mock.calls.find(call => call[1]?.method === "POST")![1]!.body));
+    expect(sent.proposalId).toBe(proposal.id); expect(sent.body).toContain("120"); expect(sent.body).toContain("XOF"); expect(sent.body).toContain("par mois"); expect(sent.body).toContain(`J’accepte les conditions de la proposition ${proposal.id}`);
+    expect(sent.body.length).toBeLessThan(4000); expect(sent.requestId).toMatch(/^[a-f0-9-]{36}$/);
+    expect(screen.queryByText("Paiement vérifié par l’équipe.")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Confirmer cette proposition" })).toBeNull();
+  });
+
+  it("retries the same proposal confirmation after an uncertain send", async () => {
+    const token = "9".repeat(64);
+    const proposal = { id: "00000000-0000-4000-8000-000000000002", offerId: "gold", offerName: "Gold", amount: 60000, unitPrice: 60000, currency: "XOF", billing: "MONTHLY", quantity: 1, countryCode: "CI", terms: "Conditions approuvées.", scope: [], exclusions: [], preparedAt: "2026-11-04T10:00:00Z", sourceVersion: "4", gloryOutputId: "quote", documentUrl: `/api/sales/${token}/proposal` };
+    let attempts = 0;
+    const fetcher = vi.fn(async (_url: string, options?: RequestInit) => options?.method === "POST" ? { ok: ++attempts > 1, json: async () => ({ received: true }) } : { ok: true, json: async () => ({ ...conversation, state: "PROPOSAL", proposal }) });
+    vi.stubGlobal("fetch", fetcher); render(React.createElement(SalesCustomerChat, { token }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirmer cette proposition" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Vérifier l’envoi" }));
+    await waitFor(() => expect(screen.getByText("Votre confirmation a été transmise à l’équipe.")).toBeTruthy());
+    const sent = fetcher.mock.calls.filter(call => call[1]?.method === "POST");
+    expect(sent).toHaveLength(2); expect(sent[1]![1]!.body).toBe(sent[0]![1]!.body);
   });
 });

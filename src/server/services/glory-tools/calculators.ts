@@ -11,6 +11,8 @@
  *   PROFITABILITY:  project-pnl-calculator, client-profitability-analyzer, utilization-rate-tracker
  */
 
+import { devisGeneratorCalculator, pricingStrategyCalculator } from "@/server/services/artemis/tools/commercial-offer";
+
 type Ctx = Record<string, unknown>;
 type Result = Record<string, unknown>;
 
@@ -384,6 +386,8 @@ function scenarioModelerCalc(ctx: Ctx): Result {
 // ─── Export map (slug → function) ────────────────────────────────────────────
 
 export const calculators: Record<string, (ctx: Ctx) => Result | Promise<Result>> = {
+  "pricing-strategy-advisor": pricingStrategyCalculator,
+  "devis-generator": devisGeneratorCalculator,
   "roi-calculator": roiCalculator,
   "hourly-rate-calculator": hourlyRateCalculator,
   "codb-calculator": codbCalculator,

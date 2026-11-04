@@ -194,8 +194,11 @@ export async function executeTool(
   if (hasGloryComposer(tool.slug)) {
     const composed = await composeGloryDeterministic(tool.slug, strategyId, input);
     if (composed.ok) {
+      // Commercial amounts must never pass a permissive/LLM fallback.
+      const composedOutput = (tool.slug === "devis-generator" || tool.slug === "pricing-strategy-advisor")
+        ? tool.outputSchema!.parse(composed.output) as Record<string, unknown> : composed.output;
       const aiOutput: Record<string, unknown> = {
-        ...composed.output,
+        ...composedOutput,
         _provenance: "DETERMINISTIC_COMPOSE",
         _meta: {
           tool: tool.slug,

@@ -6,9 +6,14 @@ export async function serialSalesTransaction<T>(run: (tx: Prisma.TransactionClie
   for (let attempt = 0; ; attempt++) {
     try { return await db.$transaction(run, { isolationLevel: "Serializable", ...options }); }
     catch (cause) {
-      const error = cause as { code?: string; name?: string; cause?: { kind?: string; originalCode?: string } };
+      type Adapter = { name?: string; cause?: { kind?: string; originalCode?: string } };
+      const error = cause as Adapter & { code?: string; meta?: { code?: string; driverAdapterError?: Adapter } };
       const adapterConflict = error.name === "DriverAdapterError" && error.cause?.kind === "TransactionWriteConflict" && error.cause.originalCode === "40001";
-      if (attempt < 3 && (["P2034", "P2002"].includes(error.code ?? "") || adapterConflict)) continue;
+      const rawSerializationRollback = error.code === "P2010" && error.meta?.code === "40001";
+      const nested = error.meta?.driverAdapterError;
+      const nestedRawRollback = error.code === "P2010" && nested?.name === "DriverAdapterError" &&
+        nested.cause?.kind === "TransactionWriteConflict" && nested.cause.originalCode === "40001";
+      if (attempt < 3 && (["P2034", "P2002"].includes(error.code ?? "") || adapterConflict || rawSerializationRollback || nestedRawRollback)) continue;
       throw cause;
     }
   }

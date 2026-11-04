@@ -5,7 +5,7 @@ import type { Prisma, SalesPublicEntry } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createDealIn } from "./index";
 import { advanceSale, mandateSchema, type SalesState } from "./commercial";
-import { assertFleetBrand, recordInboundSalesMessageIn, type FleetActor } from "./fleet";
+import { assertFleetBrand, recordInboundSalesMessageIn, ensureSalesOfferToolsIn, type FleetActor } from "./fleet";
 import { issueCustomerAccessIn } from "./customer";
 import { serialSalesTransaction } from "./transaction";
 import { assertSalesCatalogueOfferIn, assertSalesPrincipalIn } from "./portfolio";
@@ -51,6 +51,13 @@ async function assertConfigIn(tx: Tx, config: Config, authorizedBy: string) {
   for (const offer of config.offers) {
     if (new Date(offer.expiresAt) <= new Date()) throw unavailable();
     await assertSalesCatalogueOfferIn(tx, brand.id, offer);
+    if (offer.pricingRule) {
+      const { lookupCountry } = await import("../country-registry");
+      for (const code of offer.pricingRule.countryCodes) {
+        const country = await lookupCountry(code);
+        if (!country || country.code !== code) throw new TRPCError({ code: "BAD_REQUEST", message: "Choisissez des pays reconnus pour le calcul du tarif." });
+      }
+    }
     await assertSalesPrincipalIn(tx, offer.deliveryOwnerId, scope, true);
     if (offer.collection) await assertSalesPrincipalIn(tx, offer.collection.financeOwnerId, scope, false);
   }
@@ -96,7 +103,10 @@ export async function saveSalesPublicEntry(actor: FleetActor, raw: SaveSalesPubl
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Publiez cette entrée depuis le poste commercial de la marque." });
     }
     // A stale catalogue or paused seller must never prevent the owner from closing the door.
-    if (input.enabled) await assertConfigIn(tx, input, actor.id);
+    if (input.enabled) {
+      const ready = await assertConfigIn(tx, input, actor.id);
+      if (ready.profile.mcpKeyId) await ensureSalesOfferToolsIn(tx, ready.profile.mcpKeyId);
+    }
     const values = { representativeId: input.representativeId, enabled: input.enabled, authorizedBy: actor.id,
       intentId, config: JSON.parse(JSON.stringify(input)) as Prisma.InputJsonObject };
     if (existing) await tx.salesPublicEntry.update({ where: { id: existing.id }, data: { ...values, revision: { increment: 1 } } });
@@ -123,7 +133,7 @@ export async function publicSalesEntry(publicId: string) {
   return { publicId: entry.publicId, brandName: parsed.data.publicBrandName, welcome: parsed.data.welcome, available, sellerMode,
     informationOnly: parsed.data.informationOnly,
     offers: available ? parsed.data.offers.map(offer => parsed.data.informationOnly ? { id: offer.offerId, name: offer.offerName } : ({ id: offer.offerId, name: offer.offerName,
-      terms: offer.terms, amount: offer.amount, currency: offer.currency })) : [] };
+      terms: offer.terms, ...(offer.pricingRule ? { pricingRequired: true } : { amount: offer.amount, currency: offer.currency }) })) : [] };
 }
 
 /** Public brand pages can expose the same stable entry without publishing private ADVE fields. */
@@ -171,7 +181,8 @@ export async function startPublicSalesConversation(publicId: string, raw: StartP
     const dealId = `sales-public-${hash(JSON.stringify([current.id, input.requestId]))}`;
     const notApplicable = "Non applicable — conversation d’information, aucun paiement autorisé.";
     const approvedOffers = config.offers.map(offer => mandateSchema.parse({ ...offer,
-      amount: config.informationOnly ? 0 : offer.amount,
+      amount: config.informationOnly || offer.pricingRule ? 0 : offer.amount,
+      currency: config.informationOnly ? (offer.currency ?? "XXX") : offer.pricingRule ? "XXX" : offer.currency,
       beneficiary: config.informationOnly ? notApplicable : offer.beneficiary,
       paymentInstructions: config.informationOnly ? notApplicable : offer.paymentInstructions,
       informationOnly: config.informationOnly,
@@ -181,7 +192,7 @@ export async function startPublicSalesConversation(publicId: string, raw: StartP
     const state: SalesState = advanceSale({ node: "DISCOVERY" }, { requestId: input.requestId, expectedRevision: 0,
       channel: "WEB", command: { type: "MANDATE", mandate } }, { id: current.authorizedBy, admin: true }, now);
     await createDealIn(tx, { id: dealId, contactName: input.displayName ?? "Visiteur web", companyName: "Demande web",
-      operatorId: brand.operatorId ?? undefined, sellerStrategyId: brand.id, value: mandate.informationOnly ? 0 : mandate.amount, currency: mandate.currency,
+      operatorId: brand.operatorId ?? undefined, sellerStrategyId: brand.id, value: mandate.informationOnly ? 0 : mandate.pricingRule ? undefined : mandate.amount, currency: mandate.currency,
       source: "PUBLIC_SALES_ENTRY", performedBy: current.authorizedBy,
       creationDescription: "Conversation ouverte par le visiteur",
       creationMetadata: { publicEntryId: current.id, publicEntryRevision: current.revision, authorizationIntentId: current.intentId,

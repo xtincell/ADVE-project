@@ -692,6 +692,9 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
             (message.contact?.strategyId !== deal.sellerStrategyId || !deal.contactEmail || message.contact?.email.toLowerCase() !== deal.contactEmail.toLowerCase()))) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’agent doit référencer une réponse reçue de cet acheteur pour cette marque." });
       }
+      if (previous.proposal && (!previous.proposal.presentedAt || message.createdAt < new Date(previous.proposal.presentedAt))) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’accord doit être reçu après la présentation de cette proposition au client." });
+      }
     }
     if(previous.mandate?.collection && ["PAYMENT","DELIVER"].includes(command.type)) {
       const payment=deal.paymentReference?await tx.intakePayment.findUnique({where:{reference:deal.paymentReference}}):null;
@@ -714,12 +717,15 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: (error as Error).message });
     }
     const stage = saleStage(next);
+    if (next.node === "PROPOSAL" && previous.node !== "PROPOSAL" && next.proposal && !next.proposal.presentedAt) {
+      next = { ...next, proposal: { ...next.proposal, presentedAt: new Date().toISOString() } };
+    }
     const changed = await tx.deal.updateMany({
       where: { id: dealId, revision: step.expectedRevision },
       data: {
         commercial: JSON.parse(JSON.stringify(next)), paymentReference: next.mandate?.intakePaymentReference ?? deal.paymentReference, stage, revision: { increment: 1 },
         wonAt: stage === "WON" ? (deal.wonAt ?? new Date()) : deal.wonAt,
-        value: next.mandate?.informationOnly || ["PARTNER", "AUDIENCE"].includes(next.node) ? 0 : (next.mandate?.amount ?? deal.value),
+        value: next.mandate?.informationOnly || ["PARTNER", "AUDIENCE"].includes(next.node) ? 0 : next.mandate?.pricingRule && !next.proposal ? null : (next.mandate?.amount ?? deal.value),
         currency: next.mandate?.currency ?? deal.currency,
       },
     });

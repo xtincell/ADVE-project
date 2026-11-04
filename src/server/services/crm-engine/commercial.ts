@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { salesPricingRuleSchema, salesBillingSchema, salesProposalSchema } from "./offer-contract";
 
 export const salesChannel = z.enum(["PHONE", "EMAIL", "WHATSAPP", "SMS", "WEB", "SOCIAL", "IN_PERSON"]);
 const text = z.string().trim().min(1).max(4000);
@@ -57,13 +58,26 @@ export const mandateSchema = z.object({
   intakePaymentReference: text.optional(),
   outboundEmailEnabled: z.boolean().optional(),
   informationOnly: z.boolean().optional(),
+  billing: salesBillingSchema.optional(),
+  pricingRule: salesPricingRuleSchema.optional(),
+  taxTreatment: z.enum(["INCLUDED_IN_PRICE", "EXCLUDED", "UNSPECIFIED"]).optional(),
+  taxRatePct: z.number().finite().min(0).max(100).optional(),
+  exclusions: z.array(text).max(30).optional(),
   portfolioAuthorizationId: z.string().uuid().optional(),
   portfolioMemberId: text.optional(),
   outreachPolicy: outreachPolicySchema.optional(),
   collection: collectionSchema.optional(),
 });
+/** Uncalculated formula prices are explicitly pending, never a free offer. */
+const mandateInputSchema = mandateSchema.partial({ amount: true, currency: true }).transform((value, ctx) => {
+  if (!value.pricingRule && (value.amount === undefined || value.currency === undefined)) {
+    ctx.addIssue({ code: "custom", message: "Renseignez le prix fixe et sa devise, ou choisissez une règle de calcul." });
+    return z.NEVER;
+  }
+  return mandateSchema.parse({ ...value, amount: value.pricingRule ? 0 : value.amount!, currency: value.pricingRule ? "XXX" : value.currency! });
+});
 export const salesCommandSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("MANDATE"), mandate: mandateSchema }),
+  z.object({ type: z.literal("MANDATE"), mandate: mandateInputSchema }),
   z.object({ type: z.literal("SELECT_OFFER"), offerId: text }),
   z.object({ type: z.literal("QUALIFY"), role: z.enum(["BUYER", "PARTNER", "AUDIENCE"]), need: text }),
   z.object({ type: z.literal("PROPOSE") }),
@@ -92,6 +106,7 @@ export const salesStateSchema = z.object({
   nextAction: text.optional(), nextDeadline: z.string().datetime().optional(),
   nextPlan: salesPlanSchema.optional(),
   cadenceSuspended: z.boolean().optional(),
+  proposal: salesProposalSchema.optional(),
 });
 export type SalesState = z.infer<typeof salesStateSchema>;
 export type SalesStep = z.infer<typeof salesStepSchema>;
@@ -108,7 +123,7 @@ export function selectApprovedSalesOffer(previous: SalesState, mandate: z.infer<
   requireCondition(new Date(previous.mandate.expiresAt) > now && new Date(mandate.expiresAt) > now, "Les conditions de vente ont expiré. Faites-les vérifier avant de continuer.");
   requireCondition(mandate.channels.length === 1 && mandate.channels[0] === "WEB" && !mandate.outboundEmailEnabled, "L’entrée publique autorise uniquement cette conversation web.");
   requireCondition(Boolean(previous.mandate.informationOnly) === Boolean(mandate.informationOnly), "Le vendeur ne peut pas transformer une demande d’information en offre commerciale.");
-  return { ...previous, mandate, treeNodeId: mandate.conversationTree?.start,
+  return { ...previous, mandate, proposal: undefined, treeNodeId: mandate.conversationTree?.start,
     nextAction: mandate.conversationTree?.nodes.find(node => node.id === mandate.conversationTree?.start)?.prompt ??
       (mandate.informationOnly ? "Répondre aux questions et préciser les informations nécessaires à un devis." : previous.node === "QUALIFIED" ? "Présenter l’offre approuvée et ses conditions." : "Qualifier le besoin et le payeur."),
     nextPlan: undefined, nextDeadline: undefined };
@@ -121,13 +136,15 @@ export function advanceSale(previous: SalesState, step: SalesStep, actor: SalesA
     requireCondition(actor.admin, "Le propriétaire de la marque doit approuver les conditions de vente.");
     requireCondition(previous.node === "DISCOVERY", "Les conditions d’une offre déjà présentée ne peuvent plus être modifiées.");
     requireCondition(new Date(command.mandate.expiresAt) > now, "Les conditions de vente doivent être encore valables.");
-    return { ...previous, mandate: command.mandate,
+    return { ...previous, mandate: command.mandate, proposal: undefined,
       treeNodeId: command.mandate.conversationTree?.start,
       nextAction: command.mandate.conversationTree?.nodes.find(node => node.id === command.mandate.conversationTree?.start)?.prompt ?? "Qualifier le besoin et le payeur." };
   }
   const mandate = previous.mandate;
   requireCondition(mandate, "Définissez les conditions de vente avant de poursuivre.");
   requireCondition(!mandate.informationOnly || !["PROPOSE", "ACCEPT", "PAYMENT", "DELIVER"].includes(command.type), "Cette conversation sert uniquement à répondre aux questions. Aucune vente ni aucun paiement n’y est autorisé.");
+  requireCondition(!mandate.pricingRule || !["PROPOSE", "ACCEPT", "PAYMENT", "DELIVER"].includes(command.type) ||
+    (previous.proposal && previous.proposal.amount === mandate.amount && previous.proposal.currency === mandate.currency && previous.proposal.offerId === mandate.offerId), "Préparez la proposition et conservez son prix avant de poursuivre la vente.");
   requireCondition(actor.admin || actor.id === mandate.sellerId || (command.type === "DELIVER" && actor.id === mandate.deliveryOwnerId), "Ce vendeur n’est pas autorisé à agir sur cette affaire.");
   if (command.type === "STOP") {
     const contracted = ["ACCEPTED", "PAID", "DELIVERED"].includes(previous.node);
@@ -183,6 +200,8 @@ export function advanceSale(previous: SalesState, step: SalesStep, actor: SalesA
         nextAction: command.role === "BUYER" ? (mandate.informationOnly ? "Répondre aux questions et préciser les informations nécessaires à un devis." : "Présenter l’offre approuvée et ses conditions.") : "Orienter vers la relation adaptée." };
     case "PROPOSE":
       requireCondition(previous.node === "QUALIFIED" || previous.node === "OBJECTION", "Qualifier un acheteur avant proposition.");
+      requireCondition(!mandate.pricingRule || previous.proposal, "Préparez la proposition et son prix avant de la présenter au client.");
+      requireCondition(!previous.proposal || (previous.proposal.offerId === mandate.offerId && previous.proposal.amount === mandate.amount && previous.proposal.currency === mandate.currency), "La proposition doit conserver les conditions et le prix calculés pour cette affaire.");
       return { ...previous, node: "PROPOSAL", nextAction: "Recueillir une décision sur les conditions présentées." };
     case "OBJECTION":
       requireCondition(previous.node === "PROPOSAL" || previous.node === "OBJECTION", "Présenter l’offre avant de traiter une objection.");

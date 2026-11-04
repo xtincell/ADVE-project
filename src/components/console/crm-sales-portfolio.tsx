@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { authorizeSalesPortfolioInput, type AuthorizeSalesPortfolioInput, type AuthorizedSalesPortfolio } from "@/server/services/crm-engine/portfolio-contract";
-import { CrmSalesMandateFields, salesChannelNames, type SalesCatalogueOffer, type SalesPrincipalOption } from "./crm-sales-mandate-fields";
+import { CrmSalesMandateFields, readSalesPricingFields, salesTaxLabel, salesChannelNames, type SalesCatalogueOffer, type SalesPrincipalOption } from "./crm-sales-mandate-fields";
 
 const field = "mt-1 w-full rounded border border-border bg-background px-3 py-2 text-sm";
 const button = "rounded-lg border border-border px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
@@ -18,7 +18,7 @@ function summary(input: AuthorizeSalesPortfolioInput, principals: SalesPrincipal
   return <div className="space-y-4 text-sm">
     <dl className="grid gap-3 sm:grid-cols-2">
       <div><dt className="text-foreground-muted">Marché et origine des contacts</dt><dd className="break-words">{input.market} · {input.source.label}<br />{input.source.reference}</dd></div>
-      <div><dt className="text-foreground-muted">Offre approuvée</dt><dd>{mandate.offerName} · catalogue version {mandate.offerVersion}<br />{new Intl.NumberFormat("fr-FR", { style: "currency", currency: mandate.currency }).format(mandate.amount)}</dd></div>
+      <div><dt className="text-foreground-muted">Offre approuvée</dt><dd>{mandate.offerName} · catalogue version {mandate.offerVersion}<br />{mandate.pricingRule ? `Tarif calculé selon le pays · ${mandate.pricingRule.countryCodes.join(", ")}` : typeof mandate.amount === "number" && mandate.currency ? new Intl.NumberFormat("fr-FR", { style: "currency", currency: mandate.currency }).format(mandate.amount) : "Prix à préciser"}<br />{salesTaxLabel(mandate)}</dd></div>
       <div className="sm:col-span-2"><dt className="text-foreground-muted">Pourquoi peut-on contacter ces personnes ?</dt><dd className="whitespace-pre-wrap break-words">{input.source.eligibilityBasis}</dd></div>
       <div className="sm:col-span-2"><dt className="text-foreground-muted">Conditions et résultat promis</dt><dd className="whitespace-pre-wrap break-words">{mandate.terms}</dd></div>
       <div><dt className="text-foreground-muted">Moyens de contact autorisés</dt><dd>{mandate.channels.map(channel => salesChannelNames[channel]).join(", ")}{mandate.outboundEmailEnabled ? " · envoi email autorisé" : " · aucun envoi email autorisé"}</dd></div>
@@ -52,13 +52,14 @@ export function SalesPortfolioAuthorizationForm({ strategyId, representative, ca
       try {
         const tree = read(form, "tree");
         const followUps = read(form, "followUps");
-        const input = authorizeSalesPortfolioInput.parse({ strategyId, representativeId: representative.id, requestId: crypto.randomUUID(), market: read(form, "market"),
+        const input: AuthorizeSalesPortfolioInput = authorizeSalesPortfolioInput.parse({ strategyId, representativeId: representative.id, requestId: crypto.randomUUID(), market: read(form, "market"),
           source: { label: read(form, "sourceLabel"), reference: read(form, "sourceReference"), eligibilityBasis: read(form, "eligibilityBasis") },
-          mandate: { offerId, offerVersion, offerName: offer.nom, amount: Number(read(form, "amount")), currency: read(form, "currency"), terms: read(form, "terms"), beneficiary: read(form, "beneficiary"), deliveryOwnerId: read(form, "delivery"), paymentInstructions: read(form, "payment"), expiresAt: new Date(read(form, "expiry")).toISOString(), channels: form.getAll("channels"), outboundEmailEnabled: form.get("outboundEmail") === "on", conversationTree: tree ? JSON.parse(tree) : undefined,
+          mandate: { offerId, offerVersion, offerName: offer.nom, ...readSalesPricingFields(form), terms: read(form, "terms"), beneficiary: read(form, "beneficiary"), deliveryOwnerId: read(form, "delivery"), paymentInstructions: read(form, "payment"), expiresAt: new Date(read(form, "expiry")).toISOString(), channels: form.getAll("channels"), outboundEmailEnabled: form.get("outboundEmail") === "on", conversationTree: tree ? JSON.parse(tree) : undefined,
             outreachPolicy: { firstContactAt: new Date(read(form, "firstContactAt")).toISOString(), followUpAfterDays: followUps ? followUps.split(",").map(value => Number(value.trim())) : [], dailyOutboundLimit: Number(read(form, "dailyOutboundLimit")), minIntervalHours: Number(read(form, "minIntervalHours")) },
             collection: { mode: "MANUAL", destinationRef: read(form, "destinationRef"), financeOwnerId: read(form, "financeOwner") } }, collectionAttested: true,
           members: memberKeys.map(key => ({ originKey: read(form, `origin:${key}`), companyName: read(form, `company:${key}`), contactName: read(form, `contact:${key}`), contactEmail: read(form, `email:${key}`) || undefined, contactPhone: read(form, `phone:${key}`) || undefined })),
         });
+        if (input.mandate.pricingRule) { delete input.mandate.amount; delete input.mandate.currency; }
         setReview(input); setUncertain(false);
       } catch (cause) {
         const issues = (cause as { issues?: { message: string; path: PropertyKey[] }[] }).issues;

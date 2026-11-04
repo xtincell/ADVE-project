@@ -3,7 +3,10 @@ import { createHash, randomBytes } from 'node:crypto';
 import { TRPCError } from '@trpc/server';
 import { db } from '@/lib/db';
 import type {Prisma} from '@prisma/client';
-import { salesStateSchema, type SalesActor } from './commercial';
+import { z } from 'zod';
+import { salesStateSchema, type SalesActor, type SalesState } from './commercial';
+import { commercialQuoteOutputSchema } from '../artemis/tools/commercial-offer-schemas';
+import { serialSalesTransaction } from './transaction';
 import {encryptTokenPayload,decryptTokenPayload} from '@/server/services/oauth-integrations';
 const hash = (value:string) => createHash('sha256').update(value).digest('hex');
 export async function issueCustomerAccess(dealId:string,actor?:SalesActor):Promise<{path:string}> {
@@ -25,10 +28,7 @@ export async function resolveCustomerDeal(token:string) {
   if(!deal?.sellerStrategyId) throw new TRPCError({code:'NOT_FOUND',message:'Conversation indisponible.'});
   return deal;
 }
-export async function customerConversation(token:string) {
-  const deal=await resolveCustomerDeal(token);
-  const state=salesStateSchema.parse(deal.commercial??{});
-  const informationOnly=Boolean(state.mandate?.informationOnly);
+async function customerBrandName(deal:{id:string;sellerStrategyId:string|null}) {
   const brand=await db.strategy.findUnique({where:{id:deal.sellerStrategyId!},select:{name:true}});
   const publicSession=await db.salesPublicSession.findUnique({where:{dealId:deal.id},select:{entryId:true,entry:{select:{config:true}}}});
   let publicBrandName:string|null=null;
@@ -38,6 +38,44 @@ export async function customerConversation(token:string) {
     const current=(publicSession.entry.config as {publicBrandName?:unknown}|null)?.publicBrandName;
     publicBrandName=typeof frozen==='string'&&frozen.trim()?frozen:typeof current==='string'&&current.trim()?current:'Équipe commerciale';
   }
+  return publicBrandName??brand?.name??'Équipe commerciale';
+}
+/** Preparation alone does not present a quotation or authorize its publication. */
+function visibleCustomerProposal(state:SalesState) {
+  const proposal=state.proposal,mandate=state.mandate;
+  return !mandate?.informationOnly&&proposal&&proposal.presentedAt&&
+    ['PROPOSAL','OBJECTION','ACCEPTED','PAID','DELIVERED'].includes(state.node)&&
+    proposal.offerId===mandate?.offerId&&proposal.amount===mandate.amount&&proposal.currency===mandate.currency
+    ?proposal:null;
+}
+/** Reads only the stored GloryOutput tied to this exact private dossier. */
+export async function customerProposalDocument(token:string) {
+  const deal=await resolveCustomerDeal(token);
+  const state=salesStateSchema.parse(deal.commercial??{}),proposal=visibleCustomerProposal(state);
+  if(!proposal)throw new TRPCError({code:'NOT_FOUND',message:'Devis indisponible.'});
+  const output=await db.gloryOutput.findFirst({where:{id:proposal.gloryOutputId,strategyId:deal.sellerStrategyId!,toolSlug:'devis-generator'},select:{output:true}});
+  const parsed=commercialQuoteOutputSchema.safeParse(output?.output);
+  const document=parsed.success?parsed.data.devis:null;
+  const group=document?.groups[0],line=document?.lines[0];
+  if(!document||document.status!=='READY'||document.groups.length!==1||document.lines.length!==1||
+    !group||!line||group.total!==proposal.amount||group.currency!==proposal.currency||group.billing!==proposal.billing||
+    line.offerId!==proposal.offerId||line.unitPrice!==proposal.unitPrice||line.quantity!==proposal.quantity||
+    line.currency!==group.currency||line.billing!==group.billing||line.lineTotal!==group.subtotal||
+    (proposal.taxTreatment!==undefined&&proposal.taxTreatment!==group.taxTreatment)||
+    (proposal.subtotal!==undefined&&proposal.subtotal!==group.subtotal)||
+    (proposal.taxRatePct!==undefined&&proposal.taxRatePct!==group.taxRatePct)||
+    (proposal.taxAmount!==undefined&&proposal.taxAmount!==group.tax)||
+    !document.sources.some(source=>source.kind==='CATALOGUE'&&String(source.version)===proposal.sourceVersion)){
+    throw new TRPCError({code:'NOT_FOUND',message:'Devis indisponible.'});
+  }
+  return {brand:await customerBrandName(deal),proposal,document};
+}
+export async function customerConversation(token:string) {
+  const deal=await resolveCustomerDeal(token);
+  const state=salesStateSchema.parse(deal.commercial??{});
+  const informationOnly=Boolean(state.mandate?.informationOnly);
+  const brand=await customerBrandName(deal);
+  const proposal=visibleCustomerProposal(state);
   const inbound=await db.crmMessage.findMany({where:{salesDealId:deal.id,direction:'IN'},orderBy:[{createdAt:'desc'},{id:'desc'}],take:200,select:{id:true,body:true,createdAt:true,channel:true}});
   const outbound=await db.cRMActivity.findMany({where:{dealId:deal.id,activityType:{in:['SALES_WEB_SENT','SALES_EMAIL_SENT']}},orderBy:[{performedAt:'desc'},{id:'desc'}],take:200,select:{id:true,metadata:true,performedAt:true}});
   const awaitingReply=inbound[0]&&(!outbound[0]||inbound[0].createdAt>outbound[0].performedAt);
@@ -47,18 +85,39 @@ export async function customerConversation(token:string) {
   const payment=deal.paymentReference?await db.intakePayment.findUnique({where:{reference:deal.paymentReference},select:{reference:true,status:true,amount:true,currency:true,tierKey:true,intakeToken:true,paidAt:true}}):null;
   const {paymentMajorAmount}=await import('./payments');
   const customerPayment=!informationOnly&&payment?.tierKey==='SALES_COLLECTION'&&payment.intakeToken===`sales-deal:${deal.id}`?{reference:payment.reference,status:payment.status,amount:paymentMajorAmount(payment),currency:payment.currency,beneficiary:state.mandate?.beneficiary??'',paidAt:payment.paidAt}:null;
-  return {informationOnly,payment:customerPayment,brand:publicBrandName??brand?.name??'Équipe commerciale',sellerMode:state.mandate?.sellerId.startsWith('mcp:')?'AI' as const:'HUMAN' as const,replyStatus,state:state.node,offer:state.mandate&&!informationOnly?{name:state.mandate.offerName,terms:state.mandate.terms,amount:state.mandate.amount,currency:state.mandate.currency,paymentInstructions:state.mandate.paymentInstructions}:null,
+  const visibleOffer=state.mandate&&!informationOnly&&(!state.mandate.pricingRule||proposal)&&(!state.proposal||proposal)
+    ?{name:proposal?.offerName??state.mandate.offerName,terms:proposal?.terms??state.mandate.terms,amount:proposal?.amount??state.mandate.amount,currency:proposal?.currency??state.mandate.currency,paymentInstructions:state.mandate.paymentInstructions}:null;
+  return {informationOnly,payment:customerPayment,brand,sellerMode:state.mandate?.sellerId.startsWith('mcp:')?'AI' as const:'HUMAN' as const,replyStatus,state:state.node,
+    offer:visibleOffer,proposal:proposal?{...proposal,documentUrl:`/api/sales/${token}/proposal`}:null,
     stopped:!!state.contactStopped,messages:[...inbound.map(m=>({id:m.id,role:'customer' as const,body:m.body,at:m.createdAt})),...outbound.map(m=>({id:m.id,role:'seller' as const,body:String((m.metadata as {body?:string}|null)?.body??''),at:m.performedAt}))].sort((a,b)=>a.at.getTime()-b.at.getTime())};
 }
-export async function receiveCustomerMessage(token:string,input:{body:string;requestId:string}) {
-  const deal=await resolveCustomerDeal(token);
-  const previous=await db.crmMessage.findFirst({where:{salesDealId:deal.id,providerRef:`web:${input.requestId}`}});
-  if(previous){if(previous.body!==input.body)throw new TRPCError({code:'CONFLICT',message:'Référence utilisée pour un autre message.'});return {received:true};}
-  const count=await db.crmMessage.count({where:{salesDealId:deal.id,direction:'IN',createdAt:{gte:new Date(Date.now()-60000)}}});
-  if(count>=10) throw new TRPCError({code:'TOO_MANY_REQUESTS',message:'Veuillez patienter avant un nouvel envoi.'});
-  const {recordInboundSalesMessage}=await import('./fleet');
-  await recordInboundSalesMessage({dealId:deal.id,channel:'WEB',body:input.body,externalId:`web:${input.requestId}`});
-  return {received:true};
+export const customerSalesMessageSchema=z.object({body:z.string().trim().min(1).max(4000),requestId:z.string().uuid(),proposalId:z.string().uuid().optional()}).strict();
+export async function receiveCustomerMessage(token:string,raw:z.input<typeof customerSalesMessageSchema>) {
+  const input=customerSalesMessageSchema.parse(raw),resolved=await resolveCustomerDeal(token);
+  return serialSalesTransaction(async tx=>{
+    await tx.$queryRaw`SELECT id FROM "Deal" WHERE id=${resolved.id} FOR UPDATE`;
+    const deal=await tx.deal.findUniqueOrThrow({where:{id:resolved.id}});
+    if(deal.customerAccessTokenHash!==hash(token))throw new TRPCError({code:'NOT_FOUND',message:'Conversation indisponible.'});
+    const previous=await tx.crmMessage.findFirst({where:{salesDealId:deal.id,providerRef:`web:${input.requestId}`,direction:'IN'}});
+    if(previous){
+      const acceptance=await tx.cRMActivity.findUnique({where:{id:`sales-proposal-acceptance:${previous.id}`}});
+      const prior=acceptance?.metadata as {proposalId?:string}|null;
+      if(previous.body!==input.body||(prior?.proposalId??null)!==(input.proposalId??null))throw new TRPCError({code:'CONFLICT',message:'Référence utilisée pour un autre message.'});
+      return {received:true};
+    }
+    const state=salesStateSchema.parse(deal.commercial??{}),proposal=visibleCustomerProposal(state);
+    if(input.proposalId&&(!proposal||proposal.id!==input.proposalId||state.node!=='PROPOSAL'||state.contactStopped||new Date(state.mandate!.expiresAt)<=new Date())){
+      throw new TRPCError({code:'CONFLICT',message:'Cette proposition a changé ou ne peut plus être confirmée. Relisez la conversation.'});
+    }
+    const count=await tx.crmMessage.count({where:{salesDealId:deal.id,direction:'IN',createdAt:{gte:new Date(Date.now()-60000)}}});
+    if(count>=10)throw new TRPCError({code:'TOO_MANY_REQUESTS',message:'Veuillez patienter avant un nouvel envoi.'});
+    const {recordInboundSalesMessageIn}=await import('./fleet');
+    const {message}=await recordInboundSalesMessageIn(tx,{dealId:deal.id,channel:'WEB',body:input.body,externalId:`web:${input.requestId}`});
+    if(input.proposalId&&proposal)await tx.cRMActivity.create({data:{id:`sales-proposal-acceptance:${message.id}`,dealId:deal.id,
+      activityType:'SALES_CUSTOMER_PROPOSAL_ACCEPTANCE',description:'Le client a transmis son accord sur cette proposition ; le vendeur doit le traiter.',
+      metadata:{proposalId:proposal.id,customerMessageId:message.id,requestId:input.requestId,bodyFingerprint:hash(input.body),gloryOutputId:proposal.gloryOutputId,sourceVersion:proposal.sourceVersion}}});
+    return {received:true};
+  });
 }
 export async function sendSalesWebMessage(dealId:string,actor:SalesActor,input:{requestId:string;text:string}) {
   const deal=await db.deal.findUniqueOrThrow({where:{id:dealId}});

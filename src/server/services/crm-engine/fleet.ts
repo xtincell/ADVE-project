@@ -20,6 +20,18 @@ type Tx = Prisma.TransactionClient;
 const publicProfile = ({ encryptedApiKey: _secret, ...profile }: SalesRepresentative) => ({ ...profile,
   principalId: profile.mode === "AI" ? `mcp:${profile.mcpKeyId}` : profile.humanUserId,
 });
+/** Extend only a managed seller's existing allowlist after an owner action. */
+export async function ensureSalesOfferToolsIn(tx: Tx, keyId: string) {
+  const key = await tx.mcpApiKey.findUniqueOrThrow({ where: { id: keyId } });
+  const permissions = key.permissions as { managedBy?: unknown; allowedTools?: unknown } | null;
+  if (permissions?.managedBy !== "sales-fleet") return;
+  if (!Array.isArray(permissions.allowedTools) || !permissions.allowedTools.every(tool => typeof tool === "string")) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Rétablissez les accès du vendeur avant de lui confier la préparation des offres." });
+  }
+  const allowedTools = permissions.allowedTools as string[];
+  const additions = ["operations.sales_prepare_offer", "operations.sales_request_payment"].filter(tool => !allowedTools.includes(tool));
+  if (additions.length) await tx.mcpApiKey.update({ where: { id: keyId }, data: { permissions: { ...permissions, allowedTools: [...allowedTools, ...additions] } as Prisma.InputJsonObject } });
+}
 export async function assertFleetBrand(actor: FleetActor, strategyId: string) {
   const brand = await db.strategy.findUniqueOrThrow({ where: { id: strategyId }, select: { id: true, userId: true, operatorId: true, client: { select: { operatorId: true } } } });
   const operatorId = brand.operatorId ?? brand.client?.operatorId ?? null;
@@ -61,7 +73,7 @@ export async function saveSalesRepresentative(actor: FleetActor, raw: z.input<ty
   // Fail before any write if the existing credential encryption key is unavailable.
   const encryptedApiKey = secret ? encryptTokenPayload({ apiKey: secret }) : null;
   return db.$transaction(async tx => {
-    const key = secret ? await tx.mcpApiKey.create({ data: { name: `Commercial · ${input.name}`, keyHash: createHash("sha256").update(secret).digest("hex"), server: "*", scopeKind: "BRAND", scopeStrategyId: input.strategyId, permissions: { managedBy: "sales-fleet", allowedTools: ["operations.sales_portfolio", "operations.sales_decide", "operations.sales_send_email", "operations.sales_send_message", "operations.sales_sync_payment", "operations.sales_request_payment", "operations.sales_claim_run", "operations.sales_complete_run", "operations.sales_customer_link", "advertis.getBrandCard", "advertis.getPillarContent", "intelligence.rag_search"] }, ratePerCallUsd: 0, isActive: false } }) : null;
+    const key = secret ? await tx.mcpApiKey.create({ data: { name: `Commercial · ${input.name}`, keyHash: createHash("sha256").update(secret).digest("hex"), server: "*", scopeKind: "BRAND", scopeStrategyId: input.strategyId, permissions: { managedBy: "sales-fleet", allowedTools: ["operations.sales_portfolio", "operations.sales_decide", "operations.sales_prepare_offer", "operations.sales_send_email", "operations.sales_send_message", "operations.sales_sync_payment", "operations.sales_request_payment", "operations.sales_claim_run", "operations.sales_complete_run", "operations.sales_customer_link", "advertis.getBrandCard", "advertis.getPillarContent", "intelligence.rag_search"] }, ratePerCallUsd: 0, isActive: false } }) : null;
     const conversation = await tx.conversation.create({ data: { strategyId: input.strategyId, title: input.name, channel: "SALES_MANAGER", participants: [actor.id], status: "ACTIVE" } });
     const profile = await tx.salesRepresentative.create({ data: { strategyId: input.strategyId, operatorId: brand.operatorId, name: input.name, mode: input.mode, humanUserId: input.mode === "HUMAN" ? input.humanUserId : null, mcpKeyId: key?.id, encryptedApiKey, conversationId: conversation.id, maxTurns: input.maxTurns, maxTokens: input.maxTokens, dailyTokenBudget: input.dailyTokenBudget, dailyRunLimit: input.dailyRunLimit } });
     await tx.conversation.update({ where: { id: conversation.id }, data: { externalRef: profile.id } });
@@ -73,6 +85,7 @@ export async function setSalesRepresentativeStatus(actor: FleetActor, id: string
   if (status === "ACTIVE" && profile.mode === "AI" && (!profile.mcpKeyId || !profile.encryptedApiKey)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configurez d’abord l’accès de ce vendeur IA." });
   return db.$transaction(async tx => {
     if (profile.mcpKeyId) await tx.mcpApiKey.update({ where: { id: profile.mcpKeyId }, data: { isActive: status !== "DRAFT" } });
+    if (status === "ACTIVE" && profile.mcpKeyId) await ensureSalesOfferToolsIn(tx, profile.mcpKeyId);
     const changed = await tx.salesRepresentative.update({ where: { id }, data: { status, revision: { increment: 1 } } });
     await tx.message.create({ data: { conversationId: profile.conversationId!, senderId: actor.id, senderName: "Supervision", content: `État du vendeur : ${status}`, channel: "SALES_MANAGER" } });
     return publicProfile(changed);

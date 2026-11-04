@@ -55,3 +55,37 @@ Le parcours avec Luna a atteint DELIVERED : visiteur sans compte, choix d’une 
 Précédents : [ADR0232 — Flotte et conversation client](0232-sales-fleet-and-customer-conversation.md), [ADR0233 — Portefeuilles et règlement](0233-authorized-sales-portfolios-and-collection.md).
 
 Points d’entrée : [contrat](../../../src/server/services/crm-engine/public-entry-contract.ts), [service](../../../src/server/services/crm-engine/public-entry.ts), [poste](../../../src/components/console/crm-sales-public-entry.tsx), [accueil](../../../src/components/console/public-sales-entry.tsx).
+
+## Offre et proposition du vendeur
+
+Le catalogue V reste la source des produits. Le responsable peut approuver un prix
+fixe et sa période, ou associer explicitement un produit à une formule du moteur
+tarifaire existant. Les pays et quantités permis appartiennent aux conditions de
+vente conservées ; le vendeur ne peut fournir de prix ou de nouvelle règle.
+
+`prepareSalesOffer` utilise les outils existants `pricing-strategy-advisor` et
+`devis-generator`, leurs calculs déterministes et leurs `GloryOutput`. Le devis
+conserve les sources et la version V, le client, les quantités, les périodes,
+le périmètre, les exclusions et les conditions. Les taxes incluses ne sont pas
+transformées en taux nul ; les abonnements et prestations ponctuelles ne sont
+pas additionnés dans un faux montant global. Une proposition liée à une affaire
+utilise un groupe de devise/période ; les autres cas restent à séparer.
+
+Le montant d’une affaire reste absent tant qu’une formule n’a pas été calculée.
+Une proposition préparée ne vaut ni présentation ni accord. Le même STI présente
+le devis puis reçoit une confirmation datée du client. Son bouton renvoie un
+message lié à l’identifiant exact de la proposition ; le vendeur enregistre
+ensuite l’accord. Une proposition déjà présentée reste conservée malgré un
+changement ultérieur du tarif ou du catalogue. Le paiement suit ce même montant.
+
+Le document privé est relu depuis le `GloryOutput` lié au dossier et imprimable,
+sans régénération. La présentation dans le catalogue, le poste commercial et
+le parcours OFFRE-V conserve la marque. Les outils sont accessibles au vendeur
+par son autorisation existante et sa tâche en cours ; aucun nouveau CRM ni
+client de modèle n’est créé.
+
+Les interruptions observées ont conduit à réduire les répétitions dans le
+contexte du vendeur, à rendre la branche STI explicite et à conserver le lien
+du devis lors d’une reprise. Les plafonds et les réservations inconnues restent
+inchangés. L’exercice avec Luna et les contrôles de production restent tracés
+séparément ; aucun chiffre d’affaires n’est déduit de documents d’essai.

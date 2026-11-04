@@ -1,5 +1,6 @@
 import { ADVE_KEYS } from "@/domain";
 import { z } from "zod";
+import { commercialPricingOutputSchema, commercialQuoteOutputSchema } from "./commercial-offer-schemas";
 import {
   namingOutputSchema,
   socialCopyOutputSchema,
@@ -880,17 +881,17 @@ Règles : La clé 'brief' est OBLIGATOIRE et doit contenir l'intégralité du br
     requiredDrivers: [],
     dependencies: [],
     description: "Calcule et formate un devis détaillé (lignes × prix)",
-    inputFields: ["services", "pricing", "timeline", "client_info"],
+    inputFields: ["services", "tier_mapping", "catalogue_terms", "country_code", "quote_request", "owner_authorized_offer_ids"],
     pillarBindings: {
       services: "v.produitsCatalogue",
       pricing: "v.productLadder",
       timeline: "s.sprint90Days",
     },
     outputFormat: "devis",
-    promptTemplate: `Devis détaillé :
-Services : {{services}} | Pricing : {{pricing}}
-Timeline : {{timeline}}
-Format : ligne par ligne avec description, quantité, prix unitaire, total, conditions.`,
+    outputSchema: commercialQuoteOutputSchema,
+    promptTemplate: `Devis déterministe : catalogue chargé depuis V, prix fixes documentés ou moteur monetization avec correspondance explicitement approuvée.
+Sélection et quantités : {{quote_request}}. Aucun prix libre, aucune moyenne d’une fourchette.
+Les devises et périodes restent séparées ; les données absentes sont signalées à compléter. Aucun appel LLM pour produire les tarifs.`,
     status: "ACTIVE",
     // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
     forgeOutput: {
@@ -1618,7 +1619,7 @@ Discipline : n'invente RIEN — ne remplis une dimension QUE si l'offre la porte
     requiredDrivers: [],
     dependencies: [],
     description: "Grille tarifaire, packages, ancrage psychologique, comparatif marché",
-    inputFields: ["products", "product_ladder", "unit_economics", "competitors", "market_size"],
+    inputFields: ["products", "tier_mapping", "catalogue_terms", "country_code", "owner_authorized_offer_ids"],
     pillarBindings: {
       products: "v.produitsCatalogue",
       product_ladder: "v.productLadder",
@@ -1627,12 +1628,11 @@ Discipline : n'invente RIEN — ne remplis une dimension QUE si l'offre la porte
       market_size: "t.tamSamSom",
     },
     outputFormat: "pricing_strategy",
-    promptTemplate: `Stratégie de pricing :
-Catalogue : {{products}}
-Ladder : {{product_ladder}}
-Unit economics : {{unit_economics}}
-Concurrents : {{competitors}} | Marché : {{market_size}}
-Livrable : grille tarifaire, packages (3 tiers), ancrage psychologique, prix psychologiques, marge par tier, comparatif marché.`,
+    outputSchema: commercialPricingOutputSchema,
+    promptTemplate: `Grille tarifaire déterministe depuis le catalogue V courant.
+Prix fixes documentés ou moteur monetization via {{tier_mapping}}, pays {{country_code}}.
+Devise et période explicites via {{catalogue_terms}} si le catalogue ne les porte pas.
+Aucun package, marge, rabais ou montant concurrentiel inventé ; les données absentes restent à compléter.`,
     status: "ACTIVE",
   },
   {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Bot, UserRound, Pause, Play, Send, ArrowRight, Plus } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
@@ -21,6 +21,14 @@ export function CrmSalesFleet() {
   const brands = trpc.strategy.list.useQuery({});
   const deals = trpc.crm.listDeals.useQuery({ limit: 500 });
   const [strategyId, setStrategyId] = useState("");
+  const initialBrandRead = useRef(false);
+  useEffect(() => {
+    if (initialBrandRead.current || !brands.data) return;
+    initialBrandRead.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get("strategy") || params.get("strategyId");
+    if (requested && brands.data.some(brand => brand.id === requested)) setStrategyId(current => current || requested);
+  }, [brands.data]);
   const [selected, setSelected] = useState("");
   const [creating, setCreating] = useState(false);
   const [mode, setMode] = useState<"AI" | "HUMAN">("AI");

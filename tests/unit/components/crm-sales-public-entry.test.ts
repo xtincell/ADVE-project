@@ -79,4 +79,46 @@ describe("the brand chooses what its public team may do", () => {
     expect((screen.getByLabelText("Comment le client paie") as HTMLTextAreaElement).required).toBe(true);
     expect(calls.save).not.toHaveBeenCalled();
   });
+
+  it("associates the chosen catalogue offer with an existing country tariff without sending a guessed price", async () => {
+    const { container } = render(React.createElement(CrmSalesPublicEntry, props));
+    fireEvent.click(screen.getByRole("button", { name: "Préparer l’accueil public" }));
+    fireEvent.change(screen.getByLabelText("Offre du catalogue"), { target: { value: "gold" } });
+    fireEvent.change(screen.getByLabelText("Comment fixer le prix ?"), { target: { value: "MARKET_TIER" } });
+    fireEvent.change(screen.getByLabelText("Formule de référence"), { target: { value: "RETAINER_BASE" } });
+    fireEvent.change(screen.getByLabelText(/Pays autorisés/), { target: { value: "CI, FR" } });
+    fireEvent.change(screen.getByLabelText("Quantité maximum"), { target: { value: "3" } });
+    expect(screen.queryByLabelText("Prix à proposer")).toBeNull(); expect(screen.queryByLabelText("Devise")).toBeNull();
+    fill(container, "market", "Équipes en Côte d’Ivoire et en France"); fill(container, "offer:0:expiry", "2026-12-30T16:00");
+    fill(container, "offer:0:beneficiary", "La marque"); fill(container, "offer:0:payment", "Paiement après accord sur la proposition.");
+    fireEvent.submit(screen.getByRole("form", { name: "Préparer l’entrée publique de marque" }));
+    expect(screen.getByText(/Tarif calculé selon le pays · CI, FR · 3 unités maximum/)).toBeTruthy();
+    fireEvent.click(screen.getByLabelText(/J’autorise la publication de cet accueil et ces offres/));
+    fireEvent.submit(screen.getByRole("form", { name: "Approuver l’entrée publique de marque" }));
+    await waitFor(() => expect(calls.save).toHaveBeenCalledOnce());
+    const offer = calls.save.mock.calls[0]![0].offers[0];
+    expect(offer).toMatchObject({ offerId: "gold", pricingRule: { kind: "MARKET_TIER", tierKey: "RETAINER_BASE", countryCodes: ["CI", "FR"], maxQuantity: 3 } });
+    expect(offer).not.toHaveProperty("amount"); expect(offer).not.toHaveProperty("currency");
+  });
+
+  it("requires the owner to choose the treatment of taxes and preserves an explicit rate and exclusions", async () => {
+    const { container } = render(React.createElement(CrmSalesPublicEntry, props));
+    fireEvent.click(screen.getByRole("button", { name: "Préparer l’accueil public" }));
+    fireEvent.change(screen.getByLabelText("Offre du catalogue"), { target: { value: "gold" } });
+    const taxChoice = screen.getByLabelText("Comment les taxes sont-elles prises en compte ?") as HTMLSelectElement;
+    expect(taxChoice.value).toBe("UNSPECIFIED"); expect(screen.queryByLabelText("Taux de taxe approuvé (%)")).toBeNull();
+    fireEvent.change(taxChoice, { target: { value: "EXCLUDED" } });
+    fireEvent.change(screen.getByLabelText("Taux de taxe approuvé (%)"), { target: { value: "18" } });
+    fireEvent.change(screen.getByLabelText("Ce prix correspond à"), { target: { value: "MONTHLY" } });
+    fireEvent.change(screen.getByLabelText("Prestations non incluses (facultatif)"), { target: { value: "Achat média\nProduction vidéo" } });
+    fill(container, "market", "Abidjan"); fill(container, "offer:0:currency", "XOF"); fill(container, "offer:0:expiry", "2026-12-30T16:00");
+    fill(container, "offer:0:beneficiary", "La marque"); fill(container, "offer:0:payment", "Paiement après accord sur la proposition.");
+    fireEvent.submit(screen.getByRole("form", { name: "Préparer l’entrée publique de marque" }));
+    expect(screen.getByText("Prix hors taxes · taxe ajoutée : 18 %")).toBeTruthy();
+    expect(screen.getByText("Non inclus : Achat média ; Production vidéo")).toBeTruthy();
+    fireEvent.click(screen.getByLabelText(/J’autorise la publication de cet accueil et ces offres/));
+    fireEvent.submit(screen.getByRole("form", { name: "Approuver l’entrée publique de marque" }));
+    await waitFor(() => expect(calls.save).toHaveBeenCalledOnce());
+    expect(calls.save.mock.calls[0]![0].offers[0]).toMatchObject({ amount: 60000, currency: "XOF", billing: "MONTHLY", taxTreatment: "EXCLUDED", taxRatePct: 18, exclusions: ["Achat média", "Production vidéo"] });
+  });
 });

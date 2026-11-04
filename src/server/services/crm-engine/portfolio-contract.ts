@@ -28,11 +28,20 @@ export const authorizeSalesPortfolioInput = z.object({
     offerId: true, offerVersion: true, offerName: true, terms: true,
     amount: true, currency: true, deliveryOwnerId: true, beneficiary: true,
     expiresAt: true, paymentInstructions: true, channels: true,
-    conversationTree: true, outboundEmailEnabled: true,
+    conversationTree: true, outboundEmailEnabled: true, pricingRule: true, billing: true,
+    taxTreatment: true, taxRatePct: true, exclusions: true,
   }).extend({
+    amount: z.number().finite().nonnegative().optional(),
+    currency: mandateSchema.shape.currency.optional(),
     outreachPolicy: outreachPolicySchema,
     collection: collectionSchema.omit({ attestedBy: true, attestedAt: true }).strict(),
-  }).strict(),
+  }).strict().transform((value, ctx) => {
+    if (!value.pricingRule && (value.amount === undefined || value.currency === undefined)) {
+      ctx.addIssue({ code: "custom", message: "Choisissez un prix fixe avec sa devise ou une règle de calcul." });
+      return z.NEVER;
+    }
+    return { ...value, amount: value.pricingRule ? 0 : value.amount!, currency: value.pricingRule ? "XXX" : value.currency! };
+  }),
   collectionAttested: z.literal(true),
   members: z.array(portfolioMemberSchema).min(1).max(5),
 }).strict().superRefine((input, ctx) => {

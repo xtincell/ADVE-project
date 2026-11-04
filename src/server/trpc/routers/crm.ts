@@ -18,6 +18,8 @@ import { authorizeSalesPortfolioInput } from "@/server/services/crm-engine/portf
 import * as salesPayments from "@/server/services/crm-engine/payments";
 import * as publicSales from "@/server/services/crm-engine/public-entry";
 import { saveSalesPublicEntryInput } from "@/server/services/crm-engine/public-entry-contract";
+import { prepareSalesOfferInput } from "@/server/services/crm-engine/offer-contract";
+import { prepareSalesOffer } from "@/server/services/crm-engine/offers";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { getOperatorContext } from "@/server/services/operator-isolation";
 /* lafusee:governed-active */
@@ -78,6 +80,10 @@ async function assertSalesDealAccess(ctx: SalesAccessContext, dealId: string): P
 // ============================================================================
 
 export const crmRouter = createTRPCRouter({
+  prepareSalesOffer: governedProcedure({
+    kind: "LEGACY_CRM_UPDATE_DEAL", requireOperator: false,
+    caller: "crm:prepareSalesOffer", inputSchema: prepareSalesOfferInput,
+  }).mutation(async ({ ctx, input }) => prepareSalesOffer(input, await assertSalesDealAccess(ctx, input.dealId), ctx.intentId)),
   getSalesPublicEntry: protectedProcedure.input(z.object({ strategyId: z.string().min(1) }))
     .query(async ({ ctx, input }) => publicSales.getSalesPublicEntry(await assertSalesBrandRead(ctx, input.strategyId), input)),
   saveSalesPublicEntry: governedProcedure({
