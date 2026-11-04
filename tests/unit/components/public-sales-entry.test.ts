@@ -17,6 +17,7 @@ describe("a visitor starts an existing sales conversation", () => {
     render(React.createElement(PublicSalesEntry, { publicId: entry.publicId }));
     await screen.findByText(entry.welcome);
     expect((screen.getByLabelText("Votre sujet (facultatif)") as HTMLSelectElement).value).toBe("");
+    expect(screen.queryByRole("link", { name: /Échanger avec .* sur WhatsApp/ })).toBeNull();
     fireEvent.change(screen.getByLabelText("Votre premier message"), { target: { value: "Je cherche un conseil pour mon restaurant." } });
     fireEvent.click(screen.getByRole("button", { name: "Envoyer" }));
     await screen.findByRole("button", { name: "Vérifier l’envoi" });
@@ -85,5 +86,15 @@ describe("a visitor starts an existing sales conversation", () => {
     await screen.findByText("L’équipe doit confirmer les prestations et les conditions avant toute souscription.");
     expect(screen.getByRole("button", { name: "Envoyer" })).toBeTruthy();
     expect(screen.queryByText(/1.?000|EUR|XOF|Acheter|Souscrire/)).toBeNull();
+  });
+
+  it("offers only this brand's approved WhatsApp contact even when new conversations are paused", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => response({ ...entry, available: false, informationOnly: true, brandName: "Marque & Café", humanContact: { name: "Alexandre", whatsapp: "237600000001", whatsappUrl: "https://wa.me/237600000001" } })));
+    render(React.createElement(PublicSalesEntry, { publicId: entry.publicId }));
+    const link = await screen.findByRole("link", { name: "Échanger avec Alexandre sur WhatsApp" });
+    const url = new URL(link.getAttribute("href")!);
+    expect(url.origin + url.pathname).toBe("https://wa.me/237600000001");
+    expect(url.searchParams.get("text")).toBe("Bonjour Alexandre, je vous contacte au sujet de Marque & Café.");
+    expect(url.href).not.toContain("/sales/"); expect(url.href).not.toContain("clientSecret");
   });
 });

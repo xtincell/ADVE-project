@@ -36,12 +36,16 @@ function PublicEntryForm({ strategyId, brandName, representative, catalogue, off
       event.preventDefault(); setError("");
       const form = new FormData(event.currentTarget);
       try {
+        const contactName = read(form, "humanContactName"), contactNumber = read(form, "humanContactWhatsapp");
+        if (Boolean(contactName) !== Boolean(contactNumber)) throw new Error("Renseignez le nom et le numéro du contact WhatsApp, ou laissez les deux champs vides.");
+        if (contactNumber && !/^\+?[\d ()-]+$/.test(contactNumber)) throw new Error("Renseignez le numéro WhatsApp avec son indicatif pays, sans lien ni texte.");
         const parsed = saveSalesPublicEntryInput.parse({
           strategyId, expectedRevision: initial?.revision ?? 0, representativeId: representative.id, enabled: form.get("enabled") === "on",
           informationOnly,
           publicBrandName: read(form, "publicBrandName"), welcome: read(form, "welcome"), market: read(form, "market"),
           maxConversationsPerDay: Number(read(form, "daily")), maxConversationsPerHour: Number(read(form, "hourly")),
           collectionAttested: !informationOnly && form.get("collectionAttested") === "on",
+          ...(contactName || contactNumber ? { humanContact: { name: contactName, whatsapp: contactNumber.replace(/\D/g, "") } } : {}),
           offers: offers.map(item => {
             const offer = catalogue.find(candidate => candidate.id === item.id);
             if (!offer) throw new Error("Choisissez une offre du catalogue pour chaque sujet publié.");
@@ -72,6 +76,11 @@ function PublicEntryForm({ strategyId, brandName, representative, catalogue, off
         <label>Marché concerné<input className={field} name="market" required maxLength={200} defaultValue={initial?.market} placeholder="Ex. Restaurateurs · Abidjan" /></label>
         <label className="sm:col-span-2">Message d’accueil public<textarea className={field} name="welcome" required rows={3} maxLength={600} defaultValue={initial?.welcome ?? `Bienvenue chez ${brandName}. Décrivez votre besoin ; notre équipe vous accompagne.`} /></label>
         <p className="text-xs text-foreground-muted sm:col-span-2">Seuls ce nom, cet accueil et les informations approuvées ci-dessous sont exposés. Le visiteur crée sa conversation privée sans compte ; ses messages rejoignent {representative.name}.</p>
+      </fieldset>
+      <fieldset className="grid gap-3 sm:grid-cols-2"><legend className="mb-3 font-medium">Contact WhatsApp proposé aux clients (facultatif)</legend>
+        <label>Nom de la personne à contacter<input className={field} name="humanContactName" maxLength={100} defaultValue={initial?.humanContact?.name} /></label>
+        <label>Numéro WhatsApp avec indicatif pays<input className={field} name="humanContactWhatsapp" type="tel" maxLength={30} defaultValue={initial?.humanContact?.whatsapp} placeholder="Ex. +237 6…" /></label>
+        <p className="text-xs text-foreground-muted sm:col-span-2">Ce nom et ce numéro seront visibles par les visiteurs de cette marque. Renseignez les deux champs ou laissez-les vides. Le client choisit d’ouvrir WhatsApp ; ses messages et son lien privé ne sont pas copiés.</p>
       </fieldset>
       <fieldset className="space-y-4"><legend className="mb-3 font-medium">{informationOnly ? "Sujets disponibles" : "Offres autorisées"} · {offers.length}/10</legend>
         {offers.map((item, index) => {
@@ -108,6 +117,7 @@ function PublicEntryForm({ strategyId, brandName, representative, catalogue, off
       <dl className="grid gap-3 text-sm sm:grid-cols-2">
         <div className="sm:col-span-2"><dt className="text-foreground-muted">Ce que le vendeur peut faire</dt><dd>{review.informationOnly ? "Répondre aux questions" : "Proposer des offres"}</dd></div>
         <div><dt className="text-foreground-muted">Vendeur</dt><dd>{representative.name}</dd></div><div><dt className="text-foreground-muted">Marché</dt><dd>{review.market}</dd></div>
+        {review.humanContact && <div className="sm:col-span-2"><dt className="text-foreground-muted">Contact WhatsApp publié</dt><dd>{review.humanContact.name} · +{review.humanContact.whatsapp}</dd></div>}
         <div className="sm:col-span-2"><dt className="text-foreground-muted">Accueil publié</dt><dd className="whitespace-pre-wrap break-words">{review.welcome}</dd></div>
         <div><dt className="text-foreground-muted">État après publication</dt><dd>{review.enabled ? "Ouvert aux nouveaux visiteurs" : "Fermé aux nouveaux visiteurs"}</dd></div><div><dt className="text-foreground-muted">Capacité</dt><dd>{review.maxConversationsPerHour} par heure, {review.maxConversationsPerDay} par jour</dd></div>
       </dl>
@@ -155,10 +165,11 @@ export function CrmSalesPublicEntry(props: Props) {
       {entry.enabled && !available && <p role="status" className="text-foreground-muted">{query.data?.readinessReason ?? "Vérifiez le vendeur et la validité des offres avant d’accueillir de nouveaux visiteurs."}</p>}
       {!belongsToSelected && <p className="text-foreground-muted">L’entrée actuelle est affectée à un autre vendeur de cette marque. Une nouvelle publication peut la confier à {representative.name}.</p>}
       <p className="whitespace-pre-wrap break-words">{entry.welcome}</p>
+      {entry.humanContact && <p>Contact WhatsApp : {entry.humanContact.name} · +{entry.humanContact.whatsapp}</p>}
       <p className="text-foreground-muted">{entry.offers.length} {entry.informationOnly ? "sujet" : "offre"}{entry.offers.length > 1 ? "s" : ""} · {entry.maxConversationsPerHour} nouvelles conversations par heure, {entry.maxConversationsPerDay} par jour</p>
       {!entry.informationOnly && entry.offers.some(offer => !offer.collection) && <p className="text-foreground-muted">Paiement à configurer pour {entry.offers.filter(offer => !offer.collection).map(offer => offer.offerName).join(", ")}. Les conversations et propositions restent possibles.</p>}
       {path && <div className="flex flex-wrap gap-2"><button type="button" className={button} onClick={async () => { try { await navigator.clipboard.writeText(new URL(path, window.location.origin).href); setCopied(true); } catch { setError("Ouvrez l’accueil pour copier son adresse depuis votre navigateur."); } }}><Copy aria-hidden className="h-4 w-4" />{copied ? "Lien copié" : "Copier le lien public"}</button><a className={button} href={path} target="_blank" rel="noreferrer"><ExternalLink aria-hidden className="h-4 w-4" />Ouvrir l’accueil</a>
-        {canManage && <button type="button" className={button} disabled={mutation.isPending} onClick={async () => { setError(""); try { await save(saveSalesPublicEntryInput.parse({ strategyId, expectedRevision: entry.revision, representativeId: entry.representativeId, enabled: !entry.enabled, informationOnly: entry.informationOnly ?? false, publicBrandName: entry.publicBrandName, welcome: entry.welcome, market: entry.market, maxConversationsPerDay: entry.maxConversationsPerDay, maxConversationsPerHour: entry.maxConversationsPerHour, offers: entry.offers, collectionAttested: Boolean(entry.offers.some(offer => offer.collection)) })); } catch (cause) { setError((cause as Error).message); } }}>{entry.enabled ? "Fermer aux nouveaux visiteurs" : "Rouvrir l’accueil"}</button>}
+        {canManage && <button type="button" className={button} disabled={mutation.isPending} onClick={async () => { setError(""); try { await save(saveSalesPublicEntryInput.parse({ strategyId, expectedRevision: entry.revision, representativeId: entry.representativeId, enabled: !entry.enabled, informationOnly: entry.informationOnly ?? false, publicBrandName: entry.publicBrandName, welcome: entry.welcome, market: entry.market, maxConversationsPerDay: entry.maxConversationsPerDay, maxConversationsPerHour: entry.maxConversationsPerHour, offers: entry.offers, humanContact: entry.humanContact, collectionAttested: Boolean(entry.offers.some(offer => offer.collection)) })); } catch (cause) { setError((cause as Error).message); } }}>{entry.enabled ? "Fermer aux nouveaux visiteurs" : "Rouvrir l’accueil"}</button>}
       </div>}
     </div>}
     {!entry && !editing && !query.isLoading && <p className="text-sm text-foreground-muted">Aucune entrée publique configurée pour cette marque.</p>}

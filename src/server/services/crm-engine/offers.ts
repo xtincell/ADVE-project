@@ -45,10 +45,18 @@ export async function prepareSalesOffer(raw: PrepareSalesOfferInput, actor: Sale
     const country = await lookupCountry(input.countryCode);
     if (!country || country.code !== input.countryCode) fail("Précisez un pays reconnu pour calculer le tarif.");
     if (actor.id.startsWith("mcp:") && !input.customerMessageId) fail("Référencez le message reçu du client qui précise son besoin.");
+    let customerBody: string | null = null;
     if (input.customerMessageId) {
       const message = await tx.crmMessage.findUnique({ where: { id: input.customerMessageId } });
       if (!message || message.salesDealId !== deal.id || message.direction !== "IN" || message.status !== "RECEIVED") fail("Référencez un message réellement reçu dans cette affaire.");
+      customerBody = message!.body;
     }
+    const normalizeName = (value: string) => value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    const placeholder = (value: string) => ["demande web", "visiteur web", "conversation web", "visiteur"].includes(normalizeName(value));
+    const declaredName = input.clientName ?? (!placeholder(deal.companyName) ? deal.companyName : !placeholder(deal.contactName) ? deal.contactName : null);
+    if (!declaredName || !normalizeName(declaredName) || placeholder(declaredName)) fail("Précisez le nom du client ou de l’entreprise avant de préparer la proposition.");
+    if (actor.id.startsWith("mcp:") && input.clientName &&
+      (!customerBody || !normalizeName(customerBody).includes(normalizeName(input.clientName)))) fail("Le nom du client doit être repris du message reçu, sans inventer d’identité.");
     await assertSalesCatalogueOfferIn(tx, deal.sellerStrategyId!, mandate!);
     const tier = mandate!.pricingRule ? getTier(mandate!.pricingRule.tierKey) : null;
     const scope = tier ? [tier.summary, ...tier.inclusions] : [mandate!.terms];
@@ -59,7 +67,7 @@ export async function prepareSalesOffer(raw: PrepareSalesOfferInput, actor: Sale
       tier_mapping: JSON.stringify(tier ? { [input.offerId]: mandate!.pricingRule!.tierKey } : {}),
       catalogue_terms: JSON.stringify(tier ? {} : { [input.offerId]: { currency: mandate!.currency, billing: mandate!.billing, conditions: [mandate!.terms], sourceRef: `sales-authorization:${deal.id}:${mandate!.offerVersion}` } }),
       owner_authorized_offer_ids: JSON.stringify([input.offerId]),
-      quote_request: JSON.stringify({ lines: [{ offerId: input.offerId, quantity: input.quantity }], client: { name: deal.companyName || deal.contactName, reference: deal.id },
+      quote_request: JSON.stringify({ lines: [{ offerId: input.offerId, quantity: input.quantity }], client: { name: declaredName, reference: deal.id },
         conditions: [mandate!.terms], scope, exclusions: mandate!.exclusions ?? [], validUntil: mandate!.expiresAt,
         taxTreatment: mandate!.taxTreatment, ...(mandate!.taxTreatment === "EXCLUDED" ? { taxRatePct: mandate!.taxRatePct } : {}) }),
     };
@@ -81,14 +89,14 @@ export async function prepareSalesOffer(raw: PrepareSalesOfferInput, actor: Sale
       taxTreatment: mandate!.taxTreatment, subtotal: group.subtotal, taxRatePct: group.taxRatePct, taxAmount: group.tax });
     const next = { ...state, proposal, mandate: { ...mandate!, amount: proposal.amount, currency: proposal.currency, billing: proposal.billing } };
     const changed = await tx.deal.updateMany({ where: { id: deal.id, revision: input.expectedRevision }, data: {
-      commercial: JSON.parse(JSON.stringify(next)), value: proposal.amount, currency: proposal.currency, revision: { increment: 1 },
+      commercial: JSON.parse(JSON.stringify(next)), ...(input.clientName ? { companyName: declaredName! } : {}), value: proposal.amount, currency: proposal.currency, revision: { increment: 1 },
     } });
     if (changed.count !== 1) throw new TRPCError({ code: "CONFLICT", message: "L’affaire a changé pendant la préparation. Relisez-la avant de continuer." });
     const result = { status: "READY" as const, dealId: deal.id, revision: deal.revision + 1,
       proposal: { ...proposal, documentUrl: `/api/sales/${token}/proposal` },
       currentState: { node: state.node, treeNodeId: state.treeNodeId ?? null, nextAction: state.nextAction ?? null } };
     await tx.cRMActivity.create({ data: { id: `sales-offer:${input.requestId}`, dealId: deal.id, performedBy: actor.id, activityType: "SALES_OFFER_PREPARED",
-      description: "Proposition et devis préparés depuis les conditions autorisées.", metadata: JSON.parse(JSON.stringify({ fingerprint: requestHash, authorizationIntentId, customerMessageId: input.customerMessageId, result, gloryIntentId: generated.intentId })) } });
+      description: "Proposition et devis préparés depuis les conditions autorisées.", metadata: JSON.parse(JSON.stringify({ fingerprint: requestHash, authorizationIntentId, customerMessageId: input.customerMessageId, clientName: declaredName, clientIdentitySource: input.clientName ? (input.customerMessageId ?? actor.id) : "EXISTING_CONTACT", result, gloryIntentId: generated.intentId })) } });
     return result;
   }, { timeout: 20000 });
 }

@@ -37,12 +37,13 @@ describe("the seller prepares a proposal from approved prices", () => {
     const view = render(React.createElement(CrmSalesDesk)); selectDeal();
     expect(screen.getByText(/Besoin du client/).parentElement?.textContent).toContain(deal.commercial.need);
     expect(screen.queryByText(/XXX/)).toBeNull(); expect(screen.queryByLabelText("Prix à proposer")).toBeNull();
+    expect((screen.getByLabelText("Nom du client ou de l’entreprise") as HTMLInputElement).value).toBe("Restaurant"); fireEvent.change(screen.getByLabelText("Nom du client ou de l’entreprise"), { target: { value: "Restaurant du client" } });
     fireEvent.change(screen.getByLabelText("Pays du client"), { target: { value: "FR" } });
     fireEvent.change(screen.getByLabelText("Quantité"), { target: { value: "2" } });
     fireEvent.change(screen.getByLabelText("Réponse client à l’origine de la demande (facultatif)"), { target: { value: "question" } });
     fireEvent.submit(screen.getByRole("form", { name: "Préparer la proposition du client" }));
     await waitFor(() => expect(calls.prepare).toHaveBeenCalledOnce());
-    expect(calls.prepare.mock.calls[0]![0]).toMatchObject({ dealId: "deal", expectedRevision: 7, offerId: "gold", countryCode: "FR", quantity: 2, customerMessageId: "question" });
+    expect(calls.prepare.mock.calls[0]![0]).toMatchObject({ dealId: "deal", expectedRevision: 7, offerId: "gold", clientName: "Restaurant du client", countryCode: "FR", quantity: 2, customerMessageId: "question" });
     expect(calls.prepare.mock.calls[0]![0]).not.toHaveProperty("amount"); expect(calls.update).not.toHaveBeenCalled();
     calls.deal.mockReturnValue({ ...deal, revision: 8, commercial: { ...deal.commercial, proposal } }); view.rerender(React.createElement(CrmSalesDesk));
     expect(screen.getByText(/Gold · 598.*par mois/)).toBeTruthy();

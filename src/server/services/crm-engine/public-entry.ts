@@ -9,7 +9,7 @@ import { assertFleetBrand, recordInboundSalesMessageIn, ensureSalesOfferToolsIn,
 import { issueCustomerAccessIn } from "./customer";
 import { serialSalesTransaction } from "./transaction";
 import { assertSalesCatalogueOfferIn, assertSalesPrincipalIn } from "./portfolio";
-import { saveSalesPublicEntryInput, startPublicSalesConversationInput,
+import { saveSalesPublicEntryInput, startPublicSalesConversationInput, projectPublicSalesHumanContact,
   type SaveSalesPublicEntryInput, type StartPublicSalesConversationInput } from "./public-entry-contract";
 
 type Tx = Prisma.TransactionClient;
@@ -130,7 +130,20 @@ export async function publicSalesEntry(publicId: string) {
   } catch (error) {
     if (!(error instanceof TRPCError)) throw error;
   }
+  // The approved human relay remains usable when the AI is unavailable.
+  // Closing the public door also withdraws this current public announcement.
+  let contactApproved=available;
+  if(entry.enabled&&parsed.data.humanContact&&!available){
+    const [emission,brand,author]=await Promise.all([
+      db.intentEmission.findUnique({where:{id:entry.intentId},select:{strategyId:true,caller:true}}),
+      db.strategy.findUnique({where:{id:entry.strategyId},select:{userId:true,status:true}}),
+      db.user.findUnique({where:{id:entry.authorizedBy},select:{id:true,role:true}}),
+    ]);
+    contactApproved=!!(brand&&!["ARCHIVED","DELETED"].includes(brand.status)&&author&&(brand.userId===author.id||author.role==="ADMIN")&&
+      emission?.strategyId===entry.strategyId&&emission.caller==="crm:saveSalesPublicEntry");
+  }
   return { publicId: entry.publicId, brandName: parsed.data.publicBrandName, welcome: parsed.data.welcome, available, sellerMode,
+    humanContact: entry.enabled&&contactApproved ? projectPublicSalesHumanContact(parsed.data.humanContact) : null,
     informationOnly: parsed.data.informationOnly,
     offers: available ? parsed.data.offers.map(offer => parsed.data.informationOnly ? { id: offer.offerId, name: offer.offerName } : ({ id: offer.offerId, name: offer.offerName,
       terms: offer.terms, ...(offer.pricingRule ? { pricingRequired: true } : { amount: offer.amount, currency: offer.currency }) })) : [] };
@@ -196,7 +209,8 @@ export async function startPublicSalesConversation(publicId: string, raw: StartP
       source: "PUBLIC_SALES_ENTRY", performedBy: current.authorizedBy,
       creationDescription: "Conversation ouverte par le visiteur",
       creationMetadata: { publicEntryId: current.id, publicEntryRevision: current.revision, authorizationIntentId: current.intentId,
-        publicBrandName: config.publicBrandName, market: config.market, initiatedBy: "CUSTOMER", consentScope: "THIS_WEB_CONVERSATION" } });
+        publicBrandName: config.publicBrandName, humanContact: config.humanContact ?? null,
+        market: config.market, initiatedBy: "CUSTOMER", consentScope: "THIS_WEB_CONVERSATION" } });
     await tx.deal.update({ where: { id: dealId }, data: { commercial: JSON.parse(JSON.stringify(state)), revision: 1 } });
     await tx.cRMActivity.create({ data: { dealId, performedBy: current.authorizedBy, activityType: "SALES_DECISION", description: "MANDATE",
       metadata: JSON.parse(JSON.stringify({ actorId: current.authorizedBy, intentId: current.intentId,

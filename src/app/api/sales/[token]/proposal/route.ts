@@ -1,6 +1,7 @@
 /** Private immutable quotation. No generation, repricing or customer identity discovery. */
 export const dynamic='force-dynamic';
 import {customerProposalDocument} from '@/server/services/crm-engine/customer';
+import {formatCommercialQuoteBrief} from '@/server/services/artemis/tools/commercial-offer';
 
 const headers={
  'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Referrer-Policy':'no-referrer',
@@ -12,10 +13,15 @@ const money=(amount:number,currency:string)=>new Intl.NumberFormat('fr-FR',{styl
 const date=(value:string|undefined)=>value?new Intl.DateTimeFormat('fr-FR',{dateStyle:'long',timeStyle:'short',timeZone:'UTC'}).format(new Date(value))+' UTC':'Non renseignée';
 const list=(items:string[])=>items.length?`<ul>${items.map(item=>`<li>${escape(item)}</li>`).join('')}</ul>`:'<p>Aucune exclusion supplémentaire indiquée.</p>';
 
-export async function GET(_request:Request,{params}:{params:Promise<{token:string}>}){
+export async function GET(request:Request,{params}:{params:Promise<{token:string}>}){
  try{
   const token=(await params).token;
   const {brand,proposal,document}=await customerProposalDocument(token);
+  if(new URL(request.url).searchParams.get('format')==='md'){
+   const markdown=formatCommercialQuoteBrief(document);
+   if(!markdown)throw new Error('Proposition indisponible.');
+   return new Response(markdown,{headers:{...headers,'Content-Type':'text/markdown; charset=utf-8','Content-Disposition':`attachment; filename="proposition-${proposal.id}.md"`}});
+  }
   const groups=document.groups.map(group=>`<section class="totals"><h3>${escape(group.currency)} · ${escape(billing(group.billing))}</h3>
    <p>${group.taxTreatment==='INCLUDED_IN_PRICE'?'Montant final, taxes incluses sans ventilation':'Sous-total hors taxes'} : <strong>${escape(money(group.subtotal,group.currency))}</strong></p>
    ${group.taxTreatment==='INCLUDED_IN_PRICE'?'<p>Taxes incluses dans le prix final. Aucun taux ni montant de taxe distinct n’est renseigné.</p>':`<p>Taxes (${escape(group.taxRatePct)} %) : ${escape(money(group.tax!,group.currency))}</p>`}

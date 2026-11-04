@@ -31,5 +31,6 @@ export const prepareSalesOfferInput = z.object({
   dealId: z.string().min(1), requestId: z.string().uuid(), expectedRevision: z.number().int().nonnegative(),
   offerId: z.string().min(1), countryCode: z.string().regex(/^[A-Z]{2}$/),
   quantity: z.number().int().min(1).max(100).default(1), customerMessageId: z.string().min(1).optional(),
+  clientName: z.string().trim().min(1).max(200).optional(),
 }).strict();
 export type PrepareSalesOfferInput = z.input<typeof prepareSalesOfferInput>;

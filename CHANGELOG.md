@@ -5,6 +5,8 @@ PR de livraison : #1133.
 - Offre → vendeur : règles de prix approuvées, tarification locale existante et devis Glory reliés au même dossier. Préparation, présentation, accord, paiement et livraison restent distincts et conservent leurs conditions.
 - Les deux calculateurs manquants de l’offre commerciale sont rétablis ; le devis structuré rejoint sa mise en page. Le propriétaire retrouve ces actions depuis Offre avec la marque sélectionnée.
 - Le client peut ouvrir sa proposition et confirmer exactement celle-ci. Reprise identique et concurrence ne multiplient pas les devis ; un ancien accord ne valide pas une proposition nouvellement préparée.
+- Le devis reprend le nom déclaré par le client ; un vendeur IA doit citer le message qui le contient. Le document est aussi téléchargeable en Markdown. Un contact WhatsApp approuvé pour chaque marque permet au client de solliciter une personne, avec ou sans proposition.
+- Après paiement vérifié, le document approuvé est accessible depuis la fiche client. Le vendeur peut le joindre par sa référence ; le serveur conserve l’URL exacte et refuse un lien de livraison altéré. La confirmation du client reste nécessaire à la clôture.
 
 Un nouveau client peut écrire à une marque sans compte, retrouver son vendeur et poursuivre le même échange jusqu’au paiement et à la livraison.
 

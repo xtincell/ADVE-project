@@ -22,6 +22,7 @@ const questionEntry = {
   publicBrandName: "La marque publique", welcome: "Bonjour. Quelle est votre question ?", market: "Abidjan",
   maxConversationsPerDay: 10, maxConversationsPerHour: 5, publicId: "public-brand", revision: 2,
   offers: [{ offerId: "gold", offerVersion: "4", offerName: "Gold", terms: "Expliquer les services ; l’équipe doit confirmer les conditions.", currency: "XOF", deliveryOwnerId: "owner", expiresAt: "2026-12-30T16:00:00.000Z" }],
+  humanContact: { name: "Alexandre", whatsapp: "237600000001" },
 };
 beforeEach(() => {
   vi.stubGlobal("React", React); vi.clearAllMocks();
@@ -38,6 +39,8 @@ describe("the brand chooses what its public team may do", () => {
     const { container } = render(React.createElement(CrmSalesPublicEntry, props));
     fireEvent.click(screen.getByRole("button", { name: "Préparer l’accueil public" }));
     fireEvent.click(screen.getByLabelText("Répondre aux questions"));
+    expect((screen.getByLabelText("Nom de la personne à contacter") as HTMLInputElement).value).toBe("");
+    fill(container, "humanContactName", "Alexandre"); fill(container, "humanContactWhatsapp", "+237 6 00 00 00 01");
     expect(screen.queryByLabelText("Prix à proposer")).toBeNull();
     expect(screen.queryByLabelText("Entreprise qui reçoit le paiement")).toBeNull();
     expect(screen.queryByLabelText("Comment le client paie")).toBeNull();
@@ -47,12 +50,12 @@ describe("the brand chooses what its public team may do", () => {
     fill(container, "offer:0:terms", "Expliquer les services ; l’équipe doit confirmer les conditions.");
     fireEvent.submit(screen.getByRole("form", { name: "Préparer l’entrée publique de marque" }));
     expect(screen.getByRole("form", { name: "Approuver l’entrée publique de marque" })).toBeTruthy();
-    expect(screen.queryByText(/60.?000/)).toBeNull();
+    expect(screen.queryByText(/^Gold ·/)).toBeNull();
     fireEvent.click(screen.getByLabelText(/J’autorise la publication de cet accueil et ces informations/));
     fireEvent.submit(screen.getByRole("form", { name: "Approuver l’entrée publique de marque" }));
     await waitFor(() => expect(calls.save).toHaveBeenCalledOnce());
     const submitted = calls.save.mock.calls[0]![0];
-    expect(submitted).toMatchObject({ informationOnly: true, collectionAttested: false, offers: [{ offerId: "gold", currency: "XOF", deliveryOwnerId: "owner" }] });
+    expect(submitted).toMatchObject({ informationOnly: true, collectionAttested: false, humanContact: { name: "Alexandre", whatsapp: "237600000001" }, offers: [{ offerId: "gold", currency: "XOF", deliveryOwnerId: "owner" }] });
     for (const key of ["amount", "beneficiary", "paymentInstructions", "collection"]) expect(submitted.offers[0]).not.toHaveProperty(key);
   });
 
@@ -64,13 +67,15 @@ describe("the brand chooses what its public team may do", () => {
     expect(screen.queryByText(/Paiement à configurer/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Fermer aux nouveaux visiteurs" }));
     await waitFor(() => expect(calls.save).toHaveBeenCalledOnce());
-    expect(calls.save.mock.calls[0]![0]).toMatchObject({ informationOnly: true, enabled: false, expectedRevision: 2, offers: questionEntry.offers });
+    expect(calls.save.mock.calls[0]![0]).toMatchObject({ informationOnly: true, enabled: false, expectedRevision: 2, humanContact: questionEntry.humanContact, offers: questionEntry.offers });
   });
 
   it("brings back sales conditions when the owner switches from questions to offers", () => {
     calls.query.mockReturnValue({ data: { entry: questionEntry, available: true }, isLoading: false, error: null });
     render(React.createElement(CrmSalesPublicEntry, props));
     fireEvent.click(screen.getByRole("button", { name: "Modifier l’accueil" }));
+    expect((screen.getByLabelText("Nom de la personne à contacter") as HTMLInputElement).value).toBe("Alexandre");
+    expect((screen.getByLabelText("Numéro WhatsApp avec indicatif pays") as HTMLInputElement).value).toBe("237600000001");
     expect((screen.getByLabelText("Répondre aux questions") as HTMLInputElement).checked).toBe(true);
     expect(screen.queryByLabelText("Prix à proposer")).toBeNull();
     fireEvent.click(screen.getByLabelText("Proposer des offres"));

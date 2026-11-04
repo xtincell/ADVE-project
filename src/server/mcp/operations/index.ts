@@ -27,6 +27,7 @@ import * as slaTracker from "@/server/services/sla-tracker";
 import * as teamAllocator from "@/server/services/team-allocator";
 import { listStrategyMissions } from "@/server/mcp/_shared/strategy-activity";
 import { prepareSalesOfferInput } from "@/server/services/crm-engine/offer-contract";
+import { projectPublicSalesHumanContact } from "@/server/services/crm-engine/public-entry-contract";
 
 // ---------------------------------------------------------------------------
 // Operations MCP Server
@@ -144,11 +145,18 @@ export const tools: ToolDefinition[] = [
         select: { id: true, salesDealId: true, body: true, subject: true, channel: true, createdAt: true, contact: { select: { email: true } } },
         orderBy: { createdAt: "asc" },
       });
-      const publicSessions = await db.salesPublicSession.findMany({ where: { dealId: { in: assigned.map(row => row.id) } }, select: { dealId: true, approvedOffers: true } });
-      return { deals: assigned.map(row => {
+      const publicSessions = await db.salesPublicSession.findMany({ where: { dealId: { in: assigned.map(row => row.id) } }, select: { dealId: true, entryId: true, approvedOffers: true } });
+      const {resolveSalesDeliveryDocument}=await import("@/server/services/crm-engine/customer");
+      return { deals: await Promise.all(assigned.map(async row => {
         const {customerAccessTokenHash:_hash,customerAccessTokenEncrypted:_secret,...deal}=row;
         const commercialState=salesStateSchema.parse(deal.commercial??{});
         const history=activities.filter(item=>item.dealId===deal.id);
+        const publicSession = publicSessions.find(session => session.dealId === deal.id);
+        const creation = publicSession ? history.find(item => item.activityType === "DEAL_CREATED" &&
+          (item.metadata as { publicEntryId?: unknown } | null)?.publicEntryId === publicSession.entryId) : null;
+        const humanContact = projectPublicSalesHumanContact((creation?.metadata as { humanContact?: unknown } | null)?.humanContact);
+        const deliveryDocument=await resolveSalesDeliveryDocument(db,deal,commercialState);
+        const deliveryAvailable=deliveryDocument?{deliveryActivityId:deliveryDocument.activityId}:null;
         const preparedReceipt = commercialState.proposal ? history.find(item => item.id === `sales-offer:${commercialState.proposal!.id}`) : undefined;
         const preparedDocument = (preparedReceipt?.metadata as { result?: { proposal?: { id?: string; gloryOutputId?: string; documentUrl?: string } } } | null)?.result?.proposal;
         const sellerProposal = commercialState.proposal && preparedDocument?.id === commercialState.proposal.id &&
@@ -171,22 +179,22 @@ export const tools: ToolDefinition[] = [
           const {conversationTree:_tree,...mandate}=commercialState.mandate??{};
           const sent=history.filter(item=>["SALES_WEB_SENT","SALES_EMAIL_SENT"].includes(item.activityType)).slice(-2);
           const evidence=history.filter(item=>["SALES_DELIVERY_READY","SALES_PAYMENT_RECONCILED"].includes(item.activityType)).slice(-2);
-          return {contextView:"ACTIONABLE",currentState,approvedOffers,currentTreeNode,
-            deal:{id:deal.id,revision:deal.revision,sellerStrategyId:deal.sellerStrategyId,contactName:deal.contactName,stage:deal.stage,paymentReference:deal.paymentReference,
+          return {contextView:"ACTIONABLE",currentState,approvedOffers,currentTreeNode,humanContact,deliveryAvailable,
+            deal:{id:deal.id,revision:deal.revision,sellerStrategyId:deal.sellerStrategyId,contactName:deal.contactName,companyName:deal.companyName,stage:deal.stage,paymentReference:deal.paymentReference,
               commercial:{...commercialState,proposal:sellerProposal,mandate:{...mandate,conversationTree:undefined, ...(commercialState.mandate?.pricingRule&&!commercialState.proposal?{amount:undefined,currency:undefined}:{})}}},
             replies:replies.slice(-2),replyEarlierCount:Math.max(0,replies.length-2),historyEarlierCount:Math.max(0,history.length-sent.length-evidence.length),
             history:[...sent,...evidence].sort((a,b)=>a.performedAt.getTime()-b.performedAt.getTime()).map(item=>({id:item.id,activityType:item.activityType,description:item.description,performedAt:item.performedAt,
               metadata:item.activityType.startsWith("SALES_WEB")||item.activityType.startsWith("SALES_EMAIL")?{body:(item.metadata as {body?:string}|null)?.body}:undefined})),
             contextNotice:"Only the current tree node, two latest customer replies, two sent messages and two fulfilment/payment notes are included. Earlier history and inactive tree nodes remain in the canonical dossier."};
         }
-        return {currentState,
+        return {currentState,humanContact,deliveryAvailable,
           latestReply:replies.at(-1)??null,approvedOffers,
           currentTreeNode,
           deal:{...deal,commercial:{...commercialState,proposal:sellerProposal}},historyEarlierCount:Math.max(0,history.length-8),replyEarlierCount:Math.max(0,replies.length-8),
           history:history.slice(-8).map(item=>({id:item.id,activityType:item.activityType,description:item.description,performedAt:item.performedAt,
             metadata:item.activityType.startsWith("SALES_WEB")||item.activityType.startsWith("SALES_EMAIL")?{body:(item.metadata as {body?:string}|null)?.body}:undefined})),
           replies:replies.slice(-8)};
-      }) };
+      })) };
     },
   },
   {
@@ -201,7 +209,7 @@ export const tools: ToolDefinition[] = [
       const { prepareSalesOffer } = await import("@/server/services/crm-engine/offers");
       return salesDecisionResult(() => prepareSalesOffer({ dealId, requestId: String(input.requestId), expectedRevision: Number(input.expectedRevision),
         offerId: String(input.offerId), countryCode: String(input.countryCode), quantity: input.quantity as number | undefined,
-        customerMessageId: input.customerMessageId as string | undefined }, actor), dealId);
+        customerMessageId: input.customerMessageId as string | undefined, clientName: input.clientName as string | undefined }, actor), dealId);
     },
   },
   {
@@ -294,14 +302,14 @@ export const tools: ToolDefinition[] = [
   },
   {
     name: "sales_send_message",
-    description: "Répondre au client sur sa conversation web. La réponse est réellement visible dans le même dossier.",
-    inputSchema:z.object({strategyId:z.string(),dealId:z.string(),requestId:z.string().uuid(),text:z.string().trim().min(1).max(12000),channel:z.literal("WEB")}),
+    description: "Répondre au client sur sa conversation web. Pour un livrable payé, transmettre deliveryAvailable.deliveryActivityId et un texte sans URL : le serveur joint le lien approuvé, sans recopier son adresse.",
+    inputSchema:z.object({strategyId:z.string(),dealId:z.string(),requestId:z.string().uuid(),text:z.string().trim().min(1).max(12000),channel:z.literal("WEB"),deliveryActivityId:z.string().trim().min(1).max(200).optional()}),
     handler:async input=>{
       const actor=await commercialAgent(input);
       const deal=await db.deal.findUniqueOrThrow({where:{id:String(input.dealId)}});
       if(deal.sellerStrategyId!==input.strategyId)throw new Error("Affaire hors marque.");
       const {sendSalesWebMessage}=await import("@/server/services/crm-engine/customer");
-      return salesDecisionResult(()=>sendSalesWebMessage(deal.id,actor,{requestId:String(input.requestId),text:String(input.text)}),deal.id);
+      return salesDecisionResult(()=>sendSalesWebMessage(deal.id,actor,{requestId:String(input.requestId),text:String(input.text),deliveryActivityId:input.deliveryActivityId as string|undefined}),deal.id);
     },
   },
 

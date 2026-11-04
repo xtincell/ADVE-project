@@ -84,6 +84,28 @@ le parcours OFFRE-V conserve la marque. Les outils sont accessibles au vendeur
 par son autorisation existante et sa tâche en cours ; aucun nouveau CRM ni
 client de modèle n’est créé.
 
+Le nom du client doit être exploitable : un libellé d’admission tel que
+« Demande web » ne suffit pas à préparer un devis. Le vendeur IA reprend un nom
+déclaré dans le message reçu qu’il référence ; cette provenance est conservée.
+Le même devis peut être téléchargé en Markdown via sa route privée, avec les
+mêmes contrôles de correspondance entre montant, version et document.
+
+Le propriétaire peut approuver un contact WhatsApp dans l’accueil de chaque
+marque. Il est figé à l’admission et ne provient jamais du contact général
+UPgraders pour une autre marque. Le client peut l’ouvrir sans devis ; le texte
+prérempli n’emporte ni message, ni lien privé, ni secret de conversation.
+Si le vendeur ne peut conclure, il conserve l’état réel et propose ce relais,
+accompagné du devis lorsqu’il existe. Ouvrir WhatsApp ne vaut ni message envoyé,
+ni transfert déjà effectué, ni accord commercial.
+
+Après paiement vérifié, la dernière activité `SALES_DELIVERY_READY` peut rendre
+son document structuré disponible au client. Son auteur doit être le propriétaire
+de la marque ou le responsable de livraison approuvé ; une description textuelle
+ne remplace pas cette référence. Le vendeur joint son identifiant et le serveur
+ajoute l’URL canonique. Un lien de fichier altéré est refusé. Le même document est
+accessible dans la fiche client ; aucun de ces affichages ne marque DELIVERED.
+La confirmation reçue du client après paiement reste exigée pour cette étape.
+
 Les interruptions observées ont conduit à réduire les répétitions dans le
 contexte du vendeur, à rendre la branche STI explicite et à conserver le lien
 du devis lors d’une reprise. Les plafonds et les réservations inconnues restent

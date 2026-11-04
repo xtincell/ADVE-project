@@ -17,7 +17,7 @@ import { applySalesStep } from "@/server/services/crm-engine";
 import { salesStateSchema } from "@/server/services/crm-engine/commercial";
 import { prepareSalesOffer } from "@/server/services/crm-engine/offers";
 import type { PrepareSalesOfferInput } from "@/server/services/crm-engine/offer-contract";
-import { saveSalesPublicEntry, startPublicSalesConversation } from "@/server/services/crm-engine/public-entry";
+import { publicSalesEntry, saveSalesPublicEntry, startPublicSalesConversation } from "@/server/services/crm-engine/public-entry";
 import type { SaveSalesPublicEntryInput } from "@/server/services/crm-engine/public-entry-contract";
 import { customerConversation, sendSalesWebMessage } from "@/server/services/crm-engine/customer";
 import { lookupCountry, refreshCache } from "@/server/services/country-registry";
@@ -37,6 +37,8 @@ type FixtureOptions = {
   billing?: "ONE_TIME" | "MONTHLY" | "YEARLY" | null;
   taxTreatment?: "INCLUDED_IN_PRICE" | "EXCLUDED" | "UNSPECIFIED";
   cataloguePrice?: string | number; approvedAmount?: number;
+  clientName?: string | null; declaredClientName?: string;
+  humanContact?: { name: string; whatsapp: string };
 };
 async function fixture(options: FixtureOptions = {}) {
   const brand = await db.strategy.create({ data: { name: `Owned offer bridge ${randomUUID()}`, userId: owner.id, countryCode: "CI" } });
@@ -51,6 +53,7 @@ async function fixture(options: FixtureOptions = {}) {
     strategyId: brand.id, expectedRevision: 0, representativeId: ai.id, enabled: true,
     informationOnly: options.informationOnly ?? false, publicBrandName: "Vitrine de recette devis", welcome: "Parlons du besoin.", market: "Côte d’Ivoire",
     maxConversationsPerDay: 20, maxConversationsPerHour: 10, collectionAttested: false,
+    ...(options.humanContact ? { humanContact: options.humanContact } : {}),
     offers: [{ offerId: "service", offerVersion: "7", offerName: "Service autorisé", terms: "Prestation définie ; paiement avant activation. Aucun résultat garanti.",
       ...(options.rule ? { pricingRule: { kind: "MARKET_TIER" as const, tierKey: "COCKPIT_MONTHLY" as const, countryCodes: ["CI"], maxQuantity: 2 } }
         : { amount: options.approvedAmount ?? 60000, currency: "XOF" }),
@@ -64,8 +67,9 @@ async function fixture(options: FixtureOptions = {}) {
   await saveSalesPublicEntry(owner, input, emission.id);
   const entry = await db.salesPublicEntry.findUniqueOrThrow({ where: { strategyId: brand.id } });
   const requestId = randomUUID();
+  const clientName = options.clientName === null ? undefined : options.clientName ?? "Atelier Boréal";
   const opened = await startPublicSalesConversation(entry.publicId, { requestId, clientSecret: randomBytes(32).toString("hex"),
-    message: `Je cherche le service autorisé en Côte d’Ivoire, pour ${options.rule ? "deux licences" : "une licence"}. Quel est votre devis ?` }, { ipHash: randomUUID() });
+    message: `${clientName ? `Je représente ${options.declaredClientName ?? clientName}. ` : ""}Je cherche le service autorisé en Côte d’Ivoire, pour ${options.rule ? "deux licences" : "une licence"}. Quel est votre devis ?` }, { ipHash: randomUUID() });
   const session = await db.salesPublicSession.findUniqueOrThrow({ where: { entryId_requestId: { entryId: entry.id, requestId } } });
   const claimed = await fleet.claimRun(ai.mcpKeyId!, randomUUID());
   expect(claimed.run?.dealId).toBe(session.dealId);
@@ -77,12 +81,12 @@ async function fixture(options: FixtureOptions = {}) {
       command: { type: "QUALIFY", role: "BUYER", need: "Le client demande le service autorisé pour son activité en Côte d’Ivoire." } }, actor);
   }
   const deal = await db.deal.findUniqueOrThrow({ where: { id: session.dealId } });
-  return { brand, ai, input, entry, opened, session, deal, message, actor, run: claimed.run! };
+  return { brand, ai, input, entry, opened, session, deal, message, actor, clientName, run: claimed.run! };
 }
 type Fixture = Awaited<ReturnType<typeof fixture>>;
 const request = (f: Fixture, patch: Partial<PrepareSalesOfferInput> = {}): PrepareSalesOfferInput => ({
   dealId: f.deal.id, requestId: randomUUID(), expectedRevision: f.deal.revision,
-  offerId: "service", countryCode: "CI", quantity: 1, customerMessageId: f.message.id, ...patch,
+  offerId: "service", countryCode: "CI", quantity: 1, customerMessageId: f.message.id, clientName: f.clientName, ...patch,
 });
 async function outputs(f: Fixture) { return db.gloryOutput.findMany({ where: { strategyId: f.brand.id, toolSlug: "devis-generator" } }); }
 async function canonicalQuote(f: Fixture, id: string) {
@@ -139,6 +143,65 @@ afterAll(async () => {
 });
 
 describe("approved offer → deterministic quotation → seller on owned PostgreSQL", () => {
+  it("freezes the approved human relay per admission, preserves it during pause and never inherits a global payment contact", async () => {
+    const firstContact = { name: "Équipe initiale", whatsapp: "2250102030405" };
+    const secondContact = { name: "Nouvelle équipe", whatsapp: "2250708091011" };
+    const projected = (value: typeof firstContact) => ({ ...value, whatsappUrl: `https://wa.me/${value.whatsapp}` });
+    const previousGlobal = process.env.MANUAL_PAYMENT_WHATSAPP_NUMBER;
+    process.env.MANUAL_PAYMENT_WHATSAPP_NUMBER = "237699999999";
+    try {
+      const f = await fixture({ humanContact: firstContact });
+      const token = f.opened.path.split("/").at(-1)!;
+      expect((await publicSalesEntry(f.entry.publicId)).humanContact).toEqual(projected(firstContact));
+      expect((await customerConversation(token)).humanContact).toEqual(projected(firstContact));
+      const update: SaveSalesPublicEntryInput = { ...f.input, expectedRevision: f.entry.revision, humanContact: secondContact };
+      const emission = await db.intentEmission.create({ data: { strategyId: f.brand.id, caller: "crm:saveSalesPublicEntry", intentKind: "LEGACY_CRM_UPDATE_DEAL", payload: JSON.parse(JSON.stringify(update)) } });
+      await saveSalesPublicEntry(owner, update, emission.id);
+      expect((await customerConversation(token)).humanContact).toEqual(projected(firstContact));
+      const next = await startPublicSalesConversation(f.entry.publicId, { requestId: randomUUID(), clientSecret: randomBytes(32).toString("hex"), message: "Je souhaite parler à votre équipe." }, { ipHash: randomUUID() });
+      expect((await customerConversation(next.path.split("/").at(-1)!)).humanContact).toEqual(projected(secondContact));
+      const stored = await db.salesRepresentative.findUniqueOrThrow({ where: { id: f.ai.id } });
+      const key = decryptTokenPayload<{ apiKey: string }>(stored.encryptedApiKey!).apiKey;
+      const response = await mcpPost(new Request("http://localhost/api/mcp/operations", { method: "POST", headers: { "content-type": "application/json", "x-api-key": key, "x-sales-run-id": f.run.id, "x-sales-run-lease": f.run.leaseToken }, body: JSON.stringify({ tool: "sales_portfolio", params: { strategyId: f.brand.id, view: "ACTIONABLE" } }) }));
+      expect(response.status).toBe(200);
+      expect((await response.json()).result.deals.find((item: { deal: { id: string } }) => item.deal.id === f.deal.id).humanContact).toEqual(projected(firstContact));
+      await fleet.setSalesRepresentativeStatus(owner, f.ai.id, "PAUSED");
+      expect((await publicSalesEntry(f.entry.publicId)).humanContact).toEqual(projected(secondContact));
+      const latest = await db.salesPublicEntry.findUniqueOrThrow({ where: { id: f.entry.id } });
+      const disabled = { ...update, expectedRevision: latest.revision, enabled: false };
+      const disabledIntent = await db.intentEmission.create({ data: { strategyId: f.brand.id, caller: "crm:saveSalesPublicEntry", intentKind: "LEGACY_CRM_UPDATE_DEAL", payload: JSON.parse(JSON.stringify(disabled)) } });
+      await saveSalesPublicEntry(owner, disabled, disabledIntent.id);
+      expect((await publicSalesEntry(f.entry.publicId)).humanContact).toBeNull();
+      expect((await customerConversation(token)).humanContact).toEqual(projected(firstContact));
+      const other = await fixture();
+      expect((await publicSalesEntry(other.entry.publicId)).humanContact).toBeNull();
+      expect((await customerConversation(other.opened.path.split("/").at(-1)!)).humanContact).toBeNull();
+    } finally {
+      if (previousGlobal === undefined) delete process.env.MANUAL_PAYMENT_WHATSAPP_NUMBER; else process.env.MANUAL_PAYMENT_WHATSAPP_NUMBER = previousGlobal;
+    }
+  });
+
+  it("copies a client name proved in the received message into the real quotation and company field, with normalized accent/case/spacing checks", async () => {
+    const f = await fixture({ clientName: "Atelier Boréal", declaredClientName: "ATELIER   BOREAL" });
+    const result = await prepareSalesOffer(request(f), f.actor);
+    const quote = await canonicalQuote(f, result.proposal.gloryOutputId);
+    expect(quote.client?.name).toBe("Atelier Boréal");
+    expect((await db.deal.findUniqueOrThrow({ where: { id: f.deal.id } })).companyName).toBe("Atelier Boréal");
+    expect(quote.client?.name).not.toBe("Demande web"); expect(quote.client?.name).not.toBe("Visiteur web");
+  });
+
+  it("refuses an invented client name or an anonymous placeholder fallback without creating a quotation or proposal", async () => {
+    const f = await fixture();
+    await expect(prepareSalesOffer(request(f, { clientName: "Entreprise inventée absente du message" }), f.actor)).rejects.toThrow();
+    await expect(prepareSalesOffer(request(f, { clientName: "!!!" }), f.actor)).rejects.toThrow();
+    const anonymous = await fixture({ clientName: null });
+    await expect(prepareSalesOffer(request(anonymous), anonymous.actor)).rejects.toThrow();
+    for (const candidate of [f, anonymous]) {
+      expect(await outputs(candidate)).toHaveLength(0);
+      expect(salesStateSchema.parse((await db.deal.findUniqueOrThrow({ where: { id: candidate.deal.id } })).commercial).proposal).toBeUndefined();
+    }
+  });
+
   it("prepares the exact fixed monthly price, real sourced GloryOutput and revision without presenting or accepting it", async () => {
     const f = await fixture(); const input = request(f); const result = await prepareSalesOffer(input, f.actor);
     expect(result).toMatchObject({ status: "READY", dealId: f.deal.id, revision: f.deal.revision + 1,

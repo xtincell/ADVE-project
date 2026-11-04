@@ -145,13 +145,14 @@ export const crmRouter = createTRPCRouter({
     return issueCustomerAccess(input.dealId);
   }),
   sendSalesCustomerMessage: governedProcedure({ kind: "LEGACY_CRM_ADD_NOTE", requireOperator: true,
-    inputSchema: z.object({ dealId: z.string(), requestId: z.string().uuid(), channel: z.enum(["WEB", "EMAIL"]), body: z.string().trim().min(1).max(20000), subject: z.string().max(200).optional() }), caller: "crm:sendSalesCustomerMessage",
+    inputSchema: z.object({ dealId: z.string(), requestId: z.string().uuid(), channel: z.enum(["WEB", "EMAIL"]), body: z.string().trim().min(1).max(20000), subject: z.string().max(200).optional(), deliveryActivityId: z.string().trim().min(1).max(200).optional() }), caller: "crm:sendSalesCustomerMessage",
   }).mutation(async ({ ctx, input }) => {
     await assertDealAccess(ctx, input.dealId);
     const actor = { id: ctx.session.user.id, admin: ctx.session.user.role === "ADMIN" };
+    if(input.deliveryActivityId&&input.channel!=="WEB")throw new TRPCError({code:"PRECONDITION_FAILED",message:"Joignez ce document depuis la conversation privée du client."});
     const receipt = input.channel === "EMAIL"
       ? await crm.sendSalesEmail(input.dealId, actor, { requestId: input.requestId, subject: input.subject ?? "Votre échange commercial", text: input.body })
-      : await (await import("@/server/services/crm-engine/customer")).sendSalesWebMessage(input.dealId, actor, { requestId: input.requestId, text: input.body });
+      : await (await import("@/server/services/crm-engine/customer")).sendSalesWebMessage(input.dealId, actor, { requestId: input.requestId, text: input.body, deliveryActivityId: input.deliveryActivityId });
     return { status: receipt.activityType === "SALES_EMAIL_UNCERTAIN" ? "UNCERTAIN" as const : "SENT" as const, receipt };
   }),
   listSalesMessages: operatorProcedure.input(z.object({ dealId: z.string() })).query(async ({ ctx, input }) => {

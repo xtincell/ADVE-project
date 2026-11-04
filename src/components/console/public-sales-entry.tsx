@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, MessageCircle, Send } from "lucide-react";
 import { MarkdownContent } from "@/components/shared/markdown-content";
 
+export type SalesHumanContact = { name: string; whatsapp: string; whatsappUrl: string };
 type Entry = {
   publicId: string;
   brandName: string;
@@ -11,6 +12,7 @@ type Entry = {
   available: boolean;
   sellerMode: "AI" | "HUMAN";
   informationOnly?: boolean;
+  humanContact?: SalesHumanContact | null;
   offers: Array<{ id: string; name: string; terms?: string; amount?: number; currency?: string }>;
 };
 type Opening = {
@@ -26,6 +28,13 @@ const field = "w-full rounded-lg border border-border bg-background px-4 py-3 te
 const button = "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 const privatePath = (value: unknown): value is string => typeof value === "string" && /^\/sales\/[a-f0-9]{64}$/.test(value);
 const storageKey = (publicId: string) => `sales-entry:${publicId}`;
+
+/** The visitor chooses whether to open WhatsApp; no conversation secret or message is copied. */
+export function SalesHumanContactLink({ contact, brand, proposalReference }: { contact?: SalesHumanContact | null; brand: string; proposalReference?: string }) {
+  if (!contact || !/^\d{8,15}$/.test(contact.whatsapp)) return null;
+  const message = `Bonjour ${contact.name}, je vous contacte au sujet de ${brand}.${proposalReference ? `\nRéférence de la proposition : ${proposalReference}.` : ""}`;
+  return <a className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 py-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" href={`https://wa.me/${contact.whatsapp}?text=${encodeURIComponent(message)}`} target="_blank" rel="noreferrer">Échanger avec {contact.name} sur WhatsApp</a>;
+}
 
 /** Each browser keeps its own opening secret; knowing the public URL or request UUID grants no private access. */
 export function PublicSalesEntry({ publicId }: { publicId: string }) {
@@ -105,6 +114,7 @@ export function PublicSalesEntry({ publicId }: { publicId: string }) {
           <p className="mb-3 text-xs font-medium text-foreground-muted">{entry.brandName}</p><MarkdownContent>{entry.welcome}</MarkdownContent>
         </article> : <p role="alert" className="max-w-prose rounded-xl border border-border p-5 text-sm leading-relaxed">{loadError}</p>}
         {entry?.informationOnly && <p className="max-w-prose text-sm leading-relaxed text-foreground-muted">L’équipe doit confirmer les prestations et les conditions avant toute souscription.</p>}
+        {entry?.humanContact && <SalesHumanContactLink contact={entry.humanContact} brand={entry.brandName} />}
         {resumePath && <div className="space-y-3"><p className="text-sm text-foreground-muted">Votre conversation existe déjà dans cet onglet.</p><a className={button} href={resumePath}><ArrowLeft aria-hidden className="h-4 w-4" />Reprendre ma conversation</a></div>}
       </section>
       {!resumePath && <form className="sticky bottom-0 space-y-3 border-t border-border bg-background pb-5 pt-4 sm:pb-6" aria-label="Démarrer une conversation" onSubmit={event => { event.preventDefault(); void start(); }}>

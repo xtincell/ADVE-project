@@ -17,6 +17,7 @@ describe("the private dossier continues the public sales conversation", () => {
     expect(screen.queryByText(/Gold/)).toBeNull();
     expect(screen.queryByText(conversation.offer.terms)).toBeNull();
     expect(screen.getByText(/Assistant commercial IA/)).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Échanger avec .* sur WhatsApp/ })).toBeNull();
   });
 
   it("shows the actual proposal and preserves the independently confirmed payment status", async () => {
@@ -53,11 +54,16 @@ describe("the private dossier continues the public sales conversation", () => {
   it("shows the frozen proposal and sends a bounded confirmation of that exact version without claiming a payment", async () => {
     const token = "f".repeat(64);
     const proposal = { id: "00000000-0000-4000-8000-000000000001", offerId: "gold", offerName: "Gold", amount: 120000, unitPrice: 60000, currency: "XOF", billing: "MONTHLY", quantity: 2, countryCode: "CI", terms: "C".repeat(4000), scope: ["Deux établissements"], exclusions: ["Achat média"], preparedAt: "2026-11-04T10:00:00Z", sourceVersion: "catalogue-4", gloryOutputId: "quote", documentUrl: `/api/sales/${token}/proposal` };
-    const fetcher = vi.fn(async (_url: string, options?: RequestInit) => ({ ok: true, json: async () => options?.method === "POST" ? { received: true } : { ...conversation, state: "PROPOSAL", proposal } }));
+    const fetcher = vi.fn(async (_url: string, options?: RequestInit) => ({ ok: true, json: async () => options?.method === "POST" ? { received: true } : { ...conversation, state: "PROPOSAL", proposal, humanContact: { name: "Alexandre", whatsapp: "237600000001", whatsappUrl: "https://wa.me/237600000001" } } }));
     vi.stubGlobal("fetch", fetcher); render(React.createElement(SalesCustomerChat, { token }));
     await screen.findByRole("button", { name: "Confirmer cette proposition" });
     expect(screen.getByText(/Gold · 120.?000.*par mois/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "Ouvrir le devis" }).getAttribute("href")).toBe(proposal.documentUrl);
+    expect(screen.getByRole("link", { name: "Télécharger le devis en Markdown" }).getAttribute("href")).toBe(proposal.documentUrl + "?format=md");
+    const whatsapp = new URL(screen.getByRole("link", { name: "Échanger avec Alexandre sur WhatsApp" }).getAttribute("href")!);
+    expect(whatsapp.searchParams.get("text")).toContain(proposal.id);
+    expect(whatsapp.searchParams.get("text")).toContain(conversation.brand);
+    expect(whatsapp.href).not.toContain(token); expect(whatsapp.searchParams.get("text")).not.toContain(conversation.messages[0]!.body);
     expect(screen.queryByText(conversation.offer.terms)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Confirmer cette proposition" }));
     await screen.findByText("Votre confirmation a été transmise à l’équipe.");
@@ -79,5 +85,39 @@ describe("the private dossier continues the public sales conversation", () => {
     await waitFor(() => expect(screen.getByText("Votre confirmation a été transmise à l’équipe.")).toBeTruthy());
     const sent = fetcher.mock.calls.filter(call => call[1]?.method === "POST");
     expect(sent).toHaveLength(2); expect(sent[1]![1]!.body).toBe(sent[0]![1]!.body);
+  });
+
+  it("allows contact during a questions-only exchange without copying the private link or a customer message", async () => {
+    serve({ ...conversation, informationOnly: true, humanContact: { name: "Équipe de la marque", whatsapp: "225000000001", whatsappUrl: "https://wa.me/225000000001" } });
+    const token = "7".repeat(64); render(React.createElement(SalesCustomerChat, { token }));
+    const link = await screen.findByRole("link", { name: "Échanger avec Équipe de la marque sur WhatsApp" });
+    const url = new URL(link.getAttribute("href")!);
+    expect(url.origin + url.pathname).toBe("https://wa.me/225000000001");
+    expect(url.searchParams.get("text")).toBe(`Bonjour Équipe de la marque, je vous contacte au sujet de ${conversation.brand}.`);
+    expect(url.href).not.toContain(token); expect(url.searchParams.get("text")).not.toContain(conversation.messages[0]!.body);
+    expect(screen.queryByRole("link", { name: "Télécharger le devis en Markdown" })).toBeNull();
+  });
+
+  it("opens the exact delivery document received from the server after payment without rebuilding its signed URL", async () => {
+    const url = "https://powerupgraders.com/api/export/documents/dossier.pdf?signature=a%2Bb%2Fz&expires=1794000000";
+    const fetcher = vi.fn(async () => ({ ok: true, json: async () => ({ ...conversation, state: "PAID", deliveryDocument: { activityId: "approved-delivery", url } }) }));
+    vi.stubGlobal("fetch", fetcher); render(React.createElement(SalesCustomerChat, { token: "6".repeat(64) }));
+    const link = await screen.findByRole("link", { name: "Ouvrir votre document" });
+    expect(link.getAttribute("href")).toBe(url); expect(link.getAttribute("rel")).toBe("noreferrer");
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+
+  it("does not promote a link written in a message into a delivery document before payment", async () => {
+    serve({ ...conversation, state: "ACCEPTED", messages: [{ id: "seller", role: "seller", body: "Voici le document : https://example.test/recopied.pdf", at: "2026-11-04T10:00:00Z" }] });
+    render(React.createElement(SalesCustomerChat, { token: "5".repeat(64) }));
+    await screen.findByText(/Voici le document/);
+    expect(screen.queryByRole("link", { name: "Ouvrir votre document" })).toBeNull();
+  });
+
+  it.each(["javascript:alert(1)", "https://user:password@example.test/document.pdf"])("does not turn an unsafe document URL into a client link: %s", async url => {
+    serve({ ...conversation, state: "PAID", deliveryDocument: { activityId: "approved-delivery", url } });
+    render(React.createElement(SalesCustomerChat, { token: "4".repeat(64) }));
+    await screen.findByText(conversation.offer.terms);
+    expect(screen.queryByRole("link", { name: "Ouvrir votre document" })).toBeNull();
   });
 });

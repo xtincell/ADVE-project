@@ -3,6 +3,15 @@ import { z } from "zod";
 import { collectionSchema, mandateSchema } from "./commercial";
 
 const label = z.string().trim().min(1).max(200);
+/** Explicit per-brand contact; never inherited from platform/payment defaults. */
+export const publicSalesHumanContactSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  whatsapp: z.string().regex(/^[1-9][0-9]{7,14}$/),
+}).strict();
+export function projectPublicSalesHumanContact(value: unknown) {
+  const parsed = publicSalesHumanContactSchema.safeParse(value);
+  return parsed.success ? { ...parsed.data, whatsappUrl: `https://wa.me/${parsed.data.whatsapp}` } : null;
+}
 export const publicSalesOfferSchema = mandateSchema.pick({
   offerId: true, offerVersion: true, offerName: true, terms: true,
   amount: true, currency: true, deliveryOwnerId: true, beneficiary: true,
@@ -24,6 +33,7 @@ export const saveSalesPublicEntryInput = z.object({
   informationOnly: z.boolean().default(false),
   publicBrandName: z.string().trim().min(1).max(120),
   welcome: z.string().trim().min(1).max(600),
+  humanContact: publicSalesHumanContactSchema.optional(),
   market: label,
   maxConversationsPerDay: z.number().int().min(1).max(100).default(10),
   maxConversationsPerHour: z.number().int().min(1).max(30).default(5),

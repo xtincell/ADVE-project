@@ -11,7 +11,7 @@ function failure(error:unknown){
  const message=status===400?'Vérifiez votre message avant de l’envoyer.':status===429?'Veuillez patienter avant un nouvel envoi.':status===409?'Cette proposition ou ce message a changé. Relisez la conversation avant de poursuivre.':'Conversation indisponible.';
  return NextResponse.json({error:message},{status,headers});
 }
-export async function GET(_request:Request,{params}:{params:Promise<{token:string}>}){try{return NextResponse.json(await customerConversation((await params).token),{headers});}catch(error){return failure(error);}}
+export async function GET(request:Request,{params}:{params:Promise<{token:string}>}){try{return NextResponse.json(await customerConversation((await params).token,getPublicBaseUrl(request)),{headers});}catch(error){return failure(error);}}
 async function boundedJson(request:Request):Promise<unknown>{
  const reader=request.body?.getReader();if(!reader)throw new TRPCError({code:'BAD_REQUEST'});
  const chunks:Uint8Array[]=[];let bytes=0;

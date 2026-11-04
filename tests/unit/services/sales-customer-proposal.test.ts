@@ -8,18 +8,20 @@ const store = vi.hoisted(() => ({
   deal: {} as Record<string, unknown>, output: {} as Record<string, unknown>,
   messages: [] as Array<Record<string, unknown>>, events: [] as Array<Record<string, unknown>>,
   inbound: vi.fn(), transaction: vi.fn(), lock: vi.fn(), sourceRead: vi.fn(),
+  session: null as Record<string, unknown> | null, creation: null as Record<string, unknown> | null,
 }));
 vi.mock("@/lib/db", () => {
   const database = {
     deal: { findUnique: vi.fn(async () => store.deal), findUniqueOrThrow: vi.fn(async () => store.deal) },
     strategy: { findUnique: vi.fn(async () => ({ name: "Marque & client <test>" })) },
-    salesPublicSession: { findUnique: vi.fn(async () => null) },
+    salesPublicSession: { findUnique: vi.fn(async () => store.session) },
     crmMessage: {
       findMany: vi.fn(async () => []), count: vi.fn(async () => store.messages.length),
       findFirst: vi.fn(async ({ where }: { where: { providerRef: string } }) => store.messages.find(message => message.providerRef === where.providerRef) ?? null),
     },
     cRMActivity: {
       findMany: vi.fn(async () => []),
+      findFirst: vi.fn(async () => store.creation),
       findUnique: vi.fn(async ({ where }: { where: { id: string } }) => store.events.find(event => event.id === where.id) ?? null),
       create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => { store.events.push(data); return data; }),
     },
@@ -59,6 +61,7 @@ function quote() {
 }
 beforeEach(() => {
   vi.clearAllMocks(); store.messages.length = 0; store.events.length = 0;
+  store.session = null; store.creation = null;
   store.deal = { id: "deal", sellerStrategyId: "private-brand", commercial: saleState(), customerAccessTokenHash: hash(token), paymentReference: null };
   store.output = quote();
   store.sourceRead.mockImplementation(async ({ where }: { where: { id: string; strategyId: string } }) =>
@@ -103,6 +106,31 @@ describe("Private frozen sales proposal", () => {
     expect((await documentGet(new Request(`https://brand.invalid/api/sales/${token}/proposal`), params)).status).toBe(200);
     store.deal.commercial = { ...saleState("STOPPED"), contactStopped: true };
     await expect(customerProposalDocument(token)).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("exports the same READY private quotation as Markdown, with the same access and integrity checks", async () => {
+    const request = new Request(`https://brand.invalid/api/sales/${token}/proposal?format=md`);
+    const response = await documentGet(request, params);
+    expect(response.status).toBe(200); expect(response.headers.get("content-type")).toBe("text/markdown; charset=utf-8");
+    expect(response.headers.get("content-disposition")).toBe(`attachment; filename="proposition-${proposalId}.md"`);
+    expect(response.headers.get("cache-control")).toBe("no-store"); expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+    const markdown = await response.text();
+    expect(markdown).toContain("# Proposition commerciale"); expect(markdown).toMatch(/59.?000 XOF/); expect(markdown).toContain("par mois");
+    expect(markdown).not.toContain(token); expect(markdown).not.toContain("b".repeat(64));
+    store.deal.commercial = saleState("QUALIFIED"); expect((await documentGet(request, params)).status).toBe(404);
+    store.deal.commercial = saleState(); const modified = quote(); modified.devis.groups[0]!.total = 1; store.output = modified;
+    expect((await documentGet(request, params)).status).toBe(404);
+  });
+
+  it("exposes only the contact approved at admission, without adopting later contact settings", async () => {
+    store.session = { entryId: "brand-entry", entry: { config: { publicBrandName: "Nouveau nom", humanContact: { name: "Autre personne", whatsapp: "2250546156456" } } } };
+    store.creation = { metadata: { publicBrandName: "Nom initial", humanContact: { name: "Alexandre", whatsapp: "237694171799" } } };
+    const first = await customerConversation(token);
+    expect(first).toMatchObject({ brand: "Nom initial", humanContact: { name: "Alexandre", whatsapp: "237694171799", whatsappUrl: "https://wa.me/237694171799" } });
+    expect(JSON.stringify(first.humanContact)).not.toContain(token);
+    store.creation = { metadata: { publicBrandName: "Ancienne conversation sans contact" } };
+    expect((await customerConversation(token)).humanContact).toBeNull();
+    store.session = null; expect((await customerConversation(token)).humanContact).toBeNull();
   });
 
   it("records confirmation and the exact proposal event in the inbound transaction, with exact retries", async () => {

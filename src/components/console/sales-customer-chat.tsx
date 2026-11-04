@@ -5,12 +5,15 @@ import { MessageCircle, Send } from "lucide-react";
 import { cva } from "class-variance-authority";
 import { MarkdownContent } from "@/components/shared/markdown-content";
 import type { SalesProposal } from "@/server/services/crm-engine/offer-contract";
+import { SalesHumanContactLink, type SalesHumanContact } from "./public-sales-entry";
 
 type Conversation = {
   payment?: null | { reference: string; status: string; amount: number; currency: string; beneficiary: string; paidAt: string | null };
   brand: string;
   sellerMode?: "AI" | "HUMAN";
   informationOnly?: boolean;
+  humanContact?: SalesHumanContact | null;
+  deliveryDocument?: { activityId: string; url: string } | null;
   replyStatus?: "UP_TO_DATE" | "QUEUED" | "PROCESSING" | "TEAM_REVIEW" | "HUMAN_REPLY";
   state: string;
   proposal?: (SalesProposal & { documentUrl: string }) | null;
@@ -21,6 +24,11 @@ type Conversation = {
 type CustomerMessage = { body: string; requestId: string; proposalId?: string };
 const billingLabel = (billing?: SalesProposal["billing"]) => billing === "MONTHLY" ? "par mois" : billing === "YEARLY" ? "par an" : billing === "ONE_TIME" ? "paiement unique" : "";
 const money = (amount: number, currency: string) => new Intl.NumberFormat("fr-FR", { style: "currency", currency }).format(amount);
+function navigableDocumentUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  try { const parsed = new URL(value); return ["https:", "http:"].includes(parsed.protocol) && !parsed.username && !parsed.password ? value : null; }
+  catch { return null; }
+}
 const messageClass = cva("max-w-prose rounded-xl border border-border p-4 sm:p-5", {
   variants: { role: {
     customer: "ml-6 rounded-br-sm bg-muted/40 sm:ml-12",
@@ -85,8 +93,9 @@ export function SalesCustomerChat({ token }: { token: string }) {
     finally { setBusy(false); }
   }
 
-  const proposal = data?.proposal;
+  const proposal = data && !data.informationOnly && ["PROPOSAL", "OBJECTION", "ACCEPTED", "PAID", "DELIVERED"].includes(data.state) ? data.proposal : null;
   const shownOffer = proposal ? { name: proposal.offerName, ...proposal } : data?.offer?.currency !== "XXX" ? data?.offer : null;
+  const deliveredDocumentUrl = data && ["PAID", "DELIVERED"].includes(data.state) ? navigableDocumentUrl(data.deliveryDocument?.url) : null;
   return <main className="min-h-screen bg-background text-foreground">
     <div className="mx-auto flex min-h-screen max-w-3xl flex-col px-4 sm:px-6">
       <header className="flex items-center gap-3 border-b border-border py-5 sm:py-6">
@@ -104,7 +113,7 @@ export function SalesCustomerChat({ token }: { token: string }) {
               {proposal.scope.length > 0 && <div><p className="font-medium">Ce qui est prévu</p><ul className="list-disc space-y-1 pl-5">{proposal.scope.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}
               {proposal.exclusions.length > 0 && <div><p className="font-medium">Ce qui reste à part</p><ul className="list-disc space-y-1 pl-5">{proposal.exclusions.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}
               <p className="break-all text-xs text-foreground-muted">Référence : {proposal.id}</p>
-              {proposal.documentUrl === `/api/sales/${token}/proposal` && <a className="inline-flex min-h-10 items-center text-sm font-medium underline" href={proposal.documentUrl} target="_blank" rel="noreferrer">Ouvrir le devis</a>}
+              {proposal.documentUrl === `/api/sales/${token}/proposal` && <div className="flex flex-wrap gap-x-5 gap-y-2"><a className="inline-flex min-h-10 items-center text-sm font-medium underline" href={proposal.documentUrl} target="_blank" rel="noreferrer">Ouvrir le devis</a><a className="inline-flex min-h-10 items-center text-sm font-medium underline" href={`${proposal.documentUrl}?format=md`} download>Télécharger le devis en Markdown</a></div>}
               {!data.stopped && data.state === "PROPOSAL" && confirmedProposalId !== proposal.id && <div><button type="button" disabled={busy || Boolean(pending)} onClick={() => void send({ requestId: crypto.randomUUID(), proposalId: proposal.id, body: `Je confirme la proposition ${proposal.id} : ${proposal.offerName}, quantité ${proposal.quantity}, montant total ${money(proposal.amount, proposal.currency)} (${proposal.currency}) ${billingLabel(proposal.billing)}. J’accepte les conditions de la proposition ${proposal.id} affichée ci-dessus.` })} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 py-3 font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">Confirmer cette proposition</button></div>}
               {confirmedProposalId === proposal.id && <p role="status" className="text-foreground-muted">Votre confirmation a été transmise à l’équipe.</p>}
             </>}
@@ -113,8 +122,10 @@ export function SalesCustomerChat({ token }: { token: string }) {
               <p>Référence du paiement : <strong className="break-all">{data.payment.reference}</strong></p><p>Bénéficiaire : {data.payment.beneficiary}</p>
               <p>{data.payment.status === "PAID" ? "Paiement vérifié par l’équipe." : data.payment.status === "FAILED" ? "Le paiement n’est pas confirmé. Demandez à votre interlocuteur." : "L’équipe doit encore vérifier le paiement."}</p>
             </section>}
+            {deliveredDocumentUrl && <a className="inline-flex min-h-11 items-center text-sm font-medium underline" href={deliveredDocumentUrl} target="_blank" rel="noreferrer">Ouvrir votre document</a>}
           </div>
         </details>}
+        {data?.humanContact && <SalesHumanContactLink contact={data.humanContact} brand={data.brand} proposalReference={proposal?.id} />}
         {data?.stopped && <p role="status" className="rounded-lg border border-border p-4 text-sm text-foreground-muted">Votre demande d’arrêt est enregistrée. L’équipe ne vous relance plus.</p>}
         <section aria-label="Conversation" aria-live="polite" className="space-y-4">
           {!data && !error && <p role="status" className="text-sm text-foreground-muted">Chargement de votre conversation…</p>}
