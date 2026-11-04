@@ -88,9 +88,9 @@ export async function prepareSalesPlanIn(tx: Tx, dealId: string, previous: Sales
       !command.nextDeadline || new Date(command.nextDeadline) <= message.createdAt) refusal("La date doit référencer une demande reçue de ce client sur cette affaire.");
   }
   if (command.basis === "APPROVED_CADENCE") {
-    if (command.purpose !== "FOLLOW_UP") refusal("La cadence approuvée ne définit pas de nouvelle revue ou vente.");
-    if (await uncertainIn(tx, dealId)) refusal("Un envoi ou une exécution attend sa réconciliation ; aucune reprise n’est autorisée.");
-    const plan = await approvedCadencePlanIn(tx, deal, previous, now) ?? refusal("Aucune reprise de silence n’est autorisée par les reçus et le mandat actuels.");
+    if (command.purpose !== "FOLLOW_UP") refusal("Le calendrier de relance approuvé ne permet pas d’ouvrir une nouvelle vente ou un nouveau suivi.");
+    if (await uncertainIn(tx, dealId)) refusal("Vérifiez le résultat de la tentative précédente avant de reprendre.");
+    const plan = await approvedCadencePlanIn(tx, deal, previous, now) ?? refusal("Les conditions de vente et les échanges enregistrés ne permettent pas de relancer ce client.");
     return { ...step, channel: plan.channel, command: { ...command, nextDeadline: plan.dueAt } };
   }
   return step;
@@ -104,30 +104,30 @@ export async function validateDatedSalesRunIn(tx: Tx, input: { requestId: string
   const [deal, profile] = await Promise.all([
     tx.deal.findUnique({ where: { id: input.dealId } }), tx.salesRepresentative.findUnique({ where: { id: input.representativeId } }),
   ]);
-  if (!deal || !profile) return denied("Affaire ou titulaire absent.");
+  if (!deal || !profile) return denied("L’affaire ou son vendeur est introuvable.");
   const parsed = salesStateSchema.safeParse(deal.commercial);
   if (!parsed.success) return denied("État commercial illisible.");
   const state = parsed.data, mandate = state.mandate, plan = state.nextPlan;
   const internalOnly = plan?.purpose === "VALUE_REVIEW";
   if (!mandate || !plan || datedSalesRequestId(deal.id, plan.id) !== input.requestId) return denied("Échéance remplacée ou supprimée.");
   const principal = profile.mode === "AI" ? `mcp:${profile.mcpKeyId}` : profile.humanUserId;
-  if (profile.status !== "ACTIVE" || profile.strategyId !== deal.sellerStrategyId || mandate.sellerId !== principal || plan.sellerId !== principal) return denied("Titulaire suspendu ou mandat transmis.", internalOnly);
+  if (profile.status !== "ACTIVE" || profile.strategyId !== deal.sellerStrategyId || mandate.sellerId !== principal || plan.sellerId !== principal) return denied("Le vendeur est en pause ou l’affaire a été confiée à quelqu’un d’autre.", internalOnly);
   if (profile.conversationId && await tx.message.findFirst({ where: { conversationId: profile.conversationId,
     channel: "SALES_MANAGER", content: "État du vendeur : PAUSED", createdAt: { gt: new Date(plan.createdAt) } }, select: { id: true } })) return denied("Le vendeur a été suspendu depuis cette planification ; faire approuver une nouvelle date.", internalOnly);
   if (profile.mode === "AI") {
     const key = profile.mcpKeyId ? await tx.mcpApiKey.findUnique({ where: { id: profile.mcpKeyId }, select: { isActive: true, expiresAt: true, scopeKind: true, scopeStrategyId: true } }) : null;
     if (!key?.isActive || (key.expiresAt && key.expiresAt <= now) || key.scopeKind !== "BRAND" || key.scopeStrategyId !== deal.sellerStrategyId) return denied("Accès commercial révoqué ou hors marque.", internalOnly);
   }
-  if (new Date(mandate.expiresAt) <= now || new Date(plan.dueAt) > now || state.nextDeadline !== plan.dueAt || !mandate.channels.includes(plan.channel)) return denied("Date future, mandat expiré ou canal modifié.", internalOnly);
+  if (new Date(mandate.expiresAt) <= now || new Date(plan.dueAt) > now || state.nextDeadline !== plan.dueAt || !mandate.channels.includes(plan.channel)) return denied("La date n’est pas encore arrivée, les conditions de vente ont expiré ou le moyen de contact a changé.", internalOnly);
   if (state.contactStopped || state.node === "STOPPED" || await stoppedContactIn(tx, deal)) return denied("Contact arrêté pour cette marque.", internalOnly);
-  if (await uncertainIn(tx, deal.id)) return denied("Envoi ou exécution incertain : réconciliation nécessaire.", internalOnly);
+  if (await uncertainIn(tx, deal.id)) return denied("Vérifiez le résultat de la tentative précédente avant de continuer.", internalOnly);
   if (internalOnly) return state.node === "DELIVERED" ? { allowed: true, internalOnly: true } : denied("La remise n’est pas prouvée.", true);
   if (!sellingNodes.includes(state.node)) return denied("Le cycle ne permet plus cette sollicitation.");
   const since = plan.anchorSentAt ?? plan.createdAt;
   if (await tx.crmMessage.findFirst({ where: { salesDealId: deal.id, direction: "IN", status: "RECEIVED", createdAt: { gt: new Date(since) } }, select: { id: true } })) return denied("Une nouvelle réponse a remplacé le rappel de silence.");
   if (plan.basis === "APPROVED_CADENCE") {
     const current = await approvedCadencePlanIn(tx, deal, state, now);
-    if (!current || current.dueAt !== plan.dueAt || current.channel !== plan.channel || (plan.cadenceIndex !== undefined && current.id !== plan.id)) return denied("La cadence ou son reçu d’ancrage a évolué.");
+    if (!current || current.dueAt !== plan.dueAt || current.channel !== plan.channel || (plan.cadenceIndex !== undefined && current.id !== plan.id)) return denied("Le calendrier de relance ou l’envoi qui fixe ses dates a changé.");
   }
   return { allowed: true, internalOnly: false };
 }

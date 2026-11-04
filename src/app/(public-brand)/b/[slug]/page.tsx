@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { readPublicBrand } from "@/server/services/brand-vault/publication";
 import { isBrandPublicSlug } from "@/domain/brand-slug";
+import { publicSalesEntryLinkBySlug } from "@/server/services/crm-engine/public-entry";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,7 @@ export default async function PublicBrandPage(
   if (!isBrandPublicSlug(slug)) notFound();
   const brand = await loadBrand(slug).catch(() => null);
   if (!brand) notFound();
+  const salesEntry = await publicSalesEntryLinkBySlug(slug).catch(() => null);
 
   return (
     <main className="pb-page" data-theme="light">
@@ -53,6 +55,7 @@ export default async function PublicBrandPage(
         <h1 className="pb-name">{brand.title}</h1>
         {brand.accroche && <p className="pb-tagline">{brand.accroche}</p>}
         {brand.positionnement && <p className="pb-positioning">{brand.positionnement}</p>}
+        {salesEntry && <a className="pb-network" href={salesEntry.path}>Parler au commercial</a>}
 
         {brand.networks.length > 0 && (
           <div className="pb-networks">

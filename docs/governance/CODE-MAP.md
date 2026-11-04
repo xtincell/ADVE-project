@@ -119,7 +119,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Prisma — 234 models, 71 enums
+## Prisma — 236 models, 71 enums
 
 ### Models
 
@@ -357,6 +357,8 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **RecipeApplication** (21 fields)
 - **SalesRepresentative** (22 fields) — Human or AI holder of one brand sales portfolio; credentials are server-only.
 - **SalesRun** (15 fields) — Bounded invocation receipt consumed by the existing Galahad sales role.
+- **SalesPublicEntry** (12 fields) — Owner-approved inbound door; private mandate templates are never the public projection.
+- **SalesPublicSession** (10 fields) — Idempotency and quota receipt for one anonymous inbound conversation.
 
 ### Enums
 
@@ -694,7 +696,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Pages — 282 (par deck)
+## Pages — 283 (par deck)
 
 ### Agency (12)
 
@@ -947,7 +949,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (46)
+### Public (47)
 
 - `/(marketing)`
 - `/agence`
@@ -992,6 +994,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - `/shared/strategy/[token]`
 - `/sla`
 - `/status`
+- `/talk/[publicId]`
 - `/tarifs`
 - `/trust-center`
 - `/unauthorized`

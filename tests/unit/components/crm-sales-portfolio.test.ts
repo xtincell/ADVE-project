@@ -39,15 +39,15 @@ describe("one reviewed authorization for an explicit portfolio", () => {
     const onClose = vi.fn();
     const { container } = render(React.createElement(SalesPortfolioAuthorizationForm, { ...props, authorize, onClose }));
     prepare(container);
-    fireEvent.click(screen.getByRole("button", { name: "Ajouter un contact explicite" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ajouter un contact" }));
     fill(container, "origin:1", "salon-fiche-18"); fill(container, "company:1", "Restaurant B"); fill(container, "contact:1", "Personne B"); fill(container, "phone:1", "+225000000002");
-    fireEvent.submit(screen.getByRole("form", { name: "Préparer l’autorisation de portefeuille" }));
+    fireEvent.submit(screen.getByRole("form", { name: "Préparer les contacts à confier" }));
     expect(authorize).not.toHaveBeenCalled();
-    expect(screen.getByText("2 contacts explicitement autorisés")).toBeTruthy();
+    expect(screen.getByText("2 contacts choisis")).toBeTruthy();
     expect(screen.getByText("a@example.test")).toBeTruthy(); expect(screen.getByText("+225000000002")).toBeTruthy();
-    expect(screen.getByText(/Délais successifs entre les reprises : 3 jours, puis 7 jours, depuis le dernier envoi confirmé/)).toBeTruthy();
-    fireEvent.click(screen.getByLabelText(/J’atteste que le bénéficiaire/)); fireEvent.click(screen.getByLabelText(/J’autorise ce vendeur/));
-    fireEvent.submit(screen.getByRole("form", { name: "Approuver l’autorisation de portefeuille" }));
+    expect(screen.getByText(/Temps d’attente entre les relances : 3 jours, puis 7 jours, depuis le dernier envoi confirmé/)).toBeTruthy();
+    fireEvent.click(screen.getByLabelText(/Je confirme que l’entreprise bénéficiaire/)); fireEvent.click(screen.getByLabelText(/Je confie ces personnes au vendeur/));
+    fireEvent.submit(screen.getByRole("form", { name: "Confier les contacts au vendeur" }));
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
     const submitted = authorizeSalesPortfolioInput.parse(authorize.mock.calls[0]![0]);
     expect(submitted.mandate).toMatchObject({ offerId: "gold", offerVersion: "4", amount: 60000, currency: "XOF", beneficiary: "La marque locale", collection: { destinationRef: "Compte de collecte de la marque", financeOwnerId: "finance" } });
@@ -61,12 +61,12 @@ describe("one reviewed authorization for an explicit portfolio", () => {
     const authorize = vi.fn<(input: AuthorizeSalesPortfolioInput) => Promise<void>>().mockRejectedValueOnce(new Error("Connexion interrompue")).mockResolvedValueOnce(undefined);
     const onClose = vi.fn();
     const { container } = render(React.createElement(SalesPortfolioAuthorizationForm, { ...props, authorize, onClose })); prepare(container);
-    fireEvent.submit(screen.getByRole("form", { name: "Préparer l’autorisation de portefeuille" }));
-    fireEvent.click(screen.getByLabelText(/J’atteste que le bénéficiaire/)); fireEvent.click(screen.getByLabelText(/J’autorise ce vendeur/));
-    fireEvent.submit(screen.getByRole("form", { name: "Approuver l’autorisation de portefeuille" }));
-    await screen.findByRole("button", { name: "Vérifier cette autorisation" });
-    expect((screen.getByRole("button", { name: "Modifier le périmètre" }) as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.submit(screen.getByRole("form", { name: "Approuver l’autorisation de portefeuille" }));
+    fireEvent.submit(screen.getByRole("form", { name: "Préparer les contacts à confier" }));
+    fireEvent.click(screen.getByLabelText(/Je confirme que l’entreprise bénéficiaire/)); fireEvent.click(screen.getByLabelText(/Je confie ces personnes au vendeur/));
+    fireEvent.submit(screen.getByRole("form", { name: "Confier les contacts au vendeur" }));
+    await screen.findByRole("button", { name: "Vérifier cet envoi" });
+    expect((screen.getByRole("button", { name: "Modifier les contacts ou les conditions" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.submit(screen.getByRole("form", { name: "Confier les contacts au vendeur" }));
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
     expect(authorize).toHaveBeenCalledTimes(2); expect(authorize.mock.calls[1]![0]).toEqual(authorize.mock.calls[0]![0]);
   });
@@ -74,9 +74,9 @@ describe("one reviewed authorization for an explicit portfolio", () => {
     const authorize = vi.fn(async (_input: AuthorizeSalesPortfolioInput) => undefined);
     const { container } = render(React.createElement(SalesPortfolioAuthorizationForm, { ...props, authorize, onClose: vi.fn() })); prepare(container);
     fill(container, "email:0", "");
-    fireEvent.submit(screen.getByRole("form", { name: "Préparer l’autorisation de portefeuille" }));
+    fireEvent.submit(screen.getByRole("form", { name: "Préparer les contacts à confier" }));
     expect(screen.getByRole("alert").textContent).toContain("Un téléphone ou un email réel est nécessaire");
-    expect(screen.queryByRole("form", { name: "Approuver l’autorisation de portefeuille" })).toBeNull(); expect(authorize).not.toHaveBeenCalled();
+    expect(screen.queryByRole("form", { name: "Confier les contacts au vendeur" })).toBeNull(); expect(authorize).not.toHaveBeenCalled();
   });
   it("reads the authorized snapshot and actual next action on a fresh mount without reauthorizing", () => {
     queries.list.mockReturnValue({ isLoading: false, error: null, data: [{ receipt: {
@@ -88,7 +88,7 @@ describe("one reviewed authorization for an explicit portfolio", () => {
     expect(screen.getByText("Préparer la proposition demandée par le client.")).toBeTruthy();
     expect(screen.getByText("Anciennes conditions approuvées et conservées.")).toBeTruthy();
     expect(screen.queryByText("Nouvelle proposition non approuvée.")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Préparer une autorisation" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Choisir les contacts" })).toBeNull();
     expect(queries.authorize).not.toHaveBeenCalled();
   });
 });

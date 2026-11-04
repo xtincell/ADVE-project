@@ -7,7 +7,7 @@ import { useSession } from "next-auth/react";
 import { trpc } from "@/lib/trpc/client";
 import { conversationTreeSchema, salesStateSchema, type SalesStep } from "@/server/services/crm-engine/commercial";
 
-const stateNames: Record<string, string> = { DISCOVERY: "À qualifier", QUALIFIED: "Acheteur qualifié", PARTNER: "Partenariat", AUDIENCE: "Public à informer", PROPOSAL: "Offre présentée", OBJECTION: "Objection à traiter", ACCEPTED: "Accord obtenu", PAID: "Règlement confirmé", DELIVERED: "Prestation remise", STOPPED: "Contact arrêté" };
+const stateNames: Record<string, string> = { DISCOVERY: "À qualifier", QUALIFIED: "Acheteur qualifié", PARTNER: "Partenariat", AUDIENCE: "Public à informer", PROPOSAL: "Offre présentée", OBJECTION: "Objection à traiter", ACCEPTED: "Accord obtenu", PAID: "Paiement confirmé", DELIVERED: "Livraison confirmée", STOPPED: "Contact arrêté" };
 const fieldClass = "w-full rounded border border-border bg-background px-3 py-2 text-sm";
 
 export function CrmSalesDesk() {
@@ -81,7 +81,7 @@ export function CrmSalesDesk() {
           </select>
         </label>
       </div>
-      <p className="text-xs text-foreground-muted">{channel === "WEB" ? "Conversation privée : les messages du client restent dans ce dossier." : channel === "EMAIL" ? "Email : envoi depuis le dossier si le mandat et l’adresse de marque le permettent. Consignez les réponses reçues dans votre messagerie ou invitez le client dans la conversation privée." : "Échange réalisé par votre équipe sur ce point de contact. Consignez la réponse reçue pour que le vendeur puisse poursuivre le même dossier."}</p>
+      <p className="text-xs text-foreground-muted">{channel === "WEB" ? "Conversation privée : les messages du client restent dans ce dossier." : channel === "EMAIL" ? "Email : envoi depuis le dossier si les conditions de vente et l’adresse de la marque le permettent. Consignez les réponses reçues dans votre messagerie ou invitez le client dans la conversation privée." : "Échange réalisé par votre équipe sur ce point de contact. Consignez la réponse reçue pour que le vendeur puisse poursuivre le même dossier."}</p>
       {!selected && (
         <form className="grid gap-3 sm:grid-cols-2" onSubmit={async event => {
           event.preventDefault(); const form = new FormData(event.currentTarget); setError("");
@@ -108,12 +108,12 @@ export function CrmSalesDesk() {
       {deal && sale && (
         <div className="space-y-4">
           <p>{brand?.name ?? "Marque à rattacher"} → {deal.companyName} · {stateNames[sale.node] ?? sale.node}</p>
-          <p className="font-medium">{sale.nextAction ?? "Faire approuver le mandat et l’offre."}</p>
+          <p className="font-medium">{sale.nextAction ?? "Faire approuver l’offre et ses conditions."}</p>
           {sale.nextDeadline && <p>Prochaine échéance {new Date(sale.nextDeadline).toLocaleString("fr-FR")}</p>}
           {sale.mandate && <div className="space-y-1 text-sm">
             <p>{sale.mandate.offerName} · {new Intl.NumberFormat("fr-FR", { style: "currency", currency: sale.mandate.currency }).format(sale.mandate.amount)}</p>
             <p>{sale.mandate.terms}</p>
-            <p>Mandat valable jusqu’au {new Date(sale.mandate.expiresAt).toLocaleString("fr-FR")}</p>
+            <p>Conditions de vente valables jusqu’au {new Date(sale.mandate.expiresAt).toLocaleString("fr-FR")}</p>
           </div>}
           {sale.mandate?.collection && deal.sellerStrategyId && <CrmSalesPayment key={deal.id} dealId={deal.id} strategyId={deal.sellerStrategyId} revision={deal.revision} node={sale.node} canRequest={admin || session?.user.id === sale.mandate.sellerId} />}
           {!deal.sellerStrategyId && <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
@@ -122,7 +122,7 @@ export function CrmSalesDesk() {
           </div>}
           {admin && deal.sellerStrategyId && sale.node === "DISCOVERY" && (
             <details>
-              <summary>Approuver le mandat de vente</summary>
+              <summary>Approuver les conditions de vente</summary>
               <form className="mt-3 grid gap-3 sm:grid-cols-2" onSubmit={event => {
                 event.preventDefault(); const form = new FormData(event.currentTarget);
                 if (!offer || !pillar) return;
@@ -186,9 +186,9 @@ export function CrmSalesDesk() {
                   <option value="AUDIENCE">Orienter le public</option>
                 </>}
                 {(!sale.mandate.conversationTree && ["QUALIFIED", "OBJECTION"].includes(sale.node)) && <option value="PROPOSE">Présenter l’offre</option>}
-                {(!sale.mandate.conversationTree && ["PROPOSAL", "OBJECTION"].includes(sale.node)) && <option value="OBJECTION">Consigner une objection</option>}
-                {(!sale.mandate.conversationTree && sale.node === "PROPOSAL") && <option value="ACCEPT">Consigner l’accord explicite</option>}
-                {admin && sale.node === "ACCEPTED" && !sale.mandate.collection && <option value="PAYMENT">Rapprocher un règlement</option>}
+                {(!sale.mandate.conversationTree && ["PROPOSAL", "OBJECTION"].includes(sale.node)) && <option value="OBJECTION">Noter une objection</option>}
+                {(!sale.mandate.conversationTree && sale.node === "PROPOSAL") && <option value="ACCEPT">Noter l’accord du client</option>}
+                {admin && sale.node === "ACCEPTED" && !sale.mandate.collection && <option value="PAYMENT">Vérifier un paiement</option>}
                 {sale.node === "PAID" && <option value="DELIVER">Attester la remise</option>}
                 <option value="STOP">Arrêter le contact</option>
                 {admin && !sale.contactStopped && <option value="HANDOVER">Transférer le dossier</option>}
@@ -229,7 +229,7 @@ export function CrmSalesDesk() {
             {customerMessages.error && <p role="alert" className="text-sm text-error">{customerMessages.error.message}</p>}
             {!customerMessages.isLoading && !customerMessages.error && !customerMessages.data?.length && <p className="text-sm text-foreground-muted">Aucun échange reçu dans cette affaire.</p>}
             {sale.mandate.sellerId !== session?.user.id && <div className="space-y-2 border-t border-border pt-3 text-sm">
-              <p>Le vendeur titulaire répond au client. Pour répondre vous-même, reprenez d’abord l’affaire.</p>
+              <p>Le vendeur chargé de l’affaire répond au client. Pour répondre vous-même, reprenez d’abord l’affaire.</p>
               {admin && <button type="button" className="rounded border border-border px-3 py-2" disabled={update.isPending} onClick={() => session?.user.id && void act({ type: "HANDOVER", sellerId: session.user.id })}>Reprendre la main</button>}
             </div>}
             <form className="space-y-3 border-t border-border pt-3" onSubmit={async event => {
@@ -254,10 +254,10 @@ export function CrmSalesDesk() {
               <label className="block">Objet, pour un email<input className={fieldClass} name="replySubject" maxLength={200} disabled={pendingReply?.dealId === deal.id} /></label>
               <label className="block">Votre réponse<textarea className={fieldClass} name="replyBody" rows={3} required maxLength={20000} disabled={pendingReply?.dealId === deal.id} /></label>
               <button className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50" disabled={reply.isPending || sale.mandate.sellerId !== session?.user.id || !!sale.contactStopped || !sale.mandate.channels.some(item => item === "WEB" || (item === "EMAIL" && sale.mandate?.outboundEmailEnabled && deal.contactEmail))}>{pendingReply?.dealId === deal.id ? "Vérifier le même envoi" : "Envoyer au client"}</button>
-              {!sale.mandate.channels.some(item => item === "WEB" || (item === "EMAIL" && sale.mandate?.outboundEmailEnabled && deal.contactEmail)) && <p className="text-sm text-foreground-muted">Aucun canal d’envoi direct n’est autorisé dans ce mandat. Vous pouvez consigner les échanges réalisés sur les autres points de contact.</p>}
+              {!sale.mandate.channels.some(item => item === "WEB" || (item === "EMAIL" && sale.mandate?.outboundEmailEnabled && deal.contactEmail)) && <p className="text-sm text-foreground-muted">Le vendeur ne peut pas envoyer de message directement pour cette vente. Notez ici les échanges que votre équipe a eus avec le client.</p>}
             </form>
           </section>}
-          <details className="rounded-lg border border-border p-3"><summary>Consigner une réponse du client</summary>
+          <details className="rounded-lg border border-border p-3"><summary>Noter une réponse du client</summary>
             <p className="mt-2 text-sm text-foreground-muted">Pour un appel, une rencontre ou un message reçu hors de la conversation de l’affaire. Le vendeur actif reprend cette réponse dans son dossier.</p>
             <form className="mt-3 space-y-3" onSubmit={async event => {
               event.preventDefault(); const form = new FormData(event.currentTarget); const target = event.currentTarget; setError("");

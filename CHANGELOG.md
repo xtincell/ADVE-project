@@ -1,3 +1,16 @@
+## v6.27.543 — feat(vente): contacter une marque et poursuivre la vente (2026-11-04)
+
+PR de livraison : #1133.
+
+Un nouveau client peut écrire à une marque sans compte, retrouver son vendeur et poursuivre le même échange jusqu’au paiement et à la livraison.
+
+- Le mode « Répondre aux questions » ouvre le dialogue lorsque les prestations ou tarifs restent à confirmer. Aucun prix, accord, paiement ou chiffre d’affaires n’en est déduit.
+- Le responsable publie un lien permanent et choisit le vendeur, les offres, les conditions et le nombre de nouveaux échanges accepté. Le visiteur n’a pas à connaître une offre pour commencer.
+- Le vendeur retient une offre autorisée avant de la proposer. Les conditions engagées restent conservées ; paiement, accord et livraison utilisent les règles de vente existantes.
+- L’accueil et la conversation conservent le nom public de la marque, expliquent l’attente et permettent de reprendre après une réponse incertaine. Les textes des écrans de vente emploient le vocabulaire des vendeurs et des clients.
+- Deux tables et deux migrations additives portent cette entrée ; aucun contenu ADVE ou Oracle n’est réécrit. Les appels du vendeur reprennent le gestionnaire existant, avec seulement les informations utiles à l’étape en cours.
+- Vérifications locales, publication et essai complet du vendeur suivis dans ADR-0238. Une vérification technique ou un échange fictif ne constitue pas une vente réelle.
+
 ## v6.27.541 — fix(oracle): réactualiser le document depuis son état enregistré (2026-11-03)
 
 - PR de livraison réelle : #1130. La dette540 distingue désormais sa réception technique datée et la mesure terrain encore ouverte.

@@ -92,7 +92,7 @@ describe("commercial collection in owned PostgreSQL", () => {
     await expect(request(unrelated.id)).rejects.toThrow("hors de votre marque");
     await expect(listCommercialPaymentRequests(otherBrandId, owner)).rejects.toThrow("hors de votre marque");
     const own = await makeDeal(); await expect(request(own.id, { ...outsider, admin: true })).rejects.toThrow("hors de votre marque");
-    const unattested = await makeDeal({ collection: false }); await expect(request(unattested.id)).rejects.toThrow("attestés");
+    const unattested = await makeDeal({ collection: false }); await expect(request(unattested.id)).rejects.toThrow("Confirmez où recevoir");
     const notAccepted = await makeDeal({ node: "PROPOSAL" }); await expect(request(notAccepted.id)).rejects.toThrow("accord explicite");
     for (const deal of [unrelated, own, unattested, notAccepted]) expect(await db.intakePayment.count({ where: { intakeToken: `sales-deal:${deal.id}` } })).toBe(0);
   });
@@ -104,9 +104,9 @@ describe("commercial collection in owned PostgreSQL", () => {
   });
   it("requires the designated human financier, exact received major amount, currency and external proof", async () => {
     const deal = await makeDeal(); const pending = await request(deal.id); const input = proof(deal.id);
-    await expect(reconcileSalesPayment(input, seller)).rejects.toThrow("responsable financier");
-    await expect(reconcileSalesPayment(input, owner)).rejects.toThrow("responsable financier");
-    await expect(reconcileSalesPayment(input, { id: ai.principalId!, admin: true })).rejects.toThrow("agent ne peut");
+    await expect(reconcileSalesPayment(input, seller)).rejects.toThrow("personne désignée pour vérifier");
+    await expect(reconcileSalesPayment(input, owner)).rejects.toThrow("personne désignée pour vérifier");
+    await expect(reconcileSalesPayment(input, { id: ai.principalId!, admin: true })).rejects.toThrow("personne doit vérifier");
     await expect(reconcileSalesPayment({ ...input, observedAmount: 20 }, finance)).rejects.toThrow("différents");
     await expect(reconcileSalesPayment({ ...input, currency: "USD" }, finance)).rejects.toThrow("différents");
     await expect(reconcileSalesPayment({ ...input, evidence: "" }, finance)).rejects.toThrow();
@@ -136,20 +136,20 @@ describe("commercial collection in owned PostgreSQL", () => {
     await expect(requestSalesPayment(second.id, requestId, 0, owner)).rejects.toThrow("déjà été utilisée");
     const next = await makeDeal(); const created = await request(next.id);
     await db.intakePayment.update({ where: { reference: created.reference }, data: { intakeToken: `sales-deal:${first.id}` } });
-    await expect(reconcileSalesPayment(proof(next.id), finance)).rejects.toThrow("appartenir à cette affaire");
+    await expect(reconcileSalesPayment(proof(next.id), finance)).rejects.toThrow("correspondre à cette affaire");
     expect(await db.intakePayment.count({ where: { intakeToken: `sales-deal:${second.id}` } })).toBe(0);
   });
   it("permits a scoped active AI run to request collection and denies a missing lease or paused holder", async () => {
     const deal = await makeDeal({ sellerId: ai.principalId! });
     const actor = { id: ai.principalId!, admin: false };
-    await expect(request(deal.id, actor)).rejects.toThrow("mission active");
+    await expect(request(deal.id, actor)).rejects.toThrow("tâche en cours");
     const run = await db.salesRun.create({ data: { representativeId: ai.id, dealId: deal.id, requestId: randomUUID(), instruction: "Owned synthetic payment request only", status: "RUNNING", claimedAt: new Date(), leaseToken: randomUUID(), claimRequestId: randomUUID() } });
     expect((await request(deal.id, { ...actor, salesRunId: run.id })).status).toBe("PENDING");
     const next = await makeDeal({ sellerId: ai.principalId! });
-    await expect(request(next.id, { ...actor, salesRunId: run.id })).rejects.toThrow("Mission commerciale");
+    await expect(request(next.id, { ...actor, salesRunId: run.id })).rejects.toThrow("tâche de vente");
     await db.salesRun.update({ where: { id: run.id }, data: { dealId: next.id } });
     await setSalesRepresentativeStatus({ ...owner, operatorId: null }, ai.id, "PAUSED");
-    await expect(request(next.id, { ...actor, salesRunId: run.id })).rejects.toThrow("Mission commerciale");
+    await expect(request(next.id, { ...actor, salesRunId: run.id })).rejects.toThrow("tâche de vente");
     expect(await db.intakePayment.count({ where: { intakeToken: `sales-deal:${next.id}` } })).toBe(0);
     await setSalesRepresentativeStatus({ ...owner, operatorId: null }, ai.id, "ACTIVE");
   });

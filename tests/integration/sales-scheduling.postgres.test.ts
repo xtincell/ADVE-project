@@ -109,7 +109,7 @@ describe("explicit commercial deadlines on the existing queue", () => {
     const uncertain = await fixture();
     await db.cRMActivity.create({ data: { dealId: uncertain.row.id, activityType: "SALES_EMAIL_UNCERTAIN", description: "Uncertain receipt" } });
     expect((await wakeDueSalesActions(uncertain.profile.id, now)).queued).toBe(0);
-    expect((await valid(uncertain)).reason).toContain("incertain");
+    expect((await valid(uncertain)).reason).toContain("tentative précédente");
     expect(await db.cRMActivity.count({ where: { dealId: uncertain.row.id } })).toBe(1);
   });
   it("derives successive dates from confirmed contacts, never a pending attempt or an invented model date", async () => {
@@ -125,7 +125,7 @@ describe("explicit commercial deadlines on the existing queue", () => {
     const second = await db.$transaction(tx => approvedCadencePlanIn(tx, f.row, state, now));
     expect(second?.dueAt).toBe("2027-01-20T11:00:00.000Z");
     await db.cRMActivity.create({ data: { dealId: f.row.id, activityType: "SALES_EMAIL_PENDING", description: "Not a receipt" } });
-    await expect(db.$transaction(tx => prepareSalesPlanIn(tx, f.row.id, state, normalized, { id: f.mandate.sellerId, admin: false }, now))).rejects.toThrow("réconciliation");
+    await expect(db.$transaction(tx => prepareSalesPlanIn(tx, f.row.id, state, normalized, { id: f.mandate.sellerId, admin: false }, now))).rejects.toThrow("tentative précédente");
   });
   it("automatically advances one consumed plan only after confirmed sending, without self-rearming a failed task", async () => {
     const f = await fixture(); await wakeDueSalesActions(f.profile.id, now);

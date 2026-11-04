@@ -40,7 +40,7 @@ export const authorizeSalesPortfolioInput = z.object({
     ctx.addIssue({ code: "custom", path: ["members"], message: "Chaque affaire exige une identité d’origine distincte." });
   }
   if (new Date(input.mandate.outreachPolicy.firstContactAt) >= new Date(input.mandate.expiresAt)) {
-    ctx.addIssue({ code: "custom", path: ["mandate", "expiresAt"], message: "Le premier contact doit précéder l’expiration du mandat." });
+    ctx.addIssue({ code: "custom", path: ["mandate", "expiresAt"], message: "Le premier contact doit avoir lieu avant l’expiration des conditions de vente." });
   }
 });
 export type AuthorizeSalesPortfolioInput = z.input<typeof authorizeSalesPortfolioInput>;

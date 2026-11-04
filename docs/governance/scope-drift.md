@@ -257,3 +257,5 @@ exiger le label avant merge via une protection de branche.
 | 2026-11-03 | #1129 | feat/overton-concepts540 | NEFER — mandat opérateur | Concepts A par public/pays, six jalons, raccords radar/S/Oracle et entrée partielle. Graphe existant : preuves conservées, transitions atomiques, cible dans les deux sens. Pas de popularité fictive ni de nouveau service/Intent/modèle/fournisseur. Réception métier et terrain distinctes. |
 
 | 2026-11-03 | #1130 | Codex | Correctif Oracle demandé par Alexandre : bouton de réactualisation des sections périmées, état enregistré et journal de session ; assembleur existant conservé. | Opérateur Alexandre — demande explicite |
+
+| 2026-11-04 | #1133 | feat(console) accueil commercial public par marque | NEFER — demande explicite Alexandre | Un nouveau visiteur rejoint les vendeurs et le STI existants, en mode questions ou offres approuvées. Deux modèles additifs pour publication et reprise protégée ; CRM, paiement, limites et gestionnaire d’appels réutilisés. Aucun contenu ADVE/Oracle ni agent d’infrastructure modifié. ADR-0238. Essais fictifs distincts des ventes réelles ; publication et données vérifiées séparément. |

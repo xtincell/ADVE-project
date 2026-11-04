@@ -28,13 +28,26 @@ export async function resolveCustomerDeal(token:string) {
 export async function customerConversation(token:string) {
   const deal=await resolveCustomerDeal(token);
   const state=salesStateSchema.parse(deal.commercial??{});
+  const informationOnly=Boolean(state.mandate?.informationOnly);
   const brand=await db.strategy.findUnique({where:{id:deal.sellerStrategyId!},select:{name:true}});
+  const publicSession=await db.salesPublicSession.findUnique({where:{dealId:deal.id},select:{entryId:true,entry:{select:{config:true}}}});
+  let publicBrandName:string|null=null;
+  if(publicSession){
+    const creation=await db.cRMActivity.findFirst({where:{dealId:deal.id,activityType:'DEAL_CREATED',metadata:{path:['publicEntryId'],equals:publicSession.entryId}},orderBy:{performedAt:'asc'},select:{metadata:true}});
+    const frozen=(creation?.metadata as {publicBrandName?:unknown}|null)?.publicBrandName;
+    const current=(publicSession.entry.config as {publicBrandName?:unknown}|null)?.publicBrandName;
+    publicBrandName=typeof frozen==='string'&&frozen.trim()?frozen:typeof current==='string'&&current.trim()?current:'Équipe commerciale';
+  }
   const inbound=await db.crmMessage.findMany({where:{salesDealId:deal.id,direction:'IN'},orderBy:[{createdAt:'desc'},{id:'desc'}],take:200,select:{id:true,body:true,createdAt:true,channel:true}});
   const outbound=await db.cRMActivity.findMany({where:{dealId:deal.id,activityType:{in:['SALES_WEB_SENT','SALES_EMAIL_SENT']}},orderBy:[{performedAt:'desc'},{id:'desc'}],take:200,select:{id:true,metadata:true,performedAt:true}});
+  const awaitingReply=inbound[0]&&(!outbound[0]||inbound[0].createdAt>outbound[0].performedAt);
+  const replyRun=awaitingReply?await db.salesRun.findUnique({where:{requestId:`inbound:${inbound[0]!.id}`},select:{status:true}}):null;
+  const replyStatus: 'UP_TO_DATE'|'QUEUED'|'PROCESSING'|'TEAM_REVIEW'|'HUMAN_REPLY'=!awaitingReply?'UP_TO_DATE':
+    !state.mandate?.sellerId.startsWith('mcp:')?'HUMAN_REPLY':replyRun?.status==='RUNNING'?'PROCESSING':replyRun?.status==='QUEUED'?'QUEUED':'TEAM_REVIEW';
   const payment=deal.paymentReference?await db.intakePayment.findUnique({where:{reference:deal.paymentReference},select:{reference:true,status:true,amount:true,currency:true,tierKey:true,intakeToken:true,paidAt:true}}):null;
   const {paymentMajorAmount}=await import('./payments');
-  const customerPayment=payment?.tierKey==='SALES_COLLECTION'&&payment.intakeToken===`sales-deal:${deal.id}`?{reference:payment.reference,status:payment.status,amount:paymentMajorAmount(payment),currency:payment.currency,beneficiary:state.mandate?.beneficiary??'',paidAt:payment.paidAt}:null;
-  return {payment:customerPayment,brand:brand?.name??'Équipe commerciale',state:state.node,offer:state.mandate?{name:state.mandate.offerName,terms:state.mandate.terms,amount:state.mandate.amount,currency:state.mandate.currency,paymentInstructions:state.mandate.paymentInstructions}:null,
+  const customerPayment=!informationOnly&&payment?.tierKey==='SALES_COLLECTION'&&payment.intakeToken===`sales-deal:${deal.id}`?{reference:payment.reference,status:payment.status,amount:paymentMajorAmount(payment),currency:payment.currency,beneficiary:state.mandate?.beneficiary??'',paidAt:payment.paidAt}:null;
+  return {informationOnly,payment:customerPayment,brand:publicBrandName??brand?.name??'Équipe commerciale',sellerMode:state.mandate?.sellerId.startsWith('mcp:')?'AI' as const:'HUMAN' as const,replyStatus,state:state.node,offer:state.mandate&&!informationOnly?{name:state.mandate.offerName,terms:state.mandate.terms,amount:state.mandate.amount,currency:state.mandate.currency,paymentInstructions:state.mandate.paymentInstructions}:null,
     stopped:!!state.contactStopped,messages:[...inbound.map(m=>({id:m.id,role:'customer' as const,body:m.body,at:m.createdAt})),...outbound.map(m=>({id:m.id,role:'seller' as const,body:String((m.metadata as {body?:string}|null)?.body??''),at:m.performedAt}))].sort((a,b)=>a.at.getTime()-b.at.getTime())};
 }
 export async function receiveCustomerMessage(token:string,input:{body:string;requestId:string}) {
@@ -51,7 +64,7 @@ export async function sendSalesWebMessage(dealId:string,actor:SalesActor,input:{
   const deal=await db.deal.findUniqueOrThrow({where:{id:dealId}});
   if(deal.sellerStrategyId&&!actor.id.startsWith('mcp:')){const {assertHumanSalesActive}=await import('./fleet');await assertHumanSalesActive(deal.sellerStrategyId,actor.id);}
   const state=salesStateSchema.parse(deal.commercial??{});const mandate=state.mandate;
-  if(!mandate||mandate.sellerId!==actor.id||!mandate.channels.includes('WEB')||new Date(mandate.expiresAt)<=new Date()||state.contactStopped||state.node==='STOPPED'||!deal.customerAccessTokenHash)throw new TRPCError({code:'FORBIDDEN',message:'Conversation web hors mandat.'});
+  if(!mandate||mandate.sellerId!==actor.id||!mandate.channels.includes('WEB')||new Date(mandate.expiresAt)<=new Date()||state.contactStopped||state.node==='STOPPED'||!deal.customerAccessTokenHash)throw new TRPCError({code:'FORBIDDEN',message:'Cette conversation ne fait pas partie des conditions de vente autorisées.'});
   const fingerprint=hash(JSON.stringify(input));
   const {reserveSalesOutbound}=await import('./outbound-authority');
   return (await reserveSalesOutbound(dealId,actor,{requestId:input.requestId,fingerprint,channel:'WEB',body:input.text})).receipt;

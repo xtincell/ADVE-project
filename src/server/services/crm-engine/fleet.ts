@@ -14,7 +14,7 @@ export const representativeInput = z.object({
   maxTokens: z.number().int().min(1000).max(100000).default(60000),
   dailyTokenBudget: z.number().int().min(1000).max(1000000).default(150000),
   dailyRunLimit: z.number().int().min(1).max(100).default(10),
-}).refine(v => v.dailyTokenBudget >= v.maxTokens, "Le budget journalier doit couvrir une exécution.");
+}).refine(v => v.dailyTokenBudget >= v.maxTokens, "Le budget journalier doit couvrir au moins une tâche.");
 export type FleetActor = { id: string; admin: boolean; operatorId: string | null };
 type Tx = Prisma.TransactionClient;
 const publicProfile = ({ encryptedApiKey: _secret, ...profile }: SalesRepresentative) => ({ ...profile,
@@ -54,7 +54,7 @@ export async function saveSalesRepresentative(actor: FleetActor, raw: z.input<ty
   }
   if (input.id) {
     const old = await assertFleetProfile(actor, input.id);
-    if (old.strategyId !== input.strategyId || old.mode !== input.mode || old.humanUserId !== (input.mode === "HUMAN" ? input.humanUserId : null)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le titulaire et la marque restent liés à leur historique. Créer un autre vendeur pour les changer." });
+    if (old.strategyId !== input.strategyId || old.mode !== input.mode || old.humanUserId !== (input.mode === "HUMAN" ? input.humanUserId : null)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le vendeur et sa marque restent liés à l’historique de ses affaires. Créez un autre vendeur pour les changer." });
     return publicProfile(await db.salesRepresentative.update({ where: { id: old.id }, data: { name: input.name, maxTurns: input.maxTurns, maxTokens: input.maxTokens, dailyRunLimit: input.dailyRunLimit, dailyTokenBudget: input.dailyTokenBudget, revision: { increment: 1 } } }));
   }
   const secret = input.mode === "AI" ? randomBytes(32).toString("hex") : null;
@@ -70,7 +70,7 @@ export async function saveSalesRepresentative(actor: FleetActor, raw: z.input<ty
 }
 export async function setSalesRepresentativeStatus(actor: FleetActor, id: string, status: "DRAFT" | "ACTIVE" | "PAUSED") {
   const profile = await assertFleetProfile(actor, id);
-  if (status === "ACTIVE" && profile.mode === "AI" && (!profile.mcpKeyId || !profile.encryptedApiKey)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Accès serveur du vendeur absent." });
+  if (status === "ACTIVE" && profile.mode === "AI" && (!profile.mcpKeyId || !profile.encryptedApiKey)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Configurez d’abord l’accès de ce vendeur IA." });
   return db.$transaction(async tx => {
     if (profile.mcpKeyId) await tx.mcpApiKey.update({ where: { id: profile.mcpKeyId }, data: { isActive: status !== "DRAFT" } });
     const changed = await tx.salesRepresentative.update({ where: { id }, data: { status, revision: { increment: 1 } } });
@@ -97,7 +97,7 @@ export async function queueSalesRunIn(tx: Tx, profile: SalesRepresentative, inpu
     const deal = await tx.deal.findUniqueOrThrow({ where: { id: input.dealId } });
     const mandate = salesStateSchema.parse(deal.commercial ?? {}).mandate;
     const principalId = profile.mode === "AI" ? `mcp:${profile.mcpKeyId}` : profile.humanUserId;
-    if (deal.sellerStrategyId !== profile.strategyId || mandate?.sellerId !== principalId) throw new TRPCError({ code: "FORBIDDEN", message: "L’affaire doit être mandatée à ce vendeur pour cette marque." });
+    if (deal.sellerStrategyId !== profile.strategyId || mandate?.sellerId !== principalId) throw new TRPCError({ code: "FORBIDDEN", message: "Cette affaire doit être confiée à ce vendeur pour cette marque." });
   }
   const run = await tx.salesRun.create({ data: { representativeId: profile.id, requestId: input.requestId, instruction: input.instruction, dealId: input.dealId } });
   await tx.message.create({ data: { conversationId: profile.conversationId!, senderId: actorId, senderName: actorId ? "Supervision" : "Événement client", content: input.instruction, channel: "SALES_MANAGER", externalId: run.id } });
@@ -139,7 +139,7 @@ export async function claimRun(keyId: string, requestId: string) {
     const replay = await tx.salesRun.findUnique({ where: { claimRequestId: requestId } });
     const shape = (run: SalesRun) => ({ run: { id: run.id, representativeId: profile.id, strategyId: profile.strategyId, dealId: run.dealId, instruction: run.instruction, leaseToken: run.leaseToken!, maxTurns: profile.maxTurns, maxTokens: profile.maxTokens, grantMinutes: 15 } });
     if (replay) {
-      if (replay.representativeId !== profile.id) throw new TRPCError({ code: "CONFLICT", message: "Référence de prise en charge déjà utilisée." });
+      if (replay.representativeId !== profile.id) throw new TRPCError({ code: "CONFLICT", message: "Cette référence a déjà servi à confier une tâche." });
       return replay.status === "RUNNING" ? shape(replay) : { run: null };
     }
     if (await tx.salesRun.count({ where: { representativeId: profile.id, status: { in: ["RUNNING", "AMBIGUOUS"] } } })) return { run: null };
@@ -168,7 +168,7 @@ export async function claimRun(keyId: string, requestId: string) {
 async function finishIn(tx: Tx, profile: SalesRepresentative, run: SalesRun, input: { status: "DONE" | "FAILED" | "AMBIGUOUS"; result: string; tokensUsed?: number }, senderId?: string) {
   const tokensUsed = input.status === "AMBIGUOUS" ? Math.max(input.tokensUsed ?? 0, run.reservedTokens) : (input.tokensUsed ?? 0);
   if (["DONE", "FAILED"].includes(run.status) || (run.status === "AMBIGUOUS" && run.completedAt && input.status === "AMBIGUOUS")) {
-    if (run.status !== input.status || run.result !== input.result || (input.tokensUsed !== undefined && tokensUsed !== run.tokensUsed)) throw new TRPCError({ code: "CONFLICT", message: "Un résultat a déjà été reçu pour cette exécution." });
+    if (run.status !== input.status || run.result !== input.result || (input.tokensUsed !== undefined && tokensUsed !== run.tokensUsed)) throw new TRPCError({ code: "CONFLICT", message: "Cette tâche a déjà reçu un résultat." });
     return { ok: true, runId: run.id, status: run.status };
   }
   if (!Number.isSafeInteger(tokensUsed) || tokensUsed < 0 || input.result.length > 20000) throw new TRPCError({ code: "BAD_REQUEST", message: "Résultat ou mesure de consommation invalide." });
@@ -188,22 +188,23 @@ export async function completeRun(keyId: string, runId: string, leaseToken: stri
   return db.$transaction(async tx => {
     const profile = await tx.salesRepresentative.findUniqueOrThrow({ where: { mcpKeyId: keyId } });
     const run = await tx.salesRun.findUniqueOrThrow({ where: { id: runId } });
-    if (run.representativeId !== profile.id || run.leaseToken !== leaseToken || !["RUNNING", "AMBIGUOUS", "DONE", "FAILED"].includes(run.status)) throw new TRPCError({ code: "FORBIDDEN", message: "Accusé de réception hors de sa prise en charge." });
+    if (run.representativeId !== profile.id || run.leaseToken !== leaseToken || !["RUNNING", "AMBIGUOUS", "DONE", "FAILED"].includes(run.status)) throw new TRPCError({ code: "FORBIDDEN", message: "Cette réponse ne correspond pas à la tâche confiée au vendeur." });
     return finishIn(tx, profile, run, input);
   });
 }
 export async function resolveSalesRun(actor: FleetActor, input: { runId: string; status: "DONE" | "FAILED"; result: string }) {
   const run = await db.salesRun.findUniqueOrThrow({ where: { id: input.runId } });
   const profile = await assertFleetProfile(actor, run.representativeId);
-  if (run.status === "RUNNING") throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Attendre le résultat ou l’expiration de l’exécution active." });
-  if (run.status === "QUEUED" && profile.mode !== "HUMAN") throw new TRPCError({ code: "PRECONDITION_FAILED", message: "La tâche IA attend son exécution ; la suspendre ou la traiter par passation." });
+  if (run.status === "RUNNING") throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Attendez la réponse du vendeur ou la fin du délai de traitement." });
+  if (run.status === "QUEUED" && profile.mode !== "HUMAN") throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Cette tâche attend la réponse du vendeur IA. Mettez-la en pause ou confiez-la à un autre vendeur." });
   return db.$transaction(tx => finishIn(tx, profile, run, { ...input, tokensUsed: run.tokensUsed ?? run.reservedTokens }, actor.id));
 }
 function assertSameInbound(message: { channel: string; body: string; subject: string | null }, input: { channel: string; body: string; subject?: string }) {
   if (message.channel !== input.channel || message.body !== input.body || message.subject !== (input.subject ?? null)) throw new TRPCError({ code: "CONFLICT", message: "Référence de message déjà utilisée avec un contenu différent." });
 }
-export async function recordInboundSalesMessage(input: { dealId: string; channel: string; body: string; subject?: string; externalId: string }, actorId?: string) {
-  try { return await db.$transaction(async tx => {
+type InboundSalesMessageInput = { dealId: string; channel: string; body: string; subject?: string; externalId: string };
+/** Shared atomic boundary for a first inbound conversation and subsequent replies. */
+export async function recordInboundSalesMessageIn(tx: Tx, input: InboundSalesMessageInput, actorId?: string) {
     const deal = await tx.deal.findUniqueOrThrow({ where: { id: input.dealId } });
     const existing = await tx.crmMessage.findFirst({ where: { salesDealId: deal.id, providerRef: input.externalId, direction: "IN" } });
     if (existing) { assertSameInbound(existing, input); return { message: existing, run: null }; }
@@ -213,7 +214,9 @@ export async function recordInboundSalesMessage(input: { dealId: string; channel
     const profile = mandate?.sellerId.startsWith("mcp:") ? await tx.salesRepresentative.findUnique({ where: { mcpKeyId: mandate.sellerId.slice(4) } }) : null;
     const run = profile?.status === "ACTIVE" ? await queueSalesRunIn(tx, profile, { requestId: `inbound:${message.id}`, dealId: deal.id, instruction: `Nouvelle réponse du client sur ${input.channel}, message ${message.id}. Relire l’affaire et cette réponse, répondre selon le mandat et le canal autorisé. Ne pas inventer de paiement ni de livraison.` }) : null;
     return { message, run };
-  }); } catch (error) {
+}
+export async function recordInboundSalesMessage(input: InboundSalesMessageInput, actorId?: string) {
+  try { return await db.$transaction(tx => recordInboundSalesMessageIn(tx, input, actorId)); } catch (error) {
     if ((error as { code?: string }).code !== "P2002") throw error;
     const message = await db.crmMessage.findFirst({ where: { salesDealId: input.dealId, providerRef: input.externalId, direction: "IN" } });
     if (!message) throw error;

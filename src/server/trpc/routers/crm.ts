@@ -16,6 +16,8 @@ import * as fleet from "@/server/services/crm-engine/fleet";
 import { authorizeSalesPortfolio, listAuthorizedSalesPortfolios } from "@/server/services/crm-engine/portfolio";
 import { authorizeSalesPortfolioInput } from "@/server/services/crm-engine/portfolio-contract";
 import * as salesPayments from "@/server/services/crm-engine/payments";
+import * as publicSales from "@/server/services/crm-engine/public-entry";
+import { saveSalesPublicEntryInput } from "@/server/services/crm-engine/public-entry-contract";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { getOperatorContext } from "@/server/services/operator-isolation";
 /* lafusee:governed-active */
@@ -76,6 +78,12 @@ async function assertSalesDealAccess(ctx: SalesAccessContext, dealId: string): P
 // ============================================================================
 
 export const crmRouter = createTRPCRouter({
+  getSalesPublicEntry: protectedProcedure.input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => publicSales.getSalesPublicEntry(await assertSalesBrandRead(ctx, input.strategyId), input)),
+  saveSalesPublicEntry: governedProcedure({
+    kind: "LEGACY_CRM_UPDATE_DEAL", requireOperator: false,
+    caller: "crm:saveSalesPublicEntry", inputSchema: saveSalesPublicEntryInput,
+  }).mutation(async ({ ctx, input }) => publicSales.saveSalesPublicEntry(await assertSalesBrandRead(ctx, input.strategyId), input, ctx.intentId)),
   requestSalesPayment: governedProcedure({
     kind: "LEGACY_CRM_UPDATE_DEAL", caller: "crm:requestSalesPayment",
     inputSchema: z.object({ dealId: z.string().min(1), requestId: z.string().uuid(), expectedRevision: z.number().int().nonnegative() }).strict(),
@@ -207,7 +215,7 @@ export const crmRouter = createTRPCRouter({
     const { dealId, salesStep, ...data } = input;
     const deal = await assertDealAccess(ctx, dealId);
     if (salesStep) {
-      if (!deal.sellerStrategyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Rattacher la marque vendeuse avant le mandat." });
+      if (!deal.sellerStrategyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Choisissez la marque vendeuse avant de définir les conditions de vente." });
       if (salesStep.command.type === "MANDATE") {
         const mandate = salesStep.command.mandate;
         for (const userId of [mandate.sellerId, mandate.deliveryOwnerId]) {
@@ -249,7 +257,7 @@ export const crmRouter = createTRPCRouter({
       return crm.applySalesStep(dealId, salesStep, { id: ctx.session.user.id, admin: ctx.session.user.role === "ADMIN" || owner.userId === ctx.session.user.id });
     }
     if (deal.commercial && [data.value, data.contactEmail, data.contactName, data.companyName].some(value => value !== undefined)) {
-      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Les conditions et le destinataire appartiennent au mandat approuvé." });
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Les conditions de vente et le destinataire ont déjà été approuvés pour cette affaire." });
     }
     return crm.updateDeal(dealId, data);
   }),

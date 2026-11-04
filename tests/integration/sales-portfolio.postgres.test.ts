@@ -156,7 +156,7 @@ describe("owner-authorized sales portfolios in PostgreSQL", () => {
     const payload = input(); const first = await authorize(payload);
     await expect(authorize({ ...payload, market: "Another market" })).rejects.toThrow("déjà");
     await expect(authorize(payload, { ...outsider, admin: true })).rejects.toThrow("déjà");
-    await expect(authorize({ ...payload, requestId: randomUUID() })).rejects.toThrow("identité d’origine");
+    await expect(authorize({ ...payload, requestId: randomUUID() })).rejects.toThrow("déjà servi");
     expect(await db.salesRun.count({ where: { dealId: first.receipt.members[0]!.dealId } })).toBe(1);
   });
 
@@ -165,9 +165,9 @@ describe("owner-authorized sales portfolios in PostgreSQL", () => {
     const before = await db.deal.count({ where: { sellerStrategyId: brandId } });
     await expect(authorize(payload, outsider)).rejects.toThrow("propriétaire");
     await expect(authorize({ ...payload, strategyId: otherBrandId })).rejects.toThrow("vendeur actif");
-    await expect(authorize({ ...payload, mandate: { ...payload.mandate, offerVersion: "0" } })).rejects.toThrow("version");
-    await expect(authorize({ ...payload, mandate: { ...payload.mandate, collection: { ...payload.mandate.collection, financeOwnerId: ai.principalId! } } })).rejects.toThrow("humain");
-    await expect(authorizeSalesPortfolio(owner, payload, randomUUID())).rejects.toThrow("gouvernée");
+    await expect(authorize({ ...payload, mandate: { ...payload.mandate, offerVersion: "0" } })).rejects.toThrow("catalogue a été mis à jour");
+    await expect(authorize({ ...payload, mandate: { ...payload.mandate, collection: { ...payload.mandate.collection, financeOwnerId: ai.principalId! } } })).rejects.toThrow("personne de l’équipe");
+    await expect(authorizeSalesPortfolio(owner, payload, randomUUID())).rejects.toThrow("poste commercial");
     expect(authorizeSalesPortfolioInput.safeParse({ ...payload, mandate: { ...payload.mandate, intakePaymentReference: "another-payment" } }).success).toBe(false);
     expect(authorizeSalesPortfolioInput.safeParse({ ...payload, mandate: { ...payload.mandate, collection: { ...payload.mandate.collection, attestedBy: outsider.id } } }).success).toBe(false);
     expect(authorizeSalesPortfolioInput.safeParse({ ...payload, members: Array.from({ length: 6 }, (_, index) => ({ ...payload.members[0], originKey: `oversized-${index}` })) }).success).toBe(false);
@@ -181,7 +181,7 @@ describe("owner-authorized sales portfolios in PostgreSQL", () => {
     const before = await db.deal.count({ where: { sellerStrategyId: brandId } });
     await expect(authorize({ ...payload, requestId: randomUUID(), members: [
       { originKey: "a-created-before-collision", contactName: "Synthetic fresh", companyName: uniqueCompany, contactPhone: "+000002" }, payload.members[0]!,
-    ] })).rejects.toThrow("identité d’origine");
+    ] })).rejects.toThrow("déjà servi");
     expect(await db.deal.count({ where: { sellerStrategyId: brandId } })).toBe(before);
     expect(await db.cRMActivity.count({ where: { description: { contains: uniqueCompany } } })).toBe(0);
   });
