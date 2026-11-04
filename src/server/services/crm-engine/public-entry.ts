@@ -3,6 +3,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypt
 import { TRPCError } from "@trpc/server";
 import type { Prisma, SalesPublicEntry } from "@prisma/client";
 import { db } from "@/lib/db";
+import { isGodModeEmail } from "@/lib/auth/god-mode";
 import { createDealIn } from "./index";
 import { advanceSale, mandateSchema, type SalesState } from "./commercial";
 import { assertFleetBrand, recordInboundSalesMessageIn, ensureSalesOfferToolsIn, type FleetActor } from "./fleet";
@@ -19,6 +20,9 @@ const sameDigest = (a: string, b: string) => a.length === b.length && timingSafe
 const unavailable = () => new TRPCError({ code: "PRECONDITION_FAILED", message: "Cette équipe ne reçoit pas de nouvelles conversations pour le moment." });
 const conflict = () => new TRPCError({ code: "CONFLICT", message: "Cette demande ne correspond pas à la conversation initiale. Reprenez le lien conservé dans ce navigateur." });
 const publicPath = (id: string) => `/talk/${id}`;
+/** Match the existing effective-admin policy using the freshly read DB email. */
+const approvedPublisher = (ownerId: string, author: { id: string; role: string; email: string | null } | null) =>
+  !!author && (author.id === ownerId || author.role === "ADMIN" || isGodModeEmail(author.email));
 const fingerprint = (value: StartPublicSalesConversationInput) => hash(JSON.stringify({
   message: value.message, displayName: value.displayName ?? null, offerId: value.offerId ?? null,
 }));
@@ -39,9 +43,9 @@ async function ownerBrand(tx: Pick<Tx, "strategy" | "user">, actor: FleetActor, 
 async function assertConfigIn(tx: Tx, config: Config, authorizedBy: string) {
   const [brand, author] = await Promise.all([
     tx.strategy.findUnique({ where: { id: config.strategyId }, select: { id: true, userId: true, operatorId: true, status: true, client: { select: { operatorId: true } } } }),
-    tx.user.findUnique({ where: { id: authorizedBy }, select: { id: true, role: true } }),
+    tx.user.findUnique({ where: { id: authorizedBy }, select: { id: true, role: true, email: true } }),
   ]);
-  if (!brand || ["ARCHIVED", "DELETED"].includes(brand.status) || !author || (brand.userId !== author.id && author.role !== "ADMIN")) throw unavailable();
+  if (!brand || ["ARCHIVED", "DELETED"].includes(brand.status) || !approvedPublisher(brand.userId, author)) throw unavailable();
   const scope = { ...brand, operatorId: brand.operatorId ?? brand.client?.operatorId ?? null };
   const profile = await tx.salesRepresentative.findUnique({ where: { id: config.representativeId } });
   if (!profile || profile.strategyId !== brand.id || profile.status !== "ACTIVE") throw unavailable();
@@ -137,9 +141,9 @@ export async function publicSalesEntry(publicId: string) {
     const [emission,brand,author]=await Promise.all([
       db.intentEmission.findUnique({where:{id:entry.intentId},select:{strategyId:true,caller:true}}),
       db.strategy.findUnique({where:{id:entry.strategyId},select:{userId:true,status:true}}),
-      db.user.findUnique({where:{id:entry.authorizedBy},select:{id:true,role:true}}),
+      db.user.findUnique({where:{id:entry.authorizedBy},select:{id:true,role:true,email:true}}),
     ]);
-    contactApproved=!!(brand&&!["ARCHIVED","DELETED"].includes(brand.status)&&author&&(brand.userId===author.id||author.role==="ADMIN")&&
+    contactApproved=!!(brand&&!["ARCHIVED","DELETED"].includes(brand.status)&&approvedPublisher(brand.userId,author)&&
       emission?.strategyId===entry.strategyId&&emission.caller==="crm:saveSalesPublicEntry");
   }
   return { publicId: entry.publicId, brandName: parsed.data.publicBrandName, welcome: parsed.data.welcome, available, sellerMode,

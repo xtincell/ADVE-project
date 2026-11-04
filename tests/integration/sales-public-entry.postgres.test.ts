@@ -6,6 +6,7 @@ vi.mock("@/lib/auth/config", () => ({ auth: vi.fn(async () => null) }));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
 
 import { db } from "@/lib/db";
+import { GOD_MODE_EMAILS } from "@/lib/auth/god-mode";
 import * as fleet from "@/server/services/crm-engine/fleet";
 import { applySalesStep } from "@/server/services/crm-engine";
 import { customerConversation, receiveCustomerMessage, sendSalesWebMessage } from "@/server/services/crm-engine/customer";
@@ -116,6 +117,42 @@ afterAll(async () => {
 });
 
 describe("brand public sales entry on owned PostgreSQL", () => {
+  it("publishes and admits with the canonical founder email even when DB role is FOUNDER or USER, and keeps paused human fallback", async () => {
+    let email: string | undefined;
+    for (const candidate of GOD_MODE_EMAILS) if (!await db.user.findUnique({ where: { email: candidate } })) { email = candidate; break; }
+    if (!email) throw new Error("This isolated receipt needs an unused canonical founder email; do not alter an existing account.");
+    const founder = await db.user.create({ data: { email, role: "FOUNDER", name: "Owned founder policy fixture" } }); userIds.push(founder.id);
+    const actor = { id: founder.id, admin: true, operatorId: null };
+    for (const role of ["FOUNDER", "USER"]) {
+      await db.user.update({ where: { id: founder.id }, data: { role, email } });
+      const f = await fixture({ humanContact: { name: "Contact approuvé", whatsapp: "2250102030405" } });
+      // Reproduce first publication, not an owner-authorized row left over from setup.
+      await db.salesPublicEntry.delete({ where: { id: f.entry.id } });
+      await save({ ...f.input, expectedRevision: 0 }, actor);
+      const entry = await db.salesPublicEntry.findUniqueOrThrow({ where: { strategyId: f.brand.id } });
+      expect(entry.authorizedBy).toBe(founder.id);
+      expect((await publicSalesEntry(entry.publicId)).available).toBe(true);
+      const opened = await start({ ...f, entry }); expect(opened.deal.sellerStrategyId).toBe(f.brand.id);
+      const foreign = await fixture();
+      await expect(save({ ...f.input, expectedRevision: entry.revision, representativeId: foreign.ai.id }, actor)).rejects.toThrow();
+      await fleet.setSalesRepresentativeStatus(owner, f.ai.id, "PAUSED");
+      expect(await publicSalesEntry(entry.publicId)).toMatchObject({ available: false, humanContact: { name: "Contact approuvé" } });
+      await db.user.update({ where: { id: founder.id }, data: { email: `${randomUUID()}@example.invalid` } });
+      expect((await publicSalesEntry(entry.publicId)).humanContact).toBeNull();
+      expect((await db.user.findUniqueOrThrow({ where: { id: founder.id } })).role).toBe(role);
+    }
+  });
+
+  it("refuses a non-allowlisted USER claiming admin status without changing the published owner or revision", async () => {
+    const f = await fixture();
+    const forgedAdmin = { ...outsider, admin: true };
+    await expect(save({ ...f.input, expectedRevision: f.entry.revision }, forgedAdmin)).rejects.toThrow();
+    const unchanged = await db.salesPublicEntry.findUniqueOrThrow({ where: { id: f.entry.id } });
+    expect(unchanged.revision).toBe(f.entry.revision); expect(unchanged.authorizedBy).toBe(owner.id);
+    expect((await db.user.findUniqueOrThrow({ where: { id: outsider.id } })).role).toBe("USER");
+    expect((await publicSalesEntry(f.entry.publicId)).available).toBe(true);
+  });
+
   it("publishes only a curated projection and keeps owner-only mandate and financial data private", async () => {
     const f = await fixture(); const publicView = await publicSalesEntry(f.entry.publicId);
     const serialized = JSON.stringify(publicView);
