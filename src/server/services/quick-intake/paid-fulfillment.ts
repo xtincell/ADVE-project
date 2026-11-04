@@ -21,17 +21,23 @@
  */
 
 import { db } from "@/lib/db";
+import type { SalesIntakeReportClient } from "../crm-engine/intake-report";
 
 /** Same persisted right for web, recommendations and PDF. No caller flag grants access. */
 export async function readIntakeReportAccess(
   intakeToken: string,
   role?: string,
-  client: Pick<typeof db, "intakePayment"> = db,
+  client: Pick<typeof db, "intakePayment"> & Partial<SalesIntakeReportClient> = db,
 ): Promise<{ unlocked: boolean; reference: string | null }> {
   const payment = await client.intakePayment.findFirst({
-    where: { intakeToken, status: "PAID" }, orderBy: { createdAt: "desc" }, select: { reference: true },
+    where: { intakeToken, status: "PAID", OR: [{ tierKey: { not: "SALES_COLLECTION" } }, { tierKey: null }] }, orderBy: { createdAt: "desc" }, select: { reference: true },
   });
-  return { unlocked: role === "ADMIN" || payment !== null, reference: payment?.reference ?? null };
+  if (role === "ADMIN" || payment) return { unlocked: true, reference: payment?.reference ?? null };
+  // An injected reader without CRM delegates cannot acquire rights from another DB.
+  if (["deal", "quickIntake", "strategy", "cRMActivity", "gloryOutput", "user"].some(key => !client[key as keyof SalesIntakeReportClient])) return { unlocked: false, reference: null };
+  const { readSalesIntakeReportAccessIn } = await import("../crm-engine/intake-report");
+  const right = await readSalesIntakeReportAccessIn(client as SalesIntakeReportClient, intakeToken);
+  return { unlocked: Boolean(right), reference: right?.payment.reference ?? null };
 }
 
 export async function fulfillPaidIntakeReport(reference: string): Promise<void> {
@@ -40,7 +46,20 @@ export async function fulfillPaidIntakeReport(reference: string): Promise<void> 
       where: { reference },
       select: { status: true, intakeToken: true, tierKey: true },
     });
-    if (!payment || payment.status !== "PAID" || !payment.intakeToken || payment.tierKey === "SALES_COLLECTION") return;
+    if (!payment || payment.status !== "PAID" || !payment.intakeToken) return;
+
+    if (payment.tierKey === "SALES_COLLECTION") {
+      const { claimSalesIntakePreparation, finishSalesIntakePreparation } = await import("../crm-engine/intake-report");
+      const preparation = await claimSalesIntakePreparation(reference);
+      if (!preparation) return;
+      let completed = false;
+      try {
+        const { premiumReextractAfterPayment } = await import("./index");
+        completed = await premiumReextractAfterPayment(preparation.token);
+      } catch { /* A failed invocation is not a completed report. */ }
+      await finishSalesIntakePreparation(reference, completed);
+      return;
+    }
 
     // ── Toujours : rapport premium (comportement historique) ──
     const { premiumReextractAfterPayment } = await import("./index");

@@ -116,6 +116,107 @@ async function identityFixture() {
   return { s, source, palette, typography, display, body, mascot, choice, submit, mascotUrl, bodyUrl };
 }
 describe("Public brand editions", () => {
+  it("explicitly changes only links while retaining stale published identity, physical archives and documentary history", async () => {
+    const f = await identityFixture();
+    await db.brandAsset.create({ data: { strategyId: f.s.id, name: "Retained identity logo", kind: "LOGO_FINAL", state: "ACTIVE", fileUrl: `${sourcePath}/runtime-logo.png` } });
+    await f.submit();
+    const first = PublicBrandEditionV2.parse(await readPublicBrand(f.s.publicSlug!, true));
+    const firstAsset = await db.brandAsset.findUniqueOrThrow({ where: { id: first.edition } });
+    const historical = firstAsset.metadata as Record<string, unknown>;
+    const staleAt = new Date("2026-10-16T12:00:00.000Z"), staleReason = "Fixture upstream revision remains open";
+    await db.brandAsset.updateMany({ where: { strategyId: f.s.id }, data: { staleAt, staleReason } });
+    await db.brandDataSource.update({ where: { id: f.source.id }, data: { rawContent: "A new private documentary edition; the former public copy is retained explicitly." } });
+    const ordinaryBefore = await db.brandAsset.findMany({ where: { strategyId: f.s.id, kind: { not: "BRAND_GUIDELINES" } }, orderBy: { id: "asc" } });
+    const pillarsBefore = await db.pillar.findMany({ where: { strategyId: f.s.id } });
+    const p = await caller().publicPage({ id: f.s.id });
+    expect(p.published?.reusePublishedIdentity).toBeTruthy(); expect(p.identityOptions.assets).toEqual([]);
+    const content = { ...p.published!.content, links: [{ label: "Parler à la marque", url: "https://example.invalid/talk/public-brand" }] };
+    const input = { id: f.s.id, recalculateScore: false, publicPage: { expectedRevision: p.revision, expectedPublishedId: first.edition,
+      logoAssetId: p.published!.logoAssetId!, content } };
+    await expect(caller().update(input)).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    await caller().update({ ...input, publicPage: { ...input.publicPage, reusePublishedIdentity: p.published!.reusePublishedIdentity! } });
+    const next = PublicBrandEditionV2.parse(await readPublicBrand(f.s.publicSlug!, true));
+    expect(next.version).toBe(first.version + 1); expect(next.content.identity).toEqual(first.content.identity);
+    expect(next.content.logoUrl).toBe(first.content.logoUrl); expect(next.content.links).toEqual(content.links);
+    expect({ ...next.content, links: first.content.links }).toEqual(first.content);
+    const nextAsset = await db.brandAsset.findUniqueOrThrow({ where: { id: next.edition } });
+    expect(nextAsset.staleAt).toEqual(staleAt); expect(nextAsset.staleReason).toBe(staleReason);
+    const metadata = nextAsset.metadata as Record<string, unknown>;
+    for (const key of ["identityChoice", "identityPins", "identityArchives", "logoAsset", "logoArchive", "sourceReceipts", "pillarVersions"]) expect(metadata[key]).toEqual(historical[key]);
+    expect(metadata.identityReuse).toMatchObject({ fromEditionId: first.edition, approvedBy: users[0] });
+    expect((metadata.linksReview as { sourceReceipts: unknown }).sourceReceipts).not.toEqual(historical.sourceReceipts);
+    expect(await db.brandAsset.findMany({ where: { strategyId: f.s.id, kind: { not: "BRAND_GUIDELINES" } }, orderBy: { id: "asc" } })).toEqual(ordinaryBefore);
+    expect(await db.pillar.findMany({ where: { strategyId: f.s.id } })).toEqual(pillarsBefore);
+    const exported = await GET(new Request(`https://example.invalid/api/export/${f.s.publicSlug}?format=public-brand-v2`), { params: Promise.resolve({ strategyId: f.s.publicSlug! }) });
+    const received = PublicBrandEditionV2.parse(await exported.json());
+    expect(received.edition).toBe(next.edition); expect(received.content.identity).toEqual(first.content.identity);
+    expect(JSON.stringify(received)).not.toMatch(/sourceReceipts|identityReuse|identityPins|A new private/);
+    const files = [next.content.identity!.typography!.display.faces[0]!.file, next.content.identity!.typography!.body.faces[0]!.file, next.content.identity!.mascots[0]!.file];
+    for (const file of files) expect(digestBytes(await renderedLogoBytes(file.url))).toBe(file.hash);
+    expect(digestBytes(await renderedLogoBytes(next.content.logoUrl!))).toBe(digestBytes(pngOne));
+    // A second explicit links edit still resolves the original public URLs and bytes.
+    const again = await caller().publicPage({ id: f.s.id });
+    await caller().update({ id: f.s.id, recalculateScore: false, publicPage: { expectedRevision: again.revision,
+      expectedPublishedId: next.edition, content: { ...again.published!.content, links: [] }, reusePublishedIdentity: again.published!.reusePublishedIdentity! } });
+    expect(PublicBrandEditionV2.parse(await readPublicBrand(f.s.publicSlug!, true)).content.identity).toEqual(first.content.identity);
+  });
+
+  it("refuses identity/text changes, foreign editions and forged reuse receipts before any replacement", async () => {
+    const f = await identityFixture(); await f.submit();
+    const p = await caller().publicPage({ id: f.s.id }), entry = p.published!;
+    const base = { expectedRevision: p.revision, expectedPublishedId: entry.id, content: entry.content, reusePublishedIdentity: entry.reusePublishedIdentity! };
+    for (const patch of [{ content: { ...entry.content, title: "A different marketing promise" } },
+      { content: { ...entry.content, logoUrl: "https://example.invalid/other.png" } }, { logoAssetId: "foreign-logo" },
+      { identity: { ...entry.identityChoice!, voice: { quote: "New unreviewed voice", attribution: "Invented" } } },
+      { identity: null }, { restoreId: entry.id }, { reusePublishedIdentity: { ...entry.reusePublishedIdentity!, digest: "0".repeat(64) } },
+      { reusePublishedIdentity: { ...entry.reusePublishedIdentity!, editionId: "another-brand-edition" } }]) {
+      await expect(caller().update({ id: f.s.id, recalculateScore: false, publicPage: { ...base, ...patch } })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    }
+    await expect(caller(users[1]).update({ id: f.s.id, recalculateScore: false, publicPage: base })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect((await readPublicBrand(f.s.publicSlug!, true))?.edition).toBe(entry.id);
+    expect(await db.brandAsset.count({ where: { strategyId: f.s.id, kind: "BRAND_GUIDELINES" } })).toBe(1);
+  });
+
+  it("fences changed sources and editions after a historical-identity links review", async () => {
+    const f = await identityFixture(); await f.submit();
+    const p = await caller().publicPage({ id: f.s.id });
+    await db.brandDataSource.update({ where: { id: f.source.id }, data: { rawContent: "Concurrent private correction" } });
+    await expect(caller().update({ id: f.s.id, publicPage: { expectedRevision: p.revision, expectedPublishedId: p.published!.id,
+      content: p.published!.content, reusePublishedIdentity: p.published!.reusePublishedIdentity! } })).rejects.toMatchObject({ code: "CONFLICT" });
+    const fresh = await caller().publicPage({ id: f.s.id });
+    await expect(caller().update({ id: f.s.id, publicPage: { expectedRevision: fresh.revision, expectedPublishedId: "old-edition",
+      content: fresh.published!.content, reusePublishedIdentity: fresh.published!.reusePublishedIdentity! } })).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+
+  it("refuses broken historical pins and missing archive roles even with a freshly read receipt", async () => {
+    for (const defect of ["pin", "archive"] as const) {
+      const f = await identityFixture(); await f.submit();
+      const before = PublicBrandEditionV2.parse(await readPublicBrand(f.s.publicSlug!, true));
+      const active = await db.brandAsset.findUniqueOrThrow({ where: { id: before.edition } });
+      const metadata = JSON.parse(JSON.stringify(active.metadata));
+      if (defect === "pin") metadata.identityPins[0].version += 1;
+      else metadata.identityArchives.pop();
+      await db.brandAsset.update({ where: { id: active.id }, data: { metadata } });
+      const p = await caller().publicPage({ id: f.s.id });
+      await expect(caller().update({ id: f.s.id, publicPage: { expectedRevision: p.revision, expectedPublishedId: active.id,
+        content: p.published!.content, reusePublishedIdentity: p.published!.reusePublishedIdentity! } })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+      expect((await readPublicBrand(f.s.publicSlug!, true))?.edition).toBe(active.id);
+    }
+  });
+
+  it("verifies the encrypted archive physically before publishing a links-only successor", async () => {
+    const f = await identityFixture(); await f.submit();
+    const p = await caller().publicPage({ id: f.s.id }), entry = p.published!;
+    const asset = await db.brandAsset.findUniqueOrThrow({ where: { id: entry.id } });
+    const archives = (asset.metadata as unknown as { identityArchives: Array<{ receipt: { objectKey: string } }> }).identityArchives;
+    await writeFile(path.join(storeRoot, archives[0]!.receipt.objectKey + ".enc"), "damaged retained bytes");
+    await expect(caller().update({ id: f.s.id, publicPage: { expectedRevision: p.revision, expectedPublishedId: entry.id,
+      content: { ...entry.content, links: [{ label: "Contact", url: "https://example.invalid/contact" }] },
+      reusePublishedIdentity: entry.reusePublishedIdentity! } })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    expect((await readPublicBrand(f.s.publicSlug!, true))?.edition).toBe(entry.id);
+    expect(await db.brandAsset.count({ where: { strategyId: f.s.id, kind: "BRAND_GUIDELINES" } })).toBe(1);
+  });
+
   it("irrigates every owned SPAWT origin from the same chosen edition and retained bytes", async () => {
     const f = await identityFixture(); await f.submit();
     const edition = PublicBrandEditionV2.parse(await readPublicBrand(f.s.publicSlug!, true));

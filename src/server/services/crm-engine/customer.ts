@@ -8,6 +8,7 @@ import { salesStateSchema, type SalesActor, type SalesState } from './commercial
 import { commercialQuoteOutputSchema } from '../artemis/tools/commercial-offer-schemas';
 import { serialSalesTransaction } from './transaction';
 import { projectPublicSalesHumanContact } from './public-entry-contract';
+import { resolveCustomerDeal } from './customer-access';
 import {encryptTokenPayload,decryptTokenPayload,getPublicBaseUrl} from '@/server/services/oauth-integrations';
 const hash = (value:string) => createHash('sha256').update(value).digest('hex');
 export async function issueCustomerAccess(dealId:string,actor?:SalesActor):Promise<{path:string}> {
@@ -23,12 +24,8 @@ export async function issueCustomerAccessIn(client:Prisma.TransactionClient,deal
   if(saved.count!==1)return issueCustomerAccessIn(client,dealId,actor);
   return {path:`/sales/${token}`};
 }
-export async function resolveCustomerDeal(token:string) {
-  if(!/^[a-f0-9]{64}$/.test(token)) throw new TRPCError({code:'NOT_FOUND',message:'Conversation indisponible.'});
-  const deal=await db.deal.findUnique({where:{customerAccessTokenHash:hash(token)}});
-  if(!deal?.sellerStrategyId) throw new TRPCError({code:'NOT_FOUND',message:'Conversation indisponible.'});
-  return deal;
-}
+export { resolveCustomerDeal } from "./customer-access";
+
 async function customerPublicIdentity(deal:{id:string;sellerStrategyId:string|null}) {
   const brand=await db.strategy.findUnique({where:{id:deal.sellerStrategyId!},select:{name:true}});
   const publicSession=await db.salesPublicSession.findUnique({where:{dealId:deal.id},select:{entryId:true,entry:{select:{config:true}}}});
@@ -89,13 +86,17 @@ export function canonicalSalesArtifactUrl(value:unknown,baseUrl?:string):string|
     return value.startsWith('/')?parsed.toString():value;
   }catch{return null;}
 }
-export async function resolveSalesDeliveryDocument(client:Pick<Prisma.TransactionClient,'strategy'|'cRMActivity'>,
+export async function resolveSalesDeliveryDocument(client:Pick<Prisma.TransactionClient,'strategy'|'cRMActivity'|'deal'|'quickIntake'|'intakePayment'|'gloryOutput'|'user'>,
   deal:{id:string;sellerStrategyId:string|null},state:SalesState,baseUrl?:string,activityId?:string){
   if(!deal.sellerStrategyId||!state.mandate||!['PAID','DELIVERED'].includes(state.node))return null;
   const activity=await client.cRMActivity.findFirst({where:{dealId:deal.id,activityType:'SALES_DELIVERY_READY'},orderBy:[{performedAt:'desc'},{id:'desc'}]});
   if(!activity||(activityId&&activity.id!==activityId))return null;
   const brand=await client.strategy.findUnique({where:{id:deal.sellerStrategyId},select:{userId:true}});
-  if(!activity.performedBy||![brand?.userId,state.mandate.deliveryOwnerId].includes(activity.performedBy))return null;
+  if(!activity.performedBy)return null;
+  if(![brand?.userId,state.mandate.deliveryOwnerId].includes(activity.performedBy)){
+    const {verifySalesIntakeDeliveryIn}=await import('./intake-report');
+    if(!await verifySalesIntakeDeliveryIn(client,deal,state,activity))return null;
+  }
   const url=canonicalSalesArtifactUrl((activity.metadata as {artifact?:unknown}|null)?.artifact,baseUrl);
   return url?{activityId:activity.id,url}:null;
 }
@@ -111,17 +112,22 @@ export async function customerConversation(token:string,baseUrl?:string) {
   const replyRun=awaitingReply?await db.salesRun.findUnique({where:{requestId:`inbound:${inbound[0]!.id}`},select:{status:true}}):null;
   const replyStatus: 'UP_TO_DATE'|'QUEUED'|'PROCESSING'|'TEAM_REVIEW'|'HUMAN_REPLY'=!awaitingReply?'UP_TO_DATE':
     !state.mandate?.sellerId.startsWith('mcp:')?'HUMAN_REPLY':replyRun?.status==='RUNNING'?'PROCESSING':replyRun?.status==='QUEUED'?'QUEUED':'TEAM_REVIEW';
-  const payment=deal.paymentReference?await db.intakePayment.findUnique({where:{reference:deal.paymentReference},select:{reference:true,status:true,amount:true,currency:true,tierKey:true,intakeToken:true,paidAt:true}}):null;
-  const {paymentMajorAmount}=await import('./payments');
-  const customerPayment=!informationOnly&&payment?.tierKey==='SALES_COLLECTION'&&payment.intakeToken===`sales-deal:${deal.id}`?{reference:payment.reference,status:payment.status,amount:paymentMajorAmount(payment),currency:payment.currency,beneficiary:state.mandate?.beneficiary??'',paidAt:payment.paidAt}:null;
+  const payment=deal.paymentReference?await db.intakePayment.findUnique({where:{reference:deal.paymentReference},select:{reference:true,status:true,amount:true,currency:true,tierKey:true,intakeToken:true,paidAt:true,provider:true,providerRef:true,notificationTokenHash:true}}):null;
+  const {paymentMajorAmount,customerSalesCheckout,salesPaymentCheckoutUrl}=await import('./payments');
+  const checkout=await customerSalesCheckout(deal,state);
+  const {salesIntakeReportProjectionIn}=await import('./intake-report');
+  const diagnostic=await salesIntakeReportProjectionIn(db,deal,state);
+  const customerPayment=!informationOnly&&payment?.tierKey==='SALES_COLLECTION'&&payment.intakeToken===`sales-deal:${deal.id}`?{reference:payment.reference,status:payment.status,amount:paymentMajorAmount(payment),currency:payment.currency,beneficiary:state.mandate?.beneficiary??'',paidAt:payment.paidAt,provider:payment.provider,
+    ...(payment.provider==='CINETPAY'?{paymentUrl:checkout?.available&&payment.status==='PENDING'?await salesPaymentCheckoutUrl(payment):null}:{})}:null;
   const visibleOffer=state.mandate&&!informationOnly&&(!state.mandate.pricingRule||proposal)&&(!state.proposal||proposal)
     ?{name:proposal?.offerName??state.mandate.offerName,terms:proposal?.terms??state.mandate.terms,amount:proposal?.amount??state.mandate.amount,currency:proposal?.currency??state.mandate.currency,paymentInstructions:state.mandate.paymentInstructions}:null;
   const deliveryDocument=await resolveSalesDeliveryDocument(db,deal,state,baseUrl);
-  return {informationOnly,payment:customerPayment,brand,humanContact,sellerMode:state.mandate?.sellerId.startsWith('mcp:')?'AI' as const:'HUMAN' as const,replyStatus,state:state.node,
+  return {informationOnly,payment:customerPayment,checkout,diagnostic,brand,humanContact,sellerMode:state.mandate?.sellerId.startsWith('mcp:')?'AI' as const:'HUMAN' as const,replyStatus,state:state.node,
     deliveryDocument,offer:visibleOffer,proposal:proposal?{...proposal,documentUrl:`/api/sales/${token}/proposal`}:null,
     stopped:!!state.contactStopped,messages:[...inbound.map(m=>({id:m.id,role:'customer' as const,body:m.body,at:m.createdAt})),...outbound.map(m=>({id:m.id,role:'seller' as const,body:String((m.metadata as {body?:string}|null)?.body??''),at:m.performedAt}))].sort((a,b)=>a.at.getTime()-b.at.getTime())};
 }
-export const customerSalesMessageSchema=z.object({body:z.string().trim().min(1).max(4000),requestId:z.string().uuid(),proposalId:z.string().uuid().optional()}).strict();
+export const customerSalesMessageSchema=z.object({body:z.string().trim().min(1).max(4000),requestId:z.string().uuid(),proposalId:z.string().uuid().optional(),
+  deliveryActivityId:z.string().trim().min(1).max(200).optional()}).strict().refine(value=>!(value.proposalId&&value.deliveryActivityId),{message:'Confirmez une seule étape à la fois.'});
 export async function receiveCustomerMessage(token:string,raw:z.input<typeof customerSalesMessageSchema>) {
   const input=customerSalesMessageSchema.parse(raw),resolved=await resolveCustomerDeal(token);
   return serialSalesTransaction(async tx=>{
@@ -130,14 +136,26 @@ export async function receiveCustomerMessage(token:string,raw:z.input<typeof cus
     if(deal.customerAccessTokenHash!==hash(token))throw new TRPCError({code:'NOT_FOUND',message:'Conversation indisponible.'});
     const previous=await tx.crmMessage.findFirst({where:{salesDealId:deal.id,providerRef:`web:${input.requestId}`,direction:'IN'}});
     if(previous){
-      const acceptance=await tx.cRMActivity.findUnique({where:{id:`sales-proposal-acceptance:${previous.id}`}});
+      const [acceptance,deliveryAcceptance]=await Promise.all([
+        tx.cRMActivity.findUnique({where:{id:`sales-proposal-acceptance:${previous.id}`}}),
+        tx.cRMActivity.findUnique({where:{id:`sales-delivery-acceptance:${previous.id}`}}),
+      ]);
       const prior=acceptance?.metadata as {proposalId?:string}|null;
-      if(previous.body!==input.body||(prior?.proposalId??null)!==(input.proposalId??null))throw new TRPCError({code:'CONFLICT',message:'Référence utilisée pour un autre message.'});
+      const priorDelivery=deliveryAcceptance?.metadata as {deliveryActivityId?:string}|null;
+      if(previous.body!==input.body||(prior?.proposalId??null)!==(input.proposalId??null)||(priorDelivery?.deliveryActivityId??null)!==(input.deliveryActivityId??null))throw new TRPCError({code:'CONFLICT',message:'Référence utilisée pour un autre message.'});
       return {received:true};
     }
     const state=salesStateSchema.parse(deal.commercial??{}),proposal=visibleCustomerProposal(state);
     if(input.proposalId&&(!proposal||proposal.id!==input.proposalId||state.node!=='PROPOSAL'||state.contactStopped||new Date(state.mandate!.expiresAt)<=new Date())){
       throw new TRPCError({code:'CONFLICT',message:'Cette proposition a changé ou ne peut plus être confirmée. Relisez la conversation.'});
+    }
+    let deliveryArtifactHash:string|undefined;
+    if(input.deliveryActivityId){
+      const document=state.node==='PAID'?await resolveSalesDeliveryDocument(tx,deal,state,undefined,input.deliveryActivityId):null;
+      const activity=document?await tx.cRMActivity.findUnique({where:{id:document.activityId}}):null;
+      const artifact=(activity?.metadata as {artifact?:unknown}|null)?.artifact;
+      if(!document||!activity||activity.dealId!==deal.id||typeof artifact!=='string'||activity.performedAt>new Date())throw new TRPCError({code:'CONFLICT',message:'Ce document n’est plus celui qui peut être confirmé. Relisez la conversation.'});
+      deliveryArtifactHash=hash(artifact);
     }
     const count=await tx.crmMessage.count({where:{salesDealId:deal.id,direction:'IN',createdAt:{gte:new Date(Date.now()-60000)}}});
     if(count>=10)throw new TRPCError({code:'TOO_MANY_REQUESTS',message:'Veuillez patienter avant un nouvel envoi.'});
@@ -146,6 +164,9 @@ export async function receiveCustomerMessage(token:string,raw:z.input<typeof cus
     if(input.proposalId&&proposal)await tx.cRMActivity.create({data:{id:`sales-proposal-acceptance:${message.id}`,dealId:deal.id,
       activityType:'SALES_CUSTOMER_PROPOSAL_ACCEPTANCE',description:'Le client a transmis son accord sur cette proposition ; le vendeur doit le traiter.',
       metadata:{proposalId:proposal.id,customerMessageId:message.id,requestId:input.requestId,bodyFingerprint:hash(input.body),gloryOutputId:proposal.gloryOutputId,sourceVersion:proposal.sourceVersion}}});
+    if(input.deliveryActivityId&&deliveryArtifactHash)await tx.cRMActivity.create({data:{id:`sales-delivery-acceptance:${message.id}`,dealId:deal.id,
+      activityType:'SALES_CUSTOMER_DELIVERY_ACCEPTANCE',description:'Le client confirme explicitement avoir reçu et consulté ce document.',
+      metadata:{deliveryActivityId:input.deliveryActivityId,customerMessageId:message.id,requestId:input.requestId,bodyFingerprint:hash(input.body),artifactHash:deliveryArtifactHash}}});
     return {received:true};
   });
 }

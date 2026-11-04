@@ -1,3 +1,16 @@
+## 545 candidate — règlement du devis et rapport client (4 novembre 2026)
+
+ADR-0240 / PR1136 : le règlement manuel (Orange Money ou main propre) reste
+indépendant de CinetPay. Vérification humaine dans le portail, montant/devise du
+devis accepté, preuve affectée une seule fois. Le droit au diagnostic CLIENT,
+sa préparation et son PDF réutilisent les traitements existants ; aucun paiement
+ou livrable de la marque vendeuse ne remplace celui de l’acheteur. La livraison
+exige le document canonique prêt puis sa confirmation explicite par le client.
+Le responsable peut aussi conserver explicitement une identité publiée pour
+modifier seulement ses liens, avec vérification des fichiers et des révisions.
+Aucun modèle Prisma, fournisseur, moteur ADVE ou ordonnanceur nouveau.
+Les tests, le déploiement et l’argent réellement reçu sont des preuves distinctes.
+
 ## 543 candidate — entrée publique de vente (4 novembre 2026)
 
 543 relie aussi les règles de prix approuvées au moteur monétisation existant et

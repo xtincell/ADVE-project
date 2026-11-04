@@ -126,8 +126,9 @@ export async function authorizeSalesPortfolio(actor: FleetActor, raw: AuthorizeS
           (member.contactPhone && phone(old.contactPhone) === phone(member.contactPhone))))) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Une des personnes sélectionnées a demandé à ne plus être contactée par cette marque." });
         }
+        const { freezeSalesCollectionIn } = await import("./collection-provider");
         const common = { ...input.mandate, sellerId, portfolioAuthorizationId: input.requestId,
-          collection: { ...input.mandate.collection, attestedBy: actor.id, attestedAt: now.toISOString() } };
+          collection: await freezeSalesCollectionIn(tx, brand.id, input.mandate.beneficiary, { ...input.mandate.collection, attestedBy: actor.id, attestedAt: now.toISOString() }) };
         const members: SalesPortfolioReceipt["members"] = [];
         for (const member of input.members) {
           // Independent of requestId, email and seller: a retry/new authorization cannot duplicate this source opportunity.

@@ -126,4 +126,24 @@ describe("the brand chooses what its public team may do", () => {
     await waitFor(() => expect(calls.save).toHaveBeenCalledOnce());
     expect(calls.save.mock.calls[0]![0].offers[0]).toMatchObject({ amount: 60000, currency: "XOF", billing: "MONTHLY", taxTreatment: "EXCLUDED", taxRatePct: 18, exclusions: ["Achat média", "Production vidéo"] });
   });
+
+  it("reviews and saves the chosen CinetPay account without inventing a server attestation", async () => {
+    const entry = { ...questionEntry, informationOnly: false, offers: [{ ...questionEntry.offers[0], amount: 60000, beneficiary: "La marque", paymentInstructions: "Paiement après accord.", collection: { mode: "MANUAL", destinationRef: "Ancien compte", financeOwnerId: "owner" } }] };
+    calls.query.mockReturnValue({ data: { entry, available: true }, isLoading: false, error: null }); calls.fetch.mockResolvedValue({ entry });
+    const { container } = render(React.createElement(CrmSalesPublicEntry, { ...props, principals: [...props.principals, { id: "mcp:robot", label: "Vendeur IA" }] }));
+    fireEvent.click(screen.getByRole("button", { name: "Modifier l’accueil" }));
+    expect((screen.getByLabelText("Comment le client peut-il payer ?") as HTMLSelectElement).value).toBe("MANUAL");
+    fireEvent.change(screen.getByLabelText("Comment le client peut-il payer ?"), { target: { value: "CINETPAY" } });
+    fireEvent.change(screen.getByLabelText("Nom exact du compte CinetPay configuré"), { target: { value: "Compte commercial vérifié" } });
+    expect(screen.getByLabelText("Personne chargée du suivi en cas d’incident").querySelector('option[value="mcp:robot"]')).toBeNull();
+    fireEvent.click(screen.getByLabelText(/Je confirme les entreprises bénéficiaires/));
+    fireEvent.submit(screen.getByRole("form", { name: "Préparer l’entrée publique de marque" }));
+    expect(screen.getByText(/Paiement en ligne CinetPay · Paiement à La marque · Compte commercial vérifié/)).toBeTruthy();
+    fireEvent.click(screen.getByLabelText(/J’autorise la publication de cet accueil et ces offres/)); fireEvent.submit(screen.getByRole("form", { name: "Approuver l’entrée publique de marque" }));
+    await waitFor(() => expect(calls.save).toHaveBeenCalledOnce());
+    const collection = calls.save.mock.calls[0]![0].offers[0].collection;
+    expect(collection).toEqual({ mode: "CINETPAY", destinationRef: "Compte commercial vérifié", financeOwnerId: "owner" });
+    expect(collection).not.toHaveProperty("providerAccountHash"); expect(collection).not.toHaveProperty("attestedBy");
+    expect(container.textContent).not.toContain("clé API");
+  });
 });

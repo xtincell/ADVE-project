@@ -11,16 +11,24 @@ function baseUrl(): string {
   return (process.env.CINETPAY_BASE_URL ?? "https://api.cinetpay.net").replace(/\/+$/, "");
 }
 
-let tokenCache: { value: string; expiresAt: number; base: string } | null = null;
+function environmentValid(): boolean {
+  const base = baseUrl(), key = process.env.CINETPAY_API_KEY ?? "";
+  if (!["https://api.cinetpay.co", "https://api.cinetpay.net"].includes(base)) return false;
+  if (process.env.NODE_ENV === "production") return base === "https://api.cinetpay.co" && /^sk_live_/i.test(key);
+  return !(/^sk_live_/i.test(key) && base !== "https://api.cinetpay.co") && !(/^sk_test_/i.test(key) && base !== "https://api.cinetpay.net");
+}
+let tokenCache: { value: string; expiresAt: number; base: string; credentials: string } | null = null;
 async function getAccessToken(signal: AbortSignal): Promise<string> {
   const now = Date.now();
   const base = baseUrl();
-  if (tokenCache?.base === base && tokenCache.expiresAt > now + 60_000) return tokenCache.value;
   const apiKey = process.env.CINETPAY_API_KEY;
   const apiPassword = process.env.CINETPAY_API_PASSWORD;
   if (!apiKey || !apiPassword) {
     throw new PaymentProviderError("CINETPAY", "oauth/login", "Payment credentials unavailable");
   }
+  if (!environmentValid()) throw new PaymentProviderError("CINETPAY", "oauth/login", "Payment environment unavailable; production requires the approved live endpoint and credentials");
+  const credentials = createHash("sha256").update(JSON.stringify([apiKey, apiPassword])).digest("hex");
+  if (tokenCache?.base === base && tokenCache.credentials === credentials && tokenCache.expiresAt > now + 60_000) return tokenCache.value;
   const res = await fetch(`${base}/v1/oauth/login`, {
     method: "POST", signal,
     headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -32,7 +40,7 @@ async function getAccessToken(signal: AbortSignal): Promise<string> {
     // Never echo an upstream body: it may contain credentials or notification proof.
     throw new PaymentProviderError("CINETPAY", "oauth/login", `Authentication unavailable (HTTP ${res.status})`);
   }
-  tokenCache = { value: data.data.access_token, expiresAt: now + (data.data.expires_in ?? 86_400) * 1000, base };
+  tokenCache = { value: data.data.access_token, expiresAt: now + (data.data.expires_in ?? 86_400) * 1000, base, credentials };
   return tokenCache.value;
 }
 
@@ -50,7 +58,7 @@ const paymentStatuses = new Set(["SUCCESS", "FAILED", "EXPIRED", "INITIATED", "P
 
 export const cinetpayProvider: PaymentProvider = {
   id: "CINETPAY",
-  isConfigured() { return Boolean(process.env.CINETPAY_API_KEY && process.env.CINETPAY_API_PASSWORD); },
+  isConfigured() { return Boolean(process.env.CINETPAY_API_KEY && process.env.CINETPAY_API_PASSWORD) && environmentValid(); },
 
   async initPayment(input: PaymentInitInput): Promise<PaymentInitResult> {
     const signal = AbortSignal.timeout(20_000);

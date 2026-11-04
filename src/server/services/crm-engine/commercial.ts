@@ -36,8 +36,10 @@ export const outreachPolicySchema = z.object({
   minIntervalHours: z.number().finite().min(1).max(720),
 });
 export const collectionSchema = z.object({
-  mode: z.literal("MANUAL"), destinationRef: text,
+  mode: z.enum(["MANUAL", "CINETPAY"]), destinationRef: text,
   attestedBy: text, attestedAt: z.string().datetime(), financeOwnerId: text,
+  /** Derived and checked server-side from the approved non-secret provider configuration. */
+  providerAccountHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
 });
 export const salesPlanSchema = z.object({
   id: z.string().min(1).max(200),
@@ -69,12 +71,14 @@ export const mandateSchema = z.object({
   collection: collectionSchema.optional(),
 });
 /** Uncalculated formula prices are explicitly pending, never a free offer. */
-const mandateInputSchema = mandateSchema.partial({ amount: true, currency: true }).transform((value, ctx) => {
+const mandateInputSchema = mandateSchema.partial({ amount: true, currency: true }).extend({
+  collection: collectionSchema.omit({ attestedBy: true, attestedAt: true, providerAccountHash: true }).optional(),
+}).transform((value, ctx) => {
   if (!value.pricingRule && (value.amount === undefined || value.currency === undefined)) {
     ctx.addIssue({ code: "custom", message: "Renseignez le prix fixe et sa devise, ou choisissez une règle de calcul." });
     return z.NEVER;
   }
-  return mandateSchema.parse({ ...value, amount: value.pricingRule ? 0 : value.amount!, currency: value.pricingRule ? "XXX" : value.currency! });
+  return { ...value, amount: value.pricingRule ? 0 : value.amount!, currency: value.pricingRule ? "XXX" : value.currency! };
 });
 export const salesCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("MANDATE"), mandate: mandateInputSchema }),
@@ -136,9 +140,10 @@ export function advanceSale(previous: SalesState, step: SalesStep, actor: SalesA
     requireCondition(actor.admin, "Le propriétaire de la marque doit approuver les conditions de vente.");
     requireCondition(previous.node === "DISCOVERY", "Les conditions d’une offre déjà présentée ne peuvent plus être modifiées.");
     requireCondition(new Date(command.mandate.expiresAt) > now, "Les conditions de vente doivent être encore valables.");
-    return { ...previous, mandate: command.mandate, proposal: undefined,
-      treeNodeId: command.mandate.conversationTree?.start,
-      nextAction: command.mandate.conversationTree?.nodes.find(node => node.id === command.mandate.conversationTree?.start)?.prompt ?? "Qualifier le besoin et le payeur." };
+    const mandate = mandateSchema.parse(command.mandate);
+    return { ...previous, mandate, proposal: undefined,
+      treeNodeId: mandate.conversationTree?.start,
+      nextAction: mandate.conversationTree?.nodes.find(node => node.id === mandate.conversationTree?.start)?.prompt ?? "Qualifier le besoin et le payeur." };
   }
   const mandate = previous.mandate;
   requireCondition(mandate, "Définissez les conditions de vente avant de poursuivre.");

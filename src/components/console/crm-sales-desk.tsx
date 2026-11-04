@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CrmSalesMandateFields, readSalesPricingFields, salesChannels as channels, salesChannelNames } from "./crm-sales-mandate-fields";
+import { CrmSalesMandateFields, CrmSalesCollectionFields, readSalesPricingFields, readSalesCollectionFields, salesChannels as channels, salesChannelNames } from "./crm-sales-mandate-fields";
 import { CrmSalesPayment } from "./crm-sales-payment";
 import { useSession } from "next-auth/react";
 import { trpc } from "@/lib/trpc/client";
@@ -19,6 +19,7 @@ export function CrmSalesDesk() {
   const deals = trpc.crm.listDeals.useQuery({ limit: 500 });
   const [selected, setSelected] = useState("");
   const [brandId, setBrandId] = useState("");
+  const [collectPayment, setCollectPayment] = useState(false);
   const initialBrandRead = useRef(false);
   useEffect(() => {
     if (initialBrandRead.current || !brands.data) return;
@@ -84,7 +85,7 @@ export function CrmSalesDesk() {
       <p className="text-sm text-foreground-muted">Choisir une affaire, préparer le prochain échange et retrouver ses engagements.</p>
       <div className="grid gap-3 sm:grid-cols-2">
         <label>Affaire
-          <select className={fieldClass} value={selected} onChange={event => setSelected(event.target.value)}>
+          <select className={fieldClass} value={selected} onChange={event => { setSelected(event.target.value); setCollectPayment(false); }}>
             <option value="">Créer une affaire</option>
             {deals.data?.filter(item => !brandId || item.sellerStrategyId === brandId).map(item => <option key={item.id} value={item.id}>{item.companyName} · {item.contactName}</option>)}
           </select>
@@ -153,11 +154,14 @@ export function CrmSalesDesk() {
                   ...readSalesPricingFields(form),
                   terms: input(form, "terms"), beneficiary: input(form, "beneficiary"),
                   sellerId: input(form, "seller"), deliveryOwnerId: input(form, "delivery"),
+                  ...(form.get("collectPayment") === "on" ? { collection: readSalesCollectionFields(form) } : {}),
                   paymentInstructions: input(form, "payment"), expiresAt: new Date(input(form, "expiry")).toISOString(), channels: form.getAll("channels") as (typeof channels)[number][],
                 } });
               }}>
                 <CrmSalesMandateFields catalogue={catalogue} offerId={offerId} onOfferChange={setOfferId} offerVersion={pillar ? String(pillar.currentVersion) : undefined} principals={principalOptions} defaultPrincipalId={session?.user.id} defaultChannel={channel} />
                 <label className="flex gap-2"><input type="checkbox" name="outboundEmail" />Autoriser l’envoi au contact email de cette affaire</label>
+                <label className="flex gap-2 sm:col-span-2"><input type="checkbox" name="collectPayment" checked={collectPayment} onChange={event => setCollectPayment(event.target.checked)} />Configurer le paiement pour cette offre</label>
+                {collectPayment && <CrmSalesCollectionFields principals={principalOptions} defaultPrincipalId={session?.user.id} />}
                 <label>Référence du paiement La Fusée, si applicable<input className={fieldClass} name="paymentRef" /></label>
                 <button className="rounded bg-primary px-4 py-2 text-primary-foreground" disabled={update.isPending}>Approuver ces conditions</button>
               </form>

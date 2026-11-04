@@ -98,7 +98,13 @@ export const crmRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => salesPayments.listCommercialPaymentRequests(input.strategyId, await assertSalesBrandRead(ctx, input.strategyId))),
   reconcileSalesPayment: governedProcedure({
     kind: "LEGACY_CRM_UPDATE_DEAL", caller: "crm:reconcileSalesPayment", inputSchema: salesPayments.reconcileSalesPaymentInput,
-  }).mutation(async ({ ctx, input }) => salesPayments.reconcileSalesPayment(input, await assertSalesDealAccess(ctx, input.dealId))),
+  }).mutation(async ({ ctx, input }) => {
+    const result = await salesPayments.reconcileSalesPayment(input, await assertSalesDealAccess(ctx, input.dealId));
+    // The human receipt and entitlement have committed before any report work.
+    const { fulfillPaidIntakeReport } = await import("@/server/services/quick-intake/paid-fulfillment");
+    void fulfillPaidIntakeReport(result.reference);
+    return result;
+  }),
   authorizeSalesPortfolio: governedProcedure({
     kind: "LEGACY_CRM_CREATE_DEAL", inputSchema: authorizeSalesPortfolioInput,
     caller: "crm:authorizeSalesPortfolio",

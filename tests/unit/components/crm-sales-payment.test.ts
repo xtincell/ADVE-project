@@ -59,4 +59,12 @@ describe("sales payment supervision", () => {
     await waitFor(() => expect(calls.invalidate).toHaveBeenCalledTimes(2));
     expect(calls.reconcile.mock.calls[1]![0]).toEqual(calls.reconcile.mock.calls[0]![0]);
   });
+
+  it("keeps CinetPay verification server-driven and never offers manual confirmation", () => {
+    calls.list.mockReturnValue({ data: [{ ...request, provider: "CINETPAY", canReconcile: true }], isLoading: false, error: null });
+    render(React.createElement(CrmSalesPayment, props));
+    expect(screen.getByText("Vérification du paiement en cours")).toBeTruthy();
+    expect(screen.queryByRole("form", { name: "Vérifier un paiement reçu" })).toBeNull();
+    expect(screen.queryByText("Vérifier un paiement reçu")).toBeNull(); expect(calls.reconcile).not.toHaveBeenCalled();
+  });
 });

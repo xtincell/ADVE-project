@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { CrmSalesPortfolio, SalesPortfolioAuthorizationForm } from "@/components/console/crm-sales-portfolio";
 import { authorizeSalesPortfolioInput, type AuthorizeSalesPortfolioInput } from "@/server/services/crm-engine/portfolio-contract";
 
@@ -90,5 +90,20 @@ describe("one reviewed authorization for an explicit portfolio", () => {
     expect(screen.queryByText("Nouvelle proposition non approuvée.")).toBeNull();
     expect(screen.queryByRole("button", { name: "Choisir les contacts" })).toBeNull();
     expect(queries.authorize).not.toHaveBeenCalled();
+  });
+
+  it("uses the shared CinetPay selection in the reviewed authorization and its retry body", async () => {
+    const authorize = vi.fn<(input: AuthorizeSalesPortfolioInput) => Promise<void>>().mockRejectedValueOnce(new Error("Réponse interrompue")).mockResolvedValueOnce(undefined);
+    const { container } = render(React.createElement(SalesPortfolioAuthorizationForm, { ...props, authorize, onClose: vi.fn() })); prepare(container);
+    fireEvent.change(screen.getByLabelText("Comment le client peut-il payer ?"), { target: { value: "CINETPAY" } });
+    fill(container, "destinationRef", "Compte commercial vérifié");
+    fireEvent.submit(screen.getByRole("form", { name: "Préparer les contacts à confier" }));
+    expect(within(screen.getByRole("form", { name: "Confier les contacts au vendeur" })).getByText(/Paiement en ligne CinetPay/)).toBeTruthy();
+    fireEvent.click(screen.getByLabelText(/Je confirme que l’entreprise bénéficiaire/)); fireEvent.click(screen.getByLabelText(/Je confie ces personnes au vendeur/));
+    fireEvent.submit(screen.getByRole("form", { name: "Confier les contacts au vendeur" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Vérifier cet envoi" }));
+    await waitFor(() => expect(authorize).toHaveBeenCalledTimes(2));
+    expect(authorize.mock.calls[1]![0]).toEqual(authorize.mock.calls[0]![0]);
+    expect(authorize.mock.calls[0]![0].mandate.collection).toEqual({ mode: "CINETPAY", destinationRef: "Compte commercial vérifié", financeOwnerId: "finance" });
   });
 });

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { authorizeSalesPortfolioInput, type AuthorizeSalesPortfolioInput, type AuthorizedSalesPortfolio } from "@/server/services/crm-engine/portfolio-contract";
-import { CrmSalesMandateFields, readSalesPricingFields, salesTaxLabel, salesChannelNames, type SalesCatalogueOffer, type SalesPrincipalOption } from "./crm-sales-mandate-fields";
+import { CrmSalesMandateFields, CrmSalesCollectionFields, readSalesPricingFields, readSalesCollectionFields, salesCollectionNames, salesTaxLabel, salesChannelNames, type SalesCatalogueOffer, type SalesPrincipalOption } from "./crm-sales-mandate-fields";
 
 const field = "mt-1 w-full rounded border border-border bg-background px-3 py-2 text-sm";
 const button = "rounded-lg border border-border px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
@@ -23,8 +23,8 @@ function summary(input: AuthorizeSalesPortfolioInput, principals: SalesPrincipal
       <div className="sm:col-span-2"><dt className="text-foreground-muted">Conditions et résultat promis</dt><dd className="whitespace-pre-wrap break-words">{mandate.terms}</dd></div>
       <div><dt className="text-foreground-muted">Moyens de contact autorisés</dt><dd>{mandate.channels.map(channel => salesChannelNames[channel]).join(", ")}{mandate.outboundEmailEnabled ? " · envoi email autorisé" : " · aucun envoi email autorisé"}</dd></div>
       <div><dt className="text-foreground-muted">Validité</dt><dd>Jusqu’au {date(mandate.expiresAt)}</dd></div>
-      <div><dt className="text-foreground-muted">Responsables</dt><dd>Livraison : {person(mandate.deliveryOwnerId)}<br />Vérification du paiement : {person(mandate.collection.financeOwnerId)}</dd></div>
-      <div><dt className="text-foreground-muted">Qui reçoit le paiement, et où ?</dt><dd className="whitespace-pre-wrap break-words">{mandate.beneficiary}<br />{mandate.collection.destinationRef}</dd></div>
+      <div><dt className="text-foreground-muted">Responsables</dt><dd>Livraison : {person(mandate.deliveryOwnerId)}<br />{mandate.collection.mode === "CINETPAY" ? "Suivi du paiement" : "Vérification du paiement"} : {person(mandate.collection.financeOwnerId)}</dd></div>
+      <div><dt className="text-foreground-muted">Qui reçoit le paiement, et où ?</dt><dd className="whitespace-pre-wrap break-words">{mandate.beneficiary}<br />{salesCollectionNames[mandate.collection.mode]}<br />{mandate.collection.destinationRef}</dd></div>
       <div className="sm:col-span-2"><dt className="text-foreground-muted">Comment le client paie</dt><dd className="whitespace-pre-wrap break-words">{mandate.paymentInstructions}</dd></div>
       <div className="sm:col-span-2"><dt className="text-foreground-muted">Relances autorisées</dt><dd>Premier contact : {date(mandate.outreachPolicy.firstContactAt)}.<br />{mandate.outreachPolicy.followUpAfterDays.length ? `Temps d’attente entre les relances : ${mandate.outreachPolicy.followUpAfterDays.map(day => `${day} jour${day > 1 ? "s" : ""}`).join(", puis ")}, depuis le dernier envoi confirmé.` : "Aucune relance automatique autorisée."}<br />{mandate.outreachPolicy.dailyOutboundLimit} message{mandate.outreachPolicy.dailyOutboundLimit > 1 ? "s" : ""} maximum sur 24 heures pour ces contacts ; au moins {mandate.outreachPolicy.minIntervalHours} h entre deux messages adressés à la même personne pour cette marque.</dd></div>
     </dl>
@@ -56,7 +56,7 @@ export function SalesPortfolioAuthorizationForm({ strategyId, representative, ca
           source: { label: read(form, "sourceLabel"), reference: read(form, "sourceReference"), eligibilityBasis: read(form, "eligibilityBasis") },
           mandate: { offerId, offerVersion, offerName: offer.nom, ...readSalesPricingFields(form), terms: read(form, "terms"), beneficiary: read(form, "beneficiary"), deliveryOwnerId: read(form, "delivery"), paymentInstructions: read(form, "payment"), expiresAt: new Date(read(form, "expiry")).toISOString(), channels: form.getAll("channels"), outboundEmailEnabled: form.get("outboundEmail") === "on", conversationTree: tree ? JSON.parse(tree) : undefined,
             outreachPolicy: { firstContactAt: new Date(read(form, "firstContactAt")).toISOString(), followUpAfterDays: followUps ? followUps.split(",").map(value => Number(value.trim())) : [], dailyOutboundLimit: Number(read(form, "dailyOutboundLimit")), minIntervalHours: Number(read(form, "minIntervalHours")) },
-            collection: { mode: "MANUAL", destinationRef: read(form, "destinationRef"), financeOwnerId: read(form, "financeOwner") } }, collectionAttested: true,
+            collection: readSalesCollectionFields(form) }, collectionAttested: true,
           members: memberKeys.map(key => ({ originKey: read(form, `origin:${key}`), companyName: read(form, `company:${key}`), contactName: read(form, `contact:${key}`), contactEmail: read(form, `email:${key}`) || undefined, contactPhone: read(form, `phone:${key}`) || undefined })),
         });
         if (input.mandate.pricingRule) { delete input.mandate.amount; delete input.mandate.currency; }
@@ -69,8 +69,7 @@ export function SalesPortfolioAuthorizationForm({ strategyId, representative, ca
       <p className="text-sm text-foreground-muted">{representative.name} s’occupera des personnes choisies ci-dessous, avec les mêmes conditions de vente. Vérifiez ces conditions avant de lui confier les contacts.</p>
       <fieldset className="grid gap-3 sm:grid-cols-2"><legend className="mb-3 font-medium">Offre et conditions de vente</legend><CrmSalesMandateFields catalogue={catalogue} offerId={offerId} onOfferChange={setOfferId} offerVersion={offerVersion} principals={principals} defaultPrincipalId={defaultPrincipalId} showSeller={false} />
         <label className="flex items-start gap-2 text-sm sm:col-span-2"><input className="mt-1" type="checkbox" name="outboundEmail" />Autoriser ce vendeur à envoyer des emails aux adresses explicitement listées</label>
-        <label>Compte ou numéro où recevoir le paiement<input className={field} name="destinationRef" maxLength={4000} placeholder="Référence de compte ou numéro de collecte de la marque" required /></label>
-        <label>Personne qui vérifie le paiement<select className={field} name="financeOwner" defaultValue={defaultPrincipalId} required>{principals.filter(person => !person.id.startsWith("mcp:")).map(person => <option key={person.id} value={person.id}>{person.label}</option>)}</select></label>
+        <CrmSalesCollectionFields principals={principals} defaultPrincipalId={defaultPrincipalId} />
       </fieldset>
       <fieldset className="grid gap-3 sm:grid-cols-2"><legend className="mb-3 font-medium">Liste de contacts et accord pour les contacter</legend>
         <label>Marché concerné<input name="market" className={field} maxLength={200} placeholder="Ex. Restaurants · Abidjan, Côte d’Ivoire" required /></label>

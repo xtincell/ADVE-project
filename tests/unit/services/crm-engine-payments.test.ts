@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 const payment = vi.hoisted(() => ({ findUnique: vi.fn() }));
 const premium = vi.hoisted(() => vi.fn());
+const claimSales = vi.hoisted(() => vi.fn(async () => null));
 vi.mock("@/lib/db", () => ({ db: { intakePayment: payment } }));
 vi.mock("@/server/services/crm-engine/outbound-authority", () => ({ assertSalesEffectIn: vi.fn() }));
 vi.mock("@/server/services/quick-intake/index", () => ({ premiumReextractAfterPayment: premium }));
+vi.mock("@/server/services/crm-engine/intake-report", () => ({ claimSalesIntakePreparation: claimSales, finishSalesIntakePreparation: vi.fn() }));
 import { paymentMajorAmount, salesAmountToMinor } from "@/server/services/crm-engine/payments";
 import { fulfillPaidIntakeReport } from "@/server/services/quick-intake/paid-fulfillment";
 
@@ -23,8 +25,8 @@ describe("commercial collection monetary contract", () => {
     expect(paymentMajorAmount({ tierKey: "INTAKE_PDF", amount: 1999, currency: "EUR" })).toBe(1999);
     expect(paymentMajorAmount({ tierKey: null, amount: 99, currency: "WKD" })).toBe(99);
   });
-  it("never starts premium extraction or Oracle fulfillment for commercial collection", async () => {
+  it("never extracts a commercial collection without a bound paid client-report right", async () => {
     payment.findUnique.mockResolvedValue({ status: "PAID", tierKey: "SALES_COLLECTION", intakeToken: "sales-deal:owned" });
-    await fulfillPaidIntakeReport("owned-reference"); expect(premium).not.toHaveBeenCalled();
+    await fulfillPaidIntakeReport("owned-reference"); expect(claimSales).toHaveBeenCalledWith("owned-reference"); expect(premium).not.toHaveBeenCalled();
   });
 });

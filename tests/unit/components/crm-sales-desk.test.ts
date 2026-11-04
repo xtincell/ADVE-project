@@ -9,7 +9,7 @@ vi.mock("next-auth/react", () => ({ useSession: () => ({ data: { user: { id: "ow
 vi.mock("@/components/console/crm-sales-payment", () => ({ CrmSalesPayment: () => null }));
 vi.mock("@/lib/trpc/client", () => ({ trpc: {
   useUtils: () => ({ crm: { invalidate: calls.invalidate }, strategy: { list: { invalidate: vi.fn() } } }),
-  strategy: { list: { useQuery: () => ({ data: [{ id: "brand", name: "La marque", pillars: [] }, { id: "another-brand", name: "Autre marque", pillars: [] }] }) } },
+  strategy: { list: { useQuery: () => ({ data: [{ id: "brand", name: "La marque", pillars: [{ key: "v", currentVersion: 4, content: { produitsCatalogue: [{ id: "gold", nom: "Gold", prix: 60000, conditionsTarifaires: "Présence mensuelle approuvée." }] } }] }, { id: "another-brand", name: "Autre marque", pillars: [] }] }) } },
   crm: {
     listDeals: { useQuery: () => ({ data: [{ id: "deal", sellerStrategyId: "brand", companyName: "Restaurant", contactName: "Client" }] }) },
     getDeal: { useQuery: ({ id }: { id: string }) => ({ data: id ? calls.deal() : undefined }) },
@@ -106,5 +106,26 @@ describe("the seller prepares a proposal from approved prices", () => {
     fireEvent.change(screen.getByLabelText("Marque vendeuse"), { target: { value: "another-brand" } });
     view.rerender(React.createElement(CrmSalesDesk));
     expect((screen.getByLabelText("Marque vendeuse") as HTMLSelectElement).value).toBe("another-brand");
+  });
+
+  it.each([false, true])("approves an individual offer with online payment remaining optional: %s", async online => {
+    calls.deal.mockReturnValue({ ...deal, commercial: { node: "DISCOVERY", mandate } });
+    render(React.createElement(CrmSalesDesk)); selectDeal();
+    fireEvent.click(screen.getByText("Approuver les conditions de vente"));
+    fireEvent.change(screen.getByLabelText("Offre du catalogue"), { target: { value: "gold" } });
+    fireEvent.change(screen.getByLabelText("Devise"), { target: { value: "XOF" } });
+    fireEvent.change(screen.getByLabelText("Validité"), { target: { value: "2026-12-30T16:00" } });
+    fireEvent.change(screen.getByLabelText("Entreprise qui reçoit le paiement"), { target: { value: "La marque" } });
+    fireEvent.change(screen.getByLabelText("Comment le client paie"), { target: { value: "Paiement après accord." } });
+    if (online) {
+      fireEvent.click(screen.getByLabelText("Configurer le paiement pour cette offre"));
+      fireEvent.change(screen.getByLabelText("Comment le client peut-il payer ?"), { target: { value: "CINETPAY" } });
+      fireEvent.change(screen.getByLabelText("Nom exact du compte CinetPay configuré"), { target: { value: "Compte commercial vérifié" } });
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Approuver ces conditions" }));
+    await waitFor(() => expect(calls.update).toHaveBeenCalledOnce());
+    const approved = calls.update.mock.calls[0]![0].salesStep.command.mandate;
+    if (online) expect(approved.collection).toEqual({ mode: "CINETPAY", destinationRef: "Compte commercial vérifié", financeOwnerId: "owner" });
+    else expect(approved).not.toHaveProperty("collection");
   });
 });

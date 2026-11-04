@@ -1568,7 +1568,7 @@ export async function regenerateAnalysis(
 // PREMIUM RE-EXTRACTION POST-PAIEMENT (vague D)
 // ============================================================================
 
-const premiumReextractInFlight = new Set<string>();
+const premiumReextractInFlight = new Map<string, Promise<boolean>>();
 
 /**
  * Déclenchée par les webhooks paiement (Stripe/CinetPay/PayPal) quand un
@@ -1579,22 +1579,26 @@ const premiumReextractInFlight = new Set<string>();
  * Garde-fous : in-flight dédupliqué par token (retries webhook), et
  * regenerateAnalysis refuse d'écraser une strategy déjà activée (force=false).
  */
-export function premiumReextractAfterPayment(intakeToken: string): void {
-  if (premiumReextractInFlight.has(intakeToken)) return;
-  premiumReextractInFlight.add(intakeToken);
-  void regenerateAnalysis(intakeToken, { premium: true })
+export function premiumReextractAfterPayment(intakeToken: string): Promise<boolean> {
+  const current = premiumReextractInFlight.get(intakeToken);
+  if (current) return current;
+  const pending = regenerateAnalysis(intakeToken, { premium: true })
     .then(() => {
-      console.log(`[quick-intake] re-extraction premium post-paiement OK (${intakeToken})`);
+      console.log("[quick-intake] re-extraction premium post-paiement terminée");
+      return true;
     })
     .catch((err) => {
       console.warn(
-        `[quick-intake] re-extraction premium post-paiement sautée (${intakeToken}):`,
-        err instanceof Error ? err.message : err,
+        "[quick-intake] re-extraction premium post-paiement à vérifier :",
+        err instanceof Error ? err.name : "UnknownError",
       );
+      return false;
     })
     .finally(() => {
       premiumReextractInFlight.delete(intakeToken);
     });
+  premiumReextractInFlight.set(intakeToken, pending);
+  return pending;
 }
 
 // ============================================================================

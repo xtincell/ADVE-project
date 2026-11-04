@@ -72,6 +72,11 @@ export const PublicBrandPublicationInput = z.object({
   logoAssetId: z.string().min(1).optional(),
   // Private, explicit source/asset/version/role choices; never a private charter export.
   identity: PublicIdentityChoice.nullable().optional(),
+  // A deliberate links-only edit keeps the already-public identity and its history.
+  reusePublishedIdentity: z.object({
+    editionId: z.string().min(1).max(100),
+    digest: z.string().regex(/^[a-f0-9]{64}$/),
+  }).strict().optional(),
 }).strict();
 export const PublicBrandEdition = z.object({
   schema: z.literal(PUBLIC_BRAND_FORMAT),
