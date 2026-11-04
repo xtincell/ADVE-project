@@ -56,22 +56,26 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 58 modules (src/domain, cœur métier pur)
+## Domain — 68 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
 - **barre-brand-context**
 - **brand-actors**
+- **brand-asset-formats**
 - **brand-asset-kinds** — BrandAsset.kind — taxonomie complète des actifs de marque.
 - **brand-nature-archetypes** — Phase 18 (ADR-0061) — `BRAND_NATURE_ARCHETYPES` source de vérité unique.
 - **brand-scores** — src/domain/brand-scores.ts — Layer 0. Les TROIS mesures d'une marque, nommées
 - **brand-slug** — Format standard des `publicSlug` de marque (page publique `/b/[slug]`).
 - **brand-tier** — src/domain/brand-tier.ts — Layer 0. The single source of truth for the
+- **calendar-brief-source**
+- **calendar-production**
 - **campaign-code** — Phase 18-A1-α (audit MATANGA V4) — auto-générateur `Campaign.code` aligné
 - **classification-coherence** — Domain helper — invariants APOGEE de cohérence Classification ↔ Superfans ↔ Cult Tier.
 - **collaborator-access** — ADR-0131 — Zones d'accès des collaborateurs délégués par marque.
 - **connector-result** — ConnectorResult<T> — discriminated union returned by every external connector
 - **council-input**
+- **creative-direction**
 - **creative-intelligence**
 - **creative-media**
 - **creative-models**
@@ -84,6 +88,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **field-provenance** — FieldProvenance — qui a posé la valeur d'un champ de pilier ADVE.
 - **financial-document**
 - **forecast** — ADR-0156 — Moteur de forecast déterministe (pur, zéro IO, zéro LLM).
+- **generation-result**
 - **identity-graph** — ADR-0147 — Identity Graph : cœur déterministe (Layer 0, pur, zéro-LLM, zéro-IO).
 - **intent-progress** — src/domain/intent-progress.ts — IntentPhase + IntentProgressEvent.
 - **intervention-request**
@@ -100,6 +105,11 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **portfolio-reference**
 - **product-catalog** — product-catalog.ts — intégrité du socle produit (ADR-0171).
 - **product-system** — product-system.ts — le SYSTÈME produit d'une marque (ADR-0170, pilier V).
+- **production-artwork**
+- **production-image-reference**
+- **production-passages**
+- **production-pin**
+- **production-sources**
 - **public-brand**
 - **schema-normalizer** — schema-normalizer.ts — normalisation déterministe vers le schéma STRICT (ADR-0172).
 - **scoreur/anchors** — ADR-0149 — ancres-étalons + jauge de ligue (canon, θ fixé — la seule main
@@ -436,7 +446,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Services backend — 123
+## Services backend — 124
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -471,6 +481,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - `src/server/services/community-dashboard/` ✓ manifest
 - `src/server/services/consulting/` ✓ manifest
 - `src/server/services/country-registry/` ✓ manifest
+- `src/server/services/creative-direction/`
 - `src/server/services/creative-intelligence/` ✓ manifest
 - `src/server/services/creative-proposal/` ✓ manifest
 - `src/server/services/crm-engine/` ✓ manifest

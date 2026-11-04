@@ -1,5 +1,7 @@
 "use client";
 
+import { brandAssetPreviewUrl } from "@/lib/brand-asset-preview";
+
 import { sha256 } from "@noble/hashes/sha2.js";
 import { ORIGINAL_CHUNK_BYTES, MAX_CHUNKED_ORIGINAL_BYTES } from "@/domain/source-original";
 import { useState } from "react";
@@ -60,11 +62,7 @@ type AssetType = (typeof ASSET_TYPES)[number]["value"];
  */
 const STATE_LABELS: Record<string, string> = { DRAFT: "Brouillon", CANDIDATE: "À examiner", SELECTED: "Sélectionné", ACTIVE: "En usage", SUPERSEDED: "Édition antérieure", ARCHIVED: "Archivé", REJECTED: "Non retenu" };
 const isPublication = (format: string | null) => format === PUBLIC_BRAND_FORMAT || format === PUBLIC_BRAND_IDENTITY_FORMAT;
-function previewUrl(asset: { id: string; fileUrl: string | null; mimeType: string | null }) {
-  if (!asset.fileUrl) return null;
-  if (asset.fileUrl === `/api/brand-assets/${asset.id}/original`) return /^image\/(png|jpeg|gif|webp)$/.test(asset.mimeType ?? "") ? `${asset.fileUrl}?preview=1` : null;
-  return /\.(png|jpe?g|webp|gif|svg)(?:[?#]|$)/i.test(asset.fileUrl) || asset.fileUrl.startsWith("data:image/") ? asset.fileUrl : null;
-}
+
 const TYPE_FOR_KIND: Record<string, AssetType> = {
   LOGO_FINAL: "LOGO",
   LOGO_IDEA: "LOGO",
@@ -490,9 +488,9 @@ export default function AssetsPage() {
                     >
                     {/* Preview area */}
                     <div className={`flex h-24 items-center justify-center rounded-lg ${getTypeBgColor(String(assetType))}`}>
-                      {previewUrl(asset) ? (
+                      {brandAssetPreviewUrl(asset) ? (
                         <img
-                          src={previewUrl(asset)!}
+                          src={brandAssetPreviewUrl(asset)!}
                           alt={asset.name}
                           className="h-full w-full rounded-lg object-cover"
                           onError={(e) => {
@@ -780,9 +778,9 @@ export default function AssetsPage() {
             <div className="space-y-4">
               {/* Preview */}
               <div className="flex h-40 items-center justify-center rounded-lg bg-background/50">
-                {previewUrl(selectedAssetData) ? (
+                {brandAssetPreviewUrl(selectedAssetData) ? (
                   <img
-                    src={previewUrl(selectedAssetData)!}
+                    src={brandAssetPreviewUrl(selectedAssetData)!}
                     alt={selectedAssetData.name}
                     className="h-full max-w-full rounded-lg object-contain"
                     onError={(e) => {

@@ -9,6 +9,7 @@
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
+import { isUsableGeneration } from "@/domain/generation-result";
 import { executeStructuredLLMCall, LLMStructuredCallError } from "@/server/services/utils/llm-structured";
 import { deriveJsonSchemaFromZod } from "@/server/services/utils/zod-to-json-schema";
 import { sanitizeInline, wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
@@ -18,6 +19,9 @@ import { EXTENDED_GLORY_TOOLS, getGloryTool, getBrandPipelineDependencyOrder, ty
 import { checkPaidTier, tierGateDenied } from "@/server/services/glory-tools/tier-gate";
 import { invokeExternalTool as anubisInvokeExternalTool } from "@/server/services/anubis/mcp-client";
 import { hasGloryComposer, composeGloryDeterministic } from "./glory-composers";
+import { compileCreativeDirection, CREATIVE_DIRECTION_RULE } from "@/server/services/creative-direction/context";
+import type { CreativeTarget } from "@/domain/creative-direction";
+import { PRODUCTION_SOURCE_RULE } from "@/server/services/deliverable-orchestrator/production-prompt";
 import { reportRefusedWrite } from "../../pillar-gateway/refusal";
 
 /**
@@ -26,12 +30,12 @@ import { reportRefusedWrite } from "../../pillar-gateway/refusal";
  * tools have access to risks (R), market intelligence (T), action catalogue (I),
  * and strategic roadmap (S) alongside the creative pillars (A/D/V/E).
  */
-async function loadStrategyContext(strategyId: string): Promise<string> {
+async function loadStrategyContext(strategyId: string, target?: CreativeTarget): Promise<{summary:string; direction:string}> {
   const strategy = await db.strategy.findUnique({
     where: { id: strategyId },
     include: { pillars: true, drivers: { where: { deletedAt: null, status: "ACTIVE" } } },
   });
-  if (!strategy) return "";
+  if (!strategy) return {summary:"",direction:""};
 
   const vec = strategy.advertis_vector as Record<string, number> | null;
   const lines = [
@@ -101,7 +105,9 @@ async function loadStrategyContext(strategyId: string): Promise<string> {
     lines.push(strategy.drivers.map((d) => `${d.name} (${d.channel})`).join(", "));
   }
   lines.push("--- FIN CONTEXTE ---");
-  return lines.join("\n");
+  const d = target ? strategy.pillars.find(p=>p.key.toLowerCase()==="d") : undefined;
+  const direction = d ? compileCreativeDirection(d.content,d.currentVersion,target)?.text : undefined;
+  return {summary:lines.join("\n"),direction:direction ?? ""};
 }
 
 /**
@@ -111,7 +117,7 @@ export async function executeTool(
   toolSlug: string,
   strategyId: string,
   input: Record<string, string>,
-  media: { video?: import("@/server/services/llm-gateway/audiovisual").GatewayVideo; images?: readonly import("@/server/services/llm-gateway/vision").GatewayImage[]; signal?: AbortSignal } = {},
+  media: { video?: import("@/server/services/llm-gateway/audiovisual").GatewayVideo; images?: readonly import("@/server/services/llm-gateway/vision").GatewayImage[]; signal?: AbortSignal; production?: { previewIntentId: string; dispatchIntentId?: string; sourceText: string } } = {},
 ): Promise<{ outputId: string; output: Record<string, unknown>; intentId: string | null }> {
   const tool = getGloryTool(toolSlug);
   if (!tool) throw new Error(`GLORY tool inconnu: ${toolSlug}`);
@@ -155,17 +161,23 @@ export async function executeTool(
       data: {
         intentKind: "INVOKE_GLORY_TOOL",
         strategyId,
-        payload: { toolSlug, input } as Prisma.InputJsonValue,
+        payload: { toolSlug, input, ...(media.production ? {previewIntentId:media.production.previewIntentId}: {}) } as Prisma.InputJsonValue,
+        ...(media.production ? {spawnedFrom:media.production.dispatchIntentId ?? media.production.previewIntentId}: {}),
         caller: `glory-tools.executeTool`,
       },
     });
     intentEmissionId = row.id;
   } catch (err) {
+    if (media.production) throw new Error("La filiation du brief n’a pas pu être enregistrée. Aucun appel génératif lancé.");
     // ne bloque pas — IntentEmission est best-effort (Loi 1 conservation)
     console.warn(
       `[glory.executeTool] IntentEmission INVOKE_GLORY_TOOL not persisted for ${toolSlug}:`,
       err instanceof Error ? err.message : err,
     );
+  }
+
+  if (media.production?.sourceText && (tool.executionType === "MCP" || tool.executionType === "DELEGATE" || hasGloryComposer(tool.slug))) {
+    throw new Error("Ce moteur ne prend pas en charge les sources de production sélectionnées.");
   }
 
   // ── Phase 16 — MCP delegation (ADR-0048) ───────────────────────────────
@@ -252,11 +264,19 @@ export async function executeTool(
   // (anti-injection) avant substitution dans le template.
   let userPrompt = tool.promptTemplate;
   for (const [key, value] of Object.entries(input)) {
-    userPrompt = userPrompt.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), sanitizeInline(value));
+    userPrompt = userPrompt.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), () => sanitizeInline(value));
   }
 
+  if (media.production?.sourceText) userPrompt += "\n\n" + PRODUCTION_SOURCE_RULE + "\n" + media.production.sourceText;
+
   // Load strategy context — fencé comme DONNÉE non fiable (anti-injection).
-  const strategyContext = wrapUntrusted("CONTEXTE STRATÉGIE", await loadStrategyContext(strategyId), { max: 12000 });
+  const creative = tool.layer === "CR" || tool.layer === "BRAND" || !!tool.forgeOutput || !!media.production || tool.slug==="brand-guardian-system";
+  const {summary,direction} = await loadStrategyContext(strategyId, creative ? {
+    platform:input.platform || input.channel, format:input.format, theme:input.theme || input.concept || input.topic, angle:input.angle,
+    family:input.creativeFamily, mode:input.creativeMode === "REVISION" ? "REVISION" : "NEW",
+  } : undefined);
+  const strategyContext = wrapUntrusted("CONTEXTE STRATÉGIE", summary, { max: 12000 });
+  if (direction) userPrompt += "\n\n" + CREATIVE_DIRECTION_RULE + "\n" + direction;
 
   // ── Phase 24 (ADR-0108) — Références Seshat (corpus Hunter) pour l'idéation ──
   // Pour les tools d'idéation/benchmark, on injecte les campagnes RÉELLES récoltées
@@ -313,6 +333,7 @@ ${strategyContext}${referenceContext}`;
           layer: tool.layer,
           durationMs,
           attempts: structured.attempts,
+          model: structured.model, provider: structured.provider,
           schemaEnforced: true,
           generatedAt: new Date().toISOString(),
         },
@@ -369,7 +390,7 @@ ${strategyContext}${referenceContext}`;
           tool: tool.slug,
           layer: tool.layer,
           durationMs,
-          model: "claude-sonnet-4-5",
+          model: result.model, provider: result.provider,
           schemaEnforced: false,
           schemaOptOut: tool._noSchemaJustification ?? null,
           generatedAt: new Date().toISOString(),
@@ -405,7 +426,7 @@ ${strategyContext}${referenceContext}`;
       await db.intentEmission.update({
         where: { id: intentEmissionId },
         data: {
-          result: { gloryOutputId: gloryOutput.id, status: "OK" } as Prisma.InputJsonValue,
+          result: { gloryOutputId: gloryOutput.id, status: isUsableGeneration(aiOutput) ? "OK" : "FAILED" } as Prisma.InputJsonValue,
           completedAt: new Date(),
         },
       });

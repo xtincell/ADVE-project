@@ -1,6 +1,7 @@
 "use client";
 
 import { initiativeBudgetLabel, ROUTE_SPECS } from "@/lib/strategy/roadmap-routes";
+import { OVERTON_MILESTONES } from "@/domain/overton-positioning";
 
 /**
  * Pilier S (Stratégie) — renderer bespoke.
@@ -70,20 +71,32 @@ function FenetreOverton({ value, status }: { value: unknown; status?: string }) 
 function OvertonMilestones({ items, status }: { items: unknown; status?: string }) {
   const empty = isEmpty(items);
   const arr = asArr(items);
+  const groups = Map.groupBy(arr, (m, i) => str(m.conceptId) || `legacy-${i}`);
   return (
     <ACard title="Jalons d'Overton" status={status} empty={empty} span>
       {empty ? <p className="text-sm text-foreground-muted">Les jalons ne sont pas encore déductibles du socle de marque. Vérifier et compléter les objectifs et perceptions de l’ADVE, puis recalculer le plan. Aucun résultat constaté n’est inventé.</p> : (
-        <div className="ck-s-miles">
-          {arr.map((m, i) => (
-            <div className="ck-s-mile" key={i}>
-              <div className="ck-s-mile__rail"><span className="ck-s-mile__dot" /></div>
-              <div className="ck-s-mile__b">
-                <span className="ck-s-mile__phase">{str(m.phase)}</span>
-                <span className="ck-s-mile__move">{str(m.currentPerception)} <b>→</b> {str(m.targetPerception)}</span>
-                {!isEmpty(m.measurementMethod) ? <span className="ck-s-mile__meth">{str(m.measurementMethod)}</span> : null}
-              </div>
-            </div>
-          ))}
+        <div className="space-y-6">
+          <p className="text-sm text-foreground-secondary">Chaque conviction suit son propre parcours jusqu’à la cible retenue dans les fondations. « Institué » est une cible possible. Les étapes ci-dessous restent des objectifs à vérifier.</p>
+          {[...groups].map(([id, steps]) => <section key={id} className="rounded-xl border border-border p-4 space-y-4">
+            <h3 className="text-base font-semibold text-foreground">{str(steps[0]?.currentPerception)}</h3>
+            <p className="text-sm text-foreground-secondary">Départ du plan : <strong>{str(steps[0]?.phase)}</strong> → Cible retenue : <strong>{str(steps.at(-1)?.phase)}</strong></p>
+            <ol className="ck-s-miles">
+              {steps.map((m, i) => {
+                const rubric = OVERTON_MILESTONES.find(r => r.zone === m.zone);
+                const previous = OVERTON_MILESTONES.find(r => r.zone === steps[i - 1]?.zone);
+                const forward = rubric && previous && OVERTON_MILESTONES.indexOf(rubric) > OVERTON_MILESTONES.indexOf(previous);
+                return <li className="ck-s-mile" key={i}>
+                  <div className="ck-s-mile__rail"><span className="ck-s-mile__dot" /></div>
+                  <div className="ck-s-mile__b">
+                    <span className="ck-s-mile__phase">{str(m.phase)} · {i === 0 ? "Point de départ à vérifier" : i === steps.length - 1 ? "Cible" : "Étape à atteindre"}</span>
+                    <span className="ck-s-mile__move">{rubric?.meaning ?? str(m.targetPerception)}</span>
+                    {i > 0 ? <p className="text-sm text-foreground-secondary"><strong>Action de passage : </strong>{forward ? previous?.next : rubric?.proof ?? str(m.measurementMethod)}</p> : null}
+                    {!isEmpty(m.measurementMethod) ? <span className="ck-s-mile__meth"><strong>Preuve attendue : </strong>{str(m.measurementMethod)}</span> : null}
+                  </div>
+                </li>;
+              })}
+            </ol>
+          </section>)}
         </div>
       )}
     </ACard>

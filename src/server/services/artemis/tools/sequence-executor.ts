@@ -1,3 +1,4 @@
+import { isUsableGeneration } from "@/domain/generation-result";
 import { projectFinancialPillar } from "@/domain/unit-economics";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
 
@@ -223,6 +224,8 @@ async function executeGloryStep(
   const { executeTool } = await import("./engine");
   const { outputId, output, intentId: gloryIntentId } = await executeTool(ref, strategyId, input);
 
+  if (!isUsableGeneration(output)) throw new Error("La production n’a pas fourni de contenu exploitable. La tentative est conservée dans l’historique.");
+
   // Phase 10 (ADR-0012) — Auto-dépose dans le BrandVault après chaque Glory tool.
   // Mapping outputFormat → BrandAsset.kind via FORMAT_TO_KIND (brand-vault/engine).
   // Les outputs structurés (concepts_list, claims_list, etc.) deviennent
@@ -310,7 +313,7 @@ async function executeGloryStep(
  *
  * Le mapping outputFormat → kind est stable via brand-vault/engine FORMAT_TO_KIND.
  */
-async function depositInBrandVault(args: {
+export async function depositInBrandVault(args: {
   tool: NonNullable<ReturnType<typeof getGloryTool>>;
   toolOutput: Record<string, unknown>;
   gloryOutputId: string;
@@ -432,6 +435,11 @@ export async function chainGloryToPtah(args: {
   sourceBrandAssetId?: string;
   strategyId: string;
   context: SequenceContext;
+  calendarBrief?: import("@/domain/calendar-brief-source").CalendarBriefSource;
+  productionArtwork?:import("@/domain/production-artwork").ProductionArtwork;
+  productionReferences?:ReadonlyArray<import("@/domain/production-image-reference").ProductionImageReference>;
+  productionSourceText?:string;
+  onForgeReceipt?: (status: string) => void;
 }): Promise<string | undefined> {
   const { tool, toolOutput, sourceIntentId, strategyId, context } = args;
   if (!tool.forgeOutput) return undefined;
@@ -439,7 +447,9 @@ export async function chainGloryToPtah(args: {
   // Extraire le briefText du tool output selon briefTextPath (default "prompt")
   const briefTextPath = tool.forgeOutput.briefTextPath ?? "prompt";
   const structuredQuote = tool.slug === "devis-generator" && typeof toolOutput.devis !== "string";
-  const briefText = structuredQuote ? formatCommercialQuoteBrief(toolOutput.devis) : extractBriefText(toolOutput, briefTextPath);
+  const briefText = structuredQuote ? formatCommercialQuoteBrief(toolOutput.devis) :
+    extractBriefText(toolOutput, briefTextPath) || (tool.slug === "kv-banana-prompt-generator"
+      ? extractBriefText(toolOutput,"kv_prompts_list.prompts[0].prompt") || extractBriefText(toolOutput,"kv_prompts_list[0].prompt") : "");
   if (structuredQuote && !briefText) {
     throw new Error("Complétez le devis et ses conditions avant de demander sa mise en page.");
   }
@@ -470,10 +480,27 @@ export async function chainGloryToPtah(args: {
     throw new Error(`chainGloryToPtah: strategy ${strategyId} not found`);
   }
   if (!strategy.operatorId) {
+    if(args.onForgeReceipt) throw new Error("Aucun opérateur de forge n’est associé à cette marque.");
     console.warn(`[sequence-executor] chainGloryToPtah skipped: strategy ${strategyId} has no operatorId (Pilier 3 violation)`);
     return undefined;
   }
 
+  const cal=args.calendarBrief;
+  const { wrapUntrusted } = await import("@/server/services/utils/untrusted-content");
+  const materialText=args.productionArtwork ? photoSlotPrompt(args.productionArtwork.photoPolicy, cal, briefText) : [briefText,cal ? wrapUntrusted("BRIEF DU POST · conserver légende, format, piste et direction",cal.text,{max:32000}):"",args.productionSourceText].filter(Boolean).join("\n");
+  const params={...extractForgeParameters(toolOutput)};
+  // Le LLM ne peut attribuer lui-même des médias du coffre au fournisseur.
+  delete params.productionReferences;
+  delete params.productionArtwork;
+  if (args.onForgeReceipt) delete params.referenceImageUrls;
+  if(cal)Object.assign(params,{prompt:materialText,platform:cal.platform,format:cal.format??"",theme:cal.theme??"",angle:cal.angle??"",
+    creativeMode:cal.mode,...(cal.family?{creativeFamily:cal.family}:{}),calendarBriefId:cal.assetId,calendarBriefVersion:cal.version});
+  if(args.productionSourceText)params.prompt=materialText;
+  if(cal && /stor(y|ies)/i.test(cal.format??""))params.size="1024x1536";
+  if(args.productionArtwork){params.productionArtwork=args.productionArtwork;params.prompt=materialText;}
+  // The locked renderer reads its embedded original. Documentary references
+  // remain in the reviewed manifest but are not image-generation inputs.
+  if(args.productionReferences?.length && args.productionArtwork?.photoPolicy!=="LOCKED_MASTER")params.productionReferences=args.productionReferences;
   const { emitIntent } = await import("@/server/services/mestor/intents");
   const result = await emitIntent(
     {
@@ -486,12 +513,12 @@ export async function chainGloryToPtah(args: {
       briefId: context._briefId as string | undefined,
       sourceBrandAssetId: args.sourceBrandAssetId,
       brief: {
-        briefText,
+        briefText:materialText,
         forgeSpec: {
           kind: tool.forgeOutput.forgeKind,
           providerHint: tool.forgeOutput.providerHint,
           modelHint: tool.forgeOutput.modelHint,
-          parameters: extractForgeParameters(toolOutput),
+          parameters:params,
         },
         pillarSource,
         manipulationMode,
@@ -501,8 +528,28 @@ export async function chainGloryToPtah(args: {
   );
 
   // Mestor renvoie IntentResult avec output.taskId
-  const output = result.output as { taskId?: string } | undefined;
+  const output = result.output as { taskId?: string; status?: string } | undefined;
+  if (args.onForgeReceipt) {
+    if (result.status !== "OK" || !output?.taskId || !output.status) throw new Error(result.summary || "La forge n’a pas émis de reçu de tâche.");
+    args.onForgeReceipt(output.status);
+  }
   return output?.taskId;
+}
+
+/** The provider renders only the photograph. Typography and caption are never
+ * part of this prompt: the immutable master supplies them after generation. */
+export function photoSlotPrompt(policy:"GENERATED_CANDIDATE"|"LOCKED_MASTER",cal:import("@/domain/calendar-brief-source").CalendarBriefSource|undefined, fallback:string) {
+  if(policy==="LOCKED_MASTER")return "Recomposer le master original en conservant sa photographie ; aucune image à générer.";
+  const content:Record<string,unknown>=cal?JSON.parse(cal.text):{};
+  const post=(content.post??{}) as Record<string,unknown>;
+  const evidence={sujet:post.theme??cal?.theme,angle:post.angle??cal?.angle,photographie:post.illustration,
+    directionDeCetteOption:content.treatment,correction:content.correction,option:content.variant,
+    treatmentPhoto:(["A wide establishing view showing the setting as well as all subjects.","Closer three-quarter angle; use visible detail to make the choice legible, while keeping all subjects visible.","Human eye-level viewpoint centered on the documented protagonists, without inventing identities.","An overhead comparison of the documented elements; keep all subjects visible."])[Number(content.variant)-1]};
+  return [ "Produce a standalone editorial PHOTOGRAPH, not a designed social-media post. The finished post is composed outside this tool.",
+    cal?JSON.stringify(evidence):"",
+    "Photographic brief prepared by Glory from the creative direction and source briefs (use the photograph, lighting and subject direction only; template treatments are applied separately):",fallback,
+    "Use the attached photographic reference for the actual depicted subjects and setting. Keep all named subjects recognizable; never replace either by a different subject. Vary photographic composition or viewpoint between options while preserving the brief.",
+    "Instructions about masters, tickets, headlines, logos, frames and typography pertain to a separate overlay and must not be rendered in the photo. No graphic layout, letters, brands, words, labels, CTA, ticket stubs, lettering, watermark or caption on this photo."].join("\n");
 }
 
 function extractBriefText(toolOutput: Record<string, unknown>, path: string): string {
@@ -1269,6 +1316,9 @@ export async function executeSequence(
           output = {};
       }
 
+      if ((step.type === "GLORY" || step.type === "CALC") && !isUsableGeneration(output)) {
+        throw new Error("La production de cette étape n’a pas fourni de contenu exploitable. Consultez l’historique des tentatives.");
+      }
       const stepDuration = Date.now() - stepStart;
       const outputKeyCount = Object.keys(output).filter(k => !k.startsWith("_")).length;
       journal.stepOk(i, step.ref, step.type, stepDuration, { outputKeys: outputKeyCount });

@@ -38,7 +38,7 @@ export const FORGE_KINDS: readonly ForgeKind[] = [
   "design",
 ] as const;
 
-export type ProviderName = "magnific" | "adobe" | "figma" | "canva" | "openai";
+export type ProviderName = "magnific" | "adobe" | "figma" | "canva" | "openai" | "master";
 
 export const PROVIDER_NAMES: readonly ProviderName[] = [
   "magnific",
@@ -46,6 +46,7 @@ export const PROVIDER_NAMES: readonly ProviderName[] = [
   "figma",
   "canva",
   "openai",
+  "master",
 ] as const;
 
 /**
@@ -145,11 +146,13 @@ export interface ForgeProvider {
    * Lance la forge. Renvoie un task créé + estimation coût.
    * L'asset est livré plus tard (webhook ou polling reconcile).
    */
-  forge(brief: ForgeBrief, webhookUrl?: string): Promise<{
+  forge(brief: ForgeBrief, webhookUrl?: string, artwork?: {original: Buffer; slot: import("@/domain/production-artwork").ProductionArtwork; taskId:string}): Promise<{
     providerTaskId: string;
     providerModel: string;
     estimatedCostUsd: number;
     webhookSecret: string;
+    /** Synchronous material receipt, separate from the indexed provider identity. */
+    synchronousResult?: { resultUrls: string[]; realisedCostUsd: number };
   }>;
   /**
    * Réconcilie un task à partir d'un payload webhook (ou polling sync).
@@ -178,8 +181,8 @@ export interface ForgeProvider {
   isAvailable(): Promise<boolean>;
   /**
    * Provider SYNCHRONE : `forge()` produit le résultat immédiatement (pas de
-   * webhook). Dans ce cas `forge()` pose l'URL résultat dans `providerTaskId`
-   * et `materializeBrief` réconcilie inline (OpenAI images). Async par défaut.
+   * webhook). Its synchronousResult is persisted with its short provider identity
+   * before inline reconciliation. Async providers remain unchanged.
    */
   readonly sync?: boolean;
 }

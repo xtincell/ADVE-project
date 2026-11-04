@@ -512,16 +512,18 @@ export async function execute(intent: Intent, context?: { intentId: string }): P
           imageUrl: intent.imageUrl ?? null,
           scheduleAt: intent.scheduleAt ?? null,
           brandActionId: intent.brandActionId ?? null,
+          scheduledVersion: intent.scheduledVersion,
           brief: intent.brief ?? null,
           visualCopy: intent.visualCopy ?? null,
         });
         const okCount = out.results.filter((r) => r.state === "PUBLISHED").length;
         return wrap({
           ...base,
-          status: "OK",
+          status: out.mode === "FAILED" ? "FAILED" : ["PARTIAL", "UNCONFIRMED"].includes(out.mode) ? "DOWNGRADED" : "OK",
           summary:
             out.mode === "SCHEDULED"
               ? `Publication planifiée (action ${out.brandActionId})`
+              : out.mode === "SKIPPED" ? "Échéance déjà prise en charge ou modifiée."
               : `Publication : ${okCount}/${out.results.length} plateforme(s) OK`,
           output: out,
         });
@@ -729,6 +731,12 @@ export async function execute(intent: Intent, context?: { intentId: string }): P
       // Le dispatch full async (status=DISPATCHED) viendra avec le router
       // tRPC commit 4 ou ultérieur.
       case "COMPOSE_DELIVERABLE": {
+        if(intent.calendarPreparation){
+          if(intent.calendarPreparation.strategyId!==intent.strategyId || !intent.previewOnly)throw new Error("Périmètre de préparation du planning invalide.");
+          const {prepareCalendarBriefRows}=await import("@/server/services/deliverable-orchestrator/calendar-production");
+          const output=await prepareCalendarBriefRows(intent.calendarPreparation,intent.operatorId,context?.intentId);
+          return wrap({...base,status:"OK",summary:"Préparation des briefs du calendrier ; aucune génération lancée.",output});
+        }
         const { composeDeliverable } = await import(
           "@/server/services/deliverable-orchestrator"
         );
@@ -738,7 +746,8 @@ export async function execute(intent: Intent, context?: { intentId: string }): P
           targetKind: intent.targetKind,
           campaignId: intent.campaignId,
           overrideManipulationMode: intent.overrideManipulationMode,
-          previewOnly: intent.previewOnly,
+          previewOnly: intent.previewOnly, previewIntentId: intent.previewIntentId, pins: intent.pins,
+          creativeProposalId: intent.creativeProposalId, calendarBrief:intent.calendarBrief, sourceIntentId: context?.intentId,
         });
         return wrap({
           ...base,
@@ -748,6 +757,14 @@ export async function execute(intent: Intent, context?: { intentId: string }): P
             status: result.status,
             sequenceExecutionId: result.sequenceExecutionId,
             targetKind: result.composition.targetKind,
+            missingPreconditions: result.composition.missingPreconditions,
+            vaultMatches: result.composition.vaultMatches,
+            ...(result.previewIntentId ? {previewIntentId: result.previewIntentId} : {}),
+            ...(result.sourceManifest ? {sourceManifest: result.sourceManifest} : {}),
+            ...(result.materialBlock ? {materialBlock: result.materialBlock} : {}),
+            ...(result.materialStatus ? {materialStatus: result.materialStatus} : {}),
+            ...(result.generativeTaskId !== undefined ? {generativeTaskId: result.generativeTaskId} : {}),
+            ...(result.briefOutputId ? {briefOutputId: result.briefOutputId} : {}),
           },
         });
       }

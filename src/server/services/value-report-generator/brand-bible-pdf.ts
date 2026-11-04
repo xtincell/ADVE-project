@@ -22,6 +22,7 @@
  */
 
 import { jsPDF } from "jspdf";
+import type { BibleSection } from "@/server/services/brand-bible/compose";
 import { compileDeliverable, type DeliverableManifest } from "@/server/services/artemis/tools/deliverable-compiler";
 import { getSequence } from "@/server/services/artemis/tools/sequences";
 import { getGloryTool } from "@/server/services/artemis/tools/registry";
@@ -114,7 +115,7 @@ export async function exportComposedBrandBibleAsPdf(
 
   const doc = new jsPDF({ orientation: "landscape", unit: "px", format: [W, H] });
   // `null` = complétude non mesurée → jamais « complet » par défaut.
-  const complete = bible.coverage.pct != null && bible.coverage.pct >= 100;
+  const complete = bible.coverage.pct != null && bible.coverage.pct >= 100 && bible.coverage.filled === bible.coverage.total;
   await renderCover(doc, theme, bible.brandName, complete);
 
   let slideCount = 1;
@@ -136,13 +137,7 @@ export async function exportComposedBrandBibleAsPdf(
 function renderBibleSection(
   doc: jsPDF,
   t: BrandTheme,
-  section: {
-    title: string;
-    blurb: string;
-    entries: Array<{ label: string; value: unknown; provenance: string }>;
-    missing: Array<{ label: string }>;
-    citations: Array<{ fileName: string; excerpt: string }>;
-  },
+  section: BibleSection,
   index: number,
   total: number,
   brand: string,
@@ -183,7 +178,7 @@ function renderBibleSection(
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
       doc.setTextColor(...t.muted);
-      doc.text(`(${entry.provenance})`, MARGIN + 300, y);
+      doc.text(`(${entry.provenance}${entry.sourceField ? ` · ${entry.sourceField}` : ""})`, MARGIN + 300, y);
       y += 20;
       doc.setTextColor(...t.ink);
       doc.setFontSize(13);

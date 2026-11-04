@@ -77,6 +77,7 @@ export async function attachProviderTask(
   taskId: string,
   providerTaskId: string,
   expiresAt?: Date,
+  synchronousResult?: { resultUrls: string[]; realisedCostUsd: number },
 ) {
   return db.generativeTask.update({
     where: { id: taskId },
@@ -84,6 +85,7 @@ export async function attachProviderTask(
       providerTaskId,
       status: "IN_PROGRESS",
       expiresAt: expiresAt ?? null,
+      ...(synchronousResult ? { resultUrls: synchronousResult.resultUrls, realisedCostUsd: synchronousResult.realisedCostUsd } : {}),
     },
   });
 }

@@ -131,6 +131,7 @@ export function estimateCostForModel(provider: ProviderName, model: string): num
     figma: FIGMA_PRICING,
     canva: CANVA_PRICING,
     openai: OPENAI_PRICING,
+    master: {"master-svg":0},
   };
   const table = tables[provider];
   return table[model] ?? 0.1;

@@ -4,12 +4,14 @@ import { TRPCError } from "@trpc/server";
 import { db } from "@/lib/db";
 import { findDanglingReferences, type PillarBag } from "@/domain/pillar-reference-edges";
 import { measuredConfidence } from "@/lib/confidence";
+import { getFieldLabel } from "@/lib/types/field-labels";
+import type { z } from "zod";
 import { PillarSSchema } from "@/lib/types/pillar-schemas";
 import { evaluatePillarReadiness } from "@/server/governance/pillar-readiness";
 import { getContract } from "@/server/services/pillar-maturity/contracts-loader";
-import { isFieldSatisfied } from "@/server/services/pillar-maturity/assessor";
+import { applicableRequirements, isFieldSatisfied } from "@/server/services/pillar-maturity/assessor";
 import { checkStaleness } from "@/server/services/staleness-propagator";
-import { validateCrossReferences } from "@/server/services/cross-validator";
+import { validatePillarCrossReferences } from "@/server/services/cross-validator";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 
 type Status = "DRAFT" | "AI_PROPOSED" | "VALIDATED" | "LOCKED";
@@ -18,20 +20,38 @@ const transitions: Record<string, readonly Status[]> = {
   VALIDATED: ["LOCKED", "DRAFT"], LOCKED: ["DRAFT"],
 };
 
+function describeInvalidField(issue: z.core.$ZodIssue): string {
+  if ((issue.code === "too_big" || issue.code === "too_small") && ["string", "array"].includes(issue.origin)) {
+    const unit = issue.origin === "string" ? "caractères" : "éléments";
+    return issue.code === "too_big" ? `Maximum de ${issue.maximum} ${unit}.` : `Minimum de ${issue.minimum} ${unit}.`;
+  }
+  return "Le format de la valeur ne correspond pas à ce champ.";
+}
+
+function synthesisFieldLabel(path: string) {
+  return path.split(".").map(key => /^\d+$/.test(key) ? `élément ${Number(key) + 1}` : getFieldLabel(key)).join(" → ");
+}
+
 /** Composition and maturity are independent from approval and confidence. */
 export function inspectSynthesis(pillar: Pillar | null) {
   const readiness = evaluatePillarReadiness(pillar, "S");
   const content = (pillar?.content ?? {}) as Record<string, unknown>;
   const parsed = PillarSSchema.safeParse(content);
-  const missing = [...new Set([
-    ...getContract("s").stages.ENRICHED.filter(req => !isFieldSatisfied(content, req)).map(req => req.path),
-    ...(parsed.success ? [] : parsed.error.issues.map(issue => issue.path.join("."))),
-  ])];
+  const stages = getContract("s").stages;
+  const criteria = new Map<string, string>();
+  for (const req of applicableRequirements([...stages.INTAKE, ...stages.ENRICHED], content)) {
+    if (!isFieldSatisfied(content, req)) criteria.set(req.path, req.description || "À renseigner dans la stratégie.");
+  }
+  for (const issue of parsed.error?.issues ?? []) {
+    criteria.set(issue.path.join(".") || "syntheseExecutive", describeInvalidField(issue));
+  }
+  const fieldIssues = [...criteria].map(([path, reason]) => ({ path, reason, label: synthesisFieldLabel(path) }));
+  const missing = fieldIssues.map(issue => issue.path);
   // ENRICHED is the existing composed synthesis contract. COMPLETE includes
   // extra Glory-specific inputs, and must not be claimed by human approval.
   const composed = Boolean(pillar) && parsed.success
     && (readiness.stage === "ENRICHED" || readiness.stage === "COMPLETE");
-  return { exists: Boolean(pillar), composed, missing, readiness,
+  return { exists: Boolean(pillar), composed, missing, fieldIssues, readiness,
     currentVersion: pillar?.currentVersion ?? null, canValidate: composed && !readiness.stale };
 }
 
@@ -57,23 +77,34 @@ async function loadReviewScope(tx: Prisma.TransactionClient, strategyId: string,
   return strategy;
 }
 
+/** Same source checks for the read-only review, approval and project creation. */
+async function validationSourceIssues(pillar: Pillar, client: Pick<Prisma.TransactionClient, "pillar">) {
+  const key = pillar.key.toUpperCase();
+  const [age, rows] = await Promise.all([
+    checkStaleness(pillar.strategyId, key, client),
+    client.pillar.findMany({ where: { strategyId: pillar.strategyId }, select: { key: true, content: true } }),
+  ]);
+  const contents = Object.fromEntries(rows.map(row => [row.key.toUpperCase(), row.content as Record<string, unknown> | null]));
+  const links = validatePillarCrossReferences(contents)
+    .filter(row => row.status === "INVALID" && (row.from.startsWith(`${key}.`) || row.to.startsWith(`${key}.`)))
+    .map(row => row.message);
+  const dangling = key === "S" ? findDanglingReferences(contents as PillarBag, { strictS: true })
+    .filter(ref => ref.source.startsWith("S.")).map(ref => `${ref.source} · ${ref.edge} · ${ref.ref}`) : [];
+  return { stale: Boolean(pillar.staleAt) || age.isStale, changedPillars: age.dependsOn, links, dangling };
+}
+
+export async function inspectSynthesisForReview(pillar: Pillar | null, client: Pick<Prisma.TransactionClient, "pillar">) {
+  const composition = inspectSynthesis(pillar);
+  const sources = pillar ? await validationSourceIssues(pillar, client) : { stale: false, changedPillars: [], links: [], dangling: [] };
+  const canValidate = composition.composed && !sources.stale && !sources.links.length && !sources.dangling.length;
+  return { ...composition, sources, canValidate };
+}
+
 async function assertValidationSources(pillar: Pillar, tx: Prisma.TransactionClient) {
-  const key = pillar.key.toLowerCase();
-  if (pillar.staleAt || (await checkStaleness(pillar.strategyId, key, tx)).isStale) {
-    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le contenu est obsolète. Actualisez-le depuis ses sources avant de valider." });
-  }
-  const invalid = (await validateCrossReferences(pillar.strategyId, tx)).filter(row =>
-    row.status === "INVALID" && (row.from.startsWith(`${key.toUpperCase()}.`) || row.to.startsWith(`${key.toUpperCase()}.`)));
-  if (invalid.length) {
-    throw new TRPCError({ code: "PRECONDITION_FAILED", message: `Des liens entre les données sont incohérents (${invalid.length}). Relisez la synthèse et ses sources.` });
-  }
-  if (key === "s") {
-    const sources = await tx.pillar.findMany({ where: { strategyId: pillar.strategyId }, select: { key: true, content: true } });
-    const bag = Object.fromEntries(sources.map(row => [row.key.toUpperCase(), row.content])) as PillarBag;
-    if (findDanglingReferences(bag, { strictS: true }).some(ref => ref.source.startsWith("S."))) {
-      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "La synthèse pointe vers une source introuvable. Relisez ses initiatives, risques et hypothèses." });
-    }
-  }
+  const issues = await validationSourceIssues(pillar, tx);
+  if (issues.stale) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le contenu est obsolète. Actualisez-le depuis ses sources avant de valider." });
+  if (issues.links.length) throw new TRPCError({ code: "PRECONDITION_FAILED", message: `Des liens entre les données sont incohérents (${issues.links.length}). Relisez la synthèse et ses sources.` });
+  if (issues.dangling.length) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "La synthèse pointe vers une source introuvable. Relisez ses initiatives, risques et hypothèses." });
 }
 
 /** Boundary used only for projects explicitly derived from the approved S. */

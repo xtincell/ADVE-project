@@ -224,13 +224,30 @@ export async function materializeBrief(
 
   const webhookUrl = `${WEBHOOK_BASE}/api/ptah/webhook?taskId=${task.id}&secret=${webhookSecret}`;
 
+  let sentToProvider = false;
   try {
-    const result = await provider.forge(payload.brief, webhookUrl);
+    const forgeBrief = payload.brief.forgeSpec.parameters.productionReferences === undefined ? payload.brief
+      : await (await import("./production-references")).briefForImageProvider(payload.brief, provider.name,
+        {strategyId:payload.strategyId, operatorId:ctx.operatorId, campaignId:payload.campaignId});
+    let artwork;
+    if (forgeBrief.forgeSpec.parameters.productionArtwork !== undefined) {
+      const {productionArtwork}=await import("@/domain/production-artwork");
+      const slot=productionArtwork.parse(forgeBrief.forgeSpec.parameters.productionArtwork);
+      const {readArtworkMaster}=await import("./artwork-master");
+      const master=await readArtworkMaster({strategyId:payload.strategyId,operatorId:ctx.operatorId,campaignId:payload.campaignId},slot);
+      if (!master.inspection.imageLayers.some(layer=>layer.id===slot.photoLayerId))
+        throw new Error("Ce calque du master n’est plus disponible. Reprenez l’aperçu.");
+      artwork={original:master.bytes,slot,taskId:task.id};
+    }
+    sentToProvider = true;
+    const result = await provider.forge(forgeBrief, webhookUrl, artwork);
     const expiresAt =
       provider.name === "magnific"
         ? new Date(Date.now() + 12 * 3600 * 1000) // Magnific 12h URL TTL
         : null;
-    await attachProviderTask(task.id, result.providerTaskId, expiresAt ?? undefined);
+    const synchronousResult = provider.sync && result.synchronousResult
+      ? validateReceipt(result.synchronousResult.resultUrls, result.synchronousResult.realisedCostUsd) : undefined;
+    await attachProviderTask(task.id, result.providerTaskId, expiresAt ?? undefined, synchronousResult);
     await db.generativeTask.update({
       where: { id: task.id },
       data: { providerModel: result.providerModel, estimatedCostUsd: result.estimatedCostUsd },
@@ -267,7 +284,7 @@ export async function materializeBrief(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await markFailed(task.id, message);
-    await updateProviderHealth(provider.name, { failure: true });
+    if (sentToProvider) await updateProviderHealth(provider.name, { failure: true });
     throw error;
   }
 }
@@ -352,6 +369,8 @@ export async function reconcileTask(
         throw new Error("PTAH_VAULT_CONFLICT");
       }
       // An admitted asset keeps its current lifecycle (including ARCHIVED).
+      const artworkParams=current.parameters && !Array.isArray(current.parameters) && typeof current.parameters==="object" ? current.parameters.productionArtwork : null;
+      const layer=artworkParams ? await tx.brandAsset.findFirst({where:{strategyId:current.strategyId!,sourceIntentId:current.intentId,format:"PRODUCTION_PHOTO_LAYER"},select:{id:true,version:true}}) : null;
       if (!assets.length) await createBrandAsset({
         strategyId: current.strategyId!, operatorId: current.operatorId,
         name: `${current.forgeKind} forge — ${current.providerModel}`,
@@ -360,10 +379,11 @@ export async function reconcileTask(
         summary: `Forgé via ${current.provider}/${current.providerModel}`,
         pillarSource: current.pillarSource as PillarKey,
         manipulationMode: current.manipulationMode as ManipulationMode,
-        state: "ACTIVE", sourceIntentId: current.intentId, sourceAssetVersionId: version.id,
+        state: artworkParams ? "CANDIDATE" : "ACTIVE", sourceIntentId: current.intentId, sourceAssetVersionId: version.id,
         campaignId: current.campaignId ?? undefined, briefId: current.briefId ?? undefined,
         metadata: { provider: current.provider, providerModel: current.providerModel,
-          realisedCostUsd: receipt.realisedCostUsd, sourceBrandAssetId: current.sourceBrandAssetId },
+          realisedCostUsd: receipt.realisedCostUsd, sourceBrandAssetId: current.sourceBrandAssetId,
+          ...(artworkParams ? {artwork:artworkParams,photoLayer:layer,review:"REQUIRES_ART_DIRECTION_REVIEW"} : {}) },
       }, tx);
       assetVersionIds.push(version.id);
     }

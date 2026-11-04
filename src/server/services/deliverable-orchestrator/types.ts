@@ -36,6 +36,8 @@ export interface VaultMatchResult {
   readonly assetId: string | null;
   /** State observé (ACTIVE / SUPERSEDED / DRAFT / etc.) ; null si MISSING. */
   readonly assetState: string | null;
+  readonly assetVersion?: number;
+  readonly assetFingerprint?: string;
   /** Date d'expiration si déclarée. */
   readonly staleAt: Date | null;
 }
@@ -75,9 +77,16 @@ export interface DeliverableComposition {
  */
 export interface ComposeDeliverableOutput {
   readonly composition: DeliverableComposition;
+  readonly previewIntentId?: string;
+  readonly sourceManifest?: import("@/domain/production-sources").ProductionSourceManifest;
+  readonly briefOutputId?: string;
+  readonly materialBlock?: string | null;
+  readonly materialStatus?: string;
   readonly status: "PREVIEW" | "DISPATCHED" | "MISSING_PRECONDITIONS";
   /** Présent quand status=DISPATCHED — pointer vers la SequenceExecution lancée. */
   readonly sequenceExecutionId: string | null;
+  /** Material generation task; never a SequenceExecution identity. */
+  readonly generativeTaskId?: string | null;
   /** Summary lisible utilisé pour `IntentResult.summary`. */
   readonly summary: string;
 }

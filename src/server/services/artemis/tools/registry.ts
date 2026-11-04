@@ -707,6 +707,7 @@ Format : challenge → insight → idea → execution → results (avec métriqu
       linguistic_assets: "d.assetsLinguistiques",
     },
     outputFormat: "kv_prompts_list",
+    outputSchema: z.object({prompts:z.array(z.object({format:z.string(),prompt:z.string().trim().min(1),style_notes:z.string().optional(),copy_overlay:z.string().optional()})).min(1).max(4)}),
     promptTemplate: `CONTEXTE MARQUE (données piliers ADVE — ne rien inventer) :
 - Archétype : {{archetype}}
 - Prophétie : {{prophecy}}

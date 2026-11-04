@@ -85,6 +85,8 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Build Next.js (faster than cold dev compile per page)
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: npm run build
 
       - name: Start Next.js production server

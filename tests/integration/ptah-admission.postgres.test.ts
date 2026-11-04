@@ -1,6 +1,11 @@
 /** Real PostgreSQL admission; provider boundary only is synthetic, no paid call. */
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import sharp from "sharp";
+import { readAssetOriginal, retainAssetFile } from "@/server/services/brand-vault/original";
 vi.mock("@/lib/auth/config", () => ({ auth: vi.fn() }));
 vi.mock("next-auth", () => ({}));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
@@ -13,6 +18,7 @@ import { execute } from "@/server/services/artemis/commandant";
 import { POST } from "@/app/api/ptah/webhook/route";
 import { ptahRouter } from "@/server/trpc/routers/ptah";
 import { openEmission } from "@/server/governance/emission-spine";
+import { attachProviderTask } from "@/server/services/ptah/task-store";
 
 const brands: string[] = [], operators: string[] = [], users: string[] = [];
 const url = "https://fixture.example.invalid/result.png";
@@ -77,6 +83,112 @@ async function fault(table: "BrandAsset" | "GenerativeTask", expression: string,
 }
 
 describe("Ptah result admission", () => {
+  it("delivers the scoped vault JPEG bytes to the Luna image endpoint, without persisting input pixels or silently omitting a stale reference", async () => {
+    const {strategy}=await fixture(), {strategy:other}=await fixture();
+    const root=await mkdtemp(join(tmpdir(),"forge-reference-"));
+    vi.stubEnv("CREATIVE_MEDIA_ENCRYPTION_KEY","7a".repeat(32));vi.stubEnv("CREATIVE_MEDIA_ARCHIVE_DIR",root);
+    vi.stubEnv("OPENAI_TEXT_RELAY_URL","http://relay.invalid/v1");vi.stubEnv("OPENAI_TEXT_RELAY_TOKEN","synthetic");
+    const bytes=await sharp({create:{width:8,height:4,channels:3,background:"#ffac11"}}).jpeg().toBuffer();
+    const inputPixels=bytes.toString("base64"),hash=createHash("sha256").update(bytes).digest("hex");
+    const generated:string[][]=[];
+    const fetcher=vi.mocked(globalThis.fetch);
+    fetcher.mockImplementation(async (url,options)=>{
+      if(String(url)==="http://relay.invalid/health") return new Response('{"images":true}');
+      if(String(url)!=="http://relay.invalid/v1/images/generations") throw new Error("UNEXPECTED_NETWORK");
+      const body=JSON.parse(String(options?.body));
+      generated.push(body.referenceImages);
+      return new Response('{"data":[{"b64_json":"ZGlmZmVyZW50"}]}');
+    });
+    let assetId="";
+    try{
+      const original=await retainAssetFile({strategyId:strategy.id,name:"Image d’inspiration",kind:"KV_VISUAL",level:"production",assetType:"IMAGE",
+        file:{name:"fixture.jpg",mimeType:"image/jpeg",content:inputPixels}},owner,randomUUID());
+      assetId=original.id;
+      const pin={assetId,version:original.version,originalHash:hash};
+      const brief={...entryBrief,forgeSpec:{...entryBrief.forgeSpec,parameters:{productionReferences:[pin]}}};
+      const run=async(strategyId:string,b=brief)=>{
+        const payload={strategyId,sourceIntentId:randomUUID(),brief:b};
+        const intentId=await openEmission({kind:"PTAH_MATERIALIZE_BRIEF",strategyId,payload:{kind:"PTAH_MATERIALIZE_BRIEF",operatorId,...payload},caller:"fixture-reference"});
+        return materializeBrief(payload,{intentId,operatorId});
+      };
+      const result=await run(strategy.id);
+      expect(generated).toEqual([["data:image/jpeg;base64,"+inputPixels]]);
+      const saved=await db.generativeTask.findUniqueOrThrow({where:{id:result.taskId}});
+      expect(saved.parameters).toMatchObject({productionReferences:[pin]});
+      expect(saved.parameters).not.toHaveProperty("referenceImageUrls");
+      expect(JSON.stringify(saved)).not.toContain(inputPixels);
+      expect(JSON.stringify((await db.intentEmission.findUniqueOrThrow({where:{id:saved.intentId}})).payload)).not.toContain(inputPixels);
+      await expect(run(other.id)).rejects.toThrow(/inaccessible/);
+      await expect(run(strategy.id,{...brief,forgeSpec:{...brief.forgeSpec,parameters:{productionReferences:[{...pin,version:pin.version+1}]}}})).rejects.toThrow(/relire/);
+      await expect(run(strategy.id,{...brief,forgeSpec:{...brief.forgeSpec,parameters:{productionReferences:[{...pin,originalHash:"a".repeat(64)}]}}})).rejects.toThrow(/original|référence/i);
+      await db.brandAsset.update({where:{id:assetId},data:{mimeType:"image/png"}});
+      await expect(run(strategy.id)).rejects.toThrow(/octets|original/i);
+      await db.brandAsset.update({where:{id:assetId},data:{mimeType:"image/jpeg",state:"ARCHIVED"}});
+      await expect(run(strategy.id)).rejects.toThrow(/archivée|périmée/);
+      expect(generated).toHaveLength(1);
+    }finally{
+      vi.unstubAllEnvs();if(assetId) await db.fileUpload.deleteMany({where:{entityType:"BRAND_ASSET",entityId:assetId}});
+      await rm(root,{recursive:true,force:true});
+    }
+  });
+
+  it("keeps the generated photographic layer as a separate private original and admits only the assembled PNG as the candidate post", async()=>{
+    const {strategy}=await fixture();
+    const dir=await mkdtemp(join(tmpdir(),"forge-artwork-"));
+    vi.stubEnv("CREATIVE_MEDIA_ENCRYPTION_KEY","75".repeat(32));vi.stubEnv("CREATIVE_MEDIA_ARCHIVE_DIR",dir);
+    vi.stubEnv("OPENAI_TEXT_RELAY_URL","http://art.invalid/v1");vi.stubEnv("OPENAI_TEXT_RELAY_TOKEN","synthetic");
+    const source=await sharp({create:{width:5,height:4,channels:3,background:"#a32320"}}).png().toBuffer();
+    const generated=await sharp({create:{width:32,height:16,channels:3,background:"#27a430"}}).jpeg().toBuffer();
+    const master=Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="480"><g id="scene" data-production-role="illustration"><image width="320" height="320" href="data:image/png;base64,${source.toString("base64")}"/></g><text x="20" y="220" font-size="32">Titre verrouillé</text></svg>`);
+    let calls=0;
+    vi.mocked(globalThis.fetch).mockImplementation(async(url,opts)=>{
+      if(String(url)==="http://art.invalid/health")return new Response('{"images":true}');
+      if(String(url)!=="http://art.invalid/v1/images/generations")throw new Error("UNEXPECTED_NETWORK");
+      const body=JSON.parse(String(opts?.body));
+      expect(body.prompt).toContain("Photo seule pour un cadre de 320 × 320");
+      expect(body.prompt).not.toContain("Titre verrouillé");
+      expect(body.size).toBe("1024x1024");calls++;
+      return Response.json({data:[{b64_json:generated.toString("base64")}]});
+    });
+    try{
+      const original=await retainAssetFile({strategyId:strategy.id,name:"Master privé",kind:"KV_VISUAL",level:"production",assetType:"IMAGE",file:{name:"master.svg",mimeType:"image/svg+xml",content:master.toString("base64")}},owner,randomUUID());
+      const slot={assetId:original.id,version:original.version,originalHash:createHash("sha256").update(master).digest("hex"),photoLayerId:"scene",photoPolicy:"GENERATED_CANDIDATE"};
+      const brief={...entryBrief,forgeSpec:{...entryBrief.forgeSpec,parameters:{productionArtwork:slot}}};
+      const payload={strategyId:strategy.id,sourceIntentId:randomUUID(),brief};
+      const intentId=await openEmission({kind:"PTAH_MATERIALIZE_BRIEF",strategyId:strategy.id,payload:{kind:"PTAH_MATERIALIZE_BRIEF",operatorId,...payload},caller:"fixture-artwork"});
+      const receipt=await materializeBrief(payload,{operatorId,intentId});
+      expect(calls).toBe(1);
+      const final=await db.brandAsset.findFirstOrThrow({where:{strategyId:strategy.id,sourceIntentId:intentId,sourceAssetVersionId:{not:null}}});
+      const layer=await db.brandAsset.findFirstOrThrow({where:{strategyId:strategy.id,sourceIntentId:intentId,format:"PRODUCTION_PHOTO_LAYER"}});
+      expect([final.state,layer.state]).toEqual(["CANDIDATE","CANDIDATE"]);
+      expect(final.metadata).toMatchObject({artwork:slot,photoLayer:{id:layer.id,version:layer.version}});
+      expect(layer.metadata).toMatchObject({providerPhotoHash:createHash("sha256").update(generated).digest("hex"),model:"gpt-image-2"});
+      const layerFile=await readAssetOriginal(layer.id);
+      expect(await sharp(layerFile!.bytes).metadata()).toMatchObject({width:320,height:320,format:"png"});
+      const version=await db.assetVersion.findFirstOrThrow({where:{generativeTaskId:receipt.taskId}});
+      expect(await sharp(Buffer.from(version.url.split(",")[1]!,"base64")).metadata()).toMatchObject({width:320,height:480});
+      expect(JSON.stringify((await db.generativeTask.findUniqueOrThrow({where:{id:receipt.taskId}})).parameters)).not.toContain(master.toString("base64"));
+    }finally{
+      const ids=(await db.brandAsset.findMany({where:{strategyId:strategy.id},select:{id:true}})).map(a=>a.id);
+      await db.fileUpload.deleteMany({where:{entityType:"BRAND_ASSET",entityId:{in:ids}}});
+      vi.unstubAllEnvs();await rm(dir,{recursive:true,force:true});
+    }
+  },90_000);
+  it("admits a megabyte inline image with a short indexed identity and replays its saved receipt", async () => {
+    const f = await fixture();
+    const image = "data:image/png;base64," + Buffer.alloc(1_100_000, 42).toString("base64");
+    const identity = "openai-image:" + "a".repeat(64);
+    await attachProviderTask(f.task.id, identity, undefined, { resultUrls: [image], realisedCostUsd: 0 });
+    const provider = getProvider("openai");
+    const external = vi.spyOn(provider, "reconcile").mockRejectedValue(new Error("NO_PROVIDER_REPLAY"));
+    await reconcileTask(f.task.id, null);
+    await reconcileTask(f.task.id, null);
+    const saved = await db.generativeTask.findUniqueOrThrow({ where: { id: f.task.id } });
+    expect(saved).toMatchObject({ status: "COMPLETED", providerTaskId: identity, resultUrls: [image] });
+    expect(await counts(f.strategy.id)).toEqual([1, 1, 1]);
+    expect((await db.assetVersion.findFirstOrThrow({ where: { generativeTaskId: f.task.id } })).url).toBe(image);
+    expect(external).not.toHaveBeenCalled();
+  });
   async function deferredOriginal() {
     const f = await fixture(), refs = await businessScope(f.strategy.id);
     const payload = entryPayload(f.strategy.id, refs);

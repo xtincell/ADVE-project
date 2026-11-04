@@ -14,9 +14,17 @@
  * Layer 3 — DB read-only (Prisma). Tenant-scoped strict via `strategyId` filter.
  */
 
+import type { BrandAsset } from "@prisma/client";
+import { sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
 import { db } from "@/lib/db";
 import type { BrandAssetKind } from "@/domain/brand-asset-kinds";
 import type { VaultMatchResult, VaultMatchStatus } from "./types";
+
+/** Receipt of the exact current brief, including the retained document/original if present. */
+export function briefAssetFingerprint(asset: Pick<BrandAsset, "id" | "version" | "content" | "metadata" | "campaignId" | "sourceGloryOutputId" | "sourceIntentId">): string {
+  return sourceFingerprint({rawData: {id:asset.id, version:asset.version, content:asset.content, metadata:asset.metadata,
+    campaignId:asset.campaignId, sourceGloryOutputId:asset.sourceGloryOutputId, sourceIntentId:asset.sourceIntentId}});
+}
 
 /**
  * Scanne le vault d'une strategy pour les kinds donnés.
@@ -27,6 +35,7 @@ import type { VaultMatchResult, VaultMatchStatus } from "./types";
 export async function matchVault(
   strategyId: string,
   requiredKinds: readonly BrandAssetKind[],
+  campaignId?: string,
 ): Promise<VaultMatchResult[]> {
   if (requiredKinds.length === 0) return [];
 
@@ -35,6 +44,7 @@ export async function matchVault(
     where: {
       strategyId,
       state: "ACTIVE",
+      ...(campaignId ? { OR: [{campaignId}, {campaignId: null}] } : { campaignId: null }),
       kind: { in: [...requiredKinds] },
     },
     select: {
@@ -42,6 +52,9 @@ export async function matchVault(
       kind: true,
       state: true,
       staleAt: true,
+      campaignId: true,
+      version: true, content: true, metadata: true, sourceGloryOutputId: true, sourceIntentId: true,
+      name:true, mimeType:true, fileUrl:true,
     },
     orderBy: { updatedAt: "desc" },
   });
@@ -49,11 +62,12 @@ export async function matchVault(
   // Index par kind — premier ACTIVE wins (orderBy desc).
   const byKind = new Map<string, (typeof rows)[number]>();
   for (const row of rows) {
-    if (!byKind.has(row.kind)) byKind.set(row.kind, row);
+    const incumbent = byKind.get(row.kind);
+    if (!incumbent || (campaignId && row.campaignId === campaignId && incumbent.campaignId !== campaignId)) byKind.set(row.kind, row);
   }
 
   const now = new Date();
-  return requiredKinds.map((kind) => {
+  return Promise.all(requiredKinds.map(async (kind) => {
     const found = byKind.get(kind);
     if (!found) {
       return {
@@ -65,15 +79,28 @@ export async function matchVault(
       };
     }
 
-    const isStale = found.staleAt !== null && found.staleAt < now;
+    let isStale = found.staleAt !== null && found.staleAt <= now;
+    if (!isStale && found.version !== undefined) {
+      const { readPinSourceText, assertUsablePin } = await import("./production-sources");
+      try {
+        assertUsablePin(found,{assetId:found.id,version:found.version,role:"REFERENCE"},campaignId);
+        const data = await readPinSourceText(strategyId, found, "REFERENCE");
+        isStale = !data.fullText.trim();
+      } catch (error) {
+        // A retired or corrected document cannot be reused. Infrastructure failures still abort the preview.
+        if (!(error instanceof Error) || !/retiré|corrigé|Original non reçu|diffère de|a changé|inaccessible|SOURCE_UNAVAILABLE/.test(error.message)) throw error;
+        isStale = true;
+      }
+    }
     return {
       kind,
       status: (isStale ? "STALE_REFRESH" : "ACTIVE_REUSE") satisfies VaultMatchStatus,
       assetId: found.id,
       assetState: found.state,
+      ...(found.version !== undefined ? { assetVersion: found.version, assetFingerprint: briefAssetFingerprint(found) } : {}),
       staleAt: found.staleAt,
     };
-  });
+  }));
 }
 
 /**

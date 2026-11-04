@@ -239,7 +239,16 @@ export const gloryRouter = createTRPCRouter({
   scanSequence: strategyScopedProcedure
     .input(z.object({ strategyId: z.string(), sequenceKey: z.string() }))
     .query(async ({ input }) => {
-      return gloryTools.scanSequence(input.sequenceKey as gloryTools.GlorySequenceKey, input.strategyId);
+      const key = input.sequenceKey as gloryTools.GlorySequenceKey;
+      const report = await gloryTools.scanSequence(key, input.strategyId);
+      const { checkPrerequisites } = await import("@/server/services/sequence-vault");
+      const requires = gloryTools.getSequence(key)?.requires ?? [];
+      const prerequisites = await checkPrerequisites(input.strategyId, requires);
+      return { ...report, blocked: report.blockers.length > 0 || prerequisites.blocked,
+        unmetPrerequisites: prerequisites.unmet.map(item => item.type === "SEQUENCE"
+          ? `Relire et accepter le livrable ${item.key}.`
+          : item.type === "SEQUENCE_ANY" ? `Relire et accepter ${item.count} livrable(s) de niveau ${item.tier}.`
+          : `Compléter le pilier ${item.key} (${item.maturity}).`) };
     }),
 
   scanAll: strategyScopedProcedure
@@ -304,9 +313,9 @@ export const gloryRouter = createTRPCRouter({
     }),
 
   compileDeliverable: strategyScopedProcedure
-    .input(z.object({ strategyId: z.string(), sequenceKey: z.string() }))
+    .input(z.object({ strategyId: z.string(), sequenceKey: z.string(), selectedVersions: z.record(z.string(), z.string()).optional() }))
     .query(async ({ input }) => {
-      return gloryTools.compileDeliverable(input.strategyId, input.sequenceKey as gloryTools.GlorySequenceKey);
+      return gloryTools.compileDeliverable(input.strategyId, input.sequenceKey as gloryTools.GlorySequenceKey, input.selectedVersions);
     }),
 
   exportDeliverable: governedProcedure({
@@ -522,6 +531,7 @@ export const gloryRouter = createTRPCRouter({
         strategyId: z.string().min(1),
         /** J-0 du lancement (ISO). Le rétroplan est ré-ancré dessus. */
         startDate: z.string().datetime(),
+        useStoredPosts: z.boolean().optional(),
         weeks: z.number().int().min(1).max(12).optional(),
         /** Heure de publication (UTC, 0–23) — défaut 9h. */
         hourUtc: z.number().int().min(0).max(23).optional(),
@@ -553,7 +563,7 @@ export const gloryRouter = createTRPCRouter({
       const brandVoice = brandVoiceFromPillarD(pillarD?.content ?? null);
 
       const startISO = input.startDate.slice(0, 10); // YYYY-MM-DD → ancre déterministe
-      const posts = deriveDatedPosts(calendar, startISO, input.weeks ?? 4, brandVoice);
+      const posts = input.useStoredPosts && calendar.posts.length ? calendar.posts : deriveDatedPosts(calendar, startISO, input.weeks ?? 4, brandVoice);
 
       // Garde anti-doublon (audit 2026-07-16) : armer 2× (double-clic,
       // re-visite) dupliquait TOUTES les publications. On indexe les

@@ -51,9 +51,7 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
 # ffmpeg/ffprobe for bounded, local frame extraction (ADR-0195).
-# Chromium for puppeteer (Oracle / intake PDF). Remove this block + the two
-# PUPPETEER_* envs to slim the image by ~300 MB if you don't need PDF export;
-# the PDF routes then return a clean 500 instead of generating.
+# The existing system Chromium serves both PDF export and the protected artwork renderer.
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -67,7 +65,8 @@ RUN groupadd --system --gid 1001 nodejs \
     && useradd --system --uid 1001 --gid nodejs nextjs
 
 # Docker initializes the private named volume with the non-root ownership.
-RUN install -d -m 0700 -o nextjs -g nodejs /app/private-media
+RUN install -d -m 0700 -o nextjs -g nodejs /app/private-media /home/nextjs
+ENV HOME=/home/nextjs
 
 # Standalone server + assets. `server.js` is emitted by the standalone build;
 # `public/` and `.next/static` are not included in standalone and must be copied.
@@ -98,6 +97,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-entrypoint.sh ./sc
 COPY --from=builder --chown=nextjs:nodejs /app/public-brand-migration.cjs ./public-brand-migration.cjs
 RUN chmod +x ./scripts/docker-entrypoint.sh
 
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/check-production-browser.mjs ./scripts/check-production-browser.mjs
 USER nextjs
+RUN node ./scripts/check-production-browser.mjs
 EXPOSE 3000
 CMD ["./scripts/docker-entrypoint.sh"]

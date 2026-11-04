@@ -478,7 +478,7 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console/socle/parrainages", label: "Parrainages", icon: MessageSquare },
       { href: "/console/socle/valorisations", label: "Valorisations certifiées", icon: MessageSquare },
       { href: "/console/socle/funnel", label: "Notre funnel", icon: MessageSquare },
-      { href: "/console/socle/feedback", label: "Remontées testeurs", icon: Inbox },
+      { href: "/console/socle/feedback", label: "Banque de demandes", icon: Inbox },
       { href: "/console/socle/market-costs", label: "Couts marche", icon: FileBarChart },
       { href: "/console/socle/transactions", label: "Transactions", icon: Receipt },
       { href: "/console/socle/prod-ops", label: "Ops production", icon: Rocket },

@@ -24,6 +24,7 @@ import { resolveBrandIdentity } from "@/server/services/brand-theme";
 import { readPublicBrand } from "@/server/services/brand-vault/publication";
 import { GET } from "@/app/api/brand-assets/[assetId]/original/route";
 import { GET as publicFile } from "@/app/brand/editions/[editionId]/[file]/route";
+import { GET as productionImage } from "@/app/api/production/image/[id]/route";
 import { GET as sourceFile } from "@/app/api/brand-sources/[sourceId]/original/route";
 
 vi.setConfig({ testTimeout: 120_000, hookTimeout: 60_000 });
@@ -151,6 +152,40 @@ describe.sequential("private asset originals through the existing vault", () => 
     expect((await get(evil.id, "?preview=1")).status).toBe(415); expect((await get(evil.id)).status).toBe(200);
     vi.mocked(auth).mockResolvedValue({ user: { id: users[1]! } } as never); expect((await get(a.id)).status).toBe(404);
     vi.mocked(auth).mockResolvedValue(null as never); expect((await get(a.id)).status).toBe(401);
+  });
+  it("previews a generated candidate only for its authorized operator, and never publishes it", async () => {
+    const s = await brand();
+    const base = { strategyId:s.id, operatorId:operators[0]!, kind:"image", metadata:{} };
+    const [v, missing, disguised] = await Promise.all([
+      db.assetVersion.create({data:{...base, url:"data:image/png;base64,"+png.toString("base64")}}),
+      db.assetVersion.create({data:{...base, url:"https://expired.invalid/private-provider-locator"}}),
+      db.assetVersion.create({data:{...base, url:"data:image/png;base64,"+Buffer.from("<svg xmlns='http://www.w3.org/2000/svg' width='3' height='3'><rect width='3' height='3'/></svg>").toString("base64")}}),
+    ]);
+    const candidate=await db.brandAsset.create({data:{name:"Image de travail",strategyId:s.id,operatorId:operators[0],kind:"KV_VISUAL",sourceAssetVersionId:v.id,state:"CANDIDATE"}});
+    const preview=(id:string)=>productionImage(new Request("http://localhost/api/production/image/"+id),{params:Promise.resolve({id})});
+    const network=vi.spyOn(globalThis,"fetch").mockRejectedValue(new Error("Aucun appel réseau prévu"));
+    try {
+      vi.mocked(auth).mockResolvedValue(null as never);
+      expect((await preview(v.id)).status).toBe(401);
+      vi.mocked(auth).mockResolvedValue({user:{id:users[1]!}} as never);
+      const foreign=await preview(v.id);
+      expect(foreign.status).toBe(404);expect((await foreign.arrayBuffer()).byteLength).toBe(0);
+      vi.mocked(auth).mockResolvedValue({user:{id:users[0]!}} as never);
+      const visible=await preview(v.id);
+      expect(visible.status).toBe(200);expect(visible.headers.get("content-type")).toBe("image/webp");
+      expect(visible.headers.get("cache-control")).toBe("private, no-store");
+      expect(visible.headers.get("x-content-type-options")).toBe("nosniff");
+      expect(await sharp(Buffer.from(await visible.arrayBuffer())).metadata()).toMatchObject({format:"webp",width:3,height:3});
+      expect((await preview(missing.id)).status).toBe(404);
+      expect((await preview("missing-"+randomUUID())).status).toBe(404);
+      expect((await preview(disguised.id)).status).toBe(415);
+      expect(network).not.toHaveBeenCalled();
+      expect((await db.brandAsset.findUniqueOrThrow({where:{id:candidate.id}})).state).toBe("CANDIDATE");
+      expect(await readPublicBrand(s.publicSlug!)).toBeNull();
+    } finally {
+      network.mockRestore();
+      await db.assetVersion.deleteMany({where:{id:{in:[v.id,missing.id,disguised.id]}}});
+    }
   });
   it("publishes only explicitly selected verified bytes and preserves the private original", async () => {
     const s = await brand(), a = await caller().create(input(s.id));

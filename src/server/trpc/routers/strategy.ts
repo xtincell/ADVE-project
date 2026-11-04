@@ -22,7 +22,7 @@ import {
 import { computeEvidenceBreakdown } from "@/server/services/advertis-scorer/evidence";
 import { PublicBrandPublicationInput } from "@/domain/public-brand";
 import { previewPublicBrand, publishPublicBrand, PublicBrandError } from "@/server/services/brand-vault/publication";
-import { inspectSynthesis, transitionPillarStatus, assertApprovedSynthesis } from "@/server/services/pillar-gateway/validation-status";
+import { inspectSynthesisForReview, transitionPillarStatus, assertApprovedSynthesis } from "@/server/services/pillar-gateway/validation-status";
 import { measuredConfidence } from "@/lib/confidence";
 /* lafusee:governed-active */
 
@@ -882,7 +882,7 @@ export const strategyRouter = createTRPCRouter({
       );
 
       return {
-        ...inspectSynthesis(sPillar),
+        ...await inspectSynthesisForReview(sPillar, ctx.db),
         confidence: measuredConfidence(sPillar?.confidence),
         validationStatus: sPillar?.validationStatus ?? "DRAFT",
         fieldCertainty: sPillar?.fieldCertainty ?? null,

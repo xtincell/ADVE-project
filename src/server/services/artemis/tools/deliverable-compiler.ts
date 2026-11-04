@@ -14,6 +14,7 @@
  *   JSON → Structured data (design tokens, KPI frameworks, calendars)
  */
 
+import { isUsableGeneration } from "@/domain/generation-result";
 import { db } from "@/lib/db";
 import { getSequence, type GlorySequenceKey } from "./sequences";
 import { getTemplate, type MissionTemplate } from "@/server/services/mission-templates";
@@ -31,7 +32,7 @@ export interface DeliverableManifest {
   /** Metadata for the cover/header */
   meta: {
     strategyName: string;
-    generatedAt: string;
+    generatedAt: string | null;
     sequenceName: string;
     totalSteps: number;
     completedSteps: number;
@@ -40,6 +41,7 @@ export interface DeliverableManifest {
   isComplete: boolean;
   /** Missing tool outputs (sequence steps without GloryOutput) */
   missingOutputs: string[];
+  history: Array<{ id: string; toolSlug: string; title: string; version: number | null; createdAt: string; usable: boolean; author: string; engine: string | null }>;
 }
 
 export interface DeliverableSection {
@@ -51,6 +53,7 @@ export interface DeliverableSection {
   content: Record<string, unknown>;
   /** Step type that produced it (GLORY, ARTEMIS, CALC, etc.) */
   sourceType: string;
+  version?: { id: string; number: number; createdAt: string; author: string; engine: string | null; approval?: string };
 }
 
 // ─── Format Routing ──────────────────────────────────────────────────────────
@@ -104,7 +107,8 @@ const SEQUENCE_FORMATS: Partial<Record<GlorySequenceKey, DeliverableFormat>> = {
  */
 export async function compileDeliverable(
   strategyId: string,
-  sequenceKey: GlorySequenceKey
+  sequenceKey: GlorySequenceKey,
+  selectedVersions: Record<string, string> = {},
 ): Promise<DeliverableManifest> {
   const seq = getSequence(sequenceKey);
   if (!seq) throw new Error(`Sequence inconnue: ${sequenceKey}`);
@@ -118,9 +122,19 @@ export async function compileDeliverable(
   // Load all GloryOutputs for this strategy
   const outputs = await db.gloryOutput.findMany({
     where: { strategyId },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    include: { execution: { select: { approval: true } } },
   });
-  const outputMap = new Map(outputs.map((o) => [o.toolSlug, o]));
+  const usable = outputs.filter(o => isUsableGeneration(o.output));
+  const outputMap = new Map(usable.filter(o => !selectedVersions[o.toolSlug] || selectedVersions[o.toolSlug] === o.id).map(o => [o.toolSlug, o]));
+  const authorOf = (value: unknown) => {
+    const meta = (value && typeof value === "object" ? (value as Record<string, unknown>)._meta : null) as Record<string, unknown> | null;
+    const engine = typeof meta?.model === "string" ? meta.model : null;
+    const label = typeof meta?.author === "string" ? meta.author : meta?.deterministic ? "Moteur de calcul" : engine?.includes("luna") ? "Luna" : engine ? "Moteur génératif" : "Auteur historique non enregistré";
+    return { author: label, engine };
+  };
+  const relevant = new Map(seq.steps.filter(step => step.status === "ACTIVE").map(step => [step.ref, step.name]));
+  const history = outputs.filter(o => relevant.has(o.toolSlug)).map(o => ({ id: o.id, toolSlug: o.toolSlug, title: relevant.get(o.toolSlug)!, createdAt: o.createdAt.toISOString(), usable: isUsableGeneration(o.output), version: isUsableGeneration(o.output) ? usable.filter(v => v.toolSlug === o.toolSlug).findIndex(v => v.id === o.id) + 1 : null, ...authorOf(o.output) }));
 
   // Build sections from sequence steps
   const sections: DeliverableSection[] = [];
@@ -137,22 +151,27 @@ export async function compileDeliverable(
           title: step.name,
           content: (output.output as Record<string, unknown>) ?? {},
           sourceType: step.type,
+          version: { id: output.id, number: usable.filter(o => o.toolSlug === step.ref).findIndex(o => o.id === output.id) + 1, createdAt: output.createdAt.toISOString(), approval: output.execution?.approval ?? "PENDING", ...authorOf(output.output) },
         });
       } else {
         missingOutputs.push(step.ref);
       }
     } else if (step.type === "ARTEMIS") {
       // Check FrameworkResult
-      const fwResult = await db.frameworkResult.findFirst({
+      const fwRows = await db.frameworkResult.findMany({
         where: { strategyId, framework: { slug: step.ref } },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       });
-      if (fwResult) {
+      const fwUsable = fwRows.filter(row => isUsableGeneration(row.output));
+      const fwResult = selectedVersions[step.ref] ? fwUsable.find(row => row.id === selectedVersions[step.ref]) : fwUsable.at(-1);
+      history.push(...fwRows.map(row => ({ id: row.id, toolSlug: step.ref, title: step.name, createdAt: row.createdAt.toISOString(), usable: isUsableGeneration(row.output), version: isUsableGeneration(row.output) ? fwUsable.findIndex(v => v.id === row.id) + 1 : null, ...authorOf(row.output) })));
+      if (fwResult && isUsableGeneration(fwResult.output)) {
         sections.push({
           sourceToolSlug: step.ref,
           title: step.name,
           content: (fwResult.output as Record<string, unknown>) ?? {},
           sourceType: "ARTEMIS",
+          version: { id: fwResult.id, number: fwUsable.findIndex(row => row.id === fwResult.id) + 1, createdAt: fwResult.createdAt.toISOString(), ...authorOf(fwResult.output) },
         });
       } else {
         // Sans ce push, `isComplete` (missingOutputs.length === 0) mentait :
@@ -174,13 +193,14 @@ export async function compileDeliverable(
     sections,
     meta: {
       strategyName: strategy?.name ?? "Unknown",
-      generatedAt: new Date().toISOString(),
+      generatedAt: sections.flatMap(section => section.version ? [section.version.createdAt] : []).sort().at(-1) ?? null,
       sequenceName: seq.name,
-      totalSteps: seq.steps.filter((s) => s.status === "ACTIVE").length,
+      totalSteps: seq.steps.filter((s) => s.status === "ACTIVE" && ["GLORY", "CALC", "ARTEMIS"].includes(s.type)).length,
       completedSteps: sections.length,
     },
     isComplete: missingOutputs.length === 0,
     missingOutputs,
+    history,
   };
 }
 
@@ -190,27 +210,27 @@ export async function compileDeliverable(
  */
 export async function listCompilableDeliverables(
   strategyId: string
-): Promise<Array<{ sequenceKey: GlorySequenceKey; name: string; format: DeliverableFormat; completeness: number; isComplete: boolean }>> {
+): Promise<Array<{ sequenceKey: GlorySequenceKey; name: string; format: DeliverableFormat; completeness: number; isComplete: boolean; generatedAt: string | null }>> {
   // Get all outputs for this strategy
   const outputs = await db.gloryOutput.findMany({
     where: { strategyId },
-    select: { toolSlug: true },
+    select: { toolSlug: true, output: true, createdAt: true },
   });
-  const executedSlugs = new Set(outputs.map((o) => o.toolSlug));
+  const executedSlugs = new Set(outputs.filter(o => isUsableGeneration(o.output)).map((o) => o.toolSlug));
 
   // ARTEMIS steps resolve against FrameworkResult (par slug), pas GloryOutput.
   // Sans ça, la complétude ne comptait que GLORY/CALC → `isComplete` mentait de
   // la même manière que `compileDeliverable` (parité de comptage des étapes).
   const fwResults = await db.frameworkResult.findMany({
     where: { strategyId },
-    select: { framework: { select: { slug: true } } },
+    select: { output: true, createdAt: true, framework: { select: { slug: true } } },
   });
-  const executedFrameworkSlugs = new Set(fwResults.map((r) => r.framework.slug));
+  const executedFrameworkSlugs = new Set(fwResults.filter(r => isUsableGeneration(r.output)).map((r) => r.framework.slug));
   const isStepDone = (s: { type: string; ref: string }): boolean =>
     s.type === "ARTEMIS" ? executedFrameworkSlugs.has(s.ref) : executedSlugs.has(s.ref);
 
   const { ALL_SEQUENCES } = await import("./sequences");
-  const results: Array<{ sequenceKey: GlorySequenceKey; name: string; format: DeliverableFormat; completeness: number; isComplete: boolean }> = [];
+  const results: Array<{ sequenceKey: GlorySequenceKey; name: string; format: DeliverableFormat; completeness: number; isComplete: boolean; generatedAt: string | null }> = [];
 
   for (const seq of ALL_SEQUENCES) {
     const producingSteps = seq.steps.filter(
@@ -231,6 +251,10 @@ export async function listCompilableDeliverables(
       format,
       completeness,
       isComplete: completeness === 100,
+      generatedAt: [
+        ...outputs.filter(o => isUsableGeneration(o.output) && producingSteps.some(step => step.ref === o.toolSlug)).map(o => o.createdAt),
+        ...fwResults.filter(o => isUsableGeneration(o.output) && producingSteps.some(step => step.type === "ARTEMIS" && step.ref === o.framework.slug)).map(o => o.createdAt),
+      ].filter(Boolean).map(date => date.toISOString()).sort().at(-1) ?? null,
     });
   }
 

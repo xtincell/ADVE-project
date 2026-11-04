@@ -28,6 +28,51 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 542 — une action longue valide dans I pouvait bloquer S (2026-11-04)
+
+La maturité pouvait afficher 100 % alors que le schéma d’écriture de S refusait
+une action de plus de 200 caractères. Les champs `strategieDeplacement[].action`
+et `recommandationsPrioritaires[].recommendation` utilisaient la limite de longueur
+d’un titre pour un texte venant du catalogue. Le candidat adopte `textMedium`
+pour ces deux champs. La recette doit exercer l’écriture et relire le texte entier.
+
+### 542 — distinguer l’exécution de séquence de la tâche de forge (2026-11-04)
+
+Le lancement direct d’une forge renvoyait son identifiant de tâche dans
+`sequenceExecutionId`. Le candidat retourne désormais `generativeTaskId`
+et laisse l’identifiant de séquence vide en l’absence d’une telle exécution.
+L’ancien contrat d’affichage entretenait la confusion entre les deux objets.
+La suite ciblée de dispatch passe à 5/5.
+
+### 542 — un résultat image dépassait la taille de l’index PostgreSQL (2026-11-04)
+
+La forge synchrone mettait la data URI entière dans `providerTaskId` indexé.
+Le premier passage a échoué avec « index row requires 1447504 bytes, maximum
+size is 8191 ». Le correctif candidat sépare un identifiant court
+`openai-image:<sha256>` et le reçu matériel. `attachProviderTask` écrit cet
+identifiant et `GenerativeTask.resultUrls` ensemble avant réconciliation.
+La suite d’admission PostgreSQL passe à 52/52. Deux réconciliations d’un
+reçu de plus de 1 Mo produisent une version, un actif et une seule imputation
+de coût. Le raccord API local est reçu avec une identité de 77 caractères
+et un fichier de 1 076 193 octets relu depuis `AssetVersion`. La réception
+éditoriale sur DA et texte de marque reste dans le plan de composition.
+
+### 542 — un prérequis accepté restait invisible dans la modale (2026-11-04)
+
+Dans le navigateur local, la préparation pouvait annoncer « Prérequis OK » alors
+que le lancement exigeait une exécution acceptée de PLAYBOOK-E. Le contrôle
+de préparation utilise désormais `checkPrerequisites`, comme le lancement.
+La vérification native est reçue. Le motif PLAYBOOK-E est visible et le lancement
+est bloqué avant tout appel. La version 3 produite reste consultable à l’écran.
+
+### 542 — lecture des valeurs imbriquées (2026-11-04)
+
+Le lecteur abrégait les valeurs de certaines structures à l’affichage.
+Le composant de lecture parcourt les objets et listes et affiche les valeurs
+complètes. Trois tests comportementaux couvrent ce changement. Compilation finale
+et relecture native reçues : 65 valeurs textuelles attendues sur 65 présentes,
+HTTP 200, zéro réponse 5xx et zéro exception de page.
+
 ### 540 — contexte métier sans positionnement tarifaire (2026-11-03)
 
 L’avancement intake appelait `extractKeyFromOption` sur `biz_positioning` absent

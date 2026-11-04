@@ -64,6 +64,9 @@ describe("synthesis approval is a decision, never a confidence measurement", () 
   });
   it("refuses an incomplete synthesis through both existing entry points", async () => {
     const f = await fixture(0.9, { axesStrategiques: [] });
+    const review = await caller().getSynthesisConfidence({ strategyId: f.strategy.id });
+    expect(review).toMatchObject({ confidence: 0.9, canValidate: false, composed: false });
+    expect(review.fieldIssues).toEqual(expect.arrayContaining([expect.objectContaining({ path: "axesStrategiques", label: expect.any(String), reason: expect.any(String) })]));
     await expect(caller().validateSynthesis({ ...f.input, forceConfidence: true })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
     await expect(pillarRouter.createCaller(context()).transitionStatus({ ...f.input, key: "S", targetStatus: "VALIDATED" }))
       .rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
@@ -105,6 +108,9 @@ describe("synthesis approval is a decision, never a confidence measurement", () 
     await db.pillar.update({ where: { id: f.pillar!.id }, data: { content: {
       ...composedSynthesis(), sprint90Days: composedSynthesis().sprint90Days.map(row => ({ ...row, sourceInitiativeId: randomUUID() })),
     } } });
+    const review = await caller().getSynthesisConfidence({ strategyId: f.strategy.id });
+    expect(review).toMatchObject({ composed: true, canValidate: false });
+    expect(review.sources.dangling.length).toBeGreaterThan(0);
     await expect(caller().validateSynthesis({ ...f.input, expectedVersion: 2, forceConfidence: true })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
     expect((await read(f)).strategy.status).toBe("ACTIVE");
   });
@@ -145,6 +151,8 @@ describe("synthesis approval is a decision, never a confidence measurement", () 
     const f = await fixture(0.81);
     await db.pillar.update({ where: { id: f.pillar!.id }, data: { updatedAt: new Date(Date.now() - 600_000) } });
     await db.pillar.create({ data: { strategyId: f.strategy.id, key: "a", content: {}, updatedAt: new Date(Date.now() - 500_000) } });
+    const review = await caller().getSynthesisConfidence({ strategyId: f.strategy.id });
+    expect(review).toMatchObject({ composed: true, canValidate: false, fieldIssues: [], sources: { stale: true, changedPillars: ["A"] } });
     await expect(caller().validateSynthesis(f.input)).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
     expect((await read(f)).strategy.status).toBe("ACTIVE");
   });
