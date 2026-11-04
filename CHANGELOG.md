@@ -1,5 +1,7 @@
 ## v6.27.544 — fix(vente): publier avec l’administration du compte fondateur (2026-11-04)
 
+PR de livraison : #1135.
+
 Le propriétaire et l’administrateur peuvent publier l’accueil d’une marque. Le contrôle relu en base applique désormais la politique d’administration existante du compte fondateur, y compris lorsque son rôle enregistré reste FOUNDER. Le contact public de secours suit cette même règle. Aucun rôle utilisateur n’est modifié ; les contrôles de marque, vendeur, catalogue, validité et autorisation sont conservés.
 
 ## v6.27.543 — feat(vente): contacter une marque et poursuivre la vente (2026-11-04)
