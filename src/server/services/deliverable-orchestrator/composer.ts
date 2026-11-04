@@ -211,7 +211,8 @@ async function dispatchForge(
   // 3. Forge : chaîne vers Ptah (matérialisation via provider). Sans clés →
   //    DEFERRED (taskId absent), honnête.
   const context: Record<string, unknown> = {};
-  if (input.overrideManipulationMode) context._manipulationMode = input.overrideManipulationMode;
+  const effectiveMode=input.overrideManipulationMode ?? sourceManifest.mixReview?.primary;
+  if (effectiveMode) context._manipulationMode = effectiveMode;
   if (input.campaignId) context._campaignId = input.campaignId;
 
   let materialStatus = "DEFERRED";

@@ -543,7 +543,7 @@ export function photoSlotPrompt(policy:"GENERATED_CANDIDATE"|"LOCKED_MASTER",cal
   const content:Record<string,unknown>=cal?JSON.parse(cal.text):{};
   const post=(content.post??{}) as Record<string,unknown>;
   const evidence={sujet:post.theme??cal?.theme,angle:post.angle??cal?.angle,photographie:post.illustration,
-    directionDeCetteOption:content.treatment,correction:content.correction,option:content.variant,
+    directionDeCetteOption:content.treatment,commandeNouvellePhoto:(content.newProposal as {instruction?:string}|undefined)?.instruction,correction:content.correction,option:content.variant,
     treatmentPhoto:(["A wide establishing view showing the setting as well as all subjects.","Closer three-quarter angle; use visible detail to make the choice legible, while keeping all subjects visible.","Human eye-level viewpoint centered on the documented protagonists, without inventing identities.","An overhead comparison of the documented elements; keep all subjects visible."])[Number(content.variant)-1]};
   return [ "Produce a standalone editorial PHOTOGRAPH, not a designed social-media post. The finished post is composed outside this tool.",
     cal?JSON.stringify(evidence):"",

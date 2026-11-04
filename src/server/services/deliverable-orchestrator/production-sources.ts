@@ -1,5 +1,6 @@
 /** Source selection is specific to this production; it never promotes a CANDIDATE to brand canon. */
 import { isUsableGeneration } from "@/domain/generation-result";
+import { readMixDecision } from "@/domain/production-mix";
 import { db } from "@/lib/db";
 import { checkLawTwoPreconditions } from "./preconditions";
 import type { BrandAsset } from "@prisma/client";
@@ -114,7 +115,9 @@ export async function resolveProductionSources(strategyId: string, selected: Pro
     revision: proposal.updatedAt.toISOString(), fingerprint: hash(proposal.direction) } : null;
   const artworkSource=sources.find(s=>s.transport==="ARTWORK_MASTER");
   const verifiedArtwork=artworkSource && {assetId:artworkSource.assetId,version:artworkSource.version,originalHash:artworkSource.originalHash,...artworkSource.artwork};
-  const manifest = productionSourceManifest.parse({ schema: "production-sources/v1", sources, creativeProposal, ...(verifiedArtwork?{productionArtwork:verifiedArtwork}:{}) });
+  const strategy=await db.strategy.findUnique({where:{id:strategyId},select:{manipulationMix:true}});
+  const mix=readMixDecision(strategy?.manipulationMix);
+  const manifest = productionSourceManifest.parse({ schema: "production-sources/v1", sources, creativeProposal,...(mix.primary ? {mixReview:{primary:mix.primary,version:mix.version}} : {}), ...(verifiedArtwork?{productionArtwork:verifiedArtwork}:{}) });
   if (JSON.stringify(manifest).length > 32000) throw new Error("Les sources dépassent la capacité du brief. Retenez des extraits versionnés ou moins de références.");
   return cal?{...manifest,calendarBrief:cal}:manifest;
 }

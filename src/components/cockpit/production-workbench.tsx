@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { materialHandoffBlock, productionSourceManifest } from "@/domain/production-sources";
 import { trpc } from "@/lib/trpc/client";
+import { ProductionMixReview } from "@/components/cockpit/production-mix-review";
 import { ProductionSourcePicker, type SourceChoice } from "@/components/cockpit/production-source-picker";
 import { PtahKilnTracker } from "@/components/neteru/ptah-kiln-tracker";
 import { PageHeader } from "@/components/shared/page-header";
@@ -639,6 +640,11 @@ function StrategyWorkbench({ strategyId }: { strategyId: string | null }) {
       {/* ── TAB 2 : DELIVERABLE FORGE (ORIGINAL GLORY COMPOSER) ────────────────── */}
       {activeTab === "deliverables" && (
         <div className="space-y-6">
+          {strategyId && <ProductionMixReview strategyId={strategyId} onAdopted={()=>{
+            resetPreview();
+            void requirements.refetch();
+            if(targetKind && !previousDispatch) handleLaunch(false);
+          }}/> }
           {/* ── Étape 0 — Sélecteur target kind ──────────────────────────── */}
           <section className="rounded-xl border border-border bg-background/80 p-5 space-y-4">
             <div className="flex items-start gap-3">
@@ -873,7 +879,7 @@ function StrategyWorkbench({ strategyId }: { strategyId: string | null }) {
                   </li>)}
                 </ul>
               </div>}
-              {missing.length > 0 && <p role="status" className="rounded border border-warning/40 p-3 text-sm text-warning">Le brief peut être relu. Avant la forge, vérifiez les prérequis de la marque : {missing.map(code => ({MISSING_ACTIVE_ADVE_PILLAR:"activer un pilier ADVE", MISSING_MANIPULATION_MIX_PRIMARY:"définir le mode stratégique principal"}[code] ?? code)).join(" · ")}.</p>}
+              {missing.length > 0 && <p role="status" className="rounded border border-warning/40 p-3 text-sm text-warning">Le brief peut être relu. Avant la forge, vérifiez les prérequis de la marque : {missing.map(code => ({MISSING_ACTIVE_ADVE_PILLAR:"activer un pilier ADVE", MISSING_MANIPULATION_MIX_PRIMARY:"définir le mode stratégique principal"}[code] ?? code)).join(" · ")}. {missing.includes("MISSING_MANIPULATION_MIX_PRIMARY") && <a href="#forge-mix-strategique" className="underline">Relire et choisir le mode</a>}</p>}
               {previousDispatch && <p role="status" className="rounded border border-border p-3 text-sm">Tentative enregistrée · {previousDispatch.materialStatus ?? previousDispatch.status}
                 {previousDispatch.generativeTaskId && <span className="block break-all">Tâche {previousDispatch.generativeTaskId}</span>}
               </p>}

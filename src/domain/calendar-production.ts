@@ -13,8 +13,9 @@ export const calendarPreparation=calendarView.extend({
   calendarVersion:z.string().regex(/^[a-f0-9]{64}$/),
   postKeys:z.array(z.string().regex(/^[a-f0-9]{64}$/)).min(1).max(50).refine(k=>new Set(k).size===k.length,"Ligne répétée."),
   optionsPerPost:z.number().int().min(1).max(4).default(2),
+  newProposal:z.object({assetId:z.string().min(1),version:z.number().int().positive(),instruction:z.string().trim().min(1).max(1800)}).strict().optional(),
   correction:z.object({assetId:z.string().min(1),version:z.number().int().positive(),instruction:z.string().trim().min(1).max(1800),photoPolicy:z.literal("LOCKED_MASTER").optional()}).optional(),
-}).superRefine((v,c)=>{if(v.correction && v.postKeys.length!==1)c.addIssue({code:"custom",message:"Une correction porte sur une seule ligne."});});
+}).superRefine((v,c)=>{if(v.correction&&v.newProposal)c.addIssue({code:"custom",message:"Choisir une correction ou une nouvelle proposition."});if((v.correction||v.newProposal) && v.postKeys.length!==1)c.addIssue({code:"custom",message:"Une correction porte sur une seule ligne."});});
 export type CalendarView=z.infer<typeof calendarView>;
 export type CalendarPreparation=z.infer<typeof calendarPreparation>;
 export const calendarProductionLaunch=z.object({

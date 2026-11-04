@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 69 modules (src/domain, cœur métier pur)
+## Domain — 70 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
@@ -108,6 +108,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **product-system** — product-system.ts — le SYSTÈME produit d'une marque (ADR-0170, pilier V).
 - **production-artwork**
 - **production-image-reference**
+- **production-mix**
 - **production-passages**
 - **production-pin**
 - **production-sources**

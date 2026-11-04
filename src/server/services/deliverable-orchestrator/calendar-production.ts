@@ -100,13 +100,16 @@ export async function prepareCalendarBriefRows(raw:CalendarPreparation,operatorI
         if(!locked[0] || locked[0].updatedAt.getTime()!==c.sourceUpdatedAt?.getTime())throw new Error("Le calendrier a été corrigé. Rouvrez le planning.");
         const batchId="plan:"+fingerprint({strategy:v.strategyId,calendar:c.calendarVersion,key});
         const all=await tx.brandAsset.findMany({where:{strategyId:v.strategyId,batchId,format:FORMAT},orderBy:{version:"desc"}});
-        const parent=v.correction ? all.find(a=>a.id===v.correction!.assetId && a.version===v.correction!.version) : null;
-        if(v.correction && !parent)throw new Error("La piste à corriger n’appartient pas à cette ligne ou à cette version.");
+        const request=v.newProposal??v.correction;
+        const parent=request ? all.find(a=>a.id===request.assetId && a.version===request.version) : null;
+        if(request && !parent)throw new Error("La piste à corriger n’appartient pas à cette ligne ou à cette version.");
         if(parent && !usable(parent)){
-          const child=all.find(a=>a.id===parent.supersededById && usable(a) && record(a.content).correction===v.correction?.instruction);
+          const child=all.find(a=>a.id===parent.supersededById && usable(a) &&
+            (v.newProposal ? record(record(a.content).newProposal).instruction===v.newProposal.instruction && record(record(a.content).newProposal).fromBriefId===parent.id : record(a.content).correction===v.correction?.instruction));
           if(child && (!v.correction?.photoPolicy || record(record(child.content).artwork).photoPolicy===v.correction.photoPolicy))return [briefCard(child)];
           throw new Error("La piste a changé. Relisez sa dernière version.");
         }
+        if(v.newProposal && (parent?.state!=="CANDIDATE" || !line.artwork))throw new Error("Choisissez un brief candidat associé à un master versionné pour ouvrir une nouvelle piste.");
         if(!parent && all.some(a=>a.batchSize<v.optionsPerPost && usable(a))) await tx.brandAsset.updateMany({where:{strategyId:v.strategyId,batchId,state:"CANDIDATE",batchSize:{lt:v.optionsPerPost}},data:{batchSize:v.optionsPerPost}});
         const cards=[];
         for(const index of parent ? [parent.batchIndex] : Array.from({length:v.optionsPerPost},(_,i)=>i)){
@@ -135,17 +138,18 @@ export async function prepareCalendarBriefRows(raw:CalendarPreparation,operatorI
           }
           if(v.correction?.photoPolicy && !line.artwork)throw new Error("Aucun master versionné n’est associé à cette ligne.");
           const inheritedMaster=parent ? productionArtwork.safeParse(record(parent.content).artwork):null;
-          const artwork=line.artwork && {...line.artwork,photoPolicy:v.correction?.photoPolicy ?? (inheritedMaster?.success ? inheritedMaster.data.photoPolicy:line.artwork.photoPolicy)};
+          const proposal=v.newProposal ? {intentId,fromBriefId:parent!.id,fromVersion:parent!.version,instruction:v.newProposal.instruction} : (parent?record(parent.content).newProposal:undefined);
+          const artwork=line.artwork && {...line.artwork,photoPolicy:v.newProposal ? "GENERATED_CANDIDATE" : v.correction?.photoPolicy ?? (inheritedMaster?.success ? inheritedMaster.data.photoPolicy:line.artwork.photoPolicy)};
           const content={schema:FORMAT,calendarVersion:c.calendarVersion,origin:line.origin,post:line.post,action:line.action,family:line.family,
-            ...(artwork?{artwork}:{}),...(sourcePins?.length?{sourcePins}:{}),variant:index+1,treatment:treatments[index],direction,correction:v.correction?.instruction??null,
-            ...(parent?{previous:{assetId:parent.id,version:parent.version},correctionHistory:[...(Array.isArray(record(parent.content).correctionHistory)?record(parent.content).correctionHistory as string[]:[]),v.correction!.instruction]}:{}),
+            ...(artwork?{artwork}:{}),...(sourcePins?.length?{sourcePins}:{}),...(proposal?{newProposal:proposal}:{}),variant:index+1,treatment:treatments[index],direction,correction:v.correction?.instruction??null,
+            ...(parent && v.correction?{previous:{assetId:parent.id,version:parent.version},correctionHistory:[...(Array.isArray(record(parent.content).correctionHistory)?record(parent.content).correctionHistory as string[]:[]),v.correction!.instruction]}:{}),
           };
           if(JSON.stringify(content).length>32000)throw new Error("Le brief dépasse la capacité du moteur. Affinez les règles de DA avant de le produire.");
           const metadata={calendarVersion:c.calendarVersion,key,editionId:v.editionId??null,startDate:v.startDate??null,weeks:v.weeks??4,projectDates:v.projectDates===true,directionHash,mode:target.mode,preparedByUserId:operatorId};
           const asset=await createBrandAsset({strategyId:v.strategyId,operatorId:c.brandOperatorId??null,name:(line.post.theme??line.post.angle??"Publication")+" · "+line.post.platform+" · piste "+(index+1),format:FORMAT,kind:"CREATIVE_BRIEF",content,state:"CANDIDATE",
             batchId,batchSize:parent?.batchSize??v.optionsPerPost,batchIndex:index,sourceGloryOutputId:c.sourceId!,sourceIntentId:intentId,metadata},tx);
           const next=parent?await tx.brandAsset.update({where:{id:asset.id},data:{version:parent.version+1,parentBrandAssetId:parent.id}}):asset;
-          if(parent)await tx.brandAsset.update({where:{id:parent.id},data:{state:"SUPERSEDED",supersededAt:new Date(),supersededById:next.id,supersededReason:"Correction ciblée d’un brief de production"}});
+          if(parent)await tx.brandAsset.update({where:{id:parent.id},data:{state:"SUPERSEDED",supersededAt:new Date(),supersededById:next.id,supersededReason:v.newProposal?"Nouvelle proposition photographique indépendante du master historique":"Correction ciblée d’un brief de production"}});
           cards.push(briefCard(next));
         } return cards;
       });
@@ -175,7 +179,16 @@ export async function readCalendarBriefSource(strategyId:string,id:string,versio
   const doctrine=await buildCreativeDirectionContext({strategyId,target:{platform,format:format??undefined,theme:theme??undefined,angle:angle??undefined,family:line.family??undefined,mode}});
   if(fingerprint(doctrine?.context??null)!==m.directionHash)throw new Error("La doctrine de la marque a changé : révisez la piste.");
   const master=content.artwork ? productionArtwork.parse(content.artwork) : undefined;
-  if(master && (!line.artwork || master.assetId!==line.artwork.assetId || master.version!==line.artwork.version || master.originalHash!==line.artwork.originalHash || master.photoLayerId!==line.artwork.photoLayerId || (master.photoPolicy!==line.artwork.photoPolicy && master.photoPolicy!=="LOCKED_MASTER")))throw new Error("La source du montage a changé. Relisez sa version au planning.");
+  if(master && (!line.artwork || master.assetId!==line.artwork.assetId || master.version!==line.artwork.version || master.originalHash!==line.artwork.originalHash || master.photoLayerId!==line.artwork.photoLayerId))throw new Error("La source du montage a changé. Relisez sa version au planning.");
+  if(master?.photoPolicy==="GENERATED_CANDIDATE" && line.artwork?.photoPolicy==="LOCKED_MASTER"){
+    const proposal=record(content.newProposal);
+    const intentId=string(proposal.intentId);
+    const issuer=intentId && await db.intentEmission.findFirst({where:{id:intentId,strategyId,intentKind:"COMPOSE_DELIVERABLE",status:"OK"},select:{payload:true,result:true}});
+    const prep=record(record(issuer&&issuer.payload).calendarPreparation), asked=record(prep.newProposal);
+    const results=record(record(issuer&&issuer.result).output).rows;
+    const issued=Array.isArray(results)&&results.some(row=>record(row).key===m.key && Array.isArray(record(row).briefs) && (record(row).briefs as unknown[]).some(b=>record(b).variant===content.variant));
+    if(!intentId || !issued || prep.calendarVersion!==m.calendarVersion || asked.assetId!==proposal.fromBriefId || asked.version!==proposal.fromVersion || !string(asked.instruction) || asked.instruction!==proposal.instruction)throw new Error("La photo du master ne peut être remplacée sans une demande distincte de nouvelle proposition.");
+  }
   const text=JSON.stringify(content);
   return calendarBriefSource.parse({assetId:id,version,name:a.name,fingerprint:fingerprint(content),text,platform,format,theme,angle,family:line.family,mode,...(master?{artwork:master}:{}),
     ...(content.sourcePins?{sourcePins:productionPins.parse(content.sourcePins)}:{}),

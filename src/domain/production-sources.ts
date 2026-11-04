@@ -8,6 +8,7 @@ import { productionPin } from "./production-pin";
 const digest = z.string().regex(/^[a-f0-9]{64}$/);
 export const productionSourceManifest = z.object({
   schema: z.literal("production-sources/v1"),
+  mixReview:z.object({primary:z.enum(["peddler","dealer","facilitator","entertainer"]),version:z.number().int().nonnegative()}).optional(),
   calendarBrief:calendarBriefSource.optional(),
   productionArtwork:productionArtwork.optional(),
   sources: z.array(productionPin.extend({

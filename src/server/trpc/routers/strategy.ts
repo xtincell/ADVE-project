@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { mixDecision } from "@/domain/production-mix";
+import {readProductionMix,adoptProductionMix} from "@/server/services/deliverable-orchestrator/production-mix";
 import { classifyTier, MarketScaleSchema, BrandTierSchema, effectiveTier } from "@/domain";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
@@ -199,6 +201,7 @@ export const strategyRouter = createTRPCRouter({
       return strategy;
     }),
 
+  productionMix: protectedProcedure.input(z.object({id:z.string()})).query(({ctx,input})=>readProductionMix(ctx.db,input.id,ctx.session.user.id)),
   update: governedProcedure({
 
 
@@ -234,6 +237,7 @@ export const strategyRouter = createTRPCRouter({
       // ne pouvait ni activer sa page publique ni en connaître l'URL.
       enablePublicPage: z.boolean().optional(),
       publicPage: PublicBrandPublicationInput.optional(),
+      productionMix: mixDecision.optional(),
     }).transform((input) => ({ ...input, strategyId: input.id })),
 
 
@@ -242,7 +246,11 @@ export const strategyRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const { id, strategyId: _strategyId, recalculateScore, sector, enablePublicPage, watchSubjects, publicPage, ...data } = input;
+      const { id, strategyId: _strategyId, recalculateScore, sector, enablePublicPage, watchSubjects, publicPage, productionMix, ...data } = input;
+      if(productionMix){
+        if(Object.keys(input).some(key=>!["id","strategyId","productionMix"].includes(key))) throw new TRPCError({code:"BAD_REQUEST",message:"Validez le mix séparément des autres modifications."});
+        return adoptProductionMix(ctx.db,id,ctx.session.user.id,ctx.intentId,productionMix);
+      }
 
       if (publicPage) {
         if (Object.keys(input).some((key) => !["id", "strategyId", "publicPage", "recalculateScore"].includes(key))) {

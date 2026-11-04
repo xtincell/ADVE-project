@@ -51,14 +51,14 @@ export function CalendarProduction({ strategyId, editionId, startDate, weeks, pr
       setReceipts(prev => ({ ...prev, [key]: { message: error instanceof Error ? error.message : "La génération a été interrompue. Vous pouvez reprendre cette option." } }));
     }
   }
-  async function run(keys: string[], generate: boolean, correction?: { assetId: string; version: number; instruction: string; photoPolicy?: "LOCKED_MASTER" }) {
+  async function run(keys: string[], generate: boolean, correction?: { assetId: string; version: number; instruction: string; photoPolicy?: "LOCKED_MASTER" }, newProposal?: {assetId:string;version:number;instruction:string}) {
     if (!version || running.current || !keys.length) return;
     running.current = true;
     try {
       for (const [index, key] of keys.entries()) {
         setProgress(`Publication ${index + 1}/${keys.length} · préparation du brief`);
         try {
-          const result = await prepare.mutateAsync({ ...scope, calendarVersion: version, postKeys: [key], optionsPerPost: countFor(key), correction });
+          const result = await prepare.mutateAsync({ ...scope, calendarVersion: version, postKeys: [key], optionsPerPost: countFor(key), correction, newProposal });
           const row = result.rows.find(r => r.key === key);
           if (!row || row.error) throw new Error(row?.error || "Le brief de cette publication n’a pas été enregistré.");
           setErrors(prev => ({ ...prev, [key]: "" }));
@@ -124,6 +124,7 @@ export function CalendarProduction({ strategyId, editionId, startDate, weeks, pr
           {errors[row.key] && <p role="alert" className="mt-2 text-sm">{errors[row.key]}</p>}
           {row.briefs.map(brief => <CalendarOption key={brief.assetId + brief.version} brief={brief}
             receipt={brief.generation ?? receipts[brief.assetId + "/" + brief.version]} strategyId={strategyId} onResume={() => resume(brief)}
+            onNewProposal={instruction=>run([row.key],false,undefined,{assetId:brief.assetId,version:brief.version,instruction})}
             onCorrect={(instruction,photoPolicy) => run([row.key], true, { assetId: brief.assetId, version: brief.version, instruction, photoPolicy })} />)}
         </fieldset>)}
       </Fragment>)}
@@ -131,22 +132,24 @@ export function CalendarProduction({ strategyId, editionId, startDate, weeks, pr
   </section>;
 }
 
-function CalendarOption({ brief, receipt, strategyId, onResume, onCorrect }: {
-  brief: BriefRef; receipt?: Receipt; strategyId: string; onResume: () => void; onCorrect: (text: string, photoPolicy?: "LOCKED_MASTER") => void;
+function CalendarOption({ brief, receipt, strategyId, onResume, onCorrect, onNewProposal }: {
+  brief: BriefRef; receipt?: Receipt; strategyId: string; onResume: () => void; onNewProposal:(instruction:string)=>void; onCorrect: (text: string, photoPolicy?: "LOCKED_MASTER") => void;
 }) {
   const [note, setNote] = useState("");
+  const [newPhoto,setNewPhoto]=useState("");
   const [photo, setPhoto] = useState<"" | "LOCKED_MASTER">("");
   const [opened, setOpened] = useState(false);
   const utils = trpc.useUtils();
   const dossier = trpc.deliverableOrchestrator.getCalendarBrief.useQuery({ strategyId, assetId: brief.assetId, version: brief.version }, { enabled: opened });
   const material = trpc.ptah.materializeBrief.useMutation({onSuccess: () => {void utils.deliverableOrchestrator.calendarProductionRows.invalidate({strategyId});}});
-  const content = dossier.data ? JSON.parse(dossier.data.text) as {treatment:string; correction?:string; post:ContentPost; productionArtwork?: unknown; direction?:{family?:{name:string};rules?:{guidance:string}[]}} : null;
+  const content = dossier.data ? JSON.parse(dossier.data.text) as {treatment:string; correction?:string; post:ContentPost; artwork?: {photoPolicy:string}; newProposal?:{instruction:string}; direction?:{family?:{name:string};rules?:{guidance:string}[]}} : null;
   return <details onToggle={e => setOpened(e.currentTarget.open)} className="mt-2 rounded border border-border-subtle p-2 text-xs">
     <summary className="cursor-pointer">Option {brief.variant} · v{brief.version} · {brief.name}</summary>
     {dossier.isError && <p role="alert">{dossier.error.message}</p>}
     {content && <div className="my-2 space-y-1 text-sm">
       <strong>{content.treatment}</strong><p>{content.direction?.family?.name}</p>
       <p className="whitespace-pre-wrap">{content.post.caption}</p><p>{content.post.illustration}</p>
+      {content.newProposal && <p>Nouvelle proposition photographique · {content.newProposal.instruction}</p>}
       {content.correction && <p>Correction demandée · {content.correction}</p>}
       {content.direction?.rules && <details><summary>Règles de DA appliquées</summary><ul>{content.direction.rules.map((r,i)=><li key={i}>{r.guidance}</li>)}</ul></details>}
     </div>}
@@ -158,10 +161,17 @@ function CalendarOption({ brief, receipt, strategyId, onResume, onCorrect }: {
       onClick={() => material.mutate({strategyId,resumeTaskId:receipt.generativeTaskId!})}>Reprendre la forge différée</button>}
     {material.error && <p role="alert">{material.error.message}</p>}
     {material.data && <p role="status">Forge · {material.data.status}</p>}
+    {content?.artwork && <div className="my-3 space-y-2 rounded border border-border p-3">
+      <label className="block">Nouvelle proposition photographique
+        <textarea className="mt-1 block w-full rounded border border-border bg-background p-2" placeholder="Décrivez la nouvelle photo à explorer dans ce master." value={newPhoto} onChange={e=>setNewPhoto(e.target.value)} maxLength={1500}/>
+      </label>
+      <p className="text-foreground-secondary">La nouvelle photo sera candidate. La composition, les textes, le logo et le master d’origine sont conservés.</p>
+      <button className={action} disabled={!newPhoto.trim()} onClick={()=>onNewProposal(newPhoto.trim())}>Préparer cette nouvelle proposition</button>
+    </div>}
     <label className="my-2 block">Correction de cette option
       <textarea className="mt-1 block w-full rounded border border-border bg-background p-2" value={note} onChange={e => setNote(e.target.value)} maxLength={1500} />
     </label>
-    {content?.productionArtwork ? <label className="mb-2 block">Photographie de cette révision
+    {content?.artwork ? <label className="mb-2 block">Photographie de cette révision
       <select className="ml-2 rounded border border-border bg-background p-2" value={photo} onChange={e=>setPhoto(e.target.value as typeof photo)}>
         <option value="">Conserver le traitement de la piste</option>
         <option value="LOCKED_MASTER">Restituer la photo du master</option>

@@ -33,9 +33,9 @@ afterAll(async()=>{
   await db.pillar.deleteMany({where:{strategyId:brand}});
   await db.strategy.deleteMany({where:{id:{in:[brand,foreign]}}});await db.user.deleteMany({where:{id:user}});await db.operator.deleteMany({where:{id:operator}});await db.$disconnect();
 });
-async function prepare(options?:number,correction?:{assetId:string,version:number,instruction:string,photoPolicy?:"LOCKED_MASTER"}){
+async function prepare(options?:number,correction?:{assetId:string,version:number,instruction:string,photoPolicy?:"LOCKED_MASTER"},newProposal?:{assetId:string,version:number,instruction:string}){
   const {rows,calendarVersion}=await calendarProductionRows({strategyId:brand});
-  const command=calendarPreparation.parse({strategyId:brand,calendarVersion,postKeys:[rows[0]!.key],optionsPerPost:options,correction});
+  const command=calendarPreparation.parse({strategyId:brand,calendarVersion,postKeys:[rows[0]!.key],optionsPerPost:options,correction,newProposal});
   const intentId="cal-prepare-"+randomUUID();
   await db.intentEmission.create({data:{id:intentId,strategyId:brand,intentKind:"COMPOSE_DELIVERABLE",status:"PENDING",payload:asJSON({calendarPreparation:command})}});
   const result=await prepareCalendarBriefRows(command,user,intentId);
@@ -134,6 +134,27 @@ describe("Production depuis une ligne du calendrier",()=>{
       await db.brandAsset.update({where:{id:asset.id},data:{state:"ARCHIVED"}});
       await expect(resolveProductionSources(brand,[],undefined,undefined,current)).rejects.toThrow(/relire/);
     } finally {await db.gloryOutput.update({where:{id:newer.id},data:{toolSlug:"recette-ligne-historique"}});}
+  });
+  it("ouvre une nouvelle photo par demande distincte, garde l’original et refuse un mandat retiré",async()=>{
+    const master={assetId:"master-doc",version:1,originalHash:"d".repeat(64),photoLayerId:"photo",photoPolicy:"LOCKED_MASTER"};
+    const edition=await db.gloryOutput.create({data:{strategyId:brand,toolSlug:"content-calendar-strategist",output:asJSON({...data,posts:[{...post,productionArtwork:master}]})}});
+    try{
+      const [one,two]=await prepare(2);
+      const request={assetId:one!.assetId,version:one!.version,instruction:"Nouvelle photo éclairée de côté."};
+      const [candidate]=await prepare(2,undefined,request);
+      expect((await prepare(2,undefined,request))[0]?.assetId).toBe(candidate!.assetId);
+      const read=()=>readCalendarBriefSource(brand,candidate!.assetId,candidate!.version);
+      const frozen=await read();
+      expect(frozen.artwork).toEqual({...master,photoPolicy:"GENERATED_CANDIDATE"});
+      expect(JSON.parse(frozen.text)).toMatchObject({newProposal:{instruction:request.instruction},correction:null});
+      expect((await readCalendarBriefSource(brand,two!.assetId,two!.version)).artwork).toEqual(master);
+      expect(await db.gloryOutput.findUniqueOrThrow({where:{id:edition.id}})).toMatchObject({output:{posts:[{productionArtwork:master}]}});
+      const [revised]=await prepare(2,{assetId:candidate!.assetId,version:candidate!.version,instruction:"Corriger la lumière."});
+      expect((await readCalendarBriefSource(brand,revised!.assetId,revised!.version)).artwork?.photoPolicy).toBe("GENERATED_CANDIDATE");
+      const origin=JSON.parse(frozen.text).newProposal.intentId;
+      await db.intentEmission.update({where:{id:origin},data:{status:"FAILED"}});
+      await expect(readCalendarBriefSource(brand,revised!.assetId,revised!.version)).rejects.toThrow(/demande distincte/);
+    } finally {await db.gloryOutput.update({where:{id:edition.id},data:{toolSlug:"recette-ligne-historique"}});}
   });
   it("une DA corrigée invalide le brief figé",async()=>{
     const rows=await calendarProductionRows({strategyId:brand});const b=rows.rows[0]!.briefs[0]!;
