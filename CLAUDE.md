@@ -1,3 +1,18 @@
+## 543 candidate — entrée publique de vente (4 novembre 2026)
+
+543 relie aussi les règles de prix approuvées au moteur monétisation existant et
+au devis Glory déterministe. `sales_prepare_offer` conserve la proposition dans
+le dossier ; le même STI la présente, reçoit le message d’accord et conserve son
+prix pour le paiement. Voir ADR-0238 et la section Offre pour les accès existants.
+La preuve des outils isolés ne remplace pas le parcours Luna ni la production.
+
+ADR-0238 : `/talk/[publicId]` rejoint le vendeur et le STI existants. Publication
+par le responsable de marque, offres et conditions conservées, admission anonyme
+avec reprise protégée et limites persistantes. Deux migrations additives, aucun
+contenu ADVE/Oracle modifié. Le paiement reste soumis au responsable financier ;
+la livraison exige la confirmation réelle du client. L’essai isolé ne prouve pas
+une vente réelle ; livraison et contrôles de production restent à vérifier.
+
 ## 539 candidate — reprise cockpit, lecteur et raccord radar (3 novembre 2026)
 
 > Overton540 : voir ADR-0237. Le cadrage conviction/catégorie/marque vient de A et irrigue

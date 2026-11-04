@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import type { Deal, IntakePayment, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { serialSalesTransaction as serial } from "./transaction";
 import { salesStateSchema, type SalesActor, type SalesState } from "./commercial";
 import { assertSalesEffectIn } from "./outbound-authority";
 
@@ -23,7 +24,7 @@ export interface CommercialPaymentRequest {
   paymentInstructions: string; paidAt: Date | null; canReconcile: boolean;
 }
 function exponent(currency: string) {
-  if (!Object.hasOwn(currencies, currency)) throw new TRPCError({ code: "BAD_REQUEST", message: "Devise de collecte commerciale non prise en charge." });
+  if (!Object.hasOwn(currencies, currency)) throw new TRPCError({ code: "BAD_REQUEST", message: "Cette devise n’est pas prise en charge pour un paiement." });
   return currencies[currency as Currency];
 }
 /** Convert the declared decimal exactly; do not round a price to a different financial promise. */
@@ -37,10 +38,10 @@ export function salesAmountToMinor(amount: number, currency: string): number {
   if (power >= 0) minor *= BigInt(10) ** BigInt(power);
   else {
     const divisor = BigInt(10) ** BigInt(-power);
-    if (minor % divisor !== BigInt(0)) throw new TRPCError({ code: "BAD_REQUEST", message: "Le montant dépasse la précision monétaire de cette devise." });
+    if (minor % divisor !== BigInt(0)) throw new TRPCError({ code: "BAD_REQUEST", message: "Ce montant contient trop de décimales pour cette devise." });
     minor /= divisor;
   }
-  if (minor > BigInt(2147483647)) throw new TRPCError({ code: "BAD_REQUEST", message: "Montant supérieur à la capacité du paiement natif." });
+  if (minor > BigInt(2147483647)) throw new TRPCError({ code: "BAD_REQUEST", message: "Le montant dépasse la limite acceptée pour ce paiement." });
   return Number(minor);
 }
 /** Only this new tier uses ISO minor units; historical intake amounts keep their original contract. */
@@ -54,7 +55,7 @@ async function brandIn(tx: Tx, strategyId: string): Promise<ScopedBrand> {
   return { ...brand, operatorId: brand.operatorId ?? brand.client?.operatorId ?? null };
 }
 async function humanIn(tx: Tx, actor: SalesPaymentActor, brand: ScopedBrand) {
-  if (actor.id.startsWith("mcp:")) throw new TRPCError({ code: "FORBIDDEN", message: "Le rapprochement financier exige un compte humain authentifié." });
+  if (actor.id.startsWith("mcp:")) throw new TRPCError({ code: "FORBIDDEN", message: "Connectez-vous avec un compte personnel pour vérifier un paiement reçu." });
   const user = await tx.user.findUnique({ where: { id: actor.id }, select: { id: true, role: true, operatorId: true } });
   if (!user) throw new TRPCError({ code: "FORBIDDEN", message: "Compte humain introuvable." });
   const admin = actor.admin && user.role === "ADMIN";
@@ -63,19 +64,21 @@ async function humanIn(tx: Tx, actor: SalesPaymentActor, brand: ScopedBrand) {
 }
 async function collectionIn(tx: Tx, deal: Deal, state: SalesState, brand: ScopedBrand) {
   const mandate = state.mandate;
-  if (!mandate?.collection) fail("La destination et le responsable financier doivent être attestés dans le mandat.");
+  if (mandate?.informationOnly) fail("Cette conversation sert uniquement à répondre aux questions. Aucun paiement n’y est autorisé.");
+  if (mandate?.pricingRule && (!state.proposal || state.proposal.amount !== mandate.amount || state.proposal.currency !== mandate.currency)) fail("Préparez la proposition et son prix avant de demander un paiement.");
+  if (!mandate?.collection) fail("Confirmez où recevoir le paiement et qui doit le vérifier.");
   const collection = mandate.collection;
   const [attester, finance] = await Promise.all([
     tx.user.findUnique({ where: { id: collection.attestedBy }, select: { id: true, role: true } }),
     tx.user.findUnique({ where: { id: collection.financeOwnerId }, select: { id: true, operatorId: true } }),
   ]);
-  if (!attester || (attester.id !== brand.userId && attester.role !== "ADMIN") || new Date(collection.attestedAt).getTime() > Date.now() + 30000) fail("Attestation de destination absente ou hors marque.");
-  if (!finance || (finance.id !== brand.userId && (!brand.operatorId || finance.operatorId !== brand.operatorId))) fail("Responsable financier humain hors de l’équipe de cette marque.");
-  if (deal.currency !== mandate.currency || (deal.value != null && deal.value !== mandate.amount)) fail("Les conditions du dossier diffèrent du mandat approuvé.");
+  if (!attester || (attester.id !== brand.userId && attester.role !== "ADMIN") || new Date(collection.attestedAt).getTime() > Date.now() + 30000) fail("Le propriétaire de la marque doit confirmer où recevoir le paiement.");
+  if (!finance || (finance.id !== brand.userId && (!brand.operatorId || finance.operatorId !== brand.operatorId))) fail("La personne chargée de vérifier le paiement doit faire partie de l’équipe de cette marque.");
+  if (deal.currency !== mandate.currency || (deal.value != null && deal.value !== mandate.amount)) fail("Les montants ou devises de cette affaire diffèrent des conditions de vente approuvées.");
   return mandate;
 }
 function nativePayment(payment: IntakePayment | null, deal: Deal, mandate: NonNullable<SalesState["mandate"]>) {
-  if (!payment || payment.tierKey !== "SALES_COLLECTION" || payment.provider !== "MANUAL_WA" || payment.intakeToken !== `sales-deal:${deal.id}` || payment.subscriptionId || payment.amount !== salesAmountToMinor(mandate.amount, mandate.currency) || payment.currency !== mandate.currency || deal.paymentReference !== payment.reference || mandate.intakePaymentReference !== payment.reference) fail("Le règlement natif doit appartenir à cette affaire et à ses conditions approuvées.");
+  if (!payment || payment.tierKey !== "SALES_COLLECTION" || payment.provider !== "MANUAL_WA" || payment.intakeToken !== `sales-deal:${deal.id}` || payment.subscriptionId || payment.amount !== salesAmountToMinor(mandate.amount, mandate.currency) || payment.currency !== mandate.currency || deal.paymentReference !== payment.reference || mandate.intakePaymentReference !== payment.reference) fail("Le paiement doit correspondre à cette affaire et aux conditions de vente approuvées.");
   return payment;
 }
 function project(deal: Deal, state: SalesState, payment: IntakePayment, canReconcile: boolean): CommercialPaymentRequest {
@@ -84,19 +87,6 @@ function project(deal: Deal, state: SalesState, payment: IntakePayment, canRecon
     amount: paymentMajorAmount(payment), currency: payment.currency, reference: payment.reference, status: payment.status,
     beneficiary: mandate.beneficiary, destinationRef: mandate.collection!.destinationRef, paymentInstructions: mandate.paymentInstructions,
     paidAt: payment.paidAt, canReconcile };
-}
-async function serial<T>(run: (tx: Tx) => Promise<T>): Promise<T> {
-  for (let attempt = 0; ; attempt++) {
-    try { return await db.$transaction(run, { isolationLevel: "Serializable" }); }
-    catch (cause) {
-      const error = cause as { code?: string; name?: string; cause?: { kind?: string; originalCode?: string } };
-      // Prisma 7 may expose the adapter's rolled-back 40001 directly at COMMIT,
-      // before it is translated to P2034. Never retry an unknown commit outcome.
-      const adapterConflict = error.name === "DriverAdapterError" && error.cause?.kind === "TransactionWriteConflict" && error.cause.originalCode === "40001";
-      if (attempt < 3 && (["P2034", "P2002"].includes(error.code ?? "") || adapterConflict)) continue;
-      throw cause;
-    }
-  }
 }
 async function replayIn(tx: Tx, requestId: string, fingerprint: string, actorId: string, dealId: string) {
   const row = await tx.cRMActivity.findUnique({ where: { id: `sales-payment:${requestId}` } });
@@ -117,12 +107,12 @@ export async function requestSalesPayment(dealId: string, requestId: string, exp
     const mandate = await collectionIn(tx, deal, state, brand);
     let canReconcile = false;
     if (actor.id.startsWith("mcp:")) {
-      if (actor.id !== mandate.sellerId || !actor.salesRunId) throw new TRPCError({ code: "FORBIDDEN", message: "La demande de règlement exige la mission active du vendeur mandaté." });
+      if (actor.id !== mandate.sellerId || !actor.salesRunId) throw new TRPCError({ code: "FORBIDDEN", message: "Le vendeur doit avoir une tâche en cours sur cette affaire pour demander le paiement." });
       const key = await tx.mcpApiKey.findUnique({ where: { id: actor.id.slice(4) }, select: { isActive: true, scopeKind: true, scopeStrategyId: true, expiresAt: true } });
       if (!key?.isActive || key.scopeKind !== "BRAND" || key.scopeStrategyId !== brand.id || (key.expiresAt && key.expiresAt <= new Date())) throw new TRPCError({ code: "FORBIDDEN", message: "Vendeur hors de la marque ou suspendu." });
     } else {
       const person = await humanIn(tx, actor, brand);
-      if (!person.admin && person.id !== brand.userId && person.id !== mandate.sellerId) throw new TRPCError({ code: "FORBIDDEN", message: "Seul le propriétaire ou le vendeur humain mandaté peut demander le règlement." });
+      if (!person.admin && person.id !== brand.userId && person.id !== mandate.sellerId) throw new TRPCError({ code: "FORBIDDEN", message: "Seul le propriétaire ou le vendeur chargé de cette affaire peut demander le paiement." });
       if (!person.admin && person.id !== brand.userId && person.id !== mandate.collection!.financeOwnerId) {
         const profile = await tx.salesRepresentative.findFirst({ where: { strategyId: brand.id, humanUserId: person.id }, select: { status: true } });
         if (profile && profile.status !== "ACTIVE") throw new TRPCError({ code: "FORBIDDEN", message: "Le vendeur humain est suspendu." });
@@ -137,7 +127,7 @@ export async function requestSalesPayment(dealId: string, requestId: string, exp
     let payment: IntakePayment;
     if (deal.paymentReference) payment = nativePayment(await tx.intakePayment.findUnique({ where: { reference: deal.paymentReference } }), deal, mandate);
     else {
-      if (mandate.intakePaymentReference) fail("Le mandat contient déjà une référence sans règlement propre à cette affaire.");
+      if (mandate.intakePaymentReference) fail("Une référence de paiement existe déjà, mais aucun paiement ne lui correspond sur cette affaire.");
       payment = await tx.intakePayment.create({ data: { reference: `sales_${randomUUID()}`, intakeToken: `sales-deal:${dealId}`, amount, currency: mandate.currency as Currency, provider: "MANUAL_WA", status: "PENDING", tierKey: "SALES_COLLECTION" } });
     }
     const next = { ...state, mandate: { ...mandate, intakePaymentReference: payment.reference } };
@@ -150,7 +140,7 @@ export async function requestSalesPayment(dealId: string, requestId: string, exp
 
 export async function reconcileSalesPayment(raw: ReconcileSalesPaymentInput, actor: SalesPaymentActor): Promise<CommercialPaymentRequest> {
   const input = reconcileSalesPaymentInput.parse(raw);
-  if (actor.id.startsWith("mcp:")) throw new TRPCError({ code: "FORBIDDEN", message: "Un agent ne peut pas rapprocher un règlement." });
+  if (actor.id.startsWith("mcp:")) throw new TRPCError({ code: "FORBIDDEN", message: "Une personne doit vérifier le paiement reçu." });
   const fingerprint = digest({ action: "RECONCILE", ...input, actorId: actor.id });
   return serial(async tx => {
     const deal = await tx.deal.findUniqueOrThrow({ where: { id: input.dealId } });
@@ -159,10 +149,10 @@ export async function reconcileSalesPayment(raw: ReconcileSalesPaymentInput, act
     const person = await humanIn(tx, actor, brand);
     const state = salesStateSchema.parse(deal.commercial ?? {});
     const mandate = await collectionIn(tx, deal, state, brand);
-    if (!person.admin && person.id !== mandate.collection!.financeOwnerId) throw new TRPCError({ code: "FORBIDDEN", message: "Le rapprochement appartient au responsable financier désigné." });
+    if (!person.admin && person.id !== mandate.collection!.financeOwnerId) throw new TRPCError({ code: "FORBIDDEN", message: "Seule la personne désignée pour vérifier les paiements peut valider celui-ci." });
     const payment = nativePayment(deal.paymentReference ? await tx.intakePayment.findUnique({ where: { reference: deal.paymentReference } }) : null, deal, mandate);
     if (await replayIn(tx, input.requestId, fingerprint, actor.id, deal.id)) return project(deal, state, payment, true);
-    if (state.node !== "ACCEPTED" || !state.agreement || payment.status !== "PENDING") fail("Le règlement doit attendre un rapprochement après accord client.");
+    if (state.node !== "ACCEPTED" || !state.agreement || payment.status !== "PENDING") fail("Le client doit avoir accepté l’offre et le paiement doit encore être en attente de vérification.");
     const observedMinor = salesAmountToMinor(input.observedAmount, input.currency);
     if (input.currency !== mandate.currency || observedMinor !== payment.amount) fail("Montant ou devise effectivement reçus différents des conditions approuvées.");
     const normalize = (value: string) => value.trim().normalize("NFKC").toUpperCase();
@@ -171,9 +161,9 @@ export async function reconcileSalesPayment(raw: ReconcileSalesPaymentInput, act
     const now = new Date();
     await tx.cRMActivity.create({ data: { id: allocationId, dealId: deal.id, activityType: "SALES_PAYMENT_ALLOCATION", performedBy: actor.id, description: "Preuve externe affectée à ce règlement.", metadata: { externalReference: input.externalReference, paymentReference: payment.reference, requestId: input.requestId, amountMinor: observedMinor, currency: input.currency } } });
     const settled = await tx.intakePayment.updateMany({ where: { id: payment.id, status: "PENDING", amount: observedMinor, currency: payment.currency }, data: { status: "PAID", paidAt: now, providerRef: input.externalReference, providerEventId: allocationId } });
-    if (settled.count !== 1) conflict("Une autre preuve vient de rapprocher ce règlement.");
+    if (settled.count !== 1) conflict("Ce paiement vient d’être vérifié avec une autre preuve. Relisez son état avant de continuer.");
     const changed = await tx.deal.updateMany({ where: { id: deal.id, revision: deal.revision }, data: { revision: { increment: 1 } } });
-    if (changed.count !== 1) conflict("Le dossier a évolué pendant le rapprochement.");
+    if (changed.count !== 1) conflict("Cette affaire a changé pendant la vérification du paiement. Relisez-la avant de continuer.");
     await tx.cRMActivity.create({ data: { id: `sales-payment:${input.requestId}`, dealId: deal.id, activityType: "SALES_PAYMENT_RECONCILED", performedBy: actor.id, description: "Règlement rapproché par le responsable financier sur preuve externe.", metadata: { action: "RECONCILE", fingerprint, actorId: actor.id, requestId: input.requestId, paymentReference: payment.reference, externalReference: input.externalReference, evidence: input.evidence, amountMinor: observedMinor, currency: input.currency } } });
     return project(deal, state, { ...payment, status: "PAID", paidAt: now, providerRef: input.externalReference, providerEventId: allocationId }, true);
   });

@@ -26,6 +26,8 @@ import * as processScheduler from "@/server/services/process-scheduler";
 import * as slaTracker from "@/server/services/sla-tracker";
 import * as teamAllocator from "@/server/services/team-allocator";
 import { listStrategyMissions } from "@/server/mcp/_shared/strategy-activity";
+import { prepareSalesOfferInput } from "@/server/services/crm-engine/offer-contract";
+import { projectPublicSalesHumanContact } from "@/server/services/crm-engine/public-entry-contract";
 
 // ---------------------------------------------------------------------------
 // Operations MCP Server
@@ -101,7 +103,7 @@ async function commercialAgent(input: Record<string, unknown>) {
   }
   const key = await db.mcpApiKey.findUnique({ where: { id: auth.apiKeyId }, select: { isActive: true, scopeKind: true, scopeStrategyId: true, expiresAt: true } });
   if (!key?.isActive || key.scopeStrategyId !== input.strategyId || key.scopeKind !== "BRAND" || (key.expiresAt && key.expiresAt <= new Date())) {
-    throw new Error("Mandat d’accès expiré ou révoqué.");
+    throw new Error("Les accès de ce vendeur ont expiré ou ont été désactivés.");
   }
   const profile = await db.salesRepresentative.findUnique({ where: { mcpKeyId: auth.apiKeyId }, select: { status: true } });
   if (profile && profile.status !== "ACTIVE") throw new Error("Commercial suspendu ou non activé.");
@@ -122,12 +124,12 @@ export const tools: ToolDefinition[] = [
   {
     name: "sales_portfolio",
     description: "Retrouver les affaires confiées à cet agent, leurs offres, preuves et prochaines actions sur tous les canaux.",
-    inputSchema: z.object({ strategyId: z.string() }),
+    inputSchema: z.object({ strategyId: z.string(), view: z.enum(["FULL", "ACTIONABLE"]).optional() }),
     handler: async input => {
       const actor = await commercialAgent(input);
       const scopedDeal = (input.__auth as {salesDealId?:string|null}|undefined)?.salesDealId;
       const rows = await db.deal.findMany({ where: { sellerStrategyId: String(input.strategyId), ...(scopedDeal?{id:scopedDeal}:{}) }, orderBy: { updatedAt: "desc" } });
-      const { salesStateSchema } = await import("@/server/services/crm-engine/commercial");
+      const { salesStateSchema, mandateSchema } = await import("@/server/services/crm-engine/commercial");
       const assigned = rows.filter(row => {
         const state = salesStateSchema.safeParse(row.commercial);
         return state.success && state.data.mandate?.sellerId === actor.id;
@@ -143,15 +145,71 @@ export const tools: ToolDefinition[] = [
         select: { id: true, salesDealId: true, body: true, subject: true, channel: true, createdAt: true, contact: { select: { email: true } } },
         orderBy: { createdAt: "asc" },
       });
-      return { deals: assigned.map(row => {
+      const publicSessions = await db.salesPublicSession.findMany({ where: { dealId: { in: assigned.map(row => row.id) } }, select: { dealId: true, entryId: true, approvedOffers: true } });
+      const {resolveSalesDeliveryDocument}=await import("@/server/services/crm-engine/customer");
+      return { deals: await Promise.all(assigned.map(async row => {
         const {customerAccessTokenHash:_hash,customerAccessTokenEncrypted:_secret,...deal}=row;
+        const commercialState=salesStateSchema.parse(deal.commercial??{});
         const history=activities.filter(item=>item.dealId===deal.id);
+        const publicSession = publicSessions.find(session => session.dealId === deal.id);
+        const creation = publicSession ? history.find(item => item.activityType === "DEAL_CREATED" &&
+          (item.metadata as { publicEntryId?: unknown } | null)?.publicEntryId === publicSession.entryId) : null;
+        const humanContact = projectPublicSalesHumanContact((creation?.metadata as { humanContact?: unknown } | null)?.humanContact);
+        const deliveryDocument=await resolveSalesDeliveryDocument(db,deal,commercialState);
+        const deliveryAvailable=deliveryDocument?{deliveryActivityId:deliveryDocument.activityId}:null;
+        const preparedReceipt = commercialState.proposal ? history.find(item => item.id === `sales-offer:${commercialState.proposal!.id}`) : undefined;
+        const preparedDocument = (preparedReceipt?.metadata as { result?: { proposal?: { id?: string; gloryOutputId?: string; documentUrl?: string } } } | null)?.result?.proposal;
+        const sellerProposal = commercialState.proposal && preparedDocument?.id === commercialState.proposal.id &&
+          preparedDocument.gloryOutputId === commercialState.proposal.gloryOutputId && typeof preparedDocument.documentUrl === "string"
+          ? { ...commercialState.proposal, status: "READY" as const, documentUrl: preparedDocument.documentUrl } : commercialState.proposal;
         const replies=inbound.filter(item=>item.salesDealId?item.salesDealId===deal.id:item.contact?.email.toLowerCase()===deal.contactEmail?.toLowerCase());
-        return {deal,historyEarlierCount:Math.max(0,history.length-8),replyEarlierCount:Math.max(0,replies.length-8),
+        const snapshot = publicSessions.find(session => session.dealId === deal.id)?.approvedOffers;
+        const approvedOffers = (Array.isArray(snapshot) ? snapshot : []).flatMap(value => {
+          const parsed = mandateSchema.safeParse(value);
+          if (!parsed.success) return [];
+          const candidate = parsed.data;
+          return [{ offerId: candidate.offerId, offerName: candidate.offerName, expiresAt: candidate.expiresAt,
+            ...(candidate.informationOnly ? { informationOnly: true } : candidate.pricingRule
+              ? { pricingRule: candidate.pricingRule, pricingRequired: true }
+              : { amount: candidate.amount, currency: candidate.currency, billing: candidate.billing }) }];
+        });
+        const currentState={dealId:deal.id,revision:deal.revision,node:commercialState.node,informationOnly:Boolean(commercialState.mandate?.informationOnly),pricingRequired:Boolean(commercialState.mandate?.pricingRule&&!commercialState.proposal),nextAction:commercialState.nextAction??null,treeNodeId:commercialState.treeNodeId??null};
+        const currentTreeNode=commercialState.mandate?.conversationTree?.nodes.find(node=>node.id===commercialState.treeNodeId)??null;
+        if(input.view==="ACTIONABLE"){
+          const {conversationTree:_tree,...mandate}=commercialState.mandate??{};
+          const sent=history.filter(item=>["SALES_WEB_SENT","SALES_EMAIL_SENT"].includes(item.activityType)).slice(-2);
+          const evidence=history.filter(item=>["SALES_DELIVERY_READY","SALES_PAYMENT_RECONCILED"].includes(item.activityType)).slice(-2);
+          return {contextView:"ACTIONABLE",currentState,approvedOffers,currentTreeNode,humanContact,deliveryAvailable,
+            deal:{id:deal.id,revision:deal.revision,sellerStrategyId:deal.sellerStrategyId,contactName:deal.contactName,companyName:deal.companyName,stage:deal.stage,paymentReference:deal.paymentReference,
+              commercial:{...commercialState,proposal:sellerProposal,mandate:{...mandate,conversationTree:undefined, ...(commercialState.mandate?.pricingRule&&!commercialState.proposal?{amount:undefined,currency:undefined}:{})}}},
+            replies:replies.slice(-2),replyEarlierCount:Math.max(0,replies.length-2),historyEarlierCount:Math.max(0,history.length-sent.length-evidence.length),
+            history:[...sent,...evidence].sort((a,b)=>a.performedAt.getTime()-b.performedAt.getTime()).map(item=>({id:item.id,activityType:item.activityType,description:item.description,performedAt:item.performedAt,
+              metadata:item.activityType.startsWith("SALES_WEB")||item.activityType.startsWith("SALES_EMAIL")?{body:(item.metadata as {body?:string}|null)?.body}:undefined})),
+            contextNotice:"Only the current tree node, two latest customer replies, two sent messages and two fulfilment/payment notes are included. Earlier history and inactive tree nodes remain in the canonical dossier."};
+        }
+        return {currentState,humanContact,deliveryAvailable,
+          latestReply:replies.at(-1)??null,approvedOffers,
+          currentTreeNode,
+          deal:{...deal,commercial:{...commercialState,proposal:sellerProposal}},historyEarlierCount:Math.max(0,history.length-8),replyEarlierCount:Math.max(0,replies.length-8),
           history:history.slice(-8).map(item=>({id:item.id,activityType:item.activityType,description:item.description,performedAt:item.performedAt,
             metadata:item.activityType.startsWith("SALES_WEB")||item.activityType.startsWith("SALES_EMAIL")?{body:(item.metadata as {body?:string}|null)?.body}:undefined})),
           replies:replies.slice(-8)};
-      }) };
+      })) };
+    },
+  },
+  {
+    name: "sales_prepare_offer",
+    description: "Préparer la proposition et son devis avec les prix et conditions approuvés. Aucun prix choisi par le vendeur, aucune présentation ni acceptation automatique.",
+    inputSchema: prepareSalesOfferInput.extend({ strategyId: z.string() }),
+    handler: async input => {
+      const actor = await commercialAgent(input);
+      const dealId = String(input.dealId);
+      const deal = await db.deal.findUniqueOrThrow({ where: { id: dealId }, select: { sellerStrategyId: true } });
+      if (deal.sellerStrategyId !== input.strategyId) throw new TRPCError({ code: "FORBIDDEN", message: "Cette affaire appartient à une autre marque." });
+      const { prepareSalesOffer } = await import("@/server/services/crm-engine/offers");
+      return salesDecisionResult(() => prepareSalesOffer({ dealId, requestId: String(input.requestId), expectedRevision: Number(input.expectedRevision),
+        offerId: String(input.offerId), countryCode: String(input.countryCode), quantity: input.quantity as number | undefined,
+        customerMessageId: input.customerMessageId as string | undefined, clientName: input.clientName as string | undefined }, actor), dealId);
     },
   },
   {
@@ -175,7 +233,7 @@ export const tools: ToolDefinition[] = [
       const deal = await db.deal.findUniqueOrThrow({ where: { id: String(input.dealId) } });
       const { salesStateSchema } = await import("@/server/services/crm-engine/commercial");
       const state = salesStateSchema.parse(deal.commercial);
-      if (deal.sellerStrategyId !== input.strategyId || state.mandate?.sellerId !== actor.id) throw new Error("Affaire hors mandat.");
+      if (deal.sellerStrategyId !== input.strategyId || state.mandate?.sellerId !== actor.id) throw new Error("Ce vendeur n’est pas autorisé à agir sur cette affaire.");
       if (!deal.paymentReference) return {status:"NOT_REQUESTED",nextAction:"Après accord reçu, utiliser sales_request_payment pour ce mandat."};
       const payment = await db.intakePayment.findUniqueOrThrow({ where: { reference: deal.paymentReference } });
       if (payment.status !== "PAID" || !payment.paidAt) return { status: payment.status, dealId: deal.id };
@@ -213,7 +271,7 @@ export const tools: ToolDefinition[] = [
       const { salesStepSchema } = await import("@/server/services/crm-engine/commercial");
       return salesDecisionResult(async()=>{
         const step=salesStepSchema.parse(input.step);
-        if (["MANDATE", "PAYMENT", "HANDOVER"].includes(step.command.type)) throw new TRPCError({code:"FORBIDDEN",message:"Décision réservée au mandant."});
+        if (["MANDATE", "PAYMENT", "HANDOVER"].includes(step.command.type)) throw new TRPCError({code:"FORBIDDEN",message:"Cette décision doit être prise par le propriétaire de la marque."});
         const {applySalesStep}=await import("@/server/services/crm-engine");
         return applySalesStep(deal.id,step,actor);
       },deal.id);
@@ -244,14 +302,14 @@ export const tools: ToolDefinition[] = [
   },
   {
     name: "sales_send_message",
-    description: "Répondre au client sur sa conversation web. La réponse est réellement visible dans le même dossier.",
-    inputSchema:z.object({strategyId:z.string(),dealId:z.string(),requestId:z.string().uuid(),text:z.string().trim().min(1).max(12000),channel:z.literal("WEB")}),
+    description: "Répondre au client sur sa conversation web. Pour un livrable payé, transmettre deliveryAvailable.deliveryActivityId et un texte sans URL : le serveur joint le lien approuvé, sans recopier son adresse.",
+    inputSchema:z.object({strategyId:z.string(),dealId:z.string(),requestId:z.string().uuid(),text:z.string().trim().min(1).max(12000),channel:z.literal("WEB"),deliveryActivityId:z.string().trim().min(1).max(200).optional()}),
     handler:async input=>{
       const actor=await commercialAgent(input);
       const deal=await db.deal.findUniqueOrThrow({where:{id:String(input.dealId)}});
       if(deal.sellerStrategyId!==input.strategyId)throw new Error("Affaire hors marque.");
       const {sendSalesWebMessage}=await import("@/server/services/crm-engine/customer");
-      return salesDecisionResult(()=>sendSalesWebMessage(deal.id,actor,{requestId:String(input.requestId),text:String(input.text)}),deal.id);
+      return salesDecisionResult(()=>sendSalesWebMessage(deal.id,actor,{requestId:String(input.requestId),text:String(input.text),deliveryActivityId:input.deliveryActivityId as string|undefined}),deal.id);
     },
   },
 
@@ -261,7 +319,7 @@ export const tools: ToolDefinition[] = [
     handler:async input=>{
       const actor=await commercialAgent(input);const deal=await db.deal.findUniqueOrThrow({where:{id:String(input.dealId)}});
       const {salesStateSchema}=await import("@/server/services/crm-engine/commercial");const state=salesStateSchema.parse(deal.commercial??{});
-      if(deal.sellerStrategyId!==input.strategyId||state.mandate?.sellerId!==actor.id||!state.mandate.channels.includes("WEB")||state.contactStopped||new Date(state.mandate.expiresAt)<=new Date())throw new Error("Lien client hors mandat.");
+      if(deal.sellerStrategyId!==input.strategyId||state.mandate?.sellerId!==actor.id||!state.mandate.channels.includes("WEB")||state.contactStopped||new Date(state.mandate.expiresAt)<=new Date())throw new Error("Les conditions de vente actuelles ne permettent pas d’ouvrir cette conversation client.");
       const {issueCustomerAccess}=await import("@/server/services/crm-engine/customer");return salesDecisionResult(()=>issueCustomerAccess(deal.id,actor),deal.id);
     },
   },

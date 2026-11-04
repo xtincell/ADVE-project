@@ -1327,6 +1327,15 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
         <ActionDatabasePanel strategyId={strategyId} canWrite={canWriteCalendar} canSync={canSyncActions} />
       ) : null}
 
+      {config.pillarKey === "v" && canOperate && strategyId && <section aria-label="Préparer la vente" className="space-y-3 rounded-xl border border-border bg-background p-4">
+        <h2 className="font-medium">Préparer les offres de vos vendeurs</h2>
+        <p className="max-w-3xl text-sm text-foreground-muted">Transformez le catalogue de cette marque en offres que vos vendeurs peuvent présenter. Définissez les tarifs et les conditions autorisées, ou préparez le dossier de l’offre avec le générateur existant.</p>
+        <div className="flex flex-wrap gap-3">
+          <Link className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" href={`/console/socle/pipeline?strategy=${encodeURIComponent(strategyId)}`}>Préparer les offres des vendeurs</Link>
+          <Link className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border px-4 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" href={`/console/artemis/skill-tree?strategy=${encodeURIComponent(strategyId)}&sequence=OFFRE-V#sequence-OFFRE-V`}>Générer l’offre commerciale</Link>
+        </div>
+      </section>}
+
       {/* ── Field body — bespoke renderer (design handoff) ou grille générique ── */}
       {Bespoke ? (
         <Bespoke content={content} certainty={pillarCertainty} />

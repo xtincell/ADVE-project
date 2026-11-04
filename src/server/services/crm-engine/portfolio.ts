@@ -1,3 +1,4 @@
+import { assertSalesCatalogueOfferIn } from "./offer-source";
 /** Owner-authorized cohorts reuse Deal, frozen mandates, the journal and bounded sales jobs. */
 import { createHash } from "node:crypto";
 import { TRPCError } from "@trpc/server";
@@ -18,7 +19,7 @@ const receiptType = "SALES_PORTFOLIO_AUTHORIZED";
 const digest = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const receiptId = (requestId: string) => `sales-portfolio:${requestId}`;
 const phone = (value?: string | null) => value?.replace(/[^\d+]/g, "") ?? "";
-const conflict = () => new TRPCError({ code: "CONFLICT", message: "Cette autorisation ou identité d’origine a déjà été utilisée pour un autre portefeuille. Relire les autorisations existantes." });
+const conflict = () => new TRPCError({ code: "CONFLICT", message: "Cette demande a déjà servi pour un autre groupe de contacts. Consultez les autorisations existantes avant de recommencer." });
 
 interface PersistedAuthorization {
   fingerprint: string;
@@ -62,7 +63,7 @@ export async function listAuthorizedSalesPortfolios(actor: FleetActor, input: { 
 }
 
 /** Internal principal check shares the selling team; finance is always a real User. */
-async function assertPrincipal(tx: Tx, id: string, brand: { id: string; userId: string; operatorId: string | null }, allowAgent: boolean) {
+export async function assertSalesPrincipalIn(tx: Tx, id: string, brand: { id: string; userId: string; operatorId: string | null }, allowAgent: boolean) {
   if (allowAgent && id.startsWith("mcp:")) {
     const key = await tx.mcpApiKey.findUnique({ where: { id: id.slice(4) } });
     const holder = await tx.salesRepresentative.findUnique({ where: { mcpKeyId: id.slice(4) } });
@@ -72,8 +73,10 @@ async function assertPrincipal(tx: Tx, id: string, brand: { id: string; userId: 
     const user = await tx.user.findUnique({ where: { id }, select: { id: true, role: true, operatorId: true } });
     if (user && (user.id === brand.userId || (brand.operatorId && user.operatorId === brand.operatorId))) return;
   }
-  throw new TRPCError({ code: "FORBIDDEN", message: allowAgent ? "Responsable de livraison hors de l’équipe vendeuse." : "Le rapprochement doit être confié à un membre humain de la marque." });
+  throw new TRPCError({ code: "FORBIDDEN", message: allowAgent ? "Responsable de livraison hors de l’équipe vendeuse." : "La vérification des paiements doit être confiée à une personne de l’équipe de cette marque." });
 }
+
+export { assertSalesCatalogueOfferIn } from "./offer-source";
 
 export async function authorizeSalesPortfolio(actor: FleetActor, raw: AuthorizeSalesPortfolioInput, intentId: string): Promise<AuthorizedSalesPortfolio> {
   const parsed = authorizeSalesPortfolioInput.parse(raw);
@@ -99,42 +102,29 @@ export async function authorizeSalesPortfolio(actor: FleetActor, raw: AuthorizeS
         const emission = await tx.intentEmission.findUnique({ where: { id: intentId }, select: { strategyId: true, caller: true, payload: true } });
         if (!emission || emission.strategyId !== brand.id || emission.caller !== "crm:authorizeSalesPortfolio" ||
             (emission.payload as { requestId?: string } | null)?.requestId !== input.requestId) {
-          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’autorisation doit traverser la commande gouvernée de cette marque." });
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Autorisez ces contacts depuis le poste commercial de la marque." });
         }
         const replay = await existingReceipt(tx);
         if (replay) return replay;
         const now = new Date();
-        if (new Date(input.mandate.expiresAt) <= now) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le mandat doit être en vigueur." });
+        if (new Date(input.mandate.expiresAt) <= now) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Les conditions de vente doivent être encore valables." });
         const profile = await tx.salesRepresentative.findUniqueOrThrow({ where: { id: input.representativeId } });
         if (profile.strategyId !== brand.id || profile.status !== "ACTIVE") throw new TRPCError({ code: "FORBIDDEN", message: "Choisir un vendeur actif de cette marque." });
         const sellerId = profile.mode === "AI" ? `mcp:${profile.mcpKeyId}` : profile.humanUserId;
         if (!sellerId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’identité du vendeur doit être prête." });
-        await assertPrincipal(tx, sellerId, brand, true);
-        await assertPrincipal(tx, input.mandate.deliveryOwnerId, brand, true);
-        await assertPrincipal(tx, input.mandate.collection.financeOwnerId, brand, false);
+        await assertSalesPrincipalIn(tx, sellerId, brand, true);
+        await assertSalesPrincipalIn(tx, input.mandate.deliveryOwnerId, brand, true);
+        await assertSalesPrincipalIn(tx, input.mandate.collection.financeOwnerId, brand, false);
         if (profile.mode === "AI" && profile.mcpKeyId) {
-          const key = await tx.mcpApiKey.findUniqueOrThrow({ where: { id: profile.mcpKeyId } });
-          const permissions = key.permissions as { managedBy?: unknown; allowedTools?: unknown } | null;
-          if (permissions?.managedBy === "sales-fleet") {
-            if (!Array.isArray(permissions.allowedTools) || !permissions.allowedTools.every(tool => typeof tool === "string")) {
-              throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Les permissions bornées du vendeur doivent être rétablies avant autorisation." });
-            }
-            if (!permissions.allowedTools.includes("operations.sales_request_payment")) {
-              await tx.mcpApiKey.update({ where: { id: key.id }, data: {
-                permissions: { ...permissions, allowedTools: [...permissions.allowedTools, "operations.sales_request_payment"] } as Prisma.InputJsonObject,
-              } });
-            }
-          }
+          const { ensureSalesOfferToolsIn } = await import("./fleet");
+          await ensureSalesOfferToolsIn(tx, profile.mcpKeyId);
         }
-        const pillar = await tx.pillar.findUnique({ where: { strategyId_key: { strategyId: brand.id, key: "v" } } });
-        const catalogue = (pillar?.content as { produitsCatalogue?: Array<{ id?: string; nom?: string }> } | null)?.produitsCatalogue ?? [];
-        if (!catalogue.some(product => product.id === input.mandate.offerId && product.nom === input.mandate.offerName)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’offre doit appartenir au catalogue de la marque vendeuse." });
-        if (String(pillar?.currentVersion) !== input.mandate.offerVersion) throw new TRPCError({ code: "CONFLICT", message: "La version de l’offre a changé. Relire les conditions avant autorisation." });
+        await assertSalesCatalogueOfferIn(tx, brand.id, input.mandate);
         const stopped = await tx.deal.findMany({ where: { sellerStrategyId: brand.id, commercial: { path: ["contactStopped"], equals: true } }, select: { contactEmail: true, contactPhone: true } });
         if (input.members.some(member => stopped.some(old =>
           (member.contactEmail && old.contactEmail?.toLowerCase() === member.contactEmail.toLowerCase()) ||
           (member.contactPhone && phone(old.contactPhone) === phone(member.contactPhone))))) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Un destinataire de cette cohorte a demandé l’arrêt des contacts pour cette marque." });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Une des personnes sélectionnées a demandé à ne plus être contactée par cette marque." });
         }
         const common = { ...input.mandate, sellerId, portfolioAuthorizationId: input.requestId,
           collection: { ...input.mandate.collection, attestedBy: actor.id, attestedAt: now.toISOString() } };
@@ -144,7 +134,7 @@ export async function authorizeSalesPortfolio(actor: FleetActor, raw: AuthorizeS
           const dealId = `sales-origin-${digest([brand.id, input.source.reference, member.originKey])}`;
           await createDealIn(tx, { id: dealId, contactName: member.contactName, companyName: member.companyName,
             contactEmail: member.contactEmail, contactPhone: member.contactPhone, operatorId: brand.operatorId ?? undefined,
-            sellerStrategyId: brand.id, value: common.amount, currency: common.currency, source: "AUTHORIZED_PORTFOLIO",
+            sellerStrategyId: brand.id, value: common.pricingRule ? undefined : common.amount, currency: common.currency, source: "AUTHORIZED_PORTFOLIO",
             performedBy: actor.id, creationDescription: `Affaire autorisée : ${member.companyName}`,
             creationMetadata: { portfolioAuthorizationId: input.requestId, portfolioMemberId: member.originKey, intentId, source: input.source, market: input.market } });
           const mandate = { ...common, portfolioMemberId: member.originKey };

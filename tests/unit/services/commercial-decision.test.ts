@@ -60,8 +60,8 @@ describe("commercial decision boundaries", () => {
   it("does not invent a cadence, owner permission or a customer appointment", () => {
     const initial = salesStateSchema.parse({ mandate });
     const plan = { type: "PLAN_NEXT_ACTION" as const, action: "Relire le besoin", nextDeadline: "2026-11-05T12:00:00.000Z", purpose: "FOLLOW_UP" as const };
-    expect(() => advanceSale(initial, step({ ...plan, basis: "APPROVED_CADENCE" }), actor, now)).toThrow("cadence");
-    expect(() => advanceSale(initial, step({ ...plan, basis: "OWNER" }), actor, now)).toThrow("mandant");
+    expect(() => advanceSale(initial, step({ ...plan, basis: "APPROVED_CADENCE" }), actor, now)).toThrow("calendrier de relance");
+    expect(() => advanceSale(initial, step({ ...plan, basis: "OWNER" }), actor, now)).toThrow("propriétaire de la marque");
     expect(() => advanceSale(initial, step({ ...plan, basis: "CUSTOMER_REQUEST" }), actor, now)).toThrow("rendez-vous");
     const result = advanceSale(initial, step({ ...plan, basis: "OWNER" }), { ...actor, admin: true }, now);
     expect(result.nextDeadline).toBe(plan.nextDeadline);

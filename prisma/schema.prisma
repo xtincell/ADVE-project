@@ -7218,3 +7218,38 @@ model SalesRun {
   @@index([representativeId, status, createdAt])
   @@index([dealId])
 }
+
+/// Owner-approved inbound door; private mandate templates are never the public projection.
+model SalesPublicEntry {
+  id String @id @default(cuid())
+  strategyId String @unique
+  publicId String @unique
+  representativeId String
+  enabled Boolean @default(false)
+  revision Int @default(1)
+  authorizedBy String
+  intentId String
+  config Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sessions SalesPublicSession[]
+  @@index([representativeId])
+}
+
+/// Idempotency and quota receipt for one anonymous inbound conversation.
+model SalesPublicSession {
+  id String @id @default(cuid())
+  entryId String
+  entry SalesPublicEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  requestId String
+  secretHash String
+  fingerprint String
+  dealId String @unique
+  approvedOffers Json @default("[]")
+  ipHash String?
+  createdAt DateTime @default(now())
+  @@unique([entryId, requestId])
+  @@unique([entryId, secretHash])
+  @@index([entryId, createdAt])
+  @@index([entryId, ipHash, createdAt])
+}

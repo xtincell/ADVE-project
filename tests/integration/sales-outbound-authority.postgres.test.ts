@@ -58,7 +58,7 @@ describe("atomic outbound business authority in PostgreSQL", () => {
     const ids = rows.map(() => randomUUID());
     const results = await Promise.allSettled(rows.map((row, index) => send(row.id, undefined, ids[index]!)));
     expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
-    expect(results.filter(result => result.status === "rejected").map(result => String((result as PromiseRejectedResult).reason))).toEqual(expect.arrayContaining([expect.stringContaining("Limite du portefeuille")]));
+    expect(results.filter(result => result.status === "rejected").map(result => String((result as PromiseRejectedResult).reason))).toEqual(expect.arrayContaining([expect.stringContaining("nombre d’envois autorisés")]));
     const receipts = await db.cRMActivity.findMany({ where: { dealId: { in: rows.map(row => row.id) } } }); expect(receipts).toHaveLength(1);
     const receipt = receipts[0]!; const replay = await send(receipt.dealId, undefined, receipt.id);
     expect(replay.replay).toBe(true); expect(replay.receipt.id).toBe(receipt.id);
@@ -112,7 +112,7 @@ describe("atomic outbound business authority in PostgreSQL", () => {
     const next = await deal(b.id, { state: { node: "DISCOVERY", mandate: { ...approved, portfolioMemberId: randomUUID() } } });
     const receipt = await sent(earlier.id, new Date(Date.now() - 2 * DAY));
     await db.cRMActivity.update({ where: { id: receipt.id }, data: { metadata: { proactive: true, confirmedAt: new Date(Date.now() - HOUR).toISOString() } } });
-    await expect(send(next.id)).rejects.toThrow("Limite du portefeuille");
+    await expect(send(next.id)).rejects.toThrow("nombre d’envois autorisés");
     expect(await db.cRMActivity.count({ where: { dealId: next.id } })).toBe(0);
   });
   it("rejects an AI run after its date is replaced and prevents a value review from sending to a customer", async () => {
@@ -134,13 +134,13 @@ describe("atomic outbound business authority in PostgreSQL", () => {
     const old = await deal(b.id, { email }), next = await deal(b.id, { email });
     for (const activityType of ["SALES_EMAIL_PENDING", "SALES_EMAIL_UNCERTAIN"]) {
       const receipt = await db.cRMActivity.create({ data: { dealId: old.id, activityType, description: "Synthetic unresolved send" } });
-      await expect(send(next.id)).rejects.toThrow("réconciliation");
+      await expect(send(next.id)).rejects.toThrow("tentative précédente");
       await db.cRMActivity.delete({ where: { id: receipt.id } });
     }
     const profile = await fleet.saveSalesRepresentative(owner, { strategyId: b.id, name: "Synthetic human holder", mode: "HUMAN", humanUserId: owner.id });
     await fleet.setSalesRepresentativeStatus(owner, profile.id, "ACTIVE");
     await db.salesRun.create({ data: { representativeId: profile.id, dealId: old.id, requestId: randomUUID(), instruction: "Unresolved synthetic run", status: "AMBIGUOUS" } });
-    await expect(send(next.id)).rejects.toThrow("réconciliation");
+    await expect(send(next.id)).rejects.toThrow("tentative précédente");
     expect(await db.cRMActivity.count({ where: { dealId: next.id } })).toBe(0);
   });
   it("allows an active human using the STI to follow the approved due date without fabricating an AI lease, and refuses a future date", async () => {

@@ -1,3 +1,22 @@
+## v6.27.543 — feat(vente): contacter une marque et poursuivre la vente (2026-11-04)
+
+PR de livraison : #1133.
+
+- Offre → vendeur : règles de prix approuvées, tarification locale existante et devis Glory reliés au même dossier. Préparation, présentation, accord, paiement et livraison restent distincts et conservent leurs conditions.
+- Les deux calculateurs manquants de l’offre commerciale sont rétablis ; le devis structuré rejoint sa mise en page. Le propriétaire retrouve ces actions depuis Offre avec la marque sélectionnée.
+- Le client peut ouvrir sa proposition et confirmer exactement celle-ci. Reprise identique et concurrence ne multiplient pas les devis ; un ancien accord ne valide pas une proposition nouvellement préparée.
+- Le devis reprend le nom déclaré par le client ; un vendeur IA doit citer le message qui le contient. Le document est aussi téléchargeable en Markdown. Un contact WhatsApp approuvé pour chaque marque permet au client de solliciter une personne, avec ou sans proposition.
+- Après paiement vérifié, le document approuvé est accessible depuis la fiche client. Le vendeur peut le joindre par sa référence ; le serveur conserve l’URL exacte et refuse un lien de livraison altéré. La confirmation du client reste nécessaire à la clôture.
+
+Un nouveau client peut écrire à une marque sans compte, retrouver son vendeur et poursuivre le même échange jusqu’au paiement et à la livraison.
+
+- Le mode « Répondre aux questions » ouvre le dialogue lorsque les prestations ou tarifs restent à confirmer. Aucun prix, accord, paiement ou chiffre d’affaires n’en est déduit.
+- Le responsable publie un lien permanent et choisit le vendeur, les offres, les conditions et le nombre de nouveaux échanges accepté. Le visiteur n’a pas à connaître une offre pour commencer.
+- Le vendeur retient une offre autorisée avant de la proposer. Les conditions engagées restent conservées ; paiement, accord et livraison utilisent les règles de vente existantes.
+- L’accueil et la conversation conservent le nom public de la marque, expliquent l’attente et permettent de reprendre après une réponse incertaine. Les textes des écrans de vente emploient le vocabulaire des vendeurs et des clients.
+- Deux tables et deux migrations additives portent cette entrée ; aucun contenu ADVE ou Oracle n’est réécrit. Les appels du vendeur reprennent le gestionnaire existant, avec seulement les informations utiles à l’étape en cours.
+- Vérifications locales, publication et essai complet du vendeur suivis dans ADR-0238. Une vérification technique ou un échange fictif ne constitue pas une vente réelle.
+
 ## v6.27.541 — fix(oracle): réactualiser le document depuis son état enregistré (2026-11-03)
 
 - PR de livraison réelle : #1130. La dette540 distingue désormais sa réception technique datée et la mesure terrain encore ouverte.

@@ -8,7 +8,7 @@
 import { TRPCError } from "@trpc/server";
 import { createHash } from "node:crypto";
 import type { Prisma } from "@prisma/client";
-import { advanceSale, salesStateSchema, saleStage, type SalesStep, type SalesActor } from "./commercial";
+import { advanceSale, selectApprovedSalesOffer, salesStateSchema, saleStage, type SalesStep, type SalesActor } from "./commercial";
 import { db } from "@/lib/db";
 import { scopeStrategies } from "@/server/services/operator-isolation";
 
@@ -692,11 +692,14 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
             (message.contact?.strategyId !== deal.sellerStrategyId || !deal.contactEmail || message.contact?.email.toLowerCase() !== deal.contactEmail.toLowerCase()))) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’agent doit référencer une réponse reçue de cet acheteur pour cette marque." });
       }
+      if (previous.proposal && (!previous.proposal.presentedAt || message.createdAt < new Date(previous.proposal.presentedAt))) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’accord doit être reçu après la présentation de cette proposition au client." });
+      }
     }
     if(previous.mandate?.collection && ["PAYMENT","DELIVER"].includes(command.type)) {
       const payment=deal.paymentReference?await tx.intakePayment.findUnique({where:{reference:deal.paymentReference}}):null;
       const {paymentMajorAmount}=await import("./payments");
-      if(!payment||payment.tierKey!=="SALES_COLLECTION"||payment.intakeToken!==`sales-deal:${deal.id}`||payment.status!=="PAID"||!payment.paidAt||paymentMajorAmount(payment)!==previous.mandate.amount||payment.currency!==previous.mandate.currency)throw new TRPCError({code:"PRECONDITION_FAILED",message:"Le règlement individuel doit être rapproché par la finance avant cette étape."});
+      if(!payment||payment.tierKey!=="SALES_COLLECTION"||payment.intakeToken!==`sales-deal:${deal.id}`||payment.status!=="PAID"||!payment.paidAt||paymentMajorAmount(payment)!==previous.mandate.amount||payment.currency!==previous.mandate.currency)throw new TRPCError({code:"PRECONDITION_FAILED",message:"La personne chargée des paiements doit vérifier celui de cette affaire avant de continuer."});
     }
     if(actor.id.startsWith("mcp:") && command.type === "DELIVER") {
       const message=command.customerMessageId?await tx.crmMessage.findUnique({where:{id:command.customerMessageId},include:{contact:{select:{strategyId:true,email:true}}}}):null;
@@ -706,17 +709,23 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
     }
     let next;
     try {
-      next = advanceSale(previous, step, actor, new Date());
+      if (command.type === "SELECT_OFFER") {
+        const { resolvePublicSalesOfferIn } = await import("./public-offer-selection");
+        next = selectApprovedSalesOffer(previous, await resolvePublicSalesOfferIn(tx, deal, previous, command.offerId, actor), actor, new Date());
+      } else next = advanceSale(previous, step, actor, new Date());
     } catch (error) {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: (error as Error).message });
     }
     const stage = saleStage(next);
+    if (next.node === "PROPOSAL" && previous.node !== "PROPOSAL" && next.proposal && !next.proposal.presentedAt) {
+      next = { ...next, proposal: { ...next.proposal, presentedAt: new Date().toISOString() } };
+    }
     const changed = await tx.deal.updateMany({
       where: { id: dealId, revision: step.expectedRevision },
       data: {
         commercial: JSON.parse(JSON.stringify(next)), paymentReference: next.mandate?.intakePaymentReference ?? deal.paymentReference, stage, revision: { increment: 1 },
         wonAt: stage === "WON" ? (deal.wonAt ?? new Date()) : deal.wonAt,
-        value: ["PARTNER", "AUDIENCE"].includes(next.node) ? 0 : (next.mandate?.amount ?? deal.value),
+        value: next.mandate?.informationOnly || ["PARTNER", "AUDIENCE"].includes(next.node) ? 0 : next.mandate?.pricingRule && !next.proposal ? null : (next.mandate?.amount ?? deal.value),
         currency: next.mandate?.currency ?? deal.currency,
       },
     });
@@ -743,7 +752,7 @@ export async function sendSalesEmail(dealId: string, actor: SalesActor, input: {
   if (!mandate || mandate.sellerId !== actor.id || !mandate.outboundEmailEnabled ||
       !mandate.channels.includes("EMAIL") || new Date(mandate.expiresAt) <= new Date() ||
       state.contactStopped || state.node === "STOPPED" || !deal.contactEmail || !deal.sellerStrategyId) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "L’envoi exige un destinataire et un mandat email actif." });
+    throw new TRPCError({ code: "FORBIDDEN", message: "Cet envoi exige une adresse de destination et l’autorisation de contacter le client par email." });
   }
   const fingerprint = createHash("sha256").update(JSON.stringify(input)).digest("hex");
   const {reserveSalesOutbound}=await import('./outbound-authority');

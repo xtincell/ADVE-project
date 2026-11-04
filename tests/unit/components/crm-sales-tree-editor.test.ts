@@ -15,15 +15,15 @@ describe("sales tree authoring", () => {
   it("keeps the standard path until the manager chooses to author a brand-specific tree", () => {
     const { container } = render(React.createElement(CrmSalesTreeEditor));
     expect(readTree(container)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Personnaliser le parcours de vente" }));
+    fireEvent.click(screen.getByRole("button", { name: "Adapter les questions de vente" }));
     expect(readTree(container)?.nodes).toHaveLength(8);
     expect(container.querySelector('textarea[name="tree"]')).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Utiliser le parcours standard" }));
+    fireEvent.click(screen.getByRole("button", { name: "Utiliser les questions habituelles" }));
     expect(readTree(container)).toBeNull();
   });
   it("turns the manager's edited questions into an executable approval path while keeping partner and audience outside the sale", () => {
     const { container } = render(React.createElement(CrmSalesTreeEditor));
-    fireEvent.click(screen.getByRole("button", { name: "Personnaliser le parcours de vente" }));
+    fireEvent.click(screen.getByRole("button", { name: "Adapter les questions de vente" }));
     fireEvent.change(screen.getByLabelText("Question ou action du vendeur"), { target: { value: "Quel public votre restaurant veut-il attirer ?" } });
     const tree = readTree(container)!;
     expect(tree.nodes[0]?.prompt).toBe("Quel public votre restaurant veut-il attirer ?");

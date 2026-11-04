@@ -28,22 +28,22 @@ describe("sales payment supervision", () => {
     calls.list.mockReturnValue({ data: [{ ...request, canReconcile: false }], isLoading: false, error: null });
     render(React.createElement(CrmSalesPayment, props));
     expect(screen.getByText("vente-unique")).toBeTruthy();
-    expect(screen.queryByText("Rapprocher un règlement reçu")).toBeNull(); expect(calls.reconcile).not.toHaveBeenCalled();
-    expect(screen.getByText("Le responsable financier désigné effectue le rapprochement.")).toBeTruthy();
+    expect(screen.queryByText("Vérifier un paiement reçu")).toBeNull(); expect(calls.reconcile).not.toHaveBeenCalled();
+    expect(screen.getByText("La personne désignée doit vérifier le paiement.")).toBeTruthy();
   });
   it("submits the independently entered amount in major units and waits for the server's financial state", async () => {
     const { container } = render(React.createElement(CrmSalesPayment, props)); fillProof(container);
-    fireEvent.submit(container.querySelector('form[aria-label="Rapprocher un règlement reçu"]')!);
+    fireEvent.submit(container.querySelector('form[aria-label="Vérifier un paiement reçu"]')!);
     await waitFor(() => expect(calls.invalidate).toHaveBeenCalledOnce());
     expect(calls.reconcile.mock.calls[0]![0]).toMatchObject({ dealId: "owned-deal", observedAmount: 60000, currency: "XOF", externalReference: "RELEVE-2026-11-02-12", evidence: "Montant et devise vérifiés sur le relevé indépendant de la banque." });
-    expect(screen.queryByText("Règlement rapproché")).toBeNull(); expect(screen.getByText("En attente de rapprochement financier")).toBeTruthy();
+    expect(screen.queryByText("Paiement vérifié")).toBeNull(); expect(screen.getByText("Paiement à vérifier")).toBeTruthy();
   });
   it("reuses the exact reconciliation receipt after an interrupted response", async () => {
     calls.reconcile.mockRejectedValueOnce(new Error("Résultat inconnu")).mockResolvedValueOnce(request);
     const { container } = render(React.createElement(CrmSalesPayment, props)); fillProof(container);
-    const form = container.querySelector('form[aria-label="Rapprocher un règlement reçu"]')!;
+    const form = container.querySelector('form[aria-label="Vérifier un paiement reçu"]')!;
     fireEvent.submit(form);
-    await waitFor(() => expect(container.textContent).toContain("Vérifier ce rapprochement"));
+    await waitFor(() => expect(container.textContent).toContain("Vérifier ce paiement"));
     expect(container.querySelector("fieldset")!.disabled).toBe(true);
     fireEvent.submit(form);
     await waitFor(() => expect(calls.invalidate).toHaveBeenCalledOnce());
@@ -52,9 +52,9 @@ describe("sales payment supervision", () => {
   it("keeps the same receipt when reconciliation succeeds but refreshing the page data fails", async () => {
     calls.invalidate.mockRejectedValueOnce(new Error("Actualisation interrompue")).mockResolvedValueOnce(undefined);
     const { container } = render(React.createElement(CrmSalesPayment, props)); fillProof(container);
-    const form = container.querySelector('form[aria-label="Rapprocher un règlement reçu"]')!;
+    const form = container.querySelector('form[aria-label="Vérifier un paiement reçu"]')!;
     fireEvent.submit(form);
-    await waitFor(() => expect(container.textContent).toContain("Vérifier ce rapprochement"));
+    await waitFor(() => expect(container.textContent).toContain("Vérifier ce paiement"));
     fireEvent.submit(form);
     await waitFor(() => expect(calls.invalidate).toHaveBeenCalledTimes(2));
     expect(calls.reconcile.mock.calls[1]![0]).toEqual(calls.reconcile.mock.calls[0]![0]);
