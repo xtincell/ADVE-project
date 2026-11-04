@@ -11,6 +11,7 @@ import * as gloryTools from "@/server/services/glory-tools";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { parseLaunchTimeline, parseContentCalendar, parseSocialNaming, parseSocialCopy, deriveDatedPosts, brandVoiceFromPillarD } from "@/lib/types/launch-calendar";
 import { estimateSequenceCost } from "@/server/services/artemis/tools/sequence-cost";
+import { ACTIVE_CALENDAR_TOOL, HISTORICAL_CALENDAR_TOOL, CALENDAR_TOOLS } from "@/domain/calendar-editions";
 /* lafusee:governed-active */
 
 export const gloryRouter = createTRPCRouter({
@@ -456,7 +457,7 @@ export const gloryRouter = createTRPCRouter({
   //    per-platform social copy) consumed by both the launch-calendar surface
   //    and the operational deliverables hub. Pure read, tenant-scoped via ctx.db.
   launchCalendar: protectedProcedure
-    .input(z.object({ strategyId: z.string().min(1) }))
+    .input(z.object({ strategyId: z.string().min(1), editionId:z.string().min(1).max(160).optional() }))
     .query(async ({ ctx, input }) => {
       // ADR-0129 - garde par-marque (owner / operateur / ADMIN / collaborateur delegue).
       {
@@ -472,18 +473,21 @@ export const gloryRouter = createTRPCRouter({
           toolSlug: {
             in: [
               "launch-timeline-planner",
-              "content-calendar-strategist",
+              ...CALENDAR_TOOLS,
               "naming-generator",
               "social-copy-engine",
             ],
           },
         },
         orderBy: { createdAt: "desc" },
-        select: { toolSlug: true, output: true, createdAt: true },
+        select: { id:true, toolSlug: true, output: true, createdAt: true },
       });
       const pick = (slug: string) => rows.find((r) => r.toolSlug === slug);
       const timelineRow = pick("launch-timeline-planner");
-      const calendarRow = pick("content-calendar-strategist");
+      const activeCalendar = pick(ACTIVE_CALENDAR_TOOL);
+      const editions = rows.filter(row=>CALENDAR_TOOLS.includes(row.toolSlug));
+      const calendarRow = input.editionId ? editions.find(row=>row.id===input.editionId) : activeCalendar;
+      if(input.editionId && !calendarRow)throw new TRPCError({code:"NOT_FOUND",message:"Cette édition n’est pas disponible pour cette marque."});
       const namingRow = pick("naming-generator");
       const socialRow = pick("social-copy-engine");
       const generatedAt = [timelineRow?.createdAt, calendarRow?.createdAt, namingRow?.createdAt, socialRow?.createdAt]
@@ -509,6 +513,9 @@ export const gloryRouter = createTRPCRouter({
       return {
         timeline,
         calendar,
+        activeCalendarId:activeCalendar?.id??null,
+        editions:editions.map(row=>({id:row.id,documentary:row.toolSlug===HISTORICAL_CALENDAR_TOOL,createdAt:row.createdAt.toISOString(),
+          label:row.output && typeof row.output==="object" && !Array.isArray(row.output) && typeof row.output.editionLabel==="string" ? row.output.editionLabel : null})),
         naming: parseSocialNaming(namingRow?.output ?? null),
         social: parseSocialCopy(socialRow?.output ?? null),
         brandVoice,

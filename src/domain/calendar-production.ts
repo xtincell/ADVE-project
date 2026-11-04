@@ -4,6 +4,7 @@ import { productionPins } from "./production-sources";
 
 export const calendarView = z.object({
   strategyId:z.string().trim().min(1),
+  editionId:z.string().trim().min(1).max(160).optional(),
   startDate:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v => !Number.isNaN(Date.parse(v)) && new Date(v).toISOString().slice(0,10)===v,"Date invalide.").optional(),
   weeks:z.number().int().min(1).max(12).optional(),
   projectDates:z.boolean().optional(),

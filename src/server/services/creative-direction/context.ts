@@ -1,3 +1,4 @@
+import { readCreativeDirectionEdition, type DirectionEdition } from "./document";
 import { db } from "@/lib/db";
 import { creativeDirectionDoctrine, rulesForProduction, type CreativeTarget } from "@/domain/creative-direction";
 import { wrapUntrusted } from "@/server/services/utils/untrusted-content";
@@ -14,18 +15,19 @@ function populatedFields(object: Record<string, unknown>, keys: string[]) {
 }
 
 /** Use D directly, even for older brands that have not imported a source-indexed doctrine. */
-export function compileCreativeDirection(content: unknown, version: number, target: CreativeTarget = {}) {
+export function compileCreativeDirection(content: unknown, version: number, target: CreativeTarget = {}, supplement?: DirectionEdition | null) {
   const d = record(content);
   const art = record(d.directionArtistique);
   const identity = populatedFields(art, ["univers", "principes", "chromaticStrategy", "typographySystem", "logoTypeRecommendation", "moodboard"]);
   const voice = populatedFields(d, ["tonDeVoix", "assetsLinguistiques"]);
-  const doc = art.doctrine ? creativeDirectionDoctrine.parse(art.doctrine) : undefined;
+  const doc = art.doctrine ? creativeDirectionDoctrine.parse(art.doctrine) : supplement?.doctrine;
   if (!doc && !Object.keys(identity).length) return null;
 
   const choice = doc ? rulesForProduction(doc, target) : null;
   const family = choice?.family;
   const context = {
-    source: doc ? "D.directionArtistique.doctrine" : "D.directionArtistique",
+    source: supplement ? "D.directionArtistique · complément documentaire" : doc ? "D.directionArtistique.doctrine" : "D.directionArtistique",
+    ...(supplement ? { documentEdition: supplement.receipt } : {}),
     version, platform: target.platform, format: choice?.format ?? target.format, mode: target.mode ?? "NEW",
     identity, voice,
     familyDecision: choice?.decision ?? "TO_CHOOSE",
@@ -46,7 +48,12 @@ export async function buildCreativeDirectionContext(input: { strategyId: string;
     where: { strategyId_key: { strategyId: input.strategyId, key: "d" } },
     select: { content: true, currentVersion: true },
   });
-  return pillar ? compileCreativeDirection(pillar.content, pillar.currentVersion, input.target) : null;
+  return pillar ? directionForPillar(input.strategyId, pillar, input.target) : null;
 }
 
-export const CREATIVE_DIRECTION_RULE = "Applique les invariants de la doctrine de marque dans leur périmètre. Justifie la famille par la tâche du public et les preuves disponibles. Une proposition est à vérifier. Distingue une référence culturelle, un élément autorisé à être incorporé et une interdiction. Conserve les décisions figées lors d’une correction. Un rendu reste à relire.";
+export async function directionForPillar(strategyId: string, pillar: {content: unknown; currentVersion: number}, target?: CreativeTarget) {
+  const supplement = await readCreativeDirectionEdition(strategyId, pillar.content);
+  return compileCreativeDirection(pillar.content, pillar.currentVersion, target, supplement);
+}
+
+export const CREATIVE_DIRECTION_RULE = "Applique les invariants de la doctrine de marque dans leur périmètre. Justifie la famille par la tâche du public et les preuves disponibles. Une proposition est à vérifier. Distingue une référence culturelle, un élément autorisé à être incorporé et une interdiction. Les choix explicites du pilier D priment sur son complément documentaire. Une édition PROPOSED est une piste. Si elle contredit le pilier, signale le point à relire avant tout rendu. Conserve les décisions figées lors d’une correction. Un rendu reste à relire.";

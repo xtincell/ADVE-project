@@ -23,11 +23,11 @@ function OptionSelect({ value, onChange, label }: { value: OptionCount; onChange
 }
 
 /** Each brief version is durably saved before dispatch. The browser shows the backend receipt for each option. */
-export function CalendarProduction({ strategyId, startDate, weeks, projectDates, renderPost, fallback }: {
-  strategyId: string; startDate: string; weeks: number; projectDates: boolean; fallback: ReactNode;
+export function CalendarProduction({ strategyId, editionId, startDate, weeks, projectDates, renderPost, fallback }: {
+  strategyId: string; editionId?:string; startDate: string; weeks: number; projectDates: boolean; fallback: ReactNode;
   renderPost: (post: ContentPost, actions: ReactNode) => ReactNode;
 }) {
-  const scope = { strategyId, startDate, weeks, projectDates };
+  const scope = { strategyId, editionId, startDate, weeks, projectDates };
   const calendar = trpc.deliverableOrchestrator.calendarProductionRows.useQuery(scope);
   const prepare = trpc.deliverableOrchestrator.prepareCalendarBriefs.useMutation();
   const produce = trpc.deliverableOrchestrator.produceCalendarBrief.useMutation();

@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 68 modules (src/domain, cœur métier pur)
+## Domain — 69 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
@@ -69,6 +69,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **brand-slug** — Format standard des `publicSlug` de marque (page publique `/b/[slug]`).
 - **brand-tier** — src/domain/brand-tier.ts — Layer 0. The single source of truth for the
 - **calendar-brief-source**
+- **calendar-editions**
 - **calendar-production**
 - **campaign-code** — Phase 18-A1-α (audit MATANGA V4) — auto-générateur `Campaign.code` aligné
 - **classification-coherence** — Domain helper — invariants APOGEE de cohérence Classification ↔ Superfans ↔ Cult Tier.

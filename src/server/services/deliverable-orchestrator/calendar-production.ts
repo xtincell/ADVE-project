@@ -12,6 +12,8 @@ import { productionPins, type ProductionPin } from "@/domain/production-pin";
 import { productionArtwork, type ProductionArtwork } from "@/domain/production-artwork";
 import { isUsableGeneration } from "@/domain/generation-result";
 
+import { ACTIVE_CALENDAR_TOOL, HISTORICAL_CALENDAR_TOOL, CALENDAR_TOOLS, calendarPosts, linkUniqueSourcePost } from "@/domain/calendar-editions";
+
 const FORMAT="calendar-post-brief/v1";
 const record=(v:unknown):Record<string,unknown>=>v && typeof v==="object" && !Array.isArray(v)?v as Record<string,unknown>:{};
 const fingerprint=(v:unknown)=>sourceFingerprint({rawData:v});
@@ -27,11 +29,12 @@ const treatments=[
 ] as const;
 export async function resolveCalendarView(view:CalendarView) {
   const {strategyId}=view;
-  const [strategy,output,timeline,d]=await Promise.all([
+  const [strategy,output,timeline,d,archives]=await Promise.all([
     db.strategy.findUnique({where:{id:strategyId},select:{status:true,operatorId:true}}),
-    db.gloryOutput.findFirst({where:{strategyId,toolSlug:"content-calendar-strategist"},orderBy:[{createdAt:"desc"},{id:"desc"}]}),
+    db.gloryOutput.findFirst({where:{strategyId,...(view.editionId ? {id:view.editionId,toolSlug:{in:CALENDAR_TOOLS}} : {toolSlug:ACTIVE_CALENDAR_TOOL})},orderBy:[{createdAt:"desc"},{id:"desc"}]}),
     db.gloryOutput.findFirst({where:{strategyId,toolSlug:"launch-timeline-planner"},orderBy:[{createdAt:"desc"},{id:"desc"}],select:{output:true}}),
     db.pillar.findUnique({where:{strategyId_key:{strategyId,key:"d"}},select:{content:true}}),
+    db.gloryOutput.findMany({where:{strategyId,toolSlug:HISTORICAL_CALENDAR_TOOL},select:{output:true}}),
   ]);
   if(!strategy || ["ARCHIVED","DELETED"].includes(strategy.status))throw new Error("Marque indisponible.");
   const calendar=output && isUsableGeneration(output.output) ? parseContentCalendar(output.output):null;
@@ -42,12 +45,15 @@ export async function resolveCalendarView(view:CalendarView) {
   const anchor=view.startDate ?? parseLaunchTimeline(timeline?.output)?.anchorJ1 ?? output.createdAt.toISOString().slice(0,10);
   const posts=shouldProject?deriveDatedPosts(calendar,anchor,view.weeks??4,brandVoiceFromPillarD(d?.content)):calendar.posts;
   const origin:Origin=shouldProject?"PROJECTED":"STORED";
+  const documentaryPosts = output.toolSlug===ACTIVE_CALENDAR_TOOL ? archives.flatMap(item=>calendarPosts(item.output)) : [];
   const lines=posts.map((post,index)=>{
     const fields=record(!shouldProject && raw[index]);
     const family=string(fields.creativeFamily) ?? string(fields.family);
     const action=string(fields.actionId) ?? string(fields.action);
-    const rawMaster=fields.productionArtwork;
-    const master={...(rawMaster===undefined?{}:{artwork:productionArtwork.parse(rawMaster)}),...(fields.productionSources===undefined?{}:{sourcePins:productionPins.parse(fields.productionSources)})};
+    const linked=!shouldProject && !fields.productionArtwork && !fields.productionSources ? linkUniqueSourcePost(raw,index,documentaryPosts) : null;
+    const rawMaster=fields.productionArtwork ?? linked?.productionArtwork;
+    const pins=fields.productionSources ?? linked?.productionSources;
+    const master={...(rawMaster===undefined?{}:{artwork:productionArtwork.parse(rawMaster)}),...(pins===undefined?{}:{sourcePins:productionPins.parse(pins)})};
     return {key:fingerprint({id:output.id,index,post,origin,family,action,...master}),post,family,action,origin,...master};
   });
   return {calendarVersion:fingerprint({id:output.id,hash:fingerprint(output.output),rows:lines.map(l=>l.key)}),sourceId:output.id,sourceUpdatedAt:output.updatedAt,brandOperatorId:strategy.operatorId,lines};
@@ -135,7 +141,7 @@ export async function prepareCalendarBriefRows(raw:CalendarPreparation,operatorI
             ...(parent?{previous:{assetId:parent.id,version:parent.version},correctionHistory:[...(Array.isArray(record(parent.content).correctionHistory)?record(parent.content).correctionHistory as string[]:[]),v.correction!.instruction]}:{}),
           };
           if(JSON.stringify(content).length>32000)throw new Error("Le brief dépasse la capacité du moteur. Affinez les règles de DA avant de le produire.");
-          const metadata={calendarVersion:c.calendarVersion,key,startDate:v.startDate??null,weeks:v.weeks??4,projectDates:v.projectDates===true,directionHash,mode:target.mode,preparedByUserId:operatorId};
+          const metadata={calendarVersion:c.calendarVersion,key,editionId:v.editionId??null,startDate:v.startDate??null,weeks:v.weeks??4,projectDates:v.projectDates===true,directionHash,mode:target.mode,preparedByUserId:operatorId};
           const asset=await createBrandAsset({strategyId:v.strategyId,operatorId:c.brandOperatorId??null,name:(line.post.theme??line.post.angle??"Publication")+" · "+line.post.platform+" · piste "+(index+1),format:FORMAT,kind:"CREATIVE_BRIEF",content,state:"CANDIDATE",
             batchId,batchSize:parent?.batchSize??v.optionsPerPost,batchIndex:index,sourceGloryOutputId:c.sourceId!,sourceIntentId:intentId,metadata},tx);
           const next=parent?await tx.brandAsset.update({where:{id:asset.id},data:{version:parent.version+1,parentBrandAssetId:parent.id}}):asset;
@@ -161,7 +167,7 @@ export async function readCalendarBriefSource(strategyId:string,id:string,versio
   });
   if(!sealed || !Array.isArray(command.postKeys)||!command.postKeys.includes(m.key)||command.calendarVersion!==m.calendarVersion)
     throw new Error("Le brief n’a pas de reçu de préparation correspondant à la ligne du planning.");
-  const c=await resolveCalendarView({strategyId,startDate:string(m.startDate)??undefined,weeks:Number(m.weeks)||4,projectDates:m.projectDates===true});
+  const c=await resolveCalendarView({strategyId,editionId:string(m.editionId)??undefined,startDate:string(m.startDate)??undefined,weeks:Number(m.weeks)||4,projectDates:m.projectDates===true});
   const line=c.lines.find(l=>l.key===m.key);
   if(!line||c.calendarVersion!==m.calendarVersion)throw new Error("Le calendrier a changé : relisez la ligne avant génération.");
   const {platform,format,theme,angle}=line.post;

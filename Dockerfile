@@ -40,6 +40,7 @@ COPY . .
 # worker de build pour tenir dans la RAM du serveur.
 ENV NODE_OPTIONS="--max-old-space-size=6144"
 RUN npm run build
+RUN ./node_modules/.bin/esbuild scripts/release/import-spawt-editorial-october.ts --bundle --platform=node --packages=external --format=cjs --outfile=import-editorial-calendar.cjs
 RUN ./node_modules/.bin/esbuild scripts/freeze-public-brands.ts --bundle --platform=node --packages=external --format=cjs --outfile=public-brand-migration.cjs
 
 # ── runner ───────────────────────────────────────────────────────────────────
@@ -94,6 +95,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/zod ./node_modules/z
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/apply-migrations.mjs ./scripts/apply-migrations.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
+COPY --from=builder --chown=nextjs:nodejs /app/import-editorial-calendar.cjs ./scripts/import-editorial-calendar.cjs
 COPY --from=builder --chown=nextjs:nodejs /app/public-brand-migration.cjs ./public-brand-migration.cjs
 RUN chmod +x ./scripts/docker-entrypoint.sh
 

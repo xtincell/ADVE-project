@@ -19,7 +19,7 @@ import { EXTENDED_GLORY_TOOLS, getGloryTool, getBrandPipelineDependencyOrder, ty
 import { checkPaidTier, tierGateDenied } from "@/server/services/glory-tools/tier-gate";
 import { invokeExternalTool as anubisInvokeExternalTool } from "@/server/services/anubis/mcp-client";
 import { hasGloryComposer, composeGloryDeterministic } from "./glory-composers";
-import { compileCreativeDirection, CREATIVE_DIRECTION_RULE } from "@/server/services/creative-direction/context";
+import { directionForPillar, CREATIVE_DIRECTION_RULE } from "@/server/services/creative-direction/context";
 import type { CreativeTarget } from "@/domain/creative-direction";
 import { PRODUCTION_SOURCE_RULE } from "@/server/services/deliverable-orchestrator/production-prompt";
 import { reportRefusedWrite } from "../../pillar-gateway/refusal";
@@ -106,7 +106,7 @@ async function loadStrategyContext(strategyId: string, target?: CreativeTarget):
   }
   lines.push("--- FIN CONTEXTE ---");
   const d = target ? strategy.pillars.find(p=>p.key.toLowerCase()==="d") : undefined;
-  const direction = d ? compileCreativeDirection(d.content,d.currentVersion,target)?.text : undefined;
+  const direction = d ? (await directionForPillar(strategyId,d,target))?.text : undefined;
   return {summary:lines.join("\n"),direction:direction ?? ""};
 }
 

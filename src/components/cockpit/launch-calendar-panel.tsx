@@ -85,8 +85,10 @@ function todayISO(): string {
 
 export function LaunchCalendarPanel() {
   const strategyId = useCurrentStrategyId();
+  const [chosenEdition,setChosenEdition]=useState<{strategyId:string;id:string}|null>(null);
+  const editionId=chosenEdition?.strategyId===strategyId ? chosenEdition?.id : undefined;
   const query = trpc.glory.launchCalendar.useQuery(
-    { strategyId: strategyId ?? "" },
+    { strategyId: strategyId ?? "", editionId },
     { enabled: !!strategyId },
   );
   const utils = trpc.useUtils();
@@ -140,10 +142,21 @@ export function LaunchCalendarPanel() {
         </p>
       </header>
 
+      {data && data.editions.length>1 && <label className="mb-6 flex flex-wrap items-center gap-3 text-sm">
+        Édition du planning
+        <select className="rounded border border-border bg-background p-2" value={editionId??data.activeCalendarId??""} onChange={e=>{
+          setChosenEdition(e.target.value===data.activeCalendarId ? null : {strategyId,id:e.target.value});setProjectDates(false);
+        }}>
+          {data.editions.map(item=><option key={item.id} value={item.id}>
+            {item.id===data.activeCalendarId?"Planning actif":"Édition précédente"} · {item.label??new Date(item.createdAt).toLocaleDateString(LOCALE)}
+          </option>)}
+        </select>
+      </label>}
       {query.isLoading ? <SkeletonPage /> : null}
+      {query.isError && <p role="alert">Impossible de lire cette édition. <button type="button" className="underline" onClick={()=>setChosenEdition(null)}>Revenir au planning actif</button></p>}
 
       {/* ═══ J-0 + armement des publications ══════════════════════ */}
-      {calendar && !isEmpty ? (
+      {calendar && !isEmpty && !editionId ? (
         <div className="mb-10 rounded-xl border border-accent/25 bg-accent/[0.04] p-4 md:p-5">
           <div className="flex items-center gap-2 font-mono text-2xs uppercase tracking-widest text-accent">
             <Rocket className="h-3.5 w-3.5" />
@@ -306,7 +319,7 @@ export function LaunchCalendarPanel() {
           {datedPosts.length > 0 ? (
             <div>
               <SectionHeader icon={CalendarDays} label={COPY.sections.posts} suffix={COPY.counts.posts(datedPosts.length)} />
-              <CalendarProduction key={strategyId + j0 + weeks + projectDates} strategyId={strategyId} startDate={j0} weeks={weeks} projectDates={projectDates}
+              <CalendarProduction key={strategyId + (editionId??"") + j0 + weeks + projectDates} editionId={editionId} strategyId={strategyId} startDate={j0} weeks={weeks} projectDates={projectDates}
                 fallback={<div className="space-y-6">{groupPostsByWeek(datedPosts).map(([week, posts]) => (
                   <div key={week}><h3 className="mb-2 text-xs text-accent">{week}</h3><ol>{posts.map((p, i) => <PostRow key={i} post={p} />)}</ol></div>
                 ))}</div>}

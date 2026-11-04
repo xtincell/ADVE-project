@@ -8,6 +8,7 @@ import {
   getOperatorContext,
 } from "@/server/services/operator-isolation";
 import { sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
+import { readCreativeDirectionEdition } from "@/server/services/creative-direction/document";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getGloryTool } from "@/server/services/artemis/tools/registry";
@@ -405,7 +406,9 @@ export async function prepareUpstreamBriefs(
       },
     }),
   ]);
-  const contextFingerprint = sourceFingerprint({ rawData: { brand, pillars } });
+  const d=pillars.find(row=>row.key.toLowerCase()==="d");
+  const documentaryDirection=d ? await readCreativeDirectionEdition(input.strategyId,d.content) : null;
+  const contextFingerprint = sourceFingerprint({ rawData: { brand, pillars, documentaryDirection:documentaryDirection?.receipt } });
   const resolver = PillarResolver.fromData(
     pillars.map((p) => ({
       key: p.key,
