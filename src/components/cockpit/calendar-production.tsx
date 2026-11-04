@@ -51,7 +51,7 @@ export function CalendarProduction({ strategyId, startDate, weeks, projectDates,
       setReceipts(prev => ({ ...prev, [key]: { message: error instanceof Error ? error.message : "La génération a été interrompue. Vous pouvez reprendre cette option." } }));
     }
   }
-  async function run(keys: string[], generate: boolean, correction?: { assetId: string; version: number; instruction: string; photoPolicy?: "LOCKED_MASTER" | "GENERATED_CANDIDATE" }) {
+  async function run(keys: string[], generate: boolean, correction?: { assetId: string; version: number; instruction: string; photoPolicy?: "LOCKED_MASTER" }) {
     if (!version || running.current || !keys.length) return;
     running.current = true;
     try {
@@ -132,10 +132,10 @@ export function CalendarProduction({ strategyId, startDate, weeks, projectDates,
 }
 
 function CalendarOption({ brief, receipt, strategyId, onResume, onCorrect }: {
-  brief: BriefRef; receipt?: Receipt; strategyId: string; onResume: () => void; onCorrect: (text: string, photoPolicy?: "LOCKED_MASTER" | "GENERATED_CANDIDATE") => void;
+  brief: BriefRef; receipt?: Receipt; strategyId: string; onResume: () => void; onCorrect: (text: string, photoPolicy?: "LOCKED_MASTER") => void;
 }) {
   const [note, setNote] = useState("");
-  const [photo, setPhoto] = useState<"" | "LOCKED_MASTER" | "GENERATED_CANDIDATE">("");
+  const [photo, setPhoto] = useState<"" | "LOCKED_MASTER">("");
   const [opened, setOpened] = useState(false);
   const utils = trpc.useUtils();
   const dossier = trpc.deliverableOrchestrator.getCalendarBrief.useQuery({ strategyId, assetId: brief.assetId, version: brief.version }, { enabled: opened });
@@ -165,7 +165,6 @@ function CalendarOption({ brief, receipt, strategyId, onResume, onCorrect }: {
       <select className="ml-2 rounded border border-border bg-background p-2" value={photo} onChange={e=>setPhoto(e.target.value as typeof photo)}>
         <option value="">Conserver le traitement de la piste</option>
         <option value="LOCKED_MASTER">Restituer la photo du master</option>
-        <option value="GENERATED_CANDIDATE">Proposer une autre photographie</option>
       </select>
     </label> : null}
     <button className={action} disabled={!note.trim()} onClick={() => onCorrect(note.trim(),photo || undefined)}>Produire la version corrigée</button>
