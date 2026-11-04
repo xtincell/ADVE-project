@@ -26,8 +26,8 @@ export async function checkLawTwoPreconditions(strategyId: string): Promise<stri
 
   if (["ARCHIVED", "DELETED"].includes(strategy.status)) return ["STRATEGY_ARCHIVED"];
   // manipulationMix est JSON ; on cherche `.primary` non-null.
-  const mix = strategy.manipulationMix as { primary?: string } | null;
-  if (!mix || !mix.primary) {
+  const mix = readMixDecision(strategy.manipulationMix);
+  if (!mix.primary || (mix.percent && !mix.percent[mix.primary])) {
     missing.push("MISSING_MANIPULATION_MIX_PRIMARY");
   }
 

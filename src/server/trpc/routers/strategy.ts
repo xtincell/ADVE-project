@@ -201,7 +201,10 @@ export const strategyRouter = createTRPCRouter({
       return strategy;
     }),
 
-  productionMix: protectedProcedure.input(z.object({id:z.string()})).query(({ctx,input})=>readProductionMix(ctx.db,input.id,ctx.session.user.id)),
+  productionMix: protectedProcedure.input(z.object({id:z.string()})).query(async ({ctx,input})=>{
+    await assertStrategyRead(ctx.session.user.id,input.id);
+    return readProductionMix(ctx.db,input.id,ctx.session.user.id);
+  }),
   update: governedProcedure({
 
 
