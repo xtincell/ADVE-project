@@ -10,6 +10,7 @@ import { assertFleetBrand, recordInboundSalesMessageIn, ensureSalesOfferToolsIn,
 import { issueCustomerAccessIn } from "./customer";
 import { serialSalesTransaction } from "./transaction";
 import { assertSalesCatalogueOfferIn, assertSalesPrincipalIn } from "./portfolio";
+import { freezeSalesCollectionIn } from "./collection-provider";
 import { saveSalesPublicEntryInput, startPublicSalesConversationInput, projectPublicSalesHumanContact,
   type SaveSalesPublicEntryInput, type StartPublicSalesConversationInput } from "./public-entry-contract";
 
@@ -36,8 +37,18 @@ export function publicSalesClientIpHash(ip: string): string {
 
 async function ownerBrand(tx: Pick<Tx, "strategy" | "user">, actor: FleetActor, strategyId: string) {
   const brand = await tx.strategy.findUniqueOrThrow({ where: { id: strategyId }, select: { id: true, name: true, userId: true, operatorId: true, client: { select: { operatorId: true } } } });
-  if (brand.userId !== actor.id && !actor.admin) throw new TRPCError({ code: "FORBIDDEN", message: "Seul le propriétaire de la marque peut publier son entrée commerciale." });
+  const author = await tx.user.findUnique({ where: { id: actor.id }, select: { id: true, role: true, email: true } });
+  if (!approvedPublisher(brand.userId, author)) throw new TRPCError({ code: "FORBIDDEN", message: "Seul le propriétaire de la marque peut publier son entrée commerciale." });
   return { ...brand, operatorId: brand.operatorId ?? brand.client?.operatorId ?? null };
+}
+/** A pause changes no financial authority, even when its PSP is unavailable. */
+function pauseComparable(config: Config): string {
+  const { enabled: _enabled, expectedRevision: _revision, ...values } = config;
+  return JSON.stringify({ ...values, offers: config.offers.map(offer => {
+    if (!offer.collection) return offer;
+    const { providerAccountHash: _hash, ...collection } = offer.collection;
+    return { ...offer, collection };
+  }) });
 }
 
 async function assertConfigIn(tx: Tx, config: Config, authorizedBy: string) {
@@ -63,7 +74,9 @@ async function assertConfigIn(tx: Tx, config: Config, authorizedBy: string) {
       }
     }
     await assertSalesPrincipalIn(tx, offer.deliveryOwnerId, scope, true);
-    if (offer.collection) await assertSalesPrincipalIn(tx, offer.collection.financeOwnerId, scope, false);
+    if (offer.collection) {
+      await assertSalesPrincipalIn(tx, offer.collection.financeOwnerId, scope, false);
+    }
   }
   return { brand: scope, profile, sellerId };
 }
@@ -106,8 +119,21 @@ export async function saveSalesPublicEntry(actor: FleetActor, raw: SaveSalesPubl
       (emission.payload as { expectedRevision?: number } | null)?.expectedRevision !== input.expectedRevision) {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Publiez cette entrée depuis le poste commercial de la marque." });
     }
-    // A stale catalogue or paused seller must never prevent the owner from closing the door.
-    if (input.enabled) {
+    const previousConfig = existing ? saveSalesPublicEntryInput.safeParse(existing.config) : null;
+    const pauseOnly = !input.enabled && previousConfig?.success && pauseComparable(input) === pauseComparable(previousConfig.data);
+    const hasOnlineCollection = input.offers.some(offer => offer.collection?.mode === "CINETPAY") ||
+      (previousConfig?.success && previousConfig.data.offers.some(offer => offer.collection?.mode === "CINETPAY"));
+    // A pure pause grants no new authority. Changed online financial templates
+    // still require approval, including when the edited entry remains paused.
+    if (input.enabled || (hasOnlineCollection && !pauseOnly)) {
+      if (!input.informationOnly) for (const offer of input.offers) {
+        if (offer.collection) {
+          const { attestedBy: _by, attestedAt: _at, ...frozen } = await freezeSalesCollectionIn(tx, input.strategyId, offer.beneficiary!, {
+            ...offer.collection, attestedBy: actor.id, attestedAt: new Date().toISOString(),
+          });
+          offer.collection = frozen;
+        }
+      }
       const ready = await assertConfigIn(tx, input, actor.id);
       if (ready.profile.mcpKeyId) await ensureSalesOfferToolsIn(tx, ready.profile.mcpKeyId);
     }

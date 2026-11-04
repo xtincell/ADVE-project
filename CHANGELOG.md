@@ -1,3 +1,11 @@
+## v6.27.545 — feat(vente): règlement du devis et rapport client (2026-11-04)
+
+- PR1136 / ADR0240 : le devis accepté conserve son prix, sa devise et son bénéficiaire. Orange Money et main propre passent par une vérification humaine dans le portail, sans dépendre de CinetPay ; le règlement en ligne réutilise le fournisseur existant après autorisation du compte marchand.
+- Le règlement vérifié donne accès au diagnostic de la marque cliente et au PDF préparé par le traitement existant. Aucun second paiement, mélange avec la marque vendeuse ou clôture automatique ; le vendeur attend le document prêt et sa réception explicite.
+- Les demandes et retours de paiement conservent leurs références, rejettent les montants modifiés et ne déclenchent pas de nouvel appel sur une issue incertaine. Le retour navigateur ne prouve jamais un paiement.
+- La publication de liens peut conserver explicitement l’identité déjà publiée : mêmes textes et fichiers physiques vérifiés, alertes de révision conservées. Le lien commercial SPAWT peut ainsi rejoindre la vitrine sans réinterpréter son identité.
+- Aucun modèle Prisma, fournisseur, moteur ADVE, gestionnaire d’appels ou ordonnanceur ajouté. Validations et réception de production consignées séparément ; aucun encaissement réel déduit d’un test.
+
 ## v6.27.544 — fix(vente): publier avec l’administration du compte fondateur (2026-11-04)
 
 PR de livraison : #1135.

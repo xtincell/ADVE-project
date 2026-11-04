@@ -1737,3 +1737,5 @@ Lignes dérivées purgées :
   manuel/handler et refus typés. Cause : contexte transverse d’équipe confondu
   avec un contexte de marque et projection de campagnes dérivée des seules tâches.
   Réception finale à suivre dans RESIDUAL-DEBT, sans clôture du cycle métier.
+
+- 2026-11-04 · PR1136 : une confirmation humaine du règlement commercial ne donnait pas accès au rapport client ; raccord aux droits et à la préparation existants, reçu humain distinct du prestataire. La clôture du rapport exige maintenant le document prêt et son ACK exact. Cause : collecte, droit et réception restaient traités comme étapes indépendantes sans leur liaison canonique. ADR0240.

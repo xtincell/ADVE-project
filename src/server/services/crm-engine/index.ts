@@ -676,6 +676,13 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
     await assertSalesEffectIn(tx,deal,actor);
     const {prepareSalesPlanIn}=await import("./scheduling");
     step=await prepareSalesPlanIn(tx,dealId,previous,step,actor);
+    if (step.command.type === "MANDATE" && step.command.mandate.collection && deal.sellerStrategyId) {
+      const { freezeSalesCollectionIn } = await import("./collection-provider");
+      step = { ...step, command: { ...step.command, mandate: { ...step.command.mandate,
+        collection: await freezeSalesCollectionIn(tx, deal.sellerStrategyId, step.command.mandate.beneficiary, {
+          ...step.command.mandate.collection, attestedBy: actor.id, attestedAt: new Date().toISOString(),
+        }) } } };
+    }
     const command = step.command;
     if(deal.sellerStrategyId&&!actor.id.startsWith("mcp:")&&!["MANDATE","HANDOVER","STOP","PAYMENT","DELIVER"].includes(command.type)){
       const {assertHumanSalesActive}=await import("./fleet");await assertHumanSalesActive(deal.sellerStrategyId,actor.id);
@@ -700,12 +707,37 @@ export async function applySalesStep(dealId: string, step: SalesStep, actor: Sal
       const payment=deal.paymentReference?await tx.intakePayment.findUnique({where:{reference:deal.paymentReference}}):null;
       const {paymentMajorAmount}=await import("./payments");
       if(!payment||payment.tierKey!=="SALES_COLLECTION"||payment.intakeToken!==`sales-deal:${deal.id}`||payment.status!=="PAID"||!payment.paidAt||paymentMajorAmount(payment)!==previous.mandate.amount||payment.currency!==previous.mandate.currency)throw new TRPCError({code:"PRECONDITION_FAILED",message:"La personne chargée des paiements doit vérifier celui de cette affaire avant de continuer."});
+      if(payment.provider==="CINETPAY"){
+        const proof=await tx.cRMActivity.findUnique({where:{id:`sales-cinetpay-paid:${payment.reference}`}});
+        const metadata=proof?.metadata as {independentProviderProof?:boolean;providerRef?:string;paymentReference?:string;proposalId?:string;amountMinor?:number;currency?:string}|null;
+        if(!proof||proof.dealId!==deal.id||proof.activityType!=="SALES_PAYMENT_RECONCILED"||metadata?.independentProviderProof!==true||metadata.providerRef!==payment.providerRef||metadata.paymentReference!==payment.reference||metadata.proposalId!==previous.proposal?.id||metadata.amountMinor!==payment.amount||metadata.currency!==payment.currency)throw new TRPCError({code:"PRECONDITION_FAILED",message:"Le règlement doit être rapproché avec le reçu indépendant du prestataire avant de continuer."});
+      }
     }
     if(actor.id.startsWith("mcp:") && command.type === "DELIVER") {
       const message=command.customerMessageId?await tx.crmMessage.findUnique({where:{id:command.customerMessageId},include:{contact:{select:{strategyId:true,email:true}}}}):null;
       const paid=await tx.cRMActivity.findFirst({where:{dealId,activityType:"SALES_DECISION",metadata:{path:["command","type"],equals:"PAYMENT"}},orderBy:{performedAt:"desc"},select:{performedAt:true}});
       const sameBuyer=message && (message.salesDealId?message.salesDealId===dealId:message.contact?.strategyId===deal.sellerStrategyId&&!!deal.contactEmail&&message.contact?.email.toLowerCase()===deal.contactEmail.toLowerCase());
       if(!message||!sameBuyer||message.direction!=="IN"||message.status!=="RECEIVED"||!paid||message.createdAt<paid.performedAt)throw new TRPCError({code:"PRECONDITION_FAILED",message:"La remise exige une confirmation reçue de ce client après le règlement. Le paiement seul ne prouve aucune livraison."});
+    }
+    if (command.type === "DELIVER" && previous.mandate?.pricingRule?.tierKey === "INTAKE_PDF") {
+      const { resolveSalesDeliveryDocument } = await import("./customer");
+      const document = await resolveSalesDeliveryDocument(tx, deal, previous);
+      const [ready, message, acknowledgement] = await Promise.all([
+        document ? tx.cRMActivity.findUnique({ where: { id: document.activityId } }) : null,
+        command.customerMessageId ? tx.crmMessage.findUnique({ where: { id: command.customerMessageId } }) : null,
+        command.customerMessageId ? tx.cRMActivity.findUnique({ where: { id: `sales-delivery-acceptance:${command.customerMessageId}` } }) : null,
+      ]);
+      const receipt = acknowledgement?.metadata as { deliveryActivityId?: string; customerMessageId?: string; bodyFingerprint?: string; artifactHash?: string } | null;
+      const artifact = (ready?.metadata as { artifact?: unknown } | null)?.artifact;
+      if (!document || !ready || ready.dealId !== deal.id || typeof artifact !== "string" || !message || message.salesDealId !== deal.id
+        || message.direction !== "IN" || message.status !== "RECEIVED" || message.createdAt < ready.performedAt
+        || !acknowledgement || acknowledgement.dealId !== deal.id || acknowledgement.activityType !== "SALES_CUSTOMER_DELIVERY_ACCEPTANCE"
+        || acknowledgement.performedBy !== null || acknowledgement.performedAt < message.createdAt
+        || receipt?.deliveryActivityId !== ready.id || receipt.customerMessageId !== message.id
+        || receipt.bodyFingerprint !== createHash("sha256").update(message.body).digest("hex")
+        || receipt.artifactHash !== createHash("sha256").update(artifact).digest("hex")) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le rapport doit être prêt et ce client doit confirmer la réception de ce document avant de terminer la livraison." });
+      }
     }
     let next;
     try {

@@ -12,7 +12,7 @@ function auth() { fetcher.mockResolvedValueOnce(Response.json({ access_token: "o
 beforeEach(() => {
   vi.resetModules(); fetcher.mockReset(); vi.stubGlobal("fetch", fetcher);
   vi.stubEnv("CINETPAY_API_KEY", "owned-key"); vi.stubEnv("CINETPAY_API_PASSWORD", "owned-password");
-  vi.stubEnv("CINETPAY_BASE_URL", "https://owned.invalid");
+  vi.stubEnv("CINETPAY_BASE_URL", "https://api.cinetpay.net");
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 describe("CinetPay v1 wire contract — all transport is fake, no PSP call", () => {
@@ -23,7 +23,7 @@ describe("CinetPay v1 wire contract — all transport is fake, no PSP call", () 
     expect(result).toEqual({ paymentUrl: init.payment_url, providerRef: init.transaction_id,
       notificationTokenHash: createHash("sha256").update(init.notify_token).digest("hex") });
     expect(JSON.stringify(result)).not.toContain(init.notify_token);
-    expect(fetcher.mock.calls[1]![0]).toBe("https://owned.invalid/v1/payment");
+    expect(fetcher.mock.calls[1]![0]).toBe("https://api.cinetpay.net/v1/payment");
     expect(JSON.parse(fetcher.mock.calls[1]![1].body)).toMatchObject({
       merchant_transaction_id: input.reference, amount: input.amount, currency: input.currency,
       client_email: input.customer.email, success_url: input.returnUrl, notify_url: input.notifyUrl, channel: "PUSH",
@@ -55,5 +55,22 @@ describe("CinetPay v1 wire contract — all transport is fake, no PSP call", () 
     auth(); fetcher.mockResolvedValueOnce(Response.json(x.raw, { status: x.http }));
     const { cinetpayProvider: p } = await import("@/server/services/payment-providers/cinetpay");
     await expect(p.verifyPayment!(input.reference)).rejects.toThrow("Status unavailable or inconsistent");
+  });
+  it.each([
+    { base: "https://api.cinetpay.net", key: "sk_live_owned_only" },
+    { base: "https://api.cinetpay.co", key: "sk_test_owned_only" },
+    { base: "https://foreign.invalid", key: "sk_live_owned_only" },
+  ])("refuses a production environment mismatch before authentication %#", async setting => {
+    vi.stubEnv("NODE_ENV", "production"); vi.stubEnv("CINETPAY_BASE_URL", setting.base); vi.stubEnv("CINETPAY_API_KEY", setting.key);
+    const { cinetpayProvider: p } = await import("@/server/services/payment-providers/cinetpay");
+    expect(p.isConfigured()).toBe(false); await expect(p.initPayment(input)).rejects.toThrow("environment unavailable"); expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("does not reuse an authenticated token after a credential rotation", async () => {
+    auth(); fetcher.mockResolvedValueOnce(Response.json(status));
+    const { cinetpayProvider: p } = await import("@/server/services/payment-providers/cinetpay");
+    await p.verifyPayment!(input.reference);
+    vi.stubEnv("CINETPAY_API_PASSWORD", "owned-new-password"); auth(); fetcher.mockResolvedValueOnce(Response.json(status));
+    await p.verifyPayment!(input.reference);
+    expect(fetcher.mock.calls.filter(call => String(call[0]).endsWith("/oauth/login"))).toHaveLength(2);
   });
 });

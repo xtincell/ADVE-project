@@ -146,6 +146,31 @@ describe("Private frozen sales proposal", () => {
     await expect(receiveCustomerMessage(token, { body: input.body, requestId: input.requestId })).rejects.toMatchObject({ code: "CONFLICT" });
     expect(store.inbound).toHaveBeenCalledTimes(1);
   });
+  it("records an explicit receipt of the exact ready document atomically and refuses altered retries", async () => {
+    store.deal.commercial = saleState("PAID");
+    const ready = { id: "owned-ready-document", dealId: "deal", performedBy: "owner", activityType: "SALES_DELIVERY_READY",
+      performedAt: new Date(Date.now() - 1000), metadata: { artifact: "/api/intake/owned-client-report/pdf" } };
+    store.creation = ready; store.events.push(ready);
+    const input = { body: "J’ai reçu et consulté ce document.", requestId: randomUUID(), deliveryActivityId: ready.id };
+    expect(await receiveCustomerMessage(token, input)).toEqual({ received: true }); expect(await receiveCustomerMessage(token, input)).toEqual({ received: true });
+    expect(store.inbound).toHaveBeenCalledTimes(1); expect(store.events).toHaveLength(2);
+    expect(store.events[1]).toMatchObject({ id: "sales-delivery-acceptance:message-1", activityType: "SALES_CUSTOMER_DELIVERY_ACCEPTANCE",
+      metadata: { deliveryActivityId: ready.id, customerMessageId: "message-1", requestId: input.requestId, bodyFingerprint: hash(input.body), artifactHash: hash(ready.metadata.artifact) } });
+    for (const changed of [{ ...input, deliveryActivityId: "another-document" }, { ...input, body: "Où est mon rapport ?" }, { body: input.body, requestId: input.requestId }]) {
+      await expect(receiveCustomerMessage(token, changed)).rejects.toMatchObject({ code: "CONFLICT" });
+    }
+    expect(store.inbound).toHaveBeenCalledTimes(1); expect((store.deal.commercial as { node: string }).node).toBe("PAID");
+  });
+  it("refuses a stale, unready or pre-payment document acknowledgement before writing any message", async () => {
+    const input = { body: "Je confirme avoir reçu le document.", requestId: randomUUID(), deliveryActivityId: "owned-ready-document" };
+    await expect(receiveCustomerMessage(token, input)).rejects.toMatchObject({ code: "CONFLICT" });
+    store.deal.commercial = saleState("PAID");
+    await expect(receiveCustomerMessage(token, input)).rejects.toMatchObject({ code: "CONFLICT" });
+    store.creation = { id: "newer-ready-document", dealId: "deal", performedBy: "owner", activityType: "SALES_DELIVERY_READY", performedAt: new Date(Date.now() - 1000), metadata: { artifact: "/api/intake/newer/pdf" } };
+    await expect(receiveCustomerMessage(token, input)).rejects.toMatchObject({ code: "CONFLICT" });
+    await expect(receiveCustomerMessage(token, { ...input, proposalId })).rejects.toThrow();
+    expect(store.inbound).not.toHaveBeenCalled();
+  });
 
   it("rejects stale proposal IDs before writing, and retains local/proxy-origin and body bounds", async () => {
     const post = (body: unknown, headers: Record<string, string> = {}) => messagePost(new Request(`http://localhost:3412/api/sales/${token}`, {

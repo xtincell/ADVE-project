@@ -2,6 +2,7 @@
  * No pillar write, generated text, provider call or implicit publication on read.
  */
 import { Prisma } from "@prisma/client";
+import { isDeepStrictEqual } from "node:util";
 import { db } from "@/lib/db";
 import { PUBLIC_BRAND_FORMAT, PUBLIC_BRAND_IDENTITY_FORMAT, PublicBrandContent, PublicBrandContentV2, PublicBrandPublicationInput, PublicIdentityChoice, PublicIdentity } from "@/domain/public-brand";
 import { isBrandPublicSlug, brandPublicSlugSafe, disambiguateBrandSlug } from "@/domain/brand-slug";
@@ -23,6 +24,88 @@ const object = (value: unknown) => (value && typeof value === "object" && !Array
 export const publicBrandDigest = (content: PublicBrandContent | z.infer<typeof PublicBrandContentV2>) => sourceFingerprint({ rawData: content });
 export class PublicBrandError extends Error {
   constructor(public readonly code: "FORBIDDEN" | "CONFLICT" | "PRECONDITION_FAILED", message: string) { super(message); }
+}
+
+/** Receipt of the public edition, not an approval of its current source assets. */
+function publishedIdentityReuse(edition: { id: string; format: string | null; content: unknown; metadata: unknown }) {
+  if (edition.format !== PUBLIC_BRAND_IDENTITY_FORMAT || !PublicBrandContentV2.parse(edition.content).identity
+    || !object(edition.metadata).identityChoice) return null;
+  return { editionId: edition.id, digest: sourceFingerprint({ rawData: {
+    content: edition.content, identityChoice: object(edition.metadata).identityChoice,
+    identityPins: object(edition.metadata).identityPins, identityArchives: object(edition.metadata).identityArchives,
+    logoAsset: object(edition.metadata).logoAsset, logoArchive: object(edition.metadata).logoArchive,
+    sourceReceipts: object(edition.metadata).sourceReceipts, pillarVersions: object(edition.metadata).pillarVersions,
+  } }) };
+}
+
+/** Reuse only bytes which were actually public, retaining their original URLs.
+ * No lookup or promotion of the now-stale source assets takes place here. */
+async function verifyPublishedIdentityIn(edition: { id: string; strategyId: string; content: unknown; metadata: unknown }, tx: Client) {
+  const failure = () => new PublicBrandError("PRECONDITION_FAILED", "L’identité publiée ne peut pas être conservée telle quelle. Vérifiez ses copies et son historique avant de réessayer.");
+  try {
+    const content = PublicBrandContentV2.parse(edition.content), identity = content.identity;
+    const choice = PublicIdentityChoice.parse(object(edition.metadata).identityChoice);
+    const archives = publicIdentityArchives(edition.metadata);
+    const pins = z.array(z.object({ id: z.string().min(1), version: z.number().int().positive(),
+      fingerprint: z.string().regex(/^[a-f0-9]{64}$/) }).strict()).parse(object(edition.metadata).identityPins);
+    const picks = [choice.palette, choice.typography, ...(choice.typography ? [...choice.typography.display.faces, ...choice.typography.body.faces] : []),
+      choice.mascots, ...(choice.mascots?.uses ?? [])].filter((pick): pick is NonNullable<typeof pick> => !!pick);
+    const selected = new Map<string, number>();
+    for (const pick of picks) {
+      if (selected.has(pick.assetId) && selected.get(pick.assetId) !== pick.version) throw failure();
+      selected.set(pick.assetId, pick.version);
+    }
+    if (!identity || new Set(pins.map(pin => pin.id)).size !== pins.length || selected.size !== pins.length
+      || pins.some(pin => selected.get(pin.id) !== pin.version)
+      || !isDeepStrictEqual(identity.palette, choice.palette?.roles ?? null)
+      || !isDeepStrictEqual(identity.voice, choice.voice)
+      || new Set(archives.map(archive => archive.role)).size !== archives.length) throw failure();
+    const used = new Set<string>();
+    const mediaEditions = new Map<string, { metadata: unknown }>();
+    const verifyUrl = async (url: string, receipt: PublicLogoReceipt, role?: string) => {
+      const match = new URL(url).pathname.match(/^\/brand\/editions\/([a-zA-Z0-9_-]{1,100})\/[a-f0-9]{64}\.(?:png|jpg|webp|svg|otf|ttf)$/);
+      if (!match || url !== publicLogoSnapshotUrl(match[1]!, receipt)) throw failure();
+      let origin = mediaEditions.get(match[1]!);
+      if (!origin) {
+        origin = await tx.brandAsset.findFirst({ where: { id: match[1]!, strategyId: edition.strategyId, ...scope,
+          state: { in: ["ACTIVE", "SUPERSEDED"] } }, select: { metadata: true } }) ?? undefined;
+        if (!origin) throw failure();
+        mediaEditions.set(match[1]!, origin);
+      }
+      const publishedReceipt = role ? publicIdentityArchives(origin.metadata).find(archive => archive.role === role)?.receipt : publicLogoReceipt(origin.metadata);
+      if (!isDeepStrictEqual(publishedReceipt, receipt)) throw failure();
+      await readPublicLogoBytes(receipt);
+    };
+    const verifyFile = async (pick: { assetId: string; version: number }, role: string, file: z.infer<typeof PublicIdentity>["mascots"][number]["file"]) => {
+      const archive = archives.find(item => item.role === role), pin = pins.find(item => item.id === pick.assetId);
+      if (!archive || !pin || archive.assetId !== pick.assetId || archive.version !== pick.version || archive.fingerprint !== pin.fingerprint
+        || file.hash !== archive.receipt.contentHash || file.bytes !== archive.receipt.byteLength || file.type !== archive.receipt.mediaType) throw failure();
+      await verifyUrl(file.url, archive.receipt, role); used.add(role);
+    };
+    if (Boolean(identity.typography) !== Boolean(choice.typography)) throw failure();
+    if (choice.typography && identity.typography) for (const role of ["display", "body"] as const) {
+      const actual = identity.typography[role], picked = choice.typography[role];
+      if (actual.family !== picked.family || actual.faces.length !== picked.faces.length) throw failure();
+      for (let index = 0; index < picked.faces.length; index++) {
+        const pick = picked.faces[index]!, face = actual.faces[index]!;
+        if (pick.weight !== face.weight) throw failure();
+        await verifyFile(pick, `${role}:${pick.weight}`, face.file);
+      }
+    }
+    if (identity.mascots.length !== (choice.mascots?.uses.length ?? 0)) throw failure();
+    for (const pick of choice.mascots?.uses ?? []) {
+      const actual = identity.mascots.find(item => item.role === pick.role);
+      if (!actual || actual.alt !== pick.alt) throw failure();
+      await verifyFile(pick, `mascot:${pick.role}`, actual.file);
+    }
+    if (used.size !== archives.length) throw failure();
+    const logoArchive = publicLogoReceipt(edition.metadata);
+    if (content.logoUrl) {
+      if (!logoArchive) throw failure();
+      await verifyUrl(content.logoUrl, logoArchive);
+    } else if (logoArchive) throw failure();
+    return { identity, archives, pins, choice, logoArchive };
+  } catch { throw failure(); }
 }
 
 /** Only already-public files may leave the vault. A relative /brand/ path
@@ -124,6 +207,7 @@ export async function previewPublicBrand(strategyId: string, actorId?: string) {
     },
     published: active ? { id: active.id, version: active.version, logoAssetId: text(object(object(active.metadata).logoAsset).id) || null, content: privateContent(active.content),
       identityChoice: object(active.metadata).identityChoice ? PublicIdentityChoice.parse(object(active.metadata).identityChoice) : null,
+      reusePublishedIdentity: publishedIdentityReuse(active),
       observed: object(active.metadata).publicationOrigin === "OBSERVED_PUBLICATION" } : null,
     previous: state.editions.filter((e) => e.state === "SUPERSEDED").map((e) => ({ id: e.id, version: e.version })),
     warning: "Relisez les textes avant publication. Ce choix ne valide pas l’ensemble de votre stratégie.",
@@ -264,10 +348,20 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
     if (current.revision !== requested.expectedRevision || (active?.id ?? null) !== requested.expectedPublishedId) {
       throw new PublicBrandError("CONFLICT", "La marque ou sa publication a changé. Rechargez l’aperçu avant de publier.");
     }
+    if (requested.reusePublishedIdentity) {
+      const sameExceptLinks = (value: PublicBrandContent) => Object.fromEntries(Object.entries(value).filter(([key]) => key !== "links"));
+      if (!active || requested.restoreId || !isDeepStrictEqual(requested.reusePublishedIdentity, publishedIdentityReuse(active))
+        || !isDeepStrictEqual(sameExceptLinks(requested.content), sameExceptLinks(privateContent(active.content)))
+        || (requested.logoAssetId !== undefined && requested.logoAssetId !== text(object(object(active.metadata).logoAsset).id))
+        || (requested.identity !== undefined && !isDeepStrictEqual(requested.identity, object(active.metadata).identityChoice))) {
+        throw new PublicBrandError("PRECONDITION_FAILED", "Ce choix permet uniquement de modifier les liens en conservant exactement l’identité et les textes déjà publiés. Rechargez la publication avant de continuer.");
+      }
+    }
+    const keptIdentity = requested.reusePublishedIdentity && active ? await verifyPublishedIdentityIn(active, tx) : null;
     let content = requested.content;
     let chosenLogoId = requested.logoAssetId;
     let restoredLogo: Record<string, unknown> | null = null;
-    let logoArchive: PublicLogoReceipt | null = null;
+    let logoArchive: PublicLogoReceipt | null = keptIdentity?.logoArchive ?? null;
     let identityChoice = requested.identity === undefined ? object(active?.metadata).identityChoice ?? null : requested.identity;
     let reusableIdentity = requested.identity === undefined ? active?.metadata : undefined;
     if (requested.restoreId) {
@@ -286,7 +380,7 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
     }
     // A text-only review keeps the visible edition's verified bytes. A fresh
     // selection supplies the source URL and captures a new copy instead.
-    if (!requested.restoreId && active && content.logoUrl
+    if (!keptIdentity && !requested.restoreId && active && content.logoUrl
       && content.logoUrl === privateContent(active.content).logoUrl) {
       const retained = publicLogoReceipt(active.metadata);
       if (retained && content.logoUrl === publicLogoSnapshotUrl(active.id, retained)) {
@@ -294,11 +388,11 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
         if (chosenLogoId === text(restoredLogo.id)) logoArchive = retained;
       }
     }
-    const matches = current.logos.filter((logo) => (logoArchive ? logo.id === chosenLogoId : logo.url === content.logoUrl)
+    const matches = keptIdentity ? [] : current.logos.filter((logo) => (logoArchive ? logo.id === chosenLogoId : logo.url === content.logoUrl)
       && (!chosenLogoId || logo.id === chosenLogoId));
     const chosenLogo = content.logoUrl && matches.length === 1 ? matches[0]! : null;
-    if ((content.logoUrl && !chosenLogo) || (!content.logoUrl && chosenLogoId)
-      || (restoredLogo?.fingerprint && restoredLogo.fingerprint !== chosenLogo?.fingerprint)) {
+    if (!keptIdentity && ((content.logoUrl && !chosenLogo) || (!content.logoUrl && chosenLogoId)
+      || (restoredLogo?.fingerprint && restoredLogo.fingerprint !== chosenLogo?.fingerprint))) {
       throw new PublicBrandError("PRECONDITION_FAILED", "Choisissez une version actuelle du logo de cette marque, ou publiez sans logo.");
     }
     // Eligible source ids are already fenced above in the same lock order.
@@ -312,8 +406,8 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
         throw new PublicBrandError("PRECONDITION_FAILED", "Le logo n’a pas pu être conservé et vérifié. La publication précédente reste en ligne. Vérifiez son fichier et le stockage avant de réessayer.");
       }
     }
-    const preparedIdentity = await preparePublicIdentity(identityChoice ? PublicIdentityChoice.parse(identityChoice) : null, current, tx, reusableIdentity);
-    if (reusableIdentity && identityChoice) {
+    const preparedIdentity = keptIdentity ?? await preparePublicIdentity(identityChoice ? PublicIdentityChoice.parse(identityChoice) : null, current, tx, reusableIdentity);
+    if (!keptIdentity && reusableIdentity && identityChoice) {
       const oldPins = object(reusableIdentity).identityPins;
       if (!Array.isArray(oldPins) || sourceFingerprint({ rawData: oldPins }) !== sourceFingerprint({ rawData: preparedIdentity.pins })) {
         throw new PublicBrandError("PRECONDITION_FAILED", "L’identité de cette ancienne édition a changé. Choisissez les versions actuelles après relecture.");
@@ -333,7 +427,13 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
       name: `Page publique — version ${version}`, content: content as Prisma.InputJsonValue,
       state: "ACTIVE", version, parentBrandAssetId: active?.id, sourceIntentId: intentId,
       selectedAt: new Date(), selectedById: actorId, pillarSource: "A",
-      metadata: { publicationOrigin: "EXPLICIT_SELECTION", proposalRevision: current.revision,
+      ...(keptIdentity && active ? { staleAt: active.staleAt, staleReason: active.staleReason } : {}),
+      metadata: keptIdentity && active ? { ...object(active.metadata), publicationOrigin: "EXPLICIT_SELECTION",
+        identityReuse: { fromEditionId: active.id, digest: requested.reusePublishedIdentity!.digest,
+          approvedBy: actorId, approvedAt: new Date().toISOString() },
+        linksReview: { proposalRevision: current.revision, sourceReceipts: current.receipts,
+          pillarVersions: current.pins.pillars.map(p => ({ key: p.key, version: p.version })) },
+      } : { publicationOrigin: "EXPLICIT_SELECTION", proposalRevision: current.revision,
         sourceReceipts: current.receipts,
         logoAsset: chosenLogo ? { id: chosenLogo.id, version: chosenLogo.version, fileUrl: chosenLogo.fileUrl, fingerprint: chosenLogo.fingerprint } : null,
         ...(logoArchive ? { logoArchive } : {}),
@@ -342,8 +442,9 @@ export async function publishPublicBrand(strategyId: string, actorId: string, in
         pillarVersions: current.pins.pillars.map((p) => ({ key: p.key, version: p.version })),
         ...(requested.restoreId ? { restoredFromId: requested.restoreId } : {}) },
     } });
-    if (logoArchive) content = { ...content, logoUrl: publicLogoSnapshotUrl(edition.id, logoArchive) };
-    const publishedContent = preparedIdentity.identity ? { ...content, identity: identityForEdition(preparedIdentity.identity, preparedIdentity.archives, edition.id) } : content;
+    if (logoArchive && !keptIdentity) content = { ...content, logoUrl: publicLogoSnapshotUrl(edition.id, logoArchive) };
+    const publishedContent = keptIdentity ? { ...content, identity: keptIdentity.identity }
+      : preparedIdentity.identity ? { ...content, identity: identityForEdition(preparedIdentity.identity, preparedIdentity.archives, edition.id) } : content;
     edition = await tx.brandAsset.update({ where: { id: edition.id }, data: { content: publishedContent as Prisma.InputJsonValue } });
     if (active) await tx.brandAsset.update({ where: { id: active.id }, data: { supersededById: edition.id } });
     return edition;

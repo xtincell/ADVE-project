@@ -18,6 +18,7 @@ export function CrmSalesPayment({ dealId, strategyId, revision, node, canRequest
   const [pendingRequest, setPendingRequest] = useState<{ dealId: string; requestId: string; expectedRevision: number } | null>(null);
   const [pendingReconciliation, setPendingReconciliation] = useState<Reconciliation | null>(null);
   const request = requests.data?.find(item => item.dealId === dealId);
+  const onlinePayment = request?.provider === "CINETPAY";
   return <section aria-label="Paiement de l’affaire" className="space-y-3 rounded-lg border border-border p-4">
     <h3 className="font-medium">Paiement de l’affaire</h3>
     {requests.isLoading && <p className="text-sm text-foreground-muted">Chargement du paiement…</p>}
@@ -31,14 +32,15 @@ export function CrmSalesPayment({ dealId, strategyId, revision, node, canRequest
     </>}
     {request && <>
       <dl className="grid gap-3 text-sm sm:grid-cols-2">
-        <div><dt className="text-foreground-muted">État</dt><dd>{request.status === "PAID" ? "Paiement vérifié" : request.status === "FAILED" ? "Demande à vérifier" : "Paiement à vérifier"}{request.paidAt && <><br />{new Date(request.paidAt).toLocaleString("fr-FR")}</>}</dd></div>
+        <div><dt className="text-foreground-muted">État</dt><dd>{request.status === "PAID" ? onlinePayment ? "Paiement confirmé" : "Paiement vérifié" : request.status === "FAILED" ? onlinePayment ? "Paiement non abouti" : "Demande à vérifier" : onlinePayment ? "Vérification du paiement en cours" : "Paiement à vérifier"}{request.paidAt && <><br />{new Date(request.paidAt).toLocaleString("fr-FR")}</>}</dd></div>
+        {onlinePayment && <div><dt className="text-foreground-muted">Service de paiement</dt><dd>CinetPay</dd></div>}
         <div><dt className="text-foreground-muted">Montant attendu</dt><dd>{new Intl.NumberFormat("fr-FR", { style: "currency", currency: request.currency }).format(request.amount)}</dd></div>
         <div><dt className="text-foreground-muted">Référence à communiquer</dt><dd className="break-words">{request.reference}</dd></div>
         <div><dt className="text-foreground-muted">Entreprise bénéficiaire et compte de paiement</dt><dd className="break-words">{request.beneficiary}<br />{request.destinationRef}</dd></div>
         <div className="sm:col-span-2"><dt className="text-foreground-muted">Comment le client paie</dt><dd className="whitespace-pre-wrap break-words">{request.paymentInstructions}</dd></div>
       </dl>
-      <p className="text-xs text-foreground-muted">Un message client ne confirme pas un paiement. La personne chargée du paiement vérifie le montant reçu et sa preuve.</p>
-      {request.status !== "PAID" && request.canReconcile && <details><summary className="cursor-pointer text-sm underline">Vérifier un paiement reçu</summary>
+      <p className="text-xs text-foreground-muted">{onlinePayment ? "Le paiement est confirmé après vérification auprès de CinetPay. Un message client ou un retour de page ne suffit pas." : "Un message client ne confirme pas un paiement. La personne chargée du paiement vérifie le montant reçu et sa preuve."}</p>
+      {request.status !== "PAID" && request.canReconcile && !onlinePayment && <details><summary className="cursor-pointer text-sm underline">Vérifier un paiement reçu</summary>
         <form aria-label="Vérifier un paiement reçu" className="mt-3 space-y-3" onSubmit={async event => {
           event.preventDefault(); setError(""); const form = new FormData(event.currentTarget);
           const input = pendingReconciliation ?? { dealId, requestId: crypto.randomUUID(), observedAmount: Number(form.get("amount")), currency: String(form.get("currency") ?? "").trim(), externalReference: String(form.get("externalReference") ?? "").trim(), evidence: String(form.get("evidence") ?? "").trim() };
@@ -56,7 +58,7 @@ export function CrmSalesPayment({ dealId, strategyId, revision, node, canRequest
           <button className={button} disabled={reconcile.isPending}>{reconcile.isPending ? "Vérification en cours…" : pendingReconciliation ? "Vérifier ce paiement" : "Confirmer le paiement reçu"}</button>
         </form>
       </details>}
-      {request.status !== "PAID" && !request.canReconcile && <p className="text-xs text-foreground-muted">La personne désignée doit vérifier le paiement.</p>}
+      {request.status !== "PAID" && !request.canReconcile && !onlinePayment && <p className="text-xs text-foreground-muted">La personne désignée doit vérifier le paiement.</p>}
     </>}
     {(error || requests.error) && <p role="alert" className="text-sm text-error">{error || requests.error?.message}</p>}
   </section>;

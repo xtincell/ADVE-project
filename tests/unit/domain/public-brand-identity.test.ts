@@ -27,4 +27,15 @@ describe("Explicit public identity choices", () => {
     expect(PublicBrandPublicationInput.safeParse({ ...input, identity: { ...identity,
       mascots: { ...identity.mascots, uses: [identity.mascots.uses[0], identity.mascots.uses[0]] } } }).success).toBe(false);
   });
+  it("requires an explicit bounded receipt to reuse the already-public identity", () => {
+    const reusePublishedIdentity = { editionId: "published-edition", digest: "b".repeat(64) };
+    expect(PublicBrandPublicationInput.parse(input)).not.toHaveProperty("reusePublishedIdentity");
+    expect(PublicBrandPublicationInput.safeParse({ ...input, reusePublishedIdentity }).success).toBe(true);
+    for (const value of [{ ...reusePublishedIdentity, digest: "not-a-receipt" }, { ...reusePublishedIdentity, editionId: "" },
+      { ...reusePublishedIdentity, identityPins: [] }, { ...reusePublishedIdentity, bypassSourceReview: true }]) {
+      expect(PublicBrandPublicationInput.safeParse({ ...input, reusePublishedIdentity: value }).success).toBe(false);
+    }
+    expect(PublicBrandPublicationInput.safeParse({ ...input, reusePublishedIdentity,
+      content: { ...input.content, privateSources: ["must-not-leave-the-brand"] } }).success).toBe(false);
+  });
 });

@@ -21,6 +21,16 @@ function matchesProof(token: string, hash: string): boolean {
 
 async function finishCycle(reference: string) {
   try {
+    const payment = await db.intakePayment.findUnique({ where: { reference }, select: { tierKey: true } });
+    if (payment?.tierKey === "SALES_COLLECTION") {
+      const { reconcileCinetpaySalesPayment } = await import("@/server/services/crm-engine/payments");
+      await reconcileCinetpaySalesPayment(reference);
+      // The existing dispatcher now has a distinct Sales entitlement branch.
+      // It resolves the bound CLIENT intake, never sales-deal:<id> as an intake.
+      const { fulfillPaidIntakeReport } = await import("@/server/services/quick-intake/paid-fulfillment");
+      void fulfillPaidIntakeReport(reference);
+      return NextResponse.json({ received: true, status: "PAID" });
+    }
     const { applySubscriptionCycleIfPaid } = await import("@/server/services/payment-providers/subscription-cycles");
     await applySubscriptionCycleIfPaid(reference);
     return NextResponse.json({ received: true, status: "PAID" });
@@ -82,11 +92,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true, status: current.status });
   }
 
+  if (payment.tierKey === "SALES_COLLECTION") {
+    try {
+      const { reconcileCinetpaySalesPayment } = await import("@/server/services/crm-engine/payments");
+      await reconcileCinetpaySalesPayment(reference, true);
+    } catch { return NextResponse.json({ error: "Sales payment receipt mismatch" }, { status: 409 }); }
+  }
   const claimed = await db.intakePayment.updateMany({
     where: { reference, status: { not: "PAID" }, provider: "CINETPAY" },
     data: { status: "PAID", paidAt: new Date(), failureReason: null },
   });
-  if (claimed.count > 0 && payment.intakeToken) {
+  if (claimed.count > 0 && payment.intakeToken && payment.tierKey !== "SALES_COLLECTION") {
     const { fulfillPaidIntakeReport } = await import("@/server/services/quick-intake/paid-fulfillment");
     void fulfillPaidIntakeReport(reference);
   }

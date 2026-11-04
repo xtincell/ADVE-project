@@ -42,6 +42,24 @@ export function salesTaxLabel(value: { taxTreatment?: SalesTaxTreatment; taxRate
   return value.taxTreatment === "INCLUDED_IN_PRICE" ? "Prix final à payer" : value.taxTreatment === "EXCLUDED" ? `Prix hors taxes${value.taxRatePct !== undefined ? ` · taxe ajoutée : ${value.taxRatePct} %` : " · taux de taxe à préciser"}` : "Taxes à préciser";
 }
 
+type SalesCollectionFields = { mode: "MANUAL" | "CINETPAY"; destinationRef: string; financeOwnerId: string };
+export const salesCollectionNames = { MANUAL: "Règlement vérifié par l’équipe", CINETPAY: "Paiement en ligne CinetPay" } as const;
+export function readSalesCollectionFields(form: FormData, prefix = ""): SalesCollectionFields {
+  const read = (name: string) => String(form.get(prefix + name) ?? "").trim();
+  const mode = read("collectionMode");
+  if (mode !== "MANUAL" && mode !== "CINETPAY") throw new Error("Choisissez comment le client peut payer avant de continuer.");
+  return { mode, destinationRef: read("destinationRef"), financeOwnerId: read("financeOwner") };
+}
+export function CrmSalesCollectionFields({ principals, defaultPrincipalId, namePrefix = "", initialValues }: { principals: SalesPrincipalOption[]; defaultPrincipalId?: string; namePrefix?: string; initialValues?: SalesCollectionFields }) {
+  const [mode, setMode] = useState<SalesCollectionFields["mode"]>(initialValues?.mode ?? "MANUAL");
+  return <>
+    <label className="sm:col-span-2">Comment le client peut-il payer ?<select className={field} name={namePrefix + "collectionMode"} value={mode} onChange={event => setMode(event.target.value as SalesCollectionFields["mode"])}><option value="MANUAL">{salesCollectionNames.MANUAL}</option><option value="CINETPAY">{salesCollectionNames.CINETPAY}</option></select></label>
+    <label>{mode === "CINETPAY" ? "Nom exact du compte CinetPay configuré" : "Compte ou numéro où recevoir le paiement"}<input className={field} name={namePrefix + "destinationRef"} required maxLength={4000} defaultValue={initialValues?.destinationRef} placeholder={mode === "CINETPAY" ? "Nom du compte vérifié pour cette marque" : "Référence de compte ou numéro de collecte de la marque"} /></label>
+    <label>{mode === "CINETPAY" ? "Personne chargée du suivi en cas d’incident" : "Personne qui vérifie le paiement"}<select className={field} name={namePrefix + "financeOwner"} defaultValue={initialValues?.financeOwnerId ?? defaultPrincipalId} required>{principals.filter(person => !person.id.startsWith("mcp:")).map(person => <option key={person.id} value={person.id}>{person.label}</option>)}</select></label>
+    {mode === "CINETPAY" && <p className="text-xs text-foreground-muted sm:col-span-2">Le compte CinetPay doit être vérifié et correspondre à cette marque. Indiquez son nom exact, jamais une clé secrète. La personne désignée assure le suivi en cas d’incident.</p>}
+  </>;
+}
+
 /** The individual desk and the portfolio approve the same offer and commitment fields. */
 export function CrmSalesMandateFields({ catalogue, offerId, onOfferChange, offerVersion, principals, defaultPrincipalId, defaultChannel = "EMAIL", showSeller = true, namePrefix = "", webOnly = false, informationOnly = false, initialValues }: {
   catalogue: SalesCatalogueOffer[];
