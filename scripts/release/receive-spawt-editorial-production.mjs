@@ -118,11 +118,17 @@ async function run(){
     }
     rows=await api("deliverableOrchestrator.calendarProductionRows",scope);
   }
+  let scopedTasks;
   for(const post of docket())for(const brief of post.briefs){
     if(stage==="produce"&&(post.post.format!==values.format||brief.variant!==Number(values.option)))continue;
     const rec=brief.generation;
     if(!rec?.generativeTaskId)continue;
-    const task=await api("ptah.getForge",{taskId:rec.generativeTaskId});
+    // The canonical brand-scoped read admits an administrator without a personal
+    // production-team assignment. getForge requires that assignment instead.
+    scopedTasks??=await api("ptah.listForges",{strategyId,limit:100});
+    guard(Array.isArray(scopedTasks),"La liste des productions de cette marque n’est pas disponible.");
+    const task=scopedTasks.find(item=>item.id===rec.generativeTaskId);
+    guard(task,"La tâche exacte n’est pas présente dans les 100 productions reçues de cette marque. Aucun autre accès ni nouvelle génération n’est tenté.");
     guard(task?.strategyId===strategyId&&task.sourceBrandAssetId===brief.assetId,"La tâche ne correspond pas au brief sélectionné.");
     guard(task.status==="COMPLETED","La tâche de la piste "+post.post.format+"/"+brief.variant+" n’est pas terminée ("+task.status+"). Aucune relance automatique.");
     const frozenBrief=frozen.find(item=>item.assetId===brief.assetId&&item.version===brief.version);
