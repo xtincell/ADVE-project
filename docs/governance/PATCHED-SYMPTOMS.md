@@ -28,6 +28,21 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 547 — navigation mobile au-dessus du dossier d’actif (2026-11-05)
+
+Le dossier chargé était lisible et sans débordement horizontal, mais sa fin
+était masquée par la barre mobile et la bulle de retour. La modale partagée
+utilisait encore `z-50`, inférieur aux couches de navigation (70/80) et de
+retour (60). Elle utilise désormais le token commun `--z-modal` (100).
+Hypothèse de cause : ancienne valeur locale restée après centralisation des
+couches d’interface. Commit dédié `fix(ui): keep asset dossiers above mobile navigation`.
+Réception Chrome local à 1440×1100 et 390×844 : provenance synthétique explicite,
+gouverneur Mestor, navigation V2 → V1 → V2, usages campagne/brief et contenu
+intégral reçus. Le bord inférieur reste au-dessus de la navigation, sans
+débordement ni exception de page. Captures inspectées dans
+`dam-browser547/`, hors dépôt ; 4 tests dossier/focus verts et lint ciblé reçu.
+Aucune sélection humaine, génération ni donnée de production modifiée.
+
 ### 542 — une action longue valide dans I pouvait bloquer S (2026-11-04)
 
 La maturité pouvait afficher 100 % alors que le schéma d’écriture de S refusait
