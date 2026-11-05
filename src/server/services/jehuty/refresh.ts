@@ -397,7 +397,7 @@ async function refreshWeakSignals(
 
   const since = new Date(Date.now() - 20 * 60 * 60 * 1000);
   const existing = await prisma.signal.findFirst({
-    where: { strategyId, type: "WEAK_SIGNAL_ALERT", createdAt: { gte: since } },
+    where: { strategyId, type: "WEAK_SIGNAL_ALERT", createdAt: { gte: since }, data: { path: ["source"], equals: "gazette_refresh_feed_terms" } },
     select: { id: true },
   });
   if (existing) return ok("WEAK_SIGNAL", 0, "Signal faible déjà relevé aujourd'hui.");
@@ -412,6 +412,8 @@ async function refreshWeakSignals(
         content: `Le terme « ${best.term} » revient dans ${best.n} article(s) de votre veille du jour — un frémissement à surveiller dans votre secteur.`,
         thesis: best.term,
         occurrences: best.n,
+        sources: articles.filter(article => article.title.toLowerCase().split(/[^\p{L}\p{N}]+/u).includes(best.term))
+          .map(article => ({ url: article.link, title: article.title, source: article.source, publishedAt: article.publishedAt })),
       },
     },
   });

@@ -36,9 +36,15 @@ Preuves privées : `prod-four-options-readonly-long-20261105.json`,
 `prod-four-options-visual-receipt-20261105.json`, `intake-browser547/receipt.json`
 dans le dossier de recette d’octobre, hors dépôt applicatif.
 
-**Étape suivante.** Achever les réceptions Gazette et DAM, exécuter le gauntlet
-sur l’intégration complète puis recevoir la CI, l’image et les mêmes parcours en
-production. Le vrai numéro de PR rejoint `scope-drift.md` après sa création.
+**Réception locale intégrée.** Typage, lints, cycles et 1 682 tests de gouvernance
+passent ; 26 avertissements de lint existants restent identifiés. Gazette reçue
+sous session réelle : HTTP 200, DOM 624 ms, premier titre 3 316 ms, aucune
+exception/500 ; image éditeur chargée, double page bureau et mobile sans
+débordement. Interprétation de recette explicitement synthétique et mutation
+Notoria interceptée : aucun appel IA réel déduit de ce contrôle.
+
+**Étape suivante.** Recevoir le dossier DAM détaillé, la CI, l’image et les mêmes
+parcours en production. Le vrai numéro de PR rejoint `scope-drift.md` après sa création.
 La sélection éditoriale et la publication restent des décisions distinctes.
 
 ## 538 — prémisses utilisables, vérification réelle et lecteurs fidèles (2026-11-03)

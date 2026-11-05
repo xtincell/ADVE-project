@@ -9,6 +9,8 @@
  * - agency : multi-strategy avec metadata par dépêche
  */
 
+import { ArticleSpread } from "./article-spread";
+import { selectGazetteEdition } from "@/lib/jehuty-editorial";
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
@@ -39,7 +41,7 @@ const CATEGORY_RUBRIC: Record<JehutyCategory, string> = {
   WEAK_SIGNAL: "Signaux faibles",
   SCORE_DRIFT: "Mouvements de score",
   DIAGNOSTIC: "Diagnostics",
-  EXTERNAL_SIGNAL: "Le monde dehors",
+  EXTERNAL_SIGNAL: "Actualités & décryptages",
 };
 
 /** Libellé court par section du rafraîchissement (toast). */
@@ -90,12 +92,12 @@ const URGENCY_LABEL: Record<string, string> = { NOW: "Maintenant", SOON: "Bient�
 const IMPACT_LABEL: Record<string, string> = { HIGH: "Fort", MEDIUM: "Moyen", LOW: "Faible" };
 
 const CATEGORY_ORDER: JehutyCategory[] = [
+  "EXTERNAL_SIGNAL",
   "RECOMMENDATION",
   "MARKET_SIGNAL",
   "DIAGNOSTIC",
   "WEAK_SIGNAL",
   "SCORE_DRIFT",
-  "EXTERNAL_SIGNAL",
 ];
 
 const PILLAR_KEYS_LOWER = CANONICAL_PILLAR_KEYS.map((k) => k.toLowerCase()) as ReadonlyArray<string>;
@@ -146,6 +148,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
     onSuccess: () => feedQuery.refetch(),
   });
   const triggerNotoriaMutation = trpc.jehuty.triggerNotoria.useMutation({
+    onError: (error) => toast.error(`Propositions indisponibles : ${error.message}`),
     onSuccess: (result) => {
       if (result.totalRecos > 0) {
         const message = `${result.totalRecos} proposition(s) préparée(s). Examinez-les dans Recommandations avant de les appliquer.`;
@@ -201,7 +204,9 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
 
   const handleTriggerNotoria = (item: JehutyFeedItem) => {
     if (item.sourceType !== "SIGNAL" || !item.strategyId) return;
-    triggerNotoriaMutation.mutate({ strategyId: item.strategyId, signalId: item.sourceId });
+    triggerNotoriaMutation.mutate(item.externalUrl
+      ? { strategyId: item.strategyId, articleUrl: item.externalUrl }
+      : { strategyId: item.strategyId, signalId: item.sourceId });
   };
 
   const handleApplyReco = (item: JehutyFeedItem) => {
@@ -211,9 +216,8 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
 
   // ── Derive editorial structure ──
   const { lead, byCategory } = useMemo(() => {
-    const sorted = [...items].sort((a, b) => b.priority - a.priority);
-    const urgents = sorted.filter((i) => i.urgency === "NOW");
-    const lead = urgents[0] ?? sorted[0] ?? null;
+    const sorted = selectGazetteEdition(items);
+    const lead = sorted[0] ?? null;
     const restPool = sorted.filter((i) => i.id !== lead?.id);
     const byCategory: Record<JehutyCategory, JehutyFeedItem[]> = {
       RECOMMENDATION: [], MARKET_SIGNAL: [], WEAK_SIGNAL: [],
@@ -309,8 +313,8 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
       <section className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 border-y border-border-subtle py-6 mb-12">
         <Indicator
           label="Dépêches"
-          value={dashboard?.totalItems ?? 0}
-          hint="Total intelligence active"
+          value={items.length}
+          hint="Dépêches dans cette vue"
         />
         <Indicator
           label="Sévérité forte"
@@ -329,6 +333,12 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
           hint="Estimation du contexte marché renseigné"
         />
       </section>
+
+      {refreshMutation.data && <details className="mb-8 border-y border-border-subtle py-4" open={refreshMutation.data.sections.some(section => section.status === "ERROR")}>
+        <summary className="cursor-pointer text-sm text-foreground">Bilan de la dernière collecte</summary>
+        <ul className="mt-3 space-y-2 text-sm text-foreground-secondary">{refreshMutation.data.sections.map(section => <li key={section.section}><strong>{RUBRIC_SHORT[section.section]}</strong> · {section.detail}</li>)}</ul>
+      </details>}
+      {feedQuery.error && <p role="alert" className="mb-6 text-sm text-error">Lecture de la Gazette impossible : {feedQuery.error.message}</p>}
 
       {/* ═══ Filter strip (épuré) ══════════════════════════════════ */}
       <nav className="flex items-center gap-x-6 gap-y-3 flex-wrap mb-10 pb-4 border-b border-border-subtle">
@@ -405,7 +415,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
       )}
 
       {/* ═══ Sections par rubrique ═════════════════════════════════ */}
-      {CATEGORY_ORDER.map((cat) => {
+      {CATEGORY_ORDER.filter(cat => !selectedCategory || selectedCategory === cat).map((cat) => {
         const list = byCategory[cat];
         // Rubrique VIDE : présentée quand même (fix 2026-07-20) — le lecteur
         // sait ce qu'elle contiendra et comment la déclencher, au lieu d'un
@@ -429,7 +439,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
             <p className="-mt-2 mb-6 max-w-2xl text-xs leading-relaxed text-foreground-muted">
               {CATEGORY_DESCRIPTION[cat].about}
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10">
+            <div className={cat === "EXTERNAL_SIGNAL" ? "space-y-10" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10"}>
               {list.map((item) => (
                 <Dispatch
                   key={item.id}
@@ -458,7 +468,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
       {/* ═══ Footer / colophon ═════════════════════════════════════ */}
       <footer className="border-t border-border-subtle pt-6 mt-12 flex items-center justify-between flex-wrap gap-4">
         <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">
-          La Gazette · veille automatique · Les dépêches se rafraîchissent toutes les 30s.
+          La Gazette · lecture synchronisée toutes les 30 s · « Rafraîchir » lance la collecte.
         </p>
         <p className="font-serif italic text-sm text-foreground-muted">
           « Avant de forger, lire le monde. »
@@ -548,7 +558,7 @@ function DispatchActions({
   item, isPinned, isTriggered, onPin, onUnpin, onDismiss, onNotoria, isNotoriaPending, onApply, isApplyPending,
 }: DispatchActionsProps) {
   return (
-    <div className="flex items-center gap-4 font-mono text-2xs uppercase tracking-widest">
+    <div className="flex flex-wrap items-center gap-4 font-mono text-2xs uppercase tracking-widest">
       {isPinned ? (
         <button onClick={onUnpin} className="flex items-center gap-1.5 text-accent hover:opacity-80 transition-opacity">
           <Pin className="h-3 w-3" /> Retirer
@@ -619,6 +629,7 @@ function LeadStory({
   const isPinned = item.curation?.action === "PINNED";
   const isTriggered = item.curation?.action === "NOTORIA_TRIGGERED";
   const hasDetails = Boolean(item.advantages?.length || item.disadvantages?.length);
+  if (item.externalUrl) return <ArticleSpread item={item} onNotoria={onNotoria} isNotoriaPending={isNotoriaPending} onPin={onPin} onUnpin={onUnpin} onDismiss={onDismiss} />;
 
   return (
     <article className={`grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-x-10 gap-y-6 ${isPinned ? "border-l-2 border-accent pl-6" : ""}`}>
@@ -658,6 +669,7 @@ function LeadStory({
         </h3>
 
         <ReceivedObservation text={item.observation} summary={item.summary} lead />
+        <SignalSources item={item} />
 
         <div className="mt-6 flex items-center gap-6 flex-wrap">
           <DispatchActions
@@ -767,6 +779,7 @@ function Dispatch({
   const isPinned = item.curation?.action === "PINNED";
   const isTriggered = item.curation?.action === "NOTORIA_TRIGGERED";
   const hasDetails = Boolean(item.advantages?.length || item.disadvantages?.length);
+  if (item.externalUrl) return <ArticleSpread item={item} onNotoria={onNotoria} isNotoriaPending={isNotoriaPending} onPin={onPin} onUnpin={onUnpin} onDismiss={onDismiss} />;
 
   return (
     <article className={`flex flex-col ${isPinned ? "border-l-2 border-accent pl-4 -ml-4" : ""}`}>
@@ -804,6 +817,7 @@ function Dispatch({
       </h3>
 
       <ReceivedObservation text={item.observation} summary={item.summary} />
+      <SignalSources item={item} />
 
       {hasDetails && (
         <button
@@ -853,4 +867,9 @@ function Dispatch({
       )}
     </article>
   );
+}
+
+function SignalSources({ item }: { item: JehutyFeedItem }) {
+  if (!item.sources?.length) return null;
+  return <ul className="mt-3 space-y-1 text-xs text-foreground-muted" aria-label="Sources de cette analyse">{item.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{source.title}</a></li>)}</ul>;
 }

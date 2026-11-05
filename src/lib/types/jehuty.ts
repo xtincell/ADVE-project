@@ -16,6 +16,15 @@ export type JehutySourceType = "SIGNAL" | "RECOMMENDATION" | "DIAGNOSTIC";
 
 export type JehutyCurationAction = "PINNED" | "DISMISSED" | "NOTORIA_TRIGGERED";
 
+/** Article facts and the brand's reading remain separate, joined by exact source URL. */
+export interface ArticleBrandInterpretation {
+  articleUrl: string;
+  linkedAnalyses: Array<{ id: string; title: string; text: string; pillarKeys: string[]; sourceUrl: string; createdAt: string }>;
+  recommendations: Array<{ id: string; batchId: string; targetPillarKey: string; targetField: string; explain: string; status: string; createdAt: string }>;
+  brandContext: Array<{ pillarKey: string; field: string; label: string; text: string; source: "ADVE"; certainty?: string; stale: boolean }>;
+  batchIds: string[];
+}
+
 // ── Feed Item ─────────────────────────────────────────────────────
 
 export interface JehutyFeedItem {
@@ -53,6 +62,10 @@ export interface JehutyFeedItem {
   externalUrl?: string;
   /** Vignette réelle fournie par le flux RSS (articles de veille). */
   imageUrl?: string;
+  articleContext?: ArticleBrandInterpretation;
+  sources?: Array<{ url: string; title: string }>;
+  /** Distinguish the publication date from the collection date. */
+  dateKind?: "PUBLISHED" | "COLLECTED";
 }
 
 // ── Priority Calculation ──────────────────────────────────────────
