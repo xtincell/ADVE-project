@@ -1,3 +1,15 @@
+## v6.27.547 — fix(cockpit): sources lisibles, actifs traçables et entrée sans friction (2026-11-05)
+
+**Candidat local : retrouver la production, conserver ses sources et lire une Gazette exploitable.**
+
+- Intake accepte un domaine avec ou sans protocole et le normalise avant réception des sources. Les adresses non valides reçoivent un message français ; le brouillon est conservé. Le site reste facultatif et les contrôles réseau des URL restent applicables.
+- Le menu de marque expose directement Studio de production et Banque d’assets. Les livrables, sources documentaires et productions conservent leurs routes et leur rôle.
+- Le Data Asset Manager existant reste sous Mestor : le dossier d’un actif relie ses versions, sa sélection, son producteur enregistré et ses usages dans la même marque. Le déposant n’est pas assimilé à l’auteur. Un résultat Glory conservé peut rejoindre le coffre après un échec de dépôt, sans nouvel appel IA, doublon ni approbation implicite.
+- La Gazette sépare presse reçue, analyses internes et propositions ; sa lecture en double page conserve les sources et le contenu disponible. Les sujets de veille utilisent les publics et personas ADVE actuels. Les aperçus gardent leurs descriptions utiles et leurs liens/images complets lorsqu’ils sont reçus de l’éditeur.
+- La demande d’amélioration depuis un article transmet cet article et son contexte de marque au circuit de recommandations existant. Les appels, droits et états de proposition restent gouvernés par ce circuit.
+- Une production interrompue réconcilie ses reçus durables avant de proposer une reprise. Réception distincte, le 5 novembre : quatre PNG matériels et leurs quatre aperçus WEBP relus, deux formats et deux options par format. Ces fichiers préexistants en production ne prouvent pas le déploiement 547 ; ils ne sont ni approuvés par le client ni publiés sur un réseau social.
+- Intake reçu en Chrome local, bureau 1440 et mobile 390 : URL normalisée, erreur lisible sans perte de saisie, site absent accepté, HTTP 200, zéro exception/500. Les requêtes intake sont interceptées : aucune création de client et aucun appel IA. Tests ciblés intake (51 tests, 4 fichiers) et collecte Gazette (43 tests, 5 fichiers) verts ; typage reçu avec client Prisma isolé. Contrôles d’intégration, build final, CI, image/runtime 547 et réception de production suivis séparément dans REFONTE-PLAN et RESIDUAL-DEBT.
+
 ## v6.27.546 — Forge, briefs et production du calendrier (2026-11-04)
 
 La Forge exécute les briefs requis, conserve leurs versions et transmet le résultat à Ptah. Le calendrier propose deux pistes par publication par défaut et permet d’en choisir une à quatre. La doctrine de D, les références visuelles privées et les masters éditables accompagnent la production. Une piste peut être corrigée sans remplacer ses sœurs. L’approbation de S gouverne la création des projets issus de la stratégie.

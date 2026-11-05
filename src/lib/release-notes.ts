@@ -34,6 +34,16 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.547", date: "2026-11-05", headline: "Retrouver vos créations et lire votre veille",
+    highlights: [
+      { emoji: "🎨", title: "Accéder au studio et aux assets", body: "Le menu de votre marque donne un accès direct au studio de production et à la banque d’assets. Les documents livrés et les sources restent accessibles séparément." },
+      { emoji: "📚", title: "Retrouver l’origine d’un actif", body: "Le détail rassemble ses versions, son producteur renseigné et ses usages. Un résultat déjà conservé peut être déposé à nouveau après un incident, sans refaire sa génération." },
+      { emoji: "📰", title: "Lire les articles et leurs sources", body: "La Gazette distingue les articles collectés des analyses de votre marque. Une lecture en double page présente le contenu reçu, ses sources et les images disponibles." },
+      { emoji: "💡", title: "Demander une amélioration depuis un article", body: "La demande conserve l’article choisi et le contexte de votre marque pour préparer des propositions pertinentes à relire." },
+      { emoji: "🌐", title: "Saisir votre site naturellement", body: "Une adresse comme www.exemple.com est acceptée sans ajouter le protocole. Une erreur explique la correction attendue tout en conservant votre saisie ; le site reste facultatif." },
+    ],
+  },
+  {
     version: "6.27.546", date: "2026-11-04", headline: "Du planning aux visuels de marque",
     highlights: [
       { emoji: "🎨", title: "Produire depuis le calendrier", body: "Chaque publication dispose d’un brief versionné et peut recevoir une à quatre propositions. La planche du calendrier permet de relire les images reçues." },

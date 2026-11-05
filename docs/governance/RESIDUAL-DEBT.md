@@ -1,3 +1,22 @@
+## 547 — réception intégrée et livraison à recevoir (2026-11-05)
+
+Le correctif local couvre l’entrée par domaine nu, les accès Studio/Assets,
+la Gazette sourcée et le dossier/rejeu de dépôt du coffre existant. Les tests
+ciblés et le navigateur intake sont reçus ; ils ne ferment pas le parcours réel
+ADVE → calendrier → image → publication. Les mutations du navigateur intake sont
+interceptées afin de ne créer ni faux client ni coût de génération.
+
+**Plan et déclencheur.** À la fin de l’intégration 547, exécuter typage, lints,
+gouvernance, cycles et build final ; recevoir les parcours Gazette/DAM sous une
+session réelle ; puis rapprocher CI, image, version runtime et mêmes surfaces
+en production. Responsable : session NEFER de livraison 547. Effort borné au lot
+courant, sans nouvelle architecture ou moteur de génération.
+
+Les quatre images et quatre aperçus reçus séparément le 5 novembre ferment la
+réception matérielle de ces quatre options seulement. La relecture éditoriale,
+le choix du client et la publication ne sont pas effectués. Les contrats et
+fichiers vidéo/audio restent ouverts au plan de production sociale ci-dessous.
+
 ## 542 — recevoir les recettes de production audiovisuelle (2026-11-04)
 
 **Acquis.** Le texte a produit un `GloryOutput` réel avec modèle et transport

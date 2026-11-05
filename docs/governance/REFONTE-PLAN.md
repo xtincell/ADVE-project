@@ -1,3 +1,46 @@
+## 547 — Gazette sourcée, coffre traçable et accès à la production (2026-11-05)
+
+**État : candidat local en intégration.** La version runtime, le package et son
+verrou portent 547. Le déploiement 547, sa CI, son image et sa réception native de
+production ne sont pas encore reçus à ce checkpoint. Les sections historiques
+ci-dessous conservent leur portée et leurs dates ; aucun pourcentage global de
+Shinkiro ni fermeture du MVP entier n’est déduit de ce lot.
+
+Le flux réutilise les responsabilités existantes : Artemis/Glory produit la
+matière, Mestor gouverne les actifs et leurs choix, Ptah reçoit les fichiers
+matériels. Le dossier d’actif donne accès aux versions, provenance connue,
+sélection et usages sans confondre producteur et déposant. Le dépôt d’un résultat
+Glory conservé se reprend sous verrou, dans la marque, sans génération ni choix
+humain inventé. Studio et Banque d’assets deviennent des accès directs du menu.
+
+La Gazette conserve les articles réellement reçus et leurs sources, distincts
+des analyses internes. Ses sujets de collecte utilisent le socle ADVE actuel,
+y compris les personas et publics. La lecture en double page et la demande de
+recommandation depuis un article gardent le lien à cette source. La quantité de
+presse reçue et la présence d’images restent des résultats de collecte, jamais
+un contenu fabriqué pour remplir l’interface.
+
+Intake : domaine nu normalisé, erreurs compréhensibles, brouillon conservé,
+site facultatif. Chrome local bureau 1440/mobile 390 reçu avec appels interceptés :
+HTTP 200, zéro exception et zéro 500 ; aucun faux client ni appel fournisseur.
+Les tests intake (51 tests, 4 fichiers) et collecte Gazette (43 tests, 5 fichiers) sont verts. Le client Prisma est
+isolé du checkout partagé ; typage reçu, aucune migration poussée en base.
+
+**Reçu matériel distinct du candidat 547.** Le 5 novembre, lecture authentifiée
+de quatre images déjà conservées en production : deux posts 1080×1080 et deux
+stories 1080×1920, chacune avec un aperçu WEBP. Les quatre fichiers sont distincts
+et ont été inspectés visuellement. Les options de photographie alternative et
+de master conservé gardent leurs références/version. Ce reçu n’est ni une
+validation éditoriale du client ni une publication sociale, ni un déploiement 547.
+Preuves privées : `prod-four-options-readonly-long-20261105.json`,
+`prod-four-options-visual-receipt-20261105.json`, `intake-browser547/receipt.json`
+dans le dossier de recette d’octobre, hors dépôt applicatif.
+
+**Étape suivante.** Achever les réceptions Gazette et DAM, exécuter le gauntlet
+sur l’intégration complète puis recevoir la CI, l’image et les mêmes parcours en
+production. Le vrai numéro de PR rejoint `scope-drift.md` après sa création.
+La sélection éditoriale et la publication restent des décisions distinctes.
+
 ## 538 — prémisses utilisables, vérification réelle et lecteurs fidèles (2026-11-03)
 
 537 est reçue techniquement en production (mergePR1124 e3e484514, image/runtime,
