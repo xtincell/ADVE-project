@@ -23,6 +23,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@
 // ============================================================================
 
 import { z } from "zod";
+import { IntakeWebUrlSchema, OptionalIntakeWebUrlSchema } from "@/lib/intake-input";
 import { EntryOvertonClaimSchema } from "@/domain/overton-positioning";
 import { listIntakeDocuments, retainIntakeDocuments, readRetainedIntakeDocuments } from "@/server/services/quick-intake/document-input";
 import { readIntakeReportAccess } from "@/server/services/quick-intake/paid-fulfillment";
@@ -458,7 +459,7 @@ export const quickIntakeRouter = createTRPCRouter({
       attribution: z.record(z.string().max(40), z.string().max(300)).optional(),
       method: z.enum(["GUIDED", "IMPORT", "LONG", "SHORT", "INGEST", "INGEST_PLUS"]).optional(),
       // Vague 10 — empreinte web publique (alimente le pilier E)
-      websiteUrl: z.string().max(300).optional(),
+      websiteUrl: OptionalIntakeWebUrlSchema,
       socialLinksRaw: z.string().max(2000).optional(),
       // ADR-0157 — parrainage : « recommandé par » (code LF-XXXXXX). Optionnel,
       // best-effort — un code invalide n'affecte jamais l'intake.
@@ -1347,7 +1348,7 @@ export const quickIntakeRouter = createTRPCRouter({
       token: z.string(),
       rawText: z.string().optional(),
       prepareOnly: z.boolean().default(false),
-      websiteUrl: z.string().url().optional(),
+      websiteUrl: OptionalIntakeWebUrlSchema,
       files: z.array(z.object({
         name: z.string(),
         content: z.string(), // base64
@@ -1366,10 +1367,10 @@ export const quickIntakeRouter = createTRPCRouter({
       // Le site déclaré à l'étape contact (landing) reste la source par défaut :
       // le champ de la page ingest est pré-rempli côté UI, mais s'il revient
       // vide on ne DÉTRUIT pas la déclaration initiale — on la réutilise.
-      const effectiveWebsiteUrl = input.websiteUrl ?? intake.websiteUrl?.trim() ?? undefined;
+      const effectiveWebsiteUrl = OptionalIntakeWebUrlSchema.parse(input.websiteUrl ?? intake.websiteUrl ?? undefined);
 
       const documents = await retainIntakeDocuments(input.token, input.files, {
-        rawText: input.rawText ?? undefined, websiteUrl: input.websiteUrl ?? undefined,
+        rawText: input.rawText ?? undefined, websiteUrl: effectiveWebsiteUrl,
       }, ctx.db);
       if (input.prepareOnly) return { status: "SAVED" as const, token: input.token, documents };
       if (documents.some(document => document.original?.state !== "STORED")) {
@@ -1451,13 +1452,13 @@ export const quickIntakeRouter = createTRPCRouter({
     .input(z.object({
       token: z.string(),
       prepareOnly: z.boolean().default(false),
-      websiteUrl: z.string().url().optional(),
+      websiteUrl: OptionalIntakeWebUrlSchema,
       files: z.array(z.object({
         name: z.string(),
         content: z.string(),
         type: z.string(),
       })).max(5).optional(),
-      urls: z.array(z.string().url()).max(5).optional(),
+      urls: z.array(IntakeWebUrlSchema).max(5).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const intake = await ctx.db.quickIntake.findUnique({
@@ -1468,8 +1469,9 @@ export const quickIntakeRouter = createTRPCRouter({
         throw new Error("Intake already completed");
       }
 
-      const effectiveWebsiteUrl = input.websiteUrl ?? intake.websiteUrl ?? (input.prepareOnly ? undefined : input.urls?.[0]);
-      const effectiveSocialUrls = input.urls ?? intake.socialLinksRaw?.split(/\r?\n/).filter(Boolean) ?? [];
+      const effectiveWebsiteUrl = OptionalIntakeWebUrlSchema.parse(input.websiteUrl ?? intake.websiteUrl ?? (input.prepareOnly ? undefined : input.urls?.[0]));
+      const effectiveSocialUrls = (input.urls ?? intake.socialLinksRaw?.split(/\r?\n/).filter(Boolean) ?? [])
+        .map(url => IntakeWebUrlSchema.parse(url));
       const effectiveUrls = [...new Set([effectiveWebsiteUrl, ...effectiveSocialUrls].filter((url): url is string => Boolean(url)))];
       const documents = await retainIntakeDocuments(input.token, input.files ?? [], {
         websiteUrl: effectiveWebsiteUrl ?? undefined, socialLinksRaw: effectiveSocialUrls.join("\n"),

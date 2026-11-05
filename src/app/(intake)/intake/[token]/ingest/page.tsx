@@ -15,6 +15,7 @@ import { IntakeProcessingScreen } from "@/components/intake/intake-processing-sc
 import { useIntakeProcessingWatch } from "@/components/intake/use-intake-processing-watch";
 import { ReceivedIntakeDocuments, readIntakeFile } from "@/components/intake/received-documents";
 import { useT } from "@/lib/i18n/use-t";
+import { OptionalIntakeWebUrlSchema, intakeErrorMessage } from "@/lib/intake-input";
 
 const ACCEPTED_TYPES = [
   "application/pdf",
@@ -104,7 +105,7 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
         startWatching();
         return;
       }
-      setError(err.message);
+      setError(intakeErrorMessage(err));
     },
   });
 
@@ -120,7 +121,7 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
     setError("");
     setSavingSources(true);
     try {
-      const fields = { token, prepareOnly: true, rawText, websiteUrl: websiteUrl.trim() || undefined };
+      const fields = { token, prepareOnly: true, rawText, websiteUrl: OptionalIntakeWebUrlSchema.parse(websiteUrl) };
       // Text is saved independently, then each original gets its own durable receipt.
       await saveSourcesMutation.mutateAsync({ ...fields, files: [] });
       for (const [index, selected] of files.entries()) {
@@ -131,7 +132,7 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
       setFiles([]);
       await refetch();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("intakeIngest.received.failed"));
+      setError(intakeErrorMessage(err));
       await refetch();
       return;
     } finally {
@@ -322,7 +323,10 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
           <input
             disabled={savingSources}
             id="websiteUrl"
-            type="url"
+            type="text"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
             value={websiteUrl}
             onChange={(e) => setWebsiteUrl(e.target.value)}
             className="w-full rounded-xl border border-border bg-background-raised px-4 py-3 text-base text-foreground outline-none transition-colors placeholder:text-foreground-muted focus:border-primary focus:ring-1 focus:ring-primary"
@@ -399,7 +403,7 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
         </div>
 
         {error && (
-          <div className="mt-4 flex items-center gap-2 rounded-lg bg-destructive-subtle/30 px-4 py-3 text-sm text-destructive">
+          <div role="alert" className="mt-4 flex items-center gap-2 rounded-lg bg-destructive-subtle/30 px-4 py-3 text-sm text-destructive">
             <AlertCircle className="h-4 w-4 shrink-0" />
             {error}
           </div>
