@@ -23,6 +23,7 @@ import { governedProcedure } from "@/server/governance/governed-procedure";
 import { refreshBrandGazette } from "@/server/services/jehuty/refresh";
 import { signalObservation } from "@/domain/signal-observation";
 import { knowledgeStrategyScope } from "@/server/services/operator-isolation/knowledge-scope";
+import { articleNotoriaInputSchema } from "@/server/services/jehuty/article-notoria";
 
 /* lafusee:governed-active */
 
@@ -467,12 +468,14 @@ export const jehutyRouter = createTRPCRouter({
 
   triggerNotoria: governedProcedure({
     kind: "GENERATE_RECOMMENDATIONS",
-    inputSchema: z.object({
-      strategyId: z.string(),
-      signalId: z.string(),
-    }),
+    inputSchema: articleNotoriaInputSchema,
   })
     .mutation(async ({ input, ctx }) => {
+      if (input.articleUrl) {
+        const { triggerArticleNotoria } = await import("@/server/services/jehuty/article-notoria");
+        return triggerArticleNotoria({ strategyId: input.strategyId, articleUrl: input.articleUrl, userId: ctx.session.user.id });
+      }
+      if (!input.signalId) throw new TRPCError({ code: "BAD_REQUEST", message: "Choisissez un signal ou un article." });
       // Load signal
       const signal = await db.signal.findUnique({ where: { id: input.signalId } });
       if (!signal) throw new Error("Signal introuvable.");
