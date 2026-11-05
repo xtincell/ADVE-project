@@ -28,7 +28,17 @@ function guard(condition,msg){if(!condition)throw Error(msg);}
 async function api(path,input,write=false){
   const url=new URL("/api/trpc/"+path,origin);const wire=JSON.stringify({json:input});
   if(!write)url.searchParams.set("input",wire);
-  const res=await fetch(url,{method:write?"POST":"GET",redirect:"error",headers:{cookie,"content-type":"application/json"},...(write?{body:wire}:{}),signal:AbortSignal.timeout(write?720000:40000)});
+  let res;
+  try {
+    // This checkout has no importable undici Agent. Node's own headers timeout
+    // can therefore end the response before this AbortSignal's 12-minute limit.
+    res=await fetch(url,{method:write?"POST":"GET",redirect:"error",headers:{cookie,"content-type":"application/json"},...(write?{body:wire}:{}),signal:AbortSignal.timeout(write?720000:40000)});
+  } catch(error) {
+    const code=error?.cause?.code;
+    report.transport={code:typeof code==="string"&&/^[A-Z][A-Z0-9_]{0,63}$/.test(code)?code:null,requestMayHaveCompleted:write};
+    if(write)report.nextStep="Vérifier le reçu enregistré avec une étape en lecture seule. La coupure ne prouve pas un échec serveur ; aucune relance automatique.";
+    throw error;
+  }
   const body=await res.json();
   guard(res.ok&&body.result,"Requête "+path+" refusée (HTTP "+res.status+", "+(body.error?.json?.data?.code??"absence de résultat")+").");
   return body.result.data?.json;
@@ -166,5 +176,5 @@ async function run(){
   }
 }
 try{await run();report.status="RECEIVED";}
-catch(e){report.status="BLOCKED";report.message=e.message;process.exitCode=1;}
+catch(e){report.status=report.transport?.requestMayHaveCompleted?"UNCONFIRMED":"BLOCKED";report.message=e.message;process.exitCode=1;}
 report.finishedAt=new Date().toISOString();checkpoint();console.log(JSON.stringify({status:report.status,step:stage,images:report.images.length,message:report.message??null,file:values.receipt}));
