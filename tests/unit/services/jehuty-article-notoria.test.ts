@@ -147,6 +147,21 @@ describe("article right page — exact links, no simulated interpretation", () =
     expect(mocks.recommendations.mock.calls[0]?.[0].where).toEqual({ strategyId, batchId: { in: ["batch-1", "batch-2"] }, publishedAt: { not: null } });
   });
 
+  it("uses readable signal headlines without truncating linked analysis content", async () => {
+    const clause = "Les foodies construisent des communautés locales";
+    const thesis = `${clause}, ${"une hypothèse à vérifier auprès du public. ".repeat(12)}`;
+    const unbroken = "Une observation à confronter aux choix de la marque ".repeat(10);
+    mocks.signals.mockResolvedValue([
+      signal("clause", { thesis, sourceUrl: articleUrl, pillar: "v" }),
+      signal("fallback", { thesis: unbroken, sourceUrl: articleUrl, pillar: "e" }),
+    ]);
+    const result = (await readArticleBrandInterpretations(strategyId, [article])).get(articleUrl)!;
+    expect(result.linkedAnalyses.map(row => row.title)).toEqual([clause, "Point de vigilance — pilier E"]);
+    expect(result.linkedAnalyses[0]?.text).toBe(thesis.trim());
+    expect(result.linkedAnalyses[1]?.text).toBe(unbroken.trim());
+    expect(result.linkedAnalyses.every(row => row.sourceUrl === articleUrl)).toBe(true);
+  });
+
   it("identifies ADVE excerpts as context, preserves inferred/stale provenance and never claims an impact", async () => {
     mocks.pillars.mockResolvedValue([
       { key: "a", content: { promesseFondamentale: "Un bouche-à-oreille vérifiable." }, fieldCertainty: { promesseFondamentale: "INFERRED" }, staleAt: date },

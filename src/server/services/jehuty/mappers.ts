@@ -38,7 +38,7 @@ export function editorialExcerpt(text: string, max = 300): string {
   return `${cut.slice(0, boundary > 0 ? boundary : cut.length)}…`;
 }
 
-function signalHeadline(title: string, data: Record<string, unknown>, type: string): string {
+export function signalHeadline(title: string, data: Record<string, unknown>, type: string): string {
   if (title.length <= 110) return title;
   const clause = title.split(/[,;!?]|\.\s/)[0]?.trim();
   if (clause && clause.length >= 15 && clause.length <= 110) return clause;

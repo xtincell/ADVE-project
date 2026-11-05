@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { signalObservation } from "@/domain/signal-observation";
 import type { ArticleBrandInterpretation } from "@/lib/types/jehuty";
+import { signalHeadline } from "./mappers";
 
 const RECEIPT_TYPE = "JEHUTY_ARTICLE_NOTORIA";
 const RECEIPT_SCHEMA = "gazette-article-notoria-v1";
@@ -191,7 +192,7 @@ export async function readArticleBrandInterpretations(
     const observation = signalObservation(signal);
     if (!observation.observation) continue;
     for (const [url, context] of result) if (referencesArticle(data, url)) {
-      context.linkedAnalyses.push({ id: signal.id, title: observation.title, text: observation.observation,
+      context.linkedAnalyses.push({ id: signal.id, title: signalHeadline(observation.title, data, signal.type), text: observation.observation,
         pillarKeys: [...new Set([...strings(data.relatedPillars), text(data.pillar)].filter((key) => /^[ADVERTIS]$/i.test(key)).map((key) => key.toUpperCase()))],
         sourceUrl: url, createdAt: signal.createdAt.toISOString() });
     }
