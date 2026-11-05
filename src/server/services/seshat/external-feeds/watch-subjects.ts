@@ -10,7 +10,8 @@
  * existait, personne ne le branchait.
  *
  * Chaîne de propagation (PROPAGATION-MAP) : pilier V (`produitsCatalogue`) +
- * pilier D (`concurrents`) + pilier E (`cible`/`communaute`) → dérivation
+ * pilier A (`publicCible`) + D (`personas`, concurrents) + E (portrait et
+ * communauté, y compris les anciens champs) → dérivation
  * pure → sujets de veille → Gazette/panneau Veille. Manual-first (ADR-0060) :
  * `businessContext.watchSubjects` (édité par le founder/opérateur) PRIME sur
  * le dérivé quand il est non vide.
@@ -70,6 +71,7 @@ export function extractCatalogBrands(
 }
 
 export interface DeriveWatchSubjectsInput {
+  pillarA?: Record<string, unknown> | null;
   pillarV?: Record<string, unknown> | null;
   pillarD?: Record<string, unknown> | null;
   pillarE?: Record<string, unknown> | null;
@@ -77,45 +79,74 @@ export interface DeriveWatchSubjectsInput {
   countryName?: string | null;
 }
 
+const QUERY_STOPWORDS = new Set([
+  "les", "des", "une", "pour", "avec", "dans", "sur", "qui", "que", "leur", "leurs", "aux",
+  "the", "and", "for", "from", "with", "par", "est", "sont", "comme", "cette", "ces", "son", "ses",
+  "communication", "persona", "trafic", "reference", "profil", "postulat", "postulats", "confirmer",
+  "veulent", "veut", "cherche", "cherchent", "atteindre", "public", "qualifie", "premier", "plus",
+  "repondre", "connaitre", "obtenir", "passer", "conserver", "proteger", "permettre", "doit", "doivent",
+]);
+const record = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+const strings = (value: unknown): string[] => typeof value === "string" ? [value] :
+  Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
+
+/** Short search terms, not a copied persona biography or its private identity. */
+function audienceTopic(value: string, excluded: string[] = []): string {
+  const names = new Set(excluded.flatMap(contentWords).map(w => w.toLowerCase()));
+  return [...new Set(contentWords(value).filter(w => !QUERY_STOPWORDS.has(w.toLowerCase()) &&
+    !names.has(w.toLowerCase()) && !/\d/.test(w)))].slice(0, 4).join(" ");
+}
+
+/** Modern canon first; legacy E remains readable. Persona names and numbers are not topics. */
+function audienceSubjects(input: DeriveWatchSubjectsInput): string[] {
+  const a = input.pillarA ?? {}, d = input.pillarD ?? {}, e = input.pillarE ?? {};
+  const scoped = (topic: string, location?: string) => topic ?
+    `${topic}${location && !topic.toLowerCase().includes(location.toLowerCase()) ? ` ${location}` : ""}${input.countryName ? ` ${input.countryName}` : ""}` : "";
+  const declared = strings(a.publicCible).flatMap(text => text.split(/[.;\n]+/))
+    .slice(0, 3).map(clause => audienceTopic(clause.split(":").at(-1) ?? clause)).filter(Boolean);
+  if (declared.length) return declared.map(topic => scoped(topic));
+
+  const personas = Array.isArray(d.personas) ? d.personas.map(record) : [];
+  const portrait = record(e.superfanPortrait);
+  const roles = (p: Record<string, unknown>) => strings(p.actorRoles);
+  const ordered = [...personas].sort((x, y) => {
+    const priority = (p: Record<string, unknown>) => roles(p).includes("COMMUNICATION_AUDIENCE") ||
+      (typeof p.id === "string" && p.id === portrait.personaRef) ? 0 : roles(p).includes("PARTNER") ? 1 : 2;
+    return priority(x) - priority(y);
+  });
+  const modern = ordered.slice(0, 3).map(persona => {
+    const profile = persona.id === portrait.personaRef ? strings(portrait.profile).join(" ") : "";
+    const description = strings(persona.csp)[0] ?? strings(persona.jobsToBeDone)[0] ?? profile;
+    // Location is a declared scope, never a guess from the persona's given name.
+    const location = strings(persona.location)[0]?.split(/[,;]/)[0]?.trim();
+    return scoped(audienceTopic(description, strings(persona.name)), location);
+  }).filter(Boolean);
+  if (modern.length) return modern;
+  const overton = Array.isArray(a.overtonPositions) ? a.overtonPositions.map(record) : [];
+  const audience = strings(overton[0]?.audience)[0] ?? strings(e.cible ?? e.communaute ?? e.audience)[0] ??
+    strings(portrait.profile)[0];
+  return audience ? [scoped(audienceTopic(audience))].filter(Boolean) : [];
+}
+
 /**
- * Sujets dérivés, ≤ 6, dédupliqués :
- *   - marques du catalogue (mondiales — l'actu vendeur est globale) ;
- *   - concurrents déclarés (+ pays) ;
- *   - communauté cible (+ pays) — les événements locaux de l'audience.
- * Jamais d'invention : uniquement ce que les piliers contiennent.
+ * Six complementary topics at most. Reserve space for the actual audience,
+ * distributed brands and rivals; a large catalogue must not erase the audience.
+ * Only declared ADVE vocabulary is used; a search query is not an observation.
  */
 export function deriveWatchSubjects(input: DeriveWatchSubjectsInput): string[] {
   const out: string[] = [];
-  const push = (s: string | null | undefined) => {
-    const v = (s ?? "").trim();
-    if (v.length >= 3 && !out.some((o) => o.toLowerCase() === v.toLowerCase()) && out.length < 6) out.push(v);
-  };
-  const country = (input.countryName ?? "").trim();
-
-  // 1. Marques distribuées (pilier V).
-  for (const brand of extractCatalogBrands(input.pillarV?.produitsCatalogue)) push(brand);
-
-  // 2. Concurrents déclarés (pilier D).
-  const concurrents = declaredCompetitorNames(input.pillarD);
-  if (Array.isArray(concurrents)) {
-    for (const c of concurrents.slice(0, 2)) {
-      const name =
-        typeof c === "string"
-          ? c
-          : c && typeof c === "object"
-            ? String((c as Record<string, unknown>).nom ?? (c as Record<string, unknown>).name ?? "")
-            : "";
-      if (name.trim()) push(country ? `${name.trim()} ${country}` : name.trim());
-    }
+  const audiences = audienceSubjects(input);
+  const brands = extractCatalogBrands(input.pillarV?.produitsCatalogue);
+  const competitors = declaredCompetitorNames(input.pillarD).slice(0, 2)
+    .map(name => input.countryName ? `${name} ${input.countryName}` : name);
+  const candidates = [audiences[0], brands[0], competitors[0], audiences[1], audiences[2],
+    competitors[1], ...brands.slice(1)];
+  for (const candidate of candidates) {
+    const value = candidate?.trim();
+    if (value && value.length >= 3 && !out.some(o => o.toLowerCase() === value.toLowerCase())) out.push(value);
+    if (out.length === 6) break;
   }
-
-  // 3. Communauté cible (pilier E) — 3 premiers mots de contenu + pays.
-  const cible = input.pillarE?.cible ?? input.pillarE?.communaute ?? input.pillarE?.audience;
-  if (typeof cible === "string" && cible.trim()) {
-    const words = contentWords(cible).slice(0, 3).join(" ");
-    if (words) push(country ? `${words} ${country}` : words);
-  }
-
   return out;
 }
 
