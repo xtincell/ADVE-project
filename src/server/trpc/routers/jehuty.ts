@@ -39,6 +39,14 @@ const categoryEnum = z.enum([
 
 export const jehutyRouter = createTRPCRouter({
 
+  readSignal: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1), signalId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
+      const { readSignalReading } = await import("@/server/services/jehuty/signal-reading");
+      return readSignalReading({ ...input, userId: ctx.session.user.id });
+    }),
+
   // ══════════════════════════════════════════════════════════════════
   // FEED — Merged, priority-sorted intelligence stream
   // ══════════════════════════════════════════════════════════════════

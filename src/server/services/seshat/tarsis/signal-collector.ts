@@ -8,6 +8,7 @@ import { callLLM, extractJSON } from "@/server/services/llm-gateway";
 import { UNTRUSTED_NOTICE, sanitizeInline } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import type { SignalInputKind } from "@/domain/signal-provenance";
 
 export type SignalFrequency =
   | "REALTIME" | "MINUTE" | "HOURLY" | "DAILY"
@@ -75,9 +76,11 @@ export function buildCountryContextPrompt(c: {
 }
 
 export interface CollectedSignal {
+  id?: string;
   title: string;
   content: string;
-  sourceType: string;       // NEWS | REPORT | SOCIAL | REGULATORY | FINANCIAL
+  sourceType: string;       // INFERRED for model-only hypotheses; factual sources retain their type
+  provenanceKind?: SignalInputKind;
   sourceUrl?: string;
   relevance: number;        // 0-1
   collectedAt: string;
@@ -156,7 +159,6 @@ const SignalItemSchema = z.object({
   content: z.string().min(10),
   sourceType: z.enum(["NEWS", "REPORT", "SOCIAL", "REGULATORY", "FINANCIAL"]).catch("REPORT"),
   relevance: z.number().min(0).max(1).catch(0.5),
-  sourceUrl: z.string().optional(),
 });
 const SignalsResponseSchema = z.object({ signals: z.array(SignalItemSchema).max(8) });
 
@@ -197,10 +199,15 @@ Format JSON STRICT : { "signals": [ { "title": "...", "content": "2-3 phrases", 
     return parsed.data.signals.map((s) => ({
       title: s.title,
       content: s.content,
-      sourceType: s.sourceType,
+      // This producer calls a model, not a news provider. Its NEWS label or
+      // proposed URL cannot turn a plausible trend into collected news.
+      sourceType: "INFERRED",
+      provenanceKind: "INFERRED" as const,
       relevance: s.relevance,
       collectedAt: now,
-      ...(s.sourceUrl ? { sourceUrl: s.sourceUrl } : {}),
+      rawData: { producer: "seshat.tarsis.signal-collector", axis: axis.label,
+        subjectType: s.sourceType, sector: sectorSafe, market: marketSafe,
+        keywords: keywordsSafe, competitors: competitorsSafe, countryContext: countryBlock },
     }));
   } catch {
     return [];
@@ -222,26 +229,28 @@ export async function collectMarketSignals(config: CollectionStrategy): Promise<
   const batches = await Promise.all(AXES.map((axis) => collectSignalAxis(config, axis)));
   const signals = batches.flat().slice(0, 10);
 
-  await Promise.all(
-    signals.map((signal) =>
-      db.signal.create({
+  return Promise.all(
+    signals.map(async (signal) => {
+      const stored = await db.signal.create({
         data: {
           strategyId: config.strategyId,
           type: "EXTERNAL_SAAS",
-          data: {
+          data: JSON.parse(JSON.stringify({
             title: signal.title,
             content: signal.content,
             sourceType: signal.sourceType,
             sourceUrl: signal.sourceUrl,
             relevance: signal.relevance,
             frequency: config.frequency,
-          },
+            provenanceKind: signal.provenanceKind,
+            collectedAt: signal.collectedAt,
+            rawData: signal.rawData,
+          })),
         },
-      }),
-    ),
+      });
+      return { ...signal, id: stored.id };
+    }),
   );
-
-  return signals;
 }
 
 /**

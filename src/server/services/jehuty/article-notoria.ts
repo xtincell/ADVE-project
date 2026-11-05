@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { signalObservation } from "@/domain/signal-observation";
+import { ADVE_STORAGE_KEYS } from "@/domain/pillars";
 import type { ArticleBrandInterpretation } from "@/lib/types/jehuty";
 import { signalHeadline } from "./mappers";
 
@@ -120,6 +121,13 @@ export async function triggerArticleNotoria(input: { strategyId: string; article
 
 /** Explicit URL references only. Shared keywords never establish provenance. */
 function referencesArticle(data: Record<string, unknown>, url: string): boolean {
+  const provenance = record(data.provenance);
+  if (provenance.schema === "weak-signal-provenance-v1"
+    && Array.isArray(provenance.inputSignals)
+    && provenance.inputSignals.some((raw) => {
+      const input = record(raw);
+      return input.kind === "COLLECTED" && input.sourceType !== "INFERRED" && input.sourceUrl === url;
+    })) return true;
   if ([data.sourceUrl, data.articleUrl, data.url].some((value) => value === url)) return true;
   if ([...strings(data.sourceUrls), ...strings(data.causalChain)].includes(url)) return true;
   return [data.sources, data.evidence, data.supportingSignals].some((rows) =>
@@ -137,6 +145,22 @@ const CONTEXT_FIELDS = [
   ["e", "promesseExperience", "Expérience"],
 ] as const;
 
+/** Today's ADVE is alignment context, never reconstructed historical evidence. */
+export async function readGazetteBrandContext(strategyId: string): Promise<ArticleBrandInterpretation["brandContext"]> {
+  const pillars = await db.pillar.findMany({
+    where: { strategyId, key: { in: [...ADVE_STORAGE_KEYS] } },
+    select: { key: true, content: true, fieldCertainty: true, staleAt: true },
+  });
+  return CONTEXT_FIELDS.flatMap(([key, field, label]) => {
+    const pillar = pillars.find((row) => row.key === key);
+    const value = text(record(pillar?.content)[field]);
+    if (!value) return [];
+    const certainty = text(record(pillar?.fieldCertainty)[field]);
+    return [{ pillarKey: key.toUpperCase(), field, label, text: value, source: "ADVE" as const,
+      ...(certainty ? { certainty } : {}), stale: Boolean(pillar?.staleAt) }];
+  });
+}
+
 /** Read-only right page: exact article links and separately identified ADVE context. */
 export async function readArticleBrandInterpretations(
   strategyId: string,
@@ -144,7 +168,7 @@ export async function readArticleBrandInterpretations(
 ): Promise<Map<string, ArticleBrandInterpretation>> {
   const urls = [...new Set(articles.map((article) => article.link).filter((url) => webUrl.safeParse(url).success))];
   if (!urls.length) return new Map();
-  const [signals, pillars] = await Promise.all([
+  const [signals, brandContext] = await Promise.all([
     db.signal.findMany({
       where: { strategyId, OR: [
         ...urls.flatMap((url) => [
@@ -153,6 +177,7 @@ export async function readArticleBrandInterpretations(
           { data: { path: ["articleUrl"], equals: url } },
           { data: { path: ["url"], equals: url } },
           { data: { path: ["sourceUrls"], array_contains: [url] } },
+          { data: { path: ["provenance", "inputSignals"], array_contains: [{ kind: "COLLECTED", sourceUrl: url }] } },
           { data: { path: ["causalChain"], array_contains: [url] } },
           ...["sources", "evidence", "supportingSignals"].flatMap((key) => [
             { data: { path: [key], array_contains: [url] } },
@@ -163,19 +188,8 @@ export async function readArticleBrandInterpretations(
       select: { id: true, strategyId: true, type: true, data: true, createdAt: true },
       orderBy: { createdAt: "desc" }, take: 100,
     }),
-    db.pillar.findMany({
-      where: { strategyId, key: { in: ["a", "d", "v", "e"] } },
-      select: { key: true, content: true, fieldCertainty: true, staleAt: true },
-    }),
+    readGazetteBrandContext(strategyId),
   ]);
-  const brandContext: ArticleBrandInterpretation["brandContext"] = CONTEXT_FIELDS.flatMap(([key, field, label]) => {
-    const pillar = pillars.find((row) => row.key === key);
-    const value = text(record(pillar?.content)[field]);
-    if (!value) return [];
-    const certainty = text(record(pillar?.fieldCertainty)[field]);
-    return [{ pillarKey: key.toUpperCase(), field, label, text: value, source: "ADVE" as const,
-      ...(certainty ? { certainty } : {}), stale: Boolean(pillar?.staleAt) }];
-  });
   const result = new Map<string, ArticleBrandInterpretation>(urls.map((articleUrl) => [articleUrl, {
     articleUrl, linkedAnalyses: [], recommendations: [], brandContext, batchIds: [],
   }]));

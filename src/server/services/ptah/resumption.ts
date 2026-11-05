@@ -62,7 +62,7 @@ export function providerParameters(task: GenerativeTask) {
   return parameters;
 }
 
-export function hasSubmissionClaim(task: GenerativeTask): boolean {
+export function hasSubmissionClaim(task: Pick<GenerativeTask, "parameters">): boolean {
   if (!task.parameters || typeof task.parameters !== "object" || Array.isArray(task.parameters)) return false;
   const claim = task.parameters._ptahSubmission;
   return Boolean(claim && typeof claim === "object" && !Array.isArray(claim) && claim.state === "STARTED");

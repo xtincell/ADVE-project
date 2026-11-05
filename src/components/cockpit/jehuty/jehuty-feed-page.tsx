@@ -10,8 +10,9 @@
  */
 
 import { ArticleSpread } from "./article-spread";
+import { GazetteReader } from "./gazette-reader";
 import { selectGazetteEdition } from "@/lib/jehuty-editorial";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
@@ -116,6 +117,9 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
   const [selectedCategory, setSelectedCategory] = useState<JehutyCategory | null>(null);
   const [selectedPillar, setSelectedPillar] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  const [readingItem, setReadingItem] = useState<JehutyFeedItem | null>(null);
+  const closeReader = useCallback(() => setReadingItem(null), []);
 
   // ── Queries ──
   const feedQuery = trpc.jehuty.feed.useQuery(
@@ -396,6 +400,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
           <RubricHeader label="À la une" suffix={lead.urgency === "NOW" ? "Urgent" : null} />
           <LeadStory
             item={lead}
+            onRead={() => setReadingItem(lead)}
             isExpanded={expandedItems.has(lead.id)}
             mode={mode}
             onToggleExpand={(id) => {
@@ -444,6 +449,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
                 <Dispatch
                   key={item.id}
                   item={item}
+                  onRead={() => setReadingItem(item)}
                   mode={mode}
                   isExpanded={expandedItems.has(item.id)}
                   onToggleExpand={(id) => {
@@ -474,6 +480,15 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
           « Avant de forger, lire le monde. »
         </p>
       </footer>
+      <GazetteReader
+        item={readingItem ? items.find(item => item.id === readingItem.id) ?? readingItem : null}
+        onClose={closeReader}
+        onNotoria={() => { if (readingItem) handleTriggerNotoria(readingItem); }}
+        isNotoriaPending={triggerNotoriaMutation.isPending}
+        onPin={() => { if (readingItem) handleCurate(readingItem, "PINNED"); }}
+        onUnpin={() => { if (readingItem) handleUnpin(readingItem); }}
+        onDismiss={() => { if (readingItem) handleCurate(readingItem, "DISMISSED"); closeReader(); }}
+      />
     </article>
   );
 }
@@ -598,6 +613,7 @@ function DispatchActions({
 
 interface LeadStoryProps {
   item: JehutyFeedItem;
+  onRead: () => void;
   isExpanded: boolean;
   mode: "brand" | "agency";
   onToggleExpand: (id: string) => void;
@@ -610,26 +626,26 @@ interface LeadStoryProps {
   isApplyPending?: boolean;
 }
 
-function ReceivedObservation({ text, summary, lead = false }: { text?: string | null; summary?: string | null; lead?: boolean }) {
+function ReceivedObservation({ text, summary, lead = false, onRead }: { text?: string | null; summary?: string | null; lead?: boolean; onRead?: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const content = text?.trim() || summary?.trim() || "";
   const preview = summary?.trim() || content;
   const canExpand = content !== preview && content.length > preview.length;
   return <div className="max-w-[68ch]">
     <p className={`whitespace-pre-wrap break-words font-serif text-foreground-secondary leading-relaxed ${lead ? "text-lg" : "text-base"}`}>{expanded || !canExpand ? content : preview}</p>
-    {canExpand && <button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="mt-3 text-sm text-accent underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-accent">{expanded ? "Réduire" : "Lire le contenu complet"}</button>}
+    {onRead ? <button type="button" aria-haspopup="dialog" onClick={onRead} className="mt-3 text-sm text-accent underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-accent">Lire le contenu et ses sources</button> : canExpand && <button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="mt-3 text-sm text-accent underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-accent">{expanded ? "Réduire" : "Lire le contenu complet"}</button>}
   </div>;
 }
 
 function LeadStory({
-  item, isExpanded, mode, onToggleExpand,
+  item, isExpanded, mode, onToggleExpand, onRead,
   onPin, onUnpin, onDismiss, onNotoria, isNotoriaPending, onApply, isApplyPending,
 }: LeadStoryProps) {
   const Icon = CATEGORY_ICONS[item.category];
   const isPinned = item.curation?.action === "PINNED";
   const isTriggered = item.curation?.action === "NOTORIA_TRIGGERED";
   const hasDetails = Boolean(item.advantages?.length || item.disadvantages?.length);
-  if (item.externalUrl) return <ArticleSpread item={item} onNotoria={onNotoria} isNotoriaPending={isNotoriaPending} onPin={onPin} onUnpin={onUnpin} onDismiss={onDismiss} />;
+  if (item.externalUrl) return <ArticleSpread item={item} onOpen={onRead} onNotoria={onNotoria} isNotoriaPending={isNotoriaPending} onPin={onPin} onUnpin={onUnpin} onDismiss={onDismiss} />;
 
   return (
     <article className={`grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-x-10 gap-y-6 ${isPinned ? "border-l-2 border-accent pl-6" : ""}`}>
@@ -668,7 +684,7 @@ function LeadStory({
           )}
         </h3>
 
-        <ReceivedObservation text={item.observation} summary={item.summary} lead />
+        <ReceivedObservation text={item.observation} summary={item.summary} lead onRead={item.sourceType === "SIGNAL" ? onRead : undefined} />
         <SignalSources item={item} />
 
         <div className="mt-6 flex items-center gap-6 flex-wrap">
@@ -759,6 +775,7 @@ function LeadStory({
 
 interface DispatchProps {
   item: JehutyFeedItem;
+  onRead: () => void;
   mode: "brand" | "agency";
   isExpanded: boolean;
   onToggleExpand: (id: string) => void;
@@ -772,14 +789,14 @@ interface DispatchProps {
 }
 
 function Dispatch({
-  item, mode, isExpanded, onToggleExpand,
+  item, mode, isExpanded, onToggleExpand, onRead,
   onPin, onUnpin, onDismiss, onNotoria, isNotoriaPending, onApply, isApplyPending,
 }: DispatchProps) {
   const Icon = CATEGORY_ICONS[item.category];
   const isPinned = item.curation?.action === "PINNED";
   const isTriggered = item.curation?.action === "NOTORIA_TRIGGERED";
   const hasDetails = Boolean(item.advantages?.length || item.disadvantages?.length);
-  if (item.externalUrl) return <ArticleSpread item={item} onNotoria={onNotoria} isNotoriaPending={isNotoriaPending} onPin={onPin} onUnpin={onUnpin} onDismiss={onDismiss} />;
+  if (item.externalUrl) return <ArticleSpread item={item} onOpen={onRead} onNotoria={onNotoria} isNotoriaPending={isNotoriaPending} onPin={onPin} onUnpin={onUnpin} onDismiss={onDismiss} />;
 
   return (
     <article className={`flex flex-col ${isPinned ? "border-l-2 border-accent pl-4 -ml-4" : ""}`}>
@@ -816,7 +833,7 @@ function Dispatch({
         )}
       </h3>
 
-      <ReceivedObservation text={item.observation} summary={item.summary} />
+      <ReceivedObservation text={item.observation} summary={item.summary} onRead={item.sourceType === "SIGNAL" ? onRead : undefined} />
       <SignalSources item={item} />
 
       {hasDetails && (

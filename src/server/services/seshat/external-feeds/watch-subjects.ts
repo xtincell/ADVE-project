@@ -105,7 +105,6 @@ function audienceSubjects(input: DeriveWatchSubjectsInput): string[] {
     `${topic}${location && !topic.toLowerCase().includes(location.toLowerCase()) ? ` ${location}` : ""}${input.countryName ? ` ${input.countryName}` : ""}` : "";
   const declared = strings(a.publicCible).flatMap(text => text.split(/[.;\n]+/))
     .slice(0, 3).map(clause => audienceTopic(clause.split(":").at(-1) ?? clause)).filter(Boolean);
-  if (declared.length) return declared.map(topic => scoped(topic));
 
   const personas = Array.isArray(d.personas) ? d.personas.map(record) : [];
   const portrait = record(e.superfanPortrait);
@@ -122,11 +121,50 @@ function audienceSubjects(input: DeriveWatchSubjectsInput): string[] {
     const location = strings(persona.location)[0]?.split(/[,;]/)[0]?.trim();
     return scoped(audienceTopic(description, strings(persona.name)), location);
   }).filter(Boolean);
-  if (modern.length) return modern;
+  // Public statements and persona scopes complement one another. A populated
+  // A.publicCible must not hide the locations and community vocabulary in D/E.
+  const combined = [...declared.map(topic => scoped(topic)), ...modern]
+    .filter((s): s is string => Boolean(s));
+  if (combined.length) return [...new Set(combined)];
   const overton = Array.isArray(a.overtonPositions) ? a.overtonPositions.map(record) : [];
   const audience = strings(overton[0]?.audience)[0] ?? strings(e.cible ?? e.communaute ?? e.audience)[0] ??
     strings(portrait.profile)[0];
   return audience ? [scoped(audienceTopic(audience))].filter(Boolean) : [];
+}
+
+export interface WatchContext {
+  subjects: string[];
+  audienceSubjects: string[];
+  /** Declared locations only. A country search edition is not geographic proof. */
+  locations: string[];
+  localLocations: string[];
+}
+
+/** Vocabulary shared by query construction and relevance, without persona names. */
+export function watchTopicTerms(subject: string, locations: string[] = []): string[] {
+  const geography = new Set(locations.flatMap(contentWords).map(w => w.toLowerCase()));
+  const roles = new Set(["clients", "partenaires", "suiveurs", "spectateurs", "utilisateurs", "vises", "apportent", "local"]);
+  // Preserve declared proper-name compounds: splitting "Local Guides" into
+  // independent words would admit any local story or any unrelated guide.
+  const compounds = [...subject.matchAll(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b/g)]
+    .map(m => contentWords(m[0]).map(w => w.toLowerCase()).filter(word => !geography.has(word)).join(" "))
+    .filter(phrase => phrase.split(" ").length >= 2);
+  const compoundWords = new Set(compounds.flatMap(phrase => phrase.split(" ")));
+  return [...new Set(contentWords(subject).map(w => w.toLowerCase()).filter(w =>
+    !QUERY_STOPWORDS.has(w) && !roles.has(w) && !geography.has(w) && !compoundWords.has(w) && !/\d/.test(w)).concat(compounds))];
+}
+
+export function deriveWatchContext(input: DeriveWatchSubjectsInput): WatchContext {
+  const personas = Array.isArray(input.pillarD?.personas) ? input.pillarD.personas.map(record) : [];
+  const personaLocations = personas.flatMap(p => strings(p.location))
+    .map(s => s.split(/[,;()]/)[0]!.split(/\s(?:à|in|at)\s/i).at(-1)!.trim())
+    .filter(s => s.length >= 3 && s.length <= 80 && !/pr[eé]ciser|inconn[uue]|confirmer|unknown/i.test(s));
+  const locations = [...new Set([
+    ...personaLocations,
+    ...(input.countryName ? [input.countryName] : []),
+  ])];
+  return { subjects: deriveWatchSubjects(input), audienceSubjects: audienceSubjects(input), locations,
+    localLocations: [...new Set(personaLocations.length ? personaLocations : locations)] };
 }
 
 /**
