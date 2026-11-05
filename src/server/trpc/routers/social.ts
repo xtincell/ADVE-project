@@ -19,6 +19,7 @@
 // ============================================================================
 
 import { z } from "zod";
+import { prepareSocialPublication } from "@/domain/social-publication-package";
 import type { InputJsonValue as PrismaInputJson } from "@prisma/client/runtime/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
@@ -755,6 +756,46 @@ export const socialRouter = createTRPCRouter({
     }),
 
   /** Publie (ou planifie via le calendrier) au nom de la marque. */
+  listPublicationPackages: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      await assertStrategyAccess(ctx, input.strategyId);
+      const { listPublicationPackages } = await import("@/server/services/anubis/publication-package");
+      return listPublicationPackages(input.strategyId, ctx.session.user.id);
+    }),
+
+  getPublicationPackage: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1), packageId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      await assertStrategyAccess(ctx, input.strategyId);
+      const { getPublicationPackage } = await import("@/server/services/anubis/publication-package");
+      return getPublicationPackage(input.strategyId, input.packageId, ctx.session.user.id);
+    }),
+
+  preparePublicationPackage: governedProcedure({
+    kind: "ANUBIS_PREPARE_SOCIAL_POST", inputSchema: prepareSocialPublication,
+    caller: "social:preparePublicationPackage",
+  }).mutation(async ({ ctx, input }) => {
+    await assertStrategyAccess(ctx, input.strategyId);
+    const { preparePublicationPackage } = await import("@/server/services/anubis/publication-package");
+    return preparePublicationPackage(input, ctx.session.user.id, ctx.intentId);
+  }),
+
+  publishPreparedPackage: governedProcedure({
+    kind: "ANUBIS_PUBLISH_SOCIAL_POST",
+    caller: "social:publishPreparedPackage",
+    inputSchema: z.object({ strategyId: z.string().min(1), packageId: z.string().min(1),
+      contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+      target: z.object({ connectionId: z.string().min(1), accountId: z.string().min(1) }),
+      scheduleAt: z.string().datetime().optional(), confirmed: z.literal(true) }).strict(),
+  }).mutation(async ({ ctx, input }) => {
+    await assertStrategyAccess(ctx, input.strategyId);
+    const { publishSocialPost } = await import("@/server/services/anubis/social-publish");
+    return publishSocialPost({ strategyId: input.strategyId, userId: ctx.session.user.id,
+      publicationPackageId: input.packageId, publicationPackageHash: input.contentHash,
+      publicationTarget: input.target, scheduleAt: input.scheduleAt, targets: [], text: "" });
+  }),
+
   publishPost: governedProcedure({
     kind: "ANUBIS_PUBLISH_SOCIAL_POST",
     inputSchema: z.object({

@@ -79,6 +79,7 @@ export const COLLABORATOR_KIND_ZONES: Readonly<Record<string, CockpitZone>> = {
   ANUBIS_SYNC_INBOX: "social",
   ANUBIS_REPLY_COMMENT: "social",
   ANUBIS_PUBLISH_SOCIAL_POST: "social",
+  ANUBIS_PREPARE_SOCIAL_POST: "social",
   LEGACY_PUBLICATION_DELETE: "publications",
   // ADR-0144 — cockpit mission : pilotage délégable (Direction du digital).
   START_CAMPAIGN_MISSION: "campaigns",

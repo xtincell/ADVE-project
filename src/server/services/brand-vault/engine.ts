@@ -19,9 +19,12 @@ import { canAccessStrategy } from "@/server/services/operator-isolation";
 import { assertCollaboratorMayEmit } from "@/server/governance/collaborator-firewall";
 import { isGodModeEmail } from "@/lib/auth/god-mode";
 import { randomBytes } from "node:crypto";
+import { SOCIAL_PUBLICATION_PACKAGE } from "@/domain/social-publication-package";
 import { PUBLIC_BRAND_FORMAT, PUBLIC_BRAND_IDENTITY_FORMAT } from "@/domain/public-brand";
 
 export function assertOrdinaryAsset(format: string | null | undefined) {
+  if (format === SOCIAL_PUBLICATION_PACKAGE) throw new BrandAssetLifecycleError("PRECONDITION_FAILED",
+    "Cette version est figée. Retenez une autre option dans le planning pour préparer une nouvelle version à relire.");
   if (format === PUBLIC_BRAND_FORMAT || format === PUBLIC_BRAND_IDENTITY_FORMAT) throw new BrandAssetLifecycleError("PRECONDITION_FAILED",
     "Cette publication se gère depuis Connexions → Page publique, pour conserver son historique.");
 }

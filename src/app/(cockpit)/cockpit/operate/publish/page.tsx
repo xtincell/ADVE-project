@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { useToast } from "@/components/shared/notification-toast";
 import { Button, Input, Textarea } from "@/components/primitives";
 import { Send, CalendarClock, ArrowRight, PenSquare } from "lucide-react";
+import { PublicationPackagePanel } from "@/components/cockpit/social/publication-package-panel";
 import { PublicationManagerPanel } from "@/components/cockpit/social/publication-manager-panel";
 
 const PLATFORM_META: Record<string, { label: string; publishable: boolean; note?: string }> = {
@@ -99,6 +100,8 @@ export default function PublishPage() {
           { label: "Publier" },
         ]}
       />
+
+      <PublicationPackagePanel strategyId={strategyId} />
 
       {connectable.length === 0 && !hub.isLoading ? (
         <div className="ck-card">

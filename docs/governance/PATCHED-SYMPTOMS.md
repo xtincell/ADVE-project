@@ -28,6 +28,20 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 549 — rendu du calendrier sans transmission exacte au composeur (2026-11-05)
+
+Les options du planning avaient leurs briefs et fichiers reçus ; le composeur
+social acceptait une image et du texte indépendants, sans désigner la variante
+retenue ni conserver une relecture de cette version. La cause était un raccord
+absent entre les AssetVersion de Ptah, les BrandAsset de Mestor et la BrandAction
+transmise par Anubis. Le paquet du coffre réutilise ces trois modèles et garde
+une empreinte du contenu et de l’export JPEG. La sélection, la relecture et l’envoi
+sont distincts. Une seconde vérification transactionnelle précède le claim de
+publication ; une URL signée éphémère sert les mêmes octets que l’aperçu privé.
+Les dix tests PostgreSQL isolés reproduisent les changements de source, de
+version, de compte et les rejouements. Transport Meta simulé, aucun envoi réel.
+Décision : ADR0243. Commit dédié `feat(publication): freeze reviewed calendar assets for social delivery`.
+
 ### 547 — régression de prérendu dans la navigation partagée (2026-11-05)
 
 Les deux builds CI de PR1141 à `9e35e9049` s'arrêtaient sur

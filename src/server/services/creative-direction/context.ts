@@ -1,4 +1,5 @@
 import { readCreativeDirectionEdition, type DirectionEdition } from "./document";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { creativeDirectionDoctrine, rulesForProduction, type CreativeTarget } from "@/domain/creative-direction";
 import { wrapUntrusted } from "@/server/services/utils/untrusted-content";
@@ -43,16 +44,16 @@ export function compileCreativeDirection(content: unknown, version: number, targ
   return { context, text: wrapUntrusted("DIRECTION ARTISTIQUE DE MARQUE", rendered, { max: 30000 }) };
 }
 
-export async function buildCreativeDirectionContext(input: { strategyId: string; target?: CreativeTarget }) {
-  const pillar = await db.pillar.findUnique({
+export async function buildCreativeDirectionContext(input: { strategyId: string; target?: CreativeTarget }, client: Prisma.TransactionClient = db) {
+  const pillar = await client.pillar.findUnique({
     where: { strategyId_key: { strategyId: input.strategyId, key: "d" } },
     select: { content: true, currentVersion: true },
   });
-  return pillar ? directionForPillar(input.strategyId, pillar, input.target) : null;
+  return pillar ? directionForPillar(input.strategyId, pillar, input.target, client) : null;
 }
 
-export async function directionForPillar(strategyId: string, pillar: {content: unknown; currentVersion: number}, target?: CreativeTarget) {
-  const supplement = await readCreativeDirectionEdition(strategyId, pillar.content);
+export async function directionForPillar(strategyId: string, pillar: {content: unknown; currentVersion: number}, target?: CreativeTarget, client: Prisma.TransactionClient = db) {
+  const supplement = await readCreativeDirectionEdition(strategyId, pillar.content, client);
   return compileCreativeDirection(pillar.content, pillar.currentVersion, target, supplement);
 }
 

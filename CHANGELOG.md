@@ -1,3 +1,12 @@
+## v6.27.549 — feat(publication): relier le rendu retenu à son envoi (2026-11-05)
+
+- Depuis le calendrier, retenir une image reçue prépare dans le coffre une version exacte du visuel, du brief, de la légende et des hashtags. La relecture humaine est un acte distinct ; l’auteur génératif et la personne qui relit restent identifiés séparément.
+- Une autre option crée une nouvelle version et demande une nouvelle relecture. Une source ou une image modifiée rend l’ancien paquet impropre à l’envoi. Les mises à jour génériques du coffre et du composeur ne peuvent pas contourner cette filiation.
+- Le compte social destinataire et la confirmation d’envoi sont explicites. Le transport Anubis existant reçoit le JPEG exact de l’aperçu par un accès signé de dix minutes, limité au paquet et à son empreinte. La planification conserve les références et produit cet accès au moment de l’envoi ; elle ne conserve pas une URL périmée.
+- Les posts image Facebook/Instagram et les stories image Instagram sont raccordés. La story explique que seule l’image est transmise, sans sa légende interne. Les autres formats demandent leur transport spécifique. Aucun nouveau modèle Prisma, ordonnanceur ou moteur de génération.
+- Réception Chrome locale 1440/390 : sélection puis relecture via les mutations gouvernées, JPEG chargé, bouton d’envoi activé seulement après compte et confirmation distincts. Zéro POST de publication, erreur API/page ou débordement horizontal. Captures et reçu conservés hors dépôt ; aucune validation du rendu de marque réel n’en est déduite.
+- Réception PostgreSQL isolée : 10 cas reçus, dont sélection/relecture, versions, refus inter-marques, sources modifiées, accès image signé, compte précis, planification, posts et stories. Les appels Meta sont simulés ; ces preuves ne constituent pas une publication réelle ni une réception du compte Instagram.
+
 ## v6.27.547 — fix(cockpit): sources lisibles, actifs traçables et entrée sans friction (2026-11-05)
 
 **Candidat local : retrouver la production, conserver ses sources et lire une Gazette exploitable.**

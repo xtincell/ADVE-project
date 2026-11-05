@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { CalendarPublicationSelection } from "./social/calendar-publication-selection";
 import { trpc } from "@/lib/trpc/client";
 import type { ContentPost } from "@/lib/types/launch-calendar";
 import { isProductionTransportError, receiptRecoveryMessage, shouldPollProductionReceipt, useProductionReceiptRecovery, type ReceiptRecovery } from "./use-production-receipt-recovery";
@@ -184,7 +185,7 @@ function CalendarOption({ brief, receipt, recovery, onCheck, strategyId, onResum
       {content.correction && <p>Correction demandée · {content.correction}</p>}
       {content.direction?.rules && <details><summary>Règles de DA appliquées</summary><ul>{content.direction.rules.map((r,i)=><li key={i}>{r.guidance}</li>)}</ul></details>}
     </div>}
-    <Renders receipt={receipt} />
+    <Renders receipt={receipt} strategyId={strategyId} brief={brief} />
     {receipt && <p role="status" className="my-2">{receipt.message}</p>}
     {recovery && <p role="status" className="my-2">{receiptRecoveryMessage(recovery)} <button className={action} onClick={onCheck}>Vérifier le reçu</button></p>}
     {receipt?.previewIntentId && <Link className="underline" href={'/cockpit/brand/deliverables?strategy=' + encodeURIComponent(strategyId) + '&productionPreview=' + encodeURIComponent(receipt.previewIntentId)}>Ouvrir la fiche de production</Link>}
@@ -214,12 +215,12 @@ function CalendarOption({ brief, receipt, recovery, onCheck, strategyId, onResum
 }
 
 
-function Renders({receipt}: {receipt?: Receipt | null}) {
+function Renders({receipt, strategyId, brief}: {receipt?: Receipt | null; strategyId?: string; brief?: BriefRef}) {
   const files = receipt?.materialVersions?.filter(v => v.status !== "PROVIDER_ONLY" && ["image","icon","design"].includes(v.kind)) ?? [];
   if (!files.length) return <p className="text-xs text-foreground-secondary">{receipt?.message || "Visuel à produire"}</p>;
   return <div className="grid gap-2">{files.map(file =>
-    <a href={file.url} key={file.id} target="_blank" rel="noreferrer" className="text-xs underline">
+    <div key={file.id}><a href={file.url} target="_blank" rel="noreferrer" className="text-xs underline">
       <img loading="lazy" src={file.url} alt="Proposition visuelle à relire" className="max-h-72 w-full object-contain" />
       Agrandir le rendu
-    </a>)}</div>;
+    </a>{strategyId && brief && <CalendarPublicationSelection strategyId={strategyId} briefId={brief.assetId} briefVersion={brief.version} materialId={file.id} />}</div>)}</div>;
 }

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { type CreativeDirectionDoctrine, creativeDirectionDoctrine } from "@/domain/creative-direction";
 import { documentEdition, sourceIsUsable } from "@/domain/source-document";
@@ -19,13 +20,13 @@ export interface DirectionEdition {
   };
 }
 
-export async function readCreativeDirectionEdition(strategyId: string, content: unknown): Promise<DirectionEdition | null> {
+export async function readCreativeDirectionEdition(strategyId: string, content: unknown, client: Prisma.TransactionClient = db): Promise<DirectionEdition | null> {
   const d = content as {directionArtistique?: Record<string, unknown>; _fieldProvenance?: Record<string, unknown>} | null;
   // An explicit leaf, even an empty decision, belongs to D. A document only supplements the parent.
   const leafPaths = ["directionArtistique.doctrine", "d.directionArtistique.doctrine"];
   if (!d || Object.hasOwn(d.directionArtistique ?? {}, "doctrine")
     || leafPaths.some(path => d._fieldProvenance?.[path] === "HUMAN")) return null;
-  const rows = await db.brandDataSource.findMany({
+  const rows = await client.brandDataSource.findMany({
     where: {
       strategyId, sourceType: "FILE", fileType: "JSON", processingStatus: {in: ["EXTRACTED", "PROCESSED"]},
       rawData: {path: ["_document", "family"], equals: CREATIVE_DIRECTION_DOCUMENT_FAMILY},
