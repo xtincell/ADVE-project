@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { PanelLeftClose, PanelLeft, Star, Home } from "lucide-react";
@@ -19,9 +19,23 @@ interface SidebarProps {
   onNavigate?: () => void;
 }
 
-export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = false, onNavigate }: SidebarProps) {
-  const pathname = usePathname();
+export function Sidebar(props: SidebarProps) {
+  // This shared navigation also renders in statically built agency/console pages.
+  // Keep their content and navigation available while URL search params resolve.
+  return (
+    <Suspense fallback={<SidebarContent {...props} search="" />}>
+      <SidebarWithSearch {...props} />
+    </Suspense>
+  );
+}
+
+function SidebarWithSearch(props: SidebarProps) {
   const search = useSearchParams().toString();
+  return <SidebarContent {...props} search={search} />;
+}
+
+function SidebarContent({ navGroups, portalAccentVar, headerContent, mobile = false, onNavigate, search }: SidebarProps & { search: string }) {
+  const pathname = usePathname();
   const { t } = useLocale();
   const [collapsedState, setCollapsedState] = useState(false);
   // En tiroir mobile, jamais réduit (on veut la nav groupée complète).
@@ -164,7 +178,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = fa
                 return (
                   <div key={item.href} className="group relative flex items-center">
                     <Link
-                    href={withCockpitContext(item.href, search)}
+                      href={withCockpitContext(item.href, search)}
                       onClick={onNavigate}
                       className={`flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
                         active

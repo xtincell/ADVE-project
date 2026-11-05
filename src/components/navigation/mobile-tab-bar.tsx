@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { MoreHorizontal } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import type { NavGroup, NavItem } from "./types";
 import { resolveActiveHref, navItemLabel, withCockpitContext } from "./nav-active";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -14,9 +14,21 @@ interface MobileTabBarProps {
   maxTabs?: number;
 }
 
-export function MobileTabBar({ navGroups, portalAccentVar, maxTabs = 4 }: MobileTabBarProps) {
-  const pathname = usePathname();
+export function MobileTabBar(props: MobileTabBarProps) {
+  return (
+    <Suspense fallback={<MobileTabBarContent {...props} search="" />}>
+      <MobileTabBarWithSearch {...props} />
+    </Suspense>
+  );
+}
+
+function MobileTabBarWithSearch(props: MobileTabBarProps) {
   const search = useSearchParams().toString();
+  return <MobileTabBarContent {...props} search={search} />;
+}
+
+function MobileTabBarContent({ navGroups, portalAccentVar, maxTabs = 4, search }: MobileTabBarProps & { search: string }) {
+  const pathname = usePathname();
   const { t } = useLocale();
   const [moreOpen, setMoreOpen] = useState(false);
 
