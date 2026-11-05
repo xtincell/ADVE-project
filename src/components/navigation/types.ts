@@ -19,7 +19,7 @@ export interface NavItem {
   sublabelKey?: string;
   /**
    * Préfixes de routes supplémentaires qui allument cet item (hubs et
-   * onglets : les pages piliers allument « Fondation », guidelines/assets
+   * onglets : les pages piliers allument « Fondation », guidelines
    * allument « Livrables », …). L'item actif est celui dont le préfixe
    * correspondant est le plus long — un href imbriqué (settings/billing
    * sous settings) gagne donc sur son parent. Lot 10, audit 2026-07-11 §B.

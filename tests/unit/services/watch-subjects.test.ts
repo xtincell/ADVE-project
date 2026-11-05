@@ -47,6 +47,41 @@ describe("deriveWatchSubjects", () => {
     expect(subjects.some((s) => s.includes("photographes") && s.includes("Cameroun"))).toBe(true);
     expect(subjects.length).toBeLessThanOrEqual(6);
   });
+  it("uses the modern SPAWT audience, partner and payer declarations without fictional persona names", () => {
+    const subjects = deriveWatchSubjects({
+      pillarA: { publicCible: "Communication : les Suiveurs de vidéos food d’Abidjan qui enregistrent des lieux. Partenaires qui apportent ce trafic : créateurs food et Local Guides. Clients payants visés : restaurateurs qui veulent atteindre ce public qualifié." },
+      pillarD: { paysageConcurrentiel: [{ name: "Google Maps" }] },
+      pillarE: { superfanPortrait: { personaRef: "grace" } },
+      countryName: "Côte d'Ivoire",
+    });
+    expect(subjects).toContain("Suiveurs videos food Abidjan Côte d'Ivoire");
+    expect(subjects).toContain("createurs food Local Guides Côte d'Ivoire");
+    expect(subjects).toContain("restaurateurs Côte d'Ivoire");
+    expect(subjects).toContain("Google Maps Côte d'Ivoire");
+    expect(subjects.join(" ")).not.toMatch(/Grâce|Ange|Koffi/);
+  });
+  it("resolves E's superfan to D and prioritizes the communication audience over the payer", () => {
+    const subjects = deriveWatchSubjects({
+      pillarD: { personas: [
+        { id: "payer", name: "Koffi", actorRoles: ["PAYER"], csp: "restaurateurs", location: "Abidjan" },
+        { id: "partner", name: "Ange", actorRoles: ["PARTNER"], csp: "créateurs food", location: "Abidjan" },
+        { id: "traffic", name: "Grâce", actorRoles: ["COMMUNICATION_AUDIENCE", "USER"], csp: "suiveurs de vidéos food", location: "Abidjan" },
+      ] },
+      pillarE: { superfanPortrait: { personaRef: "traffic" } }, countryName: "Côte d'Ivoire",
+    });
+    expect(subjects[0]).toBe("suiveurs videos food Abidjan Côte d'Ivoire");
+    expect(subjects).toHaveLength(3);
+    expect(subjects.join(" ")).not.toMatch(/Grâce|Ange|Koffi/);
+  });
+  it("keeps the target audience when a catalogue has enough brands to fill the cap", () => {
+    const subjects = deriveWatchSubjects({
+      pillarV: { produitsCatalogue: [...CATALOGUE, { name: "Sony A7" }, { name: "Sony A9" }] },
+      pillarD: { concurrents: ["Fotona", "PhotoPro"] },
+      pillarE: { cible: "créateurs et photographes professionnels" }, countryName: "Cameroun",
+    });
+    expect(subjects[0]).toContain("photographes");
+    expect(subjects).toHaveLength(6);
+  });
   it("piliers vides → aucun sujet inventé", () => {
     expect(deriveWatchSubjects({ pillarV: {}, pillarD: {}, pillarE: {}, countryName: "Cameroun" })).toEqual([]);
   });

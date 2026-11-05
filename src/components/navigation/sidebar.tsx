@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { PanelLeftClose, PanelLeft, Star, Home } from "lucide-react";
 import type { NavGroup, NavItem } from "./types";
-import { resolveActiveHref, navItemLabel, navItemSublabel } from "./nav-active";
+import { resolveActiveHref, navItemLabel, navItemSublabel, withCockpitContext } from "./nav-active";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { APP_VERSION } from "@/lib/version";
 
@@ -19,7 +19,22 @@ interface SidebarProps {
   onNavigate?: () => void;
 }
 
-export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = false, onNavigate }: SidebarProps) {
+export function Sidebar(props: SidebarProps) {
+  // This shared navigation also renders in statically built agency/console pages.
+  // Keep their content and navigation available while URL search params resolve.
+  return (
+    <Suspense fallback={<SidebarContent {...props} search="" />}>
+      <SidebarWithSearch {...props} />
+    </Suspense>
+  );
+}
+
+function SidebarWithSearch(props: SidebarProps) {
+  const search = useSearchParams().toString();
+  return <SidebarContent {...props} search={search} />;
+}
+
+function SidebarContent({ navGroups, portalAccentVar, headerContent, mobile = false, onNavigate, search }: SidebarProps & { search: string }) {
   const pathname = usePathname();
   const { t } = useLocale();
   const [collapsedState, setCollapsedState] = useState(false);
@@ -67,7 +82,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = fa
 
   // Un seul item actif — celui dont le préfixe matché (href ou
   // activePrefixes) est le plus long. Cf. nav-active.ts (lot 10).
-  const activeHref = resolveActiveHref(navGroups, pathname);
+  const activeHref = resolveActiveHref(navGroups, pathname, search);
   const isActive = (item: NavItem) => item.href === activeHref;
 
   const basePath = navGroups[0]?.items[0]?.href || "/";
@@ -125,7 +140,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = fa
             return (
               <Link
                 key={`fav-${item.href}`}
-                href={item.href}
+                href={withCockpitContext(item.href, search)}
                 onClick={onNavigate}
                 className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
                   active
@@ -163,7 +178,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = fa
                 return (
                   <div key={item.href} className="group relative flex items-center">
                     <Link
-                      href={item.href}
+                      href={withCockpitContext(item.href, search)}
                       onClick={onNavigate}
                       className={`flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
                         active

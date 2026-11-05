@@ -18,6 +18,7 @@ import { IntakeProcessingScreen } from "@/components/intake/intake-processing-sc
 import { useIntakeProcessingWatch, failureReasonKey } from "@/components/intake/use-intake-processing-watch";
 import { ReceivedIntakeDocuments, readIntakeFile } from "@/components/intake/received-documents";
 import { useT } from "@/lib/i18n/use-t";
+import { IntakeWebUrlSchema, OptionalIntakeWebUrlSchema, intakeErrorMessage } from "@/lib/intake-input";
 
 const ACCEPTED_EXTENSIONS = ".pdf,.docx,.pptx,.txt";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -94,7 +95,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
         startWatching();
         return;
       }
-      setError(err.message);
+      setError(intakeErrorMessage(err));
     },
   });
 
@@ -173,8 +174,8 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
     setError("");
     setSavingSources(true);
     try {
-      const fields = { token, prepareOnly: true, websiteUrl: websiteUrl.trim() || undefined,
-        urls: [socialUrls.instagram.trim(), socialUrls.facebook.trim(), socialUrls.linkedin.trim(), ...extraUrls].filter(Boolean) };
+      const fields = { token, prepareOnly: true, websiteUrl: OptionalIntakeWebUrlSchema.parse(websiteUrl),
+        urls: [socialUrls.instagram.trim(), socialUrls.facebook.trim(), socialUrls.linkedin.trim(), ...extraUrls].filter(Boolean).map(url => IntakeWebUrlSchema.parse(url)) };
       await saveSourcesMutation.mutateAsync({ ...fields, files: [] });
       for (const [index, selected] of files.entries()) {
         setUploadProgress(`${index + 1}/${files.length} · ${selected.name}`);
@@ -184,7 +185,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
       setFiles([]);
       await refetch();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("intakeIngest.received.failed"));
+      setError(intakeErrorMessage(err));
       await refetch();
       return;
     } finally {
@@ -230,7 +231,10 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
           </h3>
           <input
             disabled={savingSources}
-            type="url"
+            type="text"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
             value={websiteUrl}
             onChange={(e) => setWebsiteUrl(e.target.value)}
             className={inputClass}
@@ -247,7 +251,10 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
             <Camera className="h-4 w-4 shrink-0 text-foreground-muted" />
             <input
               disabled={savingSources}
-            type="url"
+              type="text"
+              inputMode="url"
+              autoCapitalize="none"
+              autoCorrect="off"
               value={socialUrls.instagram}
               onChange={(e) => setSocialUrls({ ...socialUrls, instagram: e.target.value })}
               className={inputClass}
@@ -258,7 +265,10 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
             <Users className="h-4 w-4 shrink-0 text-foreground-muted" />
             <input
               disabled={savingSources}
-            type="url"
+              type="text"
+              inputMode="url"
+              autoCapitalize="none"
+              autoCorrect="off"
               value={socialUrls.facebook}
               onChange={(e) => setSocialUrls({ ...socialUrls, facebook: e.target.value })}
               className={inputClass}
@@ -269,7 +279,10 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
             <Briefcase className="h-4 w-4 shrink-0 text-foreground-muted" />
             <input
               disabled={savingSources}
-            type="url"
+              type="text"
+              inputMode="url"
+              autoCapitalize="none"
+              autoCorrect="off"
               value={socialUrls.linkedin}
               onChange={(e) => setSocialUrls({ ...socialUrls, linkedin: e.target.value })}
               className={inputClass}
@@ -328,7 +341,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
         <ReceivedIntakeDocuments documents={intake.documents} />
 
         {error && (
-          <div className="mt-4 flex items-center gap-2 rounded-lg bg-destructive-subtle/30 px-4 py-3 text-sm text-destructive">
+          <div role="alert" className="mt-4 flex items-center gap-2 rounded-lg bg-destructive-subtle/30 px-4 py-3 text-sm text-destructive">
             <AlertCircle className="h-4 w-4 shrink-0" />
             {error}
           </div>

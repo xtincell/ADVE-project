@@ -171,9 +171,15 @@ async function previewDispatchReceipt(strategyId: string, previewIntentId: strin
   const run = await db.intentEmission.findFirst({where:{id,strategyId,intentKind:"COMPOSE_DELIVERABLE"},select:{status:true,result:true}});
   if (!run) throw new Error("La tentative réservée n'est plus accessible ; vérifiez son suivi.");
   const output = object(object(run.result).output);
+  const generativeTaskId = typeof output.generativeTaskId === "string" ? output.generativeTaskId : null;
+  // The dispatch receipt can precede an asynchronous provider completion.
+  // Poll the current task state, never a frozen IN_PROGRESS result or image bytes.
+  const task = generativeTaskId ? await db.generativeTask.findFirst({
+    where: { id: generativeTaskId, strategyId }, select: { status: true },
+  }) : null;
   return {intentId:id,status:run.status,briefOutputId:typeof output.briefOutputId === "string" ? output.briefOutputId : null,
-    generativeTaskId:typeof output.generativeTaskId === "string" ? output.generativeTaskId : null,
-    materialStatus:typeof output.materialStatus === "string" ? output.materialStatus : null};
+    generativeTaskId,
+    materialStatus:task?.status ?? (typeof output.materialStatus === "string" ? output.materialStatus : null)};
 }
 
 /** Lightweight progress query. Full originals never transit a polling response. */

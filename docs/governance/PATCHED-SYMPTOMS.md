@@ -28,6 +28,49 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 547 — régression de prérendu dans la navigation partagée (2026-11-05)
+
+Les deux builds CI de PR1141 à `9e35e9049` s'arrêtaient sur
+`useSearchParams() should be wrapped in a suspense boundary` : Console
+(`/console/arene/academie`, `/console/socle/manual-subscriptions`) et Agence
+(`/agency/campaigns`). Les tests Golden Path et l'audit Lighthouse n'avaient
+pas commencé ; migrations et compilation avaient réussi. Cette entrée trace
+explicitement une régression introduite dans la tranche 547 (`d25429379`),
+et non un défaut pré-existant : le raccord des liens de marque avait ajouté
+une lecture d'URL à des composants partagés par des pages statiques.
+
+Le contrôle suivant à `200294627` a révélé le même défaut dans
+`/cockpit/brand/assets`. Les quatre lectures d'URL ajoutées dans cette tranche
+ont été revues : Deliverables possédait déjà sa frontière ; Assets a reçu la
+sienne. Sa reproduction SSR échoue avant le correctif et passe ensuite.
+
+Sidebar et MobileTabBar possèdent maintenant leur frontière Suspense et
+gardent un rendu de navigation utile pendant l'attente des paramètres. Le
+contenu de page reste indépendant ; aucun passage global en rendu dynamique
+ni désactivation de contrôle. Deux tests SSR ont reproduit le défaut avant
+correction ; les dix tests ciblés passent ensuite, avec conservation de la
+marque, de l'équipe et de l'onglet actif. Typage et lint ciblé reçus sans erreur.
+Le build local isolé s'est arrêté sur `ENOSPC` pendant la compilation : il ne
+constitue pas une réception du prérendu complet. Son log est conservé et seul
+son répertoire `.next` temporaire a été retiré ; la recette locale active est
+préservée. Le build complet et la CI restent à recevoir sur le nouveau commit.
+Commit dédié `fix(navigation): contain URL suspension during prerender`.
+
+### 547 — navigation mobile au-dessus du dossier d’actif (2026-11-05)
+
+Le dossier chargé était lisible et sans débordement horizontal, mais sa fin
+était masquée par la barre mobile et la bulle de retour. La modale partagée
+utilisait encore `z-50`, inférieur aux couches de navigation (70/80) et de
+retour (60). Elle utilise désormais le token commun `--z-modal` (100).
+Hypothèse de cause : ancienne valeur locale restée après centralisation des
+couches d’interface. Commit dédié `fix(ui): keep asset dossiers above mobile navigation`.
+Réception Chrome local à 1440×1100 et 390×844 : provenance synthétique explicite,
+gouverneur Mestor, navigation V2 → V1 → V2, usages campagne/brief et contenu
+intégral reçus. Le bord inférieur reste au-dessus de la navigation, sans
+débordement ni exception de page. Captures inspectées dans
+`dam-browser547/`, hors dépôt ; 4 tests dossier/focus verts et lint ciblé reçu.
+Aucune sélection humaine, génération ni donnée de production modifiée.
+
 ### 542 — une action longue valide dans I pouvait bloquer S (2026-11-04)
 
 La maturité pouvait afficher 100 % alors que le schéma d’écriture de S refusait

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Search, ArrowRight, Clock, X, FileText } from "lucide-react";
 import type { NavGroup } from "./types";
+import { withCockpitContext } from "./nav-active";
 
 interface CommandItem {
   id: string;
@@ -22,6 +23,8 @@ interface CommandItem {
  * clés avec le moteur de recherche »).
  */
 const KEYWORD_HINTS: Record<string, string> = {
+  "/cockpit/brand/deliverables?tab=production": "studio production générer generation briefs variantes visuels images vidéos",
+  "/cockpit/brand/assets": "dam asset manager banque coffre vault fichiers médias références images logos",
   "/console/anubis/credentials": "api clés cles secrets tokens connecteurs apify vault coffre credentials",
   "/console/anubis/api-billing": "api clé mcp facturation billing metering endpoint",
   "/console/socle/pricing": "clés paiement stripe providers env secrets abonnement",
@@ -125,7 +128,7 @@ export function CommandPalette({ open, onClose, navGroups, portal }: CommandPale
       // Track recent
       const updated = [href, ...recentPaths.filter((p) => p !== href)].slice(0, 10);
       localStorage.setItem("lf-recent-pages", JSON.stringify(updated));
-      router.push(href);
+      router.push(withCockpitContext(href, window.location.search));
       onClose();
     },
     [router, onClose, recentPaths]

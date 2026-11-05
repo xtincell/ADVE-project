@@ -2,7 +2,8 @@
 
 import { ProductionWorkbench } from "@/components/cockpit/production-workbench";
 import { OperatorSurface } from "@/components/cockpit/operator-surface";
-import { useEffect, useState, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -44,14 +45,33 @@ const FORMAT_BADGE: Record<string, { label: string; color: string; icon: typeof 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function BrandDeliverablesPage() {
-  const [tab, setTab] = useState<"documents" | "production">("documents");
-  useEffect(() => {
-    if (new URL(window.location.href).searchParams.has("productionPreview")) setTab("production");
-  }, []);
-  return <div className="space-y-6"><nav className="flex gap-4 border-b border-border pb-3" aria-label="Livrables et production">
-    <button aria-pressed={tab === "documents"} onClick={() => setTab("documents")} className="text-sm font-semibold text-foreground">Documents et versions</button>
-    <button aria-pressed={tab === "production"} onClick={() => setTab("production")} className="text-sm font-semibold text-foreground">Production</button>
-  </nav>{tab === "production" ? <OperatorSurface><ProductionWorkbench /></OperatorSurface> : <BrandDeliverablesDocuments />}</div>;
+  return <Suspense fallback={<SkeletonPage />}><BrandDeliverablesTabs /></Suspense>;
+}
+
+function BrandDeliverablesTabs() {
+  const search = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const tab = search.get("tab") === "production" || (!search.has("tab") && search.has("productionPreview"))
+    ? "production" : "documents";
+  const selectTab = (next: "documents" | "production") => {
+    const params = new URLSearchParams(search.toString());
+    params.set("tab", next);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+  return (
+    <div className="space-y-6">
+      <nav className="flex flex-wrap gap-2 border-b border-border pb-3" aria-label="Livrables et production">
+        {([{ key: "documents", label: "Documents et versions" }, { key: "production", label: "Studio de production" }] as const).map((item) => (
+          <button key={item.key} aria-pressed={tab === item.key} onClick={() => selectTab(item.key)}
+            className={`min-h-[var(--tap-min)] rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${tab === item.key ? "bg-primary-subtle text-primary" : "text-foreground-secondary hover:bg-background-overlay hover:text-foreground"}`}>
+            {item.label}
+          </button>
+        ))}
+      </nav>
+      {tab === "production" ? <OperatorSurface><ProductionWorkbench /></OperatorSurface> : <BrandDeliverablesDocuments />}
+    </div>
+  );
 }
 
 function BrandDeliverablesDocuments() {

@@ -25,6 +25,7 @@ import { EntryOvertonClaimSchema, type EntryOvertonClaim } from "@/domain/overto
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
+import { OptionalIntakeWebUrlSchema, intakeErrorMessage } from "@/lib/intake-input";
 import { BUSINESS_MODELS, POSITIONING_ARCHETYPES } from "@/lib/types/business-context";
 import { INTAKE_SECTORS, INTAKE_COUNTRIES } from "@/lib/constants/intake-options";
 import {
@@ -182,7 +183,7 @@ function IntakeLandingContent() {
         setError(t("intake.contact.error.requiredFields"));
         setStep("contact");
       } else {
-        setError(msg);
+        setError(intakeErrorMessage(err));
       }
     },
   });
@@ -213,6 +214,13 @@ function IntakeLandingContent() {
       return;
     }
 
+    const website = OptionalIntakeWebUrlSchema.safeParse(form.websiteUrl);
+    if (!website.success) {
+      setError(intakeErrorMessage(website.error));
+      setStep("contact");
+      return;
+    }
+
     startMutation.mutate({
       contactName: form.contactName.trim(),
       contactEmail: form.contactEmail.trim(),
@@ -222,7 +230,7 @@ function IntakeLandingContent() {
       businessModel: form.businessModel || undefined,
       positioning: form.positioning || undefined,
       overtonClaim: overtonClaim ?? undefined,
-      websiteUrl: form.websiteUrl.trim() || undefined,
+      websiteUrl: website.data,
       socialLinksRaw: form.socialLinksRaw.trim() || undefined,
       source: utmSource,
       attribution,
@@ -371,7 +379,10 @@ function IntakeLandingContent() {
               </label>
               <input
                 id="websiteUrl"
-                type="url"
+                type="text"
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
                 value={form.websiteUrl}
                 onChange={(e) => setForm({ ...form, websiteUrl: e.target.value })}
                 className={inputClass}

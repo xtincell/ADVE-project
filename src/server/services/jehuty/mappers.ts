@@ -38,7 +38,7 @@ export function editorialExcerpt(text: string, max = 300): string {
   return `${cut.slice(0, boundary > 0 ? boundary : cut.length)}…`;
 }
 
-function signalHeadline(title: string, data: Record<string, unknown>, type: string): string {
+export function signalHeadline(title: string, data: Record<string, unknown>, type: string): string {
   if (title.length <= 110) return title;
   const clause = title.split(/[,;!?]|\.\s/)[0]?.trim();
   if (clause && clause.length >= 15 && clause.length <= 110) return clause;
@@ -98,6 +98,7 @@ export function mapSignalToFeedItem(
     disadvantages: (data.disadvantages as string[]) ?? undefined,
     curation: curation ? { action: curation.action as JehutyCurationAction, note: curation.note ?? undefined } : undefined,
     createdAt: signal.createdAt.toISOString(),
+    sources: signalSourceLinks(data),
     source: signal.type === "EXTERNAL_METRIC"
       ? typeof data.sourceLabel === "string" && data.sourceLabel.trim() ? data.sourceLabel.trim() : "Mesures reçues"
       : signal.type === "WEAK_SIGNAL_ALERT" ? "Analyse des signaux de la marque"
@@ -277,9 +278,27 @@ export function mapExternalArticleToFeedItem(
     confidence: null,
     priority: computePriority(null, null, null, createdAt),
     externalUrl: article.link,
+    dateKind: article.publishedAt && !Number.isNaN(Date.parse(article.publishedAt)) ? "PUBLISHED" : "COLLECTED",
     ...(article.imageUrl ? { imageUrl: article.imageUrl } : {}),
     curation: curation ? { action: curation.action as JehutyCurationAction, note: curation.note ?? undefined } : undefined,
     createdAt: createdAt.toISOString(),
     source: article.source ?? "Veille de marque",
   };
+}
+
+/** Only expose URLs actually carried by a signal, never infer a publication. */
+export function signalSourceLinks(data: Record<string, unknown>): Array<{ url: string; title: string }> {
+  const values = [data.sourceUrl, ...(Array.isArray(data.sources) ? data.sources : []), ...(Array.isArray(data.evidence) ? data.evidence : [])];
+  const links = new Map<string, { url: string; title: string }>();
+  for (const value of values) {
+    const entry = value && typeof value === "object" ? value as Record<string, unknown> : {};
+    const raw = typeof value === "string" ? value : entry.url ?? entry.link ?? entry.sourceUrl;
+    if (typeof raw !== "string") continue;
+    try {
+      const url = new URL(raw);
+      if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) continue;
+      links.set(url.href, { url: url.href, title: typeof entry.title === "string" ? entry.title : url.hostname });
+    } catch { /* Not a public source URL. */ }
+  }
+  return [...links.values()];
 }

@@ -26,8 +26,8 @@ import { watchlistSchema } from "@/domain/creative-intelligence";
 /**
  * Sujets de veille EFFECTIFS d'une marque (ADR-0165) : l'édition manuelle
  * (`businessContext.watchSubjects`) prime ; sinon dérivation déterministe
- * depuis les piliers V (marques du catalogue), D (concurrents), E
- * (communauté cible). Best-effort : échec DB → [] (la veille retombe sur
+ * depuis les piliers A (publics), V (marques du catalogue), D (personas et
+ * concurrents), E (portrait du superfan et communauté). Best-effort : échec DB → [] (la veille retombe sur
  * nom + secteur, comportement historique).
  */
 export async function loadWatchSubjects(
@@ -37,17 +37,20 @@ export async function loadWatchSubjects(
   countryName?: string | null,
 ): Promise<{ subjects: string[]; source: "MANUAL" | "DERIVED" | "NONE" }> {
   const manual = ((businessContext ?? {}) as Record<string, unknown>).watchSubjects;
+  const explicit = effectiveWatchSubjects(manual, []);
+  if (explicit.source === "MANUAL") return explicit;
   try {
     const watch = watchlistSchema.safeParse(((businessContext ?? {}) as Record<string, unknown>).creativeWatchlist);
-    const declared = watch.success ? await db.brandRef.findMany({ where: { id: { in: watch.data.map(w => w.brandRefId) } }, select: { name: true } }) : [];
+    const declared = watch.success ? await db.brandRef.findMany({ where: { id: { in: watch.data.map(w => w.brandRefId) } }, select: { name: true } }).catch(() => []) : [];
     const pillars = await db.pillar.findMany({
-      where: { strategyId, key: { in: ["v", "d", "e"] } },
+      where: { strategyId, key: { in: ["a", "v", "d", "e"] } },
       select: { key: true, content: true },
     });
     const byKey = Object.fromEntries(
       pillars.map((p) => [p.key, (p.content as Record<string, unknown> | null) ?? {}]),
     );
     const derived = deriveWatchSubjects({
+      pillarA: byKey.a,
       pillarV: byKey.v,
       pillarD: byKey.d,
       pillarE: byKey.e,
@@ -95,10 +98,12 @@ export interface BrandFeedArticle {
  * Max three articles per refresh; never use an aggregator logo as article art.
  */
 export async function enrichArticlePreview(article: BrandFeedArticle): Promise<BrandFeedArticle> {
+  let resolved = article;
   try {
     let link = article.link;
-    const hostname = new URL(link).hostname;
-    if (hostname === "news.google.com") {
+    const original = new URL(link);
+    if (!["http:", "https:"].includes(original.protocol)) return article;
+    if (original.hostname === "news.google.com") {
       if (!article.sourceUrl) return article;
       const publisher = new URL(article.sourceUrl).hostname.replace(/^www\./, "");
       const result = await braveWebSearch(`site:${publisher} "${article.title}"`, { count: 3, allowlistOnly: true });
@@ -106,25 +111,35 @@ export async function enrichArticlePreview(article: BrandFeedArticle): Promise<B
       const tokens = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/[^a-z0-9]+/).filter(t => t.length > 3);
       const wanted = [...new Set(tokens(article.title))];
       const match = result.hits.find(hit => {
-        const host = new URL(hit.url).hostname.replace(/^www\./, "");
-        const found = new Set(tokens(hit.title));
-        return (host === publisher || host.endsWith(`.${publisher}`)) && wanted.length >= 3 &&
-          wanted.filter(t => found.has(t)).length / wanted.length >= 0.7;
+        try {
+          const url = new URL(hit.url);
+          const host = url.hostname.replace(/^www\./, "");
+          const found = new Set(tokens(hit.title));
+          return ["http:", "https:"].includes(url.protocol) && (host === publisher || host.endsWith(`.${publisher}`)) &&
+            wanted.length >= 3 && wanted.filter(t => found.has(t)).length / wanted.length >= 0.7;
+        } catch { return false; }
       });
       if (!match) return article;
       link = match.url;
+      resolved = { ...article, link, discoveryUrl: article.link };
     }
     const fetched = await fetchSourceUrl(link);
-    if (!fetched.ok || !fetched.text || !fetched.contentType?.includes("html")) return article;
+    if (!fetched.ok || !fetched.text || !fetched.contentType?.includes("html")) return resolved;
     const meta = parseHtmlMeta(fetched.text);
-    const image = meta.ogImage ? new URL(meta.ogImage, link) : null;
-    return {
-      ...article, link,
-      ...(link !== article.link ? { discoveryUrl: article.link } : {}),
-      ...(meta.description ? { summary: meta.description } : {}),
-      ...(!article.imageUrl && image && image.protocol === "https:" ? { imageUrl: image.href } : {}),
-    };
-  } catch { return article; }
+    let imageUrl = article.imageUrl;
+    if (!imageUrl && meta.ogImage) {
+      try {
+        const image = new URL(meta.ogImage, link);
+        if (image.protocol === "https:" && !image.username && !image.password) imageUrl = image.href;
+      } catch { /* A malformed picture must not discard a received publisher summary. */ }
+    }
+    // Google RSS descriptions often only repeat the headline. Prefer publisher
+    // metadata in that case; preserve a richer full excerpt supplied by the RSS.
+    const summaryRepeatsTitle = article.summary?.startsWith(article.title);
+    const summary = meta.description && (!article.summary || summaryRepeatsTitle || meta.description.length > article.summary.length)
+      ? meta.description : article.summary;
+    return { ...resolved, ...(summary ? { summary } : {}), ...(imageUrl ? { imageUrl } : {}) };
+  } catch { return resolved; }
 }
 
 export interface BrandFeedResult {

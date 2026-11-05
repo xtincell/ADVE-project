@@ -1,13 +1,15 @@
 "use client";
 
-import { Fragment, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import type { ContentPost } from "@/lib/types/launch-calendar";
+import { isProductionTransportError, receiptRecoveryMessage, shouldPollProductionReceipt, useProductionReceiptRecovery, type ReceiptRecovery } from "./use-production-receipt-recovery";
 
 type OptionCount = 1 | 2 | 3 | 4;
 type BriefRef = { assetId: string; version: number; variant: number; name: string };
 type Receipt = {
+  status?: string | null; dispatchIntentId?: string | null;
   message: string; previewIntentId?: string | null; generativeTaskId?: string | null; materialStatus?: string | null;
   materialVersions?: {id: string; url: string; status: string; kind: string}[];
 };
@@ -28,9 +30,23 @@ export function CalendarProduction({ strategyId, editionId, startDate, weeks, pr
   renderPost: (post: ContentPost, actions: ReactNode) => ReactNode;
 }) {
   const scope = { strategyId, editionId, startDate, weeks, projectDates };
-  const calendar = trpc.deliverableOrchestrator.calendarProductionRows.useQuery(scope);
+  const recovery = useProductionReceiptRecovery();
+  // The error is handled below against the durable receipt, not by the global error toast.
+  const produce = trpc.deliverableOrchestrator.produceCalendarBrief.useMutation({ retry: false, onError() {} });
+  const calendar = trpc.deliverableOrchestrator.calendarProductionRows.useQuery(scope, {
+    refetchInterval: query => {
+      const briefs = query.state.data?.rows.flatMap(row => row.briefs) ?? [];
+      const sendingKey = produce.isPending && produce.variables
+        ? produce.variables.assetId + "/" + produce.variables.version : null;
+      const pending = briefs.some(brief => shouldPollProductionReceipt(brief.generation,
+        sendingKey === brief.assetId + "/" + brief.version
+        || recovery.pending[brief.assetId + "/" + brief.version]?.phase === "VERIFYING"));
+      const unseen = Object.entries(recovery.pending).some(([key, value]) => value.phase === "VERIFYING"
+        && !briefs.some(brief => brief.assetId + "/" + brief.version === key));
+      return pending || unseen || (sendingKey && !briefs.some(brief => brief.assetId + "/" + brief.version === sendingKey)) ? 3000 : false;
+    },
+  });
   const prepare = trpc.deliverableOrchestrator.prepareCalendarBriefs.useMutation();
-  const produce = trpc.deliverableOrchestrator.produceCalendarBrief.useMutation();
   const [defaults, setDefaults] = useState<OptionCount>(2);
   const [counts, setCounts] = useState<Record<string, OptionCount>>({});
   const [receipts, setReceipts] = useState<Record<string, Receipt>>({});
@@ -41,14 +57,25 @@ export function CalendarProduction({ strategyId, editionId, startDate, weeks, pr
   const version = calendar.data?.calendarVersion;
   const rows = calendar.data?.rows ?? [];
   const countFor = (key: string) => counts[key] ?? defaults;
+  useEffect(() => {
+    for (const row of calendar.data?.rows ?? []) for (const brief of row.briefs) {
+      if (brief.generation) recovery.resolve(brief.assetId + "/" + brief.version);
+    }
+  }, [calendar.data, recovery.resolve]);
 
   async function send(brief: BriefRef) {
     const key = brief.assetId + "/" + brief.version;
+    if (recovery.pending[key]) { await calendar.refetch(); return; }
     try {
       const result = await produce.mutateAsync({ strategyId, assetId: brief.assetId, version: brief.version });
       setReceipts(prev => ({ ...prev, [key]: result }));
+      recovery.resolve(key);
     } catch (error) {
-      setReceipts(prev => ({ ...prev, [key]: { message: error instanceof Error ? error.message : "La génération a été interrompue. Vous pouvez reprendre cette option." } }));
+      if (isProductionTransportError(error)) recovery.watch(key);
+      else setReceipts(prev => ({ ...prev, [key]: { message: error instanceof Error ? error.message : "La demande n’a pas abouti." } }));
+    } finally {
+      // Receive each option immediately, including when the POST response was lost.
+      await calendar.refetch();
     }
   }
   async function run(keys: string[], generate: boolean, correction?: { assetId: string; version: number; instruction: string; photoPolicy?: "LOCKED_MASTER" }, newProposal?: {assetId:string;version:number;instruction:string}) {
@@ -83,13 +110,14 @@ export function CalendarProduction({ strategyId, editionId, startDate, weeks, pr
     try { await send(brief); }
     finally { await calendar.refetch(); running.current = false; setProgress(""); }
   }
-  if (calendar.isPending || calendar.isError) return <>
+  if (calendar.isPending || (calendar.isError && !calendar.data)) return <>
     {calendar.isError && <p role="alert">La production est indisponible. {calendar.error.message} <button onClick={() => calendar.refetch()} className={action}>Réessayer</button></p>}
     {fallback}
   </>;
   if (!version || !rows.length) return <>{fallback}</>;
   const total = rows.reduce((sum, row) => sum + countFor(row.key), 0);
   return <section aria-label="Production visuelle du calendrier">
+    {calendar.isError && <p role="status" className="mb-3 text-sm">Le suivi est momentanément indisponible. Les derniers reçus restent affichés. <button className={action} onClick={() => calendar.refetch()}>Actualiser les reçus</button></p>}
     <div className="mb-4 rounded-lg border border-border p-4">
       <h3 className="font-semibold">Produire les visuels du calendrier</h3>
       <p className="my-2 text-xs text-foreground-secondary">Chaque post garde son texte, ses sources et la version de ses briefs. Produire transmet les options au moteur de génération pour relecture. La publication se décide séparément.</p>
@@ -124,6 +152,8 @@ export function CalendarProduction({ strategyId, editionId, startDate, weeks, pr
           {errors[row.key] && <p role="alert" className="mt-2 text-sm">{errors[row.key]}</p>}
           {row.briefs.map(brief => <CalendarOption key={brief.assetId + brief.version} brief={brief}
             receipt={brief.generation ?? receipts[brief.assetId + "/" + brief.version]} strategyId={strategyId} onResume={() => resume(brief)}
+            recovery={brief.generation ? undefined : recovery.pending[brief.assetId + "/" + brief.version]}
+            onCheck={() => { recovery.watch(brief.assetId + "/" + brief.version); void calendar.refetch(); }}
             onNewProposal={instruction=>run([row.key],false,undefined,{assetId:brief.assetId,version:brief.version,instruction})}
             onCorrect={(instruction,photoPolicy) => run([row.key], true, { assetId: brief.assetId, version: brief.version, instruction, photoPolicy })} />)}
         </fieldset>)}
@@ -132,8 +162,9 @@ export function CalendarProduction({ strategyId, editionId, startDate, weeks, pr
   </section>;
 }
 
-function CalendarOption({ brief, receipt, strategyId, onResume, onCorrect, onNewProposal }: {
+function CalendarOption({ brief, receipt, recovery, onCheck, strategyId, onResume, onCorrect, onNewProposal }: {
   brief: BriefRef; receipt?: Receipt; strategyId: string; onResume: () => void; onNewProposal:(instruction:string)=>void; onCorrect: (text: string, photoPolicy?: "LOCKED_MASTER") => void;
+  recovery?: ReceiptRecovery; onCheck: () => void;
 }) {
   const [note, setNote] = useState("");
   const [newPhoto,setNewPhoto]=useState("");
@@ -155,8 +186,9 @@ function CalendarOption({ brief, receipt, strategyId, onResume, onCorrect, onNew
     </div>}
     <Renders receipt={receipt} />
     {receipt && <p role="status" className="my-2">{receipt.message}</p>}
+    {recovery && <p role="status" className="my-2">{receiptRecoveryMessage(recovery)} <button className={action} onClick={onCheck}>Vérifier le reçu</button></p>}
     {receipt?.previewIntentId && <Link className="underline" href={'/cockpit/brand/deliverables?strategy=' + encodeURIComponent(strategyId) + '&productionPreview=' + encodeURIComponent(receipt.previewIntentId)}>Ouvrir la fiche de production</Link>}
-    {!receipt?.generativeTaskId && <button className={action} onClick={onResume}>Demander la génération de cette option</button>}
+    {!receipt?.generativeTaskId && !receipt?.dispatchIntentId && !recovery && <button className={action} onClick={onResume}>Demander la génération de cette option</button>}
     {receipt?.materialStatus==="DEFERRED" && receipt.generativeTaskId && <button className={action} disabled={material.isPending}
       onClick={() => material.mutate({strategyId,resumeTaskId:receipt.generativeTaskId!})}>Reprendre la forge différée</button>}
     {material.error && <p role="alert">{material.error.message}</p>}

@@ -7,7 +7,7 @@ import {resolve} from "node:path";
 import {createHash} from "node:crypto";
 import {db} from "@/lib/db";
 import {brandVaultRouter} from "@/server/trpc/routers/brand-vault";
-import {canAccessStrategy} from "@/server/services/operator-isolation";
+import {canAccessStrategy,getOperatorContext} from "@/server/services/operator-isolation";
 import {readAssetOriginal} from "@/server/services/brand-vault/original";
 import {inspectArtworkMaster} from "@/server/services/ptah/artwork-master";
 import type {Context} from "@/server/trpc/context";
@@ -52,11 +52,12 @@ async function run(){
  if(!apply)return;
  const actorId=arg("actor");if(!actorId)throw Error("L’identifiant explicite de l’opérateur autorisé est obligatoire.");
  const actor=await db.user.findUniqueOrThrow({where:{id:actorId}});
- if(!await canAccessStrategy(target,{userId:actor.id,operatorId:actor.operatorId,role:actor.role}))throw Error("Cet opérateur ne peut déposer dans cette marque.");
+ const authority=await getOperatorContext(actor.id);
+ if(!await canAccessStrategy(target,authority))throw Error("Cet opérateur ne peut déposer dans cette marque.");
  const snapshot=arg("snapshot")??resolve(mkdtempSync(resolve(tmpdir(),"spawt-reprise-")),"planning-avant-import.json");
  writeFileSync(snapshot,JSON.stringify({strategy,portfolioNode:node,calendars,assets:seen,edition,observedAt:new Date().toISOString()},null,2),{mode:0o600,flag:"wx"});
  console.log(JSON.stringify({mode:"snapshot",file:snapshot}));
- const ctx={db,headers:new Headers(),session:{user:{id:actor.id,email:actor.email,role:actor.role,operatorId:actor.operatorId},expires:new Date(Date.now()+60_000).toISOString()}} as Context;
+ const ctx={db,headers:new Headers(),session:{user:{id:actor.id,email:actor.email,role:authority.role,operatorId:actor.operatorId},expires:new Date(Date.now()+60_000).toISOString()}} as Context;
  const vault=brandVaultRouter.createCaller(ctx),received=[];
  for(const [i,file] of files.entries()){
   const existing=seen[i];

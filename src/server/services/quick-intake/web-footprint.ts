@@ -133,19 +133,32 @@ export function parseHtmlMeta(html: string): {
   ogImage: string | null;
   language: string | null;
 } {
-  const pick = (re: RegExp): string | null => {
-    const m = html.match(re);
-    return m?.[1] ? decodeEntities(m[1].trim()).slice(0, 300) : null;
+  // Parse complete quoted attributes: an apostrophe inside a double-quoted
+  // description is content, not its closing delimiter. Keep source URLs whole.
+  const head = html.slice(0, 600_000);
+  const values = new Map<string, string>();
+  for (const tag of head.matchAll(/<meta\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi)) {
+    const attrs: Record<string, string> = {};
+    for (const attr of tag[0].matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g)) {
+      attrs[attr[1]!.toLowerCase()] = decodeEntities((attr[2] ?? attr[3] ?? attr[4] ?? "").trim());
+    }
+    const key = (attrs.property ?? attrs.name ?? "").toLowerCase();
+    if (key && attrs.content && !values.has(key)) values.set(key, attrs.content);
+  }
+  const meta = (...keys: string[]) => keys.map(key => values.get(key)).find(Boolean) ?? null;
+  const boundedText = (value: string | null, max: number) => {
+    if (!value) return null;
+    if (value.length <= max) return value;
+    return value.slice(0, max - 1).replace(/\s+\S*$/, "").trimEnd() + "…";
   };
-  const meta = (name: string): string | null =>
-    pick(new RegExp(`<meta[^>]+(?:name|property)=["']${name}["'][^>]+content=["']([^"']+)["']`, "i")) ??
-    pick(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["']${name}["']`, "i"));
-
+  const image = meta("og:image:secure_url", "og:image", "twitter:image", "twitter:image:src");
   return {
-    title: meta("og:title") ?? pick(/<title[^>]*>([^<]+)<\/title>/i),
-    description: meta("og:description") ?? meta("description"),
-    ogImage: meta("og:image"),
-    language: pick(/<html[^>]+lang=["']([a-zA-Z-]{2,8})["']/i),
+    title: boundedText(meta("og:title", "twitter:title") ??
+      decodeEntities(head.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim() ?? ""), 500),
+    description: boundedText(meta("og:description", "description", "twitter:description"), 4_000),
+    // An over-limit URL is omitted, never truncated into a different resource.
+    ogImage: image && image.length <= 8_192 ? image : null,
+    language: head.match(/<html\b[^>]*\blang\s*=\s*["']([a-zA-Z0-9-]{2,35})["']/i)?.[1] ?? null,
   };
 }
 

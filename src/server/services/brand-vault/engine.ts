@@ -69,8 +69,8 @@ export interface CreateBrandAssetInput {
 }
 
 /**
- * Crée un BrandAsset avec lineage hash-chain. Idempotent best-effort sur
- * (sourceGloryOutputId, batchIndex) pour éviter les doublons en cas de replay.
+ * Crée un BrandAsset avec sa provenance. Les dépôts Glory sérialisent leur
+ * reprise sur la source avant d’appeler ce helper transactionnel.
  */
 export async function createBrandAsset(input: CreateBrandAssetInput, client: Prisma.TransactionClient = db): Promise<import("@prisma/client").BrandAsset> {
   assertOrdinaryAsset(input.format);
@@ -131,9 +131,10 @@ export async function createCandidateBatch(args: {
   sourceExecutionId?: string;
   campaignId?: string;
   briefId?: string;
-}) {
+  metadata?: Record<string, unknown>;
+}, client?: Prisma.TransactionClient) {
   const batchId = `batch-${Date.now()}-${randomBytes(4).toString("hex")}`;
-  return db.$transaction(async (tx) => {
+  const create = async (tx: Prisma.TransactionClient) => {
     const created = [];
     for (let i = 0; i < args.candidates.length; i++) {
       const c = args.candidates[i]!;
@@ -157,11 +158,13 @@ export async function createCandidateBatch(args: {
         sourceExecutionId: args.sourceExecutionId,
         campaignId: args.campaignId,
         briefId: args.briefId,
+        metadata: args.metadata,
       }, tx);
       created.push(asset);
     }
     return { batchId, candidates: created };
-  });
+  };
+  return client ? create(client) : db.$transaction(create);
 }
 
 export class BrandAssetLifecycleError extends Error {
@@ -296,7 +299,10 @@ export async function promoteToActive(args: {
     if (asset.state === "ACTIVE") return asset;
     if (!["DRAFT", "SELECTED"].includes(asset.state)) throw new BrandAssetLifecycleError("PRECONDITION_FAILED", `ASSET_TRANSITION_REFUSED: ${asset.state} → ACTIVE`);
     await assertQuality(asset.id, asset.content, args.force);
-    const updated = await tx.brandAsset.update({ where: { id: asset.id }, data: { state: "ACTIVE" } });
+    const updated = await tx.brandAsset.update({ where: { id: asset.id }, data: {
+      state: "ACTIVE", selectedById: asset.selectedById ?? args.promotedById,
+      selectedAt: asset.selectedAt ?? new Date(), selectedReason: asset.selectedReason ?? "Mise en usage après examen humain",
+    } });
     await activateSlot(tx, updated);
     return updated;
   });

@@ -34,6 +34,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isProductionTransportError, receiptRecoveryMessage, shouldPollProductionReceipt, useProductionReceiptRecovery } from "./use-production-receipt-recovery";
 
 // Constantes locales non liées aux enums Prisma (OK de garder ici)
 const VAULT_STATUS_LABELS: Record<string, string> = {
@@ -100,6 +101,8 @@ function StrategyWorkbench({ strategyId }: { strategyId: string | null }) {
   }
   // ADR-0136 — forge réelle (previewOnly:false) après l'aperçu.
   const [confirmForge, setConfirmForge] = useState(false);
+  const recovery = useProductionReceiptRecovery();
+  const unresolvedDispatch = previewId ? recovery.pending[previewId] : undefined;
 
 
   // tRPC Queries & Mutations
@@ -160,6 +163,7 @@ function StrategyWorkbench({ strategyId }: { strategyId: string | null }) {
     setSelection(saved.data.sourceManifest.sources.map(({ assetId, version, role, name, sections, artwork }) => ({ assetId, version, role, name, sections, artwork })));
   }, [saved.data, previewId]);
   const composeMutation = trpc.deliverableOrchestrator.compose.useMutation({
+    retry: false,
     onSuccess({ intentResult }) {
       const receipt = intentResult.output as { status?: string; previewIntentId?: string } | undefined;
       if (intentResult.status === "OK" && receipt?.status === "PREVIEW" && receipt.previewIntentId) {
@@ -168,17 +172,34 @@ function StrategyWorkbench({ strategyId }: { strategyId: string | null }) {
         void saved.refetch();
       }
     },
+    onError(error, input) {
+      if (!input.previewOnly && input.previewIntentId && isProductionTransportError(error)) {
+        recovery.watch(input.previewIntentId);
+      }
+    },
+    onSettled(_data, _error, input) {
+      if (!input.previewOnly && input.previewIntentId) {
+        void saved.refetch();
+        void progress.refetch();
+      }
+    },
   });
   const composition = composeMutation.data?.intentResult ?? null;
   const output = composition?.output as { status?: string; generativeTaskId?: string | null; materialStatus?: string | null; missingPreconditions?: string[]; composition?: {missingPreconditions?: string[]}; sourceManifest?: unknown } | undefined;
   const progress = trpc.deliverableOrchestrator.productionProgress.useQuery(
     {strategyId: strategyId ?? "", previewIntentId: previewId ?? ""},
     {enabled: !!strategyId && !!previewId, refetchInterval: q => {
-      const run = q.state.data;
-      return composeMutation.isPending || (run && !["OK","FAILED","VETOED","DEFERRED"].includes(run.status)) ? 2000 : false;
+      const run = q.state.data ?? saved.data?.dispatchReceipt;
+      return shouldPollProductionReceipt(run,
+        (composeMutation.isPending && composeMutation.variables?.previewOnly === false)
+        || unresolvedDispatch?.phase === "VERIFYING") ? 2000 : false;
     }}
   );
   const previousDispatch = progress.data ?? saved.data?.dispatchReceipt;
+  useEffect(() => {
+    if (previousDispatch && previewId) recovery.resolve(previewId);
+  }, [previousDispatch, previewId, recovery.resolve]);
+  const transportError = isProductionTransportError(composeMutation.error);
   const restored = saved.data?.previewIntentId === previewId && saved.data != null;
   const parsed = productionSourceManifest.safeParse(output?.sourceManifest ?? saved.data?.sourceManifest);
   const manifest = parsed.success ? parsed.data : undefined;
@@ -240,7 +261,7 @@ function StrategyWorkbench({ strategyId }: { strategyId: string | null }) {
   function handleForge() {
     if (!strategyId || !targetKind) return;
     setConfirmForge(false);
-    if (!previewReady || handoff || missing.length || !previewId || previousDispatch) return;
+    if (!previewReady || handoff || missing.length || !previewId || previousDispatch || unresolvedDispatch) return;
     composeMutation.mutate({ strategyId, targetKind, previewOnly: false, previewIntentId: previewId, pins, ...scope });
   }
 
@@ -780,7 +801,13 @@ function StrategyWorkbench({ strategyId }: { strategyId: string | null }) {
             }} /></fieldset>
           )}
           {saved.isError && previewId && <p role="alert">Cet aperçu ne peut pas être rouvert pour cette marque. <button type="button" className="underline" onClick={handleReset}>Recommencer</button></p>}
-          {composeMutation.error && <p role="alert" className="rounded-lg border border-warning p-3 text-sm">{composeMutation.error.message}</p>}
+          {composeMutation.error && !(transportError && (previousDispatch || unresolvedDispatch)) && <p role="alert" className="rounded-lg border border-warning p-3 text-sm">{composeMutation.error.message}</p>}
+          {unresolvedDispatch && !previousDispatch && <p role="status" className="rounded-lg border border-warning p-3 text-sm">
+            {receiptRecoveryMessage(unresolvedDispatch)} <button type="button" className="underline" onClick={() => {
+              if (previewId) recovery.watch(previewId);
+              void progress.refetch(); void saved.refetch();
+            }}>Vérifier le reçu</button>
+          </p>}
 
           {/* ── Étape 2 — Lancement ──────────────────────────────────────── */}
           {requirements.data?.ok && !composition && !restored && (
@@ -889,7 +916,7 @@ function StrategyWorkbench({ strategyId }: { strategyId: string | null }) {
                   <button
                     type="button"
                     onClick={() => setConfirmForge(true)}
-                    disabled={composeMutation.isPending || Boolean(handoff) || missing.length > 0 || !previewId}
+                    disabled={composeMutation.isPending || Boolean(handoff) || missing.length > 0 || !previewId || Boolean(unresolvedDispatch)}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-medium text-accent hover:bg-accent/15 disabled:opacity-40"
                   >
                     <Hammer className="h-3.5 w-3.5" />

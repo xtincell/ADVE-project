@@ -4,8 +4,9 @@
  * Le Cockpit est le portail VENDU au client : le vocabulaire à l'écran est
  * 100 % business (KB `docs/governance/context/UPGRADERS-LAFUSEE-KB.md` §3).
  * Les noms mythologiques internes (Neteru), les noms de mécanismes (ADVERTIS,
- * APOGEE) et la plomberie (réfs ADR, IntentEmission, function-calling) ne
- * doivent JAMAIS apparaître dans une chaîne rendue.
+ * APOGEE) et la plomberie (réfs ADR, IntentEmission, function-calling)
+ * n'apparaissent pas dans une chaîne rendue, sauf les déclarations de
+ * responsabilité du DAM expressément demandées par l'opérateur (2026-11-05).
  *
  * Méthode : on scanne les fichiers `.tsx` du portail cockpit, on retire les
  * commentaires (les identifiants de code — `trpc.jehuty.*`, `JehutyFeedItem`,
@@ -63,6 +64,7 @@ const EXTRA_FILES = [
   join(ROOT, "src/components/brand/source-preparation-option.tsx"),
   join(ROOT, "src/components/brand/source-read-dialog.tsx"),
   join(ROOT, "src/components/brand/document-library.tsx"),
+  join(ROOT, "src/components/brand/asset-dossier.tsx"),
   join(ROOT, "src/components/brand/financial-document-panel.tsx"),
   join(ROOT, "src/domain/financial-document.ts"),
   join(ROOT, "src/server/services/financial-brain/break-even-docx.ts"),
@@ -93,6 +95,17 @@ const EXTRA_FILES = [
  * nouvelle entrée doit porter une justification.
  */
 const OPERATOR_GATED_ALLOWLIST: ReadonlyArray<string> = [];
+
+/** Directive explicite 2026-11-05 : le DAM est gouverné par un Neteru et
+ * expose son responsable. Exception à ces textes exacts de responsabilité,
+ * jamais au fichier entier ni aux autres règles de vocabulaire. */
+const DAM_RESPONSIBILITY_TEXT: Readonly<Record<string, readonly string[]>> = {
+  "src/app/(cockpit)/cockpit/brand/assets/page.tsx": [
+    "Gouverné par Mestor",
+    "Mestor gouverne la conservation, la provenance et le cycle de vie des actifs. Artemis orchestre les livrables, Glory prépare les contenus et Ptah produit les médias. Votre équipe choisit les éditions à retenir.",
+  ],
+  "src/components/brand/asset-dossier.tsx": ["Mestor"],
+};
 
 const FORBIDDEN: Array<{ name: string; re: RegExp }> = [
   { name: "mythologie/mécanisme", re: /\b(ADVERTIS|APOGEE|Jehuty|Notoria|Mestor|Artemis|Seshat|Ptah|Anubis|Imhotep|Thot|Tarsis|NETERU)\b/ },
@@ -249,6 +262,15 @@ describe("Cockpit — vocabulaire client (lot 11, T1)", () => {
     expect(files.length).toBeGreaterThan(40);
   });
 
+  it("limite la déclaration de responsabilité du DAM aux textes toujours rendus", () => {
+    for (const [file, texts] of Object.entries(DAM_RESPONSIBILITY_TEXT)) {
+      expect(files).toContain(join(ROOT, file));
+      const chunks = renderableChunks(stripComments(readFileSync(join(ROOT, file), "utf-8"))).map(({ chunk }) => chunk.trim());
+      for (const text of texts) expect(chunks.filter(chunk => chunk === text), `${file}: ${text}`).toHaveLength(1);
+    }
+    expect(Object.values(DAM_RESPONSIBILITY_TEXT).flat()).toHaveLength(3);
+  });
+
   it("aucun vocabulaire interne dans les chaînes rendues du portail founder", () => {
     const violations: string[] = [];
     for (const file of files) {
@@ -258,6 +280,7 @@ describe("Cockpit — vocabulaire client (lot 11, T1)", () => {
       for (const { chunk, line } of renderableChunks(src)) {
         if (IDENTIFIER_CHUNK.test(chunk) || CSS_CLASS_CHUNK.test(chunk) || CODE_CHUNK.test(chunk)) continue;
         for (const { name, re } of FORBIDDEN) {
+          if (name === "mythologie/mécanisme" && DAM_RESPONSIBILITY_TEXT[rel]?.includes(chunk.trim())) continue;
           const m = chunk.match(re);
           if (m) violations.push(`${rel}:${line} [${name}] → ${m[0]} dans ${chunk.slice(0, 80)}`);
         }

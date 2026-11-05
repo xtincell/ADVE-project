@@ -18,11 +18,13 @@ import {
   mapExternalArticleToFeedItem,
   diagnosticBelongsToFeed,
 } from "@/server/services/jehuty/mappers";
+import { selectGazetteEdition, gazetteItemTouchesPillar } from "@/lib/jehuty-editorial";
 import type { JehutyFeedItem } from "@/lib/types/jehuty";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { refreshBrandGazette } from "@/server/services/jehuty/refresh";
 import { signalObservation } from "@/domain/signal-observation";
 import { knowledgeStrategyScope } from "@/server/services/operator-isolation/knowledge-scope";
+import { articleNotoriaInputSchema } from "@/server/services/jehuty/article-notoria";
 
 /* lafusee:governed-active */
 
@@ -216,11 +218,14 @@ export const jehutyRouter = createTRPCRouter({
       if (strategyId && (!category || category === "EXTERNAL_SIGNAL")) {
         try {
           const digest = await db.knowledgeEntry.findFirst({
-            where: { entryType: "EXTERNAL_FEED_DIGEST", market: `brand:${strategyId}` },
+            where: { entryType: "EXTERNAL_FEED_DIGEST", market: `brand:${strategyId}`,
+              OR: [{ originStrategyId: null }, { originStrategyId: strategyId }],
+            },
             orderBy: { createdAt: "desc" },
             select: { createdAt: true, data: true },
           });
-          const digestItems = ((digest?.data ?? {}) as { items?: Array<{ title?: string; link?: string; source?: string; publishedAt?: string; imageUrl?: string; summary?: string }> }).items ?? [];
+          const digestData = (digest?.data ?? {}) as { strategyId?: string; items?: Array<{ title?: string; link?: string; source?: string; publishedAt?: string; imageUrl?: string; summary?: string }> };
+          const digestItems = digestData.strategyId && digestData.strategyId !== strategyId ? [] : digestData.items ?? [];
           const maxAgeMs = 90 * 24 * 60 * 60 * 1000;
           let rank = 0;
           for (const art of digestItems) {
@@ -232,7 +237,16 @@ export const jehutyRouter = createTRPCRouter({
             items.push(mapExternalArticleToFeedItem(art, strategyId, digest!.createdAt, curationMap.get(`EXTERNAL:${art.link}`)));
           }
         } catch {
-          /* best-effort — la gazette vit sans la veille si la lecture échoue */
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "La lecture des articles collectés a échoué. Actualisez la page pour réessayer." });
+        }
+      }
+
+      if (strategyId) {
+        const articles = items.filter(item => item.externalUrl).map(item => ({ link: item.externalUrl! }));
+        if (articles.length) {
+          const { readArticleBrandInterpretations } = await import("@/server/services/jehuty/article-notoria");
+          const readings = await readArticleBrandInterpretations(strategyId, articles);
+          for (const item of items) if (item.externalUrl) item.articleContext = readings.get(item.externalUrl);
         }
       }
 
@@ -242,25 +256,13 @@ export const jehutyRouter = createTRPCRouter({
         filtered = filtered.filter((i) => i.category === category);
       }
       if (input.pillarKey) {
-        filtered = filtered.filter((i) => i.pillarKey === input.pillarKey?.toLowerCase());
+        filtered = filtered.filter((i) => gazetteItemTouchesPillar(i, input.pillarKey!));
       }
       if (hideDismissed) {
         filtered = filtered.filter((i) => i.curation?.action !== "DISMISSED");
       }
 
-      // ── Sort: curation opérateur d'abord (pinned > notoria-triggered),
-      //    puis priority desc. La curation est un signal de ranking de
-      //    premier rang — un item épinglé reste en tête du feed (ADR-0085 :
-      //    l'opérateur garde la barre, le feed reflète ses décisions). ──
-      const curationRank = (action?: string) =>
-        action === "PINNED" ? 2 : action === "NOTORIA_TRIGGERED" ? 1 : 0;
-      filtered.sort((a, b) => {
-        const rankDiff = curationRank(b.curation?.action) - curationRank(a.curation?.action);
-        if (rankDiff !== 0) return rankDiff;
-        return b.priority - a.priority;
-      });
-
-      return filtered.slice(0, limit);
+      return selectGazetteEdition(filtered, limit);
     }),
 
   // ══════════════════════════════════════════════════════════════════
@@ -467,12 +469,14 @@ export const jehutyRouter = createTRPCRouter({
 
   triggerNotoria: governedProcedure({
     kind: "GENERATE_RECOMMENDATIONS",
-    inputSchema: z.object({
-      strategyId: z.string(),
-      signalId: z.string(),
-    }),
+    inputSchema: articleNotoriaInputSchema,
   })
     .mutation(async ({ input, ctx }) => {
+      if (input.articleUrl) {
+        const { triggerArticleNotoria } = await import("@/server/services/jehuty/article-notoria");
+        return triggerArticleNotoria({ strategyId: input.strategyId, articleUrl: input.articleUrl, userId: ctx.session.user.id });
+      }
+      if (!input.signalId) throw new TRPCError({ code: "BAD_REQUEST", message: "Choisissez un signal ou un article." });
       // Load signal
       const signal = await db.signal.findUnique({ where: { id: input.signalId } });
       if (!signal) throw new Error("Signal introuvable.");

@@ -4,12 +4,15 @@
  * LLM par de vrais articles. Source par défaut : Google News RSS (public).
  */
 
+import { decodeEntities } from "@/lib/html-entities";
+
 export interface RssItem {
   title: string;
   link: string;
   pubDate: string;
   summary: string;
   sourceUrl?: string;
+  source?: string;
   /** Vignette fournie par le flux (media:thumbnail / media:content / enclosure / <img>). */
   imageUrl?: string;
 }
@@ -17,13 +20,7 @@ export interface RssItem {
 // ── Parsing pur (testable sans réseau) ─────────────────────────────────────────
 
 function stripMarkup(s: string): string {
-  return s
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-    .replace(/&(?:amp|#38);/gi, "&")
-    .replace(/&(?:lt|#60);/gi, "<")
-    .replace(/&(?:gt|#62);/gi, ">")
-    .replace(/&(?:quot|#34);/gi, '"')
-    .replace(/&(?:#39|apos);/gi, "'")
+  return decodeEntities(s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1"))
     .replace(/<[^>]+>/g, " ")
     .replace(/&[a-z0-9#]+;/gi, " ")
     .replace(/\s+/g, " ")
@@ -38,12 +35,17 @@ function firstField(block: string, tags: string[]): string {
   return "";
 }
 
+function attributes(tag: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const match of tag.matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
+    out[match[1]!.toLowerCase()] = decodeEntities(match[2] ?? match[3] ?? "");
+  }
+  return out;
+}
+
 function atomLink(block: string): string {
-  // <link rel="alternate" href="..."/> ou <link href="..."/>
-  const alt = /<link[^>]*rel="alternate"[^>]*href="([^"]+)"/i.exec(block);
-  if (alt) return alt[1]!;
-  const any = /<link[^>]*href="([^"]+)"/i.exec(block);
-  return any ? any[1]! : "";
+  const links = [...block.matchAll(/<link\b[^>]*>/gi)].map(m => attributes(m[0]));
+  return links.find(a => a.rel === "alternate")?.href ?? links.find(a => !a.rel)?.href ?? "";
 }
 
 function blocks(xml: string, tag: string): string[] {
@@ -56,20 +58,18 @@ function blocks(xml: string, tag: string): string[] {
  * ne throw jamais. Retourne une URL http(s) absolue ou "".
  */
 function itemImage(block: string): string {
-  block = block.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '\"').replace(/&amp;/g, "&");
-  const patterns = [
-    /<media:(?:content|thumbnail)[^>]*\burl="([^"]+)"/i,
-    /<enclosure[^>]*\btype="image\/[^"]*"[^>]*\burl="([^"]+)"/i,
-    /<enclosure[^>]*\burl="([^"]+)"[^>]*\btype="image\//i,
-    /<img[^>]*\bsrc="([^"]+)"/i,
-    /<image>[\s\S]*?<url>([^<]+)<\/url>/i,
-  ];
-  for (const re of patterns) {
-    const m = re.exec(block);
-    const url = m?.[1]?.trim();
-    if (url && /^https?:\/\//i.test(url)) return url;
+  const decoded = decodeEntities(block);
+  const media = [...decoded.matchAll(/<(?:media:(?:content|thumbnail)|enclosure|img)\b[^>]*>/gi)];
+  for (const tag of media) {
+    const attrs = attributes(tag[0]);
+    const isImage = /^<img\b|^<media:thumbnail\b/i.test(tag[0]) ||
+      attrs.type?.startsWith("image/") || attrs.medium === "image" ||
+      (/^<media:content\b/i.test(tag[0]) && !attrs.type && !attrs.medium);
+    const url = attrs.url ?? attrs.src;
+    if (isImage && url && /^https?:\/\//i.test(url)) return url;
   }
-  return "";
+  const nested = firstField(decoded, ["image"]);
+  return /^https?:\/\//i.test(nested) ? nested : "";
 }
 
 /** Parse un flux RSS 2.0 ou Atom en items (max 25). Tolérant, ne throw jamais. */
@@ -82,10 +82,13 @@ export function parseRssItems(xml: string, limit = 25): RssItem[] {
     if (!title) continue;
     const link = firstField(b, ["link"]) || atomLink(b);
     const pubDate = firstField(b, ["pubDate", "published", "updated", "dc:date"]);
-    const summary = firstField(b, ["description", "summary", "content:encoded", "content"]);
+    const summary = firstField(b, ["content:encoded", "content", "description", "summary"]);
     const imageUrl = itemImage(b);
-    const sourceUrl = /<source[^>]*url="(https?:[^"]+)"/i.exec(b)?.[1];
-    items.push({ title, link, pubDate, summary, ...(imageUrl ? { imageUrl } : {}), ...(sourceUrl ? { sourceUrl } : {}) });
+    const sourceTag = /<source\b[^>]*>/i.exec(b)?.[0];
+    const sourceUrl = sourceTag ? attributes(sourceTag).url : undefined;
+    const source = firstField(b, ["source"]);
+    items.push({ title, link, pubDate, summary, ...(imageUrl ? { imageUrl } : {}),
+      ...(sourceUrl && /^https?:\/\//i.test(sourceUrl) ? { sourceUrl } : {}), ...(source ? { source } : {}) });
     if (items.length >= limit) break;
   }
   return items;
@@ -164,13 +167,14 @@ export function toFeedItems(
     const key = it.title.toLowerCase();
     if (!it.title || seen.has(key)) continue;
     seen.add(key);
-    const dash = it.title.lastIndexOf(" - ");
+    const suffix = it.title.lastIndexOf(" - ");
+    const dash = it.source && it.title.slice(suffix + 3).trim() !== it.source ? -1 : suffix;
     out.push({
       title: dash > 20 ? it.title.slice(0, dash).trim() : it.title,
       link: it.link,
       ...(it.sourceUrl ? { sourceUrl: it.sourceUrl } : {}),
       ...(it.summary && it.summary !== it.title ? { summary: it.summary } : {}),
-      ...(dash > 20 ? { source: it.title.slice(dash + 3).trim() } : {}),
+      ...(it.source || dash > 20 ? { source: it.source || it.title.slice(dash + 3).trim() } : {}),
       ...(it.pubDate ? { publishedAt: it.pubDate } : {}),
       ...(it.imageUrl ? { imageUrl: it.imageUrl } : {}),
     });

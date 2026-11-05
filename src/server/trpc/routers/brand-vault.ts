@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { loadAssetDossier } from "@/server/services/brand-vault/dossier";
+import { depositInBrandVault, recordVaultDepositFailure } from "@/server/services/brand-vault/glory-deposit";
+import { getGloryTool } from "@/server/services/artemis/tools/registry";
+import { isUsableGeneration } from "@/domain/generation-result";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
@@ -164,6 +168,7 @@ export const brandVaultRouter = createTRPCRouter({
     .input(z.object({
       strategyId: z.string(),
       pillar: z.string().optional(),
+      family: z.enum(["INTELLECTUAL", "MATERIAL", "HYBRID"]).optional(),
       limit: z.number().int().min(1).max(200).default(50),
       cursor: z.string().optional(),
       search: z.string().max(200).optional(),
@@ -172,7 +177,8 @@ export const brandVaultRouter = createTRPCRouter({
     }))
     .query(async ({ ctx, input }) => {
       const filters: Prisma.BrandAssetWhereInput[] = [];
-      if (input.pillar) filters.push({ pillarTags: { path: [input.pillar], gt: 0.5 } });
+      if (input.pillar) filters.push({ OR: [{ pillarSource: input.pillar.toUpperCase() }, { pillarTags: { path: [input.pillar.toLowerCase()], gt: 0.5 } }] });
+      if (input.family) filters.push({ family: input.family });
       if (input.search) filters.push({ OR: [
         { name: { contains: input.search, mode: "insensitive" } },
         { metadata: { path: ["provenance", "path"], string_contains: input.search } },
@@ -207,8 +213,36 @@ export const brandVaultRouter = createTRPCRouter({
         where: { strategyId: asset.strategyId, sourceType: "FILE", origin: `upload:${receipt.data.contentHash}` },
         orderBy: { createdAt: "asc" }, select: { id: true, processingStatus: true },
       }) : null;
-      return { ...asset, originalFileName: original?.fileName ?? null, documentarySource };
+      return { ...asset, originalFileName: original?.fileName ?? null, documentarySource, dossier: await loadAssetDossier(ctx.db, asset) };
     }),
+
+  pendingDeposits: strategyScopedProcedure
+    .input(z.object({ strategyId: z.string(), cursor: z.string().optional(), limit: z.number().int().min(1).max(50).default(20) }))
+    .query(async ({ ctx, input }) => {
+      if (input.cursor && !await ctx.db.gloryOutput.findFirst({ where: { id: input.cursor, strategyId: input.strategyId }, select: { id: true } })) throw new TRPCError({ code: "NOT_FOUND" });
+      const rows = await ctx.db.gloryOutput.findMany({ where: { strategyId: input.strategyId, output: { path: ["_vaultDeposit", "status"], equals: "FAILED" } },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: input.limit + 1,
+        ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}), select: { id: true, toolSlug: true, createdAt: true } });
+      return { items: rows.slice(0, input.limit).map(row => ({ ...row, name: getGloryTool(row.toolSlug)?.name ?? row.toolSlug })), nextCursor: rows.length > input.limit ? rows[input.limit - 1]!.id : undefined };
+    }),
+
+  retryDeposit: governedProcedure({ kind: "LEGACY_BRAND_VAULT_CREATE", caller: "brand-vault:retryDeposit",
+    inputSchema: z.object({ strategyId: z.string(), gloryOutputId: z.string() }),
+  }).mutation(async ({ ctx, input }) => {
+    await assertStrategyAccessForAsset(ctx, input.strategyId);
+    const source = await ctx.db.gloryOutput.findFirst({ where: { id: input.gloryOutputId, strategyId: input.strategyId } });
+    if (!source || !isUsableGeneration(source.output)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Ce contenu ne peut pas être déposé. Sa tentative de génération reste conservée." });
+    const tool = getGloryTool(source.toolSlug);
+    if (!tool) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’outil d’origine doit être rétabli avant ce dépôt." });
+    const receipt = source.output._vaultDeposit as { context?: Record<string, unknown>; sourceIntentId?: string } | undefined;
+    const args = { tool, toolOutput: source.output, gloryOutputId: source.id, gloryIntentId: typeof receipt?.sourceIntentId === "string" ? receipt.sourceIntentId : null,
+      strategyId: input.strategyId, context: receipt?.context ?? {}, recoveryIntentId: ctx.intentId };
+    try { return { assetIds: await depositInBrandVault(args) }; }
+    catch (error) {
+      await recordVaultDepositFailure(args);
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le dépôt n’a pas abouti. Le contenu reste conservé et la reprise reste disponible.", cause: error });
+    }
+  }),
 
   // Update asset tags
   updateTags: governedProcedure({

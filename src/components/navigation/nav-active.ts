@@ -16,8 +16,9 @@ import type { NavGroup, NavItem } from "./types";
  * matche son propre href qu'en exact — sinon il serait préfixe de tout le
  * portail — mais ses `activePrefixes` matchent normalement.
  */
-export function resolveActiveHref(navGroups: NavGroup[], pathname: string): string | null {
+export function resolveActiveHref(navGroups: NavGroup[], pathname: string, search = ""): string | null {
   const routePath = (href: string) => href.split(/[?#]/)[0]!;
+  const currentQuery = new URLSearchParams(search);
   const basePath = routePath(navGroups[0]?.items[0]?.href || "/");
 
   const prefixMatches = (prefix: string): boolean => {
@@ -27,17 +28,40 @@ export function resolveActiveHref(navGroups: NavGroup[], pathname: string): stri
 
   let bestHref: string | null = null;
   let bestLen = -1;
+  let bestQueryCount = -1;
   for (const group of navGroups) {
     for (const item of group.items) {
-      for (const prefix of [item.href, ...(item.activePrefixes ?? [])].map(routePath)) {
-        if (prefixMatches(prefix) && prefix.length > bestLen) {
+      for (const href of [item.href, ...(item.activePrefixes ?? [])]) {
+        const prefix = routePath(href);
+        // Brand/team context does not define a page. An explicit tab does.
+        const query = [...new URL(href, "https://navigation.local").searchParams]
+          .filter(([key]) => !["strategy", "strategyId", "operator"].includes(key));
+        if (!query.every(([key, value]) => currentQuery.get(key) === value)) continue;
+        if (prefixMatches(prefix) && (prefix.length > bestLen
+          || (prefix.length === bestLen && query.length > bestQueryCount))) {
           bestLen = prefix.length;
+          bestQueryCount = query.length;
           bestHref = item.href;
         }
       }
     }
   }
   return bestHref;
+}
+
+/** Carry only explicit brand/team context between cockpit pages, never page filters. */
+export function withCockpitContext(href: string, search: string): string {
+  if (href !== "/cockpit" && !href.startsWith("/cockpit/") && !href.startsWith("/cockpit?")) return href;
+  const destination = new URL(href, "https://navigation.local");
+  const source = new URLSearchParams(search);
+  if (!destination.searchParams.has("strategy") && !destination.searchParams.has("strategyId")) {
+    const strategy = source.get("strategy") || source.get("strategyId");
+    if (strategy) destination.searchParams.set("strategy", strategy);
+  }
+  if (!destination.searchParams.has("operator") && source.get("operator")) {
+    destination.searchParams.set("operator", source.get("operator")!);
+  }
+  return `${destination.pathname}${destination.search}${destination.hash}`;
 }
 
 /** Libellé localisé d'un item (pilier → slug i18n, sinon labelKey, sinon littéral FR). */

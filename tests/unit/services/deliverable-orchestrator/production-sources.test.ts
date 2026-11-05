@@ -4,10 +4,11 @@ import { listProductionPassagesInText } from "@/domain/production-passages";
 
 const storage = vi.hoisted(() => ({
   findMany: vi.fn(), findFirst: vi.fn(), proposals: vi.fn(), campaign: vi.fn(), emission: vi.fn(),
-  source: vi.fn(), original: vi.fn(),
+  source: vi.fn(), original: vi.fn(), dispatch: vi.fn(), events: vi.fn(), task: vi.fn(),
 }));
 vi.mock("@/lib/db", () => ({ db: {
-  intentEmissionEvent:{findFirst:async()=>null},
+  intentEmissionEvent:{findFirst:storage.dispatch, findMany:storage.events},
+  generativeTask:{findFirst:storage.task},
   brandAsset: { findMany:storage.findMany, findFirst:storage.findFirst },
   strategy:{findUnique:async()=>({status:"ACTIVE",manipulationMix:{primary:"entertainer"}})},pillar:{findMany:async()=>[]},
   creativeProposal:{findMany:storage.proposals}, campaign:{findFirst:storage.campaign},
@@ -18,7 +19,7 @@ vi.mock("@/server/services/ingestion-pipeline/source-usage", async(importOrigina
 }));
 vi.mock("@/server/services/brand-vault/original",()=>({readAssetOriginal:storage.original}));
 
-import { resolveProductionSources, getCurrentProductionPreview, requireReviewedManifest, listProductionPassages } from "@/server/services/deliverable-orchestrator/production-sources";
+import { resolveProductionSources, getCurrentProductionPreview, productionProgress, requireReviewedManifest, listProductionPassages } from "@/server/services/deliverable-orchestrator/production-sources";
 import { productionSourceInput } from "@/server/services/deliverable-orchestrator/production-prompt";
 
 const pin: ProductionPin = {role:"COPY",assetId:"copy",version:4};
@@ -28,9 +29,19 @@ beforeEach(()=>{
   storage.findMany.mockImplementation(async ({where}) => where.strategyId==="spawt"?[base]:[]);
   storage.findFirst.mockImplementation(async ({where}) => where.strategyId==="spawt"?base:null);
   storage.proposals.mockResolvedValue([]); storage.emission.mockResolvedValue(null); storage.campaign.mockResolvedValue(null);
+  storage.dispatch.mockResolvedValue(null); storage.events.mockResolvedValue([]); storage.task.mockResolvedValue(null);
 });
 
 describe("Production — sources relues", ()=>{
+  it("relit l’état terminal réel de la tâche après un dispatch asynchrone sans transférer les images", async () => {
+    storage.dispatch.mockResolvedValue({partial:{dispatchIntentId:"dispatch"}});
+    storage.emission.mockResolvedValue({status:"OK",result:{output:{generativeTaskId:"task",materialStatus:"IN_PROGRESS"}}});
+    storage.task.mockResolvedValue({status:"COMPLETED"});
+    expect(await productionProgress("spawt","preview")).toMatchObject({status:"OK",materialStatus:"COMPLETED",generativeTaskId:"task"});
+    expect(storage.task).toHaveBeenCalledWith({where:{id:"task",strategyId:"spawt"},select:{status:true}});
+    storage.task.mockResolvedValue({status:"FAILED"});
+    expect(await productionProgress("spawt","preview")).toMatchObject({materialStatus:"FAILED"});
+  });
   it("rouvre le même aperçu après le transport JSON d’un post sans passages sélectionnés", async () => {
     const initial = await resolveProductionSources("spawt", [{...pin, sections: undefined}]);
     const reopened = await resolveProductionSources("spawt", [pin]);
