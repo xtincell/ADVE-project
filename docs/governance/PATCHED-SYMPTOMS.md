@@ -39,11 +39,16 @@ explicitement une régression introduite dans la tranche 547 (`d25429379`),
 et non un défaut pré-existant : le raccord des liens de marque avait ajouté
 une lecture d'URL à des composants partagés par des pages statiques.
 
+Le contrôle suivant à `200294627` a révélé le même défaut dans
+`/cockpit/brand/assets`. Les quatre lectures d'URL ajoutées dans cette tranche
+ont été revues : Deliverables possédait déjà sa frontière ; Assets a reçu la
+sienne. Sa reproduction SSR échoue avant le correctif et passe ensuite.
+
 Sidebar et MobileTabBar possèdent maintenant leur frontière Suspense et
 gardent un rendu de navigation utile pendant l'attente des paramètres. Le
 contenu de page reste indépendant ; aucun passage global en rendu dynamique
 ni désactivation de contrôle. Deux tests SSR ont reproduit le défaut avant
-correction ; les neuf tests ciblés passent ensuite, avec conservation de la
+correction ; les dix tests ciblés passent ensuite, avec conservation de la
 marque, de l'équipe et de l'onglet actif. Typage et lint ciblé reçus sans erreur.
 Le build local isolé s'est arrêté sur `ENOSPC` pendant la compilation : il ne
 constitue pas une réception du prérendu complet. Son log est conservé et seul

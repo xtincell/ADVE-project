@@ -4,7 +4,7 @@ import { brandAssetPreviewUrl } from "@/lib/brand-asset-preview";
 
 import { sha256 } from "@noble/hashes/sha2.js";
 import { ORIGINAL_CHUNK_BYTES, MAX_CHUNKED_ORIGINAL_BYTES } from "@/domain/source-original";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { withCockpitContext } from "@/components/navigation/nav-active";
@@ -80,6 +80,10 @@ function assetUiType(a: { kind?: string | null; pillarTags?: unknown }): string 
 }
 
 export default function AssetsPage() {
+  return <Suspense fallback={<SkeletonPage />}><AssetsPageContent /></Suspense>;
+}
+
+function AssetsPageContent() {
   const strategyId = useCurrentStrategyId();
   const router = useRouter();
   const searchParams = useSearchParams();
