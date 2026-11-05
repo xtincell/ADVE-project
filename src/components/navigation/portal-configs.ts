@@ -69,9 +69,10 @@ import { PILLAR_METADATA } from "@/domain";
 /**
  * Nav Cockpit — arbre founder (lot 10, audit UX 2026-07-11 §B).
  *
- * 20 items / 6 groupes orientés jobs founder (voir ma marque / recevoir mes
+ * Groupes orientés jobs founder (voir ma marque / recevoir mes
  * livrables / suivre mon activité / comprendre mon marché / gérer mon
- * compte). Les surfaces de PRODUCTION (Operations Center, Forge, Séquences,
+ * compte). Le Studio expose la production depuis les livrables ; son accès
+ * opérateur reste contrôlé par <OperatorSurface>. Les outils internes (Forge, Séquences,
  * Brief→Actions, Missions, Portfolio, éditeur ADVE, RTIS legacy, Trend
  * Tracker, apogee-maintenance) sortent de la nav founder : leurs routes
  * restent joignables mais sont gardées par <OperatorSurface> (lot 12).
@@ -138,9 +139,17 @@ export const cockpitNavGroups: NavGroup[] = [
         labelKey: "nav.bible", sublabelKey: "nav.bible.sub", icon: BookOpen,
       },
       {
-        href: "/cockpit/brand/deliverables", label: "Livrables", sublabel: "Chartes · Assets · Exports",
+        href: "/cockpit/brand/deliverables", label: "Livrables", sublabel: "Documents · Versions · Exports",
         labelKey: "nav.livrables", sublabelKey: "nav.livrables.sub", icon: FileText,
-        activePrefixes: ["/cockpit/brand/guidelines", "/cockpit/brand/assets"],
+        activePrefixes: ["/cockpit/brand/guidelines"],
+      },
+      {
+        href: "/cockpit/brand/deliverables?tab=production", label: "Studio de production", sublabel: "Briefs · Variantes · Génération",
+        labelKey: "nav.production", sublabelKey: "nav.production.sub", icon: Film,
+      },
+      {
+        href: "/cockpit/brand/assets", label: "Banque d’assets", sublabel: "Visuels · Fichiers · Références",
+        labelKey: "nav.assets", sublabelKey: "nav.assets.sub", icon: Image,
       },
       {
         href: "/cockpit/brand/sources", label: "Sources", sublabel: "Vos documents & données",

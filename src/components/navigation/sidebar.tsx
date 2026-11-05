@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { PanelLeftClose, PanelLeft, Star, Home } from "lucide-react";
 import type { NavGroup, NavItem } from "./types";
-import { resolveActiveHref, navItemLabel, navItemSublabel } from "./nav-active";
+import { resolveActiveHref, navItemLabel, navItemSublabel, withCockpitContext } from "./nav-active";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { APP_VERSION } from "@/lib/version";
 
@@ -21,6 +21,7 @@ interface SidebarProps {
 
 export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = false, onNavigate }: SidebarProps) {
   const pathname = usePathname();
+  const search = useSearchParams().toString();
   const { t } = useLocale();
   const [collapsedState, setCollapsedState] = useState(false);
   // En tiroir mobile, jamais réduit (on veut la nav groupée complète).
@@ -67,7 +68,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = fa
 
   // Un seul item actif — celui dont le préfixe matché (href ou
   // activePrefixes) est le plus long. Cf. nav-active.ts (lot 10).
-  const activeHref = resolveActiveHref(navGroups, pathname);
+  const activeHref = resolveActiveHref(navGroups, pathname, search);
   const isActive = (item: NavItem) => item.href === activeHref;
 
   const basePath = navGroups[0]?.items[0]?.href || "/";
@@ -125,7 +126,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = fa
             return (
               <Link
                 key={`fav-${item.href}`}
-                href={item.href}
+                href={withCockpitContext(item.href, search)}
                 onClick={onNavigate}
                 className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
                   active
@@ -163,7 +164,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent, mobile = fa
                 return (
                   <div key={item.href} className="group relative flex items-center">
                     <Link
-                      href={item.href}
+                    href={withCockpitContext(item.href, search)}
                       onClick={onNavigate}
                       className={`flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
                         active

@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { MoreHorizontal } from "lucide-react";
 import { useState } from "react";
 import type { NavGroup, NavItem } from "./types";
-import { resolveActiveHref, navItemLabel } from "./nav-active";
+import { resolveActiveHref, navItemLabel, withCockpitContext } from "./nav-active";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 interface MobileTabBarProps {
@@ -16,13 +16,14 @@ interface MobileTabBarProps {
 
 export function MobileTabBar({ navGroups, portalAccentVar, maxTabs = 4 }: MobileTabBarProps) {
   const pathname = usePathname();
+  const search = useSearchParams().toString();
   const { t } = useLocale();
   const [moreOpen, setMoreOpen] = useState(false);
 
   const allItems = navGroups.flatMap((g) => g.items);
 
   // Même résolution d'item actif que la sidebar (préfixe le plus long gagne).
-  const activeHref = resolveActiveHref(navGroups, pathname);
+  const activeHref = resolveActiveHref(navGroups, pathname, search);
   const isActive = (item: NavItem) => item.href === activeHref;
 
   // Onglets = slots explicites `mobileTab` (lot 10) ; fallback sur les N
@@ -49,7 +50,7 @@ export function MobileTabBar({ navGroups, portalAccentVar, maxTabs = 4 }: Mobile
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={withCockpitContext(item.href, search)}
               aria-current={active ? "page" : undefined}
               className={`flex min-w-[var(--tap-min)] flex-1 flex-col items-center justify-center gap-0.5 ${
                 active ? "text-foreground" : "text-foreground-muted"
@@ -99,7 +100,7 @@ export function MobileTabBar({ navGroups, portalAccentVar, maxTabs = 4 }: Mobile
                     return (
                       <Link
                         key={item.href}
-                        href={item.href}
+                        href={withCockpitContext(item.href, search)}
                         onClick={() => setMoreOpen(false)}
                         className={`flex min-h-[var(--tap-min)] flex-col items-center justify-center gap-1.5 rounded-xl p-3 transition-colors ${
                           active ? "bg-background-overlay" : "hover:bg-background-overlay/50"
