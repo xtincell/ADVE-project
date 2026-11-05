@@ -40,7 +40,7 @@ COPY . .
 # worker de build pour tenir dans la RAM du serveur.
 ENV NODE_OPTIONS="--max-old-space-size=6144"
 RUN npm run build
-RUN ./node_modules/.bin/esbuild scripts/release/import-spawt-editorial-october.ts --bundle --platform=node --packages=external --format=cjs --outfile=import-editorial-calendar.cjs
+RUN node scripts/release/build-editorial-calendar-cli.mjs
 RUN ./node_modules/.bin/esbuild scripts/freeze-public-brands.ts --bundle --platform=node --packages=external --format=cjs --outfile=public-brand-migration.cjs
 
 # ── runner ───────────────────────────────────────────────────────────────────

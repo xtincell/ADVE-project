@@ -1,7 +1,6 @@
 /** Only this inert, bounded subset of SVG may be used as an editable production master. */
 import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 import { createHash } from "node:crypto";
-import sharp from "sharp";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { MAX_SOURCE_BYTES } from "@/domain/source-original";
@@ -219,6 +218,8 @@ export async function composeArtworkWithLayer(
     if (!photo?.length || photo.length > 25_000_000) {
       throw new Error("La nouvelle photo est absente ou trop volumineuse.");
     }
+    // Inspection of a signed master needs only XML, not a native raster engine.
+    const { default: sharp } = await import("sharp");
     const raster = sharp(photo, { limitInputPixels: 30_000_000, failOn: "warning" });
     const info = await raster.metadata();
     if (!["jpeg", "png", "webp"].includes(info.format ?? "")) {
