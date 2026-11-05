@@ -1706,12 +1706,16 @@ export function validatePillarPartial(key: PillarKey, content: unknown): {
   const partialSchema = schema.partial();
   const result = partialSchema.safeParse(content);
 
-  // Calculate completion percentage
-  const totalFields = Object.keys(PILLAR_SCHEMAS[key].shape).length;
+  // Structural schema coverage only. Runtime readiness comes from the
+  // maturity contract; metadata and legacy extras are not schema fields.
+  const schemaKeys = Object.keys(PILLAR_SCHEMAS[key].shape);
+  const totalFields = schemaKeys.length;
   const filledFields = content && typeof content === "object"
-    ? Object.entries(content as Record<string, unknown>).filter(([, v]) =>
-        v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)
-      ).length
+    ? schemaKeys.filter((field) => {
+        if (!Object.hasOwn(content, field)) return false;
+        const value = (content as Record<string, unknown>)[field];
+        return value !== null && value !== undefined && value !== "" && !(Array.isArray(value) && value.length === 0);
+      }).length
     : 0;
   // lafusee:allow-adhoc-completion: schema-level percentage validator constant (Zod validator, not runtime completion)
   const completionPercentage = Math.round((filledFields / totalFields) * 100);

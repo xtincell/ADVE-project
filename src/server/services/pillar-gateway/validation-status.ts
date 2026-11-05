@@ -13,6 +13,7 @@ import { applicableRequirements, isFieldSatisfied } from "@/server/services/pill
 import { checkStaleness } from "@/server/services/staleness-propagator";
 import { validatePillarCrossReferences } from "@/server/services/cross-validator";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
+import { toCanonical, type PillarStorageKey } from "@/domain";
 
 type Status = "DRAFT" | "AI_PROPOSED" | "VALIDATED" | "LOCKED";
 const transitions: Record<string, readonly Status[]> = {
@@ -157,8 +158,14 @@ export async function transitionPillarStatus(input: Decision) {
     // A retry of the same reviewed version has no second write or timestamp.
     if (alreadyApplied) return { success: true as const, warning: false as const,
       confidence, alreadyApplied: true, newStatus: currentStatus, updated: strategy, version: pillar.currentVersion };
-    // State only: no confidence, content, provenance or version mutation.
-    await tx.pillar.update({ where: { id: pillar.id }, data: { validationStatus: input.targetStatus } });
+    // State and its derived cache only: no confidence, content, provenance
+    // or version mutation. Lock/unlock must not leave a stale FULL badge.
+    const readiness = evaluatePillarReadiness(
+      { ...pillar, validationStatus: input.targetStatus }, toCanonical(key as PillarStorageKey),
+    );
+    await tx.pillar.update({ where: { id: pillar.id }, data: {
+      validationStatus: input.targetStatus, completionLevel: readiness.cacheLevel,
+    } });
     const updated = approvingS
       ? await tx.strategy.update({ where: { id: input.strategyId }, data: { status: "VALIDATED" } })
       : key === "s" && input.targetStatus === "DRAFT" && strategy.status === "VALIDATED"

@@ -57,7 +57,7 @@ export interface PillarReadiness {
   /** Canonical 0-100 completion derived from the COMPLETE-stage contract. */
   completionPct: number;
   /** Operator-driven validation state from the DB. */
-  validationStatus: "DRAFT" | "VALIDATED" | "LOCKED";
+  validationStatus: "DRAFT" | "AI_PROPOSED" | "VALIDATED" | "LOCKED";
   /** Field paths still missing for the COMPLETE stage. */
   missing: readonly string[];
   /** Among missing, those that can be auto-filled (Mestor / Artemis). */
@@ -66,9 +66,9 @@ export interface PillarReadiness {
   needsHuman: readonly string[];
   /** Notoria-written cache value (canonical: derived from `stage`). */
   cacheLevel: "INCOMPLET" | "COMPLET" | "FULL";
-  /** True iff Notoria's stored cache value matches what the canonical
-   *  evaluator would have written. Divergence ⇒ writePillarAndScore did
-   *  not run on the latest write (D-2 invariant breach). */
+  /** True iff the stored cache matches the canonical evaluator.
+   *  Content writes persist it atomically through writePillar; divergence
+   *  identifies legacy or out-of-gateway metadata (D-2 invariant breach). */
   cacheConsistent: boolean;
   /** Set when the pillar is marked stale by the staleness-propagator. */
   stale: boolean;
@@ -122,8 +122,8 @@ export interface RawPillar {
   key: string;
   content: unknown;
   validationStatus: string | null;
-  /** Notoria-written cache (INCOMPLET | COMPLET | FULL). Re-derived by
-   *  pillar-gateway.writePillarAndScore on every write (D-2). */
+  /** Derived cache (INCOMPLET | COMPLET | FULL), persisted atomically by
+   *  pillar-gateway.writePillar on each content write (D-2). */
   completionLevel?: string | null;
   /** Staleness propagator marker. When set, the pillar's content is
    *  outdated relative to a parent pillar that just changed. */
@@ -259,7 +259,8 @@ export function evaluatePillarReadiness(
     ORACLE_EXPORT: verdict(
       (validationStatus === "VALIDATED" || validationStatus === "LOCKED") && !stale,
       [
-        ...(validationStatus === "DRAFT" ? (["VALIDATION_NOT_VALIDATED"] as const) : []),
+        ...(validationStatus !== "VALIDATED" && validationStatus !== "LOCKED"
+          ? (["VALIDATION_NOT_VALIDATED"] as const) : []),
         ...staleReasonForBlockingGates,
       ],
     ),
@@ -287,7 +288,7 @@ function verdict(ok: boolean, reasons: readonly ReadinessReason[]): GateVerdict 
 
 function pickDisplayLabel(
   stage: MaturityStage | "EMPTY",
-  validation: "DRAFT" | "VALIDATED" | "LOCKED",
+  validation: PillarReadiness["validationStatus"],
   stale: boolean,
 ): PillarReadiness["displayLabel"] {
   if (stale) return "Périmé";

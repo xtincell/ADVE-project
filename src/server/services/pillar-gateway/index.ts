@@ -647,6 +647,14 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
       ] : pillar.sources);
       const newCertainty = restoration ? restoration.metadata.fieldCertainty : (confirmedCertainty ?? pillar.fieldCertainty);
       const newStaleAt = restoration?.metadata.staleAt ? new Date(restoration.metadata.staleAt) : null;
+      // Every accepted content write carries its canonical cache in the same
+      // transaction/version check, including callers that intentionally skip
+      // scoring. This derived value never approves or changes the content.
+      const { evaluatePillarReadiness } = await import("@/server/governance/pillar-readiness");
+      const { toCanonical } = await import("@/domain");
+      const completionLevel = evaluatePillarReadiness({
+        key: pillarKey, content: newContent, validationStatus: targetStatus, staleAt: newStaleAt,
+      }, toCanonical(pillarKey)).cacheLevel;
       const beforeMetadata = pillarMetadata(pillar);
       const afterMetadata = pillarMetadata({ sources: newSources, fieldCertainty: newCertainty, confidence: newConfidence,
         validationStatus: targetStatus, staleAt: newStaleAt });
@@ -676,6 +684,7 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
           confidence: newConfidence,
           validationStatus: targetStatus,
           staleAt: newStaleAt,
+          completionLevel,
           currentVersion: newVersion,
           ...(restoration ? { fieldCertainty: newCertainty === null ? Prisma.DbNull : newCertainty as Prisma.InputJsonValue,
             sources: newSources === null ? Prisma.DbNull : newSources as Prisma.InputJsonValue }
@@ -839,9 +848,9 @@ async function reconcileAndPublishPillar(request: PillarWriteRequest): Promise<v
 
 /**
  * Recompute and persist the canonical `completionLevel` cache for a
- * single pillar. Idempotent. Called from `writePillarAndScore`. The
- * cache is a function of (stage, validationStatus) — never invented
- * elsewhere.
+ * single pillar. Idempotent repair for legacy/cache consumers; writePillar
+ * already persists it atomically with the content. Lock before reading so
+ * a delayed repair cannot overwrite a newer write with an obsolete result.
  */
 export async function reconcileCompletionLevelCache(
   strategyId: string,
@@ -851,31 +860,22 @@ export async function reconcileCompletionLevelCache(
   const { evaluatePillarReadiness } = await import("@/server/governance/pillar-readiness");
   const { toCanonical } = await import("@/domain");
 
-  const row = await db.pillar.findUnique({
-    where: { strategyId_key: { strategyId, key: pillarKey.toLowerCase() } },
-    select: {
-      key: true,
-      content: true,
-      validationStatus: true,
-      completionLevel: true,
-      staleAt: true,
-    },
-  });
-  if (!row) return;
-
-  const readiness = evaluatePillarReadiness(
-    {
-      key: row.key,
-      content: row.content,
-      validationStatus: row.validationStatus,
-      completionLevel: row.completionLevel,
-      staleAt: row.staleAt,
-    },
-    toCanonical(pillarKey as Parameters<typeof toCanonical>[0]),
-  );
-  if (row.completionLevel === readiness.cacheLevel) return;
-  await db.pillar.update({
-    where: { strategyId_key: { strategyId, key: pillarKey.toLowerCase() } },
-    data: { completionLevel: readiness.cacheLevel },
-  });
+  await db.$transaction(async tx => {
+    const [locked] = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM "Pillar"
+      WHERE "strategyId" = ${strategyId} AND key = ${pillarKey.toLowerCase()}
+      FOR UPDATE
+    `;
+    if (!locked) return;
+    const row = await tx.pillar.findUniqueOrThrow({
+      where: { id: locked.id },
+      select: { key: true, content: true, validationStatus: true, completionLevel: true, staleAt: true },
+    });
+    const readiness = evaluatePillarReadiness(row, toCanonical(pillarKey as Parameters<typeof toCanonical>[0]));
+    if (row.completionLevel === readiness.cacheLevel) return;
+    await tx.pillar.update({
+      where: { id: locked.id },
+      data: { completionLevel: readiness.cacheLevel },
+    });
+  }, { timeout: 30_000, maxWait: 15_000 });
 }

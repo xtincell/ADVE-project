@@ -262,20 +262,14 @@ export const pillarRouter = createTRPCRouter({
     .input(z.object({ strategyId: z.string() }))
     .query(({ input }) => getCrossRefSummary(input.strategyId)),
 
-  /** Completion map for all 8 pillars */
+  /** Canonical completion map for all 8 pillars (same contract as readiness). */
   getCompletionMap: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      const pillars = await ctx.db.pillar.findMany({ where: { strategyId: input.strategyId } });
+    .query(async ({ input }) => {
+      const readiness = await getStrategyReadiness(input.strategyId);
       const map: Record<string, number> = {};
       for (const key of PILLAR_KEYS) {
-        const pillar = pillars.find((p) => p.key.toUpperCase() === key);
-        if (pillar) {
-          const v = validatePillarPartial(key as PillarKey, pillar.content);
-          map[key] = v.completionPercentage;
-        } else {
-          map[key] = 0;
-        }
+        map[key] = readiness.byPillar[key].completionPct;
       }
       return map;
     }),

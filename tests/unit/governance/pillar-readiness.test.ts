@@ -60,6 +60,18 @@ describe("pillar-readiness — invariants", () => {
     expect(r.displayLabel).toBe("Verrouillé");
   });
 
+  it.each(["AI_PROPOSED", "DRAFT", "LEGACY_UNREVIEWED"])("explains the export refusal for %s without approving it", (status) => {
+    const r = evaluatePillarReadiness({ key: "v", content: {}, validationStatus: status }, "V");
+    expect(r.validationStatus).toBe(status);
+    expect(r.gates.ORACLE_EXPORT).toEqual({ ok: false, reasons: ["VALIDATION_NOT_VALIDATED"] });
+  });
+
+  it("still refuses a stale validated export", () => {
+    const r = evaluatePillarReadiness({ key: "v", content: {}, validationStatus: "VALIDATED", staleAt: new Date() }, "V");
+    expect(r.gates.ORACLE_EXPORT.ok).toBe(false);
+    expect(r.gates.ORACLE_EXPORT.reasons).toContain("PILLAR_STALE");
+  });
+
   it("display label maps cleanly: DRAFT + EMPTY ⇒ 'Vide'", () => {
     const r = evaluatePillarReadiness(
       { key: "d", content: {}, validationStatus: "DRAFT" },

@@ -28,6 +28,24 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 549 — complétudes divergentes et cache réécrit après une version plus récente (2026-11-05)
+
+Le tableau de bord utilisait un compteur Zod différent du contrat de maturité ;
+ce compteur incluait en outre les métadonnées et pouvait dépasser 100 %. Les
+écritures sans recalcul de score ne mettaient pas toutes à jour le cache, le
+questionnaire forçait `COMPLET` et un verrouillage conservait l’ancien niveau.
+La réparation séparée pouvait enfin appliquer un résultat calculé avant une
+modification concurrente. Le tableau de bord lit maintenant le contrat canonique,
+le compteur structurel ne compte que ses clés, et chaque écriture persiste le
+cache dans sa transaction de version. La réparation verrouille la ligne avant
+de la relire ; questionnaire et transitions suivent le même évaluateur. Aucun
+contenu, auteur, décision ou numéro de version n’est modifié par cette réparation.
+Le refus d’export d’une proposition IA expose aussi son motif, sans assouplir
+la condition de validation. Régressions reproduites puis 70 tests unitaires et
+28 PostgreSQL isolés reçus, dont une course contrôlée entre transactions.
+Typage et lint des sources sans erreur ; réception de production distincte.
+Commit dédié `fix(readiness): keep canonical completion consistent across writes`.
+
 ### 549 — rendu du calendrier sans transmission exacte au composeur (2026-11-05)
 
 Les options du planning avaient leurs briefs et fichiers reçus ; le composeur
