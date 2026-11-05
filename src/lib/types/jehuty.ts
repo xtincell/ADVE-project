@@ -1,6 +1,23 @@
 /**
  * JEHUTY Types — Strategic Intelligence Feed
  */
+import type { SignalInputSnapshot, SignalBrandContextSnapshot } from "@/domain/signal-provenance";
+
+/** Two-page reader: frozen analysis inputs and its complete interpretation. */
+export interface SignalReading {
+  signalId: string;
+  strategyId: string;
+  title: string;
+  interpretation: string;
+  createdAt: string;
+  provenanceStatus: "TRACEABLE" | "REFERENCED" | "UNTRACEABLE";
+  inputSignals: Array<SignalInputSnapshot & { article?: {
+    title: string; content: string; url: string; source: string;
+    imageUrl?: string; publishedAt?: string;
+  } }>;
+  brandContextSnapshot: SignalBrandContextSnapshot | null;
+  currentBrandContext: ArticleBrandInterpretation["brandContext"];
+}
 
 // ── Feed Categories ───────────────────────────────────────────────
 

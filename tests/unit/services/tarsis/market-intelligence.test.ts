@@ -89,6 +89,26 @@ afterEach(() => {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe("runMarketIntelligence — marketReality dérivé RÉEL, jamais fabriqué (AC1, audit 2026-07-22)", () => {
+  it("preserves input identity and evidence kind through T without promoting inferred trends to observed facts", async () => {
+    setupBaselineMocks();
+    const collectedAt = "2026-11-05T10:00:00.000Z";
+    collectMarketSignalsMock.mockResolvedValue([
+      { id: "input-real", title: "Reportage reçu", content: "Résumé", sourceType: "NEWS", provenanceKind: "COLLECTED",
+        sourceUrl: "https://publisher.example/report", relevance: 0.7, collectedAt },
+      { id: "input-hypothesis", title: "Tendance envisagée", content: "Hypothèse", sourceType: "INFERRED", provenanceKind: "INFERRED",
+        sourceUrl: "https://invented.example/report", relevance: 0.7, collectedAt },
+    ]);
+    callLLMMock.mockResolvedValue({ text: JSON.stringify({ brandMarketFitScore: 55 }) });
+    const result = await runMarketIntelligence("strat-1");
+    expect(result.pillarContent.marketDataSources).toMatchObject([
+      { id: "input-real", sourceUrl: "https://publisher.example/report", provenanceKind: "COLLECTED", collectedAt },
+      { id: "input-hypothesis", provenanceKind: "INFERRED", collectedAt },
+    ]);
+    expect(JSON.stringify(result.pillarContent.marketDataSources)).not.toContain("invented.example");
+    expect(callLLMMock.mock.calls[0]?.[0].prompt).toContain("[INFERRED]");
+    expect(result.pillarContent.marketReality).toMatchObject({ macroTrends: ["Reportage reçu", "Hypothèse : Tendance envisagée"] });
+  });
+
   it("OMET marketReality (gap honnête) quand le LLM le saute ET qu'aucun signal réel n'existe", async () => {
     setupBaselineMocks(); // collectMarketSignals=[] + analyzeWeakSignals=[] → zéro signal réel
     // LLM response intentionally omits marketReality

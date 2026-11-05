@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useEffectEvent } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { lockBodyScroll, unlockBodyScroll } from "@/lib/scroll-lock";
@@ -36,12 +36,15 @@ export function Modal({
 }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const previouslyFocused = useRef<HTMLElement | null>(null);
+  // Updating parent callbacks must not restart the dialog's focus lifecycle.
+  const closeFromKeyboard = useEffectEvent(() => onClose());
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
+  useEffect(() => {
+    if (!open) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose();
+        closeFromKeyboard();
         return;
       }
       // Focus trap — keep Tab navigation inside the dialog
@@ -60,32 +63,24 @@ export function Modal({
           first.focus();
         }
       }
-    },
-    [onClose],
-  );
-
-  useEffect(() => {
-    if (open) {
-      previouslyFocused.current = (document.activeElement as HTMLElement) ?? null;
-      document.addEventListener("keydown", handleKeyDown);
-      lockBodyScroll();
-      // Focus the dialog so Tab traps inside on first keystroke
-      requestAnimationFrame(() => {
-        const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
-          'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        );
-        firstFocusable?.focus();
-      });
-    }
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      if (open) unlockBodyScroll(); // symétrique du lock (ref-compté)
-      // Restore focus to the trigger that opened the modal
-      if (!open && previouslyFocused.current) {
-        previouslyFocused.current.focus?.();
-      }
     };
-  }, [open, handleKeyDown]);
+    document.addEventListener("keydown", handleKeyDown);
+    lockBodyScroll();
+    // Focus the dialog so Tab traps inside on first keystroke.
+    const frame = requestAnimationFrame(() => {
+      const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
+        'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      firstFocusable?.focus();
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener("keydown", handleKeyDown);
+      unlockBodyScroll();
+      // This cleanup belongs to the open cycle, on close or unmount.
+      previouslyFocused?.focus?.();
+    };
+  }, [open]);
 
   if (!open) return null;
 

@@ -1,10 +1,74 @@
+## 548 — provenance de la veille et suivi Studio compact (2026-11-05)
+
+**État : candidat local en intégration, non reçu en production.** Le bump officiel
+porte le runtime, le package et son verrou en 6.27.548. La réception de 547
+ci-dessous reste acquise ; elle ne reçoit pas les changements de ce candidat.
+
+**Gazette.** Le contexte de veille complète les sujets manuels avec les publics
+et territoires ADVE sans réécrire ces sujets. Le classement vérifie la pertinence
+sur le titre et l’extrait reçus, distingue couverture locale et exploration, et
+invalide un cache construit avec l’ancienne politique. Une recherche localisée ne
+prouve pas qu’un article concerne cette ville ; un résultat manquant n’est pas fabriqué.
+
+La collecte par modèle qualifie ses sorties d’hypothèses. Les nouvelles analyses
+conservent leurs entrées, leur nature et le contexte utilisé ; le lecteur Jehuty
+retrouve seulement des références exactes dans le dossier de la même marque.
+La modale distingue source, interprétation, contexte historique et fondations
+actuelles. Les anciennes analyses sans provenance gardent cette limite visible.
+L’ouverture est en lecture seule ; l’action de propositions reste dans le circuit
+Notoria existant. Aucun nouveau moteur d’appels, service racine ou migration.
+
+**Studio.** La réponse de suivi transportait les mêmes images inline dans les
+résultats et dans les versions : 18 223 592 octets pour quatre tâches réelles en
+547, 81 à 94 secondes sur les lectures diagnostiquées. La projection de liste
+omet les originaux et les paramètres et utilise la route d’aperçu privée existante.
+Les détails conservent les originaux, le brief, les versions et les liens externes.
+
+**Reçu local Studio.** Suite PostgreSQL 56/56 ; quatre images synthétiques
+volumineuses, explicitement qualifiées, ajoutées à la seule base locale. Chrome
+1440×1100 et 390×844 : 19 tâches reçues, quatre aperçus WEBP chargés, réponse de
+liste de 24 162 octets en 600 ms et affichage après clic en 327 ms dans cette
+recette. Aucun débordement, exception, réponse HTTP en erreur ou mutation du
+navigateur. Les anciens états en échec restent visibles. Captures réellement
+inspectées ; preuves privées : `ptah-list548-code-receipt.json`,
+`ptah-list548-local-browser/receipt.json` et `ptah-list548-suite.log`.
+
+**Reçu local Gazette et modales.** La recette Chrome bureau/mobile ouvre la
+source et son interprétation, charge l’image et reçoit deux lectures
+`jehuty.readSignal` en HTTP 200, sans exception, réponse serveur en erreur ni
+mutation. Le mobile n’a pas de débordement. Cette recette utilise des fixtures,
+dont un article industriel de Dubaï : elle reçoit le lecteur, pas la pertinence
+SPAWT. Preuve privée : `gazette548-local-browser/receipt.json`. La modale partagée
+ne réinitialise plus le focus à chaque rendu parent ; trois tests de régression
+reçus après reproduction couvrent clavier, saisie et annulation du focus différé.
+
+**Contrôles intégrés locaux.** Après génération des types de routes, typage global
+terminé avec code 0. Lint et lint de gouvernance : zéro erreur, 25 avertissements
+existants chacun. Aucun cycle détecté. La première suite unitaire comptait
+5 481 succès et 2 échecs de gouvernance de l’accès `jehuty.readSignal`. Après
+correction, les 16 tests ciblés et toute la gouvernance passent : 169 fichiers,
+1 682 tests. Le typage global est de nouveau reçu avec code 0. Lecteur Gazette
+et focus : 7 + 3 tests verts après le dernier correctif d’accordéon vide.
+La suite unitaire intégrale n’a pas été rejouée ; son résultat initial est conservé.
+Journaux : `/tmp/release548-unit.log`, `/tmp/release548-governance-final.log`,
+`/tmp/release548-tsc-final.log`, `/tmp/gazette548-final-reader.log`,
+`/tmp/release548-lint.log`, `/tmp/release548-governance-lint.log` et
+`/tmp/release548-cycles.log`.
+
+**À recevoir.** Contrôles du head final, CI et image 548, puis
+relecture du suivi et d’une sélection Gazette pertinente en production. Le parcours
+article exact → propositions nécessite son propre reçu ; ni une modale ni une
+requête interceptée ne prouve un appel réel. Les critères de clôture sont dans
+RESIDUAL-DEBT. Aucun taux global Shinkiro ou achèvement du moteur audiovisuel
+n’est déduit de ce lot.
+
 ## 547 — Gazette sourcée, coffre traçable et accès à la production (2026-11-05)
 
-**État : candidat local en intégration.** La version runtime, le package et son
-verrou portent 547. Le déploiement 547, sa CI, son image et sa réception native de
-production ne sont pas encore reçus à ce checkpoint. Les sections historiques
-ci-dessous conservent leur portée et leurs dates ; aucun pourcentage global de
-Shinkiro ni fermeture du MVP entier n’est déduit de ce lot.
+**État : 547 reçue techniquement en production le 5 novembre.** PR #1141,
+merge `40efe6e281d99c3cc8eeadb4a5c6492c4f5ff39d`, CI main `42070581922`
+et image `42070720231` vertes. Le déploiement `7irdag1xalgeylk96pzzzqns`
+sert 6.27.547 ; sauvegarde DB/médias, volumes et réglages Luna conservés.
+Ces reçus ne ferment ni la pertinence éditoriale ni le MVP entier.
 
 Le flux réutilise les responsabilités existantes : Artemis/Glory produit la
 matière, Mestor gouverne les actifs et leurs choix, Ptah reçoit les fichiers
@@ -49,9 +113,23 @@ usages campagne/brief et contenu intégral reçus sur base locale, sans réponse
 simulée. Aucun débordement, masquage par la navigation ou incident de page ; aucune
 sélection humaine ni génération. Preuve privée : `dam-browser547/receipt.json`.
 
-**Étape suivante.** Recevoir la CI, l’image et les mêmes parcours en production.
-La portée de la PR #1141 est inscrite dans `scope-drift.md`. La sélection éditoriale
-et la publication restent des décisions distinctes.
+**Réception sur production.** Chrome sous session réelle, bureau 1440 et
+mobile 390 : article éditeur, source exacte et image chargée, double page puis
+empilement sans débordement ; dossier d’actif avec gouverneur Mestor, auteur
+Luna enregistré, édition et usages. Aucun appel mutant ni incident de page/500.
+Le dossier réel consulté ne possède pas d’autre édition liée ; la navigation
+entre éditions reste prouvée par la recette locale précédente.
+Intake reçu avec appels interceptés : domaine nu normalisé, site facultatif,
+erreur française et saisie conservée ; aucun nouveau client ni appel IA.
+Preuves privées : `deploiement-547/rollout-verified.json`,
+`prod547-browser/receipt.json`, `intake-production547/receipt.json`.
+
+**Défaut métier reproduit au rafraîchissement réel.** Les actualités FoodTech
+mondiales dominent la sélection SPAWT ; les thèmes manuels court-circuitent
+l’ADVE et le classement ne protège pas la pertinence locale. La tranche 548
+corrige collecte et classement, puis doit recevoir un article pertinent avec
+sa source et le passage article → recommandations. La sélection éditoriale,
+la publication sociale et la recette Shinkiro globale restent distinctes.
 
 ## 538 — prémisses utilisables, vérification réelle et lecteurs fidèles (2026-11-03)
 

@@ -28,7 +28,7 @@ import {
   MANIPULATION_MODES,
   PROVIDER_NAMES,
 } from "@/server/services/ptah/types";
-import { hasSubmissionClaim, providerParameters } from "@/server/services/ptah/resumption";
+import { hasSubmissionClaim } from "@/server/services/ptah/resumption";
 import { listProviders } from "@/server/services/ptah/routing/provider-selector";
 import { getOperatorContext } from "@/server/services/operator-isolation";
 
@@ -166,6 +166,8 @@ export const ptahRouter = createTRPCRouter({
         },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: input.limit,
+        // Original bytes belong to the asset reader, never the polled task list.
+        omit: { resultUrls: true },
         include: { versions: true },
       });
       const campaigns = await db.campaign.findMany({ where: { id: { in: tasks.flatMap(t => t.campaignId ? [t.campaignId] : []) },
@@ -173,9 +175,18 @@ export const ptahRouter = createTRPCRouter({
       const briefs = await db.campaignBrief.findMany({ where: { id: { in: tasks.flatMap(t => t.briefId ? [t.briefId] : []) },
         campaign: { strategy: { operatorId }, ...(input.strategyId ? { strategyId: input.strategyId } : {}) } }, select: { id: true, title: true } });
       return tasks.map(task => {
-        // Webhook secrets and reservation metadata are not presentation data.
+        // Briefs/parameters stay in the detail reader and server-side resumption.
         const { webhookSecret: _secret, parameters: _parameters, ...publicTask } = task;
-        return { ...publicTask, canResume, parameters: providerParameters(task),
+        const versions = task.versions.map(version => {
+          // Reuse the authenticated thumbnail reader; keep the original stored
+          // on AssetVersion and accessible through the existing detail query.
+          if (["image", "icon", "design"].includes(version.kind)
+            && /^data:image\/(?:png|jpeg|webp);base64,/.test(version.url)) {
+            return { ...version, url: `/api/production/image/${encodeURIComponent(version.id)}` };
+          }
+          return version;
+        });
+        return { ...publicTask, versions, canResume,
           submissionUnknown: task.status === "CREATED" && !task.providerTaskId && hasSubmissionClaim(task),
           campaignTitle: campaigns.find(c => c.id === task.campaignId)?.name ?? null,
           briefTitle: briefs.find(b => b.id === task.briefId)?.title ?? null };
