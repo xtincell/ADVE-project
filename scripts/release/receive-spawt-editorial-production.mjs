@@ -3,6 +3,8 @@
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { parseArgs } from "node:util";
+import { dirname, basename, join } from "node:path";
+import sharp from "sharp";
 
 const {values} = parseArgs({options:{
   session:{type:"string"},stage:{type:"string",default:"inspect"},edition:{type:"string"},
@@ -30,6 +32,24 @@ async function api(path,input,write=false){
   const body=await res.json();
   guard(res.ok&&body.result,"Requête "+path+" refusée (HTTP "+res.status+", "+(body.error?.json?.data?.code??"absence de résultat")+").");
   return body.result.data?.json;
+}
+const sha256=bytes=>createHash("sha256").update(bytes).digest("hex");
+async function readOriginal(version){
+  const inline=/^data:image\/png;base64,/.exec(version.url??"");
+  if(inline){
+    guard(version.url.length<=34_000_000,"Original trop volumineux pour la recette.");
+    return Buffer.from(version.url.slice(inline[0].length),"base64");
+  }
+  const digest=version.metadata?.archiveHash;
+  guard(version.cdnUrl&&/^[a-f0-9]{64}$/.test(digest??"")&&version.fileSizeBytes>0&&version.fileSizeBytes<=25_000_000,"Aucun original conservé et vérifiable pour cette version.");
+  const archive=new URL(version.cdnUrl);
+  guard(archive.protocol==="https:"&&!archive.username&&!archive.password,"Adresse d’archive non admise.");
+  // An archive never receives the application session cookie.
+  const res=await fetch(archive,{redirect:"error",signal:AbortSignal.timeout(45000)});
+  guard(res.ok,"Archive originale indisponible.");
+  const bytes=Buffer.from(await res.arrayBuffer());
+  guard(bytes.length===version.fileSizeBytes&&sha256(bytes)===digest,"L’archive ne correspond pas à son reçu.");
+  return bytes;
 }
 const log=(step,data={})=>{report.steps.push({step,...data});checkpoint();};
 async function run(){
@@ -99,23 +119,43 @@ async function run(){
     rows=await api("deliverableOrchestrator.calendarProductionRows",scope);
   }
   for(const post of docket())for(const brief of post.briefs){
+    if(stage==="produce"&&(post.post.format!==values.format||brief.variant!==Number(values.option)))continue;
     const rec=brief.generation;
     if(!rec?.generativeTaskId)continue;
     const task=await api("ptah.getForge",{taskId:rec.generativeTaskId});
     guard(task?.strategyId===strategyId&&task.sourceBrandAssetId===brief.assetId,"La tâche ne correspond pas au brief sélectionné.");
+    guard(task.status==="COMPLETED","La tâche de la piste "+post.post.format+"/"+brief.variant+" n’est pas terminée ("+task.status+"). Aucune relance automatique.");
+    const frozenBrief=frozen.find(item=>item.assetId===brief.assetId&&item.version===brief.version);
+    guard(frozenBrief&&task.parameters?.productionArtwork?.originalHash===frozenBrief.originalHash&&task.parameters?.productionArtwork?.photoPolicy===frozenBrief.policy,"Le master produit ne correspond pas au brief relu.");
     for(const img of rec.materialVersions??[]){
       if(img.status!=="FILE_STORED"&&img.status!=="FILE_ARCHIVED")continue;
       guard(img.url==="/api/production/image/"+img.id,"URL de version inattendue.");
-      const res=await fetch(new URL(img.url,origin),{headers:{cookie},redirect:"error",signal:AbortSignal.timeout(45000)});
-      guard(res.ok,"Image non relue.");
-      const bytes=Buffer.from(await res.arrayBuffer());guard(bytes.subarray(0,8).toString("hex")==="89504e470d0a1a0a","La version n’est pas le PNG final.");
+      const version=task.versions?.find(item=>item.id===img.id);
+      guard(version?.strategyId===strategyId&&version.generativeTaskId===task.id,"La version originale ne correspond pas à la tâche.");
+      const bytes=await readOriginal(version);
+      guard(bytes.length>=24&&bytes.subarray(0,8).toString("hex")==="89504e470d0a1a0a","L’original conservé n’est pas le PNG final.");
       const w=bytes.readUInt32BE(16),h=bytes.readUInt32BE(20);
       guard(w===1080&&h===(post.post.format==="Story"?1920:1080),"Dimensions finales incorrectes.");
-      report.images.push({format:post.post.format,option:brief.variant,provider:task.provider,model:task.providerModel,brief:brief.assetId,version:brief.version,task:task.id,image:img.id,url:img.url,master:task.parameters?.productionArtwork,sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length,width:w,height:h});
+      // The normal UI route is a WEBP preview, not the retained original PNG.
+      const res=await fetch(new URL(img.url,origin),{headers:{cookie},redirect:"error",signal:AbortSignal.timeout(45000)});
+      guard(res.ok&&res.headers.get("content-type")?.startsWith("image/webp"),"Aperçu WEBP inaccessible.");
+      const previewBytes=Buffer.from(await res.arrayBuffer()),preview=await sharp(previewBytes).metadata();
+      guard(preview.format==="webp"&&preview.width===w&&preview.height===h,"L’aperçu ne correspond pas aux dimensions de l’original.");
+      const file=join(dirname(values.receipt),basename(values.receipt).replace(/\.json$/i,"")+"-"+post.post.format+"-"+brief.variant+"-"+img.id.replace(/[^a-zA-Z0-9_-]/g,"_")+".png");
+      writeFileSync(file,bytes,{mode:0o600});
+      report.images.push({format:post.post.format,option:brief.variant,provider:task.provider,model:task.providerModel,brief:brief.assetId,version:brief.version,task:task.id,taskStatus:task.status,image:img.id,url:img.url,master:task.parameters?.productionArtwork,sha256:sha256(bytes),bytes:bytes.length,width:w,height:h,file,preview:{format:preview.format,width:preview.width,height:preview.height,bytes:previewBytes.length,sha256:sha256(previewBytes)}});
+      checkpoint();
     }
+  }
+  if(stage==="produce"){
+    const produced=report.images.filter(i=>i.format===values.format&&i.option===Number(values.option));
+    const selectedBrief=docket().find(post=>post.post.format===values.format)?.briefs.find(b=>b.variant===Number(values.option));
+    guard(produced.length===1,"La piste demandée n’a pas exactement un fichier final reçu (état : "+(selectedBrief?.generation?.status??"sans reçu")+"). Aucune relance automatique.");
   }
   if(stage==="verify"){
     guard(report.images.length===4&&new Set(report.images.map(i=>i.sha256)).size===4,"Quatre PNG distincts ne sont pas reçus.");
+    const expected=["Post/1","Post/2","Story/1","Story/2"];
+    guard(expected.every(key=>report.images.filter(i=>i.format+"/"+i.option===key).length===1)&&new Set(report.images.map(i=>i.brief)).size===4&&new Set(report.images.map(i=>i.task)).size===4,"Les quatre couples format/piste n’ont pas chacun leur brief, tâche et original distincts.");
     guard(report.images.every(i=>i.option===1?i.provider==="openai"&&i.master?.photoPolicy==="GENERATED_CANDIDATE":i.provider==="master"&&i.master?.photoPolicy==="LOCKED_MASTER"),"Les origines des quatre visuels n’ont pas été confirmées.");
   }
 }
