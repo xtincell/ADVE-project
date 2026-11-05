@@ -6,7 +6,9 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { ORIGINAL_CHUNK_BYTES, MAX_CHUNKED_ORIGINAL_BYTES } from "@/domain/source-original";
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { withCockpitContext } from "@/components/navigation/nav-active";
+import { AssetDossier } from "@/components/brand/asset-dossier";
 import { useBrandWriteAccess } from "@/components/cockpit/use-can-operate";
 import { DocumentEditionDialog } from "@/components/brand/document-library";
 import { PUBLIC_BRAND_FORMAT, PUBLIC_BRAND_IDENTITY_FORMAT } from "@/domain/public-brand";
@@ -80,16 +82,19 @@ function assetUiType(a: { kind?: string | null; pillarTags?: unknown }): string 
 export default function AssetsPage() {
   const strategyId = useCurrentStrategyId();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const contextHref = (href: string) => withCockpitContext(href, searchParams.toString());
   const { canOperateOnBrand } = useBrandWriteAccess(strategyId);
   const [documentAsset, setDocumentAsset] = useState<{ id: string; fileName: string; retainedAsset: { assetId: string; contentHash: string; strategyId: string } } | null>(null);
   const toast = useToast();
   const [search, setSearch] = useState("");
   const [pillarFilter, setPillarFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("");
+  const [familyFilter, setFamilyFilter] = useState<"INTELLECTUAL" | "MATERIAL" | "HYBRID" | "">("");
   const [stateFilter, setStateFilter] = useState<string>("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showUpload, setShowUpload] = useState(false);
-  const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<string | null>(searchParams.get("asset"));
   const selectedOriginal = trpc.brandVault.get.useQuery({ id: selectedAsset ?? "" }, { enabled: !!selectedAsset });
   const documentSources = trpc.ingestion.listSources.useQuery({ strategyId: strategyId ?? "" }, { enabled: !!strategyId && !!documentAsset });
 
@@ -142,12 +147,20 @@ export default function AssetsPage() {
       strategyId: strategyId!,
       pillar: pillarFilter !== "all" ? pillarFilter : undefined,
       search: search || undefined,
+      family: familyFilter || undefined,
       type: (typeFilter || undefined) as AssetType | undefined,
-      state: (stateFilter || undefined) as "CANDIDATE" | "SELECTED" | "ACTIVE" | "ARCHIVED" | "ALL" | undefined,
+      state: (stateFilter || undefined) as "DRAFT" | "CANDIDATE" | "SELECTED" | "ACTIVE" | "SUPERSEDED" | "ARCHIVED" | "REJECTED" | "ALL" | undefined,
       limit: 50,
     },
     { enabled: !!strategyId, getNextPageParam: (lastPage) => lastPage.length === 50 ? lastPage.at(-1)?.id : undefined },
   );
+
+  const deposits = trpc.brandVault.pendingDeposits.useInfiniteQuery({ strategyId: strategyId ?? "", limit: 20 },
+    { enabled: !!strategyId, getNextPageParam: page => page.nextCursor });
+  const retryDeposit = trpc.brandVault.retryDeposit.useMutation({
+    onSuccess: result => { void deposits.refetch(); void assetsQuery.refetch(); toast.success(`${result.assetIds.length} actif(s) conservé(s), à examiner.`); },
+    onError: error => toast.error(error.message),
+  });
 
   const strategies = trpc.strategy.list.useQuery({});
   // Bannière depuis la marque COURANTE — `data[0]` affichait le positionnement
@@ -155,6 +168,7 @@ export default function AssetsPage() {
   const currentStrategy = strategies.data?.find((st) => st.id === strategyId);
   const pillarContentMap = buildPillarContentMap(currentStrategy?.pillars as Array<{ key: string; content: unknown }> | undefined);
 
+  const [activationTarget, setActivationTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const afterUpload = () => {
@@ -171,7 +185,12 @@ export default function AssetsPage() {
   };
   const uploadMutation = trpc.brandVault.create.useMutation({ onSuccess: afterUpload });
 
-  const selectMutation = trpc.brandVault.selectFromBatch.useMutation({ onSuccess: () => { void assetsQuery.refetch(); } });
+  const selectMutation = trpc.brandVault.selectFromBatch.useMutation({ onSuccess: () => { void assetsQuery.refetch(); void selectedOriginal.refetch(); } });
+
+  const promoteMutation = trpc.brandVault.promoteToActive.useMutation({
+    onSuccess: () => { setActivationTarget(null); void assetsQuery.refetch(); void selectedOriginal.refetch(); toast.success("Cette édition est maintenant en usage."); },
+    onError: error => toast.error(error.message),
+  });
 
   const deleteMutation = trpc.brandVault.delete.useMutation({
     onSuccess: () => {
@@ -198,12 +217,12 @@ export default function AssetsPage() {
 
   const categoryMap = new Map<string, number>();
   for (const a of allAssets) {
-    const cat = assetUiType(a);
+    const cat = a.kind !== "GENERIC" ? a.kind : assetUiType(a);
     categoryMap.set(cat, (categoryMap.get(cat) ?? 0) + 1);
   }
 
   const selectedAssetData = selectedAsset
-    ? allAssets.find((a) => a.id === selectedAsset)
+    ? (selectedOriginal.data?.id === selectedAsset ? selectedOriginal.data : allAssets.find((a) => a.id === selectedAsset))
     : null;
 
   const getFileIcon = (name: string) => {
@@ -288,12 +307,12 @@ export default function AssetsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Assets"
-        description="Vos assets de marque organisés par pilier."
+        title="Data Asset Manager"
+        description="La banque des actifs de marque : documents de travail, concepts, briefs et médias, avec leurs sources, éditions et usages."
         breadcrumbs={[
           { label: "Cockpit", href: "/cockpit" },
           { label: "Marque" },
-          { label: "Assets" },
+          { label: "Data Asset Manager" },
         ]}
       >
         <button
@@ -301,9 +320,29 @@ export default function AssetsPage() {
           className="flex items-center gap-2 rounded-lg bg-surface-raised px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground"
         >
           <Upload className="h-4 w-4" />
-          Ajouter un asset
+          Déposer un actif
         </button>
       </PageHeader>
+
+      <section className="rounded-xl border border-border bg-surface-raised p-5">
+        <h2 className="font-semibold text-foreground">Gouverné par Mestor</h2>
+        <p className="mt-2 text-sm text-foreground-secondary">Mestor gouverne la conservation, la provenance et le cycle de vie des actifs. Artemis orchestre les livrables, Glory prépare les contenus et Ptah produit les médias. Votre équipe choisit les éditions à retenir.</p>
+        <nav aria-label="Banques et production" className="mt-4 flex flex-wrap gap-3 text-sm">
+          <Link className="rounded-lg border border-border px-3 py-2" href={contextHref("/cockpit/brand/sources")}>Documentation et sources</Link>
+          <Link className="rounded-lg border border-border px-3 py-2" href={contextHref("/cockpit/brand/deliverables")}>Livrables</Link>
+          <Link className="rounded-lg border border-border px-3 py-2" href={contextHref("/cockpit/brand/deliverables?tab=production")}>Studio de production</Link>
+        </nav>
+      </section>
+      {deposits.error && <p role="alert" className="text-error">Le suivi des dépôts est indisponible : {deposits.error.message}</p>}
+      {!!deposits.data?.pages.some(page => page.items.length) && <section className="rounded-xl border border-warning/30 bg-warning/10 p-5">
+        <h2 className="font-semibold text-warning">Dépôts à reprendre</h2>
+        <p className="mt-2 text-sm text-foreground-secondary">Ces contenus ont été produits, mais leur dépôt dans la banque a échoué. Reprendre conserve la même production, sans nouvel appel IA et sans validation automatique.</p>
+        <ul className="mt-3 space-y-3">{deposits.data.pages.flatMap(page => page.items).map(item => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3">
+          <span>{item.name}<span className="block text-xs text-foreground-secondary">{new Date(item.createdAt).toLocaleString("fr-FR")}</span></span>
+          {canOperateOnBrand && <button type="button" disabled={retryDeposit.isPending} onClick={() => retryDeposit.mutate({ strategyId: strategyId!, gloryOutputId: item.id })} className="rounded-lg border border-border px-3 py-2 disabled:opacity-50">{retryDeposit.isPending && retryDeposit.variables?.gloryOutputId === item.id ? "Dépôt…" : "Reprendre le dépôt"}</button>}
+        </li>)}</ul>
+        {deposits.hasNextPage && <button type="button" className="mt-3 text-info underline" onClick={() => void deposits.fetchNextPage()} disabled={deposits.isFetchingNextPage}>Afficher les dépôts suivants</button>}
+      </section>}
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -312,7 +351,7 @@ export default function AssetsPage() {
           value={allAssets.length}
           icon={Layers}
           trend="flat"
-          trendValue={`${allAssets.length} fichier${allAssets.length !== 1 ? "s" : ""}`}
+          trendValue={`${allAssets.length} actif${allAssets.length !== 1 ? "s" : ""}`}
         />
         <StatCard
           title="Catégories affichées"
@@ -361,7 +400,7 @@ export default function AssetsPage() {
       <div className="flex items-center gap-3">
         <div className="flex-1">
           <SearchFilter
-            placeholder="Rechercher un asset..."
+            placeholder="Rechercher un actif…"
             value={search}
             onChange={(value) => setSearch(value.slice(0, 200))}
             filters={[
@@ -396,14 +435,21 @@ export default function AssetsPage() {
         </div>
       </div>
 
-      <label className="flex items-center gap-3 text-sm text-foreground-secondary">
-        Usage
-        <select value={stateFilter} onChange={e => setStateFilter(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-foreground">
-          <option value="">Actifs disponibles</option>
-          <option value="CANDIDATE">À examiner</option><option value="SELECTED">Sélectionnés</option>
-          <option value="ACTIVE">En usage</option><option value="ARCHIVED">Archives</option><option value="ALL">Tous les états</option>
+      <div className="flex flex-wrap gap-4">
+      <label className="flex items-center gap-3 text-sm text-foreground-secondary">Famille
+        <select value={familyFilter} onChange={e => setFamilyFilter(e.target.value as typeof familyFilter)} className="rounded-lg border border-border bg-background px-3 py-2 text-foreground">
+          <option value="">Toutes les familles</option><option value="INTELLECTUAL">Contenus et concepts</option><option value="MATERIAL">Fichiers et médias</option><option value="HYBRID">Actifs mixtes</option>
         </select>
       </label>
+      <label className="flex items-center gap-3 text-sm text-foreground-secondary">
+        État
+        <select value={stateFilter} onChange={e => setStateFilter(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-foreground">
+          <option value="">Actifs disponibles</option>
+          <option value="DRAFT">Brouillons</option><option value="CANDIDATE">À examiner</option><option value="SELECTED">Sélectionnés</option>
+          <option value="ACTIVE">En usage</option><option value="SUPERSEDED">Éditions antérieures</option><option value="REJECTED">Non retenus</option><option value="ARCHIVED">Archives</option><option value="ALL">Tous les états</option>
+        </select>
+      </label>
+      </div>
 
       {/* Pillar brand context banner */}
       {pillarFilter !== "all" && pillarContentMap[pillarFilter] && (
@@ -450,8 +496,8 @@ export default function AssetsPage() {
                   ? `Aucun asset associe au pilier ${PILLAR_NAMES[pillarFilter as PillarKey]}.`
                   : "Votre Brand Vault est vide. Ajoutez vos premiers assets."
               }
-              action={search || typeFilter || stateFilter || pillarFilter !== "all"
-                ? { label: "Réinitialiser les filtres", onClick: () => { setSearch(""); setTypeFilter(""); setStateFilter(""); setPillarFilter("all"); } }
+              action={search || typeFilter || familyFilter || stateFilter || pillarFilter !== "all"
+                ? { label: "Réinitialiser les filtres", onClick: () => { setSearch(""); setTypeFilter(""); setFamilyFilter(""); setStateFilter(""); setPillarFilter("all"); } }
                 : { label: "Ajouter un asset", onClick: () => setShowUpload(true) }}
             />
           ) : viewMode === "grid" ? (
@@ -520,8 +566,7 @@ export default function AssetsPage() {
                             production: "bg-foreground-muted/15 text-foreground-secondary ring-border/30",
                           }}
                         />
-                        {tags &&
-                          PILLAR_KEYS.filter((k) => (tags[k] as number) > 0.5)
+                        {PILLAR_KEYS.filter((k) => (tags?.[k] as number) > 0.5 || asset.pillarSource === k.toUpperCase())
                             .slice(0, 2)
                             .map((k) => (
                               <span
@@ -570,8 +615,7 @@ export default function AssetsPage() {
                         }}
                       />
                       <div className="flex gap-1">
-                        {tags &&
-                          PILLAR_KEYS.filter((k) => (tags[k] as number) > 0.5)
+                        {PILLAR_KEYS.filter((k) => (tags?.[k] as number) > 0.5 || asset.pillarSource === k.toUpperCase())
                             .slice(0, 3)
                             .map((k) => (
                               <span
@@ -764,11 +808,13 @@ export default function AssetsPage() {
 
       {/* Asset Detail Modal */}
       <Modal
-        open={!!selectedAssetData}
+        open={!!selectedAsset}
         onClose={() => setSelectedAsset(null)}
-        title={selectedAssetData?.name ?? "Detail de l'asset"}
+        title={selectedAssetData?.name ?? "Dossier de l’actif"}
         size="lg"
       >
+        {!selectedAssetData && selectedOriginal.isFetching && <p role="status">Lecture du dossier…</p>}
+        {!selectedAssetData && selectedOriginal.error && <p role="alert" className="text-error">{selectedOriginal.error.message}</p>}
         {selectedAssetData && (() => {
           const tags = selectedAssetData.pillarTags as Record<string, unknown> | null;
           const level = (tags?.level as string) ?? "production";
@@ -847,21 +893,27 @@ export default function AssetsPage() {
                     </> : <p className="mt-2">Aucun reçu d’original privé pour cet actif.</p>}
                   </>;
                 })()}
-                {((selectedAssetData.state === "CANDIDATE") || (selectedAssetData.state === "ARCHIVED" && selectedAssetData.fileUrl === `/api/brand-assets/${selectedAssetData.id}/original`)) && selectedAssetData.batchId && <button
+                {canOperateOnBrand && ((selectedAssetData.state === "CANDIDATE") || (selectedAssetData.state === "ARCHIVED" && selectedAssetData.fileUrl === `/api/brand-assets/${selectedAssetData.id}/original`)) && selectedAssetData.batchId && <button
                   onClick={() => selectMutation.mutate({ batchId: selectedAssetData.batchId!, selectedAssetId: selectedAssetData.id, selectedReason: "Sélection manuelle après examen de l’actif" })}
                   disabled={selectMutation.isPending}
                   className="mt-3 rounded-lg border border-border px-3 py-2 text-foreground disabled:opacity-50">
                   {selectMutation.isPending ? "Sélection…" : selectedAssetData.state === "ARCHIVED" ? "Réutiliser cette édition" : "Retenir cette édition"}
                 </button>}
+                {canOperateOnBrand && !isPublication(selectedAssetData.format) && ["DRAFT", "SELECTED"].includes(selectedAssetData.state) && <button
+                  type="button" onClick={() => setActivationTarget({ id: selectedAssetData.id, name: selectedAssetData.name })}
+                  className="mt-3 rounded-lg border border-border px-3 py-2 text-foreground">Mettre cette édition en usage</button>}
                 {selectMutation.error && <p className="mt-2 text-error">{selectMutation.error.message}</p>}
               </div>
+
+              {selectedOriginal.isFetching && <p role="status" className="text-foreground-muted">Lecture de la provenance et des usages…</p>}
+              {selectedOriginal.error && <p role="alert" className="text-error">{selectedOriginal.error.message}</p>}
+              {selectedOriginal.data?.id === selectedAssetData.id && <AssetDossier asset={selectedOriginal.data} onVersion={setSelectedAsset} />}
 
               {/* Pillar tags */}
               <div>
                 <p className="text-xs font-medium text-foreground-muted">Piliers associes</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {tags &&
-                    PILLAR_KEYS.filter((k) => (tags[k] as number) > 0.5).map(
+                  {PILLAR_KEYS.filter((k) => (tags?.[k] as number) > 0.5 || selectedAssetData.pillarSource === k.toUpperCase()).map(
                       (k) => (
                         <span
                           key={k}
@@ -871,8 +923,7 @@ export default function AssetsPage() {
                         </span>
                       ),
                     )}
-                  {(!tags ||
-                    PILLAR_KEYS.filter((k) => (tags[k] as number) > 0.5)
+                  {(PILLAR_KEYS.filter((k) => (tags?.[k] as number) > 0.5 || selectedAssetData.pillarSource === k.toUpperCase())
                       .length === 0) && (
                     <span className="text-xs text-foreground-muted">
                       Aucun pilier associe
@@ -898,6 +949,12 @@ export default function AssetsPage() {
           );
         })()}
       </Modal>
+
+      <ConfirmDialog variant="info" open={!!activationTarget} onClose={() => setActivationTarget(null)}
+        onConfirm={() => { if (activationTarget) promoteMutation.mutate({ brandAssetId: activationTarget.id }); }}
+        title="Mettre cette édition en usage"
+        message={`Après relecture, retenir « ${activationTarget?.name} » pour alimenter les productions de la marque ? Les contrôles de source et de qualité restent appliqués.`}
+        confirmLabel={promoteMutation.isPending ? "Vérification…" : "Confirmer la mise en usage"} />
 
       {/* Delete confirmation dialog */}
       <ConfirmDialog

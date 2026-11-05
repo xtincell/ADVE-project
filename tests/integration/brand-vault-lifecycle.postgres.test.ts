@@ -7,6 +7,8 @@ vi.mock("next-auth", () => ({}));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { depositInBrandVault, recordVaultDepositFailure } from "@/server/services/brand-vault/glory-deposit";
+import { getGloryTool } from "@/server/services/artemis/tools/registry";
 import { archive, promoteToActive, selectFromBatch, supersede } from "@/server/services/brand-vault/engine";
 import { execute } from "@/server/services/artemis/commandant";
 import { emitIntent, type Intent } from "@/server/services/mestor/intents";
@@ -32,6 +34,7 @@ beforeAll(async () => {
 afterAll(async () => {
   const where = { strategyId: { in: brands } };
   await db.brandAsset.deleteMany({ where });
+  await db.gloryOutput.deleteMany({ where });
   await db.campaignBrief.deleteMany({ where: { campaign: where } });
   await db.campaign.deleteMany({ where });
   await db.brandSourceUse.deleteMany({ where }); await db.brandDataSource.deleteMany({ where });
@@ -57,6 +60,54 @@ async function asset(f: Awaited<ReturnType<typeof fixture>>, state: "ACTIVE" | "
 }
 
 describe("BrandAsset common lifecycle", () => {
+  it("serializes concurrent Artemis deposits into one draft edition, retaining the actual generator", async () => {
+    const f = await fixture(), tool = getGloryTool("wordplay-cultural-bank")!;
+    const output = { culture: "Corpus synthétique de recette", _meta: { provider: "local-fixture", model: "synthetic-only" } };
+    const source = await db.gloryOutput.create({ data: { strategyId: f.s.id, toolSlug: tool.slug, output } });
+    const args = { strategyId: f.s.id, tool, toolOutput: output, gloryOutputId: source.id, gloryIntentId: null, context: {} };
+    const [one, two] = await Promise.all([depositInBrandVault(args), depositInBrandVault(args)]);
+    expect(one).toEqual(two); expect(one).toHaveLength(1);
+    expect(await db.brandAsset.count({ where: { strategyId: f.s.id, sourceGloryOutputId: source.id } })).toBe(1);
+    const received = await caller().get({ id: one[0]! });
+    expect(received.state).toBe("DRAFT"); expect(received.selectedById).toBeNull();
+    expect(received.dossier.authorship).toMatchObject({ provider: "local-fixture", model: "synthetic-only" });
+    expect(received.content).toMatchObject({ culture: "Corpus synthétique de recette" });
+    expect((await db.gloryOutput.findUniqueOrThrow({ where: { id: source.id } })).updatedAt).toEqual(source.updatedAt);
+  });
+
+  it("rolls back a failed candidate batch then resumes the retained output through Mestor", async () => {
+    const f = await fixture(), tool = getGloryTool("wordplay-cultural-bank")!;
+    const badName = "dam-rollback-" + randomUUID();
+    const output = { concepts: [{ title: "Candidat A" }, { title: badName }] };
+    const source = await db.gloryOutput.create({ data: { strategyId: f.s.id, toolSlug: tool.slug, output } });
+    const args = { strategyId: f.s.id, tool, toolOutput: output, gloryOutputId: source.id, gloryIntentId: null, context: {} };
+    const constraint = "fixture_dam_" + randomUUID().replaceAll("-", "");
+    await db.$executeRawUnsafe(`ALTER TABLE "BrandAsset" ADD CONSTRAINT ${constraint} CHECK (name <> '${badName}') NOT VALID`);
+    try {
+      await expect(depositInBrandVault(args)).rejects.toThrow();
+      expect(await db.brandAsset.count({ where: { strategyId: f.s.id } })).toBe(0);
+    } finally { await db.$executeRawUnsafe(`ALTER TABLE "BrandAsset" DROP CONSTRAINT ${constraint}`); }
+    await recordVaultDepositFailure(args);
+    const pending = await caller().pendingDeposits({ strategyId: f.s.id });
+    expect(pending.items.map(item => item.id)).toContain(source.id);
+    await expect(caller(stranger).retryDeposit({ strategyId: f.s.id, gloryOutputId: source.id })).rejects.toThrow();
+    const result = await caller().retryDeposit({ strategyId: f.s.id, gloryOutputId: source.id });
+    expect(result.assetIds).toHaveLength(2);
+    expect((await caller().pendingDeposits({ strategyId: f.s.id })).items).toHaveLength(0);
+    expect(await db.brandAsset.count({ where: { strategyId: f.s.id, state: "CANDIDATE", selectedById: null } })).toBe(2);
+    expect(await db.intentEmission.findFirst({ where: { strategyId: f.s.id, caller: "brand-vault:retryDeposit", governor: "MESTOR", status: "OK" } })).not.toBeNull();
+    expect(await db.gloryOutput.count({ where: { strategyId: f.s.id } })).toBe(1);
+  });
+
+  it("records the real human who puts a draft into use without backdating authorship", async () => {
+    const f = await fixture();
+    const draft = await db.brandAsset.create({ data: { ...f.input, state: "DRAFT" } });
+    const result = await promoteToActive({ brandAssetId: draft.id, promotedById: owner });
+    expect(result.state).toBe("ACTIVE"); expect(result.selectedById).toBe(owner);
+    expect(result.selectedAt).toBeInstanceOf(Date);
+    expect(result.selectedReason).toBe("Mise en usage après examen humain");
+  });
+
   it.each(["SELECT_BRAND_ASSET", "PROMOTE_BRAND_ASSET_TO_ACTIVE", "SUPERSEDE_BRAND_ASSET", "ARCHIVE_BRAND_ASSET"])(
     "executes the catalogued command %s", async (kind) => {
       const f = await fixture(), a = await asset(f, kind === "SUPERSEDE_BRAND_ASSET" ? "ACTIVE" : "CANDIDATE", { batchId: "batch-" + randomUUID() });

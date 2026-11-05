@@ -1,3 +1,5 @@
+import { depositInBrandVault, recordVaultDepositFailure } from "@/server/services/brand-vault/glory-deposit";
+export { depositInBrandVault } from "@/server/services/brand-vault/glory-deposit";
 import { isUsableGeneration } from "@/domain/generation-result";
 import { projectFinancialPillar } from "@/domain/unit-economics";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
@@ -232,6 +234,7 @@ async function executeGloryStep(
   // batch de candidats. Les outputs uniques (script, brand_audit_report)
   // deviennent un BrandAsset DRAFT unique.
   let brandAssetIds: string[] = [];
+  let vaultDepositFailed = false;
   if (tool && tool.outputFormat) {
     try {
       brandAssetIds = await depositInBrandVault({
@@ -243,10 +246,9 @@ async function executeGloryStep(
         context,
       });
     } catch (err) {
-      console.warn(
-        `[sequence-executor] BrandVault deposit failed for ${ref}:`,
-        err instanceof Error ? err.message : err,
-      );
+      vaultDepositFailed = true;
+      await recordVaultDepositFailure({ gloryOutputId: outputId, strategyId, gloryIntentId, context });
+      console.warn(`[sequence-executor] BrandVault deposit failed for ${ref}:`, err instanceof Error ? err.name : "Error");
     }
   }
 
@@ -265,7 +267,7 @@ async function executeGloryStep(
   // et la cascade Glory→Brief→Forge hash-chain f9cd9de complète est préservée.
   let forgeTaskId: string | undefined;
   const decision = shouldChainPtahForge({
-    hasForgeOutput: !!tool?.forgeOutput && !(ref === "devis-generator" && typeof output.devis !== "string" && !formatCommercialQuoteBrief(output.devis)),
+    hasForgeOutput: !vaultDepositFailed && !!tool?.forgeOutput && !(ref === "devis-generator" && typeof output.devis !== "string" && !formatCommercialQuoteBrief(output.devis)),
     oracleEnrichmentMode: context.mode === "ENRICHMENT",
   });
   if (decision.shouldChain && tool) {
@@ -297,128 +299,11 @@ async function executeGloryStep(
   return {
     ...output,
     _gloryOutputId: outputId,
+    ...(vaultDepositFailed ? { _vaultDeposit: { status: "FAILED", message: "Contenu conservé. Reprendre son dépôt dans le Data Asset Manager avant la production." } } : {}),
     ...(gloryIntentId ? { _gloryIntentId: gloryIntentId } : {}),
     ...(forgeTaskId ? { _ptahTaskId: forgeTaskId } : {}),
     ...(brandAssetIds.length > 0 ? { _brandAssetIds: brandAssetIds } : {}),
   };
-}
-
-/**
- * Auto-dépose un output Glory tool dans le BrandVault.
- *
- * Heuristique :
- *   - Si output contient une liste structurée (concepts, claims, prompts, names) →
- *     créer un batch de N BrandAsset CANDIDATE.
- *   - Sinon → 1 BrandAsset DRAFT unique.
- *
- * Le mapping outputFormat → kind est stable via brand-vault/engine FORMAT_TO_KIND.
- */
-export async function depositInBrandVault(args: {
-  tool: NonNullable<ReturnType<typeof getGloryTool>>;
-  toolOutput: Record<string, unknown>;
-  gloryOutputId: string;
-  gloryIntentId: string | null;
-  strategyId: string;
-  context: SequenceContext;
-}): Promise<string[]> {
-  const { tool, toolOutput, gloryOutputId, gloryIntentId, strategyId, context } = args;
-  const { kindFromFormat, createBrandAsset, createCandidateBatch } = await import(
-    "@/server/services/brand-vault/engine"
-  );
-
-  const kind = kindFromFormat(tool.outputFormat);
-  if (kind === "GENERIC" && !tool.forgeOutput) return [];
-
-  const strategy = await db.strategy.findUnique({
-    where: { id: strategyId },
-    select: { operatorId: true },
-  });
-  if (!strategy?.operatorId) return [];
-
-  const pillarSource =
-    (context._pillarSource as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S" | undefined) ??
-    (tool.pillarKeys[0]?.toUpperCase() as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S" | undefined);
-  const manipulationMode = context._manipulationMode as
-    | "peddler" | "dealer" | "facilitator" | "entertainer" | undefined;
-  const campaignId = context._campaignId as string | undefined;
-  const briefId = context._briefId as string | undefined;
-
-  // Détecter si output est un batch de candidats
-  const candidates = extractCandidates(toolOutput);
-  if (candidates.length > 1) {
-    const batch = await createCandidateBatch({
-      strategyId,
-      operatorId: strategy.operatorId,
-      kind,
-      format: tool.outputFormat,
-      candidates,
-      pillarSource,
-      manipulationMode,
-      sourceIntentId: gloryIntentId ?? undefined,
-      sourceGloryOutputId: gloryOutputId,
-      campaignId,
-      briefId,
-    });
-    return batch.candidates.map((a) => a.id);
-  }
-
-  // Sinon : 1 asset unique en DRAFT
-  const asset = await createBrandAsset({
-    strategyId,
-    operatorId: strategy.operatorId,
-    name: `${tool.name} output`,
-    kind,
-    format: tool.outputFormat,
-    family: "INTELLECTUAL",
-    content: toolOutput,
-    summary: candidates[0]?.summary,
-    pillarSource,
-    manipulationMode,
-    state: "DRAFT",
-    sourceIntentId: gloryIntentId ?? undefined,
-    sourceGloryOutputId: gloryOutputId,
-    campaignId,
-    briefId,
-  });
-  return [asset.id];
-}
-
-/**
- * Extrait les candidats depuis un output Glory tool.
- * Supporte les patterns : `concepts: [...]`, `claims: [...]`, `prompts: [...]`,
- * `names: [...]`, `propositions: [...]`, et tout array de longueur > 1.
- */
-function extractCandidates(
-  toolOutput: Record<string, unknown>,
-): Array<{ name: string; content: Record<string, unknown>; summary?: string }> {
-  const arrayKeys = ["concepts", "claims", "prompts", "names", "propositions", "ideas", "options"];
-  for (const key of arrayKeys) {
-    const arr = toolOutput[key];
-    if (Array.isArray(arr) && arr.length > 0) {
-      return arr.map((item, i) => {
-        if (typeof item === "string") {
-          return { name: `${key} ${i + 1}`, content: { value: item }, summary: item.slice(0, 200) };
-        }
-        if (item && typeof item === "object") {
-          const obj = item as Record<string, unknown>;
-          const name =
-            (obj.title as string) ?? (obj.name as string) ?? (obj.headline as string) ?? `${key} ${i + 1}`;
-          const summary =
-            (obj.description as string) ?? (obj.summary as string) ?? (obj.tagline as string) ?? undefined;
-          return { name, content: obj, summary };
-        }
-        return { name: `${key} ${i + 1}`, content: { value: item } };
-      });
-    }
-  }
-  // Pas de liste détectée : output unique
-  return [
-    {
-      name: (toolOutput.title as string) ?? (toolOutput.name as string) ?? "output",
-      content: toolOutput,
-      summary: (toolOutput.summary as string) ?? (toolOutput.description as string) ?? undefined,
-    },
-  ];
 }
 
 /**
@@ -1321,7 +1206,11 @@ export async function executeSequence(
       }
       const stepDuration = Date.now() - stepStart;
       const outputKeyCount = Object.keys(output).filter(k => !k.startsWith("_")).length;
-      journal.stepOk(i, step.ref, step.type, stepDuration, { outputKeys: outputKeyCount });
+      const depositFailure = (output._vaultDeposit as { status?: string; message?: string } | undefined)?.status === "FAILED";
+      if (depositFailure) {
+        hasFailure = true;
+        journal.stepFail(i, step.ref, step.type, stepDuration, "Contenu produit ; dépôt dans le DAM à reprendre.");
+      } else journal.stepOk(i, step.ref, step.type, stepDuration, { outputKeys: outputKeyCount });
 
       if (key === "OFFRE-V" && step.ref === "devis-generator") {
         commercialQuoteReady = (output.devis as { status?: string } | undefined)?.status === "READY";
@@ -1341,7 +1230,8 @@ export async function executeSequence(
         stepIndex: i,
         ref: step.ref,
         type: step.type,
-        status: "SUCCESS",
+        status: depositFailure ? "FAILED" : "SUCCESS",
+        ...(depositFailure ? { error: "Contenu produit ; dépôt dans le DAM à reprendre." } : {}),
         output,
         durationMs: stepDuration,
       });

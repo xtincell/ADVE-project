@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { executeSequence } from "@/server/services/artemis/tools/sequence-executor";
 
 const state = vi.hoisted(() => ({
-  outputCreate: vi.fn(), record: vi.fn(), cacheRead: vi.fn(), cacheWrite: vi.fn(), llm: vi.fn(),
+  deposit: vi.fn(), depositFailure: vi.fn(), outputCreate: vi.fn(), record: vi.fn(), cacheRead: vi.fn(), cacheWrite: vi.fn(), llm: vi.fn(),
   products: [{ id: "gold", nom: "Gold reçu", prix: 60000, disponibilite: "ALWAYS" }],
 }));
 vi.mock("@/lib/db", () => ({ db: {
@@ -37,8 +37,8 @@ vi.mock("@/server/services/artemis/tools/pillar-resolver", () => ({ PillarResolv
 vi.mock("@/server/services/artemis/tools/execution-journal", () => ({ createJournal: () => new Proxy({}, { get: () => () => {} }) }));
 vi.mock("@/server/services/pillar-maturity/assessor", () => ({ assessStrategy: vi.fn(async () => ({ pillars: {} })) }));
 vi.mock("@/server/services/seshat-bridge", () => ({ queryReferences: vi.fn(async () => []) }));
-vi.mock("@/server/services/brand-vault/engine", () => ({
-  kindFromFormat: () => "GENERIC", createBrandAsset: vi.fn(), createCandidateBatch: vi.fn(),
+vi.mock("@/server/services/brand-vault/glory-deposit", () => ({
+  depositInBrandVault: state.deposit, recordVaultDepositFailure: state.depositFailure,
 }));
 vi.mock("@/server/services/advertis-scorer", () => ({ scoreObject: vi.fn(async () => ({ composite: 1 })) }));
 vi.mock("@/server/services/sequence-vault", () => ({ recordExecution: state.record }));
@@ -54,6 +54,8 @@ const initial = { mode: "ENRICHMENT" as const, country_code: "CI", quote_request
 
 beforeEach(() => {
   vi.clearAllMocks();
+  state.deposit.mockResolvedValue(["vault-edition"]);
+  state.depositFailure.mockResolvedValue(undefined);
   state.outputCreate.mockImplementation(async ({ data }: { data: { toolSlug: string } }) => ({ id: `real-${data.toolSlug}` }));
   state.record.mockResolvedValue("sequence-received");
   state.cacheRead.mockResolvedValue({ devis: { status: "READY", client: { name: "Ancien client" } } });
@@ -61,6 +63,17 @@ beforeEach(() => {
 });
 
 describe("OFFRE-V — prix/devis raccordés", () => {
+  it("conserve les sorties mais signale la séquence partielle quand le dépôt DAM échoue", async () => {
+    state.deposit.mockRejectedValue(new Error("Storage unavailable"));
+    const result = await executeSequence("OFFRE-V", "brand", initial);
+    expect(result.status).toBe("PARTIAL");
+    const failed = result.steps.filter(step => step.output._vaultDeposit);
+    expect(failed.length).toBeGreaterThan(0);
+    expect(failed.every(step => step.status === "FAILED" && step.output._gloryOutputId)).toBe(true);
+    expect(state.depositFailure).toHaveBeenCalled();
+    expect(result.gloryOutputIds).toContain("real-devis-generator");
+  });
+
   it("reçoit 9 étapes, deux GloryOutput financiers et un devis exact malgré les champs narratifs forgés", async () => {
     const result = await executeSequence("OFFRE-V", "brand", initial);
     expect(result.status).toBe("COMPLETED");
