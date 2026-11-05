@@ -34,6 +34,16 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.548", date: "2026-11-05", headline: "Une veille plus pertinente et un studio plus fluide",
+    highlights: [
+      { emoji: "📰", title: "Retrouver les sujets de votre public", body: "La veille croise vos sujets suivis avec votre public et ses territoires. Elle distingue les articles locaux pertinents de l’exploration sectorielle, sans modifier vos choix de sujets." },
+      { emoji: "🔎", title: "Comprendre l’origine d’une analyse", body: "Ouvrez le message pour lire les sources conservées et son interprétation. Les hypothèses sont identifiées ; lorsqu’une ancienne analyse n’a pas conservé ses sources, le lecteur le précise." },
+      { emoji: "📖", title: "Relire les sources dans leur contexte", body: "Les références exactes et le contenu disponible restent consultables dans le lecteur. Le contexte utilisé lors de l’analyse est distingué des informations actuelles de votre marque." },
+      { emoji: "⌨️", title: "Garder votre place pendant la saisie", body: "Une fenêtre de détail conserve le curseur pendant la saisie et les rafraîchissements. Après fermeture, la navigation au clavier revient au bouton qui l’a ouverte." },
+      { emoji: "🎨", title: "Charger vos productions plus vite", body: "Le suivi affiche les tâches sans télécharger toutes leurs images originales. Les aperçus restent privés et chaque création conserve ses versions et son fichier d’origine." },
+    ],
+  },
+  {
     version: "6.27.547", date: "2026-11-05", headline: "Retrouver vos créations et lire votre veille",
     highlights: [
       { emoji: "🎨", title: "Accéder au studio et aux assets", body: "Le menu de votre marque donne un accès direct au studio de production et à la banque d’assets. Les documents livrés et les sources restent accessibles séparément." },

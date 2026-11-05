@@ -60,48 +60,37 @@ Les dix tests PostgreSQL isolés reproduisent les changements de source, de
 version, de compte et les rejouements. Transport Meta simulé, aucun envoi réel.
 Décision : ADR0243. Commit dédié `feat(publication): freeze reviewed calendar assets for social delivery`.
 
-### 547 — régression de prérendu dans la navigation partagée (2026-11-05)
 
-Les deux builds CI de PR1141 à `9e35e9049` s'arrêtaient sur
-`useSearchParams() should be wrapped in a suspense boundary` : Console
-(`/console/arene/academie`, `/console/socle/manual-subscriptions`) et Agence
-(`/agency/campaigns`). Les tests Golden Path et l'audit Lighthouse n'avaient
-pas commencé ; migrations et compilation avaient réussi. Cette entrée trace
-explicitement une régression introduite dans la tranche 547 (`d25429379`),
-et non un défaut pré-existant : le raccord des liens de marque avait ajouté
-une lecture d'URL à des composants partagés par des pages statiques.
+### 548 — le focus de la modale repartait à chaque rendu parent (2026-11-05)
 
-Le contrôle suivant à `200294627` a révélé le même défaut dans
-`/cockpit/brand/assets`. Les quatre lectures d'URL ajoutées dans cette tranche
-ont été revues : Deliverables possédait déjà sa frontière ; Assets a reçu la
-sienne. Sa reproduction SSR échoue avant le correctif et passe ensuite.
+Le rappel de fermeture fourni en ligne changeait d’identité à chaque rendu.
+La modale partagée redémarrait alors son effet de clavier/focus : une saisie ou
+un rafraîchissement pouvait déplacer le focus et remplacer sa cible de retour.
+Le candidat lie ce cycle à l’ouverture seulement, garde le rappel courant et
+annule le focus différé si la modale est démontée. Le piège clavier et le retour
+au déclencheur après fermeture sont conservés.
 
-Sidebar et MobileTabBar possèdent maintenant leur frontière Suspense et
-gardent un rendu de navigation utile pendant l'attente des paramètres. Le
-contenu de page reste indépendant ; aucun passage global en rendu dynamique
-ni désactivation de contrôle. Deux tests SSR ont reproduit le défaut avant
-correction ; les dix tests ciblés passent ensuite, avec conservation de la
-marque, de l'équipe et de l'onglet actif. Typage et lint ciblé reçus sans erreur.
-Le build local isolé s'est arrêté sur `ENOSPC` pendant la compilation : il ne
-constitue pas une réception du prérendu complet. Son log est conservé et seul
-son répertoire `.next` temporaire a été retiré ; la recette locale active est
-préservée. Le build complet et la CI restent à recevoir sur le nouveau commit.
-Commit dédié `fix(navigation): contain URL suspension during prerender`.
+Trois tests de comportement reçus après reproduction : ouverture/clavier/retour,
+saisie sans perte de focus et démontage avant le premier focus différé. Recette
+Gazette locale bureau/mobile sans erreur ni mutation. Commit à attribuer au
+candidat 548 ; production et validation sur le head livré restent à recevoir.
+Ce correctif ne réécrit pas la réception antérieure de la bulle de retour.
 
-### 547 — navigation mobile au-dessus du dossier d’actif (2026-11-05)
+### 548 — le suivi Studio rechargeait les originaux en double (2026-11-05)
 
-Le dossier chargé était lisible et sans débordement horizontal, mais sa fin
-était masquée par la barre mobile et la bulle de retour. La modale partagée
-utilisait encore `z-50`, inférieur aux couches de navigation (70/80) et de
-retour (60). Elle utilise désormais le token commun `--z-modal` (100).
-Hypothèse de cause : ancienne valeur locale restée après centralisation des
-couches d’interface. Commit dédié `fix(ui): keep asset dossiers above mobile navigation`.
-Réception Chrome local à 1440×1100 et 390×844 : provenance synthétique explicite,
-gouverneur Mestor, navigation V2 → V1 → V2, usages campagne/brief et contenu
-intégral reçus. Le bord inférieur reste au-dessus de la navigation, sans
-débordement ni exception de page. Captures inspectées dans
-`dam-browser547/`, hors dépôt ; 4 tests dossier/focus verts et lint ciblé reçu.
-Aucune sélection humaine, génération ni donnée de production modifiée.
+La liste de quatre productions terminées renvoyait 18 223 592 octets : les mêmes
+images base64 figuraient dans `resultUrls` et `versions[].url`, avec les paramètres
+de génération. Une lecture valide demandait plus de 81 secondes ; le bouton
+changeait bien de filtre mais les lignes restaient en attente. Cause identifiée :
+le contrat de détail complet servait aussi au suivi des tâches.
+
+Le candidat `ptah.listForges` omet résultats binaires et paramètres de la liste
+et remplace les images inline par les URLs privées d’aperçu existantes. Aucun
+original, brief, lien externe ou historique n’est supprimé des détails. Suite
+PostgreSQL 56/56, contrôle d’accès aux aperçus, source lintée et réception Chrome
+locale bureau/mobile : 19 lignes, quatre aperçus chargés, 24 162 octets et aucun
+incident. Commit à attribuer au candidat 548 ; réception de production ouverte
+dans RESIDUAL-DEBT. Les échecs historiques ne deviennent pas des réussites.
 
 ### 542 — une action longue valide dans I pouvait bloquer S (2026-11-04)
 

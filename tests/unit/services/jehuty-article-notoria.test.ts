@@ -121,6 +121,23 @@ describe("article → Notoria, existing governed endpoint", () => {
 });
 
 describe("article right page — exact links, no simulated interpretation", () => {
+  it("joins a collected provenance input by exact URL, never an inferred or unspecified input", async () => {
+    const provenance = (kind: string, sourceUrl = articleUrl) => ({ schema: "weak-signal-provenance-v1",
+      inputSignals: [{ kind, sourceType: "NEWS", sourceUrl, title: article.title }] });
+    mocks.signals.mockResolvedValue([
+      signal("collected", { thesis: "Lecture conservée", provenance: provenance("COLLECTED") }),
+      signal("inferred", { thesis: "Hypothèse seule", provenance: provenance("INFERRED") }),
+      signal("unspecified", { thesis: "Origine inconnue", provenance: provenance("UNSPECIFIED") }),
+      signal("prefix", { thesis: "Une autre source", provenance: provenance("COLLECTED", `${articleUrl}-other`) }),
+      signal("foreign", { thesis: "Privé", provenance: provenance("COLLECTED") }, "WEAK_SIGNAL_ALERT", "brand-b"),
+    ]);
+    const result = (await readArticleBrandInterpretations(strategyId, [article])).get(articleUrl)!;
+    expect(result.linkedAnalyses.map((row) => row.id)).toEqual(["collected"]);
+    expect(mocks.signals.mock.calls[0]?.[0].where.OR).toContainEqual({ data: {
+      path: ["provenance", "inputSignals"], array_contains: [{ kind: "COLLECTED", sourceUrl: articleUrl }],
+    } });
+  });
+
   it("shows explicit URL-linked analyses, excluding same-keyword and prefix matches", async () => {
     mocks.signals.mockResolvedValue([
       signal("direct", { title: "Effet à examiner", content: "Hypothèse pour la marque.", sourceUrl: articleUrl, relatedPillars: ["v", "x"] }),

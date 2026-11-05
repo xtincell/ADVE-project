@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 71 modules (src/domain, cœur métier pur)
+## Domain — 72 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
@@ -122,6 +122,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **scoreur/types** — ADR-0149 — Scoreur à force révélée : types canon (Layer 0, pur).
 - **sector-taxonomy** — Taxonomie de secteurs CANONIQUE — la clé de ligue universelle du scoreur.
 - **signal-observation** — Observation factuelle partagée par la Gazette et son analyse explicitement demandée.
+- **signal-provenance**
 - **social-publication-package**
 - **source-certainty** — SourceCertainty — niveau de certitude opérateur sur une `BrandDataSource`.
 - **source-document**

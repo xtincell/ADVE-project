@@ -1,29 +1,46 @@
-## 547 — réception intégrée et livraison à recevoir (2026-11-05)
+## 548 — recevoir la veille traçable et le suivi des productions (2026-11-05)
 
-Le correctif local couvre l’entrée par domaine nu, les accès Studio/Assets,
-la Gazette sourcée et le dossier/rejeu de dépôt du coffre existant. Les tests
-ciblés et le navigateur intake sont reçus ; ils ne ferment pas le parcours réel
-ADVE → calendrier → image → publication. Les mutations du navigateur intake sont
-interceptées afin de ne créer ni faux client ni coût de génération.
+La livraison technique 547, sa CI, son image et ses surfaces Gazette/DAM/intake
+ont été reçues. Le rafraîchissement réel a cependant remonté surtout des articles
+industriels FoodTech mondiaux, éloignés du public foodie/restauration de SPAWT.
+Les sujets manuels restent légitimes ; ils ne doivent pas empêcher l’usage de
+l’ADVE pour qualifier la collecte et la pertinence des résultats.
 
-**Réceptions locales acquises.** Gazette et dossier DAM détaillé reçus sous
-session réelle en bureau et mobile : sources et image reçue, lecture dépliable,
-versions/usages et contenu intégral, sans débordement ni exception. Les données
-de recette restent explicitement qualifiées et la mutation Notoria interceptée ;
-aucun appel IA réel, sélection humaine ou résultat de production n’en est déduit.
-Preuves privées : `gazette-dam547-local-browser-receipt.json` et
-`dam-browser547/receipt.json`.
+**Corrections candidates.** La collecte complète les sujets conservés avec le
+contexte ADVE et qualifie la pertinence sur les articles reçus. Les nouveaux
+signaux produits par modèle restent des hypothèses ; les analyses enregistrent
+leurs entrées et leur contexte. Le lecteur distingue provenance historique et
+contexte actuel, sans reconstruire des preuves absentes. Le suivi Studio évite
+le transfert des originaux en double : 56/56 tests PostgreSQL et réception locale
+bureau/mobile acquis, originaux et aperçus privés conservés. Ce reçu ne prouve
+pas encore le correctif sur les productions réelles.
 
-**Plan et déclencheur restant.** À la fin de l’intégration 547, revalider typage,
-lints, gouvernance, cycles et build sur le head final ; puis rapprocher CI, image,
-version runtime et mêmes surfaces en production. CI/image/réception de production
-restent ouvertes. Responsable : session NEFER de livraison 547. Effort borné au lot
-courant, sans nouvelle architecture ou moteur de génération.
+**Contrôles déjà reçus localement.** Typage global avec code 0 après génération
+des types de routes ; lint et lint de gouvernance sans erreur, avec 25
+avertissements existants chacun ; aucun cycle. Les trois tests de focus de la
+modale et la réception Gazette bureau/mobile sont acquis. Celle-ci est une
+recette avec fixtures, sans mutation, et ne reçoit pas la pertinence éditoriale.
+La première suite globale comptait **5 481 succès et deux échecs sur 5 483 tests**.
+Ces deux échecs de gouvernance d’accès de `jehuty.readSignal` sont corrigés :
+16 tests ciblés et la suite de gouvernance complète (169 fichiers, 1 682 tests)
+passent, ainsi que le typage global final. Les 7 tests du lecteur et les 3 tests
+de focus passent après le dernier correctif. La suite intégrale n’a pas été
+rejouée ; aucun second résultat global n’est inventé.
 
-Les quatre images et quatre aperçus reçus séparément le 5 novembre ferment la
-réception matérielle de ces quatre options seulement. La relecture éditoriale,
-le choix du client et la publication ne sont pas effectués. Les contrats et
-fichiers vidéo/audio restent ouverts au plan de production sociale ci-dessous.
+**Plan et déclencheur.** Dès l’intégration du head 548 : recevoir la CI et l’image,
+puis relire les productions existantes sans génération. Recevoir une
+collecte sur le contexte réel SPAWT, sa sélection pertinente et une demande
+Notoria liée à un article exact. Vérifier que les propositions restent à relire
+et que les fondations ne changent pas. Le lecteur doit exposer les références
+exactes, distinguer hypothèse et article, et rendre l’ancienne provenance absente
+explicite. Responsable : session NEFER de livraison ; effort borné à cette tranche
+de collecte, lecture et suivi, sans nouveau moteur. Aucune actualité, image ou
+preuve de popularité inventée. Production 548 et réception métier restent ouvertes.
+
+Les quatre images et quatre aperçus reçus le 5 novembre ferment la réception
+matérielle de ces quatre options seulement. La relecture éditoriale, le choix du
+client et la publication ne sont pas effectués. Les contrats et fichiers
+vidéo/audio restent ouverts au plan de production sociale ci-dessous.
 
 ## 542 — recevoir les recettes de production audiovisuelle (2026-11-04)
 

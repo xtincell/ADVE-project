@@ -1,6 +1,6 @@
 /** Real PostgreSQL admission; provider boundary only is synthetic, no paid call. */
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,6 +19,8 @@ import { POST } from "@/app/api/ptah/webhook/route";
 import { ptahRouter } from "@/server/trpc/routers/ptah";
 import { openEmission } from "@/server/governance/emission-spine";
 import { attachProviderTask } from "@/server/services/ptah/task-store";
+import { GET as previewProductionImage } from "@/app/api/production/image/[id]/route";
+import { auth } from "@/lib/auth/config";
 
 const brands: string[] = [], operators: string[] = [], users: string[] = [];
 const url = "https://fixture.example.invalid/result.png";
@@ -349,7 +351,7 @@ describe("Ptah result admission", () => {
     for (let page = 0; page < 4; page++) {
       const rows = await caller.listForges({ strategyId: f.strategy.id, limit: 7, cursor });
       for (const row of rows) {
-        expect(row).not.toHaveProperty("webhookSecret"); expect(row.parameters).not.toHaveProperty("_ptahSubmission");
+        expect(row).not.toHaveProperty("webhookSecret"); expect(row).not.toHaveProperty("parameters");
         ids.push(row.id);
       }
       if (!rows.length) break;
@@ -360,6 +362,57 @@ describe("Ptah result admission", () => {
     await db.user.update({ where: { id: owner }, data: { operatorId: null } });
     try { await expect(caller.listForges({ strategyId: f.strategy.id, limit: 7 })).rejects.toMatchObject({ code: "FORBIDDEN" }); }
     finally { await db.user.update({ where: { id: owner }, data: { operatorId } }); }
+  });
+
+  it("lists completed productions without duplicating inline originals and keeps private gallery previews usable", async () => {
+    const parameters = { prompt: "Original brief. ".repeat(40_000) };
+    const f = await fixture({ status: "COMPLETED", parameters });
+    const bytes = await sharp(randomBytes(900 * 700 * 3), { raw: { width: 900, height: 700, channels: 3 } }).png().toBuffer();
+    const inline = "data:image/png;base64," + bytes.toString("base64");
+    expect(inline.length).toBeGreaterThan(2_000_000);
+    await db.generativeTask.update({ where: { id: f.task.id }, data: { resultUrls: [inline] } });
+    const version = await db.assetVersion.create({ data: { generativeTaskId: f.task.id, operatorId,
+      strategyId: f.strategy.id, kind: "image", url: inline, width: 900, height: 700, fileSizeBytes: bytes.length, metadata: {} } });
+    const session = { user: { id: owner, role: "OPERATOR" }, expires: new Date(Date.now() + 60_000).toISOString() };
+    const caller = ptahRouter.createCaller({ db, headers: undefined, session });
+    const rows = await caller.listForges({ strategyId: f.strategy.id });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ id: f.task.id, status: "COMPLETED", canResume: true,
+      versions: [{ id: version.id, kind: "image", url: `/api/production/image/${version.id}`, width: 900, height: 700 }] });
+    expect(rows[0]).not.toHaveProperty("resultUrls");
+    expect(rows[0]).not.toHaveProperty("parameters");
+    expect(Buffer.byteLength(JSON.stringify(rows))).toBeLessThan(8_000);
+    expect(JSON.stringify(rows)).not.toContain("data:image/");
+    expect(await caller.getForge({ taskId: f.task.id })).toMatchObject({ resultUrls: [inline], parameters });
+    expect((await caller.getAssetVersion({ id: version.id }))?.url).toBe(inline);
+    vi.mocked(auth).mockResolvedValue(session as never);
+    const response = await previewProductionImage(new Request(`http://localhost/api/production/image/${version.id}`),
+      { params: Promise.resolve({ id: version.id }) });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/webp");
+    expect(response.headers.get("cache-control")).toContain("private");
+    expect((await sharp(Buffer.from(await response.arrayBuffer())).metadata()).width).toBe(900);
+    vi.mocked(auth).mockResolvedValue(null as never);
+    expect((await previewProductionImage(new Request(`http://localhost/api/production/image/${version.id}`),
+      { params: Promise.resolve({ id: version.id }) })).status).toBe(401);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("keeps existing remote image and video gallery links in the compact task list", async () => {
+    const f = await fixture({ status: "COMPLETED" });
+    const version = await db.assetVersion.create({ data: { generativeTaskId: f.task.id, operatorId,
+      strategyId: f.strategy.id, kind: "video", url: "https://fixture.example.invalid/movie.mp4",
+      cdnUrl: "https://fixture.example.invalid/retained-movie.mp4", metadata: {} } });
+    const image = await db.assetVersion.create({ data: { generativeTaskId: f.task.id, operatorId,
+      strategyId: f.strategy.id, kind: "image", url, metadata: {} } });
+    const caller = ptahRouter.createCaller({ db, headers: undefined, session: { user: { id: owner, role: "OPERATOR" },
+      expires: new Date(Date.now() + 60_000).toISOString() } });
+    const rows = await caller.listForges({ strategyId: f.strategy.id });
+    expect(rows[0]?.versions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: version.id, url: version.url, cdnUrl: version.cdnUrl }),
+      expect.objectContaining({ id: image.id, url }),
+    ]));
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
   async function administrativeCaller(role: "ADMIN" | "USER" = "ADMIN") {

@@ -6,7 +6,9 @@ import { Loader2, Pin, X, Zap } from "lucide-react";
 import type { JehutyFeedItem } from "@/lib/types/jehuty";
 import { FIELD_PROVENANCE_LABEL, type FieldProvenance } from "@/domain/field-provenance";
 
-interface ArticleSpreadProps {
+export interface ArticleSpreadProps {
+  onOpen?: () => void;
+  expanded?: boolean;
   item: JehutyFeedItem;
   onNotoria: () => void;
   isNotoriaPending: boolean;
@@ -15,19 +17,26 @@ interface ArticleSpreadProps {
   onDismiss: () => void;
 }
 
-function ReadingText({ text }: { text: string }) {
+/** A stored heading is sometimes repeated as the first paragraph of the body. */
+export function readingBody(text: string, heading: string): string {
+  const paragraphs = text.trim().split(/\n\s*\n/);
+  return paragraphs.length > 1 && paragraphs[0]?.trim() === heading.trim()
+    ? paragraphs.slice(1).join("\n\n") : text;
+}
+
+function ReadingText({ text, expanded = false }: { text: string; expanded?: boolean }) {
   // The full received text stays accessible, including after a feed refresh.
   const [open, setOpen] = useState(false);
   const long = text.length > 700;
   return <div>
-    <p className={`whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground-secondary ${long && !open ? "line-clamp-6" : ""}`}>{text}</p>
-    {long && <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="mt-2 text-sm text-accent underline underline-offset-4">{open ? "Réduire" : "Lire la suite"}</button>}
+    <p className={`whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground-secondary ${long && !open && !expanded ? "line-clamp-6" : ""}`}>{text}</p>
+    {long && !expanded && <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="mt-2 text-sm text-accent underline underline-offset-4">{open ? "Réduire" : "Lire la suite"}</button>}
   </div>;
 }
 
 /** A double editorial spread: reported facts on the left, brand reading on the right.
  * No text generation on read; only the explicit CTA calls the governed Notoria route. */
-export function ArticleSpread({ item, onNotoria, isNotoriaPending, onPin, onUnpin, onDismiss }: ArticleSpreadProps) {
+export function ArticleSpread({ item, onNotoria, isNotoriaPending, onPin, onUnpin, onDismiss, onOpen, expanded = false }: ArticleSpreadProps) {
   const [failedImageUrl, setFailedImageUrl] = useState<string>();
   const context = item.articleContext;
   const analyses = context?.linkedAnalyses ?? [];
@@ -46,7 +55,9 @@ export function ArticleSpread({ item, onNotoria, isNotoriaPending, onPin, onUnpi
       <h3 className="mb-4 font-display text-2xl font-semibold leading-tight tracking-tight text-foreground md:text-3xl">
         <a href={item.externalUrl} target="_blank" rel="noopener noreferrer" className="hover:text-accent">{item.title}</a>
       </h3>
-      <ReadingText text={item.observation || item.summary} />
+      {onOpen && <button type="button" onClick={onOpen} aria-haspopup="dialog" className="mb-4 inline-block text-sm font-medium text-accent underline underline-offset-4">Ouvrir l’article et son décryptage</button>}
+      <p className="mb-2 text-xs text-foreground-muted">Extrait reçu de la source</p>
+      <ReadingText expanded={expanded} text={item.observation || item.summary} />
       <a href={item.externalUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block text-sm text-accent underline underline-offset-4">Lire l’article chez {item.source || "l’éditeur"} ↗</a>
       <div className="mt-6 flex flex-wrap gap-5 text-xs text-foreground-muted">
         <button type="button" onClick={pinned ? onUnpin : onPin} className="inline-flex items-center gap-2 hover:text-foreground"><Pin className="h-3.5 w-3.5" />{pinned ? "Retirer de la une" : "Épingler"}</button>
@@ -58,13 +69,13 @@ export function ArticleSpread({ item, onNotoria, isNotoriaPending, onPin, onUnpi
       <h4 className="mb-5 font-display text-xl font-semibold text-foreground">Ce que cette actualité met en question</h4>
       {analyses.length > 0 && <div className="space-y-5">{analyses.map(analysis => <div key={analysis.id}>
         <p className="mb-2 text-sm font-semibold text-foreground">{analysis.title}</p>
-        <ReadingText text={analysis.text} />
+        <ReadingText expanded={expanded} text={readingBody(analysis.text, analysis.title)} />
         <p className="mt-2 text-xs text-foreground-muted">Analyse liée à cet article · {new Date(analysis.createdAt).toLocaleDateString("fr-FR")}</p>
       </div>)}</div>}
       {recommendations.length > 0 && <div className="space-y-5">
         {recommendations.map(reco => <div key={reco.id}>
           <p className="mb-2 text-xs text-foreground-muted">Pilier {reco.targetPillarKey.toUpperCase()} · {reco.status === "PENDING" ? "Proposition à examiner" : reco.status === "APPLIED" ? "Proposition appliquée" : reco.status === "ACCEPTED" ? "Proposition retenue" : reco.status === "REJECTED" ? "Proposition écartée" : "Proposition enregistrée"}</p>
-          <ReadingText text={reco.explain} />
+          <ReadingText expanded={expanded} text={reco.explain} />
         </div>)}
       </div>}
       {!analyses.length && !recommendations.length && <p className="text-sm leading-relaxed text-foreground-secondary">Cette actualité est à confronter à vos choix de marque ci-dessous. Son impact n’a pas encore été analysé ; les données de votre ADVE serviront à préparer des propositions liées à cet article.</p>}
@@ -72,7 +83,7 @@ export function ArticleSpread({ item, onNotoria, isNotoriaPending, onPin, onUnpi
         <summary className="cursor-pointer text-sm font-semibold text-foreground">Les repères de votre ADVE</summary>
         <div className="mt-4 space-y-4">{context.brandContext.map(anchor => <div key={`${anchor.pillarKey}.${anchor.field}`}>
           <p className="mb-1 text-xs text-foreground-muted">{anchor.label} · {anchor.pillarKey.toUpperCase()}{anchor.certainty && anchor.certainty in FIELD_PROVENANCE_LABEL ? ` · ${FIELD_PROVENANCE_LABEL[anchor.certainty as FieldProvenance]}` : ""}{anchor.stale ? " · À réactualiser" : ""}</p>
-          <ReadingText text={anchor.text} />
+          <ReadingText expanded={expanded} text={anchor.text} />
         </div>)}</div>
       </details>}
       <button type="button" onClick={onNotoria} disabled={isNotoriaPending} className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-50">

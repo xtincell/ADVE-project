@@ -1,8 +1,8 @@
 # SERVICE-MAP — Tous les services backend mappés sur APOGEE
 
-**123 répertoires** sous `src/server/services/` (recompte 2026-10-06) : **122 services métier/enregistrements** et **1 helper** (`utils/`). Les rôles restent classifiés par sous-système ci-dessous. Le recensement des chemins est généré dans [CODE-MAP.md](CODE-MAP.md) ; ces nombres ne mesurent pas la maturité ni l'exécution réelle.
+**124 répertoires** sous `src/server/services/` (recompte 2026-11-05, version 547) : **123 services métier/enregistrements** et **1 helper** (`utils/`). Les rôles restent classifiés par sous-système ci-dessous. Le recensement des chemins est généré dans [CODE-MAP.md](CODE-MAP.md) ; ces nombres ne mesurent pas la maturité ni l'exécution réelle.
 
-Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque), `brand-theme/` (thème des livrables), `brand-tier-transition/` (transition gouvernée de palier). Ces trois modules sont des extensions de services existants, sans nouveau Neter.
+Ajouts au relevé du 21 juillet : `brand-bible/` (composition du livre de marque), `brand-theme/` (thème des livrables), `brand-tier-transition/` (transition gouvernée de palier). Le recompte 547 réintègre aussi `creative-direction/` (lecture des éditions de DA et contexte partagé par Artemis et le compositeur de livrables), déjà présent dans le code mais absent de cette carte. Ces quatre modules sont des extensions de services existants, sans nouveau Neter.
 
 **Cap APOGEE atteint — 7/7 Neteru actifs** depuis Phase 14/15.
 
@@ -630,7 +630,7 @@ documentaire et couverture globale distincts.
 [ADR-0214 Proposed](adr/0214-synthesis-approval-preserves-confidence.md) ·
 [réception](RECEPTION-VALIDATION-SYNTHESE.md).
 
-Couverture physique des manifests au 2026-10-06 : **120/123 répertoires**. `creative-intelligence/manifest.ts` réexporte le manifest du moteur sous Seshat, car le registre découvre les manifests racines. Les trois extensions ci-dessus ne portent pas de manifest co-localisé ; leur rattachement aux services parents reste à vérifier dans le registre de gouvernance. Le relevé 118/118 du 2026-07-21 est historique et ne décrit plus tout le répertoire.
+Couverture physique des manifests au 2026-11-05 : **120/124 répertoires**. `creative-intelligence/manifest.ts` réexporte le manifest du moteur sous Seshat, car le registre découvre les manifests racines. Les quatre extensions ci-dessus ne portent pas de manifest co-localisé ; leur rattachement aux services parents reste à vérifier dans le registre de gouvernance. Le relevé 118/118 du 2026-07-21 est historique et ne décrit plus tout le répertoire.
 
 ---
 
@@ -638,7 +638,7 @@ Couverture physique des manifests au 2026-10-06 : **120/123 répertoires**. `cre
 
 | Sous-système | Tier | Count | Governor Neteru |
 |---|---|---|---|
-| Propulsion (briefs) | M | 19 (incl. `deliverable-orchestrator/` Phase 17b + acteurs Phase 24) | ARTEMIS (+ INFRASTRUCTURE acteurs) |
+| Propulsion (briefs) | M | 20 (incl. `deliverable-orchestrator/` Phase 17b, acteurs Phase 24 et extension `creative-direction/`) | ARTEMIS (+ INFRASTRUCTURE acteurs) |
 | Propulsion (forge) | M | 1 (`ptah/` Phase 9 ✅ shipped) | **PTAH** (ADR-0009) |
 | Guidance | M | 24 | MESTOR (+ INFRASTRUCTURE) |
 | Telemetry | M | 27 | SESHAT (+ INFRASTRUCTURE / THOT) |
@@ -647,7 +647,7 @@ Couverture physique des manifests au 2026-10-06 : **120/123 répertoires**. `cre
 | Crew Programs | G | 6 satellites + `imhotep/` orchestrateur (Phase 14 ✅) | **IMHOTEP** (ADR-0019, supersedes ADR-0017) |
 | Comms | G | 2 satellites + `anubis/` orchestrateur (Phase 15 ✅) | **ANUBIS** (ADR-0020, supersedes ADR-0018) |
 | Admin | G | 13 | INFRASTRUCTURE |
-| **TOTAL** | | **122 services métier/enregistrements** + 1 helper (`utils/`) = **123 répertoires** | 7 Neteru actifs + INFRASTRUCTURE |
+| **TOTAL** | | **123 services métier/enregistrements** + 1 helper (`utils/`) = **124 répertoires** | 7 Neteru actifs + INFRASTRUCTURE |
 
 ### Imhotep — service Phase 14 ✅ shipped (ADR-0019)
 
@@ -778,9 +778,9 @@ les futures forges. Le manifeste Ptah reste gouverné par MESTOR.
 
 ---
 
-## 1. Propulsion (20 services — Mission Tier)
+## 1. Propulsion (21 services — Mission Tier)
 
-Génèrent la poussée vers l'apogée. **19 services briefs (incl. `deliverable-orchestrator/` Phase 17b + acteurs Phase 24) + 1 service forge (PTAH)**.
+Génèrent la poussée vers l'apogée. **20 services briefs (incl. `deliverable-orchestrator/` Phase 17b, acteurs Phase 24 et extension `creative-direction/`) + 1 service forge (PTAH)**.
 
 | Service | Rôle propulsion | Governor | Manifest |
 |---|---|---|---|
@@ -799,6 +799,7 @@ Génèrent la poussée vers l'apogée. **19 services briefs (incl. `deliverable-
 | `seshat-bridge/` | **Bridge** Telemetry → Propulsion (signaux qui déclenchent missions) | ARTEMIS | ✅ existant |
 | `ptah/` | **Forge orchestrator** — soumission fournisseur et admission des résultats ; réception bornée ci-dessus | **MESTOR** (manifest Ptah) | ✅ existant |
 | `deliverable-orchestrator/` | **Output-first composer** (Phase 17b, ADR-0050 — anciennement ADR-0037) — résout DAG briefs depuis kind matériel cible, scan vault, mode PREVIEW | ARTEMIS | ✅ existant |
+| `creative-direction/` | Lecture des éditions de DA et contexte partagé, consommés par Artemis et le compositeur de livrables | Extension de Propulsion | sans manifest propre |
 | `intention/` | Aval de l'ADVE (Phase 24, ADR-0106) : capture l'intention du dirigeant → brief candidat (intention × ADVE, manual-first) | ARTEMIS | ✅ existant |
 | `oracle-section/` | OracleSection first-class (Phase 21 F-B/F-C, ADR-0068/0070) : lifecycle 35 sections, lock optimiste, runners | ARTEMIS | ✅ existant |
 | `creative-proposal/` | Proposition Créative — gate de génération de production (ADR-0120) : validation → briefs de production depuis les frames canon | INFRASTRUCTURE | ✅ existant |
