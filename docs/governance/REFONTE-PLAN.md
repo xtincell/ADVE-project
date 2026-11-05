@@ -43,9 +43,15 @@ exception/500 ; image éditeur chargée, double page bureau et mobile sans
 débordement. Interprétation de recette explicitement synthétique et mutation
 Notoria interceptée : aucun appel IA réel déduit de ce contrôle.
 
-**Étape suivante.** Recevoir le dossier DAM détaillé, la CI, l’image et les mêmes
-parcours en production. Le vrai numéro de PR rejoint `scope-drift.md` après sa création.
-La sélection éditoriale et la publication restent des décisions distinctes.
+**Dossier DAM reçu localement.** Chrome bureau 1440×1100 et mobile 390×844 :
+provenance explicitement synthétique, gouverneur Mestor, versions V2 → V1 → V2,
+usages campagne/brief et contenu intégral reçus sur base locale, sans réponse API
+simulée. Aucun débordement, masquage par la navigation ou incident de page ; aucune
+sélection humaine ni génération. Preuve privée : `dam-browser547/receipt.json`.
+
+**Étape suivante.** Recevoir la CI, l’image et les mêmes parcours en production.
+La portée de la PR #1141 est inscrite dans `scope-drift.md`. La sélection éditoriale
+et la publication restent des décisions distinctes.
 
 ## 538 — prémisses utilisables, vérification réelle et lecteurs fidèles (2026-11-03)
 

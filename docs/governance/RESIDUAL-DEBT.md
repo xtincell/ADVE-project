@@ -6,10 +6,18 @@ ciblés et le navigateur intake sont reçus ; ils ne ferment pas le parcours ré
 ADVE → calendrier → image → publication. Les mutations du navigateur intake sont
 interceptées afin de ne créer ni faux client ni coût de génération.
 
-**Plan et déclencheur.** À la fin de l’intégration 547, exécuter typage, lints,
-gouvernance, cycles et build final ; recevoir les parcours Gazette/DAM sous une
-session réelle ; puis rapprocher CI, image, version runtime et mêmes surfaces
-en production. Responsable : session NEFER de livraison 547. Effort borné au lot
+**Réceptions locales acquises.** Gazette et dossier DAM détaillé reçus sous
+session réelle en bureau et mobile : sources et image reçue, lecture dépliable,
+versions/usages et contenu intégral, sans débordement ni exception. Les données
+de recette restent explicitement qualifiées et la mutation Notoria interceptée ;
+aucun appel IA réel, sélection humaine ou résultat de production n’en est déduit.
+Preuves privées : `gazette-dam547-local-browser-receipt.json` et
+`dam-browser547/receipt.json`.
+
+**Plan et déclencheur restant.** À la fin de l’intégration 547, revalider typage,
+lints, gouvernance, cycles et build sur le head final ; puis rapprocher CI, image,
+version runtime et mêmes surfaces en production. CI/image/réception de production
+restent ouvertes. Responsable : session NEFER de livraison 547. Effort borné au lot
 courant, sans nouvelle architecture ou moteur de génération.
 
 Les quatre images et quatre aperçus reçus séparément le 5 novembre ferment la
