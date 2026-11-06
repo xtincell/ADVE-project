@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+export const PortfolioLifecycleSchema = z.enum(["ACTIVE", "DRAFT", "ARCHIVED", "DEPRECATED"]);
+export type PortfolioLifecycle = z.infer<typeof PortfolioLifecycleSchema>;
+
 // Historical unqualified references keep their original source identity.
 export const PORTFOLIO_BARRE_INSTANCE = "barre-matanga";
 const instanceSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,79}$/);
@@ -107,7 +110,7 @@ export const PORTFOLIO_KIND_LABELS: Record<string, string> = {
 };
 
 export const PORTFOLIO_LIFECYCLE_LABELS: Record<string, string> = {
-  ACTIVE: "Actif", DRAFT: "À achever", ARCHIVED: "Archivé", DEPRECATED: "Retiré",
+  ACTIVE: "Actif", DRAFT: "Brouillon", ARCHIVED: "Archivé", DEPRECATED: "Retiré",
 };
 
 /** Missing historical namespaces never acquire a new installation’s identity. */

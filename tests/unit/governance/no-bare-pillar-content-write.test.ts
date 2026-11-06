@@ -97,19 +97,10 @@ const ALLOWED_BARE_PILLAR_CONTENT_WRITES: ReadonlyArray<AcceptedBareWrite> = [
     reroutePlanned: false,
   },
   {
-    file: "src/server/trpc/routers/strategy.ts",
-    line: 101,
+    file: "src/server/services/strategy-bootstrap.ts",
+    line: 112,
     hole: "—",
-    reason:
-      "Seed ADVE à la création de marque (client.addBrand voisin) : amorce a/d/v depuis le business-context, e/r/t/i/s vides. Bootstrap de ligne au create. Reroute via gateway = dette P2.",
-    reroutePlanned: true,
-  },
-  {
-    file: "src/server/trpc/routers/client.ts",
-    line: 304,
-    hole: "—",
-    reason:
-      "Seed ADVE à la création de marque via client.addBrand (comme strategy.create voisin) : amorce a/d/v depuis le business-context. Bootstrap de ligne au create. Reroute via gateway = dette P2.",
+    reason: "Bootstrap unique de lignes à la création atomique du dossier. Les modifications ultérieures passent par la gateway.",
     reroutePlanned: true,
   },
   {

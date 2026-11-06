@@ -736,6 +736,13 @@ model ClientAllocation {
   @@index([scopeNodeId])
 }
 
+enum ClientOrganizationKind {
+  UNSPECIFIED
+  INTERNATIONAL_GROUP
+  REGIONAL_OFFICE
+  GROUP_SUBSIDIARY
+}
+
 model Client {
   id           String  @id @default(cuid())
   name         String
@@ -749,6 +756,13 @@ model Client {
   operatorId   String
   status       String  @default("ACTIVE")
 
+  organizationKind ClientOrganizationKind @default(UNSPECIFIED)
+  organizationKey String?
+  organizationSourceRefs Json?
+  parentClientId String?
+  parentClient Client? @relation("ClientOrganization", fields: [parentClientId], references: [id], onDelete: Restrict)
+  childClients Client[] @relation("ClientOrganization")
+
   operator    Operator           @relation(fields: [operatorId], references: [id])
   strategies  Strategy[]
   allocations ClientAllocation[] // Chantier 5 — multi-agence
@@ -759,6 +773,8 @@ model Client {
 
   @@index([operatorId])
   @@index([contactEmail])
+  @@index([parentClientId])
+  @@unique([operatorId, organizationKey])
 }
 
 model Strategy {

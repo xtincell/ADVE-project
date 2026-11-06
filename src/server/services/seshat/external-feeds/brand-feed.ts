@@ -13,6 +13,7 @@
  * est réutilisé (cache read-through, aussi préchauffé par le cron).
  */
 
+import { brandMarketScope } from "@/domain/brand-market-scope";
 import type { PrismaClient, Prisma } from "@prisma/client";
 import { subjectSourcesFor, sectorHeadTerm } from "./feed-sources";
 import { fetchRssText, parseRssItems, toFeedItems, type RssItem } from "./rss";
@@ -310,7 +311,8 @@ export async function getOrBuildBrandFeed(
   brand: {
     strategyId: string;
     name: string;
-    countryCode: string;
+    countryCode: string|null;
+    marketRegion?: string|null;
     sector: string | null;
     extraSubjects?: string[];
   },
@@ -319,10 +321,10 @@ export async function getOrBuildBrandFeed(
   const marketKey = marketKeyFor(brand.strategyId);
   // Read ADVE even when a legacy/manual subject list exists. The editor still
   // receives that exact list from loadWatchSubjects; no saved choice is changed.
-  const context = await loadWatchContext(db, brand.strategyId, countryDisplayNameFr(brand.countryCode));
+  const context = await loadWatchContext(db, brand.strategyId, brand.marketRegion ?? countryDisplayNameFr(brand.countryCode));
   const topics = buildBrandFeedTopics(brand, context);
   const subjects = topics.map(t => t.query);
-  const contextFingerprint = JSON.stringify(topics);
+  const contextFingerprint = JSON.stringify({topics,edition:brand.countryCode,region:brand.marketRegion ?? null});
 
   // ── Cache journalier (read-through) ──────────────────────────────────────────
   if (!opts?.force) {
@@ -435,7 +437,14 @@ export async function refreshActiveBrandFeeds(
 ): Promise<{ built: number; skipped: number }> {
   const strategies = await db.strategy
     .findMany({
-      where: { countryCode: { not: null }, status: { not: "ARCHIVED" } },
+      where: {
+        archivedAt:null, status:{not:"ARCHIVED"},
+        AND:[
+          { OR:[{countryCode:{not:null}},{businessContext:{path:["marketRegion"],string_starts_with:""}}] },
+          { OR:[{brandNodes:{none:{}}},{brandNodes:{some:{lifecycle:"ACTIVE",archivedAt:null}}}] },
+          { OR:[{clientId:null},{client:{status:{notIn:["REFERENCE","ARCHIVED"]}}}] },
+        ],
+      },
       select: { id: true, name: true, countryCode: true, businessContext: true },
       orderBy: { updatedAt: "desc" },
       // 50 → 200 (rationalisation 2026-07-16) : au-delà du cap, la N+1ᵉ marque
@@ -447,7 +456,8 @@ export async function refreshActiveBrandFeeds(
   let built = 0;
   let skipped = 0;
   for (const s of strategies) {
-    if (!s.countryCode) {
+    const marketRegion = brandMarketScope(s).region;
+    if (!s.countryCode && !marketRegion) {
       skipped++;
       continue;
     }
@@ -457,11 +467,11 @@ export async function refreshActiveBrandFeeds(
     // (ADVE dérivé / édition manuelle), sinon le cache du jour servirait la
     // veille générique et l'ADVE ne serait consulté qu'au build à la demande.
     const { countryDisplayNameFr } = await import("./watch-subjects");
-    const watch = await loadWatchSubjects(db, s.id, s.businessContext, countryDisplayNameFr(s.countryCode));
+    const watch = await loadWatchSubjects(db, s.id, s.businessContext, marketRegion ?? countryDisplayNameFr(s.countryCode));
     const r = await getOrBuildBrandFeed(db, {
       strategyId: s.id,
       name: s.name,
-      countryCode: s.countryCode,
+      countryCode: s.countryCode, marketRegion,
       sector,
       extraSubjects: watch.subjects,
     }).catch(() => null);

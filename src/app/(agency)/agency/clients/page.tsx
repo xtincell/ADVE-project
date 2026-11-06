@@ -50,6 +50,7 @@ export default function AgencyClientsPage() {
     };
   });
 
+  const scoreRows = tableData.filter(c => c.status !== "REFERENCE" || c.brandCount > 0);
   const columns = [
     {
       key: "name",
@@ -81,14 +82,14 @@ export default function AgencyClientsPage() {
       header: "Score ADVE moyen",
       sortable: true,
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-sm text-white">{item.avgScore.toFixed(0)}/200</span>
+        <span className="text-sm text-white">{item.status === "REFERENCE" && !item.brandCount ? "Sans marque évaluée" : `${item.avgScore.toFixed(0)}/200`}</span>
       ),
     },
     {
       key: "status",
       header: "Statut",
       sortable: true,
-      render: (item: (typeof tableData)[0]) => <StatusBadge status={item.status} />,
+      render: (item: (typeof tableData)[0]) => <StatusBadge status={item.status === "REFERENCE" ? "Référence" : item.status} />,
     },
     {
       key: "createdAt",
@@ -119,7 +120,7 @@ export default function AgencyClientsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <PageHeader
           title="Clients"
-          description={`${allClients.length} clients dans votre portefeuille`}
+          description={`${allClients.length} organisations dans votre portefeuille`}
           breadcrumbs={[{ label: "Agence", href: "/agency" }, { label: "Clients" }]}
         />
         <Link
@@ -132,13 +133,13 @@ export default function AgencyClientsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard title="Total clients" value={allClients.length} icon={Building} />
+        <StatCard title="Total clients" value={allClients.filter(c=>c.status !== "REFERENCE").length} icon={Building} />
         <StatCard
           title="Total marques"
           value={allClients.reduce((sum, c) => sum + (c._count?.strategies ?? 0), 0)}
           icon={Building2}
         />
-        <StatCard title="Score ADVE moyen" value={`${tableData.length > 0 ? (tableData.reduce((s, c) => s + c.avgScore, 0) / tableData.length).toFixed(0) : 0}/200`} icon={TrendingUp} />
+        <StatCard title="Score ADVE moyen" value={`${scoreRows.length > 0 ? (scoreRows.reduce((s, c) => s + c.avgScore, 0) / scoreRows.length).toFixed(0) : "—"}/200`} icon={TrendingUp} />
       </div>
 
       <SearchFilter
@@ -152,6 +153,7 @@ export default function AgencyClientsPage() {
             options: [
               { value: "ACTIVE", label: "Actif" },
               { value: "PROSPECT", label: "Prospect" },
+              { value: "REFERENCE", label: "Référence" },
               { value: "ARCHIVED", label: "Archive" },
             ],
           },

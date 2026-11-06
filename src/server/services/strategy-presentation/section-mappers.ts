@@ -7,6 +7,7 @@
  * Note: Uses `any` for strategy param since Prisma complex includes resist clean typing.
  */
 
+import { brandMarketScope } from "@/domain/brand-market-scope";
 import { isUsableGeneration } from "@/domain/generation-result";
 import { readOvertonPositioning } from "@/domain/overton-positioning";
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
@@ -221,6 +222,7 @@ export function mapContexteDefi(strategy: any): ContexteDefiSection {
           horizon: safeStr(prophecy.horizon) ?? "",
         }
       : null,
+    market: brandMarketScope(strategy),
     client: strategy.client
       ? {
           sector: strategy.client.sector,

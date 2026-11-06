@@ -7,6 +7,7 @@ interface Props { data: ContexteDefiSection }
 
 export function ContexteDefi({ data }: Props) {
   const bc = data.businessContext;
+  const market = [data.market?.region, data.market?.countryCode, data.market?.scaleLabel].filter(Boolean).join(" · ");
   return (
     <div className="space-y-6">
       {/* Contexte marche */}
@@ -18,7 +19,8 @@ export function ContexteDefi({ data }: Props) {
           {bc.positioningArchetype && <InfoBlock label="Archetype de positionnement" value={bc.positioningArchetype} />}
           {bc.economicModels.length > 0 && <InfoBlock label="Modeles economiques" value={bc.economicModels.join(", ")} />}
           {bc.salesChannels.length > 0 && <InfoBlock label="Canaux de vente" value={bc.salesChannels.join(", ")} />}
-          {data.client?.country && <InfoBlock label="Marche" value={data.client.country} />}
+          {market && <InfoBlock label="Marché du dossier" value={market} />}
+          {data.client?.country && <InfoBlock label="Pays du siège du client" value={data.client.country} />}
         </div>
       </div>
 

@@ -15,6 +15,7 @@ import { BrandWorkspace, writeOrigin } from "@/components/portfolio/BrandWorkspa
 function render(author: string | null = "seed-spawt", hasHistory = true) {
   const root = { id: "brand", name: "Marque de recette", slug: "fixture", operatorId: "team", strategyId: "strategy", sourceRefs: [] };
   state.data = { root, nodes: [root], barre: null, inheritedFrom: null, referenceIssues: [],
+    dossierContext: { kind: "OWN", strategyId: "strategy", sourceNodeId: root.id, sourceName: root.name },
     sourceStatus: "NOT_CONNECTED", strategies: [{ id: "strategy", name: "Dossier de recette", dataSources: [], campaigns: [], brandAssets: [],
       pillars: [{ key: "a", currentVersion: 3, validationStatus: "VALIDATED", staleAt: null,
         versions: hasHistory ? [{ version: 3, author, createdAt: new Date("2026-07-14T12:00:00Z"), reason: "Initial seed" }] : [] }],

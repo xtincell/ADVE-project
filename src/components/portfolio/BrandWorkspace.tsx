@@ -54,6 +54,7 @@ function WorkspaceContent({ data, refresh, refreshing }: { data: PortfolioWorksp
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [selectedSource, setSelectedSource] = useState<{ id: string; strategyId: string } | null>(null);
   const { setStrategyId } = useStrategy();
+  const dossierContext = data.dossierContext ?? { kind: "UNAVAILABLE" as const };
   const match = (s: string) => normalize(s).includes(normalize(search));
   const barre = data.barre;
   const products = (barre?.products ?? []).filter((p) => (showArchives || !p.archived) && match(`${p.name} ${p.brand} ${p.range} ${p.format} ${p.language}`));
@@ -85,6 +86,12 @@ function WorkspaceContent({ data, refresh, refreshing }: { data: PortfolioWorksp
     <div className="flex flex-wrap items-center justify-between gap-3 border-y border-border py-3 text-xs text-foreground-secondary">
       <p className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-accent" /> Dossier de marque · consultation et travail manuel</p>
       <button onClick={refresh} disabled={refreshing} className="inline-flex items-center gap-2 rounded px-2 py-1 hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-accent"><RefreshCw className="h-3 w-3" />{refreshing ? "Actualisation…" : "Actualiser les sources"}</button>
+    </div>
+    <div aria-label="Origine du dossier ADVE" className="rounded-xl border border-border bg-surface-raised p-4 text-sm">
+      {dossierContext.kind === "OWN" && <p>Dossier ADVE propre à {data.root.name}{data.root.countryCode ? ` · ${data.root.countryCode}` : ""}. Ses réponses et ses validations sont rattachées à ce dossier.</p>}
+      {dossierContext.kind === "INHERITED" && <><p className="font-medium">Socle hérité de {dossierContext.sourceName}</p><p className="mt-2 text-foreground-secondary">{data.root.name} n’a pas encore de dossier ADVE propre. Les données, scores et validations du socle partagé ne décrivent pas la complétude de ce marché. Créez ou rattachez sa plateforme pour travailler ce périmètre.</p></>}
+      {dossierContext.kind === "NONE" && <p>Aucun dossier ADVE propre ni socle hérité. Les références reliées restent consultables dans leurs dossiers d’origine.</p>}
+      {dossierContext.kind === "UNAVAILABLE" && <p>Le dossier ADVE relié est indisponible pour cette consultation. Aucun dossier associé ne le remplace.</p>}
     </div>
     {data.referenceIssues.length > 0 && <div role="status" className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-warning"><p>Des raccordements sont à réparer. Les autres liens restent consultables.</p><ul className="mt-2 space-y-1">{data.referenceIssues.map((issue, i) => <li key={i}>{issue}</li>)}</ul></div>}
     {data.sourceError && <p role="status" className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-warning">{data.sourceError} Les données de La Fusée restent consultables ; les données externes ne sont pas comptées comme absentes.</p>}
