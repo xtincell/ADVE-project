@@ -8,6 +8,8 @@ import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { useToast } from "@/components/shared/notification-toast";
 import { ArrowLeft, Download, Loader2, FileText, CheckCircle } from "lucide-react";
+import { EditorialCalendarDocument } from "@/components/cockpit/editorial-calendar-document";
+import { recordedEditorialCalendarSchema } from "@/domain/editorial-source";
 import { DeliverableContentValue } from "@/components/cockpit/deliverable-content-value";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -110,12 +112,12 @@ export default function DeliverableViewPage() {
     <div className="min-h-screen bg-background">
       {showLaunch && sequence ? <LaunchModal strategyId={strategyId} seq={sequence} onClose={() => setShowLaunch(false)} onSuccess={() => { setSelectedVersions({}); void utils.glory.compileDeliverable.invalidate(); void utils.glory.compilableDeliverables.invalidate(); }} /> : null}
       {/* Toolbar — not included in PDF */}
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background/95 backdrop-blur px-6 py-3">
+      <div className="z-10 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur sm:sticky sm:top-0 sm:px-6">
         <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-foreground-secondary hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" /> Retour
         </button>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-foreground-muted">{m.name}</span>
+        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+          <span className="hidden text-sm text-foreground-muted sm:inline">{m.name}</span>
           {m.isComplete ? (
             <span className="inline-flex items-center gap-1 text-2xs text-success">
               <CheckCircle className="h-3 w-3" /> {accepted ? "Relecture acceptée" : "Contenu complet · à relire"}
@@ -177,6 +179,7 @@ export default function DeliverableViewPage() {
         {/* Sections */}
         {m.sections.map((section, i) => {
           const content = section.content;
+          const documentary = section.sourceToolSlug === "content-calendar-strategist" ? recordedEditorialCalendarSchema.safeParse(content) : null;
           const entries = Object.entries(content).filter(([k]) => !k.startsWith("_"));
 
           return (
@@ -193,7 +196,7 @@ export default function DeliverableViewPage() {
                 </div>
               </div>
 
-              {entries.length === 0 ? (
+              {documentary?.success ? <EditorialCalendarDocument calendar={documentary.data} strategyId={strategyId}/> : entries.length === 0 ? (
                 <p className="text-sm text-foreground-muted italic">Section en attente de generation.</p>
               ) : (
                 <div className="space-y-6">

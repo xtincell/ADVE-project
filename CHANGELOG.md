@@ -1,3 +1,9 @@
+## v6.27.553 — Le Playbook d’engagement relit les canaux et le planning documentés (2026-11-06)
+
+- Les sections Artemis et GLORY du Playbook prennent en compte les pièces de référence de la marque, avec l’identité et l’empreinte des éditions consultées. Les liens publics et les profils sociaux du Playbook proviennent des déclarations identifiées.
+- Le calendrier distingue les sujets proposés des occurrences externes documentées. Chaque occurrence conserve son texte, son canal, sa date, son statut et sa source. La lecture et la production du Playbook conservent le choix du planning opérationnel dans le Studio.
+- Sur SPAWT, la recette locale des pièces de novembre retrouve les dix sujets, les douze diffusions proposées et les neuf légendes de l’export Buffer. L’édition produite reste soumise à la relecture de l’équipe.
+
 ## v6.27.552 — fix(notoria): comparer les propositions et justifier les actions issues d’un article (2026-11-06)
 
 - Les recommandations générales confrontent les amendements de champs à leur valeur en place ou au seuil documenté de la règle. La présélection et la possibilité d’appliquer un remplacement sont distinctes. Les décisions unitaires de préférence, de risque et de scénario conservent une voie manuelle.

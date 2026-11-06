@@ -1,3 +1,4 @@
+import { readEditorialSources, prepareEditorialEvidence, type EditorialEvidence } from "./editorial-references";
 import { depositInBrandVault, recordVaultDepositFailure } from "@/server/services/brand-vault/glory-deposit";
 export { depositInBrandVault } from "@/server/services/brand-vault/glory-deposit";
 import { readMixDecision } from "@/domain/production-mix";
@@ -191,7 +192,8 @@ async function executeGloryStep(
   ref: string,
   strategyId: string,
   context: SequenceContext,
-  resolver: PillarResolver
+  resolver: PillarResolver,
+  editorial?: EditorialEvidence,
 ): Promise<Record<string, unknown>> {
   const tool = getGloryTool(ref);
 
@@ -225,7 +227,7 @@ async function executeGloryStep(
 
   // Lazy import to avoid circular dependency (index.ts re-exports us)
   const { executeTool } = await import("./engine");
-  const { outputId, output, intentId: gloryIntentId } = await executeTool(ref, strategyId, input);
+  const { outputId, output, intentId: gloryIntentId } = await executeTool(ref, strategyId, input, { editorial });
 
   if (!isUsableGeneration(output)) throw new Error("La production n’a pas fourni de contenu exploitable. La tentative est conservée dans l’historique.");
 
@@ -464,7 +466,8 @@ function extractForgeParameters(toolOutput: Record<string, unknown>): Record<str
 async function executeArtemisStep(
   ref: string,
   strategyId: string,
-  context: SequenceContext
+  context: SequenceContext,
+  editorial?: EditorialEvidence,
 ): Promise<Record<string, unknown>> {
   // Dynamic import to avoid circular deps
   const { executeFramework } = await import("@/server/services/artemis");
@@ -474,7 +477,7 @@ async function executeArtemisStep(
     if (typeof value === "string") input[key] = value;
   }
 
-  const result = await executeFramework(ref, strategyId, input);
+  const result = await executeFramework(ref, strategyId, input, editorial);
   if (!isUsableGeneration(result.output)) {
     throw new Error("Le diagnostic n’a produit aucun contenu exploitable. Sa tentative a été conservée.");
   }
@@ -1027,6 +1030,9 @@ export async function executeSequence(
   const briefContext = options?.briefContext ?? {};
 
   const context: SequenceContext = { ...strategyContext, ...briefContext, ...initialContext };
+  const editorial = key === "PLAYBOOK-E"
+    ? prepareEditorialEvidence(await readEditorialSources(strategyId), new Date().toISOString().slice(0,7))
+    : undefined;
   const authorizedCommercialInputs: Record<string, string> = {};
   if (key === "OFFRE-V") {
     for (const field of COMMERCIAL_INPUT_FIELDS) {
@@ -1148,13 +1154,13 @@ export async function executeSequence(
           output = await executePillarStep(step.ref, strategyId, context);
           break;
         case "GLORY":
-          output = await executeGloryStep(step.ref, strategyId, context, resolver);
+          output = await executeGloryStep(step.ref, strategyId, context, resolver, editorial);
           if (output._gloryOutputId) {
             gloryOutputIds.push(output._gloryOutputId as string);
           }
           break;
         case "ARTEMIS":
-          output = await executeArtemisStep(step.ref, strategyId, context);
+          output = await executeArtemisStep(step.ref, strategyId, context, editorial);
           break;
         case "SESHAT":
           output = await executeSeshatStep(step.ref, strategyId, context);

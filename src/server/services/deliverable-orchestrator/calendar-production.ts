@@ -1,5 +1,6 @@
 /** Planning → briefs de contenu. Seul le calendrier Glory stocké fait autorité.
  * Une date recalculée ou un brief candidat ne constitue jamais une publication approuvée. */
+import { readActiveCalendar } from "./active-calendar";
 import { db } from "@/lib/db";
 import { Prisma, type BrandAsset } from "@prisma/client";
 import { brandVoiceFromPillarD, deriveDatedPosts, parseContentCalendar, parseLaunchTimeline, type ContentPost } from "@/lib/types/launch-calendar";
@@ -31,7 +32,7 @@ export async function resolveCalendarView(view:CalendarView, client: Prisma.Tran
   const {strategyId}=view;
   const [strategy,output,timeline,d,archives]=await Promise.all([
     client.strategy.findUnique({where:{id:strategyId},select:{status:true,operatorId:true}}),
-    client.gloryOutput.findFirst({where:{strategyId,...(view.editionId ? {id:view.editionId,toolSlug:{in:CALENDAR_TOOLS}} : {toolSlug:ACTIVE_CALENDAR_TOOL})},orderBy:[{createdAt:"desc"},{id:"desc"}]}),
+    view.editionId ? client.gloryOutput.findFirst({ where: {strategyId, id:view.editionId, toolSlug:{in:CALENDAR_TOOLS}} }) : readActiveCalendar(strategyId, client),
     client.gloryOutput.findFirst({where:{strategyId,toolSlug:"launch-timeline-planner"},orderBy:[{createdAt:"desc"},{id:"desc"}],select:{output:true}}),
     client.pillar.findUnique({where:{strategyId_key:{strategyId,key:"d"}},select:{content:true}}),
     client.gloryOutput.findMany({where:{strategyId,toolSlug:HISTORICAL_CALENDAR_TOOL},select:{output:true}}),

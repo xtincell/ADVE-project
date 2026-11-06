@@ -8,6 +8,7 @@
  * Runs tools with AI (Claude), tracks outputs, manages the BRAND pipeline
  */
 
+import { EDITORIAL_REFERENCE_RULE, type EditorialEvidence } from "./editorial-references";
 import { callLLM } from "@/server/services/llm-gateway";
 import { isUsableGeneration } from "@/domain/generation-result";
 import { executeStructuredLLMCall, LLMStructuredCallError } from "@/server/services/utils/llm-structured";
@@ -117,7 +118,7 @@ export async function executeTool(
   toolSlug: string,
   strategyId: string,
   input: Record<string, string>,
-  media: { video?: import("@/server/services/llm-gateway/audiovisual").GatewayVideo; images?: readonly import("@/server/services/llm-gateway/vision").GatewayImage[]; signal?: AbortSignal; production?: { previewIntentId: string; dispatchIntentId?: string; sourceText: string } } = {},
+  media: { editorial?: EditorialEvidence; video?: import("@/server/services/llm-gateway/audiovisual").GatewayVideo; images?: readonly import("@/server/services/llm-gateway/vision").GatewayImage[]; signal?: AbortSignal; production?: { previewIntentId: string; dispatchIntentId?: string; sourceText: string } } = {},
 ): Promise<{ outputId: string; output: Record<string, unknown>; intentId: string | null }> {
   const tool = getGloryTool(toolSlug);
   if (!tool) throw new Error(`GLORY tool inconnu: ${toolSlug}`);
@@ -204,7 +205,7 @@ export async function executeTool(
   // reproductible, garantie par `outputSchema`, provenance DETERMINISTIC_COMPOSE.
   // C'est le chemin canonique (ADVERTIS → Glory → GloryOutput) qui faisait défaut.
   if (hasGloryComposer(tool.slug)) {
-    const composed = await composeGloryDeterministic(tool.slug, strategyId, input);
+    const composed = await composeGloryDeterministic(tool.slug, strategyId, input, media.editorial);
     if (composed.ok) {
       // Commercial amounts must never pass a permissive/LLM fallback.
       const composedOutput = (tool.slug === "devis-generator" || tool.slug === "pricing-strategy-advisor")
@@ -267,6 +268,7 @@ export async function executeTool(
     userPrompt = userPrompt.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), () => sanitizeInline(value));
   }
 
+  if (media.editorial?.brief) userPrompt += "\n\n" + EDITORIAL_REFERENCE_RULE + "\n" + media.editorial.brief;
   if (media.production?.sourceText) userPrompt += "\n\n" + PRODUCTION_SOURCE_RULE + "\n" + media.production.sourceText;
 
   // Load strategy context — fencé comme DONNÉE non fiable (anti-injection).
@@ -411,6 +413,9 @@ ${strategyContext}${referenceContext}`;
     }
   }
 
+  if (media.editorial?.citations.length && isUsableGeneration(aiOutput)) {
+    aiOutput.editorialSources = media.editorial.citations;
+  }
   const gloryOutput = await db.gloryOutput.create({
     data: {
       strategyId,

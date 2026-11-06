@@ -28,6 +28,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### Playbook d’engagement — canal public et calendrier de référence (2026-11-06)
+
+Une production réelle attribuait à deux profils un domaine fabriqué à partir du nom de marque et du pays. Le calendrier était composé depuis une cadence type malgré la présence de légendes documentées. Son enregistrement pouvait aussi devenir le dernier planning sélectionné par le Studio.
+
+La lecture des éditions courantes de la marque alimente les diagnostics, les textes et les compositions déterministes. Les copies externes restent attachées à leur statut, date et édition. La lecture du planning opérationnel écarte les sorties du Playbook, y compris les anciennes éditions liées à leur exécution. La relecture humaine, la programmation et les diffusions suivent leurs décisions existantes.
+
 ### Livrables Glory et Artemis — une tentative partielle pouvait remplacer l’édition relue (2026-11-06)
 
 Une erreur Artemis historique avec `error: true` restait lisible comme analyse. Une étape en échec pouvait alimenter sa dépendance ou être comptée comme réussie dans le pipeline BRAND. Le catalogue qualifiait de terminé tout document daté, et le coffre utilisait la dernière tentative pour débloquer les prérequis des séquences suivantes.
