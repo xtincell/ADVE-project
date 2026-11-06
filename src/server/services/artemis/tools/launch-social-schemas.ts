@@ -12,6 +12,7 @@
  */
 
 import { z } from "zod";
+import { editorialSourceSchema, editorialPlanSchema, recordedPostSchema } from "@/domain/editorial-source";
 
 export const namingOutputSchema = z.object({
   brandName: z.string(),
@@ -47,6 +48,7 @@ export const socialCopyOutputSchema = z.object({
   brand: z.string(),
   voice: z.string().nullable().optional(),
   market: z.string().nullable().optional(),
+  channelSources: z.array(editorialSourceSchema).optional(),
   handleBaseline: z.string().nullable().optional(),
   profiles: z.array(socialProfileSchema),
   linkInBio: z
@@ -57,6 +59,7 @@ export const socialCopyOutputSchema = z.object({
 });
 
 export const contentPostSchema = z.object({
+  ...recordedPostSchema.partial().shape,
   date: z.string(),
   weekday: z.string(),
   week: z.string().nullable().optional(),
@@ -71,6 +74,11 @@ export const contentPostSchema = z.object({
 });
 
 export const contentCalendarOutputSchema = z.object({
+  calendarRole: z.enum(["PLAYBOOK_PROPOSAL","EXTERNAL_SCHEDULE_SNAPSHOT"]).optional(),
+  editionLabel: z.string().optional(),
+  planning: z.array(editorialPlanSchema).optional(),
+  reading: z.string().optional(),
+  sources: z.array(editorialSourceSchema).optional(),
   brand: z.string(),
   cadenceParCanal: z.record(
     z.string(),

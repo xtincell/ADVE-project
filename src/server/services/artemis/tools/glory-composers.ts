@@ -20,6 +20,7 @@
 
 import { db } from "@/lib/db";
 import { deriveDatedPosts, type ContentCalendar } from "@/lib/types/launch-calendar";
+import { channelDeclaration, currentPlanningReferences, planOutline, readEditorialSources, recordedSchedule, sourceCitation, type EditorialSource } from "./editorial-references";
 import { LAUNCH_SOCIAL_SCHEMAS } from "./launch-social-schemas";
 
 type Blob = Record<string, unknown>;
@@ -27,6 +28,7 @@ type Blob = Record<string, unknown>;
 export interface GloryComposerContext {
   strategy: { id: string; name: string; countryCode: string | null; businessContext: Blob | null };
   pillars: Partial<Record<string, Blob>>;
+  editorial?: { sources: EditorialSource[]; month: string; website?: string | null; playbook?: boolean };
 }
 
 // ── Helpers purs ────────────────────────────────────────────────────────────
@@ -101,7 +103,7 @@ const PLATFORMS: Array<{ key: string; label: string }> = [
 
 // ── Context loader (1 requête) ───────────────────────────────────────────────
 
-export async function loadGloryComposerContext(strategyId: string): Promise<GloryComposerContext | null> {
+export async function loadGloryComposerContext(strategyId: string, editorial?: GloryComposerContext["editorial"]): Promise<GloryComposerContext | null> {
   const strategy = await db.strategy.findUnique({
     where: { id: strategyId },
     select: {
@@ -109,6 +111,7 @@ export async function loadGloryComposerContext(strategyId: string): Promise<Glor
       name: true,
       countryCode: true,
       businessContext: true,
+      quickIntakes: { where: { quarantinedAt: null, websiteUrl: { not: null } }, orderBy: { updatedAt: "desc" }, take: 1, select: { websiteUrl: true } },
       pillars: { select: { key: true, content: true } },
     },
   });
@@ -123,6 +126,7 @@ export async function loadGloryComposerContext(strategyId: string): Promise<Glor
       businessContext: (strategy.businessContext ?? null) as Blob | null,
     },
     pillars,
+    ...(editorial ? { editorial: { ...editorial, website: strategy.quickIntakes?.[0]?.websiteUrl } } : {}),
   };
 }
 
@@ -198,8 +202,16 @@ export function composeSocialCopy(ctx: GloryComposerContext): Blob {
   const rituels = names(arr(pick(e, "rituels")));
   const sector = str(pick(ctx.strategy.businessContext, "sector"));
   const country = str(pick(ctx.strategy.businessContext, "country")) ?? (ctx.strategy.countryCode ?? null);
-  const { baseline, xHandle, domain } = buildHandles(ctx);
-  const link = `https://${domain}`;
+  const channels = channelDeclaration(ctx.editorial?.sources ?? [], ctx.editorial?.website);
+  const link = channels.website;
+  function recordedHandle(platform: string) {
+    const url = channels.links[platform];
+    if (!url) return null;
+    const profile = new URL(url);
+    const hosts: Record<string,string[]> = {Instagram:["instagram.com"],TikTok:["tiktok.com"],Facebook:["facebook.com"],X:["x.com","twitter.com"]};
+    const handle = profile.pathname.match(/^\/@?([\w.-]+)\/?$/)?.[1];
+    return hosts[platform]?.includes(profile.hostname.replace(/^www\./,"")) && handle ? "@" + handle : null;
+  }
 
   const voice = personnalite.length ? `${personnalite.join(", ")}.` : null;
   const highlights = (lexique.length ? lexique : rituels).slice(0, 5);
@@ -209,7 +221,7 @@ export function composeSocialCopy(ctx: GloryComposerContext): Blob {
   const profiles: Blob[] = [
     {
       platform: "Instagram",
-      handle: baseline,
+      handle: recordedHandle("Instagram"),
       displayName,
       bio: [slogan, promesse, "👇 Découvre-nous"].filter(Boolean).join("\n"),
       link,
@@ -219,7 +231,7 @@ export function composeSocialCopy(ctx: GloryComposerContext): Blob {
     },
     {
       platform: "TikTok",
-      handle: baseline,
+      handle: recordedHandle("TikTok"),
       displayName: brandName,
       bio: bioBase || promesse || slogan,
       link,
@@ -227,14 +239,14 @@ export function composeSocialCopy(ctx: GloryComposerContext): Blob {
     },
     {
       platform: "WhatsApp Community",
-      handle: "lien d'invitation",
+      handle: null,
       displayName: `La communauté ${brandName}`,
       bio: promesse ? `${promesse} — chaque semaine, l'essentiel partagé par la communauté.` : `La communauté ${brandName}.`,
       channels: ["📣 Annonces", "🍽️ Partages de la communauté"],
     },
     {
       platform: "Facebook",
-      handle: baseline,
+      handle: recordedHandle("Facebook"),
       displayName,
       bio: promesse || bioBase,
       about: elevator,
@@ -242,7 +254,7 @@ export function composeSocialCopy(ctx: GloryComposerContext): Blob {
     },
     {
       platform: "X (Twitter)",
-      handle: xHandle,
+      handle: recordedHandle("X"),
       displayName: brandName,
       bio: [slogan, promesse].filter(Boolean).join(". "),
       priority: "secondaire",
@@ -253,13 +265,14 @@ export function composeSocialCopy(ctx: GloryComposerContext): Blob {
     brand: ctx.strategy.name,
     voice,
     market: [country, sector].filter(Boolean).join(" · ") || null,
-    handleBaseline: baseline,
+    handleBaseline: recordedHandle("Instagram"),
+    channelSources: channels.sources,
     profiles,
     linkInBio: {
-      recommendation: `un seul lien = la landing principale (${domain}) qui capte le lead`,
+      recommendation: link ? "Lien officiel de la marque : " + link : "Renseigner le site officiel avant de diffuser ces profils.",
       avoid: "linktree générique qui dilue le CTA",
     },
-    doNot: onNeDitPas.map((x) => `ne pas dire « ${x} »`),
+    doNot: onNeDitPas,
   };
 }
 
@@ -324,10 +337,25 @@ export function composeContentCalendar(ctx: GloryComposerContext): Blob {
   const personnalite = strArr(pick(ton, "personnalite"));
   const brandVoice = { voice: personnalite.length ? personnalite.join(", ") : null, lexique };
   const calForPosts = { cadenceParCanal, themesParPhaseOverton, hashtags: { signature, local } };
+  const documentary = ctx.editorial ? recordedSchedule(ctx.editorial.sources, ctx.editorial.month) : [];
+  const plans = ctx.editorial ? currentPlanningReferences(ctx.editorial.sources, ctx.editorial.month) : [];
+  if (documentary.length || plans.length) {
+    return {
+      brand: ctx.strategy.name,
+      calendarRole: "EXTERNAL_SCHEDULE_SNAPSHOT",
+      editionLabel: "Programmation documentée · " + ctx.editorial!.month,
+      planning: plans.map(planOutline),
+      sources: [...plans.map(sourceCitation), ...new Map(documentary.map(p => [p.source.sourceId, p.source])).values()],
+      reading: documentary.length ? "Diffusions et légendes reprises à la date de l’export. Vérifier le statut dans le canal avant toute action." : "Plan et briefs documentés. Consulter ces éditions pour les sujets retenus. Les occurrences de diffusion restent à identifier.",
+      cadenceParCanal: {}, themesParPhaseOverton: [], hashtags: { signature: [], local: [] },
+      doNot: strArr(pick(ton, "onNeditPas") ?? pick(ton, "onNeDitPas")), posts: documentary,
+    };
+  }
   const posts = deriveDatedPosts(calForPosts, launchAnchorISO(ctx), 4, brandVoice);
 
   return {
     brand: ctx.strategy.name,
+    ...(ctx.editorial?.playbook ? { calendarRole: "PLAYBOOK_PROPOSAL", editionLabel: "Projection éditoriale à relire" } : {}),
     cadenceParCanal,
     themesParPhaseOverton,
     hashtags: { signature, local },
@@ -477,6 +505,7 @@ export async function composeGloryDeterministic(
   slug: string,
   strategyId: string,
   input: Record<string, string> = {},
+  editorial?: GloryComposerContext["editorial"],
 ): Promise<DeterministicGloryResult> {
   // Composer async adossé à Seshat (lit le corpus DB, pas l'ADVERTIS seul).
   const asyncComposer = ASYNC_GLORY_COMPOSERS[slug];
@@ -488,7 +517,10 @@ export async function composeGloryDeterministic(
   const composer = GLORY_COMPOSERS[slug];
   if (!composer) return { output: {}, ok: false };
 
-  const ctx = await loadGloryComposerContext(strategyId);
+  const selected = slug === "content-calendar-strategist" || slug === "social-copy-engine"
+    ? editorial ?? { sources: await readEditorialSources(strategyId), month: new Date().toISOString().slice(0, 7) }
+    : undefined;
+  const ctx = await loadGloryComposerContext(strategyId, selected);
   if (!ctx) return { output: {}, ok: false };
 
   const raw = composer(ctx);

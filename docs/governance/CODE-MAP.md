@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 75 modules (src/domain, cœur métier pur)
+## Domain — 76 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
@@ -86,6 +86,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **creative-sources**
 - **cult-index-tier** — Domain — Cult Index tier (échelle de maturité culturelle de la marque).
 - **devotion-ladder** — Domain — Devotion Ladder canonique (rungs du parcours superfan).
+- **editorial-source**
 - **entity-ids**
 - **external-metric**
 - **field-provenance** — FieldProvenance — qui a posé la valeur d'un champ de pilier ADVE.
