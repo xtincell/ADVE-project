@@ -1,11 +1,12 @@
 /** Operator decision → versioned I → projection → deterministic S, real local DB. */
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 vi.mock("@/lib/auth/config", () => ({ auth: vi.fn() }));
 vi.mock("next-auth", () => ({}));
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
 const provider = vi.hoisted(() => ({ callLLM: vi.fn(async () => { throw new Error("PROVIDER_FORBIDDEN_IN_FIXTURE"); }) }));
-vi.mock("@/server/services/llm-gateway", () => provider);
+vi.mock("@/server/services/llm-gateway", async original => ({ ...await original<typeof import("@/server/services/llm-gateway")>(), ...provider }));
+afterEach(() => provider.callLLM.mockReset());
 import { db } from "@/lib/db";
 import { syncBrandActionsFromBlob } from "@/server/services/artemis/action-db/materializer";
 import { setBrandActionStatus } from "@/server/services/artemis/action-db/set-status";
@@ -33,6 +34,11 @@ beforeAll(async () => {
 afterAll(async () => {
   const where = { strategyId: { in: brands } };
   await db.recommendation.deleteMany({ where }); await db.recommendationBatch.deleteMany({ where });
+  await db.campaignAction.deleteMany({ where: { campaign: where } });
+  await db.campaignBrief.deleteMany({ where: { campaign: where } });
+  await db.campaign.deleteMany({ where });
+  await db.jehutyCuration.deleteMany({ where });
+  await db.knowledgeEntry.deleteMany({ where: { originStrategyId: { in: brands } } });
   await db.brandAction.deleteMany({ where }); await db.intentEmission.deleteMany({ where });
   await db.costDecision.deleteMany({ where }); await db.scoreSnapshot.deleteMany({ where });
   await db.process.deleteMany({ where }); await db.signal.deleteMany({ where });
@@ -63,6 +69,59 @@ const choose = (f: Fixture, selected: boolean) => setBrandActionStatus({ strateg
 const readI = (f: Fixture) => db.pillar.findUniqueOrThrow({ where: { id: f.i.id } });
 
 describe("one operator choice survives the whole existing action path", () => {
+  it.each(["current", "changed plan", "changed action"])("rechecks an accepted article initiative against its %s inside the I write", async scenario => {
+    const f = await fixture();
+    const strategyId = f.strategy.id;
+    const objective = "Respecter le mix éditorial du pilote";
+    const audience = "Lecteurs de recettes du pilote";
+    const title = "Les visiteurs du marché demandent des itinéraires culinaires";
+    const action = "Faire tester un itinéraire culinaire aux lecteurs du pilote.";
+    await db.strategy.update({where:{id:strategyId},data:{manipulationMix:{
+      entertainer:0.5,facilitator:0.5,dealer:0,peddler:0,primary:"entertainer",review:{status:"HUMAN_REVIEWED",version:1},
+    }}});
+    await db.pillar.create({data:{strategyId,key:"a",content:{promesseFondamentale:"Aider les lecteurs du pilote à trouver leur itinéraire."}}});
+    const campaign=await db.campaign.create({data:{strategyId,name:"Pilote",objectives:{description:objective},state:"LIVE",
+      startDate:new Date("2026-10-01"),endDate:new Date("2026-10-31")}});
+    await db.campaignBrief.create({data:{campaignId:campaign.id,title:"Brief relu",status:"VALIDATED",briefType:"CREATIVE",content:{briefClient:{cible_principale:audience}}}});
+    const adopted=await db.campaignAction.create({data:{campaignId:campaign.id,name:"Partager une découverte en vidéo",actionType:"VIDEO",category:"TTL",
+      status:"IN_PROGRESS",aarrStage:"ACTIVATION",devotionRungTargeted:"APPRENTI",manipulationModeApplied:"entertainer"}});
+    const url="https://publisher.example/pilote";
+    await db.knowledgeEntry.create({data:{market:"brand:"+strategyId,entryType:"EXTERNAL_FEED_DIGEST",originStrategyId:strategyId,
+      data:{strategyId,items:[{link:url,title,source:"Éditeur de test"}]}}});
+    provider.callLLM.mockResolvedValueOnce({text:JSON.stringify({actions:[{field:"title",quote:title,anchor:0,brandQuote:"trouver leur itinéraire",
+      implication:"Cette demande suggère de vérifier l’utilité d’un itinéraire proposé par la marque.",action,format:"Test guidé",objective,
+      measure:"Observer si chaque lecteur trouve son premier arrêt.",scope:0,mode:"facilitator"}]})} as never);
+    provider.callLLM.mockResolvedValueOnce({text:JSON.stringify({reviews:[{index:0,supported:true,scopeConfirmed:true,
+      reason:"L’itinéraire proposé permet de vérifier la demande auprès du même public dans le cadre du pilote."}]})} as never);
+    const {triggerArticleNotoria}=await import("@/server/services/jehuty/article-notoria");
+    expect(await triggerArticleNotoria({strategyId,userId:owner,articleUrl:url})).toMatchObject({articleActions:{retained:1}});
+    const reco=await db.recommendation.findFirstOrThrow({where:{strategyId}});
+    await acceptRecos(strategyId,[reco.id],owner);
+    if(scenario==="changed plan") await db.pillar.update({where:{id:f.s.id},data:{currentVersion:{increment:1},validationStatus:"AI_PROPOSED"}});
+    if(scenario==="changed action") await db.campaignAction.update({where:{id:adopted.id},data:{manipulationModeApplied:"facilitator"}});
+    const before=await readI(f);
+    const result=await applyRecos(strategyId,[reco.id]);
+    if(scenario==="current") {
+      expect(result.applied,result.warnings.join(" ")).toBe(1);
+      expect(JSON.stringify((await readI(f)).content)).toContain(action);
+    } else {
+      expect(result.applied).toBe(0);
+      expect(result.warnings.join(" ")).toContain("ARTICLE_SCOPE_CHANGED");
+      expect(await readI(f)).toEqual(before);
+      expect((await db.recommendation.findUniqueOrThrow({where:{id:reco.id}})).status).toBe("ACCEPTED");
+    }
+  });
+  it("keeps a historical article-driven field fill from bypassing the review through applyRecos", async () => {
+    const f=await fixture();
+    const row=await db.recommendation.create({data:{strategyId:f.strategy.id,targetPillarKey:"v",targetField:"businessModel",
+      operation:"SET",agent:"MESTOR",confidence:0.9,explain:"Hypothèse historique",status:"ACCEPTED",source:"SESHAT",
+      missionType:"SESHAT_OBSERVATION",inputSnapshotId:"historical-article",proposedValue:"Ancienne proposition de prix."}});
+    const result=await applyRecos(f.strategy.id,[row.id]);
+    expect(result).toMatchObject({applied:0,warnings:[expect.stringContaining("ARTICLE_COMPARISON_REQUIRED")]});
+    expect(await db.pillar.count({where:{strategyId:f.strategy.id,key:"v"}})).toBe(0);
+    expect((await db.recommendation.findUniqueOrThrow({where:{id:row.id}})).status).toBe("ACCEPTED");
+  });
+
   it("retains source cost bounds, monthly units and campaign cadence through the stored projection and saved S without activating execution", async () => {
     const f = await fixture();
     const { budget: _oldAmount, timeframe: _oldHorizon, ...identity } = f.initiative;

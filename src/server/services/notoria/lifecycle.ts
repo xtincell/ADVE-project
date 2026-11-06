@@ -98,7 +98,7 @@ export async function applyRecos(
   recoIds: string[],
 ): Promise<{ applied: number; warnings: string[] }> {
   // Load all ACCEPTED recos
-  const recos = await db.recommendation.findMany({
+  const accepted = await db.recommendation.findMany({
     where: {
       id: { in: recoIds },
       strategyId,
@@ -106,12 +106,21 @@ export async function applyRecos(
     },
   });
 
-  if (recos.length === 0) {
+  if (accepted.length === 0) {
     return { applied: 0, warnings: ["Aucune recommandation ACCEPTED trouvee."] };
   }
 
   let totalApplied = 0;
   const allWarnings: string[] = [];
+
+  const { readArticleComparison } = await import("@/domain/recommendation-comparison");
+  const recos = accepted.filter(row => {
+    const comparison = readArticleComparison(row);
+    if (!comparison || (comparison.shortlisted && parseRecommendationPayload(row.proposedValue)?.kind === "ADD_INITIATIVE")) return true;
+    allWarnings.push(`ARTICLE_COMPARISON_REQUIRED: ${row.id} doit être instruite avant application.`);
+    return false;
+  });
+  if (!recos.length) return { applied: 0, warnings: allWarnings };
 
   // ── ADR-0090 — GATE DE REMPLACEMENT PONDÉRÉ (hard) ──────────────────────
   // Une reco ne REMPLACE un contenu existant que si son score pondéré bat

@@ -51,6 +51,7 @@ export interface ArticleSourceGrounding {
 export type ArticleActionBasis = {
   field: "title" | "summary"; quote: string; start: number; end: number;
   anchor: { pillarKey: string; field: string; quote: string; certainty?: string };
+  decision?: { scopeId: string; digest: string; campaignId?: string; mode?: string };
   action: string; implication: string; measure: string; reviewReason: string; comparison: ObjectiveComparison;
 };
 

@@ -1,13 +1,15 @@
-import type { Prisma } from "@prisma/client";
+import { createHash } from "node:crypto";
+import { Prisma } from "@prisma/client";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { object, productionModes, readMixDecision, type ProductionMode } from "@/domain/production-mix";
-import { compareObjective } from "@/domain/recommendation-comparison";
+import { compareObjective, readArticleComparison } from "@/domain/recommendation-comparison";
 import { collectNormalizedInitiatives } from "@/lib/types/pillar-schemas";
 
 type Reference = { id: string; label: string; mode?: string | null };
 export type ArticleComparisonScope = {
   id: string; objective: string; audience: string; period: string; channel: string; evidence: string[];
-  references: Reference[]; mix?: Record<ProductionMode, number>;
+  campaignId?: string; planRevision?: string; references: Reference[]; mix?: Record<ProductionMode, number>;
 };
 
 const fold = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
@@ -27,6 +29,8 @@ export async function readArticleComparisonScopes(strategyId: string, reader: Pi
     reader.pillar.findMany({ where: { strategyId, key: { in: ["i", "s"] } }, select: { key: true, content: true, currentVersion: true, validationStatus: true, staleAt: true } }),
   ]);
   const result: ArticleComparisonScope[] = [];
+  const plan = pillars.find(p => p.key === "s");
+  const planRevision = plan ? `${plan.currentVersion}.${plan.validationStatus}.${plan.staleAt?.toISOString() ?? "current"}` : "absent";
   const i = pillars.find(p => p.key === "i" && !p.staleAt);
   const s = pillars.find(p => p.key === "s" && !p.staleAt && ["VALIDATED", "LOCKED"].includes(p.validationStatus));
   const selected = object(s?.content).selectedFromI;
@@ -50,7 +54,7 @@ export async function readArticleComparisonScopes(strategyId: string, reader: Pi
     for (const a of campaign.actions) {
       if (!a.aarrStage || !a.devotionRungTargeted) continue;
       const id = JSON.stringify([campaign.id, a.category, a.aarrStage, a.devotionRungTargeted]);
-      const group = groups.get(id) ?? { id, objective: description, channel: a.category,
+      const group = groups.get(id) ?? { id, campaignId: campaign.id, planRevision, objective: description, channel: a.category,
         audience: audience + " · " + a.devotionRungTargeted, period: campaign.startDate.toISOString().slice(0, 10) + " / " + campaign.endDate.toISOString().slice(0, 10),
         evidence: [`Campaign:${campaign.id} · ${campaign.name} · ${a.aarrStage}`, `CampaignBrief:${brief.id}.v${brief.version}`], references: [] as Reference[] };
       if (adoptedStatus.includes(a.status)) group.references.push({ id: a.id, label: a.name, mode: a.manipulationModeApplied });
@@ -100,4 +104,57 @@ export function compareArticleAction(action: { action: string; objective: string
     : { threshold: 0 };
   return compareObjective({ ...base, criterion: "Écart entre les parts du plan et le mix éditorial adopté", unit: "points de pourcentage",
     candidate: gap([...modes, mode]), ...anchor });
+}
+
+const fingerprint = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+
+export function articleDecisionBinding(scope: ArticleComparisonScope, mode?: ProductionMode) {
+  return { scopeId: scope.id, digest: fingerprint(scope), ...(scope.campaignId ? { campaignId: scope.campaignId } : {}), ...(mode ? { mode } : {}) };
+}
+
+const bindingSchema = z.object({ scopeId: z.string(), digest: z.string().length(64), campaignId: z.string().optional(),
+  mode: z.enum(productionModes).optional() });
+
+/** Re-read the article receipt and the operator's current plan under the same transaction as the I write. */
+export async function assertArticleDecisionsCurrent(tx: Prisma.TransactionClient, strategyId: string, recommendationIds: string[]) {
+  if (!recommendationIds.length) return;
+  const recommendations = await tx.recommendation.findMany({ where: { strategyId, id: { in: recommendationIds },
+    missionType: "SESHAT_OBSERVATION", source: "SESHAT", inputSnapshotId: { not: null } },
+    select: { id: true, proposedValue: true, inputSnapshotId: true, rulerVerdict: true, missionType: true, source: true } });
+  if (!recommendations.length) return;
+  const snapshots = await tx.signal.findMany({ where: { strategyId, type: "JEHUTY_ARTICLE_NOTORIA",
+    id: { in: recommendations.map(r => r.inputSnapshotId!) } }, select: { id: true, data: true } });
+  const work = recommendations.map(row => {
+    const snapshot = object(snapshots.find(s => s.id === row.inputSnapshotId)?.data);
+    const stored = Array.isArray(snapshot.articleGrounding)
+      ? snapshot.articleGrounding.map(object).find(r => r.recommendationId === row.id) : undefined;
+    const basis = object(stored?.basis);
+    const decision = bindingSchema.safeParse(basis.decision);
+    const comparison = readArticleComparison(row);
+    if (snapshot.mode !== "source-actions-v1" || stored?.proposedValueHash !== fingerprint(row.proposedValue)
+      || !decision.success || !comparison?.shortlisted) {
+      throw Error("ARTICLE_COMPARISON_REQUIRED: la proposition doit être comparée et relue avant son ajout au catalogue.");
+    }
+    return { decision: decision.data, comparison, initiative: object(object(row.proposedValue).initiative) };
+  });
+  // Lock in strategy → campaign → children order. The campaign lock also excludes concurrent FK insertions into its plan.
+  await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${strategyId} FOR UPDATE`;
+  const campaignIds = [...new Set(work.flatMap(w => w.decision.campaignId ? [w.decision.campaignId] : []))].sort();
+  if (campaignIds.length) {
+    const locked = await tx.$queryRaw<{id:string}[]>`SELECT id FROM "Campaign" WHERE "strategyId" = ${strategyId} AND id IN (${Prisma.join(campaignIds)}) ORDER BY id FOR UPDATE`;
+    if (locked.length !== campaignIds.length) throw Error("ARTICLE_SCOPE_CHANGED: campagne de référence indisponible.");
+    await tx.$queryRaw`SELECT id FROM "CampaignAction" WHERE "campaignId" IN (${Prisma.join(campaignIds)}) ORDER BY id FOR SHARE`;
+    await tx.$queryRaw`SELECT id FROM "CampaignBrief" WHERE "campaignId" IN (${Prisma.join(campaignIds)}) ORDER BY id FOR SHARE`;
+  }
+  const scopes = await readArticleComparisonScopes(strategyId, tx);
+  for (const { decision, comparison, initiative } of work) {
+    const scope = scopes.find(s => s.id === decision.scopeId);
+    if (!scope || fingerprint(scope) !== decision.digest || typeof initiative.action !== "string" || typeof initiative.objectif !== "string") {
+      throw Error("ARTICLE_SCOPE_CHANGED: le plan, son public ou les actions adoptées ont changé. Recalculez la comparaison.");
+    }
+    const refreshed = compareArticleAction({ action: initiative.action, objective: initiative.objectif }, scope, decision.mode);
+    if (!refreshed.shortlisted || refreshed.verdict !== comparison.verdict || refreshed.delta !== comparison.delta) {
+      throw Error("ARTICLE_VERDICT_CHANGED: la comparaison relue a changé. Recalculez la proposition.");
+    }
+  }
 }

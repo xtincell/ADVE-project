@@ -8,7 +8,7 @@ import type { RawLLMReco } from "./types";
 import type { ArticleActionBasis, ArticleBrandInterpretation } from "@/lib/types/jehuty";
 
 import { productionModes } from "@/domain/production-mix";
-import { compareArticleAction, type ArticleComparisonScope } from "./article-comparison";
+import { articleDecisionBinding, compareArticleAction, type ArticleComparisonScope } from "./article-comparison";
 
 type ArticleInput = {
   observation: string;
@@ -102,6 +102,7 @@ export async function prepareArticleActions(input: ArticleInput, brandContext: B
     actions.push({ initiativeId: id, basis: {
       field: candidate.field, quote: candidate.quote, start, end: start + candidate.quote.length,
       anchor: { pillarKey: anchor.pillarKey, field: anchor.field, quote: candidate.brandQuote, ...(anchor.certainty ? { certainty: anchor.certainty } : {}) },
+      ...(scope ? { decision: articleDecisionBinding(scope, candidate.mode ?? undefined) } : {}),
       comparison, action: candidate.action, implication: candidate.implication, measure: candidate.measure, reviewReason: reason,
     }, recommendation: {
       field: "catalogueParCanal", operation: "ADD", proposedValue, source: "SESHAT", impact: "MEDIUM",

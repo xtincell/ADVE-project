@@ -187,6 +187,10 @@ export async function dispatchTypedRecos(
     const results = await withPillarTransaction(strategyId, async (tx, write) => {
       // Documentary locks precede the strategy lock, as in the shared gateway.
       await assertCurrentSourceReceipts(tx, strategyId, sourceReceipts, requiredSourceIds, "UPDATE");
+      if (typed.some(row => row.payload.kind === "ADD_INITIATIVE")) {
+        const { assertArticleDecisionsCurrent } = await import("./article-comparison");
+        await assertArticleDecisionsCurrent(tx, strategyId, typed.filter(row => row.payload.kind === "ADD_INITIATIVE").map(row => row.id));
+      }
       const written: PillarWriteResult[] = [];
       let firstWrite = true;
       for (const key of changed) {
