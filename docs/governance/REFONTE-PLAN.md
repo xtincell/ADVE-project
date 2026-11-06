@@ -1,3 +1,7 @@
+## 553 — Playbook d’engagement et calendrier de référence
+
+Le parcours de relecture exploite les pièces de référence du dossier. Le calendrier distingue les sujets du plan et les occurrences dont la programmation a été documentée. L’acceptation de l’édition reste une décision humaine. La réception métier de la nouvelle édition en production constitue le prochain jalon.
+
 ## 552 — Gazette et recommandations comparables
 
 Le mode article fournit un passage exact, son implication pour la marque et un contrôle de pertinence. Le choix dépend ensuite d’une référence comparable. Le mode général suit le référentiel de qualité du champ concerné. Le lecteur de l’article et la file des recommandations distinguent la présélection et l’instruction. Le replay Koaci local conserve une piste à instruire. La réception de la version déployée reste ouverte.

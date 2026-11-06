@@ -1,3 +1,7 @@
+## 553 — recevoir la nouvelle édition du Playbook
+
+La relecture de la version 550 de SPAWT a retrouvé sept sections Luna et deux compositions déterministes. Des CTA de prélancement et un domaine déduit du pays rendaient le résultat impropre à l’acceptation. La version 553 corrige le contexte, les liens et le planning en local. Contrôler les neuf sections d’une nouvelle exécution en production avec les pièces courantes. L’équipe décidera ensuite de son acceptation avant Devotion Ladder.
+
 ## 552 — couverture des critères et réception de l’article
 
 Le comparateur d’initiative utilise la répartition éditoriale documentée sur un périmètre comparable. Quand la décision porte sur un autre critère et qu’aucune mesure attribuable n’est disponible, la piste demeure à instruire. Reprendre au prochain dossier doté d’une règle métier et d’une mesure comparables, puis recevoir le nouveau critère sur cette référence. Le replay PostgreSQL local du cas Koaci utilise deux sorties Luna réelles. La réception de la version 552 en production doit éprouver le lecteur et la sélection avant toute clôture métier.
