@@ -1,5 +1,6 @@
 import { depositInBrandVault, recordVaultDepositFailure } from "@/server/services/brand-vault/glory-deposit";
 export { depositInBrandVault } from "@/server/services/brand-vault/glory-deposit";
+import { readMixDecision } from "@/domain/production-mix";
 import { isUsableGeneration } from "@/domain/generation-result";
 import { projectFinancialPillar } from "@/domain/unit-economics";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
@@ -474,11 +475,12 @@ async function executeArtemisStep(
   }
 
   const result = await executeFramework(ref, strategyId, input);
+  if (!isUsableGeneration(result.output)) {
+    throw new Error("Le diagnostic n’a produit aucun contenu exploitable. Sa tentative a été conservée.");
+  }
   return {
-    analysis: result.output?.analysis,
-    score: result.output?.score,
-    prescriptions: result.output?.prescriptions,
-    confidence: result.output?.confidence,
+    ...result.output,
+    _frameworkResultId: result.resultId,
     ...((result.output?.outputFields as Record<string, unknown>) ?? {}),
   };
 }
@@ -635,6 +637,9 @@ async function loadFullStrategyContext(strategyId: string): Promise<SequenceCont
     _strategyDescription: strategy.description,
   };
 
+  const mix = readMixDecision(strategy.manipulationMix);
+  if (mix.primary) ctx.manipulation_mode = { primary: mix.primary, percent: mix.percent };
+
   // Inject ADVE vector scores
   const vec = strategy.advertis_vector as Record<string, number> | null;
   if (vec) {
@@ -731,6 +736,7 @@ async function loadFullStrategyContext(strategyId: string): Promise<SequenceCont
       ctx.aarrr = c.aarrr;
       ctx.kpis = c.kpis;
       ctx.devotionLadder = c.devotionLadder;
+      ctx.devotion_projection = c.devotionProjection;
       ctx.community = c.communityStrategy ?? c.principesCommunautaires;
       ctx.gamification = c.gamification;
       ctx.sacredCalendar = c.sacredCalendar;
@@ -1115,6 +1121,15 @@ export async function executeSequence(
       continue;
     }
 
+    const dependencies = step.type === "GLORY" ? getGloryTool(step.ref)?.dependencies ?? [] : [];
+    const unavailable = stepResults.find(previous => dependencies.includes(previous.ref) && previous.status !== "SUCCESS");
+    if (unavailable) {
+      const reason = `Étape en attente du résultat de ${unavailable.ref}.`;
+      journal.stepSkip(i, step.ref, reason);
+      stepResults.push({ stepIndex: i, ref: step.ref, type: step.type, status: "SKIPPED", output: {}, durationMs: 0, error: reason });
+      hasFailure = true;
+      continue;
+    }
     journal.stepStart(i, step.ref, step.type);
 
     if (key === "OFFRE-V" && (step.ref === "client-presentation-strategist" || step.ref === "sales-deck-builder")
@@ -1266,7 +1281,7 @@ export async function executeSequence(
 
   const successCount = stepResults.filter((s) => s.status === "SUCCESS").length;
   const totalActive = seq.steps.filter((s) => s.status === "ACTIVE").length;
-  const finalStatus = hasFailure ? (successCount > 0 ? "PARTIAL" : "FAILED") : "COMPLETED";
+  let finalStatus: SequenceResult["status"] = hasFailure ? (successCount > 0 ? "PARTIAL" : "FAILED") : "COMPLETED";
 
   journal.end(finalStatus, Date.now() - startTime, successCount, seq.steps.length);
 
@@ -1288,14 +1303,19 @@ export async function executeSequence(
       strategyId,
       sequenceKey: key,
       tier,
-      status: finalStatus,
-      stepResults: stepResults.map(s => ({ ref: s.ref, type: s.type, status: s.status, durationMs: s.durationMs, error: s.error })),
+      status: depth === "PREVIEW" && stepResults.some(step => step.error === "preview-mode") ? "PARTIAL" : finalStatus,
+      stepResults: stepResults.map(s => ({ ref: s.ref, type: s.type, status: s.status, durationMs: s.durationMs, error: s.error,
+        ...(s.output._gloryOutputId ? { gloryOutputId: s.output._gloryOutputId } : {}),
+        ...(s.output._frameworkResultId ? { frameworkResultId: s.output._frameworkResultId } : {}),
+      })),
       finalContext: context,
       totalDurationMs: result.totalDurationMs,
       gloryOutputIds,
       campaignId: options?.campaignId,
     });
   } catch (err) {
+    if (finalStatus === "COMPLETED") result.status = finalStatus = "PARTIAL";
+    journal.warn("Les contenus produits sont conservés. L’édition complète n’a pas pu être enregistrée pour relecture.");
     console.warn("[sequence-executor] Vault recording failed:", err instanceof Error ? err.message : err);
   }
 

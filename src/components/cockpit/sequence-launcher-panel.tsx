@@ -120,6 +120,9 @@ export function SequenceLauncherPanel() {
           const lastOutput = document?.generatedAt ? {
             id: exec?.id ?? s.key,
             completedAt: document.generatedAt,
+            isComplete: document.isComplete,
+            lastAttemptStatus: exec?.status,
+            completeness: document.completeness,
             outputUrl: `/cockpit/brand/deliverables/${s.key}`,
           } : null;
           return (
@@ -152,9 +155,9 @@ function SequenceCard({
 }: {
   seq: Seq;
   onLaunch: () => void;
-  lastOutput?: { outputUrl?: string | null; completedAt?: string | null; id?: string } | null;
+  lastOutput?: { lastAttemptStatus?: string; isComplete: boolean; completeness: number; outputUrl?: string | null; completedAt?: string | null; id?: string } | null;
 }) {
-  const isCompleted = !!lastOutput?.completedAt;
+  const hasReadableSections = !!lastOutput?.completedAt;
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -163,7 +166,7 @@ function SequenceCard({
 
   return (
     <div className="flip-card">
-      <div className={`flip-card-inner ${mounted ? "has-transition" : ""} ${isCompleted ? "is-flipped" : ""}`}>
+      <div className={`flip-card-inner ${mounted ? "has-transition" : ""} ${hasReadableSections ? "is-flipped" : ""}`}>
         {/* Front Face: Launch card */}
         <div className="flip-card-front flex h-full flex-col rounded-lg border border-white/5 bg-surface-raised p-4">
           <div className="mb-1 flex items-center gap-2">
@@ -216,12 +219,14 @@ function SequenceCard({
                 <span className="truncate text-sm font-semibold text-foreground">{seq.name}</span>
               </div>
               <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[9px] font-bold text-success ring-1 ring-inset ring-success/30">
-                <CheckCircle2 className="h-2.5 w-2.5" /> Terminé
+                <CheckCircle2 className="h-2.5 w-2.5" /> {lastOutput?.isComplete ? "Complet · consulter" : `Partiel · ${lastOutput?.completeness}%`}
               </span>
             </div>
             <p className="text-xs text-foreground-secondary leading-relaxed mb-4">
-              Ce livrable a été généré avec succès. Vous pouvez maintenant l'ouvrir ou relancer la séquence si des données sources ont changé.
+              {lastOutput?.isComplete ? "Toutes les sections sont disponibles à la lecture." : "Les sections déjà produites sont consultables. Des sections restent à produire."}
             </p>
+            {lastOutput?.lastAttemptStatus === "FAILED" && <p className="mb-3 text-xs text-warning">La dernière tentative a échoué. Cette édition reste consultable.</p>}
+            {lastOutput?.lastAttemptStatus === "PARTIAL" && lastOutput.isComplete && <p className="mb-3 text-xs text-warning">La dernière tentative est partielle. Vous consultez l’édition complète précédente.</p>}
           </div>
 
           <div>
@@ -284,9 +289,7 @@ export function LaunchModal({
 }) {
   const scan = trpc.glory.scanSequence.useQuery({ strategyId, sequenceKey: seq.key });
   const exec = trpc.glory.executeSequence.useMutation({
-    onSuccess: data => {
-      if (data.status === "COMPLETED") onSuccess();
-    },
+    onSuccess,
   });
 
   const blocked = scan.data?.blocked ?? false;

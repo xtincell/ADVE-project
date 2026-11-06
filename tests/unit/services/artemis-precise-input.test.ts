@@ -9,7 +9,7 @@ vi.mock("@/lib/db", () => ({ db: {
 vi.mock("@/server/services/llm-gateway", () => ({ callLLM: vi.fn() }));
 vi.mock("@/server/services/utils/llm-structured", () => ({
   executeStructuredLLMCall: vi.fn(async () => ({ data: { analysis: "Reçu", score: 4,
-    prescriptions: [], confidence: 0.3 }, attempts: 1 })),
+    prescriptions: [], confidence: 0.3 }, attempts: 1, model: "gpt-5.6-luna", provider: "openai-codex-oauth" })),
   LLMStructuredCallError: class extends Error {},
 }));
 vi.mock("@/server/services/seshat/context-store", async () => {
@@ -24,7 +24,7 @@ vi.mock("@/server/services/seshat/context-store", async () => {
   };
 });
 
-import { executeFramework } from "@/server/services/artemis";
+import { executeFramework, runDiagnosticBatch } from "@/server/services/artemis";
 import { executeStructuredLLMCall } from "@/server/services/utils/llm-structured";
 import { callLLM } from "@/server/services/llm-gateway";
 
@@ -65,6 +65,12 @@ describe("Artemis consumes Seshat precise input through the existing manager", (
     expect(options.system).toContain("Résumé pour orientation");
   });
 
+  it("conserves the actual generator and keeps an upstream failure out of completed diagnostics", async () => {
+    const success = await executeFramework("fw-08-ritual-design", "brand-receipt", {});
+    expect(success.output?._meta).toMatchObject({ model: "gpt-5.6-luna", provider: "openai-codex-oauth" });
+    vi.mocked(executeStructuredLLMCall).mockRejectedValueOnce(new Error("Transport failure"));
+    expect(await runDiagnosticBatch("brand-receipt", ["fw-08-ritual-design"], {})).toMatchObject([{ resultId: "result", status: "FAILED" }]);
+  });
   it("keeps missing precise data explicit instead of making the summary its evidence", async () => {
     state.precise = [];
     await executeFramework("fw-08-ritual-design", "brand-receipt", {});

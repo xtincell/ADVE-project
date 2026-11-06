@@ -483,7 +483,7 @@ export async function executeHybridTool(
   toolSlug: string,
   strategyId: string,
   input: Record<string, string>,
-  opts: { preferManual?: boolean; manualEntry?: Record<string, unknown>; fullAuto?: boolean; video?: import("@/server/services/llm-gateway/audiovisual").GatewayVideo; images?: readonly import("@/server/services/llm-gateway/vision").GatewayImage[]; signal?: AbortSignal } = {},
+  opts: { manualAuthor?: { id: string; name?: string | null }; preferManual?: boolean; manualEntry?: Record<string, unknown>; fullAuto?: boolean; video?: import("@/server/services/llm-gateway/audiovisual").GatewayVideo; images?: readonly import("@/server/services/llm-gateway/vision").GatewayImage[]; signal?: AbortSignal } = {},
 ): Promise<HybridToolResult> {
   const tool = getGloryTool(toolSlug);
   if (!tool) throw new Error(`GLORY tool inconnu: ${toolSlug}`);
@@ -518,7 +518,7 @@ export async function executeHybridTool(
           },
         };
       }
-      return persistManualHybridOutput(tool, strategyId, parsed.data as Record<string, unknown>);
+      return persistManualHybridOutput(tool, strategyId, parsed.data as Record<string, unknown>, opts.manualAuthor);
     }
     return manualEntryRequired(tool, "preferManual=true sans saisie fournie — formulaire manuel requis.");
   }
@@ -614,6 +614,7 @@ async function persistManualHybridOutput(
   tool: GloryToolDef,
   strategyId: string,
   data: Record<string, unknown>,
+  author?: { id: string; name?: string | null },
 ): Promise<HybridToolResult> {
   let intentEmissionId: string | null = null;
   try {
@@ -641,6 +642,7 @@ async function persistManualHybridOutput(
       path: "manual",
       schemaEnforced: true,
       manualEntry: true,
+      ...(author ? { authorId: author.id, author: author.name?.trim() || "Opérateur identifié" } : {}),
       generatedAt: new Date().toISOString(),
     },
   };
@@ -914,6 +916,10 @@ export async function executeBrandPipeline(
       }
 
       const { outputId, output } = await executeTool(slug, strategyId, mergedInput);
+      if (!isUsableGeneration(output)) {
+        results.push({ slug, outputId, status: "FAILED" });
+        continue;
+      }
       pipelineOutputs[slug] = output;
       results.push({ slug, outputId, status: "COMPLETED" });
 

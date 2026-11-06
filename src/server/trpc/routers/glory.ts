@@ -74,8 +74,9 @@ export const gloryRouter = createTRPCRouter({
     }),
     caller: "glory:executeHybrid",
   })
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       return gloryTools.executeHybridTool(input.toolSlug, input.strategyId, input.input, {
+        manualAuthor: { id: ctx.session.user.id, name: ctx.session.user.name },
         preferManual: input.preferManual,
         manualEntry: input.manualEntry,
         fullAuto: input.fullAuto,

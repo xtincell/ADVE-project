@@ -4,6 +4,7 @@
  * Calls through the existing LLM Gateway for framework execution
  */
 
+import { isUsableGeneration } from "@/domain/generation-result";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
 import { callLLM } from "@/server/services/llm-gateway";
 import { executeStructuredLLMCall, LLMStructuredCallError } from "@/server/services/utils/llm-structured";
@@ -174,7 +175,7 @@ ${wrapUntrusted("DONNÉES FOURNIES", JSON.stringify(input, null, 2))}`;
       const durationMs = Date.now() - startTime;
       output = {
         ...(structured.data as Record<string, unknown>),
-        _meta: { attempts: structured.attempts, schemaEnforced: true },
+        _meta: { attempts: structured.attempts, schemaEnforced: true, model: structured.model, provider: structured.provider },
       };
 
       score = typeof output.score === "number" ? output.score : null;
@@ -258,6 +259,7 @@ ${wrapUntrusted("DONNÉES FOURNIES", JSON.stringify(input, null, 2))}`;
       const confidence = typeof output.confidence === "number" ? output.confidence : null;
       const prescriptions = Array.isArray(output.prescriptions) ? output.prescriptions : null;
 
+      output._meta = { model: aiResult.model, provider: aiResult.provider, schemaEnforced: false };
       aiCost = ((aiResult.usage?.inputTokens ?? 0) / 1_000_000) * 3 + ((aiResult.usage?.outputTokens ?? 0) / 1_000_000) * 15;
 
       await db.frameworkExecution.update({
@@ -322,8 +324,8 @@ export async function runDiagnosticBatch(
   for (const slug of sorted) {
     try {
       const input = inputs[slug] ?? {};
-      const { resultId } = await executeFramework(slug, strategyId, input);
-      results.push({ slug, resultId, status: "COMPLETED" });
+      const { resultId, output } = await executeFramework(slug, strategyId, input);
+      results.push({ slug, resultId, status: isUsableGeneration(output) ? "COMPLETED" : "FAILED" });
     } catch (error) {
       results.push({ slug, resultId: "", status: "FAILED" });
     }
