@@ -4,7 +4,7 @@
 - Une erreur de transport conserve la tentative et suspend les outils qui en dépendent. Une nouvelle édition peut reprendre le parcours. La précédente reste consultable avec ses actifs. Une validation exige une exécution complète de la marque concernée et conserve la décision humaine.
 - Devotion Ladder transmet les six paliers du mappeur au concepteur des rituels. Le brief reprend le mode stratégique, le profil du superfan et la projection de dévotion quand E en contient une. Les répartitions déduites demandent une qualification et une vérification.
 
-La recette locale couvre 1 702 vérifications de gouvernance et de services, et trois parcours PostgreSQL avec fournisseur simulé. L’appel réel pour SPAWT et le reçu de production sont suivis séparément.
+La PR #1146 inclut la recette de reprise dans le contrôle PostgreSQL de CI. La recette locale couvre 1 702 vérifications de gouvernance et de services, et trois parcours PostgreSQL avec fournisseur simulé. L’appel réel pour SPAWT et le reçu de production sont suivis séparément.
 
 ## v6.27.549 — fix(cockpit): relier la complétude et le rendu retenu à leurs preuves (2026-11-05)
 
