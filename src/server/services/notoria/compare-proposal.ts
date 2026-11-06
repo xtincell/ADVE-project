@@ -63,14 +63,39 @@ export function fieldComparator(contents: PillarContentMap, weights: Record<Pill
 }
 
 
-/** Recompute a page of comparisons for one brand with the same loaded state. */
-export async function compareReviewRows<T extends Candidate & Parameters<typeof readArticleComparison>[0]>(strategyId: string, rows: T[]) {
-  if (!rows.length) return [];
+type ReviewRow = Candidate & Parameters<typeof readArticleComparison>[0] & {id:string; batchId:string|null};
+
+/** Load the reference once when filtering several storage pages for the same brand. */
+export async function reviewComparator(strategyId: string) {
   const { loadContentsAndWeights } = await import("./preview-impact");
   const state = await loadContentsAndWeights(strategyId);
   const compare = fieldComparator(state.contents, state.weights);
-  return rows.map(row => {
+  return <T extends ReviewRow>(rows: T[]) => rows.map(row => {
     const comparison = readArticleComparison(row) ?? compare(row);
     return { ...row, comparison, eligibleForApplication: permitsReplacement(comparison) };
   });
+}
+
+export async function compareReviewRows<T extends ReviewRow>(strategyId: string, rows: T[]) {
+  if (!rows.length) return [];
+  const compare=await reviewComparator(strategyId);
+  const {readArticleEvidenceForReview} = await import("../jehuty/article-notoria");
+  const evidence=await readArticleEvidenceForReview(strategyId,rows);
+  return compare(rows).map((row,index)=>({...row,articleEvidence:evidence[index]}));
+}
+
+/** A single operator decision may select a known item or route directly.
+ * Unbenchmarked content changes and article-derived initiatives require a comparison.
+ * Bulk commands always exclude equivalent alternatives and every unassessed row. */
+export async function reviewedIds<T extends ReviewRow>(strategyId: string, rows: T[], singleDecision: boolean) {
+  if (!rows.length) return new Set<string>();
+  const compared=(await reviewComparator(strategyId))(rows);
+  const ids=new Set<string>();
+  for(const row of compared) {
+    const typed=parseRecommendationPayload(row.proposedValue);
+    const directChoice=singleDecision && !readArticleComparison(row) && typed
+      && ["SELECT_INITIATIVE","REJECT_INITIATIVE","SET_RISK_STATUS","LINK_RISK","SELECT_ROADMAP_ROUTE"].includes(typed.kind);
+    if(directChoice || (row.eligibleForApplication && (singleDecision || row.comparison.verdict !== "EQUAL"))) ids.add(row.id);
+  }
+  return ids;
 }

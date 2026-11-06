@@ -102,7 +102,7 @@ export function ArticleSpread({ item, onNotoria, isNotoriaPending, onPin, onUnpi
             <p className="text-sm font-semibold">Ce que cela suggère pour votre marque</p>
             <ReadingText expanded={expanded} text={reco.actionBasis.implication} />
             <p className="mt-3 text-sm"><strong>À vérifier.</strong> {reco.actionBasis.measure}</p>
-            <details className="mt-3 text-sm"><summary className="cursor-pointer">Pourquoi retenir cette piste</summary>
+            <details className="mt-3 text-sm"><summary className="cursor-pointer">Raisons et comparaison</summary>
               <p className="mt-2">Repère de marque · {reco.actionBasis.anchor.pillarKey.toUpperCase()}.{reco.actionBasis.anchor.field}</p>
               <blockquote className="my-2">{reco.actionBasis.anchor.quote}</blockquote>
               <p>{reco.actionBasis.reviewReason}</p>

@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.552", date: "2026-11-06", headline: "Choisir les propositions qui méritent une action",
+    highlights: [
+      { emoji: "📰", title: "Partir d’un article précis", body: "La Gazette rapproche un passage de l’article d’un élément de votre marque. Chaque piste explique ce qu’elle suggère de tester et comment lire le résultat." },
+      { emoji: "⚖️", title: "Comparer avant de choisir", body: "Les recommandations distinguent les améliorations étayées, les alternatives équivalentes et les idées qui demandent encore une comparaison. Vous pouvez relire la source depuis la proposition." },
+      { emoji: "🗂️", title: "Appliquer les choix relus", body: "La sélection par lot conserve les propositions applicables. Si le plan qui justifiait une action issue d’un article a changé, La Fusée demande une nouvelle comparaison." },
+    ],
+  },
+  {
     version: "6.27.551", date: "2026-11-06", headline: "Travailler marque par marque, pays par pays",
     highlights: [
       { emoji: "🗂️", title: "Ouvrir un dossier pays", body: "Créez le dossier en brouillon et retrouvez la même plateforme après une interruption. Le portefeuille distingue ses propres fondations de celles qu’il hérite." },

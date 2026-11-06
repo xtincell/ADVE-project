@@ -21,14 +21,17 @@ import { assertCurrentSourceReceipts, readSourceReceipts } from "@/server/servic
 export async function acceptRecos(
   strategyId: string,
   recoIds: string[],
-  reviewerId: string,
-): Promise<{ accepted: number }> {
+  reviewerId: string, mode: "REVIEW" | "SHORTLIST" = "REVIEW",
+): Promise<{ accepted: number; warnings: string[] }> {
   const result = await db.$transaction(async (tx) => {
     const pending = await tx.recommendation.findMany({ where: { id: { in: recoIds }, strategyId, status: "PENDING" } });
-    await assertCurrentSourceReceipts(tx, strategyId, pending.flatMap((r) => readSourceReceipts(r.sourceReceipts)), pending.flatMap((r) => r.groundedSourceIds));
+    const {reviewedIds}=await import("./compare-proposal");
+    const eligible=await reviewedIds(strategyId,pending,mode==="REVIEW" && recoIds.length===1 && reviewerId!=="MESTOR");
+    const selected=pending.filter(row=>eligible.has(row.id));
+    await assertCurrentSourceReceipts(tx, strategyId, selected.flatMap((r) => readSourceReceipts(r.sourceReceipts)), selected.flatMap((r) => r.groundedSourceIds));
     return tx.recommendation.updateMany({
     where: {
-      id: { in: recoIds },
+      id: { in: selected.map(row=>row.id) },
       strategyId,
       status: "PENDING", // optimistic lock
     },
@@ -52,7 +55,7 @@ export async function acceptRecos(
     }
   }
 
-  return { accepted: result.count };
+  return { accepted: result.count, warnings: result.count < new Set(recoIds).size ? ["Une ou plusieurs propositions ne sont plus en attente ou demandent une comparaison avant acceptation."] : [] };
 }
 
 // ── Reject ────────────────────────────────────────────────────────
@@ -95,7 +98,7 @@ export async function rejectRecos(
 
 export async function applyRecos(
   strategyId: string,
-  recoIds: string[],
+  recoIds: string[], mode: "REVIEW" | "SHORTLIST" = "REVIEW",
 ): Promise<{ applied: number; warnings: string[] }> {
   // Load all ACCEPTED recos
   const accepted = await db.recommendation.findMany({
@@ -114,9 +117,18 @@ export async function applyRecos(
   const allWarnings: string[] = [];
 
   const { readArticleComparison } = await import("@/domain/recommendation-comparison");
+  const {reviewedIds}=await import("./compare-proposal");
+  const singleDecision=mode==="REVIEW" && recoIds.length===1;
+  const eligible=await reviewedIds(strategyId,accepted,singleDecision);
   const recos = accepted.filter(row => {
     const comparison = readArticleComparison(row);
-    if (!comparison || (comparison.shortlisted && parseRecommendationPayload(row.proposedValue)?.kind === "ADD_INITIATIVE")) return true;
+    if (!comparison) {
+      if (eligible.has(row.id)) return true;
+      if (singleDecision && ["SET","MODIFY","EXTEND"].includes(row.operation) && (!parseRecommendationPayload(row.proposedValue) || parseRecommendationPayload(row.proposedValue)?.kind==="UPDATE_ADVE_FIELD")) return true; // existing hard replacement gate returns its specific reason
+      allWarnings.push(`COMPARISON_REQUIRED: ${row.id} demande une comparaison applicable à son objectif.`);
+      return false;
+    }
+    if (eligible.has(row.id) && parseRecommendationPayload(row.proposedValue)?.kind === "ADD_INITIATIVE") return true;
     allWarnings.push(`ARTICLE_COMPARISON_REQUIRED: ${row.id} doit être instruite avant application.`);
     return false;
   });

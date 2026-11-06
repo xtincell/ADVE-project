@@ -224,6 +224,42 @@ export async function readGazetteBrandContext(strategyId: string): Promise<Artic
   });
 }
 
+
+export function assessArticleReceipt(strategyId: string, articleUrl: string, reco: {id: string; batchId: string | null; proposedValue: unknown}, receipt?: Record<string, unknown>) {
+  const received = articleInputSchema.safeParse(receipt?.articleInput);
+  const savedGrounding = (Array.isArray(receipt?.articleGrounding) ? receipt.articleGrounding : [])
+    .map(record).find(row => row.recommendationId === reco.id);
+  const measure = groundingSchema.safeParse(savedGrounding);
+  const validInput = receipt?.strategyId === strategyId && receipt?.schema === RECEIPT_SCHEMA && receipt.batchId === reco.batchId && received.success && measure.success
+    && received.data.sourceUrl === articleUrl
+    && received.data.sourceId === record(receipt.article).digestId
+    && received.data.sourceUrl === record(receipt.article).url
+    && received.data.observationHash === hash(received.data.observation)
+    && received.data.excerpts.every(excerpt => excerpt.end >= excerpt.start
+      && received.data.observation.slice(excerpt.start, excerpt.end) === excerpt.text)
+    && savedGrounding?.proposedValueHash === hash(JSON.stringify(reco.proposedValue));
+  const basis = actionBasisSchema.safeParse(savedGrounding?.basis);
+  const isAction = validInput && received.success && receipt?.mode === ARTICLE_MODE && basis.success
+    && basis.data.action === record(record(reco.proposedValue).initiative).action
+    && received.data.excerpts.some(ex => ex.field === basis.data.field && ex.start <= basis.data.start && ex.end >= basis.data.end
+      && received.data.observation.slice(basis.data.start, basis.data.end) === basis.data.quote);
+  return { received, measure, validInput, basis, isAction };
+}
+
+export async function readArticleEvidenceForReview(strategyId: string, rows: {id:string; batchId:string|null; proposedValue:unknown; inputSnapshotId:string|null}[]) {
+  const ids = [...new Set(rows.flatMap(row => row.inputSnapshotId ? [row.inputSnapshotId] : []))];
+  const snapshots = ids.length ? await db.signal.findMany({where:{strategyId,type:RECEIPT_TYPE,id:{in:ids}},select:{id:true,data:true}}) : [];
+  const receipts = new Map(snapshots.map(row => [row.id, record(row.data)]));
+  return rows.map(row => {
+    const receipt = row.inputSnapshotId ? receipts.get(row.inputSnapshotId) : undefined;
+    const url = text(record(receipt?.article).url);
+    const checked = assessArticleReceipt(strategyId, url, row, receipt);
+    return checked.isAction && checked.basis.success && checked.received.success
+      ? { sourceUrl: url, title: text(record(receipt?.article).title), quote: checked.basis.data.quote,
+          implication: checked.basis.data.implication, measure: checked.basis.data.measure } : null;
+  });
+}
+
 /** Read-only right page: exact article links and separately identified ADVE context. */
 export async function readArticleBrandInterpretations(
   strategyId: string,
@@ -295,25 +331,9 @@ export async function readArticleBrandInterpretations(
       if (reco.strategyId !== strategyId || !reco.batchId) continue;
       for (const context of result.values()) if (context.batchIds.includes(reco.batchId)) {
         const receipt = reco.inputSnapshotId ? receipts.get(reco.inputSnapshotId) : undefined;
-        const received = articleInputSchema.safeParse(receipt?.articleInput);
-        const savedGrounding = (Array.isArray(receipt?.articleGrounding) ? receipt.articleGrounding : [])
-          .map(record).find(row => row.recommendationId === reco.id);
-        const measure = groundingSchema.safeParse(savedGrounding);
-        const validInput = receipt?.batchId === reco.batchId && received.success && measure.success
-          && received.data.sourceUrl === context.articleUrl
-          && received.data.sourceId === record(receipt.article).digestId
-          && received.data.sourceUrl === record(receipt.article).url
-          && received.data.observationHash === hash(received.data.observation)
-          && received.data.excerpts.every(excerpt => excerpt.end >= excerpt.start
-            && received.data.observation.slice(excerpt.start, excerpt.end) === excerpt.text)
-          && savedGrounding?.proposedValueHash === hash(JSON.stringify(reco.proposedValue));
+        const { received, measure, validInput, basis, isAction } = assessArticleReceipt(strategyId, context.articleUrl, reco, receipt);
         const documentary = groundingSchema.pick({ score: true, band: true })
           .safeParse({ score: reco.groundingScore, band: reco.groundingBand });
-        const basis = actionBasisSchema.safeParse(savedGrounding?.basis);
-        const isAction = validInput && received.success && receipt?.mode === ARTICLE_MODE && basis.success
-          && basis.data.action === record(record(reco.proposedValue).initiative).action
-          && received.data.excerpts.some(ex => ex.field === basis.data.field && ex.start <= basis.data.start && ex.end >= basis.data.end
-            && received.data.observation.slice(basis.data.start, basis.data.end) === basis.data.quote);
         let group = context.generalRecommendations ??= [];
         if (isAction && basis.success) {
           switch (basis.data.comparison.verdict) {

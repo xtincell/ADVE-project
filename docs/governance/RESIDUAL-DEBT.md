@@ -1,3 +1,7 @@
+## 552 — couverture des critères et réception de l’article
+
+Le comparateur d’initiative utilise la répartition éditoriale documentée sur un périmètre comparable. Quand la décision porte sur un autre critère et qu’aucune mesure attribuable n’est disponible, la piste demeure à instruire. Reprendre au prochain dossier doté d’une règle métier et d’une mesure comparables, puis recevoir le nouveau critère sur cette référence. Le replay PostgreSQL local du cas Koaci utilise deux sorties Luna réelles. La réception de la version 552 en production doit éprouver le lecteur et la sélection avant toute clôture métier.
+
 ## 549 — recevoir les recommandations et la publication après le raccord local (2026-11-05)
 
 **Acquis, au périmètre reçu.** La version 548 est déployée sur le merge

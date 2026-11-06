@@ -272,15 +272,15 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
     onError: () => refreshPillarState(),
   });
   const acceptRecosMutation = trpc.notoria.acceptRecos.useMutation({
-    onSuccess: () => {
+    onSuccess: data => {
       void refreshPillarState();
       recosQuery.refetch();
       // Rafraîchir la file des acceptées : c'est elle qui fait apparaître le
       // bouton « Appliquer au pilier », le geste qui écrit réellement.
       acceptedRecosQuery.refetch();
       setEnrichResult({
-        type: "success",
-        message: "Recommandations acceptées — reste à les appliquer au pilier.",
+        type: data.warnings.length ? "warning" : "success",
+        message: data.warnings[0] ?? (data.accepted + " proposition(s) acceptée(s). Vous pouvez les appliquer au pilier."),
       });
     },
     onError: (err: any) => {

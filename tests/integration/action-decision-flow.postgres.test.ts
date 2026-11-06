@@ -114,12 +114,28 @@ describe("one operator choice survives the whole existing action path", () => {
   it("keeps a historical article-driven field fill from bypassing the review through applyRecos", async () => {
     const f=await fixture();
     const row=await db.recommendation.create({data:{strategyId:f.strategy.id,targetPillarKey:"v",targetField:"businessModel",
-      operation:"SET",agent:"MESTOR",confidence:0.9,explain:"Hypothèse historique",status:"ACCEPTED",source:"SESHAT",
+      operation:"SET",agent:"MESTOR",impact:"MEDIUM",confidence:0.9,explain:"Hypothèse historique",status:"ACCEPTED",source:"SESHAT",
       missionType:"SESHAT_OBSERVATION",inputSnapshotId:"historical-article",proposedValue:"Ancienne proposition de prix."}});
     const result=await applyRecos(f.strategy.id,[row.id]);
     expect(result).toMatchObject({applied:0,warnings:[expect.stringContaining("ARTICLE_COMPARISON_REQUIRED")]});
     expect(await db.pillar.count({where:{strategyId:f.strategy.id,key:"v"}})).toBe(0);
     expect((await db.recommendation.findUniqueOrThrow({where:{id:row.id}})).status).toBe("ACCEPTED");
+  });
+
+  it("excludes unassessed additions and singular operator choices from a bulk accept, while allowing the same direct manual choice", async () => {
+    const f=await fixture();
+    const single=await db.recommendation.create({data:{strategyId:f.strategy.id,targetPillarKey:"i",targetField:"catalogueParCanal",operation:"ADD",
+      agent:"MESTOR",source:"R+T",impact:"MEDIUM",confidence:.8,explain:"Choix unitaire de catalogue",missionType:"I_GENERATION",
+      proposedValue:{kind:"SELECT_INITIATIVE",initiativeId:f.initiative.id,timeframe:"SPRINT_90"}}});
+    const added=await db.recommendation.create({data:{strategyId:f.strategy.id,targetPillarKey:"i",targetField:"catalogueParCanal",operation:"ADD",
+      agent:"MESTOR",source:"R+T",impact:"MEDIUM",confidence:.8,explain:"Piste sans référence comparable",missionType:"I_GENERATION",
+      proposedValue:{kind:"ADD_INITIATIVE",pillar:"i",initiative:{id:randomUUID(),status:"DRAFT",action:"Proposition sans comparaison",format:"Test",objectif:"Tester le pilote"}}}});
+    expect(await acceptRecos(f.strategy.id,[single.id,added.id],owner)).toMatchObject({accepted:0,warnings:[expect.any(String)]});
+    expect(await acceptRecos(f.strategy.id,[single.id],owner,"SHORTLIST")).toMatchObject({accepted:0});
+    expect(await acceptRecos(f.strategy.id,[single.id],owner)).toMatchObject({accepted:1});
+    expect(await applyRecos(f.strategy.id,[single.id],"SHORTLIST")).toMatchObject({applied:0});
+    expect(await acceptRecos(f.strategy.id,[added.id],owner)).toMatchObject({accepted:0});
+    expect((await db.recommendation.findUniqueOrThrow({where:{id:added.id}})).status).toBe("PENDING");
   });
 
   it("retains source cost bounds, monthly units and campaign cadence through the stored projection and saved S without activating execution", async () => {

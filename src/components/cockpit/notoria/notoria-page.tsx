@@ -63,6 +63,8 @@ function typedProposalLabel(value: unknown): string | null {
 }
 
 function applicationWarningLabel(warning: string): string {
+  if (warning.includes("ARTICLE_SCOPE_CHANGED") || warning.includes("ARTICLE_VERDICT_CHANGED")) return "Le plan de référence a changé. Recalculez et relisez la proposition depuis son article avant de l’ajouter au catalogue.";
+  if (warning.includes("ARTICLE_COMPARISON_REQUIRED")) return "Cette piste reste à instruire. Vérifiez sa source et sa comparaison avant son application.";
   if (warning.includes("FIELD_PROVENANCE_REFUSED")) return "Une décision humaine existante empêche ce changement. Relisez le choix conservé avant de modifier l’action.";
   if (warning.includes("PILLAR_SOURCE_VERSION_CONFLICT")) return "Vos données ont changé depuis cette proposition. Rechargez la stratégie avant de réessayer.";
   if (warning.startsWith("Validation:") || warning.startsWith("Bible[WARN]:")) return "Le plan reste partiel. Relisez et complétez votre stratégie avant de l’approuver.";
@@ -80,7 +82,7 @@ const OP_RESKIN: Record<string, { label: string; c: string }> = {
   EXTEND: { label: "Enrichir", c: "accent" },
 };
 const URG_RESKIN: Record<string, { label: string; c: string }> = {
-  NOW: { label: "Urgent", c: "ko" }, SOON: { label: "Recommandé", c: "warn" }, LATER: { label: "Optionnel", c: "muted" },
+  NOW: { label: "Urgent", c: "ko" }, SOON: { label: "Prochainement", c: "warn" }, LATER: { label: "Optionnel", c: "muted" },
 };
 // Statuts de reco traduits — plus d'enum brut à l'écran (lot 11, [M04-03]).
 const STATUS_RESKIN: Record<string, string> = {
@@ -121,7 +123,7 @@ export function NotoriaPage() {
   // The store is a global singleton — clear the staged queue when the operator
   // switches strategy so stale reco ids never leak across brands.
   useEffect(() => { resetRecoQueue(); }, [strategyId, resetRecoQueue]);
-  const [activeTab, setActiveTab] = useState<"pending" | "review" | "history">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "alternatives" | "review" | "history">("pending");
   const [applyFeedback, setApplyFeedback] = useState<{ type: "success" | "warning" | "error"; message: string } | null>(null);
 
   // ── Queries ──
@@ -188,7 +190,11 @@ export function NotoriaPage() {
     },
   });
   const acceptMutation = trpc.notoria.acceptRecos.useMutation({
-    onSuccess: () => { recosQuery.refetch(); dashboardQuery.refetch(); },
+    onSuccess: data => {
+      recosQuery.refetch(); dashboardQuery.refetch();
+      setApplyFeedback({type:data.warnings.length ? "warning" : "success",message:
+        `${data.accepted} proposition(s) acceptée(s). ` + (data.warnings[0] || "Vous pouvez maintenant les appliquer.")});
+    },
   });
   const rejectMutation = trpc.notoria.rejectRecos.useMutation({
     onSuccess: () => { recosQuery.refetch(); dashboardQuery.refetch(); },
@@ -268,10 +274,11 @@ export function NotoriaPage() {
 
   // Split recos: actionable (PENDING + ACCEPTED) vs history (APPLIED/REJECTED/REVERTED/EXPIRED)
   const pendingRecos = allRecos.filter((r) => r.status === "PENDING" || r.status === "ACCEPTED");
-  const actionableRecos = pendingRecos.filter(r => r.comparison?.shortlisted);
+  const actionableRecos = pendingRecos.filter(r => r.comparison?.shortlisted && r.comparison.verdict !== "EQUAL");
+  const alternatives = pendingRecos.filter(r => r.comparison?.verdict === "EQUAL");
   const toReview = pendingRecos.filter(r => !r.comparison?.shortlisted);
   const historyRecos = allRecos.filter((r) => r.status !== "PENDING" && r.status !== "ACCEPTED");
-  const recos = activeTab === "history" ? historyRecos : activeTab === "review" ? toReview : actionableRecos;
+  const recos = activeTab === "history" ? historyRecos : activeTab === "review" ? toReview : activeTab === "alternatives" ? alternatives : actionableRecos;
 
   // Pillar tabs with counts (actionable, not just PENDING)
   const countByPillar: Record<string, number> = {};
@@ -479,7 +486,8 @@ export function NotoriaPage() {
       {/* ═══ Tab bar: Pending / History ════════════════════════════ */}
       <div className="ck-nz__tabbar">
         <button data-on={activeTab === "pending" ? 1 : 0} onClick={() => setActiveTab("pending")}>Présélection ({totalPending})</button>
-        <button data-on={activeTab === "review" ? 1 : 0} onClick={() => setActiveTab("review")}>Autres propositions</button>
+        {alternatives.length > 0 && <button data-on={activeTab === "alternatives" ? 1 : 0} onClick={() => setActiveTab("alternatives")}>Alternatives équivalentes ({alternatives.length})</button>}
+        <button data-on={activeTab === "review" ? 1 : 0} onClick={() => setActiveTab("review")}>À instruire ou à écarter</button>
         <button data-on={activeTab === "history" ? 1 : 0} onClick={() => setActiveTab("history")}>Historique</button>
       </div>
 
@@ -579,14 +587,25 @@ export function NotoriaPage() {
                       <span className="ck-nz__status" data-s={reco.status}>{STATUS_RESKIN[reco.status] ?? reco.status}</span>
                     </div>
 
-                    <p className="ck-nz__reco-explain">{reco.explain}</p>
+                    <p className="ck-nz__reco-explain">{reco.articleEvidence ? (proposalLabel ?? reco.explain) : reco.explain}</p>
                     {reco.comparison && <div className="text-sm text-foreground-secondary">
                       <strong>{reco.comparison.objective}</strong>
                       <p>{reco.comparison.reason}</p>
                       {reco.comparison.shortlisted && !reco.eligibleForApplication && <p>Alternative à conserver. Le gain reste sous la marge requise pour remplacer la valeur en place.</p>}
-                      <small>{reco.comparison.criterion} · {reco.comparison.basis === "measurement" ? "Mesuré" : reco.comparison.basis === "structural" ? "Évaluation du champ" : "Projection"}</small>
+                      <small>{reco.comparison.criterion && reco.comparison.criterion + " · "}{reco.comparison.basis === "measurement" ? "Mesuré" : reco.comparison.basis === "structural" ? "Évaluation du champ" : "Projection"}</small>
                     </div>}
 
+                    {reco.articleEvidence && <details onClick={event => event.stopPropagation()}>
+                      <summary className="ck-nz__reco-toggle">Relire le passage de l’article</summary>
+                      <blockquote className="my-2 border-l border-border pl-3">{reco.articleEvidence.quote}</blockquote>
+                      <p>{reco.articleEvidence.implication}</p>
+                      <p className="mt-2">Vérification prévue · {reco.articleEvidence.measure}</p>
+                      <a href={reco.articleEvidence.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-accent underline">{reco.articleEvidence.title}</a>
+                    </details>}
+                    {activeTab === "alternatives" && reco.eligibleForApplication && <button className="ck-nz__bb accent" disabled={isMutating}
+                      onClick={event => { event.stopPropagation(); (reco.status === "ACCEPTED" ? applyMutation : acceptMutation).mutate({ strategyId: strategyId!, recoIds: [reco.id] }); }}>
+                      {reco.status === "ACCEPTED" ? "Ajouter cette alternative au catalogue" : "Retenir cette alternative"}
+                    </button>}
                     {hasAnalysis && (
                       <details onClick={(e) => e.stopPropagation()}>
                         <summary className="ck-nz__reco-toggle">Avantages / Risques</summary>

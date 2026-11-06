@@ -256,18 +256,21 @@ export const notoriaRouter = createTRPCRouter({
       }),
     )
     .query(async ({ input }) => {
-      const rows = await db.recommendation.findMany({
-        where: {
-          strategyId: input.strategyId,
-          targetPillarKey: input.pillarKey.toLowerCase(),
-          status: input.status,
-        },
-        orderBy: [{ impact: "desc" }, { createdAt: "desc" }],
-        take: 50,
-      });
-      if (!input.shortlistedOnly) return rows;
-      const { compareReviewRows } = await import("@/server/services/notoria/compare-proposal");
-      return (await compareReviewRows(input.strategyId,rows)).filter(row => row.comparison.shortlisted);
+      const where = {strategyId: input.strategyId, targetPillarKey: input.pillarKey.toLowerCase(), status: input.status};
+      const orderBy = [{ impact: "desc" }, {createdAt:"desc"}, {id:"desc"}] as const;
+      const page = (cursor?: string) => db.recommendation.findMany({where, orderBy: [...orderBy], take:50,
+        ...(cursor ? {cursor:{id:cursor},skip:1} : {})});
+      if (!input.shortlistedOnly) return page();
+      const {reviewComparator} = await import("@/server/services/notoria/compare-proposal");
+      const compare = await reviewComparator(input.strategyId);
+      let cursor: string | undefined;
+      const shortlist = [];
+      do {
+        const rows = await page(cursor);
+        shortlist.push(...compare(rows).filter(row => row.comparison.shortlisted));
+        cursor = rows.length === 50 ? rows.at(-1)?.id : undefined;
+      } while (cursor && shortlist.length < 50);
+      return shortlist.slice(0,50);
     }),
 
   getPendingCounts: strategyScopedProcedure
@@ -521,26 +524,26 @@ export const notoriaRouter = createTRPCRouter({
   }).mutation(async ({ input, ctx }) => {
       // Accept all PENDING in batch
       const pending = await db.recommendation.findMany({
-        where: { batchId: input.batchId, status: "PENDING" },
+        where: { strategyId: input.strategyId, batchId: input.batchId, status: "PENDING" },
         select: { id: true },
       });
       if (pending.length > 0) {
         await acceptRecos(
           input.strategyId,
           pending.map((r) => r.id),
-          ctx.session.user.id,
+          ctx.session.user.id, "SHORTLIST",
         );
       }
 
       // Apply all ACCEPTED in batch
       const accepted = await db.recommendation.findMany({
-        where: { batchId: input.batchId, status: "ACCEPTED" },
+        where: { strategyId: input.strategyId, batchId: input.batchId, status: "ACCEPTED" },
         select: { id: true },
       });
       if (accepted.length > 0) {
         return applyRecos(
           input.strategyId,
-          accepted.map((r) => r.id),
+          accepted.map((r) => r.id), "SHORTLIST",
         );
       }
 
