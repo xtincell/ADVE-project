@@ -6,6 +6,8 @@
 
 La PR #1146 inclut la recette de reprise dans le contrôle PostgreSQL de CI. La recette locale couvre 1 702 vérifications de gouvernance et de services, et trois parcours PostgreSQL avec fournisseur simulé. L’appel réel pour SPAWT et le reçu de production sont suivis séparément.
 
+Le premier build de l’image 550 a échoué sur la résolution de JetBrains Mono par `next/font/google` (GitHub Actions 42214103778). Le layout livre désormais les trois graisses déjà utilisées depuis les fichiers WOFF2 officiels JetBrains Mono 2.304, avec leur licence OFL. Le prochain build vérifie cette correction sur l’image entière.
+
 ## v6.27.549 — fix(cockpit): relier la complétude et le rendu retenu à leurs preuves (2026-11-05)
 
 **Candidat local : des états cohérents et une version relue avant son envoi.**
