@@ -1,5 +1,9 @@
 # Scope Drift Log
 
+## 2026-11-06 · PR #1146 · Livrables Glory et Artemis
+
+Le défaut client sur Devotion Ladder demande de réparer les éditions, leur lecture après échec et la validation de leur provenance. La version 6.27.550 circonscrit le changement au catalogue des livrables, aux outils d’exécution existants et au coffre de relecture. Aucun schéma ni fournisseur supplémentaire.
+
 One line per PR labeled `out-of-scope` during the refonte. Format:
 
 ```
