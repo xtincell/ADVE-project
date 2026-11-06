@@ -1,3 +1,9 @@
+## 550 — éditions des livrables, génération et relecture (2026-11-06)
+
+La fiche d’un livrable relie les sections d’une même édition, leurs auteurs et la décision de la personne qui relit. Les sorties GLORY, les résultats Artemis et le coffre Mestor existants portent cette filiation. Les étapes dépendantes attendent la réparation d’une génération en échec. Le portefeuille conserve les éditions complètes précédentes lors d’un échec ou d’une reprise partielle.
+
+Le parcours Devotion Ladder reçu en PostgreSQL local couvre les six paliers, la constitution des deux sections, la relecture par un opérateur, une panne après acceptation et une génération suivante. Les dates et attributions historiques qui manquent ne sont pas reconstituées. La réception SPAWT en production vérifie séparément les prérequis du dossier et le résultat du fournisseur réellement appelé.
+
 ## 549 — états canoniques et version retenue pour la publication (2026-11-05)
 
 **État : candidat local, non reçu en production.** La fusion de 548 dans ce

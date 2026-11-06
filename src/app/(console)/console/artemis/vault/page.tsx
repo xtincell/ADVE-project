@@ -241,7 +241,8 @@ export default function VaultPage() {
                                 <>
                                   <button
                                     onClick={() => acceptMutation.mutate({ executionId: exec.id })}
-                                    disabled={acceptMutation.isPending}
+                                    disabled={acceptMutation.isPending || exec.status !== "COMPLETED"}
+                                    title={exec.status === "COMPLETED" ? undefined : "L’édition doit être complète avant sa validation."}
                                     className="rounded-md bg-emerald-500/20 px-2 py-1 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50"
                                   >
                                     <CheckCircle className="mr-1 inline h-3 w-3" /> Accepter

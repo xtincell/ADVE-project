@@ -28,6 +28,14 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### Livrables Glory et Artemis — une tentative partielle pouvait remplacer l’édition relue (2026-11-06)
+
+Une erreur Artemis historique avec `error: true` restait lisible comme analyse. Une étape en échec pouvait alimenter sa dépendance ou être comptée comme réussie dans le pipeline BRAND. Le catalogue qualifiait de terminé tout document daté, et le coffre utilisait la dernière tentative pour débloquer les prérequis des séquences suivantes.
+
+Le lecteur rapproche les sections de leur exécution, conserve les éditions lisibles et présente l’auteur enregistré. Le coffre sépare la tentative courante de la dernière édition complète acceptée. La relecture référence les sorties exactes et les actifs antérieurs restent consultables. Pour les anciennes analyses sans référence de section, l’historique garde sa date et sa provenance disponible.
+
+Recette locale dans `tests/integration/glory-edition-recovery.postgres.test.ts` avec la gateway simulée, le vrai compilateur et le coffre PostgreSQL. Elle couvre échec, dépendance suspendue, reprise, validation, tentative partielle après acceptation, conservation des actifs, isolation entre opérateurs et concurrence de version.
+
 ### 549 — recommandations bloquées par un contexte dupliqué et une erreur générique (2026-11-05)
 
 Le contexte qualifié de S occupait 133 413 caractères pour une limite de 128 000 ;

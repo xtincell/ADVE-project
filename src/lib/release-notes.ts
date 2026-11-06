@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.550", date: "2026-11-06", headline: "Retrouver la dernière édition complète",
+    highlights: [
+      { emoji: "📖", title: "Reprendre un livrable", body: "Si une production échoue, les sections déjà utilisables et l’édition complète précédente restent consultables dans votre dossier." },
+      { emoji: "✍️", title: "Relire la bonne version", body: "Le document indique qui a produit chaque section. La personne qui relit une édition complète peut enregistrer sa validation depuis le document." },
+      { emoji: "🪜", title: "Suivre les six paliers d’engagement", body: "Chaque palier, du spectateur à l’évangéliste, retrouve ses propres rituels. Les hypothèses de répartition et de conversion sont identifiées lors de la préparation du document." },
+    ],
+  },
+  {
     version: "6.27.549", date: "2026-11-05", headline: "Relire la bonne version avant de publier",
     highlights: [
       { emoji: "💡", title: "Analyser un dossier de marque riche", body: "La demande de recommandations transmet les informations qualifiées sans répéter le même contenu. Si une préparation ou un appel échoue, le message précise l’étape concernée et conserve un diagnostic." },

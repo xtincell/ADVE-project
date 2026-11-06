@@ -35,6 +35,11 @@ export default function DeliverableViewPage() {
   const me = trpc.auth.me.useQuery();
   const utils = trpc.useUtils();
   const [showLaunch, setShowLaunch] = useState(false);
+  const accept = trpc.sequenceVault.accept.useMutation({ onSuccess: async () => {
+    await utils.glory.compileDeliverable.invalidate();
+    await utils.sequenceVault.list.invalidate();
+    toast.success("Relecture enregistrée pour cette édition.");
+  }, onError: error => toast.error(error.message) });
   const launchable = trpc.glory.launchableSequences.useQuery(undefined, { enabled: !!me.data?.canOperate });
   const sequence = launchable.data?.find(row => row.key === key);
 
@@ -96,6 +101,9 @@ export default function DeliverableViewPage() {
   }
 
   const m = manifest.data;
+  const executionId = m.sections[0]?.version?.executionId;
+  const coherentEdition = Boolean(executionId && m.isComplete && m.sections.every(section => section.version?.executionId === executionId));
+  const accepted = coherentEdition && m.sections.every(section => section.version?.approval === "ACCEPTED");
 
 
   return (
@@ -110,11 +118,17 @@ export default function DeliverableViewPage() {
           <span className="text-sm text-foreground-muted">{m.name}</span>
           {m.isComplete ? (
             <span className="inline-flex items-center gap-1 text-2xs text-success">
-              <CheckCircle className="h-3 w-3" /> {m.sections.every(section => section.version?.approval === "ACCEPTED") ? "Relecture acceptée" : "Contenu complet · à relire"}
+              <CheckCircle className="h-3 w-3" /> {accepted ? "Relecture acceptée" : "Contenu complet · à relire"}
             </span>
           ) : (
             <span className="text-2xs text-warning">{m.meta.completedSteps}/{m.meta.totalSteps} sections</span>
           )}
+          {me.data?.canOperate && coherentEdition && executionId && m.sections.every(section => section.version?.approval === "PENDING") ? (
+            <button type="button" disabled={accept.isPending} onClick={() => accept.mutate({ executionId })}
+              className="rounded-lg border border-border px-3 py-2 text-xs font-semibold disabled:opacity-50">
+              Valider cette édition après relecture
+            </button>
+          ) : null}
           {me.data?.canOperate ? <button disabled={!sequence} onClick={() => setShowLaunch(true)} className="rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-foreground disabled:opacity-50">{m.sections.length ? "Produire une nouvelle version" : "Générer le livrable"}</button> : null}
           <button
             onClick={handleExportPDF}
