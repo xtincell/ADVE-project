@@ -431,8 +431,11 @@ async function persistBatch(
   // ── ADR-0090 — contexte de simulation chargé UNE fois par batch ──
   // Ruler déterministe par champ + preview d'impact score, zéro LLM.
   const { loadContentsAndWeights, previewCandidateImpact } = await import("./preview-impact");
-  const { evaluateField, computeRecoWeightedScore, compareForReplacement } = await import("./rulers");
+  const { evaluateField, computeRecoWeightedScore } = await import("./rulers");
+  const { fieldComparator } = await import("./compare-proposal");
   const simCtx = await loadContentsAndWeights(strategyId).catch(() => null);
+
+  const compare = simCtx ? fieldComparator(simCtx.contents, simCtx.weights) : null;
 
   for (const reco of allRecos) {
     const gateResult = applyQualityGates(reco, reco.pillarKey);
@@ -458,6 +461,7 @@ async function persistBatch(
           targetPillarKey: pillarKeyLower,
           targetField: reco.field,
           operation,
+          targetMatch: reco.targetMatch,
           proposedValue: reco.proposedValue,
         })
       : null;
@@ -466,29 +470,6 @@ async function persistBatch(
       scoreImpactEstimate,
       confidence: reco.confidence ?? 0.6,
     });
-
-    // Gate de remplacement à la génération : si la valeur EN PLACE bat la
-    // proposition, on ne bloque pas le catalogue (Notoria catalogue tout)
-    // mais on force requires_review + warning visible. Le blocage dur vit
-    // dans lifecycle.applyRecos.
-    let rulerWarning: string | undefined;
-    if (simCtx && (operation === "SET" || operation === "MODIFY")) {
-      const currentValue = (simCtx.contents[pillarKeyLower as keyof typeof simCtx.contents] as Record<string, unknown> | null | undefined)?.[
-        reco.field.split(".")[0] ?? reco.field
-      ];
-      const cmp = compareForReplacement({
-        pillarKey: pillarKeyLower,
-        field: reco.field,
-        oldValue: currentValue,
-        newValue: reco.proposedValue,
-        confidence: reco.confidence ?? 0.6,
-        scoreImpactEstimate,
-      });
-      if (!cmp.replaceAllowed) {
-        gateResult.applyPolicy = "requires_review";
-        rulerWarning = cmp.reason;
-      }
-    }
 
     // ── ADR-0184 — ancrage documentaire, mesuré et non pas supposé ──
     const justification = reco.justification ?? "";
@@ -508,6 +489,13 @@ async function persistBatch(
         "La marque a de la documentation, mais cette proposition n'en reprend rien.";
     }
 
+    const comparison = compare?.({
+      targetPillarKey: pillarKeyLower, targetField: reco.field, operation, targetMatch: reco.targetMatch,
+      proposedValue: reco.proposedValue, confidence: reco.confidence ?? 0.6,
+      unverifiedCitations: grounding.unverifiedCitations,
+    });
+    const rulerWarning = !comparison?.shortlisted ? comparison?.reason : undefined;
+    if (!comparison?.shortlisted) gateResult.applyPolicy = "requires_review";
     const validationWarning = [
       (reco as Record<string, unknown>)._validationWarning as string | undefined,
       rulerWarning,
@@ -543,7 +531,7 @@ async function persistBatch(
         validationWarning: validationWarning ?? null,
         sectionGroup: reco.sectionGroup ?? null,
         rulerScore: rulerVerdict.score,
-        rulerVerdict: rulerVerdict as unknown as Prisma.InputJsonValue,
+        rulerVerdict: { ...rulerVerdict, fieldComparison: comparison } as unknown as Prisma.InputJsonValue,
         scoreImpactEstimate,
         weightedScore,
         groundingScore: grounding.score,

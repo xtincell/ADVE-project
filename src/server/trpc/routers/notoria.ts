@@ -204,6 +204,7 @@ export const notoriaRouter = createTRPCRouter({
         sectionGroup: z.string().optional(),
         limit: z.number().min(1).max(200).default(100),
         cursor: z.string().optional(),
+        comparePending: z.boolean().optional(),
       }),
     )
     .query(async ({ input }) => {
@@ -211,6 +212,7 @@ export const notoriaRouter = createTRPCRouter({
         strategyId: input.strategyId,
       };
       if (input.status) where.status = input.status;
+      else if (input.comparePending) where.status = { in: ["PENDING","ACCEPTED"] };
       if (input.targetPillarKey)
         where.targetPillarKey = input.targetPillarKey.toLowerCase();
       if (input.missionType) where.missionType = input.missionType;
@@ -220,10 +222,12 @@ export const notoriaRouter = createTRPCRouter({
       const items = await db.recommendation.findMany({
         where,
         take: input.limit + 1,
-        ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
-        orderBy: { createdAt: "desc" },
+        ...(input.cursor ? { cursor: { id: input.cursor } } : {}),
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       });
 
+      // Take the cursor from storage order before reordering a page for display.
+      const nextCursor = items.length > input.limit ? items.pop()?.id : undefined;
       // Sort in-memory by semantic priority (alphabetical sort on enum strings is unreliable)
       const IMPACT_ORDER: Record<string, number> = { HIGH: 3, MEDIUM: 2, LOW: 1 };
       const URGENCY_ORDER: Record<string, number> = { NOW: 3, SOON: 2, LATER: 1 };
@@ -235,12 +239,10 @@ export const notoriaRouter = createTRPCRouter({
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
 
-      let nextCursor: string | undefined;
-      if (items.length > input.limit) {
-        const next = items.pop();
-        nextCursor = next?.id;
+      if (input.comparePending && items.length) {
+        const { compareReviewRows } = await import("@/server/services/notoria/compare-proposal");
+        return { items: await compareReviewRows(input.strategyId, items), nextCursor };
       }
-
       return { items, nextCursor };
     }),
 
@@ -249,11 +251,12 @@ export const notoriaRouter = createTRPCRouter({
       z.object({
         strategyId: z.string(),
         pillarKey: pillarKeyEnum,
+        shortlistedOnly: z.boolean().optional(),
         status: recoStatusEnum.optional().default("PENDING"),
       }),
     )
     .query(async ({ input }) => {
-      return db.recommendation.findMany({
+      const rows = await db.recommendation.findMany({
         where: {
           strategyId: input.strategyId,
           targetPillarKey: input.pillarKey.toLowerCase(),
@@ -262,6 +265,9 @@ export const notoriaRouter = createTRPCRouter({
         orderBy: [{ impact: "desc" }, { createdAt: "desc" }],
         take: 50,
       });
+      if (!input.shortlistedOnly) return rows;
+      const { compareReviewRows } = await import("@/server/services/notoria/compare-proposal");
+      return (await compareReviewRows(input.strategyId,rows)).filter(row => row.comparison.shortlisted);
     }),
 
   getPendingCounts: strategyScopedProcedure

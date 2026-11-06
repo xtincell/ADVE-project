@@ -282,52 +282,21 @@ async function applyReplacementGate(
   strategyId: string,
   recos: Array<RecoRow & Record<string, unknown>>,
 ): Promise<{ blockedIds: Set<string>; gateWarnings: string[] }> {
-  const { compareForReplacement } = await import("./rulers");
-
+  const { fieldComparator } = await import("./compare-proposal");
+  const { loadContentsAndWeights } = await import("./preview-impact");
+  const { RULER_REPLACEMENT_MARGIN } = await import("./rulers");
+  const { contents, weights } = await loadContentsAndWeights(strategyId);
+  const compare = fieldComparator(contents, weights);
   const blockedIds = new Set<string>();
   const gateWarnings: string[] = [];
-
-  const pillarRows = await db.pillar.findMany({
-    where: { strategyId },
-    select: { key: true, content: true },
-  });
-  const contents = new Map<string, Record<string, unknown>>(
-    pillarRows.map((p) => [p.key.toLowerCase(), (p.content ?? {}) as Record<string, unknown>]),
-  );
-
   for (const reco of recos) {
-    // Résout la cible effective (typée ou legacy).
     const typed = parseRecommendationPayload(reco.proposedValue);
-    let pillarKey: string;
-    let field: string;
-    let newValue: unknown;
-    if (typed) {
-      if (typed.kind !== "UPDATE_ADVE_FIELD") continue; // mutations id-ciblées : pas un remplacement
-      pillarKey = typed.pillar.toLowerCase();
-      field = typed.field;
-      newValue = typed.value;
-    } else {
-      if (reco.operation !== "SET" && reco.operation !== "MODIFY") continue;
-      pillarKey = reco.targetPillarKey.toLowerCase();
-      field = reco.targetField;
-      newValue = reco.proposedValue;
-    }
-
-    const topField = field.split(".")[0] ?? field;
-    const currentValue = contents.get(pillarKey)?.[topField];
-
-    const cmp = compareForReplacement({
-      pillarKey,
-      field,
-      oldValue: currentValue,
-      newValue,
-      confidence: reco.confidence ?? 0.6,
-      scoreImpactEstimate: reco.scoreImpactEstimate,
-    });
-
-    if (!cmp.replaceAllowed) {
+    if (typed ? typed.kind !== "UPDATE_ADVE_FIELD" : !["SET","MODIFY","EXTEND"].includes(reco.operation)) continue;
+    const cmp = compare(reco);
+    if (!cmp.shortlisted || (cmp.incumbent && (cmp.delta ?? 0) < RULER_REPLACEMENT_MARGIN)) {
       blockedIds.add(reco.id);
-      gateWarnings.push(`Reco ${reco.id} (${pillarKey}.${field}) rejetée — ${cmp.reason}`);
+      const margin = cmp.shortlisted ? " Le remplacement exige un gain de " + RULER_REPLACEMENT_MARGIN + " points." : "";
+      gateWarnings.push("Reco " + reco.id + " (" + reco.targetField + ") : " + cmp.reason + margin);
     }
   }
 

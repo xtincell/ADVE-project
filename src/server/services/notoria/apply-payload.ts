@@ -1,3 +1,4 @@
+import { applyResolvedRecoOps } from "../pillar-gateway/apply-resolved-ops";
 /**
  * FUNCTION-CALLING RECOMMENDATION EXECUTOR (ADR-0088)
  *
@@ -128,7 +129,9 @@ export function applyPayloadToPillars(
       // toLowerCase, l'écriture créait un pilier fantôme "A" jamais persisté.
       const storageKey = payload.pillar.toLowerCase();
       const p = (pillars[storageKey] ??= {});
-      p[payload.field] = payload.value;
+      const result = applyResolvedRecoOps(p, [{ field: payload.field, operation: "SET", proposedValue: payload.value, recoId: "typed-update" }]);
+      if (!result.appliedCount) { warnings.push(...result.warnings); break; }
+      pillars[storageKey] = result.content;
       changed.add(storageKey);
       break;
     }

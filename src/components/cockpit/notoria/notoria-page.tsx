@@ -121,7 +121,7 @@ export function NotoriaPage() {
   // The store is a global singleton — clear the staged queue when the operator
   // switches strategy so stale reco ids never leak across brands.
   useEffect(() => { resetRecoQueue(); }, [strategyId, resetRecoQueue]);
-  const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "review" | "history">("pending");
   const [applyFeedback, setApplyFeedback] = useState<{ type: "success" | "warning" | "error"; message: string } | null>(null);
 
   // ── Queries ──
@@ -132,14 +132,14 @@ export function NotoriaPage() {
 
   // For "pending" tab: show PENDING + ACCEPTED (not yet applied)
   // For "history" tab: show all statuses
-  const recosQuery = trpc.notoria.getRecos.useQuery(
+  const recosQuery = trpc.notoria.getRecos.useInfiniteQuery(
     {
       strategyId: strategyId ?? "",
-      status: activeTab === "history" ? undefined : undefined, // no status filter — we filter client-side
+      comparePending: activeTab !== "history",
       targetPillarKey: (selectedPillar?.toUpperCase() ?? undefined) as PillarKey | undefined,
       limit: 200,
     },
-    { enabled: !!strategyId },
+    { enabled: !!strategyId, getNextPageParam: page => page.nextCursor },
   );
 
   const pipelineQuery = trpc.notoria.getPipelineStatus.useQuery(
@@ -257,7 +257,7 @@ export function NotoriaPage() {
 
   const dashboard = dashboardQuery.data;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const allRecos: any[] = recosQuery.data?.items ?? [];
+  const allRecos: any[] = recosQuery.data?.pages.flatMap(page => page.items) ?? [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const batches: any[] = batchesQuery.data ?? [];
   // Founders are not operators (init.ts operatorProcedure) — accepting/applying
@@ -267,9 +267,11 @@ export function NotoriaPage() {
   const isMutating = generateMutation.isPending || generateTypedMutation.isPending || generateFromVaultMutation.isPending || acceptMutation.isPending || rejectMutation.isPending || applyMutation.isPending || !canOperate;
 
   // Split recos: actionable (PENDING + ACCEPTED) vs history (APPLIED/REJECTED/REVERTED/EXPIRED)
-  const actionableRecos = allRecos.filter((r) => r.status === "PENDING" || r.status === "ACCEPTED");
+  const pendingRecos = allRecos.filter((r) => r.status === "PENDING" || r.status === "ACCEPTED");
+  const actionableRecos = pendingRecos.filter(r => r.comparison?.shortlisted);
+  const toReview = pendingRecos.filter(r => !r.comparison?.shortlisted);
   const historyRecos = allRecos.filter((r) => r.status !== "PENDING" && r.status !== "ACCEPTED");
-  const recos = activeTab === "pending" ? actionableRecos : historyRecos;
+  const recos = activeTab === "history" ? historyRecos : activeTab === "review" ? toReview : actionableRecos;
 
   // Pillar tabs with counts (actionable, not just PENDING)
   const countByPillar: Record<string, number> = {};
@@ -311,6 +313,7 @@ export function NotoriaPage() {
   });
 
   const totalPending = actionableRecos.length;
+  const eligibleRecos = actionableRecos.filter(r => r.eligibleForApplication);
 
   // Readiness permits a run; freshness describes its stored result. Review
   // queues are a separate workflow, never the production history of I or S.
@@ -475,12 +478,13 @@ export function NotoriaPage() {
 
       {/* ═══ Tab bar: Pending / History ════════════════════════════ */}
       <div className="ck-nz__tabbar">
-        <button data-on={activeTab === "pending" ? 1 : 0} onClick={() => setActiveTab("pending")}>En attente ({totalPending})</button>
+        <button data-on={activeTab === "pending" ? 1 : 0} onClick={() => setActiveTab("pending")}>Présélection ({totalPending})</button>
+        <button data-on={activeTab === "review" ? 1 : 0} onClick={() => setActiveTab("review")}>Autres propositions</button>
         <button data-on={activeTab === "history" ? 1 : 0} onClick={() => setActiveTab("history")}>Historique</button>
       </div>
 
       {/* ═══ Section 3: Reco Panel ═════════════════════════════════ */}
-      {activeTab === "pending" && (
+      {activeTab !== "history" && (
         <>
           {/* Pillar tabs */}
           <div className="ck-nz__ptabs">
@@ -501,18 +505,18 @@ export function NotoriaPage() {
           )}
 
           {/* Batch actions */}
-          {recos.length > 0 && (
+          {activeTab === "pending" && recos.length > 0 && (
             <div className="ck-nz__batch">
-              {recos.some((r) => r.status === "PENDING") && (
+              {eligibleRecos.some((r) => r.status === "PENDING") && (
                 <button className="ck-nz__bb emerald" disabled={isMutating}
-                  onClick={() => { const ids = recos.filter((r) => r.status === "PENDING").map((r) => r.id); if (ids.length > 0) acceptMutation.mutate({ strategyId: strategyId!, recoIds: ids }); }}>
-                  <CheckCircle /> Tout accepter ({recos.filter((r) => r.status === "PENDING").length})
+                  onClick={() => { const ids = eligibleRecos.filter((r) => r.status === "PENDING").map((r) => r.id); if (ids.length > 0) acceptMutation.mutate({ strategyId: strategyId!, recoIds: ids }); }}>
+                  <CheckCircle /> Tout accepter ({eligibleRecos.filter((r) => r.status === "PENDING").length})
                 </button>
               )}
-              {recos.some((r) => r.status === "ACCEPTED") && (
+              {eligibleRecos.some((r) => r.status === "ACCEPTED") && (
                 <button className="ck-nz__bb blue" disabled={isMutating}
-                  onClick={() => { setApplyFeedback(null); const ids = recos.filter((r) => r.status === "ACCEPTED").map((r) => r.id); if (ids.length > 0) applyMutation.mutate({ strategyId: strategyId!, recoIds: ids }); }}>
-                  <Zap /> Appliquer tout ({recos.filter((r) => r.status === "ACCEPTED").length})
+                  onClick={() => { setApplyFeedback(null); const ids = eligibleRecos.filter((r) => r.status === "ACCEPTED").map((r) => r.id); if (ids.length > 0) applyMutation.mutate({ strategyId: strategyId!, recoIds: ids }); }}>
+                  <Zap /> Appliquer tout ({eligibleRecos.filter((r) => r.status === "ACCEPTED").length})
                 </button>
               )}
               <button className="ck-nz__bb accent" disabled={selectedRecoIds.length === 0 || isMutating}
@@ -520,17 +524,17 @@ export function NotoriaPage() {
                   setApplyFeedback(null);
                   const ids = selectedRecoIds;
                   if (ids.length === 0) return;
-                  const pendingIds = ids.filter((id) => recos.find((r) => r.id === id)?.status === "PENDING");
+                  const pendingIds = ids.filter((id) => eligibleRecos.find((r) => r.id === id)?.status === "PENDING");
                   if (pendingIds.length > 0) acceptMutation.mutate({ strategyId: strategyId!, recoIds: pendingIds });
-                  const acceptedIds = ids.filter((id) => recos.find((r) => r.id === id)?.status === "ACCEPTED");
+                  const acceptedIds = ids.filter((id) => eligibleRecos.find((r) => r.id === id)?.status === "ACCEPTED");
                   if (acceptedIds.length > 0) applyMutation.mutate({ strategyId: strategyId!, recoIds: acceptedIds });
                   resetRecoQueue();
                 }}>
                 <ThumbsUp /> Sélection ({selectedRecoIds.length})
               </button>
-              {recos.some((r) => r.status === "PENDING") && (
+              {eligibleRecos.some((r) => r.status === "PENDING") && (
                 <button className="ck-nz__bb red" disabled={isMutating}
-                  onClick={() => { const ids = recos.filter((r) => r.status === "PENDING").map((r) => r.id); if (ids.length > 0) rejectMutation.mutate({ strategyId: strategyId!, recoIds: ids }); }}>
+                  onClick={() => { const ids = eligibleRecos.filter((r) => r.status === "PENDING").map((r) => r.id); if (ids.length > 0) rejectMutation.mutate({ strategyId: strategyId!, recoIds: ids }); }}>
                   <ThumbsDown /> Rejeter
                 </button>
               )}
@@ -539,11 +543,11 @@ export function NotoriaPage() {
 
           {/* Reco cards */}
           <div className="ck-nz__recos">
-            {recos.length === 0 && <div className="ck-nz__empty">Aucune recommandation en attente.</div>}
+            {recos.length === 0 && <div className="ck-nz__empty">{activeTab === "pending" ? "Aucune proposition présélectionnée dans cette liste." : "Aucune autre proposition dans cette liste."}</div>}
             {recos.map((reco) => {
               const proposalLabel = typedProposalLabel(reco.proposedValue);
               const isSelected = !!recoQueue[reco.id];
-              const isActionable = reco.status === "PENDING" || reco.status === "ACCEPTED";
+              const isActionable = activeTab === "pending" && reco.eligibleForApplication && (reco.status === "PENDING" || reco.status === "ACCEPTED");
               const op = OP_RESKIN[reco.operation] ?? { label: reco.operation, c: "blue" };
               const urg = URG_RESKIN[reco.urgency] ?? URG_RESKIN.SOON!;
               const advantages = Array.isArray(reco.advantages) ? reco.advantages as string[] : [];
@@ -576,6 +580,12 @@ export function NotoriaPage() {
                     </div>
 
                     <p className="ck-nz__reco-explain">{reco.explain}</p>
+                    {reco.comparison && <div className="text-sm text-foreground-secondary">
+                      <strong>{reco.comparison.objective}</strong>
+                      <p>{reco.comparison.reason}</p>
+                      {reco.comparison.shortlisted && !reco.eligibleForApplication && <p>Alternative à conserver. Le gain reste sous la marge requise pour remplacer la valeur en place.</p>}
+                      <small>{reco.comparison.criterion} · {reco.comparison.basis === "measurement" ? "Mesuré" : reco.comparison.basis === "structural" ? "Évaluation du champ" : "Projection"}</small>
+                    </div>}
 
                     {hasAnalysis && (
                       <details onClick={(e) => e.stopPropagation()}>
@@ -641,6 +651,8 @@ export function NotoriaPage() {
           })}
         </div>
       )}
+      {recosQuery.hasNextPage && <button type="button" disabled={recosQuery.isFetchingNextPage}
+        onClick={() => recosQuery.fetchNextPage()}>Charger la suite</button>}
     </div>
   );
 }
