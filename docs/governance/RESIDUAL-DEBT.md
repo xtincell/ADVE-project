@@ -1,46 +1,88 @@
-## 548 — recevoir la veille traçable et le suivi des productions (2026-11-05)
+## 549 — recevoir les recommandations et la publication après le raccord local (2026-11-05)
 
-La livraison technique 547, sa CI, son image et ses surfaces Gazette/DAM/intake
-ont été reçues. Le rafraîchissement réel a cependant remonté surtout des articles
-industriels FoodTech mondiaux, éloignés du public foodie/restauration de SPAWT.
-Les sujets manuels restent légitimes ; ils ne doivent pas empêcher l’usage de
-l’ADVE pour qualifier la collecte et la pertinence des résultats.
+**Acquis, au périmètre reçu.** La version 548 est déployée sur le merge
+`e723d0e5adf5808e3405254b5940035f190ac950`, après CI main et image reçues.
+Le 5 novembre, la recette native en lecture seule reçoit le dossier d’actif Mestor,
+les quatre tâches Studio compactes, un article Koaci pertinent pour la restauration
+à Abidjan, son image, son lien et son extrait, en bureau et mobile. Le signal ancien
+sans provenance reste qualifié comme non traçable. Les dettes de livraison 548 et
+de transfert des images en double sont fermées ; elles ne sont plus des travaux
+à refaire. Preuves privées : `deploiement-548/rollout-verified.json` et
+`prod548-readonly-ui-partial/2026-11-05T22-27-02-817Z/receipt.json`.
 
-**Corrections candidates.** La collecte complète les sujets conservés avec le
-contexte ADVE et qualifie la pertinence sur les articles reçus. Les nouveaux
-signaux produits par modèle restent des hypothèses ; les analyses enregistrent
-leurs entrées et leur contexte. Le lecteur distingue provenance historique et
-contexte actuel, sans reconstruire des preuves absentes. Le suivi Studio évite
-le transfert des originaux en double : 56/56 tests PostgreSQL et réception locale
-bureau/mobile acquis, originaux et aperçus privés conservés. Ce reçu ne prouve
-pas encore le correctif sur les productions réelles.
+**Défaut encore ouvert : article → propositions.** L’appel Notoria a échoué en
+412 sur cette version et n’a reçu aucune proposition. La préparation sérialise S
+sur 133 413 caractères pour une limite de 128 000, avant l’appel à Luna ; les six
+cibles échouent et l’erreur générique masque cette cause. Aucun coût ni appel
+fournisseur n’a été enregistré dans la fenêtre diagnostiquée. La route OpenAI
+existante est configurée. Preuve privée :
+`gazette548-reception/notoria-routing-readonly.json`.
 
-**Contrôles déjà reçus localement.** Typage global avec code 0 après génération
-des types de routes ; lint et lint de gouvernance sans erreur, avec 25
-avertissements existants chacun ; aucun cycle. Les trois tests de focus de la
-modale et la réception Gazette bureau/mobile sont acquis. Celle-ci est une
-recette avec fixtures, sans mutation, et ne reçoit pas la pertinence éditoriale.
-La première suite globale comptait **5 481 succès et deux échecs sur 5 483 tests**.
-Ces deux échecs de gouvernance d’accès de `jehuty.readSignal` sont corrigés :
-16 tests ciblés et la suite de gouvernance complète (169 fichiers, 1 682 tests)
-passent, ainsi que le typage global final. Les 7 tests du lecteur et les 3 tests
-de focus passent après le dernier correctif. La suite intégrale n’a pas été
-rejouée ; aucun second résultat global n’est inventé.
+**Correctif local reçu.** 549 compacte le contexte sans supprimer ses enregistrements
+ni leurs qualifications et ne répète plus la cible. Le plafond reste inchangé.
+Le snapshot privé SPAWT prépare les six cibles ; S occupe 89 559 caractères.
+Les pannes sont enregistrées avec code, phase et pilier, même sans lot créé.
+36 tests ciblés passent, ainsi que le typage et le lint ciblés ; le reçu
+`notoria549-snapshot-context.json` ne comporte aucun appel fournisseur.
+Un appel réel local séparé, via le gestionnaire, reçoit quatre propositions Luna
+en 57,9 secondes ; la sortie est non appliquée. Ce reçu
+`notoria549-luna-receipt.json` est complété par un replay PostgreSQL local :
+quatre propositions persistées et relues depuis l’article, sans application ni
+modification des huit piliers ; les cinq autres cibles sont des sorties de test
+vides. Preuve : `notoria549-local-persistence.json`. Leur qualification `NO_SOURCE`
+et un avertissement de qualité restent visibles. Le sourcing et la pertinence
+métier sur le parcours livré ne sont pas reçus. La projection de prose à 400
+caractères reste une limite existante, distincte du correctif de duplication.
 
-**Plan et déclencheur.** Dès l’intégration du head 548 : recevoir la CI et l’image,
-puis relire les productions existantes sans génération. Recevoir une
-collecte sur le contexte réel SPAWT, sa sélection pertinente et une demande
-Notoria liée à un article exact. Vérifier que les propositions restent à relire
-et que les fondations ne changent pas. Le lecteur doit exposer les références
-exactes, distinguer hypothèse et article, et rendre l’ancienne provenance absente
-explicite. Responsable : session NEFER de livraison ; effort borné à cette tranche
-de collecte, lecture et suivi, sans nouveau moteur. Aucune actualité, image ou
-preuve de popularité inventée. Production 548 et réception métier restent ouvertes.
+**Traçabilité de l’article reçue localement.** L’entrée exacte transmise à Luna
+est désormais conservée avec URL, date et empreinte, puis relue séparément des
+sources documentaires. Les 55 tests ciblés finaux et le replay PostgreSQL des quatre
+propositions déjà reçues passent, sans nouvel appel : un ancrage faible à 25 %,
+trois insuffisants entre 8,6 et 14,3 %. Le statut documentaire `NO_SOURCE` de la
+fixture sans documents reste inchangé. Cette preuve ferme le raccord local de
+traçabilité ; la pertinence réelle de la recommandation et son acceptation restent
+à recevoir. Preuve : `notoria549-article-grounding-persistence.json`. La lecture
+native compilée reçoit les quatre propositions en attente, leurs qualifications
+séparées, le contenu disponible et l’image en bureau/mobile, sans écriture ni
+erreur : `notoria549-compiled-browser/receipt.json`. Elle ne reçoit pas une
+nouvelle demande dans le parcours de production.
 
-Les quatre images et quatre aperçus reçus le 5 novembre ferment la réception
-matérielle de ces quatre options seulement. La relecture éditoriale, le choix du
-client et la publication ne sont pas effectués. Les contrats et fichiers
-vidéo/audio restent ouverts au plan de production sociale ci-dessous.
+**Plan de réception et déclencheur.** Après intégration et livraison du correctif
+549, recevoir une demande réelle sur l’article exact :
+propositions liées à la source, auteur et état conservés, fondations inchangées.
+Responsable : session NEFER de livraison ; effort borné au sérialiseur et au
+circuit Notoria existants. Aucune nouvelle route fournisseur ni preuve de pertinence
+inventée. La lecture de l’article seule ne ferme pas cette dette.
+
+**Publication : raccord local, réception réelle ouverte.** 549 prépare dans le
+coffre la version choisie au calendrier, son image, son brief et son texte. Dix
+cas PostgreSQL isolés et la recette Chrome locale 1440/390 passent, avec transport
+Meta simulé ou sans envoi. Aucun choix de variante SPAWT par le client, relecture
+éditoriale du rendu réel, remise au destinataire ou publication Instagram n’est
+reçu. Les quatre PNG et quatre WEBP inspectés le 5 novembre prouvent seulement
+la réception matérielle de quatre options.
+
+**Plan de réception et déclencheur.** Après intégration et livraison 549, recevoir
+sur le dossier SPAWT le parcours calendrier → brief → options → version retenue
+→ relecture → compte destinataire. La publication demande sa confirmation
+distincte ; lire ensuite l’identifiant et le résultat réellement reçus du réseau.
+Responsable : session NEFER et responsable de marque pour ses décisions ; effort
+borné à une publication, deux formats contrôlés et la conservation des versions.
+Sources modifiées, compte erroné ou absence d’accord ne doivent pas être assimilés
+à une réception. Graphe libre, reprises complètes, vidéo/audio et réception
+Friesland restent dans les critères existants ci-dessous.
+
+**États canoniques : correctifs 549 locaux.** Le tableau de bord, le cache,
+le questionnaire et le verrouillage utilisent désormais le même évaluateur.
+Les métadonnées ne gonflent plus le compteur structurel ; les refus d’export
+exposent le statut de proposition IA. 70 tests unitaires et 28 tests PostgreSQL
+isolés reçus, avec concurrence contrôlée, ne valent pas réception de production.
+Le contrôle HTTP authentifié local confirme les mêmes taux entre lecteurs,
+le cache réconcilié et le refus d’export d’une proposition IA toujours explicite.
+Preuve privée : `readiness549-http-receipt.json`.
+Déclencheur : head 549 intégré, puis lecture des mêmes états dans ses surfaces
+natives. Conserver les auteurs, contenus, versions et décisions pendant cette
+réception. Preuve privée : `pillar-readiness549-receipt.json`.
 
 ## 542 — recevoir les recettes de production audiovisuelle (2026-11-04)
 

@@ -683,7 +683,7 @@ src/server/services/anubis/
 
 Dépendances satellites : `email`, `oauth-integrations`, `advertis-connectors`, `financial-brain`. **4 nouveaux models Prisma** : `CommsPlan`, `BroadcastJob`, `EmailTemplate`, `SmsTemplate`. Réutilise `Notification`, `NotificationPreference`, `WebhookConfig`, `ExternalConnector` existants. Pages : `/console/anubis/page.tsx` (dashboard) + `/console/anubis/credentials/page.tsx` (Credentials Center). Router tRPC : `anubis.ts`.
 
-### Anubis — publication depuis les variantes du calendrier (ADR0243, candidat local 549)
+### Anubis — publication depuis les variantes du calendrier (ADR0242, candidat local 549)
 
 - `publication-package.ts` prépare une version du coffre à partir du brief et du fichier reçus, puis enregistre la relecture humaine de son empreinte. Les tables existantes BrandAsset, AssetVersion et BrandAction portent la filiation.
 - `publication-media.ts` contrôle les octets reçus et produit l’export JPEG exact de l’aperçu, sans recadrage. `publication-access.ts` borne l’accès fournisseur à dix minutes et au hash du paquet.

@@ -62,6 +62,43 @@ describe("Gazette source and interpretation reader", () => {
     expect(actions.onNotoria).not.toHaveBeenCalled();
   });
 
+  it("rereads exact article evidence separately from documentary support and keeps the proposal pending", () => {
+    const url = "https://presse.example/a";
+    const article: JehutyFeedItem = { ...item, externalUrl: url, source: "Journal local", articleContext: {
+      articleUrl: url, linkedAnalyses: [], brandContext: [], batchIds: ["batch-a"], recommendations: [{
+        id: "r-a", batchId: "batch-a", targetPillarKey: "I", targetField: "catalogueParCanal", explain: "Une piste conditionnelle.",
+        status: "PENDING", createdAt: item.createdAt, documentaryGrounding: { band: "NO_SOURCE", score: 0 },
+        articleGrounding: { receiptId: "receipt-a", sourceId: "digest-a", sourceUrl: url, source: "Journal local", publishedAt: item.createdAt,
+          qualification: "REPORTED", observationHash: "input-hash", band: "WEAK", score: .25, unverifiedCitations: [],
+          excerpts: [{ field: "summary", text: "Extrait exact utilisé, avec sa dernière phrase.", start: 20, end: 70 }] },
+      }],
+    } };
+    render(React.createElement(GazetteReader, { item: article, ...actions }));
+    const right = screen.getByRole("region", { name: "La lecture pour votre marque" });
+    expect(within(right).getByText(/Proposition à examiner/)).toBeTruthy();
+    expect(within(right).getByText("Appui lexical partiel · 25 %")).toBeTruthy();
+    expect(within(right).getByText("Recouvrement non mesurable")).toBeTruthy();
+    expect(within(right).getByText("Extrait exact utilisé, avec sa dernière phrase.")).toBeTruthy();
+    expect(within(right).getByRole("link", { name: /Journal local/ }).getAttribute("href")).toBe(url);
+    expect(right.textContent).toContain("Documentation de marque");
+    expect(right.textContent).toContain("Il ne valide ni les faits rapportés ni l’impact supposé");
+    expect(actions.onNotoria).not.toHaveBeenCalled();
+  });
+
+  it("does not invent article grounding for an old proposal", () => {
+    const article: JehutyFeedItem = { ...item, externalUrl: "https://presse.example/a", articleContext: {
+      articleUrl: "https://presse.example/a", linkedAnalyses: [], brandContext: [], batchIds: ["old"], recommendations: [{
+        id: "r-old", batchId: "old", targetPillarKey: "I", targetField: "copyStrategy", explain: "Ancienne piste.", status: "PENDING", createdAt: item.createdAt,
+      }],
+    } };
+    render(React.createElement(GazetteReader, { item: article, ...actions }));
+    const right = screen.getByRole("region", { name: "La lecture pour votre marque" });
+    expect(within(right).getAllByText("Non mesuré")).toHaveLength(2);
+    expect(right.textContent).toContain("L’extrait exact utilisé pour cette proposition n’est pas conservé");
+    expect(right.textContent).not.toContain("Appui lexical");
+    expect(actions.onNotoria).not.toHaveBeenCalled();
+  });
+
   it("distinguishes preserved legacy references from a complete historical snapshot", () => {
     query.result = { data: { ...reading, provenanceStatus: "REFERENCED", inputSignals: [
       { title: "Article conservé", content: "", sourceType: "REFERENCE", sourceUrl: "https://presse.example/archive", collectedAt: "", kind: "UNSPECIFIED", article: { title: "Article retrouvé", content: "Extrait reçu ultérieurement.", url: "https://presse.example/archive", source: "Journal local" } },

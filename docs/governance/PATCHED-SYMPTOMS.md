@@ -28,6 +28,73 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 549 — recommandations bloquées par un contexte dupliqué et une erreur générique (2026-11-05)
+
+Le contexte qualifié de S occupait 133 413 caractères pour une limite de 128 000 ;
+les six cibles Notoria échouaient avant l’appel fournisseur. Le prompt répétait
+aussi la cible en JSON brut. La sérialisation compacte et la cible unique gardent
+les enregistrements et leurs qualifications ; le même snapshot SPAWT prépare
+les six cibles avec S à 89 559 caractères, sans relever le plafond. Le contrat
+de sortie structuré accompagne également les observations. Les pannes conservent
+un reçu sûr même sans lot créé : phase, code et pilier, sans texte fournisseur.
+36 tests ciblés, typage et lint ciblés reçus ; le snapshot est un contrôle local
+sans appel LLM. Un appel Luna réel local distinct reçoit quatre propositions
+non appliquées. Le replay PostgreSQL local les persiste et les relit depuis
+l’article, en attente de relecture, sans modifier les huit piliers ; les cinq
+autres cibles sont des sorties vides simulées. La prose reste bornée à 400
+caractères par la projection existante. Réception du parcours livré et qualité
+métier encore ouvertes dans RESIDUAL-DEBT.
+
+### 549 — article transmis sans reçu d’ancrage de la proposition (2026-11-05)
+
+L’observation issue de l’article atteignait le modèle, mais la relecture qualifiait
+uniquement les sources documentaires. Le signal existant conserve maintenant
+l’extrait exact, ses références et son empreinte ; chaque proposition expose
+sa correspondance à cet extrait, distincte de l’ancrage documentaire. Le lecteur
+vérifie l’entrée et l’empreinte de la proposition. Les 55 tests ciblés finaux et le replay
+PostgreSQL de quatre propositions Luna passent, sans nouvel appel externe.
+Un résultat reste faiblement ancré et trois insuffisamment ancrés : aucune
+pertinence, validation humaine ou publication n’est déduite de cette traçabilité.
+Preuves : `notoria549-article-grounding-persistence.json` et lecture native
+compilée `notoria549-compiled-browser/receipt.json` (quatre propositions en
+attente, qualifications séparées, bureau/mobile, aucune écriture ni erreur).
+Réception du parcours déployé conservée dans RESIDUAL-DEBT.
+
+### 549 — documents partagés absents du retraitement (2026-11-05)
+
+`ingestion.reprocessPillar` présélectionnait les sources du seul propriétaire.
+Le remplissage recevait ensuite cette liste fermée, ce qui excluait un document
+partagé autorisé avant sa lecture. La présélection utilise désormais le lecteur
+canonique `loadBrandSources`, avec les mêmes états de traitement et l’accès
+explicite par `BrandSourceUse`. Aucun document n’est copié et aucune marque
+non destinataire ne gagne d’accès. Trois échecs reproduits, puis 19 tests ciblés
+reçus sur retraitement, usages, préparation et isolation. Réception du retraitement
+Friesland en production encore distincte.
+
+### 549 — résultat reçu inaccessible depuis le suivi Studio (2026-11-05)
+
+Le suivi chargé en 548 affichait l’état des tâches mais pas les versions pourtant
+renvoyées par `listForges`. Le composant affiche les résultats par défaut,
+conserve les proportions d’image, ouvre un lecteur et relie le brief au coffre
+de la même marque. Le téléchargement original réutilise la route privée avec
+les mêmes vérifications d’accès et d’intégrité, sans redimensionnement ; l’aperçu
+reste distinct. Six tests du composant et 17 tests PostgreSQL du coffre passent,
+dont original exact et refus inter-opérateurs. Chrome local reçoit les aperçus,
+le lecteur, le PNG original et le dossier source sur deux tâches de fixture, en
+bureau/mobile sans erreur, écriture ni débordement. Le changement ne valide ni
+ne publie les créations. Preuve : `studio549-local-browser/receipt.json`.
+
+### 549 — secret de rappel présent dans des reçus publics de production (2026-11-05)
+
+Les retours tRPC de lecture et création reprenaient la ligne complète de tâche,
+y compris le secret utilisé pour authentifier le rappel du fournisseur. Une
+projection commune l’exclut des lectures de tâche/version, de la création/reprise
+et du résultat de forge Oracle. Les services internes conservent leur reçu et
+l’authentification du rappel. Les régressions sont reproduites, puis 59 tests
+ciblés sur huit fichiers passent. Portée limitée aux quatre chemins identifiés ;
+aucun audit de tous les journaux ni réception HTTP en production n’est déduit.
+Preuve privée : `ptah-public-receipts549-receipt.json`.
+
 ### 549 — complétudes divergentes et cache réécrit après une version plus récente (2026-11-05)
 
 Le tableau de bord utilisait un compteur Zod différent du contrat de maturité ;
@@ -58,39 +125,8 @@ sont distincts. Une seconde vérification transactionnelle précède le claim de
 publication ; une URL signée éphémère sert les mêmes octets que l’aperçu privé.
 Les dix tests PostgreSQL isolés reproduisent les changements de source, de
 version, de compte et les rejouements. Transport Meta simulé, aucun envoi réel.
-Décision : ADR0243. Commit dédié `feat(publication): freeze reviewed calendar assets for social delivery`.
+Décision : ADR0242. Commit dédié `feat(publication): freeze reviewed calendar assets for social delivery`.
 
-
-### 548 — le focus de la modale repartait à chaque rendu parent (2026-11-05)
-
-Le rappel de fermeture fourni en ligne changeait d’identité à chaque rendu.
-La modale partagée redémarrait alors son effet de clavier/focus : une saisie ou
-un rafraîchissement pouvait déplacer le focus et remplacer sa cible de retour.
-Le candidat lie ce cycle à l’ouverture seulement, garde le rappel courant et
-annule le focus différé si la modale est démontée. Le piège clavier et le retour
-au déclencheur après fermeture sont conservés.
-
-Trois tests de comportement reçus après reproduction : ouverture/clavier/retour,
-saisie sans perte de focus et démontage avant le premier focus différé. Recette
-Gazette locale bureau/mobile sans erreur ni mutation. Commit à attribuer au
-candidat 548 ; production et validation sur le head livré restent à recevoir.
-Ce correctif ne réécrit pas la réception antérieure de la bulle de retour.
-
-### 548 — le suivi Studio rechargeait les originaux en double (2026-11-05)
-
-La liste de quatre productions terminées renvoyait 18 223 592 octets : les mêmes
-images base64 figuraient dans `resultUrls` et `versions[].url`, avec les paramètres
-de génération. Une lecture valide demandait plus de 81 secondes ; le bouton
-changeait bien de filtre mais les lignes restaient en attente. Cause identifiée :
-le contrat de détail complet servait aussi au suivi des tâches.
-
-Le candidat `ptah.listForges` omet résultats binaires et paramètres de la liste
-et remplace les images inline par les URLs privées d’aperçu existantes. Aucun
-original, brief, lien externe ou historique n’est supprimé des détails. Suite
-PostgreSQL 56/56, contrôle d’accès aux aperçus, source lintée et réception Chrome
-locale bureau/mobile : 19 lignes, quatre aperçus chargés, 24 162 octets et aucun
-incident. Commit à attribuer au candidat 548 ; réception de production ouverte
-dans RESIDUAL-DEBT. Les échecs historiques ne deviennent pas des réussites.
 
 ### 542 — une action longue valide dans I pouvait bloquer S (2026-11-04)
 

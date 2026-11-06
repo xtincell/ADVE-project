@@ -30,6 +30,7 @@ import type {
   RecoSource,
 } from "./types";
 import { MISSION_CONFIG } from "./types";
+import { NotoriaGenerationFailure, describeNotoriaFailure } from "./generation-failure";
 import { serializePillars, ADVE_SOURCE_ALIGNMENT_CONTRACT, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
 
 // A pillar letter is a storage key, not a documentary question. Keep the same
@@ -138,7 +139,7 @@ Regles:
 - Si un champ est deja excellent, NE le mentionne PAS
 - Recommandations etayees uniquement, triees par impact decroissant ; aucun minimum impose.`;
 
-const SESHAT_SYSTEM = `${SYSTEM_BASE}
+const SESHAT_SYSTEM = `${RECO_SYSTEM}
 
 Tu recois une OBSERVATION de Seshat (surveillance externe) et tu dois la transformer
 en recommandations structurees pour les piliers ADVERTIS impactes.
@@ -169,7 +170,12 @@ async function generateRecosForPillar(
 
   // Build source context based on mission type
   const config = MISSION_CONFIG[missionType];
-  const sourceContext = serializePillars(config.sourcePillars.map(k => [k.toUpperCase(), pillars[k.toUpperCase()]]));
+  // The target used to be inserted as raw pretty JSON AND in the qualified
+  // source bundle. Keep it once, with the same authority as every other pillar.
+  // Compact encoding removes whitespace only; the 128K per-pillar admission
+  // guard and every projected record, identifier and value remain unchanged.
+  const contextKeys = [...new Set([targetKey, ...config.sourcePillars].map(k => k.toUpperCase()))];
+  const sourceContext = serializePillars(contextKeys.map(k => [k, pillars[k]]), { compact: true });
   const { recipeContext } = await import("@/server/services/seshat/creative-intelligence");
   const empiricalCreativeContext = missionType === "SESHAT_OBSERVATION" || missionType === "I_GENERATION"
     ? await recipeContext(strategyId) : "";
@@ -305,7 +311,7 @@ ${bibleInstructions}
 ${targetKey === "i" ? INITIATIVE_PLANNING_SOURCE_CONTRACT : ""}
 
 Pilier ${targetKey.toUpperCase()} actuel (${filledFields.length}/${allSchemaKeys.length} champs remplis):
-${JSON.stringify(currentContent, null, 2)}
+Le contenu qualifié de ce pilier est inclus une seule fois dans le contexte ci-dessous.
 ${emptyFieldsSection}
 
 Contexte source (${sourceLabel}):
@@ -322,14 +328,18 @@ IMPORTANT:
 
   const system =
     missionType === "SESHAT_OBSERVATION" ? SESHAT_SYSTEM : RECO_SYSTEM;
-  const response = await callNotoriaLLM(system, prompt, strategyId);
-  const parsed = extractJSON(response);
+  let response: string;
+  try { response = await callNotoriaLLM(system, prompt, strategyId); }
+  catch (error) { throw new NotoriaGenerationFailure("MODEL_CALL_FAILED", error); }
+  let parsed: Record<string, unknown>;
+  try { parsed = extractJSON(response); }
+  catch (error) { throw new NotoriaGenerationFailure("INVALID_MODEL_OUTPUT", error); }
 
   const recosRaw: RawLLMReco[] = Array.isArray(parsed)
     ? (parsed as RawLLMReco[])
-    : (parsed as Record<string, unknown>).recommendations
-      ? ((parsed as Record<string, unknown>).recommendations as RawLLMReco[])
-      : [];
+    : parsed && Array.isArray(parsed.recommendations)
+      ? parsed.recommendations as RawLLMReco[]
+      : (() => { throw new NotoriaGenerationFailure("INVALID_MODEL_OUTPUT"); })();
 
   // F3 (round-11) : le LLM peut omettre `field` (sortie malformée) — les boucles
   // `reco.field.startsWith(...)`/`.split(...)` plus bas planteraient alors TOUT le
@@ -692,23 +702,15 @@ export async function generateBatch(
   );
 
   const recosByPillar = new Map<string, RawLLMReco[]>();
-  const errors: Array<{ pillarKey: string; error: string }> = [];
+  const errors: GenerateBatchResult["errors"] = [];
   const countByPillar: Record<string, number> = {};
 
-  for (const result of results) {
+  for (const [index, result] of results.entries()) {
     if (result.status === "fulfilled") {
       recosByPillar.set(result.value.key, result.value.recos);
       countByPillar[result.value.key] = result.value.recos.length;
     } else {
-      const key =
-        (result.reason as { pillarKey?: string })?.pillarKey ?? "unknown";
-      errors.push({
-        pillarKey: key,
-        error:
-          result.reason instanceof Error
-            ? result.reason.message
-            : String(result.reason),
-      });
+      errors.push(describeNotoriaFailure(result.reason, targets[index] ?? "unknown"));
     }
   }
 

@@ -1,4 +1,12 @@
 export const productionFr = {
+  "production.openResult": "Consulter le résultat",
+  "production.result": "Fichier reçu",
+  "production.unreadableResult": "Adresse du fichier à vérifier",
+  "production.openSource": "Ouvrir le brief et ses sources",
+  "production.resultReview": "Résultat de production conservé. Sa réception ne vaut pas validation éditoriale.",
+  "production.openFile": "Ouvrir le fichier original",
+  "production.close": "Fermer",
+
   "production.readOnly": "Suivi en lecture seule. La reprise est réservée à l’équipe affectée à ce dossier.",
   "production.waiting": "À reprendre",
   "production.emptyWaiting": "Aucune production à reprendre dans ce dossier.",
@@ -54,6 +62,14 @@ export const productionFr = {
 } as const;
 
 export const productionEn = {
+  "production.openResult": "View result",
+  "production.result": "Received file",
+  "production.unreadableResult": "File address needs review",
+  "production.openSource": "Open brief and sources",
+  "production.resultReview": "Stored production result. Receipt does not mean editorial approval.",
+  "production.openFile": "Open original file",
+  "production.close": "Close",
+
   "production.readOnly": "Read-only tracking. Resumption is reserved for the team assigned to this workspace.",
   "production.waiting": "Awaiting resumption",
   "production.emptyWaiting": "No production awaiting resumption in this workspace.",
@@ -109,6 +125,14 @@ export const productionEn = {
 } as const;
 
 export const productionZh = {
+  "production.openResult": "查看结果",
+  "production.result": "已收到文件",
+  "production.unreadableResult": "文件地址待核查",
+  "production.openSource": "打开需求及来源",
+  "production.resultReview": "已保存的制作结果。收到文件不代表已通过编辑审核。",
+  "production.openFile": "打开原始文件",
+  "production.close": "关闭",
+
   "production.readOnly": "仅供查看。只有负责此工作区的团队可以恢复任务。",
   "production.waiting": "待恢复",
   "production.emptyWaiting": "此工作区没有待恢复的制作任务。",

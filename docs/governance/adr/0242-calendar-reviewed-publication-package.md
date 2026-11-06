@@ -1,4 +1,6 @@
-# ADR0243 — Du rendu du calendrier à la publication relue
+# ADR0242 — Du rendu du calendrier à la publication relue
+
+> Renumérotation 2026-11-05 : le numéro 0243 avait été réservé par erreur ; 0242 est le prochain numéro libre. Aucun autre ADR ne change.
 
 5 novembre 2026. Candidat local ; suite ADR0241. Aucun déploiement ni envoi public effectué pour cette réception.
 

@@ -1,8 +1,130 @@
+## 549 — états canoniques et version retenue pour la publication (2026-11-05)
+
+**État : candidat local, non reçu en production.** La fusion de 548 dans ce
+travail est `f01f0f106`. La livraison de 548 reste acquise au périmètre détaillé
+ci-dessous ; elle ne reçoit pas les changements de 549.
+
+**Complétude.** Le tableau de bord utilise le contrat canonique. Le compteur
+structurel des formulaires exclut les clés hors schéma et les métadonnées.
+Le cache est mis à jour dans la transaction d’écriture ; sa réparation verrouille
+la ligne avant de la relire. Questionnaire, transitions de verrouillage et motifs
+de refus d’export suivent le même évaluateur, sans changer une décision, un auteur
+ou une version de contenu. Commit `9b55b0f49` : 70 tests unitaires ciblés et
+28 tests PostgreSQL isolés reçus, dont une concurrence contrôlée ; typage et lint
+des sources sans erreur. Le contrôle HTTP local authentifié reçoit quatre GET200 :
+les deux lecteurs exposent les mêmes huit taux avant/après écriture. V passe de
+4 à 100 %, son cache est réconcilié, sa version passe de 1 à 2 ; `AI_PROPOSED`
+et le refus d’export `VALIDATION_NOT_VALIDATED` restent conservés. Fixture locale
+nettoyée, aucune modification de production. Preuves privées :
+`pillar-readiness549-receipt.json` et `readiness549-http-receipt.json`.
+
+**Publication.** Le choix d’une option du calendrier prépare un paquet versionné
+dans le coffre : image, brief, texte, hashtags et empreintes. Sélection, relecture
+et confirmation d’envoi restent distinctes. Le transport existant reçoit les mêmes
+octets que l’aperçu, pour le compte choisi ; une modification des sources exige
+une nouvelle relecture. ADR0242 décrit ce raccord sans nouveau moteur.
+Commit `a6ae0692e` : dix tests PostgreSQL isolés reçus avec transport Meta simulé.
+Chrome local 1440/390 reçoit la sélection et la relecture de fixture, le JPEG,
+les contrôles d’envoi et le mobile sans débordement, sans aucun envoi externe.
+Preuves privées : `publication549-integration.log` et
+`publication549-local-browser/receipt.json`.
+
+**Sources et résultats.** Le retraitement documentaire utilise `loadBrandSources`
+afin d’inclure les usages partagés explicites, jusque-là exclus par la présélection
+du propriétaire. Trois régressions rouges puis 19 tests ciblés reçus ; aucun
+retraitement de production n’en est déduit. Le lecteur et les règles réels sont
+exercés avec un adaptateur de base en mémoire et une génération simulée.
+Preuve privée : `ingestion-shared-source549-receipt.json`.
+Le Studio affiche les versions reçues
+avec leurs proportions et un lecteur, ainsi qu’un lien vers le brief du coffre
+dans la même marque. Le téléchargement privé retourne l’original exact, séparé
+de l’aperçu WEBP, avec les mêmes contrôles d’accès et d’intégrité. Six tests du
+composant et 17 tests PostgreSQL du coffre passent, dont conservation des octets
+et refus inter-opérateurs. Preuves privées : `studio549-results-unit.log` et
+`studio549-original-postgres.log`. Chrome local reçoit deux tâches de fixture,
+leurs aperçus et le lecteur, le PNG original de 22 440 octets et le dossier source.
+Captures bureau/mobile inspectées, sans erreur, écriture ni débordement à 390 px.
+Preuve privée : `studio549-local-browser/receipt.json`.
+Aucun résultat reçu n’est assimilé à une validation éditoriale.
+
+Les réponses publiques des tâches excluent le secret de rappel fournisseur sur
+les lectures de tâche/version, la création/reprise et la forge d’une section
+Oracle. Le reçu interne reste disponible pour la réconciliation. Régressions
+reproduites puis 59 tests sur huit fichiers reçus, avec adaptateurs simulés ;
+aucun audit général des journaux n’est revendiqué. Preuve privée :
+`ptah-public-receipts549-receipt.json`.
+
+**Contexte des recommandations.** La sérialisation compacte supprime l’espacement
+inutile et la duplication de la cible, en conservant tous les enregistrements et
+leurs qualifications. La prose reste bornée à 400 caractères par la projection
+existante ; aucune transmission intégrale de chaque texte n’est revendiquée.
+La limite par pilier reste inchangée. Le snapshot privé
+SPAWT prépare les six cibles ; S passe de 133 413 caractères refusés à 89 559
+caractères admis. Le contrat de sortie structuré accompagne aussi les observations.
+Une panne conserve un reçu sûr avec sa phase, son code et le pilier concerné,
+même sans lot créé. Réception locale : 36 tests ciblés, typage et lint ciblés
+sans erreur. Preuve privée : `notoria549-snapshot-context.json`, sans appel LLM.
+Un appel réel local séparé via le gestionnaire existant reçoit quatre propositions
+de Luna en 57,9 secondes, sans application ni modification de production.
+Le replay de cette sortie sur PostgreSQL local reçoit quatre propositions
+persistées et relues depuis l’article, `PENDING` / `requires_review`, huit piliers
+inchangés et aucun envoi. Les cinq autres cibles sont des sorties de test vides ;
+aucun second appel fournisseur n’est exécuté. Les quatre propositions restent
+`NO_SOURCE`, dont une avec avertissement de qualité : la liaison à l’article ne
+prouve pas le sourcing ni la pertinence de leur contenu. Preuves privées :
+`notoria549-luna-receipt.json` et `notoria549-local-persistence.json`.
+
+**Ancrage à l’article.** Le reçu conserve l’extrait exact transmis, son URL,
+sa date et son empreinte. Le lecteur vérifie cette entrée et la valeur proposée
+avant d’exposer leur correspondance ; cette qualification reste séparée de
+l’ancrage documentaire. Les 55 tests ciblés finaux passent, dont le cloisonnement
+entre citations documentaires et article. Un nouveau replay local
+de la même sortie Luna reçoit les six entrées de modèle et quatre reçus liés,
+sans appel externe : un ancrage faible à 25 %, trois insuffisants de 8,6 à 14,3 %.
+Le statut documentaire `NO_SOURCE` de cette fixture sans documents est conservé,
+ainsi que `PENDING` / `requires_review`, huit piliers inchangés et zéro publication.
+Cela reçoit la traçabilité, pas la pertinence des propositions. Preuves privées :
+`notoria549-final-focused.log` et
+`notoria549-article-grounding-persistence.json`.
+
+**Contrôles intégrés en cours.** La première suite unitaire 549 reçoit 5 522 tests
+et quatre échecs dans le banc de récupération du calendrier. Le composant réel
+était rendu sans son routeur ni ses accès de publication ; le banc corrigé conserve
+les assertions de reprise. Les 12 tests ciblés passent, dont absence de sélection,
+relecture, envoi ou navigation pendant la récupération. Preuve privée :
+`production-receipt-recovery549-harness-receipt.json`. La suite intégrale suivante
+reçoit 5 537 tests sur 555 fichiers ; le dernier ajout d’une ligne de cloisonnement
+des citations d’article et de son test intervient ensuite. Les 55 tests ciblés
+finaux passent après cet ajout ; la CI recevra la suite intégrale du head final.
+Preuves privées : `check549-unit-final.log` et `notoria549-final-focused.log`.
+La compilation locale de production termine avec code 0 ; les empreintes des
+trois fichiers gelés d’ancrage et de lecture sont conservées et vérifiées dans
+`build549-source-receipt.json`. Le dernier texte ajouté aux notes client est
+postérieur à ce build. Le stress compilé reçoit 278 routes HTTP200, sept types
+de forge et zéro échec ; cinq routes de démonstration HTTP404 restent non reçues.
+Ce contrôle ne vaut pas inspection native. La recette native distincte de la
+modale reçoit les quatre propositions en attente et leurs ancrages séparés,
+l’image 600 × 395, le contenu disponible, les deux colonnes à 1440 px et
+l’empilement à 390 px, sans débordement, écriture ni erreur JS/API. Captures
+inspectées ; le bouton est actionnable mais n’est pas déclenché dans cette recette.
+Preuves privées : `source549-stress-exact-final-received.json` et
+`notoria549-compiled-browser/receipt.json`. La livraison 549 reste à recevoir.
+
+**Encore ouvert.** La demande de recommandations depuis l’article réel échoue
+en 412 sur 548. La préparation du contexte corrigée est reçue localement ;
+un appel Luna réel local est reçu, la réception du parcours livré reste ouverte.
+La réception de 549, le choix et la relecture éditoriale réels SPAWT, la remise
+et la publication Instagram restent distincts et ouverts. Les sept chantiers,
+le graphe libre et la réception Friesland ne sont pas déclarés terminés.
+
 ## 548 — provenance de la veille et suivi Studio compact (2026-11-05)
 
-**État : candidat local en intégration, non reçu en production.** Le bump officiel
-porte le runtime, le package et son verrou en 6.27.548. La réception de 547
-ci-dessous reste acquise ; elle ne reçoit pas les changements de ce candidat.
+**État : reçue techniquement en production ; réception métier partielle.**
+PR1142, merge `e723d0e5adf5808e3405254b5940035f190ac950`, CI main
+`42104293729` et image `42105897927` reçues. Le déploiement
+`oowg1ldyfetcyhrub2vuzqpx` sert 6.27.548 avec l’image exacte ; les sauvegardes,
+volumes privés et réglages du relais sont conservés. Preuves privées :
+`deploiement-548/image.json` et `deploiement-548/rollout-verified.json`.
 
 **Gazette.** Le contexte de veille complète les sujets manuels avec les publics
 et territoires ADVE sans réécrire ces sujets. Le classement vérifie la pertinence
@@ -55,12 +177,22 @@ Journaux : `/tmp/release548-unit.log`, `/tmp/release548-governance-final.log`,
 `/tmp/release548-lint.log`, `/tmp/release548-governance-lint.log` et
 `/tmp/release548-cycles.log`.
 
-**À recevoir.** Contrôles du head final, CI et image 548, puis
-relecture du suivi et d’une sélection Gazette pertinente en production. Le parcours
-article exact → propositions nécessite son propre reçu ; ni une modale ni une
-requête interceptée ne prouve un appel réel. Les critères de clôture sont dans
-RESIDUAL-DEBT. Aucun taux global Shinkiro ou achèvement du moteur audiovisuel
-n’est déduit de ce lot.
+**Reçu en production, en lecture seule.** Le 5 novembre à 22:28 UTC : article
+Koaci sur la livraison de restaurants à Abidjan, image chargée, lien source exact,
+extrait disponible conservé, double page bureau et mobile sans débordement.
+L’interprétation absente reste annoncée comme telle. Un signal historique sans
+provenance est explicitement non traçable ; aucun rattachement n’est inventé.
+Le dossier d’actif expose Mestor, auteur, version et usages. Les quatre tâches
+Studio réelles sont chargées en 421 ms après clic ; l’API répond en 449 ms,
+5 788 octets, sans image inline. Aucun incident navigateur, 5xx ou écriture.
+Preuve privée : `prod548-readonly-ui-partial/2026-11-05T22-27-02-817Z/receipt.json`.
+
+**À recevoir.** Cette lecture ne clôt pas le parcours article exact → propositions :
+la demande Notoria a échoué en 412 et n’a reçu aucune proposition. Le contenu
+de presse reçu est un extrait ; il n’est pas présenté comme l’article intégral.
+L’ensemble de la pertinence métier, la relecture créative et la publication
+restent ouverts dans RESIDUAL-DEBT. Aucun taux global Shinkiro ou achèvement
+du moteur audiovisuel n’est déduit de ce lot.
 
 ## 547 — Gazette sourcée, coffre traçable et accès à la production (2026-11-05)
 
