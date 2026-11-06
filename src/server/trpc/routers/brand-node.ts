@@ -11,7 +11,7 @@
  */
 
 import { z } from "zod";
-import { PortfolioReferencesSchema } from "@/domain/portfolio-reference";
+import { PortfolioReferencesSchema, PortfolioLifecycleSchema } from "@/domain/portfolio-reference";
 import { getPortfolioWorkspace } from "@/server/services/brand-node/workspace";
 import { canAccessBarre } from "@/server/services/brand-node/barre-connection";
 import { TRPCError } from "@trpc/server";
@@ -137,6 +137,7 @@ export const brandNodeRouter = createTRPCRouter({
       clusterTag: z.string().nullable().optional(),
       attachStrategyId: StringId.nullable().optional(),
       sourceRefs: PortfolioReferencesSchema.optional(),
+      lifecycle: PortfolioLifecycleSchema.optional(),
     }),
   }).mutation(async ({ ctx, input }) => {
     // Anti-IDOR (round-9) : le caller ne peut créer un nœud QUE dans un arbre
@@ -159,6 +160,7 @@ export const brandNodeRouter = createTRPCRouter({
         clusterTag: input.clusterTag ?? null,
         attachStrategyId: input.attachStrategyId ?? null,
         sourceRefs: input.sourceRefs,
+        lifecycle: input.lifecycle,
       });
       return { ok: true as const, node };
     } catch (err) {
@@ -183,7 +185,7 @@ export const brandNodeRouter = createTRPCRouter({
         countryCode: z.string().length(2).nullable().optional(),
         clientId: StringId.nullable().optional(),
         nodeRole: z.array(z.string()).optional(),
-        lifecycle: z.string().optional(),
+        lifecycle: PortfolioLifecycleSchema.optional(),
         inheritanceLocked: z.boolean().optional(),
         sourceRefs: PortfolioReferencesSchema.optional(),
       }).passthrough(),
@@ -260,14 +262,22 @@ export const brandNodeRouter = createTRPCRouter({
       strategyId: StringId,
       operatorId: StringId,
       nodeId: StringId,
+      expectedStrategyId: StringId.nullable(),
+      expectedUpdatedAt: z.string().datetime(),
     }),
   }).mutation(async ({ ctx, input }) => {
+    await assertOperatorAccess(ctx.session.user.id, input.operatorId);
     await assertNodeAccess(ctx.session.user.id, input.nodeId);
+    const target = await db.brandNode.findUnique({ where: { id: input.nodeId }, select: { operatorId: true } });
+    if (target?.operatorId !== input.operatorId) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Le dossier appartient à une autre équipe." });
+    }
     await assertStrategyRead(ctx.session.user.id, input.strategyId);
     try {
-      const node = await attachStrategyToNode(input.nodeId, input.strategyId);
+      const node = await attachStrategyToNode(input.nodeId, input.strategyId, input);
       return { ok: true as const, node };
     } catch (err) {
+      if (err instanceof BrandNodeUpdateConflictError) throw new TRPCError({ code: "CONFLICT", message: err.message });
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: err instanceof Error ? err.message : "attachStrategyToNode failed",

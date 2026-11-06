@@ -17,7 +17,7 @@ export const operatorRouter = createTRPCRouter({
     return ctx.db.operator.findMany({
       orderBy: { createdAt: "desc" },
       include: {
-        _count: { select: { users: true, strategies: true, clients: true } },
+        _count: { select: { users: true, strategies: true, clients: {where:{status:{not:"REFERENCE"}}} } },
         parent: { select: { id: true, name: true } },
       },
     });
@@ -29,7 +29,7 @@ export const operatorRouter = createTRPCRouter({
       return ctx.db.operator.findUniqueOrThrow({
         where: { id: input.id },
         include: {
-          _count: { select: { users: true, strategies: true, clients: true } },
+          _count: { select: { users: true, strategies: true, clients: {where:{status:{not:"REFERENCE"}}} } },
           parent: { select: { id: true, name: true } },
           children: { select: { id: true, name: true, agencyType: true, status: true } },
           clientAllocations: {
@@ -160,7 +160,7 @@ export const operatorRouter = createTRPCRouter({
       const [userCount, strategyCount, clientCount, allocationCount] = await Promise.all([
         ctx.db.user.count({ where: { operatorId: input.id } }),
         ctx.db.strategy.count({ where: { operatorId: input.id } }),
-        ctx.db.client.count({ where: { operatorId: input.id } }),
+        ctx.db.client.count({ where: { operatorId: input.id,status:{not:"REFERENCE"} } }),
         ctx.db.clientAllocation.count({ where: { operatorId: input.id } }),
       ]);
       return { userCount, strategyCount, clientCount, allocationCount };

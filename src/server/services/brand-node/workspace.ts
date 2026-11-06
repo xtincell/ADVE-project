@@ -61,21 +61,21 @@ export async function getPortfolioWorkspace(root: BrandNode, options: { allowBar
   let parentId = root.parentNodeId;
   while (parentId && ancestors.length < allNodes.length) {
     const parent = allNodes.find((n) => n.id === parentId);
-    if (!parent || ancestors.some((n) => n.id === parent.id)) break;
+    if (!parent || parent.archivedAt || ancestors.some((n) => n.id === parent.id)) break;
     ancestors.push(parent); parentId = parent.parentNodeId;
   }
-  const inheritedFrom = root.strategyId ? null : ancestors.find((n) => n.strategyId) ?? null;
+  const inheritedCandidate = root.strategyId ? null : ancestors.find((n) => n.strategyId) ?? null;
   const inspected = nodes.map((node) => ({ node, ...inspectPortfolioReferences(node.sourceRefs) }));
   const referenceIssues = inspected.flatMap(({ node, issues }) => issues.map((i) => `${node.name} · ${i.message}`));
   const references = [...new Map(inspected.flatMap((n) => n.references)
     .map((r) => [portfolioReferenceKey(r), r])).values()];
-  const strategyIds = [...new Set([...nodes.flatMap((n) => n.strategyId ? [n.strategyId] : []), ...(inheritedFrom?.strategyId ? [inheritedFrom.strategyId] : []),
+  const strategyIds = [...new Set([...nodes.flatMap((n) => n.strategyId ? [n.strategyId] : []), ...(inheritedCandidate?.strategyId ? [inheritedCandidate.strategyId] : []),
     ...references.filter((r) => r.system === "LA_FUSEE" && r.kind === "strategy").map((r) => r.id)])];
   const accessibleIds = (await Promise.all(strategyIds.map(async (id) =>
     await canAccessStrategy(id, options.actor) ? id : null))).filter((id): id is string => id !== null);
   // A source reference is not an access grant; apply the native access policy.
   const strategyRows = await db.strategy.findMany({
-    where: { id: { in: accessibleIds } },
+    where: { id: { in: accessibleIds }, archivedAt: null },
     select: { id: true, name: true, status: true,
       pillars: { select: { key: true, validationStatus: true, completionLevel: true, staleAt: true, currentVersion: true,
         // A recorded status does not establish who approved it. Read only the
@@ -96,8 +96,9 @@ export async function getPortfolioWorkspace(root: BrandNode, options: { allowBar
   })));
   // These are the existing receipts, not a copied portfolio truth. Apply the
   // readable dossier IDs before LIMIT; a linked source is never an access grant.
-  const signals = accessibleIds.length ? await db.signal.findMany({
-    where: { strategyId: { in: accessibleIds }, type: "EXTERNAL_METRIC" },
+  const activeIds = strategyRows.map((strategy) => strategy.id);
+  const signals = activeIds.length ? await db.signal.findMany({
+    where: { strategyId: { in: activeIds }, type: "EXTERNAL_METRIC" },
     orderBy: { createdAt: "desc" }, take: 10,
     select: { id: true, strategyId: true, type: true, data: true, createdAt: true },
   }) : [];
@@ -124,6 +125,17 @@ export async function getPortfolioWorkspace(root: BrandNode, options: { allowBar
       sourceError = error instanceof Error ? error.message : "La Barre est momentanément indisponible.";
     }
   }
-  return { root, nodes, strategies, observations, referenceIssues, barreBinding: binding, inheritedFrom: inheritedFrom ? { name: inheritedFrom.name, strategyId: inheritedFrom.strategyId } : null, barre, sourceStatus, sourceError, fetchedAt };
+  // Aggregated platforms never substitute for the selected node's own ADVE.
+  const sourceNode = root.strategyId ? root : inheritedCandidate;
+  const sourceStrategy = strategyRows.find((s) => s.id === sourceNode?.strategyId);
+  const dossierContext: PortfolioDossierContext = sourceNode && sourceStrategy
+    ? { kind: root.strategyId ? "OWN" : "INHERITED", strategyId: sourceStrategy.id, sourceNodeId: sourceNode.id, sourceName: sourceNode.name }
+    : { kind: sourceNode ? "UNAVAILABLE" : "NONE" };
+  const inheritedFrom = dossierContext.kind === "INHERITED"
+    ? { name: dossierContext.sourceName, strategyId: dossierContext.strategyId } : null;
+  return { root, nodes, strategies, observations, referenceIssues, barreBinding: binding, dossierContext, inheritedFrom, barre, sourceStatus, sourceError, fetchedAt };
 }
+export type PortfolioDossierContext =
+  | { kind: "OWN" | "INHERITED"; strategyId: string; sourceNodeId: string; sourceName: string }
+  | { kind: "NONE" | "UNAVAILABLE" };
 export type PortfolioWorkspace = Awaited<ReturnType<typeof getPortfolioWorkspace>>;

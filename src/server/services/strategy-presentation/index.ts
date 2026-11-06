@@ -310,7 +310,7 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
     sections: {
       // Phase 1: ADVE
       executiveSummary: { ...safeMap("executive-summary", () => mapExecutiveSummary(strategy, vector, classification), { vector, classification, cultIndex: null, devotionScore: null, superfanCount: 0, brandName: strategy.name, topStrengths: [], topWeaknesses: [], highlights: [] }), revealedScore },
-      contexteDefi: safeMap("contexte-defi", () => mapContexteDefi(strategy), { businessContext: { sector: null, businessModel: null, positioningArchetype: null, economicModels: [], salesChannels: [] }, enemy: null, prophecy: null, client: null, personas: [] }),
+      contexteDefi: safeMap("contexte-defi", () => mapContexteDefi(strategy), { market:{countryCode:null,region:null,scaleLabel:null}, businessContext: { sector: null, businessModel: null, positioningArchetype: null, economicModels: [], salesChannels: [] }, enemy: null, prophecy: null, client: null, personas: [] }),
       plateformeStrategique: safeMap("plateforme-strategique", () => mapPlateformeStrategique(strategy), { archetype: null, citationFondatrice: null, doctrine: null, ikigai: null, valeurs: [], positionnement: null, promesseMaitre: null, sousPromesses: [], tonDeVoix: null, assetsLinguistiques: null, messagingFramework: [] }),
       propositionValeur: safeMap("proposition-valeur", () => mapPropositionValeur(strategy), { pricing: null, proofPoints: [], guarantees: [], innovationPipeline: [], unitEconomics: null }),
       territoireCreatif: safeMap("territoire-creatif", () => mapTerritoireCreatif(strategy), { conceptGenerator: null, moodboard: null, chromaticStrategy: null, directionArtistique: null, kvPrompts: null, typographySystem: null, logoAdvice: null }),

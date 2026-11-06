@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.551", date: "2026-11-06", headline: "Travailler marque par marque, pays par pays",
+    highlights: [
+      { emoji: "🗂️", title: "Ouvrir un dossier pays", body: "Créez le dossier en brouillon et retrouvez la même plateforme après une interruption. Le portefeuille distingue ses propres fondations de celles qu’il hérite." },
+      { emoji: "🌍", title: "Déclarer le territoire servi", body: "La Fondation, l’Oracle et la Gazette utilisent le marché indiqué pour la marque. La fiche client conserve séparément son siège." },
+      { emoji: "🏢", title: "Lire la filiation d’un client", body: "Retrouvez le groupe d’un bureau régional ou d’une filiale avec les sources du rattachement. Le statut Référence distingue un groupe documentaire des clients commerciaux." },
+    ],
+  },
+  {
     version: "6.27.550", date: "2026-11-06", headline: "Retrouver la dernière édition complète",
     highlights: [
       { emoji: "📖", title: "Reprendre un livrable", body: "Si une production échoue, les sections déjà utilisables et l’édition complète précédente restent consultables dans votre dossier." },

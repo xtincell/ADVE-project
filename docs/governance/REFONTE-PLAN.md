@@ -1,3 +1,7 @@
+## 551 — Portefeuille de marques et territoire de travail
+
+Le portefeuille reçoit les dossiers pays en brouillon et distingue les fondations propres et héritées. Le CRM rattache bureaux et filiales à une organisation de référence avec preuves. L’Oracle et la Gazette consomment le territoire de la marque. Recette locale sur PostgreSQL et 25 associations documentées. La ventilation du brief Noël et la relecture du déploiement constituent des réceptions distinctes. Voir ADR0243.
+
 ## 550 — éditions des livrables, génération et relecture (2026-11-06)
 
 La fiche d’un livrable relie les sections d’une même édition, leurs auteurs et la décision de la personne qui relit. Les sorties GLORY, les résultats Artemis et le coffre Mestor existants portent cette filiation. Les étapes dépendantes attendent la réparation d’une génération en échec. Le portefeuille conserve les éditions complètes précédentes lors d’un échec ou d’une reprise partielle.

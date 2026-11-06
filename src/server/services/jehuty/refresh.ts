@@ -22,6 +22,7 @@
  * (STOP-à-Jehuty préservé au point qui compte : l'écriture ADVE).
  */
 
+import { brandMarketScope } from "@/domain/brand-market-scope";
 import type { PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db";
 import { PILLAR_KEYS, classifyBrand } from "@/lib/types/advertis-vector";
@@ -138,23 +139,23 @@ export async function refreshBrandGazette(
       countryCode: true,
       businessContext: true,
       advertis_vector: true,
-      client: { select: { sector: true, country: true } },
+      client: { select: { sector: true } },
     },
   });
   if (!strategy) throw new Error("Strategy introuvable");
 
   const context = (strategy.businessContext ?? {}) as Record<string, unknown>;
   const sector = typeof context.sector === "string" ? context.sector : strategy.client?.sector ?? null;
-  const countryCode = strategy.countryCode ?? strategy.client?.country ?? "CM";
+  const {countryCode,region:marketRegion} = brandMarketScope(strategy);
 
   // ── 1. Le monde dehors — veille externe réelle (RSS/Google News) ──────────
   let articles: BrandFeedArticle[] = [];
   try {
     const { countryDisplayNameFr } = await import("@/server/services/seshat/external-feeds/watch-subjects");
-    const watch = await loadWatchSubjects(prisma, strategyId, strategy.businessContext, countryDisplayNameFr(countryCode));
+    const watch = await loadWatchSubjects(prisma, strategyId, strategy.businessContext, marketRegion ?? countryDisplayNameFr(countryCode));
     const feed = await getOrBuildBrandFeed(
       prisma,
-      { strategyId, name: strategy.name, countryCode, sector, extraSubjects: watch.subjects },
+      { strategyId, name: strategy.name, countryCode, marketRegion, sector, extraSubjects: watch.subjects },
       { force: opts.force ?? true },
     );
     articles = feed.articles;

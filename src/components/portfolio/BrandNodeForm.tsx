@@ -17,11 +17,10 @@ import { useSession } from "next-auth/react";
 import { trpc } from "@/lib/trpc/client";
 import {
   ALL_BRAND_NATURES,
-  BRAND_NATURE_ARCHETYPES,
   getValidChildKinds,
 } from "@/domain/brand-nature-archetypes";
 import type { BrandNature } from "@prisma/client";
-import { PORTFOLIO_KIND_LABELS, PORTFOLIO_LIFECYCLE_LABELS, PORTFOLIO_NATURE_LABELS } from "@/domain/portfolio-reference";
+import { PORTFOLIO_KIND_LABELS, PORTFOLIO_LIFECYCLE_LABELS, PORTFOLIO_NATURE_LABELS, type PortfolioLifecycle } from "@/domain/portfolio-reference";
 
 export interface BrandNodeFormProps {
   /** Si fourni : mode édition. Sinon : mode création. */
@@ -49,7 +48,7 @@ interface FormState {
   clusterTag: string | null;
   nodeRole: string[];
   attachStrategyId: string | null;
-  lifecycle: string;
+  lifecycle: PortfolioLifecycle;
   clientId: string | null;
 }
 
@@ -62,7 +61,7 @@ const INITIAL_STATE: FormState = {
   clusterTag: null,
   nodeRole: [],
   attachStrategyId: null,
-  lifecycle: "ACTIVE",
+  lifecycle: "DRAFT",
   clientId: null,
 };
 
@@ -113,7 +112,7 @@ export function BrandNodeForm({
   );
 
   useEffect(() => {
-    if (existingNode) {
+    if (isEdit && existingNode) {
       setState({
         name: existingNode.name,
         slug: existingNode.slug,
@@ -123,12 +122,12 @@ export function BrandNodeForm({
         clusterTag: existingNode.clusterTag,
         nodeRole: existingNode.nodeRole,
         attachStrategyId: existingNode.strategyId,
-        lifecycle: existingNode.lifecycle,
+        lifecycle: existingNode.lifecycle as PortfolioLifecycle,
         clientId: existingNode.clientId,
       });
       setAutoSlug(false);
     }
-  }, [existingNode]);
+  }, [existingNode, isEdit]);
 
   const utils = trpc.useUtils();
 
@@ -157,6 +156,14 @@ export function BrandNodeForm({
   // Editing cannot change the kind. Display the recorded kind even when the
   // parent is not supplied, rather than the first allowed root option.
   const validKinds = isEdit ? [state.nodeKind] : getValidChildKinds(parent?.nodeKind ?? null, state.nodeNature);
+
+  useEffect(() => {
+    if (isEdit) return;
+    setState((current) => {
+      const kinds = getValidChildKinds(parent?.nodeKind ?? null, current.nodeNature);
+      return kinds.includes(current.nodeKind) ? current : { ...current, nodeKind: kinds[0] ?? "" };
+    });
+  }, [isEdit, parent?.nodeKind]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,6 +202,7 @@ export function BrandNodeForm({
         countryCode: state.countryCode,
         clusterTag: state.clusterTag,
         attachStrategyId: state.attachStrategyId,
+        lifecycle: state.lifecycle,
       });
     }
   };
@@ -282,14 +290,14 @@ export function BrandNodeForm({
         />
       </label>
 
-      {isEdit && <label className="flex flex-col gap-1 text-sm">
+      <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium">État du dossier</span>
-        <select value={state.lifecycle} onChange={(e) => setState((s) => ({ ...s, lifecycle: e.target.value }))} className="rounded border border-border bg-surface-raised px-2 py-1.5">
+        <select aria-label="État du dossier" value={state.lifecycle} onChange={(e) => setState((s) => ({ ...s, lifecycle: e.target.value as PortfolioLifecycle }))} className="rounded border border-border bg-surface-raised px-2 py-1.5">
           {!PORTFOLIO_LIFECYCLE_LABELS[state.lifecycle] && <option value={state.lifecycle}>État historique à préciser</option>}
           {Object.entries(PORTFOLIO_LIFECYCLE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
-        <span className="text-xs text-foreground-secondary">Un dossier archivé se restaure en choisissant son état de reprise. Son historique et ses liens sont conservés.</span>
-      </label>}
+        <span className="text-xs text-foreground-secondary">{isEdit ? "Un dossier archivé se restaure en choisissant son état de reprise. Son historique et ses liens sont conservés." : "Brouillon permet de documenter un marché sans le déclarer actif."}</span>
+      </label>
 
       {/* Nature + Kind */}
       <div className="grid grid-cols-2 gap-3">
@@ -304,7 +312,7 @@ export function BrandNodeForm({
                 ...s,
                 nodeNature: nature,
                 // Reset kind to default cascade root for new nature
-                nodeKind: BRAND_NATURE_ARCHETYPES[nature].cascade[0] ?? "STANDALONE_BRAND",
+                nodeKind: getValidChildKinds(parent?.nodeKind ?? null, nature)[0] ?? "",
               }));
             }}
             className="rounded border border-border bg-surface-raised px-2 py-1.5 disabled:opacity-50"
@@ -354,7 +362,7 @@ export function BrandNodeForm({
               }))
             }
             className="rounded border border-border bg-surface-raised px-2 py-1.5 uppercase"
-            placeholder="CI / SN / NG / CMR…"
+            placeholder="CI / SN / NG / CM…"
           />
         </label>
 

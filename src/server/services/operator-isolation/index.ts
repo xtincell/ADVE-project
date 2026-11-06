@@ -379,7 +379,7 @@ export async function getOperatorDashboard(operatorId: string): Promise<Operator
       where: { operatorId },
       select: { id: true, name: true, status: true, advertis_vector: true },
     }),
-    db.client.count({ where: { operatorId } }),
+    db.client.count({ where: { operatorId,status:{not:"REFERENCE"} } }),
     db.campaign.count({ where: { strategy: { operatorId } } }),
     db.signal.count({ where: { strategy: { operatorId } } }),
     db.deal.count({ where: { strategy: { operatorId } } }),

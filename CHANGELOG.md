@@ -1,3 +1,7 @@
+## v6.27.551 — feat(portfolio): distinguer les marques pays, les bureaux et le marché servi (2026-11-06)
+
+Création en brouillon et rattachement atomique des dossiers pays. Le CRM conserve les filiations sourcées. L’Oracle et la Gazette utilisent le territoire déclaré de la marque. Migration additive de Client, documentée dans l’ADR0243.
+
 ## v6.27.550 — fix(glory): conserver l’édition relue après un échec de production (2026-11-06)
 
 - Livrables distingue les tentatives, les sections disponibles et la dernière édition complète. La relecture porte sur les résultats exacts de cette édition. Les productions GLORY et les analyses Artemis conservent le moteur effectivement utilisé. La saisie manuelle conserve l’auteur de la session.

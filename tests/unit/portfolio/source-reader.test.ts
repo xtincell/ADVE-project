@@ -23,6 +23,7 @@ beforeEach(() => {
   transport.inputs = []; transport.retry = undefined; transport.denied = false; transport.checking = false; transport.setStrategyId.mockClear();
   const root = { id: "node", name: "Marque de recette", operatorId: "team", strategyId: "owner", sourceRefs: [] };
   transport.data = { root, nodes: [root], barre: null, inheritedFrom: null, referenceIssues: [], sourceStatus: "NOT_CONNECTED", observations: [],
+    dossierContext: { kind: "OWN", strategyId: "owner", sourceNodeId: "node", sourceName: root.name },
     strategies: ["owner", "consumer"].map((id) => ({ id, name: id === "owner" ? "Dossier propriétaire" : "Dossier consommateur",
       pillars: [], brandAssets: [], campaigns: [], dataSources: [{ id: "canonical-source", fileName: "Brief partagé", certainty: "DECLARED",
         shared: id === "consumer", ownerBrandName: "Dossier propriétaire", processingStatus: "EXTRACTED", updatedAt: new Date("2026-10-08T00:00:00Z") }],
@@ -35,6 +36,23 @@ const openSources = () => {
   fireEvent.click(screen.getByRole("button", { name: "Sources & liens" }));
 };
 describe("consultation documentaire depuis le dossier de marque", () => {
+  it("identifie le dossier propre sans lui attribuer un état de validation global", () => {
+    render(React.createElement(BrandWorkspace, { nodeId: "node" }));
+    expect(screen.getByLabelText("Origine du dossier ADVE").textContent).toContain("Dossier ADVE propre à Marque de recette");
+  });
+  it("sépare le socle hérité de la complétude du marché pays", () => {
+    transport.data.dossierContext = { kind: "INHERITED", strategyId: "owner", sourceNodeId: "parent", sourceName: "Marque internationale" };
+    render(React.createElement(BrandWorkspace, { nodeId: "node" }));
+    const text = screen.getByLabelText("Origine du dossier ADVE").textContent;
+    expect(text).toContain("Socle hérité de Marque internationale");
+    expect(text).toContain("n’a pas encore de dossier ADVE propre");
+    expect(text).toContain("ne décrivent pas la complétude de ce marché");
+  });
+  it("supporte un ancien cache sans inventer la provenance avant relecture", () => {
+    delete transport.data.dossierContext;
+    render(React.createElement(BrandWorkspace, { nodeId: "node" }));
+    expect(screen.getByLabelText("Origine du dossier ADVE").textContent).toContain("indisponible");
+  });
   it("ne relance pas un refus d’accès, mais garde les reprises bornées sur erreur temporaire", () => {
     openSources();
     fireEvent.click(screen.getByRole("button", { name: "Consulter Brief partagé dans Dossier consommateur" }));

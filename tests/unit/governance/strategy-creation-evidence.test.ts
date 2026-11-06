@@ -16,6 +16,10 @@ vi.mock("@/server/governance/governed-procedure", async () => {
   const { protectedProcedure } = await import("@/server/trpc/init");
   return { governedProcedure: ({ inputSchema }: any) => protectedProcedure.input(inputSchema) };
 });
+vi.mock("@/server/services/operator-isolation",async (original)=>{
+  const actual=await original<typeof import("@/server/services/operator-isolation")>();
+  return {...actual,getOperatorContext:async()=>({role:"OPERATOR",operatorId:"agency",userId:"operator-user"})};
+});
 vi.mock("@/server/trpc/resolve-session-user", () => ({ resolveSessionUserId: async () => "operator-user" }));
 vi.mock("@/server/services/audit-trail", () => ({ log: vi.fn(async () => undefined) }));
 vi.mock("@/server/services/country-registry", () => ({
@@ -27,6 +31,7 @@ import { buildInitialIntakeResponses, formatIntakeRawContent, strategyRouter } f
 function persistence() {
   const create = () => vi.fn(async ({ data }: any) => ({ id: "new-record", ...data }));
   return {
+    $transaction<T>(fn: (tx: any) => T) { return fn(this); }, auditLog: {create: create()}, client: {findFirst:vi.fn(async()=>({id:"client"}))},
     strategy: { create: create() }, pillar: { create: create() },
     quickIntake: { create: create() }, brandDataSource: { create: create() },
     knowledgeEntry: { create: create() }, variableStoreConfig: { create: create() },
@@ -72,6 +77,14 @@ describe("creation source does not fabricate diagnostic evidence", () => {
     }));
   });
 
+  it("refuses foreign operator and client IDs before writing a seed",async()=>{
+    const db=persistence();
+    const caller=strategyRouter.createCaller({db,session:{user:{id:"operator-user",operatorId:"agency"}}} as any);
+    await expect(caller.create({name:"Foreign operator",operatorId:"elsewhere"})).rejects.toThrow();
+    db.client.findFirst.mockResolvedValueOnce(null as any);
+    await expect(caller.create({name:"Foreign client",operatorId:"agency",clientId:"foreign"})).rejects.toThrow();
+    expect(db.strategy.create).not.toHaveBeenCalled();
+  });
   it("creating a name-only platform persists no diagnostic answers or invented language", async () => {
     const db = persistence();
     const caller = strategyRouter.createCaller({

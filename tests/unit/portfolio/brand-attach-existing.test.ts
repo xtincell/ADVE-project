@@ -24,6 +24,21 @@ it("attaches the selected existing platform through the original governed create
   fireEvent.click(screen.getByRole("button", { name: "Créer" }));
   await waitFor(() => expect(m.create).toHaveBeenCalledWith(expect.objectContaining({ operatorId: "team-a", attachStrategyId: "existing", nodeNature: "SERVICE", name: "Atelier Boréal" })));
 });
+it("starts a new dossier as Brouillon and sends its lifecycle in the single create", async () => {
+  render(React.createElement(BrandNodeForm, { operatorId: "team-a", strategyId: "audit:team-a" }));
+  expect((screen.getByLabelText("État du dossier") as HTMLSelectElement).value).toBe("DRAFT");
+  expect(screen.getByRole("option", { name: "Brouillon" })).toBeDefined();
+  fireEvent.change(screen.getByLabelText("Nom"), { target: { value: "Bonnet Rouge CI" } });
+  fireEvent.click(screen.getByRole("button", { name: "Créer" }));
+  await waitFor(() => expect(m.create).toHaveBeenCalledWith(expect.objectContaining({ lifecycle: "DRAFT" })));
+  expect(m.update).not.toHaveBeenCalled();
+});
+it("keeps the recorded draft after reopening its edit form", () => {
+  m.get.mockReturnValue({ data: { ...existingNode, lifecycle: "DRAFT" } });
+  render(React.createElement(BrandNodeForm, { nodeId: "node", operatorId: "team-a", strategyId: "existing" }));
+  expect((screen.getByLabelText("État du dossier") as HTMLSelectElement).value).toBe("DRAFT");
+  expect(screen.getByRole("option", { name: "Brouillon" })).toBeDefined();
+});
 it("preserves an intentionally entered dossier name and does not infer a platform", () => {
   render(React.createElement(BrandNodeForm, { operatorId: "team-a", strategyId: "audit:team-a" }));
   fireEvent.change(screen.getByLabelText("Nom"), { target: { value: "Dossier régional" } });

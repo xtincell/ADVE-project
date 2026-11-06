@@ -1,4 +1,4 @@
-import type { PortfolioReference } from "@/domain/portfolio-reference";
+import type { PortfolioReference, PortfolioLifecycle } from "@/domain/portfolio-reference";
 import type { SourceReceipt } from "@/domain/source-certainty";
 import { ADVE_STORAGE_KEYS, type BrandTier } from "@/domain";
 
@@ -869,13 +869,14 @@ export type Intent =
       /** Optional link to existing Strategy (operationnel REGIONAL_BRAND/SKU). */
       attachStrategyId?: string | null;
       sourceRefs?: PortfolioReference[];
+      lifecycle?: PortfolioLifecycle;
     }
   | {
       kind: "OPERATOR_UPDATE_BRAND_NODE";
       strategyId: string; // audit pivot
       operatorId: string;
       nodeId: string;
-      /** Required when replacing sourceRefs or clientId; guards the read version. */
+      /** Required when replacing sourceRefs, countryCode or clientId; guards the read version. */
       expectedUpdatedAt?: string;
       patches: {
         name?: string;
@@ -884,7 +885,7 @@ export type Intent =
         countryCode?: string | null;
         clientId?: string | null;
         nodeRole?: string[];
-        lifecycle?: string;
+        lifecycle?: PortfolioLifecycle;
         inheritanceLocked?: boolean;
         pillarOverrides?: unknown;
         sourceRefs?: PortfolioReference[];
@@ -910,6 +911,8 @@ export type Intent =
       strategyId: string; // the strategy being attached (pivot natural here)
       operatorId: string;
       nodeId: string;
+      expectedStrategyId: string | null;
+      expectedUpdatedAt: string;
     }
   | {
       kind: "OPERATOR_TAG_NODE_ROLE";

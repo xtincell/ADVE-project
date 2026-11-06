@@ -242,6 +242,7 @@ export interface ExecutiveSummarySection {
 }
 
 export interface ContexteDefiSection {
+  market: {countryCode:string|null; region:string|null; scaleLabel:string|null};
   businessContext: {
     sector: string | null;
     businessModel: string | null;

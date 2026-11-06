@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 72 modules (src/domain, cœur métier pur)
+## Domain — 74 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
@@ -64,6 +64,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **brand-actors**
 - **brand-asset-formats**
 - **brand-asset-kinds** — BrandAsset.kind — taxonomie complète des actifs de marque.
+- **brand-market-scope**
 - **brand-nature-archetypes** — Phase 18 (ADR-0061) — `BRAND_NATURE_ARCHETYPES` source de vérité unique.
 - **brand-scores** — src/domain/brand-scores.ts — Layer 0. Les TROIS mesures d'une marque, nommées
 - **brand-slug** — Format standard des `publicSlug` de marque (page publique `/b/[slug]`).
@@ -73,6 +74,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **calendar-production**
 - **campaign-code** — Phase 18-A1-α (audit MATANGA V4) — auto-générateur `Campaign.code` aligné
 - **classification-coherence** — Domain helper — invariants APOGEE de cohérence Classification ↔ Superfans ↔ Cult Tier.
+- **client-organization**
 - **collaborator-access** — ADR-0131 — Zones d'accès des collaborateurs délégués par marque.
 - **connector-result** — ConnectorResult<T> — discriminated union returned by every external connector
 - **council-input**
@@ -133,7 +135,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Prisma — 236 models, 71 enums
+## Prisma — 236 models, 72 enums
 
 ### Models
 
@@ -143,7 +145,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **User** (32 fields)
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
-- **Client** (17 fields)
+- **Client** (23 fields)
 - **Strategy** (86 fields)
 - **Intention** (14 fields)
 - **Campaign** (80 fields)
@@ -433,6 +435,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **AuditAction** : CREATE | UPDATE | DELETE | LOGIN | LOGOUT | APPROVE | REJECT | ESCALATE | EXPORT
 - **CampaignTeamRole** : ACCOUNT_DIRECTOR | ACCOUNT_MANAGER | STRATEGIC_PLANNER | CREATIVE_DIRECTOR | ART_DIRECTOR | COPYWRITER | MEDIA_PLANNER | MEDIA_BUYER | SOCIAL_MANAGER | PRODUCTION_MANAGER | PROJECT_MANAGER | DATA_ANALYST | CLIENT | DIGITAL_DIRECTOR
 - **NotificationChannel** : IN_APP | EMAIL | SMS | PUSH
+- **ClientOrganizationKind** : UNSPECIFIED | INTERNATIONAL_GROUP | REGIONAL_OFFICE | GROUP_SUBSIDIARY
 - **IntentionType** : PRODUCT_LAUNCH | REPOSITION | MARKET_ENTRY | CAMPAIGN | PLATFORM | PARTNERSHIP | OTHER
 - **IntentionStatus** : CAPTURED | BRIEF_GENERATED | BRIEF_VALIDATED | CONVERTED | ARCHIVED
 - **BrandAssetState** : DRAFT | CANDIDATE | SELECTED | ACTIVE | SUPERSEDED | ARCHIVED | REJECTED

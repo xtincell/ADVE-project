@@ -1,3 +1,4 @@
+import { brandMarketScope } from "@/domain/brand-market-scope";
 import { z } from "zod";
 import { readBrandOvertonPositioning } from "@/server/services/seshat/overton-graph";
 import type { OvertonPositioning } from "@/domain/overton-positioning";
@@ -447,7 +448,7 @@ export const cockpitRouter = createTRPCRouter({
         lastDigestAt: null as string | null,
         articles: [] as Array<{ title: string; link: string; source: string | null; publishedAt: string | null }>,
         themes: [] as string[],
-        configured: Boolean(strategy.countryCode),
+        configured: Boolean(strategy.countryCode || brandMarketScope(strategy).region),
         watchSubjects: [] as string[],
         watchSource: "NONE" as "MANUAL" | "DERIVED" | "NONE",
       };
@@ -466,12 +467,13 @@ export const cockpitRouter = createTRPCRouter({
         ctx.db,
         strategy.id,
         strategy.businessContext,
-        countryDisplayNameFr(strategy.countryCode),
+        brandMarketScope(strategy).region ?? countryDisplayNameFr(strategy.countryCode),
       );
       const feed = await getOrBuildBrandFeed(ctx.db, {
         strategyId: strategy.id,
         name: strategy.name,
-        countryCode: strategy.countryCode ?? "CM",
+        countryCode: strategy.countryCode,
+        marketRegion: brandMarketScope(strategy).region,
         sector,
         extraSubjects: watch.subjects,
       }).catch(() => null);

@@ -85,7 +85,7 @@ const BASELINE: Readonly<Record<string, number>> = {
   "anubis.ts": 2, // PENDING — templatesUpsert/Delete (le reste émet via emitIntentTyped)
   "argos.ts": 1, // subscribeNewsletter (public) ; setVerdict gouverné (ADR-0195)
   "brand-mcp.ts": 2, // EXEMPT — infra credential MCP (canAccessStrategy-gardé)
-  "client.ts": 2, // PENDING — client create/addBrand
+  "client.ts": 0, // Native CRM creation and brand bootstrap use their registered intents.
   "market-study-ingestion.ts": 2, // EXEMPT — preview (dry-run) + export PDF
   "social.ts": 2, // PENDING — upsertSocialConnector / dismissInboxItem
   "brand-node.ts": 1, // EXEMPT — invalidateInheritanceCache (cache, pas métier)

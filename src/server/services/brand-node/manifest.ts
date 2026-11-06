@@ -12,6 +12,7 @@
  * les mêmes endpoints qu'un opérateur humain.
  */
 import { z } from "zod";
+import { PortfolioLifecycleSchema } from "@/domain/portfolio-reference";
 import { defineManifest } from "@/server/governance/manifest";
 
 const StringId = z.string().min(1);
@@ -52,6 +53,7 @@ export const manifest = defineManifest({
         name: z.string().min(1),
         slug: z.string().min(1),
         nodeKind: z.string().min(1),
+        lifecycle: PortfolioLifecycleSchema.optional(),
         nodeNature: z.enum([
           "PRODUCT", "SERVICE", "CHARACTER_IP", "FESTIVAL_IP", "MEDIA_IP",
           "RETAIL_SPACE", "PLATFORM", "INSTITUTION", "PERSONAL",
@@ -116,6 +118,8 @@ export const manifest = defineManifest({
         strategyId: StringId,
         operatorId: StringId,
         nodeId: StringId,
+        expectedStrategyId: StringId.nullable(),
+        expectedUpdatedAt: z.string().datetime(),
       }).passthrough(),
       outputSchema: HandlerResult,
       sideEffects: ["DB_WRITE"],

@@ -1,4 +1,6 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { vi, describe, it, expect, beforeAll, afterAll } from "vitest";
+// createCaller supplies the authenticated session. The Next HTTP adapter is outside this DB test.
+vi.mock("@/lib/auth/types", () => ({}));
 import { db } from "@/lib/db";
 import { createTRPCRouter } from "@/server/trpc/init";
 import { strategyRouter } from "@/server/trpc/routers/strategy";
@@ -25,7 +27,7 @@ describe("Cockpit & Client Strategy Creation Alignment", () => {
     }
 
     // 2. Find or create a client to test clientRouter.addBrand
-    let operator = await db.operator.findFirst();
+    let operator = await db.operator.findUnique({where:{slug:"test-operator"}});
     if (!operator) {
       operator = await db.operator.create({
         data: {
@@ -39,7 +41,7 @@ describe("Cockpit & Client Strategy Creation Alignment", () => {
       });
     }
     client = await db.client.findFirst({
-      where: { operatorId: operator.id }
+      where: { operatorId: operator.id, name:"Test Client Company" }
     });
     if (!client) {
       client = await db.client.create({
@@ -118,7 +120,7 @@ describe("Cockpit & Client Strategy Creation Alignment", () => {
     expect(responses.biz).toBeDefined();
     expect(responses.biz.biz_model).toBe("PRODUCTION");
     expect(responses.a).toBeDefined();
-    expect(responses.a.a_noyau).toBe(testBrandName);
+    expect(responses.a).toEqual({});
 
     // Verify BrandDataSource was created
     const dataSource = await db.brandDataSource.findFirst({
@@ -136,7 +138,7 @@ describe("Cockpit & Client Strategy Creation Alignment", () => {
     expect(rawData.biz.biz_model).toBe("PRODUCTION");
   });
 
-  it("clientRouter.addBrand mutation initializes QuickIntake and BrandDataSource with nested responses using client defaults", async () => {
+  it("clientRouter.addBrand mutation initializes QuickIntake and BrandDataSource with nested responses using declared client sector only", async () => {
     const ctx = {
       db,
       session: {
@@ -171,14 +173,14 @@ describe("Cockpit & Client Strategy Creation Alignment", () => {
     expect(strategy.id).toBeDefined();
     strategiesToDelete.push(strategy.id);
 
-    // Verify QuickIntake was created with client defaults (sector: TECH, country: CM)
+    // Only the declared sector is inherited. A client headquarters does not declare the market.
     const quickIntake = await db.quickIntake.findFirst({
       where: { convertedToId: strategy.id }
     });
     expect(quickIntake).toBeDefined();
     expect(quickIntake!.companyName).toBe(testBrandName);
     expect(quickIntake!.sector).toBe("TECH");
-    expect(quickIntake!.country).toBe("CM");
+    expect(quickIntake!.country).toBeNull();
     expect(quickIntake!.status).toBe("CONVERTED");
 
     // Check responses are nested
@@ -187,7 +189,7 @@ describe("Cockpit & Client Strategy Creation Alignment", () => {
     expect(responses.biz).toBeDefined();
     expect(responses.biz.biz_model).toBe("SERVICES");
     expect(responses.a).toBeDefined();
-    expect(responses.a.a_noyau).toBe(testBrandName);
+    expect(responses.a).toEqual({});
 
     // Verify BrandDataSource was created
     const dataSource = await db.brandDataSource.findFirst({
