@@ -21,6 +21,9 @@ import {
   DEFAULT_SOURCE_BUDGET,
   type BrandSourceContext,
 } from "./source-context";
+import type { ObjectiveComparison } from "@/domain/recommendation-comparison";
+import { readArticleComparisonScopes } from "./article-comparison";
+import { prepareArticleActions, type PreparedArticleAction } from "./article-actions";
 import { computeRecoGrounding, flattenProposedValue } from "./grounding";
 import type {
   GenerateBatchInput,
@@ -402,13 +405,15 @@ async function persistBatch(
    * sur des documents qu'on ne lui a jamais montrés n'aurait aucun sens.
    */
   sourceCtx: BrandSourceContext,
+  writer: Pick<Prisma.TransactionClient, "recommendationBatch" | "recommendation"> = db,
+  articleComparisons?: ReadonlyMap<unknown, ObjectiveComparison>,
 ): Promise<{ batchId: string; totalRecos: number; autoApplied: number }> {
   const config = MISSION_CONFIG[missionType];
   const allRecos = [...recosByPillar.entries()].flatMap(([key, recos]) =>
     recos.map((r) => ({ ...r, pillarKey: key })),
   );
 
-  const batch = await db.recommendationBatch.create({
+  const batch = await writer.recommendationBatch.create({
     data: {
       strategyId,
       missionType,
@@ -505,7 +510,7 @@ async function persistBatch(
       .filter(Boolean)
       .join("; ") || undefined;
 
-    await db.recommendation.create({
+    await writer.recommendation.create({
       data: {
         strategyId,
         targetPillarKey: reco.pillarKey.toLowerCase(),
@@ -531,7 +536,9 @@ async function persistBatch(
         validationWarning: validationWarning ?? null,
         sectionGroup: reco.sectionGroup ?? null,
         rulerScore: rulerVerdict.score,
-        rulerVerdict: { ...rulerVerdict, fieldComparison: comparison } as unknown as Prisma.InputJsonValue,
+        rulerVerdict: { ...rulerVerdict, fieldComparison: comparison,
+          ...(articleComparisons?.has(reco.proposedValue) ? { objectiveComparison: articleComparisons.get(reco.proposedValue) } : {}),
+        } as unknown as Prisma.InputJsonValue,
         scoreImpactEstimate,
         weightedScore,
         groundingScore: grounding.score,
@@ -550,6 +557,21 @@ async function persistBatch(
   }
 
   return { batchId: batch.id, totalRecos: allRecos.length, autoApplied };
+}
+
+/** Gazette mode uses the same provider and recommendation persistence as a normal batch.
+ * A reported article produces catalogue candidates; it never runs the pillar fill prompts. */
+export async function generateArticleActions(strategyId: string, input: Parameters<typeof prepareArticleActions>[0],
+  anchors: Parameters<typeof prepareArticleActions>[1]) {
+  const scopes = await readArticleComparisonScopes(strategyId);
+  const result = await prepareArticleActions(input, anchors, (system, prompt) => callNotoriaLLM(system, prompt, strategyId), scopes);
+  return { ...result, scopes };
+}
+
+export function persistArticleActions(tx: Prisma.TransactionClient, strategyId: string, actions: PreparedArticleAction[]) {
+  return persistBatch(strategyId, "SESHAT_OBSERVATION", new Map([["i", actions.map(a => a.recommendation)]]),
+    { empty: true, documentsUsed: 0, documentsSkipped: 0, charsUsed: 0, retrieval: "NONE", excerpts: [] }, tx,
+    new Map(actions.map(a => [a.recommendation.proposedValue, a.basis.comparison])));
 }
 
 // ── Public API ────────────────────────────────────────────────────

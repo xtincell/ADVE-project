@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
+import { NotoriaGenerationFailure } from "@/server/services/notoria/generation-failure";
 import { untrustedContentBody } from "@/server/services/utils/untrusted-content";
 
 const mocks = vi.hoisted(() => ({
   digests: vi.fn(), signals: vi.fn(), pillars: vi.fn(), recommendations: vi.fn(),
-  createSignal: vi.fn(), curate: vi.fn(), publish: vi.fn(), transaction: vi.fn(), generateBatch: vi.fn(), batchProposals: vi.fn(),
+  createSignal: vi.fn(), curate: vi.fn(), publish: vi.fn(), transaction: vi.fn(), persist: vi.fn(), generateActions: vi.fn(), batchProposals: vi.fn(),
 }));
 vi.mock("@/lib/db", () => ({ db: {
   knowledgeEntry: { findMany: mocks.digests },
@@ -13,7 +14,7 @@ vi.mock("@/lib/db", () => ({ db: {
   recommendation: { findMany: mocks.recommendations },
   $transaction: mocks.transaction,
 } }));
-vi.mock("@/server/services/notoria/engine", () => ({ generateBatch: mocks.generateBatch }));
+vi.mock("@/server/services/notoria/engine", () => ({ generateArticleActions: mocks.generateActions, persistArticleActions: mocks.persist }));
 
 import {
   articleNotoriaInputSchema, readArticleBrandInterpretations, triggerArticleNotoria,
@@ -37,15 +38,33 @@ const reco = (id: string, batchId: string, owner = strategyId) => ({
   explain: "Examiner un rendez-vous éditorial avec les créateurs partenaires.", status: "PENDING", createdAt: date,
 });
 
+const actionRow = (action = article.summary) => ({ ...reco("r1", "batch-1"),
+  proposedValue: { kind: "ADD_INITIATIVE", initiative: { id: "initiative-1", action } },
+  inputSnapshotId: "input-receipt", groundingScore: 0, groundingBand: "NO_SOURCE" });
+
+const comparison = { objective: "Respecter le mix éditorial", criterion: "écart", unit: "points", direction: "lower", candidate: 5,
+  incumbent: {id: "campagne", label: "plan", value: 10}, evidence: ["campagne"], basis: "projection", verdict: "BETTER" };
+vi.mock("@/server/services/notoria/article-comparison", () => ({ readArticleComparisonScopes: async () => [] }));
+function prepareMock(action = article.summary) {
+  mocks.generateActions.mockImplementation(async (_id, source) => {
+    const excerpt = source.excerpts[0];
+    return { rejected: 0, scopes: [], actions: [{ initiativeId: "initiative-1", basis: { comparison, field: excerpt.field, quote: excerpt.text,
+      start: excerpt.start, end: excerpt.end, action, implication: "Une série locale mérite un essai éditorial.",
+      measure: "Recueillir les motifs de choix après le test.", reviewReason: "L’essai concret respecte le périmètre du rendez-vous annoncé.",
+      anchor: { pillarKey: "D", field: "promesseMaitre", quote: "décider où manger" } } }] };
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.digests.mockResolvedValue([digest()]);
   mocks.signals.mockResolvedValue([]);
   mocks.pillars.mockResolvedValue([]);
   mocks.recommendations.mockResolvedValue([]);
-  mocks.batchProposals.mockResolvedValue([]);
+  mocks.batchProposals.mockResolvedValue([actionRow()]);
   mocks.createSignal.mockResolvedValue({ id: "input-receipt" });
-  mocks.generateBatch.mockResolvedValue({ batchId: "batch-1", totalRecos: 2, errors: [], autoApplied: 0, recosByPillar: {} });
+  prepareMock();
+  mocks.persist.mockResolvedValue({ batchId: "batch-1", totalRecos: 1, autoApplied: 0 });
   mocks.transaction.mockImplementation(async (callback) => callback({
     signal: { create: mocks.createSignal }, jehutyCuration: { upsert: mocks.curate },
     recommendation: { updateMany: mocks.publish, findMany: mocks.batchProposals },
@@ -64,7 +83,7 @@ describe("article → Notoria, existing governed endpoint", () => {
   it("rejects a URL absent from this brand's digest before invoking a generator", async () => {
     mocks.digests.mockResolvedValue([digest({ data: { items: [{ ...article, link: `${articleUrl}-another` }] } })]);
     await expect(triggerArticleNotoria(input)).rejects.toMatchObject({ code: "NOT_FOUND" });
-    expect(mocks.generateBatch).not.toHaveBeenCalled();
+    expect(mocks.generateActions).not.toHaveBeenCalled();
     expect(mocks.transaction).not.toHaveBeenCalled();
     expect(mocks.digests.mock.calls[0]?.[0].where).toMatchObject({ market: `brand:${strategyId}`, entryType: "EXTERNAL_FEED_DIGEST" });
   });
@@ -76,17 +95,17 @@ describe("article → Notoria, existing governed endpoint", () => {
   ])("rejects contradictory attribution despite matching URL: %j", async (extra) => {
     mocks.digests.mockResolvedValue([digest(extra)]);
     await expect(triggerArticleNotoria(input)).rejects.toMatchObject({ code: "NOT_FOUND" });
-    expect(mocks.generateBatch).not.toHaveBeenCalled();
+    expect(mocks.generateActions).not.toHaveBeenCalled();
   });
 
   it("uses collected article metadata with the canonical pillar-aware mission; makes proposals visible without applying them", async () => {
-    await expect(triggerArticleNotoria(input)).resolves.toEqual({ batchId: "batch-1", totalRecos: 2, failedParts: 0 });
-    const generation = mocks.generateBatch.mock.calls[0]?.[0];
-    expect(generation).toMatchObject({ strategyId, missionType: "SESHAT_OBSERVATION" });
+    await expect(triggerArticleNotoria(input)).resolves.toEqual({ batchId: "batch-1", totalRecos: 1, failedParts: 0, articleActions: {retained: 1, alternatives: 0, toInvestigate: 0} });
+    const generation = mocks.generateActions.mock.calls[0]?.[1];
+    expect(mocks.generateActions.mock.calls[0]?.[0]).toBe(strategyId);
     for (const value of [article.link, article.title, article.summary, article.source, article.publishedAt]) {
-      expect(generation.seshatObservation).toContain(value);
+      expect(generation.observation).toContain(value);
     }
-    expect(generation.seshatObservation).toContain("hypothèses d'impact");
+    expect(generation.observation).toContain("hypothèses d'impact");
     const stored = mocks.createSignal.mock.calls[0]?.[0].data;
     expect(stored).toMatchObject({ strategyId, type: "JEHUTY_ARTICLE_NOTORIA", data: {
       batchId: "batch-1", article: { digestId: "digest-1", url: articleUrl, title: article.title },
@@ -109,33 +128,41 @@ describe("article → Notoria, existing governed endpoint", () => {
   it("retains a bounded source and explicitly missing metadata instead of inventing a news body or publication date", async () => {
     mocks.digests.mockResolvedValue([digest({ data: { items: [{ link: articleUrl, title: "Un titre seul" }] } })]);
     await triggerArticleNotoria(input);
-    expect(mocks.generateBatch.mock.calls[0]?.[0].seshatObservation).toContain("Aucun résumé disponible");
-    expect(mocks.generateBatch.mock.calls[0]?.[0].seshatObservation).toContain("Non fournie par la source");
+    expect(mocks.generateActions.mock.calls[0]?.[1].observation).toContain("Aucun résumé disponible");
+    expect(mocks.generateActions.mock.calls[0]?.[1].observation).toContain("Non fournie par la source");
     mocks.digests.mockResolvedValue([digest({ data: { items: [{ ...article, summary: "Résumé ".repeat(3000) }] } })]);
     await triggerArticleNotoria(input);
-    expect(mocks.generateBatch.mock.calls[1]?.[0].seshatObservation.length).toBeLessThanOrEqual(3900);
-    expect(mocks.generateBatch.mock.calls[1]?.[0].seshatObservation).toContain(articleUrl);
+    expect(mocks.generateActions.mock.calls[1]?.[1].observation.length).toBeLessThanOrEqual(3900);
+    expect(mocks.generateActions.mock.calls[1]?.[1].observation).toContain(articleUrl);
   });
 
   it("surfaces complete generation failure without automatic retry, while retaining its source receipt", async () => {
-    mocks.generateBatch.mockResolvedValue({ batchId: "failed-batch", totalRecos: 0, errors: [{ error: "provider unavailable" }] });
+    mocks.generateActions.mockRejectedValue(new NotoriaGenerationFailure("MODEL_CALL_FAILED"));
     await expect(triggerArticleNotoria(input)).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
-    expect(mocks.generateBatch).toHaveBeenCalledTimes(1);
-    expect(mocks.createSignal.mock.calls[0]?.[0].data.data).toMatchObject({ batchId: "failed-batch", totalRecos: 0, failedParts: 1 });
+    expect(mocks.generateActions).toHaveBeenCalledTimes(1);
+    expect(mocks.createSignal.mock.calls[0]?.[0].data.data).toMatchObject({ batchId: "", totalRecos: 0, failedParts: 1 });
   });
   it("keeps a safe source-linked failure receipt when no batch exists, without altering prior curation", async () => {
-    mocks.generateBatch.mockResolvedValue({ batchId: "", totalRecos: 0, errors: [{ pillarKey: "e", code: "CONTEXT_TOO_LARGE", sourcePillar: "s", error: "private response sk-secret" }] });
-    await expect(triggerArticleNotoria(input)).rejects.toMatchObject({ code: "PRECONDITION_FAILED", message: expect.stringContaining("CONTEXT_TOO_LARGE (E)") });
+    mocks.generateActions.mockRejectedValue(new Error("PILLAR_CONTEXT_TOO_LARGE: S private response sk-secret"));
+    await expect(triggerArticleNotoria(input)).rejects.toMatchObject({ code: "PRECONDITION_FAILED", message: expect.stringContaining("CONTEXT_TOO_LARGE") });
     const stored = mocks.createSignal.mock.calls[0]?.[0].data.data;
     expect(stored).toMatchObject({ status: "FAILED", batchId: "", article: { url: articleUrl },
-      failures: [{ pillarKey: "e", code: "CONTEXT_TOO_LARGE", phase: "CONTEXT", sourcePillar: "S" }] });
+      failures: [{ pillarKey: "i", code: "CONTEXT_TOO_LARGE", phase: "CONTEXT", sourcePillar: "S" }] });
     expect(JSON.stringify(stored)).not.toContain("sk-secret");
     expect(mocks.curate).not.toHaveBeenCalled();
     expect(mocks.publish).not.toHaveBeenCalled();
   });
 
+  it("refuses a changed comparison scope before persisting the batch or source", async () => {
+    const prepared = await mocks.generateActions(strategyId, {excerpts:[{field:"title",text:article.title,start:0,end:article.title.length}]});
+    mocks.generateActions.mockResolvedValue({...prepared, scopes:[{id:"scope-now-obsolete"}]});
+    await expect(triggerArticleNotoria(input)).rejects.toMatchObject({code:"CONFLICT"});
+    expect(mocks.persist).not.toHaveBeenCalled();
+    expect(mocks.createSignal).not.toHaveBeenCalled();
+  });
+
   it("records pre-batch preparation rejection with no secret or misleading completed batch", async () => {
-    mocks.generateBatch.mockRejectedValue(new Error("connection private-token"));
+    mocks.generateActions.mockRejectedValue(new Error("connection private-token"));
     await expect(triggerArticleNotoria(input)).rejects.toMatchObject({ code: "PRECONDITION_FAILED", message: expect.stringContaining("CONTEXT_PREPARATION_FAILED") });
     const stored = mocks.createSignal.mock.calls[0]?.[0].data.data;
     expect(stored).toMatchObject({ status: "FAILED", batchId: "", totalRecos: 0 });
@@ -147,9 +174,9 @@ describe("article → Notoria, existing governed endpoint", () => {
 });
 
 describe("article evidence stays separate from documentary grounding", () => {
-  const proposal = { ...reco("r1", "batch-1"), proposedValue: article.summary, explain: "Proposition à confronter aux choix de marque.",
-    inputSnapshotId: "input-receipt", groundingScore: 0, groundingBand: "NO_SOURCE" };
+  const proposal = actionRow();
   async function received(proposed = proposal) {
+    prepareMock(proposed.proposedValue.initiative.action);
     mocks.batchProposals.mockResolvedValue([proposed]);
     await triggerArticleNotoria(input);
     const data = mocks.createSignal.mock.calls[0]![0].data.data;
@@ -160,7 +187,7 @@ describe("article evidence stays separate from documentary grounding", () => {
 
   it("preserves exactly the source spans sent to the model and their hash, then rereads article support separately", async () => {
     const data = await received();
-    const sent = mocks.generateBatch.mock.calls[0]![0].seshatObservation;
+    const sent = mocks.generateActions.mock.calls[0]![1].observation;
     expect(data.articleInput).toMatchObject({ sourceId: "digest-1", sourceUrl: articleUrl,
       publishedAt: article.publishedAt, source: article.source, qualification: "REPORTED", observation: sent,
       observationHash: createHash("sha256").update(sent).digest("hex") });
@@ -171,11 +198,12 @@ describe("article evidence stays separate from documentary grounding", () => {
     expect(view.recommendations[0]).toMatchObject({ status: "PENDING", documentaryGrounding: { score: 0, band: "NO_SOURCE" },
       articleGrounding: { receiptId: "input-receipt", sourceId: "digest-1", sourceUrl: articleUrl,
         qualification: "REPORTED", band: "GROUNDED", score: 1, publishedAt: article.publishedAt } });
+    expect(view.recommendations[0]?.actionBasis?.comparison).toMatchObject({verdict:"BETTER", delta:-5});
     expect(mocks.batchProposals.mock.calls[0]![0].where).toEqual({ strategyId, batchId: "batch-1" });
   });
 
   it("does not let the rationale or prompt instructions manufacture evidence for an unrelated proposal", async () => {
-    const data = await received({ ...proposal, proposedValue: "Améliorer satellites quantiques moteurs spatiaux propulsion nucléaire demain",
+    const data = await received({ ...proposal, proposedValue: actionRow("Améliorer satellites quantiques moteurs spatiaux propulsion nucléaire demain").proposedValue,
       explain: `${article.summary} source:digest-1` });
     expect(data.articleGrounding[0]).toMatchObject({ band: "UNGROUNDED", score: 0, unverifiedCitations: ["digest-1"] });
     expect(data.articleInput.excerpts.map((part: {text: string}) => part.text).join(" ")).not.toContain("Proposer des actions");
@@ -191,7 +219,7 @@ describe("article evidence stays separate from documentary grounding", () => {
   it("never grounds against a tail omitted by the observation budget", async () => {
     const omitted = "satellites quantiques moteurs spatiaux propulsion nucléaire demain";
     mocks.digests.mockResolvedValue([digest({ data: { items: [{ ...article, summary: "Cuisine locale. ".repeat(500) + omitted }] } })]);
-    const data = await received({ ...proposal, proposedValue: omitted });
+    const data = await received({ ...proposal, proposedValue: actionRow(omitted).proposedValue });
     expect(data.article.summary).toContain(omitted); // full collected source still preserved
     expect(data.articleInput.observation.length).toBeLessThanOrEqual(3900);
     expect(data.articleInput.excerpts.map((part: {text: string}) => part.text).join(" ")).not.toContain(omitted);
@@ -216,8 +244,9 @@ describe("article evidence stays separate from documentary grounding", () => {
     if (change === "proposal") mocks.recommendations.mockResolvedValue([{ ...proposal, proposedValue: "Changed proposal" }]);
     if (change === "snapshot") mocks.recommendations.mockResolvedValue([{ ...proposal, inputSnapshotId: "missing-receipt" }]);
     const view = (await readArticleBrandInterpretations(strategyId, [article])).get(articleUrl)!;
-    expect(view.recommendations[0]?.articleGrounding).toBeUndefined();
-    expect(view.recommendations[0]?.documentaryGrounding).toEqual({ score: 0, band: "NO_SOURCE" });
+    expect(view.recommendations).toHaveLength(0);
+    expect(view.generalRecommendations?.[0]?.articleGrounding).toBeUndefined();
+    expect(view.generalRecommendations?.[0]?.documentaryGrounding).toEqual({ score: 0, band: "NO_SOURCE" });
   });
 });
 
@@ -260,8 +289,9 @@ describe("article right page — exact links, no simulated interpretation", () =
     const result = (await readArticleBrandInterpretations(strategyId, [article])).get(articleUrl)!;
     expect(result.batchIds).toEqual(["batch-1", "batch-2"]);
     expect(result.linkedAnalyses).toEqual([]); // a receipt is not a brand analysis
-    expect(result.recommendations.map((row) => row.id)).toEqual(["r1", "r2"]);
-    expect(result.recommendations[0]).toMatchObject({ status: "PENDING", targetPillarKey: "I" });
+    expect(result.recommendations).toEqual([]);
+    expect(result.generalRecommendations?.map((row) => row.id)).toEqual(["r1", "r2"]);
+    expect(result.generalRecommendations?.[0]).toMatchObject({ status: "PENDING", targetPillarKey: "I" });
     expect(result.recommendations[0]?.articleGrounding).toBeUndefined(); // legacy receipt is not retroactively grounded
     expect(mocks.recommendations.mock.calls[0]?.[0].where).toEqual({ strategyId, batchId: { in: ["batch-1", "batch-2"] }, publishedAt: { not: null } });
   });
@@ -293,7 +323,7 @@ describe("article right page — exact links, no simulated interpretation", () =
     ]);
     expect(result.linkedAnalyses).toEqual([]);
     expect(result.recommendations).toEqual([]);
-    expect(mocks.generateBatch).not.toHaveBeenCalled();
+    expect(mocks.generateActions).not.toHaveBeenCalled();
   });
 
   it("performs no queries for an empty or invalid article list", async () => {

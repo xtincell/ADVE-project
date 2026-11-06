@@ -47,7 +47,11 @@ export function ArticleSpread({ item, onNotoria, isNotoriaPending, onPin, onUnpi
   const [failedImageUrl, setFailedImageUrl] = useState<string>();
   const context = item.articleContext;
   const analyses = context?.linkedAnalyses ?? [];
-  const recommendations = context?.recommendations ?? [];
+  const stored = context?.recommendations ?? [];
+  const recommendations = stored.filter(row => row.actionBasis);
+  const history = [...(context?.generalRecommendations ?? []), ...stored.filter(row => !row.actionBasis)];
+  const alternatives = context?.alternatives ?? [];
+  const toInvestigate = context?.toInvestigate ?? [];
   const pinned = item.curation?.action === "PINNED";
   const sourceDate = new Date(item.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
   return <article data-testid="gazette-article-spread" className={`grid min-w-0 grid-cols-1 gap-y-8 border-y border-border-subtle py-6 lg:grid-cols-2 ${pinned ? "border-t-accent" : ""}`}>
@@ -79,10 +83,36 @@ export function ArticleSpread({ item, onNotoria, isNotoriaPending, onPin, onUnpi
         <ReadingText expanded={expanded} text={readingBody(analysis.text, analysis.title)} />
         <p className="mt-2 text-xs text-foreground-muted">Analyse liée à cet article · {new Date(analysis.createdAt).toLocaleDateString("fr-FR")}</p>
       </div>)}</div>}
-      {recommendations.length > 0 && <div className="space-y-5">
-        {recommendations.map(reco => <div key={reco.id}>
+      {[
+        { label: "Actions tirées de l’article", rows: recommendations },
+        { label: "Alternatives équivalentes", rows: alternatives },
+        { label: "Pistes à instruire", rows: toInvestigate },
+        { label: "Historique des recommandations générales", rows: history, historical: true },
+      ].filter(group => group.rows.length).map(group => {
+        const Section = group.historical ? "details" : "section";
+        const Heading = group.historical ? "summary" : "h5";
+        return <Section key={group.label} className="my-4 space-y-5">
+        <Heading className="font-semibold">{group.label} ({group.rows.length})</Heading>
+        {group.historical && <p className="text-sm text-foreground-muted">Le lien entre ces anciennes propositions et un passage précis de cet article reste à établir.</p>}
+        {group.rows.map(reco => <div key={reco.id}>
           <p className="mb-2 text-xs text-foreground-muted">Pilier {reco.targetPillarKey.toUpperCase()} · {reco.status === "PENDING" ? "Proposition à examiner" : reco.status === "APPLIED" ? "Proposition appliquée" : reco.status === "ACCEPTED" ? "Proposition retenue" : reco.status === "REJECTED" ? "Proposition écartée" : "Proposition enregistrée"}</p>
-          <ReadingText expanded={expanded} text={reco.explain} />
+          {reco.actionBasis ? <>
+            <h6 className="mb-2 font-semibold">{reco.actionBasis.action}</h6>
+            <blockquote className="my-3 whitespace-pre-wrap border-l border-border-subtle pl-3">{reco.actionBasis.quote}</blockquote>
+            <p className="text-sm font-semibold">Ce que cela suggère pour votre marque</p>
+            <ReadingText expanded={expanded} text={reco.actionBasis.implication} />
+            <p className="mt-3 text-sm"><strong>À vérifier.</strong> {reco.actionBasis.measure}</p>
+            <details className="mt-3 text-sm"><summary className="cursor-pointer">Pourquoi retenir cette piste</summary>
+              <p className="mt-2">Repère de marque · {reco.actionBasis.anchor.pillarKey.toUpperCase()}.{reco.actionBasis.anchor.field}</p>
+              <blockquote className="my-2">{reco.actionBasis.anchor.quote}</blockquote>
+              <p>{reco.actionBasis.reviewReason}</p>
+              <p className="mt-3 font-semibold">Comparaison · {reco.actionBasis.comparison.objective}</p>
+              <p>{reco.actionBasis.comparison.reason}</p>
+              {reco.actionBasis.comparison.criterion && <p>{reco.actionBasis.comparison.criterion} · {reco.actionBasis.comparison.basis === "measurement" ? "Mesure observée" : "Projection de planification"}</p>}
+              {reco.actionBasis.comparison.delta != null && <p>Écart projeté · {reco.actionBasis.comparison.delta.toLocaleString("fr-FR")} {reco.actionBasis.comparison.unit}</p>}
+              {reco.actionBasis.comparison.evidence.map(ref => <p className="mt-1 break-words text-xs" key={ref}>{ref}</p>)}
+            </details>
+          </> : <ReadingText expanded={expanded} text={reco.explain} />}
           <details className="mt-3 rounded-lg border border-border-subtle p-3">
             <summary className="cursor-pointer text-xs text-foreground-muted">Sources de cette proposition</summary>
             <dl className="mt-3 space-y-2 text-xs text-foreground-secondary">
@@ -99,8 +129,11 @@ export function ArticleSpread({ item, onNotoria, isNotoriaPending, onPin, onUnpi
             </div> : <p className="mt-3 text-xs text-foreground-muted">L’extrait exact utilisé pour cette proposition n’est pas conservé dans son reçu. L’article affiché aujourd’hui ne remplace pas cette trace.</p>}
           </details>
         </div>)}
-      </div>}
-      {!analyses.length && !recommendations.length && <p className="text-sm leading-relaxed text-foreground-secondary">Cette actualité est à confronter à vos choix de marque ci-dessous. Son impact n’a pas encore été analysé ; les données de votre ADVE serviront à préparer des propositions liées à cet article.</p>}
+      </Section>; })}
+      {!recommendations.length && (history.length > 0 || context?.lastActionAnalysis) && <p className="mb-4 text-sm">
+        {context?.lastActionAnalysis?.status === "FAILED" ? "La dernière analyse de cet article a échoué." : "Aucune action retenue à ce stade."}
+      </p>}
+      {!context?.lastActionAnalysis && !history.length && !analyses.length && !recommendations.length && !alternatives.length && !toInvestigate.length && <p className="text-sm leading-relaxed text-foreground-secondary">Cette actualité est à confronter à vos choix de marque ci-dessous. Son impact n’a pas encore été analysé ; les données de votre ADVE serviront à préparer des propositions liées à cet article.</p>}
       {!!context?.brandContext.length && <details className="my-6 border-y border-border-subtle py-4" open={!analyses.length && !recommendations.length}>
         <summary className="cursor-pointer text-sm font-semibold text-foreground">Les repères de votre ADVE</summary>
         <div className="mt-4 space-y-4">{context.brandContext.map(anchor => <div key={`${anchor.pillarKey}.${anchor.field}`}>
@@ -112,7 +145,7 @@ export function ArticleSpread({ item, onNotoria, isNotoriaPending, onPin, onUnpi
         {isNotoriaPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
         {isNotoriaPending ? "Préparation des propositions…" : "Proposer des actions avec l’IA"}
       </button>
-      <p className="mt-3 text-xs leading-relaxed text-foreground-muted">L’article et votre ADVE nourrissent les propositions. Vous choisissez ensuite lesquelles appliquer dans Recommandations.</p>
+      <p className="mt-3 text-xs leading-relaxed text-foreground-muted">Une piste cite un passage de l’article et un repère de votre marque. La comparaison aux décisions adoptées distingue les actions retenues, les alternatives et les pistes à instruire.</p>
       {item.strategyId && <Link href={`/cockpit/brand/notoria?strategy=${encodeURIComponent(item.strategyId)}`} className="mt-3 inline-block text-sm text-accent underline underline-offset-4">Examiner les propositions dans Recommandations →</Link>}
     </section>
   </article>;

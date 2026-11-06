@@ -2,16 +2,19 @@ import { createHash } from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { compareObjective, objectiveComparisonInputSchema } from "@/domain/recommendation-comparison";
+import { readArticleComparisonScopes } from "@/server/services/notoria/article-comparison";
 import { signalObservation } from "@/domain/signal-observation";
 import { ADVE_STORAGE_KEYS } from "@/domain/pillars";
-import type { ArticleBrandInterpretation } from "@/lib/types/jehuty";
+import type { ArticleActionBasis, ArticleBrandInterpretation } from "@/lib/types/jehuty";
 import { signalHeadline } from "./mappers";
 import { describeNotoriaFailure, safeNotoriaFailure } from "@/server/services/notoria/generation-failure";
-import { computeRecoGrounding, extractCitedSourceIds, flattenProposedValue } from "@/server/services/notoria/grounding";
+import { computeRecoGrounding, extractCitedSourceIds } from "@/server/services/notoria/grounding";
 import { untrustedContentBody } from "@/server/services/utils/untrusted-content";
 
 const RECEIPT_TYPE = "JEHUTY_ARTICLE_NOTORIA";
 const RECEIPT_SCHEMA = "gazette-article-notoria-v1";
+const ARTICLE_MODE = "source-actions-v1";
 const webUrl = z.string().url().max(2048).refine((value) => /^https?:\/\//i.test(value));
 
 /** The client selects a stored item; it never supplies news or an instruction. */
@@ -50,6 +53,13 @@ const articleInputSchema = z.object({
   observation: z.string(), observationHash: z.string(),
   excerpts: z.array(z.object({ field: z.enum(["title", "summary"]), text: z.string(), start: z.number().int().min(0), end: z.number().int().min(0) })),
 });
+
+const actionBasisSchema = z.object({
+  field: z.enum(["title", "summary"]), quote: z.string().min(12), start: z.number().int(), end: z.number().int(),
+  anchor: z.object({ pillarKey: z.string(), field: z.string(), quote: z.string().min(8), certainty: z.string().optional() }),
+  comparison: objectiveComparisonInputSchema.transform(compareObjective),
+  action: z.string().min(12), implication: z.string().min(16), measure: z.string().min(12), reviewReason: z.string().min(12),
+}) satisfies z.ZodType<ArticleActionBasis>;
 
 async function storedArticle(strategyId: string, articleUrl: string): Promise<StoredArticle> {
   const digests = await db.knowledgeEntry.findMany({
@@ -113,64 +123,63 @@ function articleObservation(article: StoredArticle): z.infer<typeof articleInput
 export async function triggerArticleNotoria(input: { strategyId: string; articleUrl: string; userId: string }) {
   const article = await storedArticle(input.strategyId, input.articleUrl);
   const articleInput = articleObservation(article);
-  const { generateBatch } = await import("@/server/services/notoria/engine");
-  const result = await generateBatch({
-    strategyId: input.strategyId, missionType: "SESHAT_OBSERVATION",
-    seshatObservation: articleInput.observation,
-  }).catch((error: unknown) => ({
-    batchId: "", totalRecos: 0, autoApplied: 0, recosByPillar: {},
-    errors: [describeNotoriaFailure(error, "unknown")],
-  }));
-  const failures = result.errors.map(safeNotoriaFailure);
-  {
-    const receipt = {
-      schema: RECEIPT_SCHEMA, strategyId: input.strategyId, batchId: result.batchId,
-      article: { ...article }, contentHash: hash(JSON.stringify(article)), articleInput,
-      totalRecos: result.totalRecos, failedParts: failures.length, failures,
-      status: failures.length ? result.totalRecos > 0 ? "PARTIAL" : "FAILED" : "COMPLETE",
-    };
-    await db.$transaction(async (tx) => {
-      const proposals = result.batchId ? await tx.recommendation.findMany({
-        where: { strategyId: input.strategyId, batchId: result.batchId },
-        select: { id: true, proposedValue: true, explain: true },
-      }) : [];
-      // Same conservative metric, applied ONLY to source text actually sent.
-      // Prompt instructions and absent-source fallback text are never evidence.
-      const articleGrounding = proposals.map(proposal => ({
-        recommendationId: proposal.id, proposedValueHash: hash(JSON.stringify(proposal.proposedValue)),
-        ...computeRecoGrounding(flattenProposedValue(proposal.proposedValue),
-          extractCitedSourceIds(proposal.explain).filter(id => id === articleInput.sourceId).map(id => `source:${id}`).join(" "),
-          articleInput.excerpts.filter(excerpt => excerpt.text).map(excerpt => ({ sourceId: articleInput.sourceId, text: excerpt.text }))),
-      }));
-      const frozenReceipt = { ...receipt, articleGrounding };
-      // Append-only proof survives pin/unpin and an editable curation note.
-      const storedReceipt = await tx.signal.create({ data: { strategyId: input.strategyId, type: RECEIPT_TYPE, data: frozenReceipt } });
-      // A refused context has no batch. Preserve its failure without pretending
-      // proposals exist, publishing anything, or replacing an earlier curation.
-      if (!result.batchId) return;
-      await tx.jehutyCuration.upsert({
-        where: { strategyId_itemType_itemId: {
-          strategyId: input.strategyId, itemType: "EXTERNAL", itemId: article.url,
-        } },
-        create: {
-          strategyId: input.strategyId, itemType: "EXTERNAL", itemId: article.url,
-          action: "NOTORIA_TRIGGERED", userId: input.userId, note: JSON.stringify(frozenReceipt),
-        },
-        update: { action: "NOTORIA_TRIGGERED", userId: input.userId, note: JSON.stringify(frozenReceipt) },
-      });
-      // Published means visible for review, never accepted/applied. Documentary
-      // sourceReceipts keep their original meaning and are not forged from URLs.
-      await tx.recommendation.updateMany({
-        where: { strategyId: input.strategyId, batchId: result.batchId, status: "PENDING", publishedAt: null },
-        data: { publishedAt: new Date(), source: "SESHAT", applyPolicy: "requires_review", inputSnapshotId: storedReceipt.id },
-      });
+  const { generateArticleActions, persistArticleActions } = await import("@/server/services/notoria/engine");
+  const base = { schema: RECEIPT_SCHEMA, mode: ARTICLE_MODE, strategyId: input.strategyId,
+    article: { ...article }, contentHash: hash(JSON.stringify(article)), articleInput };
+  let prepared: Awaited<ReturnType<typeof generateArticleActions>>;
+  try {
+    const anchors = await readGazetteBrandContext(input.strategyId);
+    prepared = await generateArticleActions(input.strategyId, articleInput, anchors);
+  } catch (error) {
+    const failure = safeNotoriaFailure(describeNotoriaFailure(error, "i"));
+    await db.$transaction(async tx => tx.signal.create({ data: { strategyId: input.strategyId, type: RECEIPT_TYPE,
+      data: { ...base, status: "FAILED", batchId: "", totalRecos: 0, failedParts: 1, failures: [failure] } } }));
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: `L’analyse de cet article a échoué. ${failure.error} Diagnostic enregistré : ${failure.code}.` });
+  }
+  // No provider IO inside this transaction. A candidate and its exact source
+  // appear together; an interrupted write cannot leave a published general reco.
+  return db.$transaction(async tx => {
+    const compared = prepared.actions.some(action => action.basis.comparison.evidence.length);
+    if (compared && JSON.stringify(prepared.scopes) !== JSON.stringify(await readArticleComparisonScopes(input.strategyId, tx))) {
+      throw new TRPCError({ code: "CONFLICT", message: "Les décisions de référence ont changé pendant l’analyse. Relancez la comparaison." });
+    }
+    const { batchId, totalRecos } = await persistArticleActions(tx, input.strategyId, prepared.actions);
+    const proposals = await tx.recommendation.findMany({
+      where: { strategyId: input.strategyId, batchId },
+      select: { id: true, proposedValue: true, explain: true },
     });
-  }
-  if (result.totalRecos === 0 && result.errors.length > 0) {
-    const detail = [...new Set(failures.map(failure => `${failure.code} (${failure.pillarKey.toUpperCase()})`))].join(", ");
-    throw new TRPCError({ code: "PRECONDITION_FAILED", message: `L’analyse n’a produit aucune proposition. ${failures[0]!.error} Diagnostic enregistré : ${detail}. Aucun changement n’a été appliqué à la marque.` });
-  }
-  return { batchId: result.batchId, totalRecos: result.totalRecos, failedParts: result.errors.length };
+    const evidenceById = new Map(prepared.actions.map(a => [a.initiativeId, a.basis]));
+    const articleGrounding = proposals.map(proposal => {
+      const initiative = record(record(proposal.proposedValue).initiative);
+      const basis = evidenceById.get(text(initiative.id));
+      if (!basis || basis.action !== initiative.action) throw new Error("Le reçu ne correspond pas à l’initiative enregistrée.");
+      return { recommendationId: proposal.id, proposedValueHash: hash(JSON.stringify(proposal.proposedValue)), basis,
+        ...computeRecoGrounding(text(initiative.action),
+          extractCitedSourceIds(proposal.explain).filter(id => id === articleInput.sourceId).map(id => `source:${id}`).join(" "),
+          articleInput.excerpts.map(excerpt => ({ sourceId: articleInput.sourceId, text: excerpt.text }))) };
+    });
+    if (articleGrounding.length !== prepared.actions.length || totalRecos !== prepared.actions.length) {
+      throw new Error("Le nombre d’initiatives reçues ne correspond pas au lot préparé.");
+    }
+    const receipt = { ...base, batchId, totalRecos, failedParts: 0, failures: [], status: "COMPLETE",
+      retained: prepared.actions.filter(action => ["BETTER", "THRESHOLD_MET"].includes(action.basis.comparison.verdict)).length,
+      rejectedCandidates: prepared.rejected, articleGrounding };
+    const storedReceipt = await tx.signal.create({ data: { strategyId: input.strategyId, type: RECEIPT_TYPE, data: receipt } });
+    await tx.jehutyCuration.upsert({
+      where: { strategyId_itemType_itemId: { strategyId: input.strategyId, itemType: "EXTERNAL", itemId: article.url } },
+      create: { strategyId: input.strategyId, itemType: "EXTERNAL", itemId: article.url,
+        action: "NOTORIA_TRIGGERED", userId: input.userId, note: JSON.stringify(receipt) },
+      update: { action: "NOTORIA_TRIGGERED", userId: input.userId, note: JSON.stringify(receipt) },
+    });
+    if (totalRecos) await tx.recommendation.updateMany({
+      where: { strategyId: input.strategyId, batchId, status: "PENDING", publishedAt: null },
+      data: { publishedAt: new Date(), source: "SESHAT", applyPolicy: "requires_review", inputSnapshotId: storedReceipt.id },
+    });
+    return { batchId, totalRecos, failedParts: 0, articleActions: {
+      retained: receipt.retained, alternatives: prepared.actions.filter(a => a.basis.comparison.verdict === "EQUAL").length,
+      toInvestigate: prepared.actions.filter(a => a.basis.comparison.verdict === "UNASSESSED").length,
+    } };
+  });
 }
 
 /** Explicit URL references only. Shared keywords never establish provenance. */
@@ -254,6 +263,11 @@ export async function readArticleBrandInterpretations(
     if (signal.type === RECEIPT_TYPE) {
       const context = result.get(text(record(data.article).url));
       const batchId = text(data.batchId);
+      if (context && data.mode === ARTICLE_MODE && data.schema === RECEIPT_SCHEMA && data.strategyId === strategyId
+        && !context.lastActionAnalysis && (data.status === "COMPLETE" || data.status === "FAILED")) {
+        context.lastActionAnalysis = { at: signal.createdAt.toISOString(), status: data.status,
+          retained: typeof data.retained === "number" ? data.retained : 0 };
+      }
       if (context && batchId && data.schema === RECEIPT_SCHEMA && data.strategyId === strategyId
       ) {
         if (!context.batchIds.includes(batchId)) context.batchIds.push(batchId);
@@ -295,7 +309,21 @@ export async function readArticleBrandInterpretations(
           && savedGrounding?.proposedValueHash === hash(JSON.stringify(reco.proposedValue));
         const documentary = groundingSchema.pick({ score: true, band: true })
           .safeParse({ score: reco.groundingScore, band: reco.groundingBand });
-        context.recommendations.push({ id: reco.id, batchId: reco.batchId,
+        const basis = actionBasisSchema.safeParse(savedGrounding?.basis);
+        const isAction = validInput && received.success && receipt?.mode === ARTICLE_MODE && basis.success
+          && basis.data.action === record(record(reco.proposedValue).initiative).action
+          && received.data.excerpts.some(ex => ex.field === basis.data.field && ex.start <= basis.data.start && ex.end >= basis.data.end
+            && received.data.observation.slice(basis.data.start, basis.data.end) === basis.data.quote);
+        let group = context.generalRecommendations ??= [];
+        if (isAction && basis.success) {
+          switch (basis.data.comparison.verdict) {
+            case "BETTER": case "THRESHOLD_MET": group = context.recommendations; break;
+            case "EQUAL": group = context.alternatives ??= []; break;
+            case "UNASSESSED": group = context.toInvestigate ??= []; break;
+            default: continue;
+          }
+        }
+        group.push({ id: reco.id, ...(isAction && basis.success ? { actionBasis: basis.data } : {}), batchId: reco.batchId,
           targetPillarKey: reco.targetPillarKey.toUpperCase(), targetField: reco.targetField,
           explain: reco.explain, status: reco.status, createdAt: reco.createdAt.toISOString(),
           ...(validInput && received.success && measure.success ? { articleGrounding: {
