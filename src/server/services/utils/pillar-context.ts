@@ -14,8 +14,10 @@ export function projectForContext(value: unknown, leafMax: number): unknown {
   return value;
 }
 
+export interface PillarContextOptions { compact?: boolean }
+
 /** The same bounded, authority-qualified context for individual and sequenced readers. */
-export function serializePillar(key: string, content: unknown, fieldStatus?: (field: string) => string | undefined, sharedVerification?: Set<FieldVerificationProfile>): string {
+export function serializePillar(key: string, content: unknown, fieldStatus?: (field: string) => string | undefined, sharedVerification?: Set<FieldVerificationProfile>, options: PillarContextOptions = {}): string {
   if (!content || typeof content !== "object") return `[${key}] Vide`;
   if (key.toLowerCase() === "v" && !Array.isArray(content)) content = projectFinancialPillar(content as Record<string, unknown>);
   const profiles = sharedVerification ?? new Set<FieldVerificationProfile>();
@@ -42,7 +44,7 @@ export function serializePillar(key: string, content: unknown, fieldStatus?: (fi
           ...(complements.length ? { complements: { regle: "Ces cellules portent leur propre origine ; le statut du parent ne les valide pas.", cellules: complements } } : {}) }];
       }))
     : projected;
-  const json = JSON.stringify(qualified, null, 2);
+  const json = JSON.stringify(qualified, null, options.compact ? undefined : 2);
   // Never hand a reader half a JSON object or silently discard its last personas.
   // The former 8K/1.1K summaries also removed all nested foreign-key targets.
   // A complete I catalogue is larger than the former 64K per-pillar guard.
@@ -51,24 +53,24 @@ export function serializePillar(key: string, content: unknown, fieldStatus?: (fi
   const max = 128_000;
   if (json.length > max) throw new Error(`PILLAR_CONTEXT_TOO_LARGE: ${key} dépasse la fenêtre structurée (${json.length}/${max}).`);
   const notice = ["D", "V"].includes(key.toUpperCase()) ? `${BRAND_ACTOR_CONTEXT_NOTICE}\n` : "";
-  return (sharedVerification ? "" : serializeVerificationInstructions(profiles)) + notice + wrapUntrusted(`PILIER ${key}`, json, { max });
+  return (sharedVerification ? "" : serializeVerificationInstructions(profiles, options)) + notice + wrapUntrusted(`PILIER ${key}`, json, { max });
 }
 
 /** Fixed application policy, factored once per context; no brand text is
  * promoted to instructions. Field packets carry only a stable profile key. */
-export function serializeVerificationInstructions(profiles: Set<FieldVerificationProfile>): string {
+export function serializeVerificationInstructions(profiles: Set<FieldVerificationProfile>, options: PillarContextOptions = {}): string {
   if (!profiles.size) return "";
   return "VÉRIFICATION DES POSTULATS — chaque verificationRef renvoie au contrôle ci-dessous.\n"
     + JSON.stringify({ ...FIELD_VERIFICATION_RESPONSIBILITY,
       controles: Object.fromEntries([...profiles].sort().map(id => [id, FIELD_VERIFICATION_RULES[id]])),
-    }, null, 2) + "\n\n";
+    }, null, options.compact ? undefined : 2) + "\n\n";
 }
 
 /** Bundle readers share one dictionary, while retaining every data envelope. */
-export function serializePillars(entries: ReadonlyArray<readonly [string, unknown]>): string {
+export function serializePillars(entries: ReadonlyArray<readonly [string, unknown]>, options: PillarContextOptions = {}): string {
   const profiles = new Set<FieldVerificationProfile>();
-  const data = entries.map(([key, value]) => serializePillar(key, value, undefined, profiles)).join("\n\n");
-  return serializeVerificationInstructions(profiles) + data;
+  const data = entries.map(([key, value]) => serializePillar(key, value, undefined, profiles, options)).join("\n\n");
+  return serializeVerificationInstructions(profiles, options) + data;
 }
 
 /** A rich corpus grounds ADVE; missing facts are not a completion quota. */

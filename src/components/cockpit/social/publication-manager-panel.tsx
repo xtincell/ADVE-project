@@ -165,13 +165,18 @@ export function PublicationManagerPanel({ strategyId }: { strategyId: string }) 
                 )}
                 {(editable || (retryable && ["PARTIAL", "UNCONFIRMED"].includes(p.status))) && (
                   <div className="ck-pub__actions">
-                    {editable && <Button size="sm" variant="outline" onClick={() => { setEditingId(p.brandActionId); setEditText(p.text); setEditImage(p.imageUrl ?? ""); setEditWhen(toLocalInput(p.scheduledAt)); }}>
+                    {p.publicationPackageId && <a className="text-sm text-accent underline" href={(() => {
+                      const query = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
+                      query.set("strategy", strategyId); query.set("package", p.publicationPackageId!);
+                      return `/cockpit/operate/publish?${query.toString()}`;
+                    })()}>Ouvrir le paquet relu</a>}
+                    {editable && !p.publicationPackageId && <Button size="sm" variant="outline" onClick={() => { setEditingId(p.brandActionId); setEditText(p.text); setEditImage(p.imageUrl ?? ""); setEditWhen(toLocalInput(p.scheduledAt)); }}>
                       <Pencil /> Modifier
                     </Button>}
-                    <Button size="sm" variant="primary" disabled={publish.isPending}
+                    {!p.publicationPackageId && <Button size="sm" variant="primary" disabled={publish.isPending}
                       onClick={() => setToFire({ id: p.brandActionId, targets: p.targets, text: p.text, imageUrl: p.imageUrl, linkUrl: p.linkUrl, brief: p.brief, visualCopy: p.visualCopy })}>
                       <Send /> {editable ? "Déclencher maintenant" : "Reprendre les réseaux en échec"}
-                    </Button>
+                    </Button>}
                     {editable && <Button size="sm" variant="ghost" onClick={() => setToCancel(p.brandActionId)}><Trash2 /> Annuler</Button>}
                   </div>
                 )}

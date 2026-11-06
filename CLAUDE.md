@@ -2076,8 +2076,8 @@ l’image exacte UID 1001, réseau coupé/root readonly : cinq frames sans audio
 RPC publicRecipes 200/vide ; HTML Argos 200. Navigateur production bloqué par CA
 proxy : hydratation/DOM/pageerror non vérifiés, aucun parcours protégé ni provider
 authentifié reçu. Credentials provider/vision et endpoint Argos indisponibles.
-Comptes courants : 633 Intent kinds ; 56 CORE / 154 registry Glory tools ;
-94 séquences dont 91 DRAFT ; 28 frameworks (recompte des registres 2026-11-02).
+Comptes courants : 634 Intent kinds ; 56 CORE / 154 registry Glory tools ;
+94 séquences dont 91 DRAFT ; 28 frameworks (recompte des registres 2026-11-06).
 
 ### Extension intelligence créative et concurrentielle — 2026-10-06
 

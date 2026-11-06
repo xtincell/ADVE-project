@@ -29,6 +29,7 @@ import {
   PROVIDER_NAMES,
 } from "@/server/services/ptah/types";
 import { hasSubmissionClaim } from "@/server/services/ptah/resumption";
+import { publicForgeTask } from "@/server/services/ptah/public-receipt";
 import { listProviders } from "@/server/services/ptah/routing/provider-selector";
 import { getOperatorContext } from "@/server/services/operator-isolation";
 
@@ -92,7 +93,7 @@ export const ptahRouter = createTRPCRouter({
         catch (error) { throw new TRPCError({ code: "PRECONDITION_FAILED",
           message: error instanceof Error ? error.message : "Le brief conservé ne peut pas être vérifié." }); }
       })() : input;
-      return emitIntentTyped<Awaited<ReturnType<typeof materializeBrief>>>(
+      const receipt = await emitIntentTyped<Awaited<ReturnType<typeof materializeBrief>>>(
         {
           kind: "PTAH_MATERIALIZE_BRIEF",
           strategyId: payload.strategyId,
@@ -108,6 +109,7 @@ export const ptahRouter = createTRPCRouter({
         },
         { caller: "ptah-router:materializeBrief" },
       );
+      return publicForgeTask(receipt);
     }),
 
   regenerateFadingAsset: operatorProcedure
@@ -140,7 +142,7 @@ export const ptahRouter = createTRPCRouter({
         where: { id: input.taskId, operatorId },
         include: { versions: true },
       });
-      return task;
+      return task ? publicForgeTask(task) : null;
     }),
 
   listForges: operatorProcedure
@@ -176,7 +178,7 @@ export const ptahRouter = createTRPCRouter({
         campaign: { strategy: { operatorId }, ...(input.strategyId ? { strategyId: input.strategyId } : {}) } }, select: { id: true, title: true } });
       return tasks.map(task => {
         // Briefs/parameters stay in the detail reader and server-side resumption.
-        const { webhookSecret: _secret, parameters: _parameters, ...publicTask } = task;
+        const { parameters: _parameters, ...publicTask } = publicForgeTask(task);
         const versions = task.versions.map(version => {
           // Reuse the authenticated thumbnail reader; keep the original stored
           // on AssetVersion and accessible through the existing detail query.
@@ -197,10 +199,14 @@ export const ptahRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const { operatorId } = await resolveOperatorId(ctx.session.user.id);
-      return db.assetVersion.findFirst({
+      const version = await db.assetVersion.findFirst({
         where: { id: input.id, operatorId },
         include: { generativeTask: true, parent: true, children: true },
       });
+      return version ? {
+        ...version,
+        generativeTask: version.generativeTask ? publicForgeTask(version.generativeTask) : null,
+      } : null;
     }),
 
   listProviderHealth: protectedProcedure.query(async () => {

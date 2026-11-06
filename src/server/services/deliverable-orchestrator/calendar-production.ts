@@ -27,14 +27,14 @@ const treatments=[
   "Donner la priorité à la voix identifiée dans les sources ; sans citation autorisée, privilégier un récit sans citation.",
   "Adopter une construction graphique comparative entre éléments documentés ; ne pas inventer une alternative.",
 ] as const;
-export async function resolveCalendarView(view:CalendarView) {
+export async function resolveCalendarView(view:CalendarView, client: Prisma.TransactionClient = db) {
   const {strategyId}=view;
   const [strategy,output,timeline,d,archives]=await Promise.all([
-    db.strategy.findUnique({where:{id:strategyId},select:{status:true,operatorId:true}}),
-    db.gloryOutput.findFirst({where:{strategyId,...(view.editionId ? {id:view.editionId,toolSlug:{in:CALENDAR_TOOLS}} : {toolSlug:ACTIVE_CALENDAR_TOOL})},orderBy:[{createdAt:"desc"},{id:"desc"}]}),
-    db.gloryOutput.findFirst({where:{strategyId,toolSlug:"launch-timeline-planner"},orderBy:[{createdAt:"desc"},{id:"desc"}],select:{output:true}}),
-    db.pillar.findUnique({where:{strategyId_key:{strategyId,key:"d"}},select:{content:true}}),
-    db.gloryOutput.findMany({where:{strategyId,toolSlug:HISTORICAL_CALENDAR_TOOL},select:{output:true}}),
+    client.strategy.findUnique({where:{id:strategyId},select:{status:true,operatorId:true}}),
+    client.gloryOutput.findFirst({where:{strategyId,...(view.editionId ? {id:view.editionId,toolSlug:{in:CALENDAR_TOOLS}} : {toolSlug:ACTIVE_CALENDAR_TOOL})},orderBy:[{createdAt:"desc"},{id:"desc"}]}),
+    client.gloryOutput.findFirst({where:{strategyId,toolSlug:"launch-timeline-planner"},orderBy:[{createdAt:"desc"},{id:"desc"}],select:{output:true}}),
+    client.pillar.findUnique({where:{strategyId_key:{strategyId,key:"d"}},select:{content:true}}),
+    client.gloryOutput.findMany({where:{strategyId,toolSlug:HISTORICAL_CALENDAR_TOOL},select:{output:true}}),
   ]);
   if(!strategy || ["ARCHIVED","DELETED"].includes(strategy.status))throw new Error("Marque indisponible.");
   const calendar=output && isUsableGeneration(output.output) ? parseContentCalendar(output.output):null;
@@ -158,11 +158,11 @@ export async function prepareCalendarBriefRows(raw:CalendarPreparation,operatorI
   }
   return {rows};
 }
-export async function readCalendarBriefSource(strategyId:string,id:string,version:number){
-  const a=await db.brandAsset.findFirst({where:{strategyId,id,version,format:FORMAT,kind:"CREATIVE_BRIEF"}});
+export async function readCalendarBriefSource(strategyId:string,id:string,version:number, client: Prisma.TransactionClient = db){
+  const a=await client.brandAsset.findFirst({where:{strategyId,id,version,format:FORMAT,kind:"CREATIVE_BRIEF"}});
   if(!a || !usable(a) || !a.sourceIntentId)throw new Error("La version de ce brief n’est plus disponible. Rouvrez le planning.");
   const m=record(a.metadata), content=record(a.content);
-  const proof=await db.intentEmission.findFirst({where:{id:a.sourceIntentId,strategyId,intentKind:"COMPOSE_DELIVERABLE",status:"OK"},select:{payload:true,result:true}});
+  const proof=await client.intentEmission.findFirst({where:{id:a.sourceIntentId,strategyId,intentKind:"COMPOSE_DELIVERABLE",status:"OK"},select:{payload:true,result:true}});
   const command=record(record(proof?.payload).calendarPreparation), produced=record(record(proof?.result).output).rows;
   const sealed=Array.isArray(produced) && produced.some(item=>{
     const row=record(item);return row.key===m.key && Array.isArray(row.briefs) && row.briefs.some(item=>{
@@ -171,19 +171,19 @@ export async function readCalendarBriefSource(strategyId:string,id:string,versio
   });
   if(!sealed || !Array.isArray(command.postKeys)||!command.postKeys.includes(m.key)||command.calendarVersion!==m.calendarVersion)
     throw new Error("Le brief n’a pas de reçu de préparation correspondant à la ligne du planning.");
-  const c=await resolveCalendarView({strategyId,editionId:string(m.editionId)??undefined,startDate:string(m.startDate)??undefined,weeks:Number(m.weeks)||4,projectDates:m.projectDates===true});
+  const c=await resolveCalendarView({strategyId,editionId:string(m.editionId)??undefined,startDate:string(m.startDate)??undefined,weeks:Number(m.weeks)||4,projectDates:m.projectDates===true}, client);
   const line=c.lines.find(l=>l.key===m.key);
   if(!line||c.calendarVersion!==m.calendarVersion)throw new Error("Le calendrier a changé : relisez la ligne avant génération.");
   const {platform,format,theme,angle}=line.post;
   const mode=m.mode==="REVISION"?"REVISION":"NEW";
-  const doctrine=await buildCreativeDirectionContext({strategyId,target:{platform,format:format??undefined,theme:theme??undefined,angle:angle??undefined,family:line.family??undefined,mode}});
+  const doctrine=await buildCreativeDirectionContext({strategyId,target:{platform,format:format??undefined,theme:theme??undefined,angle:angle??undefined,family:line.family??undefined,mode}}, client);
   if(fingerprint(doctrine?.context??null)!==m.directionHash)throw new Error("La doctrine de la marque a changé : révisez la piste.");
   const master=content.artwork ? productionArtwork.parse(content.artwork) : undefined;
   if(master && (!line.artwork || master.assetId!==line.artwork.assetId || master.version!==line.artwork.version || master.originalHash!==line.artwork.originalHash || master.photoLayerId!==line.artwork.photoLayerId))throw new Error("La source du montage a changé. Relisez sa version au planning.");
   if(master?.photoPolicy==="GENERATED_CANDIDATE" && line.artwork?.photoPolicy==="LOCKED_MASTER"){
     const proposal=record(content.newProposal);
     const intentId=string(proposal.intentId);
-    const issuer=intentId && await db.intentEmission.findFirst({where:{id:intentId,strategyId,intentKind:"COMPOSE_DELIVERABLE",status:"OK"},select:{payload:true,result:true}});
+    const issuer=intentId && await client.intentEmission.findFirst({where:{id:intentId,strategyId,intentKind:"COMPOSE_DELIVERABLE",status:"OK"},select:{payload:true,result:true}});
     const prep=record(record(issuer&&issuer.payload).calendarPreparation), asked=record(prep.newProposal);
     const results=record(record(issuer&&issuer.result).output).rows;
     const issued=Array.isArray(results)&&results.some(row=>record(row).key===m.key && Array.isArray(record(row).briefs) && (record(row).briefs as unknown[]).some(b=>record(b).variant===content.variant));

@@ -150,6 +150,7 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "ANUBIS_SYNC_SOCIAL_POSTS", p95LatencyMs: 30_000, errorRatePct: 0.10, costP95Usd: 0 },
   { kind: "ANUBIS_SYNC_INBOX", p95LatencyMs: 30_000, errorRatePct: 0.10, costP95Usd: 0 },
   { kind: "ANUBIS_REPLY_COMMENT", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "ANUBIS_PREPARE_SOCIAL_POST", p95LatencyMs: 25_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "ANUBIS_PUBLISH_SOCIAL_POST", p95LatencyMs: 25_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "ANUBIS_COMMERCE_CONNECT_SHOP", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "ANUBIS_LINK_MOBILE_APP", p95LatencyMs: 3_000, errorRatePct: 0.05, costP95Usd: 0 },

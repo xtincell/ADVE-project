@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 71 modules (src/domain, cœur métier pur)
+## Domain — 72 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-projection**
@@ -123,6 +123,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **sector-taxonomy** — Taxonomie de secteurs CANONIQUE — la clé de ligue universelle du scoreur.
 - **signal-observation** — Observation factuelle partagée par la Gazette et son analyse explicitement demandée.
 - **signal-provenance**
+- **social-publication-package**
 - **source-certainty** — SourceCertainty — niveau de certitude opérateur sur une `BrandDataSource`.
 - **source-document**
 - **source-original**
@@ -1183,7 +1184,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Intent kinds — 633 (par governor)
+## Intent kinds — 634 (par governor)
 
 ### SESHAT (63)
 
@@ -1794,7 +1795,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - `IMHOTEP_QC_DELIVERABLE` → imhotep (sync) — Route un MissionDeliverable vers QC (AUTOMATED via qc-router.automatedQc, ou ASS…
 - `IMHOTEP_RECOMMEND_FORMATION` → imhotep (sync) — Propose top 3 Courses pour combler un skill gap (filtre par pillarFocus si fourn…
 
-### ANUBIS (42)
+### ANUBIS (43)
 
 - `RECORD_FOLLOWER_SNAPSHOT` → social (sync) — Vague 7 : instantane followers/mentions par plateforme (traque unifiee — comptes…
 - `SOCIAL_AUDIT_FETCH_OFFICIAL` → social (async) — Declenche une collecte de followers via l API officielle Meta (Page/User Access …
@@ -1807,6 +1808,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - `ANUBIS_SYNC_SOCIAL_POSTS` → anubis (sync) — Collecte les publications récentes des connexions sociales ACTIVE d'une marque (…
 - `ANUBIS_SYNC_INBOX` → anubis (sync) — Balaie les commentaires des publications récentes des connexions sociales ACTIVE…
 - `ANUBIS_REPLY_COMMENT` → anubis (sync) — Répond à un commentaire AU NOM de la marque (FB pages_manage_engagement, IG inst…
+- `ANUBIS_PREPARE_SOCIAL_POST` → anubis (sync) — Scelle une variante matérielle et sa copy au coffre, puis enregistre séparément …
 - `ANUBIS_PUBLISH_SOCIAL_POST` → anubis (sync) — Publie (ou planifie via BrandAction SCHEDULED + cron — calendrier unique) un pos…
 - `ANUBIS_COMMERCE_CONNECT_SHOP` → anubis (sync) — Persiste la connexion boutique Shopify d'une marque (OAuth founder — token offli…
 - `ANUBIS_LINK_MOBILE_APP` → anubis (sync) — Persiste les liens des apps mobiles d'une marque (fiches App Store iOS + Play St…

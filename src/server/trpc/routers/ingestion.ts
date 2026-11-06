@@ -17,7 +17,7 @@ import { governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
 import { assertStrategyRead } from "./_strategy-read-guard";
 import { getOperatorContext } from "@/server/services/operator-isolation";
-import { listBrandSourceSummaries, resolveBrandSource, setSourceUse, invalidateSourceDerivatives } from "@/server/services/ingestion-pipeline/source-usage";
+import { listBrandSourceSummaries, loadBrandSources, resolveBrandSource, setSourceUse, invalidateSourceDerivatives } from "@/server/services/ingestion-pipeline/source-usage";
 /* lafusee:governed-active */
 
 /**
@@ -396,10 +396,11 @@ export const ingestionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const sourceIds = (await ctx.db.brandDataSource.findMany({
-        where: { strategyId: input.strategyId, processingStatus: { in: ["EXTRACTED", "PROCESSED"] } },
-        select: { id: true },
-      })).map((s) => s.id);
+      // Keep explicit shared uses in scope; an owner-only preselection would
+      // remove them before the filler can resolve their current receipts.
+      const sourceIds = (await loadBrandSources(input.strategyId, {
+        processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
+      }, ctx.db)).map((s) => s.id);
 
       const { fillPillar } = await import("@/server/services/ingestion-pipeline/ai-filler");
       return fillPillar(input.strategyId, input.pillarKey, sourceIds);

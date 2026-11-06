@@ -38,6 +38,7 @@ import { cockpitRouter } from "@/server/trpc/routers/cockpit-router";
 import { pillarRouter } from "@/server/trpc/routers/pillar";
 import { generateInsights } from "@/server/services/mestor/insights";
 import { ADVE_KEYS, ADVE_STORAGE_KEYS, RTIS_STORAGE_KEYS } from "@/domain";
+import { getStrategyReadiness } from "@/server/governance/pillar-readiness";
 
 const partial = [
   { key: "a", content: { nomMarque: "Recette", publicCible: "Dirigeants de TPE" } },
@@ -60,6 +61,23 @@ beforeEach(() => {
 });
 
 describe("dashboard reflects canonical foundation progress", () => {
+  it("the completion map matches canonical readiness for partial lower-case pillars", async () => {
+    const readiness = await getStrategyReadiness("brand");
+    const result = await pillarRouter.createCaller({ db: mocks.db, session: { user: { id: "owner", role: "ADMIN" } } } as any)
+      .getCompletionMap({ strategyId: "brand" });
+    expect(result).toEqual(Object.fromEntries(Object.entries(readiness.byPillar).map(([key, value]) => [key, value.completionPct])));
+    expect(result.A).toBeGreaterThan(0);
+    expect(result.V).toBe(0);
+    expect(Object.keys(result)).toHaveLength(8);
+  });
+
+  it("metadata cannot make an empty foundation look started in the completion map", async () => {
+    mocks.db.pillar.findMany.mockResolvedValue([{ key: "V", content: { _fieldProvenance: { offre: "INFERRED" }, _commentary: "fixture", legacyExtra: "x" }, validationStatus: "AI_PROPOSED" }]);
+    const result = await pillarRouter.createCaller({ db: mocks.db, session: { user: { id: "owner", role: "ADMIN" } } } as any)
+      .getCompletionMap({ strategyId: "brand" });
+    expect(Object.values(result)).toEqual(Array(8).fill(0));
+  });
+
   it("Enrichir ADVE does not launch the separate derived strategy cascade", async () => {
     await pillarRouter.createCaller({ db: mocks.db, session: { user: { id: "owner", role: "ADMIN" } } } as any)
       .autoFillAll({ strategyId: "brand" });

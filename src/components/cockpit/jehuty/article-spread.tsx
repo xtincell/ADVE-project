@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Loader2, Pin, X, Zap } from "lucide-react";
-import type { JehutyFeedItem } from "@/lib/types/jehuty";
+import type { ArticleSourceGrounding, JehutyFeedItem } from "@/lib/types/jehuty";
 import { FIELD_PROVENANCE_LABEL, type FieldProvenance } from "@/domain/field-provenance";
 
 export interface ArticleSpreadProps {
@@ -32,6 +32,13 @@ function ReadingText({ text, expanded = false }: { text: string; expanded?: bool
     <p className={`whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground-secondary ${long && !open && !expanded ? "line-clamp-6" : ""}`}>{text}</p>
     {long && !expanded && <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="mt-2 text-sm text-accent underline underline-offset-4">{open ? "Réduire" : "Lire la suite"}</button>}
   </div>;
+}
+
+function groundingLabel(value?: { score: number; band: ArticleSourceGrounding["band"] }): string {
+  if (!value) return "Non mesuré";
+  if (value.band === "NO_SOURCE") return "Recouvrement non mesurable";
+  const label = { GROUNDED: "Appui lexical", WEAK: "Appui lexical partiel", UNGROUNDED: "Appui lexical insuffisant" }[value.band];
+  return `${label} · ${Math.round(value.score * 100)} %`;
 }
 
 /** A double editorial spread: reported facts on the left, brand reading on the right.
@@ -76,6 +83,21 @@ export function ArticleSpread({ item, onNotoria, isNotoriaPending, onPin, onUnpi
         {recommendations.map(reco => <div key={reco.id}>
           <p className="mb-2 text-xs text-foreground-muted">Pilier {reco.targetPillarKey.toUpperCase()} · {reco.status === "PENDING" ? "Proposition à examiner" : reco.status === "APPLIED" ? "Proposition appliquée" : reco.status === "ACCEPTED" ? "Proposition retenue" : reco.status === "REJECTED" ? "Proposition écartée" : "Proposition enregistrée"}</p>
           <ReadingText expanded={expanded} text={reco.explain} />
+          <details className="mt-3 rounded-lg border border-border-subtle p-3">
+            <summary className="cursor-pointer text-xs text-foreground-muted">Sources de cette proposition</summary>
+            <dl className="mt-3 space-y-2 text-xs text-foreground-secondary">
+              <div><dt className="font-semibold">Article observé</dt><dd>{groundingLabel(reco.articleGrounding)}</dd></div>
+              <div><dt className="font-semibold">Documentation de marque</dt><dd>{groundingLabel(reco.documentaryGrounding)}</dd></div>
+            </dl>
+            <p className="mt-3 text-xs text-foreground-muted">Le recouvrement compare le vocabulaire de la proposition aux extraits transmis. Il ne valide ni les faits rapportés ni l’impact supposé pour la marque.</p>
+            {reco.articleGrounding ? <div className="mt-3 space-y-2 text-xs text-foreground-secondary">
+              <a className="text-accent underline underline-offset-4" href={reco.articleGrounding.sourceUrl} target="_blank" rel="noopener noreferrer">{reco.articleGrounding.source || "Voir la publication source"} ↗</a>
+              <p>Faits rapportés par la source · {reco.articleGrounding.publishedAt ? `Date fournie : ${reco.articleGrounding.publishedAt}` : "Date non fournie par la source"}</p>
+              <p className="font-semibold">Extraits effectivement transmis</p>
+              {reco.articleGrounding.excerpts.map(excerpt => <blockquote key={excerpt.field} className="whitespace-pre-wrap break-words border-l border-border-subtle pl-3">{excerpt.text}</blockquote>)}
+              <p className="break-all text-foreground-muted">Référence : {reco.articleGrounding.sourceId} · Empreinte de l’entrée : {reco.articleGrounding.observationHash}</p>
+            </div> : <p className="mt-3 text-xs text-foreground-muted">L’extrait exact utilisé pour cette proposition n’est pas conservé dans son reçu. L’article affiché aujourd’hui ne remplace pas cette trace.</p>}
+          </details>
         </div>)}
       </div>}
       {!analyses.length && !recommendations.length && <p className="text-sm leading-relaxed text-foreground-secondary">Cette actualité est à confronter à vos choix de marque ci-dessous. Son impact n’a pas encore été analysé ; les données de votre ADVE serviront à préparer des propositions liées à cet article.</p>}

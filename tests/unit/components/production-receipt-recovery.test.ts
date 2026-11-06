@@ -10,7 +10,9 @@ import { isProductionTransportError, shouldPollProductionReceipt } from "@/compo
 const h = vi.hoisted(() => ({
   calendar: null as any, dispatch: null as any,
   readCalendar: vi.fn(), readDispatch: vi.fn(), produce: vi.fn(), compose: vi.fn(), prepare: vi.fn(),
+  preparePackage: vi.fn(), publish: vi.fn(), push: vi.fn(),
 }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: h.push }) }));
 vi.mock("@/lib/trpc/client", async () => {
   const { useQuery, useMutation } = await import("@tanstack/react-query");
   const staticQuery = (data: unknown) => ({ useQuery: () => ({ data, refetch: vi.fn(), isLoading: false }) });
@@ -20,7 +22,15 @@ vi.mock("@/lib/trpc/client", async () => {
     strategy: { get: staticQuery({ status: "ACTIVE" }), getSynthesisConfidence: staticQuery(null), validateSynthesis: unusedMutation, generateProjectsFromActions: unusedMutation },
     actions: { byStrategy: staticQuery([]) }, campaignManager: { routeToGuilde: unusedMutation },
     ptah: { materializeBrief: unusedMutation },
-    useUtils: () => ({ deliverableOrchestrator: { calendarProductionRows: { invalidate: vi.fn() } } }),
+    social: {
+      listPublicationPackages: staticQuery([]),
+      preparePublicationPackage: { useMutation: (options: any) => useMutation({ mutationFn: h.preparePackage, ...options }) },
+      publish: { useMutation: (options: any) => useMutation({ mutationFn: h.publish, ...options }) },
+    },
+    useUtils: () => ({
+      deliverableOrchestrator: { calendarProductionRows: { invalidate: vi.fn() } },
+      social: { listPublicationPackages: { invalidate: vi.fn() } },
+    }),
     deliverableOrchestrator: {
       calendarProductionRows: { useQuery: (_input: any, options: any) => useQuery({ queryKey: ["calendar"], queryFn: h.readCalendar, ...options }) },
       produceCalendarBrief: { useMutation: (options: any) => useMutation({ mutationFn: h.produce, ...options }) },
@@ -67,7 +77,13 @@ beforeEach(() => {
   h.compose.mockRejectedValue(new TypeError("fetch failed"));
   h.prepare.mockImplementation(async () => structuredClone(h.calendar));
 });
-afterEach(() => { cleanup(); client.clear(); vi.useRealTimers(); vi.unstubAllGlobals(); });
+afterEach(() => {
+  // Receipt recovery is read-only: it cannot select/review a package or publish it.
+  expect(h.preparePackage).not.toHaveBeenCalled();
+  expect(h.publish).not.toHaveBeenCalled();
+  expect(h.push).not.toHaveBeenCalled();
+  cleanup(); client.clear(); vi.useRealTimers(); vi.unstubAllGlobals();
+});
 async function tick(ms = 25) { await act(async () => { await vi.advanceTimersByTimeAsync(ms); }); }
 function show(component: React.ReactElement) {
   return render(React.createElement(QueryClientProvider, { client }, component));
@@ -89,6 +105,7 @@ describe("Production receipt recovery without redispatch", () => {
     await tick(3050);
     expect(document.querySelector('img[src="/api/production/image/image-1"]')).toBeTruthy();
     expect(document.body.textContent).not.toContain("Connexion interrompue");
+    expect(screen.getByRole("button", { name: "Retenir ce rendu" })).toBeTruthy();
     const reads = h.readCalendar.mock.calls.length;
     await tick(15_000);
     expect(h.readCalendar).toHaveBeenCalledTimes(reads);

@@ -513,6 +513,9 @@ export async function execute(intent: Intent, context?: { intentId: string }): P
           scheduleAt: intent.scheduleAt ?? null,
           brandActionId: intent.brandActionId ?? null,
           scheduledVersion: intent.scheduledVersion,
+          publicationPackageId: intent.publicationPackageId,
+          publicationPackageHash: intent.publicationPackageHash,
+          publicationTarget: intent.publicationTarget,
           brief: intent.brief ?? null,
           visualCopy: intent.visualCopy ?? null,
         });

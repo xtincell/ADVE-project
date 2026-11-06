@@ -37,6 +37,16 @@ describe("projectForContext — prose capée, structure intacte", () => {
 });
 
 describe("serializePillar — la matrice profonde n'est plus tronquée (Phase 4)", () => {
+  it("compact encoding preserves the same qualified records and verification dictionary", () => {
+    const content = { personas: [{ id: "persona-1", budget: 0, active: false, notes: "Une source" }],
+      _fieldProvenance: { personas: "INFERRED", "personas[0].budget": "SOURCE" } };
+    const normal = serializePillars([["D", content]]);
+    const compact = serializePillars([["D", content]], { compact: true });
+    expect(readPillarEnvelope(compact)).toEqual(readPillarEnvelope(normal));
+    expect(compact.length).toBeLessThan(normal.length);
+    expect(compact).toContain("VÉRIFICATION DES POSTULATS");
+    expect(readPillarEnvelope(compact).personas.complements.cellules[0]).toMatchObject({ path: "personas[0].budget", statut: "SOURCE" });
+  });
   it("admits a complete six-channel catalogue above 64K without dropping records or authority", () => {
     let n = 0;
     const catalogueParCanal = Object.fromEntries(["DIGITAL", "PRODUCTION", "EVENEMENTIEL", "PR_INFLUENCE", "MEDIA_TRADITIONNEL", "RETAIL_DISTRIBUTION"]

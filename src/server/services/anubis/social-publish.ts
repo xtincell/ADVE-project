@@ -24,6 +24,8 @@ import { db } from "@/lib/db";
 import { decryptTokenPayload } from "@/server/services/oauth-integrations";
 import type { SocialTokenPayload } from "./social-connect";
 import { pushNotification } from "./notifications";
+import { readPreparedPublication } from "./publication-package";
+import { publicationMediaUrl } from "./publication-access";
 
 const FETCH_TIMEOUT_MS = 12_000;
 
@@ -48,6 +50,10 @@ export interface PublishSocialPostInput {
   brandActionId?: string | null;
   /** Version lue par le cron pour ne pas publier une ancienne édition. */
   scheduledVersion?: string;
+  /** Exact reviewed package. Generic/manual publications leave these absent. */
+  publicationPackageId?: string;
+  publicationPackageHash?: string;
+  publicationTarget?: { connectionId: string; accountId: string };
   /**
    * Brief créatif intégré — direction pour ILLUSTRER (le générateur/designer
    * sait quoi produire). Persisté sur l'action ; ne part jamais au réseau.
@@ -136,6 +142,7 @@ async function publishToInstagram(
   text: string,
   imageUrl: string,
   viaInstagramGraph: boolean,
+  placement: "FEED" | "STORIES" = "FEED",
 ): Promise<TransportResult> {
   // Instagram Business Login (token IG) publie sur graph.instagram.com ; l'edge
   // FB-Page hérité (token de Page) publie sur graph.facebook.com. Même geste
@@ -146,10 +153,13 @@ async function publishToInstagram(
   const base = `${graphBase}/${encodeURIComponent(igUserId)}`;
   let publishStarted = false;
   try {
+    const media = new URLSearchParams({ access_token: accessToken, image_url: imageUrl });
+    if (placement === "STORIES") media.set("media_type", "STORIES");
+    else media.set("caption", text);
     const create = await fetch(`${base}/media`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ access_token: accessToken, image_url: imageUrl, caption: text }),
+      body: media,
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     const created = (await create.json().catch(() => ({}))) as Record<string, unknown>;
@@ -239,6 +249,8 @@ function publishMetadata(input: PublishSocialPostInput, pending: boolean, result
     targets: input.targets, text: input.text, linkUrl: input.linkUrl ?? null,
     imageUrl: input.imageUrl ?? null, scheduleAt: input.scheduleAt ?? null,
     requestedByUserId: input.userId, pending, brief: input.brief ?? null, visualCopy: input.visualCopy ?? null,
+    ...(input.publicationPackageId ? { publicationPackageId: input.publicationPackageId,
+      publicationPackageHash: input.publicationPackageHash, publicationTarget: input.publicationTarget } : {}),
     results: results as unknown as Prisma.InputJsonValue,
   };
 }
@@ -268,22 +280,39 @@ function toAbsoluteImageUrl(url: string | null | undefined): string | null {
 export async function publishSocialPost(
   input: PublishSocialPostInput,
 ): Promise<PublishSocialPostResult> {
-  const text = input.text.trim();
+  const prepared = input.publicationPackageId
+    ? await readPreparedPublication(input.strategyId, input.publicationPackageId, input.publicationPackageHash ?? "", input.userId)
+    : null;
+  if (prepared) {
+    if (!input.publicationTarget) throw new Error("Choisissez le compte destinataire de ce paquet.");
+    const target = await db.socialConnection.findFirst({ where: { id: input.publicationTarget.connectionId,
+      accountId: input.publicationTarget.accountId, strategyId: input.strategyId, status: "ACTIVE", platform: prepared.platform as "INSTAGRAM" | "FACEBOOK" } });
+    if (!target) throw new Error("Le compte destinataire a changé. Vérifiez la connexion avant l’envoi.");
+    input = { ...input, brandActionId: prepared.action.id, targets: [prepared.platform],
+      text: prepared.content.publicationText, linkUrl: null,
+      imageUrl: `/api/production/publication/${encodeURIComponent(prepared.asset.id)}` };
+  }
+  // Preserve the exact reviewed copy; manual legacy copy keeps its old trim behavior.
+  const text = prepared ? input.text : input.text.trim();
   if (!text && !input.imageUrl) throw new Error("Publication vide — texte ou visuel requis");
-  const pubImageUrl = toAbsoluteImageUrl(input.imageUrl);
+  let pubImageUrl = prepared ? null : toAbsoluteImageUrl(input.imageUrl);
   const targets = [...new Set(input.targets.map((t) => t.toUpperCase()))];
   if (targets.length === 0) throw new Error("Aucune plateforme ciblée");
 
   input = { ...input, targets };
   const scheduleAt = input.scheduleAt ? new Date(input.scheduleAt) : null;
+  if (prepared && scheduleAt && (!Number.isFinite(scheduleAt.getTime()) || scheduleAt.getTime() <= Date.now() + 2 * 60_000))
+    throw new Error("Choisissez une échéance à plus de deux minutes ou demandez explicitement un envoi immédiat.");
   const planning = Boolean(scheduleAt && scheduleAt.getTime() > Date.now() + 2 * 60_000);
   const existing = input.brandActionId ? await db.brandAction.findFirst({
     where: { id: input.brandActionId, strategyId: input.strategyId },
     select: { id: true, metadata: true, status: true, updatedAt: true, timingStart: true },
   }) : null;
   const meta = (existing?.metadata ?? {}) as Record<string, unknown>;
+  if (meta.publicationPackageId && (!prepared || meta.publicationPackageId !== prepared.asset.id || meta.contentHash !== input.publicationPackageHash))
+    throw new Error("Ouvrez le paquet relu pour publier sa version exacte.");
   const previous = meta.socialPublish as Record<string, unknown> | undefined;
-  if (input.brandActionId && (!existing || !previous)) throw new Error("Publication introuvable");
+  if (input.brandActionId && (!existing || (!previous && !prepared))) throw new Error("Publication introuvable");
   if (existing && input.scheduledVersion &&
       (existing.status !== "SCHEDULED" || existing.updatedAt.toISOString() !== input.scheduledVersion)) {
     return { mode: "SKIPPED", brandActionId: existing.id, results: [] };
@@ -296,6 +325,9 @@ export async function publishSocialPost(
   if (existing?.status === "EXECUTED" && prior.length === 0) throw new Error(missingReceipt);
   const held = prior.filter((r) => r.state === "PUBLISHED" || r.state === "UNCONFIRMED");
   const previousTargets = Array.isArray(previous?.targets) ? [...new Set(previous.targets.map((t) => String(t).toUpperCase()))] : [];
+  const previousTarget = previous?.publicationTarget as { connectionId?: string; accountId?: string } | undefined;
+  if (held.length && prepared && (previousTarget?.connectionId !== input.publicationTarget?.connectionId || previousTarget?.accountId !== input.publicationTarget?.accountId))
+    throw new Error("Cette version a déjà été envoyée ou attend vérification sur le compte retenu.");
   if (held.length && (planning || previousTargets.length !== targets.length || previousTargets.some((t) => !targets.includes(t)) ||
       input.text !== previous?.text || (input.imageUrl ?? null) !== (previous?.imageUrl ?? null) ||
       (input.linkUrl ?? null) !== (previous?.linkUrl ?? null))) {
@@ -306,17 +338,24 @@ export async function publishSocialPost(
   }
   // Connexions lues avant le claim : si la DB est indisponible aucun POST n'a débuté.
   const connections = planning ? [] : await db.socialConnection.findMany({
-    where: { strategyId: input.strategyId, status: "ACTIVE" },
+    where: { strategyId: input.strategyId, status: "ACTIVE", ...(prepared ? { id: input.publicationTarget!.connectionId, accountId: input.publicationTarget!.accountId } : {}) },
   });
+  // A signed delivery URL exists only for a deliberate send, never in persisted metadata.
+  if (prepared && !planning) pubImageUrl = publicationMediaUrl(prepared.asset.id, input.publicationPackageHash!);
   const status = planning ? "SCHEDULED" : "PUBLISHING";
   const metadata = { ...meta, socialPublish: publishMetadata(input, planning, prior) } as Prisma.InputJsonValue;
   let brandActionId: string;
   if (existing) {
     // Ce claim partagé empêche un double envoi entre cron et déclenchement manuel.
-    const claimed = await db.brandAction.updateMany({
+    const claim = (client: Prisma.TransactionClient) => client.brandAction.updateMany({
       where: { id: existing.id, strategyId: input.strategyId, status: existing.status, updatedAt: existing.updatedAt },
       data: { status, metadata, timingStart: scheduleAt ?? existing.timingStart, timingEnd: null },
     });
+    const claimed = prepared ? await db.$transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id=${input.strategyId} FOR UPDATE`;
+      await readPreparedPublication(input.strategyId, prepared.asset.id, input.publicationPackageHash!, input.userId, tx);
+      return claim(tx);
+    }, { isolationLevel: "Serializable", timeout: 25000 }) : await claim(db);
     if (claimed.count !== 1) {
       if (input.scheduledVersion) return { mode: "SKIPPED", brandActionId: existing.id, results: [] };
       throw new Error("Publication déjà prise en charge ou modifiée.");
@@ -404,6 +443,7 @@ export async function publishSocialPost(
               pubImageUrl!,
               // Business Login (token IG) → graph.instagram.com ; edge FB-Page → graph.facebook.com.
               meta.provider === "instagram",
+              prepared?.content.delivery.placement ?? "FEED",
             )
           : await publishToLinkedIn(conn.accountId, payload.access_token, text, input.linkUrl ?? null);
 
@@ -509,6 +549,11 @@ export async function listDueScheduledPublications(): Promise<
         scheduleAt: null, // échéance atteinte → publication immédiate
         brandActionId: action.id,
         scheduledVersion: action.updatedAt.toISOString(),
+        ...(typeof sp.publicationPackageId === "string" ? {
+          publicationPackageId: sp.publicationPackageId,
+          publicationPackageHash: String(sp.publicationPackageHash ?? ""),
+          publicationTarget: sp.publicationTarget as PublishSocialPostInput["publicationTarget"],
+        } : {}),
         // Préservés à la ré-émission : sinon le brief/copy visuel seraient nullés
         // quand le cron reconstruit socialPublish (perte de la direction créative).
         brief: typeof sp.brief === "string" ? sp.brief : null,
@@ -527,6 +572,7 @@ export async function listDueScheduledPublications(): Promise<
 
 export interface BrandPublicationView {
   brandActionId: string;
+  publicationPackageId?: string;
   status: string; // État spécifique de publication, reconstitué des reçus pour les anciennes lignes.
   scheduledAt: string | null; // timingStart ISO
   targets: string[];
@@ -568,6 +614,7 @@ export async function listScheduledPublications(
     const settled = a.status === "EXECUTED" || a.status === "ACCEPTED";
     out.push({
       brandActionId: a.id,
+      ...(typeof sp.publicationPackageId === "string" ? { publicationPackageId: sp.publicationPackageId } : {}),
       status: settled ? publicationOutcome(targets, results) : a.status,
       scheduledAt: a.timingStart ? a.timingStart.toISOString() : null,
       targets,

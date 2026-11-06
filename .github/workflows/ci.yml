@@ -28,6 +28,8 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
       - run: npx tsc --noEmit
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
 
   lint:
     name: Lint (next lint)

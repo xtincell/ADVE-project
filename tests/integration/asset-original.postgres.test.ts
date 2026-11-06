@@ -162,20 +162,29 @@ describe.sequential("private asset originals through the existing vault", () => 
       db.assetVersion.create({data:{...base, url:"data:image/png;base64,"+Buffer.from("<svg xmlns='http://www.w3.org/2000/svg' width='3' height='3'><rect width='3' height='3'/></svg>").toString("base64")}}),
     ]);
     const candidate=await db.brandAsset.create({data:{name:"Image de travail",strategyId:s.id,operatorId:operators[0],kind:"KV_VISUAL",sourceAssetVersionId:v.id,state:"CANDIDATE"}});
-    const preview=(id:string)=>productionImage(new Request("http://localhost/api/production/image/"+id),{params:Promise.resolve({id})});
+    const preview=(id:string, query="")=>productionImage(new Request("http://localhost/api/production/image/"+id+query),{params:Promise.resolve({id})});
     const network=vi.spyOn(globalThis,"fetch").mockRejectedValue(new Error("Aucun appel réseau prévu"));
     try {
       vi.mocked(auth).mockResolvedValue(null as never);
       expect((await preview(v.id)).status).toBe(401);
+      expect((await preview(v.id, "?download=1")).status).toBe(401);
       vi.mocked(auth).mockResolvedValue({user:{id:users[1]!}} as never);
       const foreign=await preview(v.id);
       expect(foreign.status).toBe(404);expect((await foreign.arrayBuffer()).byteLength).toBe(0);
+      expect((await preview(v.id, "?download=1")).status).toBe(404);
       vi.mocked(auth).mockResolvedValue({user:{id:users[0]!}} as never);
       const visible=await preview(v.id);
       expect(visible.status).toBe(200);expect(visible.headers.get("content-type")).toBe("image/webp");
       expect(visible.headers.get("cache-control")).toBe("private, no-store");
       expect(visible.headers.get("x-content-type-options")).toBe("nosniff");
       expect(await sharp(Buffer.from(await visible.arrayBuffer())).metadata()).toMatchObject({format:"webp",width:3,height:3});
+      const original = await preview(v.id, "?download=1");
+      expect(original.status).toBe(200); expect(original.headers.get("content-type")).toBe("image/png");
+      expect(original.headers.get("content-disposition")).toContain("attachment;");
+      expect(original.headers.get("cache-control")).toBe("private, no-store");
+      expect(Buffer.from(await original.arrayBuffer()).equals(png)).toBe(true);
+      expect((await preview(missing.id, "?download=1")).status).toBe(404);
+      expect((await preview(disguised.id, "?download=1")).status).toBe(415);
       expect((await preview(missing.id)).status).toBe(404);
       expect((await preview("missing-"+randomUUID())).status).toBe(404);
       expect((await preview(disguised.id)).status).toBe(415);

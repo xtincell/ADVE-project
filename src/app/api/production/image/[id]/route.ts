@@ -9,7 +9,7 @@ import { readMediaBytes } from "@/server/services/seshat/creative-intelligence/m
 const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'; sandbox" };
 const maxBytes = 25_000_000;
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return new Response(null, { status: 401, headers });
   const { id } = await params;
@@ -36,8 +36,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         throw new Error("Archive modifiée.");
     }
     const decoder = sharp(bytes, { limitInputPixels: 40_000_000 });
-    if (!["png", "jpeg", "webp"].includes((await decoder.metadata()).format ?? ""))
+    const format = (await decoder.metadata()).format;
+    if (!format || !["png", "jpeg", "webp"].includes(format))
       return new Response(null, { status: 415, headers });
+    if (new URL(request.url).searchParams.get("download") === "1") {
+      return new Response(new Uint8Array(bytes), { headers: { ...headers,
+        "Content-Type": `image/${format}`, "Content-Disposition": `attachment; filename="${encodeURIComponent(id)}.${format}"` } });
+    }
     const thumb = await decoder.resize({ width: 1100, withoutEnlargement: true }).webp().toBuffer();
     return new Response(new Uint8Array(thumb), { headers: { ...headers, "Content-Type": "image/webp" } });
   } catch { return new Response(null, { status: 422, headers }); }

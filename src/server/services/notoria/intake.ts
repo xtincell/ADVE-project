@@ -7,13 +7,13 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
  * this is a structured wizard that walks through every Zod schema field
  * and produces Recommendation(SET, source=INTAKE, confidence=1.0, applyPolicy=auto).
  *
- * Result: pillar completionLevel → COMPLET (all fields filled).
+ * Result: the gateway derives completionLevel from the canonical contract.
  */
 
 import { db } from "@/lib/db";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import { normalizePillarForIntake } from "@/server/services/pillar-normalizer";
-import { writePillarAndScore } from "@/server/services/pillar-gateway";
+import { reconcileCompletionLevelCache, writePillarAndScore } from "@/server/services/pillar-gateway";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import type { Prisma } from "@prisma/client";
 import { reportRefusedWrite } from "../pillar-gateway/refusal";
@@ -165,11 +165,8 @@ export async function advanceConsoleIntake(
 
   const filled = fields.filter((f) => f.filled).length;
 
-  // Update completion level
-  await db.pillar.update({
-    where: { strategyId_key: { strategyId, key: pillarKey } },
-    data: { completionLevel: "COMPLET" },
-  });
+  // The gateway already persisted canonical completion with the accepted
+  // content. Advancing the wizard is not evidence that every field is filled.
 
   return {
     strategyId,
@@ -184,7 +181,7 @@ export async function advanceConsoleIntake(
 export async function completeConsoleIntake(
   strategyId: string,
 ): Promise<{ applied: number }> {
-  // Mark all ADVE pillars as COMPLET
+  // Finishing the wizard repairs the derived cache, never promotes its content.
   let total = 0;
   for (const key of ADVE_KEYS) {
     const pillar = await db.pillar.findUnique({
@@ -196,12 +193,7 @@ export async function completeConsoleIntake(
       (v) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0),
     ).length;
 
-    await db.pillar.update({
-      where: { strategyId_key: { strategyId, key } },
-      data: {
-        completionLevel: filled > 0 ? "COMPLET" : "INCOMPLET",
-      },
-    });
+    await reconcileCompletionLevelCache(strategyId, key);
     total += filled;
   }
 

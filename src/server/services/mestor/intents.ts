@@ -657,6 +657,9 @@ export type Intent =
       scheduleAt?: string | null;
       brandActionId?: string | null;
       scheduledVersion?: string;
+      publicationPackageId?: string;
+      publicationPackageHash?: string;
+      publicationTarget?: { connectionId: string; accountId: string };
       /** Brief créatif intégré (direction pour illustrer). */
       brief?: string | null;
       /** Copy du visuel (texte DANS l'image). */

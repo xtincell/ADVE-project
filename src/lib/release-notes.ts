@@ -34,6 +34,19 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.549", date: "2026-11-05", headline: "Relire la bonne version avant de publier",
+    highlights: [
+      { emoji: "💡", title: "Analyser un dossier de marque riche", body: "La demande de recommandations transmet les informations qualifiées sans répéter le même contenu. Si une préparation ou un appel échoue, le message précise l’étape concernée et conserve un diagnostic." },
+      { emoji: "🔎", title: "Vérifier le lien avec un article", body: "Chaque proposition conserve l’extrait utilisé et son lien source. Vous voyez si elle s’appuie sur cet article ou s’en éloigne, indépendamment de vos documents de marque, avant de la relire." },
+      { emoji: "🎨", title: "Ouvrir les résultats du studio", body: "Les productions reçues montrent leurs versions. Ouvrez une création pour la consulter ou télécharger son fichier original, puis retrouvez son brief et ses sources dans la banque d’assets." },
+      { emoji: "📚", title: "Reprendre les documents partagés", body: "Un document partagé explicitement avec votre marque est pris en compte lors du retraitement de ses informations. Les sources restent attachées à leurs destinataires autorisés." },
+      { emoji: "🖼️", title: "Retenir une création du calendrier", body: "Choisissez une image reçue et retrouvez ensemble son brief, sa légende et ses hashtags. Le coffre conserve cette version exacte et son origine." },
+      { emoji: "✅", title: "Séparer le choix et la relecture", body: "La relecture porte sur la version choisie. Une autre option ou une source modifiée demande une nouvelle relecture ; une génération ne vaut jamais votre accord." },
+      { emoji: "📤", title: "Confirmer le compte et l’envoi", body: "Le composeur reprend l’image relue et son texte. Vous choisissez le compte destinataire puis confirmez l’envoi séparément. Les stories expliquent que seule l’image est transmise." },
+      { emoji: "🧭", title: "Lire une complétude cohérente", body: "Le tableau de bord et les vues détaillées utilisent les mêmes règles de complétude. Les informations techniques ne gonflent plus le compteur des formulaires, et les états restent cohérents après une modification." },
+    ],
+  },
+  {
     version: "6.27.548", date: "2026-11-05", headline: "Une veille plus pertinente et un studio plus fluide",
     highlights: [
       { emoji: "📰", title: "Retrouver les sujets de votre public", body: "La veille croise vos sujets suivis avec votre public et ses territoires. Elle distingue les articles locaux pertinents de l’exploration sectorielle, sans modifier vos choix de sujets." },

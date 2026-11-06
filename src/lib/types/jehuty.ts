@@ -33,11 +33,29 @@ export type JehutySourceType = "SIGNAL" | "RECOMMENDATION" | "DIAGNOSTIC";
 
 export type JehutyCurationAction = "PINNED" | "DISMISSED" | "NOTORIA_TRIGGERED";
 
+export interface ArticleSourceGrounding {
+  receiptId: string;
+  sourceId: string;
+  sourceUrl: string;
+  source: string | null;
+  publishedAt: string | null;
+  qualification: "REPORTED";
+  observationHash: string;
+  excerpts: Array<{ field: "title" | "summary"; text: string; start: number; end: number }>;
+  score: number;
+  band: "GROUNDED" | "WEAK" | "UNGROUNDED" | "NO_SOURCE";
+  unverifiedCitations: string[];
+}
+
 /** Article facts and the brand's reading remain separate, joined by exact source URL. */
 export interface ArticleBrandInterpretation {
   articleUrl: string;
   linkedAnalyses: Array<{ id: string; title: string; text: string; pillarKeys: string[]; sourceUrl: string; createdAt: string }>;
-  recommendations: Array<{ id: string; batchId: string; targetPillarKey: string; targetField: string; explain: string; status: string; createdAt: string }>;
+  recommendations: Array<{ id: string; batchId: string; targetPillarKey: string; targetField: string; explain: string; status: string; createdAt: string;
+    /** Received article and documentary sources are two different evidence scopes. */
+    articleGrounding?: ArticleSourceGrounding;
+    documentaryGrounding?: { score: number; band: ArticleSourceGrounding["band"] };
+  }>;
   brandContext: Array<{ pillarKey: string; field: string; label: string; text: string; source: "ADVE"; certainty?: string; stale: boolean }>;
   batchIds: string[];
 }
