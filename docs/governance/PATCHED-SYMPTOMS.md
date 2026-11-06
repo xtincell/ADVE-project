@@ -36,6 +36,10 @@ Le lecteur rapproche les sections de leur exécution, conserve les éditions lis
 
 Recette locale dans `tests/integration/glory-edition-recovery.postgres.test.ts` avec la gateway simulée, le vrai compilateur et le coffre PostgreSQL. Elle couvre échec, dépendance suspendue, reprise, validation, tentative partielle après acceptation, conservation des actifs, isolation entre opérateurs et concurrence de version.
 
+### 552 — propositions générales attachées après coup à un article
+
+La demande Koaci en 549 exécutait les missions de fond sur six piliers. Le reçu de l’article était attaché au lot sans exiger une implication de marque étayée. Le mode article borné conserve citation, repère ADVE, interprétation, mesure et comparaison. Les propositions historiques sont séparées et la référence est revérifiée avant une écriture dans I.
+
 ### 549 — recommandations bloquées par un contexte dupliqué et une erreur générique (2026-11-05)
 
 Le contexte qualifié de S occupait 133 413 caractères pour une limite de 128 000 ;

@@ -154,7 +154,10 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
   const triggerNotoriaMutation = trpc.jehuty.triggerNotoria.useMutation({
     onError: (error) => toast.error(`Propositions indisponibles : ${error.message}`),
     onSuccess: (result) => {
-      if (result.totalRecos > 0) {
+      if ("articleActions" in result && result.articleActions) {
+        const { retained, alternatives, toInvestigate } = result.articleActions;
+        toast.info(result.totalRecos ? `Article analysé. Actions retenues · ${retained}. Alternatives · ${alternatives}. Pistes à instruire · ${toInvestigate}.` : "Article analysé. Aucune proposition à soumettre.");
+      } else if (result.totalRecos > 0) {
         const message = `${result.totalRecos} proposition(s) préparée(s). Examinez-les dans Recommandations avant de les appliquer.`;
         if (result.failedParts > 0) toast.warning(`${message} L’analyse reste partielle.`);
         else toast.success(message);

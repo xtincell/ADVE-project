@@ -1,6 +1,7 @@
 /**
  * JEHUTY Types — Strategic Intelligence Feed
  */
+import type { ObjectiveComparison } from "@/domain/recommendation-comparison";
 import type { SignalInputSnapshot, SignalBrandContextSnapshot } from "@/domain/signal-provenance";
 
 /** Two-page reader: frozen analysis inputs and its complete interpretation. */
@@ -47,17 +48,29 @@ export interface ArticleSourceGrounding {
   unverifiedCitations: string[];
 }
 
+export type ArticleActionBasis = {
+  field: "title" | "summary"; quote: string; start: number; end: number;
+  anchor: { pillarKey: string; field: string; quote: string; certainty?: string };
+  decision?: { scopeId: string; digest: string; campaignId?: string; mode?: string };
+  action: string; implication: string; measure: string; reviewReason: string; comparison: ObjectiveComparison;
+};
+
 /** Article facts and the brand's reading remain separate, joined by exact source URL. */
 export interface ArticleBrandInterpretation {
   articleUrl: string;
   linkedAnalyses: Array<{ id: string; title: string; text: string; pillarKeys: string[]; sourceUrl: string; createdAt: string }>;
   recommendations: Array<{ id: string; batchId: string; targetPillarKey: string; targetField: string; explain: string; status: string; createdAt: string;
     /** Received article and documentary sources are two different evidence scopes. */
+    actionBasis?: ArticleActionBasis;
     articleGrounding?: ArticleSourceGrounding;
     documentaryGrounding?: { score: number; band: ArticleSourceGrounding["band"] };
   }>;
   brandContext: Array<{ pillarKey: string; field: string; label: string; text: string; source: "ADVE"; certainty?: string; stale: boolean }>;
   batchIds: string[];
+  generalRecommendations?: ArticleBrandInterpretation["recommendations"];
+  alternatives?: ArticleBrandInterpretation["recommendations"];
+  toInvestigate?: ArticleBrandInterpretation["recommendations"];
+  lastActionAnalysis?: { at: string; status: "FAILED" | "COMPLETE"; retained: number };
 }
 
 // ── Feed Item ─────────────────────────────────────────────────────

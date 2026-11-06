@@ -19,6 +19,7 @@ import { scorePillarStructural } from "@/lib/utils/scoring";
 import { getStrategyPillarInputsFromContent } from "@/server/services/advertis-scorer/structural";
 import { parseRecommendationPayload } from "@/lib/types/recommendation-payload";
 import { applyPayloadToPillars } from "./apply-payload";
+import { applyResolvedRecoOps } from "../pillar-gateway/apply-resolved-ops";
 
 type PillarBlob = Record<string, unknown>;
 export type PillarContentMap = Partial<Record<PillarKey, PillarBlob | null>>;
@@ -33,6 +34,11 @@ export interface ScoreImpactPreview {
 
 // ── Cœur pur ───────────────────────────────────────────────────────────
 
+export function weightedPillarScore(key: PillarKey, content: PillarBlob | null, weight: number) {
+  const structural = scorePillarStructural(getStrategyPillarInputsFromContent(key, content));
+  return Math.round(Math.min(25, Math.max(0, structural * weight)) * 100) / 100;
+}
+
 /** Score structurel ×poids business d'une map de piliers en mémoire. */
 export function computeCompositeFromContents(
   contents: PillarContentMap,
@@ -40,9 +46,7 @@ export function computeCompositeFromContents(
 ): { composite: number; pillars: Record<PillarKey, number> } {
   const pillars = {} as Record<PillarKey, number>;
   for (const key of PILLAR_KEYS) {
-    const input = getStrategyPillarInputsFromContent(key, (contents[key] ?? null) as Record<string, unknown> | null);
-    const structural = scorePillarStructural(input);
-    pillars[key] = Math.round(Math.min(25, Math.max(0, structural * weights[key])) * 100) / 100;
+    pillars[key] = weightedPillarScore(key, contents[key] ?? null, weights[key]);
   }
   const composite = Math.round(
     PILLAR_KEYS.reduce((sum, k) => sum + pillars[k], 0) * 100,
@@ -60,6 +64,7 @@ export function simulateRecoOnContents(
     targetPillarKey: string;
     targetField: string;
     operation: string;
+    targetMatch?: unknown;
     proposedValue: unknown;
   },
 ): PillarContentMap {
@@ -72,34 +77,14 @@ export function simulateRecoOnContents(
     return clone as PillarContentMap;
   }
 
-  const pillar = (clone[reco.targetPillarKey.toLowerCase()] ??= {});
-  const field = reco.targetField;
-  switch (reco.operation) {
-    case "ADD":
-    case "EXTEND": {
-      const existing = pillar[field];
-      if (Array.isArray(existing)) {
-        pillar[field] = Array.isArray(reco.proposedValue)
-          ? [...existing, ...reco.proposedValue]
-          : [...existing, reco.proposedValue];
-      } else if (existing == null) {
-        pillar[field] = Array.isArray(reco.proposedValue)
-          ? reco.proposedValue
-          : [reco.proposedValue];
-      } else {
-        pillar[field] = reco.proposedValue;
-      }
-      break;
-    }
-    case "REMOVE":
-      delete pillar[field];
-      break;
-    case "SET":
-    case "MODIFY":
-    default:
-      pillar[field] = reco.proposedValue;
-      break;
-  }
+  const key = reco.targetPillarKey.toLowerCase();
+  const match = reco.targetMatch as { key?: unknown; value?: unknown } | null;
+  const targetMatch = typeof match?.key === "string" && typeof match.value === "string"
+    ? { key: match.key, value: match.value } : undefined;
+  clone[key] = applyResolvedRecoOps(clone[key] ?? {}, [{
+    field: reco.targetField, operation: reco.operation, proposedValue: reco.proposedValue,
+    targetMatch, recoId: "preview",
+  }]).content;
   return clone as PillarContentMap;
 }
 
@@ -154,6 +139,7 @@ export async function previewRecoScoreImpact(
       targetField: true,
       operation: true,
       proposedValue: true,
+      targetMatch: true,
     },
   });
   if (recos.length === 0) return {};
@@ -189,7 +175,7 @@ export async function previewRecoScoreImpact(
 export function previewCandidateImpact(
   contents: PillarContentMap,
   weights: Record<PillarKey, number>,
-  reco: { targetPillarKey: string; targetField: string; operation: string; proposedValue: unknown },
+  reco: { targetPillarKey: string; targetField: string; operation: string; proposedValue: unknown; targetMatch?: unknown },
 ): number {
   const before = computeCompositeFromContents(contents, weights);
   const after = computeCompositeFromContents(simulateRecoOnContents(contents, reco), weights);

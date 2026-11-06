@@ -237,7 +237,7 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
 
   // ── Notoria recommendations (replaces pillar.getRecos) ──
   const recosQuery = trpc.notoria.getRecosByPillar.useQuery(
-    { strategyId: strategyId ?? "", pillarKey: upperKey, status: "PENDING" },
+    { strategyId: strategyId ?? "", pillarKey: upperKey, status: "PENDING", shortlistedOnly: true },
     { enabled: !!strategyId && isAdve },
   );
 
@@ -249,7 +249,7 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
   // premier temps était câblé côté UI : `applyRecos` était déclaré et jamais
   // appelé, donc « Tout accepter » ne changeait effectivement rien au pilier.
   const acceptedRecosQuery = trpc.notoria.getRecosByPillar.useQuery(
-    { strategyId: strategyId ?? "", pillarKey: upperKey, status: "ACCEPTED" },
+    { strategyId: strategyId ?? "", pillarKey: upperKey, status: "ACCEPTED", shortlistedOnly: true },
     { enabled: !!strategyId && isAdve },
   );
 
@@ -272,15 +272,15 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
     onError: () => refreshPillarState(),
   });
   const acceptRecosMutation = trpc.notoria.acceptRecos.useMutation({
-    onSuccess: () => {
+    onSuccess: data => {
       void refreshPillarState();
       recosQuery.refetch();
       // Rafraîchir la file des acceptées : c'est elle qui fait apparaître le
       // bouton « Appliquer au pilier », le geste qui écrit réellement.
       acceptedRecosQuery.refetch();
       setEnrichResult({
-        type: "success",
-        message: "Recommandations acceptées — reste à les appliquer au pilier.",
+        type: data.warnings.length ? "warning" : "success",
+        message: data.warnings[0] ?? (data.accepted + " proposition(s) acceptée(s). Vous pouvez les appliquer au pilier."),
       });
     },
     onError: (err: any) => {
@@ -510,8 +510,9 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
   // « on a implémenté une logique de score pour éviter de recommander des choses
   // moins efficaces » restait invisible. On trie les meilleures d'abord.
   const recoScore = (r: Record<string, unknown>) => (typeof r.weightedScore === "number" ? r.weightedScore : -1);
+  const eligiblePending = pendingRecos.filter(r => r.eligibleForApplication === true);
   const sortedRecos = [...pendingRecos].sort((a, b) => recoScore(b) - recoScore(a));
-  const acceptedRecos = (acceptedRecosQuery.data ?? []) as Array<{ id: string }>;
+  const acceptedRecos = ((acceptedRecosQuery.data ?? []) as Array<{ id: string; eligibleForApplication?: boolean }>).filter(r => r.eligibleForApplication);
 
   // RTIS pages: pending counts from Notoria
   const pendingCounts = pendingCountsQuery?.data ?? {};
@@ -1071,17 +1072,17 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
             </div>
             <div className="flex gap-2">
               <button onClick={() => {
-                const ids = pendingRecos.map(r => r.id);
+                const ids = eligiblePending.map(r => r.id);
                 if (ids.length === 0) return;
                 acceptRecosMutation.mutate({ strategyId: strategyId!, recoIds: ids });
                 setSelectedRecos(new Set());
-              }} disabled={acceptRecosMutation.isPending || pendingRecos.length === 0}
+              }} disabled={acceptRecosMutation.isPending || eligiblePending.length === 0}
                 title="Enregistre la décision de revue. L'écriture dans le pilier se fait ensuite via « Appliquer au pilier »."
                 className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-success/20 text-success hover:bg-success/30 disabled:opacity-40">
                 <CheckCircle className="h-3 w-3" /> Tout accepter
               </button>
               <button onClick={() => {
-                const ids = Array.from(selectedRecos);
+                const ids = eligiblePending.filter(r => selectedRecos.has(r.id)).map(r => r.id);
                 if (ids.length === 0) return;
                 acceptRecosMutation.mutate({ strategyId: strategyId!, recoIds: ids });
                 setSelectedRecos(new Set());
@@ -1136,7 +1137,7 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
               // `currentEmpty` prime : combler un vide ne peut pas être « inférieur à
               // l'existant ». Le drapeau ne s'allume que sur un champ NON vide.
               const flagged = !currentEmpty && op !== "ADD" && (inferiorToExisting || requiresReview);
-              const verdict = op === "ADD"
+              const verdict = !reco.eligibleForApplication ? { label: "Alternative", cls: "bg-info/15 text-info" } : op === "ADD"
                 ? { label: "Ajout", cls: "bg-success/15 text-success" }
                 : currentEmpty
                   ? { label: "Comble un vide", cls: "bg-info/15 text-info" }
@@ -1160,7 +1161,7 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
                       : null;
 
               return (
-                <div key={recoId} onClick={() => { const s = new Set(selectedRecos); if (isSelected) s.delete(recoId); else s.add(recoId); setSelectedRecos(s); }}
+                <div key={recoId} onClick={() => { if (!reco.eligibleForApplication) return; const s = new Set(selectedRecos); if (isSelected) s.delete(recoId); else s.add(recoId); setSelectedRecos(s); }}
                   className={`cursor-pointer rounded-lg border p-3 transition-colors ${isSelected ? "border-success/30 bg-success/10" : "border-white/5 bg-white/[0.02] hover:bg-white/5"}`}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
@@ -1185,6 +1186,7 @@ export function PillarPage({ pageKey, focusPaths = [] }: PillarPageProps) {
                           écrit `explain: reco.justification`), pas `justification` : lire
                           `reco.justification` rendait une ligne VIDE pour chaque reco. */}
                       <p className="text-2xs text-foreground-muted mb-1">{String(reco.explain ?? reco.justification ?? "")}</p>
+                      {!!reco.comparison && <p className="text-xs text-foreground-secondary">{(reco.comparison as { reason: string }).reason}</p>}
                       {/* Warning : le gate signale un problème (ruler inférieur OU violation
                           Bible OU financier) sur un champ NON vide → surface la vraie raison. */}
                       {flagged ? (

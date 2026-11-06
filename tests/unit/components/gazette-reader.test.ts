@@ -6,6 +6,7 @@ import type { JehutyFeedItem, SignalReading } from "@/lib/types/jehuty";
 
 const query = vi.hoisted(() => ({ read: vi.fn(), result: {} as { data?: SignalReading; isLoading?: boolean; error?: Error; refetch?: () => void } }));
 vi.mock("@/lib/trpc/client", () => ({ trpc: { jehuty: { readSignal: { useQuery: (input: unknown) => { query.read(input); return query.result; } } } } }));
+import { compareObjective } from "@/domain/recommendation-comparison";
 import { GazetteReader } from "@/components/cockpit/jehuty/gazette-reader";
 
 const item: JehutyFeedItem = { id: "signal:signal-a", sourceType: "SIGNAL", sourceId: "signal-a", strategyId: "brand-a", category: "WEAK_SIGNAL", title: "Point de vigilance", summary: "Un aperçu…", observation: "Une interprétation complète. Dernière phrase conservée.", urgency: "NOW", impact: null, confidence: .94, priority: 1, createdAt: "2026-11-05T11:00:00Z", source: "Analyse des signaux de la marque" };
@@ -85,6 +86,27 @@ describe("Gazette source and interpretation reader", () => {
     expect(actions.onNotoria).not.toHaveBeenCalled();
   });
 
+  it("keeps a source-supported but unbenchmarked proposal out of the shortlist and shows its basis", () => {
+    const url = "https://presse.example/a";
+    const article: JehutyFeedItem = {...item, externalUrl:url, articleContext:{
+      articleUrl:url, brandContext:[], batchIds:["a"], linkedAnalyses:[], recommendations:[],
+      lastActionAnalysis:{at:item.createdAt,status:"COMPLETE",retained:0}, toInvestigate:[{
+        id:"r1",batchId:"a",targetPillarKey:"I",targetField:"catalogueParCanal",explain:"Hypothèse de travail",
+        createdAt:item.createdAt,status:"PENDING",actionBasis:{field:"title",quote:"Une livraison à Abidjan",start:0,end:22,
+          anchor:{pillarKey:"A",field:"promesse",quote:"Décider où aller"},action:"Tester les sorties proposées aux foodies.",
+          implication:"Une occasion de choix à étudier.",measure:"Mesurer la préférence entre sortir et commander.",
+          reviewReason:"Le passage justifie cette comparaison des occasions.",comparison:compareObjective({
+            objective:"Distinguer les occasions de sortie",criterion:"",unit:"",direction:"higher",candidate:null,evidence:[],basis:"projection",
+          })},
+      }],
+    }};
+    render(React.createElement(GazetteReader,{item:article,...actions}));
+    const right=screen.getByRole("region",{name:"La lecture pour votre marque"});
+    expect(right.textContent).toContain("Pistes à instruire (1)");
+    expect(right.textContent).toContain("Une livraison à Abidjan");
+    expect(right.textContent).toContain("Mesurer la préférence entre sortir et commander.");
+    expect(right.textContent).not.toContain("Actions tirées de l’article (1)");
+  });
   it("does not invent article grounding for an old proposal", () => {
     const article: JehutyFeedItem = { ...item, externalUrl: "https://presse.example/a", articleContext: {
       articleUrl: "https://presse.example/a", linkedAnalyses: [], brandContext: [], batchIds: ["old"], recommendations: [{
@@ -96,6 +118,8 @@ describe("Gazette source and interpretation reader", () => {
     expect(within(right).getAllByText("Non mesuré")).toHaveLength(2);
     expect(right.textContent).toContain("L’extrait exact utilisé pour cette proposition n’est pas conservé");
     expect(right.textContent).not.toContain("Appui lexical");
+    expect(right.textContent).toContain("Historique des recommandations générales (1)");
+    expect(right.textContent).not.toContain("Actions tirées de l’article (1)");
     expect(actions.onNotoria).not.toHaveBeenCalled();
   });
 
