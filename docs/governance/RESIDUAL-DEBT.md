@@ -1,3 +1,24 @@
+## 554 — cinq correctifs isolés du plan 4.11 : réceptions restantes (2026-11-10)
+
+Candidat local sur la branche `claude/correctifs-isoles-553`, versionné 6.27.554
+parce que la PR ouverte #1152 réserve 6.27.553. Les cinq défauts sont corrigés et
+reproduits en rouge avant correction (16 rouges / 25 sur l’ancien code, 25 / 25
+après). Session réelle Auth.js sur PostgreSQL jetable : un ADMIN supprimé gardait
+sa session (rôle ADMIN, cookie rafraîchi) ; il reçoit désormais `null` et un cookie
+effacé. Grille Oracle lue dans Chromium sous session dirigeant, sur fixture
+synthétique : « 0 rédigées · 6 à jour », sept pastilles « complète » et six
+boutons de lecture avant ; « 0 rédigées · 0 à jour », six « Résultat vide », zéro
+« complète » et zéro bouton de lecture après, sans réponse 5xx ni exception.
+**Non reçu** : CI, image, runtime et production 554 ; appel réel des questions de
+suivi par le relais ; collecte Lighthouse ; rétrogradation d’un rôle actif.
+**Plan** : ouvrir la PR (label `out-of-scope`, ligne `scope-drift.md` avec son
+numéro réel), recevoir CI et le run Lighthouse déclenché par `src/app/**`, puis
+lire en production la grille Oracle d’une marque réelle et une session révoquée.
+**Déclencheur** : ouverture de la PR par l’opérateur, puis livraison 554.
+Les reprises propres à chaque défaut restent dans leurs sections : Session et rôle
+courant (C7), Calculateur CODB legacy, préflight `generateAiFollowUps`, Mesure
+mobile Lighthouse et Honnêteté du livrable Oracle.
+
 ## 552 — couverture des critères et réception de l’article
 
 Le comparateur d’initiative utilise la répartition éditoriale documentée sur un périmètre comparable. Quand la décision porte sur un autre critère et qu’aucune mesure attribuable n’est disponible, la piste demeure à instruire. Reprendre au prochain dossier doté d’une règle métier et d’une mesure comparables, puis recevoir le nouveau critère sur cette référence. Le replay PostgreSQL local du cas Koaci utilise deux sorties Luna réelles. La réception de la version 552 en production doit éprouver le lecteur et la sélection avant toute clôture métier.
@@ -646,7 +667,9 @@ est SUCCESS. Le premier refus Ubuntu 26.04 / Playwright 1.59.1 reste conservé
 (`golden525-nov02-failed.log`) ; étapes et assertions inchangées. Ce reçu CI ne
 reçoit pas le MVP ou le parcours client de production.
 
-**CI Lighthouse 525 — résultat encore attendu** : le [run précédent](https://github.com/xtincell/ADVE-project/actions/runs/41414616465/job/125175335668)
+**CI Lighthouse 525 — build reçu depuis, audit encore attendu** (le run 42250705338
+de 552 compile et démarre le serveur, puis la collecte échoue sur le préréglage retiré
+en 554 ; reprise dans « Mesure mobile existante ») : le [run précédent](https://github.com/xtincell/ADVE-project/actions/runs/41414616465/job/125175335668)
 échoue au build, avant audit : Turbopack ne résout pas la requête interne Google
 Font de JetBrains Mono (`lighthouse525-nov02-failed.log`). Le seul correctif du
 workflow est `npm run build -- --webpack`, compilateur de l’image de production ;
@@ -899,22 +922,24 @@ après livraison523, relever les bilans `[seshat:embedder] passage` du journal, 
 décrue des 7 115 fragments et le steal de l'hôte ; rejouer un lot témoin de sources.
 Déclencheur : première relève de production après livraison523.
 
-## Calculateur CODB legacy — seuil non recevable (2026-10-22)
+## Calculateur CODB legacy — seuil délégué en 554, défauts restants (2026-10-22)
 
 **Où/quoi** : `src/server/services/glory-tools/calculators.ts::codbCalculator`.
-La sortie `breakeven` vaut `codbAnnual / (revenueTarget / codbAnnual)` ; elle varie
-avec un objectif de revenu, sans marge unitaire ni ratio de contribution déclaré.
-Les périodes des entrées ne permettent pas de qualifier ce chiffre comme un seuil
-de rentabilité. Les défauts à zéro et le libellé XAF imposé restent également
-legacy. La nouvelle fiche Catalyse n’appelle pas ce calcul et ne le valide pas.
+**Seuil fermé en 554** (plan 4.11.b) : `breakeven` ne vaut plus
+`codbAnnual / (revenueTarget / codbAnnual)` ; il est délégué à `calculateBreakeven`
+(charges fixes mensuelles / (prix − coût variable unitaires)), nul et qualifié
+`INSUFFICIENT_DATA` / `NO_FINITE_BREAK_EVEN` sans ces entrées. Régressions : revenus
+cibles différents, absence de charges fixes, contribution nulle et seuil mensuel ;
+cinq rouges puis 6/6 verts (`tests/unit/services/codb-breakeven.test.ts`).
+**Restent legacy** : les défauts à zéro des autres sorties (`fixed_costs`,
+`variable_costs`, `costPerHead`) et le libellé XAF imposé du résumé. La nouvelle
+fiche Catalyse n’appelle pas ce calcul et ne le valide pas.
 
-**Plan de résolution** : préciser le contrat CODB (coût de fonctionnement versus
-seuil), ses unités, devise et périodes à partir des consommateurs existants ;
-retirer le faux seuil ou le déléguer au calculateur canonique avec ses entrées
-requises. Écrire les régressions sur revenus cibles différents, absence de coût,
-contribution nulle et comparaison mensuelle/annuelle, puis exercer les séquences
-et exports réellement consommateurs. Préserver les anciens résultats comme
-historiques ; ne pas les requalifier ou recalculer à la lecture.
+**Plan de résolution** : préciser le contrat CODB (coût de fonctionnement), ses
+unités, devise et périodes à partir des consommateurs existants ; qualifier les
+absences au lieu des zéros et lire la devise du modèle. Exercer ensuite la
+séquence COST-SERVICE (DRAFT) et les exports réellement consommateurs. Préserver
+les anciens résultats comme historiques ; ne pas les requalifier à la lecture.
 Responsable financial-brain / outils Glory existants ; effort audit borné des
 consommateurs, correction dédiée et recette, séparés de la livraison520.
 **Déclencheur** : avant toute réactivation de `codb-calculator` dans une fiche ou
@@ -1073,11 +1098,13 @@ recevoir choix explicite proposé→retenu→S via le chemin gouverné existant,
 contenu/conservation et effet réel sur S. Responsable Core-I/S/FIDÉLITÉ existants ;
 effort recette ciblée, déclencheur immédiat à cette étape Core demandée, avant
 Oracle. Huit étapes Core A/D/V/E/R/T/I/S suivies, aucun crédit macro déduit.
-**Restitution Oracle restante, hors correctif 519** : titre local 27/35 « complètes »
-avec zéro rédigée. Diagnostiquer compteurs/état/contenu puis corriger leurs libellés
-sur lecteurs existants et recevoir le rendu ; ne pas annoncer des sections rédigées
-depuis un statut préparatoire. Responsable réception Oracle existante ; effort
-recette/correction bornée, déclencheur avant recevoir Oracle, toujours 0/6.
+**Restitution Oracle « N complètes » sans section rédigée — fermée** : la synthèse
+de la page distingue « Rédigées » et « Nourries par vos piliers » depuis 538. En 554,
+la grille ne présente plus la matière des piliers comme une section complète
+(« nourrie » / « à étoffer » / « sans matière »), ne compte plus « à jour » ni ne
+propose à la lecture une rédaction terminée sans contenu, et l'instantané tRPC/MCP
+expose `written`/`current` à côté du statut `complete`. La réception native de
+cette grille reste dans « 554 — correctifs isolés » en tête de ce registre.
 
 Preuve de cadrage : `release/preuves-rapport-fidelite-20261020/framing.json`. Première transition : `release/preuves-rapport-fidelite-20261020/native-model-transition-network.json` ; régénération historique reçue12/12. Preuves complémentaires : `release/preuves-rapport-fidelite-20261020/history-conservation510-received.json`, `regeneration-fixture-cleanup.json`, `native-paid-final-network.json`, `print2-visually-received.json` ; print2 conserve le checkpointdev13pages, désormais complété par `compiled-pdf-visually-received.json`, `native-compiled-print-network.json` et `original510-http-received.json` : PDF compilé/qualité bornée et conservation postnettoyage reçus ; livraison510 désormais reçue séparément. Reçus finaux : `history-conservation510-final-received.json`, `nori-read-conservation-received.json` ; ancien périmètre coût8 conservé, nouveau cas coût8 au snapshot puis11partiels par écritures différées avant la lecture sans provider.
 
@@ -1759,15 +1786,15 @@ Import/export, qualité modèle/coût réel, choix agentique utilisateur et
 attribution du propriétaire/offre CRM restent dans les critères MVP02–04 ;
 un Deal LEAD non attribué n’est pas une offre activée ni une conversion.
 
-**Point statique non corrigé, non reçu comme panne runtime** :
-`question-bank.generateAiFollowUps` teste directement ANTHROPIC_API_KEY,
-OPENAI_API_KEY et OLLAMA_BASE_URL ; le gestionnaire existant sait déclarer un
-relais OAuth texte disponible. **Fermer** : vérifier le cas relais seul et le
-cas sans fournisseur, puis réutiliser `isTextLLMAvailable` du Gateway si l’écart
-est reproduit ; recevoir repli manuel, option facultative et appel gouverné au
-périmètre autorisé. Aucun nouveau manager, policy ou provider. Responsable
-C6/MVP-FUSEE-02 ; effort une vérification/correction ciblée, déclencheur après
-réception du parcours manuel 507 et avant option assistée du même parcours.
+**Préflight `generateAiFollowUps` — écart reproduit et corrigé en 554** (plan
+4.11.c) : le test direct d’ANTHROPIC_API_KEY, OPENAI_API_KEY et OLLAMA_BASE_URL
+ignorait le relais texte OAuth seul et comptait la clé OpenAI des embeddings comme
+un fournisseur texte. Le préflight réutilise `isTextLLMAvailable` du Gateway, sans
+nouveau gestionnaire ; deux rouges puis 3/3 verts
+(`tests/unit/services/question-bank-llm-preflight.test.ts`, `callLLM` simulé).
+**Reste** : recevoir un appel réel par le relais sur le parcours intake, repli
+statique et caractère facultatif compris. Responsable C6/MVP-FUSEE-02 ; effort une
+recette ciblée, déclencheur avant l’option assistée de ce parcours en production.
 
 ## Sprint MVP1 — correctifs du scoreur livrés avec 507, réception limitée (2026-10-20)
 
@@ -2027,10 +2054,15 @@ implicite de données personnelles dans la portée d’une marque.
 ## Mesure mobile existante — collecte Lighthouse non reçue (2026-10-19)
 
 Run 39319055374 vert selon sa politique non bloquante, mais collect échoue : preset mobile
-invalide (choix annoncés perf, experimental, desktop). Aucun score mobile reçu. Réparer
-.lighthouserc.json dans la passe corrective après le gros œuvre, puis recevoir la collecte
-sur build exact, sans ajouter un moniteur. Responsable C4 ; entrée LeRadar C4-01-E008.
-Les tests natifs bornés ne constituent pas une mesure de performance de toute la flotte.
+invalide (choix annoncés perf, experimental, desktop). Le défaut persistait au run
+42250705338 (552, 6 novembre), après build et démarrage du serveur reçus.
+**Configuration corrigée en 554** (plan 4.11.g) : le préréglage invalide est retiré ;
+l’émulation mobile est la configuration par défaut de Lighthouse. Verrou
+`tests/unit/governance/lighthouse-config.test.ts`, un rouge puis 3/3 verts.
+**Reste** : aucun score mobile reçu. Recevoir la collecte et ses assertions au prochain
+run du workflow sur build exact, sans ajouter un moniteur. Responsable C4 ; entrée
+LeRadar C4-01-E008 ; déclencheur : première PR qui modifie `src/app/**` ou
+`src/components/**`. Les tests natifs bornés ne mesurent pas toute la flotte.
 
 ## Réception C7 du raccord entreprise 493 — reprise des deux stockages ouverte (2026-10-19)
 
@@ -3501,12 +3533,18 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
 - **Session et rôle courant — C7, constat du 8 octobre** : la session ADMIN
   du compte FOUNDER SPAWT est expliquée par isGodModeEmail effectivement vrai
   dans le runtime 419 ; aucune divergence de rôle ordinaire n'est déduite de
-  ce cas. Les comptes ordinaires restent à recevoir sur rétrogradation,
-  suppression et transfert ; resolve-session-user peut recréer un utilisateur
-  supprimé depuis un JWT signé. **Plan** : contre-exemples locaux avec sessions
-  actives, retirer toute autorité périmée en réutilisant la résolution existante,
-  puis recevoir les refus sans élargir le god-mode. **Déclencheur** : C7 avant
-  réception multi-tenant ; effort : un lot auth et recettes de révocation.
+  ce cas. **Suppression fermée en 554** (plan 4.11.f) : resolve-session-user ne
+  recrée plus un compte depuis les claims du jeton et ne le rattache plus par
+  email ; le callback `jwt` relit l'existence du compte et révoque la session
+  (`null`, cookie effacé) d'un compte supprimé, god-mode compris. Quatre rouges
+  puis 8/8 verts dans `tests/unit/auth/deleted-user-session.test.ts`. L'équipe
+  (`operatorId`) est relue à chaque session depuis 433. **Reste rétrogradation** :
+  le rôle du jeton n'est relu qu'au `update` ou pour un rôle legacy ; un compte
+  rétrogradé garde son ancien rôle jusqu'à expiration du jeton, et `proxy.ts`
+  route les pages sur ce rôle. **Plan** : relire le rôle stocké dans la même
+  lecture du callback `jwt`, god-mode inchangé, puis recevoir les refus tRPC et
+  le routage des pages sur une session active rétrogradée. **Déclencheur** : C7
+  avant réception multi-tenant ; effort : un lot auth et recettes de révocation.
 - **Audit gouverné — statut de fin honnête** — 🟢 **CLOS round-4** (v6.27.274, trouvé à la vérif du diff round-3) : `governedProcedure` fermait les mutations REFUSÉES/échouées en aval avec `status="OK"` + publiait `intent.completed` + Seshat les marquait OBSERVED (tRPC v11 `next()` NE JETTE PAS sur échec aval — il renvoie `{ok:false}`, donc le `catch` du lane ne voyait que ses propres throws). Corrigé : `governed-procedure.ts` teste `result.ok` et ferme `VETOED` (FORBIDDEN/UNAUTHORIZED) ou `FAILED` sinon — parité avec `auditedProcedure` qui testait déjà `result.ok`. Ferme la falsification de combustion sur le lane gouverné (miroir du fix `/api/nsp` DELETE). NB : sécurité intacte avant/après (le corps ne s'exécutait jamais) — c'était une intégrité d'audit (Q1/Q2).
 - **`session.user.operatorId` jamais peuplé — champ `User.operatorId` surchargé** *(trouvé à l'audit
   B1, 2026-07-22)* : le callback NextAuth (`lib/auth/config.ts`) ne pose que `role`+`id` sur la
@@ -3768,8 +3806,9 @@ le schéma et recevoir une saisie manuelle sans perte du contenu existant.
 ### §Honnêteté du livrable Oracle hors conditions tarifaires — 2026-10-08
 
 La recette synthétique ADR-0204 reçoit les tarifs de §04, pas le document entier.
-Sans autres piliers, l'HTML montre pourtant « 6 sections complètes » pour zéro
-section rédigée, un mix 25/25/25/25 qualifié « déclaré », des conditions générales
+Sans autres piliers, l'HTML montrait « 6 sections complètes » pour zéro section
+rédigée — compteurs fermés en 538 (synthèse) puis 554 (grille et instantané,
+plan 4.11.e). Restent un mix 25/25/25/25 qualifié « déclaré », des conditions générales
 standard (cession, annulation, validité) et des métriques à zéro. Le PDF expose
 également des zéros sans distinguer absence et mesure. Ce sont des projections
 legacy ; elles ne constituent ni données reçues ni engagement commercial.

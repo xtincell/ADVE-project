@@ -2713,8 +2713,8 @@ Formule : coût_annuel = (salaire*12)*(1+charges/100)*(1+overhead/100), taux_rev
     pillarKeys: ["V"],
     requiredDrivers: [],
     dependencies: [],
-    description: "Coûts fixes + variables + overhead → seuil de rentabilité",
-    inputFields: ["fixed_costs", "variable_costs", "headcount", "revenue_target", "billable_ratio"],
+    description: "Coûts fixes + variables + overhead ; seuil de rentabilité seulement si prix et coût variable unitaires sont déclarés",
+    inputFields: ["fixed_costs", "variable_costs", "headcount", "revenue_target", "billable_ratio", "price_per_unit", "variable_cost_per_unit"],
     pillarBindings: {},
     outputFormat: "codb",
     promptTemplate: `CODB :
@@ -2723,7 +2723,9 @@ Coûts variables/mois : {{variable_costs}} XAF
 Effectif : {{headcount}}
 CA cible : {{revenue_target}} XAF/an
 Ratio facturable : {{billable_ratio}}%
-Formules : CODB_mensuel = fixes+variables, CODB_annuel = CODB_mensuel*12, seuil_rentabilite = CODB_annuel/marge_moyenne, overhead_rate = CODB/(salaires*12).`,
+Prix unitaire : {{price_per_unit}}
+Coût variable unitaire : {{variable_cost_per_unit}}
+Formules : CODB_mensuel = fixes+variables, CODB_annuel = CODB_mensuel*12, overhead_rate = (100-facturable)/facturable. Seuil (calcul canonique) = coûts fixes mensuels / (prix unitaire - coût variable unitaire), non calculable sans ces entrées ; le CA cible n'entre pas dans le seuil.`,
     status: "ACTIVE",
   },
   {

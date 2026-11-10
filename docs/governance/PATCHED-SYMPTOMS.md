@@ -28,6 +28,33 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 554 — cinq défauts isolés du plan Shinkiro 4.11 (2026-11-10)
+
+Chaque défaut a été reproduit par un test rouge avant correction, puis vert.
+
+- **Compte supprimé recréé depuis un jeton signé (4.11.f)** — `resolve-session-user.ts`
+  recréait la ligne `User` depuis les claims (rôle et équipe compris) ou la rattachait
+  à un autre compte par email ; le callback `jwt` de `src/lib/auth/config.ts` réémettait
+  le jeton sans relire le compte. La session d’un compte supprimé est révoquée et aucune
+  recréation n’est possible. Hypothèse de cause racine : le jeton signé était traité
+  comme une source d’identité, alors que seule la ligne persistée l’est ; la même
+  hypothèse couvre le rôle rétrogradé, encore ouvert dans RESIDUAL-DEBT.
+- **Seuil CODB fonction de l’objectif de CA (4.11.b)** — `calculators.ts` calculait
+  codbAnnual² / CA cible. Le seuil est délégué au calcul canonique et reste nul sans
+  prix ni coût variable unitaires. Hypothèse : calculateurs CALC écrits avant le
+  contrat financier canonique, sans entrées déclarées ni statut d’insuffisance.
+- **Questions de suivi aveugles au relais OAuth (4.11.c)** — `question-bank.ts` lisait
+  trois clés d’environnement au lieu du signal du Gateway. Hypothèse : préflights
+  locaux antérieurs au relais, qui dupliquent la sélection des fournisseurs.
+- **Oracle « complet » sans section rédigée (4.11.e)** — la pastille de matière disait
+  « complète » sur des sections à produire, l’en-tête comptait « à jour » une rédaction
+  vide et l’instantané MCP n’exposait que le statut. Hypothèse : deux mesures (matière
+  des piliers, résultat de rédaction) partageaient le même vocabulaire et le statut
+  `COMPLETE` était lu comme une preuve de contenu.
+- **Préréglage Lighthouse invalide (4.11.g)** — `.lighthouserc.json` passait
+  `preset: "mobile"`, refusé par Lighthouse (run 42250705338) ; l’étape non bloquante
+  laissait le job vert. Hypothèse : erreur de collecte masquée par `continue-on-error`.
+
 ### Livrables Glory et Artemis — une tentative partielle pouvait remplacer l’édition relue (2026-11-06)
 
 Une erreur Artemis historique avec `error: true` restait lisible comme analyse. Une étape en échec pouvait alimenter sa dépendance ou être comptée comme réussie dans le pipeline BRAND. Le catalogue qualifiait de terminé tout document daté, et le coffre utilisait la dernière tentative pour débloquer les prérequis des séquences suivantes.
@@ -997,7 +1024,8 @@ via chemin existant ; ADVE, MVP, Oracle et sept chantiers entiers non reçus.
 
 I→S/Oracle restent des constats ouverts : 28 retenues historiques hors I courant,
 aucun choix des 52 actions I reçu ; titre Oracle local 27/35 « complètes » avec
-zéro rédigée non corrigé dans 519. Conservation sans réactivation et reprise par
+zéro rédigée non corrigé dans 519 (corrigé depuis : synthèse en 538, grille et
+instantané en 554). Conservation sans réactivation et reprise par
 chemins existants planifiées dans [la même dette Core/Oracle](RESIDUAL-DEBT.md).
 
 **518 livrée — rattachement Client manuel dans le portefeuille** : extension de

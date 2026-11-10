@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { callLLM } from "@/server/services/llm-gateway";
+import { callLLM, isTextLLMAvailable } from "@/server/services/llm-gateway";
 import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { BUSINESS_MODELS, ECONOMIC_MODELS, POSITIONING_ARCHETYPES, BRAND_NATURES } from "@/lib/types/business-context";
 
@@ -295,14 +295,12 @@ async function generateAiFollowUps(
   existingResponses: Record<string, unknown>,
   businessContext?: { sector?: string; positioning?: string }
 ): Promise<IntakeQuestion[]> {
-  // Short-circuit when no LLM provider is configured (CI smoke runs, fresh
-  // dev clones without env). Avoids 24s of retry timeouts before falling
-  // back to the static bank — which is the desired outcome anyway.
-  if (
-    !process.env.ANTHROPIC_API_KEY &&
-    !process.env.OPENAI_API_KEY &&
-    !process.env.OLLAMA_BASE_URL
-  ) {
+  // Short-circuit when the Gateway declares no healthy text provider (CI smoke
+  // runs, fresh dev clones without env). Avoids 24s of retry timeouts before
+  // falling back to the static bank. Plan 4.11.c — the signal is the Gateway's
+  // own `isTextLLMAvailable` : a hand-read key list ignored the OAuth text relay
+  // and counted the embeddings-only OpenAI key as a text provider.
+  if (!isTextLLMAvailable()) {
     return [];
   }
 

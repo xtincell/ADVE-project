@@ -1,3 +1,14 @@
+## v6.27.554 — fix(shinkiro): cinq correctifs isolés du plan 4.11 (2026-11-10)
+
+**Un compte supprimé ne survit plus à son jeton ; le seuil CODB, les questions de suivi, l’Oracle et Lighthouse disent ce qui est réellement calculé, disponible, rédigé et accepté.**
+
+- 4.11.f, sécurité : `resolve-session-user` recréait un compte supprimé depuis les claims de son jeton signé (rôle et équipe compris) ou le rattachait à un autre compte par email. Il refuse désormais en 401. Le callback `jwt` relit l’existence du compte hors connexion et révoque la session d’un compte supprimé (`null`, cookie effacé), god-mode compris. Sur PostgreSQL jetable, le point de session réel renvoyait encore la session ADMIN d’un compte supprimé ; il renvoie `null`. La rétrogradation d’un rôle actif reste ouverte dans RESIDUAL-DEBT.
+- 4.11.b : le seuil du calculateur CODB valait codbAnnual² / CA cible. Il est délégué au calcul canonique (charges fixes mensuelles / contribution unitaire) et reste non calculable sans prix ni coût variable unitaires. Les absences ne deviennent pas des zéros.
+- 4.11.c : les questions de suivi de l’intake lisaient trois clés d’environnement. Elles suivent `isTextLLMAvailable` du Gateway : le relais texte OAuth seul est servi, et la clé OpenAI des embeddings ne déclenche plus d’appel texte. Aucun gestionnaire ajouté.
+- 4.11.e : la grille de l’Oracle présentait la matière des piliers comme une section « complète » et comptait « à jour » une rédaction terminée sans contenu. Elle distingue « nourrie », « à étoffer » et « sans matière » de la rédaction, signale un « Résultat vide » sans lecteur et compte les seules sections rédigées. L’instantané tRPC/MCP ajoute `written` et `current` au statut `complete`.
+- 4.11.g : `.lighthouserc.json` passait `preset: "mobile"`, refusé par Lighthouse (run 42250705338 du 6 novembre). Le préréglage est retiré ; l’émulation mobile est la configuration par défaut. Aucun score mobile n’est encore reçu.
+- Version 6.27.554 : la PR ouverte #1152 réserve 6.27.553. Réception locale : 16 rouges / 25 tests sur l’ancien code, 25 / 25 après ; suite unitaire, typage, lints, cycles et gouvernance relus avant commit. Lecture Chromium de la grille sur fixture synthétique : « 0 rédigées · 6 à jour » et sept « complète » avant, « 0 rédigées · 0 à jour », six « Résultat vide » et zéro « complète » après. CI, image, production et appel réel par le relais restent à recevoir.
+
 ## v6.27.552 — fix(notoria): comparer les propositions et justifier les actions issues d’un article (2026-11-06)
 
 - Les recommandations générales confrontent les amendements de champs à leur valeur en place ou au seuil documenté de la règle. La présélection et la possibilité d’appliquer un remplacement sont distinctes. Les décisions unitaires de préférence, de risque et de scénario conservent une voie manuelle.
