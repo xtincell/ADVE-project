@@ -14,8 +14,8 @@ name: Build image (ghcr)
 # DÉPLOIEMENT 100 % MANUEL (décision opérateur 2026-07-15) : aucun trigger
 # automatique. Le push sur `main` ne construit PLUS d'image et ne redéploie PLUS.
 # Pour livrer en prod : lancer CE workflow à la main (workflow_dispatch), cocher
-# `notify_coolify` pour déclencher le swap Coolify — ou `deploy.yml`, ou le
-# dashboard Coolify. Cf. docs/deploy/BUILD-DEPORT.md.
+# `notify_coolify` pour déclencher le swap Coolify — ou le dashboard Coolify.
+# Cf. docs/deploy/BUILD-DEPORT.md.
 on:
   workflow_dispatch:
     inputs:

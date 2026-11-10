@@ -3079,14 +3079,16 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
   Effort : un lot de maintenance documentaire Git ; déclencheur : prochaine
   maintenance des workflows ou actualisation de cette référence. Aucun fichier
   documentaire supprimé pour masquer cet avertissement non bloquant.
-- **Workflow de déploiement legacy sans script — préexistant** :
-  `.github/workflows/deploy.yml` appelle `scripts/deploy-coolify.sh`, absent.
-  La voie canonique `build-image.yml` est utilisée ; le workflow legacy n'est
-  pas un chemin de reprise valide en l'état. Fermer en retirant cette voie ou
-  en la remplaçant par un appel explicite au workflow canonique, puis vérifier
-  références de documentation, dispatch/inputs et garde de notification Coolify.
-  Effort : un lot de maintenance workflow ; déclencheur : prochaine maintenance
-  des workflows de livraison. Aucun refactor CI dans la présente reprise.
+- **Publication du SDK `@lafusee/sdk` — aucune voie de livraison** : `release.yml`
+  est retiré le 10 novembre 2026 (v6.27.555). Il n’avait jamais tourné, aucun tag `v*`
+  n’existe, et il aurait échoué au premier : `build:sdk` absent, aucun workspace déclaré,
+  version fixe `0.1.0` republiée à chaque tag. Le paquet n’est pas sur npm (404).
+  Fermer par un workflow dédié, déclenché par un tag propre au SDK : build
+  `npm --prefix packages/sdk run build`, publication `npm publish ./packages/sdk`.
+  Il faut d’abord trancher la licence, aujourd’hui `UNLICENSED` pour un paquet
+  public, le versionnage du SDK et le jeton npm. Effort : un lot workflow après
+  décision. Déclencheur : décision opérateur de la Phase 8, ou premier consommateur
+  externe du SDK.
 - **Alertes npm préexistantes au build Docker — qualification de sécurité** :
   Le checkpoint Docker antérieur signalait 50 vulnérabilités (7 low, 16 moderate,
   22 high, 5 critical). Audit du 14 octobre, candidat 463 : baseline et candidat

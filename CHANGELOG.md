@@ -1,4 +1,4 @@
-## v6.27.555 — fix(ci): huit tests PostgreSQL orphelins branchés et mémoire du job fixée (2026-11-10)
+## v6.27.555 — fix(ci): tests PostgreSQL orphelins branchés, mémoire fixée, deux workflows morts retirés (2026-11-10)
 
 **Les reçus PostgreSQL qui n’étaient que locaux tournent désormais dans la CI.**
 
@@ -8,6 +8,8 @@
 - Rejeu local équivalent au job, PostgreSQL 16 jetable : 55 fichiers et 767 tests verts, dont 41 nouveaux, puis 5 tests sociaux sur leur base dédiée.
 - Verrou : `ci-postgres-recovery.test.ts` échoue si un `*.postgres.test.ts` n’est lancé par aucune configuration du job, si une entrée d’include ne correspond à aucun fichier, si le reçu social quitte sa base dédiée ou si le tas fixé disparaît. Les trois défauts réintroduits l’ont fait passer au rouge, puis la restauration exacte au vert.
 - Ce branchement révèle un défaut de la gateway : une écriture de pilier annulée laisse une ligne `AuditLog`. Il est inscrit dans RESIDUAL-DEBT avec son plan.
+- `deploy.yml` est retiré. Il extrayait par défaut la branche périmée `claude/project-revamp-agent-safe-doc3ip`, seule à contenir `scripts/deploy-coolify.sh`. Ce script provisionne un autre projet Coolify, `lafusee-v7`, construit sur le VPS, et régénère `AUTH_SECRET` à chaque passage. Ses deux exécutions, le 1er juillet, ont échoué. La production se livre par *Build image (ghcr)* puis un redémarrage de la ressource ; `build-image.yml` et `BUILD-DEPORT.md` ne citent plus `deploy.yml`.
+- `release.yml` est retiré. Il n’a jamais tourné, faute de tag `v*`. Il aurait échoué au premier : `npm run build:sdk` n’existe pas et le dépôt ne déclare aucun workspace, deux échecs reproduits localement. La publication de `@lafusee/sdk`, absent de npm, reste à décider : RESIDUAL-DEBT en garde le plan et le déclencheur.
 
 ## v6.27.552 — fix(notoria): comparer les propositions et justifier les actions issues d’un article (2026-11-06)
 
