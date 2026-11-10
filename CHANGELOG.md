@@ -1,3 +1,14 @@
+## v6.27.555 — fix(ci): huit tests PostgreSQL orphelins branchés et mémoire du job fixée (2026-11-10)
+
+**Les reçus PostgreSQL qui n’étaient que locaux tournent désormais dans la CI.**
+
+- Huit fichiers PostgreSQL ne tournaient dans aucun job : `calendar-production`, `calendar-publication`, `pillar-completion-cache`, `production-mix`, `production-sources`, `source-uses`, `upstream-resume` et `social-publication-receipt`. Les sept premiers rejoignent la base partagée du job. Le reçu social exige une base vide, car son cron lit toutes les échéances : le job crée et migre `shinkiro_social_receipt_ci` dans le même conteneur, puis le lance seul avec `vitest.social-receipt-postgres.config.mts`.
+- `source-uses` empruntait l’opérateur d’une stratégie laissée par une autre suite et n’acceptait que le port local 55439. Il crée maintenant ses opérateurs et son responsable, puis les retire avec leurs dépendances. Seul sur base vide, il ne laisse aucune ligne. Sa dernière assertion datait d’avant 519 : chaque pilier écrit invalide aussi l’Oracle dans la transaction. Le test vérifie désormais deux invalidations en transaction et une seule après le commit. Les gardes de `source-uses` et du reçu social acceptent le conteneur CI de ce dépôt sur 5432, comme `change-requests` et `scoreur-pipeline`.
+- Mémoire : `NODE_OPTIONS=--max-old-space-size=6144` sur le job. Rejoué localement avec le tas par défaut de Node 22 (environ 2 Gio), le job actuel perd son worker dans `asset-original`. Seul, ce fichier échoue à 3 Gio et passe à 4 Gio. 6 Gio est la valeur du job de typage et laisse de la marge sur le runner de 16 Gio.
+- Rejeu local équivalent au job, PostgreSQL 16 jetable : 55 fichiers et 767 tests verts, dont 41 nouveaux, puis 5 tests sociaux sur leur base dédiée.
+- Verrou : `ci-postgres-recovery.test.ts` échoue si un `*.postgres.test.ts` n’est lancé par aucune configuration du job, si une entrée d’include ne correspond à aucun fichier, si le reçu social quitte sa base dédiée ou si le tas fixé disparaît. Les trois défauts réintroduits l’ont fait passer au rouge, puis la restauration exacte au vert.
+- Ce branchement révèle un défaut de la gateway : une écriture de pilier annulée laisse une ligne `AuditLog`. Il est inscrit dans RESIDUAL-DEBT avec son plan.
+
 ## v6.27.552 — fix(notoria): comparer les propositions et justifier les actions issues d’un article (2026-11-06)
 
 - Les recommandations générales confrontent les amendements de champs à leur valeur en place ou au seuil documenté de la règle. La présélection et la possibilité d’appliquer un remplacement sont distinctes. Les décisions unitaires de préférence, de risque et de scénario conservent une voie manuelle.

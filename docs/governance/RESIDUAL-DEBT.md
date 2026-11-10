@@ -4071,16 +4071,21 @@ sign-off direction (cf. § Actions opérateur).
 - **Won't-do historiques** (V8 sandbox, multi-region, Web Components, GraphQL, Yjs full runtime) —
   inchangés.
 
-### Recette documentaire hors CI — fixture de source partagée
+### Journal d’audit des piliers — écriture annulée journalisée
 
-Revue CI du 8 octobre 2026 (lot 421) : `source-uses.postgres.test.ts`, hors de
-`vitest.feedback-postgres.config.mts`, emprunte encore le premier opérateur
-d’une stratégie existante. La course reproduite dans `amend-source` est corrigée ;
-ce second fichier n’est pas reçu par cette correction. Plan : lui attribuer
-ses opérateurs/utilisateurs jetables, nettoyer leurs dépendances et exécuter
-la suite depuis une base migrée vide puis avec les autres fichiers en parallèle.
-Déclencheur : prochaine recette de l’irrigation documentaire C3, avant admission
-de ce fichier dans la CI. Aucun assouplissement de la suite existante.
+Constat du 10 novembre 2026, en branchant `source-uses.postgres.test.ts` dans la CI :
+`writePillar` appelle `auditTrail.log(...)` sans attendre et hors du client de
+transaction, avant le commit. Quand le lot de `writePillarsAtomically` est annulé
+(pilier `d` LOCKED), la ligne `AuditLog` « UPDATE Pillar a, version 1 → 2,
+Recette atomique » subsiste. Le pilier reste en version 1 et sans nouvelle
+`PillarVersion`. Le journal décrit donc une version qui n’a jamais existé. Où :
+`src/server/services/pillar-gateway/index.ts`, bloc AUDIT de `writePillar`, et
+`withPillarTransaction`. Fermer en rendant l’entrée d’audit avec le résultat, puis
+en la journalisant après le commit : à la fin de `writePillar` hors lot, dans
+`withPillarTransaction` pour un lot. Prouver par un test PostgreSQL rouge puis vert :
+lot refusé, zéro `AuditLog`, et une ligne par pilier écrit pour un lot validé.
+Effort : un lot ciblé sur la gateway. Déclencheur : prochaine modification de la
+gateway des piliers, ou avant toute lecture de l’`AuditLog` comme preuve.
 
 ### Harnais de stress global — cible et providers à isoler
 
