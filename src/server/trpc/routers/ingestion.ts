@@ -205,13 +205,17 @@ export const ingestionRouter = createTRPCRouter({
   getSource: protectedProcedure
     .input(z.object({ id: z.string(), strategyId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
+      // The reader keeps its 403 contract (a withdrawn share included), with one
+      // message: a refused brand no longer tells a foreign source from an unknown id.
+      const refused = () => new TRPCError({ code: "FORBIDDEN", message: SOURCE_NOT_FOUND_MESSAGE });
       const { source, consumerStrategyId, contentHash } = await resolveBrandSource(input.id, input.strategyId, ctx.db).catch((error: unknown) => {
-        if (error instanceof Error && error.message.startsWith("SOURCE_UNAVAILABLE:")) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Ce document n’est plus accessible dans ce dossier." });
-        }
+        if (error instanceof Error && error.message.startsWith("SOURCE_UNAVAILABLE:")) throw refused();
         throw error;
       });
-      await assertStrategyRead(ctx.session.user.id, consumerStrategyId);
+      await assertStrategyRead(ctx.session.user.id, consumerStrategyId).catch((error: unknown) => {
+        if (error instanceof TRPCError && error.code === "FORBIDDEN") throw refused();
+        throw error;
+      });
       return { id: source.id, contentHash, fileName: source.fileName, rawContent: source.rawContent,
         certainty: source.certainty, sourceType: source.sourceType, origin: source.origin, document: documentEdition(source.rawData), representation: documentRepresentation(source.rawData) };
     }),

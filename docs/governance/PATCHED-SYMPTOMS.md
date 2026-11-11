@@ -28,6 +28,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 557 — `ingestion.getSource` distinguait une source étrangère d’un id inconnu (2026-11-11)
+
+Symptôme : appelé sans dossier, le lecteur `getSource` refusait en 403 dans les deux cas, mais avec deux messages : « Ce document n’est plus accessible dans ce dossier. » pour un id inconnu, « Accès refusé à cette marque » pour la source d’un autre locataire. Le message suffisait à savoir que la source existait. Patch (v6.27.557) : même 403 et même message dans les deux cas ; le contrat 403 du lecteur, retrait d’un partage compris, est conservé. Croisé en corrigeant IN1 (écrivains de source en 500), commit `fix(ingestion)` dédié.
+
+Hypothèse de cause racine : les gardes keyées par id lisent l’entité puis appellent `assertStrategyRead`, dont le refus `FORBIDDEN` porte son propre message ; « inconnu » et « refusé » suivent donc deux chemins de réponse. Le patron commun (lecture sans exception, une seule réponse pour inconnu et refusé) n’existe que dans `assertSourceAccess`. Dette liée : RESIDUAL-DEBT, « 557 — IN1 fermé pour les sources ; même classe ailleurs ».
+
 ### 556 — dépendances : 63 alertes npm accumulées, dont 9 critiques (2026-11-11)
 
 Symptôme : `npm audit` sur `main` 6.27.552 relevait 63 alertes (9 critical, 21 high, 27 moderate, 6 low), dont 39 sur l’arbre de production. Le registre en notait 50 le 6 octobre et 51 le 20 octobre. Patch : montées mineures ou correctives des directes (`next` 16.4.6, Auth.js, SDK MCP, Prisma 7.10.1, Puppeteer, SDK IA v6, zod, xmldom), `sharp` 0.35.5 exigé par `next` 16.4, transitives mises à jour dans leurs plages, et un override `exceljs` → `uuid` ^11.1.1. Résultat : 15 moderate de l’outillage de développement, 0 en production. Commit `fix(deps)` de la branche `claude/alertes-dependances`.

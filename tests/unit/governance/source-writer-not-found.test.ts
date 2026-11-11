@@ -150,3 +150,19 @@ describe("source writers refuse an unknown or foreign source id with one typed 4
     expect(h.assertRead).toHaveBeenCalledWith("operator-b", "brand-b");
   });
 });
+
+describe("le lecteur getSource ne distingue pas un id inconnu d'un id étranger", () => {
+  it("sans dossier précisé : même refus pour l'id inconnu et la source d'un autre locataire", async () => {
+    const unknown = await refusal(caller().getSource({ id: UNKNOWN }));
+    const foreign = await refusal(caller().getSource({ id: FOREIGN }));
+    // Contrat existant du lecteur conservé (403, retrait d'un partage compris) ;
+    // seul l'indice d'existence porté par le message disparaît.
+    expect(unknown).toMatchObject({ code: "FORBIDDEN", httpStatus: 403 });
+    expect(foreign).toEqual(unknown);
+    expect(h.assertRead).toHaveBeenCalledWith("operator-b", "brand-a");
+  });
+
+  it("la source accessible reste lue", async () => {
+    await expect(caller().getSource({ id: OWN })).resolves.toMatchObject({ id: OWN });
+  });
+});

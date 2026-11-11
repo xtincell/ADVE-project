@@ -150,6 +150,14 @@ describe.sequential("IN1 — source writers on PostgreSQL", () => {
     expect(await db.brandSourceUse.count({ where: { sourceId: sourceB } })).toBe(0);
   });
 
+  it("le lecteur getSource garde son refus 403, sans distinguer l’id absent de la source étrangère", async () => {
+    const absent = await refusal(caller().getSource({ id: ABSENT }));
+    const foreign = await refusal(caller().getSource({ id: sourceA }));
+    expect(absent).toEqual({ code: "FORBIDDEN", httpStatus: 403, message: "Ce document n’est plus accessible dans ce dossier." });
+    expect(foreign).toEqual(absent);
+    await expect(caller().getSource({ id: sourceB })).resolves.toMatchObject({ id: sourceB });
+  });
+
   it("la source propre reste écrite par le même écrivain", async () => {
     const updated = await caller().updateSource({ id: sourceB, content: "Texte corrigé de l’entreprise B." });
     expect(updated).toMatchObject({ id: sourceB, rawContent: "Texte corrigé de l’entreprise B.", processingStatus: "EXTRACTED" });
