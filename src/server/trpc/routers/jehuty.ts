@@ -305,7 +305,7 @@ export const jehutyRouter = createTRPCRouter({
     } else if (reco.status !== "ACCEPTED") {
       throw new Error(`Recommandation en status ${reco.status} — seules PENDING/ACCEPTED sont applicables.`);
     }
-    const result = await applyRecos(input.strategyId, [input.recoId]);
+    const result = await applyRecos(input.strategyId, [input.recoId], "REVIEW", { intentId: ctx.intentId });
 
     // Trace la curation NOTORIA_TRIGGERED pour le ranking du feed.
     await db.jehutyCuration.upsert({

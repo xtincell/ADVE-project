@@ -37,7 +37,7 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-import { createVersion, rollback } from "@/server/services/pillar-versioning";
+import { createVersion } from "@/server/services/pillar-versioning";
 
 beforeEach(() => {
   pillarFindUnique.mockReset();
@@ -67,17 +67,5 @@ describe("createVersion — n'écrit jamais Pillar.currentVersion (round-13a)", 
         data: expect.objectContaining({ pillarId: "p1", version: 3, content: { a: 1 } }),
       }),
     );
-  });
-});
-
-describe("rollback — gateway owns the only version bump (ADR-0207)", () => {
-  it("routes the authenticated history action to the checkpoint gateway without a bare write", async () => {
-    await rollback("p1", "v-old", "op-1", "undo-emission");
-    expect(gateway).toHaveBeenCalledWith({ strategyId: "s1", pillarKey: "v",
-      operation: { type: "RESTORE_VERSION", versionId: "v-old" },
-      author: { system: "OPERATOR", userId: "op-1", intentId: "undo-emission", reason: "Compensation de la version v-old" },
-      options: { expectedVersion: 3 } });
-    expect(pillarUpdate).not.toHaveBeenCalled();
-    expect(versionCreate).not.toHaveBeenCalled();
   });
 });

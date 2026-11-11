@@ -303,7 +303,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **VariableStoreConfig** (7 fields)
 - **OrchestrationPlan** (13 fields)
 - **OrchestrationStep** (17 fields)
-- **Recommendation** (52 fields)
+- **Recommendation** (53 fields)
 - **RecommendationBatch** (17 fields)
 - **BrandMoment** (11 fields)
 - **CampaignCanonTemplate** (12 fields)

@@ -66,20 +66,9 @@ export async function getHistory(pillarId: string, limit = 20) {
   });
 }
 
-/** The history action uses exactly the same checkpoint, authority and fences as compensation. */
-export async function rollback(pillarId: string, versionId: string, author: string, intentId: string) {
-  const pillar = await db.pillar.findUniqueOrThrow({ where: { id: pillarId } });
-  // Dynamic import avoids the versioning -> gateway -> versioning module cycle.
-  const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
-  const result = await writePillarAndScore({
-    strategyId: pillar.strategyId, pillarKey: pillar.key as import("@/lib/types/advertis-vector").PillarKey,
-    operation: { type: "RESTORE_VERSION", versionId },
-    author: { system: "OPERATOR", userId: author, intentId, reason: `Compensation de la version ${versionId}` },
-    options: { expectedVersion: pillar.currentVersion },
-  });
-  if (!result.success) throw new Error(result.error ?? "RESTORE_REFUSED");
-  return result;
-}
+// Restoration is not a versioning concern: the history action, the journal
+// compensation and the Notoria withdrawal all enter `pillar-gateway/rollback.ts`
+// (ADR-0207, amendement 562). This module only archives and reads history.
 
 /**
  * Compute a simple diff summary between two content objects

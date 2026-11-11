@@ -31,20 +31,7 @@ export const manifest = defineManifest({
       idempotent: true,
       missionContribution: "GROUND_INFRASTRUCTURE",
       groundJustification:
-        "Historique versions pour UI cockpit (timeline du pilier) + rollback workflow — sans cela aucune trace des changements.",
-    },
-    {
-      name: "rollback",
-      inputSchema: z.object({
-        pillarId: z.string().min(1),
-        versionId: z.string().min(1),
-        author: z.string().optional(),
-      }),
-      outputSchema: z.void(),
-      sideEffects: ["DB_WRITE", "EVENT_EMIT"],
-      missionContribution: "GROUND_INFRASTRUCTURE",
-      groundJustification:
-        "Rollback explicite vers une version antérieure quand l'opérateur veut annuler une cascade — sans cela les édits sont définitifs et la friction d'expérimentation augmente.",
+        "Historique versions pour UI cockpit (timeline du pilier) ; la restauration depuis cet historique passe par pillar-gateway/rollback (ADR-0207) — sans cela aucune trace des changements.",
     },
   ],
   missionContribution: "CHAIN_VIA:pillar-gateway",
