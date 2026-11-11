@@ -5,8 +5,8 @@ import { documentEdition, documentRepresentation, sourceIsUsable } from "@/domai
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import { Prisma } from "@prisma/client";
-import { TRPCError } from "@trpc/server";
 import { db } from "@/lib/db";
+import { TypedRefusal, type TypedRefusalCode } from "@/domain/typed-refusal";
 import { sourceOriginalSummary } from "@/domain/source-original";
 import type { SourceReceipt } from "@/domain/source-certainty";
 import { getPillarDependents, type PillarKey } from "@/lib/types/advertis-vector";
@@ -18,9 +18,12 @@ export type SourceDb = Prisma.TransactionClient;
  * Refus métier d'un document, typé pour la réponse HTTP (557, RESIDUAL-DEBT) :
  * même message qu'avant, mais 409/403/404/400 au lieu de 500. Le message reste
  * lisible par les appelants qui le reconnaissent (`SOURCE_CHANGED:`).
+ * Pas de `@trpc/server` ici : ce module entre dans le script de démarrage de
+ * l'image, où ce paquet n'existe pas. Le middleware de base des procédures
+ * convertit `TypedRefusal` en `TRPCError` du même code.
  */
-export function sourceRefusal(code: "CONFLICT" | "FORBIDDEN" | "NOT_FOUND" | "BAD_REQUEST", message: string): TRPCError {
-  return new TRPCError({ code, message });
+export function sourceRefusal(code: TypedRefusalCode, message: string): TypedRefusal {
+  return new TypedRefusal(code, message);
 }
 export type { SourceReceipt } from "@/domain/source-certainty";
 

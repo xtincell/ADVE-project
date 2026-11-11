@@ -1,3 +1,14 @@
+## 571 — image 570 refusée au démarrage ; script de démarrage sans tRPC (2026-11-11)
+
+**Constaté.** L'image 6.27.570 a échoué à son test de démarrage (`Boot smoke-test`,
+run 43068138052) : `public-brand-migration.cjs` demandait `@trpc/server`, absent de
+l'image. Aucune image 570 publiée, production restée en 6.27.569. La CI de la PR ne
+construit pas l'image : le défaut n'apparaissait qu'à la construction.
+**Corrigé localement.** Refus métier par `TypedRefusal` (domaine) convertis par le
+middleware de base des procédures ; garde `boot-script-packages` qui rejoue le bundle
+du Dockerfile. **Non reçu.** Image, démarrage et production 571. **Déclencheur** :
+fusion de la PR, puis construction de l'image.
+
 ## 570 — IN1 fermé dans les routeurs ; refus documentaires typés (2026-11-11)
 
 **Fermé localement.** Plus aucune lecture `findUniqueOrThrow`/`findFirstOrThrow` keyée
