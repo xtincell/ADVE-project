@@ -1,3 +1,37 @@
+## 564 — F2 contrat S unique : désaccord reproduit et convergé localement (2026-11-11)
+
+**Fermé localement (cause du constat 436).** La maturité de S ne lisait que la présence
+des champs, le schéma strict était lu à part par la composition relue : une forme
+historique synthétique était COMPLETE/100 et refusée sur dix chemins, le cache
+persisté `COMPLET`, et `sequence-vault` jugeait S par sa confiance. Convergence sur
+un seul contrat (ADR-0214, amendement 6.27.564) : admission de forme pour tout
+écrivain de S dans le gateway, stade ≥ ENRICHED ⇔ schéma strict accepté, chemins
+refusés listés et plafond sous 100 %, `ZOD_STRICT_FAILED` émis, `inspectSynthesis`
+et `sequence-vault` dérivés de ce verdict, auto-filler sans réécriture d’une valeur
+présente refusée, score structurel gelé. Preuves : `synthesis-single-contract.test.ts`
+(dix rouges sur `main`, dont un dû seulement au champ `invalid` absent de `main`) et
+deux cas PostgreSQL de `synthesis-write.postgres.test.ts` (deux rouges sur `main`).
+
+**Non reçu.** CI, image, runtime et production 564 ; relecture des S réels après
+livraison. Les S réels de forme historique passeront « Brouillon » avec leurs chemins
+refusés et un cache stocké divergent (`CACHE_DIVERGENCE`) jusqu’à leur prochaine
+écriture. **Plan** : ouvrir la PR (label `out-of-scope`, numéro réel dans
+`scope-drift.md`), recevoir CI et image, puis relire en production le S d’un dossier
+réel (stade, chemins refusés, approbation refusée) et l’actualiser par le recalcul
+gouverné existant si ses sources le permettent, sans normaliser ni compléter.
+**Déclencheur** : ouverture de la PR, puis prochaine réception C3/C4/C6 Guidance.
+
+**Reste ouvert, hors de ce lot.** (a) Les piliers ADVE gardent leur tolérance aux
+brouillons (ADR-0172) : leur maturité n’est pas bornée par leur schéma strict ;
+étendre `STRICT_CONTENT_PILLARS` exige la normalisation sémantique tracée de la
+reprise « Formats ADVE legacy » ci-dessous, avec le même déclencheur. (b) Les canons
+du dépôt (quatre S) restent de forme historique : `canon-sync` les importe comme
+brouillons non composés ; leur mise en conformité relève d’une décision sur les
+données de marque, pas d’une coercition. **Déclencheur** : prochaine passe seed ou
+`canon-sync`. (c) Le cardinal minimal du contrat COMPLETE dérivé du schéma reste
+« au moins un » pour les tableaux (ex. `kpiDashboard` min 5) ; le bornage strict de S
+le couvre, les autres piliers non. **Déclencheur** : extension de (a).
+
 ## 559 — IN7 reçu localement ; page de console, retrait d’équipe et 500 des routeurs ouverts (2026-11-11)
 
 **Fermé localement.** Rétrogradation, suppression et réaffectation des comptes ordinaires
@@ -385,7 +419,8 @@ formes stockées ne satisfont pas les schémas stricts, alors que leur contenu p
 être rendu ou compté présent. Le correctif de lecture ne normalise pas ces données
 et un compteur de présence ne les valide pas. Cette reprise prolonge la dette
 historique de désaccord entre formes legacy, maturité et schéma strict tracée
-ci-dessous ; elle n’autorise ni assouplissement des schémas ni remplissage fictif.
+ci-dessous (fermée pour S en 564 ; ADVE ouvert) ; elle n’autorise ni assouplissement
+des schémas ni remplissage fictif.
 
 **Plan concret** : inventorier chaque chemin incompatible et retrouver sa source,
 son édition et la version du pilier. Proposer une normalisation sémantique vers
@@ -2436,6 +2471,8 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   business absents. **Réconcilier** les contrats et formes historiques avec le
   S calculé et ses sources réelles, puis les consommateurs ; ne pas affaiblir la
   gate, forcer une approbation ou fabriquer du contenu pour passer le contrôle.
+  (Contrats, écrivains et consommateur sequence-vault réconciliés localement en
+  564 ; relecture des S réels encore à recevoir, section 564 en tête.)
   Preuve privée native-s-composition-contract-conflict.json. La revue statique
   436 relevait la validation conservée après currentVersion++ et le rafraîchissement
   direct canon-sync. **437 livré dans 438, causes locales réparées** : collections S
@@ -2741,11 +2778,11 @@ aucun fournisseur/cycle réel : [reçu UX](RECEPTION-PTAH-UX.md).
   440 exact et contrôles reçus ; lecture réelle SPAWT USER seulement, aucune
   actions.sync sur dossier réel. Mutations 403/200 locales uniquement, aucune
   préservation générale des décisions déduite. [Reçu 440](REFONTE-PLAN.md).
-  Réconcilier maturité COMPLETE par présence/formes
-  historiques/schéma strict et affichage Complet/Périmé sans gate affaiblie ni
-  matière inventée. Recevoir
-  les consommateurs (dont sequence-vault : confiance ≥0.6 OU VALIDATED), la
-  source modifiée pendant création de projets, puis cycles/modes/isolation.
+  ~~Réconcilier maturité COMPLETE par présence/formes historiques/schéma strict
+  et affichage Complet/Périmé ; consommateur sequence-vault (confiance ≥0.6 OU
+  VALIDATED)~~ — **fermé localement en 564** (contrat S unique, ADR-0214 amendé,
+  section 564 en tête). Restent : la source modifiée pendant création de projets,
+  puis cycles/modes/isolation.
   **Âge global, lecture statique seulement** : auditAllStrategies scanne
   Strategy.status ACTIVE et ne consulte pas autoRecalculate=false avant Process.
   Ce défaut n’est ni reproduit ni corrigé en 437. **Plan** : reproduire les

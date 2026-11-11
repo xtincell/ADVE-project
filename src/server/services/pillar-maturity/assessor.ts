@@ -19,7 +19,7 @@ import type {
   StrategyMaturityReport,
 } from "@/lib/types/pillar-maturity";
 import { MATURITY_ORDER } from "@/lib/types/pillar-maturity";
-import { findEmptyLeafPaths, findEmptyArrayCellPaths, isNonFabricableLeaf } from "@/lib/types/pillar-maturity-contracts";
+import { findEmptyLeafPaths, findEmptyArrayCellPaths, isNonFabricableLeaf, strictContentIssues } from "@/lib/types/pillar-maturity-contracts";
 import { getContracts } from "./contracts-loader";
 
 // ─── Field Validation ───────────────────────────────────────────────────────
@@ -195,6 +195,7 @@ export function assessPillar(
       derivable: ct?.stages.COMPLETE.filter(r => r.derivable).map(r => r.path) ?? [],
       needsHuman: ct?.stages.COMPLETE.filter(r => !r.derivable).map(r => r.path) ?? [],
       optionalFillable: [],
+      invalid: [],
       completionPct: 0,
       readyForGlory: false,
     };
@@ -259,6 +260,29 @@ export function assessPillar(
   }
   const deepGapCount = deepSeen.size;
 
+  // ── Contrat unique : maturité bornée par le schéma strict (ADR-0214 amendement) ──
+  // Pour S, la présence ne suffit plus : un champ présent que le schéma strict
+  // refuse (montant en texte, fréquence hors énumération, identifiant non UUID,
+  // cardinalité insuffisante…) n'est pas rempli. Sans ce bornage, un S historique
+  // était COMPLETE/100 ici et refusé par la composition relue (validation-status)
+  // — deux verdicts sur un même contenu. Mêmes chemins que ceux que l'approbation
+  // liste ; aucune normalisation implicite, aucune valeur réécrite.
+  // INVARIANT DE DÉCOUPLAGE (ADR-0102) conservé : `satisfied` reste inchangé (le
+  // score structurel le lit) — seuls le %, le stade et `missing` deviennent honnêtes.
+  const strictIssues = strictContentIssues(pillarKey, content);
+  const invalid: string[] = [];
+  const invalidTopKeys = new Set<string>();
+  for (const { path, topKey } of strictIssues) {
+    invalidTopKeys.add(topKey);
+    if (!invalid.includes(path)) invalid.push(path);
+    if (missing.includes(path)) continue;
+    missing.push(path);
+    // Présent mais refusé : la reprise est un recalcul depuis les sources ou la
+    // correction de la source — jamais une rédaction par l'auto-filler.
+    needsHuman.push(path);
+  }
+  const invalidSatisfiedCount = satisfied.filter((p) => invalidTopKeys.has(p.split(/[.[]/)[0]!)).length;
+
   // ── Profondeur OPTIONNELLE remplissable (ADR-0177 — « Enrichir remplit tout ») ─
   // Ce que l'auto-filler PEUT encore combler SANS gater COMPLET : cellules de
   // matrice d'objets (`personas[i].lifestyle/.fears/.jobsToBeDone`,
@@ -294,15 +318,23 @@ export function assessPillar(
   // deepGapCount === 0 → `satisfied / completeReqs` (comportement inchangé) ;
   // deepGapCount > 0 → dénominateur gonflé → % < 100 (honnête).
   const honestTotal = completeReqs.length + deepGapCount;
-  const completionPct = honestTotal > 0
-    ? Math.round((satisfied.length / honestTotal) * 100)
+  const honestSatisfied = satisfied.length - invalidSatisfiedCount;
+  const rawPct = honestTotal > 0
+    ? Math.round((honestSatisfied / honestTotal) * 100)
     : 100;
+  // Un contenu refusé par son schéma strict n'est jamais présenté à 100 %.
+  const completionPct = strictIssues.length > 0 ? Math.min(rawPct, 99) : rawPct;
 
   // Un pilier avec une feuille REQUISE vide n'est PAS COMPLETE — le pill
   // « Complet », `readyForGlory` et le gate DISPLAY_AS_COMPLETE le reflètent.
   // (On ne rétrograde que COMPLETE→ENRICHED ; les stages inférieurs sont déjà honnêtes.)
-  const effectiveStage: MaturityStage | "EMPTY" =
+  const deepStage: MaturityStage | "EMPTY" =
     deepGapCount > 0 && currentStage === "COMPLETE" ? "ENRICHED" : currentStage;
+  // ENRICHED est le contrat de composition de S (validation-status) : un contenu
+  // refusé par le schéma strict n'est ni composé ni complet → INTAKE (« existe,
+  // à recomposer »). D'où : stade ≥ ENRICHED ⇔ schéma strict accepté (piliers stricts).
+  const effectiveStage: MaturityStage | "EMPTY" =
+    strictIssues.length > 0 && (deepStage === "ENRICHED" || deepStage === "COMPLETE") ? "INTAKE" : deepStage;
 
   // Determine next stage
   let nextStage: MaturityStage | null = null;
@@ -320,6 +352,7 @@ export function assessPillar(
     derivable,
     needsHuman,
     optionalFillable,
+    invalid,
     completionPct,
     readyForGlory: effectiveStage === "COMPLETE",
   };
