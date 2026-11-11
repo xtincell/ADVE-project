@@ -11,6 +11,14 @@
 - Recette croisée locale : `servir.mjs` réel de la branche La Barre derrière la vraie route (pont HTTP), PostgreSQL réel, Chrome. `contexte.json` déclare la personne, le rail dit « authentifié par La Fusée » ; « Clore le bilan de campagne » enregistre une décision, trois lignes de journal et la version, toutes attestées et scellées ; depuis la même page, une attestation forgée, renommée ou effacée reçoit 422 et une révision périmée 409, base inchangée ; « Transmettre à La Fusée » reçu en 1,3 s, source rangée avec l’attestation de la version ; Paramètres : sélecteur verrouillé, lignes du journal attestées ; aucune erreur de page. Non reçus : CI, images et production 569 des deux dépôts, un geste attesté sur l’instance livrée.
 - Restes (sans identité dans `servir.mjs`, trois registres seulement, personne connectée non reliée aux personnes de La Barre, rotation de la clé, ordre de livraison La Barre d’abord ou ensemble) : RESIDUAL-DEBT § 569.
 
+## v6.27.567 — fix(ingestion): la route d'admission des observations authentifie avant de lire le corps (2026-11-11)
+
+**Constaté en production 6.27.565 : un appel anonyme à `POST /api/ingest/metrics` recevait 400 avec le détail de validation du contrat au lieu de 401. La route authentifie désormais avant toute lecture du corps.**
+
+- Ordre de `src/app/api/ingest/metrics/route.ts` : authentification (clé `x-api-key` limitée au serveur `ingest`, session ADMIN, puis `CRON_SECRET` interne) d'abord, ensuite lecture et validation du corps, garde de portée, émission. Un appelant anonyme reçoit 401 quel que soit le corps, JSON invalide compris, sans message de validation. Pour un appelant authentifié, rien ne change : corps invalide 400 typé, clé d'une autre marque 403 `SCOPE_DENIED`, marque inconnue 404, rejeu et conflit inchangés ; un refus 400 n'est toujours pas facturé (`meterMcp` n'enveloppe que l'émission).
+- `authenticateMcpRequest` ne lit que les en-têtes : déplacer l'appel ne consomme pas le corps.
+- Vérification : nouveau cas `external-metric-route.test.ts` (anonyme, mois invalide puis JSON invalide : 401 sans détail, ni émission ni facturation), rouge sur `main` 6.27.566 et vert après, fichier 13/13. `datacollector-admission.postgres.test.ts` 5/5 sur base PostgreSQL neuve migrée (clés réelles, refus 400 typés, 403, 404, rejeu). Aucun modèle, migration, Intent, service ou ADR. CI, image et production 567 suivies séparément.
+
 ## v6.27.566 — feat(barre): le bilan de campagne arrêté dans La Barre est reçu dans les documents de la marque (2026-11-11)
 
 **Point LB4 du programme Shinkiro : la campagne suivante n’a plus à repartir sans son diagnostic. La Barre fige le bilan par une décision, La Fusée le relit, vérifie son empreinte et le range comme proposition dans les sources de la marque.**
