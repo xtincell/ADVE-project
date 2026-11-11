@@ -28,6 +28,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 558 — la console des clés MCP n’offrait pas toutes les portées serveur (2026-11-11)
+
+Symptôme : `/console/anubis/api-billing` tenait sa liste de serveurs en dur, sans `council`, `oracle` ni `ingest` (ADR-0146) ; une clé limitée à l’un de ces serveurs ne pouvait pas y être émise. Le routeur `mcpBilling.createKey` acceptait n’importe quelle chaîne : une clé limitée à un serveur inconnu de l’authentification était créée, puis n’appelait rien. Patch (v6.27.558) : liste unique `MCP_SERVER_NAMES` / `MCP_KEY_SERVER_SCOPES` dans le module feuille `mcp-scope-kind`, reprise par `loadAllServers`, la console et la validation `z.enum` du routeur. Verrou `mcp-key-server-scopes.test.ts` : chaque serveur demandé par une route MCP ou d’ingestion doit être une portée émettable. Croisé en recevant F13 (clé limitée à un serveur), commit `fix(mcp)` dédié.
+
+Hypothèse de cause racine : la console et le dispatch MCP ont été écrits séparément et la liste a été recopiée ; l’ajout de `council`/`oracle` (ADR-0182) et d’`ingest` (ADR-0146) n’a touché que le serveur. Aucune garde ne comparait les portées émises aux noms que l’authentification honore. Dette liée : aucune.
+
 ### 557 — `ingestion.getSource` distinguait une source étrangère d’un id inconnu (2026-11-11)
 
 Symptôme : appelé sans dossier, le lecteur `getSource` refusait en 403 dans les deux cas, mais avec deux messages : « Ce document n’est plus accessible dans ce dossier. » pour un id inconnu, « Accès refusé à cette marque » pour la source d’un autre locataire. Le message suffisait à savoir que la source existait. Patch (v6.27.557) : même 403 et même message dans les deux cas ; le contrat 403 du lecteur, retrait d’un partage compris, est conservé. Croisé en corrigeant IN1 (écrivains de source en 500), commit `fix(ingestion)` dédié.

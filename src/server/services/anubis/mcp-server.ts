@@ -13,7 +13,7 @@
 
 import type { z } from "zod";
 import { db } from "@/lib/db";
-import { isMcpServerAllowed } from "@/server/services/anubis/mcp-scope-kind";
+import { isMcpServerAllowed, MCP_SERVER_NAMES } from "@/server/services/anubis/mcp-scope-kind";
 
 /**
  * Portée d'un tool vis-à-vis des marques.
@@ -89,20 +89,8 @@ async function loadServer(name: string): Promise<McpServerModule | null> {
 // Notoria expose des `resources` (read-only), pas des `tools` callable —
 // elle est exclue de l'agrégateur tools. Pour exposer ses resources via le
 // manifest MCP, étendre `loadServer` avec un branch resource-aware.
-const MCP_SERVER_NAMES = [
-  "advertis",
-  "advertis-inbound",
-  "artemis",
-  "council",
-  "creative",
-  "guild",
-  "intelligence",
-  "operations",
-  "oracle",
-  "ptah",
-  "pulse",
-  "seshat",
-] as const;
+// Liste canonique : `MCP_SERVER_NAMES` (mcp-scope-kind, module feuille partagé
+// avec la console d'émission des clés).
 
 export type McpServerName = (typeof MCP_SERVER_NAMES)[number];
 

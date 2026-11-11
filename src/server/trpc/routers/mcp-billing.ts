@@ -39,6 +39,7 @@ import {
   settleStatement,
   currentPeriod,
 } from "@/server/services/anubis/mcp-billing";
+import { MCP_KEY_SERVER_SCOPES } from "@/server/services/anubis/mcp-scope-kind";
 /* lafusee:governed-active — router adminProcedure d'infra de facturation MCP (clés API, relevés gelés + paymentRef = audit propre) ; pas une mutation de marque gouvernée par mestor */
 
 export const mcpBillingRouter = createTRPCRouter({
@@ -48,7 +49,9 @@ export const mcpBillingRouter = createTRPCRouter({
     .input(
       z.object({
         name: z.string().min(2).max(80),
-        server: z.string().min(1).max(60), // nom de serveur MCP ou "*"
+        // « * », un serveur MCP agrégé ou `ingest` : une clé limitée à un serveur
+        // inconnu de l'authentification ne pourrait rien appeler.
+        server: z.enum(MCP_KEY_SERVER_SCOPES),
         ratePerCallUsd: z.number().min(0).max(10).default(0.002),
         includedMonthlyCalls: z.number().int().min(0).max(1_000_000).default(100),
         ownerEmail: z.string().email().optional(),
