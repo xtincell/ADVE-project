@@ -92,8 +92,11 @@ describe.sequential("mission visibility through PostgreSQL", () => {
   it("does not disclose the local brand to an outsider", async () => {
     expect(ownIds(await caller(outsiderId).list({ limit: 1000 })))
       .not.toContain(localMissionId);
-    await expect(caller(outsiderId).get({ id: localMissionId }))
-      .rejects.toMatchObject({ code: "FORBIDDEN" });
+    // IN1 (570) : la mission d'une autre marque reçoit la réponse d'un id inconnu.
+    const foreign = await caller(outsiderId).get({ id: localMissionId }).then(() => null, (e: { code?: string; message?: string }) => ({ code: e.code, message: e.message }));
+    const unknown = await caller(outsiderId).get({ id: "cmabsent-mission-of-no-installation" }).then(() => null, (e: { code?: string; message?: string }) => ({ code: e.code, message: e.message }));
+    expect(foreign).toEqual({ code: "NOT_FOUND", message: "Mission introuvable." });
+    expect(unknown).toEqual(foreign);
     await expect(caller(outsiderId).list({ strategyId: localBrandId }))
       .rejects.toMatchObject({ code: "FORBIDDEN" });
   });

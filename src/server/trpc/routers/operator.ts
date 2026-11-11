@@ -2,14 +2,15 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { found } from "../entity-access";
 /* lafusee:governed-active */
 
 export const operatorRouter = createTRPCRouter({
   getOwn: protectedProcedure.query(async ({ ctx }) => {
-    const user = await ctx.db.user.findUniqueOrThrow({
+    const user = found(await ctx.db.user.findUnique({
       where: { id: ctx.session.user.id },
       include: { operator: true },
-    });
+    }), "Compte introuvable.");
     return user.operator;
   }),
 
@@ -26,7 +27,7 @@ export const operatorRouter = createTRPCRouter({
   getById: adminProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.operator.findUniqueOrThrow({
+      return found(await ctx.db.operator.findUnique({
         where: { id: input.id },
         include: {
           _count: { select: { users: true, strategies: true, clients: {where:{status:{not:"REFERENCE"}}} } },
@@ -36,7 +37,7 @@ export const operatorRouter = createTRPCRouter({
             include: { client: { select: { id: true, name: true } } },
           },
         },
-      });
+      }), "Opérateur introuvable.");
     }),
 
   create: governedProcedure({

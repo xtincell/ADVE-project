@@ -23,7 +23,11 @@ import { prepareSocialPublication } from "@/domain/social-publication-package";
 import type { InputJsonValue as PrismaInputJson } from "@prisma/client/runtime/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { accessible } from "../entity-access";
 /* lafusee:governed-active */
+
+/** IN1 : un driver inconnu et le driver d'une autre marque reçoivent le même 404. */
+const DRIVER_NOT_FOUND = "Canal introuvable.";
 
 /** Engagement rate thresholds by platform (%) */
 const ENGAGEMENT_THRESHOLDS: Record<string, { low: number; good: number; excellent: number }> = {
@@ -53,10 +57,10 @@ export const socialRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       // Store connection metadata on the Driver
-      const driver = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.driverId } });
       // IDOR (round-10) : keyé sur driverId, aucune garde de tête → vérifier que
       // le driver appartient à une marque du caller avant d'y écrire.
-      await assertStrategyAccess(ctx, driver.strategyId);
+      const driver = await accessible(ctx.db.driver.findUnique({ where: { id: input.driverId } }), DRIVER_NOT_FOUND,
+        async (driver) => { await assertStrategyAccess(ctx, driver.strategyId); });
       const existing = (driver.constraints as Record<string, unknown>) ?? {};
       return ctx.db.driver.update({
         where: { id: input.driverId },
@@ -193,9 +197,9 @@ export const socialRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const driver = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.driverId } });
       // IDOR (round-10) : keyé sur driverId, aucune garde de tête.
-      await assertStrategyAccess(ctx, driver.strategyId);
+      const driver = await accessible(ctx.db.driver.findUnique({ where: { id: input.driverId } }), DRIVER_NOT_FOUND,
+        async (driver) => { await assertStrategyAccess(ctx, driver.strategyId); });
       const existing = (driver.constraints as Record<string, unknown>) ?? {};
       const socialConnections = (existing.socialConnections as Array<Record<string, unknown>>) ?? [];
 

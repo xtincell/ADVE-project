@@ -31,6 +31,7 @@ import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { processSignal, detectStrategyDrift } from "@/server/services/feedback-loop";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
+import { accessible, found } from "../entity-access";
 
 /**
  * Anti-IDOR (audit adversarial 2026-07-22) : `get`/`reprocess`/`propagateToQueue`
@@ -45,6 +46,8 @@ async function assertStrategyAccess(userId: string, strategyId: string): Promise
     throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette marque." });
   }
 }
+/** IN1 : un signal inconnu et un signal d'une autre marque reçoivent le même 404. */
+const SIGNAL_NOT_FOUND = "Signal introuvable.";
 /* lafusee:governed-active */
 
 export const signalRouter = createTRPCRouter({
@@ -103,12 +106,10 @@ export const signalRouter = createTRPCRouter({
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const signal = await ctx.db.signal.findUniqueOrThrow({
+      return accessible(ctx.db.signal.findUnique({
         where: { id: input.id },
         include: { strategy: true },
-      });
-      await assertStrategyAccess(ctx.session.user.id, signal.strategyId);
-      return signal;
+      }), SIGNAL_NOT_FOUND, (signal) => assertStrategyAccess(ctx.session.user.id, signal.strategyId));
     }),
 
   // Check drift status for a specific pillar on a strategy
@@ -138,11 +139,10 @@ export const signalRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const signal = await ctx.db.signal.findUniqueOrThrow({
+      await accessible(ctx.db.signal.findUnique({
         where: { id: input.signalId },
         select: { strategyId: true },
-      });
-      await assertStrategyAccess(ctx.session.user.id, signal.strategyId);
+      }), SIGNAL_NOT_FOUND, (signal) => assertStrategyAccess(ctx.session.user.id, signal.strategyId));
       try {
         const alerts = await processSignal(input.signalId);
         return { signalId: input.signalId, alerts };
@@ -157,10 +157,10 @@ export const signalRouter = createTRPCRouter({
   scoreVector: protectedProcedure
     .input(z.object({ signalId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const signal = await ctx.db.signal.findUniqueOrThrow({ where: { id: input.signalId } });
       // anti-IDOR (sibling manqué au 1er passage) : le vecteur de score d'un
       // signal appartient à une marque — sans garde, lecture cross-tenant.
-      await assertStrategyAccess(ctx.session.user.id, signal.strategyId);
+      const signal = await accessible(ctx.db.signal.findUnique({ where: { id: input.signalId } }), SIGNAL_NOT_FOUND,
+        (s) => assertStrategyAccess(ctx.session.user.id, s.strategyId));
       const vector = (signal.advertis_vector as Record<string, number>) ?? {};
       const pillars = [...PILLAR_STORAGE_KEYS];
       // Each pillar scores /25, total /200
@@ -220,11 +220,10 @@ export const signalRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const signal = await ctx.db.signal.findUniqueOrThrow({
+      const signal = await accessible(ctx.db.signal.findUnique({
         where: { id: input.signalId },
         include: { strategy: true },
-      });
-      await assertStrategyAccess(ctx.session.user.id, signal.strategyId);
+      }), SIGNAL_NOT_FOUND, (s) => assertStrategyAccess(ctx.session.user.id, s.strategyId));
 
       // Create a decision queue entry as a Process of type TRIGGERED
       const queueEntry = await ctx.db.process.create({
@@ -289,10 +288,10 @@ export const signalRouter = createTRPCRouter({
       const thresholds = (config?.data as Record<string, { warn: number; critical: number }>) ?? {};
 
       // Load strategy vector
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+      const strategy = found(await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
         select: { advertis_vector: true },
-      });
+      }), "Marque introuvable.");
       const vector = (strategy.advertis_vector as Record<string, number>) ?? {};
 
       const alerts: Array<{ pillar: string; value: number; level: "OK" | "WARN" | "CRITICAL" }> = [];

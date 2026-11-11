@@ -32,17 +32,22 @@ export async function ensureSalesOfferToolsIn(tx: Tx, keyId: string) {
   const additions = ["operations.sales_prepare_offer", "operations.sales_request_payment"].filter(tool => !allowedTools.includes(tool));
   if (additions.length) await tx.mcpApiKey.update({ where: { id: keyId }, data: { permissions: { ...permissions, allowedTools: [...allowedTools, ...additions] } as Prisma.InputJsonObject } });
 }
+/** IN1 : une marque inconnue reçoit le refus d'une marque d'une autre équipe, jamais P2025. */
 export async function assertFleetBrand(actor: FleetActor, strategyId: string) {
-  const brand = await db.strategy.findUniqueOrThrow({ where: { id: strategyId }, select: { id: true, userId: true, operatorId: true, client: { select: { operatorId: true } } } });
-  const operatorId = brand.operatorId ?? brand.client?.operatorId ?? null;
-  if (!actor.admin && brand.userId !== actor.id && (!operatorId || operatorId !== actor.operatorId)) {
+  const brand = await db.strategy.findUnique({ where: { id: strategyId }, select: { id: true, userId: true, operatorId: true, client: { select: { operatorId: true } } } });
+  const operatorId = brand ? brand.operatorId ?? brand.client?.operatorId ?? null : null;
+  if (!brand || (!actor.admin && brand.userId !== actor.id && (!operatorId || operatorId !== actor.operatorId))) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Gestion des vendeurs réservée à l’équipe de cette marque." });
   }
   return { ...brand, operatorId };
 }
 export async function assertFleetProfile(actor: FleetActor, id: string) {
-  const profile = await db.salesRepresentative.findUniqueOrThrow({ where: { id } });
-  await assertFleetBrand(actor, profile.strategyId);
+  const profile = await db.salesRepresentative.findUnique({ where: { id } });
+  if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "Vendeur introuvable." });
+  await assertFleetBrand(actor, profile.strategyId).catch((error: unknown) => {
+    if (error instanceof TRPCError && error.code === "FORBIDDEN") throw new TRPCError({ code: "NOT_FOUND", message: "Vendeur introuvable." });
+    throw error;
+  });
   return profile;
 }
 export async function listSalesRepresentatives(actor: FleetActor, strategyId: string) {

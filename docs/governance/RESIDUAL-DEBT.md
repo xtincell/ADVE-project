@@ -1,3 +1,57 @@
+## 570 — IN1 fermé dans les routeurs ; refus documentaires typés (2026-11-11)
+
+**Fermé localement.** Plus aucune lecture `findUniqueOrThrow`/`findFirstOrThrow` keyée
+par un identifiant d'entrée dans `src/server/trpc/routers/` : 161 lectures converties
+dans 45 routeurs au patron `src/server/trpc/entity-access.ts` (lecture `findUnique`,
+même 404 pour inconnu et refusé, avant toute écriture ; aucune règle globale P2025).
+Les gardes keyées par id qui répondaient 404 à l'inconnu et 403 au refusé répondent le
+même 404 (propositions, actifs, livrables, activités, contrats, conversations, suivis,
+process, profils talent, diagnostics, canaux, affaires, vendeurs, études). Les refus de
+`document-versions` et de `setSourceUse` sont typés (`CONFLICT`, `FORBIDDEN`,
+`NOT_FOUND`, `BAD_REQUEST`), mêmes messages. Cinq accès entre marques corrigés en
+passant (PATCHED-SYMPTOMS 570). Preuves : `router-entity-not-found.postgres.test.ts`
+rouge sur `main` à 13 cas sur 14, vert à 14 après ; unitaires `document-versions`
+2 rouges puis verts.
+
+**Cliquet** (`tests/unit/governance/router-entity-not-found.test.ts`, bases
+décroissantes) : lectures `OrThrow` keyées par l'entrée **0** (146 sur `main` 569) ;
+toutes lectures `OrThrow` des routeurs **3** (164 sur `main`), trois relectures internes :
+`crm.ts` (propriétaire de la marque vendeuse d'une affaire déjà gardée),
+`intervention.ts` et `mission-applications.ts` (relecture après écriture, en
+transaction). Abaisser la base dans le commit qui en convertit une.
+
+**Non reçu.** CI, image, runtime et production 570 ; rejeu de la recette d'installation
+isolée (`installation/entreprise.py`) sur l'image 570 au-delà des sources.
+**Plan** : ouvrir la PR (label `out-of-scope`, numéro réel dans `scope-drift.md`),
+recevoir CI et image, puis rejouer la recette isolée en ajoutant un écrivain keyé hors
+sources (ex. `campaignManager.completeMilestone`) : id de l'autre entreprise et id
+inconnu attendus au même 404. **Déclencheur** : ouverture de la PR, puis prochaine
+réception C7.
+
+**Reste ouvert.**
+(a) Gardes qui distinguent encore : `brand-node` (`assertNodeAccess` 404/403,
+`getBySlug` null/403 — un test PostgreSQL attend 403 sur un dossier archivé) et
+`brand-vault.withAssetStrategy`. Les gardes posées avant la lecture (`canAccess*`,
+`strategyScopedProcedure`, `campaignScopedProcedure`) répondent 403 à l'inconnu comme au
+refusé : pas d'oracle, mais pas 404. **Plan** : passer `assertNodeAccess` au patron
+après décision sur le contrat 403 d'un dossier archivé, puis, si l'uniformité 404 est
+voulue, convertir les gardes amont avec leurs tests. **Déclencheur** : prochaine
+modification de `brand-node`, ou recette d'isolation C7 qui l'exige.
+(b) La même classe vit dans les services : lectures `OrThrow` keyées par un id venu de
+l'appelant (ex. `bureau-etudes.compareWaves`, `consulting.setRecommendationRice`,
+`crm-engine`). Les routeurs gardent désormais l'entité avant l'appel ; seul un id
+retiré entre la garde et le service y donne encore 500. **Plan** : même cliquet étendu
+aux services appelés par un routeur, conversion fichier par fichier. **Déclencheur** :
+prochaine modification d'un de ces services.
+(c) Refus encore en `Error` nu sur des chemins documentaires voisins :
+`readAccessibleBrandSource` (`SOURCE_UNAVAILABLE:`, converti par les routeurs mais pas
+par les autres appelants), `assertCurrentSourceReceipts`, et les refus d'`original.ts`
+(dépôt d'un original déjà classé ou corrigé, via `uploadFile`). **Plan** : `sourceRefusal`
+existant, mêmes messages, consommateurs à préfixe vérifiés. **Déclencheur** : prochaine
+session sur le dépôt d'originaux ou les reçus de source.
+(d) `throw new Error(` dans les routeurs : 104 dans 33 fichiers (116 avant 570) ; plan
+inchangé dans § 559.
+
 ## 569 — LB3 acteur authentifié des décisions La Barre : reçu localement (2026-11-11)
 
 **Fermé localement.** Servie derrière La Fusée, La Barre reçoit dans `contexte.json` la
@@ -198,7 +252,7 @@ même registre), avec la même réception. **Déclencheur** : décision opérate
 sortie d’un membre d’équipe, ou premier départ réel.
 
 **Même classe de 500 dans les routeurs.** Relevé du 11 novembre, après correctif :
-116 `throw new Error(` dans 33 fichiers de `src/server/trpc/routers/`. Ceux qui portent un
+116 `throw new Error(` dans 33 fichiers (104 après 570, refus de propriétaire et de profil typés) de `src/server/trpc/routers/`. Ceux qui portent un
 refus ou un objet introuvable (exemple : `laguilde.publishMission`, « Mission
 introuvable. ») répondent 500 au lieu de 403/404. **Plan** : trier les appels par nature
 (refus, introuvable, invariant interne), convertir les deux premières en `TRPCError`
@@ -241,7 +295,8 @@ isolée (`installation/entreprise.py`, deux entreprises) sur l’image 557, cas
 numéro réel dans `scope-drift.md`), recevoir CI et image, puis rejouer la recette sur
 l’image exacte. **Déclencheur** : ouverture de la PR, puis prochaine réception C7.
 
-**Même classe hors des sources, non corrigée.** Relevé du 11 novembre, après correctif : 164 appels
+**Même classe hors des sources : fermée localement en 570** (§ 570 ci-dessus, cliquet à 0
+lecture keyée par l’entrée). Relevé historique du 11 novembre, après 557 : 164 appels
 `findUniqueOrThrow`/`findFirstOrThrow` dans 47 fichiers de routeurs, dont au moins 70
 lisent un id d’entrée sur la même ligne. Un id inconnu y donne 500 et un message Prisma qui
 expose le chemin et un extrait du fichier serveur ; une garde de marque placée après
@@ -256,7 +311,7 @@ en `CONFLICT`). **Plan** : même patron que `assertSourceAccess` (lecture `findU
 `OrThrow` d’un id d’entrée. **Déclencheur** : prochaine recette d’isolation C7, ou
 toute modification d’un de ces routeurs.
 
-**Refus métier encore en 500.** `setSourceUse` (« Le partage exige deux marques du
+**Refus métier encore en 500 : typés en 570** (§ 570 ; restes voisins en (c)). Relevé 557 : `setSourceUse` (« Le partage exige deux marques du
 même opérateur. », « Seul le responsable… ») et les services de `document-versions`
 (`SOURCE_CHANGED:`) lèvent des `Error` nus : tRPC répond 500 avec le bon message.
 La relecture sous verrou de ces services par `findUniqueOrThrow` donne aussi 500 si

@@ -26,6 +26,10 @@ import { createTRPCRouter, protectedProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
+import { accessible, found } from "../entity-access";
+
+/** IN1 : un communiqué inconnu et celui d'une autre marque reçoivent le même 404. */
+const PRESS_RELEASE_NOT_FOUND = "Communiqué introuvable.";
 
 /**
  * Anti-IDOR (audit adversarial 2026-07-22) : `processClipping` (clippingId=Signal),
@@ -184,10 +188,10 @@ export const prRouter = createTRPCRouter({
         where: { strategyId: input.strategyId },
       });
 
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+      const strategy = found(await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
         select: { name: true },
-      });
+      }), "Marque introuvable.");
 
       const brandName = strategy.name;
       const angles: Array<{ pillar: string; angle: string; talkingPoints: string[]; targetMedia: string }> = [];
@@ -258,10 +262,9 @@ export const prRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       // clippingId = Signal ID of type PRESS_CLIPPING
-      const clipping = await ctx.db.signal.findUniqueOrThrow({
+      const clipping = await accessible(ctx.db.signal.findUnique({
         where: { id: input.clippingId },
-      });
-      await assertStrategyAccess(ctx.session.user.id, clipping.strategyId);
+      }), "Retombée presse introuvable.", (c) => assertStrategyAccess(ctx.session.user.id, c.strategyId));
 
       const data = clipping.data as Record<string, unknown> | null;
       if (!data) throw new Error("Clipping has no data");
@@ -306,10 +309,9 @@ export const prRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       // pressReleaseId = BrandAsset ID with type press_release
-      const asset = await ctx.db.brandAsset.findUniqueOrThrow({
+      const asset = await accessible(ctx.db.brandAsset.findUnique({
         where: { id: input.pressReleaseId },
-      });
-      await assertStrategyAccess(ctx.session.user.id, asset.strategyId);
+      }), PRESS_RELEASE_NOT_FOUND, (a) => assertStrategyAccess(ctx.session.user.id, a.strategyId));
 
       const tags = asset.pillarTags as Record<string, unknown> | null;
       const content = (tags?.content as string) ?? "";
@@ -360,10 +362,9 @@ export const prRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const asset = await ctx.db.brandAsset.findUniqueOrThrow({
+      const asset = await accessible(ctx.db.brandAsset.findUnique({
         where: { id: input.pressReleaseId },
-      });
-      await assertStrategyAccess(ctx.session.user.id, asset.strategyId);
+      }), PRESS_RELEASE_NOT_FOUND, (a) => assertStrategyAccess(ctx.session.user.id, a.strategyId));
 
       const tags = asset.pillarTags as Record<string, unknown> | null;
       const existingDistribution = (tags?.distribution as Array<Record<string, unknown>>) ?? [];
@@ -406,10 +407,9 @@ export const prRouter = createTRPCRouter({
   getDistributionStatus: protectedProcedure
     .input(z.object({ pressReleaseId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const asset = await ctx.db.brandAsset.findUniqueOrThrow({
+      const asset = await accessible(ctx.db.brandAsset.findUnique({
         where: { id: input.pressReleaseId },
-      });
-      await assertStrategyAccess(ctx.session.user.id, asset.strategyId);
+      }), PRESS_RELEASE_NOT_FOUND, (a) => assertStrategyAccess(ctx.session.user.id, a.strategyId));
 
       const tags = asset.pillarTags as Record<string, unknown> | null;
       const distribution = (tags?.distribution as Array<Record<string, unknown>>) ?? [];

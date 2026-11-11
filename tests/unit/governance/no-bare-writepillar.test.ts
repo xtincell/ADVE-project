@@ -51,7 +51,7 @@ const ALLOWED_BARE_CALLERS: ReadonlyArray<{ file: string; line: number; reason: 
   },
   {
     file: "src/server/trpc/routers/quick-intake.ts",
-    line: 89,
+    line: 94,
     reason:
       "seedPillarFromIntake (reroute C1, P2-b) — bare writePillar VOLONTAIRE : préserve l'advertis_vector calculé à l'intake. writePillarAndScore recalculerait le score depuis le contenu brut partiel → régression du score affiché. Validation Zod + PillarVersion + cache canonique atomique + cascade staleness + author trail sont appliqués ; le score est recalculé à l'activation.",
   },

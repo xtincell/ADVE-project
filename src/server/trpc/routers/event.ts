@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { found } from "../entity-access";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -27,10 +28,10 @@ export const eventRouter = createTRPCRouter({
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.event.findUniqueOrThrow({
+      return found(await ctx.db.event.findUnique({
         where: { id: input.id },
         include: { registrations: true },
-      });
+      }), "Événement introuvable.");
     }),
 
   create: governedProcedure({

@@ -55,6 +55,7 @@ import {
 
 import { ADVE_STORAGE_KEYS, AdveKeySchema, PILLAR_KEYS, PillarKeySchema } from "@/domain";
 import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
+import { entityNotFound, found } from "../entity-access";
 /* lafusee:governed-active */
 
 const pillarKeyEnum = PillarKeySchema;
@@ -572,9 +573,12 @@ export const pillarRouter = createTRPCRouter({
     }),
   }).mutation(async ({ ctx, input }) => {
       // Load the glory output
-      const gloryOutput = await ctx.db.gloryOutput.findUniqueOrThrow({
+      // Le résultat doit appartenir à la marque gardée : inconnu ou d'une autre
+      // marque, le même 404 (IN1), avant toute écriture du pilier.
+      const gloryOutput = await ctx.db.gloryOutput.findUnique({
         where: { id: input.gloryOutputId },
       });
+      if (!gloryOutput || gloryOutput.strategyId !== input.strategyId) throw entityNotFound("Résultat d’outil introuvable dans cette marque.");
 
       const output = gloryOutput.output as Record<string, unknown>;
 
@@ -974,10 +978,10 @@ export const pillarRouter = createTRPCRouter({
   getPhase: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+      const strategy = found(await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
         select: { status: true, advertis_vector: true },
-      });
+      }), "Marque introuvable.");
       // Derive current phase from strategy status
       const phaseOrder = ["FICHE", "AUDIT", "IMPLEMENTATION", "COCKPIT", "COMPLETE"] as const;
       const statusToPhase: Record<string, (typeof phaseOrder)[number]> = {
@@ -1013,10 +1017,10 @@ export const pillarRouter = createTRPCRouter({
         COCKPIT: "COCKPIT", COMPLETE: "COMPLETED",
       };
 
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+      const strategy = found(await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
         select: { status: true },
-      });
+      }), "Marque introuvable.");
 
       // Determine current phase
       const statusToPhase: Record<string, string> = {

@@ -5,6 +5,7 @@ import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as auditTrail from "@/server/services/audit-trail";
 import { canAccessCampaign, canAccessStrategy, getOperatorContext, scopeCampaigns } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { found } from "../entity-access";
 /* lafusee:governed-active */
 
 export const campaignRouter = createTRPCRouter({
@@ -73,7 +74,7 @@ export const campaignRouter = createTRPCRouter({
         throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette campagne" });
       }
       const { id, advertis_vector, devotionObjective, ...data } = input;
-      const previous = await ctx.db.campaign.findUniqueOrThrow({ where: { id } });
+      const previous = found(await ctx.db.campaign.findUnique({ where: { id } }), "Campagne introuvable.");
       const updated = await ctx.db.campaign.update({
         where: { id },
         data: {
@@ -109,10 +110,10 @@ export const campaignRouter = createTRPCRouter({
       if (!(await canAccessCampaign(input.id, opCtx))) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette campagne" });
       }
-      return ctx.db.campaign.findUniqueOrThrow({
+      return found(await ctx.db.campaign.findUnique({
         where: { id: input.id },
         include: { missions: true, strategy: true },
-      });
+      }), "Campagne introuvable.");
     }),
 
   list: protectedProcedure

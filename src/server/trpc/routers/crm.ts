@@ -22,7 +22,13 @@ import { prepareSalesOfferInput } from "@/server/services/crm-engine/offer-contr
 import { prepareSalesOffer } from "@/server/services/crm-engine/offers";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { getOperatorContext } from "@/server/services/operator-isolation";
+import { accessible, entityNotFound, found, refusalAsNotFound } from "../entity-access";
 /* lafusee:governed-active */
+
+/** IN1 : un id inconnu et une entité hors portefeuille reçoivent le même 404. */
+const DEAL_NOT_FOUND = "Affaire introuvable.";
+const REPRESENTATIVE_NOT_FOUND = "Vendeur introuvable.";
+const SALES_RUN_NOT_FOUND = "Tâche de vente introuvable.";
 
 /** Opérateur de l'appelant pour le scope des lectures (null = ADMIN → global). */
 async function callerOperatorScope(ctx: {
@@ -35,16 +41,15 @@ async function callerOperatorScope(ctx: {
 }
 
 async function assertDealAccess(ctx: { session: { user: { id: string; role?: string | null } }; db: typeof import("@/lib/db").db }, dealId: string) {
-  const deal = await ctx.db.deal.findUniqueOrThrow({ where: { id: dealId } });
-  const scope = await callerOperatorScope(ctx);
-  if (scope !== null) {
+  return accessible(ctx.db.deal.findUnique({ where: { id: dealId } }), DEAL_NOT_FOUND, async (deal) => {
+    const scope = await callerOperatorScope(ctx);
+    if (scope === null) return;
     if (deal.operatorId ? deal.operatorId !== scope : !deal.strategyId) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Affaire hors de votre portefeuille." });
     }
     if (!deal.operatorId && deal.strategyId) await assertStrategyRead(ctx.session.user.id, deal.strategyId);
     if (deal.sellerStrategyId) await assertStrategyRead(ctx.session.user.id, deal.sellerStrategyId);
-  }
-  return deal;
+  });
 }
 async function assertLegacyStageChange(ctx: Parameters<typeof assertDealAccess>[0], dealId: string) {
   const deal = await assertDealAccess(ctx, dealId);
@@ -61,19 +66,31 @@ async function assertSalesBrandRead(ctx: SalesAccessContext, strategyId: string)
   await fleet.assertFleetBrand(actor, strategyId);
   return actor;
 }
+/** Résout une entité keyée vers sa marque vendeuse ; refus de la marque = 404 de l'entité. */
+async function salesActorFor(ctx: SalesAccessContext, strategyId: string, message: string): Promise<fleet.FleetActor> {
+  let actor: fleet.FleetActor | undefined;
+  await refusalAsNotFound(async () => { actor = await assertSalesBrandRead(ctx, strategyId); }, message);
+  return actor!;
+}
 async function assertSalesRepresentativeAccess(ctx: SalesAccessContext, representativeId: string, strategyId?: string): Promise<fleet.FleetActor> {
-  const profile = await ctx.db.salesRepresentative.findUniqueOrThrow({ where: { id: representativeId }, select: { strategyId: true } });
-  if (strategyId && profile.strategyId !== strategyId) throw new TRPCError({ code: "FORBIDDEN", message: "Vendeur hors de cette marque." });
-  return assertSalesBrandRead(ctx, profile.strategyId);
+  const profile = await ctx.db.salesRepresentative.findUnique({ where: { id: representativeId }, select: { strategyId: true } });
+  if (!profile || (strategyId && profile.strategyId !== strategyId)) throw entityNotFound(REPRESENTATIVE_NOT_FOUND);
+  return salesActorFor(ctx, profile.strategyId, REPRESENTATIVE_NOT_FOUND);
 }
 async function assertSalesRunAccess(ctx: SalesAccessContext, runId: string): Promise<fleet.FleetActor> {
-  const run = await ctx.db.salesRun.findUniqueOrThrow({ where: { id: runId }, select: { representativeId: true } });
-  return assertSalesRepresentativeAccess(ctx, run.representativeId);
+  const run = found(await ctx.db.salesRun.findUnique({ where: { id: runId }, select: { representativeId: true } }), SALES_RUN_NOT_FOUND);
+  let actor: fleet.FleetActor | undefined;
+  await refusalAsNotFound(async () => { actor = await assertSalesRepresentativeAccess(ctx, run.representativeId); }, SALES_RUN_NOT_FOUND);
+  return actor!;
 }
 async function assertSalesDealAccess(ctx: SalesAccessContext, dealId: string): Promise<fleet.FleetActor> {
-  const deal = await ctx.db.deal.findUniqueOrThrow({ where: { id: dealId }, select: { sellerStrategyId: true } });
-  if (!deal.sellerStrategyId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Rattacher une marque vendeuse avant cette demande." });
-  return assertSalesBrandRead(ctx, deal.sellerStrategyId);
+  const deal = found(await ctx.db.deal.findUnique({ where: { id: dealId }, select: { sellerStrategyId: true } }), DEAL_NOT_FOUND);
+  if (!deal.sellerStrategyId) {
+    // Sans marque vendeuse, l'état n'est dit qu'à qui voit l'affaire.
+    await assertDealAccess(ctx, dealId);
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Rattacher une marque vendeuse avant cette demande." });
+  }
+  return salesActorFor(ctx, deal.sellerStrategyId, DEAL_NOT_FOUND);
 }
 // ============================================================================
 // DEAL LIFECYCLE (opérateur/ADMIN uniquement)
@@ -176,8 +193,9 @@ export const crmRouter = createTRPCRouter({
     inputSchema: z.object({ intakeId: z.string() }),
     caller: "crm:createDealFromIntake",
   }).mutation(async ({ ctx, input }) => {
-    const intake = await ctx.db.quickIntake.findUniqueOrThrow({ where: { id: input.intakeId } });
+    // Le rôle est vérifié avant la lecture : le refus ne dit rien de l'intake demandé.
     if (ctx.session.user.role !== "ADMIN") throw new TRPCError({ code: "FORBIDDEN", message: "Rattachement intake réservé au mandant." });
+    const intake = found(await ctx.db.quickIntake.findUnique({ where: { id: input.intakeId } }), "Diagnostic introuvable.");
     return crm.createDealFromIntake(intake.id);
   }),
 
@@ -202,9 +220,9 @@ export const crmRouter = createTRPCRouter({
     const callerOperatorId = operatorId;
     if (input.sellerStrategyId) {
       await assertStrategyRead(ctx.session.user.id, input.sellerStrategyId);
-      const seller = await ctx.db.strategy.findUniqueOrThrow({
+      const seller = found(await ctx.db.strategy.findUnique({
         where: { id: input.sellerStrategyId }, select: { operatorId: true, client: { select: { operatorId: true } } },
-      });
+      }), "Marque introuvable.");
       operatorId = seller.operatorId ?? seller.client?.operatorId ?? operatorId;
       if (callerOperatorId !== null && operatorId !== callerOperatorId) throw new TRPCError({ code: "FORBIDDEN", message: "Marque hors de votre portefeuille de vente." });
     }
@@ -366,13 +384,13 @@ export const crmRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       await assertDealAccess(ctx, input.id);
-      return ctx.db.deal.findUniqueOrThrow({
+      return found(await ctx.db.deal.findUnique({
         where: { id: input.id },
         include: {
           strategy: { select: { id: true, name: true } },
           user: { select: { id: true, name: true, email: true } },
         },
-      });
+      }), DEAL_NOT_FOUND);
     }),
 
   listDeals: operatorProcedure

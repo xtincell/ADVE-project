@@ -4,6 +4,7 @@ import { readBrandOvertonPositioning } from "@/server/services/seshat/overton-gr
 import type { OvertonPositioning } from "@/domain/overton-positioning";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { found } from "../entity-access";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { checkPaidTier } from "@/server/services/glory-tools/tier-gate";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
@@ -72,14 +73,14 @@ export const cockpitRouter = createTRPCRouter({
   dashboard: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+      const strategy = found(await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
         include: {
           pillars: { select: { key: true, content: true, confidence: true, validationStatus: true } },
           missions: { where: { status: { in: ["IN_PROGRESS", "COMPLETED"] } }, select: { id: true, status: true } },
           campaigns: { where: { status: { not: "ARCHIVED" } }, select: { id: true, status: true } },
         },
-      });
+      }), "Marque introuvable.");
       const vector = strategy.advertis_vector as Record<string, number> | null;
 
       // Extract RTIS key metrics from pillar content for dashboard visibility

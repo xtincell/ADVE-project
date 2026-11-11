@@ -12,6 +12,11 @@ import { governedProcedure } from "@/server/governance/governed-procedure";
 import { canAccessStrategy } from "@/server/services/operator-isolation";
 import * as consulting from "@/server/services/consulting";
 import { setRecommendationRice, sortByRice } from "@/server/services/consulting";
+import { accessible, entityNotFound } from "../entity-access";
+
+/** IN1 : une entité inconnue et une entité d'une autre marque reçoivent le même 404. */
+const RECOMMENDATION_NOT_FOUND = "Recommandation introuvable.";
+const HYPOTHESIS_NOT_FOUND = "Hypothèse introuvable.";
 /* lafusee:governed-active */
 
 type Ctx = { session: { user: { id: string; role: string; operatorId?: string | null } } };
@@ -63,11 +68,10 @@ export const consultingRouter = createTRPCRouter({
     }),
     caller: "consulting:setRice",
   }).mutation(async ({ ctx, input }) => {
-    const reco = await ctx.db.recommendation.findUniqueOrThrow({
+    await accessible(ctx.db.recommendation.findUnique({
       where: { id: input.recommendationId },
       select: { strategyId: true },
-    });
-    await assertStrategyAccess(ctx, reco.strategyId);
+    }), RECOMMENDATION_NOT_FOUND, (reco) => assertStrategyAccess(ctx, reco.strategyId));
     return setRecommendationRice(input);
   }),
 
@@ -104,8 +108,8 @@ export const consultingRouter = createTRPCRouter({
     inputSchema: z.object({ engagementId: z.string(), statement: z.string().min(1).max(1000) }),
     caller: "consulting:addHypothesis",
   }).mutation(async ({ ctx, input }) => {
-    const eng = await ctx.db.consultingEngagement.findUniqueOrThrow({ where: { id: input.engagementId }, select: { strategyId: true } });
-    await assertStrategyAccess(ctx, eng.strategyId);
+    await accessible(ctx.db.consultingEngagement.findUnique({ where: { id: input.engagementId }, select: { strategyId: true } }),
+      "Mission de conseil introuvable.", (eng) => assertStrategyAccess(ctx, eng.strategyId));
     return consulting.addHypothesis(input);
   }),
 
@@ -122,8 +126,8 @@ export const consultingRouter = createTRPCRouter({
     }),
     caller: "consulting:addEvidence",
   }).mutation(async ({ ctx, input }) => {
-    const hyp = await ctx.db.hypothesis.findUniqueOrThrow({ where: { id: input.hypothesisId }, select: { engagement: { select: { strategyId: true } } } });
-    await assertStrategyAccess(ctx, hyp.engagement.strategyId);
+    await accessible(ctx.db.hypothesis.findUnique({ where: { id: input.hypothesisId }, select: { engagement: { select: { strategyId: true } } } }),
+      HYPOTHESIS_NOT_FOUND, (hyp) => assertStrategyAccess(ctx, hyp.engagement.strategyId));
     return consulting.addEvidence(input);
   }),
 
@@ -132,8 +136,12 @@ export const consultingRouter = createTRPCRouter({
     inputSchema: z.object({ recommendationId: z.string(), hypothesisId: z.string() }),
     caller: "consulting:linkRecommendation",
   }).mutation(async ({ ctx, input }) => {
-    const reco = await ctx.db.recommendation.findUniqueOrThrow({ where: { id: input.recommendationId }, select: { strategyId: true } });
-    await assertStrategyAccess(ctx, reco.strategyId);
+    const reco = await accessible(ctx.db.recommendation.findUnique({ where: { id: input.recommendationId }, select: { strategyId: true } }),
+      RECOMMENDATION_NOT_FOUND, (r) => assertStrategyAccess(ctx, r.strategyId));
+    // L'hypothèse doit appartenir à la même marque : inconnue ou d'une autre
+    // marque, le même 404 (IN1), avant toute écriture.
+    const hyp = await ctx.db.hypothesis.findUnique({ where: { id: input.hypothesisId }, select: { engagement: { select: { strategyId: true } } } });
+    if (!hyp || hyp.engagement.strategyId !== reco.strategyId) throw entityNotFound(HYPOTHESIS_NOT_FOUND);
     return consulting.linkRecommendationToHypothesis(input);
   }),
 });
