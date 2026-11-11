@@ -28,6 +28,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 570 — cinq écrivains acceptaient une entité d’une autre marque (2026-11-11)
+
+Symptôme : la garde de marque portait sur l’identifiant de tête, pas sur l’entité liée. `campaignManager.createFromValidatedAction` créait une campagne de la marque gardée à partir de l’action d’une autre marque (titre, description, budget copiés, statut de l’action étrangère modifié) ; `consulting.linkRecommendation` rattachait une recommandation à l’hypothèse d’une autre marque ; `pillar.applyGloryOutput` écrivait dans un pilier le résultat d’outil d’une autre marque ; `bureauEtudes.compareWaves` lisait l’échantillon des vagues d’une autre étude ; `campaignTracker.reportFieldProgress` (opérateur) écrivait un rapport terrain sur l’opération d’une autre équipe. Patch (v6.27.570) : l’entité liée doit appartenir à la marque, à l’étude ou à la campagne gardée, sinon le même 404 qu’un id inconnu, avant toute écriture. Croisé en convertissant les lectures `OrThrow` des routeurs (IN1), même commit `fix(trpc)`.
+
+Hypothèse de cause racine : un identifiant secondaire de l’entrée est lu sans garde parce que la garde ADR-0175/ADR-0166 ne voit que l’identifiant de tête, et le verrou `entity-id-idor-proactive` ne contrôle que la présence d’une garde dans la procédure, pas qu’elle couvre chaque identifiant. Dette liée : aucune nouvelle ; le cliquet `router-entity-not-found` impose désormais la lecture sans exception, pas l’appartenance (revue).
+
 ### 560 — `/status` affichait « Opérationnel » sans mesure ; la force /200 annoncée sans être affichée (2026-11-11)
 
 Symptôme : `/status` remplaçait chaque lecture échouée par 0 (`.catch(() => 0)`) et posait `successRate = 100` quand il n'y avait ni succès ni échec : base injoignable ou journée sans activité donnaient « Opérationnel 100 % ». Un moyen de paiement à clés posées était « ✓ actif », même refusé par le prestataire (CinetPay, 513). Sur le résultat du diagnostic, la phrase « voici la force qu'elle révèle — le score complet /200 » était posée par la page même quand `ForceSection` ne rendait rien. Patch : `derivePublicStatus` (`src/lib/public-status.ts`), « Non mesuré » avec sa raison, « configuré » ; phrase déplacée dans `ForceSection`. Tests `public-status` et `intake-force-bridge`, rouges puis verts.
@@ -44,7 +50,7 @@ Hypothèse de cause racine : la console et le dispatch MCP ont été écrits sé
 
 Symptôme : appelé sans dossier, le lecteur `getSource` refusait en 403 dans les deux cas, mais avec deux messages : « Ce document n’est plus accessible dans ce dossier. » pour un id inconnu, « Accès refusé à cette marque » pour la source d’un autre locataire. Le message suffisait à savoir que la source existait. Patch (v6.27.557) : même 403 et même message dans les deux cas ; le contrat 403 du lecteur, retrait d’un partage compris, est conservé. Croisé en corrigeant IN1 (écrivains de source en 500), commit `fix(ingestion)` dédié.
 
-Hypothèse de cause racine : les gardes keyées par id lisent l’entité puis appellent `assertStrategyRead`, dont le refus `FORBIDDEN` porte son propre message ; « inconnu » et « refusé » suivent donc deux chemins de réponse. Le patron commun (lecture sans exception, une seule réponse pour inconnu et refusé) n’existe que dans `assertSourceAccess`. Dette liée : RESIDUAL-DEBT, « 557 — IN1 fermé pour les sources ; même classe ailleurs ».
+Hypothèse de cause racine : les gardes keyées par id lisent l’entité puis appellent `assertStrategyRead`, dont le refus `FORBIDDEN` porte son propre message ; « inconnu » et « refusé » suivent donc deux chemins de réponse. Le patron commun (lecture sans exception, une seule réponse pour inconnu et refusé) n’existait que dans `assertSourceAccess`. **Cause traitée dans les routeurs en 6.27.570** : patron `src/server/trpc/entity-access.ts` et cliquet `router-entity-not-found` ; restes (brand-node, services) dans RESIDUAL-DEBT § 570.
 
 ### 556 — dépendances : 63 alertes npm accumulées, dont 9 critiques (2026-11-11)
 
