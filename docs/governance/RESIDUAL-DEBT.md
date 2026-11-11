@@ -1,3 +1,23 @@
+## 558 — F13 : premier clic et clé MCP limitée, réceptions restantes (2026-11-11)
+
+**Fermé localement.** Le premier clic « Sources » perdu après rechargement venait de
+« Quoi de neuf », modal bloquant ouvert de lui-même après l’hydratation : le clic visé
+sur la barre latérale fermait la note au lieu de naviguer. `Dialog blocking={false}`
+pour les notes ouvertes d’elles-mêmes (« Quoi de neuf », accueil du portail) ; reçu sur
+build de production local et en test e2e. La clé MCP limitée à un serveur, corrigée en
+448 sans clôture de sa dette, est reçue sur PostgreSQL réel ; l’entrée « §Transport MCP
+et clé limitée à un serveur » est retirée.
+
+**Non reçu.** CI, image, runtime et production 558 ; clic natif sur la production après
+déploiement d’une version dont la note n’a pas été vue ; émission d’une clé `council`,
+`oracle` ou `ingest` depuis la console et appel MCP de production avec une clé limitée
+à un serveur. Le test e2e `cockpit-first-click.spec.ts` rejoint la suite Playwright,
+qui ne se lance qu’à la main (`e2e.yml`, `workflow_dispatch`). **Plan** : ouvrir la PR
+(label `out-of-scope`, numéro réel dans `scope-drift.md`), recevoir CI et image, puis,
+après déploiement, recharger le cockpit avec la note non vue et cliquer Sources, et
+émettre une clé limitée à `council` pour un `tools/list` et un appel réels.
+**Déclencheur** : ouverture de la PR, puis première recette native après livraison 558.
+
 ## 557 — IN1 fermé pour les sources ; même classe ailleurs, réceptions ouvertes (2026-11-11)
 
 **Fermé localement.** Les écrivains de source du routeur `ingestion` (`updateSource`,
@@ -3760,20 +3780,6 @@ Le backend d'ingestion (extracteurs + Intent + tRPC + persister) est shippé et 
 - **Logo binaire** : `pdf-parse` ne garde que le texte → le logo d'un brand book n'est pas extrait (seule sa
   description l'est). **Bornage** : ré-upload image séparé → `LOGO_FINAL` (chaîne existante). **Déclencheur** :
   quand un vrai book est ingéré en prod.
-
-### §Transport MCP et clé limitée à un serveur — 2026-10-08
-
-Recette HTTP locale 419 : une clé active `server=advertis`, limitée à la marque
-synthétique, reçoit 401 sur `/api/mcp/rpc` dès tools/list. authenticateMcpRequest
-est appelé avec `*` mais n’accepte que la clé `server=*` ; la promesse du commentaire
-de route (« clé scopée à un serveur précis honorée ») n’est pas reçue.
-**Plan** : transmettre la portée serveur à la frontière de dispatch et l’imposer
-par outil avant d’autoriser cette clé sur le transport agrégé ; recevoir liste,
-appel autorisé et refus d’un autre serveur. Ne pas desserrer l’auth seule, ce qui
-élargirait la portée. La recette 419 utilise une clé locale éphémère `server=*`,
-BRAND uniquement, sans modification des accès de production.
-**Déclencheur** : avant réception C7 des connexions MCP multi-serveurs avec clé
-limitée ; hors raccord documentaire de l’amendement.
 
 ### §Conditions commerciales et projection économique — 2026-10-08
 
