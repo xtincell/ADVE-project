@@ -64,18 +64,9 @@ function readBody(raw: unknown): { ok: true; body: IngestPayload } | { ok: false
 }
 
 export async function POST(request: Request) {
-  // 1) Corps
-  let raw: unknown;
-  try {
-    raw = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-  const read = readBody(raw);
-  if (!read.ok) return read.response;
-  const body = read.body;
-
-  // 2) Auth — token MCP scopé / ADMIN d'abord ; sinon CRON_SECRET interne.
+  // 1) Auth — token MCP scopé / ADMIN d'abord ; sinon CRON_SECRET interne.
+  // Avant toute lecture du corps : un appelant anonyme reçoit 401 et
+  // n'apprend rien du contrat par les messages de validation.
   let scopeKind: "SYSTEM" | "BRAND" = "SYSTEM";
   let scopeStrategyId: string | null = null;
   let operatorId = "cron:ingest";
@@ -89,6 +80,17 @@ export async function POST(request: Request) {
   } else {
     return gate.response ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // 2) Corps — lu et validé seulement pour un appelant authentifié.
+  let raw: unknown;
+  try {
+    raw = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const read = readBody(raw);
+  if (!read.ok) return read.response;
+  const body = read.body;
 
   // 3) Garde de portée — un token BRAND ne pousse QUE sa marque (fail-closed).
   if (scopeKind === "BRAND" && scopeStrategyId !== body.strategyId) {

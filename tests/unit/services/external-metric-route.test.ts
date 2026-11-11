@@ -49,6 +49,17 @@ describe("existing metric HTTP route", () => {
     expect((await POST(request())).status).toBe(200); expect(mocks.emit).toHaveBeenCalledOnce();
     expect(mocks.meter).not.toHaveBeenCalled();
   });
+  it("answers 401 to an anonymous caller before reading or validating the body", async () => {
+    mocks.auth.mockResolvedValue({ ok: false, response: new Response("Unauthorized", { status: 401 }) });
+    const malformed = await POST(request({ ...payload(), period: "2026-99" }));
+    expect(malformed.status).toBe(401);
+    expect(await malformed.text()).not.toMatch(/VALIDATION_FAILED|period/);
+    const notJson = new Request("http://localhost/api/ingest/metrics", {
+      method: "POST", headers: { "content-type": "application/json" }, body: "{",
+    });
+    expect((await POST(notJson)).status).toBe(401);
+    expect(mocks.emit).not.toHaveBeenCalled(); expect(mocks.meter).not.toHaveBeenCalled();
+  });
 });
 
 describe("DataCollector receipt deposited on the same route (DC3)", () => {
