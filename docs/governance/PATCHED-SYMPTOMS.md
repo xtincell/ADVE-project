@@ -28,6 +28,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 556 — dépendances : 63 alertes npm accumulées, dont 9 critiques (2026-11-11)
+
+Symptôme : `npm audit` sur `main` 6.27.552 relevait 63 alertes (9 critical, 21 high, 27 moderate, 6 low), dont 39 sur l’arbre de production. Le registre en notait 50 le 6 octobre et 51 le 20 octobre. Patch : montées mineures ou correctives des directes (`next` 16.4.6, Auth.js, SDK MCP, Prisma 7.10.1, Puppeteer, SDK IA v6, zod, xmldom), `sharp` 0.35.5 exigé par `next` 16.4, transitives mises à jour dans leurs plages, et un override `exceljs` → `uuid` ^11.1.1. Résultat : 15 moderate de l’outillage de développement, 0 en production. Commit `fix(deps)` de la branche `claude/alertes-dependances`.
+
+Hypothèse de cause racine : les PR Dependabot hebdomadaires (limite de cinq, groupes par framework) ne touchent ni les transitives verrouillées ni les versions épinglées en exact (`sharp`, `@xmldom/xmldom`), et aucune relecture périodique de `npm audit` n’est planifiée. Les alertes s’accumulent donc entre deux lots manuels. Dette liée : RESIDUAL-DEBT, « Alertes npm préexistantes au build Docker » (moderate restantes, majeures et réception de 556).
+
 ### Livrables Glory et Artemis — une tentative partielle pouvait remplacer l’édition relue (2026-11-06)
 
 Une erreur Artemis historique avec `error: true` restait lisible comme analyse. Une étape en échec pouvait alimenter sa dépendance ou être comptée comme réussie dans le pipeline BRAND. Le catalogue qualifiait de terminé tout document daté, et le coffre utilisait la dernière tentative pour débloquer les prérequis des séquences suivantes.
