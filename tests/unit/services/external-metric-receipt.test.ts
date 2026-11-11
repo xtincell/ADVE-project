@@ -5,11 +5,12 @@ import { signalObservation } from "@/domain/signal-observation";
 const mocks = vi.hoisted(() => ({
   transaction: vi.fn(), lock: vi.fn(), campaign: vi.fn(), aarr: vi.fn(),
   update: vi.fn(), create: vi.fn(), activity: vi.fn(), activityUpdate: vi.fn(),
-  receipts: vi.fn(), signalCreate: vi.fn(),
+  receipts: vi.fn(), signalCreate: vi.fn(), strategy: vi.fn(),
 }));
 vi.mock("@/lib/db", () => {
   const client = {
     $executeRaw: mocks.lock,
+    strategy: { findUnique: mocks.strategy },
     campaign: { findUnique: mocks.campaign },
     campaignAARRMetric: { findFirst: mocks.aarr, findMany: mocks.aarr, update: mocks.update, create: mocks.create },
     missionActivity: { findUnique: mocks.activity, update: mocks.activityUpdate },
@@ -32,6 +33,7 @@ const intent = (data: Record<string, unknown> = {}) => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.receipts.mockResolvedValue([]);
+  mocks.strategy.mockResolvedValue({ id: "brand" });
   mocks.aarr.mockResolvedValue([]);
   mocks.campaign.mockResolvedValue({ strategyId: "brand" });
   mocks.signalCreate.mockResolvedValue({ id: "signal-1" });
@@ -119,4 +121,74 @@ it("makes a real measurement readable with its version, without claiming causali
   expect(observation.observation).toContain("six-questions-v1");
   expect(observation.observation).toContain("2026-10-01T10:00:00.000Z");
   expect(observation.observation).not.toMatch(/croissance démontrée|cause démontrée/i);
+});
+
+describe("collector receipts and declared absences (ADR-0146, DC3 amendment)", () => {
+  // Hashes produced by the 563 admission for receipts without the new optional
+  // fields: a replay of an already retained observation must keep matching it.
+  it("keeps the exact legacy payload hashes", async () => {
+    await ingestExternalMetric(intent({ metrics: [{ metric: "quiz_completions", value: 6 },
+      { stage: "ACTIVATION", metric: "b", value: 2, target: 5, kpiActivityId: null }] }));
+    await ingestExternalMetric(intent({ observationId: undefined, sourceVersion: undefined, observedAt: undefined, period: "2026-09",
+      metrics: [{ metric: "quiz_completions", value: 6 }, { stage: "ACTIVATION", metric: "b", value: 2, target: 5, kpiActivityId: null }] }));
+    expect(mocks.signalCreate.mock.calls.map((call) => call[0].data.data.payloadHash)).toEqual([
+      "670449e501bca37044cfb7907c621086535ea5a0b51cd13e567d9cd7584dd34e",
+      "501d20c3f707967664cf27ae7e51be6700a7fd8e6eeb203721640ff17004aa54",
+    ]);
+  });
+  it("accepts a COLLECTOR receipt whose only content is a declared absence", () => {
+    const parsed = IngestSchema.safeParse({ ...payload(), sourceType: "COLLECTOR", metrics: [],
+      unobserved: [{ metric: "followers", state: "FAILED", errorCode: "URL_METADATA_ADDRESS", source: "competitor_social_spy" }] });
+    expect(parsed.success).toBe(true);
+    expect(IngestSchema.safeParse({ ...payload(), metrics: [], unobserved: [] }).success).toBe(false);
+  });
+  it("binds a producer digest to an identified observation only", () => {
+    const digest = "a".repeat(64);
+    expect(IngestSchema.safeParse({ ...payload(), sourceDigest: digest }).success).toBe(true);
+    expect(IngestSchema.safeParse({ ...payload(), observationId: undefined, sourceVersion: undefined, observedAt: undefined,
+      sourceDigest: digest }).success).toBe(false);
+    expect(IngestSchema.safeParse({ ...payload(), sourceDigest: "A".repeat(64) }).success).toBe(false);
+  });
+  it("retains absences and cell provenance without writing a value, and hashes them", async () => {
+    const result = await ingestExternalMetric(intent({ sourceType: "COLLECTOR", campaignId: "campaign", sourceDigest: "b".repeat(64),
+      metrics: [{ metric: "performance_score", value: 80, source: "web_performance", subject: "https://example.test/",
+        unit: "score_0_100", observedAt: "2026-10-01T09:00:00.123456Z" }],
+      unobserved: [{ metric: "followers", state: "NOT_PUBLISHED", source: "competitor_social_spy", unit: "count",
+        observedAt: "2026-10-01T09:00:02Z" }] }));
+    expect(result.status).toBe("OK");
+    expect(mocks.update).not.toHaveBeenCalled(); expect(mocks.create).not.toHaveBeenCalled();
+    expect(mocks.activityUpdate).not.toHaveBeenCalled();
+    const data = mocks.signalCreate.mock.calls[0]![0].data.data;
+    expect(data.metrics).toEqual([{ stage: null, metric: "performance_score", value: 80, kpiActivityId: null,
+      source: "web_performance", subject: "https://example.test/", unit: "score_0_100", observedAt: "2026-10-01T09:00:00.123456Z" }]);
+    expect(data.unobserved).toEqual([{ metric: "followers", state: "NOT_PUBLISHED", source: "competitor_social_spy",
+      unit: "count", observedAt: "2026-10-01T09:00:02Z" }]);
+    expect(data.sourceDigest).toBe("b".repeat(64));
+    expect(JSON.stringify(data.unobserved)).not.toContain('"value"');
+    expect(result.summary).toContain("1 mesure(s) sans valeur");
+  });
+  it("refuses a cell observed after reception", async () => {
+    const result = await ingestExternalMetric(intent({ metrics: [{ metric: "x", value: 1, observedAt: "2999-01-01T00:00:00Z" }] }));
+    expect(result).toMatchObject({ status: "VETOED", reason: "OBSERVATION_IN_FUTURE" });
+    expect(mocks.signalCreate).not.toHaveBeenCalled();
+  });
+  it("refuses an unknown brand before any effect instead of failing on a foreign key", async () => {
+    mocks.strategy.mockResolvedValue(null);
+    const result = await ingestExternalMetric(intent());
+    expect(result).toMatchObject({ status: "VETOED", reason: "STRATEGY_NOT_FOUND" });
+    expect(mocks.signalCreate).not.toHaveBeenCalled();
+  });
+  it("renders absences as such, never as zero, with the receipt digest", () => {
+    const observation = signalObservation({ type: "EXTERNAL_METRIC", data: { ...payload(), sourceType: "COLLECTOR",
+      sourceDigest: "c".repeat(64), metrics: [{ metric: "performance_score", value: 80, source: "web_performance" }],
+      unobserved: [{ metric: "followers", state: "FAILED", errorCode: "URL_METADATA_ADDRESS", source: "competitor_social_spy" },
+        { metric: "speed_index_score", state: "NOT_PUBLISHED", source: "web_performance" },
+        { metric: "my_rank", state: "NOT_REQUESTED", source: "search_visibility" }] } }).observation;
+    expect(observation).toContain("performance_score : 80 — web_performance.");
+    expect(observation).toContain("followers : échec de la source (URL_METADATA_ADDRESS) — competitor_social_spy.");
+    expect(observation).toContain("speed_index_score : valeur non publiée — web_performance.");
+    expect(observation).toContain("my_rank : non demandée — search_visibility.");
+    expect(observation).toContain("c".repeat(64));
+    expect(observation).not.toMatch(/followers : 0|speed_index_score : 0/);
+  });
 });

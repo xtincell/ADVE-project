@@ -31,6 +31,38 @@ déclaré par le poste La Barre ; l'identité authentifiée n'y est pas transmis
 les factoriser en une fonction de domaine unique sans changer aucun sceau existant.
 **Déclencheur** : fusion de la PR 565.
 
+## 565 — DC3 : reçu DataCollector admis localement ; dépôt réel, console et agrégats ouverts (2026-11-11)
+
+**Fermé localement.** Un reçu DataCollector 1.1.0 exporté (schéma
+`datacollector/observation-receipt` v1) se dépose sur `POST /api/ingest/metrics`
+avec `{ strategyId, receipt }` : empreinte RFC 8785 recalculée, admission par
+`INGEST_EXTERNAL_METRIC` existant, rejeu sans effet, conflit d’empreinte refusé,
+absences conservées, clé d’une autre marque 403, marque inconnue 404
+(`datacollector-admission.postgres.test.ts`, job PostgreSQL de CI). ADR-0146 amendé.
+
+**Non reçu.** CI, image, runtime et production 565 ; dépôt d’un reçu réel par un
+opérateur sur l’instance livrée. **Plan** : ouvrir la PR (label `out-of-scope`, numéro
+réel dans `scope-drift.md`), recevoir CI et image, puis déposer un reçu 1.1.0 d’une
+collecte de recette avec une clé limitée à la marque et relire le Signal dans la
+Gazette. **Déclencheur** : ouverture de la PR, puis prochaine réception C7.
+
+**Dépôt depuis la console.** La surface reste la route HTTP (clé limitée à la marque
+ou session ADMIN) ; aucun opérateur non ADMIN ne dépose depuis une page. **Plan** :
+si l’usage le demande, ajouter un champ de dépôt à une page de sources existante qui
+appelle la même route, sans nouvelle procédure ; recette navigateur sous USER et
+ADMIN. **Déclencheur** : premier dépôt réel demandé par un opérateur non ADMIN, ou
+arbitrage 5.9 (outil local ou service).
+
+**Absences converties dans `knowledge-aggregator`, constatées en passant.**
+`aggregateFrameworkRankings` lit `successScore ?? 0.5` et `aggregateBriefPatterns`
+`engagement ?? clicks ?? 0` : une valeur absente y devient une mesure. Les reçus DC3
+n’y entrent pas (Signaux `EXTERNAL_METRIC` non lus par ces agrégats), d’où l’exclusion
+de KnowledgeEntry. **Plan** : exclure les entrées sans valeur de ces moyennes et
+compter la couverture, avec tests rouges puis verts ; vérifier les lecteurs de
+`agg-framework-rankings` et `agg-brief-*`. **Effort** : un lot borné, sans schéma.
+**Déclencheur** : prochaine modification de `knowledge-aggregator`, ou premier
+lecteur client de ces agrégats.
+
 ## 564 — F2 contrat S unique : désaccord reproduit et convergé localement (2026-11-11)
 
 **Fermé localement (cause du constat 436).** La maturité de S ne lisait que la présence

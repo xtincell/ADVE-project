@@ -27,6 +27,7 @@ vi.mock("@/lib/db", () => ({
   db: {
     $transaction: async (run: (client: unknown) => unknown) => run({
       $executeRaw: vi.fn(),
+      strategy: { findUnique: async () => ({ id: "strat-1" }) },
       campaign: { findUnique: campaignFindUnique },
       campaignAARRMetric: { findMany: aarrFindMany, update: aarrUpdate, create: aarrCreate },
       missionActivity: { findUnique: activityFindUnique, update: activityUpdate },

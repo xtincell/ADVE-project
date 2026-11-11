@@ -15,6 +15,8 @@ export const dynamic = "force-dynamic";
  *
  * Zéro LLM, zéro fabrication. La route ne fait qu'authentifier + garder la
  * portée + émettre l'Intent gouverné `INGEST_EXTERNAL_METRIC` (spine + audit).
+ * Corps accepté : le contrat ADR-0146, ou `{ strategyId, receipt }` pour un reçu
+ * DataCollector exporté (vérifié, puis converti dans ce même contrat).
  */
 
 import { NextResponse } from "next/server";
@@ -24,7 +26,42 @@ import {
   meterMcp,
   type McpAuthResult,
 } from "@/server/services/anubis/mcp-billing";
-import { IngestSchema } from "./schema";
+import { IngestSchema, type IngestPayload } from "./schema";
+import {
+  DatacollectorDepositSchema, datacollectorReceiptToIngest, readDatacollectorReceipt,
+} from "@/domain/datacollector-receipt";
+
+/**
+ * Dépôt d'un reçu DataCollector exporté (`{ strategyId, receipt }`, DC3 Shinkiro) :
+ * enveloppe et empreinte vérifiées, puis même contrat et même Intent que les autres
+ * sources. Aucun service DataCollector n'est appelé.
+ */
+function readBody(raw: unknown): { ok: true; body: IngestPayload } | { ok: false; response: Response } {
+  const issues = (list: ReadonlyArray<{ path: PropertyKey[]; message: string }>) => list.map((i) => ({ path: i.path, message: i.message }));
+  if (raw !== null && typeof raw === "object" && !Array.isArray(raw) && "receipt" in raw) {
+    const deposit = DatacollectorDepositSchema.safeParse(raw);
+    if (!deposit.success) {
+      return { ok: false, response: NextResponse.json({ error: "VALIDATION_FAILED", issues: issues(deposit.error.issues) }, { status: 400 }) };
+    }
+    const reading = readDatacollectorReceipt(deposit.data.receipt);
+    if (!reading.ok) {
+      return { ok: false, response: NextResponse.json(
+        { error: reading.code, detail: reading.detail, ...(reading.issues ? { issues: reading.issues } : {}) },
+        { status: 400 },
+      ) };
+    }
+    try {
+      return { ok: true, body: datacollectorReceiptToIngest(deposit.data.strategyId, reading.receipt) };
+    } catch {
+      return { ok: false, response: NextResponse.json({ error: "RECEIPT_INVALID", detail: "Reçu non convertible dans le contrat d'observation." }, { status: 400 }) };
+    }
+  }
+  const parsed = IngestSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, response: NextResponse.json({ error: "VALIDATION_FAILED", issues: issues(parsed.error.issues) }, { status: 400 }) };
+  }
+  return { ok: true, body: parsed.data };
+}
 
 export async function POST(request: Request) {
   // 1) Corps
@@ -34,14 +71,9 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
-  const parsed = IngestSchema.safeParse(raw);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "VALIDATION_FAILED", issues: parsed.error.issues.map((i) => ({ path: i.path, message: i.message })) },
-      { status: 400 },
-    );
-  }
-  const body = parsed.data;
+  const read = readBody(raw);
+  if (!read.ok) return read.response;
+  const body = read.body;
 
   // 2) Auth — token MCP scopé / ADMIN d'abord ; sinon CRON_SECRET interne.
   let scopeKind: "SYSTEM" | "BRAND" = "SYSTEM";
@@ -78,7 +110,7 @@ export async function POST(request: Request) {
       { caller: "api:ingest:metrics" },
     );
     if (result.status !== "OK") return {
-      httpStatus: result.status === "VETOED" ? 409 : 500,
+      httpStatus: result.reason === "STRATEGY_NOT_FOUND" ? 404 : result.status === "VETOED" ? 409 : 500,
       error: result.reason ?? result.status, detail: result.summary,
     };
     return { httpStatus: 200, result: result.output };
