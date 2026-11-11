@@ -34,6 +34,12 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.558", date: "2026-11-11", headline: "Votre premier clic n’est plus perdu",
+    highlights: [
+      { emoji: "👆", title: "Naviguer dès l’ouverture", body: "Les messages d’accueil et de nouveautés s’affichent sans bloquer la page. Un clic sur un menu, par exemple Sources, ouvre directement la rubrique et referme le message." },
+    ],
+  },
+  {
     version: "6.27.554", date: "2026-11-10", headline: "Lire l’état réel de votre diagnostic",
     highlights: [
       { emoji: "📑", title: "Distinguer informations et rédaction", body: "Chaque section du diagnostic indique séparément si vos informations de marque l’alimentent et si elle est rédigée. Une section encore à produire n’est plus présentée comme complète." },

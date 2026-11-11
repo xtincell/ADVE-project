@@ -3,6 +3,15 @@
 /**
  * Dialog primitive — modal natif + focus trap + ESC close.
  * Pattern simple custom (sans Radix). Sizes sm/md/lg/xl/fullscreen.
+ *
+ * `blocking={false}` — pour un dialogue qui s'ouvre DE LUI-MÊME (note de version,
+ * accueil), pas en réponse à un geste. Un tel dialogue apparaît après l'hydratation,
+ * donc quand la page est déjà visible et cliquable : en modal bloquant, il captait le
+ * premier geste visé sur la page (F13, 2026-11-11 : premier clic « Sources » perdu
+ * après rechargement, le clic fermait la note au lieu de naviguer). Non bloquant, il
+ * ne capte aucun geste destiné à la page : le fond laisse passer les pointeurs, une
+ * pression hors du contenu le referme (comme le Popover) et le clic atteint sa cible ;
+ * il ne prend pas le focus et ne verrouille pas le défilement.
  */
 
 import * as React from "react";
@@ -25,10 +34,20 @@ export const dialogContentVariants = cva(
         xl: "max-w-[var(--modal-max-w-xl)] w-[90vw]",
         fullscreen: "w-screen h-screen max-w-none max-h-none rounded-none",
       },
+      // Non bloquant : seul le contenu reçoit les pointeurs (la racine les laisse passer).
+      blocking: { true: "", false: "pointer-events-auto" },
     },
-    defaultVariants: { size: "md" },
+    defaultVariants: { size: "md", blocking: true },
   },
 );
+
+export const dialogRootVariants = cva("fixed inset-0 z-[var(--z-modal)] flex items-center justify-center", {
+  variants: {
+    // Non bloquant : la racine et le fond laissent passer les pointeurs vers la page.
+    blocking: { true: "", false: "pointer-events-none" },
+  },
+  defaultVariants: { blocking: true },
+});
 
 export interface DialogProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, "title">,
@@ -47,6 +66,7 @@ export function Dialog({
   description,
   dismissible = true,
   size,
+  blocking,
   className,
   children,
   ...props
@@ -54,10 +74,18 @@ export function Dialog({
   const titleId = React.useId();
   const descId = React.useId();
   const contentRef = React.useRef<HTMLDivElement>(null);
+  const isBlocking = blocking !== false;
   // Event handlers may change on every keystroke. Focus belongs to the open
   // lifecycle, not to the identity of the parent's inline callback.
   const handleEscape = React.useEffectEvent(() => {
     if (dismissible) onOpenChange(false);
+  });
+  // Non bloquant : une pression hors du contenu referme le dialogue, SANS être
+  // consommée — l'évènement poursuit sa route vers l'élément visé de la page.
+  const handleOutsidePointer = React.useEffectEvent((event: PointerEvent) => {
+    if (!dismissible) return;
+    if (event.target instanceof Node && contentRef.current?.contains(event.target)) return;
+    onOpenChange(false);
   });
 
   React.useEffect(() => {
@@ -65,32 +93,43 @@ export function Dialog({
     const previousActive = document.activeElement as HTMLElement | null;
     // Verrou de scroll REF-COMPTÉ (audit 2026-07-22) — plusieurs modaux empilés ne
     // laissent plus le body bloqué `overflow:hidden` après fermeture.
-    lockBodyScroll();
+    if (isBlocking) lockBodyScroll();
 
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") handleEscape();
     }
     document.addEventListener("keydown", handleKey);
+    function handlePointer(e: PointerEvent) {
+      handleOutsidePointer(e);
+    }
+    if (!isBlocking) document.addEventListener("pointerdown", handlePointer, true);
 
-    const frame = requestAnimationFrame(() => {
-      contentRef.current?.focus();
-    });
+    // Un dialogue non bloquant ne prend pas le focus : la touche Entrée d'un
+    // utilisateur au clavier reste sur l'élément qu'il a choisi.
+    const frame = isBlocking
+      ? requestAnimationFrame(() => {
+          contentRef.current?.focus();
+        })
+      : null;
 
     return () => {
-      cancelAnimationFrame(frame);
+      if (frame !== null) cancelAnimationFrame(frame);
       document.removeEventListener("keydown", handleKey);
-      unlockBodyScroll();
-      previousActive?.focus?.();
+      if (!isBlocking) document.removeEventListener("pointerdown", handlePointer, true);
+      if (isBlocking) {
+        unlockBodyScroll();
+        previousActive?.focus?.();
+      }
     };
-  }, [open]);
+  }, [open, isBlocking]);
 
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center"
+      className={dialogRootVariants({ blocking: isBlocking })}
       role="dialog"
-      aria-modal="true"
+      aria-modal={isBlocking ? "true" : "false"}
       aria-labelledby={title ? titleId : undefined}
       aria-describedby={description ? descId : undefined}
     >
@@ -102,7 +141,7 @@ export function Dialog({
       <div
         ref={contentRef}
         tabIndex={-1}
-        className={cn(dialogContentVariants({ size }), "z-[1]", className)}
+        className={cn(dialogContentVariants({ size, blocking: isBlocking }), "z-[1]", className)}
         {...props}
       >
         {title && (
