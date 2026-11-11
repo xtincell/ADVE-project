@@ -608,6 +608,12 @@ export const pillarRouter = createTRPCRouter({
       return { versions, currentVersion: pillar.currentVersion ?? 1 };
     }),
 
+  /** Entrées, retraits, réintroductions et renommages du catalogue produit, lus
+   *  dans les versions conservées (ADR-0205, amendement 568). Lecture seule. */
+  getCatalogueHistory: strategyScopedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(({ input }) => pillarVersioning.getCatalogueHistory(input.strategyId)),
+
   /** Compensate the archived change while preserving later independent decisions.
    *  Same restorer, refusals and effect identity as the journal (ADR-0207). */
   rollbackVersion: governedProcedure({

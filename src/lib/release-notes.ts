@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.568", date: "2026-11-11", headline: "Retrouver l’histoire de chaque produit de votre catalogue",
+    highlights: [
+      { emoji: "🗂️", title: "Entrées, retraits et retours", body: "La page Offre & Pricing propose un historique du catalogue : pour chaque produit, quand il est entré, a été renommé, retiré ou réintroduit, par quelle modification, avec son identifiant. Il se lit dans les versions conservées, sans rien modifier." },
+      { emoji: "🔐", title: "Un produit retiré garde son identité", body: "Un nouveau produit portant le même nom qu’un produit retiré reçoit un nouvel identifiant, et les liens vers l’ancien ne basculent plus vers lui. Pour faire revenir un produit retiré sous son identifiant, on restaure la version qui le contenait." },
+    ],
+  },
+  {
     version: "6.27.564", date: "2026-11-11", headline: "Un plan stratégique annoncé complet est un plan relisible",
     highlights: [
       { emoji: "🧭", title: "Un seul verdict pour votre plan", body: "Votre plan stratégique n’est plus présenté comme complet lorsqu’un de ses éléments ne peut pas être relu en l’état, par exemple un montant écrit en texte ou un nombre d’indicateurs insuffisant. L’avancement affiché et la possibilité d’approuver le plan disent désormais la même chose." },

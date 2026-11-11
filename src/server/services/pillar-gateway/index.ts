@@ -20,7 +20,7 @@
  */
 
 import { db } from "@/lib/db";
-import { ensureProductIds, rebindProductRefs, type CatalogueProduct } from "@/domain/product-catalog";
+import { ensureProductIds, rebindProductRefs, retiredCatalogueIdentities, type CatalogueProduct } from "@/domain/product-catalog";
 import { acquirePillarEntityIds } from "@/domain/pillar-entity-ids";
 import { randomUUID } from "node:crypto";
 import { inferredFieldPaths, provenanceTopKey } from "@/domain/field-provenance";
@@ -35,7 +35,7 @@ import { type PillarKey, getPillarDependents } from "@/lib/types/advertis-vector
 import { validatePillarPartial } from "@/lib/types/pillar-schemas";
 import { validateAgainstBible } from "@/lib/types/variable-bible";
 import { getFieldZod, canInferMissingConceptualField } from "@/lib/types/pillar-maturity-contracts";
-import { createVersion } from "@/server/services/pillar-versioning";
+import { createVersion, readCatalogueArchives } from "@/server/services/pillar-versioning";
 import * as auditTrail from "@/server/services/audit-trail";
 import { assertCurrentSourceReceipts, readSourceReceipts, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
 import { markPillarsStale, withdrawSynthesisReview } from "./review-invalidation";
@@ -587,11 +587,23 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
         );
         if (namedProducts(newContent.produitsCatalogue)) {
           const previous = namedProducts(previousContent.produitsCatalogue) ? previousContent.produitsCatalogue : [];
-          const products = ensureProductIds(newContent.produitsCatalogue, previous);
+          // Every archived state, not only the previous one: a product retired two
+          // versions ago keeps its identity out of reach of a new homonym (ADR-0205, 568).
+          const archives = await readCatalogueArchives(pillar.id, tx);
+          const { reservedIds, retired } = retiredCatalogueIdentities(archives.map(a => a.catalogue), previousContent.produitsCatalogue);
+          const products = ensureProductIds(newContent.produitsCatalogue, previous, reservedIds);
           const ids = products.map(p => p.id);
           if (new Set(ids).size !== ids.length) throw new Error("CATALOGUE_ID_CONFLICT: deux produits portent le même identifiant — corriger le catalogue avant de réappliquer.");
+          // Allocation never yields a retired id: one here was sent explicitly. The only
+          // proof accepted for a reintroduction is the restoration of its archive.
+          const retiredIds = new Set(retired.flatMap(p => typeof p.id === "string" && p.id.trim() ? [p.id] : []));
+          const reused = products.filter(p => retiredIds.has(p.id!));
+          if (reused.length) {
+            throw new Error(`CATALOGUE_RETIRED_ID: ${reused.map(p => `« ${p.id} »`).join(", ")} identifie un produit retiré du catalogue. ` +
+              "Une réintroduction sous cet identifiant passe par la restauration de la version qui le contenait ; sinon, ajoutez le produit sans identifiant pour qu'il en reçoive un nouveau.");
+          }
           newContent.produitsCatalogue = products;
-          newContent = rebindProductRefs(newContent, previous, products);
+          newContent = rebindProductRefs(newContent, previous, products, retired);
         }
       }
 
