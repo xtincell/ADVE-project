@@ -67,6 +67,8 @@ export const campaignChangeRequestRouter = createTRPCRouter({
       strategyId: StringId,
       operatorId: StringId,
       ticketId: StringId,
+      /** Version lue : requise pour remplacer besoin, impact ou responsable (sinon CONFLICT). */
+      expectedUpdatedAt: z.string().datetime().nullable().optional(),
       patches: z.object({
         status: StatusEnum.optional(),
         assignedToUserId: StringId.nullable().optional(),

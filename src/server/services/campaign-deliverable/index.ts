@@ -10,6 +10,12 @@
  * Le RAG (GREEN/AMBER/RED) est **calculé automatiquement** depuis
  * status × deadline_proximity × blockers, **sauf** si `manualRagOverride`
  * est non-null (forcé par opérateur).
+ *
+ * La santé de campagne en mode automatique agrège ce même computeRAG
+ * (`computeCampaignHealth`) et se recalcule dans la transaction de chaque
+ * commande tâche/reprise ; non calculable → `UNKNOWN`, jamais un vert par défaut.
+ * Les éditions qui remplacent un contenu, un visuel ou une délégation exigent la
+ * version lue (`expectedUpdatedAt`) : une version périmée reçoit CONFLICT.
  */
 
 import type { Intent, IntentResult } from "@/server/services/mestor/intents";
@@ -93,9 +99,12 @@ export async function deleteCampaignDeliverableHandler(intent: DeleteIntent): Pr
 export async function overrideRagHandler(intent: OverrideRagIntent): Promise<HandlerResult> {
   try {
     const result = await overrideRag(intent);
+    const automatic = result.health
+      ? `retour au calcul automatique : ${result.health.signal ?? "non calculable"}`
+      : `RAG override appliqué (${intent.ragOverride ?? "CLEARED"})`;
     return {
       status: "OK",
-      summary: `RAG override appliqué (${intent.ragOverride ?? "CLEARED"}) — ${intent.reason}`,
+      summary: `${automatic} — ${intent.reason}`,
       tool: "campaign-deliverable.override-rag",
       output: result,
       estimatedCost: ZERO_COST,
@@ -152,75 +161,144 @@ export async function createCampaignDeliverable(args: CreateCampaignDeliverableA
       taskCode = generateTaskCode(campaign.code, maxIndex + 1);
     }
     const rag = computeRAG({ status: "TODO", dueDate: args.dueDate, deliveredAt: null, manualOverride: null });
-    return tx.campaignDeliverable.create({ data: {
+    const created = await tx.campaignDeliverable.create({ data: {
       campaignId: args.campaignId, targetNodeId: args.targetNodeId, taskCode,
       countryCode: args.countryCode, clusterTag: args.clusterTag, deliverableType: args.deliverableType,
       language: args.language, promoTag: args.promoTag, status: "TODO", rag,
       dueDate: args.dueDate, notes: args.notes,
     } });
+    await refreshCampaignHealth(tx, campaign.id);
+    return created;
   });
 }
 
-async function assertDeliverableScope(deliverableId: string, scope: CampaignScope) {
-  const row = await db.campaignDeliverable.findUnique({ where: { id: deliverableId }, select: { campaignId: true } });
-  if (!row) throw new CampaignScopeError("NOT_FOUND", "Livrable introuvable.");
-  await assertCampaignScope(row.campaignId, scope);
+// ──────────────────────────────────────────────────────────────────────────
+// Version lue — contrôle optimiste par updatedAt (même règle que le portefeuille)
+// ──────────────────────────────────────────────────────────────────────────
+
+/** Scope d'une édition : marque/équipe déclarées + version lue de la ligne modifiée. */
+export interface VersionedCampaignScope extends CampaignScope {
+  /** `updatedAt` ISO de la ligne lue par l'éditeur ; une version périmée reçoit CONFLICT. */
+  expectedUpdatedAt?: string | null;
 }
+
+/**
+ * Compare la version lue à la ligne verrouillée. Requise dès que l'édition remplace un
+ * contenu, un rattachement ou une délégation ; facultative pour une simple transition
+ * de statut, qui reste sérialisée sous le même verrou.
+ */
+export function assertReadVersion(current: Date, expected: string | null | undefined,
+  required: boolean, messages: { missing: string; stale: string }): void {
+  if (expected == null || expected === "") {
+    if (required) throw new CampaignScopeError("CONFLICT", messages.missing);
+    return;
+  }
+  const at = Date.parse(expected);
+  if (!Number.isFinite(at)) throw new CampaignScopeError("BAD_REQUEST", "Version lue illisible : relisez la fiche.");
+  if (current.getTime() !== at) throw new CampaignScopeError("CONFLICT", messages.stale);
+}
+
+/** Version suivante strictement croissante, même pour deux écritures dans la même milliseconde. */
+export function nextVersion(current: Date): Date {
+  return new Date(Math.max(Date.now(), current.getTime() + 1));
+}
+
+const TASK_STATUSES = ["TODO", "IN_PROGRESS", "DELIVERED", "VALIDATED"];
+/** Champs dont le remplacement exige la version lue (contenu, rattachement d'actif, délégation). */
+const VERSIONED_TASK_FIELDS = ["dueDate", "deliveredAt", "validatedAt", "notes", "brandAssetId", "delegatedToOperatorId"];
+const TASK_DATE_FIELDS = ["dueDate", "deliveredAt", "validatedAt"];
+const TASK_VERSION_MESSAGES = {
+  missing: "Relisez la tâche avant de modifier son contenu, son visuel ou sa délégation : sa version est requise.",
+  stale: "La tâche a été modifiée depuis votre lecture : relisez-la avant d’enregistrer.",
+};
 
 export async function updateCampaignDeliverable(
   deliverableId: string,
   patches: UpdateIntent["patches"],
-  scope: CampaignScope,
+  scope: VersionedCampaignScope,
 ): Promise<CampaignDeliverable> {
-  await assertDeliverableScope(deliverableId, scope);
-  const existing = await db.campaignDeliverable.findUnique({ where: { id: deliverableId } });
-  if (!existing) throw new Error(`CampaignDeliverable ${deliverableId} not found`);
-
-  const allowedKeys = ["status", "dueDate", "deliveredAt", "validatedAt", "notes", "brandAssetId", "delegatedToOperatorId"];
-  const data: Prisma.CampaignDeliverableUpdateInput = {};
+  const allowedKeys = ["status", ...VERSIONED_TASK_FIELDS];
+  const data: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(patches)) {
     if (!allowedKeys.includes(key)) {
       throw new Error(`Field "${key}" is immutable or unknown for OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE. Allowed: ${allowedKeys.join(", ")}`);
     }
-    if ((key === "dueDate" || key === "deliveredAt" || key === "validatedAt") && typeof value === "string") {
-      (data as Record<string, unknown>)[key] = new Date(value);
+    if (value === undefined) continue;
+    if (key === "status" && (typeof value !== "string" || !TASK_STATUSES.includes(value))) {
+      throw new CampaignScopeError("BAD_REQUEST", "Statut de tâche inconnu.");
+    }
+    if (TASK_DATE_FIELDS.includes(key) && value !== null) {
+      const date = new Date(value as string);
+      if (typeof value !== "string" || !Number.isFinite(date.getTime())) throw new CampaignScopeError("BAD_REQUEST", "Date de tâche illisible.");
+      data[key] = date;
     } else {
-      (data as Record<string, unknown>)[key] = value;
+      data[key] = value;
     }
   }
+  const versioned = Object.keys(data).some(key => VERSIONED_TASK_FIELDS.includes(key));
 
-  // Auto-recompute RAG sauf manualRagOverride non-null
-  const updated = await db.campaignDeliverable.update({ where: { id: deliverableId }, data });
-  if (!updated.manualRagOverride) {
-    const newRag = computeRAG({
-      status: updated.status,
-      dueDate: updated.dueDate,
-      deliveredAt: updated.deliveredAt,
-      manualOverride: null,
-    });
-    if (newRag !== updated.rag) {
-      return db.campaignDeliverable.update({ where: { id: deliverableId }, data: { rag: newRag } });
+  return db.$transaction(async tx => {
+    // Same row lock as the change requests: concurrent edits, attachments, transfers
+    // and deletion of one task are applied one after the other, never interleaved.
+    await tx.$queryRaw`SELECT "id" FROM "CampaignDeliverable" WHERE "id" = ${deliverableId} FOR UPDATE`;
+    const existing = await tx.campaignDeliverable.findUnique({ where: { id: deliverableId } });
+    if (!existing) throw new CampaignScopeError("NOT_FOUND", "Livrable introuvable.");
+    const campaign = await assertCampaignScope(existing.campaignId, scope, tx);
+    if (typeof data.brandAssetId === "string") {
+      const asset = await tx.brandAsset.findUnique({ where: { id: data.brandAssetId }, select: { strategyId: true } });
+      if (!asset) throw new CampaignScopeError("NOT_FOUND", "Visuel introuvable.");
+      if (asset.strategyId !== campaign.strategyId) {
+        throw new CampaignScopeError("FORBIDDEN", "Ce visuel relève d’une autre marque que la campagne.");
+      }
     }
-  }
-  return updated;
+    if (typeof data.delegatedToOperatorId === "string" && !await tx.operator.findUnique({
+      where: { id: data.delegatedToOperatorId }, select: { id: true },
+    })) throw new CampaignScopeError("NOT_FOUND", "Agence de délégation introuvable.");
+    assertReadVersion(existing.updatedAt, scope.expectedUpdatedAt, versioned, TASK_VERSION_MESSAGES);
+
+    const next = { ...existing, ...data } as CampaignDeliverable;
+    // A manual task status keeps its stored health; otherwise recompute it from the final row.
+    const rag = existing.manualRagOverride ? existing.rag : computeRAG({
+      status: next.status, dueDate: next.dueDate, deliveredAt: next.deliveredAt, manualOverride: null,
+    });
+    const updated = await tx.campaignDeliverable.update({
+      where: { id: deliverableId },
+      data: { ...(data as Prisma.CampaignDeliverableUncheckedUpdateInput), rag, updatedAt: nextVersion(existing.updatedAt) },
+    });
+    await refreshCampaignHealth(tx, existing.campaignId);
+    return updated;
+  });
 }
 
 export async function deleteCampaignDeliverable(deliverableId: string, scope: CampaignScope): Promise<void> {
-  await assertDeliverableScope(deliverableId, scope);
-  const existing = await db.campaignDeliverable.findUnique({
-    where: { id: deliverableId },
-    select: { id: true, brandAssetId: true },
+  await db.$transaction(async tx => {
+    // Locked like an edit: an asset attached concurrently is seen before deletion.
+    await tx.$queryRaw`SELECT "id" FROM "CampaignDeliverable" WHERE "id" = ${deliverableId} FOR UPDATE`;
+    const existing = await tx.campaignDeliverable.findUnique({ where: { id: deliverableId }, select: {
+      id: true, campaignId: true, brandAssetId: true, _count: { select: { changeRequests: true } },
+    } });
+    if (!existing) throw new CampaignScopeError("NOT_FOUND", "Livrable introuvable.");
+    await assertCampaignScope(existing.campaignId, scope, tx);
+    if (existing.brandAssetId) {
+      throw new CampaignScopeError("CONFLICT", "Un visuel est rattaché à cette tâche : passez par le cycle de vie de l’actif plutôt que par une suppression.");
+    }
+    if (existing._count.changeRequests > 0) {
+      throw new CampaignScopeError("CONFLICT", "Cette tâche porte des reprises : elle est conservée avec leur historique.");
+    }
+    await tx.campaignDeliverable.delete({ where: { id: deliverableId } });
+    await refreshCampaignHealth(tx, existing.campaignId);
   });
-  if (!existing) throw new Error(`CampaignDeliverable ${deliverableId} not found`);
-  if (existing.brandAssetId) {
-    throw new Error(
-      `CampaignDeliverable ${deliverableId} a brandAssetId=${existing.brandAssetId} — utiliser cascade BrandAsset (asset versioning), pas delete direct.`,
-    );
-  }
-  await db.campaignDeliverable.delete({ where: { id: deliverableId } });
 }
 
-export async function overrideRag(intent: OverrideRagIntent): Promise<{ kind: "campaign" | "deliverable"; id: string; rag: string | null }> {
+export interface OverrideRagResult {
+  kind: "campaign" | "deliverable";
+  id: string;
+  rag: string | null;
+  /** Retour d'une campagne au calcul automatique : résultat du calcul, calculable ou non. */
+  health?: CampaignHealth;
+}
+
+export async function overrideRag(intent: OverrideRagIntent): Promise<OverrideRagResult> {
   const hasCampaign = intent.campaignId != null;
   const hasDeliverable = intent.deliverableId != null;
   if (hasCampaign === hasDeliverable) {
@@ -228,16 +306,24 @@ export async function overrideRag(intent: OverrideRagIntent): Promise<{ kind: "c
   }
 
   if (hasCampaign && intent.campaignId) {
-    await assertCampaignScope(intent.campaignId, intent);
-    if (intent.ragOverride === null) {
-      throw new CampaignScopeError("BAD_REQUEST", "Le calcul automatique de santé de campagne n’est pas disponible. Le statut manuel est conservé ; choisissez un statut motivé.");
-    }
-    const updated = await db.campaign.update({
-      where: { id: intent.campaignId },
-      data: { manualRagOverride: intent.ragOverride, healthSignal: intent.ragOverride },
-      select: { id: true, manualRagOverride: true },
+    const campaignId = intent.campaignId;
+    return db.$transaction(async tx => {
+      await tx.$queryRaw`SELECT "id" FROM "Campaign" WHERE "id" = ${campaignId} FOR UPDATE`;
+      await assertCampaignScope(campaignId, intent, tx);
+      if (intent.ragOverride !== null) {
+        const updated = await tx.campaign.update({
+          where: { id: campaignId },
+          data: { manualRagOverride: intent.ragOverride, healthSignal: intent.ragOverride },
+          select: { id: true, manualRagOverride: true },
+        });
+        return { kind: "campaign" as const, id: updated.id, rag: updated.manualRagOverride };
+      }
+      // Back to automatic: the existing task calculation decides, or says it cannot.
+      await tx.campaign.update({ where: { id: campaignId }, data: { manualRagOverride: null } });
+      const health = await refreshCampaignHealth(tx, campaignId);
+      if (!health) throw new Error("Campaign health refresh skipped after clearing its manual status");
+      return { kind: "campaign" as const, id: campaignId, rag: null, health };
     });
-    return { kind: "campaign", id: updated.id, rag: updated.manualRagOverride };
   }
 
   // Deliverable
@@ -251,10 +337,11 @@ export async function overrideRag(intent: OverrideRagIntent): Promise<{ kind: "c
       deliveredAt: existing.deliveredAt, manualOverride: intent.ragOverride });
     const updated = await tx.campaignDeliverable.update({
       where: { id: deliverableId },
-      data: { manualRagOverride: intent.ragOverride, rag },
+      data: { manualRagOverride: intent.ragOverride, rag, updatedAt: nextVersion(existing.updatedAt) },
       select: { id: true, manualRagOverride: true },
     });
-    return { kind: "deliverable", id: updated.id, rag: updated.manualRagOverride };
+    await refreshCampaignHealth(tx, existing.campaignId);
+    return { kind: "deliverable" as const, id: updated.id, rag: updated.manualRagOverride };
   });
 }
 
@@ -264,11 +351,12 @@ export async function overrideRag(intent: OverrideRagIntent): Promise<{ kind: "c
 
 export interface ComputeRAGInput {
   status: string; // TODO | IN_PROGRESS | DELIVERED | VALIDATED  (deliverable)
-  // ou pour Campaign : creativeState/clientState concaténés
   dueDate: Date | null;
   deliveredAt: Date | null;
   manualOverride: string | null;
   blockerCount?: number; // si > 0 → AMBER au minimum
+  /** Date de référence injectable (déterminisme des calculs et des tests). */
+  now?: Date;
 }
 
 /**
@@ -277,16 +365,16 @@ export interface ComputeRAGInput {
  * Règles :
  * - Si manualOverride non-null → retourner manualOverride (court-circuit)
  * - Si VALIDATED → GREEN
- * - Si DELIVERED ou IN_PROGRESS et dueDate dans > 7 jours futur → GREEN
- * - Si dueDate dans 0-3 jours futur → AMBER
  * - Si dueDate passée et status != VALIDATED/DELIVERED → RED
+ * - Si dueDate à moins de 3 jours (ou passée et DELIVERED) → AMBER
  * - Si blockerCount > 0 → AMBER au minimum
+ * - Sinon → GREEN (le calcul de campagne ne compte ce vert que s'il repose sur une preuve)
  */
 export function computeRAG(input: ComputeRAGInput): string {
   if (input.manualOverride) return input.manualOverride;
   if (input.status === "VALIDATED") return "GREEN";
 
-  const now = new Date();
+  const now = input.now ?? new Date();
   const due = input.dueDate;
 
   if (due) {
@@ -297,6 +385,110 @@ export function computeRAG(input: ComputeRAGInput): string {
 
   if ((input.blockerCount ?? 0) > 0) return "AMBER";
   return "GREEN";
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Santé automatique de campagne — agrégat déterministe de computeRAG
+// ──────────────────────────────────────────────────────────────────────────
+
+export type CampaignHealthSignal = "GREEN" | "AMBER" | "RED";
+/** Valeur stockée dans Campaign.healthSignal quand le calcul automatique n'est pas possible. */
+export const CAMPAIGN_HEALTH_UNKNOWN = "UNKNOWN";
+/** Reprises qui bloquent encore leur tâche. */
+export const OPEN_CHANGE_REQUEST_STATUSES = ["PENDING", "IN_PROGRESS", "ESCALATED"] as const;
+
+export interface CampaignHealthTask {
+  status: string;
+  dueDate: Date | null;
+  deliveredAt: Date | null;
+  manualRagOverride: string | null;
+  /** Reprises ouvertes (PENDING / IN_PROGRESS / ESCALATED) de cette tâche. */
+  openChangeRequests: number;
+}
+export interface CampaignHealthInput {
+  tasks: CampaignHealthTask[];
+  isCritical: boolean;
+  /** CreativeProductionStatus de la campagne (BLOQUE = production bloquée). */
+  creativeState: string;
+  now?: Date;
+}
+export type CampaignHealth =
+  | { calculable: true; signal: CampaignHealthSignal; reasons: string[] }
+  | { calculable: false; signal: null; reasons: string[] };
+
+const HEALTH_SEVERITY: Record<CampaignHealthSignal, number> = { GREEN: 0, AMBER: 1, RED: 2 };
+const isHealthSignal = (value: string): value is CampaignHealthSignal => value in HEALTH_SEVERITY;
+const tasksLabel = (count: number) => `${count} tâche${count > 1 ? "s" : ""}`;
+
+/**
+ * Santé d'une campagne, sans modèle ni valeur inventée :
+ * 1. sans tâche, la santé n'est pas calculable ;
+ * 2. chaque tâche passe par computeRAG (son statut manuel s'il existe), ses reprises ouvertes comptant comme blocages ;
+ * 3. une tâche ni validée, ni livrée, sans échéance ni statut manuel et sans signal n'est pas mesurable ;
+ * 4. la campagne prend la pire santé des tâches ; campagne critique ou production bloquée : au moins orange, les deux : rouge ;
+ * 5. un vert n'est rendu que si toutes les tâches sont mesurables ; sinon la santé n'est pas calculable.
+ */
+export function computeCampaignHealth(input: CampaignHealthInput): CampaignHealth {
+  if (input.tasks.length === 0) {
+    return { calculable: false, signal: null, reasons: ["Aucune tâche : la santé de la campagne n’est pas calculable."] };
+  }
+  const now = input.now ?? new Date();
+  let worst: CampaignHealthSignal = "GREEN";
+  const raise = (signal: CampaignHealthSignal) => { if (HEALTH_SEVERITY[signal] > HEALTH_SEVERITY[worst]) worst = signal; };
+  let late = 0, close = 0, blocked = 0, manual = 0, unmeasured = 0;
+  for (const task of input.tasks) {
+    const rag = computeRAG({ status: task.status, dueDate: task.dueDate, deliveredAt: task.deliveredAt,
+      manualOverride: task.manualRagOverride, blockerCount: task.openChangeRequests, now });
+    if (!isHealthSignal(rag)) { unmeasured++; continue; }
+    const evidence = task.manualRagOverride != null || task.status === "VALIDATED" || task.status === "DELIVERED"
+      || task.dueDate != null || rag !== "GREEN";
+    if (!evidence) { unmeasured++; continue; }
+    if (task.manualRagOverride != null) manual++;
+    else if (rag === "RED") late++;
+    else if (rag === "AMBER") { if (task.openChangeRequests > 0) blocked++; else close++; }
+    raise(rag);
+  }
+  const reasons: string[] = [];
+  if (late) reasons.push(`${tasksLabel(late)} en retard.`);
+  if (close) reasons.push(`${tasksLabel(close)} à échéance dans moins de trois jours.`);
+  if (blocked) reasons.push(`${tasksLabel(blocked)} avec une reprise ouverte.`);
+  if (manual) reasons.push(`${tasksLabel(manual)} au statut fixé manuellement.`);
+  const stalled = input.creativeState === "BLOQUE";
+  if (input.isCritical && stalled) { raise("RED"); reasons.push("Campagne critique et production bloquée."); }
+  else if (input.isCritical) { raise("AMBER"); reasons.push("Campagne marquée critique."); }
+  else if (stalled) { raise("AMBER"); reasons.push("Production bloquée."); }
+  if (unmeasured) reasons.push(`${tasksLabel(unmeasured)} sans échéance, livraison ni statut manuel : santé non mesurée.`);
+  if (worst === "GREEN" && unmeasured) {
+    return { calculable: false, signal: null, reasons: [...reasons, "Un état sain ne peut pas être affirmé."] };
+  }
+  return { calculable: true, signal: worst, reasons };
+}
+
+/**
+ * Recalcule et enregistre la santé d'une campagne en mode automatique, dans la
+ * transaction appelante. Une campagne au statut manuel n'est pas modifiée (null).
+ * Non calculable → `UNKNOWN`, jamais un vert par défaut.
+ */
+export async function refreshCampaignHealth(tx: Prisma.TransactionClient, campaignId: string,
+  now: Date = new Date()): Promise<CampaignHealth | null> {
+  // Serializes concurrent refreshes without blocking inserts of child rows.
+  await tx.$queryRaw`SELECT "id" FROM "Campaign" WHERE "id" = ${campaignId} FOR NO KEY UPDATE`;
+  const campaign = await tx.campaign.findUnique({ where: { id: campaignId }, select: {
+    manualRagOverride: true, healthSignal: true, isCritical: true, creativeState: true,
+  } });
+  if (!campaign || campaign.manualRagOverride) return null;
+  const rows = await tx.campaignDeliverable.findMany({ where: { campaignId }, select: {
+    status: true, dueDate: true, deliveredAt: true, manualRagOverride: true,
+    _count: { select: { changeRequests: { where: { status: { in: [...OPEN_CHANGE_REQUEST_STATUSES] } } } } },
+  } });
+  const health = computeCampaignHealth({
+    tasks: rows.map(row => ({ status: row.status, dueDate: row.dueDate, deliveredAt: row.deliveredAt,
+      manualRagOverride: row.manualRagOverride, openChangeRequests: row._count.changeRequests })),
+    isCritical: campaign.isCritical, creativeState: campaign.creativeState, now,
+  });
+  const signal = health.signal ?? CAMPAIGN_HEALTH_UNKNOWN;
+  if (signal !== campaign.healthSignal) await tx.campaign.update({ where: { id: campaignId }, data: { healthSignal: signal } });
+  return health;
 }
 
 // ──────────────────────────────────────────────────────────────────────────
