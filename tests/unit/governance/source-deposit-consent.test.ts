@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // dispatch are recorded. Auth/spine are exercised separately against Postgres.
 const recorded = vi.hoisted(() => ({
   db: {
-    brandDataSource: { create: vi.fn(), update: vi.fn(), findUniqueOrThrow: vi.fn(), findFirst: vi.fn() },
+    brandDataSource: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn(), findUniqueOrThrow: vi.fn(), findFirst: vi.fn() },
     fileUpload: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn(), findUniqueOrThrow: vi.fn() },
     $queryRaw: vi.fn(), $executeRaw: vi.fn(),
     brandContextNode: { deleteMany: vi.fn() },
@@ -67,6 +67,7 @@ beforeEach(() => {
   recorded.emit.mockResolvedValue({ status: "OK" });
   recorded.assertRead.mockResolvedValue(undefined);
   recorded.db.brandDataSource.findUniqueOrThrow.mockImplementation(async () => recorded.source);
+  recorded.db.brandDataSource.findUnique.mockImplementation(async () => recorded.source);
   recorded.db.fileUpload.findUnique.mockResolvedValue(null);
   recorded.db.fileUpload.findUniqueOrThrow.mockImplementation(async () => recorded.upload);
   recorded.db.fileUpload.create.mockImplementation(async ({ data }) => (recorded.upload = { id: "upload-test", ...data }));

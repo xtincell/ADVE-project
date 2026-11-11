@@ -1,3 +1,41 @@
+## 557 — IN1 fermé pour les sources ; même classe ailleurs, réceptions ouvertes (2026-11-11)
+
+**Fermé localement.** Les écrivains de source du routeur `ingestion` (`updateSource`,
+`deleteSource`, `uploadFile` avec `sourceId`, `sourceUses`, `previewBrandBook`,
+`prepareSourceIndex`) répondent 404 `NOT_FOUND` à un id inconnu comme à une source
+d’un autre locataire, avant toute écriture, avec le même message. Reçu sur PostgreSQL
+jetable par le routeur, la procédure gouvernée et la vraie route `/api/trpc`.
+Le dossier cible inconnu de `updateSource({ use })` ne produit plus P2025.
+
+**Non reçu.** CI, image, runtime et production 557 ; rejeu de la recette d’installation
+isolée (`installation/entreprise.py`, deux entreprises) sur l’image 557, cas
+`foreign_id_writer_in_B` attendu à 404. **Plan** : ouvrir la PR (label `out-of-scope`,
+numéro réel dans `scope-drift.md`), recevoir CI et image, puis rejouer la recette sur
+l’image exacte. **Déclencheur** : ouverture de la PR, puis prochaine réception C7.
+
+**Même classe hors des sources, non corrigée.** Relevé du 11 novembre, après correctif : 164 appels
+`findUniqueOrThrow`/`findFirstOrThrow` dans 47 fichiers de routeurs, dont au moins 70
+lisent un id d’entrée sur la même ligne. Un id inconnu y donne 500 et un message Prisma qui
+expose le chemin et un extrait du fichier serveur ; une garde de marque placée après
+répond 403, ce qui distingue un id étranger d’un id inconnu. Exemple keyé par une
+source d’étude : `bureauEtudes.setProvenance` et `assertStudyAccess`.
+Une règle globale P2025 → 404 est écartée : P2025 signale aussi les écritures
+conditionnelles refusées (révision du Deal dans `crm-engine/payments.ts`, sans
+conversion ; `brand-node`, `strategy.update` et `client-organization` le convertissent
+en `CONFLICT`). **Plan** : même patron que `assertSourceAccess` (lecture `findUnique`,
+404 identique pour inconnu et refusé) routeur par routeur, en commençant par les
+écrivains keyés par id ; verrou anti-régression à base décroissante sur les lectures
+`OrThrow` d’un id d’entrée. **Déclencheur** : prochaine recette d’isolation C7, ou
+toute modification d’un de ces routeurs.
+
+**Refus métier encore en 500.** `setSourceUse` (« Le partage exige deux marques du
+même opérateur. », « Seul le responsable… ») et les services de `document-versions`
+(`SOURCE_CHANGED:`) lèvent des `Error` nus : tRPC répond 500 avec le bon message.
+La relecture sous verrou de ces services par `findUniqueOrThrow` donne aussi 500 si
+la source est retirée entre la garde et le verrou. **Plan** : refus typés convertis
+dans le routeur (`CONFLICT`, `FORBIDDEN`, `NOT_FOUND`), sans changer les messages.
+**Déclencheur** : prochaine session sur le partage ou les éditions de documents.
+
 ## 556 — dépendances : réception et alertes moderate restantes
 
 Le lot 556 ferme les 9 critical, 21 high et 6 low du relevé npm du 10 novembre ; l’arbre de production ne porte plus d’alerte. Restent 15 moderate (`minimatch` dans l’outillage lint et madge), les majeures de frameworks non appliquées et la réception CI, image et runtime de 556. Le lot a aussi constaté que la garde de couches `boundaries/dependencies` est inerte. Le plan et les déclencheurs sont dans les entrées « Alertes npm préexistantes au build Docker » et « Garde de couches ESLint inerte » de la section « Maintenance des voies de livraison et dépendances ».
