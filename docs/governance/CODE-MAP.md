@@ -56,9 +56,10 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 75 modules (src/domain, cœur métier pur)
+## Domain — 76 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
+- **argos-library** — SHK-0002 point 5 — lecture publique de la bibliothèque canonique Argos-studio.
 - **argos-projection**
 - **barre-brand-context**
 - **brand-actors**

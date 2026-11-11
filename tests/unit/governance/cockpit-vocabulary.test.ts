@@ -40,6 +40,10 @@ const SCAN_DIRS = [
   // interdit exactement ces mots.
   join(ROOT, "src/components/strategy-presentation"),
   join(ROOT, "src/app/(shared)"),
+  // SHK-0002 point 5 (2026-11-11) — la bibliothèque publique Argos dit d'où
+  // vient ce qu'elle affiche : ses textes de source parlent au lecteur public.
+  join(ROOT, "src/app/(public)/argos"),
+  join(ROOT, "src/components/argos"),
 ];
 // Composants hors components/cockpit mais rendus dans le portail founder,
 // + sources de chaînes rendues au prospect (grille /pricing).
