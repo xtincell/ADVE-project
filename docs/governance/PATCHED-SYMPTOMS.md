@@ -28,6 +28,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 556 — dépendances : 63 alertes npm accumulées, dont 9 critiques (2026-11-11)
+
+Symptôme : `npm audit` sur `main` 6.27.552 relevait 63 alertes (9 critical, 21 high, 27 moderate, 6 low), dont 39 sur l’arbre de production. Le registre en notait 50 le 6 octobre et 51 le 20 octobre. Patch : montées mineures ou correctives des directes (`next` 16.4.6, Auth.js, SDK MCP, Prisma 7.10.1, Puppeteer, SDK IA v6, zod, xmldom), `sharp` 0.35.5 exigé par `next` 16.4, transitives mises à jour dans leurs plages, et un override `exceljs` → `uuid` ^11.1.1. Résultat : 15 moderate de l’outillage de développement, 0 en production. Commit `fix(deps)` de la branche `claude/alertes-dependances`.
+
+Hypothèse de cause racine : les PR Dependabot hebdomadaires (limite de cinq, groupes par framework) ne touchent ni les transitives verrouillées ni les versions épinglées en exact (`sharp`, `@xmldom/xmldom`), et aucune relecture périodique de `npm audit` n’est planifiée. Les alertes s’accumulent donc entre deux lots manuels. Dette liée : RESIDUAL-DEBT, « Alertes npm préexistantes au build Docker » (moderate restantes, majeures et réception de 556).
+
 ### CI PostgreSQL — assertion de `source-uses` périmée hors CI (2026-11-10)
 
 `source-uses.postgres.test.ts` attendait un seul `markAllSectionsStale` par écriture atomique. Depuis 519, `markPillarsStale` invalide aussi l’Oracle dans la transaction, une fois par pilier écrit : le test comptait trois appels et échouait. Personne ne l’a vu, car le fichier ne tournait dans aucun job. Patch (v6.27.555) : le test distingue deux invalidations en transaction et une seule après le commit. Cause racine : fichiers PostgreSQL hors CI, fermée par leur branchement et le verrou `ci-postgres-recovery.test.ts`. Dette liée : aucune.
