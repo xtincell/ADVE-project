@@ -1,7 +1,8 @@
 /**
  * Argos by LaFusée — router (ADR-0100). Sous-domaine Seshat.
  * Hunter gouverné (LLM via Gateway) + création manuelle (manual-first) +
- * revue opérateur + lectures publiques (apps Argos /argos, PASS uniquement).
+ * revue opérateur + lectures publiques (apps Argos /argos) : bibliothèque
+ * canonique Argos-studio si raccordée, sinon dossiers PASS du journal (SHK-0002).
  */
 
 import { z } from "zod";
@@ -21,6 +22,7 @@ import {
 import { manualDossierInputSchema } from "@/server/services/seshat/argos/schemas";
 import { creativeIntelligenceRouter } from "./creative-intelligence";
 import { projectArgosInput } from "@/domain/argos-projection";
+import { ARGOS_PUBLIC_REF_RE } from "@/domain/argos-library";
 import { projectToArgosStudio } from "@/server/services/seshat/argos/studio-client";
 import { getOperatorContext } from "@/server/services/operator-isolation";
 
@@ -82,13 +84,15 @@ export const argosRouter = createTRPCRouter({
       return setDossierVerdict({ id: input.id, verdict: input.verdict, reviewedBy: ctx.session.user.id });
     }),
 
-  // ── Lectures publiques (apps Argos) — PASS + publié uniquement ────────────
+  // ── Lectures publiques (apps Argos) — SHK-0002 point 5 ────────────────────
+  // Bibliothèque canonique Argos-studio si raccordée, sinon dossiers PASS +
+  // publiés du journal ; la réponse porte toujours sa source et sa fraîcheur.
   listPublic: publicProcedure
     .input(z.object({ sector: z.string().max(120).optional(), limit: z.number().int().min(1).max(60).default(60) }).optional())
     .query(({ input }) => listPublicDossiers(input ?? {})),
 
   getPublicByRef: publicProcedure
-    .input(z.object({ ref: z.string().min(1).max(160) }))
+    .input(z.object({ ref: z.string().regex(ARGOS_PUBLIC_REF_RE) }))
     .query(({ input }) => getPublicDossierByRef(input.ref)),
 
   /**

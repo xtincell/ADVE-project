@@ -351,7 +351,7 @@ garde des versions source restent à réconcilier.
 | `market-intelligence.ts` | Intel marché | M | point gouverné présent |
 | `market-study.ts` | Études marché | M | point gouverné présent |
 | `error-vault.ts` | Capture/triage errors runtime + `oracleIncidents` cluster par code ORACLE-NNN (ADR-0022) | INFRA | appels à suivre |
-| `argos.ts` | Argos by LaFusée — dossiers de référence + projection publique (ADR-0100) | M | point gouverné présent |
+| `argos.ts` | Argos by LaFusée — dossiers de référence (ADR-0100) ; `listPublic`/`getPublicByRef` lisent la bibliothèque Argos-studio si raccordée, sinon les dossiers PASS du journal, réponse `{ …, source }` (SHK-0002 point 5, 6.27.561) | M | point gouverné présent |
 | `creative-intelligence.ts` | Sous-router `argos.intelligence` (ADR-0194/0195) : corpus/recettes/essais/opportunités, capacités et collecte de sources, export atomique, veille opt-in, brouillons assistés et revue MANUAL. Mutations gouvernées, lectures de marque scopées ; aucun namespace racine nouveau. `argos.ts` conserve revue de dossier et ajoute projection explicite Argos-studio. | M | point gouverné présent ; ADR-0195 Accepted, parcours et stress local PASS |
 | `bureau-etudes.ts` | Vagues d'étude time-spine, significativité (ADR-0110/0114) | M | point gouverné présent |
 | `footprint.ts` | Score d'empreinte public instantané (funnel « Scorer ma marque ») — rate-limité ADR-0161, gate homonymes ADR-0162 | M | appels à suivre |

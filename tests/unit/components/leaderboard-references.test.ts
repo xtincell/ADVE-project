@@ -7,7 +7,7 @@ vi.mock("@/server/services/seshat/scoreur", () => ({ listLatestPublicVerdicts: a
 vi.mock("@/server/services/seshat/scoreur/canon", () => ({ getPublicScoreurReferences: async () => [
   { id: "coca-cola", label: "Coca-Cola", scale: "MONDE", theta: 2150 },
 ] }));
-vi.mock("@/server/services/seshat/argos", () => ({ listPublicDossiers: async () => [] }));
+vi.mock("@/server/services/seshat/argos", () => ({ listPublicDossiers: async () => ({ dossiers: [], source: { origin: "JOURNAL", reason: "NOT_CONFIGURED", observedAt: "2026-11-11T00:00:00.000Z", latestPublishedAt: null } }) }));
 vi.mock("@/lib/i18n/server", () => ({ getServerLocale: async () => "fr" }));
 vi.mock("@/components/public/newsletter-capture", () => ({ NewsletterCapture: () => null }));
 import LeaderboardPage from "@/app/leaderboard/page";

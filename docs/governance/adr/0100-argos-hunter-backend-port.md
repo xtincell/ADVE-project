@@ -37,6 +37,14 @@ Ce qui change est l'articulation, arbitrée par
 `POST /api/v1/ingest/dossier`, idempotent sur le slug, lorsque le verdict est `PASS`.
 `CampaignReferenceDossier` devient le journal de gouvernance, non le fonds documentaire.
 
+**Suite du 11 novembre 2026 (6.27.561) — lectures publiques.** Le point 5 de
+SHK-0002 est branché : `listPublicDossiers` et `getPublicDossierByRef`
+(`seshat/argos/library-read.ts`) lisent `GET /api/v1/references(/{slug})` du studio
+quand `ARGOS_STUDIO_URL` est posée, validé en Zod (`src/domain/argos-library.ts`).
+Studio absent, refusé, muet (3 s) ou illisible : la page sert les dossiers PASS du
+journal et affiche pourquoi. Le journal n'est lu publiquement qu'en repli et n'est
+jamais écrit par une lecture. Lecture d'un studio déployé encore à recevoir.
+
 Le dispositif qui rend cette erreur non reproductible est décrit dans
 [`shinkiro/docs/DERIVE.md`](https://github.com/xtincell/shinkiro/blob/main/docs/DERIVE.md).
 
