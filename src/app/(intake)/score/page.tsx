@@ -185,12 +185,12 @@ export default function PublicScorePage() {
             Diagnostiquer ma marque — gratuit
           </a>
           <p className="mt-3 text-xs text-foreground-muted">
-            Questionnaire ~15 min · Gratuit · Confidentiel · Verdict immédiat
+            Questionnaire ~10 min (indicatif) · Gratuit · Confidentiel · Rapport généré à la fin, parfois en plusieurs minutes
           </p>
           <p className="mt-2 text-xs text-foreground-muted">
             Pressé ?{" "}
             <a href="/scorer" className="text-primary underline-offset-2 hover:underline">
-              Scorez votre empreinte publique en 1 min, sans email
+              Scorez votre empreinte publique en ~1 min, sans email
             </a>
             .
           </p>

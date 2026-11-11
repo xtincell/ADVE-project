@@ -16,12 +16,12 @@ export const intakeEntryFr = {
 
   // ── Landing /intake — hero + badges ──────────────────────────────────
   "intake.hero.title.before": "Mesurez la force de votre marque en",
-  "intake.hero.title.highlight": "15 minutes",
+  "intake.hero.title.highlight": "15 minutes environ",
   "intake.hero.subtitle":
     "Le protocole ADVE analyse 4 dimensions fondamentales et vous donne votre socle de marque sur 100 — le premier pas vers le score complet sur 200, mesuré sur épreuves.",
   "intake.badge.free": "Gratuit",
   "intake.badge.confidential": "Confidentiel",
-  "intake.badge.duration": "15 min",
+  "intake.badge.duration": "~15 min (indicatif)",
   "intake.badge.actionable": "Actionnable",
   "intake.badge.diagnostics": "{count}+ diagnostics",
   "intake.steps.contact": "Vos infos",
@@ -77,7 +77,7 @@ export const intakeEntryFr = {
   "intake.method.start": "Commencer le diagnostic",
   "intake.method.starting": "Démarrage...",
   "intake.footer.privacy":
-    "Vos données sont confidentielles et ne seront jamais partagées sans votre accord explicite.",
+    "Vos données servent à votre diagnostic : elles ne sont ni vendues ni publiées. Les analyses assistées passent par le service d’IA décrit dans la politique de confidentialité.",
 
   // ── Questionnaire /intake/[token] ────────────────────────────────────
   "intake.run.headline.biz": "Parlons de votre business",
@@ -150,7 +150,7 @@ export const intakeEntryFr = {
   "intake.short.lengthOk": "Longueur suffisante",
   "intake.short.error.minLength":
     "Veuillez fournir un texte d'au moins 100 caractères pour un diagnostic pertinent.",
-  "intake.short.analyzing": "Analyse en cours... (30-60 sec)",
+  "intake.short.analyzing": "Analyse en cours… (cela peut prendre plusieurs minutes)",
   "intake.short.submit": "Analyser et générer le score",
 } as const;
 
@@ -160,12 +160,12 @@ export const intakeEntryEn: Record<keyof typeof intakeEntryFr, string> = {
   "intake.notFound.body": "This link is invalid or has expired.",
 
   "intake.hero.title.before": "Measure your brand's strength in",
-  "intake.hero.title.highlight": "15 minutes",
+  "intake.hero.title.highlight": "about 15 minutes",
   "intake.hero.subtitle":
     "The ADVE protocol analyzes 4 fundamental dimensions and gives you your brand foundation score out of 100 — the first step toward the full score out of 200, measured through real-world trials.",
   "intake.badge.free": "Free",
   "intake.badge.confidential": "Confidential",
-  "intake.badge.duration": "15 min",
+  "intake.badge.duration": "~15 min (indicative)",
   "intake.badge.actionable": "Actionable",
   "intake.badge.diagnostics": "{count}+ diagnostics",
   "intake.steps.contact": "Your details",
@@ -219,7 +219,7 @@ export const intakeEntryEn: Record<keyof typeof intakeEntryFr, string> = {
   "intake.method.start": "Start the diagnostic",
   "intake.method.starting": "Starting...",
   "intake.footer.privacy":
-    "Your data is confidential and will never be shared without your explicit consent.",
+    "Your data is used for your diagnostic: it is neither sold nor published. Assisted analyses go through the AI service described in the privacy policy.",
 
   "intake.run.headline.biz": "Let's talk about your business",
   "intake.run.headline.a": "Who are you, really?",
@@ -289,7 +289,7 @@ export const intakeEntryEn: Record<keyof typeof intakeEntryFr, string> = {
   "intake.short.lengthOk": "Long enough",
   "intake.short.error.minLength":
     "Please provide at least 100 characters for a meaningful diagnostic.",
-  "intake.short.analyzing": "Analyzing... (30-60 sec)",
+  "intake.short.analyzing": "Analyzing… (this can take several minutes)",
   "intake.short.submit": "Analyze and generate my score",
 };
 
@@ -299,12 +299,12 @@ export const intakeEntryZh: Record<keyof typeof intakeEntryFr, string> = {
   "intake.notFound.body": "此链接无效或已过期。",
 
   "intake.hero.title.before": "测量您品牌的力量，只需",
-  "intake.hero.title.highlight": "15 分钟",
+  "intake.hero.title.highlight": "约 15 分钟",
   "intake.hero.subtitle":
     "ADVE 协议分析 4 个基本维度，为您给出满分 100 的品牌根基分——这是迈向满分 200、经实战检验的完整评分的第一步。",
   "intake.badge.free": "免费",
   "intake.badge.confidential": "保密",
-  "intake.badge.duration": "15 分钟",
+  "intake.badge.duration": "约 15 分钟（参考）",
   "intake.badge.actionable": "可执行",
   "intake.badge.diagnostics": "{count}+ 次诊断",
   "intake.steps.contact": "您的信息",
@@ -357,7 +357,7 @@ export const intakeEntryZh: Record<keyof typeof intakeEntryFr, string> = {
     "提供文本、文档（PDF、Word）和/或您的网站链接。AI 会分析您的资料并提取 ADVE 数据。",
   "intake.method.start": "开始诊断",
   "intake.method.starting": "启动中...",
-  "intake.footer.privacy": "您的数据严格保密，未经您的明确同意绝不共享。",
+  "intake.footer.privacy": "您的数据仅用于您的诊断：不会出售，也不会公开。辅助分析通过隐私政策中所述的 AI 服务进行。",
 
   "intake.run.headline.biz": "聊聊您的业务",
   "intake.run.headline.a": "您到底是谁？",
@@ -423,6 +423,6 @@ export const intakeEntryZh: Record<keyof typeof intakeEntryFr, string> = {
   "intake.short.charsRemaining": "还需 {count} 个字符",
   "intake.short.lengthOk": "长度足够",
   "intake.short.error.minLength": "请提供至少 100 个字符的文本，以获得有意义的诊断。",
-  "intake.short.analyzing": "分析中...（30-60 秒）",
+  "intake.short.analyzing": "分析中…（可能需要几分钟）",
   "intake.short.submit": "分析并生成评分",
 };

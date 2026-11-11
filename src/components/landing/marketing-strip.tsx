@@ -5,17 +5,19 @@
  * version affichait de faux événements horodatés (« Brief PDF entré · 14h02 »,
  * « 47 USD validés ») présentés comme du live : purgé (audit intention/exécution
  * 2026-07-16 — un chiffre inventé face lead viole le canon d'honnêteté).
+ * Recette F16 (11 novembre 2026) : délais, affectations et contrôles décrits
+ * tels que le code les fait — propositions à confirmer, pas d'automatisme promis.
  */
 const ITEMS = [
-  "★ Brief entré → diagnostic en 15 min",
+  "★ Diagnostic gratuit — questionnaire ou import de documents",
   "8 piliers scorés · /25 chacun",
-  "Missions dispatchées aux talents · Douala · Abidjan",
-  "Recommandations générées à chaque cycle",
-  "Chaque dépense validée par un verrou budgétaire",
-  "Signaux faibles sectoriels détectés",
-  "Équipes appariées par mission",
-  "Diffusion multi-canaux orchestrée",
-  "Axe culturel suivi par secteur",
+  "Missions proposées aux talents de La Guilde",
+  "Recommandations à valider à chaque actualisation",
+  "Coût des traitements assistés contrôlé avant lancement",
+  "Signaux sectoriels lus dans les sources activées",
+  "Équipes proposées par mission, à confirmer",
+  "Diffusion préparée sur les canaux connectés",
+  "Axe culturel lu par secteur quand les signaux existent",
 ];
 
 export function MarketingStrip() {

@@ -395,7 +395,7 @@ export const intakeResultFr = {
   // ── Processing — header / progression ──────────────────────────────
   "intakeProcessing.titleBefore": "Analyse de",
   "intakeProcessing.titleAfter": "en cours",
-  "intakeProcessing.sub": "On extrait vos 4 piliers ADVE. Cela prend généralement 30 à 60 secondes.",
+  "intakeProcessing.sub": "On extrait vos 4 piliers ADVE. Cela peut prendre plusieurs minutes.",
   "intakeProcessing.done": "Terminé",
 
   // ── Processing — échecs du traitement asynchrone (F1, 2026-07-19) ──
@@ -492,8 +492,8 @@ export const intakeResultEn: Record<keyof typeof intakeResultFr, string> = {
   "intakeResult.oracle.body": "The 35 sections of your strategic document are being assembled — open it (and keep this link):",
   "intakeResult.oracle.open": "Open my full strategy",
 
-  "intakeResult.radar.before": "ADVE brand foundation score:",
-  "intakeResult.radar.after": "/100 — your full brand score /200 (execution pillars included) then builds up in your workspace.",
+  "intakeResult.radar.before": "ADVE file completeness:",
+  "intakeResult.radar.after": "/100 — this score measures how much of the structure is filled in, not brand strength. Public evidence is assessed separately.",
   "intakeResult.estRev.p1": "Your level above is",
   "intakeResult.estRev.estimated": "estimated",
   "intakeResult.estRev.p2": "from your answers. Further down, your",
@@ -759,7 +759,7 @@ export const intakeResultEn: Record<keyof typeof intakeResultFr, string> = {
 
   "intakeProcessing.titleBefore": "Analysis of",
   "intakeProcessing.titleAfter": "in progress",
-  "intakeProcessing.sub": "We're extracting your 4 ADVE pillars. This usually takes 30 to 60 seconds.",
+  "intakeProcessing.sub": "We're extracting your 4 ADVE pillars. This can take several minutes.",
   "intakeProcessing.done": "Done",
 
   // ── Processing — async failure states (F1, 2026-07-19) ──
@@ -856,8 +856,8 @@ export const intakeResultZh: Record<keyof typeof intakeResultFr, string> = {
   "intakeResult.oracle.body": "您的战略文档共 35 个章节正在生成——请查看（并保存此链接）：",
   "intakeResult.oracle.open": "打开我的完整战略",
 
-  "intakeResult.radar.before": "ADVE 品牌根基得分：",
-  "intakeResult.radar.after": "/100——您的品牌总分 /200（含执行支柱）随后将在您的空间中逐步构建。",
+  "intakeResult.radar.before": "ADVE 档案完整度：",
+  "intakeResult.radar.after": "/100——该分数衡量已填写结构的完整度，而非品牌力量。公开证据另行评估。",
   "intakeResult.estRev.p1": "上方的层级是",
   "intakeResult.estRev.estimated": "估算值",
   "intakeResult.estRev.p2": "，来自您的回答。下方的",
@@ -1123,7 +1123,7 @@ export const intakeResultZh: Record<keyof typeof intakeResultFr, string> = {
 
   "intakeProcessing.titleBefore": "正在分析",
   "intakeProcessing.titleAfter": "……",
-  "intakeProcessing.sub": "正在提取您的 4 大 ADVE 支柱。通常需要 30 到 60 秒。",
+  "intakeProcessing.sub": "正在提取您的 4 大 ADVE 支柱。可能需要几分钟。",
   "intakeProcessing.done": "完成",
 
   // ── Processing — 异步处理失败状态（F1，2026-07-19）──

@@ -1,19 +1,23 @@
+// Recette F16 (11 novembre 2026) : chaque réponse dit ce que le code fait.
+// Retirés : rapport « en 15 minutes », livrables « sous 30 jours », palier
+// « à 90 jours », « chaque franc » contrôlé, matching « sans dispatch humain »,
+// briefs « chiffrés au repos », « aucun cross-tenant possible ».
 const QUESTIONS = [
   {
     q: "En quoi La Fusée est-elle différente d'une agence classique ?",
-    a: "Une agence vend des heures. La Fusée vend une trajectoire mesurée. Chaque livrable est scoré, chaque décision est tracée à vie et auditable, chaque franc passe par un verrou budgétaire avant d'être engagé. On industrialise — pas on improvise.",
+    a: "Une agence vend des heures. La Fusée outille une trajectoire mesurée. Le score de marque est calculé sans IA, chaque opération gouvernée est tracée dans un journal chaîné, et le coût d'un traitement assisté est contrôlé avant son lancement. On industrialise — pas on improvise.",
   },
   {
-    q: "15 minutes pour diagnostiquer une marque, c'est crédible ?",
-    a: "Oui — le rapport diagnostic auto se rend en 15 minutes (gratuit, web). Ensuite, la stratégie complète s'écrit, les missions se dispatchent, et les premiers livrables arrivent sous 30 jours. Le PDF brandé exportable est en option payante. Si on rate l'altitude, on le dit — c'est le rôle de la veille sentinelle.",
+    q: "Combien de temps prend le diagnostic ?",
+    a: "Le questionnaire guidé prend environ 10 minutes, l'import de documents quelques minutes de plus ou de moins : ce sont des durées indicatives, pas des garanties. La génération du rapport vient ensuite et peut prendre plusieurs minutes. Le rapport web est gratuit ; le PDF brandé exportable est en option payante. La suite — stratégie, missions, livrables — se cadre avec ton équipe ; aucun délai n'est garanti sur cette page.",
   },
   {
     q: "Qu'est-ce qui empêche l'IA de raconter n'importe quoi ?",
-    a: "Cinq verrous : un point d'écriture unique sur chaque pilier, un verrou de format, une validation de type, un score de confiance, et un verrou financier automatique. Confiance < 0.5 → revue obligatoire. Aucune mutation ne sort du décideur sans signature auditable.",
+    a: "Plusieurs verrous : un point d'écriture unique sur chaque pilier, un format imposé et validé pour les réponses structurées, l'origine de chaque information affichée (déclarée, observée ou déduite) et un contrôle de coût avant lancement. Le socle de ta marque ne change que par une décision humaine ; une proposition de l'IA reste une proposition à valider.",
   },
   {
     q: "Et les freelances africains, comment ils s'intègrent ?",
-    a: "Tier system + matching automatique sur skills + QC + paiement mobile money. Un créatif à Douala peut livrer un KV pour une marque à Abidjan sans dispatch humain — l'OS apparie talent et mission, compose l'équipe, et route le QC. La progression de tier est validée par les livraisons réelles, pas par une lettre de recommandation. Formation Académie intégrée pour combler les gaps.",
+    a: "Ils s'inscrivent sur La Guilde, consultent le mur des missions et candidatent. L'OS propose des profils selon les compétences et la disponibilité ; l'affectation et la composition de l'équipe sont confirmées par une personne. Le contrôle qualité, les paliers des talents (proposés sur leurs livraisons, validés par l'équipe) et le paiement mobile money passent par les moyens activés.",
   },
   {
     q: "ADVE/RTIS, ça veut dire quoi exactement ?",
@@ -21,15 +25,15 @@ const QUESTIONS = [
   },
   {
     q: "Mes données, où vivent-elles ?",
-    a: "Postgres multi-tenant avec isolation stricte. Chaque opérateur voit ses propres données. Les briefs sont chiffrés au repos. Aucun cross-tenant possible — c'est un invariant testé en continu.",
+    a: "Dans une base PostgreSQL auto-hébergée sur le serveur de production. Chaque requête vérifie l'accès à la marque concernée ; cette isolation est contrôlée par des tests automatisés à chaque modification du code. Les documents originaux déposés et les jetons de connexion aux réseaux sont chiffrés par l'application. Détail sur la page Confidentialité et le Trust Center.",
   },
   {
     q: "Concrètement, ça coûte combien ?",
-    a: "Le diagnostic est gratuit (rapport web en 15 minutes) et te donne déjà un score, un radar 8 piliers et un plan d'action priorisé. Le PDF brandé exportable est en option payante. La grille par palier et par zone (FCFA / EUR / USD) est publique — voir la page tarifs. Propulsion s'indexe sur ton palier visé (FORTE, CULTE, ICONE) et le périmètre missions ; Apex est un partenariat sélectif sur devis. Le diagnostic gratuit te donne tous les éléments pour comparer à ce que tu paies aujourd'hui en agence ou en interne.",
+    a: "Le diagnostic est gratuit (rapport web) : complétude de ton socle ADVE sur 100, radar des 4 piliers ADVE, force publique sur 200 quand une mesure existe et un aperçu des recommandations. Le PDF brandé exportable est en option payante. La grille par palier et par zone (FCFA / EUR / USD) est publique — voir la page tarifs. Propulsion s'indexe sur ton palier visé (FORTE, CULTE, ICONE) et le périmètre missions ; Apex est un partenariat sélectif sur devis.",
   },
   {
     q: "Quand est-ce que je vois mes premiers superfans recrutés ?",
-    a: "Diagnostic : 15 minutes. Propulsion : premiers livrables 30 jours, premier palier mesurable 90 jours, premier signal d'évolution Cult Index 60-120 jours selon le palier de départ. Si ta marque est à FRAGILE, le passage à ORDINAIRE prend 90-180 jours. De ORDINAIRE à FORTE : 6-12 mois. La Fusée mesure chaque transition — pas de promesse en l'air.",
+    a: "Aucune date ne peut être promise ici : la communauté se mesure sur des données réelles — réseaux connectés, échanges, clients — et aucun délai type n'a encore été mesuré sur un cycle complet. La Fusée mesure chaque transition de palier et ne la valide que sur preuve.",
   },
 ];
 
