@@ -51,7 +51,7 @@ export default function TarifsPage() {
             <Eyebrow num="02">Le produit</Eyebrow>
             <SectionHeading emphasis="Fusée.">La</SectionHeading>
             <Lede className="mt-4">
-              Parmi nos offres, un produit se pilote seul : La Fusée. Diagnostic gratuit en quinze minutes,
+              Parmi nos offres, un produit est en libre-service : La Fusée. Diagnostic gratuit,
               puis Oracle à l&apos;acte, Cockpit et Retainers en abonnement — chaque palier a un prix clair,
               recalculé pour votre marché. La porte d&apos;entrée sans engagement vers la méthode.
             </Lede>

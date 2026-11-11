@@ -18,10 +18,10 @@ export const scorerFr = {
 
   // ── Hero ───────────────────────────────────────────────────────────────
   "scorer.hero.kicker": "La Fusée · score gratuit · sans email",
-  "scorer.hero.title": "Scorez votre marque en une minute",
+  "scorer.hero.title": "Scorez votre marque en une minute environ",
   "scorer.hero.lede.before":
     "Entrez votre marque, votre site et vos réseaux — on scanne votre empreinte digitale en ",
-  "scorer.hero.lede.strong": "une minute",
+  "scorer.hero.lede.strong": "une minute environ",
   "scorer.hero.lede.after":
     ", sans inscription. Puis, si vous voulez aller plus loin, votre diagnostic complet (méthode ADVE) vous attend.",
 
@@ -244,10 +244,10 @@ export const scorerEn: Record<keyof typeof scorerFr, string> = {
   "scorer.nav.login": "Log in",
 
   "scorer.hero.kicker": "La Fusée · free score · no email",
-  "scorer.hero.title": "Score your brand in one minute",
+  "scorer.hero.title": "Score your brand in about one minute",
   "scorer.hero.lede.before":
     "Enter your brand, your website and your social accounts — we scan your digital footprint in ",
-  "scorer.hero.lede.strong": "one minute",
+  "scorer.hero.lede.strong": "about one minute",
   "scorer.hero.lede.after":
     ", no sign-up required. Then, if you want to go further, your full diagnostic (ADVE method) is waiting.",
 
@@ -446,9 +446,9 @@ export const scorerZh: Record<keyof typeof scorerFr, string> = {
   "scorer.nav.login": "登录",
 
   "scorer.hero.kicker": "La Fusée · 免费评分 · 无需邮箱",
-  "scorer.hero.title": "一分钟为您的品牌评分",
+  "scorer.hero.title": "约一分钟为您的品牌评分",
   "scorer.hero.lede.before": "输入您的品牌、网站和社交账号——我们将在",
-  "scorer.hero.lede.strong": "一分钟",
+  "scorer.hero.lede.strong": "约一分钟",
   "scorer.hero.lede.after":
     "内扫描您的数字足迹，无需注册。之后若想更进一步，您的完整诊断（ADVE 方法）已在等您。",
 

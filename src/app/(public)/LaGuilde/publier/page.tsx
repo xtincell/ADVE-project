@@ -8,7 +8,7 @@ import { PostMissionForm } from "@/components/laguilde/post-mission-form";
 export const metadata: Metadata = {
   title: "Publier une mission — La Guilde | La Fusée",
   description:
-    "Publiez votre mission créative et recevez des candidatures de freelances et agences de prod vérifiés.",
+    "Publiez votre mission créative : après relecture par l'équipe, elle reçoit les candidatures de freelances et agences de prod inscrits sur La Guilde.",
 };
 
 export default function PublierPage() {

@@ -20,7 +20,7 @@ export function MarketingFinale() {
           Pas une <span className="font-serif italic font-medium text-accent">promesse</span>.
         </h2>
         <p className="max-w-[60ch] text-foreground-secondary text-base md:text-lg">
-          15 minutes pour le rapport diagnostic. 30 jours pour les premiers livrables. 90 jours pour le premier palier mesurable. La Fusée signe ses transitions avec des chiffres — pas avec des slides.
+          Un diagnostic gratuit pour situer ta marque. Des transitions de palier qui ne se valident que sur des mesures. La Fusée signe ses transitions avec des chiffres — pas avec des slides.
         </p>
         <div className="flex gap-3 flex-wrap justify-center mt-3">
           <a href="/intake" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors">
@@ -31,7 +31,7 @@ export function MarketingFinale() {
             Lire la doctrine complète
           </a>
         </div>
-        <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">↳ gratuit · 15 min · sans engagement</p>
+        <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">↳ gratuit · sans engagement</p>
         <div className="flex gap-4 items-center mt-8 pt-6 border-t border-border font-mono text-2xs text-foreground-muted flex-wrap justify-center">
           <span>UPgraders · Industry OS</span>
           <span aria-hidden="true" className="text-accent">●</span>

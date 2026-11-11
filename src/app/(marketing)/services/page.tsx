@@ -88,8 +88,8 @@ export default function ServicesPage() {
             <SectionHeading emphasis="Fusée.">La</SectionHeading>
             <Lede className="mt-4">
               Les cinq piliers ne tiennent pas par magie : ils sont orchestrés par La Fusée, notre Industry OS. C&apos;est
-              lui qui transforme votre brief en fiche ADVE, génère le SWOT, cartographie les actions et tient la roadmap
-              à jour. Côté client, vous le pilotez depuis le Cockpit.
+              lui qui structure votre brief en fiche ADVE, dérive le SWOT et la carte des actions, et recalcule la
+              roadmap quand vous le demandez. Côté client, vous le pilotez depuis le Cockpit.
             </Lede>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/lafusee" className="inline-flex items-center gap-2 border border-border-strong px-5 py-3.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-elevated">
@@ -104,8 +104,9 @@ export default function ServicesPage() {
             <Eyebrow>La Fusée — notre produit</Eyebrow>
             <div className="font-display text-xl font-semibold tracking-tight">Pas (encore) prêt pour un mandat ?</div>
             <p className="mt-3 text-sm leading-relaxed text-foreground-secondary">
-              Essayez La Fusée en libre-service : le diagnostic est gratuit et tombe en quinze minutes — un score sur
-              200, un radar de vos piliers, un premier plan d&apos;action. Sans engagement, c&apos;est la façon de voir la
+              Essayez La Fusée en libre-service : le diagnostic est gratuit — la complétude de votre
+              socle ADVE sur 100, un radar de ses 4 piliers, votre force publique sur 200 quand une mesure existe et un
+              aperçu des recommandations. Sans engagement, c&apos;est la façon de voir la
               mécanique avant de parler mandat.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">

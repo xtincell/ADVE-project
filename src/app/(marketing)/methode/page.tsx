@@ -86,8 +86,8 @@ export default function MethodePage() {
             <Eyebrow num="05">Le livrable</Eyebrow>
             <SectionHeading emphasis="Oracle.">L&apos;</SectionHeading>
             <Lede className="mt-4">
-              La méthode produit un document de conseil dynamique — l&apos;Oracle. Un diagnostic structuré qui se
-              met à jour à chaque cycle : score, radar des piliers, plan d&apos;action priorisé. On l&apos;accouche par un
+              La méthode produit un document de conseil dynamique — l&apos;Oracle. Un diagnostic structuré qu&apos;on
+              actualise à chaque cycle : score, radar des piliers, plan d&apos;action priorisé. On l&apos;accouche par un
               audit ADVE en mandat — ou vous l&apos;essayez en libre-service via notre produit La Fusée.
             </Lede>
             <div className="mt-8 flex flex-wrap gap-3">

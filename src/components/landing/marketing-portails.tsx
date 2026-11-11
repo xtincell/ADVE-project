@@ -1,34 +1,38 @@
 import Link from "next/link";
 
+// Recette F16 (11 novembre 2026) : rien n'est promis « en temps réel », « seul »
+// ou « automatiquement » quand le code propose et attend une décision humaine,
+// ou dépend d'un service à configurer (forge, diffusion, paiement).
+
 const PORTAILS = [
   {
     num: "06 / 1", name: "Cockpit", forWhom: "→ Founder, marque",
-    bullets: ["Score ADVE/RTIS /200 et radar 8 piliers en temps réel", "Brandbook, plan media, KV générés par l'OS", "Stratégie Oracle qui se met à jour seule quand le marché bouge"],
+    bullets: ["Score ADVE/RTIS /200 et radar des 8 piliers, recalculés à chaque modification enregistrée", "Livre de marque composé depuis tes piliers et documents ; visuels préparés sur brief, générés par un service configuré puis relus", "Document de stratégie en 35 sections, signalé périmé quand le socle change, actualisé à la demande"],
     cta: "Accéder au Cockpit ↗",
     href: "/cockpit",
   },
   {
     num: "06 / 2", name: "Console", forWhom: "→ Opérateur UPgraders",
-    bullets: ["Vue écosystème complète — clients, talents, missions, revenus", "Pilote les 7 cerveaux et supervise chaque recommandation IA", "Audit trail immuable sur chaque décision · zéro mutation hors gouvernance"],
+    bullets: ["Vue écosystème — clients, talents, missions, revenus", "Supervise les sept fonctions et relit les propositions de l'IA", "Journal chaîné des opérations gouvernées, consultable et vérifiable"],
     cta: "Accéder à la Console ↗",
     accent: true,
     href: "/console",
   },
   {
     num: "06 / 3", name: "Creator", forWhom: "→ Freelance, talent",
-    bullets: ["Missions matchées automatiquement à ton profil — pas de prospection", "Progression de tier validée par tes livraisons réelles", "Académie + certifications portables · paiement mobile money à la livraison"],
+    bullets: ["Missions proposées selon ton profil, candidature depuis La Guilde", "Progression de palier proposée sur tes livraisons et leur contrôle qualité, validée par l'équipe", "Académie · paiement mobile money via les moyens de paiement activés"],
     cta: "Accéder au Creator ↗",
     href: "/creator",
   },
   {
     num: "06 / 4", name: "Agency", forWhom: "→ Agence partenaire",
-    bullets: ["Tous tes clients depuis un seul dashboard", "Broadcast multi-canal (Meta / Google / X / TikTok / email / SMS) pour tous tes clients", "API keys sécurisées dans un Credentials Vault · commissions tracées automatiquement"],
+    bullets: ["Tous tes clients depuis un seul dashboard", "Diffusion préparée sur les canaux connectés de chaque client — réseaux, email, SMS selon les accès configurés", "Accès aux services externes gérés en console · commissions calculées par mission"],
     cta: "Accéder à l'Agency ↗",
     href: "/agency",
   },
   {
     num: "06 / 5", name: "La Guilde", forWhom: "→ Public · marketplace crew",
-    bullets: ["Le mur des missions ouvertes — consultable sans compte", "Les marques publient un brief ; freelances & agences s'inscrivent et candidatent", "Façade publique d'Imhotep · modération opérateur avant mise en ligne"],
+    bullets: ["Le mur des missions ouvertes — consultable sans compte", "Les marques publient un brief ; freelances & agences s'inscrivent et candidatent", "Chaque mission est relue par l'équipe avant mise en ligne"],
     cta: "Découvrir La Guilde ↗",
     href: "/LaGuilde",
   },

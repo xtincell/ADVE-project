@@ -1,22 +1,25 @@
+// Recette F16 (11 novembre 2026) : durées et délais présentés comme indicatifs
+// ou fixés au cadrage ; le diagnostic gratuit décrit tel que le résultat intake
+// le rend (complétude /100, radar 4 piliers ADVE, aperçu des recommandations).
 const PLANS = [
   {
     name: "RAMPE 01", title: "Diagnostic", lead: "Pour calibrer l'altitude actuelle de la marque.",
-    price: "Gratuit", per: "— rapport web en 15 min",
-    feats: ["Socle de marque /100 (méthode ADVE) — premier pas vers le score complet /200", "Radar 8 piliers", "1 plan d'action priorisé", "PDF brandé exportable en option payante", "Sans engagement, sans appel commercial"],
+    price: "Gratuit", per: "— rapport web",
+    feats: ["Complétude du socle de marque /100 (méthode ADVE) — force publique /200 quand une mesure existe", "Radar des 4 piliers ADVE", "Aperçu des recommandations prioritaires, à valider", "PDF brandé exportable en option payante", "Sans engagement, sans appel commercial"],
     cta: "Diagnostiquer ma marque →", href: "#intake", featured: false,
-    timeline: "↳ Résultat : 15 minutes",
+    timeline: "↳ Questionnaire ~10 min · durée indicative",
   },
   {
     name: "RAMPE 02", title: "Propulsion", lead: "L'OS complet pour aller de FORTE à CULTE.",
     price: "Par palier", per: "— grille publique par zone (FCFA / EUR / USD)",
-    feats: ["Tout le Diagnostic +", "Stratégie dynamique — 35 sections qui se mettent à jour seules", "Missions en production · talents appariés", "Cockpit fondateur + suivi opérationnel"],
+    feats: ["Tout le Diagnostic +", "Document de stratégie en 35 sections, actualisé à la demande quand le socle change", "Missions confiées à des talents · affectations à confirmer", "Cockpit fondateur + suivi opérationnel"],
     cta: "Briefer un opérateur →", href: "/contact?offre=lafusee-propulsion", featured: true,
-    timeline: "↳ Premiers livrables : 30 jours · 1er palier mesuré : 90 jours",
+    timeline: "↳ Calendrier fixé au cadrage · aucun délai garanti sur cette page",
   },
   {
     name: "RAMPE 03", title: "Apex", lead: "Pour les candidats à l'ICONE — veille sentinelle active.",
     price: "Partenariat", per: "— dossier sélectif, sur devis",
-    feats: ["Tout Propulsion +", "Veille sentinelle continue (culture, communauté, actifs)", "Couverture cross-secteur", "Account dédié · UPgraders en lead direct"],
+    feats: ["Tout Propulsion +", "Vigies sur les signaux disponibles (culture, communauté, actifs)", "Couverture cross-secteur", "Account dédié · UPgraders en lead direct"],
     cta: "Postuler →", href: "/contact?offre=lafusee-apex", featured: false,
     timeline: "↳ Maintien orbite ICONE · cycle annuel renouvelé",
   },

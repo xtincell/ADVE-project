@@ -15,7 +15,7 @@ export default function SlaPage() {
   return (
     <LegalShell
       title="Engagements de niveau de service (SLA)"
-      updated="12 juin 2026"
+      updated="11 novembre 2026"
       intro={
         <>
           Les délais ci-dessous font partie de la <strong>strate ferme</strong> de l&apos;obligation d&apos;effet
@@ -54,7 +54,7 @@ export default function SlaPage() {
           <li>Par période de retard entamée (l&apos;unité du SLA concerné) : <strong>avoir de 5 % de la valeur du livrable</strong>.</li>
           <li>Plafond par livrable : 100 % de sa valeur.</li>
           <li>Plafond combiné avec le geste commercial des CGV : 2 cycles d&apos;abonnement sur une même période.</li>
-          <li>Les pénalités sont des avoirs en compte, imputés automatiquement — pas de démarche à faire.</li>
+          <li>Les pénalités sont des avoirs en compte, imputés par UPgraders sur constat — pas de démarche à faire.</li>
         </ul>
       </LegalSection>
 
@@ -70,7 +70,7 @@ export default function SlaPage() {
       <LegalSection title="5. Mesure et preuve">
         <p>
           Les horodatages de demande et de livraison sont journalisés dans la trace de la plateforme — le constat
-          de respect ou de violation d&apos;un SLA est mécanique, lisible par le client, et fait foi entre les
+          de respect ou de violation d&apos;un SLA s&apos;établit sur ces horodatages et fait foi entre les
           parties. État temps réel de la plateforme : <a href="/status" className="text-accent hover:underline">/status</a>.
         </p>
       </LegalSection>

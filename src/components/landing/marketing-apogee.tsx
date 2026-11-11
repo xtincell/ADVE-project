@@ -4,13 +4,18 @@ import { TIER_UPPER_BOUNDS_200 } from "@/domain";
 // littéraux qui contredisent classifyTier (audit intention/exécution 2026-07-16 :
 // un lead à 75 lisait LATENT ici alors que le produit le classe FRAGILE).
 const B = TIER_UPPER_BOUNDS_200;
-const TIERS = [
-  { i: 6, num: "06", name: "ICONE", alt: "APEX · plafond cassé", proofs: ["Référence culturelle", "Marché redéfini", "Influence transversale"], metric: `Score > ${B.CULTE}/200 · Overton déflecté`, cron: "DEFEND_LEGACY" },
-  { i: 5, num: "05", name: "CULTE", alt: "plafond haut · communauté", proofs: ["NPS > 70", "UGC organique soutenu", "Tribu identifiable"], metric: `Score ${B.FORTE + 1}–${B.CULTE}/200 · NPS > 70`, cron: "MAINTAIN_APOGEE" },
-  { i: 4, num: "04", name: "FORTE", alt: "plafond moyen · traction", proofs: ["Top of mind sectoriel", "Distribution maîtrisée", "Pricing power +20%"], metric: `Score ${B.ORDINAIRE + 1}–${B.FORTE}/200 · pricing +20%`, cron: "DEFEND_OVERTON" },
-  { i: 3, num: "03", name: "ORDINAIRE", alt: "bas plafond · interchangeable", proofs: ["Identité reconnue", "Promesse claire", "Mais pas différenciante"], metric: `Score ${B.FRAGILE + 1}–${B.ORDINAIRE}/200`, cron: "EXPAND_SECTOR" },
-  { i: 2, num: "02", name: "FRAGILE", alt: "décollage · instable", proofs: ["Présence existe", "Pas de système", "Tout repose sur 1 personne"], metric: `Score ${B.LATENT + 1}–${B.FRAGILE}/200`, cron: "STABILIZE_BASE" },
-  { i: 1, num: "01", name: "LATENT", alt: "SOL · invisible", proofs: ["Notoriété quasi nulle", "Aucune trace mesurable", "Existe sans exister"], metric: `Score ≤ ${B.LATENT}/200`, cron: "DETECT_PULSE" },
+// Recette F16 (11 novembre 2026) : les colonnes « CRON · DEFEND_LEGACY /
+// STABILIZE_BASE / DETECT_PULSE / EXPAND_SECTOR » nommaient des tâches qui
+// n'existent pas, et « NPS > 70 » / « pricing +20% » des critères que
+// classifyTier n'applique pas. Seule la vigie de maintien des marques ICONE
+// existe (sentinelle MAINTAIN_APOGEE) ; les bandes viennent du canon.
+const TIERS: Array<{ i: number; num: string; name: string; alt: string; proofs: string[]; metric: string; watch?: string }> = [
+  { i: 6, num: "06", name: "ICONE", alt: "APEX · plafond cassé", proofs: ["Référence culturelle", "Marché redéfini", "Influence transversale"], metric: `Score > ${B.CULTE}/200 · preuves de communauté mesurées`, watch: "VIGIE · MAINTIEN DU PALIER" },
+  { i: 5, num: "05", name: "CULTE", alt: "plafond haut · communauté", proofs: ["Communauté qui s'identifie", "UGC organique soutenu", "Tribu identifiable"], metric: `Score ${B.FORTE + 1}–${B.CULTE}/200 · preuves de communauté mesurées` },
+  { i: 4, num: "04", name: "FORTE", alt: "plafond moyen · traction", proofs: ["Top of mind sectoriel", "Distribution maîtrisée", "Pouvoir de prix"], metric: `Score ${B.ORDINAIRE + 1}–${B.FORTE}/200` },
+  { i: 3, num: "03", name: "ORDINAIRE", alt: "bas plafond · interchangeable", proofs: ["Identité reconnue", "Promesse claire", "Mais pas différenciante"], metric: `Score ${B.FRAGILE + 1}–${B.ORDINAIRE}/200` },
+  { i: 2, num: "02", name: "FRAGILE", alt: "décollage · instable", proofs: ["Présence existe", "Pas de système", "Tout repose sur 1 personne"], metric: `Score ${B.LATENT + 1}–${B.FRAGILE}/200` },
+  { i: 1, num: "01", name: "LATENT", alt: "SOL · invisible", proofs: ["Notoriété quasi nulle", "Aucune trace mesurable", "Existe sans exister"], metric: `Score ≤ ${B.LATENT}/200` },
 ];
 
 export function MarketingApogee() {
@@ -25,7 +30,7 @@ export function MarketingApogee() {
           <div>
             <div className="inline-flex items-center gap-3 mb-5 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-              ↳ DE LATENT À ICÔNE · 6 PALIERS · UNE SEULE DIRECTION
+              ↳ DE LATENT À ICÔNE · 6 PALIERS · AUCUNE RÉGRESSION SILENCIEUSE
             </div>
             <h2 className="font-display font-semibold tracking-tight text-balance" style={{ fontSize: "clamp(56px,7vw,104px)", lineHeight: 0.98 }}>
               La marque <span className="font-serif italic font-medium">décolle.</span><br />
@@ -33,7 +38,7 @@ export function MarketingApogee() {
             </h2>
           </div>
           <p className="text-foreground-secondary text-pretty max-w-[50ch] text-base md:text-lg leading-relaxed">
-            Aucune marque ne saute de palier. Aucune ne reste indéfiniment au sol — si elle accepte la doctrine. Chaque palier a ses <strong className="text-foreground">preuves</strong>, ses <strong className="text-foreground">gates</strong>, et ses <strong className="text-foreground">sentinelles cron</strong> qui défendent l&rsquo;altitude.
+            Un palier officiel se franchit un à la fois, sur <strong className="text-foreground">preuve</strong>, et ne se perd pas en silence : une rétrogradation est une décision tracée. Les deux paliers du haut exigent aussi des <strong className="text-foreground">preuves de communauté mesurées</strong>.
           </p>
         </header>
 
@@ -62,10 +67,14 @@ export function MarketingApogee() {
                 </ul>
                 <span className="font-mono text-2xs uppercase tracking-wider text-accent pt-1.5 mt-1 border-t border-dashed border-border-subtle">↳ {t.metric}</span>
               </div>
-              <span className="font-mono text-2xs uppercase tracking-widest text-foreground-muted inline-flex items-center gap-2 whitespace-nowrap">
-                <span className="w-1 h-1 rounded-full bg-accent animate-pulse" />
-                CRON · {t.cron}
-              </span>
+              {t.watch ? (
+                <span className="font-mono text-2xs uppercase tracking-widest text-foreground-muted inline-flex items-center gap-2 whitespace-nowrap">
+                  <span className="w-1 h-1 rounded-full bg-accent animate-pulse" />
+                  {t.watch}
+                </span>
+              ) : (
+                <span aria-hidden="true" />
+              )}
             </li>
           ))}
         </ol>
@@ -75,7 +84,7 @@ export function MarketingApogee() {
             ↳ La trajectoire APOGEE n&rsquo;est pas une promesse. C&rsquo;est un protocole. Et il est mesurable.
           </p>
           <a href="/intake" className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline whitespace-nowrap">
-            Trouver ton palier en 15 min
+            Estimer ton palier — diagnostic gratuit
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
           </a>
         </footer>
