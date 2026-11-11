@@ -6,6 +6,7 @@ import { BARRE_REVIEW_INTAKE_REFUSALS, type BarreReviewIntakeRefusal, type Barre
 import { barreBinding } from "./barre-connection";
 import { resolveBarreBrands } from "./barre-context";
 import { readBarreSnapshot } from "./workspace";
+import { barreAttestationVerifier } from "./barre-attestation";
 
 export const barreReviewInput = BarreCampaignReviewRequestSchema;
 type Actor = Parameters<typeof canAccessStrategy>[1];
@@ -23,7 +24,8 @@ const refusal = (status: number, code: string, quoi: string): BarreReviewRespons
 export async function receiveBarreCampaignReview(input: BarreCampaignReviewRequest, actor: Actor): Promise<BarreReviewResponse> {
   const binding = barreBinding();
   const snapshot = await readBarreSnapshot({ fresh: true });
-  const located = locateBarreCampaignReview(snapshot.data, input);
+  // Une version attestée l'est par cette installation, sur ce contenu exact (ADR-0245).
+  const located = locateBarreCampaignReview(snapshot.data, input, barreAttestationVerifier(binding.instance));
   if (!located.ok) {
     const r = BARRE_REVIEW_REFUSALS[located.code];
     return refusal(r.status, located.code, r.message);

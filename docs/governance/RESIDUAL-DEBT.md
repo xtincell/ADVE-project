@@ -1,3 +1,41 @@
+## 569 — LB3 acteur authentifié des décisions La Barre : reçu localement (2026-11-11)
+
+**Fermé localement.** Servie derrière La Fusée, La Barre reçoit dans `contexte.json` la
+personne connectée (`actorAttestation: "SESSION_V1"`, identifiant et nom, jamais l'e-mail) et
+l'impose comme acteur. La route `/la-barre/` relit la version courante avant chaque
+enregistrement de la base, applique la même précondition que La Barre, tamponne les
+décisions, lignes de journal et versions de bilan nouvelles (`attestation`, sceau HMAC de
+l'installation) et refuse toute attestation forgée, modifiée ou effacée (422 typé) ; la
+réception d'un bilan vérifie le sceau (ADR-0245, amendement ADR-0244). Preuves : unitaires
+rouges sur `main`, PostgreSQL, recette croisée `servir.mjs` réel → route → Chrome → PostgreSQL.
+
+**Non reçu.** CI, image, runtime et production 569 ; La Barre de la branche
+`claude/acteur-authentifie` livrée à côté ; un geste réel attesté sur l'instance livrée.
+**Plan** : ouvrir les deux PR (label `out-of-scope`, numéro réel dans `scope-drift.md`),
+recevoir CI et images, puis sur l'instance de recette : une décision prise dans La Barre
+ouverte depuis La Fusée, relue attestée dans la base, et un bilan transmis reçu avec son
+attestation. **Déclencheur** : ouverture des deux PR, puis prochaine livraison commune.
+Ordre de livraison : La Barre d'abord, ou les deux ensemble. Une La Barre de ce lot devant
+une La Fusée antérieure ne voit pas la capacité et garde son mode déclaré ; une La Barre
+antérieure devant une La Fusée qui atteste ignore les attestations reçues, et son
+rapprochement demanderait un choix manuel sur le journal à chaque écriture concurrente.
+
+**Reste ouvert, hors de ce lot.** (a) `servir.mjs` reste sans identité : quiconque joint son
+port écrit une attestation sans sceau valide ; seule la réception d'un bilan vérifie le
+sceau, La Barre affiche ce qui est enregistré. Garantie tenue tant que le port de La Barre
+n'est joint que par La Fusée. **Déclencheur** : exposition de La Barre hors du réseau
+interne, ou besoin d'afficher une attestation vérifiée dans La Barre (lecture de
+vérification à ajouter sur la route existante, jamais la clé chez La Barre). (b) Seuls les
+trois registres sont attestés ; projets, livrables et réglages restent écrits d'un bloc, et
+une ligne de journal sans marque peut disparaître par troncature. **Déclencheur** : prochain
+chantier LB sur l'écriture par gestes. (c) La personne connectée n'est reliée à aucune
+personne de la base La Barre : postes de l'installation, sans casquette. **Déclencheur** :
+arbitrage sur le rattachement des comptes La Fusée aux personnes La Barre. (d) Le sceau
+dépend de `AUTH_SECRET` : une rotation rend les attestations antérieures invérifiables et
+leur réception est refusée. **Déclencheur** : première rotation de la clé de session.
+(e) Un geste sans acteur authentifié n'est pas refusé côté La Barre seule (mode déclaré
+conservé à dessein).
+
 ## 566 — LB4 bilan de campagne : geste La Barre et réception reçus localement (2026-11-11)
 
 **Fermé localement.** La Barre clôt le bilan de campagne par la fabrique de décision
@@ -23,9 +61,9 @@ des sources, contexte de marque La Barre), sans copier le texte ni l'adopter.
 **Déclencheur** : prochain chantier LB sur le brief ou la composition de campagne.
 (b) La transmission est manuelle, version par version ; une version manquée crée une
 lacune visible dans la lignée (édition suivante chaînée à la dernière reçue), jamais
-comblée. **Déclencheur** : même chantier que (a). (c) L'acteur d'une version reste
-déclaré par le poste La Barre ; l'identité authentifiée n'y est pas transmise
-(README La Barre). **Déclencheur** : arbitrage SHK-0005 sur l'acteur authentifié.
+comblée. **Déclencheur** : même chantier que (a). (c) Fermé localement en 569 (LB3) :
+derrière La Fusée, une version porte l'attestation de la personne connectée, vérifiée à
+la réception ; une version arrêtée hors de La Fusée reste déclarée.
 (d) Fermé à la fusion de main 565 : le reçu DataCollector et le bilan La Barre partagent
 `domain/canonical-json.ts` (ré-exporté par `datacollector-receipt`, sceaux inchangés).
 Reste la copie privée de `governance/hash-chain` (sceau v2 des émissions) : la brancher

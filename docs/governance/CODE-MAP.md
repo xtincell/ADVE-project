@@ -56,11 +56,12 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 79 modules (src/domain, cœur métier pur)
+## Domain — 80 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-library** — SHK-0002 point 5 — lecture publique de la bibliothèque canonique Argos-studio.
 - **argos-projection**
+- **barre-actor-attestation** — Acteur authentifié des décisions La Barre (point LB3 du programme Shinkiro, ADR-0245).
 - **barre-brand-context**
 - **barre-campaign-review** — Bilan de campagne arrêté dans La Barre (point LB4 du programme Shinkiro).
 - **brand-actors**

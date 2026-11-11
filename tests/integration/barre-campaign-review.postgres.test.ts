@@ -22,6 +22,10 @@ import { documentEdition } from "@/domain/source-document";
 type Review = Record<string, unknown> & { id: string; version: number; empreinte: string; contenu: string };
 const FIXTURE = JSON.parse(readFileSync(join(__dirname, "../fixtures/la-barre/bilan-campagne-v1.json"), "utf8")) as { versions: Review[] };
 const [V1, V2] = FIXTURE.versions as [Review, Review];
+// LB3 (ADR-0245) : la même version 1, attestée par La Fusée à son enregistrement.
+const SHARED = JSON.parse(readFileSync(join(__dirname, "../fixtures/la-barre/bilan-campagne-atteste-v1.json"), "utf8")) as {
+  cleDeRecette: string; instance: string; version: Review & { attestation: Record<string, unknown> } };
+const V1A = SHARED.version;
 const copy = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
 const reseal = (v: Review): Review => { const r = copy(v); r.empreinte = barreCampaignReviewDigest(r); return r; };
 const ORIGIN = "https://workspace.example";
@@ -81,6 +85,7 @@ beforeEach(() => {
   vi.stubEnv("PORTFOLIO_BARRE_OPERATOR_IDS", `${operatorId},${foreignOperatorId}`);
   vi.stubEnv("PORTFOLIO_BARRE_UPSTREAM", "http://barre.test:3000");
   vi.stubEnv("AUTH_URL", ORIGIN);
+  vi.stubEnv("AUTH_SECRET", SHARED.cleDeRecette);
   mocks.auth.mockResolvedValue({ user: { id: userId } });
   // La base enregistrée de La Barre, servie avec une révision qui suit son contenu.
   vi.stubGlobal("fetch", vi.fn(async (_url: URL, options?: RequestInit) => {
@@ -181,6 +186,32 @@ describe.sequential("bilan de campagne La Barre reçu dans les sources de la mar
     expect(results.filter((r) => !(r.output as { alreadyReceived: boolean }).alreadyReceived)).toHaveLength(1);
     expect(new Set(results.map((r) => (r.output as { sourceId: string }).sourceId)).size).toBe(1);
     expect(await sources(concurrent)).toHaveLength(1);
+  });
+
+  it("une version attestée est rangée avec son attestation ; une attestation forgée est refusée sans effet", async () => {
+    expect(SHARED.instance).toBe("barre-matanga");
+    // La version 1 déjà reçue sans attestation reste le reçu de cette version.
+    barreBase = barre(V1A, V2);
+    const replay = await post(ask(V1A));
+    expect(replay.status).toBe(200);
+    expect(await replay.json()).toMatchObject({ edition: 1, alreadyReceived: true });
+    const forged = { ...copy(V1A), attestation: { ...V1A.attestation, userId: "quelqu-un-d-autre" } } as Review;
+    barreBase = barre(forged, V2);
+    const refused = await post(ask(forged));
+    expect(refused.status).toBe(422);
+    expect(await refused.json()).toMatchObject({ code: "REVIEW_ATTESTATION_INVALID" });
+    const fresh = await strategy("Bilan attesté");
+    expect(await ingestBarreCampaignReview(intent(fresh, forged))).toMatchObject({ status: "VETOED", reason: "REVIEW_ATTESTATION_INVALID" });
+    expect(await sources(fresh)).toHaveLength(0);
+    expect(await ingestBarreCampaignReview(intent(fresh, V1A))).toMatchObject({ status: "OK", output: { edition: 1, version: 1 } });
+    const [source] = await sources(fresh);
+    const receipt = (source!.rawData as { _barreReview: { review: Record<string, unknown>; receivedBy: string } })._barreReview;
+    expect(receipt.review.attestation).toEqual(V1A.attestation);
+    expect(receipt.receivedBy).toBe(userId);
+    // Une clé changée ne vérifie plus aucune attestation : refus, jamais acceptation par défaut.
+    vi.stubEnv("AUTH_SECRET", "une-autre-cle-de-session-longue");
+    const other = await strategy("Autre clé");
+    expect(await ingestBarreCampaignReview(intent(other, V1A))).toMatchObject({ status: "VETOED", reason: "REVIEW_ATTESTATION_INVALID" });
   });
 
   it("une autre agence ne résout pas la marque, et ne peut rien écrire dans ce dossier", async () => {
