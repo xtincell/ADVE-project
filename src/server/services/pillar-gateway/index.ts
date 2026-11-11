@@ -30,7 +30,7 @@ import { Prisma } from "@prisma/client";
 import { isDeepStrictEqual } from "node:util";
 import { createCheckpoint, pillarMetadata, planCompensation, readCheckpoint, type PillarMetadata } from "@/server/services/pillar-versioning/checkpoint";
 import { getOperatorContext, canAccessStrategy } from "@/server/services/operator-isolation";
-import { assertCollaboratorMayEmit } from "@/server/governance/collaborator-firewall";
+import { assertCollaboratorMayEmit, CollaboratorWriteVetoError } from "@/server/governance/collaborator-firewall";
 import { type PillarKey, getPillarDependents } from "@/lib/types/advertis-vector";
 import { validatePillarPartial } from "@/lib/types/pillar-schemas";
 import { validateAgainstBible } from "@/lib/types/variable-bible";
@@ -312,10 +312,10 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
         const actor = await getOperatorContext(author.userId, tx);
         if (!(await canAccessStrategy(strategyId, actor, tx))) throw new Error("RESTORE_ACCESS_REFUSED");
         const emission = await tx.intentEmission.findUnique({ where: { id: author.intentId }, select: { strategyId: true, intentKind: true } });
-        if (!emission || emission.strategyId !== strategyId || !["ROLLBACK_PILLAR", "LEGACY_PILLAR_ROLLBACK_VERSION"].includes(emission.intentKind)) {
+        if (!emission || emission.strategyId !== strategyId || !RESTORE_EMISSION_KINDS.includes(emission.intentKind)) {
           throw new Error("RESTORE_EMISSION_REQUIRED: intention de restauration introuvable pour cette marque.");
         }
-        await assertCollaboratorMayEmit({ userId: actor.userId, role: actor.role, strategyId, kind: emission.intentKind }, tx);
+        await restoreMayEmit({ userId: actor.userId, role: actor.role, strategyId, kind: emission.intentKind }, tx);
         const snapshot = await tx.pillarVersion.findUnique({ where: { id: operation.versionId } });
         if (!snapshot || snapshot.pillarId !== pillar.id || (operation.compensatedFrom && snapshot.intentId !== operation.compensatedFrom)) {
           throw new Error("RESTORE_ARCHIVE_UNAVAILABLE: archive étrangère ou absente.");
@@ -346,7 +346,7 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
         await tx.$queryRaw`SELECT id FROM "StrategyCollaborator" WHERE "strategyId" = ${strategyId} AND "userId" = ${author.userId} FOR SHARE`;
         const currentActor = await getOperatorContext(author.userId, tx);
         if (!(await canAccessStrategy(strategyId, currentActor, tx))) throw new Error("RESTORE_ACCESS_REFUSED");
-        await assertCollaboratorMayEmit({ userId: currentActor.userId, role: currentActor.role, strategyId, kind: emission.intentKind }, tx);
+        await restoreMayEmit({ userId: currentActor.userId, role: currentActor.role, strategyId, kind: emission.intentKind }, tx);
         await tx.$queryRaw`SELECT id FROM "Pillar" WHERE id = ${pillar.id} FOR UPDATE`;
         const locked = await tx.pillar.findUniqueOrThrow({ where: { id: pillar.id } });
         if (locked.currentVersion !== pillar.currentVersion || !isDeepStrictEqual(locked.content, pillar.content) || !isDeepStrictEqual(pillarMetadata(locked), pillarMetadata(pillar))) {
@@ -878,4 +878,17 @@ export async function reconcileCompletionLevelCache(
       data: { completionLevel: readiness.cacheLevel },
     });
   }, { timeout: 30_000, maxWait: 15_000 });
+}
+
+/** ADR-0207 — emissions allowed to carry a restoration; all enter through `rollback.ts`. */
+const RESTORE_EMISSION_KINDS = ["ROLLBACK_PILLAR", "LEGACY_PILLAR_ROLLBACK_VERSION", "LEGACY_NOTORIA_REVERT_RECO"];
+
+/** A delegated role outside its zone is a refused authority, typed like any other. */
+async function restoreMayEmit(input: Parameters<typeof assertCollaboratorMayEmit>[0], tx: Prisma.TransactionClient): Promise<void> {
+  try {
+    await assertCollaboratorMayEmit(input, tx);
+  } catch (err) {
+    if (err instanceof CollaboratorWriteVetoError) throw new Error(`RESTORE_ACCESS_REFUSED: ${err.message}`);
+    throw err;
+  }
 }

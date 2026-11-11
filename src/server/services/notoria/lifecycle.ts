@@ -13,7 +13,6 @@ import type { FieldProvenance } from "@/domain/field-provenance";
 import type { ResolvedRecoOperation, CompletionLevel } from "./types";
 import { parseRecommendationPayload } from "@/lib/types/recommendation-payload";
 import { dispatchTypedRecos } from "./apply-payload";
-import { reportRefusedWrite } from "../pillar-gateway/refusal";
 import { assertCurrentSourceReceipts, readSourceReceipts } from "@/server/services/ingestion-pipeline/source-usage";
 
 // ── Accept ────────────────────────────────────────────────────────
@@ -99,6 +98,9 @@ export async function rejectRecos(
 export async function applyRecos(
   strategyId: string,
   recoIds: string[], mode: "REVIEW" | "SHORTLIST" = "REVIEW",
+  /** ADR-0207 (amendement 562) — emission of the governed application, stamped on
+   *  the pillar archive and on the applied rows so a withdrawal compensates exactly it. */
+  context: { intentId?: string } = {},
 ): Promise<{ applied: number; warnings: string[] }> {
   // Load all ACCEPTED recos
   const accepted = await db.recommendation.findMany({
@@ -216,6 +218,7 @@ export async function applyRecos(
       operation: { type: "APPLY_RECOS_RESOLVED", operations },
       author: {
         system: "MESTOR",
+        intentId: context.intentId,
         reason: `Notoria: apply ${operations.length} recommendation(s)`,
       },
       options: {
@@ -228,11 +231,11 @@ export async function applyRecos(
     });
 
     if (result.success) {
-      // Mark all recos as APPLIED
+      // Mark all recos as APPLIED, with the write that applied them (one archive per pillar).
       const appliedIds = pillarRecos.map((r) => r.id);
       await db.recommendation.updateMany({
         where: { id: { in: appliedIds } },
-        data: { status: "APPLIED", appliedAt: new Date() },
+        data: { status: "APPLIED", appliedAt: new Date(), appliedIntentId: context.intentId ?? null },
       });
       totalApplied += appliedIds.length;
 
@@ -361,76 +364,59 @@ async function recordPredecessorLineage(
 
 // ── Revert ────────────────────────────────────────────────────────
 
+export type RevertRecoResult =
+  | { reverted: true; alreadyRecorded: boolean; version?: number }
+  | { reverted: false; reason: string; refusal: import("../pillar-gateway/rollback").RestoreRefusal };
+
+/**
+ * Withdraw one applied proposal by compensating the exact write that applied it
+ * (ADR-0207, amendement 562). Same restorer as the journal and the history
+ * action: later independent decisions are kept, a later change of the same
+ * value refuses, and the reco is marked REVERTED only once its effect is undone.
+ * No archive is chosen by date: an application without recorded filiation refuses.
+ */
 export async function revertReco(
   strategyId: string,
   recoId: string,
   reason: string,
-): Promise<{ reverted: boolean }> {
+  actor: { operatorId: string; intentId: string },
+): Promise<RevertRecoResult> {
+  const refuse = (refusal: "NOT_FOUND" | "PRECONDITION_FAILED", text: string): RevertRecoResult => ({ reverted: false, reason: text, refusal });
   const reco = await db.recommendation.findUnique({ where: { id: recoId } });
-  if (!reco || reco.status !== "APPLIED" || reco.strategyId !== strategyId) {
-    return { reverted: false };
+  if (!reco || reco.strategyId !== strategyId) return refuse("NOT_FOUND", "RECO_NOT_FOUND: proposition introuvable pour cette marque.");
+  if (reco.status === "REVERTED") return { reverted: true, alreadyRecorded: true };
+  if (reco.status !== "APPLIED") return refuse("PRECONDITION_FAILED", `RECO_NOT_APPLIED: proposition au statut ${reco.status}, rien à retirer.`);
+  if (parseRecommendationPayload(reco.proposedValue)) {
+    // Typed proposals write several pillars and recompute S/BrandAction in one
+    // transaction; a per-pillar compensation would leave those projections behind.
+    return refuse("PRECONDITION_FAILED",
+      "RESTORE_MULTI_PILLAR: cette proposition a modifié plusieurs piliers et projections ; leur compensation commune n’est pas disponible.");
+  }
+  if (!reco.appliedIntentId) {
+    return refuse("PRECONDITION_FAILED",
+      "RESTORE_ARCHIVE_UNLINKED: application antérieure au suivi par intention ; aucune archive n’est choisie par la date. Une édition explicite reste possible.");
+  }
+  const siblings = await db.recommendation.count({ where: { strategyId, targetPillarKey: reco.targetPillarKey,
+    appliedIntentId: reco.appliedIntentId, id: { not: reco.id } } });
+  if (siblings > 0) {
+    return refuse("PRECONDITION_FAILED",
+      `RESTORE_SHARED_WRITE: la même écriture a appliqué ${siblings + 1} propositions sur ce pilier ; les retirer ensemble demande une décision explicite.`);
   }
 
-  // Find the PillarVersion created just before appliedAt
-  const pillar = await db.pillar.findUnique({
-    where: {
-      strategyId_key: { strategyId, key: reco.targetPillarKey },
-    },
-    select: { id: true },
+  const { rollbackPillar } = await import("../pillar-gateway/rollback");
+  const restored = await rollbackPillar({ strategyId, pillarKey: reco.targetPillarKey, compensatedFrom: reco.appliedIntentId,
+    operatorId: actor.operatorId, intentId: actor.intentId, reason: `Retrait de la proposition ${recoId} — ${reason}` });
+  if (!restored.restored) return { reverted: false, reason: restored.reason, refusal: restored.refusal ?? "PRECONDITION_FAILED" };
+
+  // The write is compensated (now or by an earlier attempt): record the decision once.
+  await db.recommendation.updateMany({
+    where: { id: recoId, status: "APPLIED" },
+    data: { status: "REVERTED", revertedAt: new Date(), revertReason: reason },
   });
-
-  if (!pillar) return { reverted: false };
-
-  const previousVersion = await db.pillarVersion.findFirst({
-    where: {
-      pillarId: pillar.id,
-      createdAt: { lt: reco.appliedAt ?? new Date() },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  if (!previousVersion) {
-    return { reverted: false };
-  }
-
-  // Restore content via Gateway
-  const _w0 = await writePillarAndScore({
-    strategyId,
-    pillarKey: reco.targetPillarKey as PillarKey,
-    operation: {
-      type: "REPLACE_FULL",
-      content: previousVersion.content as Record<string, unknown>,
-    },
-    author: {
-      system: "OPERATOR",
-      reason: `Notoria revert: ${reason}`,
-    },
-  });
-  reportRefusedWrite(_w0, "notoria:lifecycle");
-
-  // Mark reco as REVERTED
-  await db.recommendation.update({
-    where: { id: recoId },
-    data: {
-      status: "REVERTED",
-      revertedAt: new Date(),
-      revertReason: reason,
-    },
-  });
-
-  // Update batch counts
   if (reco.batchId) await updateBatchCounts(reco.batchId);
+  await updateCompletionLevel(strategyId, reco.targetPillarKey as PillarKey);
 
-  // Update completion level
-  await updateCompletionLevel(
-    strategyId,
-    reco.targetPillarKey as PillarKey,
-  );
-
-  // Recalc scores
-  await scoreObject("strategy", strategyId);
-
-  return { reverted: true };
+  return { reverted: true, alreadyRecorded: !!restored.alreadyRecorded, version: restored.version };
 }
 
 // ── Expire ────────────────────────────────────────────────────────

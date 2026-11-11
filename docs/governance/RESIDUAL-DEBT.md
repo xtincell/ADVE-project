@@ -3513,13 +3513,32 @@ Items MEDIUM à régression-risquée ou à coordination, déférés de la boucle
   sans annulation réelle. Les trois symptômes fermés sont retirés du registre
   transitoire ; leur historique reste dans CHANGELOG et ADR-0207.
   Les anciennes archives SPAWT sans intentId/checkpoint ne sont pas reconstruites.
+  **6.27.562 — un seul restaurateur (amendement ADR-0207)** : l’action
+  d’historique et le retrait Notoria (`notoria.revertReco`) entrent désormais dans
+  `rollbackPillar`, comme le journal. L’enveloppe `pillarVersioning.rollback` est
+  supprimée ; les refus de l’historique ne sortent plus en 500 (412 conflit/archive
+  insuffisante, 404 archive ou pilier absent, 403 opérateur étranger). Le retrait ne
+  choisit plus l’archive par date ni ne réécrit le pilier entier : il compense
+  l’écriture enregistrée dans `Recommendation.appliedIntentId`. Reçu PostgreSQL :
+  14 cas, 10 rouges sur l’ancien code puis 14 verts ; garde HARD
+  `single-pillar-restorer`. Allowlist C5 inchangée (3 entrées, aucun restaurateur).
   **Restants** : ROLLBACK_ADVE, ROLLBACK_RTIS_CASCADE et DISCARD/REVERT_RECOMMENDATIONS
-  restent audit-only ; les autres writers qui perdent le contexte d’émission ne
-  sont pas reçus par ce lot. **Fermeture** : transmettre le contexte réel dans
-  chaque chemin restant puis recevoir une compensation atomique par opération,
-  avec conflit, source révoquée, retry et opérateur étranger. **Déclencheur** : C5
-  avant autonomie de ces chemins ; effort : un lot par famille de writers.
-  La restauration complète du SI sur autre hôte reste au chantier C7.
+  (compensateurs du journal) restent audit-only ; les autres writers qui perdent le
+  contexte d’émission ne sont pas reçus. Retrait Notoria refusé, sans estimation,
+  dans trois cas : application antérieure à 562 ou sans émission
+  (`applyAcceptedRecommendations` de `mestor/rtis-cascade`, sans contexte),
+  proposition typée (écriture multi-piliers, S et BrandAction recalculés), écriture
+  partagée par plusieurs propositions du même pilier. Les deux derniers attendent une
+  décision métier : retrait groupé des propositions d’une écriture, compensation
+  multi-piliers. Le retrait n’est pas compensable depuis le journal (kind absent de
+  `COMPENSATING_MAP`, payload sans pilier) ; l’historique peut compenser son archive
+  mais laisse la proposition `REVERTED`. **Fermeture** : transmettre le contexte réel
+  dans chaque chemin restant (dont `applyAcceptedRecommendations`), décider le
+  retrait groupé puis recevoir une compensation atomique par opération, avec
+  conflit, source révoquée, retry et opérateur étranger ; relier le statut des
+  propositions à toute compensation de leur écriture. **Déclencheur** : C5 avant
+  autonomie de ces chemins, ou première demande de retrait groupé ; effort : un lot
+  par famille de writers. La restauration complète du SI reste au chantier C7.
 - **J4 — `text-white` en mode jour** — 🟢 **CLOS (v6.27.306, 2026-07-23)** : les **330** `text-white` du cockpit ont été traités **par occurrence** (fond gouvernant tracé, pas de sweep aveugle) — **303 remplacés** (`text-foreground` sur fonds theme-inversants `bg-background`/`bg-surface-*` + tints ≤20 % qui composent clair en mode jour ; **+4 `text-foreground-inverse`** pour les `hover:bg-foreground` — blancs invisibles en mode NUIT, corrigés en passant) et **27 GARDÉS** (tous sur couleur fixe `bg-accent`/`bg-success`/`bg-warning`/`bg-info`/`bg-rocket-red` — blanc correct dans les deux thèmes). Périmètre = `(cockpit)` UNIQUEMENT (le toggle mode-jour n'est monté que là ; `(console)`/`(creator)`/`(agency)` sont dark-only → hors périmètre, ne pas toucher). Garde CI dédiée `cockpit-day-mode-readability.test.ts` (baseline décroissant 27, bloque tout nouveau `text-white` régressant sur un fond inversant) — plus honnête qu'étendre `design-tokens-canonical` (un ban total casserait les 27 keeps légitimes).
 - **E5 — armes `z.unknown()` des `S.computed`** (`pillar-schemas.ts:1447+`) : `budgetByPhase`/`devotionFunnel` acceptent tout objet/array → gate SHAPE neutralisé pour ces champs. **Fermeture** : resserrer vers les formes concrètes de `computePillarS` **en coordination avec le seed spawt** (qui portait des formes divergentes — risque de re-casser le seed sinon). **Déclencheur** : passe seed spawt / computePillarS.
 - **Sweep des émissions PENDING orphelines (LOW)** — 🟢 **BÂTI (purge dette)** : `ops-sweep §5` réconcilie désormais les émissions non-terminales (status PENDING + completedAt null > 6 h → FAILED ; observationStatus figé sur OK/DOWNGRADED > 6 h → STALE_OBSERVATION), via `updateMany` DIRECT (aucun event bus → aucun fan-out de compensation ; un close réel ultérieur écrase, idempotent). Plafond 6 h ≫ tout SLO → aucun job async légitime n'est fail-flaggé. Commentaires `emission-spine`/`mestor.close` corrigés (pointent le sweep). Le schéma promettait déjà « flip à STALE_OBSERVATION par cron staleness » — la promesse est tenue. *(Ancien texte : `closeEmission` + le `close()` best-effort promettaient « le cron staleness la flaggera » — ce sweep n'existait PAS.)* Si `closeEmission` throw (blip DB à l'update) ou si le process meurt entre `openEmission` et `closeEmission`, la row `IntentEmission` reste `PENDING`/`PENDING_OBSERVATION` à vie, non réconciliée. **Intégrité PAS en jeu** (fail-closed : la mutation a commit ou non, jamais à moitié) — pur trou d'observabilité ; commentaires rendus honnêtes. **Plan** : un sweep dans `ops-sweep` passant en terminal (état `STALE`/`ABANDONED`, **PAS `FAILED`** → éviter le fan-out de compensation) les `IntentEmission` non-terminales dont `emittedAt` dépasse un plafond GÉNÉREUX (≫ tous les SLO, ex. 1 h). **Prudence obligatoire** : ne pas fail-closer une émission `async:true` légitimement encore en vol (threader le SLO du kind, ou plafond fixe très large). **Effort** : ~½ session (design état-terminal + test anti-faux-positif). **Déclencheur** : prochaine passe observabilité gouvernance / si des PENDING orphelines s'accumulent en prod.

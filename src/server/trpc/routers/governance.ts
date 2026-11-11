@@ -117,8 +117,10 @@ export const governanceRouter = createTRPCRouter({
         const { emitIntent } = await import("@/server/services/mestor/intents");
         const result = await emitIntent(built.reverseIntent, { caller: "console:governance:compensate" });
         if (result.status !== "OK") {
+          // ROLLBACK_PILLAR carries the typed refusal shared with the history action.
+          const refusal = (result.output as { refusal?: "NOT_FOUND" | "FORBIDDEN" | "PRECONDITION_FAILED" } | undefined)?.refusal;
           throw new TRPCError({
-            code: "PRECONDITION_FAILED",
+            code: refusal ?? "PRECONDITION_FAILED",
             message: result.summary ?? result.reason ?? "Compensation refusée.",
           });
         }

@@ -7,7 +7,6 @@ vi.mock("@/server/services/oracle-section", () => ({ markAllSectionsStale: vi.fn
 vi.mock("@/server/governance/event-bus", () => ({ eventBus: { publish: vi.fn() } }));
 import { Prisma } from "@prisma/client";
 import { sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
-import { rollback as rollbackVersion } from "@/server/services/pillar-versioning";
 import { db } from "@/lib/db";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import { rollbackPillar } from "@/server/services/pillar-gateway/rollback";
@@ -45,6 +44,8 @@ async function waitForSourceLock() {
  }
  throw new Error("Restoration never reached the documentary write fence");
 }
+/** The history action, through the single restorer it now shares with compensation. */
+async function rollbackVersion(pillarId:string,versionId:string,userId:string,intentId:string){const p=await db.pillar.findUniqueOrThrow({where:{id:pillarId}});const r=await rollbackPillar({strategyId:p.strategyId,pillarKey:p.key,versionId,operatorId:userId,intentId,reason:"Synthetic history"});if(!r.restored)throw new Error(r.reason);return {success:true,noOp:!!r.alreadyRecorded};}
 function caller(userId=owner){return governanceRouter.createCaller({db,headers:undefined,session:{user:{id:userId,role:"USER"},expires:new Date(Date.now()+60000).toISOString()}});}
 describe("targeted pillar compensation",()=>{
  it("keeps an independent later decision and its human origin",async()=>{const f=await fixture();const a=await change(f,"promesseDeValeur","Propose");await change(f,"salesChannel","HYBRID");const r=await undo(f,a);expect(r.result.restored).toBe(true);const p=await db.pillar.findUniqueOrThrow({where:{id:f.p.id}});expect(p.content).toMatchObject({promesseDeValeur:"Avant",salesChannel:"HYBRID",_fieldProvenance:{promesseDeValeur:"INFERRED",salesChannel:"HUMAN"}});expect(p.fieldCertainty).toEqual(f.p.fieldCertainty);expect(p.currentVersion).toBe(4);});

@@ -4881,6 +4881,10 @@ model Recommendation {
   reviewedBy   String? // userId
   reviewedAt   DateTime?
   appliedAt    DateTime?
+  /// ADR-0207 (amendement 562) — IntentEmission de l'écriture qui a appliqué
+  /// cette proposition ; son retrait compense exactement cette écriture. Null pour
+  /// les applications antérieures : aucune archive n'est devinée par la date.
+  appliedIntentId String?
   revertedAt   DateTime?
   revertReason String?
 
