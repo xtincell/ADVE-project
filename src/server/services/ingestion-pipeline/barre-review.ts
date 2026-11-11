@@ -23,6 +23,7 @@ import { canAccessStrategy, getOperatorContext } from "@/server/services/operato
 import { assertCollaboratorMayEmit, CollaboratorWriteVetoError } from "@/server/governance/collaborator-firewall";
 import { registerDocumentEdition } from "./document-versions";
 import { sourceFingerprint } from "./source-usage";
+import { barreAttestationVerifier } from "@/server/services/brand-node/barre-attestation";
 
 type ReviewIntent = Extract<Intent, { kind: "INGEST_BARRE_CAMPAIGN_REVIEW" }>;
 type HandlerResult = Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">;
@@ -32,7 +33,7 @@ export const BARRE_REVIEW_RECEIPT_SCHEMA = "barre-campaign-review-receipt-v1";
 export type BarreReviewIntakeRefusal =
   | "REVIEW_INVALID" | "REVIEW_DIGEST_INVALID" | "ACCESS_DENIED" | "STRATEGY_UNAVAILABLE"
   | "REVIEW_VERSION_CONFLICT" | "REVIEW_VERSION_STALE" | "REVIEW_CHAIN_MISMATCH"
-  | "REVIEW_FAMILY_TAKEN" | "REVIEW_RECEIPT_UNREADABLE" | "REVIEW_LINEAGE_CHANGED";
+  | "REVIEW_FAMILY_TAKEN" | "REVIEW_RECEIPT_UNREADABLE" | "REVIEW_LINEAGE_CHANGED" | "REVIEW_ATTESTATION_INVALID";
 
 /** Message rendu tel quel à La Barre ; le code reste la clé stable. */
 export const BARRE_REVIEW_INTAKE_REFUSALS: Record<BarreReviewIntakeRefusal, { status: number; message: string }> = {
@@ -46,6 +47,7 @@ export const BARRE_REVIEW_INTAKE_REFUSALS: Record<BarreReviewIntakeRefusal, { st
   REVIEW_FAMILY_TAKEN: { status: 409, message: "Une autre lignée de documents porte déjà le nom de ce bilan dans ce dossier. Renommez-la avant de transmettre." },
   REVIEW_RECEIPT_UNREADABLE: { status: 409, message: "Une réception antérieure de ce bilan est illisible ; elle reste conservée et doit être examinée avant d’en ajouter une autre." },
   REVIEW_LINEAGE_CHANGED: { status: 409, message: "Les documents de ce bilan ont changé pendant la réception. Transmettez de nouveau." },
+  REVIEW_ATTESTATION_INVALID: { status: 422, message: "L’attestation de cette version n’a pas été posée par La Fusée sur ce contenu." },
 };
 
 class ReviewRefusal extends Error {
@@ -92,6 +94,10 @@ export async function ingestBarreCampaignReview(intent: ReviewIntent): Promise<H
   const review = parsed.data;
   if (barreCampaignReviewDigest(intent.review as unknown as Record<string, unknown>) !== review.empreinte) {
     return refused("REVIEW_DIGEST_INVALID");
+  }
+  // Une attestation présente est revérifiée ici aussi : le bus peut porter n'importe quoi.
+  if (review.attestation && !barreAttestationVerifier(intent.instance)(intent.review as unknown as Record<string, unknown>)) {
+    return refused("REVIEW_ATTESTATION_INVALID");
   }
   const strategyId = intent.strategyId;
   const prefix = barreReviewOrigin(intent.instance, review.id);

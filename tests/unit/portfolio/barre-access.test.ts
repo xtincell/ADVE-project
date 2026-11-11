@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), actor: vi.fn(), fetch: vi.fn() }));
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), actor: vi.fn(), fetch: vi.fn(), user: vi.fn() }));
 vi.mock("@/lib/auth/config", () => ({ auth: mocks.auth }));
 vi.mock("@/server/services/operator-isolation", () => ({ getOperatorContext: mocks.actor }));
+vi.mock("@/lib/db", () => ({ db: { user: { findUnique: mocks.user } } }));
 import { GET, HEAD, PUT, POST } from "@/app/la-barre/[[...path]]/route";
 import { barreUpstreamUrl } from "@/server/services/brand-node/barre-connection";
 
@@ -12,7 +13,9 @@ beforeEach(() => {
   vi.stubEnv("PORTFOLIO_BARRE_OPERATOR_IDS", " agency-a ");
   vi.stubEnv("PORTFOLIO_BARRE_UPSTREAM", "http://private-barre:3000");
   vi.stubEnv("AUTH_URL", ""); vi.stubEnv("NEXTAUTH_URL", "");
+  vi.stubEnv("AUTH_SECRET", "secret-de-recette-assez-long");
   vi.stubGlobal("fetch", mocks.fetch);
+  mocks.user.mockResolvedValue({ id: "actor-a", name: "Personne A" });
   mocks.auth.mockResolvedValue({ user: { id: "actor-a" } });
   mocks.actor.mockResolvedValue({ userId: "actor-a", role: "USER", operatorId: "agency-a" });
   mocks.fetch.mockImplementation(async () => new Response('{"projets":[]}', { headers: { ETag: '"rev-a"', "Content-Type": "application/json" } }));
@@ -73,14 +76,24 @@ describe("native La Barre through the existing authenticated session", () => {
   });
   it("preserves a conditional write and the source's conflict without retry or overwrite", async () => {
     mocks.actor.mockResolvedValue({ userId: "actor-a", role: "OPERATOR", operatorId: "agency-a" });
+    const write = (ifMatch: string) => PUT(new Request(url, { method: "PUT", body: '{"projets":["proposal"]}', headers: { origin: "https://workspace.example", "content-type": "application/json", "if-match": ifMatch } }), context());
+    // A stale revision is refused against the base read from La Barre, before any write (ADR-0245).
+    const stale = await write('"stale"');
+    expect(stale.status).toBe(409); expect(stale.headers.get("etag")).toBe('"rev-a"');
+    expect(await stale.json()).toMatchObject({ code: "REVISION_DEPASSEE", revision: '"rev-a"' });
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    expect(mocks.fetch.mock.calls[0]![1].method).toBeUndefined();
+    // A concurrent write between that read and the write is still refused by La Barre itself.
     mocks.fetch.mockImplementation(async (_: URL, options: RequestInit) => {
+      if (options.method !== "PUT") return new Response('{"projets":[]}', { headers: { ETag: '"rev-a"' } });
       expect(await new Response(options.body).text()).toBe('{"projets":["proposal"]}');
-      expect(new Headers(options.headers).get("if-match")).toBe('"stale"');
+      expect(new Headers(options.headers).get("if-match")).toBe('"rev-a"');
+      expect(new Headers(options.headers).get("cookie")).toBeNull();
       return new Response('{"conflit":true}', { status: 409, headers: { ETag: '"new"' } });
     });
-    const response = await PUT(new Request(url, { method: "PUT", body: '{"projets":["proposal"]}', headers: { origin: "https://workspace.example", "content-type": "application/json", "if-match": '"stale"' } }), context());
-    expect(response.status).toBe(409); expect(response.headers.get("etag")).toBe('"new"');
-    expect(await response.text()).toBe('{"conflit":true}'); expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    const race = await write('"rev-a"');
+    expect(race.status).toBe(409); expect(race.headers.get("etag")).toBe('"new"');
+    expect(await race.text()).toBe('{"conflit":true}'); expect(mocks.fetch).toHaveBeenCalledTimes(3);
   });
   it.each([undefined, "https://other.example"])("rejects a write from origin %s", async (origin) => {
     mocks.actor.mockResolvedValue({ userId: "actor-a", role: "OPERATOR", operatorId: "agency-a" });
@@ -98,7 +111,7 @@ describe("native La Barre through the existing authenticated session", () => {
     expect(response.headers.get("location")).toContain("https://workspace.example/login?");
     mocks.auth.mockResolvedValue({ user: { id: "actor-a" } });
     mocks.actor.mockResolvedValue({ userId: "actor-a", role: "OPERATOR", operatorId: "agency-a" });
-    expect((await PUT(new Request("http://localhost:3000/la-barre/depots/beignet-paradise.json", { method: "PUT", body: "{}", headers: { origin: "https://workspace.example" } }), context())).status).toBe(200);
+    expect((await PUT(new Request("http://localhost:3000/la-barre/depots/beignet-paradise.json", { method: "PUT", body: "{}", headers: { origin: "https://workspace.example", "if-match": '"rev-a"' } }), context())).status).toBe(200);
   });
   it.each([[".env"], ["assets", "production", "original.psd"], ["disque", "matanga", "secret"], ["app", "..", "config"], ["assets", "%2e%2e", "secret"]])("refuses non-native or ambiguous paths %j", async (...path) => {
     expect((await GET(new Request(url), context(path))).status).toBe(404); expect(mocks.fetch).not.toHaveBeenCalled();

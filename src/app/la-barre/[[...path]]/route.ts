@@ -4,6 +4,7 @@ import { barreUpstreamUrl, canAccessBarre } from "@/server/services/brand-node/b
 import { getBarreBrandContext } from "@/server/services/brand-node/barre-context";
 import { barrePublicationInput, publishBarreDocument } from "@/server/services/brand-node/barre-document";
 import { barreReviewInput, receiveBarreCampaignReview } from "@/server/services/brand-node/barre-review";
+import { barreActorDeclaration, saveBarreBase } from "@/server/services/brand-node/barre-attestation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,7 +41,12 @@ async function serve(request: Request, context: Context) {
   if (rel === "contexte.json" && readOnly) {
     const ids = new URL(request.url).searchParams.getAll("brand");
     if (ids.length > 200 || ids.some((id) => !/^[a-zA-Z0-9_-]{1,200}$/.test(id))) return message("Les références demandées ne sont pas reconnues.", 400);
-    try { return Response.json(await getBarreBrandContext(actor, ids.length ? [...new Set(ids)] : undefined), { headers: PRIVATE }); }
+    try {
+      // The authenticated person is declared once the installation can seal their gestures (ADR-0245).
+      const [brandContext, person] = await Promise.all([
+        getBarreBrandContext(actor, ids.length ? [...new Set(ids)] : undefined), barreActorDeclaration(actor.userId)]);
+      return Response.json({ ...brandContext, ...person }, { headers: PRIVATE });
+    }
     catch { return message("Les références de marque n’ont pas pu être relues.", 503); }
   }
   if (rel === "publication") {
@@ -90,6 +96,11 @@ async function serve(request: Request, context: Context) {
     if (!writable) return message("Écriture non autorisée à cette adresse.", 403);
     const origin = request.headers.get("origin");
     if (origin !== publicOrigin) return message("Ouvrez La Barre pour enregistrer ce travail.", 403);
+  }
+  if (!readOnly && /^depots\/[a-zA-Z0-9._-]+\.json$/.test(rel)) {
+    // A saved base is attributed to the session: new entries are attested, existing attestations kept (ADR-0245).
+    try { return await saveBarreBase(request, path, actor, AbortSignal.any([request.signal, AbortSignal.timeout(60_000)])); }
+    catch { return message("La Barre est momentanément indisponible. Votre travail reste dans son outil d’origine.", 503); }
   }
   try {
     const target = barreUpstreamUrl(path);

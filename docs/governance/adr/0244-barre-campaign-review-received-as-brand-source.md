@@ -69,3 +69,15 @@ Tests anti-dérive : `tests/unit/portfolio/barre-review.test.ts` (contrat commun
 `tests/integration/barre-campaign-review.postgres.test.ts` (réception réelle, rejeu, conflit,
 ancienneté, chaîne, homonymie, concurrence, accès), jeu commun
 `tests/fixtures/la-barre/bilan-campagne-v1.json` identique à celui de La Barre.
+
+## Amendement — 11 novembre 2026 (LB3, ADR0245)
+
+Servie derrière La Fusée, une version de bilan reçoit à l’enregistrement qui l’introduit
+l’attestation de la personne connectée (`attestation`, posée par la route `/la-barre/`).
+L’empreinte d’une version exclut désormais `attestation` comme `empreinte` : les versions déjà
+reçues, sans attestation, gardent leur empreinte et restent reçues. À la réception, une
+attestation présente est vérifiée (forme stricte, sceau de l’installation sur ce contenu) dans
+la route et dans le handler ; sinon `REVIEW_ATTESTATION_INVALID` (422), sans effet. L’acteur
+déclaré de la version reste dans son contenu ; l’attestation porte l’identité authentifiée, et
+le reçu garde aussi la personne qui transmet. Jeu commun :
+`tests/fixtures/la-barre/bilan-campagne-atteste-v1.json`.

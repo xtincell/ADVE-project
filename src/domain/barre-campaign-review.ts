@@ -4,7 +4,9 @@
  * La Barre fige chaque version du bilan d'une campagne : identité stable,
  * numéro, date, campagne, marques, texte, note, décision, acteur déclaré,
  * empreinte de la version précédente et la sienne (SHA-256 du JSON aux clés
- * triées, sans le champ `empreinte`). Ce module relit cette forme telle que
+ * triées, sans les champs `empreinte` et `attestation`). Servie derrière La Fusée,
+ * une version porte aussi l'attestation posée à son enregistrement par la session
+ * (ADR-0245) ; elle est vérifiée à la réception. Ce module relit cette forme telle que
  * La Barre l'a enregistrée, recalcule l'empreinte et refuse ce qui ne
  * correspond pas. Il ne décide rien : la réception range une preuve, jamais
  * une décision de marque ni une valeur de pilier.
@@ -15,6 +17,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { canonicalJson } from "./canonical-json";
+import { BarreActorAttestationSchema } from "./barre-actor-attestation";
 
 export const BARRE_CAMPAIGN_REVIEW_SCHEMA = "la-barre/bilan-campagne";
 /** Capacité déclarée à La Barre dans `contexte.json`. */
@@ -58,6 +61,8 @@ export const BarreCampaignReviewSchema = z.object({
     postes: z.array(z.string().max(120)).max(30).optional(),
   }).strict().nullable(),
   empreinte: z.string().regex(HEX),
+  /** Posée par La Fusée à l'enregistrement (LB3) ; absente des versions arrêtées avant ou hors de La Fusée. */
+  attestation: BarreActorAttestationSchema.optional(),
 }).strict().superRefine((review, ctx) => {
   if ((review.version === 1) !== (review.precedente === null)) {
     ctx.addIssue({ code: "custom", path: ["precedente"], message: "Seule la première version n’a pas de précédente." });
@@ -69,15 +74,18 @@ export const BarreCampaignReviewSchema = z.object({
 export type BarreCampaignReview = z.infer<typeof BarreCampaignReviewSchema>;
 
 
-/** SHA-256 de la version sans son champ `empreinte`, comme La Barre la scelle. */
+/**
+ * SHA-256 de la version sans ses champs `empreinte` et `attestation`, comme La
+ * Barre la scelle : l'attestation est posée après l'arrêt, elle désigne ce contenu.
+ */
 export function barreCampaignReviewDigest(review: Record<string, unknown>): string {
-  const { empreinte: _sealed, ...content } = review;
+  const { empreinte: _sealed, attestation: _attested, ...content } = review;
   return createHash("sha256").update(canonicalJson(content), "utf8").digest("hex");
 }
 
 export type BarreReviewRefusal =
   | "REVIEW_NOT_FOUND" | "REVIEW_AMBIGUOUS" | "REVIEW_INVALID"
-  | "REVIEW_DIGEST_INVALID" | "REVIEW_DIGEST_MISMATCH" | "REVIEW_CHAIN_MISMATCH";
+  | "REVIEW_DIGEST_INVALID" | "REVIEW_DIGEST_MISMATCH" | "REVIEW_CHAIN_MISMATCH" | "REVIEW_ATTESTATION_INVALID";
 
 export const BARRE_REVIEW_REFUSALS: Record<BarreReviewRefusal, { status: number; message: string }> = {
   REVIEW_NOT_FOUND: { status: 404, message: "Cette version du bilan n’est pas dans la base enregistrée de La Barre. Attendez la fin de la sauvegarde, puis transmettez-la de nouveau." },
@@ -86,6 +94,7 @@ export const BARRE_REVIEW_REFUSALS: Record<BarreReviewRefusal, { status: number;
   REVIEW_DIGEST_INVALID: { status: 422, message: "Le bilan enregistré ne correspond plus à son empreinte : il a été modifié après son arrêt. Arrêtez une nouvelle version." },
   REVIEW_DIGEST_MISMATCH: { status: 409, message: "L’empreinte transmise n’est pas celle de la version enregistrée. Rechargez La Barre avant de transmettre." },
   REVIEW_CHAIN_MISMATCH: { status: 409, message: "Cette version ne prolonge pas la précédente : leurs empreintes ne se suivent pas." },
+  REVIEW_ATTESTATION_INVALID: { status: 422, message: "L’attestation de cette version n’a pas été posée par La Fusée sur ce contenu. Arrêtez une nouvelle version dans La Barre ouverte depuis La Fusée." },
 };
 
 const record = (value: unknown): Record<string, unknown> | null =>
@@ -93,10 +102,13 @@ const record = (value: unknown): Record<string, unknown> | null =>
 
 /**
  * Retrouve la version désignée dans la base La Barre enregistrée et la vérifie :
- * identité, forme, empreinte recalculée, empreinte demandée et, si la version
- * précédente est présente, la chaîne des empreintes.
+ * identité, forme, empreinte recalculée, empreinte demandée, attestation si elle
+ * est présente (`verifyAttestation`, sceau de l'installation) et, si la version
+ * précédente est présente, la chaîne des empreintes. Sans vérificateur, une
+ * version attestée est refusée : on ne range pas une attestation non vérifiée.
  */
-export function locateBarreCampaignReview(data: unknown, request: BarreCampaignReviewRequest):
+export function locateBarreCampaignReview(data: unknown, request: BarreCampaignReviewRequest,
+  verifyAttestation?: (review: Record<string, unknown>) => boolean):
   { ok: true; review: BarreCampaignReview } | { ok: false; code: BarreReviewRefusal } {
   const campagnes = Array.isArray(record(data)?.campagnes) ? record(data)!.campagnes as unknown[] : [];
   const matching = campagnes.map(record).filter((c): c is Record<string, unknown> => c?.id === request.campagneId);
@@ -113,6 +125,7 @@ export function locateBarreCampaignReview(data: unknown, request: BarreCampaignR
   if (!parsed.success || parsed.data.campagne.id !== request.campagneId) return { ok: false, code: "REVIEW_INVALID" };
   if (digest !== parsed.data.empreinte) return { ok: false, code: "REVIEW_DIGEST_INVALID" };
   if (parsed.data.empreinte !== request.empreinte) return { ok: false, code: "REVIEW_DIGEST_MISMATCH" };
+  if (parsed.data.attestation && !verifyAttestation?.(raw)) return { ok: false, code: "REVIEW_ATTESTATION_INVALID" };
   const previous = rows.filter((v) => v.version === request.version - 1 && v.id === request.bilanId);
   if (previous.length === 1 && previous[0]!.empreinte !== parsed.data.precedente) return { ok: false, code: "REVIEW_CHAIN_MISMATCH" };
   return { ok: true, review: parsed.data };

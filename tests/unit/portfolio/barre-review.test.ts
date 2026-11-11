@@ -151,3 +151,49 @@ describe("POST /la-barre/bilan", () => {
     expect(down.status).toBe(503); expect(await down.json()).toMatchObject({ code: "RECEPTION_FAILED" });
   });
 });
+
+describe("version attestée par La Fusée (LB3, ADR-0245)", () => {
+  const SHARED = JSON.parse(readFileSync(join(__dirname, "../../fixtures/la-barre/bilan-campagne-atteste-v1.json"), "utf8")) as {
+    cleDeRecette: string; instance: string; version: Review & { attestation: Record<string, unknown> } };
+  const attested = SHARED.version;
+  beforeEach(() => { vi.stubEnv("AUTH_SECRET", SHARED.cleDeRecette); vi.stubEnv("PORTFOLIO_BARRE_INSTANCE", SHARED.instance); });
+
+  it("la forme accepte l'attestation, l'empreinte l'ignore", () => {
+    expect(BarreCampaignReviewSchema.safeParse(attested).success).toBe(true);
+    expect(barreCampaignReviewDigest(attested)).toBe(V1.empreinte);
+    expect(BarreCampaignReviewSchema.safeParse({ ...copy(attested), attestation: { par: "la-barre" } }).success).toBe(false);
+  });
+
+  it("vérifie le sceau à la réception et range la version avec son attestation", async () => {
+    mocks.snapshot.mockResolvedValue({ data: base(attested), etag: '"rev-a"' });
+    const response = await post(ask(attested));
+    expect(response.status).toBe(200);
+    expect(mocks.emit.mock.calls[0]![0]).toMatchObject({ review: attested });
+  });
+
+  it("refuse une attestation qui n'est pas celle de cette installation, ou qui ne désigne pas ce contenu", async () => {
+    const autres = [
+      { ...copy(attested), attestation: { ...attested.attestation, nom: "Quelqu’un d’autre" } },
+      { ...copy(attested), attestation: { ...attested.attestation, sceau: "0".repeat(64) } },
+    ];
+    for (const v of autres) {
+      mocks.snapshot.mockResolvedValue({ data: base(v as Review), etag: null });
+      const response = await post(ask(v as Review));
+      expect(response.status).toBe(422);
+      expect(await response.json()).toMatchObject({ code: "REVIEW_ATTESTATION_INVALID" });
+    }
+    vi.stubEnv("PORTFOLIO_BARRE_INSTANCE", "autre-installation");
+    mocks.snapshot.mockResolvedValue({ data: base(attested), etag: null });
+    expect(await (await post(ask(attested))).json()).toMatchObject({ code: "REVIEW_ATTESTATION_INVALID" });
+    vi.stubEnv("PORTFOLIO_BARRE_INSTANCE", SHARED.instance); vi.stubEnv("AUTH_SECRET", "une-autre-cle-de-session-longue");
+    expect(await (await post(ask(attested))).json()).toMatchObject({ code: "REVIEW_ATTESTATION_INVALID" });
+    expect(mocks.emit).not.toHaveBeenCalled();
+    // Sans vérificateur, une attestation n'est jamais tenue pour vérifiée.
+    expect(locateBarreCampaignReview(base(attested), ask(attested))).toEqual({ ok: false, code: "REVIEW_ATTESTATION_INVALID" });
+  });
+
+  it("les versions reçues avant, sans attestation, restent reçues", async () => {
+    mocks.snapshot.mockResolvedValue({ data: base(V1), etag: null });
+    expect((await post(ask(V1))).status).toBe(200);
+  });
+});
