@@ -4,6 +4,7 @@
 
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { catalogueIdentityHistory, type CatalogueArchive, type CatalogueIdentityHistory, type CatalogueWrite } from "@/domain/product-catalog";
 
 interface VersionEntry {
   pillarId: string;
@@ -64,6 +65,52 @@ export async function getHistory(pillarId: string, limit = 20) {
     orderBy: { createdAt: "desc" },
     take: limit,
   });
+}
+
+/**
+ * États archivés du catalogue produit (V) : seul le chemin `produitsCatalogue`
+ * est lu, avec l'écriture qui a remplacé chaque état. Lecture pure, utilisable
+ * dans la transaction du gateway (réservation des identifiants retirés).
+ */
+export async function readCatalogueArchives(
+  pillarId: string, client: Prisma.TransactionClient = db,
+): Promise<CatalogueArchive[]> {
+  const rows = await client.$queryRaw<Array<{
+    version: number; catalogue: unknown; author: string | null; reason: string | null;
+    intentId: string | null; compensatedFrom: string | null; createdAt: Date;
+  }>>`SELECT "version", "content"->'produitsCatalogue' AS "catalogue", "author", "reason", "intentId", "compensatedFrom", "createdAt"
+      FROM "PillarVersion" WHERE "pillarId" = ${pillarId} ORDER BY "version" ASC, "createdAt" ASC, "id" ASC`;
+  return rows.map(row => ({ version: row.version, catalogue: row.catalogue ?? undefined, write: {
+    at: row.createdAt.toISOString(), author: row.author, reason: row.reason,
+    intentId: row.intentId, compensatedFrom: row.compensatedFrom,
+  } }));
+}
+
+export type CatalogueHistoryWrite = CatalogueWrite & { intentKind: string | null };
+export type CatalogueHistory = CatalogueIdentityHistory<CatalogueHistoryWrite> & { currentVersion: number };
+
+/**
+ * Historique des retraits et réintroductions du catalogue d'une marque, dérivé
+ * des versions conservées (ADR-0205, amendement 568). L'intention de chaque
+ * écriture n'est lue que dans le journal de cette même marque.
+ */
+export async function getCatalogueHistory(strategyId: string, client: Prisma.TransactionClient = db): Promise<CatalogueHistory> {
+  const pillar = await client.pillar.findUnique({
+    where: { strategyId_key: { strategyId, key: "v" } }, select: { id: true, currentVersion: true, content: true },
+  });
+  if (!pillar) return { currentVersion: 0, ...catalogueIdentityHistory([], { version: 0, catalogue: undefined }) };
+  const archives = await readCatalogueArchives(pillar.id, client);
+  const intentIds = [...new Set(archives.flatMap(a => a.write.intentId ? [a.write.intentId] : []))];
+  const emissions = intentIds.length ? await client.intentEmission.findMany({
+    where: { id: { in: intentIds }, strategyId }, select: { id: true, intentKind: true },
+  }) : [];
+  const kinds = new Map(emissions.map(e => [e.id, e.intentKind]));
+  const content = (pillar.content ?? {}) as Record<string, unknown>;
+  const history = catalogueIdentityHistory(
+    archives.map(a => ({ ...a, write: { ...a.write, intentKind: a.write.intentId ? kinds.get(a.write.intentId) ?? null : null } })),
+    { version: pillar.currentVersion, catalogue: content.produitsCatalogue },
+  );
+  return { currentVersion: pillar.currentVersion, ...history };
 }
 
 // Restoration is not a versioning concern: the history action, the journal
