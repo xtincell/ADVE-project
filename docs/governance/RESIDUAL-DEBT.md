@@ -1,3 +1,36 @@
+## 566 — LB4 bilan de campagne : geste La Barre et réception reçus localement (2026-11-11)
+
+**Fermé localement.** La Barre clôt le bilan de campagne par la fabrique de décision
+(version figée, empreinte SHA-256 du JSON canonique) et le transmet par
+`POST /la-barre/bilan` ; La Fusée relit la version dans la base enregistrée, recalcule
+l'empreinte et la range comme édition PROPOSED « Bilan de campagne » dans les sources de
+la marque (ADR-0244, Intent `INGEST_BARRE_CAMPAIGN_REVIEW`). Preuves : route rouge sur
+`main` (5 cas sur 7) puis verte ; PostgreSQL 8 cas, contre-épreuves verrou et homonymie ;
+recette croisée La Barre réelle (`servir.mjs`) → route → PostgreSQL.
+
+**Non reçu.** CI, image, runtime et production 566 ; le geste « Transmettre à La Fusée »
+dans un navigateur ouvert sur La Fusée (servie sous `/la-barre/`) ; un bilan réel.
+**Plan** : ouvrir la PR (label `out-of-scope`, numéro réel dans `scope-drift.md`) et celle
+de `xtincell/la-barre` (`claude/bilan-campagne`), recevoir CI et image des deux, puis
+arrêter et transmettre un bilan fictif depuis La Barre ouverte dans La Fusée de recette :
+réponse 200, édition PROPOSED relue dans Sources, rejeu sans seconde source.
+**Déclencheur** : ouverture des deux PR, puis prochaine livraison commune.
+
+**Reste ouvert, hors de ce lot.** (a) La boucle « le bilan nourrit la campagne
+suivante » : aucun lecteur ne ramène encore une édition `CAMPAIGN_REVIEW` dans le brief
+ou la composition suivants ; à brancher sur les lecteurs documentaires existants (RAG
+des sources, contexte de marque La Barre), sans copier le texte ni l'adopter.
+**Déclencheur** : prochain chantier LB sur le brief ou la composition de campagne.
+(b) La transmission est manuelle, version par version ; une version manquée crée une
+lacune visible dans la lignée (édition suivante chaînée à la dernière reçue), jamais
+comblée. **Déclencheur** : même chantier que (a). (c) L'acteur d'une version reste
+déclaré par le poste La Barre ; l'identité authentifiée n'y est pas transmise
+(README La Barre). **Déclencheur** : arbitrage SHK-0005 sur l'acteur authentifié.
+(d) Trois sérialisations canoniques JSON coexistent (`governance/hash-chain`, privée ;
+`domain/barre-campaign-review` ; et celle du reçu DataCollector si la PR 565 fusionne) :
+les factoriser en une fonction de domaine unique sans changer aucun sceau existant.
+**Déclencheur** : fusion de la PR 565.
+
 ## 564 — F2 contrat S unique : désaccord reproduit et convergé localement (2026-11-11)
 
 **Fermé localement (cause du constat 436).** La maturité de S ne lisait que la présence

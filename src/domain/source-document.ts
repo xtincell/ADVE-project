@@ -2,11 +2,12 @@ import { z } from "zod";
 import { SourceReceiptSchema } from "./source-certainty";
 
 /** A document edition is evidence, never an implicit strategic approval. */
-export const DOCUMENT_KINDS = ["LEAN_CANVAS", "BMC", "MARKET_STUDY", "STRATEGY", "FINANCE", "PRESENTATION", "BRAND_GUIDE", "RESEARCH_DATA", "TECHNICAL", "ASSET", "OTHER"] as const;
+export const DOCUMENT_KINDS = ["LEAN_CANVAS", "BMC", "MARKET_STUDY", "STRATEGY", "FINANCE", "PRESENTATION", "BRAND_GUIDE", "RESEARCH_DATA", "CAMPAIGN_REVIEW", "TECHNICAL", "ASSET", "OTHER"] as const;
 export const DOCUMENT_KIND_LABEL: Record<typeof DOCUMENT_KINDS[number], string> = {
   LEAN_CANVAS: "Lean Canvas", BMC: "Business Model Canvas", MARKET_STUDY: "Étude de marché",
   STRATEGY: "Stratégie", FINANCE: "Finances", PRESENTATION: "Présentation", BRAND_GUIDE: "Charte et identité",
-  RESEARCH_DATA: "Données de recherche", TECHNICAL: "Documentation technique", ASSET: "Ressource de marque", OTHER: "Autre document",
+  // Retour d’expérience d’une campagne (bilan arrêté, dont celui reçu de La Barre) : preuve, pas décision.
+  RESEARCH_DATA: "Données de recherche", CAMPAIGN_REVIEW: "Bilan de campagne", TECHNICAL: "Documentation technique", ASSET: "Ressource de marque", OTHER: "Autre document",
 };
 export const DOCUMENT_STATUS_LABEL = { PROPOSED: "Proposition · à valider", REFERENCE: "Référence de travail", SUPERSEDED: "Édition antérieure", ARCHIVED: "Archive" } as const;
 export const DocumentEditionInputSchema = z.object({

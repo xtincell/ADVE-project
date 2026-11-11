@@ -57,6 +57,10 @@ const EXTRA_FILES = [
   join(ROOT, "src/server/services/brand-node/barre-document.ts"),
   join(ROOT, "src/server/services/brand-node/barre-document-runtime.ts"),
   join(ROOT, "src/server/services/brand-node/barre-connection.ts"),
+  // LB4 — refus et accusés du bilan de campagne, lus par La Barre.
+  join(ROOT, "src/server/services/brand-node/barre-review.ts"),
+  join(ROOT, "src/server/services/ingestion-pipeline/barre-review.ts"),
+  join(ROOT, "src/domain/barre-campaign-review.ts"),
   join(ROOT, "src/components/shared/markdown-content.tsx"),
   join(ROOT, "src/server/services/notoria/generate-typed-recos.ts"),
   join(ROOT, "src/lib/strategy/roadmap-routes.ts"),
