@@ -89,15 +89,164 @@ export function productSlug(nom: string): string {
  * Ids manquants : reprend un nom EXACT et non ambigu de l'état précédent,
  * sinon alloue un slug dédupliqué. Ne réutilise pas l'id d'un produit supprimé
  * et ne déduit jamais une identité de la position dans le tableau.
+ * `reserved` porte les identifiants de tout l'historique (produits retirés
+ * compris) : un nouvel homonyme d'un produit retiré n'hérite jamais de son id.
  * Ne touche JAMAIS un id existant. Retourne une NOUVELLE liste.
  */
 export function ensureProductIds<T extends CatalogueProduct>(
-  catalogue: readonly T[], previous: readonly CatalogueProduct[] = [],
+  catalogue: readonly T[], previous: readonly CatalogueProduct[] = [], reserved: Iterable<string> = [],
 ): T[] {
   return acquireEntityIds(catalogue, previous, "nom", (product, attempt) => {
     const slug = productSlug(typeof product.nom === "string" ? product.nom : "");
     return attempt ? `${slug}-${attempt + 1}` : slug;
-  });
+  }, reserved);
+}
+
+// ── Historique des identités (ADR-0205, amendement 568) ────────────────
+
+/** Écriture gouvernée qui a fait passer le catalogue d'une version à la suivante. */
+export interface CatalogueWrite {
+  at: string;
+  author: string | null;
+  reason: string | null;
+  intentId: string | null;
+  /** Écriture compensée : la nouvelle version restaure une archive (ADR-0207). */
+  compensatedFrom: string | null;
+}
+
+/** État archivé du catalogue à `version`, et l'écriture qui l'a remplacé. */
+export interface CatalogueArchive<W extends CatalogueWrite = CatalogueWrite> {
+  version: number;
+  catalogue: unknown;
+  write: W;
+}
+
+export type CatalogueIdentityEventKind = "APPEARED" | "RETIRED" | "REINTRODUCED" | "RENAMED";
+
+export interface CatalogueIdentityEvent<W extends CatalogueWrite = CatalogueWrite> {
+  kind: CatalogueIdentityEventKind;
+  productId: string;
+  name: string | null;
+  /** Nom avant renommage, ou dernier nom connu avant le retrait pour une réintroduction. */
+  previousName: string | null;
+  /** null : présent dès la plus ancienne version conservée. */
+  fromVersion: number | null;
+  toVersion: number;
+  /** null : aucune écriture unique conservée entre ces deux versions. */
+  write: W | null;
+  /**
+   * Réintroduction seulement. RESTORATION : restauration d'une version conservée ;
+   * NONE : identifiant repris sans restauration (écritures antérieures à la règle),
+   * à vérifier ; UNKNOWN : écriture non conservée.
+   */
+  proof: "RESTORATION" | "NONE" | "UNKNOWN" | null;
+}
+
+export interface CatalogueIdentityHistory<W extends CatalogueWrite = CatalogueWrite> {
+  events: CatalogueIdentityEvent<W>[];
+  /** Identifiants déjà acquis et absents du catalogue courant. */
+  retiredIds: string[];
+  /** Produits sans identifiant : non suivis, jamais rapprochés par nom ou position. */
+  unidentified: { current: number; archivedVersions: number };
+  /** Passages de version sans écriture unique conservée. */
+  unattributed: Array<{ fromVersion: number; toVersion: number }>;
+}
+
+const productRecords = (value: unknown): CatalogueProduct[] => Array.isArray(value)
+  ? value.filter((p): p is CatalogueProduct => p !== null && typeof p === "object" && !Array.isArray(p)) : [];
+const acquiredId = (product: CatalogueProduct): string | null =>
+  typeof product.id === "string" && product.id.trim() ? product.id : null;
+const productName = (product: CatalogueProduct): string | null => typeof product.nom === "string" ? product.nom : null;
+
+/** Identités d'un état, dans l'ordre du catalogue ; un id répété garde sa première entrée. */
+function identities(value: unknown): Map<string, CatalogueProduct> {
+  const result = new Map<string, CatalogueProduct>();
+  for (const product of productRecords(value)) {
+    const id = acquiredId(product);
+    if (id && !result.has(id)) result.set(id, product);
+  }
+  return result;
+}
+
+/**
+ * Identités retirées : la dernière entrée connue de chaque produit de l'historique
+ * absent de l'état courant — par id quand il en a un, sinon par nom exact. Les
+ * identifiants de tout l'historique sont réservés à l'allocation.
+ */
+export function retiredCatalogueIdentities(history: readonly unknown[], current: unknown): {
+  reservedIds: Set<string>; retired: CatalogueProduct[];
+} {
+  const now = productRecords(current);
+  const presentIds = new Set(now.flatMap(p => acquiredId(p) ? [acquiredId(p)!] : []));
+  const presentNames = new Set(now.flatMap(p => productName(p) !== null ? [productName(p)!] : []));
+  const reservedIds = new Set(presentIds);
+  const last = new Map<string, CatalogueProduct>();
+  for (const state of history) {
+    for (const product of productRecords(state)) {
+      const id = acquiredId(product);
+      if (id) reservedIds.add(id);
+      const name = productName(product);
+      const key = id ? `id:${id}` : name !== null && name.trim() ? `nom:${name}` : null;
+      if (!key) continue;
+      last.delete(key); // ordre : dernière apparition
+      last.set(key, product);
+    }
+  }
+  const retired = [...last.entries()].filter(([key, product]) => key.startsWith("id:")
+    ? !presentIds.has(acquiredId(product)!) : !presentNames.has(productName(product)!)).map(([, product]) => product);
+  return { reservedIds, retired };
+}
+
+/**
+ * Historique lisible des identités du catalogue, dérivé des versions archivées.
+ * Une archive `PillarVersion` porte l'état AVANT une écriture et cette écriture ;
+ * l'état courant clôt la suite. L'écriture n'est attribuée que si la version
+ * suivante est exactement la suivante et l'archive unique — sinon `write: null`.
+ * Aucune identité déduite d'un nom, d'une ressemblance ou d'une position.
+ */
+export function catalogueIdentityHistory<W extends CatalogueWrite>(
+  archives: readonly CatalogueArchive<W>[], current: { version: number; catalogue: unknown },
+): CatalogueIdentityHistory<W> {
+  const ordered = [...archives].sort((a, b) => a.version - b.version);
+  const perVersion = new Map<number, number>();
+  for (const archive of ordered) perVersion.set(archive.version, (perVersion.get(archive.version) ?? 0) + 1);
+  const states = [...ordered.map(a => ({ version: a.version, catalogue: a.catalogue })), current];
+  const events: CatalogueIdentityEvent<W>[] = [];
+  const unattributed: CatalogueIdentityHistory<W>["unattributed"] = [];
+  const lastName = new Map<string, string | null>();
+  const event = (kind: CatalogueIdentityEventKind, productId: string, product: CatalogueProduct,
+    previousName: string | null, fromVersion: number | null, toVersion: number, write: W | null) => {
+    events.push({ kind, productId, name: productName(product), previousName, fromVersion, toVersion, write,
+      proof: kind !== "REINTRODUCED" ? null : !write ? "UNKNOWN" : write.compensatedFrom ? "RESTORATION" : "NONE" });
+  };
+
+  const first = states[0]!;
+  for (const [id, product] of identities(first.catalogue)) {
+    event("APPEARED", id, product, null, null, first.version, null);
+    lastName.set(id, productName(product));
+  }
+  for (let i = 0; i + 1 < states.length; i++) {
+    const before = states[i]!, after = states[i + 1]!;
+    const write = after.version === before.version + 1 && perVersion.get(before.version) === 1 ? ordered[i]!.write : null;
+    if (!write) unattributed.push({ fromVersion: before.version, toVersion: after.version });
+    const was = identities(before.catalogue), now = identities(after.catalogue);
+    for (const [id, product] of now) {
+      const old = was.get(id);
+      if (!old) event(lastName.has(id) ? "REINTRODUCED" : "APPEARED", id, product, lastName.get(id) ?? null, before.version, after.version, write);
+      else if (productName(old) !== productName(product)) event("RENAMED", id, product, productName(old), before.version, after.version, write);
+    }
+    for (const [id, product] of was) if (!now.has(id)) event("RETIRED", id, product, null, before.version, after.version, write);
+    for (const [id, product] of now) lastName.set(id, productName(product));
+  }
+
+  const present = identities(current.catalogue);
+  const unnamed = (value: unknown) => productRecords(value).filter(p => !acquiredId(p)).length;
+  return {
+    events,
+    retiredIds: [...lastName.keys()].filter(id => !present.has(id)).sort(),
+    unidentified: { current: unnamed(current.catalogue), archivedVersions: ordered.filter(a => unnamed(a.catalogue) > 0).length },
+    unattributed,
+  };
 }
 
 /**
@@ -105,10 +254,12 @@ export function ensureProductIds<T extends CatalogueProduct>(
  * Les champs *Ids prennent l'id acquis ; productNames conserve un nom lisible.
  * Correspondances EXACTES et uniques seulement, sans rapprocher un produit retiré
  * d'un nouveau produit homonyme. Aucun prix, origine ou autre champ n'est réécrit.
+ * `retired` (produits retirés plus tôt dans l'historique) : une référence à leur
+ * id ou à un nom qu'ils portaient reste telle quelle, à corriger par une décision.
  */
 export function rebindProductRefs(
   content: Record<string, unknown>, previous: readonly CatalogueProduct[],
-  products: readonly CatalogueProduct[],
+  products: readonly CatalogueProduct[], retired: readonly CatalogueProduct[] = [],
 ): Record<string, unknown> {
   const unique = (list: readonly CatalogueProduct[], key: "id" | "nom", ref: string) => {
     const matches = list.filter(p => p[key] === ref);
@@ -123,6 +274,7 @@ export function rebindProductRefs(
     if (oldNames.length > 1) return undefined;
     const old = oldNames[0];
     if (old?.id) return unique(products, "id", old.id);
+    if (!old && retired.some(p => p.id === ref || p.nom === ref)) return undefined;
     return unique(products, "nom", ref);
   };
   const refs = (value: unknown, names = false) => Array.isArray(value)

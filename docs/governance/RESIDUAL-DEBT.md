@@ -1,3 +1,25 @@
+## 568 — F13 historique des identités du catalogue : reçu localement (2026-11-11)
+
+**Fermé localement.** Un produit retiré garde son identifiant hors de portée d'un nouvel
+homonyme (réservation de tout l'historique archivé, plus seulement l'état précédent) ;
+il ne revient sous cet identifiant que par la restauration de la version qui le
+contenait, toute autre écriture qui le porte est refusée (`CATALOGUE_RETIRED_ID`) ;
+l'historique des entrées, retraits, renommages et réintroductions, avec date, auteur et
+intention de chaque écriture, se lit par `pillar.getCatalogueHistory` et sur la page
+Offre & Pricing. Amendement 568 d'ADR-0205, sans modèle ni migration. Preuves :
+unitaires 7 rouges sur 8 puis verts, PostgreSQL 3 rouges sur 3 puis verts, contre-épreuve,
+recette native locale du panneau (HTTP 200, sept événements, 0 ≥ 500, 390 px sans débordement).
+
+**Non reçu.** CI, image, runtime et production 568 ; lecture native du panneau en
+production ; un retrait/réintroduction réel. **Plan** : ouvrir la PR (label `out-of-scope`, numéro réel
+dans `scope-drift.md`), recevoir CI et image, puis après livraison ouvrir l'historique
+du catalogue d'une marque en lecture et relire ses entrées. **Déclencheur** : ouverture
+de la PR, puis première recette native après livraison 568.
+
+**Reste ouvert.** La résolution tolérante en lecture des références produit
+(`resolveProductRef`) rapproche encore un identifiant retiré d'un homonyme par nom ;
+plan et déclencheur dans la section catalogue (ADR-0205) plus bas.
+
 ## 566 — LB4 bilan de campagne : geste La Barre et réception reçus localement (2026-11-11)
 
 **Fermé localement.** La Barre clôt le bilan de campagne par la fabrique de décision
@@ -4072,15 +4094,28 @@ Le renommage natif a révélé un lien historique par nom encore fragile : trans
 exacte unique reçue par le même writer, sans rapprocher homonymes ou produits retirés.
 Les références catalogue/gammes et les produits socles du Palais SPAWT sont
 reçus par amendement gouverné et lecture native ; aucun backfill SQL utilisé.
-La réservation d'id couvre l'état précédent, pas tout l'historique des retraits.
-Le lecteur commun du lot 420 refuse désormais un id/nom/slug homonyme ;
-les noms de personaSegmentMap ne portent pas tous une identité acquise. Leur
-résolution générale et un retrait/réintroduction ne sont pas reçus par ce lot.
-**Plan** : qualifier les références historiques avant réintroduction d'un ancien
-produit, recevoir la résolution unique et les ancres des références par nom,
-puis borner l'allocation au contexte/version existant si nécessaire.
-**Déclencheur** : avant une recette réelle de retrait/réintroduction C3/C6 ; aucun
-rapprochement automatique par nom similaire ou position dans la liste.
+**Fermé localement en 568 (amendement ADR-0205)** : la réservation couvre tout
+l'historique archivé du catalogue, un nouvel homonyme d'un produit retiré reçoit
+un identifiant nouveau et ses références ne basculent plus vers lui ; un
+identifiant retiré ne revient que par restauration de sa version (refus
+`CATALOGUE_RETIRED_ID` sinon) ; l'historique des entrées, retraits, renommages et
+réintroductions se lit par `pillar.getCatalogueHistory` et sur la page Offre &
+Pricing. Reçu sur PostgreSQL jetable (3/3), en tests unitaires/composant et en recette
+native locale du panneau.
+**Non reçu** : CI, image, runtime et production 568 ; lecture native du panneau en
+production ; recette d'un retrait/réintroduction réel sur un dossier de marque.
+**Reste ouvert — résolution en lecture.** `resolveProductRef` (ADR-0171) rapproche
+encore une référence par nom ou slug sans casse : une gamme qui vise l'identifiant
+retiré `palais` s'affiche résolue vers un nouveau « Palais » (id `palais-2`), et
+`danglingProductRefs` ne la signale pas. Les noms de personaSegmentMap ne portent
+pas tous une identité acquise. **Plan** : passer aux lecteurs (cross-validator,
+renderer V, prix de gamme) les identités retirées que dérive
+`retiredCatalogueIdentities` depuis `readCatalogueArchives`, refuser la résolution
+par nom/slug d'une référence égale à un identifiant ou nom retiré et la signaler
+comme rompue ; recevoir ensuite les ancres des références par nom.
+**Déclencheur** : avant la recette réelle de retrait/réintroduction C3/C6, ou au
+premier retrait d'un produit d'un dossier de marque réel ; aucun rapprochement
+automatique par nom similaire ou position dans la liste.
 
 L'éditeur de `unitEconomics.pointMort` reste numérique alors que son schéma
 attend une description textuelle du seuil. **Plan** : aligner ce contrôle sur

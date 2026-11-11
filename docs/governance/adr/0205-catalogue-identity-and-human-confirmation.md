@@ -80,3 +80,57 @@ l'histoire. Plan : qualifier les références historiques avant toute réintrodu
 d'un produit retiré, avec allocation bornée au contexte/version existant si besoin.
 Reprise : avant un cycle réel de retrait/réintroduction ; aucun rapprochement de
 produits par simple similarité de nom n'est reçu ici.
+
+## Amendement 568 — retraits, réintroductions et leur historique (2026-11-11)
+
+**Défaut reproduit.** La réservation ne couvrait que l'état précédent. Un produit
+retiré à la version N, puis un nouveau produit homonyme ajouté sans identifiant,
+recevait par ressemblance de slug l'identifiant du retiré ; les gammes qui
+pointaient encore vers lui, ou vers son nom, basculaient silencieusement sur le
+nouveau. Une écriture pouvait aussi reprendre l'identifiant retiré sans autre
+preuve que sa présence dans la charge utile (formulaire périmé, import, proposition
+automatique). L'historique existait dans `PillarVersion` mais aucune lecture ne
+disait quand un produit avait été retiré ou réintroduit, ni par quelle écriture.
+
+**Décision.**
+
+- Le writer commun lit les états archivés du catalogue (`PillarVersion`, chemin
+  `produitsCatalogue` seul, dans sa transaction) : tous les identifiants de
+  l'historique sont réservés à l'allocation (`acquireEntityIds(…, reserved)`),
+  et un nouvel homonyme reçoit un identifiant nouveau.
+- Règle de réintroduction, la plus prudente : un identifiant retiré ne revient
+  que par la restauration gouvernée de la version qui le contenait (ADR-0207,
+  `rollbackPillar`) ; l'archive restaurée est la preuve. Toute autre écriture qui
+  porte un identifiant retiré est refusée avant version ou archive
+  (`CATALOGUE_RETIRED_ID`) ; le produit peut être ajouté sans identifiant et en
+  reçoit un nouveau. Aucune voie déclarative supplémentaire n'est ajoutée : elle
+  demanderait une décision métier (qui peut affirmer qu'un nouvel ajout est le
+  produit retiré) qui n'est pas prise ici.
+- Une référence à un produit retiré plus tôt, par son identifiant ou par un nom
+  qu'il portait, n'est plus réancrée vers un homonyme : elle reste à corriger.
+- Lecture : `catalogueIdentityHistory` (domaine, pur) dérive des versions
+  conservées les entrées, retraits, renommages et réintroductions, avec l'écriture
+  de chacun (date, auteur, motif, intention et son type lus dans le journal de la
+  même marque, restauration). Une écriture n'est attribuée que si la version
+  suivante suit exactement et que l'archive est unique ; sinon le passage est
+  listé sans auteur. Un identifiant revenu sans restauration avant cette règle est
+  qualifié « repris sans preuve, à vérifier ». Les produits sans identifiant sont
+  comptés, jamais rapprochés par nom ou position. Procédure
+  `pillar.getCatalogueHistory` (lecture, `strategyScopedProcedure`) et panneau
+  « Historique du catalogue » de la page Offre & Pricing, chargé à l'ouverture.
+
+Aucun modèle, migration, service, Intent ou routeur nouveau ; zéro modèle de langue.
+
+**Preuves.** Unitaires `catalogue-history.test.ts` : 7 rouges sur 8 contre le code
+566, 8 verts après ; composant 2/2. PostgreSQL `catalogue-history.postgres.test.ts` :
+3 rouges sur 3 contre le code 566 (identifiant `palais` réattribué au nouvel
+homonyme, réintroduction non déclarée acceptée, procédure absente), 3 verts après ;
+contre-épreuve sans réservation ni refus : 2 rouges, restaurés verts. Recette native
+locale sous vrai compte propriétaire, fixture synthétique : page HTTP 200, lecture
+200, sept événements dans l'ordre, aucune réponse ≥ 500 ni erreur de page, 390 px
+sans débordement. CI, image et production 568 restent à recevoir.
+
+**Résidu.** La résolution tolérante en lecture (`resolveProductRef`, ADR-0171)
+rapproche encore une référence par nom ou slug, sans casse : une gamme qui vise
+l'identifiant retiré `palais` s'affiche résolue vers un nouveau « Palais ». Plan et
+déclencheur : RESIDUAL-DEBT § catalogue.

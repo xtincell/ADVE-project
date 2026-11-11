@@ -90,7 +90,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **cult-index-tier** — Domain — Cult Index tier (échelle de maturité culturelle de la marque).
 - **datacollector-receipt** — DataCollector receipt, schema `datacollector/observation-receipt` v1 (DC3 Shinkiro).
 - **devotion-ladder** — Domain — Devotion Ladder canonique (rungs du parcours superfan).
-- **entity-ids**
+- **entity-ids** — Shared identity acquisition for existing JSON collections. No fuzzy or positional matching.
 - **external-metric** — ADR-0146 ingress contract for external metrics and observations, shared by HTTP and governed admission.
 - **field-provenance** — FieldProvenance — qui a posé la valeur d'un champ de pilier ADVE.
 - **financial-document**
