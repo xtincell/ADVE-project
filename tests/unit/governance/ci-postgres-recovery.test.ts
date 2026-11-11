@@ -1,10 +1,11 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const workflow = readFileSync(join(__dirname, "../../../.github/workflows/ci.yml"), "utf8");
+const root = join(__dirname, "../../..");
+const workflow = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
 const job = workflow.split("  feedback-postgres:\n")[1]!.split("\n  prisma-validate:")[0]!;
 const digest = "sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d";
 const primary = `public.ecr.aws/docker/library/postgres:16@${digest}`;
@@ -132,5 +133,41 @@ describe("PostgreSQL CI — execute the existing shell without Docker or a netwo
     expect(job).toContain("npx vitest run --config vitest.feedback-postgres.config.mts");
     expect(job).toMatch(/name: Remove the isolated PostgreSQL container\n        if: always\(\)/);
     expect(job).toContain("docker rm --force shinkiro-ci-postgres");
+  });
+});
+
+// Eight PostgreSQL files once ran in no workflow, so their receipts stayed local.
+function postgresTestFiles(dir = "tests/integration"): string[] {
+  return readdirSync(join(root, dir), { withFileTypes: true }).flatMap((entry) => {
+    const path = `${dir}/${entry.name}`;
+    if (entry.isDirectory()) return postgresTestFiles(path);
+    return entry.name.endsWith(".postgres.test.ts") ? [path] : [];
+  });
+}
+const included = (config: string) =>
+  [...readFileSync(join(root, config), "utf8").matchAll(/"(tests\/integration\/[^"]+\.test\.ts)"/g)].map((m) => m[1]!);
+
+describe("PostgreSQL CI — every PostgreSQL test file runs in the job", () => {
+  const shared = included("vitest.feedback-postgres.config.mts");
+  const dedicated = included("vitest.social-receipt-postgres.config.mts");
+
+  it("runs each *.postgres.test.ts through a configuration that the job executes", () => {
+    expect(job).toContain("npx vitest run --config vitest.feedback-postgres.config.mts");
+    expect(job).toContain("npx vitest run --config vitest.social-receipt-postgres.config.mts");
+    const orphans = postgresTestFiles().filter((file) => !shared.includes(file) && !dedicated.includes(file));
+    expect(orphans).toEqual([]);
+    // Vitest ignores an include that matches nothing: keep every entry real.
+    expect([...shared, ...dedicated].filter((file) => !existsSync(join(root, file)))).toEqual([]);
+  });
+
+  it("keeps the empty-database receipt on its own migrated database", () => {
+    expect(dedicated).toEqual(["tests/integration/social-publication-receipt.postgres.test.ts"]);
+    expect(shared).not.toContain(dedicated[0]);
+    expect(job).toContain("DATABASE_URL: postgresql://postgres:receipt-ci@127.0.0.1:5432/shinkiro_social_receipt_ci");
+    expect(job).toContain("docker exec shinkiro-ci-postgres createdb -U postgres shinkiro_social_receipt_ci");
+  });
+
+  it("fixes the heap of the job's Node processes", () => {
+    expect(job).toMatch(/^      NODE_OPTIONS: --max-old-space-size=6144$/m);
   });
 });

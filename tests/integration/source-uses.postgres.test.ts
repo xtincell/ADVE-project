@@ -1,4 +1,4 @@
-/** Run only against a disposable local database with migrations applied.
+/** Run only against a disposable database with migrations applied (local receipt cluster or CI container).
  * Providers are stubbed; persistence, transactions, locks and access resolution are real.
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -17,7 +17,8 @@ import { indexBrandSource } from "@/server/services/seshat/context-store/indexer
 import { proposeBrandAssetsFromSource } from "@/server/services/source-classifier";
 import { writePillarsAtomically } from "@/server/services/pillar-gateway";
 let owner: string, second: string, third: string, foreign: string, sourceId: string, actor: string, operatorId: string, foreignOperator: string;
-const share = (strategyId: string, revoke = false) => setSourceUse({ sourceId, strategyId, userId: actor, operatorId, admin: false, revoke });
+const strategies: string[] = [];
+const share =(strategyId: string, revoke = false) => setSourceUse({ sourceId, strategyId, userId: actor, operatorId, admin: false, revoke });
 async function correction(content: string) {
   await db.$transaction(async (tx) => {
     await tx.brandDataSource.update({ where: { id: sourceId }, data: { rawContent: content } });
@@ -25,22 +26,44 @@ async function correction(content: string) {
   });
 }
 beforeAll(async () => {
-  expect(process.env.DATABASE_URL).toContain("127.0.0.1:55439/shinkiro_verify");
-  const template = await db.strategy.findFirstOrThrow({ where: { operatorId: { not: null } } });
-  actor = template.userId; operatorId = template.operatorId!;
-  const op = await db.operator.findUniqueOrThrow({ where: { id: operatorId } });
-  const other = await db.operator.create({ data: { status: op.status, licenseType: op.licenseType, licensedAt: op.licensedAt, licenseExpiry: op.licenseExpiry, slug: `receipt-${randomUUID()}`, name: "Opérateur de recette isolé" } });
-  foreignOperator = other.id;
+  // Owned disposable targets only: the local receipt cluster on 55439, or the
+  // pinned container that this repository's CI job starts on 5432.
+  const url = new URL(process.env.DATABASE_URL!);
+  expect(url.hostname).toBe("127.0.0.1"); expect(url.pathname).toBe("/shinkiro_verify");
+  const ownedCI = process.env.GITHUB_ACTIONS === "true" && process.env.GITHUB_REPOSITORY === "xtincell/ADVE-project";
+  expect(url.port).toBe(ownedCI ? "5432" : "55439");
+  // Own operators and owner: never borrow a strategy left by another suite.
+  const license = { status: "ACTIVE" as const, licenseType: "TRIAL" as const, licensedAt: new Date(), licenseExpiry: new Date(Date.now() + 86_400_000) };
+  operatorId = (await db.operator.create({ data: { ...license, slug: `source-uses-${randomUUID()}`, name: "Opérateur de recette documentaire" } })).id;
+  foreignOperator = (await db.operator.create({ data: { ...license, slug: `receipt-${randomUUID()}`, name: "Opérateur de recette isolé" } })).id;
+  actor = (await db.user.create({ data: { email: `source-uses-${randomUUID()}@example.invalid`, operatorId } })).id;
   const brands = await Promise.all(["Propriétaire", "Marque deux", "Marque trois", "Marque étrangère"].map((name, i) => db.strategy.create({ data: {
-    name: `${name} — reçu documentaire synthétique`, userId: actor, operatorId: i === 3 ? other.id : operatorId,
+    name: `${name} — reçu documentaire synthétique`, userId: actor, operatorId: i === 3 ? foreignOperator : operatorId,
   } })));
+  strategies.push(...brands.map((brand) => brand.id));
   owner = brands[0]!.id; second = brands[1]!.id; third = brands[2]!.id; foreign = brands[3]!.id;
   const source = await db.brandDataSource.create({ data: {
     strategyId: owner, sourceType: "MANUAL_INPUT", fileName: "Brief synthétique partagé", rawContent: "Une source unique pour trois marques. La période est décembre. Aucun budget validé.", processingStatus: "EXTRACTED", certainty: "DECLARED",
   } });
   sourceId = source.id;
 });
-afterAll(async () => { await db.$disconnect(); });
+afterAll(async () => {
+  if (strategies.length) {
+    const scope = { strategyId: { in: strategies } };
+    await db.brandContextNode.deleteMany({ where: sourceId ? { OR: [scope, { sourceId }] } : scope });
+    await db.recommendation.deleteMany({ where: scope });
+    await db.brandAsset.deleteMany({ where: scope });
+    const pillars = (await db.pillar.findMany({ where: scope, select: { id: true } })).map((p) => p.id);
+    await db.auditLog.deleteMany({ where: { entityType: "Pillar", entityId: { in: pillars } } });
+    await db.pillar.deleteMany({ where: scope });
+    await db.brandSourceUse.deleteMany({ where: scope });
+    await db.brandDataSource.deleteMany({ where: scope });
+    await db.strategy.deleteMany({ where: { id: { in: strategies } } });
+  }
+  if (actor) await db.user.deleteMany({ where: { id: actor } });
+  await db.operator.deleteMany({ where: { id: { in: [operatorId, foreignOperator].filter(Boolean) } } });
+  await db.$disconnect();
+});
 describe.sequential("canonical source uses on PostgreSQL", () => {
   it("links concurrent retries once, preserves one canonical document and isolates operators", async () => {
     await Promise.all([share(second), share(second), share(third), share(third)]);
@@ -156,7 +179,11 @@ describe.sequential("canonical source uses on PostgreSQL", () => {
       author: { system: "MESTOR" as const, reason: "Recette du commit" }, options: { sourceReceipts: [receipt] },
     })));
     expect(results.every((r) => r.success)).toBe(true);
-    expect(markAllSectionsStale).toHaveBeenCalledTimes(1);
+    // Each written pillar also invalidates the Oracle inside the transaction,
+    // with its client (519); the post-commit invalidation stays single.
+    const staleCalls = vi.mocked(markAllSectionsStale).mock.calls;
+    expect(staleCalls.filter((call) => call.length === 1)).toHaveLength(1);
+    expect(staleCalls.filter((call) => call.length === 2)).toHaveLength(2);
     expect(eventBus.publish).toHaveBeenCalledTimes(2);
     const rows = await db.pillar.findMany({ where: { strategyId: owner } });
     expect(rows).toHaveLength(2);

@@ -28,6 +28,10 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### CI PostgreSQL — assertion de `source-uses` périmée hors CI (2026-11-10)
+
+`source-uses.postgres.test.ts` attendait un seul `markAllSectionsStale` par écriture atomique. Depuis 519, `markPillarsStale` invalide aussi l’Oracle dans la transaction, une fois par pilier écrit : le test comptait trois appels et échouait. Personne ne l’a vu, car le fichier ne tournait dans aucun job. Patch (v6.27.555) : le test distingue deux invalidations en transaction et une seule après le commit. Cause racine : fichiers PostgreSQL hors CI, fermée par leur branchement et le verrou `ci-postgres-recovery.test.ts`. Dette liée : aucune.
+
 ### 554 — cinq défauts isolés du plan Shinkiro 4.11 (2026-11-10)
 
 Chaque défaut a été reproduit par un test rouge avant correction, puis vert.

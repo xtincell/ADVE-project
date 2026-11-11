@@ -3111,14 +3111,16 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
   Effort : un lot de maintenance documentaire Git ; déclencheur : prochaine
   maintenance des workflows ou actualisation de cette référence. Aucun fichier
   documentaire supprimé pour masquer cet avertissement non bloquant.
-- **Workflow de déploiement legacy sans script — préexistant** :
-  `.github/workflows/deploy.yml` appelle `scripts/deploy-coolify.sh`, absent.
-  La voie canonique `build-image.yml` est utilisée ; le workflow legacy n'est
-  pas un chemin de reprise valide en l'état. Fermer en retirant cette voie ou
-  en la remplaçant par un appel explicite au workflow canonique, puis vérifier
-  références de documentation, dispatch/inputs et garde de notification Coolify.
-  Effort : un lot de maintenance workflow ; déclencheur : prochaine maintenance
-  des workflows de livraison. Aucun refactor CI dans la présente reprise.
+- **Publication du SDK `@lafusee/sdk` — aucune voie de livraison** : `release.yml`
+  est retiré le 10 novembre 2026 (v6.27.555). Il n’avait jamais tourné, aucun tag `v*`
+  n’existe, et il aurait échoué au premier : `build:sdk` absent, aucun workspace déclaré,
+  version fixe `0.1.0` republiée à chaque tag. Le paquet n’est pas sur npm (404).
+  Fermer par un workflow dédié, déclenché par un tag propre au SDK : build
+  `npm --prefix packages/sdk run build`, publication `npm publish ./packages/sdk`.
+  Il faut d’abord trancher la licence, aujourd’hui `UNLICENSED` pour un paquet
+  public, le versionnage du SDK et le jeton npm. Effort : un lot workflow après
+  décision. Déclencheur : décision opérateur de la Phase 8, ou premier consommateur
+  externe du SDK.
 - **Alertes npm préexistantes au build Docker — qualification de sécurité** :
   Le checkpoint Docker antérieur signalait 50 vulnérabilités (7 low, 16 moderate,
   22 high, 5 critical). Audit du 14 octobre, candidat 463 : baseline et candidat
@@ -4110,16 +4112,21 @@ sign-off direction (cf. § Actions opérateur).
 - **Won't-do historiques** (V8 sandbox, multi-region, Web Components, GraphQL, Yjs full runtime) —
   inchangés.
 
-### Recette documentaire hors CI — fixture de source partagée
+### Journal d’audit des piliers — écriture annulée journalisée
 
-Revue CI du 8 octobre 2026 (lot 421) : `source-uses.postgres.test.ts`, hors de
-`vitest.feedback-postgres.config.mts`, emprunte encore le premier opérateur
-d’une stratégie existante. La course reproduite dans `amend-source` est corrigée ;
-ce second fichier n’est pas reçu par cette correction. Plan : lui attribuer
-ses opérateurs/utilisateurs jetables, nettoyer leurs dépendances et exécuter
-la suite depuis une base migrée vide puis avec les autres fichiers en parallèle.
-Déclencheur : prochaine recette de l’irrigation documentaire C3, avant admission
-de ce fichier dans la CI. Aucun assouplissement de la suite existante.
+Constat du 10 novembre 2026, en branchant `source-uses.postgres.test.ts` dans la CI :
+`writePillar` appelle `auditTrail.log(...)` sans attendre et hors du client de
+transaction, avant le commit. Quand le lot de `writePillarsAtomically` est annulé
+(pilier `d` LOCKED), la ligne `AuditLog` « UPDATE Pillar a, version 1 → 2,
+Recette atomique » subsiste. Le pilier reste en version 1 et sans nouvelle
+`PillarVersion`. Le journal décrit donc une version qui n’a jamais existé. Où :
+`src/server/services/pillar-gateway/index.ts`, bloc AUDIT de `writePillar`, et
+`withPillarTransaction`. Fermer en rendant l’entrée d’audit avec le résultat, puis
+en la journalisant après le commit : à la fin de `writePillar` hors lot, dans
+`withPillarTransaction` pour un lot. Prouver par un test PostgreSQL rouge puis vert :
+lot refusé, zéro `AuditLog`, et une ligne par pilier écrit pour un lot validé.
+Effort : un lot ciblé sur la gateway. Déclencheur : prochaine modification de la
+gateway des piliers, ou avant toute lecture de l’`AuditLog` comme preuve.
 
 ### Harnais de stress global — cible et providers à isoler
 

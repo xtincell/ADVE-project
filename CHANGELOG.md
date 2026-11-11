@@ -1,3 +1,16 @@
+## v6.27.555 — fix(ci): tests PostgreSQL orphelins branchés, mémoire fixée, deux workflows morts retirés (2026-11-10)
+
+**Les reçus PostgreSQL qui n’étaient que locaux tournent désormais dans la CI.**
+
+- Huit fichiers PostgreSQL ne tournaient dans aucun job : `calendar-production`, `calendar-publication`, `pillar-completion-cache`, `production-mix`, `production-sources`, `source-uses`, `upstream-resume` et `social-publication-receipt`. Les sept premiers rejoignent la base partagée du job. Le reçu social exige une base vide, car son cron lit toutes les échéances : le job crée et migre `shinkiro_social_receipt_ci` dans le même conteneur, puis le lance seul avec `vitest.social-receipt-postgres.config.mts`.
+- `source-uses` empruntait l’opérateur d’une stratégie laissée par une autre suite et n’acceptait que le port local 55439. Il crée maintenant ses opérateurs et son responsable, puis les retire avec leurs dépendances. Seul sur base vide, il ne laisse aucune ligne. Sa dernière assertion datait d’avant 519 : chaque pilier écrit invalide aussi l’Oracle dans la transaction. Le test vérifie désormais deux invalidations en transaction et une seule après le commit. Les gardes de `source-uses` et du reçu social acceptent le conteneur CI de ce dépôt sur 5432, comme `change-requests` et `scoreur-pipeline`.
+- Mémoire : `NODE_OPTIONS=--max-old-space-size=6144` sur le job. Rejoué localement avec le tas par défaut de Node 22 (environ 2 Gio), le job actuel perd son worker dans `asset-original`. Seul, ce fichier échoue à 3 Gio et passe à 4 Gio. 6 Gio est la valeur du job de typage et laisse de la marge sur le runner de 16 Gio.
+- Rejeu local équivalent au job, PostgreSQL 16 jetable : 55 fichiers et 767 tests verts, dont 41 nouveaux, puis 5 tests sociaux sur leur base dédiée.
+- Verrou : `ci-postgres-recovery.test.ts` échoue si un `*.postgres.test.ts` n’est lancé par aucune configuration du job, si une entrée d’include ne correspond à aucun fichier, si le reçu social quitte sa base dédiée ou si le tas fixé disparaît. Les trois défauts réintroduits l’ont fait passer au rouge, puis la restauration exacte au vert.
+- Ce branchement révèle un défaut de la gateway : une écriture de pilier annulée laisse une ligne `AuditLog`. Il est inscrit dans RESIDUAL-DEBT avec son plan.
+- `deploy.yml` est retiré. Il extrayait par défaut la branche périmée `claude/project-revamp-agent-safe-doc3ip`, seule à contenir `scripts/deploy-coolify.sh`. Ce script provisionne un autre projet Coolify, `lafusee-v7`, construit sur le VPS, et régénère `AUTH_SECRET` à chaque passage. Ses deux exécutions, le 1er juillet, ont échoué. La production se livre par *Build image (ghcr)* puis un redémarrage de la ressource ; `build-image.yml` et `BUILD-DEPORT.md` ne citent plus `deploy.yml`.
+- `release.yml` est retiré. Il n’a jamais tourné, faute de tag `v*`. Il aurait échoué au premier : `npm run build:sdk` n’existe pas et le dépôt ne déclare aucun workspace, deux échecs reproduits localement. La publication de `@lafusee/sdk`, absent de npm, reste à décider : RESIDUAL-DEBT en garde le plan et le déclencheur.
+
 ## v6.27.554 — fix(shinkiro): cinq correctifs isolés du plan 4.11 (2026-11-10)
 
 **Un compte supprimé ne survit plus à son jeton ; le seuil CODB, les questions de suivi, l’Oracle et Lighthouse disent ce qui est réellement calculé, disponible, rédigé et accepté.**
