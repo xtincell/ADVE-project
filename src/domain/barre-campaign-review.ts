@@ -14,6 +14,7 @@
  */
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { canonicalJson } from "./canonical-json";
 
 export const BARRE_CAMPAIGN_REVIEW_SCHEMA = "la-barre/bilan-campagne";
 /** Capacité déclarée à La Barre dans `contexte.json`. */
@@ -67,30 +68,11 @@ export const BarreCampaignReviewSchema = z.object({
 });
 export type BarreCampaignReview = z.infer<typeof BarreCampaignReviewSchema>;
 
-/** JSON canonique : clés triées par unités UTF-16, nombres finis, aucune valeur indéfinie. */
-export function canonicalReviewJson(value: unknown): string {
-  if (value === null) return "null";
-  switch (typeof value) {
-    case "boolean":
-    case "string":
-      return JSON.stringify(value);
-    case "number":
-      if (!Number.isFinite(value)) throw new TypeError("Nombre non fini : aucune forme JSON.");
-      return JSON.stringify(value);
-    case "object": {
-      if (Array.isArray(value)) return `[${value.map(canonicalReviewJson).join(",")}]`;
-      const record = value as Record<string, unknown>;
-      return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonicalReviewJson(record[key])}`).join(",")}}`;
-    }
-    default:
-      throw new TypeError(`Valeur sans forme JSON : ${typeof value}.`);
-  }
-}
 
 /** SHA-256 de la version sans son champ `empreinte`, comme La Barre la scelle. */
 export function barreCampaignReviewDigest(review: Record<string, unknown>): string {
   const { empreinte: _sealed, ...content } = review;
-  return createHash("sha256").update(canonicalReviewJson(content), "utf8").digest("hex");
+  return createHash("sha256").update(canonicalJson(content), "utf8").digest("hex");
 }
 
 export type BarreReviewRefusal =

@@ -12,29 +12,13 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { IngestSchema, type IngestPayload, type UnobservedMetric } from "./external-metric";
+import { canonicalJson } from "./canonical-json";
 
 export const DATACOLLECTOR_RECEIPT_SCHEMA = { name: "datacollector/observation-receipt", version: 1 } as const;
 export const DATACOLLECTOR_SOURCES = ["web_performance", "community_sentiment", "search_visibility", "competitor_social_spy"] as const;
 
-/** RFC 8785 canonical JSON: sorted keys (UTF-16 units), ECMAScript numbers, no whitespace. */
-export function canonicalJson(value: unknown): string {
-  if (value === null) return "null";
-  switch (typeof value) {
-    case "boolean":
-    case "string":
-      return JSON.stringify(value);
-    case "number":
-      if (!Number.isFinite(value)) throw new TypeError("Nombre non fini : aucune forme JSON.");
-      return JSON.stringify(value);
-    case "object": {
-      if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
-      const record = value as Record<string, unknown>;
-      return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`).join(",")}}`;
-    }
-    default:
-      throw new TypeError(`Valeur sans forme JSON : ${typeof value}.`);
-  }
-}
+/** RFC 8785 canonical JSON, shared with the La Barre campaign review (LB4). */
+export { canonicalJson };
 
 /** SHA-256 of the receipt without its `fingerprint` key, as the collector seals it. */
 export function datacollectorReceiptFingerprint(receipt: Record<string, unknown>): string {

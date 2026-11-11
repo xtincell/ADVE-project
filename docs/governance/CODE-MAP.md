@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 78 modules (src/domain, cœur métier pur)
+## Domain — 79 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-library** — SHK-0002 point 5 — lecture publique de la bibliothèque canonique Argos-studio.
@@ -75,6 +75,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **calendar-editions**
 - **calendar-production**
 - **campaign-code** — Phase 18-A1-α (audit MATANGA V4) — auto-générateur `Campaign.code` aligné
+- **canonical-json** — JSON canonique RFC 8785 : clés triées par unités UTF-16, nombres ECMAScript,
 - **classification-coherence** — Domain helper — invariants APOGEE de cohérence Classification ↔ Superfans ↔ Cult Tier.
 - **client-organization**
 - **collaborator-access** — ADR-0131 — Zones d'accès des collaborateurs délégués par marque.

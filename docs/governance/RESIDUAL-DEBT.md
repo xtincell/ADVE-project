@@ -26,10 +26,11 @@ lacune visible dans la lignée (édition suivante chaînée à la dernière reç
 comblée. **Déclencheur** : même chantier que (a). (c) L'acteur d'une version reste
 déclaré par le poste La Barre ; l'identité authentifiée n'y est pas transmise
 (README La Barre). **Déclencheur** : arbitrage SHK-0005 sur l'acteur authentifié.
-(d) Trois sérialisations canoniques JSON coexistent (`governance/hash-chain`, privée ;
-`domain/barre-campaign-review` ; et celle du reçu DataCollector si la PR 565 fusionne) :
-les factoriser en une fonction de domaine unique sans changer aucun sceau existant.
-**Déclencheur** : fusion de la PR 565.
+(d) Fermé à la fusion de main 565 : le reçu DataCollector et le bilan La Barre partagent
+`domain/canonical-json.ts` (ré-exporté par `datacollector-receipt`, sceaux inchangés).
+Reste la copie privée de `governance/hash-chain` (sceau v2 des émissions) : la brancher
+sur ce module sans changer aucun sceau existant. **Déclencheur** : prochaine
+modification du sceau d’émission.
 
 ## 565 — DC3 : reçu DataCollector admis localement ; dépôt réel, console et agrégats ouverts (2026-11-11)
 

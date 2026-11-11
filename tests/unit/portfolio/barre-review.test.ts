@@ -13,8 +13,10 @@ vi.mock("@/server/services/brand-node/barre-context", () => ({ getBarreBrandCont
 vi.mock("@/server/services/mestor/intents", () => ({ emitIntent: mocks.emit }));
 import { POST, GET } from "@/app/la-barre/[[...path]]/route";
 import {
-  BarreCampaignReviewSchema, barreCampaignReviewDigest, canonicalReviewJson, locateBarreCampaignReview,
+  BarreCampaignReviewSchema, barreCampaignReviewDigest, locateBarreCampaignReview,
 } from "@/domain/barre-campaign-review";
+import { canonicalJson } from "@/domain/canonical-json";
+import { canonicalJson as datacollectorCanonicalJson } from "@/domain/datacollector-receipt";
 
 type Review = Record<string, unknown> & { empreinte: string; version: number; id: string };
 const FIXTURE = JSON.parse(readFileSync(join(__dirname, "../../fixtures/la-barre/bilan-campagne-v1.json"), "utf8")) as { versions: Review[] };
@@ -31,8 +33,10 @@ describe("contrat commun avec La Barre", () => {
       expect(BarreCampaignReviewSchema.safeParse(v).success).toBe(true);
     }
     expect(V2.precedente).toBe(V1.empreinte);
-    expect(canonicalReviewJson({ b: 1, a: [{ d: null, c: "é" }] })).toBe('{"a":[{"c":"é","d":null}],"b":1}');
-    expect(() => canonicalReviewJson({ a: undefined })).toThrow();
+    // Une seule sérialisation canonique pour les deux reçus (DataCollector et La Barre).
+    expect(datacollectorCanonicalJson).toBe(canonicalJson);
+    expect(canonicalJson({ b: 1, a: [{ d: null, c: "é" }] })).toBe('{"a":[{"c":"é","d":null}],"b":1}');
+    expect(() => canonicalJson({ a: undefined })).toThrow();
   });
 
   it("retrouve la version désignée et la vérifie de bout en bout", () => {
