@@ -674,13 +674,15 @@ export type Intent =
       strategyId: string;
       operatorId: string;
       /** Source agnostique de la remontée (n'importe quelle marque, n'importe quel canal). */
-      sourceType: "QUIZ" | "APP" | "CRM" | "EMAIL" | "FIELD" | "WEBHOOK" | "MANUAL";
+      sourceType: "QUIZ" | "APP" | "CRM" | "EMAIL" | "FIELD" | "WEBHOOK" | "MANUAL" | "COLLECTOR";
       /** Étiquette libre lisible (ex. "quizz.spawt.online"). */
       sourceLabel?: string | null;
       /** Immutable producer receipt: all three fields together, or legacy unknown. */
       observationId?: string;
       sourceVersion?: string;
       observedAt?: string;
+      /** Empreinte SHA-256 déclarée par le producteur (reçu DataCollector vérifié avant émission). */
+      sourceDigest?: string;
       /** Cible AARRR : requis pour écrire une CampaignAARRMetric. */
       campaignId?: string | null;
       /** Cible KPI d'activité de mission (garde de portée sur strategyId). */
@@ -696,6 +698,13 @@ export type Intent =
         target?: number | null;
         /** MissionActivity.id à mettre à jour (kpiActual = value). */
         kpiActivityId?: string | null;
+        /** Provenance de la cellule (source, objet observé, unité, date, note). */
+        source?: string; subject?: string; unit?: string; observedAt?: string; note?: string;
+      }>;
+      /** Mesures déclarées sans valeur : conservées comme telles, jamais routées ni lues comme 0. */
+      unobserved?: Array<{
+        metric: string; state: "NOT_PUBLISHED" | "FAILED" | "NOT_REQUESTED"; errorCode?: string;
+        source?: string; subject?: string; unit?: string; observedAt?: string; note?: string;
       }>;
     }
   // ── ADR-0134 — mesure communautaire réelle (chaîne community→devotion→cult) ──
