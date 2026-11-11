@@ -34,6 +34,13 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.564", date: "2026-11-11", headline: "Un plan stratégique annoncé complet est un plan relisible",
+    highlights: [
+      { emoji: "🧭", title: "Un seul verdict pour votre plan", body: "Votre plan stratégique n’est plus présenté comme complet lorsqu’un de ses éléments ne peut pas être relu en l’état, par exemple un montant écrit en texte ou un nombre d’indicateurs insuffisant. L’avancement affiché et la possibilité d’approuver le plan disent désormais la même chose." },
+      { emoji: "📝", title: "Savoir quoi reprendre", body: "Chaque élément à reprendre est listé. Vos données ne sont ni modifiées ni complétées automatiquement : l’actualisation du plan le recompose depuis vos informations de marque." },
+    ],
+  },
+  {
     version: "6.27.558", date: "2026-11-11", headline: "Votre premier clic n’est plus perdu",
     highlights: [
       { emoji: "👆", title: "Naviguer dès l’ouverture", body: "Les messages d’accueil et de nouveautés s’affichent sans bloquer la page. Un clic sur un menu, par exemple Sources, ouvre directement la rubrique et referme le message." },

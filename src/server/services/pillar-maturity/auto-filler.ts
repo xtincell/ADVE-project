@@ -23,7 +23,7 @@ import { setNestedValue, resolvePillarPath } from "@/lib/pillar-path";
 import { findEmptyLeafPaths, findEmptyArrayCellPaths, isNonFabricableLeaf, buildFieldAnchor, getFieldZod, canInferMissingConceptualField } from "@/lib/types/pillar-maturity-contracts";
 import { isDeepStrictEqual } from "node:util";
 import type { Prisma } from "@prisma/client";
-import type { MaturityStage, AutoFillResult, FieldRequirement } from "@/lib/types/pillar-maturity";
+import type { MaturityStage, AutoFillResult, FieldRequirement, PillarAssessment } from "@/lib/types/pillar-maturity";
 import { assessPillar } from "./assessor";
 import { getContract } from "./contracts-loader";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
@@ -289,6 +289,23 @@ export async function fillToStage(
  * in place. Caller decides whether to retry. NO DB write here — the caller
  * persists once after all passes converge.
  */
+/**
+ * Contract requirements the filler may target for this pass: those the assessor
+ * lists missing, EXCEPT a present value refused by the strict schema (S —
+ * ADR-0214 amendment). Such a value is listed missing so the % and the stage are
+ * honest, but it is not absence: the filler fills absence and never rewrites a
+ * present value. Its repair is the governed recalculation from sources, not an
+ * LLM draft. Pure, exported for the contract tests.
+ */
+export function requirementsToFill(
+  targetReqs: FieldRequirement[],
+  before: Pick<PillarAssessment, "missing" | "satisfied" | "invalid">,
+): FieldRequirement[] {
+  const presentInvalid = new Set(before.invalid.map((p) => p.split(/[.[]/)[0]!));
+  return targetReqs.filter((r) => before.missing.includes(r.path)
+    && !(before.satisfied.includes(r.path) && presentInvalid.has(r.path)));
+}
+
 async function runFillPass(
   strategyId: string,
   key: string,
@@ -302,8 +319,7 @@ async function runFillPass(
   const before = assessPillar(key, content, contract);
 
   // Get target requirements
-  const targetReqs = contract.stages[targetStage];
-  let missingReqs = targetReqs.filter(r => before.missing.includes(r.path));
+  let missingReqs = requirementsToFill(contract.stages[targetStage], before);
 
   if (fieldsToFill && fieldsToFill.length > 0) {
     missingReqs = missingReqs.filter(r => fieldsToFill.includes(r.path));
