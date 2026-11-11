@@ -44,7 +44,11 @@ import { db } from "@/lib/db";
 import { assertStrategyRead } from "./_strategy-read-guard";
 import { getOperatorContext } from "@/server/services/operator-isolation";
 import { sanitizeInline, wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
+import { accessible, found } from "../entity-access";
 /* lafusee:governed-active */
+
+/** IN1 : un diagnostic inconnu et un diagnostic hors d'atteinte reçoivent le même 404. */
+const INTAKE_NOT_FOUND = "Diagnostic introuvable.";
 
 /**
  * IDOR round-10 (Agent D) — `quickIntake.get`/`updateIntake` sont keyés sur l'id
@@ -55,17 +59,18 @@ import { sanitizeInline, wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/servic
  * converti est un prospect → réservé au staff.
  */
 async function assertIntakeAccess(userId: string, intakeId: string): Promise<void> {
-  const intake = await db.quickIntake.findUniqueOrThrow({
+  await accessible(db.quickIntake.findUnique({
     where: { id: intakeId },
     select: { convertedToId: true },
+  }), INTAKE_NOT_FOUND, async (intake) => {
+    if (intake.convertedToId) {
+      await assertStrategyRead(userId, intake.convertedToId);
+      return;
+    }
+    const opCtx = await getOperatorContext(userId);
+    if (opCtx.role === "ADMIN" || opCtx.operatorId) return;
+    throw new TRPCError({ code: "FORBIDDEN", message: "Intake non accessible" });
   });
-  if (intake.convertedToId) {
-    await assertStrategyRead(userId, intake.convertedToId);
-    return;
-  }
-  const opCtx = await getOperatorContext(userId);
-  if (opCtx.role === "ADMIN" || opCtx.operatorId) return;
-  throw new TRPCError({ code: "FORBIDDEN", message: "Intake non accessible" });
 }
 
 /**
@@ -1058,9 +1063,9 @@ export const quickIntakeRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const intake = await ctx.db.quickIntake.findUniqueOrThrow({
+      const intake = found(await ctx.db.quickIntake.findUnique({
         where: { id: input.intakeId },
-      });
+      }), INTAKE_NOT_FOUND);
       if (intake.status !== "COMPLETED" && intake.status !== "CONVERTED") {
         throw new Error("Intake must be completed before conversion");
       }
@@ -1541,7 +1546,7 @@ export const quickIntakeRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const intake = await ctx.db.quickIntake.findUniqueOrThrow({ where: { id: input.intakeId } });
+      const intake = found(await ctx.db.quickIntake.findUnique({ where: { id: input.intakeId } }), INTAKE_NOT_FOUND);
       if (intake.status !== "COMPLETED" && intake.status !== "CONVERTED") {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Intake not yet completed" });
       }
@@ -1618,9 +1623,9 @@ export const quickIntakeRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       await assertIntakeAccess(ctx.session.user.id, input.id);
-      return ctx.db.quickIntake.findUniqueOrThrow({
+      return found(await ctx.db.quickIntake.findUnique({
         where: { id: input.id },
-      });
+      }), INTAKE_NOT_FOUND);
     }),
 
   getAllQuestions: protectedProcedure
@@ -1639,9 +1644,9 @@ export const quickIntakeRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertIntakeAccess(ctx.session.user.id, input.id);
-      const intake = await ctx.db.quickIntake.findUniqueOrThrow({
+      const intake = found(await ctx.db.quickIntake.findUnique({
         where: { id: input.id },
-      });
+      }), INTAKE_NOT_FOUND);
 
       const biz = input.responses.biz ?? {};
       const bizModel = biz.biz_model ? extractKeyFromOption(biz.biz_model as string) : undefined;

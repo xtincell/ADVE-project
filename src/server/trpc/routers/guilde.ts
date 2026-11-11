@@ -27,10 +27,20 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
 // ============================================================================
 
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { entityNotFound, found } from "../entity-access";
 /* lafusee:governed-active */
+
+const PROFILE_NOT_FOUND = "Profil talent introuvable.";
+
+/** Profil du titulaire : inconnu ou d'un autre compte, le même 404 (IN1), jamais un 500. */
+async function assertOwnProfileAccess(client: PrismaClient, profileId: string, userId: string) {
+  const profile = await client.talentProfile.findUnique({ where: { id: profileId } });
+  if (!profile || profile.userId !== userId) throw entityNotFound(PROFILE_NOT_FOUND);
+  return profile;
+}
 
 // ── Tier promotion criteria ─────────────────────────────────────────────────
 const TIER_CRITERIA: Record<string, { minMissions: number; minScore: number; minFirstPass: number }> = {
@@ -61,7 +71,7 @@ export const guildeRouter = createTRPCRouter({
   getProfile: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.talentProfile.findUniqueOrThrow({
+      return found(await ctx.db.talentProfile.findUnique({
         where: { id: input.id },
         // `payoutPhone` (PII payout) exclu — profil consultable par tout membre.
         omit: { payoutPhone: true },
@@ -70,7 +80,7 @@ export const guildeRouter = createTRPCRouter({
           memberships: { where: { status: "ACTIVE" } },
           guildOrganization: true,
         },
-      });
+      }), PROFILE_NOT_FOUND);
     }),
 
   getMyProfile: protectedProcedure
@@ -148,9 +158,9 @@ export const guildeRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const profile = await ctx.db.talentProfile.findUniqueOrThrow({
+      const profile = found(await ctx.db.talentProfile.findUnique({
         where: { userId: ctx.session.user.id },
-      });
+      }), PROFILE_NOT_FOUND);
       const { pillarTags, ...rest } = input;
       return ctx.db.portfolioItem.create({
         data: {
@@ -208,8 +218,7 @@ export const guildeRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const profile = await ctx.db.talentProfile.findUniqueOrThrow({ where: { id: input.profileId } });
-      if (profile.userId !== ctx.session.user.id) throw new Error("Acces refuse");
+      const profile = await assertOwnProfileAccess(ctx.db, input.profileId, ctx.session.user.id);
 
       const currentIdx = TIER_ORDER.indexOf(profile.tier as typeof TIER_ORDER[number]);
       if (currentIdx >= TIER_ORDER.length - 1) {
@@ -246,10 +255,10 @@ export const guildeRouter = createTRPCRouter({
   getSkillTree: protectedProcedure
     .input(z.object({ profileId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const profile = await ctx.db.talentProfile.findUniqueOrThrow({
+      const profile = found(await ctx.db.talentProfile.findUnique({
         where: { id: input.profileId },
         select: { skills: true, tier: true, driverSpecialties: true, advertis_vector: true },
-      });
+      }), PROFILE_NOT_FOUND);
       const skills = (profile.skills as string[]) ?? [];
       const specialties = (profile.driverSpecialties as Array<{ channel: string; level: string }>) ?? [];
       const vector = (profile.advertis_vector as Record<string, number>) ?? {};
@@ -287,8 +296,7 @@ export const guildeRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const profile = await ctx.db.talentProfile.findUniqueOrThrow({ where: { id: input.profileId } });
-      if (profile.userId !== ctx.session.user.id) throw new Error("Acces refuse");
+      const profile = await assertOwnProfileAccess(ctx.db, input.profileId, ctx.session.user.id);
 
       const currentSkills = (profile.skills as string[]) ?? [];
       if (currentSkills.includes(input.skillId)) {
@@ -335,7 +343,7 @@ export const guildeRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const profile = await ctx.db.talentProfile.findUniqueOrThrow({ where: { userId: ctx.session.user.id } });
+      const profile = found(await ctx.db.talentProfile.findUnique({ where: { userId: ctx.session.user.id } }), PROFILE_NOT_FOUND);
       // Check if already a member of this organization
       if (profile.guildOrganizationId === input.eventId) {
         return { registered: false, message: "Deja inscrit a cet evenement." };
@@ -352,10 +360,10 @@ export const guildeRouter = createTRPCRouter({
   getGuildMetrics: protectedProcedure
     .input(z.object({ guildId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const guild = await ctx.db.guildOrganization.findUniqueOrThrow({
+      const guild = found(await ctx.db.guildOrganization.findUnique({
         where: { id: input.guildId },
         include: { members: true },
-      });
+      }), "Organisation introuvable.");
       const profiles = guild.members;
       const totalMissions = profiles.reduce((s: number, p) => s + p.totalMissions, 0);
       const avgScore = profiles.length > 0
@@ -396,8 +404,7 @@ export const guildeRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const profile = await ctx.db.talentProfile.findUniqueOrThrow({ where: { id: input.profileId } });
-      if (profile.userId !== ctx.session.user.id) throw new Error("Acces refuse");
+      const profile = await assertOwnProfileAccess(ctx.db, input.profileId, ctx.session.user.id);
 
       const tierIdx = TIER_ORDER.indexOf(profile.tier as typeof TIER_ORDER[number]);
       if (tierIdx >= 2) {
@@ -436,11 +443,11 @@ export const guildeRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const mentee = await ctx.db.talentProfile.findUniqueOrThrow({ where: { id: input.menteeId } });
-      const mentor = await ctx.db.talentProfile.findUniqueOrThrow({
+      const mentee = found(await ctx.db.talentProfile.findUnique({ where: { id: input.menteeId } }), PROFILE_NOT_FOUND);
+      const mentor = found(await ctx.db.talentProfile.findUnique({
         where: { id: input.mentorId },
         select: { id: true, displayName: true, tier: true },
-      });
+      }), PROFILE_NOT_FOUND);
       const existing = (mentee.advertis_vector as Record<string, unknown>) ?? {};
       await ctx.db.talentProfile.update({
         where: { id: input.menteeId },

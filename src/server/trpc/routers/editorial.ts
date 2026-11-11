@@ -5,6 +5,7 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { found } from "../entity-access";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -27,9 +28,9 @@ export const editorialRouter = createTRPCRouter({
   get: protectedProcedure
     .input(z.object({ slug: z.string() }))
     .query(async ({ ctx, input }) => {
-      const article = await ctx.db.editorialArticle.findUniqueOrThrow({
+      const article = found(await ctx.db.editorialArticle.findUnique({
         where: { slug: input.slug },
-      });
+      }), "Article introuvable.");
       const comments = await ctx.db.editorialComment.findMany({
         where: { articleId: article.id },
         orderBy: { createdAt: "asc" },

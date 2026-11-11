@@ -23,6 +23,7 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { found } from "../entity-access";
 import { getOperatorContext, scopeStrategies } from "@/server/services/operator-isolation";
 import { startProcess, pauseProcess, stopProcess, getContention } from "@/server/services/process-scheduler";
 import { governedProcedure } from "@/server/governance/governed-procedure";
@@ -184,10 +185,10 @@ export const processRouter = createTRPCRouter({
     .input(z.object({ processId: z.string() }))
     .query(async ({ ctx, input }) => {
       await assertProcessAccess(ctx.session.user.id, input.processId);
-      return ctx.db.process.findUniqueOrThrow({
+      return found(await ctx.db.process.findUnique({
         where: { id: input.processId },
         select: { id: true, name: true, status: true, lastRunAt: true, nextRunAt: true, frequency: true },
-      });
+      }), "Process introuvable");
     }),
 
   getContention: adminProcedure

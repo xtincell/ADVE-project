@@ -13,7 +13,11 @@ import { z } from "zod";
 import { createTRPCRouter, operatorProcedure } from "../init";
 import { db } from "@/lib/db";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { found } from "../entity-access";
 /* lafusee:governed-active */
+
+/** IN1 : un id inconnu reçoit 404 typé, jamais P2025 ni un message Prisma. */
+const NEWSLETTER_NOT_FOUND = "Campagne d’emailing introuvable.";
 
 const BATCH_SIZE = 25;
 
@@ -132,7 +136,7 @@ export const crmContactsRouter = createTRPCRouter({
       body: z.string().min(2).max(50_000),
     }),
   }).mutation(async ({ input, ctx }) => {
-    const contact = await db.crmContact.findUniqueOrThrow({ where: { id: input.contactId } });
+    const contact = found(await db.crmContact.findUnique({ where: { id: input.contactId } }), "Contact introuvable.");
     const { sendEmail } = await import("@/server/services/anubis/email-sender");
     const html = input.body.trim().startsWith("<") ? input.body : `<div style="font-family:sans-serif;white-space:pre-wrap">${input.body}</div>`;
     const result = await sendEmail({ to: contact.email, subject: input.subject, html });
@@ -182,7 +186,7 @@ export const crmContactsRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       if (!input.bodyMjml && !input.bodyHtml) throw new Error("Corps MJML ou HTML requis.");
       if (input.id) {
-        const existing = await db.newsletterCampaign.findUniqueOrThrow({ where: { id: input.id } });
+        const existing = found(await db.newsletterCampaign.findUnique({ where: { id: input.id } }), NEWSLETTER_NOT_FOUND);
         if (existing.status !== "DRAFT") throw new Error("Seule une campagne DRAFT est éditable.");
         return db.newsletterCampaign.update({
           where: { id: input.id },
@@ -208,7 +212,7 @@ export const crmContactsRouter = createTRPCRouter({
   sendTest: operatorProcedure
     .input(z.object({ campaignId: z.string(), to: z.string().email() }))
     .mutation(async ({ input }) => {
-      const campaign = await db.newsletterCampaign.findUniqueOrThrow({ where: { id: input.campaignId } });
+      const campaign = found(await db.newsletterCampaign.findUnique({ where: { id: input.campaignId } }), NEWSLETTER_NOT_FOUND);
       const html = await renderCampaignHtml(campaign);
       const { sendEmail } = await import("@/server/services/anubis/email-sender");
       const result = await sendEmail({ to: input.to, subject: `[TEST] ${campaign.subject}`, html });
@@ -225,7 +229,7 @@ export const crmContactsRouter = createTRPCRouter({
     inputSchema: z.object({ campaignId: z.string() }),
   }).mutation(async ({ input, ctx }) => {
     if (ctx.session.user.role !== "ADMIN") throw new Error("Envoi de campagne réservé aux ADMIN.");
-    const campaign = await db.newsletterCampaign.findUniqueOrThrow({ where: { id: input.campaignId } });
+    const campaign = found(await db.newsletterCampaign.findUnique({ where: { id: input.campaignId } }), NEWSLETTER_NOT_FOUND);
     if (campaign.status !== "DRAFT") throw new Error(`Campagne déjà ${campaign.status}.`);
 
     const recipients = await db.crmContact.findMany({

@@ -3,7 +3,11 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
+import { accessible } from "../entity-access";
 /* lafusee:governed-active */
+
+/** IN1 : une publication inconnue et celle d'une autre marque reçoivent le même 404. */
+const PUBLICATION_NOT_FOUND = "Publication introuvable.";
 
 /**
  * ADR-0129 — garde par-marque des publications (GloryOutput). Ces procédures
@@ -35,9 +39,8 @@ export const publicationRouter = createTRPCRouter({
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const row = await ctx.db.gloryOutput.findUniqueOrThrow({ where: { id: input.id } });
-      if (row.strategyId) await assertPublicationAccess(ctx.session.user.id, row.strategyId);
-      return row;
+      return accessible(ctx.db.gloryOutput.findUnique({ where: { id: input.id } }), PUBLICATION_NOT_FOUND,
+        (row) => assertPublicationAccess(ctx.session.user.id, row.strategyId));
     }),
 
   /** Delete a publication */
@@ -51,8 +54,8 @@ export const publicationRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const row = await ctx.db.gloryOutput.findUniqueOrThrow({ where: { id: input.id }, select: { id: true, strategyId: true } });
-      if (row.strategyId) await assertPublicationAccess(ctx.session.user.id, row.strategyId);
+      const row = await accessible(ctx.db.gloryOutput.findUnique({ where: { id: input.id }, select: { id: true, strategyId: true } }),
+        PUBLICATION_NOT_FOUND, (r) => assertPublicationAccess(ctx.session.user.id, r.strategyId));
       return ctx.db.gloryOutput.delete({ where: { id: row.id } });
     }),
 });
