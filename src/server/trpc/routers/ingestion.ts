@@ -21,16 +21,44 @@ import { listBrandSourceSummaries, loadBrandSources, resolveBrandSource, setSour
 /* lafusee:governed-active */
 
 /**
+ * Une seule réponse pour un document hors d'atteinte : identifiant inconnu de
+ * cette installation, document d'un autre locataire ou retiré de ce dossier.
+ * Le refus ne révèle jamais l'existence d'une pièce que l'appelant ne voit pas
+ * (recette d'installation isolée du 19 octobre, cas `foreign_id_writer_in_B`).
+ */
+const SOURCE_NOT_FOUND_MESSAGE = "Ce document n’est plus accessible dans ce dossier.";
+function sourceNotFound(): TRPCError {
+  return new TRPCError({ code: "NOT_FOUND", message: SOURCE_NOT_FOUND_MESSAGE });
+}
+
+/**
  * IDOR (round-10) — une source keyée sur son `id` (BrandDataSource) n'a pas de
  * strategyId de tête → aucune garde ne s'applique. `rawContent` est le matériel
  * brut de la marque (fuite/altération cross-tenant). Résout la source → sa marque.
+ *
+ * IN1 : `findUniqueOrThrow` laissait remonter P2025 en HTTP 500 pour un id
+ * inconnu, et un id d'un autre locataire recevait 403 : deux réponses
+ * distinctes. Les deux reçoivent désormais le même 404, avant toute écriture.
+ * Seul le refus d'accès devient 404 ; toute autre erreur garde son code.
  */
 async function assertSourceAccess(userId: string, sourceId: string): Promise<void> {
-  const source = await db.brandDataSource.findUniqueOrThrow({
+  const source = await db.brandDataSource.findUnique({
     where: { id: sourceId },
     select: { strategyId: true },
   });
-  await assertStrategyRead(userId, source.strategyId);
+  if (!source) throw sourceNotFound();
+  try {
+    await assertStrategyRead(userId, source.strategyId);
+  } catch (error) {
+    if (error instanceof TRPCError && error.code === "FORBIDDEN") throw sourceNotFound();
+    throw error;
+  }
+}
+
+/** The scoped documentary reader refuses with the same 404 when a source is out of reach. */
+function sourceUnavailableAsNotFound(error: unknown): never {
+  if (error instanceof Error && error.message.startsWith("SOURCE_UNAVAILABLE:")) throw sourceNotFound();
+  throw error;
 }
 
 /**
@@ -155,12 +183,7 @@ export const ingestionRouter = createTRPCRouter({
     }),
     caller: "ingestion:prepareSourceIndex",
   }).mutation(async ({ ctx, input }) => {
-    const { source } = await resolveBrandSource(input.sourceId, input.strategyId, ctx.db).catch((error: unknown) => {
-      if (error instanceof Error && error.message.startsWith("SOURCE_UNAVAILABLE:")) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Ce document n’est plus accessible dans ce dossier." });
-      }
-      throw error;
-    });
+    const { source } = await resolveBrandSource(input.sourceId, input.strategyId, ctx.db).catch(sourceUnavailableAsNotFound);
     if (!sourceIsUsable(source.rawData)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Cette édition antérieure reste consultable dans l’historique." });
     if (!["EXTRACTED", "PROCESSED"].includes(source.processingStatus)) {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Le texte de ce document doit être extrait avant sa préparation." });
@@ -238,7 +261,8 @@ export const ingestionRouter = createTRPCRouter({
       // l'est pas. Les deux suppressions vont ensemble, en transaction.
       return ctx.db.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${input.id} FOR UPDATE`;
-        const previous = await tx.brandDataSource.findUniqueOrThrow({ where: { id: input.id } });
+        const previous = await tx.brandDataSource.findUnique({ where: { id: input.id } });
+        if (!previous) throw sourceNotFound(); // removed concurrently, after the access check
         if (sourceHasRetainedDocument(previous.rawData)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Les éditions et leurs formats restent conservés dans leur historique." });
         await invalidateSourceDerivatives(tx, input.id);
         return tx.brandDataSource.delete({ where: { id: input.id } });
@@ -303,7 +327,8 @@ export const ingestionRouter = createTRPCRouter({
       // No embedding or generation follows a manual correction implicitly.
       return ctx.db.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT id FROM "BrandDataSource" WHERE id = ${input.id} FOR UPDATE`;
-        const previous = await tx.brandDataSource.findUniqueOrThrow({ where: { id: input.id } });
+        const previous = await tx.brandDataSource.findUnique({ where: { id: input.id } });
+        if (!previous) throw sourceNotFound(); // removed concurrently, after the access check
         if (sourceHasRetainedDocument(previous.rawData)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Cette édition et ses formats sont conservés. Déposez un nouveau fichier pour une autre version." });
         const updated = await tx.brandDataSource.update({ where: { id: input.id }, data });
         await invalidateSourceDerivatives(tx, input.id);
@@ -446,7 +471,7 @@ export const ingestionRouter = createTRPCRouter({
     .input(z.object({ strategyId: z.string(), sourceId: z.string(), mode: z.enum(["LLM", "STRUCTURED"]).default("LLM") }))
     .mutation(async ({ ctx, input }) => {
       await assertStrategyRead(ctx.session.user.id, input.strategyId);
-      const { source, contentHash } = await resolveBrandSource(input.sourceId, input.strategyId, ctx.db);
+      const { source, contentHash } = await resolveBrandSource(input.sourceId, input.strategyId, ctx.db).catch(sourceUnavailableAsNotFound);
       if (!sourceIsUsable(source.rawData)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Cette édition reste consultable dans l’historique. Choisissez une référence ou une proposition pour l’analyse." });
       if (!source?.rawContent) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Source introuvable ou sans texte extrait — uploade d'abord le brand book." });
