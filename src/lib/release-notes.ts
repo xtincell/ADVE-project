@@ -34,6 +34,14 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.554", date: "2026-11-10", headline: "Lire l’état réel de votre diagnostic",
+    highlights: [
+      { emoji: "📑", title: "Distinguer informations et rédaction", body: "Chaque section du diagnostic indique séparément si vos informations de marque l’alimentent et si elle est rédigée. Une section encore à produire n’est plus présentée comme complète." },
+      { emoji: "🔁", title: "Repérer une rédaction vide", body: "Une section dont la rédaction s’est terminée sans contenu est signalée à reprendre. Elle n’est plus comptée à jour et n’ouvre plus un lecteur vide." },
+      { emoji: "🔒", title: "Retirer un accès sans délai", body: "Une ancienne connexion ne donne plus accès à un compte supprimé et ne peut plus le recréer." },
+    ],
+  },
+  {
     version: "6.27.552", date: "2026-11-06", headline: "Choisir les propositions qui méritent une action",
     highlights: [
       { emoji: "📰", title: "Partir d’un article précis", body: "La Gazette rapproche un passage de l’article d’un élément de votre marque. Chaque piste explique ce qu’elle suggère de tester et comment lire le résultat." },

@@ -19,10 +19,12 @@ const cronRequest = () => cron(new Request("http://localhost/api/cron/social-syn
 }));
 
 beforeAll(async () => {
-  // Ce cron lit TOUTES les échéances : seulement une base locale dédiée, vide.
+  // Ce cron lit TOUTES les échéances : seulement une base dédiée, vide — le
+  // cluster local 55439 ou le conteneur 5432 que le job CI de ce dépôt crée.
   const url = new URL(process.env.DATABASE_URL!);
   expect(url.hostname).toBe("127.0.0.1");
-  expect(url.port).toBe("55439");
+  const ownedCI = process.env.GITHUB_ACTIONS === "true" && process.env.GITHUB_REPOSITORY === "xtincell/ADVE-project";
+  expect(url.port).toBe(ownedCI ? "5432" : "55439");
   expect(url.pathname).toMatch(/^\/shinkiro_social_receipt_[a-z0-9]+$/);
   expect(await db.strategy.count()).toBe(0);
   vi.stubEnv("CRON_SECRET", "isolated-receipt");

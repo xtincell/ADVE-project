@@ -893,10 +893,10 @@ parcours, déclencheur fin du candidat en cours. Source 506
 `2c5c2b276`/PR 1038/CI 39444684044 reçues, désormais intégrées à 507 livré.
 Guidé B local uniquement, pas de complétion guidée production reçue. Audit/rapport complets, coût, conversion et MVP entier ouverts.
 
-Point statique séparé à vérifier sur le préflight `generateAiFollowUps` :
-configuration par clés ignorant le relais OAuth seul. Reprise bornée MVP02,
-s’appuyer sur `isTextLLMAvailable` existant après vérification ; aucun nouveau
-gestionnaire/policy/provider ni correctif runtime déduit. [Dette](RESIDUAL-DEBT.md).
+Point statique séparé du préflight `generateAiFollowUps` (configuration par clés
+ignorant le relais OAuth seul) : écart reproduit puis corrigé en 554 par
+`isTextLLMAvailable` existant, sans nouveau gestionnaire/policy/provider. L’appel
+réel par le relais sur le parcours intake reste à recevoir. [Dette](RESIDUAL-DEBT.md).
 
 ## Sprint MVP1 — couverture et information publique, candidat 506 (2026-10-20)
 
