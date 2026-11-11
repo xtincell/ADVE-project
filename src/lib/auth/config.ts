@@ -84,39 +84,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user }) {
       if (user) {
         token.role = (user as { role?: string }).role ?? "USER";
         token.id = user.id;
         token.email = (user as { email?: string }).email ?? token.email;
       }
-      // Auto-heal des sessions pré-migration `20260503020000_normalize_user_roles` :
-      // un JWT signé avant la migration peut porter un role legacy hors canon
-      // (cf. proxy.ts COCKPIT_ROLES/CREATOR_ROLES). Sans re-fetch, l'user reste
-      // bloqué sur /unauthorized même après que la BDD a été normalisée.
-      // Forcer la relecture si le role est absent OU hors set canonique OU
-      // explicitement demandé via session.update().
-      const CANONICAL_ROLES = new Set([
-        "ADMIN", "OPERATOR", "USER", "FOUNDER", "BRAND",
-        "CLIENT_RETAINER", "CLIENT_STATIC", "CREATOR", "FREELANCE", "AGENCY",
-        "PARTNER", // Vague 7 — réseau partenaires (console superviseur)
-      ]);
-      const role = typeof token.role === "string" ? token.role : null;
-      // Le jeton reste signé après la suppression du compte. Hors connexion (où
-      // `authorize`/l'adaptateur viennent de lire la ligne), on relit donc son
-      // existence : un compte supprimé n'a plus de session — `null` est la
-      // révocation d'Auth.js, qui efface aussi le cookie. Sans cette relecture,
-      // un administrateur supprimé gardait son rôle jusqu'à l'expiration du
-      // jeton (plan 4.11.f). Le god-mode n'est appliqué qu'à un compte existant.
+      // Le jeton reste signé après la suppression du compte ou le retrait d'un
+      // rôle. Hors connexion (où `authorize`/l'adaptateur viennent de lire la
+      // ligne), on relit donc la ligne à chaque appel :
+      //  - un compte supprimé n'a plus de session — `null` est la révocation
+      //    d'Auth.js, qui efface aussi le cookie (plan 4.11.f) ;
+      //  - le rôle stocké remplace celui du jeton. Auparavant il ne le
+      //    remplaçait que sur `session.update()` ou pour un rôle absent/legacy
+      //    hors canon (auto-heal de `20260503020000_normalize_user_roles`, qui
+      //    reste couvert) : un ADMIN rétrogradé gardait ses droits sur sa
+      //    session ouverte jusqu'à l'expiration du jeton (IN7, 2026-11-11).
+      // Le god-mode n'est appliqué qu'à un compte existant, après la relecture.
       if (!user && token.id) {
         const stored = await db.user.findUnique({
           where: { id: token.id as string },
           select: { role: true },
         });
         if (!stored) return null;
-        if (trigger === "update" || !role || !CANONICAL_ROLES.has(role)) {
-          token.role = stored.role || "USER";
-        }
+        token.role = stored.role || "USER";
       }
       // God mode — un compte founder de l'allowlist est TOUJOURS ADMIN, même
       // si la BDD prod n'a jamais été re-seedée (aucune écriture DB requise).

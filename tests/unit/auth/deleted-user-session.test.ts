@@ -66,6 +66,18 @@ describe("jwt callback — un compte supprimé perd sa session", () => {
     expect(token).toMatchObject({ id: "live-user", role: "USER" });
   });
 
+  it("applique au jeton déjà émis la rétrogradation enregistrée en base (IN7)", async () => {
+    state.findUnique.mockResolvedValue({ role: "USER" });
+    const token = await jwt({ token: { id: "demoted-admin", role: "ADMIN", email: "demoted@example.test" } });
+    expect(token).toMatchObject({ id: "demoted-admin", role: "USER" });
+  });
+
+  it("garde le god-mode au-dessus du rôle relu pour un compte de l'allowlist", async () => {
+    state.findUnique.mockResolvedValue({ role: "USER" });
+    const token = await jwt({ token: { id: "founder", role: "ADMIN", email: "xtincell@gmail.com" } });
+    expect(token).toMatchObject({ role: "ADMIN" });
+  });
+
   it("relit encore le rôle stocké pour un rôle legacy hors canon", async () => {
     state.findUnique.mockResolvedValue({ role: "FOUNDER" });
     const token = await jwt({ token: { id: "legacy-user", role: "BRAND_OWNER", email: "legacy@example.test" } });
