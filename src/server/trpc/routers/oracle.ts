@@ -14,7 +14,7 @@
  *     FAILED ou STALE (auto-detect depuis status courant).
  *   - retrySection(strategyId, sectionId) — convenience pour mode RETRY
  *     explicite (audit log clair "opérateur a retenté").
- *   - snapshotStrategy(strategyId) — counts par status (UI dashboard).
+ *   - snapshotStrategy(strategyId) — counts par status + rédigées/à jour.
  */
 
 import { z } from "zod";

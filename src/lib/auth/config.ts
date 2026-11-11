@@ -102,12 +102,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         "PARTNER", // Vague 7 — réseau partenaires (console superviseur)
       ]);
       const role = typeof token.role === "string" ? token.role : null;
-      if (token.id && (trigger === "update" || !role || !CANONICAL_ROLES.has(role))) {
-        const fresh = await db.user.findUnique({
+      // Le jeton reste signé après la suppression du compte. Hors connexion (où
+      // `authorize`/l'adaptateur viennent de lire la ligne), on relit donc son
+      // existence : un compte supprimé n'a plus de session — `null` est la
+      // révocation d'Auth.js, qui efface aussi le cookie. Sans cette relecture,
+      // un administrateur supprimé gardait son rôle jusqu'à l'expiration du
+      // jeton (plan 4.11.f). Le god-mode n'est appliqué qu'à un compte existant.
+      if (!user && token.id) {
+        const stored = await db.user.findUnique({
           where: { id: token.id as string },
           select: { role: true },
         });
-        if (fresh) token.role = fresh.role || "USER";
+        if (!stored) return null;
+        if (trigger === "update" || !role || !CANONICAL_ROLES.has(role)) {
+          token.role = stored.role || "USER";
+        }
       }
       // God mode — un compte founder de l'allowlist est TOUJOURS ADMIN, même
       // si la BDD prod n'a jamais été re-seedée (aucune écriture DB requise).

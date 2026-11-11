@@ -337,7 +337,7 @@ export default function PropositionPage() {
         <div className="ck-oracle-hero__stats">
           <div><span className="k">Rédigées</span><b className="text-success">{writtenSections}/{totalSections}</b></div>
           <div><span className="k">Nourries par vos piliers</span><b>{completeSections}/{totalSections}</b></div>
-          <div><span className="k">À approfondir</span><b>{partialSections + emptySections}</b></div>
+          <div><span className="k">À étoffer dans vos piliers</span><b>{partialSections + emptySections}</b></div>
         </div>
         {/* Deux mesures DIFFÉRENTES portaient le même dénominateur 35 sans que
             rien ne les distingue — d'où « toujours 21/35 » sur une page dont

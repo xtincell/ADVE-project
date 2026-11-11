@@ -49,6 +49,13 @@ export interface OracleSectionCardProps {
    * `undefined` = non mesuré, on n'affiche rien (jamais « vide » par défaut).
    */
   contentFill?: "complete" | "partial" | "empty";
+  /**
+   * Un contenu rédigé est enregistré (payload non vide). Une rédaction peut se
+   * terminer (`COMPLETE`) sans rien produire : la carte ne la présente alors ni
+   * comme rédigée ni comme lisible (plan 4.11.e). `undefined` = non mesuré,
+   * comportement historique conservé.
+   */
+  written?: boolean;
   /** Disable le bouton si l'opérateur n'a pas le droit ou si une autre op est en cours. */
   disabled?: boolean;
   /** Click "Générer" / "Régénérer" / "Retry" — caller émet le tRPC mutation. */
@@ -70,29 +77,42 @@ const TIER_CHIPS: Record<OracleSectionCardProps["tier"], string> = {
 };
 
 /**
- * Matière de la section — vocabulaire volontairement DISJOINT de celui du cycle
- * de génération (« Complète » / « Échec » / « Périmée »…). Deux mesures qui se
- * ressemblent sont deux mesures qu'on confond.
+ * Matière que vos piliers fournissent à la section — vocabulaire volontairement
+ * DISJOINT de celui de la rédaction (« Rédigée » / « Échec » / « À réactualiser »…).
+ * Deux mesures qui se ressemblent sont deux mesures qu'on confond.
+ *
+ * Plan 4.11.e : cette mesure ne dit rien de la rédaction. La pastille « complète »
+ * (« La section dit tout ce qu'elle a à dire ») s'affichait sur des sections jamais
+ * rédigées — un Oracle vierge annonçait ainsi des dizaines de sections complètes.
  */
 const CONTENT_FILL_CHIPS: Record<
   NonNullable<OracleSectionCardProps["contentFill"]>,
   { label: string; className: string; title: string }
 > = {
   complete: {
-    label: "complète",
+    label: "nourrie",
     className: "text-success",
-    title: "La section dit tout ce qu'elle a à dire.",
+    title: "Vos piliers renseignent les données attendues par cette section. Cela ne signifie pas qu'elle est rédigée ni validée.",
   },
   partial: {
-    label: "à approfondir",
+    label: "à étoffer",
     className: "text-warning",
-    title: "La section a été rédigée mais reste incomplète — il lui manque de la matière.",
+    title: "Une partie des données attendues par cette section manque encore dans vos piliers.",
   },
   empty: {
-    label: "sans contenu",
+    label: "sans matière",
     className: "text-foreground-muted",
-    title: "La section ne contient encore rien d'exploitable.",
+    title: "Vos piliers ne fournissent encore aucune donnée à cette section.",
   },
+};
+
+/** Rédaction terminée sans contenu enregistré : à reprendre, jamais « rédigée ». */
+const EMPTY_RESULT_VISUAL: VisualConfig = {
+  Icon: AlertCircle,
+  color: "text-warning",
+  bg: "bg-warning/10",
+  border: "border-warning/30",
+  label: "Résultat vide",
 };
 
 export function OracleSectionCard(props: OracleSectionCardProps): React.ReactElement {
@@ -107,6 +127,7 @@ export function OracleSectionCard(props: OracleSectionCardProps): React.ReactEle
     lastError,
     isStale,
     contentFill,
+    written,
     disabled,
     onAction,
     onShowError,
@@ -115,7 +136,8 @@ export function OracleSectionCard(props: OracleSectionCardProps): React.ReactEle
 
   // Stream phase wins for transient "generating" state; otherwise DB status.
   const effectivePhase = resolveEffectivePhase(dbStatus, streamPhase);
-  const visual = getVisual(effectivePhase, isStale);
+  const emptyResult = effectivePhase === "completed" && written === false;
+  const visual = emptyResult ? EMPTY_RESULT_VISUAL : getVisual(effectivePhase, isStale);
   const buttonConfig = getButtonConfig(effectivePhase, dbStatus);
 
   return (
@@ -149,7 +171,7 @@ export function OracleSectionCard(props: OracleSectionCardProps): React.ReactEle
               · {CONTENT_FILL_CHIPS[contentFill].label}
             </span>
           ) : null}
-          {effectivePhase === "completed" && typeof confidence === "number" && (
+          {effectivePhase === "completed" && !emptyResult && typeof confidence === "number" && (
             <span title="Estimation de fiabilité de la rédaction de cette section.">· fiabilité {Math.round(confidence * 100)}&nbsp;%</span>
           )}
           {isStale && effectivePhase !== "generating" && (
@@ -158,7 +180,7 @@ export function OracleSectionCard(props: OracleSectionCardProps): React.ReactEle
         </div>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
-        {onRead && (
+        {onRead && !emptyResult && (
           <button
             type="button"
             onClick={onRead}
