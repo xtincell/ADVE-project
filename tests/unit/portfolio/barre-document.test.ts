@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ nodes: vi.fn(), pillars: vi.fn(), access: vi.fn() }));
 vi.mock("@/lib/db", () => ({ db: { brandNode: { findMany: mocks.nodes }, pillar: { findMany: mocks.pillars } } }));
 vi.mock("@/server/services/operator-isolation", () => ({ canAccessStrategy: mocks.access }));
-import { getBarreBrandContext } from "@/server/services/brand-node/barre-context";
+import { getBarreBrandContext, resolveBarreBrands } from "@/server/services/brand-node/barre-context";
 import { barreDocumentGrant } from "@/server/services/brand-node/barre-document";
 import { cleanBarreDocument, sharedMediaPath } from "@/server/services/brand-node/barre-document-runtime";
 
@@ -49,6 +49,17 @@ describe("native readers use current authorized brand sources", () => {
     mocks.nodes.mockResolvedValue([node]);
     const data = await getBarreBrandContext(actor, ["MQ"]);
     expect(data.brands).toEqual({}); expect(mocks.pillars).not.toHaveBeenCalled();
+  });
+  it("declares the campaign review reception and resolves review brands without loading pillars", async () => {
+    expect((await getBarreBrandContext(actor)).campaignReviewReception).toBe("CAMPAIGN_REVIEW_V1");
+    mocks.pillars.mockClear();
+    expect(await resolveBarreBrands(actor, ["MQ", "OTHER"])).toEqual({ brands: [{ id: "MQ", nodeId: "node", strategyId: "current", name: "SPAWT" }], ambiguous: [] });
+    expect(mocks.pillars).not.toHaveBeenCalled();
+    mocks.access.mockResolvedValue(false);
+    expect((await resolveBarreBrands(actor, ["MQ"])).brands).toEqual([]);
+    mocks.access.mockResolvedValue(true);
+    mocks.nodes.mockResolvedValue([node, { ...node, id: "other", operatorId: "another-company" }]);
+    expect(await resolveBarreBrands({ ...actor, role: "ADMIN" }, ["MQ"])).toEqual({ brands: [], ambiguous: ["MQ"] });
   });
   it("refuses ambiguous company/strategy assignments instead of choosing the first", async () => {
     mocks.nodes.mockResolvedValue([node, { ...node, id: "other", operatorId: "another-company" }]);

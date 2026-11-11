@@ -3,6 +3,7 @@ import { getOperatorContext } from "@/server/services/operator-isolation";
 import { barreUpstreamUrl, canAccessBarre } from "@/server/services/brand-node/barre-connection";
 import { getBarreBrandContext } from "@/server/services/brand-node/barre-context";
 import { barrePublicationInput, publishBarreDocument } from "@/server/services/brand-node/barre-document";
+import { barreReviewInput, receiveBarreCampaignReview } from "@/server/services/brand-node/barre-review";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +56,26 @@ async function serve(request: Request, context: Context) {
       return Response.json(await publishBarreDocument(input.data, actor), { headers: PRIVATE });
     } catch {
       return Response.json({ quoi: "La publication n’a pas été reçue. Votre travail reste dans son dossier ; reprenez le même lien." }, { status: 503, headers: PRIVATE });
+    }
+  }
+  if (rel === "bilan") {
+    // Same guard as a publication: write role, same origin, bounded body. The version
+    // itself is re-read from La Barre's saved base, never taken from this request.
+    if (request.method !== "POST") return message("Transmettez le bilan depuis l’écran de sa campagne.", 405);
+    if (!["ADMIN", "OPERATOR"].includes(actor.role)) return Response.json({ code: "ROLE_REFUSED", quoi: "La transmission des bilans est prise en charge par votre équipe." }, { status: 403, headers: PRIVATE });
+    if (request.headers.get("origin") !== publicOrigin) return Response.json({ code: "ORIGIN_REFUSED", quoi: "Ouvrez La Barre pour transmettre ce bilan." }, { status: 403, headers: PRIVATE });
+    try {
+      if (Number(request.headers.get("content-length") || 0) > 2_048) return Response.json({ code: "TOO_LARGE", quoi: "Demande trop volumineuse." }, { status: 413, headers: PRIVATE });
+      const text = await request.text();
+      if (text.length > 2_048) return Response.json({ code: "TOO_LARGE", quoi: "Demande trop volumineuse." }, { status: 413, headers: PRIVATE });
+      let body: unknown;
+      try { body = JSON.parse(text); } catch { body = null; }
+      const input = barreReviewInput.safeParse(body);
+      if (!input.success) return Response.json({ code: "REQUEST_INVALID", quoi: "Le bilan à transmettre n’est pas reconnu." }, { status: 400, headers: PRIVATE });
+      const received = await receiveBarreCampaignReview(input.data, actor);
+      return Response.json(received.body, { status: received.status, headers: PRIVATE });
+    } catch {
+      return Response.json({ code: "RECEPTION_FAILED", quoi: "Le bilan n’a pas été reçu. Il reste dans La Barre ; transmettez-le de nouveau." }, { status: 503, headers: PRIVATE });
     }
   }
   // Expose the native application and its corpus, never repository/configuration or local disk helpers.

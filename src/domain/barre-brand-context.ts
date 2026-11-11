@@ -4,6 +4,8 @@ import type { FieldProvenance } from "./field-provenance";
 export type BarreBrandContext = {
   generatedAt: string;
   sharingMode: "DOCUMENT_V2";
+  /** La route `/la-barre/bilan` reçoit un bilan de campagne arrêté (LB4). */
+  campaignReviewReception?: "CAMPAIGN_REVIEW_V1";
   choices?: Array<{ id: string; nodeId: string; strategyId: string; name: string; url: string }>;
   brands: Record<string, {
     nodeId: string;
