@@ -98,9 +98,11 @@ export function PricingGrid({ callbackPath = "/pricing" }: { callbackPath?: stri
           Recalculé pour <span className="relative inline-block">votre zone.<span className="absolute inset-x-[-2%] bottom-1 -z-10 h-[0.18em] bg-accent" style={{ transform: "skewX(-12deg)" }} /></span>
         </h1>
         <p className="mt-4 max-w-2xl text-sm" style={{ color: "var(--color-foreground-secondary)" }}>
-          Les montants sont résolus en temps réel selon votre marché (indice de zone + devise locale) —
-          jamais une grille statique. Mobile money (CinetPay) en zone FCFA, carte (Stripe/PayPal) à
-          l&apos;international. Chaque devis et chaque paiement sont tracés.
+          Les montants sont calculés à chaque affichage selon votre marché (indice de zone + devise
+          locale) — jamais une grille statique. Le paiement en ligne passe par les moyens activés pour
+          votre zone (mobile money via CinetPay en zone FCFA, carte via Stripe à l&apos;international) ;
+          sinon, la demande est enregistrée et réglée via WhatsApp, puis validée par l&apos;équipe avant
+          tout accès. Chaque demande d&apos;abonnement et chaque paiement sont enregistrés.
         </p>
         <p className="mt-3 text-sm" style={{ color: "var(--color-foreground-secondary)" }}>
           La Fusée est le produit self-serve d&apos;UPgraders. Pour les prestations agence
@@ -206,7 +208,7 @@ export function PricingGrid({ callbackPath = "/pricing" }: { callbackPath?: stri
                       disabled={pendingTier === tier.key}
                       className="mt-auto bg-accent px-5 py-3 font-mono text-[12px] uppercase tracking-widest text-accent-foreground hover:opacity-90 disabled:opacity-50"
                     >
-                      {pendingTier === tier.key ? "Initialisation…" : tier.adminFree ? "Activer (offert) →" : session?.user ? "Payer via WhatsApp →" : "Se connecter pour s'abonner →"}
+                      {pendingTier === tier.key ? "Initialisation…" : tier.adminFree ? "Activer (offert) →" : session?.user ? "S'abonner →" : "Se connecter pour s'abonner →"}
                     </button>
                   )
                 ) : (
@@ -229,8 +231,7 @@ export function PricingGrid({ callbackPath = "/pricing" }: { callbackPath?: stri
       <p className="mt-10 max-w-2xl text-xs" style={{ color: "var(--color-foreground-secondary)" }}>
         Zone FCFA : l&apos;abonnement fonctionne par cycles de 30 jours réglés en mobile money — pas de
         prélèvement automatique silencieux, vous re-consentez chaque cycle. International : abonnement
-        récurrent Stripe, annulable à tout moment à fin de période. Les commissions Hub-Escrow sont
-        dégressives avec votre palier (20 % → 8 %).
+        récurrent Stripe, annulable à tout moment à fin de période.
       </p>
     </main>
   );

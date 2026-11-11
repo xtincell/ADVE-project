@@ -28,6 +28,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 560 — `/status` affichait « Opérationnel » sans mesure ; la force /200 annoncée sans être affichée (2026-11-11)
+
+Symptôme : `/status` remplaçait chaque lecture échouée par 0 (`.catch(() => 0)`) et posait `successRate = 100` quand il n'y avait ni succès ni échec : base injoignable ou journée sans activité donnaient « Opérationnel 100 % ». Un moyen de paiement à clés posées était « ✓ actif », même refusé par le prestataire (CinetPay, 513). Sur le résultat du diagnostic, la phrase « voici la force qu'elle révèle — le score complet /200 » était posée par la page même quand `ForceSection` ne rendait rien. Patch : `derivePublicStatus` (`src/lib/public-status.ts`), « Non mesuré » avec sa raison, « configuré » ; phrase déplacée dans `ForceSection`. Tests `public-status` et `intake-force-bridge`, rouges puis verts.
+
+Hypothèse de cause racine : une valeur de repli optimiste choisie pour ne jamais casser le rendu (zéro, 100 %, phrase fixe) se lit comme un fait. Même famille que les compteurs inventés purgés en juillet : l'absence de mesure doit rester un état visible. Recette F16 : [RECEPTION-PROMESSES-PUBLIQUES.md](RECEPTION-PROMESSES-PUBLIQUES.md).
+
 ### 558 — la console des clés MCP n’offrait pas toutes les portées serveur (2026-11-11)
 
 Symptôme : `/console/anubis/api-billing` tenait sa liste de serveurs en dur, sans `council`, `oracle` ni `ingest` (ADR-0146) ; une clé limitée à l’un de ces serveurs ne pouvait pas y être émise. Le routeur `mcpBilling.createKey` acceptait n’importe quelle chaîne : une clé limitée à un serveur inconnu de l’authentification était créée, puis n’appelait rien. Patch (v6.27.558) : liste unique `MCP_SERVER_NAMES` / `MCP_KEY_SERVER_SCOPES` dans le module feuille `mcp-scope-kind`, reprise par `loadAllServers`, la console et la validation `z.enum` du routeur. Verrou `mcp-key-server-scopes.test.ts` : chaque serveur demandé par une route MCP ou d’ingestion doit être une portée émettable. Croisé en recevant F13 (clé limitée à un serveur), commit `fix(mcp)` dédié.

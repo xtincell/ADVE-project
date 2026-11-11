@@ -39,7 +39,7 @@ export function PillarsGrid() {
       <div className="flex flex-col justify-center gap-2 bg-accent p-7 text-accent-foreground">
         <span className="font-mono text-2xs uppercase tracking-widest opacity-80">+ la plateforme</span>
         <h3 className="font-display text-xl font-semibold tracking-tight">La Fusée</h3>
-        <p className="text-sm leading-relaxed opacity-90">L&apos;Industry OS qui orchestre les cinq piliers et automatise la méthode ADVE/RTIS.</p>
+        <p className="text-sm leading-relaxed opacity-90">L&apos;Industry OS qui orchestre les cinq piliers et outille la méthode ADVE/RTIS.</p>
         <Link href="/lafusee" className="mt-1 inline-flex items-center gap-1.5 font-mono text-2xs uppercase tracking-widest underline-offset-4 hover:underline">
           Découvrir l&apos;OS →
         </Link>

@@ -15,7 +15,7 @@ export default function MentionsLegalesPage() {
   return (
     <LegalShell
       title="Mentions légales"
-      updated="22 juin 2026"
+      updated="11 novembre 2026"
       intro={
         <>
           Informations d&apos;identification d&apos;<strong>UPgraders</strong>, éditeur de ce site et agence
@@ -49,8 +49,7 @@ export default function MentionsLegalesPage() {
 
       <LegalSection title="Hébergement">
         <ul>
-          <li>Application : Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, USA.</li>
-          <li>Base de données : Supabase (PostgreSQL managé), région contractuelle du projet.</li>
+          <li>Application et base de données : serveur privé virtuel loué par UPgraders auprès de Hostinger et administré via Coolify (base PostgreSQL auto-hébergée), depuis le 5 juillet 2026.</li>
         </ul>
       </LegalSection>
 

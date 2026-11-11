@@ -85,11 +85,13 @@ function DiagnosticModal({ onClose }: { onClose: () => void }) {
               <button className="lf-btn lf-btn--primary lf-btn--lg lf-btn--block" onClick={goToIntake}>
                 Commencer le questionnaire <ArrowRight />
               </button>
-              <p className="modal__legal">Vos réponses préremplissent le questionnaire — rien n&apos;est envoyé sans votre accord.</p>
+              {/* Recette F16 : le formulaire a déjà transmis nom, email et marque
+                  à l'équipe (/api/contact) ; on ne prétend plus le contraire. */}
+              <p className="modal__legal">Votre nom, votre email et votre marque ont été transmis à l&apos;équipe UPgraders et préremplissent le questionnaire.</p>
             </div>
           ) : (
             <form onSubmit={submit}>
-              <span className="modal__eyebrow"><Sparkles style={{ width: 13, height: 13 }} /> Diagnostic offert · 15 min</span>
+              <span className="modal__eyebrow"><Sparkles style={{ width: 13, height: 13 }} /> Diagnostic offert</span>
               <h3>Démarrez votre diagnostic</h3>
               <p className="modal__sub">Trois informations, et on lance l&apos;évaluation de votre marque.</p>
               <div className="field">
@@ -121,7 +123,7 @@ function DiagnosticModal({ onClose }: { onClose: () => void }) {
                 Lancer mon diagnostic <ArrowRight />
               </button>
               <p className="modal__legal">
-                <Lock style={{ width: 12, height: 12, verticalAlign: "-2px" }} /> Vos données restent confidentielles et ne sont jamais partagées.
+                <Lock style={{ width: 12, height: 12, verticalAlign: "-2px" }} /> Vos données servent à votre diagnostic, ne sont ni vendues ni publiées. Détail : politique de confidentialité.
               </p>
             </form>
           )}
