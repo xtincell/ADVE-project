@@ -125,13 +125,13 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
 
   // ── Phase 18 (ADR-0059) — CampaignDeliverable matrice 6D + RAG override ──
   { kind: "OPERATOR_CREATE_CAMPAIGN_DELIVERABLE", governor: "MESTOR", handler: "campaign-deliverable", async: false, description: "Crée un CampaignDeliverable matrice 6D (targetNodeId × countryCode × deliverableType × language × promoTag). targetNodeId doit être SKU ou PRODUCT_VARIANT (test anti-drift CI)." },
-  { kind: "OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE", governor: "MESTOR", handler: "campaign-deliverable", async: false, description: "Modifie status/dueDate/notes/brandAssetId/delegatedToOperatorId. Auto-recompute RAG sauf manualRagOverride non-null." },
+  { kind: "OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE", governor: "MESTOR", handler: "campaign-deliverable", async: false, description: "Modifie status/dueDate/notes/brandAssetId/delegatedToOperatorId sous verrou. Version lue requise hors statut (CONFLICT si périmée). Recalcule RAG sauf manualRagOverride et la santé de campagne automatique." },
   { kind: "OPERATOR_DELETE_CAMPAIGN_DELIVERABLE", governor: "MESTOR", handler: "campaign-deliverable", async: false, description: "Supprime un deliverable (hard delete — pas d'archive sur les livrables qui n'ont pas été matérialisés)." },
-  { kind: "OPERATOR_OVERRIDE_RAG", governor: "MESTOR", handler: "campaign-deliverable", async: false, description: "Force le manualRagOverride sur un CampaignDeliverable OU une Campaign. Audit trail Mestor obligatoire (raison opérateur)." },
+  { kind: "OPERATOR_OVERRIDE_RAG", governor: "MESTOR", handler: "campaign-deliverable", async: false, description: "Force le manualRagOverride sur un CampaignDeliverable OU une Campaign ; null rend la campagne au calcul automatique (UNKNOWN si non calculable). Audit trail Mestor obligatoire (raison opérateur)." },
 
   // ── Phase 18-A1-β (audit MATANGA V4 sheet TICKETS MODIFS) — Change Requests ──
   { kind: "OPERATOR_CREATE_CHANGE_REQUEST", governor: "MESTOR", handler: "campaign-change-request", async: false, description: "Crée un ticket de reprise sur un CampaignDeliverable, lié à sa marque et son opérateur. Code `[ID_TÂCHE]-R[NN]` ; identité explicite de demande rejouable. COSMETIC/MINOR/MAJOR qualifient l'impact ; aucun message externe automatique." },
-  { kind: "OPERATOR_UPDATE_CHANGE_REQUEST", governor: "MESTOR", handler: "campaign-change-request", async: false, description: "Modifie status/assignation/resolutionNotes d'un ticket. Auto-stamp resolvedAt si status devient RESOLVED." },
+  { kind: "OPERATOR_UPDATE_CHANGE_REQUEST", governor: "MESTOR", handler: "campaign-change-request", async: false, description: "Modifie status/assignation/resolutionNotes d'un ticket. Version lue requise pour besoin/impact/responsable (CONFLICT si périmée). Auto-stamp resolvedAt si status devient RESOLVED." },
   { kind: "OPERATOR_RESOLVE_CHANGE_REQUEST", governor: "MESTOR", handler: "campaign-change-request", async: false, description: "Marque RESOLVED + resolutionNotes obligatoires + lien optionnel vers nouveau CampaignBrief.version." },
   { kind: "OPERATOR_ESCALATE_CHANGE_REQUEST", governor: "MESTOR", handler: "campaign-change-request", async: false, description: "Escalade un ticket MAJOR vers status ESCALATED. Audit trail Slack-side hors scope (intégration Anubis Phase 18-A1-δ)." },
 

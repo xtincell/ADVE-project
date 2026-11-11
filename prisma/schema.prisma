@@ -1004,14 +1004,16 @@ model Campaign {
   // backward compat. Les deux statuts ci-dessous capturent la granularité opérationnelle agence.
   creativeState     CreativeProductionStatus @default(BRIEF_RECU)
   clientState       ClientReviewStatus       @default(PENDING)
-  /// GREEN | AMBER | RED — calculé via helper computeRAG(campaign) à partir de deadline_proximity + creativeState + clientState + delivered_ratio + isCritical + blockers
+  /// GREEN | AMBER | RED | UNKNOWN — en mode automatique, computeCampaignHealth agrège computeRAG des tâches
+  /// (reprises ouvertes = blocages), isCritical et creativeState BLOQUE ; UNKNOWN = non calculable (ADR-0202).
+  /// Recalculé dans la transaction de chaque commande tâche/reprise ; défaut historique GREEN (RESIDUAL-DEBT).
   healthSignal      String                   @default("GREEN")
   /// Si non-null : override manuel par opérateur (computeRAG ignoré). Audit conservé via Mestor Intent OPERATOR_OVERRIDE_RAG.
   manualRagOverride String?
   /// Dernier commentaire libre (pour vue Project Tracker dashboard agence).
   commentsLatest    String?
-  // Phase 18-A1 — Flag orthogonal "🔴 CRITIQUE" V4. computeRAG → AMBER min si TRUE,
-  // RED si TRUE + deadline_proximity < 3j ou status BLOQUE. Indépendant de creativeState
+  // Phase 18-A1 — Flag orthogonal "🔴 CRITIQUE" V4. Santé de campagne → AMBER min si TRUE,
+  // RED si TRUE + creativeState BLOQUE (computeCampaignHealth). Indépendant de creativeState
   // (un projet EN_PRODUCTION peut devenir CRITIQUE sans changer de statut).
   isCritical        Boolean                  @default(false)
   // Phase 18-A1 — Priorité opérationnelle (V4 sheet ACTIONS column PRIORITÉ).

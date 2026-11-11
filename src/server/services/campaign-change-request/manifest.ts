@@ -72,7 +72,7 @@ export const manifest = defineManifest({
       idempotent: true,
       missionContribution: "GROUND_INFRASTRUCTURE",
       groundJustification:
-        "Modification status / assignation / resolutionNotes pendant le workflow. Auto-stamp resolvedAt si status devient RESOLVED.",
+        "Modification status / assignation / resolutionNotes pendant le workflow ; version lue requise pour remplacer besoin, impact ou responsable. Auto-stamp resolvedAt si status devient RESOLVED.",
     },
     {
       name: "resolveChangeRequestHandler",

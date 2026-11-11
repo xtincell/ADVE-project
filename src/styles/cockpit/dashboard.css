@@ -209,6 +209,8 @@ a.ck-feed__item:hover { background: var(--surface-raised); }
 .ck-camp__chip { font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 3px 8px; border-radius: var(--radius-pill); background: var(--accent-fill); color: var(--accent); }
 .ck-camp__chip[data-health="AMBER"] { background: color-mix(in srgb, var(--warning) 14%, transparent); color: var(--warning); }
 .ck-camp__chip[data-health="RED"] { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
+/* Santé non calculable : neutre, jamais la teinte d'une bonne santé. */
+.ck-camp__chip[data-health="UNKNOWN"] { background: var(--surface-raised); color: var(--text-secondary); }
 .ck-camp[data-live="1"] .ck-camp__chip { background: color-mix(in srgb, var(--success) 16%, transparent); color: var(--success); }
 .ck-camp__dates { font-size: 12px; color: var(--text-secondary); }
 .ck-camp__empty { display: flex; flex-direction: column; gap: 4px; padding: 8px 2px; }

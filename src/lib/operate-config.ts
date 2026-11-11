@@ -109,7 +109,8 @@ export type ClientReviewStatus =
   | "VALIDE"
   | "REJETE";
 
-export type HealthSignal = "GREEN" | "AMBER" | "RED";
+/** UNKNOWN : santé automatique non calculable (aucune preuve suffisante), jamais un vert par défaut. */
+export type HealthSignal = "GREEN" | "AMBER" | "RED" | "UNKNOWN";
 
 export type BriefStatus = "DRAFT" | "SUBMITTED" | "VALIDATED" | "ASSIGNED";
 
@@ -534,6 +535,7 @@ export const HEALTH_SIGNAL_CONFIG: Record<HealthSignal, { label: string; color: 
   GREEN: { label: "Bonne santé",   color: "bg-success/15 text-success ring-success/30",  icon: "🟢", dotClass: "bg-success" },
   AMBER: { label: "Attention",     color: "bg-warning/15 text-warning ring-warning/30",  icon: "🟡", dotClass: "bg-warning" },
   RED:   { label: "Critique",      color: "bg-error/15 text-error ring-error/30",        icon: "🔴", dotClass: "bg-error animate-pulse" },
+  UNKNOWN: { label: "Non calculée", color: "bg-foreground-muted/15 text-foreground-secondary ring-border/30", icon: "⚪", dotClass: "bg-foreground-muted" },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

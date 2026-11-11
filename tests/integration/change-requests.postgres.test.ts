@@ -351,16 +351,18 @@ describe.sequential("campaign change requests through the existing governed boun
       manualRagOverride: null, rag: "RED",
     });
   });
-  it("does not manufacture a green campaign when no automatic campaign calculation exists", async () => {
+  it("does not manufacture a green campaign when returning to the automatic calculation", async () => {
     const f = await fixture();
     const before = await db.campaign.update({ where: { id: f.campaign.id }, data: {
       manualRagOverride: "RED", healthSignal: "RED",
     } });
-    await expect(deliverableCaller().overrideRag({ strategyId: brand, operatorId: localOperator,
-      campaignId: before.id, ragOverride: null, reason: "Retour au calcul de campagne" })).rejects.toMatchObject({
-        code: "BAD_REQUEST",
-      });
-    expect(await db.campaign.findUniqueOrThrow({ where: { id: before.id } })).toEqual(before);
+    // Two undated, unfinished tasks: the calculation runs and says it cannot conclude.
+    const res = await deliverableCaller().overrideRag({ strategyId: brand, operatorId: localOperator,
+      campaignId: before.id, ragOverride: null, reason: "Retour au calcul de campagne" });
+    expect(res.result).toMatchObject({ health: { calculable: false, signal: null } });
+    expect(await db.campaign.findUniqueOrThrow({ where: { id: before.id } })).toEqual({
+      ...before, manualRagOverride: null, healthSignal: "UNKNOWN", updatedAt: expect.any(Date),
+    });
   });
   it("cannot create a task in a foreign campaign or attach another operator's product", async () => {
     const foreign = await fixture(true); const own = await fixture();
