@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
@@ -19,7 +20,9 @@ const PERIOD_RE = /^(\d{4})(-Q[1-4]|-\d{2})?$/;
 
 function assertOperator(role: string | null | undefined) {
   if (role !== "ADMIN" && role !== "OPERATOR") {
-    throw new Error("Accès réservé aux opérateurs UPgraders.");
+    // Refus typé (403) : un compte rattaché à une équipe mais sans le rôle —
+    // par exemple un OPERATOR rétrogradé — recevait une 500 (IN7).
+    throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé aux opérateurs UPgraders." });
   }
 }
 
