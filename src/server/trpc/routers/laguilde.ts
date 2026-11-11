@@ -16,6 +16,7 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, publicProcedure, protectedProcedure, operatorProcedure } from "../init";
 import { classifyCanonicalSector } from "@/domain/sector-taxonomy";
@@ -60,7 +61,9 @@ const OPEN_MISSION_WHERE: Prisma.MissionWhereInput = {
 
 function assertOperator(role: string | null | undefined) {
   if (role !== "ADMIN" && role !== "OPERATOR") {
-    throw new Error("Accès réservé aux opérateurs UPgraders.");
+    // Refus typé (403) : un compte rattaché à une équipe mais sans le rôle —
+    // par exemple un OPERATOR rétrogradé — recevait une 500 (IN7).
+    throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé aux opérateurs UPgraders." });
   }
 }
 

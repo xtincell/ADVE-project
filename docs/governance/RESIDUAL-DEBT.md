@@ -1,3 +1,51 @@
+## 559 — IN7 reçu localement ; page de console, retrait d’équipe et 500 des routeurs ouverts (2026-11-11)
+
+**Fermé localement.** Rétrogradation, suppression et réaffectation des comptes ordinaires
+reçues sur PostgreSQL jetable par le vrai formulaire de connexion d’Auth.js et la vraie
+route `/api/trpc` (`account-lifecycle.postgres.test.ts`, 9 tests, job PostgreSQL de CI),
+puis par `next dev` local : une session ouverte avant le geste perd le rôle retiré dès
+l’appel suivant (403), un compte supprimé perd sa session (401) et sa connexion, un
+ancien titulaire ou délégué perd lecture et écriture, le nouveau les obtient.
+`accounts.setRole`, `assertOperator` (`laguilde`, `market-cost`, `argos`) et
+`accounts.purgeAccount` ne répondent plus 500 sur ces refus.
+
+**Non reçu.** CI, image, runtime et production 559 ; rejeu sur des comptes de production.
+**Plan** : ouvrir la PR (label `out-of-scope`, numéro réel dans `scope-drift.md`), recevoir
+CI et image, puis rétrograder un compte de recette sur l’instance livrée avec une session
+ouverte avant le geste. **Déclencheur** : ouverture de la PR, puis prochaine réception C7.
+
+**Page de console servie à un cookie périmé.** `src/proxy.ts` lit le rôle dans le cookie
+(`getToken`) sans relire la base. Mesure locale (`next dev`, 11 novembre) : après
+rétrogradation ADMIN → USER, l’ancien cookie reçoit encore `/console/governance/accounts`
+en 200 ; une fois réémis par `/api/auth/session`, il reçoit 307 vers `/unauthorized`.
+Les données de la page passent par `/api/trpc`, qui refuse en 403 : seule la coquille
+est exposée. Le `SessionProvider` racine appelle cet endpoint au montage, ce qui borne
+la fenêtre à la première page ; ce comportement navigateur n’a pas été exercé. **Plan** :
+pour les préfixes réservés à ADMIN et OPERATOR (`/console`, `/launchpad`), faire relire
+au proxy le rôle courant comme le fait le callback `jwt` (vérifier d’abord que son runtime
+accède à Prisma), ou y forcer la réémission du cookie ; puis mesurer le coût par
+navigation et réexercer l’ancien cookie. **Déclencheur** : prochaine modification de `src/proxy.ts`, ou
+recette navigateur C7 de la console.
+
+**Retrait d’un compte d’une équipe : aucune procédure.** `User.operatorId` n’a pas
+d’écrivain hors création et seeds ; `accounts.setRole` ne change que le rôle, et un
+OPERATOR rétrogradé en USER garde donc l’accès aux données de son équipe
+(`operatorProcedure`, `canAccessStrategy`). La relecture à chaque appel est reçue : la
+ligne modifiée en base retire l’accès à la session ouverte. **Plan** : décider si le
+retrait d’équipe accompagne la rétrogradation ou forme un geste distinct ; l’ajouter
+alors à la procédure gouvernée existante `accounts.setRole` (ou sous un Intent ADMIN du
+même registre), avec la même réception. **Déclencheur** : décision opérateur sur la
+sortie d’un membre d’équipe, ou premier départ réel.
+
+**Même classe de 500 dans les routeurs.** Relevé du 11 novembre, après correctif :
+116 `throw new Error(` dans 33 fichiers de `src/server/trpc/routers/`. Ceux qui portent un
+refus ou un objet introuvable (exemple : `laguilde.publishMission`, « Mission
+introuvable. ») répondent 500 au lieu de 403/404. **Plan** : trier les appels par nature
+(refus, introuvable, invariant interne), convertir les deux premières en `TRPCError`
+typés fichier par fichier avec un test par routeur, puis ajouter une règle de lint sur
+`throw new Error` dans les routeurs une fois le compte à zéro. **Déclencheur** : prochaine
+modification d’un de ces routeurs, ou session dédiée C7.
+
 ## 557 — IN1 fermé pour les sources ; même classe ailleurs, réceptions ouvertes (2026-11-11)
 
 **Fermé localement.** Les écrivains de source du routeur `ingestion` (`updateSource`,
