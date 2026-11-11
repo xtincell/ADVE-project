@@ -7,6 +7,7 @@ import type { CampaignChangeRequest, ChangeRequestImpact, Prisma } from "@prisma
 import { db } from "@/lib/db";
 import { generateChangeRequestCode } from "@/domain/campaign-code";
 import { assertCampaignScope, CampaignScopeError as ChangeRequestError, type CampaignScope } from "@/server/services/operator-isolation";
+import { assertReadVersion, nextVersion, refreshCampaignHealth, type VersionedCampaignScope } from "@/server/services/campaign-deliverable";
 export { CampaignScopeError as ChangeRequestError } from "@/server/services/operator-isolation";
 
 type HandlerResult = Pick<IntentResult, "status" | "summary" | "tool" | "output" | "reason" | "estimatedCost">;
@@ -185,12 +186,15 @@ export async function createChangeRequest(args: CreateChangeRequestArgs): Promis
         }
         maxRevision = Math.max(maxRevision, revision);
       }
-      return tx.campaignChangeRequest.create({ data: {
+      const created = await tx.campaignChangeRequest.create({ data: {
         ...(args.requestId ? { id: args.requestId } : {}),
         ticketCode: generateChangeRequestCode(baseCode, maxRevision + 1),
         campaignDeliverableId: deliverable.id, requestedByName, description,
         impact: args.impact, status: "PENDING", assignedToUserId: args.assignedToUserId,
       } });
+      // An open change request blocks its task: the automatic campaign health follows.
+      await refreshCampaignHealth(tx, deliverable.campaignId);
+      return created;
     });
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
@@ -200,14 +204,22 @@ export async function createChangeRequest(args: CreateChangeRequestArgs): Promis
   }
 }
 
-export async function updateChangeRequest(ticketId: string, patches: UpdateIntent["patches"], scope: ChangeRequestScope): Promise<CampaignChangeRequest> {
+/** Champs dont le remplacement exige la version lue (besoin, impact, responsable). */
+const VERSIONED_TICKET_FIELDS = ["description", "impact", "assignedToUserId"];
+const TICKET_VERSION_MESSAGES = {
+  missing: "Relisez la reprise avant de modifier son besoin, son impact ou son responsable : sa version est requise.",
+  stale: "La reprise a été modifiée depuis votre lecture : relisez-la avant d’enregistrer.",
+};
+
+export async function updateChangeRequest(ticketId: string, patches: UpdateIntent["patches"], scope: VersionedCampaignScope): Promise<CampaignChangeRequest> {
   return db.$transaction(async tx => {
-    const { row } = await scopedTicket(tx, ticketId, scope);
+    const { row, deliverable } = await scopedTicket(tx, ticketId, scope);
     assertOpen(row.status);
-    const allowedKeys = ["status", "assignedToUserId", "resolutionNotes", "description", "impact"];
+    const allowedKeys = ["status", ...VERSIONED_TICKET_FIELDS, "resolutionNotes"];
     const data: Prisma.CampaignChangeRequestUpdateInput = {};
     for (const [key, value] of Object.entries(patches)) {
       if (!allowedKeys.includes(key)) throw new ChangeRequestError("BAD_REQUEST", `Champ non modifiable : ${key}.`);
+      if (value === undefined) continue;
       (data as Record<string, unknown>)[key] = value;
     }
     if (patches.description !== undefined) data.description = nonBlank(patches.description, "Besoin de modification");
@@ -216,7 +228,16 @@ export async function updateChangeRequest(ticketId: string, patches: UpdateInten
       data.resolutionNotes = nonBlank(patches.resolutionNotes, "Compte rendu de résolution");
       data.resolvedAt = new Date();
     }
-    return tx.campaignChangeRequest.update({ where: { id: ticketId }, data });
+    // A terminal decision is protected by the lock and the closed-ticket rule; replacing
+    // the need, its impact, its owner or open notes requires the version that was read.
+    const terminal = patches.status === "RESOLVED" || patches.status === "REJECTED";
+    const versioned = Object.keys(data).some(key => VERSIONED_TICKET_FIELDS.includes(key))
+      || (patches.resolutionNotes !== undefined && !terminal);
+    assertReadVersion(row.updatedAt, scope.expectedUpdatedAt, versioned, TICKET_VERSION_MESSAGES);
+    data.updatedAt = nextVersion(row.updatedAt);
+    const updated = await tx.campaignChangeRequest.update({ where: { id: ticketId }, data });
+    await refreshCampaignHealth(tx, deliverable.campaignId);
+    return updated;
   });
 }
 
@@ -232,22 +253,28 @@ export async function resolveChangeRequest(ticketId: string, resolutionNotes: st
         throw new ChangeRequestError("BAD_REQUEST", "La version de brief doit appartenir à la même campagne.");
       }
     }
-    return tx.campaignChangeRequest.update({ where: { id: ticketId }, data: {
+    const resolved = await tx.campaignChangeRequest.update({ where: { id: ticketId }, data: {
       status: "RESOLVED", resolutionNotes: notes, newBriefVersionId, resolvedAt: new Date(),
+      updatedAt: nextVersion(row.updatedAt),
     } });
+    await refreshCampaignHealth(tx, deliverable.campaignId);
+    return resolved;
   });
 }
 
 export async function escalateChangeRequest(ticketId: string, escalationNotes: string, scope: ChangeRequestScope): Promise<CampaignChangeRequest> {
   const notes = `[ESCALATED] ${nonBlank(escalationNotes, "Motif d’arbitrage")}`;
   return db.$transaction(async tx => {
-    const { row } = await scopedTicket(tx, ticketId, scope);
+    const { row, deliverable } = await scopedTicket(tx, ticketId, scope);
     assertOpen(row.status);
     if (row.status === "ESCALATED" && row.resolutionNotes?.split("\n").includes(notes)) return row;
     // Local workflow only: this never sends a Slack/Telegram/email message.
-    return tx.campaignChangeRequest.update({ where: { id: ticketId }, data: {
+    const escalated = await tx.campaignChangeRequest.update({ where: { id: ticketId }, data: {
       status: "ESCALATED", resolutionNotes: row.resolutionNotes ? `${row.resolutionNotes}\n${notes}` : notes,
+      updatedAt: nextVersion(row.updatedAt),
     } });
+    await refreshCampaignHealth(tx, deliverable.campaignId);
+    return escalated;
   });
 }
 

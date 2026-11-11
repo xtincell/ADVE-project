@@ -90,3 +90,32 @@ Le registre campaign.list existant est filtré par équipe avec refus des demand
 étrangères. Le tableau et le formulaire le consomment : une campagne sans tâche
 reste visible dès réception ; l’absence de tâche ne produit aucun état vert.
 Le domaine des actions est conservé, sans nouvelle couche de suivi.
+
+## Extension — santé automatique, brouillon et éditions concurrentes (2026-11-11)
+
+La décision 6 refusait la remise en automatique faute de calcul. Le calcul existe
+désormais dans le même service, sans second moteur : `computeCampaignHealth`
+applique `computeRAG` à chaque tâche (son statut manuel s'il existe), compte les
+reprises ouvertes (PENDING, IN_PROGRESS, ESCALATED) comme blocages de leur tâche,
+prend la pire santé, et porte au moins à l'orange une campagne critique ou une
+production bloquée (rouge si les deux). Sans tâche, ou si seules restent des
+tâches non validées, non livrées, sans échéance ni statut manuel, il rend « non
+calculable » ; un vert exige que chaque tâche soit mesurable. Zéro modèle, date de
+référence injectable. La remise en automatique enregistre ce résultat ou `UNKNOWN`
+et chaque commande tâche/reprise le recalcule dans sa transaction, sauf statut
+manuel de campagne. La valeur par défaut historique `GREEN` des campagnes non
+touchées et la fraîcheur sans écriture restent tracées dans RESIDUAL-DEBT.
+
+Les éditions ouvertes réutilisent la précondition de version du portefeuille :
+`expectedUpdatedAt` est comparé sous le verrou de ligne. Il est requis pour
+remplacer notes, dates, visuel ou délégation d'une tâche et besoin, impact ou
+responsable d'une reprise ; une simple transition de statut et les décisions
+terminales restent sérialisées par le verrou et la règle des tickets clos. Une
+version périmée reçoit CONFLICT, chaque écriture avance la version. Le visuel
+rattaché doit appartenir à la marque de la campagne ; la suppression d'une tâche
+prend le même verrou et refuse une tâche portant un visuel ou des reprises.
+
+Le formulaire de reprise conserve saisie et UUID envoyé dans le `sessionStorage`
+de l'onglet, par équipe et par tâche, validés et bornés à la relecture, purgés
+après reçu ou abandon explicite : une soumission après remontage retrouve le même
+reçu. Aucun objet, Intent, service ou état serveur ajouté.

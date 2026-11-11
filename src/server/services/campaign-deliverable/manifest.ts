@@ -67,7 +67,7 @@ export const manifest = defineManifest({
       idempotent: true,
       missionContribution: "GROUND_INFRASTRUCTURE",
       groundJustification:
-        "Modification status / dueDate / brandAssetId / delegatedToOperatorId d'un deliverable. Auto-recompute RAG sauf manualRagOverride non-null.",
+        "Modification status / dueDate / brandAssetId / delegatedToOperatorId d'un deliverable sous verrou, version lue requise hors statut. Auto-recompute RAG sauf manualRagOverride non-null, puis santé de campagne automatique.",
     },
     {
       name: "deleteCampaignDeliverableHandler",
@@ -96,7 +96,7 @@ export const manifest = defineManifest({
       idempotent: true,
       missionContribution: "GROUND_INFRASTRUCTURE",
       groundJustification:
-        "Override manuel du RAG par opérateur sur Campaign ou CampaignDeliverable (computeRAG ignoré). Audit trail Mestor obligatoire avec raison.",
+        "Override manuel du RAG par opérateur sur Campaign ou CampaignDeliverable (computeRAG ignoré) ; null rend la campagne au calcul automatique computeCampaignHealth, UNKNOWN si non calculable. Audit trail Mestor obligatoire avec raison.",
     },
   ],
   dependencies: [],

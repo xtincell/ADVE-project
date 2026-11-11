@@ -76,6 +76,8 @@ export default function DeliverableDetailPage() {
   const utils = trpc.useUtils();
   const updateMutation = trpc.campaignDeliverable.update.useMutation({
     onSuccess: () => utils.campaignDeliverable.invalidate(),
+    // A refused version means someone else changed the task: show their version.
+    onError: () => { void refetchDeliverables(); },
   });
   const resolveMutation = trpc.campaignChangeRequest.resolve.useMutation({
     onSuccess: () => { setDecision(null); setDecisionNotes(""); void refetchTickets(); },
@@ -112,6 +114,8 @@ export default function DeliverableDetailPage() {
       strategyId: deliverable.campaign.strategyId,
       operatorId: operator.id,
       deliverableId,
+      // The version read on this screen: a concurrent change is refused, never overwritten.
+      expectedUpdatedAt: new Date(deliverable.updatedAt).toISOString(),
       patches: { status: newStatus },
     });
   };
@@ -221,7 +225,7 @@ export default function DeliverableDetailPage() {
               onClick={() => setShowTicketForm((v) => !v)}
               className="inline-flex items-center gap-2 rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/80"
             >
-              {showTicketForm ? "Annuler" : "+ Nouveau ticket modif"}
+              {showTicketForm ? "Masquer le formulaire" : "+ Nouveau ticket modif"}
             </button>
           </div>
 

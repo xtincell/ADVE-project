@@ -2948,22 +2948,38 @@ La fermeture best-effort de l’Intent après commit reste la dette distincte
 
 ## Reprises de campagne — 2026-10-07 (ADR-0202)
 
-- **Statut de campagne automatique absent** : retirer le statut manuel est refusé
-  sans écriture ; pas de vert par défaut. Qualifier le calcul canonique avant
-  raccord, éprouver retard, blocages et absence de données. Déclencheur : réception
-  C6 de la santé campagne ; effort : un lot sur l'écrivain existant.
-- **Versions d'édition et liens métier** : les tickets terminaux sont verrouillés,
-  mais les éditions ouvertes n'ont pas de précondition de version ; les liens
-  BrandAsset/délégation des tâches et le transfert concurrent de campagne doivent
-  être reçus. Fermer par deux éditions concurrentes, changement de propriétaire
-  et refus de liens étrangers, sans second workflow. Déclencheur : prochain lot
-  C3/C6 des livrables ; effort : un lot de garde et recette PostgreSQL.
-- **Identité côté formulaire** : le retry garde son UUID pendant la même ouverture
-  du formulaire. Fermer/recharger cette page perd cet essai local ; le reçu serveur
-  reste persistant, mais une nouvelle saisie produit une nouvelle identité.
-  Recevoir cette interruption et raccorder la conservation au mécanisme de brouillon
-  existant, sans dédupliquer aveuglément les textes. Déclencheur : suite C6 de
-  reprise après interruption du navigateur ; effort : un lot formulaire/recette.
+- **Santé de campagne automatique — candidat 6.27.563, local seulement** : le
+  retour au calcul exécute `computeCampaignHealth` (agrégat de `computeRAG`,
+  reprises ouvertes = blocages, campagne critique/production bloquée) et enregistre
+  `UNKNOWN` quand il ne peut conclure ; chaque commande tâche/reprise le recalcule
+  sous verrou. Restent ouverts : (a) le défaut de colonne `GREEN` des campagnes
+  jamais touchées depuis, sans backfill — fermer par migration du défaut vers
+  `UNKNOWN` puis recalcul explicite par opérateur ; (b) la fraîcheur temporelle
+  (une échéance qui passe sans écriture ne change pas la valeur stockée) — fermer
+  par recalcul quotidien dans le balayage nocturne existant ou à la lecture du
+  cockpit. Déclencheur : décision opérateur sur le défaut, puis prochain lot C6 ;
+  effort : une migration et un appel du recalcul existant. CI, image, runtime et
+  lecture native de la santé en production restent à recevoir.
+- **Éditions concurrentes de tâches et de reprises — candidat 6.27.563, local** :
+  la version lue (`expectedUpdatedAt`, même règle que le portefeuille) est requise
+  pour remplacer notes, dates, visuel ou délégation d'une tâche et besoin, impact
+  ou responsable d'une reprise ; version périmée → CONFLICT, vérifié sur
+  PostgreSQL réel en séquentiel et en simultané. Un visuel d'une autre marque est
+  refusé ; suppression et rattachement concurrents ne perdent plus le visuel.
+  Restent ouverts : la règle métier de délégation inter-agences (seule l'existence
+  de l'agence est vérifiée) et le « transfert de campagne », qu'aucune commande ne
+  propose aujourd'hui — à recevoir si une telle commande est créée. Les actions
+  transverses gardent leur ligne ci-dessous. Déclencheur : prochain lot C3/C6 des
+  livrables ; effort : une règle de délégation validée par l'opérateur.
+- **Brouillon de reprise après remontage — candidat 6.27.563, local** : le
+  formulaire de reprise conserve saisie et UUID déjà envoyé dans le
+  `sessionStorage` de l'onglet (par équipe et tâche), purgés après reçu ou abandon
+  explicite ; reçu par test de composant, pas par navigateur réel ni production.
+  Une fermeture d'onglet perd toujours le brouillon (stockage de session). Le
+  formulaire de création de tâche n'a pas d'identité de demande côté serveur :
+  sa reprise après interruption peut encore créer une seconde tâche. Fermer en
+  persistant un UUID de création dans `CampaignDeliverable.id` comme les reprises.
+  Déclencheur : suite C6 de création de tâche ; effort : un lot service/formulaire.
 - **Cycle complet** : résoudre une reprise ne livre pas sa tâche. Production,
   preuve de validation, diffusion, mesure et reprise ultérieure restent à recevoir
   sur les vrais projets. Déclencheur : traversée C6 après recette 408.

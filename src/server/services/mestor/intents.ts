@@ -942,6 +942,8 @@ export type Intent =
       strategyId: string; // pivot
       operatorId: string;
       deliverableId: string;
+      /** Version lue (updatedAt ISO). Requise pour remplacer contenu, visuel ou délégation. */
+      expectedUpdatedAt?: string | null;
       patches: {
         status?: string;
         dueDate?: string | null;
@@ -987,6 +989,8 @@ export type Intent =
       strategyId: string;
       operatorId: string;
       ticketId: string;
+      /** Version lue (updatedAt ISO). Requise pour remplacer besoin, impact ou responsable. */
+      expectedUpdatedAt?: string | null;
       patches: {
         status?: "PENDING" | "IN_PROGRESS" | "RESOLVED" | "REJECTED" | "ESCALATED";
         assignedToUserId?: string | null;
