@@ -849,7 +849,7 @@ Dirigent la trajectoire. Décisions, validations, plans.
 
 ## 3. Telemetry (27 services — Mission Tier)
 
-Observent, mesurent, archivent. **27 répertoires** (recompte 2026-10-06) ; la table contient 3 lignes supplémentaires (`seshat/tarsis/connector.ts` · `seshat/scan-rate-limit.ts` · `seshat/entity-gate/`) qui sont des **sous-modules de `seshat/`** — documentés ici pour la traçabilité, hors compte.
+Observent, mesurent, archivent. **27 répertoires** (recompte 2026-10-06) ; la table contient 4 lignes supplémentaires (`seshat/tarsis/connector.ts` · `seshat/scan-rate-limit.ts` · `seshat/entity-gate/` · `seshat/argos/`) qui sont des **sous-modules de `seshat/`** — documentés ici pour la traçabilité, hors compte.
 
 | Service | Rôle telemetry | Governor | Manifest |
 |---|---|---|---|
@@ -863,6 +863,7 @@ Observent, mesurent, archivent. **27 répertoires** (recompte 2026-10-06) ; la t
 | `seshat/tarsis/connector.ts` | **Tarsis-monitoring API façade — Phase 23 PENDING (Epic 2 Story 2.2)**. Retourne `ConnectorResult<TarsisSignal>` per pattern P22-1. Credentials via Vault (ADR-0021 + ADR-0079). Cf. ADR-0077, architecture D4. | SESHAT | 🟡 PENDING (Phase 23) |
 | `seshat/scan-rate-limit.ts` | Rate-limit PARTAGÉ entre workers des scans frais du scoreur public (table `ScanRateHit`, 6/min/IP, fail-open, purge auto) + résolution IP réelle derrière Cloudflare/Traefik (ADR-0161). Le cache ne consomme jamais. | SESHAT | ✅ shippé (2026-07-19) |
 | `seshat/entity-gate/` | Gate adversarial de collecte publique (ADR-0162) : ambiguïté du nom (lexique mots communs) + discriminants du contexte déclaré + verdict déterministe avec preuves + réfutation LLM optionnelle demote-only. Consommé par `quick-intake/public-enrichment` (presse, Brave, Maps, découverte de site). | SESHAT | ✅ shippé (2026-07-20) |
+| `seshat/argos/` | Argos by LaFusée (ADR-0100, SHK-0002) : Hunter gouverné et saisie manuelle, verdict de sûreté déterministe, journal de gouvernance `CampaignReferenceDossier`, projection vers Argos-studio (`studio-client.ts`) et lectures publiques (`library-read.ts` : bibliothèque Argos-studio si `ARGOS_STUDIO_URL`, repli sur les dossiers PASS du journal, source affichée). | SESHAT | Lecture reçue sur studio simulé et studio local (6.27.561) ; lecture et projection vers un studio déployé à recevoir |
 | `seshat/creative-intelligence/` | Extension Telemetry ADR-0194/0195/0196 : corpus PUBLIC/BRAND, snapshots/recettes, acquisition bornée et veille verrouillée, archive chiffrée/purge, audiovisuel natif MODEL_DRAFT puis revue MANUAL, modèle conditionnel/trajectoires/voisins context nodes et publication confirmée avant résultat immuable. Contexte Artemis/Notoria et Glory DELEGATE/HYBRID ; bibliothèque canonique Argos-studio. | SESHAT | Parcours locaux et CI PR #968 reçus ; livraison image suivie par run 37521228164 et réception applicative datée dans PR #968 ; accès métier externes à recevoir |
 | `creative-intelligence/` | Enregistrement du manifest ADR-0194 : réexport du moteur `seshat/creative-intelligence/`, nécessaire au scanner de manifests racines. Aucune duplication du moteur. | SESHAT | code présent (inspection 2026-10-06) |
 | `source-classifier/` | Reads BrandDataSource → BrandAsset DRAFTs (taxonomie canonique) | SESHAT | ✅ existant |

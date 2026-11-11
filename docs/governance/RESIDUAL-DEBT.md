@@ -3143,6 +3143,33 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
   Effort : un lot d'intégration ; reprise dès accès à Argos-studio et
   credentials/contrat complet qualifiés. La publication locale
   des dossiers PASS ne prouve pas la projection distante.
+- **Lectures publiques Argos-studio (SHK-0002 point 5, 6.27.561) — client codé,
+  lecture distante réelle non reçue** : `seshat/argos/library-read.ts` lit
+  `GET /api/v1/references(/{slug})` quand `ARGOS_STUDIO_URL` est posée, repli
+  honnête sur les dossiers PASS du journal sinon (source affichée). Reçus : tests
+  sur studio simulé, contrat contre un studio local (8/8 références, fiche, 404)
+  et recette Chromium des replis. Non reçus : lecture par le serveur Fusée d'un
+  studio réel (la garde SSRF refuse un studio local) ; le studio n'a pas de
+  déploiement de production connu (arbitrage 5.8). Fermer par : URL HTTPS
+  publique du studio posée en production, une lecture `/argos` et une fiche
+  relues avec source `STUDIO`. Effort : configuration + une recette.
+  Déclencheur : arbitrage 5.8 tranché et studio déployé. Conséquence à traiter
+  au même moment : les liens anciens `/argos/<ref du journal>` (forme
+  `marque--campagne`) ne correspondent pas aux slugs du studio
+  (`marque-titre-année`) et répondront « introuvable » une fois le studio
+  raccordé ; raccord prévu par le reçu de projection (`receipt.slug`, journalisé
+  dans l'émission `SESHAT_PROJECT_ARGOS_DOSSIER`) → redirection de la ref du
+  journal vers le slug, sans relire le journal comme bibliothèque.
+- **`next dev --turbopack` local : boucle de rechargement sur `/argos`** :
+  observé le 11 novembre (Next 16.4.6) — trames HMR `reloadPage` « HMR hash
+  mismatch » à chaque connexion, la page se recharge avant que les requêtes
+  tRPC du client aboutissent (le bloc recettes existant reste aussi en
+  chargement). `next dev --webpack` sur le même code rend la page normalement.
+  Cause non établie (environnement de dev, pas le code de production). Fermer
+  par : reproduction sur un autre poste et sur `main` sans ce lot, puis
+  correctif de configuration ou rapport amont. Effort : une session de
+  diagnostic. Déclencheur : prochaine recette navigateur en Turbopack ; d'ici
+  là, recettes navigateur en `--webpack`.
 - **Archive durable — exploitation cible et lifecycle distant à recevoir** :
   archive AES/scopée avec droits attestés, échéance, backendId et purge physique
   est codée ; parcours réel NASA local PASS (relecture/hash, expiration et cron

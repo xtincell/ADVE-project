@@ -109,8 +109,10 @@ export default async function LeaderboardPage() {
   const verdicts = await listLatestPublicVerdicts();
   const references = await getPublicScoreurReferences();
   // Phase A état-final — le championnat et sa rédaction sont UN média :
-  // les derniers dossiers Argos publiés (PASS uniquement) en pied de page.
-  const dossiers = await listPublicDossiers({ limit: 3 }).catch(() => []);
+  // les derniers dossiers Argos publiés en pied de page. Même source que
+  // /argos (bibliothèque canonique, sinon dossiers PASS de La Fusée) : les liens
+  // ouvrent donc des fiches que /argos/[ref] sait relire.
+  const dossiers = (await listPublicDossiers({ limit: 3 }).catch(() => null))?.dossiers ?? [];
 
   // Same latest-per-brand reader as the public API; history cannot mask peers.
   const latest: Row[] = verdicts.map(v => {
