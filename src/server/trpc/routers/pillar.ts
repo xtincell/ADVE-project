@@ -608,20 +608,20 @@ export const pillarRouter = createTRPCRouter({
       return { versions, currentVersion: pillar.currentVersion ?? 1 };
     }),
 
-  /** Compensate the archived change while preserving later independent decisions. */
+  /** Compensate the archived change while preserving later independent decisions.
+   *  Same restorer, refusals and effect identity as the journal (ADR-0207). */
   rollbackVersion: governedProcedure({
     kind: "LEGACY_PILLAR_ROLLBACK_VERSION",
     caller: "pillar:rollbackVersion",
     requireOperator: true,
-    inputSchema: z.object({ strategyId: z.string(), key: pillarKeyEnum, versionId: z.string() }),
+    inputSchema: z.object({ strategyId: z.string(), key: pillarKeyEnum, versionId: z.string(),
+      reason: z.string().min(3).max(500).optional() }),
   }).mutation(async ({ ctx, input }) => {
-      const pillar = await ctx.db.pillar.findUnique({
-        where: { strategyId_key: { strategyId: input.strategyId, key: input.key.toLowerCase() } },
-      });
-      if (!pillar) return { success: false, error: "Pillar not found" };
-
-      const result = await pillarVersioning.rollback(pillar.id, input.versionId, ctx.session.user.id, ctx.intentId);
-      return { success: true, alreadyRecorded: !!result.noOp, version: result.version };
+      const { rollbackPillar } = await import("@/server/services/pillar-gateway/rollback");
+      const result = await rollbackPillar({ strategyId: input.strategyId, pillarKey: input.key, versionId: input.versionId,
+        operatorId: ctx.session.user.id, intentId: ctx.intentId, reason: input.reason ?? "action d’historique" });
+      if (!result.restored) throw new TRPCError({ code: result.refusal ?? "PRECONDITION_FAILED", message: result.reason });
+      return { success: true, alreadyRecorded: !!result.alreadyRecorded, version: result.version };
     }),
 
   // ── Mestor RTIS Cascade ────────────────────────────────────────────────
