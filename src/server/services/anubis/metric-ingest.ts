@@ -42,8 +42,24 @@ export async function ingestExternalMetric(intent: IngestIntent): Promise<Handle
   const input = parsed.data;
   const observedAt = input.observedAt ? new Date(input.observedAt) : null;
   if (observedAt && observedAt.getTime() > receivedAt.getTime()) return refused("OBSERVATION_IN_FUTURE");
+  const cellTimes = [...input.metrics, ...(input.unobserved ?? [])].map((cell) => cell.observedAt).filter((v): v is string => v !== undefined);
+  if (cellTimes.some((time) => new Date(time).getTime() > receivedAt.getTime())) return refused("OBSERVATION_IN_FUTURE");
   const { strategyId, sourceType, campaignId, missionId, metrics } = input;
   const period = input.period ?? periodOf(observedAt ?? receivedAt);
+  // Cell provenance, absences and the producer digest are added only when sent:
+  // a receipt without them keeps the exact hash it was admitted with (replay).
+  const cellProvenance = (cell: { source?: string; subject?: string; unit?: string; observedAt?: string; note?: string }) => ({
+    ...(cell.source !== undefined ? { source: cell.source } : {}),
+    ...(cell.subject !== undefined ? { subject: cell.subject } : {}),
+    ...(cell.unit !== undefined ? { unit: cell.unit } : {}),
+    ...(cell.observedAt !== undefined ? { observedAt: cell.observedAt } : {}),
+    ...(cell.note !== undefined ? { note: cell.note } : {}),
+  });
+  const byKey = (key: (cell: Record<string, unknown>) => unknown[]) => (a: Record<string, unknown>, b: Record<string, unknown>) => {
+    // A receipt must keep the same hash when the host's locale changes.
+    const left = JSON.stringify(key(a)), right = JSON.stringify(key(b));
+    return left < right ? -1 : left > right ? 1 : 0;
+  };
   const normalized = {
     sourceType, sourceLabel: input.sourceLabel ?? null,
     observationId: input.observationId ?? null, sourceVersion: input.sourceVersion ?? null,
@@ -54,18 +70,21 @@ export async function ingestExternalMetric(intent: IngestIntent): Promise<Handle
       // Omission never means erase the operator's existing objective.
       ...(m.target !== undefined ? { target: m.target } : {}),
       kpiActivityId: m.kpiActivityId ?? null,
-    })).sort((a, b) => {
-      // A receipt must keep the same hash when the host's locale changes.
-      const left = JSON.stringify([a.stage, a.metric, a.kpiActivityId]);
-      const right = JSON.stringify([b.stage, b.metric, b.kpiActivityId]);
-      return left < right ? -1 : left > right ? 1 : 0;
-    }),
+      ...cellProvenance(m),
+    })).sort(byKey((c) => [c.stage, c.metric, c.kpiActivityId])),
+    // Declared without a value: retained as such, never routed, never zero.
+    ...(input.unobserved !== undefined ? { unobserved: input.unobserved.map((m) => ({
+      metric: m.metric, state: m.state, ...(m.errorCode !== undefined ? { errorCode: m.errorCode } : {}), ...cellProvenance(m),
+    })).sort(byKey((c) => [c.source ?? null, c.metric, c.subject ?? null])) } : {}),
+    ...(input.sourceDigest !== undefined ? { sourceDigest: input.sourceDigest } : {}),
   };
   const payloadHash = createHash("sha256").update(JSON.stringify(normalized)).digest("hex");
 
   // The spine's emission lock closes before dispatch. It cannot dedup effects.
   return db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`external-metric:${strategyId}`}))`;
+    // An unknown brand used to surface as a foreign-key failure (HTTP 500).
+    if (!await tx.strategy.findUnique({ where: { id: strategyId }, select: { id: true } })) return refused("STRATEGY_NOT_FOUND");
     const outcome: IngestOutcome = {
       sourceType, period, aarrWritten: 0, kpiWritten: 0, skipped: [], signalId: "",
       observationId: normalized.observationId, sourceVersion: normalized.sourceVersion,
@@ -155,6 +174,7 @@ export async function ingestExternalMetric(intent: IngestIntent): Promise<Handle
       } }, select: { id: true },
     });
     outcome.signalId = signal.id;
-    return { status: "OK", summary: `Métriques ${sourceType} reçues (${period}) : ${outcome.aarrWritten} AARRR, ${outcome.kpiWritten} KPI activité, ${outcome.skipped.length} non écrite(s)`, output: outcome };
+    const absent = input.unobserved?.length ? `, ${input.unobserved.length} mesure(s) sans valeur conservée(s)` : "";
+    return { status: "OK", summary: `Métriques ${sourceType} reçues (${period}) : ${outcome.aarrWritten} AARRR, ${outcome.kpiWritten} KPI activité, ${outcome.skipped.length} non écrite(s)${absent}`, output: outcome };
   }, { maxWait: 10_000, timeout: 30_000 });
 }

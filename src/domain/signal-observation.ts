@@ -11,9 +11,20 @@ export function signalObservation(signal: { type: string; data: unknown }): { ti
   const observation = [data.content, data.thesis, data.brandImpact, data.recommendedAction]
     .map(text).filter(Boolean).join("\n\n");
   if (signal.type === "EXTERNAL_METRIC") {
+    // Cell provenance (source, observed object, own date) is shown when the producer sent it.
+    const cellOrigin = (cell: Record<string, unknown>) => {
+      const parts = [text(cell.source), text(cell.subject), text(cell.observedAt) ? `observée le ${text(cell.observedAt)}` : ""].filter(Boolean);
+      return parts.length ? ` — ${parts.join(" · ")}` : "";
+    };
+    const note = (cell: Record<string, unknown>) => text(cell.note) ? ` ${text(cell.note)}` : "";
     const cells = (Array.isArray(data.metrics) ? data.metrics : []).map(record)
       .filter((cell) => typeof cell.metric === "string" && typeof cell.value === "number" && Number.isFinite(cell.value))
-      .map((cell) => `${cell.metric} : ${cell.value}${typeof cell.target === "number" && Number.isFinite(cell.target) ? ` (objectif : ${cell.target})` : ""}.`);
+      .map((cell) => `${cell.metric} : ${cell.value}${typeof cell.target === "number" && Number.isFinite(cell.target) ? ` (objectif : ${cell.target})` : ""}${cellOrigin(cell)}.${note(cell)}`);
+    const ABSENCE: Record<string, string> = { NOT_PUBLISHED: "valeur non publiée", FAILED: "échec de la source", NOT_REQUESTED: "non demandée" };
+    // A declared measure without a value is rendered as such, never as zero.
+    const absences = (Array.isArray(data.unobserved) ? data.unobserved : []).map(record)
+      .filter((cell) => typeof cell.metric === "string" && typeof cell.state === "string" && cell.state in ABSENCE)
+      .map((cell) => `${cell.metric} : ${ABSENCE[cell.state as string]}${text(cell.errorCode) ? ` (${text(cell.errorCode)})` : ""}${cellOrigin(cell)}.${note(cell)}`);
     const date = metricObservationTime(data);
     const origin = text(data.sourceLabel) || text(data.sourceType) || "Source inconnue";
     const receipt = [
@@ -21,7 +32,9 @@ export function signalObservation(signal: { type: string; data: unknown }): { ti
       text(data.sourceVersion) ? `Version : ${text(data.sourceVersion)}.` : "Version de source inconnue.",
       date ? `Observation : ${date.toISOString()}.` : "Date d'observation inconnue.",
       text(data.observationId) ? `Référence : ${text(data.observationId)}.` : "Référence de source inconnue.",
+      ...(text(data.sourceDigest) ? [`Empreinte du reçu (SHA-256) : ${text(data.sourceDigest)}.`] : []),
       ...cells,
+      ...absences,
     ];
     return { title: title || `Mesures reçues · ${origin}`, observation: [observation, ...receipt].filter(Boolean).join("\n") };
   }
