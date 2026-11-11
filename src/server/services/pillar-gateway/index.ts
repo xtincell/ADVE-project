@@ -457,7 +457,11 @@ export async function writePillar(request: PillarWriteRequest, transaction?: Pri
       // ── VALIDATE: SHAPE gate (corruption structurelle uniquement) ──────────
       // Bloque un scalaire-là-où-conteneur (casse le rendu) sans toucher aux advisories
       // DRAFT. Couvre le runtime (CRUD/amend) que le gate seed ne voyait pas.
-      if (!restoration && options?.shapeGate) {
+      // S (ADR-0214 amendement 6.27.564) : tout écrivain de S — calcul, import de
+      // canon, édition partielle, complétion — persiste un contenu que le contrat
+      // unique sait classer (brouillon ou composé). Une corruption de forme n'est
+      // ni l'un ni l'autre : refusée pour tous les auteurs, quelle que soit l'option.
+      if (!restoration && (options?.shapeGate || pillarKey === "s")) {
         const { classifyPillarConformance } = await import("@/lib/types/pillar-conformance");
         const conf = classifyPillarConformance(
           pillarKey.toUpperCase() as Parameters<typeof classifyPillarConformance>[0],

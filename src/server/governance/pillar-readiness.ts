@@ -36,6 +36,7 @@
 import { db } from "@/lib/db";
 import { ADVE_KEYS, PILLAR_KEYS, PILLAR_STORAGE_KEYS, toCanonical, toStorage, type PillarKey, type PillarStorageKey } from "@/domain";
 import { validatePillarPartial, validatePillarContent } from "@/lib/types/pillar-schemas";
+import { STRICT_CONTENT_PILLARS } from "@/lib/types/pillar-maturity-contracts";
 import { assessPillar } from "@/server/services/pillar-maturity/assessor";
 import { getContracts } from "@/server/services/pillar-maturity/contracts-loader";
 import type { PillarAssessment, MaturityStage } from "@/lib/types/pillar-maturity";
@@ -64,6 +65,9 @@ export interface PillarReadiness {
   derivable: readonly string[];
   /** Among missing, those that require human input. */
   needsHuman: readonly string[];
+  /** Present paths refused by the pillar's strict schema (S — ADR-0214 amendment).
+   *  Non-empty ⇒ stage below ENRICHED and `ZOD_STRICT_FAILED` on the gates. */
+  invalid: readonly string[];
   /** Notoria-written cache value (canonical: derived from `stage`). */
   cacheLevel: "INCOMPLET" | "COMPLET" | "FULL";
   /** True iff the stored cache matches the canonical evaluator.
@@ -157,6 +161,7 @@ export function evaluatePillarReadiness(
         derivable: contract.stages.COMPLETE.filter((r) => r.derivable).map((r) => r.path),
         needsHuman: contract.stages.COMPLETE.filter((r) => !r.derivable).map((r) => r.path),
         optionalFillable: [],
+        invalid: [],
         completionPct: 0,
         readyForGlory: false,
       };
@@ -206,6 +211,11 @@ export function evaluatePillarReadiness(
       ? (["PILLAR_STALE_ADVISORY"] as const)
       : [];
 
+  // Strict-schema pillars (S): a present value refused by the schema caps the
+  // stage below ENRICHED (assessor) — the gates name that cause explicitly.
+  const strictReasons: readonly ReadinessReason[] =
+    assessment.invalid.length > 0 ? (["ZOD_STRICT_FAILED"] as const) : [];
+
   // ── Gate verdicts ──
   const gates: Record<ReadinessGate, GateVerdict> = {
     DISPLAY_AS_COMPLETE: verdict(
@@ -221,6 +231,7 @@ export function evaluatePillarReadiness(
         ...(strictDisplayBar && validationStatus === "DRAFT"
           ? (["VALIDATION_NOT_VALIDATED"] as const)
           : []),
+        ...strictReasons,
         ...staleReasonForBlockingGates,
       ],
     ),
@@ -232,6 +243,7 @@ export function evaluatePillarReadiness(
         ...(stage === "EMPTY" || stage === "INTAKE"
           ? (["STAGE_BELOW_ENRICHED"] as const)
           : []),
+        ...strictReasons,
         ...staleReasonForRefreshGates,
       ],
     ),
@@ -240,6 +252,7 @@ export function evaluatePillarReadiness(
       [
         ...(stage !== "COMPLETE" ? (["STAGE_BELOW_COMPLETE"] as const) : []),
         ...(validationStatus === "DRAFT" ? (["VALIDATION_NOT_VALIDATED"] as const) : []),
+        ...strictReasons,
         ...staleReasonForBlockingGates,
       ],
     ),
@@ -251,6 +264,7 @@ export function evaluatePillarReadiness(
         ...(stage === "EMPTY" || stage === "INTAKE"
           ? (["STAGE_BELOW_ENRICHED"] as const)
           : []),
+        ...strictReasons,
         ...staleReasonForRefreshGates,
       ],
     ),
@@ -274,6 +288,7 @@ export function evaluatePillarReadiness(
     missing: assessment.missing,
     derivable: assessment.derivable,
     needsHuman: assessment.needsHuman,
+    invalid: assessment.invalid,
     cacheLevel: canonicalCache,
     cacheConsistent,
     stale,
@@ -570,6 +585,14 @@ export function consistencyCheck(
     divergences.push(
       `canonical=COMPLETE but zod-partial only ${zodPartial.completionPercentage}%`,
     );
+  }
+
+  // Invariant 4 (ADR-0214 amendment): for a strict-schema pillar (S), a stage at
+  // or above ENRICHED — the composition contract — MUST pass the strict schema.
+  // This is the historical "COMPLETE/100 while the strict schema refuses" defect.
+  if (STRICT_CONTENT_PILLARS.has(toStorage(pillarKey))
+    && (canonical.stage === "ENRICHED" || canonical.stage === "COMPLETE") && !zodStrict.success) {
+    divergences.push(`canonical=${canonical.stage} but zod-strict refuses ${zodStrict.errors?.length ?? 0} path(s)`);
   }
 
   return {

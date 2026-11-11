@@ -259,6 +259,55 @@ const COMPLETE_OPTIONAL_BY_PILLAR: Record<string, Set<string>> = {
   s: new Set<string>(),
 };
 
+// ─── Contrat unique : maturité bornée par le schéma strict ───────────────────
+
+/**
+ * Piliers dont la maturité est BORNÉE par leur schéma strict (ADR-0214,
+ * amendement 6.27.564). Pour eux, la maturité, la composition relue et
+ * l'approbation lisent un seul contrat : le schéma Zod strict du pilier, en plus
+ * des exigences de présence par stade.
+ *
+ * Avant, la maturité de S ne vérifiait que la PRÉSENCE des champs : un S de forme
+ * historique (montant en texte, fréquence hors énumération, identifiant lisible à
+ * la place d'un UUID, quatre indicateurs pour cinq exigés…) était déclaré
+ * COMPLETE/100 alors que le schéma strict le refusait et que son approbation
+ * était impossible. Une seule source de vérité : `PILLAR_SCHEMAS`.
+ *
+ * Seul S y figure : c'est un tableau calculé (ADR-0088) dont le schéma décrit la
+ * forme produite par son unique calcul. Les piliers ADVE gardent leur tolérance
+ * documentée aux formes brouillon (ADR-0172) — les y ajouter est une décision
+ * distincte, avec sa propre reprise des données.
+ */
+export const STRICT_CONTENT_PILLARS: ReadonlySet<string> = new Set(["s"]);
+
+export interface StrictContentIssue {
+  /** Chemin exact refusé (`kpiDashboard.0.frequency`), tel que l'approbation le liste. */
+  path: string;
+  /** Clé de premier niveau — le grain des exigences de maturité. */
+  topKey: string;
+  /** Diagnostic Zod d'origine (code, bornes) pour un libellé lisible. */
+  issue: z.core.$ZodIssue;
+}
+
+/**
+ * Chemins d'un pilier refusés par son schéma strict. Vide hors `STRICT_CONTENT_PILLARS`.
+ * Lecture pure du contenu STOCKÉ : aucune normalisation implicite — une forme
+ * historique est listée telle quelle, jamais réécrite ni acceptée en silence.
+ * Sa reprise passe par le recalcul gouverné de S (version archivée, revue retirée).
+ */
+export function strictContentIssues(pillarKey: string, content: Record<string, unknown> | null): StrictContentIssue[] {
+  const key = pillarKey.toLowerCase();
+  if (!STRICT_CONTENT_PILLARS.has(key) || !content) return [];
+  const schema = PILLAR_SCHEMAS[key.toUpperCase() as keyof typeof PILLAR_SCHEMAS];
+  const parsed = schema.safeParse(content);
+  if (parsed.success) return [];
+  return parsed.error.issues.map((issue) => ({
+    path: issue.path.map(String).join("."),
+    topKey: String(issue.path[0] ?? ""),
+    issue,
+  }));
+}
+
 /**
  * Unwrap ZodOptional/ZodNullable/ZodDefault/ZodEffects/ZodPipe/ZodUnion to
  * reach the underlying schema. Zod 4 exposes constructor.name ("ZodOptional",

@@ -30,12 +30,14 @@ vi.mock("@/server/services/rtis-protocols/track", () => ({ executeProtocoleTrack
 vi.mock("@/server/services/rtis-protocols/innovation", () => ({ executeProtocoleInnovation: vi.fn(async () => ({ pillarKey: "i", content: {}, confidence: 0 })) }));
 import { db } from "@/lib/db";
 import { writePillar, type PillarWriteRequest } from "@/server/services/pillar-gateway";
-import { transitionPillarStatus } from "@/server/services/pillar-gateway/validation-status";
+import { transitionPillarStatus, inspectSynthesisForReview } from "@/server/services/pillar-gateway/validation-status";
+import { evaluatePillarReadiness } from "@/server/governance/pillar-readiness";
 import { pillarRouter } from "@/server/trpc/routers/pillar";
+import { strategyRouter } from "@/server/trpc/routers/strategy";
 import { resolveBrandSource } from "@/server/services/ingestion-pipeline/source-usage";
 import { ingestionRouter } from "@/server/trpc/routers/ingestion";
 import { propagateFromPillar } from "@/server/services/staleness-propagator";
-import { composedSynthesis } from "../fixtures/synthesis";
+import { composedSynthesis, completeSynthesis } from "../fixtures/synthesis";
 import { generateAndPersistRtisDraft } from "@/server/services/quick-intake/rtis-draft";
 import { executeNextStep, type OrchestrationPlan } from "@/server/services/mestor/hyperviseur";
 import { executeRTISCascade } from "@/server/services/rtis-protocols";
@@ -489,6 +491,50 @@ describe("the shared S writer conserves snapshots and human review", () => {
     expect(current.s.validationStatus).toBe(autoRecalculate ? "AI_PROPOSED" : "VALIDATED");
     expect(Boolean(current.s.staleAt)).toBe(autoRecalculate);
     expect(await db.process.count({ where: { strategyId: f.strategy.id } })).toBe(autoRecalculate ? 1 : 0);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("one S contract for writers, maturity and review (ADR-0214 amendment)", () => {
+  it("any writer, without opting in, cannot persist an S whose shape no contract level can classify", async () => {
+    const f = await fixture();
+    // Same operation as pillar.updatePartial: an operator MERGE_DEEP with no shape gate option.
+    const result = await writePillar(request(f, { axesStrategiques: "Axe saisi en texte libre" }, {
+      author: { system: "OPERATOR", reason: "Synthetic partial edit" }, options: { expectedVersion: 1 } }));
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("corruption structurelle");
+    expect((await read(f)).s).toEqual(f.s);
+    expect(await db.pillarVersion.count({ where: { pillarId: f.s.id } })).toBe(0);
+    // The actual partial-edit route reaches the same refusal, without a write
+    // (its governed post-condition turns the refused write into an error).
+    await expect(pillarRouter.createCaller(context()).updatePartial({ strategyId: f.strategy.id, key: "S",
+      content: { axesStrategiques: "Axe saisi en texte libre" } })).rejects.toThrow("write-succeeded");
+    expect((await read(f)).s).toEqual(f.s);
+  });
+  it("a draft the strict schema refuses is persisted as a draft: stored cache, maturity and review agree", async () => {
+    const f = await fixture({ content: { ...completeSynthesis(), _fieldProvenance: {} } });
+    const complete = await db.pillar.findUniqueOrThrow({ where: { id: f.s.id } });
+    expect(evaluatePillarReadiness(complete, "S")).toMatchObject({ stage: "COMPLETE", completionPct: 100 });
+    const result = await writePillar(request(f, { kpiDashboard: completeSynthesis().kpiDashboard.slice(0, 1) }));
+    expect(result.success, result.error).toBe(true);
+    const stored = (await read(f)).s;
+    expect(stored).toMatchObject({ currentVersion: 2, validationStatus: "AI_PROPOSED", completionLevel: "INCOMPLET" });
+    const readiness = evaluatePillarReadiness(stored, "S");
+    expect(readiness).toMatchObject({ stage: "INTAKE", cacheConsistent: true });
+    expect(readiness.invalid).toEqual(["kpiDashboard"]);
+    expect(readiness.completionPct).toBeLessThan(100);
+    expect(readiness.gates.DISPLAY_AS_COMPLETE.reasons).toContain("ZOD_STRICT_FAILED");
+    const review = await inspectSynthesisForReview(stored, db);
+    expect(review).toMatchObject({ composed: false, canValidate: false });
+    expect(review.missing).toContain("kpiDashboard");
+    // The routes the cockpit reads return the same single verdict.
+    const routedReadiness = (await pillarRouter.createCaller(context()).readiness({ strategyId: f.strategy.id })).byPillar.S;
+    expect(routedReadiness).toMatchObject({ stage: "INTAKE", invalid: ["kpiDashboard"], displayLabel: "Brouillon" });
+    const forge = await strategyRouter.createCaller(context()).getSynthesisConfidence({ strategyId: f.strategy.id });
+    expect(forge).toMatchObject({ composed: false, canValidate: false });
+    expect(forge.missing).toContain("kpiDashboard");
+    await expect(transitionPillarStatus({ strategyId: f.strategy.id, key: "s", targetStatus: "VALIDATED",
+      userId: owner, expectedVersion: 2 })).rejects.toThrow("La synthèse est incomplète");
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });

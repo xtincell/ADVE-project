@@ -89,6 +89,63 @@ Postmerge documentaire et parcours réels restent ouverts ; revue statique
 d’autres écrivains/consommateurs S bornée, sans couverture globale.
 Aucun verrou ni borne n’est affaibli, ADR Proposed conservé.
 
+## Amendement 6.27.564 — un contrat S unique (point F2 Shinkiro, 11 novembre 2026)
+
+**Désaccord reproduit sur `main` 6.27.562.** La maturité canonique de S
+(`pillar-maturity/assessor.ts:assessPillar`, contrat
+`pillar-maturity-contracts.ts:buildContracts`) ne vérifiait que la présence des
+champs ; le schéma strict (`pillar-schemas.ts:PillarSSchema`) était lu à part par
+`validation-status.ts:inspectSynthesis`. Une forme historique synthétique, toutes
+clés présentes, était COMPLETE/100 pour la maturité et refusée sur dix chemins
+par le schéma (identifiants non UUID, montant en texte, fréquence hors
+énumération, cardinalités, `pillarsLinked` à un seul pilier, route unique) ; un S
+courant à un seul indicateur pour cinq exigés, COMPLETE/100 aussi ; un S calculé
+à trois objectifs ou à un objectif trop long pour un critère court, ENRICHED
+(« Enrichi ») sans être composable. Le gateway persistait alors `COMPLET` dans
+le cache de complétude d’un S refusé. Le consommateur `sequence-vault` jugeait
+la maturité de S par sa confiance (≥ 0,3 / ≥ 0,6) : un S historique à 0,912
+ouvrait les séquences, un S calculé composé (confiance 0 par construction) les
+fermait. Lecture locale des quatre S de canon du dépôt : trois COMPLETE/100 et
+un ENRICHED/95, chacun refusé par le schéma sur 23 à 26 chemins (comptes
+seulement, contenus non repris dans les tests).
+
+**Décision.** Un seul contrat, le schéma strict, lu à trois niveaux :
+
+- *Admission* (tout écrivain de S, dans `pillar-gateway/index.ts`) : le gate de
+  forme existant s’applique à toute écriture de S, quelle que soit l’option de
+  l’appelant (import de canon, édition partielle, complétion). Un brouillon
+  incomplet reste admis ; une corruption de forme, qu’aucun niveau ne sait
+  classer, est refusée. Restauration exemptée comme avant.
+- *Composition* (`ENRICHED`) : `strictContentIssues` (contrats de maturité,
+  `STRICT_CONTENT_PILLARS = {s}`) borne le stade : un S que le schéma refuse
+  reste `INTAKE` (« Brouillon »), ses chemins refusés sont listés dans `invalid`,
+  `missing` et `needsHuman`, son pourcentage est plafonné sous 100. `readiness`
+  émet enfin la raison déclarée `ZOD_STRICT_FAILED` ; `consistencyCheck` gagne
+  l’invariant « stade composé ⇒ schéma accepté ». `inspectSynthesis` ne parse
+  plus de son côté : composé ⇔ stade ENRICHED ou COMPLETE.
+- *Complétude* (`COMPLETE`) : toutes les clés présentes et acceptées.
+
+Aucune normalisation implicite : le contenu stocké est lu tel quel. Le
+normaliseur d’ADR-0172 n’est pas utilisé pour ce verdict, car il transforme des
+identifiants lisibles en UUID qui ne désignent rien et extrait des nombres de
+textes qualitatifs ; les lecteurs, eux, lisent le contenu stocké, et un verdict
+sur une vue normalisée recréerait le désaccord. La reprise explicite et tracée
+d’une forme historique est le recalcul gouverné existant (`PROTOCOLE_S`,
+`REPLACE_FULL`, version archivée, revue retirée). L’auto-filler ne réécrit
+jamais une valeur présente refusée (`requirementsToFill`). Le score structurel
+reste gelé (ADR-0102) : `satisfied` est inchangé, seuls le stade, le
+pourcentage et les manques changent. `sequence-vault` lit la maturité de S par
+le contrat ; les autres piliers gardent leur règle. Seul S est concerné : les
+piliers ADVE gardent leur tolérance documentée aux brouillons (ADR-0172).
+
+**Conséquences.** Les S historiques ou incomplets cessent d’être annoncés
+complets ; leur cache stocké se réaligne à la prochaine écriture (d’ici là
+`cacheConsistent=false` les signale). Les séquences qui exigent S `ENRICHED`
+exigent un S composé. L’écrivain calculé produit un S composé quand ses
+sources sont complètes et un brouillon classé sinon, sans remplissage ni
+troncature (cinq indicateurs restent exigés). Réception : voir CHANGELOG
+6.27.564 ; aucune donnée réelle, CI, image ni production reçues par ce lot.
+
 [Réception courante et limites](../RECEPTION-VALIDATION-SYNTHESE.md) ·
 [reprise planifiée des consommateurs transverses](../RESIDUAL-DEBT.md).
 ADR Proposed ; aucune approbation SPAWT/FrieslandCampina, aucun coût fournisseur
