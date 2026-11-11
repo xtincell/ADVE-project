@@ -1,3 +1,12 @@
+## v6.27.571 — fix(démarrage): l'image 570 ne démarrait pas, le script de démarrage ne dépend plus de tRPC (2026-11-11)
+
+**La construction de l'image 6.27.570 a échoué à son test de démarrage (`Boot smoke-test`) : `public-brand-migration.cjs`, lancé par l'entrypoint, demandait `@trpc/server`, absent de l'image standalone. La production est restée en 6.27.569. La 571 retire cette dépendance et garde les refus typés de la 570.**
+
+- Cause : en 570, `ingestion-pipeline/source-usage.ts` construisait ses refus avec `TRPCError`. Ce module entre dans le graphe de `scripts/freeze-public-brands.ts`, que le Dockerfile bundle avec `--packages=external` : le `require("@trpc/server")` restait externe, et ce paquet n'est pas copié dans l'image (il est intégré aux bundles Next).
+- Correctif : `src/domain/typed-refusal.ts` définit `TypedRefusal` (code `BAD_REQUEST` / `FORBIDDEN` / `NOT_FOUND` / `CONFLICT`, message), sans dépendance. `sourceRefusal` le lève. Un middleware à la base de toutes les procédures (`src/server/trpc/init.ts`) le convertit en `TRPCError` du même code et du même message ; hors tRPC, c'est une `Error` dont le message est conservé (`SOURCE_CHANGED:` reste lisible). Réponses HTTP inchangées par rapport à la 570.
+- Garde : `tests/unit/governance/boot-script-packages.test.ts` rejoue le bundle du Dockerfile et refuse tout paquet demandé qui n'est pas présent dans l'image (`@prisma/adapter-pg`, `@prisma/client`, `sharp`, `zod`). Rouge sur `main` 570 (`@trpc/server`), vert après.
+- Vérification : `tests/unit/trpc/typed-refusal.test.ts` (code et message conservés à travers une procédure publique et une procédure authentifiée, erreur ordinaire toujours 500) rouge sans le middleware (2 sur 3) puis vert ; `document-versions` unitaire vert ; PostgreSQL sur base neuve 32/32 (`router-entity-not-found`, `source-uses`, `document-versions`, `document-representations`) ; typage 0, lint sans erreur ; gouvernance 1 750/177 sur trois passages (un premier passage avait montré 2 échecs, non reproduits ensuite). Image, démarrage et production 571 suivis séparément.
+
 ## v6.27.570 — fix(trpc): un id inconnu ou hors d’atteinte reçoit le même 404 dans tous les routeurs (2026-11-11)
 
 **Suite d’IN1 (557) : la classe « identifiant inconnu → 500 » est fermée dans les routeurs tRPC. Une lecture keyée par un identifiant d’entrée ne laisse plus remonter P2025 ni son message Prisma, et la réponse ne dit plus si l’identifiant existe chez un autre locataire.**

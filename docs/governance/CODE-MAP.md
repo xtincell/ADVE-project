@@ -56,7 +56,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 ---
 
-## Domain — 80 modules (src/domain, cœur métier pur)
+## Domain — 81 modules (src/domain, cœur métier pur)
 
 - **__tests__/pillars.test**
 - **argos-library** — SHK-0002 point 5 — lecture publique de la bibliothèque canonique Argos-studio.
@@ -137,6 +137,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **source-original**
 - **superfan-conditions** — Domain — Superfan à conditions strictes (ADR-0141).
 - **touchpoints** — src/domain/touchpoints.ts — Touchpoint families & AARRR pirate metrics.
+- **typed-refusal** — Refus métier typé, levé par un service sans dépendre de la couche tRPC.
 - **unit-economics**
 
 ---
