@@ -1,0 +1,100 @@
+{
+  "_note": "Bilan de campagne fictif, partagé par La Barre et La Fusée : la version 1 est arrêtée avant le compte des reprises (identique à bilan-campagne-v1.json), la version 2 après, et porte `reprises`. Les comptes sont ceux du relevé des écarts à l'arrêt, jamais un montant. L'empreinte se calcule pareil : SHA-256 du JSON canonique (clés triées, sans espace), sans les champs empreinte et attestation.",
+  "versions": [
+    {
+      "schema": "la-barre/bilan-campagne",
+      "schemaVersion": 1,
+      "id": "BIL-CMP-recette-noel",
+      "version": 1,
+      "arrete_le": "2026-11-11T09:00:00.000Z",
+      "campagne": {
+        "id": "CMP-recette-noel",
+        "nom": "Marque de recette — Noël 2026",
+        "regime": "ponctuelle",
+        "occasion": "noel",
+        "debut": "2026-11-15",
+        "fin": "2027-01-06"
+      },
+      "marques": [
+        {
+          "id": "MQ-recette",
+          "nom": "Marque de recette"
+        }
+      ],
+      "contenu": "Bilan de recette, sans donnée réelle : « l’affiche » a porté, le film non.",
+      "note": null,
+      "precedente": null,
+      "decision": "DEC-rec001",
+      "qui": "creation",
+      "acteur": {
+        "personneId": "P-recette",
+        "nom": "Personne de recette",
+        "poste": "creation",
+        "postes": [
+          "creation"
+        ]
+      },
+      "empreinte": "2b6b559b4bbb2c03c894f4f0551b6411cd57ae383aba47435cbc34b2249d9529"
+    },
+    {
+      "schema": "la-barre/bilan-campagne",
+      "schemaVersion": 1,
+      "id": "BIL-CMP-recette-noel",
+      "version": 2,
+      "arrete_le": "2026-11-13T09:00:00.000Z",
+      "campagne": {
+        "id": "CMP-recette-noel",
+        "nom": "Marque de recette — Noël 2026",
+        "regime": "ponctuelle",
+        "occasion": "noel",
+        "debut": "2026-11-15",
+        "fin": "2027-01-06"
+      },
+      "marques": [
+        {
+          "id": "MQ-recette",
+          "nom": "Marque de recette"
+        }
+      ],
+      "contenu": "Bilan de recette, sans donnée réelle : « l’affiche » a porté, le film non.\nLes reprises du relevé sont comptées à l’arrêt.",
+      "note": "Seconde lecture de recette, avec le compte des reprises.",
+      "reprises": {
+        "projets": 2,
+        "facturables": 2,
+        "chargeAgence": 3,
+        "nonQualifiees": 1,
+        "ecartes": 1,
+        "parOrigine": {
+          "brief": {
+            "facturable": false,
+            "n": 2
+          },
+          "agence": {
+            "facturable": false,
+            "n": 1
+          },
+          "donneur": {
+            "facturable": true,
+            "n": 2
+          },
+          "origine-de-recette": {
+            "facturable": null,
+            "n": 1
+          }
+        }
+      },
+      "precedente": "2b6b559b4bbb2c03c894f4f0551b6411cd57ae383aba47435cbc34b2249d9529",
+      "decision": "DEC-rec003",
+      "qui": "creation",
+      "acteur": {
+        "personneId": "P-recette",
+        "nom": "Personne de recette",
+        "poste": "creation",
+        "postes": [
+          "creation"
+        ]
+      },
+      "empreinte": "92c3bacd721a409c616b43cfcff25c60ce8e6ee8b06cc3d9bd5b99deb33e5618"
+    }
+  ]
+}

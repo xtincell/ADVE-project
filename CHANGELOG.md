@@ -1,3 +1,12 @@
+## v6.27.586 — fix(la-barre): le bilan de campagne peut porter le compte des reprises (2026-11-12)
+
+**Arbitrage du propriétaire du 12 novembre (programme Shinkiro, geste 4.8) : La Barre compte désormais, dans chaque version arrêtée du bilan de campagne, les reprises facturables au client et celles à la charge de l'agence (la-barre#27). La Fusée doit accepter ce champ avant que La Barre ne soit déployée, sinon une version arrêtée après ce changement serait refusée à la transmission.**
+
+- Le schéma strict du bilan reçu admet un champ facultatif `reprises` : projets, reprises facturables, à la charge de l'agence, non qualifiées, écarts écartés, et détail par origine (facturable vrai, faux ou non qualifié, nombre au moins 1). Forme stricte : pas de compte négatif, pas de clé inconnue, aucun montant.
+- Le champ est couvert par l'empreinte de La Barre : un compte modifié après l'arrêt est refusé comme une version altérée. Le calcul de l'empreinte ne change pas, et une version arrêtée avant reste acceptée telle quelle.
+- Jeu commun aux deux dépôts : `tests/fixtures/la-barre/bilan-campagne-reprises-v1.json`, copié de La Barre. Le test était rouge avant la modification du schéma.
+- Aucun modèle, migration, Intent, route ou écriture nouvelle : la version reçue reste rangée entière dans la source, comme avant.
+
 ## v6.27.584 — feat(audit): l'inventaire des formes ADVE se lance dans l'image de production (2026-11-12)
 
 **Suite de 6.27.583 (geste 4.11.k du programme Shinkiro).** L'inventaire en lecture seule des formes ADVE hors schéma strict ne se lançait qu'avec `tsx` et le dépôt complet, absents de l'image : la production ne pouvait pas être inventoriée sans accès à l'hôte.

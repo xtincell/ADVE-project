@@ -39,6 +39,39 @@ describe("contrat commun avec La Barre", () => {
     expect(() => canonicalJson({ a: undefined })).toThrow();
   });
 
+  it("accepte le compte des reprises facturables, additif et scellé dans l'empreinte (la-barre#27)", () => {
+    const shared = JSON.parse(readFileSync(join(__dirname, "../../fixtures/la-barre/bilan-campagne-reprises-v1.json"), "utf8")) as { versions: Review[] };
+    const [avant, apres] = shared.versions as [Review, Review];
+    expect(avant).not.toHaveProperty("reprises");
+    expect(apres).toHaveProperty("reprises");
+    for (const v of shared.versions) {
+      expect(barreCampaignReviewDigest(v)).toBe(v.empreinte);
+      expect(BarreCampaignReviewSchema.safeParse(v).success).toBe(true);
+    }
+    expect(apres.precedente).toBe(avant.empreinte);
+    const campagne = (avant.campagne as { id: string }).id;
+    const at = (...versions: Review[]) => ({ campagnes: [{ id: campagne, bilanVersions: versions }] });
+    const designe = (v: Review) => ({ campagneId: campagne, bilanId: v.id, version: v.version, empreinte: v.empreinte });
+    expect(locateBarreCampaignReview(at(avant, apres), designe(apres))).toEqual({ ok: true, review: apres });
+    // Un compte modifié après l'arrêt ne correspond plus à l'empreinte.
+    const gonfle = copy(apres) as Review & { reprises: { facturables: number } };
+    gonfle.reprises.facturables += 1;
+    expect(locateBarreCampaignReview(at(avant, gonfle), designe(apres))).toEqual({ ok: false, code: "REVIEW_DIGEST_INVALID" });
+    // Forme stricte : pas de compte négatif, pas de clé inconnue, pas d'origine vide.
+    const mauvais: Array<(r: Record<string, unknown>) => void> = [
+      (r) => { r.facturables = -1; },
+      (r) => { r.montant = 1200; },
+      (r) => { r.parOrigine = { donneur: { facturable: true, n: 0 } }; },
+      (r) => { r.parOrigine = { donneur: { facturable: "oui", n: 1 } }; },
+    ];
+    for (const change of mauvais) {
+      const v = copy(apres) as Review & { reprises: Record<string, unknown> };
+      change(v.reprises);
+      const sealed = reseal(v);
+      expect(locateBarreCampaignReview(at(avant, sealed), designe(sealed))).toEqual({ ok: false, code: "REVIEW_INVALID" });
+    }
+  });
+
   it("retrouve la version désignée et la vérifie de bout en bout", () => {
     expect(locateBarreCampaignReview(base(V1, V2), ask(V2))).toEqual({ ok: true, review: V2 });
     const altere = { ...copy(V2), contenu: V2.contenu + " ajout" };
