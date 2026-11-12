@@ -7,6 +7,16 @@
 - Correctif : longueur puis `Buffer.equals`, avec une contre-épreuve sur une copie dont le dernier octet change. Même correction sur un second cas de 4 Mo chiffrés (16,6 s → 0,8 s). Le cas passe en 2,1 s, le fichier entier en 5,1 s au lieu de 97,6 s ; mémoire maximale 262 Mo.
 - Le chemin produit prend environ 2 s seul, 7,7 à 10,3 s avec huit exécutions simultanées sur quatre processeurs, sans attente de verrou observée. Mesures locales, pas une capacité de production.
 - Aucun plafond relevé (120 s, 60 s, transaction `documentTags` 120 s) et aucun code produit modifié. Récidive consignée dans PATCHED-SYMPTOMS (première en 527).
+## v6.27.574 — fix(production): le compositeur n'appelle plus son outil avec des entrées vides (2026-11-12)
+
+**Point 4.11.a du programme Shinkiro. Le lancement d'un livrable appelait l'outil producteur avec un objet d'entrée vide : sur le visuel principal (`KV_VISUAL`), les 13 champs, concept et direction de couleur compris, arrivaient au moteur sous la mention « non disponible ».**
+
+- Contrat d'entrée (`src/domain/production-inputs.ts`, `deliverable-orchestrator/target-inputs.ts`) : pour les neuf livrables pris en charge, chaque champ de l'outil producteur est obligatoire ou facultatif, avec ses sources possibles — fiche de marque, brief du post, proposition créative validée, brief amont.
+- Aperçu : il liste les entrées obligatoires manquantes et les documents amont sans version active que rien ne peut produire automatiquement (le `CONCEPT` de l'annonce presse), qui jusqu'ici échouaient au milieu de la cascade après des appels payés.
+- Lancement : refusé avec le statut `MISSING_INPUTS` avant toute cascade et tout appel ; l'aperçu se relance une fois les informations ajoutées. Le moteur (`executeTool`, option `requiredInputs`) refuse aussi un champ obligatoire absent avant toute émission. Une entrée facultative absente n'est jamais inventée.
+- Écrans : l'atelier Production et le calendrier affichent les manques et bloquent le lancement ; un aperçu rouvert les recalcule. Les messages du compositeur parlent la langue du client et entrent dans le test de vocabulaire du cockpit.
+- 11 tests nouveaux, rouges puis verts ; suite unitaire complète 5 890 verte, PostgreSQL ciblé 15/15. Même Intent, même passerelle, aucun modèle, service ou Intent nouveau.
+- Restent ouverts (RESIDUAL-DEBT) : entrées des outils amont non déclarées ; épinglage des versions de DA et de texte, révision indépendante et autonomie par étape non commencés.
 ## v6.27.573 — fix(lint): la garde de couches ESLint refonctionne (2026-11-12)
 
 **Constat du lot 556 : la règle de couches `boundaries/dependencies` était inerte. Sans résolveur d'imports, ESLint ne reconnaissait ni les fichiers `.ts` ni l'alias `@/`, et laissait passer n'importe quel import entre couches. Elle refonctionne, en erreur.**

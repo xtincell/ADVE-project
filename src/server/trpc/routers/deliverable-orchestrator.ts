@@ -30,7 +30,7 @@ import { productionPins } from "@/domain/production-sources";
 import { calendarView, calendarPreparation, calendarProductionLaunch } from "@/domain/calendar-production";
 import { calendarProductionRows, prepareCalendarBriefRows, produceCalendarBrief, readCalendarBriefSource } from "@/server/services/deliverable-orchestrator/calendar-production";
 import { emitIntentTyped } from "@/server/services/mestor/intents";
-import { getCurrentProductionPreview, listProductionPassages } from "@/server/services/deliverable-orchestrator/production-sources";
+import { listProductionPassages } from "@/server/services/deliverable-orchestrator/production-sources";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { assertRawStrategyScope } from "../middleware/strategy-scope";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
@@ -44,6 +44,7 @@ import {
   isSupportedTargetKind,
   TargetNotForgeableError,
   ResolverCycleDetectedError,
+  getProductionPreviewState,
 } from "@/server/services/deliverable-orchestrator";
 import { emitIntent } from "@/server/services/mestor/intents";
 
@@ -167,7 +168,7 @@ export const deliverableOrchestratorRouter = createTRPCRouter({
 
   getProductionPreview: auditedProtected
     .input(z.object({strategyId: z.string().min(1), previewIntentId: z.string().min(1).max(180)}))
-    .query(({input}) => getCurrentProductionPreview(input.strategyId, input.previewIntentId)),
+    .query(({input}) => getProductionPreviewState(input.strategyId, input.previewIntentId)),
 
   compose: auditedProtected
     .input(

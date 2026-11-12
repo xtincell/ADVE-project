@@ -463,14 +463,33 @@ La modification ultérieure du lecteur imbriqué a trois tests de comportement
 verts. Sa compilation finale et sa relecture native sont reçues : 65 valeurs textuelles sur 65 présentes, HTTP 200, zéro 5xx et zéro exception.
 Le post éditorial SPAWT reste ouvert.
 
-**Manque précis.** Le compositeur recense les dépendances et appelle son outil
-cible avec un objet d’entrée vide. Le moteur générique peut remplacer un champ absent
-par « non disponible ». Pour une recette, l’étape doit résoudre chaque entrée
-obligatoire ou exposer le manque avant tout appel. Les entrées facultatives peuvent
-recevoir un postulat qualifié. Le manifeste doit fixer les versions de la DA et du
-texte, permettre une révision indépendante et relier les sorties à leurs sources
-jusqu’à la remise. Le candidat identifie déjà la tâche Ptah et l’exécution de séquence
-dans deux champs distincts.
+**Premier lot 4.11.a reçu localement (12 novembre 2026).** Le compositeur
+n’appelle plus son outil cible avec une entrée vide. Pour les neuf livrables cibles,
+chaque champ déclaré de l’outil producteur est classé obligatoire ou facultatif,
+avec ses origines admises : fiche de marque, brief du post, proposition créative
+validée ou brief amont (`target-inputs.ts`). L’aperçu liste les entrées obligatoires
+introuvables et les documents amont sans version active ni producteur. Le
+lancement refuse ces manques avant la réservation de l’aperçu, avec le statut
+`MISSING_INPUTS` et une liste typée. Aucune cascade ni aucun appel n’est alors lancé.
+Une entrée obligatoire issue d’un brief amont cite les versions exactes préparées ;
+leur texte intégral passe dans les sources de production. Le moteur refuse aussi,
+avant toute émission, un champ déclaré obligatoire et absent. Une entrée facultative
+absente n’est pas inventée : la consigne la signale absente, sans postulat.
+L’atelier Production affiche les manques et bloque le lancement.
+Contrôles reçus : 11 nouveaux tests rouges puis verts, 5 890 tests unitaires sur
+594 fichiers, 1 752 de gouvernance sur 177, PostgreSQL ciblé 15 sur 3, typage, lints
+sans erreur avec 25 avertissements préexistants, aucun cycle. Aucune recette native,
+production réelle ni livraison n’est reçue par ce lot.
+
+**Reste ouvert.** Les outils amont produits par la cascade reçoivent encore
+« non disponible » pour leurs champs absents : leur contrat d’entrée n’est pas déclaré.
+Le format cible reste facultatif hors brief du post, faute de saisie dans l’atelier.
+Les postulats qualifiés des entrées facultatives restent à concevoir. Le manifeste
+doit encore fixer les versions de la DA et du texte, permettre une révision
+indépendante et relier les sorties à leurs sources jusqu’à la remise. L’autonomie par
+étape et ses limites d’appels, de coût ou d’autorité ne sont pas commencées. Le
+candidat identifie déjà la tâche Ptah et l’exécution de séquence dans deux champs
+distincts.
 
 **Conduite à recevoir.** Proposer les réglages avec référence, version et raison.
 Conserver tout remplacement explicite au sein d’une nouvelle révision. Exercer le
