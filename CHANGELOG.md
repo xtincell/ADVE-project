@@ -1,3 +1,11 @@
+## v6.27.577 — fix(crm): une marque non évaluée n'est plus affichée à zéro (2026-11-12)
+
+**Tri des anciennes PR (arbitrage 5.14 du programme Shinkiro) : la PR #1150, encore juste, est remise à jour et livrée. Le CRM distinguait mal une marque jamais évaluée d'une marque notée zéro.**
+
+- La fiche client, la liste des clients et le tableau de bord de l'agence affichent « Non évalué » au lieu d'un 0/200 et d'un palier LATENT inventés. Un vrai zéro calculé reste affiché et compte dans la moyenne, qui ne retient que les marques évaluées.
+- Tri : le tableau partagé inversait tout son résultat en ordre décroissant, si bien qu'un client « Non évalué » passait devant tous les scores mesurés. Le sens s'applique désormais à la comparaison, et les valeurs absentes restent en bas dans les deux sens. Test `client-score-sort.test.ts` rouge en ordre décroissant avant, vert après.
+- PostgreSQL : `agency-score-presence.postgres.test.ts` ajouté à la suite de CI.
+
 ## v6.27.576 — fix(ventes): une transaction sérialisée attend avant d'être rejouée (2026-11-12)
 
 **Le test PostgreSQL des encaissements concurrents échouait par intermittence en CI (P2034, « could not serialize access »). `serialSalesTransaction` rejouait aussitôt une transaction annulée par PostgreSQL : deux transactions concurrentes se heurtaient de nouveau aux quatre essais et la seconde échouait.**

@@ -68,8 +68,11 @@ export function DataTable<T extends Record<string, unknown>>({
     const col = columns.find((c) => c.key === sortKey);
     if (!col) return data;
 
-    const sorted = [...data].sort((a, b) => {
-      if (col.sortFn) return col.sortFn(a, b);
+    // The direction applies to the comparison, not to the result: a missing
+    // value (never measured) stays after every present value in both orders.
+    const direction = sortDir === "desc" ? -1 : 1;
+    return [...data].sort((a, b) => {
+      if (col.sortFn) return direction * col.sortFn(a, b);
 
       const aVal = a[col.key];
       const bVal = b[col.key];
@@ -79,12 +82,10 @@ export function DataTable<T extends Record<string, unknown>>({
       if (bVal == null) return -1;
 
       if (typeof aVal === "number" && typeof bVal === "number") {
-        return aVal - bVal;
+        return direction * (aVal - bVal);
       }
-      return String(aVal).localeCompare(String(bVal), "fr");
+      return direction * String(aVal).localeCompare(String(bVal), "fr");
     });
-
-    return sortDir === "desc" ? sorted.reverse() : sorted;
   }, [data, sortKey, sortDir, columns]);
 
   // Pagination
