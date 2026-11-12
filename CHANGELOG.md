@@ -1,3 +1,11 @@
+## v6.27.579 — fix(canons): points de contact au bon contrat, deux nombres retirés au modèle (2026-11-12)
+
+**Tri des anciennes PR (arbitrage 5.14 du programme Shinkiro) : la PR #696 (V6 canons, V7 anti-fabrication), encore juste, est remise à jour sur main et livrée.**
+
+- Les canons de démonstration SPAWT et Motion19 décrivent leurs points de contact dans la forme du contrat (nature, canal, rôle, étape AARRR). Leur score Engagement devient juste ; le niveau de dévotion reste à déclarer par l'équipe. L'application SPAWT pointe vers le canal `APP`, non plus `WEBSITE`.
+- Deux nombres ne passent plus par le modèle : le taux de rotation interne du personnel (`turnoverRate`) attend une saisie humaine, et le total d'actions du catalogue (`totalActions`) est calculé. Un verrou échoue si l'un des deux sort du contrat ou si `totalActions` n'est plus marqué « calcul ».
+- Un score issu de l'intake (/100) se distingue désormais d'un score canon (/200).
+
 ## v6.27.576 — fix(ventes): une transaction sérialisée attend avant d'être rejouée (2026-11-12)
 
 **Le test PostgreSQL des encaissements concurrents échouait par intermittence en CI (P2034, « could not serialize access »). `serialSalesTransaction` rejouait aussitôt une transaction annulée par PostgreSQL : deux transactions concurrentes se heurtaient de nouveau aux quatre essais et la seconde échouait.**
