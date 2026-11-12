@@ -710,23 +710,60 @@ ne prouvent ni 35 sections actuelles ni une livraison Oracle/MVP globale.
 **Devis et fournisseur** : remplacement de l’estimation sur la responsabilité
 réellement couverte reste à recevoir selon ADR0228 §§5–6. La ventilation estimée537
 ne clôt pas ce volet. **Taxonomies legacy** : finition via lexique existant avant
-Oracle global. Les dettes de capacité sous charge ci-dessous restent distinctes.
+Oracle global. Les dettes de capacité sous charge restent distinctes (grand document
+fermé par profilage ci-dessous ; transaction lente sous charge du lot financier521).
 Données, montants et preuves de marque privés hors checkout.
 [ADR-0235 Proposed](adr/0235-strategy-planning-premises-and-projections.md).
 
-## Performance — marge faible sur grand document, toujours ouverte
+## Performance — marge faible sur grand document : profilée et fermée (4.11.l, 12 novembre 2026)
 
-**Faible marge sur grand document** : passage antérieur isolé en111,86 s sous le
-plafond120 s, puis timeout du candidat535. Reprise ciblée536 : 16/1 verts en60,9 s
-après redémarrage de la base locale éteinte ; aucun plafond augmenté. Ces passages
-ne reçoivent pas la capacité sous charge. **Fermer** par profilage borné
-du cas conservé : durée par étape de lecture/désérialisation, scellement/empreinte,
-écriture/transaction et contention base/CPU/IO ; comparer un passage isolé puis
-une concurrence contrôlée, conserver taille et invariants, sans relever une limite
-pour masquer le coût. Responsable Core/admission et infrastructure existants ;
-effort : une passe de profilage ciblée ; **déclencheur** après livraison du gros
-œuvre fonctionnel, avant toute réception de capacité sous charge ou engagement
-de latence. La reprise verte ne ferme ni cette dette ni la contention VPS déjà tracée.
+**Historique conservé** : passage isolé en 111,86 s sous le plafond de 120 s, puis
+timeout du candidat 535 ; reprise 536 en 60,9 s. Le cas conservé est
+`tests/integration/asset-original.postgres.test.ts`, « reads a large chunked
+document… » : 12 582 949 octets (trois fragments de 4 Mio + 37 octets), dépôt
+fragmenté, deux classements documentaires concurrents, relecture par la route.
+
+**Profil par étape** : `LARGE_DOCUMENT_PROFILE_OUT=<fichier.json>` active
+`tests/fixtures/step-profile.ts` (durée par étape, CPU du processus, pauses GC,
+pic de tas) ; sans cette variable, tout reste un simple passage, sans espion.
+Mesures locales seulement : 4 vCPU, 15 Gio, PostgreSQL 16.15 local, Node 22.23.4,
+tas par défaut 2 096 Mio. Ce ne sont ni des SLO ni une capacité de production.
+
+- **Avant, isolé, tas par défaut** : le worker s’arrête, tas épuisé à 2 048 Mio ;
+  le cas n’aboutit pas.
+- **Avant, isolé, tas de 8 Gio** : 81,1 s, dont 78,8 s pour la seule comparaison
+  des octets servis, avec 55,5 s de GC et un pic de tas de 3,86 Gio. Fichier entier :
+  17/17 en 97,6 s, dont 78,3 s pour ce cas et 16,6 s pour la reprise de fragments.
+- **Avant, deux processus concurrents (8 Gio chacun)** : 93,6 s et 91,0 s, dont
+  91,0 s et 88,1 s de comparaison.
+- **Chemin produit mesuré dans ce même passage** : ouverture du transfert 0,23 s,
+  quatre fragments 0,47 s, fin du transfert 0,07 s, paire de classements
+  concurrents 1,0 s, route et corps 0,28 s ; lecture et déchiffrement 0,41 s
+  sur 29 appels, empreintes de source 0,13 s (deux), scellement des journaux
+  0,19 s, 18 transactions pour 2,0 s cumulées.
+
+**Coût dominant** : l’assertion du test, pas le stockage ni la base. Le
+`toEqual` structurel de Vitest parcourait les 12,6 millions d’index du Buffer servi,
+soit 97 % du temps et l’essentiel du tas. Même cause que le comparateur du test
+unitaire de 527 (PATCHED-SYMPTOMS). Correctif côté test : longueur puis
+`Buffer.equals`, avec une contre-épreuve à un octet modifié qui doit échouer ; même
+comparaison native pour le chiffré de 4 Mio de la reprise de fragments. Octets,
+empreintes, reçus et assertions de base sont conservés. Aucun plafond n’est relevé :
+120 s pour le test, 60 s pour les transactions de dépôt et 120 s pour `documentTags`
+restent inchangés. Le code produit n’est pas modifié.
+
+- **Après, isolé, tas par défaut** : 2,1 s, 0,11 s de GC, pic de tas de 262 Mio ;
+  comparaison 14 ms. Fichier entier 17/17 en 5,1 s.
+- **Après, concurrence contrôlée du même cas** : deux processus 1,8 s chacun ;
+  quatre 4,9 à 6,0 s ; huit, soit deux fois les vCPU, 7,7 à 10,3 s. La hausse suit
+  la surcharge CPU, sans signe d’attente de verrou entre marques distinctes.
+
+Pistes produit chiffrées et volontairement non retenues : deux empreintes du texte
+de 12 Mo dans la transaction d’écriture (environ 70 ms chacune) et relectures de
+vérification après écriture. Elles portent la garde de version et l’intégrité ;
+leur gain resterait marginal. La capacité sous charge en production, la latence
+CI et la contention VPS restent des réceptions distinctes, déjà tracées ailleurs.
+Prochaine observation : la durée de ce cas dans la CI de la branche.
 
 ## 530 — réception ciblée puis chaîne entière encore ouvertes (2026-11-02)
 

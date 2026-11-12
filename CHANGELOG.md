@@ -6,6 +6,24 @@
 - Tri : le tableau partagé inversait tout son résultat en ordre décroissant, si bien qu'un client « Non évalué » passait devant tous les scores mesurés. Le sens s'applique désormais à la comparaison, et les valeurs absentes restent en bas dans les deux sens. Test `client-score-sort.test.ts` rouge en ordre décroissant avant, vert après.
 - PostgreSQL : `agency-score-presence.postgres.test.ts` ajouté à la suite de CI.
 
+## v6.27.576 — fix(ventes): une transaction sérialisée attend avant d'être rejouée (2026-11-12)
+
+**Le test PostgreSQL des encaissements concurrents échouait par intermittence en CI (P2034, « could not serialize access »). `serialSalesTransaction` rejouait aussitôt une transaction annulée par PostgreSQL : deux transactions concurrentes se heurtaient de nouveau aux quatre essais et la seconde échouait.**
+
+- Cause : aucune attente entre deux essais. Les transactions concurrentes relancées au même instant reproduisent le même conflit de lecture/écriture.
+- Correctif (`src/server/services/crm-engine/transaction.ts`) : attente croissante avant chaque rejeu, 20, 40 puis 80 ms, plus un décalage aléatoire de 0 à 25 ms qui sépare les transactions. Mêmes erreurs rejouables, même limite de quatre tentatives ; une erreur qui n'est pas un retour en arrière confirmé n'est toujours jamais rejouée.
+- Tests : `tests/unit/services/crm-engine-serial-transaction.test.ts`, trois cas. « attend avant de rejouer » était rouge avant le correctif (rejeu immédiat), vert après ; limite de tentatives et refus de rejouer une autre erreur verts avant et après.
+- Constat sur la PR #1190 (production), dont le diff ne touche pas les ventes : `sales-payments.postgres.test.ts` « allocates one external receipt per destination and currency under concurrent competing deals » rouge une fois. Aucun test assoupli.
+
+## v6.27.575 — test(documents): le grand document passe en 2 s, la lenteur venait du test (2026-11-12)
+
+**Point 4.11.l du programme Shinkiro. Le test du grand document tournait en 112 s sous un plafond de 120 s. Profilé étape par étape, le coût venait du test lui-même, pas du produit.**
+
+- Relevé activable par `LARGE_DOCUMENT_PROFILE_OUT=<fichier.json>` (`tests/fixtures/step-profile.ts`) : durée par étape, CPU, ramasse-miettes, mémoire maximale ; inactif sinon.
+- Cause : la comparaison finale des 12 582 949 octets avec `toEqual` parcourait chaque index et occupait 97 % des 81 s, avec 3,9 Go de mémoire ; sous la limite par défaut de 2 Go, le test ne finissait pas.
+- Correctif : longueur puis `Buffer.equals`, avec une contre-épreuve sur une copie dont le dernier octet change. Même correction sur un second cas de 4 Mo chiffrés (16,6 s → 0,8 s). Le cas passe en 2,1 s, le fichier entier en 5,1 s au lieu de 97,6 s ; mémoire maximale 262 Mo.
+- Le chemin produit prend environ 2 s seul, 7,7 à 10,3 s avec huit exécutions simultanées sur quatre processeurs, sans attente de verrou observée. Mesures locales, pas une capacité de production.
+- Aucun plafond relevé (120 s, 60 s, transaction `documentTags` 120 s) et aucun code produit modifié. Récidive consignée dans PATCHED-SYMPTOMS (première en 527).
 ## v6.27.574 — fix(production): le compositeur n'appelle plus son outil avec des entrées vides (2026-11-12)
 
 **Point 4.11.a du programme Shinkiro. Le lancement d'un livrable appelait l'outil producteur avec un objet d'entrée vide : sur le visuel principal (`KV_VISUAL`), les 13 champs, concept et direction de couleur compris, arrivaient au moteur sous la mention « non disponible ».**

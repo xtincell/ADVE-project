@@ -13,8 +13,18 @@ export async function serialSalesTransaction<T>(run: (tx: Prisma.TransactionClie
       const nested = error.meta?.driverAdapterError;
       const nestedRawRollback = error.code === "P2010" && nested?.name === "DriverAdapterError" &&
         nested.cause?.kind === "TransactionWriteConflict" && nested.cause.originalCode === "40001";
-      if (attempt < 3 && (["P2034", "P2002"].includes(error.code ?? "") || adapterConflict || rawSerializationRollback || nestedRawRollback)) continue;
+      if (attempt < 3 && (["P2034", "P2002"].includes(error.code ?? "") || adapterConflict || rawSerializationRollback || nestedRawRollback)) {
+        // Rejouer aussitôt fait se heurter de nouveau les mêmes transactions concurrentes :
+        // une attente croissante et décalée au hasard les sépare.
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs(attempt)));
+        continue;
+      }
       throw cause;
     }
   }
+}
+
+/** Attente avant le rejeu n° attempt+1 : 20, 40 puis 80 ms, plus un décalage aléatoire de 0 à 25 ms. */
+function retryDelayMs(attempt: number): number {
+  return 20 * 2 ** attempt + Math.floor(Math.random() * 25);
 }

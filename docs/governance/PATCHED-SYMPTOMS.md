@@ -28,6 +28,12 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 4.11.l — comparateur structurel sur grand Buffer, deuxième occurrence (2026-11-12)
+
+Symptôme : `tests/integration/asset-original.postgres.test.ts` comparait par `toEqual` les 12 582 949 octets servis par la route d’original et le chiffré de 4 Mio d’un fragment rejoué. En local, ce test mettait 81,1 s avec un tas de 8 Gio, dont 78,8 s et 55,5 s de GC pour la seule comparaison. Avec le tas par défaut de 2 Gio, le worker s’arrêtait, tas épuisé. Patch : longueur puis `Buffer.equals`, plus une contre-épreuve à un octet modifié. Le cas passe en 2,1 s et le fichier 17/17 en 5,1 s ; le code produit, les invariants et les plafonds sont inchangés. Mesures et profil par étape : RESIDUAL-DEBT, section « Performance — marge faible sur grand document ».
+
+Hypothèse de cause racine : l’égalité structurelle de Vitest parcourt chaque index d’un Buffer. Ce coût était déjà corrigé en 527 dans `chunked-original-store.test.ts`, mais ce n’est pas une règle. Les autres usages relevés restent petits : 256 Ko dans `private-media-atomic-write.test.ts` (0,55 s), quelques centaines d’octets ailleurs. Dette liée : aucune ; une troisième occurrence justifierait une garde statique contre `toEqual` sur des Buffers d’un mégaoctet ou plus.
+
 ### 4.11.d — restitution intake : nom de modèle et nombre de paliers faux (2026-11-12)
 
 Symptôme : en traitant les chiffres non sourcés, deux défauts voisins rendus au prospect. Le badge de la recommandation affichait le nom du modèle (`intakeResult.reco.badge`, FR/EN/ZH) ; l’écran d’attente annonçait « 7 paliers » alors que `BRAND_TIERS` en compte six. Badge reformulé « Analyse assistée », compte corrigé à 6.

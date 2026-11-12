@@ -26,6 +26,12 @@ import { GET } from "@/app/api/brand-assets/[assetId]/original/route";
 import { GET as publicFile } from "@/app/brand/editions/[editionId]/[file]/route";
 import { GET as productionImage } from "@/app/api/production/image/[id]/route";
 import { GET as sourceFile } from "@/app/api/brand-sources/[sourceId]/original/route";
+import * as encryptedStore from "@/lib/encrypted-media-store";
+import * as chunkStore from "@/lib/chunked-original-store";
+import * as sourceUsage from "@/server/services/ingestion-pipeline/source-usage";
+import * as documentVersions from "@/server/services/ingestion-pipeline/document-versions";
+import * as spine from "@/server/governance/emission-spine";
+import { createStepProfile } from "../fixtures/step-profile";
 
 vi.setConfig({ testTimeout: 120_000, hookTimeout: 60_000 });
 
@@ -254,7 +260,8 @@ describe.sequential("private asset originals through the existing vault", () => 
     const upload = await db.fileUpload.findFirstOrThrow({ where: { entityType: "BRAND_ASSET", entityId: a.id } });
     const receipt = assetChunkedReceiptSchema.parse(upload.storageReceipt), firstKey = receipt.chunks[0]!.objectKey;
     const firstCipher = await readFile(join(root, firstKey + ".enc"));
-    await caller().transfer(partInput(0)); expect(await readFile(join(root, firstKey + ".enc"))).toEqual(firstCipher);
+    // Exact bytes compared natively: structural toEqual walks every Buffer index (RESIDUAL-DEBT, grand document).
+    await caller().transfer(partInput(0)); expect((await readFile(join(root, firstKey + ".enc"))).equals(firstCipher)).toBe(true);
     await expect(caller().transfer({ ...partInput(0), transfer: { ...partInput(0).transfer,
       content: Buffer.alloc(ORIGINAL_CHUNK_BYTES, 42).toString("base64") } })).rejects.toThrow("changé");
     // Recheck the database's current grant on each part, even with the old session.
@@ -301,37 +308,60 @@ describe.sequential("private asset originals through the existing vault", () => 
 
 describe.sequential("documentary uses of already retained originals", () => {
   it("reads a large chunked document, replays concurrently and retains the same encrypted objects", async () => {
+    // LARGE_DOCUMENT_PROFILE_OUT=<file.json> writes per-step timings; unset, every helper is a passthrough.
+    const profile = createStepProfile(process.env.LARGE_DOCUMENT_PROFILE_OUT), step = profile.time;
     const s = await brand(), bytes = Buffer.alloc(ORIGINAL_CHUNK_BYTES * 3 + 37, 65);
-    const digest = createHash("sha256").update(bytes).digest("hex");
-    const start = await caller().transfer({ strategyId: s.id, transfer: { action: "BEGIN", name: "Large fictional document",
-      fileName: "fixture.txt", mimeType: "text/plain", contentHash: digest, byteLength: bytes.length, type: "DOCUMENT" } });
-    for (let index = 0; index < start.partCount; index++) await caller().transfer({ strategyId: s.id, transfer: {
-      action: "PART", assetId: start.assetId, index, content: bytes.subarray(index * ORIGINAL_CHUNK_BYTES, (index + 1) * ORIGINAL_CHUNK_BYTES).toString("base64"),
-    } });
-    await caller().transfer({ strategyId: s.id, transfer: { action: "FINISH", assetId: start.assetId, autoTag: false } });
-    const original = await db.fileUpload.findFirstOrThrow({ where: { entityType: "BRAND_ASSET", entityId: start.assetId } });
-    const files = (await readdir(root)).sort(), before = await db.brandAsset.findUniqueOrThrow({ where: { id: start.assetId } });
-    const [received, replay] = await Promise.all([documentCaller().uploadFile(storedDocument(s.id, start.assetId, bytes)), documentCaller().uploadFile(storedDocument(s.id, start.assetId, bytes))]);
-    expect(received.sourceId).toBe(replay.sourceId);
-    const source = await db.brandDataSource.findUniqueOrThrow({ where: { id: received.sourceId } });
-    const use = await db.fileUpload.findUniqueOrThrow({ where: { sourceId: source.id } });
-    expect(use.id).not.toBe(original.id); // Another documentary use, the same physical original.
-    expect(use.storageReceipt).toEqual(original.storageReceipt);
-    expect((await readdir(root)).sort()).toEqual(files);
-    expect(await db.fileUpload.findUniqueOrThrow({ where: { id: original.id } })).toEqual(original);
-    expect(await db.brandAsset.findUniqueOrThrow({ where: { id: before.id } })).toEqual(before);
-    expect(await db.brandDataSource.count({ where: { strategyId: s.id } })).toBe(1);
-    expect(source.rawContent).toBe(bytes.toString()); expect(documentEdition(source.rawData)).toMatchObject(edition("v1"));
-    expect(await db.aICostLog.count({ where: { strategyId: s.id } })).toBe(0);
-    expect(await db.brandContextNode.count({ where: { strategyId: s.id } })).toBe(0);
-    vi.mocked(auth).mockResolvedValue({ user: { id: users[0]! } } as never);
-    const response = await sourceFile(new Request("http://localhost/api/brand-sources/" + source.id + "/original"), { params: Promise.resolve({ sourceId: source.id }) });
-    expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("private, no-store");
-    expect(response.headers.get("x-content-sha256")).toBe(digest); expect(Buffer.from(await response.arrayBuffer())).toEqual(bytes);
-    vi.mocked(auth).mockResolvedValue({ user: { id: users[1]! } } as never);
-    expect((await sourceFile(new Request("http://localhost/api/brand-sources/" + source.id + "/original"), { params: Promise.resolve({ sourceId: source.id }) })).status).toBe(404);
-    const payloads = await db.intentEmission.findMany({ where: { strategyId: s.id, intentKind: "LEGACY_INGESTION_UPLOAD_FILE" }, select: { payload: true } });
-    expect(payloads).toHaveLength(2); expect(JSON.stringify(payloads)).not.toContain(bytes.subarray(0, 100).toString("base64"));
+    profile.wrap(encryptedStore, "getEncryptedMedia", "store.readDecrypt");
+    profile.wrap(encryptedStore, "putEncryptedMedia", "store.encryptWrite");
+    profile.wrap(chunkStore, "retainOriginalChunk", "store.retainChunk");
+    profile.wrap(chunkStore, "sealOriginalChunks", "store.sealManifest");
+    profile.wrap(extractors, "extractReceivedFile", "document.extract");
+    profile.wrap(sourceUsage, "sourceFingerprint", "document.fingerprint");
+    profile.wrap(documentVersions, "registerDocumentEdition", "document.registerEdition");
+    profile.wrap(spine, "openEmission", "emission.open");
+    profile.wrap(spine, "closeEmission", "emission.close");
+    if (profile.enabled) profile.wrap((globalThis as { prisma?: object }).prisma!, "$transaction", "db.transaction");
+    profile.start();
+    try {
+      const digest = await step("test.hashFixture", () => createHash("sha256").update(bytes).digest("hex"));
+      const start = await step("transfer.begin", () => caller().transfer({ strategyId: s.id, transfer: { action: "BEGIN", name: "Large fictional document",
+        fileName: "fixture.txt", mimeType: "text/plain", contentHash: digest, byteLength: bytes.length, type: "DOCUMENT" } }));
+      for (let index = 0; index < start.partCount; index++) await step("transfer.part", () => caller().transfer({ strategyId: s.id, transfer: {
+        action: "PART", assetId: start.assetId, index, content: bytes.subarray(index * ORIGINAL_CHUNK_BYTES, (index + 1) * ORIGINAL_CHUNK_BYTES).toString("base64"),
+      } }));
+      await step("transfer.finish", () => caller().transfer({ strategyId: s.id, transfer: { action: "FINISH", assetId: start.assetId, autoTag: false } }));
+      const original = await db.fileUpload.findFirstOrThrow({ where: { entityType: "BRAND_ASSET", entityId: start.assetId } });
+      const files = (await readdir(root)).sort(), before = await db.brandAsset.findUniqueOrThrow({ where: { id: start.assetId } });
+      const [received, replay] = await step("document.uploadConcurrentPair", () => Promise.all([documentCaller().uploadFile(storedDocument(s.id, start.assetId, bytes)), documentCaller().uploadFile(storedDocument(s.id, start.assetId, bytes))]));
+      expect(received.sourceId).toBe(replay.sourceId);
+      const source = await step("check.readSourceRow", () => db.brandDataSource.findUniqueOrThrow({ where: { id: received.sourceId } }));
+      const use = await db.fileUpload.findUniqueOrThrow({ where: { sourceId: source.id } });
+      expect(use.id).not.toBe(original.id); // Another documentary use, the same physical original.
+      expect(use.storageReceipt).toEqual(original.storageReceipt);
+      expect((await readdir(root)).sort()).toEqual(files);
+      expect(await db.fileUpload.findUniqueOrThrow({ where: { id: original.id } })).toEqual(original);
+      expect(await db.brandAsset.findUniqueOrThrow({ where: { id: before.id } })).toEqual(before);
+      expect(await db.brandDataSource.count({ where: { strategyId: s.id } })).toBe(1);
+      expect(source.rawContent).toBe(bytes.toString()); expect(documentEdition(source.rawData)).toMatchObject(edition("v1"));
+      expect(await db.aICostLog.count({ where: { strategyId: s.id } })).toBe(0);
+      expect(await db.brandContextNode.count({ where: { strategyId: s.id } })).toBe(0);
+      vi.mocked(auth).mockResolvedValue({ user: { id: users[0]! } } as never);
+      const response = await step("read.route", () => sourceFile(new Request("http://localhost/api/brand-sources/" + source.id + "/original"), { params: Promise.resolve({ sourceId: source.id }) }));
+      expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("private, no-store");
+      const served = await step("read.body", async () => Buffer.from(await response.arrayBuffer()));
+      expect(response.headers.get("x-content-sha256")).toBe(digest);
+      // Exact bytes compared natively, length first: structural toEqual enumerated
+      // twelve million Buffer indexes and dominated this case (RESIDUAL-DEBT).
+      await step("check.servedBytes", () => {
+        expect(served.length).toBe(bytes.length); expect(served.equals(bytes)).toBe(true);
+        const lastByteChanged = Buffer.from(bytes); lastByteChanged[lastByteChanged.length - 1]! ^= 1;
+        expect(served.equals(lastByteChanged)).toBe(false); // The native comparison still discriminates one byte.
+      });
+      vi.mocked(auth).mockResolvedValue({ user: { id: users[1]! } } as never);
+      expect((await sourceFile(new Request("http://localhost/api/brand-sources/" + source.id + "/original"), { params: Promise.resolve({ sourceId: source.id }) })).status).toBe(404);
+      const payloads = await db.intentEmission.findMany({ where: { strategyId: s.id, intentKind: "LEGACY_INGESTION_UPLOAD_FILE" }, select: { payload: true } });
+      expect(payloads).toHaveLength(2); expect(JSON.stringify(payloads)).not.toContain(bytes.subarray(0, 100).toString("base64"));
+    } finally { profile.stop({ case: "large chunked document", byteLength: bytes.length }); }
   });
 
   it("refuses a changed documentary decision on replay", async () => {
