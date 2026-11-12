@@ -1,4 +1,4 @@
-## 553 — Playbook d’engagement et calendrier de référence
+## 578 — Playbook d’engagement et calendrier de référence
 
 Le parcours de relecture exploite les pièces de référence du dossier. Le calendrier distingue les sujets du plan et les occurrences dont la programmation a été documentée. L’acceptation de l’édition reste une décision humaine. La réception métier de la nouvelle édition en production constitue le prochain jalon.
 

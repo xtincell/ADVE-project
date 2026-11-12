@@ -355,9 +355,9 @@ Les reprises propres à chaque défaut restent dans leurs sections : Session et 
 courant (C7), Calculateur CODB legacy, préflight `generateAiFollowUps`, Mesure
 mobile Lighthouse et Honnêteté du livrable Oracle.
 
-## 553 — recevoir la nouvelle édition du Playbook
+## 578 — recevoir la nouvelle édition du Playbook
 
-La relecture de la version 550 de SPAWT a retrouvé sept sections Luna et deux compositions déterministes. Des CTA de prélancement et un domaine déduit du pays rendaient le résultat impropre à l’acceptation. La version 553 corrige le contexte, les liens et le planning en local. Contrôler les neuf sections d’une nouvelle exécution en production avec les pièces courantes. L’équipe décidera ensuite de son acceptation avant Devotion Ladder.
+La relecture de la version 550 de SPAWT a retrouvé sept sections Luna et deux compositions déterministes. Des CTA de prélancement et un domaine déduit du pays rendaient le résultat impropre à l’acceptation. La version 578 corrige le contexte, les liens et le planning en local. Contrôler les neuf sections d’une nouvelle exécution en production avec les pièces courantes. L’équipe décidera ensuite de son acceptation avant Devotion Ladder.
 
 ## 552 — couverture des critères et réception de l’article
 
