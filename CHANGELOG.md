@@ -1,3 +1,10 @@
+## v6.27.583 — fix(adve): un enum absent est un champ manquant pour le classificateur du gate (2026-11-12)
+
+**Croisé en préparant l'inventaire des formes ADVE (point 4.11.k du programme Shinkiro) : un champ énuméré absent n'est plus présenté comme une valeur à traduire.**
+
+- `classifyConformanceError` rangeait tout code `invalid_value` parmi les valeurs hors énumération. Zod 4 émet aussi ce code pour un enum absent (`valeurs[0].value` manquant à côté de `valeur`) ; c'est désormais un champ manquant, comme pour `invalid_type` et `invalid_union`. 65 chemins des canons du dépôt étaient mal classés.
+- Le gate ne bloque toujours que les corruptions de forme : son comportement ne change pas. Aucun modèle, migration, Intent, route ou ADR.
+
 ## v6.27.582 — fix(argos): projection vers le studio avec sa version courante (2026-11-12)
 
 **Point F14 du programme Shinkiro : un second envoi d'un dossier déjà présent dans la bibliothèque Argos n'est plus refusé puis annoncé comme une panne.**

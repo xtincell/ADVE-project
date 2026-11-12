@@ -59,6 +59,8 @@ describe("canon-conformance — le classifieur distingue SHAPE vs advisory", () 
     expect(classifyConformanceError({ path: "x", message: "expected number, received string", code: "invalid_type", expected: "number" })).toBe("TYPE");
     expect(classifyConformanceError({ path: "x", message: "Le positionnement doit faire ≤200 caractères", code: "too_big" })).toBe("LENGTH");
     expect(classifyConformanceError({ path: "x", message: "Invalid input: expected string, received undefined", code: "invalid_type", expected: "string" })).toBe("MISSING");
+    // Zod 4 émet `invalid_value` aussi pour un enum absent : champ manquant, pas valeur à traduire.
+    expect(classifyConformanceError({ path: "x", message: "Invalid option", code: "invalid_value", received: "undefined" })).toBe("MISSING");
   });
 });
 

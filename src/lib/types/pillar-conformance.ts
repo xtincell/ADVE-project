@@ -93,7 +93,9 @@ export function classifyConformanceError(err: RawPillarError): ConformanceClass 
       return "LENGTH";
     case "invalid_value":       // Zod 4 : enum / littéral
     case "invalid_enum_value":  // Zod 3
-      return "ENUM";
+      // Zod 4 émet aussi `invalid_value` pour un enum ABSENT : c'est un champ manquant,
+      // pas une valeur hors énumération à traduire (inventaire des formes legacy).
+      return received === "undefined" ? "MISSING" : "ENUM";
     case "invalid_union": {
       // Zod émet `invalid_union` pour TOUTE divergence dans une arme — y compris un
       // simple scalaire mal typé (ex. `charismaScore:"8/10"` dans un union number|objet).
