@@ -102,8 +102,7 @@ export const governanceRouter = createTRPCRouter({
       const built = await buildCompensatingIntent({
         originalIntentId: input.originalIntentId,
         reason: input.reason,
-        // ADR-0167 — les compensateurs de palier (DEMOTE_*) exigent operatorId.
-        payloadOverride: { operatorId: ctx.session.user.id },
+        userId: ctx.session.user.id,
       });
 
       // ADR-0167/0176 — si le compensateur a un VRAI handler, on le DISPATCHE
@@ -118,8 +117,10 @@ export const governanceRouter = createTRPCRouter({
         const { emitIntent } = await import("@/server/services/mestor/intents");
         const result = await emitIntent(built.reverseIntent, { caller: "console:governance:compensate" });
         if (result.status !== "OK") {
+          // ROLLBACK_PILLAR carries the typed refusal shared with the history action.
+          const refusal = (result.output as { refusal?: "NOT_FOUND" | "FORBIDDEN" | "PRECONDITION_FAILED" } | undefined)?.refusal;
           throw new TRPCError({
-            code: "PRECONDITION_FAILED",
+            code: refusal ?? "PRECONDITION_FAILED",
             message: result.summary ?? result.reason ?? "Compensation refusée.",
           });
         }
@@ -151,6 +152,7 @@ export const governanceRouter = createTRPCRouter({
       });
       return { ok: true, reverseKind: built.reverseKind, originalKind: built.originalKind, executed: false };
     } catch (err) {
+      if (err instanceof TRPCError) throw err;
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: err instanceof Error ? err.message : "Failed to compensate intent",
@@ -171,8 +173,15 @@ export const governanceRouter = createTRPCRouter({
   // creates a hash-chained IntentEmission row. Artemis Commandant routes
   // the intent to model-policy.updatePolicy.
   modelPolicyList: adminProcedure.query(async () => {
-    const { listAllPolicies } = await import("@/server/services/model-policy");
-    return listAllPolicies();
+    const { listAllPolicies, resolvePolicy } = await import("@/server/services/model-policy");
+    const { describeTextRouting } = await import("@/server/services/llm-gateway");
+    const rows = await listAllPolicies();
+    // listAllPolicies deduplicates purposes. These reads touch distinct cache
+    // keys, so they can resolve together without serial database round trips.
+    // Stored and cached policy can differ briefly across processes (TTL 60s).
+    return Promise.all(rows.map(async (row) => ({
+      ...row, routing: describeTextRouting(await resolvePolicy(row.purpose)),
+    })));
   }),
 
   modelPolicyUpdate: governedProcedure({

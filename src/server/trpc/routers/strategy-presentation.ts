@@ -14,6 +14,7 @@ import {
 } from "@/server/services/strategy-presentation";
 import { generateBudgetPlan } from "@/server/services/budget-allocator";
 import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
+import { publicForgeTask } from "@/server/services/ptah/public-receipt";
 /* lafusee:governed-active */
 
 export const strategyPresentationRouter = createTRPCRouter({
@@ -72,6 +73,7 @@ export const strategyPresentationRouter = createTRPCRouter({
    */
   forgeForSection: governedProcedure({
     kind: "PTAH_MATERIALIZE_BRIEF",
+    requireOperator: true,
     inputSchema: z.object({
       strategyId: z.string(),
       sectionId: z.string(),
@@ -131,6 +133,9 @@ export const strategyPresentationRouter = createTRPCRouter({
         strategyId: input.strategyId,
         operatorId: strategy.operatorId,
         sourceIntentId: brandAsset.sourceIntentId ?? brandAsset.id,
+        campaignId: brandAsset.campaignId,
+        briefId: brandAsset.briefId,
+        sourceBrandAssetId: brandAsset.id,
         brief: {
           briefText,
           forgeSpec: {
@@ -152,7 +157,7 @@ export const strategyPresentationRouter = createTRPCRouter({
       status: result.status,
       summary: result.summary,
       reason: result.reason ?? null,
-      output: result.output ?? null,
+      output: publicForgeTask(result.output) ?? null,
       message: `Forge ${result.status} pour ${input.sectionId} (kind=${input.brandAssetKind}).`,
     };
   }),

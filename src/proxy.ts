@@ -174,9 +174,12 @@ export async function proxy(request: NextRequest) {
   // connection is plain HTTP — `request.nextUrl.protocol` isn't guaranteed
   // to reflect the client-facing scheme, so we also honor `x-forwarded-proto`.
   const secureCookie =
-    process.env.NODE_ENV === "production" ||
     request.nextUrl.protocol === "https:" ||
-    request.headers.get("x-forwarded-proto") === "https";
+    request.headers.get("x-forwarded-proto") === "https" ||
+    // `next start` local uses Auth.js' HTTP cookie; production alone must
+    // not force its Secure name/salt. Public production keeps the fallback.
+    (process.env.NODE_ENV === "production" &&
+      !isLocalHost(request.headers.get("host") ?? request.nextUrl.host));
 
   const token = await getToken({
     req: request,

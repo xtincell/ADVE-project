@@ -99,6 +99,78 @@ describe("provenanceFromAuthorSystem", () => {
   });
 });
 
+describe("complétion chirurgicale — cellules manquantes sous une matrice validée", () => {
+  const previous = { produitsCatalogue: [{ id: "product-a", nom: "Offre", gainClientConcret: "", gainClientAbstrait: "Confiance" }] };
+  const path = "produitsCatalogue[0].gainClientConcret";
+  const candidate = { produitsCatalogue: [{ ...previous.produitsCatalogue[0], gainClientConcret: "Économiser une heure" }] };
+  const complete = (changes: Partial<Parameters<typeof applyProvenanceGuard>[0]> = {}) => applyProvenanceGuard({
+    previousContent: previous, newContent: candidate,
+    existingProvenance: { produitsCatalogue: "HUMAN" }, incomingFor: () => "INFERRED", surgicalPaths: [path], ...changes,
+  });
+  it("remplit une cellule sans retaguer ni changer le catalogue humain", () => {
+    const result = complete();
+    expect(result.content).toEqual(candidate);
+    expect(result.provenance).toEqual({ produitsCatalogue: "HUMAN", [path]: "INFERRED" });
+    expect(result.denied).toEqual([]);
+    expect(previous.produitsCatalogue[0]!.gainClientConcret).toBe("");
+  });
+  it("sans chemins précis, le remplacement global reste refusé", () => {
+    expect(complete({ surgicalPaths: [] }).content).toEqual(previous);
+  });
+  it("une complétion ne transporte ni changement d’identité ni nouvel item", () => {
+    for (const next of [
+      { produitsCatalogue: [{ ...candidate.produitsCatalogue[0], nom: "Autre offre" }] },
+      { produitsCatalogue: [...candidate.produitsCatalogue, { id: "new", nom: "Ajout" }] },
+    ]) {
+      const result = complete({ newContent: next });
+      expect(result.content).toEqual(previous);
+      expect(result.denied).toContain("produitsCatalogue");
+    }
+  });
+  it("une cellule scalaire vide ne devient pas un objet ou une liste d’identités", () => {
+    for (const next of [{ nom: "Inventé" }, [{ nom: "Inventé" }], ["Texte", { nom: "Inventé" }]]) {
+      const result = complete({ previousContent: { model: { input: null } }, newContent: { model: { input: next } },
+        existingProvenance: { model: "HUMAN" }, surgicalPaths: ["model.input"] });
+      expect(result.content).toEqual({ model: { input: null } });
+    }
+  });
+  it("protège les cellules remplies, y compris 0, false et le choix d’une collection vide", () => {
+    for (const value of ["Promesse validée", 0, false, []]) {
+      const old = { model: { input: value } };
+      const result = complete({ previousContent: old, newContent: { model: { input: "Remplacement" } },
+        existingProvenance: { model: "HUMAN" }, surgicalPaths: ["model.input"] });
+      expect(result.content).toEqual(old); expect(result.denied).toContain("model.input");
+    }
+  });
+  it("une révision de postulat ne change pas les cellules humaines voisines", () => {
+    const result = complete({ previousContent: candidate, newContent: { produitsCatalogue: [{ ...candidate.produitsCatalogue[0], gainClientConcret: "Deux heures" }] },
+      existingProvenance: { produitsCatalogue: "HUMAN", [path]: "INFERRED" } });
+    expect(result.content.produitsCatalogue).toMatchObject([{ gainClientConcret: "Deux heures", nom: "Offre", gainClientAbstrait: "Confiance" }]);
+    expect(result.provenance.produitsCatalogue).toBe("HUMAN");
+  });
+  it("la confirmation d’une cellule ne confirme pas ses sœurs proposées", () => {
+    const other = "produitsCatalogue[0].gainClientAbstrait";
+    const result = complete({ previousContent: candidate, existingProvenance: { produitsCatalogue: "HUMAN", [path]: "INFERRED", [other]: "INFERRED" },
+      incomingFor: () => "HUMAN", declaredFor: p => p === path ? "HUMAN" : undefined });
+    expect(result.provenance[path]).toBe("HUMAN"); expect(result.provenance[other]).toBe("INFERRED");
+  });
+  it("un générateur ne contourne pas un enfant humain via un parent inféré ou omis", () => {
+    for (const next of [{}, { model: { input: "Autre" } }]) {
+      const result = complete({ previousContent: { model: { input: "Relu" } }, newContent: next,
+        existingProvenance: { model: "INFERRED", "model.input": "HUMAN" }, surgicalPaths: [] });
+      expect(result.content).toEqual({ model: { input: "Relu" } });
+      expect(result.denied).toContain("model.input");
+    }
+  });
+  it("une déclaration inchangée de parent ne dégrade pas l’autorité d’un enfant", () => {
+    const same = { model: { input: "Relu" } };
+    const result = complete({ previousContent: same, newContent: same,
+      existingProvenance: { model: "INFERRED", "model.input": "HUMAN" }, surgicalPaths: [],
+      declaredFor: path => path === "model" ? "INFERRED" : undefined });
+    expect(result.provenance["model.input"]).toBe("HUMAN");
+  });
+});
+
 describe("suppression par OMISSION — arbitrée comme une écriture", () => {
   it("un écrivain dérivé ne peut pas effacer un champ HUMAN en l'omettant", () => {
     const r = applyProvenanceGuard({
@@ -174,5 +246,58 @@ describe("confirmation d'un champ INCHANGÉ (declaredFor)", () => {
       incomingFor: () => "HUMAN",
     });
     expect(r.provenance.identite).toBe("INFERRED");
+  });
+});
+
+
+describe("initiative choice provenance follows stable identity", () => {
+  const id = "63d161c4-937d-4df4-a9d3-332f279b80cc";
+  const otherId = "a11a7e91-7993-4ddc-897e-25578d34d866";
+  const path = `initiatives.${id}.status`;
+  const chosen = { id, action: "Chosen", status: "SELECTED_FOR_ROADMAP" };
+  it("keeps the choice through reordering without mutating the supplied candidate", () => {
+    const next = { catalogueParCanal: { DIGITAL: [{ id: otherId, action: "Added", status: "RECOMMENDED" },
+      { ...chosen, action: "Updated", status: "RECOMMENDED" }] } };
+    const before = structuredClone(next);
+    const result = applyProvenanceGuard({ previousContent: { catalogueParCanal: { DIGITAL: [chosen] } }, newContent: next,
+      existingProvenance: { [path]: "HUMAN" }, incomingFor: () => "INFERRED" });
+    expect(result.content).toMatchObject({ catalogueParCanal: { DIGITAL: [{ id: otherId, status: "RECOMMENDED" },
+      { id, action: "Updated", status: "SELECTED_FOR_ROADMAP" }] } });
+    expect(next).toEqual(before); expect(result.provenance[path]).toBe("HUMAN");
+    expect(result.denied).toEqual([path]);
+  });
+  it("preserves a chosen source removed by a generator, while admitting its new proposals", () => {
+    const result = applyProvenanceGuard({ previousContent: { catalogueParCanal: { DIGITAL: [chosen] } },
+      newContent: { catalogueParCanal: { DIGITAL: [{ id: otherId, action: "Added", status: "RECOMMENDED" }] } },
+      existingProvenance: { [path]: "HUMAN" }, incomingFor: () => "INFERRED" });
+    expect(result.content).toMatchObject({ catalogueParCanal: { DIGITAL: [{ id: otherId }, chosen] } });
+    expect(result.denied).toEqual([path]);
+  });
+  it("retains a human withdrawal across aliases in all existing collections", () => {
+    const withdrawn = { ...chosen, status: "RECOMMENDED" };
+    const result = applyProvenanceGuard({ previousContent: { catalogueParCanal: { DIGITAL: [withdrawn] } },
+      newContent: { actionsByDevotionLevel: { PARTICIPANT: [chosen] }, actionsByOvertonPhase: [{ phase: "Phase 1", actions: [chosen] }] },
+      existingProvenance: { [path]: "HUMAN" }, incomingFor: () => "INFERRED" });
+    expect(result.content).toMatchObject({ actionsByDevotionLevel: { PARTICIPANT: [withdrawn] }, actionsByOvertonPhase: [{ actions: [withdrawn] }] });
+  });
+  it("confirms only the explicit choice and leaves the catalogue available for generation", () => {
+    const content = { catalogueParCanal: { DIGITAL: [chosen] } };
+    const result = applyProvenanceGuard({ previousContent: content, newContent: content, existingProvenance: {}, incomingFor: () => "INFERRED",
+      declaredFor: key => key === path ? "HUMAN" : undefined, declaredPaths: [path] });
+    expect(result.provenance[path]).toBe("HUMAN"); expect(result.provenance.catalogueParCanal).toBeUndefined();
+  });
+  it("does not refuse an unchanged human choice when only its definition changes", () => {
+    const result = applyProvenanceGuard({ previousContent: { catalogueParCanal: { DIGITAL: [chosen] } },
+      newContent: { catalogueParCanal: { DIGITAL: [{ ...chosen, action: "Updated definition" }] } },
+      existingProvenance: { [path]: "HUMAN" }, incomingFor: () => "INFERRED" });
+    expect(result.denied).toEqual([]); expect(result.challenged).toEqual([]);
+    expect(result.content).toMatchObject({ catalogueParCanal: { DIGITAL: [{ ...chosen, action: "Updated definition" }] } });
+  });
+  it("refuses a contradicted secondary representation even when the canonical choice is unchanged", () => {
+    const result = applyProvenanceGuard({ previousContent: { catalogueParCanal: { DIGITAL: [chosen] } },
+      newContent: { catalogueParCanal: { DIGITAL: [chosen] }, actionsByDevotionLevel: { ENGAGE: [{ ...chosen, status: "REJECTED" }] } },
+      existingProvenance: { [path]: "HUMAN" }, incomingFor: () => "SOURCE" });
+    expect(result.challenged).toEqual([path]);
+    expect(result.content).toMatchObject({ actionsByDevotionLevel: { ENGAGE: [chosen] } });
   });
 });

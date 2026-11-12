@@ -166,13 +166,50 @@ const polityShape = {
   countryCode: z.string().max(2).nullish(),
 };
 
+export const OvertonEvidenceSchema = z.object({
+  source: z.string().min(1),
+  at: z.string().optional(),
+  note: z.string().optional(),
+  stance: z.enum(["SUPPORTS", "OPPOSES", "CONTEXT"]).optional(),
+  zone: OvertonZoneSchema.optional(),
+  audience: z.string().min(1).optional(),
+  countryCode: z.string().length(2).optional(),
+  method: z.string().min(1).optional(),
+});
+export const OvertonConceptRefSchema = z.object({
+  key: z.string().min(1),
+  targetZone: OvertonZoneSchema.optional(),
+  kind: z.enum(["CONVICTION", "CATEGORY", "BRAND"]),
+  audience: z.string().min(1),
+});
+export type OvertonEvidence = z.infer<typeof OvertonEvidenceSchema>;
+export type OvertonConceptRef = z.infer<typeof OvertonConceptRefSchema>;
+
+/** JSON envelope in the existing graph, compatible with historic evidence arrays. */
+export function readOvertonEvidence(value: unknown): { concept?: OvertonConceptRef; items: OvertonEvidence[] } {
+  const envelope = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const concept = OvertonConceptRefSchema.safeParse(envelope.concept);
+  const rows = Array.isArray(value) ? value : Array.isArray(envelope.items) ? envelope.items : [];
+  return { ...(concept.success ? { concept: concept.data } : {}), items: rows.flatMap(row => {
+    const parsed = OvertonEvidenceSchema.safeParse(row); return parsed.success ? [parsed.data] : [];
+  }) };
+}
+
+/** Proof must describe the public, territory, time and method of the zone assessment. */
+export function qualifyingOvertonEvidence(items: readonly OvertonEvidence[], zone: OvertonZone, audience: string, countryCode: string | null, now = Date.now()): OvertonEvidence[] {
+  return items.filter(item => item.zone === zone && (item.stance === "SUPPORTS" || item.stance === "OPPOSES")
+    && item.audience === audience && (item.countryCode ?? null) === countryCode
+    && !!item.method && !!item.at && Number.isFinite(Date.parse(item.at)) && Date.parse(item.at) <= now);
+}
+
 export const upsertOvertonPositionInputSchema = z.object({
   strategyId: z.string().nullish(),
   ...polityShape,
   statement: z.string().min(1),
+  concept: OvertonConceptRefSchema.optional(),
   /** null = pas de preuve (jamais fabriquée). */
   zone: OvertonZoneSchema.nullish(),
-  evidence: z.array(z.object({ source: z.string(), at: z.string().optional(), note: z.string().optional() })).default([]),
+  evidence: z.array(OvertonEvidenceSchema).default([]),
 });
 export type UpsertOvertonPositionInput = z.infer<typeof upsertOvertonPositionInputSchema>;
 
@@ -181,7 +218,7 @@ export const recordZoneTransitionInputSchema = z.object({
   fromZone: OvertonZoneSchema.nullish(),
   toZone: OvertonZoneSchema,
   occurredAt: z.string(), // ISO
-  evidence: z.array(z.object({ source: z.string(), at: z.string().optional() })).default([]),
+  evidence: z.array(OvertonEvidenceSchema).default([]),
   attributedActorKind: OvertonActorKindSchema.nullish(),
   attributedActorRef: z.string().nullish(),
 });

@@ -12,7 +12,9 @@
  * Output: Complete plan (media mix, channel allocation, timeline, KPIs, production costs)
  */
 
+import { resolveUnitEconomics } from "@/domain/unit-economics";
 import { db } from "@/lib/db";
+import { catalogueReferencePrice } from "@/domain/product-catalog";
 import type { DriverChannel } from "@prisma/client";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -54,8 +56,8 @@ export interface KpiProjection {
   totalClicks: number;
   totalConversions: number;
   estimatedCac: number;
-  estimatedRevenue: number;
-  estimatedRoas: number;
+  estimatedRevenue: number | null;
+  estimatedRoas: number | null;
   costPerClick: number;
   costPerLead: number;
 }
@@ -434,16 +436,16 @@ function calculateProductionPlan(
 function projectKpis(
   allocations: ChannelAllocation[],
   budget: number,
-  avgTicket: number,
+  avgTicket: number | null,
 ): KpiProjection {
   const totalReach = allocations.reduce((s, a) => s + a.estimatedReach, 0);
   const totalClicks = allocations.reduce((s, a) => s + a.estimatedClicks, 0);
   const totalConversions = allocations.reduce((s, a) => s + a.estimatedConversions, 0);
   const mediaBudget = allocations.reduce((s, a) => s + a.budgetAmount, 0);
 
-  const estimatedRevenue = totalConversions * avgTicket;
+  const estimatedRevenue = avgTicket == null ? null : totalConversions * avgTicket;
   const estimatedCac = totalConversions > 0 ? Math.round(mediaBudget / totalConversions) : 0;
-  const estimatedRoas = mediaBudget > 0 ? Math.round((estimatedRevenue / mediaBudget) * 100) / 100 : 0;
+  const estimatedRoas = estimatedRevenue != null && mediaBudget > 0 ? Math.round((estimatedRevenue / mediaBudget) * 100) / 100 : null;
   const costPerClick = totalClicks > 0 ? Math.round(mediaBudget / totalClicks) : 0;
   const costPerLead = totalConversions > 0 ? Math.round(mediaBudget / totalConversions) : 0;
 
@@ -525,13 +527,14 @@ export async function generateBudgetPlan(strategyId: string, overrideBudget?: nu
   const pillarD = (strategy.pillars.find((p: any) => p.key === "d")?.content as Record<string, unknown>) ?? {};
 
   // Resolve budget: override > pillar V budgetCom > businessContext declaredBudget > 0
-  const ue = (pillarV.unitEconomics as Record<string, unknown>) ?? {};
+  const ue = resolveUnitEconomics(pillarV);
   const budget = overrideBudget
     ?? (typeof ue.budgetCom === "number" ? ue.budgetCom : null)
     ?? (typeof bCtx.declaredBudget === "number" ? bCtx.declaredBudget : 0);
 
-  const currency = "XAF";
+  const currency = typeof ue.currency === "string" ? ue.currency : "XAF";
   const warnings: string[] = [];
+  if (ue._financialContext) warnings.push("Enveloppe calculée depuis les hypothèses du modèle ADVE ; la simulation ne constitue pas une autorisation de dépense.");
 
   if (budget === 0) {
     warnings.push("Aucun budget detecte — utilise 0 FCFA. Renseignez pillar V.unitEconomics.budgetCom ou businessContext.declaredBudget.");
@@ -563,18 +566,21 @@ export async function generateBudgetPlan(strategyId: string, overrideBudget?: nu
   const phases = generatePhases(budget, budgetTier, activeDrivers.map((d) => d.name));
   const productionPlan = calculateProductionPlan(budget, budget * mediaMix.production, activeDrivers);
 
-  // Average ticket from pillar V or fallback
-  const products = Array.isArray(pillarV.produitsCatalogue) ? pillarV.produitsCatalogue : [];
-  const avgTicket = products.length > 0
-    ? products.reduce((s: number, p: any) => s + (typeof p.prix === "number" ? p.prix : 0), 0) / products.length
-    : 10000; // XAF fallback
+  // Un catalogue n'est pas un panier moyen observé. Sans référence scalaire
+  // comparable, ni la moyenne non pondérée ni un ticket par défaut ne conviennent.
+  const avgTicket = catalogueReferencePrice(pillarV.produitsCatalogue);
+  warnings.push(avgTicket == null
+    ? "Panier moyen non qualifié : catalogue absent, prix non comparables ou conditions tarifaires. CA et ROAS non calculés ; aucun montant par défaut."
+    : "Projection sur le prix de référence du catalogue, pas sur un panier moyen mesuré. Période, fiscalité et conversion doivent être vérifiées.");
 
   const kpiProjections = projectKpis(channelAllocations, budget, avgTicket);
 
-  // Enrich REVENUE phase KPIs with real avg ticket
+  // Enrichit le scénario avec une référence nominale, jamais un panier mesuré.
   for (const phase of phases) {
+    if (avgTicket == null) phase.kpis = phase.kpis.filter(kpi => kpi.metric !== "Panier moyen");
     for (const kpi of phase.kpis) {
-      if (kpi.metric === "Panier moyen" && kpi.target === 0) {
+      if (avgTicket != null && kpi.metric === "Panier moyen" && kpi.target === 0) {
+        kpi.metric = "Prix de référence (scénario)";
         kpi.target = Math.round(avgTicket);
         kpi.unit = currency;
       }

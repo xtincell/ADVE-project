@@ -95,7 +95,7 @@ export function PricingTiers({
           "grid gap-4 " +
           (compact
             ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-            : "grid-cols-1 md:grid-cols-2 lg:grid-cols-" + Math.min(tiers.length, 5))
+            : "grid-cols-1 md:grid-cols-2 xl:grid-cols-3")
         }
       >
         {tiers.map(({ definition, price }) => {
@@ -138,12 +138,7 @@ export function PricingTiers({
                 <p className="mt-1 text-xs leading-relaxed text-foreground-secondary">{definition.summary}</p>
               </header>
 
-              {/* Price row + localized badge.
-                  Landscape with 5 columns gives each card a ~180-220px width.
-                  The 3xl price + "/ mois" + "PRIX LOCAL" cannot fit on one
-                  line at that width, and the previous flex layout (no wrap)
-                  caused the badge to bleed outside the card. We split into
-                  two rows: price+billing on one line, badge on its own. */}
+              {/* Localized prices need room within the existing responsive cards. */}
               <div className="my-4 space-y-1.5">
                 <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
                   <span
@@ -195,7 +190,7 @@ export function PricingTiers({
                     <span>Initialisation…</span>
                   </>
                 ) : isCurrent ? (
-                  <span>Tier activé</span>
+                  <span>Offre activée</span>
                 ) : price.amount === 0 ? (
                   <>
                     <Sparkles className="h-4 w-4" />
@@ -203,7 +198,7 @@ export function PricingTiers({
                   </>
                 ) : (
                   <>
-                    <span>Choisir ce tier</span>
+                    <span>Choisir cette offre</span>
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}
@@ -214,7 +209,7 @@ export function PricingTiers({
       </div>
 
       <p className="text-center text-[10px] text-foreground-muted">
-        Prix adaptés à votre marché. TVA incluse. Paiement sécurisé Stripe / CinetPay (Mobile Money).
+        Prix adaptés à votre marché. Les moyens de paiement disponibles sont précisés à la commande.
       </p>
     </section>
   );

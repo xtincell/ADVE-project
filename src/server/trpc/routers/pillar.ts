@@ -26,19 +26,25 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { inferredFieldPaths, provenanceTopKey, inferredFieldVerification } from "@/domain/field-provenance";
+import { SourceReceiptSchema } from "@/domain/source-certainty";
 import type { Prisma } from "@prisma/client";
+import type { Context } from "../context";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
+import { assertStrategyRead } from "./_strategy-read-guard";
 import { validatePillarContent, validatePillarPartial, type PillarKey } from "@/lib/types/pillar-schemas";
 import { validateCrossReferences, getCrossRefSummary } from "@/server/services/cross-validator";
 import * as pillarVersioning from "@/server/services/pillar-versioning";
 import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import { getStrategyReadiness } from "@/server/governance/pillar-readiness";
+import { assertCollaboratorMayEmit, CollaboratorWriteVetoError } from "@/server/governance/collaborator-firewall";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
+import { transitionPillarStatus } from "@/server/services/pillar-gateway/validation-status";
 import { assertWritten } from "./_pillar-write-guard";
-import { getNestedArray } from "@/lib/pillar-path";
-import { ensureProductIds } from "@/domain/product-catalog";
+import { getNestedArray, resolvePillarPath } from "@/lib/pillar-path";
 import type { PillarKey as PK } from "@/lib/types/advertis-vector";
 import { triggerNextStageFrameworks } from "@/server/services/artemis";
 import {
@@ -49,9 +55,28 @@ import {
 
 import { ADVE_STORAGE_KEYS, AdveKeySchema, PILLAR_KEYS, PillarKeySchema } from "@/domain";
 import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
+import { entityNotFound, found } from "../entity-access";
 /* lafusee:governed-active */
 
 const pillarKeyEnum = PillarKeySchema;
+
+// A global operator can be only a reader of this particular brand. Apply the
+// existing delegation firewall before preview cost or manual intent emission,
+// just as governedProcedure does; reading the brand alone is not write access.
+async function assertManualAmendAccess(
+  user: { id: string; role?: string }, strategyId: string, client: Context["db"],
+): Promise<void> {
+  await assertStrategyRead(user.id, strategyId);
+  try {
+    await assertCollaboratorMayEmit({ userId: user.id, role: user.role, strategyId,
+      kind: "OPERATOR_AMEND_PILLAR" }, client);
+  } catch (err) {
+    if (err instanceof CollaboratorWriteVetoError) {
+      throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+    }
+    throw err;
+  }
+}
 const adveKeyEnum = AdveKeySchema;
 
 export const pillarRouter = createTRPCRouter({
@@ -238,20 +263,14 @@ export const pillarRouter = createTRPCRouter({
     .input(z.object({ strategyId: z.string() }))
     .query(({ input }) => getCrossRefSummary(input.strategyId)),
 
-  /** Completion map for all 8 pillars */
+  /** Canonical completion map for all 8 pillars (same contract as readiness). */
   getCompletionMap: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      const pillars = await ctx.db.pillar.findMany({ where: { strategyId: input.strategyId } });
+    .query(async ({ input }) => {
+      const readiness = await getStrategyReadiness(input.strategyId);
       const map: Record<string, number> = {};
       for (const key of PILLAR_KEYS) {
-        const pillar = pillars.find((p) => p.key.toUpperCase() === key);
-        if (pillar) {
-          const v = validatePillarPartial(key as PillarKey, pillar.content);
-          map[key] = v.completionPercentage;
-        } else {
-          map[key] = 0;
-        }
+        map[key] = readiness.byPillar[key].completionPct;
       }
       return map;
     }),
@@ -279,17 +298,13 @@ export const pillarRouter = createTRPCRouter({
       const content = (pillar?.content as Record<string, unknown>) ?? {};
       const catalogue = getArraySafe(content.produitsCatalogue);
       catalogue.push(input.product);
-      // Ids stables : le nouveau produit (et tout legacy sans id) reçoit un id
-      // déterministe → les gammes/système peuvent référencer de façon fiable (ADR-0171).
-      const withIds = ensureProductIds(catalogue as Array<Record<string, unknown>>);
-
       const w = await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "v",
-        operation: { type: "SET_FIELDS", fields: [{ path: "produitsCatalogue", value: withIds }] },
+        operation: { type: "SET_FIELDS", fields: [{ path: "produitsCatalogue", value: catalogue }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addProduct" },
       });
       assertWritten(w, "addProduct");
-      return { success: true, productCount: withIds.length };
+      return { success: true, productCount: catalogue.length };
     }),
 
   /** Convenience: add a persona to D.personas */
@@ -498,85 +513,12 @@ export const pillarRouter = createTRPCRouter({
       strategyId: z.string(),
       key: pillarKeyEnum,
       targetStatus: z.enum(["DRAFT", "AI_PROPOSED", "VALIDATED", "LOCKED"]),
+      expectedVersion: z.number().int().min(1).optional(),
+      acknowledgeLowConfidence: z.boolean().optional().default(false),
     }),
   }).mutation(async ({ ctx, input }) => {
-      const pillar = await ctx.db.pillar.findUnique({
-        where: { strategyId_key: { strategyId: input.strategyId, key: input.key.toLowerCase() } },
-      });
-      if (!pillar) return { success: false, error: "Pillar not found" };
-
-      const currentStatus = pillar.validationStatus ?? "DRAFT";
-
-      // Enforce valid transitions
-      const validTransitions: Record<string, string[]> = {
-        DRAFT: ["AI_PROPOSED", "VALIDATED"],
-        AI_PROPOSED: ["DRAFT", "VALIDATED"],
-        VALIDATED: ["LOCKED", "DRAFT"],
-        LOCKED: ["DRAFT"], // Can only unlock back to DRAFT
-      };
-
-      const allowed = validTransitions[currentStatus] ?? [];
-      if (!allowed.includes(input.targetStatus)) {
-        return {
-          success: false,
-          error: `Transition invalide: ${currentStatus} → ${input.targetStatus}. Transitions permises: ${allowed.join(", ")}`,
-        };
-      }
-
-      // Gate: Cannot validate a stale pillar
-      if (input.targetStatus === "VALIDATED" && pillar.staleAt) {
-        return {
-          success: false,
-          error: `Impossible de valider: le pilier ${input.key} est marque obsolete depuis le ${pillar.staleAt.toLocaleDateString("fr-FR")}. Mettez a jour le contenu d'abord.`,
-          staleAt: pillar.staleAt.toISOString(),
-        };
-      }
-
-      // Gate: VALIDATED requires no stale dependencies
-      if (input.targetStatus === "VALIDATED") {
-        const { checkStaleness } = await import("@/server/services/staleness-propagator");
-        const staleness = await checkStaleness(input.strategyId, input.key);
-        if (staleness.isStale) {
-          return {
-            success: false,
-            error: `Impossible de valider: pilier ${input.key} est stale depuis ${staleness.staleDays} jour(s). Mettez a jour les dependances (${staleness.dependsOn.join(", ")}) ou rafraichissez ce pilier.`,
-            staleness,
-          };
-        }
-      }
-
-      // Gate: VALIDATED requires cross-validation check (only rules involving THIS pillar)
-      if (input.targetStatus === "VALIDATED") {
-        const allRefs = await validateCrossReferences(input.strategyId);
-        const key = input.key.toUpperCase();
-        const relevantInvalid = allRefs.filter(
-          (r: { status: string; from: string; to: string }) =>
-            r.status === "INVALID" && (r.from.startsWith(`${key}.`) || r.to.startsWith(`${key}.`))
-        );
-        if (relevantInvalid.length > 0) {
-          return {
-            success: false,
-            error: `Impossible de valider ${key}: ${relevantInvalid.length} violation(s) cross-pilier. ${relevantInvalid.map((r: { rule: string }) => r.rule).join(", ")}`,
-            crossRefViolations: relevantInvalid,
-          };
-        }
-      }
-
-      // Gate: LOCKED requires minimum confidence
-      if (input.targetStatus === "LOCKED") {
-        if ((pillar.confidence ?? 0) < 0.7) {
-          return {
-            success: false,
-            error: `Impossible de verrouiller: confiance insuffisante (${(pillar.confidence ?? 0).toFixed(2)} < 0.70).`,
-          };
-        }
-      }
-
-      // validationStatus is a state machine transition, not content — direct write OK
-      await ctx.db.pillar.update({
-        where: { id: pillar.id },
-        data: { validationStatus: input.targetStatus },
-      });
+      const decision = await transitionPillarStatus({ ...input, userId: ctx.session.user.id });
+      if (!decision.success || decision.alreadyApplied) return decision;
 
       // If all ADVE are VALIDATED, check for RTIS trigger
       if (input.targetStatus === "VALIDATED" && (ADVE_STORAGE_KEYS as readonly string[]).includes(input.key.toLowerCase())) {
@@ -606,13 +548,13 @@ export const pillarRouter = createTRPCRouter({
       }
 
       // Artemis auto-trigger: run relevant frameworks for the next pipeline stage
-      if (input.targetStatus === "VALIDATED") {
+      if (input.targetStatus === "VALIDATED" && input.key !== "S") {
         triggerNextStageFrameworks(input.strategyId, input.key.toLowerCase()).catch((err) => {
           console.warn("[pillar] Artemis auto-trigger failed:", err instanceof Error ? err.message : err);
         });
       }
 
-      return { success: true, newStatus: input.targetStatus };
+      return decision;
     }),
 
   /** Apply a GLORY tool output to D.directionArtistique */
@@ -631,9 +573,12 @@ export const pillarRouter = createTRPCRouter({
     }),
   }).mutation(async ({ ctx, input }) => {
       // Load the glory output
-      const gloryOutput = await ctx.db.gloryOutput.findUniqueOrThrow({
+      // Le résultat doit appartenir à la marque gardée : inconnu ou d'une autre
+      // marque, le même 404 (IN1), avant toute écriture du pilier.
+      const gloryOutput = await ctx.db.gloryOutput.findUnique({
         where: { id: input.gloryOutputId },
       });
+      if (!gloryOutput || gloryOutput.strategyId !== input.strategyId) throw entityNotFound("Résultat d’outil introuvable dans cette marque.");
 
       const output = gloryOutput.output as Record<string, unknown>;
 
@@ -667,26 +612,26 @@ export const pillarRouter = createTRPCRouter({
       return { versions, currentVersion: pillar.currentVersion ?? 1 };
     }),
 
-  /** Rollback a pillar to a previous version */
+  /** Entrées, retraits, réintroductions et renommages du catalogue produit, lus
+   *  dans les versions conservées (ADR-0205, amendement 568). Lecture seule. */
+  getCatalogueHistory: strategyScopedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(({ input }) => pillarVersioning.getCatalogueHistory(input.strategyId)),
+
+  /** Compensate the archived change while preserving later independent decisions.
+   *  Same restorer, refusals and effect identity as the journal (ADR-0207). */
   rollbackVersion: governedProcedure({
     kind: "LEGACY_PILLAR_ROLLBACK_VERSION",
     caller: "pillar:rollbackVersion",
     requireOperator: true,
-    inputSchema: z.object({ strategyId: z.string(), key: pillarKeyEnum, versionId: z.string() }),
+    inputSchema: z.object({ strategyId: z.string(), key: pillarKeyEnum, versionId: z.string(),
+      reason: z.string().min(3).max(500).optional() }),
   }).mutation(async ({ ctx, input }) => {
-      const pillar = await ctx.db.pillar.findUnique({
-        where: { strategyId_key: { strategyId: input.strategyId, key: input.key.toLowerCase() } },
-      });
-      if (!pillar) return { success: false, error: "Pillar not found" };
-
-      await pillarVersioning.rollback(pillar.id, input.versionId, ctx.session.user.id);
-
-      // Propagate staleness after rollback
-      await propagateFromPillar(input.strategyId, input.key).catch((err) => {
-        console.warn("[staleness] propagation after rollback failed:", err instanceof Error ? err.message : err);
-      });
-
-      return { success: true };
+      const { rollbackPillar } = await import("@/server/services/pillar-gateway/rollback");
+      const result = await rollbackPillar({ strategyId: input.strategyId, pillarKey: input.key, versionId: input.versionId,
+        operatorId: ctx.session.user.id, intentId: ctx.intentId, reason: input.reason ?? "action d’historique" });
+      if (!result.restored) throw new TRPCError({ code: result.refusal ?? "PRECONDITION_FAILED", message: result.reason });
+      return { success: true, alreadyRecorded: !!result.alreadyRecorded, version: result.version };
     }),
 
   // ── Mestor RTIS Cascade ────────────────────────────────────────────────
@@ -704,7 +649,7 @@ export const pillarRouter = createTRPCRouter({
 
 
   })
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       // ADR-0030 PR-Fix-2 — gate RTIS_CASCADE sur les piliers dérivés.
       // Cohérent avec notoria.actualizeRT (PR-2). Refuse de cascader R/T/I/S
       // si A/D/V/E pas ENRICHED minimum. Pour ADVE keys, pas de gate (on
@@ -714,7 +659,7 @@ export const pillarRouter = createTRPCRouter({
         const { assertReadyFor } = await import("@/server/governance/pillar-readiness");
         await assertReadyFor(input.strategyId, "RTIS_CASCADE");
       }
-      return actualizePillar(input.strategyId, input.key);
+      return actualizePillar(input.strategyId, input.key, { intentId: ctx.intentId, userId: ctx.session.user.id });
     }),
 
   triggerMarketStudy: governedProcedure({
@@ -908,7 +853,7 @@ export const pillarRouter = createTRPCRouter({
     }),
   }).mutation(async ({ input }) => {
       const { fillStrategyToStage } = await import("@/server/services/pillar-maturity/auto-filler");
-      return fillStrategyToStage(input.strategyId, input.targetStage ?? "COMPLETE");
+      return fillStrategyToStage(input.strategyId, input.targetStage ?? "COMPLETE", ADVE_STORAGE_KEYS);
     }),
 
   /**
@@ -925,7 +870,7 @@ export const pillarRouter = createTRPCRouter({
    *
    * Inference policy (PR-C, ADR-0035) :
    *   Every auto-filled field is marked INFERRED in `Pillar.fieldCertainty`
-   *   so the cockpit pages render the "Inféré IA — à valider" badge. The
+   *   so the cockpit pages render the "Déduit — à vérifier" badge. The
    *   operator confirms each field via `pillar.confirmInferredField` when
    *   reviewed. This means `needsHuman` is never blocking — we always produce
    *   an inferred draft, the human validates afterward.
@@ -1033,10 +978,10 @@ export const pillarRouter = createTRPCRouter({
   getPhase: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+      const strategy = found(await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
         select: { status: true, advertis_vector: true },
-      });
+      }), "Marque introuvable.");
       // Derive current phase from strategy status
       const phaseOrder = ["FICHE", "AUDIT", "IMPLEMENTATION", "COCKPIT", "COMPLETE"] as const;
       const statusToPhase: Record<string, (typeof phaseOrder)[number]> = {
@@ -1072,10 +1017,10 @@ export const pillarRouter = createTRPCRouter({
         COCKPIT: "COCKPIT", COMPLETE: "COMPLETED",
       };
 
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+      const strategy = found(await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
         select: { status: true },
-      });
+      }), "Marque introuvable.");
 
       // Determine current phase
       const statusToPhase: Record<string, string> = {
@@ -1133,6 +1078,7 @@ export const pillarRouter = createTRPCRouter({
   listEditableFields: operatorProcedure
     .input(z.object({ strategyId: z.string(), pillarKey: adveKeyEnum }))
     .query(async ({ input, ctx }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
       const { listEditableFields, getEditableMode } = await import(
         "@/lib/types/variable-bible"
       );
@@ -1143,10 +1089,15 @@ export const pillarRouter = createTRPCRouter({
         select: { content: true, validationStatus: true, currentVersion: true },
       });
       const content = (pillar?.content as Record<string, unknown> | null) ?? {};
-      const fields = listEditableFields(pillarKeyLower);
+      const fields = listEditableFields(pillarKeyLower).filter(f => !(pillarKeyLower === "v" && content.financialModel != null && f.field === "unitEconomics"));
+      const profiles = pillarKeyLower === "v" ? await ctx.db.pillar.findUnique({ where: { strategyId_key: { strategyId: input.strategyId, key: "d" } }, select: { content: true } }) : null;
+      const personas = (profiles?.content as { personas?: Array<{ id?: string; name?: string; nom?: string; actorRoles?: string[] }> } | null)?.personas;
+      const payerOptions = Array.isArray(personas) ? personas.filter(p => p.id && p.actorRoles?.includes("PAYER"))
+        .map(p => ({ id: p.id!, name: p.name || p.nom || "Client payeur" })) : [];
       return {
         version: pillar?.currentVersion ?? 1,
         validationStatus: pillar?.validationStatus ?? "DRAFT",
+        payerOptions,
         fields: fields.map((f) => ({
           field: f.field,
           mode: getEditableMode(pillarKeyLower, f.spec),
@@ -1172,6 +1123,7 @@ export const pillarRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      await assertManualAmendAccess(ctx.session.user, input.strategyId, ctx.db);
       const pillarKeyLower = input.pillarKey.toLowerCase();
       const pillar = await ctx.db.pillar.findUnique({
         where: { strategyId_key: { strategyId: input.strategyId, key: pillarKeyLower } },
@@ -1298,9 +1250,11 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
         reason: z.string().min(1),
         overrideLocked: z.boolean().optional(),
         expectedVersion: z.number().int().positive().optional(),
+        sourceReceipts: SourceReceiptSchema.array().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      await assertManualAmendAccess(ctx.session.user, input.strategyId, ctx.db);
       const operatorId = ctx.session.user.id;
       const { emitIntent } = await import("@/server/services/mestor/intents");
       const result = await emitIntent(
@@ -1318,6 +1272,7 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
           reason: input.reason,
           overrideLocked: input.overrideLocked,
           expectedVersion: input.expectedVersion,
+          sourceReceipts: input.sourceReceipts,
         },
         { caller: "trpc.pillar.amend" },
       );
@@ -1327,14 +1282,9 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
   /**
    * PR-C (ADR-0035) — confirm an INFERRED field as DECLARED.
    *
-   * The LLM inference pass at activateBrand time pre-fills the 7 needsHuman
-   * ADVE fields with values marked as INFERRED in `Pillar.fieldCertainty`.
-   * The cockpit shows a yellow "Inféré IA — à valider" badge next to those
-   * fields. This mutation removes the INFERRED marker (the field then
-   * defaults to the absence of marker = treated as DECLARED in the UI),
-   * signalling that the operator has reviewed the value and accepts it
-   * as-is. The actual content stays unchanged — operators who want to edit
-   * the value should use the regular amend flow (OPERATOR_AMEND_PILLAR).
+   * Confirmation explicite d'une valeur inférée relue à une version donnée.
+   * La provenance HUMAN et le retrait des marqueurs legacy sont atomiques.
+   * La fiabilité d'une source documentaire n'est jamais modifiée par ce geste.
    */
   confirmInferredField: governedProcedure({
     kind: "LEGACY_PILLAR_CONFIRM_INFERRED_FIELD",
@@ -1343,83 +1293,46 @@ Propose une nouvelle valeur cohérente avec l'intention, en respectant le schém
       strategyId: z.string().min(1),
       pillarKey: z.enum(["a", "d", "v", "e", "r", "t", "i", "s", "A", "D", "V", "E", "R", "T", "I", "S"]),
       fieldPath: z.string().min(1),
+      expectedVersion: z.number().int().min(1),
     }),
   }).mutation(async ({ ctx, input }) => {
       const pillar = await ctx.db.pillar.findUnique({
         where: { strategyId_key: { strategyId: input.strategyId, key: input.pillarKey.toLowerCase() } },
-        select: { id: true, fieldCertainty: true, content: true },
+        select: { id: true, fieldCertainty: true, content: true, currentVersion: true },
       });
       if (!pillar) return { ok: false, alreadyConfirmed: false, reason: "pillar_not_found" as const };
 
+      if (input.expectedVersion !== pillar.currentVersion) {
+        throw new TRPCError({ code: "CONFLICT", message: "Cette valeur a changé depuis l’ouverture de l’écran. Recharge avant de la valider." });
+      }
       const certainty = (pillar.fieldCertainty as Record<string, string> | null) ?? {};
-      // Field path stored without the pillar prefix in the UI ("archetype")
-      // OR fully qualified ("a.archetype") in the LLM service. Accept both.
-      const qualifiedPath = input.fieldPath.includes(".")
-        ? input.fieldPath
-        : `${input.pillarKey.toLowerCase()}.${input.fieldPath}`;
-
-      if (!(qualifiedPath in certainty) && !(input.fieldPath in certainty)) {
+      const content = (pillar.content ?? {}) as Record<string, unknown>;
+      const paths = inferredFieldPaths(content, certainty, input.pillarKey);
+      const bare = input.fieldPath.replace(new RegExp(`^${input.pillarKey.toLowerCase()}\\.`), "");
+      const topKey = paths.includes(bare) ? bare : provenanceTopKey(input.fieldPath, input.pillarKey);
+      if (!paths.includes(topKey)) {
         return { ok: true, alreadyConfirmed: true };
       }
-
-      delete certainty[qualifiedPath];
-      delete certainty[input.fieldPath];
-
-      // Confirmer n'accordait AUCUNE protection : seul le badge `fieldCertainty`
-      // disparaissait, la provenance restait INFERRED, et la prochaine passe
-      // d'ingestion ou de remplissage (`SOURCE`/`INFERRED` sur `INFERRED` =
-      // ALLOW) écrasait silencieusement la valeur que l'opérateur venait de
-      // valider. Le geste de confirmation doit donc écrire la provenance, sinon
-      // il ne veut rien dire.
-      //
-      // Le grain est celui du garde (`provenance-guard` arbitre les clés de
-      // TÊTE) : confirmer `a.identite.archetype` verrouille `identite`.
-      //
-      // On passe par la GATEWAY plutôt que d'écrire `content` en direct (C5) :
-      // ré-écrire la valeur courante sous l'autorité OPERATOR fait poser la
-      // provenance HUMAN par le chemin normal, et laisse au passage une
-      // `PillarVersion` qui date la confirmation. Idempotent — la valeur ne
-      // change pas, seule son autorité change.
-      const content = (pillar.content ?? {}) as Record<string, unknown>;
-      const bare = qualifiedPath.startsWith(`${input.pillarKey.toLowerCase()}.`)
-        ? qualifiedPath.slice(input.pillarKey.length + 1)
-        : qualifiedPath;
-      const topKey = bare.split(/[.[]/)[0];
-
-      // La PROVENANCE d'abord, le badge ensuite : l'ordre inverse laissait le
-      // badge supprimé quand la gateway refusait l'écriture — l'opérateur
-      // voyait « confirmé » sur un champ dont l'autorité n'avait pas bougé.
-      let provenanceLocked: string | null = null;
-      if (topKey && topKey in content) {
-        const w = await writePillarAndScore({
+      const w = await writePillarAndScore({
           strategyId: input.strategyId,
           pillarKey: input.pillarKey.toLowerCase() as Lowercase<PillarKey>,
-          operation: { type: "SET_FIELDS", fields: [{ path: topKey, value: content[topKey] }] },
+          operation: { type: "SET_FIELDS", fields: [{ path: topKey, value: resolvePillarPath(content, topKey) }] },
           author: {
             system: "OPERATOR",
             userId: ctx.session.user.id,
-            reason: `Confirmation opérateur de « ${qualifiedPath} » — provenance HUMAN`,
+            intentId: ctx.intentId,
+            reason: `Confirmation opérateur de « ${input.pillarKey.toLowerCase()}.${topKey} » pour le plan, version relue ${input.expectedVersion}. Consigne : ${inferredFieldVerification(input.pillarKey, topKey).instruction}`,
           },
-          // DÉCLARATION explicite : la valeur ne change pas, seule son autorité
-          // change. Sans elle le garde court-circuite le champ inchangé et
-          // n'écrit rien — la confirmation était un no-op qui se déclarait
-          // verrou (relecture adversariale 2026-07-27).
-          options: { fieldProvenance: { [topKey]: "HUMAN" } },
+          options: { fieldProvenance: { [topKey]: "HUMAN" }, expectedVersion: input.expectedVersion, confirmInferredField: topKey },
         });
-        assertWritten(w, "confirmInferredField");
-        provenanceLocked = topKey;
+      if (!w.success && (w.error?.includes("PILLAR_VERSION_CONFLICT") || w.error?.includes("FIELD_CONFIRMATION_CONFLICT"))) {
+        throw new TRPCError({ code: "CONFLICT", message: "Cette valeur a changé pendant la validation. Recharge avant de réessayer." });
       }
-
-      await ctx.db.pillar.update({
-        where: { id: pillar.id },
-        data: { fieldCertainty: certainty as Prisma.InputJsonValue },
-      });
-
-      return { ok: true, alreadyConfirmed: false, provenanceLocked };
+      assertWritten(w, "confirmInferredField");
+      return { ok: true, alreadyConfirmed: false, provenanceLocked: topKey };
     }),
 });
 
 function getArraySafe(val: unknown): unknown[] {
   return Array.isArray(val) ? [...val] : [];
 }
-

@@ -11,9 +11,14 @@ import { PortalWelcome } from "@/components/shared/portal-welcome";
 import { PortalTourHost } from "@/components/shared/portal-tour";
 import { NotoriaStatusDock } from "@/components/cockpit/notoria/notoria-status-dock";
 import { WhatsNewModal } from "@/components/cockpit/whats-new-modal";
+import { usePathname } from "next/navigation";
+import { PortfolioShell } from "@/components/portfolio/PortfolioShell";
+import Link from "next/link";
+import { Suspense } from "react";
 
 function CockpitSidebarHeader() {
   const { strategies, strategyId } = useStrategy();
+  const me = trpc.auth.me.useQuery();
   const current = strategies.find((s) => s.id === strategyId);
   // Le portail porte le visage de la marque active (mandat « le cockpit doit
   // refléter la marque ») : logo du coffre en tête de sidebar quand il existe.
@@ -50,26 +55,28 @@ function CockpitSidebarHeader() {
         <CockpitThemeToggle />
       </div>
       <StrategySelector />
+      {me.data?.canOperate && <Link href="/cockpit/portfolio" className="block text-xs text-foreground-secondary underline hover:text-accent">Portefeuille de marques</Link>}
     </div>
   );
 }
 
 export default function CockpitLayout({ children }: { children: React.ReactNode }) {
+  const isPortfolio = usePathname().startsWith("/cockpit/portfolio");
   return (
     <div data-density="comfortable" data-portal="cockpit" className="contents">
       <StrategyProvider>
         {/* ADR-0130 — le cockpit puise dans le code couleur de la marque active. */}
-        <BrandAccentVars />
-        <AppShell
+        {!isPortfolio && <BrandAccentVars />}
+        {isPortfolio ? <Suspense fallback={<p className="p-6 text-sm text-foreground-secondary">Chargement du portefeuille…</p>}><PortfolioShell>{children}</PortfolioShell></Suspense> : <AppShell
           portal="cockpit"
           navGroups={cockpitNavGroups}
           portalAccentVar="var(--color-portal-cockpit)"
           sidebarHeader={<CockpitSidebarHeader />}
         >
           {children}
-        </AppShell>
-        <PortalWelcome portal="cockpit" />
-        <PortalTourHost portal="cockpit" />
+        </AppShell>}
+        {!isPortfolio && <PortalWelcome portal="cockpit" />}
+        {!isPortfolio && <PortalTourHost portal="cockpit" />}
         {/* « Quoi de neuf » — la note de version la plus récente (vocable client)
             présentée une fois par version après login. Même source que le récap
             console `/console/socle/release-notes` (src/lib/release-notes.ts). */}
@@ -78,7 +85,7 @@ export default function CockpitLayout({ children }: { children: React.ReactNode 
             operator always knows the engine state (pillar maturity + pending
             recos + next pipeline step). Source: notoria.getDashboard via
             getStrategyReadiness (governance layer). */}
-        <NotoriaStatusDock />
+        {!isPortfolio && <NotoriaStatusDock />}
       </StrategyProvider>
     </div>
   );

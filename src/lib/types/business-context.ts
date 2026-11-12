@@ -141,9 +141,11 @@ export interface BusinessContext {
   premiumScope: PremiumScope;
   premiumProducts?: string[];
   brandNature?: BrandNatureKey;
+  marketRegion?: string;
 }
 
 export const BusinessContextSchema = z.object({
+  marketRegion: z.string().trim().min(2).max(120).optional(),
   businessModel: z.enum(BUSINESS_MODEL_KEYS as [string, ...string[]]),
   businessModelSubtype: z.string().optional(),
   economicModels: z.array(z.enum(ECONOMIC_MODEL_KEYS as [string, ...string[]])).min(1),

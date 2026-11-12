@@ -7,6 +7,7 @@ interface Props { data: ContexteDefiSection }
 
 export function ContexteDefi({ data }: Props) {
   const bc = data.businessContext;
+  const market = [data.market?.region, data.market?.countryCode, data.market?.scaleLabel].filter(Boolean).join(" · ");
   return (
     <div className="space-y-6">
       {/* Contexte marche */}
@@ -18,7 +19,8 @@ export function ContexteDefi({ data }: Props) {
           {bc.positioningArchetype && <InfoBlock label="Archetype de positionnement" value={bc.positioningArchetype} />}
           {bc.economicModels.length > 0 && <InfoBlock label="Modeles economiques" value={bc.economicModels.join(", ")} />}
           {bc.salesChannels.length > 0 && <InfoBlock label="Canaux de vente" value={bc.salesChannels.join(", ")} />}
-          {data.client?.country && <InfoBlock label="Marche" value={data.client.country} />}
+          {market && <InfoBlock label="Marché du dossier" value={market} />}
+          {data.client?.country && <InfoBlock label="Pays du siège du client" value={data.client.country} />}
         </div>
       </div>
 
@@ -48,11 +50,12 @@ export function ContexteDefi({ data }: Props) {
       {/* Cibles */}
       {data.personas.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Cibles</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Publics et rôles dans le modèle</h3>
           <DataTable
-            headers={["Segment", "Age", "CSP", "Insight cle", "Freins"]}
+            headers={["Profil", "Rôles", "Age", "CSP", "Insight cle", "Freins"]}
             rows={data.personas.map((p) => [
               p.nom,
+              p.actorRoles?.join(" · ") || "Rôles à qualifier",
               p.trancheAge,
               p.csp,
               p.insightCle,

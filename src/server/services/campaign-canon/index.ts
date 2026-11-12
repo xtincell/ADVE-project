@@ -15,44 +15,12 @@
  */
 
 import { db } from "@/lib/db";
-import { BRAND_TIERS, effectiveTier, type BrandTier } from "@/domain/brand-tier";
-import { readCompositeFromVector } from "@/domain/brand-scores";
-import { planCanonicalCampaigns, type InitiativeLite, type CanonTemplateLite, type PlannedCampaign } from "./plan";
+import { collectNormalizedInitiatives, ROADMAP_ROUTE_KEYS } from "@/lib/types/pillar-schemas";
+import { planCanonicalCampaigns, canonTypeForInitiative, type InitiativeLite, type CanonTemplateLite, type PlannedCampaign } from "./plan";
 import { ensureCanonTemplates } from "./reference";
 
 export * from "./plan";
 export * from "./reference";
-
-function tierToOrdinal(tier: BrandTier): number {
-  const i = BRAND_TIERS.indexOf(tier);
-  return i < 0 ? 0 : i;
-}
-
-/** Résout le tier de marque depuis le score composite courant (best-effort → LATENT). */
-async function resolveTierOrdinal(strategyId: string): Promise<number> {
-  const strat = await db.strategy.findUnique({
-    where: { id: strategyId },
-    select: { advertis_vector: true, apogeeTier: true },
-  });
-  // Lecture canon du composite (`composite`, PAS `compositeScore` — cf.
-  // `domain/brand-scores.ts` : cette confusion de nom servait `null` ici, donc
-  // un tier LATENT systématique, donc un cadrage de campagne sous-dimensionné.
-  const composite = readCompositeFromVector(strat?.advertis_vector);
-  if (composite == null && !strat?.apogeeTier) return 0;
-  return tierToOrdinal(effectiveTier({ apogeeTier: strat?.apogeeTier, composite }));
-}
-
-/** Budget global conseillé (Pilier S computed.globalBudget → Pilier V → 0). */
-async function resolveGlobalBudget(strategyId: string): Promise<number> {
-  const pillars = await db.pillar.findMany({ where: { strategyId, key: { in: ["s", "v"] } }, select: { key: true, content: true } });
-  for (const p of pillars) {
-    const c = (p.content ?? {}) as Record<string, unknown>;
-    const computed = (c.computed ?? {}) as Record<string, unknown>;
-    const gb = computed.globalBudget ?? c.globalBudget ?? c.budgetDisponible;
-    if (typeof gb === "number" && gb > 0) return gb;
-  }
-  return 0;
-}
 
 export interface GenerateCanonResult {
   status: "OK" | "DEFERRED";
@@ -64,7 +32,8 @@ export interface GenerateCanonResult {
    * direction créative. Le frame porte budget conseillé + AARRR + dates et attend
    * la direction créative.
    */
-  campaigns: Array<{ id: string; canonType: string; recommendedBudget: number }>;
+  campaigns: Array<{ id: string; canonType: string; recommendedBudget: number | null }>;
+  unassignedInitiativeIds?: string[];
 }
 
 /**
@@ -76,8 +45,27 @@ export async function generateCanonicalCampaigns(input: {
   routeKey?: string;
   startDate?: Date;
 }): Promise<GenerateCanonResult> {
-  const routeKey = input.routeKey ?? "TARGET";
-  const startDate = input.startDate ?? new Date();
+  const [sourceRows, strategy] = await Promise.all([
+    db.pillar.findMany({ where: { strategyId: input.strategyId, key: { in: ["i", "s"] } }, select: { key: true, content: true, staleAt: true } }),
+    db.strategy.findUniqueOrThrow({ where: { id: input.strategyId }, select: { currencyCode: true } }),
+  ]);
+  const synthesis = sourceRows.find(p => p.key === "s");
+  const computed = ((synthesis?.content as Record<string, unknown> | null)?.computed ?? {}) as Record<string, unknown>;
+  const routeKey = input.routeKey ?? (typeof computed.selectedRouteKey === "string" ? computed.selectedRouteKey : "TARGET");
+  const routes = Array.isArray(computed.roadmapRoutes) ? computed.roadmapRoutes as Array<Record<string, unknown>> : [];
+  const route = routes.find(r => r.key === routeKey && r.selectionBasis === "CATALOGUE_COVERAGE_RULES_V1");
+  if (!(ROADMAP_ROUTE_KEYS as readonly string[]).includes(routeKey) || !route || synthesis?.staleAt) {
+    return { status: "DEFERRED", reason: "Recalculez le scénario stratégique avant de préparer ses campagnes.", routeKey, campaigns: [] };
+  }
+  const routeIds = new Set(Array.isArray(route.initiativeIds) ? route.initiativeIds as string[] : []);
+  const initiatives: InitiativeLite[] = collectNormalizedInitiatives(sourceRows.find(p => p.key === "i")?.content)
+    .filter(i => routeIds.has(i.id) && i.preference !== "REJECTED");
+  if (initiatives.length !== routeIds.size) return { status: "DEFERRED", reason: "Les actions du scénario ne correspondent plus au catalogue. Recalculez le plan.", routeKey, campaigns: [] };
+  const unassignedInitiativeIds = initiatives.filter(i => !canonTypeForInitiative(i) || canonTypeForInitiative(i) === "PUNCTUAL").map(i => i.id);
+  if (!initiatives.length || unassignedInitiativeIds.length === initiatives.length) return {
+    status: "DEFERRED", reason: "Les campagnes du scénario ne sont pas encore déductibles des informations de marque. Complétez le socle ADVE à partir des sources et des inputs attribués, puis recalculez le plan. Les activations ponctuelles gardent leur propre cadre.", routeKey, campaigns: [], unassignedInitiativeIds,
+  };
+  const startDate = input.startDate ?? null;
 
   let templatesRaw = await db.campaignCanonTemplate.findMany({ orderBy: { sortOrder: "asc" } });
   if (templatesRaw.length === 0) {
@@ -100,40 +88,21 @@ export async function generateCanonicalCampaigns(input: {
     budgetShare: t.budgetShare,
   }));
 
-  const actionRows = await db.brandAction.findMany({
-    where: { strategyId: input.strategyId, selected: true },
-    select: { id: true, budgetMin: true, budgetMax: true, metadata: true },
-  });
-  const initiatives: InitiativeLite[] = actionRows.map((a) => ({
-    id: a.id,
-    timeframe: typeof (a.metadata as Record<string, unknown> | null)?.timeframe === "string"
-      ? ((a.metadata as Record<string, unknown>).timeframe as string)
-      : null,
-    budgetMin: a.budgetMin,
-    budgetMax: a.budgetMax,
-  }));
-
-  const [tierOrdinal, globalBudget, strategy] = await Promise.all([
-    resolveTierOrdinal(input.strategyId),
-    resolveGlobalBudget(input.strategyId),
-    db.strategy.findUniqueOrThrow({ where: { id: input.strategyId }, select: { currencyCode: true } }),
-  ]);
-
-  const planned = planCanonicalCampaigns({ initiatives, templates, tierOrdinal, startDate, globalBudget });
+  const planned = planCanonicalCampaigns({ initiatives, templates, tierOrdinal: 0, startDate });
   const currency = strategy.currencyCode ?? "XAF";
 
   const out: GenerateCanonResult["campaigns"] = [];
   for (const p of planned) {
-    const campaign = await upsertCanonCampaign(input.strategyId, routeKey, currency, p);
+    const campaign = await upsertCanonCampaign(input.strategyId, routeKey, currency, p, input.startDate !== undefined);
     // ADR-0120 — DÉCOUPLAGE : l'amorçage canon ne rattache plus d'action. Le frame
     // est le cadre stratégique (budget conseillé + AARRR + dates), préfillé depuis
     // l'Advertis et en attente de la direction créative. Les actions + briefs de
     // production sont générés à la validation de la Proposition Créative. `p.actionIds`
     // sert encore au planner PUR pour le budget conseillé — jamais à l'attache ici.
-    out.push({ id: campaign.id, canonType: p.canonType, recommendedBudget: p.recommendedBudget });
+    out.push({ id: campaign.id, canonType: p.canonType, recommendedBudget: campaign.recommendedBudget });
   }
 
-  return { status: "OK", routeKey, campaigns: out };
+  return { status: "OK", routeKey, campaigns: out, unassignedInitiativeIds };
 }
 
 /**
@@ -194,10 +163,10 @@ export async function createPunctualCampaign(input: {
   return campaign;
 }
 
-async function upsertCanonCampaign(strategyId: string, routeKey: string, currency: string, p: PlannedCampaign) {
+async function upsertCanonCampaign(strategyId: string, routeKey: string, currency: string, p: PlannedCampaign, replanDates: boolean) {
   const existing = await db.campaign.findFirst({
     where: { strategyId, canonType: p.canonType, routeKey },
-    select: { id: true },
+    select: { id: true, state: true, recommendedBudget: true },
   });
   const data = {
     name: p.label,
@@ -207,18 +176,21 @@ async function upsertCanonCampaign(strategyId: string, routeKey: string, currenc
     aarrrSecondary: p.aarrrSecondary,
     isAlwaysOn: p.isAlwaysOn,
     recommendedBudget: p.recommendedBudget,
-    budget: p.recommendedBudget,
     budgetCurrency: currency,
     startDate: p.startDate,
     endDate: p.endDate,
   };
   if (existing) {
-    return db.campaign.update({ where: { id: existing.id }, data });
+    if (existing.state !== "BRIEF_DRAFT") return existing;
+    // Refresh proposed framing, never an adopted budget or production schedule.
+    const { startDate, endDate, ...proposal } = data;
+    return db.campaign.update({ where: { id: existing.id }, data: { ...proposal, ...(replanDates ? { startDate, endDate } : {}) } });
   }
   return db.campaign.create({
     data: {
       strategyId,
       ...data,
+      budget: null,
       code: `CANON-${p.canonType}-${routeKey}`.slice(0, 40),
       state: "BRIEF_DRAFT",
       status: "PLANNING",

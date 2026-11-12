@@ -45,10 +45,10 @@ describe("pillar schema coherence (ADR-0023)", () => {
     }
   });
 
-  it("derivedFrom variables resolve to INFERRED_NO_EDIT", () => {
+  it("derivation alone never grants a manual edit", () => {
     for (const [pillarKey, bible] of Object.entries(VARIABLE_BIBLE)) {
       for (const [field, spec] of Object.entries(bible)) {
-        if (spec.derivedFrom) {
+        if (spec.derivedFrom && !spec.editableMode) {
           expect(
             getEditableMode(pillarKey, spec),
             `${pillarKey}.${field} has derivedFrom but is not INFERRED_NO_EDIT`,
@@ -56,6 +56,28 @@ describe("pillar schema coherence (ADR-0023)", () => {
         }
       }
     }
+  });
+
+  it.each([
+    ["d", ["personas", "tonDeVoix", "archetypalExpression"]],
+    ["v", ["businessModel", "pricingJustification", "economicModels", "positioningArchetype", "salesChannel", "personaSegmentMap"]],
+    ["e", ["promesseExperience", "superfanPortrait", "primaryChannel", "productExperienceMap", "ladderProductAlignment", "channelTouchpointMap"]],
+  ] as const)("keeps qualitative %s decisions available in the existing manual editor", (pillar, fields) => {
+    const editable = listEditableFields(pillar);
+    for (const field of fields) {
+      const entry = editable.find(item => item.field === field);
+      // Inference inputs remain documented; a proposed synthesis is not a
+      // mathematical result. Human correction uses the strategic rewrite path.
+      expect(entry, `${pillar}.${field} has no manual route`).toBeDefined();
+      expect(entry?.spec.derivedFrom).toBeTruthy();
+      expect(entry?.mode).toBe("STRATEGIC_REWRITE");
+    }
+  });
+
+  it("keeps the computed team size outside manual amendments", () => {
+    const computed = Object.entries(VARIABLE_BIBLE.a!).find(([, spec]) => spec.derivedFrom === "a.equipeDirigeante (calcul)");
+    expect(computed).toBeDefined();
+    expect(listEditableFields("a").some(item => item.field === computed![0])).toBe(false);
   });
 
   it("explicit editableMode overrides win over heuristic", () => {

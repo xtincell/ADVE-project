@@ -14,6 +14,7 @@
  */
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { trpc } from "@/lib/trpc/client";
 import type { MarketScale } from "@/domain/market-scale";
 import { PageHeader } from "@/components/shared/page-header";
@@ -34,6 +35,7 @@ const TIERS = ["FRAGILE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"] as const;
 const ARENAS = ["A", "D", "V", "E", "T", "R", "TENURE"] as const;
 
 export default function ScoreurCanonPage() {
+  const { data: session } = useSession();
   const canon = trpc.scoreur.getCanon.useQuery();
   const utils = trpc.useUtils();
   const [msg, setMsg] = useState<string | null>(null);
@@ -57,6 +59,15 @@ export default function ScoreurCanonPage() {
     },
     onError: (e) => setErr(e.message),
   });
+  const initialize = trpc.scoreur.seedCanon.useMutation({
+    onSuccess: () => {
+      setMsg("Repères proposés chargés. Les réglages existants sont conservés.");
+      setErr(null);
+      void utils.scoreur.getCanon.invalidate();
+    },
+    onError: (e) => { setErr(e.message); setMsg(null); },
+  });
+  const busy = edit.isPending || reset.isPending || initialize.isPending;
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -75,9 +86,15 @@ export default function ScoreurCanonPage() {
         <CardHeader>
           <CardTitle>Étalons — θ des ancres & items</CardTitle>
           <CardDescription>
-            La seule main humaine du système : ces θ jaugent toute la mesure. Modifiez
-            puis « Enregistrer ». (Échelle Elo.)
+            Chargez les repères proposés manquants, puis ajustez leurs valeurs si nécessaire.
+            Le chargement conserve les réglages déjà enregistrés et ne vaut pas ratification.
           </CardDescription>
+          {session?.user?.role === "ADMIN" ? (
+            <Button variant="outline" className="self-start" disabled={busy || canon.isLoading || canon.isError}
+              onClick={() => initialize.mutate()}>
+              {initialize.isPending ? "Chargement des repères…" : "Charger les repères proposés"}
+            </Button>
+          ) : null}
         </CardHeader>
         <CardBody>
           <div className="flex flex-col gap-2">
@@ -89,7 +106,7 @@ export default function ScoreurCanonPage() {
                 kind={a.kind}
                 theta={a.fixedTheta ?? 0}
                 onSave={(fixedTheta) => edit.mutate({ op: "SET_ANCHOR_THETA", slug: a.slug, fixedTheta })}
-                busy={edit.isPending}
+                busy={busy}
               />
             ))}
             {canon.isLoading ? <Text>Chargement…</Text> : null}
@@ -118,7 +135,7 @@ export default function ScoreurCanonPage() {
                   edit.mutate({ op: "SET_GAUGE", marketScale: scale as MarketScale, floor, icone })
                 }
                 onReset={() => reset.mutate({ kind: "GAUGE", key: scale })}
-                busy={edit.isPending}
+                busy={busy}
               />
             ))}
           </div>
@@ -145,14 +162,14 @@ export default function ScoreurCanonPage() {
                   edit.mutate({ op: "SET_ITEM", itemId: it.id, tier: tier as (typeof TIERS)[number], label, arena: arena as (typeof ARENAS)[number], order })
                 }
                 onRemove={() => edit.mutate({ op: "REMOVE_ITEM", itemId: it.id })}
-                busy={edit.isPending}
+                busy={busy}
               />
             ))}
             <AddItemRow
               onAdd={(itemId, tier, label, arena) =>
                 edit.mutate({ op: "SET_ITEM", itemId, tier: tier as (typeof TIERS)[number], label, arena: arena as (typeof ARENAS)[number] })
               }
-              busy={edit.isPending}
+              busy={busy}
             />
           </div>
         </CardBody>
@@ -176,7 +193,7 @@ export default function ScoreurCanonPage() {
               edit.mutate({ op: "SET_REVEALED_THRESHOLDS", mytheMinDomainAgeYears, marketFitMinPress })
             }
             onReset={() => reset.mutate({ kind: "REVEALED_GATE", key: "default" })}
-            busy={edit.isPending}
+            busy={busy}
           />
         </CardBody>
       </Card>

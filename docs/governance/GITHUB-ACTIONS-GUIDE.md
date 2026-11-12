@@ -318,6 +318,13 @@ jobs:
 
 ### Phase 8 — `release.yml` (changelog auto + SDK publish)
 
+> **Retiré le 10 novembre 2026 (v6.27.555).** Le workflow n’a jamais tourné : aucun tag
+> `v*` n’existe. Il aurait échoué au premier tag, car `npm run build:sdk` n’existe pas et
+> le dépôt ne déclare aucun workspace. Il aurait aussi republié la version fixe `0.1.0` du
+> SDK à chaque tag. Publier `@lafusee/sdk` demandera un workflow dédié, une fois tranchés
+> la licence, le versionnage et le jeton npm (`RESIDUAL-DEBT.md`). Le modèle ci-dessous
+> reste un plan.
+
 **Pourquoi** : la Phase 8 publie `@lafusee/sdk`. Sans automatisation, le bump de version + changelog devient une corvée que personne ne fait. Et le SDK décale la version du repo.
 
 ```yaml
@@ -409,7 +416,7 @@ Si le repo passe en public (ce qui semble être le cas — `xtincell/ADVE-projec
 | **5** NSP + UI Kit | `e2e.yml` + visual regression Playwright | Storybook publié |
 | **6** Filets | `governance-drift.yml`, `slo-check.yml`, chaos suite | scripts SLO + hash-chain |
 | **7** UI/Oracle/Landing | `lighthouse.yml` | `.lighthouserc.json` configuré |
-| **8** Hardening + Docs | `release.yml`, `docs-deploy.yml` | SDK packagé en workspace |
+| **8** Hardening + Docs | `release.yml` (retiré, voir Phase 8), `docs-deploy.yml` | SDK packagé en workspace |
 
 ---
 

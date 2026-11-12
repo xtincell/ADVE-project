@@ -65,6 +65,24 @@ afterEach(() => {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe("collectMarketSignals — AC4 signal type EXTERNAL_SAAS", () => {
+  it("labels model-produced trends as inferred and strips model URLs while retaining stored IDs", async () => {
+    callLLMMock.mockResolvedValue({ text: JSON.stringify({ signals: [{
+      title: "Hypothèse sectorielle", content: "Une tendance plausible, pas un article collecté.",
+      sourceType: "NEWS", sourceUrl: "https://invented.example/article", relevance: 0.7,
+    }] }) });
+    dbSignalCreateMock.mockResolvedValue({ id: "stored-input" });
+    const result = await collectMarketSignals(BASE_CONFIG);
+    expect(result.length).toBeGreaterThan(0);
+    for (const signal of result) {
+      expect(signal).toMatchObject({ id: "stored-input", sourceType: "INFERRED", provenanceKind: "INFERRED" });
+      expect(signal).not.toHaveProperty("sourceUrl");
+    }
+    for (const call of dbSignalCreateMock.mock.calls) {
+      expect(call[0].data.data).toMatchObject({ sourceType: "INFERRED", provenanceKind: "INFERRED" });
+      expect(JSON.stringify(call[0].data.data)).not.toContain("invented.example");
+    }
+  });
+
   it("writes Signal.type = 'EXTERNAL_SAAS' — NOT 'MARKET_SIGNAL'", async () => {
     callLLMMock.mockResolvedValue({
       text: JSON.stringify({

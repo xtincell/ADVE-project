@@ -1,3 +1,4 @@
+import { resolveUnitEconomics, unitEconomicsRatio } from "@/domain/unit-economics";
 import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -15,14 +16,29 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
+import { fieldStatusFor } from "@/domain/field-provenance";
+import { deriveActorProductLinks } from "@/domain/brand-actors";
+import { loadBrandSources, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
 import { setNestedValue, resolvePillarPath } from "@/lib/pillar-path";
-import { findEmptyLeafPaths, findEmptyArrayCellPaths, isNonFabricableLeaf, buildFieldAnchor } from "@/lib/types/pillar-maturity-contracts";
+import { findEmptyLeafPaths, findEmptyArrayCellPaths, isNonFabricableLeaf, buildFieldAnchor, getFieldZod, canInferMissingConceptualField } from "@/lib/types/pillar-maturity-contracts";
+import { isDeepStrictEqual } from "node:util";
 import type { Prisma } from "@prisma/client";
-import type { MaturityStage, AutoFillResult, FieldRequirement } from "@/lib/types/pillar-maturity";
+import type { MaturityStage, AutoFillResult, FieldRequirement, PillarAssessment } from "@/lib/types/pillar-maturity";
 import { assessPillar } from "./assessor";
 import { getContract } from "./contracts-loader";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
+import { serializePillars, ADVE_SOURCE_ALIGNMENT_CONTRACT } from "@/server/services/utils/pillar-context";
+import { loadBrandSourceContext, renderSourceContext } from "@/server/services/notoria/source-context";
+
+/** Source extracts remain sourced. Replacing a previously deliberate conceptual
+ * blank is a proposed premise, with its source receipts and history retained. */
+export function completionProvenance(key: string, path: string, previous: Record<string, unknown>, next: unknown,
+  sourceExtracted: boolean, certainty?: Record<string, string>): "SOURCE" | "INFERRED" {
+  const origin = fieldStatusFor(certainty, key, previous._fieldProvenance)(path);
+  const blankDecision = (origin === "HUMAN" || origin === "SOURCE") && canInferMissingConceptualField(key, path, previous, next);
+  return sourceExtracted && !blankDecision ? "SOURCE" : "INFERRED";
+}
 
 // ─── Enrichissement surgical des matrices (Phase 3) ───────────────────────────
 
@@ -98,7 +114,9 @@ export async function fillToStage(
   });
   const content = ((pillar?.content ?? {}) as Record<string, unknown>);
   const existingCertainty = ((pillar?.fieldCertainty ?? {}) as Record<string, string>);
+  const initialContent = structuredClone(content);
 
+  const sourceReceipts: SourceReceipt[] = [];
   const aggregateFilled: string[] = [];
   const aggregateSourceFilled = new Set<string>(); // champs SOURCE (ÉTAPE 0)
   const aggregateAiFilled: string[] = [];
@@ -107,7 +125,7 @@ export async function fillToStage(
   const MAX_PASSES = targetStage === "COMPLETE" ? 3 : 2;
 
   for (let pass = 1; pass <= MAX_PASSES; pass++) {
-    const passResult = await runFillPass(strategyId, key, content, targetStage, contract, fieldsToFill);
+    const passResult = await runFillPass(strategyId, key, content, targetStage, contract, fieldsToFill, sourceReceipts);
     for (const p of passResult.filled) if (!aggregateFilled.includes(p)) aggregateFilled.push(p);
     for (const p of passResult.sourceFilled) aggregateSourceFilled.add(p);
     for (const p of passResult.aiFilled) if (!aggregateAiFilled.includes(p)) aggregateAiFilled.push(p);
@@ -141,22 +159,17 @@ export async function fillToStage(
     // humain/source, et signale les contradictions source↔humain (CHALLENGE).
     const fieldProvenance: Record<string, import("@/domain/field-provenance").FieldProvenance> = {};
     for (const path of aggregateFilled) {
-      // Clé de tête normalisée : on retire l'index de tableau ET la profondeur
-      // (`produitsCatalogue[2].gainClientConcret` → `produitsCatalogue`) — la
-      // provenance/le badge restent au grain top-level (une cellule inférée
-      // marque toute la matrice INFERRED).
-      const topKey = path.split(/[.[]/)[0]!;
-      // SOURCE l'emporte sur INFERRED si plusieurs sous-champs d'une même clé.
-      if (aggregateSourceFilled.has(path)) fieldProvenance[topKey] = "SOURCE";
-      else if (fieldProvenance[topKey] !== "SOURCE") fieldProvenance[topKey] = "INFERRED";
+      fieldProvenance[path] = completionProvenance(key, path, initialContent,
+        resolvePillarPath(content, path), aggregateSourceFilled.has(path), existingCertainty);
     }
     const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+    const proposed = new Map(aggregateFilled.map(path => [path, structuredClone(resolvePillarPath(content, path))]));
     const write = await writePillarAndScore({
       strategyId,
       pillarKey: key as import("@/lib/types/advertis-vector").PillarKey,
-      operation: { type: "REPLACE_FULL", content },
+      operation: { type: "SET_FIELDS", fields: aggregateFilled.map(path => ({ path, value: resolvePillarPath(content, path) })) },
       author: { system: "AUTO_FILLER", reason: `fillToStage(${targetStage}) — ${aggregateFilled.length} fields filled across ${MAX_PASSES} max passes` },
-      options: { confidenceDelta: 0.03 * aggregateFilled.length, fieldProvenance },
+      options: { expectedVersion: pillar?.currentVersion ?? 0, confidenceDelta: 0.03 * aggregateFilled.length, fieldProvenance, sourceReceipts },
     });
 
     // ── Le verdict de la gateway DÉCIDE — il n'est plus jeté ────────────────
@@ -209,14 +222,19 @@ export async function fillToStage(
     for (const w of write.warnings) {
       aggregateFailed.push({ path: "*", reason: w });
     }
+    for (let i = aggregateFilled.length - 1; i >= 0; i--) {
+      const path = aggregateFilled[i]!;
+      if (isDeepStrictEqual(resolvePillarPath(content, path), proposed.get(path))) continue;
+      aggregateFilled.splice(i, 1);
+      aggregateFailed.push({ path, reason: "La valeur proposée n’a pas été persistée ; consulter les avertissements de gouvernance." });
+    }
 
     // Update fieldCertainty with INFERRED for any newly AI-filled fields
     const updatedCertainty = { ...existingCertainty };
     let certaintyChanged = false;
     for (const path of aggregateAiFilled) {
-      // Grain top-level (index de tableau + profondeur retirés) : une cellule
-      // de matrice inférée marque toute la matrice INFERRED côté badge.
-      const dbKey = `${key}.${path.split(/[.[]/)[0]}`;
+      if (!aggregateFilled.includes(path)) continue;
+      const dbKey = `${key}.${path}`;
       if (!updatedCertainty[dbKey] || updatedCertainty[dbKey] === "INFERRED") {
         updatedCertainty[dbKey] = "INFERRED";
         certaintyChanged = true;
@@ -271,6 +289,23 @@ export async function fillToStage(
  * in place. Caller decides whether to retry. NO DB write here — the caller
  * persists once after all passes converge.
  */
+/**
+ * Contract requirements the filler may target for this pass: those the assessor
+ * lists missing, EXCEPT a present value refused by the strict schema (S —
+ * ADR-0214 amendment). Such a value is listed missing so the % and the stage are
+ * honest, but it is not absence: the filler fills absence and never rewrites a
+ * present value. Its repair is the governed recalculation from sources, not an
+ * LLM draft. Pure, exported for the contract tests.
+ */
+export function requirementsToFill(
+  targetReqs: FieldRequirement[],
+  before: Pick<PillarAssessment, "missing" | "satisfied" | "invalid">,
+): FieldRequirement[] {
+  const presentInvalid = new Set(before.invalid.map((p) => p.split(/[.[]/)[0]!));
+  return targetReqs.filter((r) => before.missing.includes(r.path)
+    && !(before.satisfied.includes(r.path) && presentInvalid.has(r.path)));
+}
+
 async function runFillPass(
   strategyId: string,
   key: string,
@@ -278,13 +313,13 @@ async function runFillPass(
   targetStage: MaturityStage,
   contract: import("@/lib/types/pillar-maturity").PillarMaturityContract,
   fieldsToFill?: string[],
+  sourceReceipts?: SourceReceipt[],
 ): Promise<{ filled: string[]; failed: Array<{ path: string; reason: string }>; needsHuman: string[]; sourceFilled: string[]; aiFilled: string[] }> {
   // Assess current state
   const before = assessPillar(key, content, contract);
 
   // Get target requirements
-  const targetReqs = contract.stages[targetStage];
-  let missingReqs = targetReqs.filter(r => before.missing.includes(r.path));
+  let missingReqs = requirementsToFill(contract.stages[targetStage], before);
 
   if (fieldsToFill && fieldsToFill.length > 0) {
     missingReqs = missingReqs.filter(r => fieldsToFill.includes(r.path));
@@ -412,7 +447,7 @@ async function runFillPass(
 
   // ── 0. Extract from BrandDataSource (zero-cost — source of truth) ───────
   try {
-    const sourceExtracted = await extractFromSources(strategyId, key, missingReqs.map(r => r.path));
+    const sourceExtracted = await extractFromSources(strategyId, key, missingReqs.map(r => r.path), sourceReceipts);
     for (const [path, value] of Object.entries(sourceExtracted)) {
       if (value !== undefined && value !== null && value !== "") {
         setNestedValue(content, path, value);
@@ -466,9 +501,14 @@ async function runFillPass(
   // ── 3. AI generation (batched — single LLM call for all remaining) ──────
   if (aiFields.length > 0) {
     try {
-      const aiResults = await generateMissingFields(strategyId, key, content, pillarMap, aiFields);
+      const aiResults = await generateMissingFields(strategyId, key, content, pillarMap, aiFields, sourceReceipts);
       for (const req of aiFields) {
         if (aiResults[req.path] !== undefined) {
+          const schema = getFieldZod(key, req.path) as { safeParse: (value: unknown) => { success: boolean } } | null;
+          if (schema && !schema.safeParse(aiResults[req.path]).success) {
+            failed.push({ path: req.path, reason: "AI field does not match the canonical schema; upstream completion is still required" });
+            continue;
+          }
           setNestedValue(content, req.path, aiResults[req.path]);
           filled.push(req.path);
           aiFilled.push(req.path);
@@ -571,84 +611,13 @@ async function deriveByCalculation(
     return Math.round((total / (matrix.length * 9)) * 100);
   }
 
-  // ── Pillar V: Deterministic unit economics via Financial Brain ─────────
-  // These calculations replace LLM generation for financial fields.
-  // Context: sector/country/positioning from pillar A/D, benchmarks from financial-brain.
+  // A current ADVE model is the sole financial calculation basis. Legacy
+  // inputs can yield their qualified quotient, never a sector/country default.
   if (path.startsWith("unitEconomics.")) {
-    const a = _allPillars.a ?? {};
-    const d = _allPillars.d ?? {};
-    const sector = (a.secteur as string ?? "SERVICES").toUpperCase();
-    const country = a.pays as string ?? "Cameroun";
-    const positioning = (d.positionnement as string ?? "MAINSTREAM").toUpperCase();
-    const businessModel = (a.businessModel as string ?? "B2C").toUpperCase();
-    const ue = (content.unitEconomics ?? {}) as Record<string, unknown>;
-
-    // Lazy-import to avoid circular deps and keep zero-cost when not needed
-    const fb = await import("@/server/services/financial-brain");
-
-    const COUNTRY_MULT: Record<string, number> = {
-      Cameroun: 1.0, "Cote d'Ivoire": 1.05, Senegal: 0.95, RDC: 0.6, Gabon: 2.0,
-      "Afrique du Sud": 3.0,
-      Congo: 1.1, Nigeria: 0.8, Ghana: 0.9, France: 8.0, USA: 10.0, Maroc: 1.5, Tunisie: 1.3,
-    };
-    const BIZ_MODEL_CAC: Record<string, number> = { B2C: 1.0, B2B: 2.5, B2B2C: 1.8, D2C: 0.7, MARKETPLACE: 0.5 };
-    const POS_MULT: Record<string, number> = { ULTRA_LUXE: 10.0, LUXE: 5.0, PREMIUM: 2.5, MASSTIGE: 1.5, MAINSTREAM: 1.0, VALUE: 0.6, LOW_COST: 0.3 };
-    const cm = COUNTRY_MULT[country] ?? 1.0;
-    const bm = BIZ_MODEL_CAC[businessModel] ?? 1.0;
-    const pm = POS_MULT[positioning] ?? 1.0;
-
-    // Sector benchmarks (mid-range)
-    const SECTORS: Record<string, { cacMid: number; ltvMid: number; grossMargin: number; revMid: number }> = {
-      FMCG: { cacMid: 2750, ltvMid: 82500, grossMargin: 0.35, revMid: 275_000_000 },
-      TECH: { cacMid: 55000, ltvMid: 2550000, grossMargin: 0.65, revMid: 510_000_000 },
-      SERVICES: { cacMid: 110000, ltvMid: 5250000, grossMargin: 0.55, revMid: 165_000_000 },
-      RETAIL: { cacMid: 11000, ltvMid: 275000, grossMargin: 0.40, revMid: 110_000_000 },
-      HOSPITALITY: { cacMid: 27500, ltvMid: 1050000, grossMargin: 0.45, revMid: 275_000_000 },
-      EDUCATION: { cacMid: 55000, ltvMid: 2600000, grossMargin: 0.50, revMid: 105_000_000 },
-      BANQUE: { cacMid: 275000, ltvMid: 10250000, grossMargin: 0.60, revMid: 5_250_000_000 },
-      MODE: { cacMid: 27500, ltvMid: 525000, grossMargin: 0.55, revMid: 255_000_000 },
-      GAMING: { cacMid: 15500, ltvMid: 255000, grossMargin: 0.70, revMid: 502_500_000 },
-      STARTUP: { cacMid: 52500, ltvMid: 1025000, grossMargin: 0.60, revMid: 102_500_000 },
-    };
-    const sd = SECTORS[sector] ?? SECTORS.SERVICES!;
-
-    if (path === "unitEconomics.ltvCacRatio") {
-      if (ue?.ltv && ue?.cac && typeof ue.ltv === "number" && typeof ue.cac === "number" && ue.cac > 0) {
-        return Math.round((ue.ltv / ue.cac) * 100) / 100;
-      }
-      return undefined;
-    }
-    if (path === "unitEconomics.cac") {
-      return Math.round(sd.cacMid * cm * bm);
-    }
-    if (path === "unitEconomics.ltv") {
-      return Math.round(sd.ltvMid * cm * pm);
-    }
-    if (path === "unitEconomics.caVise") {
-      return Math.round(sd.revMid * cm * pm);
-    }
-    if (path === "unitEconomics.budgetCom") {
-      const caVise = typeof ue.caVise === "number" ? ue.caVise : Math.round(sd.revMid * cm * pm);
-      const reco = await fb.recommendBudget({
-        sector, country, positioning, businessModel,
-        estimatedRevenue: caVise,
-      });
-      return reco.recommended;
-    }
-    if (path === "unitEconomics.margeNette") {
-      return Math.round(sd.grossMargin * 0.65 * 100) / 100;
-    }
-    if (path === "unitEconomics.roiEstime") {
-      const cac = typeof ue.cac === "number" ? ue.cac : Math.round(sd.cacMid * cm * bm);
-      const ltv = typeof ue.ltv === "number" ? ue.ltv : Math.round(sd.ltvMid * cm * pm);
-      return cac > 0 ? Math.round(((ltv - cac) / cac) * 100) : 0;
-    }
-    if (path === "unitEconomics.paybackPeriod") {
-      const cac = typeof ue.cac === "number" ? ue.cac : Math.round(sd.cacMid * cm * bm);
-      const margin = sd.grossMargin * 0.65;
-      const monthlyRev = typeof ue.caVise === "number" ? ue.caVise / 12 / 100 : sd.revMid * cm / 12 / 100;
-      return monthlyRev > 0 && margin > 0 ? Math.min(36, Math.round(cac / (monthlyRev * margin))) : 24;
-    }
+    const ue = resolveUnitEconomics(content);
+    const key = path.slice("unitEconomics.".length);
+    if (content.financialModel != null) return ue[key] ?? undefined;
+    if (key === "ltvCacRatio") return unitEconomicsRatio(ue.cac, ue.ltv, ue.ltvCacRatio) ?? undefined;
     return undefined;
   }
 
@@ -712,12 +681,7 @@ function deriveCrossPillar(
     if (path === "pricingJustification" && d.positionnement) return `Pricing justifie par le positionnement : ${d.positionnement}`;
     if (path === "personaSegmentMap" && Array.isArray(d.personas) && d.personas.length > 0) {
       const v = allPillars.v ?? {};
-      const produits = Array.isArray(v.produitsCatalogue) ? v.produitsCatalogue : [];
-      return (d.personas as Array<Record<string, unknown>>).slice(0, 3).map((p, i) => ({
-        personaName: p.name ?? `Persona ${i + 1}`,
-        productNames: produits.slice(0, 2).map((pr: any) => pr.nom ?? "Produit"),
-        devotionLevel: p.devotionPotential ?? "SPECTATEUR",
-      }));
+      return deriveActorProductLinks(d.personas, v.produitsCatalogue);
     }
   }
 
@@ -865,61 +829,11 @@ function shapeHint(r: FieldRequirement): string {
   }
 }
 
-const PILLAR_CHAR_BUDGET = 6_000;
-
-/**
- * Cap each pillar's serialized JSON to ~6kB. Once Oracle enrichment writes
- * nested SuperAsset payloads back into pillars, raw JSON.stringify of all 8
- * pillars routinely overflows the LLM input budget. The summary keeps
- * top-level keys with brief value digests so the model still has shape +
- * intent without burning the input window.
- */
-function summarizePillar(content: Record<string, unknown>): string {
-  const json = JSON.stringify(content, null, 2);
-  if (json.length <= PILLAR_CHAR_BUDGET) return json;
-  const summary: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(content)) {
-    if (v === null || v === undefined) continue;
-    if (typeof v === "string") {
-      summary[k] = v.length > 240 ? v.slice(0, 240) + "…" : v;
-    } else if (Array.isArray(v)) {
-      // Garde les IDENTITÉS des items-objets visibles (name/nom/label) au lieu d'un
-      // opaque « [Array×N] » qui effaçait QUI peuple le tableau — première cause de la
-      // contamination inter-persona (le LLM ne « voyait » plus Awa/Betsy). Cap serré.
-      const ids = v
-        .slice(0, 5)
-        .map((it) => {
-          if (it && typeof it === "object" && !Array.isArray(it)) {
-            const r = it as Record<string, unknown>;
-            const id = r.name ?? r.nom ?? r.label ?? r.titre ?? r.title;
-            if (typeof id === "string" && id.trim()) return id.length > 40 ? id.slice(0, 40) + "…" : id;
-          }
-          return null;
-        })
-        .filter(Boolean);
-      summary[k] = ids.length > 0
-        ? `[Array×${v.length}: ${ids.join(", ")}${v.length > ids.length ? ", …" : ""}]`
-        : `[Array×${v.length}]`;
-    } else if (typeof v === "object") {
-      const keys = Object.keys(v as object);
-      summary[k] = `{${keys.slice(0, 6).join(", ")}${keys.length > 6 ? "…" : ""}}`;
-    } else {
-      summary[k] = v;
-    }
-  }
-  const summaryJson = JSON.stringify(summary, null, 2);
-  return summaryJson.length <= PILLAR_CHAR_BUDGET
-    ? `${summaryJson}\n[…contenu condensé : ${(json.length / 1000).toFixed(0)}k chars de détails omis…]`
-    : summaryJson.slice(0, PILLAR_CHAR_BUDGET) + "\n[…tronqué…]";
-}
-
-function buildPillarContext(allPillars: Record<string, Record<string, unknown>>): string {
+/** Completion sees the same records, identities and origins as R/T/I/Council. */
+export function buildPillarContext(allPillars: Record<string, Record<string, unknown>>): string {
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : contenu des
   // piliers (dérivé du fondateur) balisé bloc par bloc ; la clé pilier est interne.
-  return Object.entries(allPillars)
-    .filter(([, v]) => v && Object.keys(v).length > 0)
-    .map(([k, v]) => wrapUntrusted(`PILIER ${k.toUpperCase()}`, summarizePillar(v), { max: PILLAR_CHAR_BUDGET }))
-    .join("\n\n");
+  return serializePillars(Object.entries(allPillars).filter(([, v]) => v && Object.keys(v).length > 0));
 }
 
 async function buildFinancialContext(
@@ -1021,7 +935,7 @@ Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`
   // `fieldList` porte les paths/shapes du contrat (internes) ET l'ANCRE — texte d'identité
   // dérivé du fondateur, JSON-échappé + cadré « données de marque, PAS des instructions ».
   // `financialCtx` (benchmarks internes) est interne. L'UNTRUSTED_NOTICE au system couvre l'ensemble.
-  const system = `${UNTRUSTED_NOTICE}\n\nTu es Mestor, l'intelligence stratégique de marque. Tu réponds UNIQUEMENT en JSON valide : pas de markdown, pas de commentaire, pas de texte autour.`;
+  const system = `${UNTRUSTED_NOTICE}\n\n${ADVE_SOURCE_ALIGNMENT_CONTRACT}\n\nTu es Mestor, l'intelligence stratégique de marque. Tu réponds UNIQUEMENT en JSON valide : pas de markdown, pas de commentaire, pas de texte autour.`;
   const attempts = 3;
   for (let attempt = 1; attempt <= attempts; attempt++) {
     let text: string;
@@ -1070,6 +984,8 @@ Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`
  * `"rtis-cascade-completion:i"`). Each chunk appends `:chunk-N/M`.
  */
 export async function runChunkedFieldGeneration(args: {
+  sourceReceipts?: SourceReceipt[];
+  documentaryContext?: string;
   strategyId: string;
   pillarKey: string;
   currentContent: Record<string, unknown>;
@@ -1090,23 +1006,17 @@ export async function runChunkedFieldGeneration(args: {
   const financialCtx = await buildFinancialContext(allPillars, missingReqs);
   const hasFinancialFields = missingReqs.some(r => r.path.startsWith("unitEconomics"));
 
-  // Load sources context (ADVE-project V3.3 correction)
-  const sources = await db.brandDataSource.findMany({
-    where: {
-      strategyId,
-      processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
-    },
-    select: {
-      rawContent: true,
-    },
-  });
-  const sourcesContext = sources
-    .map(s => s.rawContent)
-    .filter(Boolean)
-    .join("\n\n---\n\n");
-  const sourcesBlock = sourcesContext.trim()
-    ? wrapUntrusted("DOCUMENTS SOURCES DE LA MARQUE", sourcesContext, { max: 8000 })
-    : "";
+  // Reuse the current, topic-selected editions. The former first-8K join
+  // discarded dates/statuses and cited every file, including unread pieces.
+  let sourcesBlock = args.documentaryContext ?? "";
+  if (args.documentaryContext === undefined) {
+    const sources = await loadBrandSourceContext(strategyId, {
+      query: `Compléter ${pillarKey} : ${missingReqs.map(r => r.path).join(" ")}`,
+      ensureIndexed: false,
+    });
+    args.sourceReceipts?.push(...sources.excerpts.flatMap(s => s.contentHash ? [{ sourceId: s.sourceId, contentHash: s.contentHash }] : []));
+    sourcesBlock = sources.empty ? "" : wrapUntrusted("DOCUMENTS SOURCES DE LA MARQUE", renderSourceContext(sources), { max: 32_000 });
+  }
 
   // Determine if the risk of truncation is high (modèle owl ou complexité totale > 15)
   const totalComplexity = missingReqs.reduce((sum, r) => sum + (VALIDATOR_COMPLEXITY[r.validator] ?? 1), 0);
@@ -1171,6 +1081,7 @@ async function generateMissingFields(
   currentContent: Record<string, unknown>,
   allPillars: Record<string, Record<string, unknown>>,
   missingReqs: FieldRequirement[],
+  sourceReceipts?: SourceReceipt[],
 ): Promise<Record<string, unknown>> {
   return runChunkedFieldGeneration({
     strategyId,
@@ -1179,6 +1090,7 @@ async function generateMissingFields(
     allPillars,
     missingReqs,
     caller: `auto-filler:${pillarKey}`,
+    sourceReceipts,
   });
 }
 
@@ -1198,23 +1110,13 @@ async function extractFromSources(
   strategyId: string,
   pillarKey: string,
   missingPaths: string[],
+  sourceReceipts?: SourceReceipt[],
 ): Promise<Record<string, unknown>> {
   if (missingPaths.length === 0) return {};
 
   // Load all processed sources for this strategy
-  const sources = await db.brandDataSource.findMany({
-    where: {
-      strategyId,
-      processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
-    },
-    select: {
-      extractedFields: true,
-      rawData: true,
-      rawContent: true,
-      pillarMapping: true,
-      sourceType: true,
-    },
-  });
+  const sources = await loadBrandSources(strategyId, { processingStatus: { in: ["EXTRACTED", "PROCESSED"] } });
+  sourceReceipts?.push(...sources.map((s) => ({ sourceId: s.id, contentHash: s.contentHash })));
 
   if (sources.length === 0) return {};
 

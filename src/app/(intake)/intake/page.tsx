@@ -20,9 +20,12 @@
 
 "use client";
 
+import { OvertonEntry } from "@/components/shared/overton-entry";
+import { EntryOvertonClaimSchema, type EntryOvertonClaim } from "@/domain/overton-positioning";
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
+import { OptionalIntakeWebUrlSchema, intakeErrorMessage } from "@/lib/intake-input";
 import { BUSINESS_MODELS, POSITIONING_ARCHETYPES } from "@/lib/types/business-context";
 import { INTAKE_SECTORS, INTAKE_COUNTRIES } from "@/lib/constants/intake-options";
 import {
@@ -91,6 +94,8 @@ function IntakeLandingContent() {
     referralCode: "",
   });
   const [error, setError] = useState("");
+  const [incomingOverton, setIncomingOverton] = useState<EntryOvertonClaim | null>(null);
+  const [overtonClaim, setOvertonClaim] = useState<EntryOvertonClaim | null>(null);
 
   // Attribution funnel (vague E) : UTM structurés + referrer + click ids —
   // d'où vient CHAQUE prospect. `source` reste la synthèse lisible (compat).
@@ -120,6 +125,12 @@ function IntakeLandingContent() {
     // ignoré (audit 2026-07-16).
     const method = searchParams.get("method");
     if (method === "GUIDED" || method === "IMPORT") setSelectedMethod(method);
+    const overtonRaw = searchParams.get("overton");
+    try {
+      const claim = EntryOvertonClaimSchema.safeParse(overtonRaw && overtonRaw.length <= 3000 ? JSON.parse(overtonRaw) : null);
+      setOvertonClaim(claim.success ? claim.data : null);
+      setIncomingOverton(claim.success ? claim.data : null);
+    } catch { setOvertonClaim(null); }
     const company = searchParams.get("company") ?? searchParams.get("brand");
     const email = searchParams.get("email");
     const website = searchParams.get("website") ?? searchParams.get("websiteUrl");
@@ -172,7 +183,7 @@ function IntakeLandingContent() {
         setError(t("intake.contact.error.requiredFields"));
         setStep("contact");
       } else {
-        setError(msg);
+        setError(intakeErrorMessage(err));
       }
     },
   });
@@ -203,6 +214,13 @@ function IntakeLandingContent() {
       return;
     }
 
+    const website = OptionalIntakeWebUrlSchema.safeParse(form.websiteUrl);
+    if (!website.success) {
+      setError(intakeErrorMessage(website.error));
+      setStep("contact");
+      return;
+    }
+
     startMutation.mutate({
       contactName: form.contactName.trim(),
       contactEmail: form.contactEmail.trim(),
@@ -211,7 +229,8 @@ function IntakeLandingContent() {
       country: form.country || undefined,
       businessModel: form.businessModel || undefined,
       positioning: form.positioning || undefined,
-      websiteUrl: form.websiteUrl.trim() || undefined,
+      overtonClaim: overtonClaim ?? undefined,
+      websiteUrl: website.data,
       socialLinksRaw: form.socialLinksRaw.trim() || undefined,
       source: utmSource,
       attribution,
@@ -267,6 +286,8 @@ function IntakeLandingContent() {
             </span>
           )}
         </div>
+
+        <div className="w-full max-w-lg"><OvertonEntry brand={form.companyName} initialValue={incomingOverton} onChange={setOvertonClaim} hidePreview /></div>
 
         {/* Step indicator */}
         <div className="mt-8 flex items-center gap-2 text-xs text-foreground-muted">
@@ -358,7 +379,10 @@ function IntakeLandingContent() {
               </label>
               <input
                 id="websiteUrl"
-                type="url"
+                type="text"
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
                 value={form.websiteUrl}
                 onChange={(e) => setForm({ ...form, websiteUrl: e.target.value })}
                 className={inputClass}

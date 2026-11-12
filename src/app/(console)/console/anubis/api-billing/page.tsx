@@ -10,23 +10,14 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
+import { MCP_KEY_SERVER_SCOPES } from "@/server/services/anubis/mcp-scope-kind";
 import { PageHeader } from "@/components/shared/page-header";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Key, Plus, Copy, Power, Receipt, CheckCircle2, BadgeDollarSign, RefreshCw, Globe, Building2 } from "lucide-react";
 
-const MCP_SERVERS = [
-  "*",
-  "advertis",
-  "advertis-inbound",
-  "artemis",
-  "creative",
-  "guild",
-  "intelligence",
-  "operations",
-  "ptah",
-  "pulse",
-  "seshat",
-] as const;
+// Portées honorées par l'authentification MCP (liste partagée, module feuille) —
+// l'ancienne liste en dur omettait `council`, `oracle` et `ingest`.
+const MCP_SERVERS = MCP_KEY_SERVER_SCOPES;
 
 function fmtUsd(n: number): string {
   return `$${n.toFixed(4).replace(/\.?0+$/, (m) => (m.startsWith(".") ? "" : m))}`;
@@ -65,7 +56,7 @@ export default function McpApiBillingPage() {
   const [freshKey, setFreshKey] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
-    server: "*" as string,
+    server: "*" as (typeof MCP_SERVERS)[number],
     ratePerCallUsd: "0.002",
     includedMonthlyCalls: "100",
     ownerEmail: "",
@@ -235,7 +226,7 @@ export default function McpApiBillingPage() {
           />
           <select
             value={form.server}
-            onChange={(e) => setForm({ ...form, server: e.target.value })}
+            onChange={(e) => setForm({ ...form, server: e.target.value as (typeof MCP_SERVERS)[number] })}
             className="rounded-lg border border-border bg-bg px-3 py-2 text-sm"
           >
             {MCP_SERVERS.map((s) => (

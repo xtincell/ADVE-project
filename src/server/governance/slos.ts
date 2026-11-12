@@ -18,6 +18,27 @@ export interface IntentSlo {
 }
 
 export const INTENT_SLOS: readonly IntentSlo[] = [
+  { kind: "SESHAT_ARCHIVE_CREATIVE_MEDIA", p95LatencyMs: 60000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "SESHAT_REMOVE_CREATIVE_MEDIA", p95LatencyMs: 30000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "SESHAT_INDEX_CREATIVE_PATTERNS", p95LatencyMs: 60000, errorRatePct: 0.05, costP95Usd: 0.05 },
+  { kind: "SESHAT_BIND_RECIPE_PUBLICATION", p95LatencyMs: 5000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "SESHAT_IMPORT_SPECIMEN", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_RECORD_CONTENT_METRIC", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_ANNOTATE_CREATIVE", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_DISCOVER_RECIPE", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_REVIEW_RECIPE", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_SAVE_CREATIVE_WATCHLIST", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_APPLY_RECIPE", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_RESOLVE_RECIPE_APPLICATION", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_CAPTURE_NATIVE_CREATIVE_INSIGHTS", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_COLLECT_CREATIVE_SOURCE", p95LatencyMs: 50000, errorRatePct: 0.08, costP95Usd: 0 },
+  { kind: "SESHAT_REFRESH_CREATIVE_WATCHLIST", p95LatencyMs: 100000, errorRatePct: 0.08, costP95Usd: 0 },
+  { kind: "SESHAT_SET_CREATIVE_WATCH_AUTOMATION", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_IMPORT_CREATIVE_EXPORT", p95LatencyMs: 25000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_DRAFT_CREATIVE_ANALYSIS", p95LatencyMs: 120000, errorRatePct: 0.08, costP95Usd: 0.15 },
+  { kind: "SESHAT_REVIEW_CREATIVE_DRAFT", p95LatencyMs: 5000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SESHAT_PROJECT_ARGOS_DOSSIER", p95LatencyMs: 20000, errorRatePct: 0.08, costP95Usd: 0 },
+  { kind: "SESHAT_REVIEW_REFERENCE_DOSSIER", p95LatencyMs: 1000, errorRatePct: 0.02, costP95Usd: 0 },
   { kind: "FILL_ADVE", p95LatencyMs: 25_000, errorRatePct: 0.03, costP95Usd: 0.25 },
   // ADR-0023 — small-scope edit; PATCH_DIRECT zero LLM cost, LLM_REPHRASE bounded.
   { kind: "OPERATOR_AMEND_PILLAR", p95LatencyMs: 5_000, errorRatePct: 0.02, costP95Usd: 0.05 },
@@ -129,12 +150,14 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "ANUBIS_SYNC_SOCIAL_POSTS", p95LatencyMs: 30_000, errorRatePct: 0.10, costP95Usd: 0 },
   { kind: "ANUBIS_SYNC_INBOX", p95LatencyMs: 30_000, errorRatePct: 0.10, costP95Usd: 0 },
   { kind: "ANUBIS_REPLY_COMMENT", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "ANUBIS_PREPARE_SOCIAL_POST", p95LatencyMs: 25_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "ANUBIS_PUBLISH_SOCIAL_POST", p95LatencyMs: 25_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "ANUBIS_COMMERCE_CONNECT_SHOP", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "ANUBIS_LINK_MOBILE_APP", p95LatencyMs: 3_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "ANUBIS_SYNC_COMMERCE", p95LatencyMs: 25_000, errorRatePct: 0.10, costP95Usd: 0 },
   // ADR-0146 — ingestion métrique externe agnostique (push, zéro LLM, DB only).
   { kind: "INGEST_EXTERNAL_METRIC", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "INGEST_BARRE_CAMPAIGN_REVIEW", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   // ADR-0121 — re-scan empreinte publique → pilier E (footprint + Brave + Apify + RSS, zéro LLM).
   { kind: "ENRICH_E_FROM_PUBLIC_FOOTPRINT", p95LatencyMs: 35_000, errorRatePct: 0.10, costP95Usd: 0.005 },
   { kind: "SYNC_UPGRADERS_CANON", p95LatencyMs: 30_000, errorRatePct: 0.01, costP95Usd: 0 },

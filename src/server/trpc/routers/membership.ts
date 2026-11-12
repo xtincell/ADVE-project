@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { MembershipStatus, GuildTier } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { found } from "../entity-access";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { assertTalentProfileAccess } from "./_talent-access-guard";
 /* lafusee:governed-active */
@@ -59,7 +60,7 @@ export const membershipRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const membership = await ctx.db.membership.findUniqueOrThrow({ where: { id: input.membershipId } });
+      found(await ctx.db.membership.findUnique({ where: { id: input.membershipId }, select: { id: true } }), "Adhésion introuvable.");
       const durationMs = (input.duration ?? 365) * 24 * 60 * 60 * 1000;
       return ctx.db.membership.update({
         where: { id: input.membershipId },

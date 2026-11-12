@@ -98,7 +98,7 @@ const RESOLUTION_GUARD: Array<[string, RegExp]> = [
   ["intervention.ts", /assertSignalStrategyAccess\(/],
   ["quality-review.ts", /assertQcParticipant\(/],
   ["campaign-deliverable.ts", /canAccessCampaign\(/],
-  ["campaign-change-request.ts", /canAccessMission\(/],
+  ["campaign-change-request.ts", /canAccessCampaign\(/], // CampaignDeliverable → Campaign, pas MissionDeliverable.
   ["deliverable-tracking.ts", /canAccessMission\(/],
   ["signal.ts", /assertStrategyAccess\(/],
   // ── Round-9 : routeurs entité-id manqués par le sweep round-4/5 ──

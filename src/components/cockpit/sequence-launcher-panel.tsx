@@ -17,7 +17,7 @@ import { Rocket, Zap, Coins, Loader2, X, AlertTriangle, CheckCircle2, FolderOpen
 
 const LIFECYCLE_LABEL: Record<string, string> = { DRAFT: "Brouillon", STABLE: "Stable", DEPRECATED: "Déprécié" };
 
-interface Seq {
+export interface Seq {
   key: string;
   family: string;
   name: string;
@@ -33,6 +33,7 @@ interface Seq {
 export function SequenceLauncherPanel() {
   const strategyId = useCurrentStrategyId();
   const listQuery = trpc.glory.launchableSequences.useQuery(undefined);
+  const deliverables = trpc.glory.compilableDeliverables.useQuery({ strategyId: strategyId ?? "" }, { enabled: !!strategyId });
   const executionsQuery = trpc.sequenceVault.list.useQuery(
     { strategyId: strategyId ?? "" },
     { enabled: !!strategyId }
@@ -115,9 +116,13 @@ export function SequenceLauncherPanel() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filtered.map((s) => {
           const exec = executions.get(s.key);
-          const lastOutput = exec && exec.status === "COMPLETED" ? {
-            id: exec.id,
-            completedAt: exec.createdAt instanceof Date ? exec.createdAt.toISOString() : exec.createdAt,
+          const document = deliverables.data?.find(d => d.sequenceKey === s.key);
+          const lastOutput = document?.generatedAt ? {
+            id: exec?.id ?? s.key,
+            completedAt: document.generatedAt,
+            isComplete: document.isComplete,
+            lastAttemptStatus: exec?.status,
+            completeness: document.completeness,
             outputUrl: `/cockpit/brand/deliverables/${s.key}`,
           } : null;
           return (
@@ -136,7 +141,7 @@ export function SequenceLauncherPanel() {
           strategyId={strategyId}
           seq={selected}
           onClose={() => setSelected(null)}
-          onSuccess={() => executionsQuery.refetch()}
+          onSuccess={() => { void executionsQuery.refetch(); void deliverables.refetch(); }}
         />
       ) : null}
     </article>
@@ -150,9 +155,9 @@ function SequenceCard({
 }: {
   seq: Seq;
   onLaunch: () => void;
-  lastOutput?: { outputUrl?: string | null; completedAt?: string | null; id?: string } | null;
+  lastOutput?: { lastAttemptStatus?: string; isComplete: boolean; completeness: number; outputUrl?: string | null; completedAt?: string | null; id?: string } | null;
 }) {
-  const isCompleted = !!lastOutput?.completedAt;
+  const hasReadableSections = !!lastOutput?.completedAt;
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -161,7 +166,7 @@ function SequenceCard({
 
   return (
     <div className="flip-card">
-      <div className={`flip-card-inner ${mounted ? "has-transition" : ""} ${isCompleted ? "is-flipped" : ""}`}>
+      <div className={`flip-card-inner ${mounted ? "has-transition" : ""} ${hasReadableSections ? "is-flipped" : ""}`}>
         {/* Front Face: Launch card */}
         <div className="flip-card-front flex h-full flex-col rounded-lg border border-white/5 bg-surface-raised p-4">
           <div className="mb-1 flex items-center gap-2">
@@ -214,12 +219,14 @@ function SequenceCard({
                 <span className="truncate text-sm font-semibold text-foreground">{seq.name}</span>
               </div>
               <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[9px] font-bold text-success ring-1 ring-inset ring-success/30">
-                <CheckCircle2 className="h-2.5 w-2.5" /> Terminé
+                <CheckCircle2 className="h-2.5 w-2.5" /> {lastOutput?.isComplete ? "Complet · consulter" : `Partiel · ${lastOutput?.completeness}%`}
               </span>
             </div>
             <p className="text-xs text-foreground-secondary leading-relaxed mb-4">
-              Ce livrable a été généré avec succès. Vous pouvez maintenant l'ouvrir ou relancer la séquence si des données sources ont changé.
+              {lastOutput?.isComplete ? "Toutes les sections sont disponibles à la lecture." : "Les sections déjà produites sont consultables. Des sections restent à produire."}
             </p>
+            {lastOutput?.lastAttemptStatus === "FAILED" && <p className="mb-3 text-xs text-warning">La dernière tentative a échoué. Cette édition reste consultable.</p>}
+            {lastOutput?.lastAttemptStatus === "PARTIAL" && lastOutput.isComplete && <p className="mb-3 text-xs text-warning">La dernière tentative est partielle. Vous consultez l’édition complète précédente.</p>}
           </div>
 
           <div>
@@ -269,7 +276,7 @@ function SequenceCard({
   );
 }
 
-function LaunchModal({
+export function LaunchModal({
   strategyId,
   seq,
   onClose,
@@ -282,12 +289,10 @@ function LaunchModal({
 }) {
   const scan = trpc.glory.scanSequence.useQuery({ strategyId, sequenceKey: seq.key });
   const exec = trpc.glory.executeSequence.useMutation({
-    onSuccess: () => {
-      onSuccess();
-    },
+    onSuccess,
   });
 
-  const blocked = (scan.data as { blocked?: boolean } | undefined)?.blocked ?? false;
+  const blocked = scan.data?.blocked ?? false;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4" role="dialog" aria-modal="true">
@@ -305,7 +310,7 @@ function LaunchModal({
         <div className={`mb-3 rounded-lg border p-3 ${seq.cost.costClass === "LLM" ? "border-accent/30 bg-accent/5" : "border-white/5 bg-white/[0.02]"}`}>
           {seq.cost.costClass === "LLM" ? (
             <p className="flex items-center gap-2 text-xs text-accent">
-              <Zap className="h-3.5 w-3.5 shrink-0" /> {seq.cost.llmSteps} appel{seq.cost.llmSteps > 1 ? "s" : ""} LLM · coût estimé <strong>~${seq.cost.estimateUsd.toFixed(2)}</strong> (crédits)
+              <Zap className="h-3.5 w-3.5 shrink-0" /> {seq.cost.llmSteps} appel{seq.cost.llmSteps > 1 ? "s" : ""} LLM · estimation de référence <strong>~${seq.cost.estimateUsd.toFixed(2)}</strong>, distincte d’une facture
             </p>
           ) : (
             <p className="flex items-center gap-2 text-xs text-success"><Coins className="h-3.5 w-3.5 shrink-0" /> Séquence déterministe — aucun crédit consommé.</p>
@@ -314,15 +319,17 @@ function LaunchModal({
 
         {scan.isLoading ? (
           <p className="mb-3 flex items-center gap-2 text-xs text-foreground-muted"><Loader2 className="h-3 w-3 animate-spin" /> Vérification des prérequis…</p>
-        ) : blocked ? (
-          <p className="mb-3 flex items-start gap-2 text-xs text-error"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Prérequis non remplis — complète les piliers / séquences en amont avant de lancer.</p>
+        ) : scan.isError ? <p role="alert" className="mb-3 text-xs text-error">La vérification a échoué : {scan.error.message}</p>
+        : blocked ? (
+          <div className="mb-3 space-y-2 text-xs text-error"><p className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Production en attente des éléments suivants :</p><ul className="list-disc pl-5">{scan.data?.unmetPrerequisites.map(reason => <li key={reason}>{reason}</li>)}{scan.data?.blockers.map(item => <li key={item.step}>{item.step} : renseigner {item.missingFields.join(", ")} dans les fondations.</li>)}</ul></div>
         ) : (
           <p className="mb-3 flex items-center gap-2 text-xs text-success"><CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> Prérequis OK.</p>
         )}
 
         {exec.isError ? <p className="mb-3 text-xs text-error">{exec.error.message}</p> : null}
 
-        {exec.isSuccess ? (
+        {exec.isSuccess && exec.data.status !== "COMPLETED" ? <p role="alert" className="mb-3 text-sm text-error">La production est {exec.data.status === "PARTIAL" ? "partielle" : "en échec"}. La dernière version exploitable est conservée. Consultez les tentatives dans le document.</p> : null}
+        {exec.isSuccess && exec.data.status === "COMPLETED" ? (
           <div className="flex flex-col items-center gap-2 py-2 text-center">
             <CheckCircle2 className="h-6 w-6 text-success" />
             <p className="text-sm font-medium text-foreground">Séquence lancée.</p>
@@ -334,7 +341,7 @@ function LaunchModal({
             <button
               type="button"
               onClick={() => exec.mutate({ strategyId, sequenceKey: seq.key })}
-              disabled={exec.isPending || blocked || scan.isLoading}
+              disabled={exec.isPending || blocked || scan.isLoading || scan.isError}
               className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {exec.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}

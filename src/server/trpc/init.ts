@@ -3,6 +3,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import type { Context } from "./context";
+import { isTypedRefusal } from "@/domain/typed-refusal";
 
 const t = initTRPC.context<Context>().create({
   transformer: superjson,
@@ -35,9 +36,25 @@ const t = initTRPC.context<Context>().create({
 export const createCallerFactory = t.createCallerFactory;
 export const createTRPCRouter = t.router;
 
-export const publicProcedure = t.procedure;
+/**
+ * Un service levé hors de la couche tRPC refuse par `TypedRefusal` (domaine,
+ * sans dépendance) : la réponse garde son code (409, 403, 404, 400) et son
+ * message au lieu d'un 500. Toutes les procédures dérivent de cette base.
+ */
+const typedRefusals = t.middleware(async ({ next }) => {
+  const result = await next();
+  if (!result.ok && isTypedRefusal(result.error.cause)) {
+    const refusal = result.error.cause;
+    throw new TRPCError({ code: refusal.code, message: refusal.message, cause: refusal });
+  }
+  return result;
+});
 
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+const baseProcedure = t.procedure.use(typedRefusals);
+
+export const publicProcedure = baseProcedure;
+
+export const protectedProcedure = baseProcedure.use(({ ctx, next }) => {
   if (!ctx.session?.user) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }

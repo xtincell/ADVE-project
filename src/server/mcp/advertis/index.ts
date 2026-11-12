@@ -25,6 +25,7 @@ import { ADVE_COMPOSITE_MAX, describeScores, readCompositeFromVector } from "@/d
 import { computeProvenanceBreakdown } from "@/domain/field-provenance";
 import { PILLAR_KEYS, PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import { ADVE_KEYS } from "@/domain";
+import { SourceReceiptSchema } from "@/domain/source-certainty";
 
 export const serverName = "advertis";
 export const serverDescription =
@@ -317,7 +318,7 @@ export const tools: ToolDefinition[] = [
       const requested = (input.keys as PillarKey[] | undefined) ?? (PILLAR_KEYS as readonly PillarKey[]);
       const rows = await db.pillar.findMany({
         where: { strategyId, key: { in: requested as string[] } },
-        select: { key: true, content: true, updatedAt: true },
+        select: { key: true, content: true, updatedAt: true, currentVersion: true },
       });
       const byKey = new Map(rows.map((r) => [r.key, r]));
       const vec = asRecord(strategy.advertis_vector);
@@ -330,6 +331,7 @@ export const tools: ToolDefinition[] = [
           score: typeof vec[key] === "number" ? (vec[key] as number) : null,
           present: Object.keys(content).length > 0,
           updatedAt: row?.updatedAt ?? null,
+          currentVersion: row?.currentVersion ?? null,
           content, // ← intégral, non tronqué
         };
       });
@@ -349,6 +351,8 @@ export const tools: ToolDefinition[] = [
       proposedValue: z.unknown().describe("Nouvelle valeur"),
       mode: z.enum(["PATCH_DIRECT", "STRATEGIC_REWRITE"]).default("PATCH_DIRECT"),
       reason: z.string().min(1).describe("Raison de l'édition (≥20 car. si STRATEGIC_REWRITE)"),
+      expectedVersion: z.number().int().positive().optional().describe("Version du pilier effectivement lue ; obligatoire avec des sources"),
+      sourceReceipts: SourceReceiptSchema.array().optional().describe("Versions des documents effectivement lus, vérifiées avant l'écriture"),
     }),
     handler: async (input) => {
       // Contexte d'auth injecté par la route (jamais par le client — override après spread).
@@ -383,6 +387,8 @@ export const tools: ToolDefinition[] = [
           field: String(input.field ?? ""),
           proposedValue: input.proposedValue,
           reason: String(input.reason ?? "MCP agent amend"),
+          expectedVersion: input.expectedVersion as number | undefined,
+          sourceReceipts: input.sourceReceipts as import("@/domain/source-certainty").SourceReceipt[] | undefined,
         },
         { caller: "mcp:advertis:amendPillar", operatorId },
       );

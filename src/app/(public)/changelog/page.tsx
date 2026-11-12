@@ -70,7 +70,7 @@ export default async function ChangelogPage() {
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-zinc-100">Changelog</h1>
         <p className="mt-3 text-sm text-zinc-400">
           Toutes les évolutions de l&apos;OS, par ordre chronologique inverse.
-          Mise à jour automatique à chaque déploiement (cron horaire).
+          Régénéré à chaque construction de l&apos;image déployée.
         </p>
       </header>
 

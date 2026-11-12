@@ -7,6 +7,7 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter } from "../init";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { generateBatch } from "@/server/services/notoria/engine";
@@ -204,6 +205,7 @@ export const notoriaRouter = createTRPCRouter({
         sectionGroup: z.string().optional(),
         limit: z.number().min(1).max(200).default(100),
         cursor: z.string().optional(),
+        comparePending: z.boolean().optional(),
       }),
     )
     .query(async ({ input }) => {
@@ -211,6 +213,7 @@ export const notoriaRouter = createTRPCRouter({
         strategyId: input.strategyId,
       };
       if (input.status) where.status = input.status;
+      else if (input.comparePending) where.status = { in: ["PENDING","ACCEPTED"] };
       if (input.targetPillarKey)
         where.targetPillarKey = input.targetPillarKey.toLowerCase();
       if (input.missionType) where.missionType = input.missionType;
@@ -220,10 +223,12 @@ export const notoriaRouter = createTRPCRouter({
       const items = await db.recommendation.findMany({
         where,
         take: input.limit + 1,
-        ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
-        orderBy: { createdAt: "desc" },
+        ...(input.cursor ? { cursor: { id: input.cursor } } : {}),
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       });
 
+      // Take the cursor from storage order before reordering a page for display.
+      const nextCursor = items.length > input.limit ? items.pop()?.id : undefined;
       // Sort in-memory by semantic priority (alphabetical sort on enum strings is unreliable)
       const IMPACT_ORDER: Record<string, number> = { HIGH: 3, MEDIUM: 2, LOW: 1 };
       const URGENCY_ORDER: Record<string, number> = { NOW: 3, SOON: 2, LATER: 1 };
@@ -235,12 +240,10 @@ export const notoriaRouter = createTRPCRouter({
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
 
-      let nextCursor: string | undefined;
-      if (items.length > input.limit) {
-        const next = items.pop();
-        nextCursor = next?.id;
+      if (input.comparePending && items.length) {
+        const { compareReviewRows } = await import("@/server/services/notoria/compare-proposal");
+        return { items: await compareReviewRows(input.strategyId, items), nextCursor };
       }
-
       return { items, nextCursor };
     }),
 
@@ -249,19 +252,26 @@ export const notoriaRouter = createTRPCRouter({
       z.object({
         strategyId: z.string(),
         pillarKey: pillarKeyEnum,
+        shortlistedOnly: z.boolean().optional(),
         status: recoStatusEnum.optional().default("PENDING"),
       }),
     )
     .query(async ({ input }) => {
-      return db.recommendation.findMany({
-        where: {
-          strategyId: input.strategyId,
-          targetPillarKey: input.pillarKey.toLowerCase(),
-          status: input.status,
-        },
-        orderBy: [{ impact: "desc" }, { createdAt: "desc" }],
-        take: 50,
-      });
+      const where = {strategyId: input.strategyId, targetPillarKey: input.pillarKey.toLowerCase(), status: input.status};
+      const orderBy = [{ impact: "desc" }, {createdAt:"desc"}, {id:"desc"}] as const;
+      const page = (cursor?: string) => db.recommendation.findMany({where, orderBy: [...orderBy], take:50,
+        ...(cursor ? {cursor:{id:cursor},skip:1} : {})});
+      if (!input.shortlistedOnly) return page();
+      const {reviewComparator} = await import("@/server/services/notoria/compare-proposal");
+      const compare = await reviewComparator(input.strategyId);
+      let cursor: string | undefined;
+      const shortlist = [];
+      do {
+        const rows = await page(cursor);
+        shortlist.push(...compare(rows).filter(row => row.comparison.shortlisted));
+        cursor = rows.length === 50 ? rows.at(-1)?.id : undefined;
+      } while (cursor && shortlist.length < 50);
+      return shortlist.slice(0,50);
     }),
 
   getPendingCounts: strategyScopedProcedure
@@ -502,7 +512,7 @@ export const notoriaRouter = createTRPCRouter({
       strategyId: z.string(),
       recoIds: z.array(z.string()).min(1),
     }),
-  }).mutation(({ input }) => applyRecos(input.strategyId, input.recoIds)),
+  }).mutation(({ input, ctx }) => applyRecos(input.strategyId, input.recoIds, "REVIEW", { intentId: ctx.intentId })),
 
   applyBatch: governedProcedure({
     kind: "LEGACY_NOTORIA_APPLY_BATCH",
@@ -515,26 +525,26 @@ export const notoriaRouter = createTRPCRouter({
   }).mutation(async ({ input, ctx }) => {
       // Accept all PENDING in batch
       const pending = await db.recommendation.findMany({
-        where: { batchId: input.batchId, status: "PENDING" },
+        where: { strategyId: input.strategyId, batchId: input.batchId, status: "PENDING" },
         select: { id: true },
       });
       if (pending.length > 0) {
         await acceptRecos(
           input.strategyId,
           pending.map((r) => r.id),
-          ctx.session.user.id,
+          ctx.session.user.id, "SHORTLIST",
         );
       }
 
       // Apply all ACCEPTED in batch
       const accepted = await db.recommendation.findMany({
-        where: { batchId: input.batchId, status: "ACCEPTED" },
+        where: { strategyId: input.strategyId, batchId: input.batchId, status: "ACCEPTED" },
         select: { id: true },
       });
       if (accepted.length > 0) {
         return applyRecos(
           input.strategyId,
-          accepted.map((r) => r.id),
+          accepted.map((r) => r.id), "SHORTLIST", { intentId: ctx.intentId },
         );
       }
 
@@ -550,9 +560,13 @@ export const notoriaRouter = createTRPCRouter({
       recoId: z.string(),
       reason: z.string(),
     }),
-  }).mutation(({ input }) =>
-      revertReco(input.strategyId, input.recoId, input.reason),
-    ),
+  }).mutation(async ({ input, ctx }) => {
+      // Same restorer and typed refusals as the journal and the history action (ADR-0207).
+      const result = await revertReco(input.strategyId, input.recoId, input.reason,
+        { operatorId: ctx.session.user.id, intentId: ctx.intentId });
+      if (!result.reverted) throw new TRPCError({ code: result.refusal, message: result.reason });
+      return result;
+    }),
 
   // ══════════════════════════════════════════════════════════════════
   // PUBLICATION (Jehuty)

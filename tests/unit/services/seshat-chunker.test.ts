@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { chunkText } from "@/server/services/seshat/context-store/chunker";
+import { chunkText, excerptForQuery, sourceQueryForDocument } from "@/server/services/seshat/context-store/chunker";
 
 describe("SESHAT — chunkText (BRAND_SOURCE chunking)", () => {
   it("returns empty array for empty / whitespace input", () => {
@@ -22,9 +22,9 @@ describe("SESHAT — chunkText (BRAND_SOURCE chunking)", () => {
     const text = `${para}\n\n${para}\n\n${para}`;
     const chunks = chunkText(text);
     expect(chunks.length).toBeGreaterThanOrEqual(2);
-    // Each chunk respects the 2500 char ceiling (allowing ~2x for buffer-merge fallback).
+    // Every emitted chunk respects the canonical hard bound.
     for (const chunk of chunks) {
-      expect(chunk.text.length).toBeLessThanOrEqual(5000);
+      expect(chunk.text.length).toBeLessThanOrEqual(2500);
     }
     // Indexes are strictly increasing from 0
     expect(chunks.map((c) => c.index)).toEqual(chunks.map((_, i) => i));
@@ -36,7 +36,7 @@ describe("SESHAT — chunkText (BRAND_SOURCE chunking)", () => {
     expect(chunks.length).toBeGreaterThanOrEqual(2);
     // Hard ceiling enforced (no chunk grossly oversized).
     for (const chunk of chunks) {
-      expect(chunk.text.length).toBeLessThanOrEqual(5000);
+      expect(chunk.text.length).toBeLessThanOrEqual(2500);
     }
   });
 
@@ -60,5 +60,84 @@ describe("SESHAT — chunkText (BRAND_SOURCE chunking)", () => {
     for (let i = 1; i < chunks.length; i++) {
       expect(chunks[i]!.charStart).toBeGreaterThanOrEqual(chunks[i - 1]!.charStart);
     }
+  });
+
+  it("retains exact original offsets through whitespace and long paragraphs", () => {
+    const text = "  \n" + "Première phrase précise.  ".repeat(160)
+      + "\r\n\r\n\r\n" + "Second paragraphe intact.\t".repeat(180) + "\n Fin.  ";
+    const chunks = chunkText(text);
+    expect(chunks.length).toBeGreaterThan(1);
+    for (const chunk of chunks) {
+      expect(text.slice(chunk.charStart, chunk.charEnd)).toBe(chunk.text);
+      expect(chunk.text.length).toBeLessThanOrEqual(2500);
+    }
+    expect(chunks.map(c => c.text).join("").replace(/\s/gu, ""))
+      .toBe(text.replace(/\s/gu, ""));
+    expect(chunks.at(-1)!.text).toContain("Fin.");
+  });
+
+  it("supports bounded source windows without dropping a short tail or splitting emoji", () => {
+    const text = "🙂".repeat(7000) + " Fin exacte.";
+    const chunks = chunkText(text, { maxChars: 12001 });
+    expect(chunks.length).toBeGreaterThan(1);
+    for (const chunk of chunks) {
+      expect(text.slice(chunk.charStart, chunk.charEnd)).toBe(chunk.text);
+      expect(chunk.text.length).toBeLessThanOrEqual(12001);
+      expect(chunk.text).not.toMatch(/^[\uDC00-\uDFFF]|[\uD800-\uDBFF]$/u);
+    }
+    expect(chunks.map(c => c.text).join("").replace(/\s/gu, "")).toBe(text.replace(/\s/gu, ""));
+  });
+
+  it("refuses unusable bounds rather than looping or silently changing the budget", () => {
+    for (const maxChars of [0, 1, -2, 2.5, NaN, Infinity]) {
+      expect(() => chunkText("Source", { maxChars })).toThrow(RangeError);
+    }
+  });
+});
+
+
+describe("SESHAT — bound already selected excerpts without another index", () => {
+  it("preserves short text exactly", () => {
+    expect(excerptForQuery("Texte exact.  ", "Texte", 100)).toBe("Texte exact.  ");
+  });
+  it("finds late accented words and short question identifiers without rewriting", () => {
+    const text = "Ancienne introduction. ".repeat(100) + "\nQ9 : préférence de découverte. Aucune calibration reçue.";
+    const excerpt = excerptForQuery(text, "Q9 preference calibration", 180);
+    expect(excerpt).toContain("Q9 : préférence de découverte.");
+    expect(excerpt).toContain("Aucune calibration reçue.");
+    expect(text).toContain(excerpt);
+    expect(excerpt.length).toBeLessThanOrEqual(180);
+  });
+  it("uses the original head when no requested word matches", () => {
+    const text = "Le texte conservé. ".repeat(30);
+    expect(excerptForQuery(text, "inconnu", 80)).toBe(text.slice(0, 80));
+  });
+  it("finds a late three-letter document identifier without rewriting", () => {
+    const text = "Introduction ancienne. ".repeat(100) + "BMC : nouvelle piste à valider par l’équipe.";
+    const excerpt = excerptForQuery(text, "BMC", 120);
+    expect(excerpt).toContain("BMC : nouvelle piste à valider");
+    expect(text).toContain(excerpt);
+  });
+  it("keeps the requested identifier ahead of incidental introduction words", () => {
+    const text = "Sixième question. Fichier taste.mjs. " + "Contexte général. ".repeat(120)
+      + "RÔLE DE Q9 — RADAR\nQ9 mesure directement la découverte.";
+    expect(excerptForQuery(text, "Rôle de la sixième question Q9 radar et Taste Reveal", 300))
+      .toContain("Q9 mesure directement la découverte.");
+  });
+  it("does not expand an empty budget", () => {
+    expect(excerptForQuery("Document", "Document", 0)).toBe("");
+  });
+});
+
+
+describe("document-specific clauses in a compound question", () => {
+  it("keeps the study request distinct from the subsequent BMC request", () => {
+    const study = 'Dans l’étude terrain, que disent Google et TikTok du champ « prix par personne » ?';
+    const bmc = 'Puis situe les BMC v3.1 et la validation de l’équipe.';
+    const query = `${study} ${bmc}`;
+    expect(sourceQueryForDocument(query, "Étude terrain.docx")).toBe(study);
+    expect(sourceQueryForDocument(query, "BMC v3.1.docx")).toBe(bmc);
+    expect(sourceQueryForDocument(query, "Autre document.txt")).toBe(query);
+    expect(sourceQueryForDocument(query, null)).toBe(query);
   });
 });

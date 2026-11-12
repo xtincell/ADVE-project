@@ -13,6 +13,7 @@ import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { PageHeader } from "@/components/shared/page-header";
 import { TrendingUp, Database, Filter, Globe2 } from "lucide-react";
+import { BrandCreativeIntelligence } from "@/components/cockpit/creative-intelligence";
 
 const CATEGORY_LABELS: Record<string, string> = {
   MACRO_ECO: "Macro Économique",
@@ -71,6 +72,7 @@ export default function TrackPage() {
         title="Trend Tracker — 49 variables"
         description={`Canon Workflow ADVE GEN appliqué à ${countryCode} · ${sector}. Les valeurs proviennent des études de marché ingérées (Statista, Nielsen, Kantar…). Les cellules vides signalent une variable non couverte par les études — opportunité d'injecter une nouvelle source.`}
       />
+      <BrandCreativeIntelligence strategyId={strategyId} />
 
       {/* Stats top */}
       <div className="grid grid-cols-4 gap-3">

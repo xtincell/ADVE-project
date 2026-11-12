@@ -175,7 +175,7 @@ export const RTIS: MethodStep[] = [
     code: "S",
     name: "Stratégie",
     sub: "Roadmap dynamique.",
-    body: "Une feuille de route vivante, hiérarchisée, ajustée au cycle. Pas un plan figé — un système qui apprend et se réorganise.",
+    body: "Une feuille de route vivante, hiérarchisée, ajustée au cycle. Pas un plan figé — un plan recalculé quand le socle ou le marché change.",
   },
 ];
 
@@ -261,7 +261,7 @@ export type ProductCategory =
   | "Le cadre";
 
 export const PRODUCT_CATEGORIES: { name: ProductCategory; intro: string }[] = [
-  { name: "Le produit", intro: "L'Industry OS en libre-service — la seule offre qui se pilote seule, avec son propre univers de prix." },
+  { name: "Le produit", intro: "L'Industry OS en libre-service — la seule offre sans intermédiaire, avec son propre univers de prix." },
   { name: "Conseil & stratégie", intro: "Le cerveau : extraction d'ADN, roadmap, marché et finance. Le socle ADVE/RTIS, accompagné." },
   { name: "Production · marque blanche", intro: "Les mains : design, image, son. Une cellule sur mesure convoquée à la mission via La Guilde, sous votre marque." },
   { name: "Le cadre", intro: "La couverture : on porte la méthode, le contrat, l'escrow et l'admin ; vous portez la relation et le métier." },
@@ -299,7 +299,7 @@ export const PRODUCTS: ProductOffer[] = [
     priceLabel: "Gratuit, puis prix fixe",
     priceNote: "Diagnostic gratuit, puis un prix clair par palier (à l'acte ou abonnement), résolu selon votre zone. Détail chiffré ci-dessous.",
     inclusions: [
-      "Diagnostic ADVE gratuit (score /200)",
+      "Diagnostic ADVE gratuit (socle /100, force publique /200 quand une mesure existe)",
       "Rapport ADVE+RTIS & Oracle à l'acte — prix fixe affiché",
       "Cockpit & Retainers en abonnement — prix mensuel affiché",
       "Enterprise multi-marques — sur devis (cadré sur mesure)",

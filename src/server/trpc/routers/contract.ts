@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { Prisma, ContractStatus } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { found } from "../entity-access";
 import { canAccessStrategy, getOperatorContext, scopeStrategies } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
@@ -23,8 +24,9 @@ async function assertContractAccess(
   const c = await ctx.db.contract.findUnique({ where: { id: contractId }, select: { strategyId: true } });
   if (!c) throw new TRPCError({ code: "NOT_FOUND", message: "Contrat introuvable" });
   const opCtx = await getOperatorContext(ctx.session.user.id);
+  // IN1 : un contrat d'une autre marque reçoit la réponse d'un contrat inconnu.
   if (!(await canAccessStrategy(c.strategyId, opCtx))) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à ce contrat." });
+    throw new TRPCError({ code: "NOT_FOUND", message: "Contrat introuvable" });
   }
 }
 
@@ -54,7 +56,7 @@ export const contractRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       await assertContractAccess(ctx, input.id); // anti-IDOR : lecture cross-tenant sinon
-      return ctx.db.contract.findUniqueOrThrow({ where: { id: input.id }, include: { escrows: { include: { conditions: true } } } });
+      return found(await ctx.db.contract.findUnique({ where: { id: input.id }, include: { escrows: { include: { conditions: true } } } }), "Contrat introuvable");
     }),
 
   list: protectedProcedure

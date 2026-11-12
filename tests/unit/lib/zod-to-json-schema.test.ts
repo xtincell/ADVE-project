@@ -65,11 +65,26 @@ describe("deriveJsonSchemaFromZod", () => {
     expect(out.enum).toEqual(expect.arrayContaining(["a", "b", "c"]));
   });
 
-  it("converts ZodUnion to oneOf", () => {
+  it("converts a ZodUnion of primitives to an equivalent JSON Schema alternative", () => {
     const schema = z.union([z.string(), z.number()]);
+    const out = deriveJsonSchemaFromZod(schema) as {
+      oneOf?: Array<{ type?: string }>;
+      anyOf?: Array<{ type?: string }>;
+      type?: string | string[];
+    };
+    // Since zod 4.6 the native converter collapses a union of primitive types into
+    // `type: ["string", "number"]` (valid draft-7). Older zod produced anyOf, and
+    // our fallback uses oneOf. All three must keep both alternatives.
+    const alternatives = Array.isArray(out.type)
+      ? out.type
+      : (out.oneOf ?? out.anyOf ?? []).map((branch) => branch.type);
+    expect(alternatives).toEqual(expect.arrayContaining(["string", "number"]));
+  });
+
+  it("keeps anyOf/oneOf for a ZodUnion that mixes objects and primitives", () => {
+    const schema = z.union([z.string(), z.object({ score: z.number() })]);
     const out = deriveJsonSchemaFromZod(schema) as { oneOf?: unknown[]; anyOf?: unknown[] };
-    // zod 4 native may produce anyOf (compatible JSON Schema), our fallback uses oneOf.
-    expect(out.oneOf ?? out.anyOf).toBeDefined();
+    expect(out.oneOf ?? out.anyOf).toHaveLength(2);
   });
 
   it("preserves description from .describe()", () => {

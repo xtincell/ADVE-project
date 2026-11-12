@@ -18,6 +18,27 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
+import type { InterventionState } from "@/domain/intervention-request";
+import { measuredConfidence } from "@/lib/confidence";
+
+/** Existing request Signal states; the legacy InterventionRequest table keeps its own taxonomy. */
+export const INTERVENTION_STATE_CONFIG: Record<InterventionState, {
+  label: string; tone: "neutral" | "info" | "warning" | "success";
+}> = {
+  PENDING: { label: "À examiner", tone: "warning" },
+  CONVERTED: { label: "Mission préparée", tone: "info" },
+  DISMISSED: { label: "Écartée", tone: "neutral" },
+  OPEN: { label: "Ouverte (historique)", tone: "warning" },
+  ASSIGNED: { label: "Affectée (historique)", tone: "info" },
+  IN_PROGRESS: { label: "En cours (historique)", tone: "info" },
+  RESOLVED: { label: "Résolue (historique)", tone: "success" },
+  COMPLETED: { label: "Terminée (historique)", tone: "success" },
+  CLOSED: { label: "Fermée (historique)", tone: "neutral" },
+  UNKNOWN: { label: "État à vérifier", tone: "warning" },
+};
+export const INTERVENTION_URGENCY = { low: "Faible", medium: "Moyenne", high: "Haute", critical: "Critique" };
+export const INTERVENTION_TYPE = { one_off: "Ponctuelle", recurring: "Récurrente", emergency: "Urgence" };
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Types — dérivés des enums Prisma (schema.prisma)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -88,7 +109,8 @@ export type ClientReviewStatus =
   | "VALIDE"
   | "REJETE";
 
-export type HealthSignal = "GREEN" | "AMBER" | "RED";
+/** UNKNOWN : santé automatique non calculable (aucune preuve suffisante), jamais un vert par défaut. */
+export type HealthSignal = "GREEN" | "AMBER" | "RED" | "UNKNOWN";
 
 export type BriefStatus = "DRAFT" | "SUBMITTED" | "VALIDATED" | "ASSIGNED";
 
@@ -513,6 +535,7 @@ export const HEALTH_SIGNAL_CONFIG: Record<HealthSignal, { label: string; color: 
   GREEN: { label: "Bonne santé",   color: "bg-success/15 text-success ring-success/30",  icon: "🟢", dotClass: "bg-success" },
   AMBER: { label: "Attention",     color: "bg-warning/15 text-warning ring-warning/30",  icon: "🟡", dotClass: "bg-warning" },
   RED:   { label: "Critique",      color: "bg-error/15 text-error ring-error/30",        icon: "🔴", dotClass: "bg-error animate-pulse" },
+  UNKNOWN: { label: "Non calculée", color: "bg-foreground-muted/15 text-foreground-secondary ring-border/30", icon: "⚪", dotClass: "bg-foreground-muted" },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -603,9 +626,10 @@ export function getHealthSignalConfig(signal: string): typeof HEALTH_SIGNAL_CONF
 export function formatConfidence(confidence: number | null | undefined): {
   pct: string;
   color: string;
-  level: "low" | "medium" | "high";
+  level: "unknown" | "low" | "medium" | "high";
 } {
-  const val = confidence ?? 0;
+  const val = measuredConfidence(confidence);
+  if (val === null) return { pct: "—", color: "text-foreground-muted", level: "unknown" };
   const pct = `${Math.round(val * 100)}%`;
   if (val < 0.30) return { pct, color: "text-error", level: "low" };
   if (val < 0.70) return { pct, color: "text-warning", level: "medium" };

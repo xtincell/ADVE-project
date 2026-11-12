@@ -13,7 +13,7 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { Loader2, RefreshCw, Star, Layers, Plus, Sparkles } from "lucide-react";
+import { Loader2, RefreshCw, Layers, Plus, Sparkles } from "lucide-react";
 
 const TOUCHPOINT_LABELS: Record<string, string> = {
   DIGITAL: "Digital",
@@ -47,7 +47,7 @@ const INPUT_CLS =
   "rounded-lg border border-white/10 bg-background px-2 py-1 text-xs text-foreground placeholder:text-foreground-muted focus:border-accent/40 focus:outline-none";
 
 function fcfa(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n) || n <= 0) return "—";
+  if (n == null || !Number.isFinite(n) || n < 0) return "Budget à préciser";
   if (n >= 1_000_000) return `${(n / 1_000_000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} M`;
   if (n >= 1_000) return `${Math.round(n / 1_000)} k`;
   return String(Math.round(n));
@@ -55,12 +55,16 @@ function fcfa(n: number | null | undefined): string {
 
 interface Props {
   strategyId: string;
-  /** Operator-only projection refresh is available; founders rely on auto-sync. */
+  /** Current brand calendar permission, independently of operator membership. */
+  canWrite?: boolean;
+  /** The server also requires operator membership for projection refresh. */
   canSync?: boolean;
 }
 
-export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
+export function ActionDatabasePanel({ strategyId, canWrite = false, canSync = false }: Props) {
   const [touchpointFilter, setTouchpointFilter] = useState<string | null>(null);
+  const [showOutsideCatalogue, setShowOutsideCatalogue] = useState(false);
+  const utils = trpc.useUtils();
 
   const summaryQuery = trpc.actions.summary.useQuery({ strategyId }, { enabled: !!strategyId });
   const listQuery = trpc.actions.byStrategy.useQuery(
@@ -73,10 +77,18 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
 
   const refetchAll = () => { summaryQuery.refetch(); listQuery.refetch(); };
   const proposeMutation = trpc.actions.propose.useMutation({ onSuccess: refetchAll });
-  const selectMutation = trpc.actions.setSelected.useMutation({ onSuccess: refetchAll });
+  const selectMutation = trpc.actions.setSelected.useMutation({
+    onSuccess: () => {
+      refetchAll();
+      // A retained action is a versioned choice in I and makes S stale.
+      void utils.pillar.get.invalidate({ strategyId });
+      void utils.pillar.assess.invalidate({ strategyId });
+      void utils.pillar.readiness.invalidate({ strategyId });
+    },
+  });
 
   const [showPropose, setShowPropose] = useState(false);
-  const [proposeMode, setProposeMode] = useState<"LLM" | "MANUAL">("LLM");
+  const [proposeMode, setProposeMode] = useState<"LLM" | "MANUAL">("MANUAL");
   const [channel, setChannel] = useState("DIGITAL");
   const [count, setCount] = useState(5);
   const [intention, setIntention] = useState("");
@@ -85,6 +97,8 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
 
   const summary = summaryQuery.data;
   const actions = listQuery.data ?? [];
+  const outsideCatalogue = actions.filter(a => a.sourceInitiativeId && !a.inCurrentCatalogue);
+  const visibleActions = showOutsideCatalogue ? actions : actions.filter(a => a.inCurrentCatalogue || !a.sourceInitiativeId);
   const touchpoints = summary ? Object.keys(summary.byTouchpoint).sort() : [];
 
   return (
@@ -93,23 +107,23 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Layers className="h-4 w-4 text-accent" />
-          <span className="text-sm font-semibold text-foreground">Base d'actions</span>
+          <span className="text-sm font-semibold text-foreground">Catalogue d’actions</span>
           {summary ? (
             <span className="rounded-full bg-white/5 px-2 py-0.5 text-2xs text-foreground-muted">
               {summary.total} action{summary.total > 1 ? "s" : ""}
-              {summary.selectedCount > 0 ? ` · ${summary.selectedCount} retenue${summary.selectedCount > 1 ? "s" : ""}` : ""}
+              {` · ${summary.currentCatalogueCount} au catalogue courant · ${summary.currentFavoriteCount} favori(s) · ${summary.currentRejectedCount} rejetée(s)`}
             </span>
           ) : null}
         </div>
         <div className="flex items-center gap-1.5">
-          <button
+          {canWrite ? <button
             type="button"
             onClick={() => setShowPropose((v) => !v)}
             className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-2xs font-medium transition-colors ${showPropose ? "bg-accent/20 text-accent" : "bg-white/5 text-foreground-secondary hover:bg-white/10 hover:text-foreground"}`}
           >
             <Plus className="h-3 w-3" /> Proposer
-          </button>
-          {canSync ? (
+          </button> : null}
+          {canSync && canWrite ? (
             <button
               type="button"
               onClick={() => syncMutation.mutate({ strategyId })}
@@ -124,8 +138,17 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
         </div>
       </div>
 
+      {selectMutation.isError || syncMutation.isError ? (
+        <p role="alert" className="mb-3 text-xs text-error">
+          {selectMutation.isError
+            ? "Ce choix n’a pas pu être confirmé."
+            : "La synchronisation n’a pas abouti."}
+        </p>
+      ) : null}
+
+      <p className="mb-3 text-xs text-foreground-muted">Vos préférences orientent les scénarios de stratégie. Un favori n’est pas une action planifiée ; une action rejetée reste au catalogue et sort des propositions.</p>
       {/* Propose actions (Phase 24) — generate-more (IA, brand-aware) or manual */}
-      {showPropose ? (
+      {showPropose && canWrite ? (
         <div className="mb-3 rounded-lg border border-accent/20 bg-accent/[0.04] p-3">
           <div className="mb-2 flex gap-1.5">
             <button type="button" onClick={() => setProposeMode("LLM")} className={`rounded-full px-2.5 py-0.5 text-2xs font-medium transition-colors ${proposeMode === "LLM" ? "bg-accent/20 text-accent" : "bg-white/5 text-foreground-muted hover:bg-white/10"}`}>Générer (IA)</button>
@@ -214,6 +237,14 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
       ) : null}
 
       {/* List */}
+      {outsideCatalogue.length > 0 ? (
+        <div className="mb-3 text-xs text-foreground-muted">
+          <p>{summary?.outsideCatalogueSelectedCount ?? 0} choix antérieurs restent hors du catalogue courant. Ils ne sont pas transmis au nouveau plan.</p>
+          <button type="button" className="mt-1 text-accent" onClick={() => setShowOutsideCatalogue(v => !v)}>
+            {showOutsideCatalogue ? "Masquer les actions hors catalogue" : `Voir les ${outsideCatalogue.length} actions hors catalogue`}
+          </button>
+        </div>
+      ) : null}
       {listQuery.isLoading ? (
         <div className="flex items-center justify-center py-8 text-foreground-muted">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -226,26 +257,33 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
         </div>
       ) : (
         <div className="space-y-1.5">
-          {actions.map((a) => {
+          {visibleActions.map((a) => {
             const meta = (a.metadata ?? {}) as Record<string, unknown>;
             const channel = typeof meta.channel === "string" ? meta.channel : null;
+            const hasBudget = typeof a.budgetMin === "number" && Number.isFinite(a.budgetMin) && a.budgetMin >= 0;
+            const estimatedBudget = hasBudget && meta.budgetBasis === "QUALITATIVE_ESTIMATE" && meta.projectedBudget === a.budgetMin;
+            const needsReconciliation = !!a.sourceInitiativeId && !a.inCurrentCatalogue;
+            const retained = a.inCurrentCatalogue ? a.selectedForCurrentPlan : a.selected;
             return (
               <div
                 key={a.id}
                 className={`flex items-start justify-between gap-3 rounded-lg border px-3 py-2 ${
-                  a.selected ? "border-accent/30 bg-accent/5" : "border-white/5 bg-white/[0.02]"
+                  retained && !needsReconciliation ? "border-accent/30 bg-accent/5" : "border-white/5 bg-white/[0.02]"
                 }`}
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => selectMutation.mutate({ strategyId, actionId: a.id, selected: !a.selected })}
-                      title={a.selected ? "Retirer de la roadmap" : "Retenir pour la roadmap"}
-                      className="flex-shrink-0"
+                    <select
+                      aria-label={`Préférence pour ${a.title}`}
+                      value={a.preference}
+                      onChange={e => { if (canWrite && !needsReconciliation && !selectMutation.isPending) selectMutation.mutate({ strategyId, actionId: a.id, preference: e.target.value as "FAVORITE" | "NEUTRAL" | "REJECTED" }); }}
+                      disabled={!canWrite || needsReconciliation || selectMutation.isPending}
+                      className="rounded border border-white/10 bg-background px-1.5 py-1 text-2xs text-foreground"
                     >
-                      <Star className={`h-3 w-3 ${a.selected ? "fill-accent text-accent" : "text-foreground-muted hover:text-accent"}`} />
-                    </button>
+                      <option value="FAVORITE">Favori</option>
+                      <option value="NEUTRAL">Neutre</option>
+                      <option value="REJECTED">Rejeté</option>
+                    </select>
                     <span className="truncate text-xs font-medium text-foreground">{a.title}</span>
                   </div>
                   {a.description ? (
@@ -271,10 +309,10 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
                   </div>
                 </div>
                 <div className="flex flex-shrink-0 flex-col items-end gap-1">
-                  <span className="text-2xs font-semibold text-foreground">{fcfa(a.budgetMin)}<span className="text-[9px] font-normal text-foreground-muted"> {a.budgetCurrency ?? ""}</span></span>
+                  <span className="text-2xs font-semibold text-foreground">{estimatedBudget ? "Estimation · " : ""}{fcfa(a.budgetMin)}{hasBudget ? <span className="text-[9px] font-normal text-foreground-muted"> {a.budgetCurrency ?? ""}</span> : null}</span>
                   <div className="flex items-center gap-1">
                     <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">{a.priority}</span>
-                    <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">{STATUS_LABELS[a.status] ?? a.status}</span>
+                    <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted">{needsReconciliation ? "Hors catalogue courant" : STATUS_LABELS[a.status] ?? a.status}</span>
                   </div>
                 </div>
               </div>

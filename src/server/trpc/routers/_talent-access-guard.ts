@@ -19,7 +19,8 @@ export function isStaff(opCtx: { role: string; operatorId: string | null }): boo
 }
 
 /**
- * Self (le User propriétaire du TalentProfile) OU staff. Lève FORBIDDEN sinon.
+ * Self (le User propriétaire du TalentProfile) OU staff. Sinon le même NOT_FOUND
+ * qu'un identifiant inconnu (IN1).
  * `talentProfileId` peut être null/undefined (self implicite non résolu) → refuse.
  */
 export async function assertTalentProfileAccess(userId: string, talentProfileId: string): Promise<void> {
@@ -31,5 +32,6 @@ export async function assertTalentProfileAccess(userId: string, talentProfileId:
   if (tp.userId === userId) return;
   const opCtx = await getOperatorContext(userId);
   if (isStaff(opCtx)) return;
-  throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à ce profil talent" });
+  // IN1 : un profil hors d'atteinte reçoit la réponse d'un profil inconnu.
+  throw new TRPCError({ code: "NOT_FOUND", message: "Profil talent introuvable" });
 }

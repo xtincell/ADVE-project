@@ -43,14 +43,14 @@ export function sectorHeadTerm(sector: string): string {
  * dans TOUTES les langues de SEARCH_LOCALES. L'appelant concatène les items de
  * tous les sujets/langues puis trie par pertinence (relevance.ts).
  */
-export function subjectSourcesFor(subject: string, countryCode: string): FeedSource[] {
-  const cc = (countryCode || "CM").toUpperCase();
+export function subjectSourcesFor(subject: string, countryCode: string | null): FeedSource[] {
+  const cc = (countryCode ?? "").toUpperCase();
   const clean = subject.trim();
   if (clean.length < 2) return [];
   const q = encodeURIComponent(clean);
   const label = clean.toLowerCase().slice(0, 40);
   return SEARCH_LOCALES.map((hl) => ({
-    url: `https://news.google.com/rss/search?q=${q}&hl=${hl}&gl=${cc}&ceid=${cc}:${hl}`,
+    url: `https://news.google.com/rss/search?q=${q}&hl=${hl}${cc ? `&gl=${cc}&ceid=${cc}:${hl}` : ""}`,
     name: `google-news:${label}:${cc}:${hl}`,
   }));
 }
@@ -59,8 +59,8 @@ export function subjectSourcesFor(subject: string, countryCode: string): FeedSou
  * Flux RSS pour un couple pays×secteur (digest sectoriel PARTAGÉ du cron).
  * Sujet = terme-tête du secteur + nom du pays, interrogé multi-langue.
  */
-export function feedSourcesFor(countryCode: string, sector: string, countryName?: string): FeedSource[] {
-  const cc = (countryCode || "CM").toUpperCase();
+export function feedSourcesFor(countryCode: string | null, sector: string, countryName?: string): FeedSource[] {
+  const cc = (countryCode ?? "").toUpperCase();
   const head = sectorHeadTerm(sector);
   return subjectSourcesFor(`${head} ${countryName ?? cc}`.trim(), cc);
 }
@@ -80,8 +80,8 @@ export function brandPressFeedFor(
   countryCode?: string | null,
   opts?: { extraTerms?: readonly string[] },
 ): FeedSource {
-  const cc = (countryCode ?? "CM").toUpperCase();
-  const locale = `hl=fr&gl=${cc}&ceid=${cc}:fr`;
+  const cc = (countryCode ?? "").toUpperCase();
+  const locale = cc ? `hl=fr&gl=${cc}&ceid=${cc}:fr` : "hl=fr";
   const terms = (opts?.extraTerms ?? []).filter((t) => t.trim()).slice(0, 4);
   const query = terms.length > 0 ? `"${companyName}" (${terms.join(" OR ")})` : `"${companyName}"`;
   const q = encodeURIComponent(query);

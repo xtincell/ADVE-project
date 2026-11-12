@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { ProductionWorkbench } from "@/components/cockpit/production-workbench";
+import { OperatorSurface } from "@/components/cockpit/operator-surface";
+import { Suspense, useState, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -42,6 +45,36 @@ const FORMAT_BADGE: Record<string, { label: string; color: string; icon: typeof 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function BrandDeliverablesPage() {
+  return <Suspense fallback={<SkeletonPage />}><BrandDeliverablesTabs /></Suspense>;
+}
+
+function BrandDeliverablesTabs() {
+  const search = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const tab = search.get("tab") === "production" || (!search.has("tab") && search.has("productionPreview"))
+    ? "production" : "documents";
+  const selectTab = (next: "documents" | "production") => {
+    const params = new URLSearchParams(search.toString());
+    params.set("tab", next);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+  return (
+    <div className="space-y-6">
+      <nav className="flex flex-wrap gap-2 border-b border-border pb-3" aria-label="Livrables et production">
+        {([{ key: "documents", label: "Documents et versions" }, { key: "production", label: "Studio de production" }] as const).map((item) => (
+          <button key={item.key} aria-pressed={tab === item.key} onClick={() => selectTab(item.key)}
+            className={`min-h-[var(--tap-min)] rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${tab === item.key ? "bg-primary-subtle text-primary" : "text-foreground-secondary hover:bg-background-overlay hover:text-foreground"}`}>
+            {item.label}
+          </button>
+        ))}
+      </nav>
+      {tab === "production" ? <OperatorSurface><ProductionWorkbench /></OperatorSurface> : <BrandDeliverablesDocuments />}
+    </div>
+  );
+}
+
+function BrandDeliverablesDocuments() {
   const strategyId = useCurrentStrategyId();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [expandedSection, setExpandedSection] = useState<number | null>(null);
@@ -112,6 +145,8 @@ export default function BrandDeliverablesPage() {
         breadcrumbs={[{ label: "Cockpit", href: "/cockpit" }, { label: "Brand" }, { label: "Livrables" }]}
       />
 
+      <a href="/cockpit/operate/sequences" className="inline-flex rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground">Générer un document</a>
+      <a href="/cockpit/operate/forge" className="ml-3 text-sm text-accent underline">Créer un asset visuel</a>
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard title="Kits operationnels" value={opCount} icon={Rocket} />
@@ -288,7 +323,7 @@ export default function BrandDeliverablesPage() {
               </div>
 
               <p className="text-xs text-foreground-muted">
-                {m.meta.strategyName} — genere le {new Date(m.meta.generatedAt).toLocaleDateString("fr-FR")}
+                {m.meta.strategyName} — {m.meta.generatedAt ? `version produite le ${new Date(m.meta.generatedAt).toLocaleDateString("fr-FR")}` : "aucune version produite"}
               </p>
 
               {/* Sections — clickable to expand content */}
@@ -424,6 +459,7 @@ type LaunchKit = {
 } | null;
 
 function OperationalDeliverables({ kit, isLoading }: { kit: LaunchKit; isLoading: boolean }) {
+  const strategyId = useCurrentStrategyId();
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -482,6 +518,7 @@ function OperationalDeliverables({ kit, isLoading }: { kit: LaunchKit; isLoading
               {Object.keys(calendar.cadenceParCanal).length} canaux
               {calendar.posts.length > 0 ? ` · ${calendar.posts.length} posts datés` : " · cadence définie"}
             </p>
+            {strategyId && <a className="text-xs font-medium text-accent underline" href={"/cockpit/operate/calendar?strategy="+encodeURIComponent(strategyId)}>Ouvrir le calendrier et produire les visuels</a>}
             {allHashtags.length ? (
               <div className="flex flex-wrap gap-1">
                 {allHashtags.slice(0, 6).map((h) => (

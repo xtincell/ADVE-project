@@ -8,7 +8,9 @@
  * symboles, SWOT flash, ESOV, barrières, ratio histoire/preuve.
  */
 
+import { creativeDirectionDoctrine } from "@/domain/creative-direction";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
+import { brandActorRoleLabels } from "@/domain/brand-actors";
 import {
   Section, ACard, EmptyBody, EmptyValue, TagRow, ObjCard, ProofList,
   isEmpty, asRec, asArr, str, makeStatusFor, type Rec,
@@ -55,6 +57,8 @@ function Personas({ items, status }: { items: unknown; status?: string }) {
                 {!isEmpty(p.devotionPotential) ? <span className="ck-d-persona__dev" data-lvl={str(p.devotionPotential)}>{str(p.devotionPotential)}</span> : null}
               </div>
               <div className="ck-d-persona__chips">
+                {brandActorRoleLabels(p.actorRoles).map(role => <span className="ck-fc__tag" data-tone="info" key={role}>{role}</span>)}
+                {brandActorRoleLabels(p.actorRoles).length === 0 ? <span className="ck-fc__tag" data-tone="neutral">Rôles à qualifier</span> : null}
                 {!isEmpty(p.lf8Dominant) ? <span className="ck-fc__tag" data-tone="info">LF8 · {str(p.lf8Dominant)}</span> : null}
                 {!isEmpty(p.tensionProfile) ? <span className="ck-fc__tag" data-tone="neutral">{str(p.tensionProfile)}</span> : null}
                 {(Array.isArray(p.schwartzValues) ? p.schwartzValues : []).map((s, j) => <span className="ck-fc__tag" data-tone="neutral" key={`sv${j}`}>{str(s)}</span>)}
@@ -190,6 +194,24 @@ function SacredObjects({ items, status }: { items: unknown; status?: string }) {
 // moodboard, chromaticStrategy, typographySystem, …}` (sortie des Glory
 // créatifs). Le renderer affiche celle qui est présente — aucune n'écrase
 // l'autre, aucune donnée n'est inventée.
+function DoctrineSummary({value}: {value: unknown}) {
+  const result=creativeDirectionDoctrine.safeParse(value);
+  if (!result.success) return null;
+  const {families,rules,sources}=result.data;
+  return <div className="space-y-2 py-2 text-sm">
+    <p className="font-semibold">Choix de direction artistique</p>
+    <p>{families.length} familles d’exécution · {rules.length} règles sourcées</p>
+    <details><summary className="cursor-pointer">Choisir une famille selon le sujet</summary>
+      <ul className="mt-2 space-y-2">{families.map(f=><li key={f.id}><strong>{f.name}</strong> · {f.purpose}</li>)}</ul>
+    </details>
+    <details><summary className="cursor-pointer">Consulter les règles et leur origine</summary>
+      <ul className="mt-2 space-y-2">{rules.map(rule=><li key={rule.id}>{rule.guidance}
+        <span className="block text-xs text-foreground-secondary">{rule.sources.map(id=>{const ref=sources.find(x=>x.id===id);return ref ? ref.label+" · "+ref.locator : id;}).join(" / ")}</span>
+      </li>)}</ul>
+    </details>
+  </div>;
+}
+
 function DirectionArtistique({ value, status }: { value: unknown; status?: string }) {
   const empty = isEmpty(value);
   const obj = asRec(value);
@@ -218,6 +240,7 @@ function DirectionArtistique({ value, status }: { value: unknown; status?: strin
               <div className="ck-a-obj__v"><TagRow items={obj.principes} tone="info" /></div>
             </div>
           ) : null}
+          {Boolean(obj.doctrine) && <DoctrineSummary value={obj.doctrine} />}
           {richPresent.map(([k, label]) => (
             <div className="ck-a-obj__row" key={k}>
               <span className="ck-a-obj__k">{label}</span>
@@ -255,7 +278,7 @@ function StoryRatio({ value, status }: { value: unknown; status?: string }) {
 
 export function PillarDFields({ content, certainty }: { content: Rec; certainty: Record<string, string> | null | undefined }) {
   const v = content;
-  const st = makeStatusFor(certainty, "d");
+  const st = makeStatusFor(certainty, "d", content._fieldProvenance);
   const schemaKeys = Object.keys((PILLAR_SCHEMAS.D as { shape?: Record<string, unknown> }).shape ?? {});
   const total = schemaKeys.length;
   const filled = schemaKeys.filter((k) => !isEmpty(v[k])).length;
@@ -273,7 +296,7 @@ export function PillarDFields({ content, certainty }: { content: Rec; certainty:
         </div>
       </Section>
 
-      <Section title="Cibles" sub="Les personas — qui adresse-t-on, et que cherchent-ils vraiment">
+      <Section title="Publics et acteurs" sub="Qui reçoit la communication, utilise, paie ou contribue à la valeur ; plusieurs rôles peuvent se cumuler">
         <div className="ck-a-grid"><Personas items={v.personas} status={st("personas")} /></div>
       </Section>
 

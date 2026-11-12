@@ -9,7 +9,10 @@
  * - agency : multi-strategy avec metadata par dépêche
  */
 
-import { useMemo, useState } from "react";
+import { ArticleSpread } from "./article-spread";
+import { GazetteReader } from "./gazette-reader";
+import { selectGazetteEdition } from "@/lib/jehuty-editorial";
+import { useCallback, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
@@ -39,7 +42,7 @@ const CATEGORY_RUBRIC: Record<JehutyCategory, string> = {
   WEAK_SIGNAL: "Signaux faibles",
   SCORE_DRIFT: "Mouvements de score",
   DIAGNOSTIC: "Diagnostics",
-  EXTERNAL_SIGNAL: "Le monde dehors",
+  EXTERNAL_SIGNAL: "Actualités & décryptages",
 };
 
 /** Libellé court par section du rafraîchissement (toast). */
@@ -69,11 +72,11 @@ const CATEGORY_DESCRIPTION: Record<JehutyCategory, { about: string; whenEmpty: s
   },
   WEAK_SIGNAL: {
     about: "Les frémissements de votre marché détectés tôt — tendances naissantes, mouvements discrets à surveiller.",
-    whenEmpty: "Aucun signal faible détecté sur la période. C'est aussi une information : votre marché est calme.",
+    whenEmpty: "Aucun signal faible disponible dans cette vue. Cela ne permet pas de conclure à l’absence de changement sur votre marché.",
   },
   SCORE_DRIFT: {
     about: "Les variations de votre score de marque — ce qui monte, ce qui baisse, et depuis quand.",
-    whenEmpty: "Votre score n'a pas bougé récemment. Chaque nouvelle mesure ou action peut le faire évoluer.",
+    whenEmpty: "Aucune variation de score disponible dans cette vue.",
   },
   DIAGNOSTIC: {
     about: "Les examens automatiques de vos fondations : points de friction détectés et grilles d'analyse mobilisées.",
@@ -81,7 +84,7 @@ const CATEGORY_DESCRIPTION: Record<JehutyCategory, { about: string; whenEmpty: s
   },
   EXTERNAL_SIGNAL: {
     about: "Votre veille : ce que la presse et le web publient autour de votre marque, votre secteur et votre marché.",
-    whenEmpty: "La veille n'a rien capté de récent sur vos sujets suivis — la collecte tourne chaque jour.",
+    whenEmpty: "Aucun article disponible dans cette vue. Vérifiez les sujets suivis et la dernière collecte.",
   },
 };
 
@@ -90,12 +93,12 @@ const URGENCY_LABEL: Record<string, string> = { NOW: "Maintenant", SOON: "Bient�
 const IMPACT_LABEL: Record<string, string> = { HIGH: "Fort", MEDIUM: "Moyen", LOW: "Faible" };
 
 const CATEGORY_ORDER: JehutyCategory[] = [
+  "EXTERNAL_SIGNAL",
   "RECOMMENDATION",
   "MARKET_SIGNAL",
   "DIAGNOSTIC",
   "WEAK_SIGNAL",
   "SCORE_DRIFT",
-  "EXTERNAL_SIGNAL",
 ];
 
 const PILLAR_KEYS_LOWER = CANONICAL_PILLAR_KEYS.map((k) => k.toLowerCase()) as ReadonlyArray<string>;
@@ -114,6 +117,9 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
   const [selectedCategory, setSelectedCategory] = useState<JehutyCategory | null>(null);
   const [selectedPillar, setSelectedPillar] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  const [readingItem, setReadingItem] = useState<JehutyFeedItem | null>(null);
+  const closeReader = useCallback(() => setReadingItem(null), []);
 
   // ── Queries ──
   const feedQuery = trpc.jehuty.feed.useQuery(
@@ -146,7 +152,18 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
     onSuccess: () => feedQuery.refetch(),
   });
   const triggerNotoriaMutation = trpc.jehuty.triggerNotoria.useMutation({
-    onSuccess: () => feedQuery.refetch(),
+    onError: (error) => toast.error(`Propositions indisponibles : ${error.message}`),
+    onSuccess: (result) => {
+      if ("articleActions" in result && result.articleActions) {
+        const { retained, alternatives, toInvestigate } = result.articleActions;
+        toast.info(result.totalRecos ? `Article analysé. Actions retenues · ${retained}. Alternatives · ${alternatives}. Pistes à instruire · ${toInvestigate}.` : "Article analysé. Aucune proposition à soumettre.");
+      } else if (result.totalRecos > 0) {
+        const message = `${result.totalRecos} proposition(s) préparée(s). Examinez-les dans Recommandations avant de les appliquer.`;
+        if (result.failedParts > 0) toast.warning(`${message} L’analyse reste partielle.`);
+        else toast.success(message);
+      } else toast.info("Analyse terminée sans proposition. Vous pouvez réessayer après avoir précisé le contexte.");
+      feedQuery.refetch();
+    },
   });
   // ADR-0085/0090 — application directe d'une reco depuis le feed (acte
   // opérateur explicite ; le gate de remplacement pondéré s'applique).
@@ -156,6 +173,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
 
   // Rafraîchit les 6 rubriques (veille, diagnostic, score, audience, recos,
   // signaux faibles). Toast récapitulatif honnête par rubrique.
+  const [withRecos, setWithRecos] = useState(false);
   const refreshMutation = trpc.jehuty.refreshFeed.useMutation({
     onSuccess: (res) => {
       const filled = res.sections.filter((s) => s.status === "FILLED");
@@ -171,7 +189,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
   });
   const handleRefresh = () => {
     if (!strategyId) return;
-    refreshMutation.mutate({ strategyId, withRecos: true });
+    refreshMutation.mutate({ strategyId, withRecos });
   };
 
   const items: JehutyFeedItem[] = feedQuery.data ?? [];
@@ -180,20 +198,22 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
   const handleCurate = (item: JehutyFeedItem, action: "PINNED" | "DISMISSED") => {
     if (!item.strategyId) return;
     const [sourceType] = item.id.split(":");
-    const itemType = sourceType === "signal" ? "SIGNAL" : sourceType === "reco" ? "RECOMMENDATION" : "DIAGNOSTIC";
-    curateMutation.mutate({ strategyId: item.strategyId, itemType: itemType as "SIGNAL" | "RECOMMENDATION" | "DIAGNOSTIC", itemId: item.sourceId, action });
+    const itemType = sourceType === "ext" ? "EXTERNAL" : sourceType === "signal" ? "SIGNAL" : sourceType === "reco" ? "RECOMMENDATION" : "DIAGNOSTIC";
+    curateMutation.mutate({ strategyId: item.strategyId, itemType: itemType as "SIGNAL" | "RECOMMENDATION" | "DIAGNOSTIC" | "EXTERNAL", itemId: item.sourceId, action });
   };
 
   const handleUnpin = (item: JehutyFeedItem) => {
     if (!item.strategyId) return;
     const [sourceType] = item.id.split(":");
-    const itemType = sourceType === "signal" ? "SIGNAL" : sourceType === "reco" ? "RECOMMENDATION" : "DIAGNOSTIC";
-    removeCurationMutation.mutate({ strategyId: item.strategyId, itemType: itemType as "SIGNAL" | "RECOMMENDATION" | "DIAGNOSTIC", itemId: item.sourceId });
+    const itemType = sourceType === "ext" ? "EXTERNAL" : sourceType === "signal" ? "SIGNAL" : sourceType === "reco" ? "RECOMMENDATION" : "DIAGNOSTIC";
+    removeCurationMutation.mutate({ strategyId: item.strategyId, itemType: itemType as "SIGNAL" | "RECOMMENDATION" | "DIAGNOSTIC" | "EXTERNAL", itemId: item.sourceId });
   };
 
   const handleTriggerNotoria = (item: JehutyFeedItem) => {
     if (item.sourceType !== "SIGNAL" || !item.strategyId) return;
-    triggerNotoriaMutation.mutate({ strategyId: item.strategyId, signalId: item.sourceId });
+    triggerNotoriaMutation.mutate(item.externalUrl
+      ? { strategyId: item.strategyId, articleUrl: item.externalUrl }
+      : { strategyId: item.strategyId, signalId: item.sourceId });
   };
 
   const handleApplyReco = (item: JehutyFeedItem) => {
@@ -203,9 +223,8 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
 
   // ── Derive editorial structure ──
   const { lead, byCategory } = useMemo(() => {
-    const sorted = [...items].sort((a, b) => b.priority - a.priority);
-    const urgents = sorted.filter((i) => i.urgency === "NOW");
-    const lead = urgents[0] ?? sorted[0] ?? null;
+    const sorted = selectGazetteEdition(items);
+    const lead = sorted[0] ?? null;
     const restPool = sorted.filter((i) => i.id !== lead?.id);
     const byCategory: Record<JehutyCategory, JehutyFeedItem[]> = {
       RECOMMENDATION: [], MARKET_SIGNAL: [], WEAK_SIGNAL: [],
@@ -271,44 +290,62 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
           </p>
         </div>
         {mode === "brand" && (
+          <div className="flex flex-col items-start gap-3">
+          <label className="flex items-center gap-2 text-sm text-foreground-secondary">
+            <input type="checkbox" checked={withRecos} onChange={(event) => setWithRecos(event.target.checked)} disabled={refreshMutation.isPending} />
+            Inclure des propositions IA (facultatif)
+          </label>
           <button
             onClick={handleRefresh}
             disabled={refreshMutation.isPending || !strategyId}
             className="shrink-0 inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-elevated px-5 py-2.5 font-mono text-2xs uppercase tracking-widest text-foreground hover:bg-surface-sunken transition-colors disabled:opacity-50"
-            title="Collecte la veille, examine vos fondations, relève votre audience et votre score, et génère des recommandations."
+            title="Collecte la veille, examine vos fondations et relève votre audience et votre score. Les propositions IA nécessitent l’option explicite."
           >
             {refreshMutation.isPending
               ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
               : <RefreshCw className="h-3.5 w-3.5" />}
             {refreshMutation.isPending ? "Rafraîchissement…" : "Rafraîchir la gazette"}
           </button>
+          </div>
         )}
       </section>
+
+      {triggerNotoriaMutation.error && (
+        <p role="alert" className="mb-6 rounded-lg border border-warning/30 bg-warning/10 p-4 text-warning">
+          L’analyse assistée n’a pas abouti : {triggerNotoriaMutation.error.message}
+        </p>
+      )}
 
       {/* ═══ Indicators row ═════════════════════════════════════════ */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 border-y border-border-subtle py-6 mb-12">
         <Indicator
           label="Dépêches"
-          value={dashboard?.totalItems ?? 0}
-          hint="Total intelligence active"
+          value={items.length}
+          hint="Dépêches dans cette vue"
         />
         <Indicator
-          label="Critiques"
+          label="Sévérité forte"
           value={dashboard?.criticalCount ?? 0}
-          hint="Urgence NOW · impact HIGH"
+          hint="Signaux qualifiés hauts ou critiques"
           accent={dashboard?.criticalCount ? "accent" : undefined}
         />
         <Indicator
           label="Acceptation"
-          value={`${Math.round((dashboard?.acceptanceRate ?? 0) * 100)}%`}
-          hint="Taux de pin / total proposé"
+          value={dashboard?.acceptanceRate == null ? "—" : `${Math.round(dashboard.acceptanceRate * 100)} %`}
+          hint="Recommandations acceptées parmi celles décidées"
         />
         <Indicator
-          label="Santé marché"
-          value={`${Math.round(dashboard?.marketHealthScore ?? 0)}`}
-          hint="Indice marché · /100"
+          label="Confiance du contexte"
+          value={dashboard?.marketHealthScore == null ? "—" : `${Math.round(dashboard.marketHealthScore)} %`}
+          hint="Estimation du contexte marché renseigné"
         />
       </section>
+
+      {refreshMutation.data && <details className="mb-8 border-y border-border-subtle py-4" open={refreshMutation.data.sections.some(section => section.status === "ERROR")}>
+        <summary className="cursor-pointer text-sm text-foreground">Bilan de la dernière collecte</summary>
+        <ul className="mt-3 space-y-2 text-sm text-foreground-secondary">{refreshMutation.data.sections.map(section => <li key={section.section}><strong>{RUBRIC_SHORT[section.section]}</strong> · {section.detail}</li>)}</ul>
+      </details>}
+      {feedQuery.error && <p role="alert" className="mb-6 text-sm text-error">Lecture de la Gazette impossible : {feedQuery.error.message}</p>}
 
       {/* ═══ Filter strip (épuré) ══════════════════════════════════ */}
       <nav className="flex items-center gap-x-6 gap-y-3 flex-wrap mb-10 pb-4 border-b border-border-subtle">
@@ -366,6 +403,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
           <RubricHeader label="À la une" suffix={lead.urgency === "NOW" ? "Urgent" : null} />
           <LeadStory
             item={lead}
+            onRead={() => setReadingItem(lead)}
             isExpanded={expandedItems.has(lead.id)}
             mode={mode}
             onToggleExpand={(id) => {
@@ -385,7 +423,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
       )}
 
       {/* ═══ Sections par rubrique ═════════════════════════════════ */}
-      {CATEGORY_ORDER.map((cat) => {
+      {CATEGORY_ORDER.filter(cat => !selectedCategory || selectedCategory === cat).map((cat) => {
         const list = byCategory[cat];
         // Rubrique VIDE : présentée quand même (fix 2026-07-20) — le lecteur
         // sait ce qu'elle contiendra et comment la déclencher, au lieu d'un
@@ -398,7 +436,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
                 {CATEGORY_DESCRIPTION[cat].about}
               </p>
               <p className="mt-1.5 max-w-2xl font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">
-                {CATEGORY_DESCRIPTION[cat].whenEmpty}
+                {lead?.category === cat ? "La dépêche de cette rubrique est présentée à la une." : CATEGORY_DESCRIPTION[cat].whenEmpty}
               </p>
             </section>
           );
@@ -409,11 +447,12 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
             <p className="-mt-2 mb-6 max-w-2xl text-xs leading-relaxed text-foreground-muted">
               {CATEGORY_DESCRIPTION[cat].about}
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10">
+            <div className={cat === "EXTERNAL_SIGNAL" ? "space-y-10" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10"}>
               {list.map((item) => (
                 <Dispatch
                   key={item.id}
                   item={item}
+                  onRead={() => setReadingItem(item)}
                   mode={mode}
                   isExpanded={expandedItems.has(item.id)}
                   onToggleExpand={(id) => {
@@ -438,12 +477,21 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
       {/* ═══ Footer / colophon ═════════════════════════════════════ */}
       <footer className="border-t border-border-subtle pt-6 mt-12 flex items-center justify-between flex-wrap gap-4">
         <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">
-          La Gazette · veille automatique · Les dépêches se rafraîchissent toutes les 30s.
+          La Gazette · lecture synchronisée toutes les 30 s · « Rafraîchir » lance la collecte.
         </p>
         <p className="font-serif italic text-sm text-foreground-muted">
           « Avant de forger, lire le monde. »
         </p>
       </footer>
+      <GazetteReader
+        item={readingItem ? items.find(item => item.id === readingItem.id) ?? readingItem : null}
+        onClose={closeReader}
+        onNotoria={() => { if (readingItem) handleTriggerNotoria(readingItem); }}
+        isNotoriaPending={triggerNotoriaMutation.isPending}
+        onPin={() => { if (readingItem) handleCurate(readingItem, "PINNED"); }}
+        onUnpin={() => { if (readingItem) handleUnpin(readingItem); }}
+        onDismiss={() => { if (readingItem) handleCurate(readingItem, "DISMISSED"); closeReader(); }}
+      />
     </article>
   );
 }
@@ -528,7 +576,7 @@ function DispatchActions({
   item, isPinned, isTriggered, onPin, onUnpin, onDismiss, onNotoria, isNotoriaPending, onApply, isApplyPending,
 }: DispatchActionsProps) {
   return (
-    <div className="flex items-center gap-4 font-mono text-2xs uppercase tracking-widest">
+    <div className="flex flex-wrap items-center gap-4 font-mono text-2xs uppercase tracking-widest">
       {isPinned ? (
         <button onClick={onUnpin} className="flex items-center gap-1.5 text-accent hover:opacity-80 transition-opacity">
           <Pin className="h-3 w-3" /> Retirer
@@ -541,14 +589,14 @@ function DispatchActions({
       <button onClick={onDismiss} className="flex items-center gap-1.5 text-foreground-muted hover:text-error transition-colors">
         <X className="h-3 w-3" /> Écarter
       </button>
-      {item.sourceType === "SIGNAL" && !isTriggered && (
+      {item.sourceType === "SIGNAL" && !item.externalUrl && (
         <button
           onClick={onNotoria}
           disabled={isNotoriaPending}
           className="flex items-center gap-1.5 text-accent hover:opacity-80 transition-opacity disabled:opacity-40"
         >
           {isNotoriaPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-          Générer une recommandation
+          {isTriggered ? "Réexaminer avec l’IA" : "Proposer des actions avec l’IA"}
         </button>
       )}
       {item.sourceType === "RECOMMENDATION" && !isTriggered && onApply && (
@@ -568,6 +616,7 @@ function DispatchActions({
 
 interface LeadStoryProps {
   item: JehutyFeedItem;
+  onRead: () => void;
   isExpanded: boolean;
   mode: "brand" | "agency";
   onToggleExpand: (id: string) => void;
@@ -580,22 +629,32 @@ interface LeadStoryProps {
   isApplyPending?: boolean;
 }
 
+function ReceivedObservation({ text, summary, lead = false, onRead }: { text?: string | null; summary?: string | null; lead?: boolean; onRead?: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const content = text?.trim() || summary?.trim() || "";
+  const preview = summary?.trim() || content;
+  const canExpand = content !== preview && content.length > preview.length;
+  return <div className="max-w-[68ch]">
+    <p className={`whitespace-pre-wrap break-words font-serif text-foreground-secondary leading-relaxed ${lead ? "text-lg" : "text-base"}`}>{expanded || !canExpand ? content : preview}</p>
+    {onRead ? <button type="button" aria-haspopup="dialog" onClick={onRead} className="mt-3 text-sm text-accent underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-accent">Lire le contenu et ses sources</button> : canExpand && <button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="mt-3 text-sm text-accent underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-accent">{expanded ? "Réduire" : "Lire le contenu complet"}</button>}
+  </div>;
+}
+
 function LeadStory({
-  item, isExpanded, mode, onToggleExpand,
+  item, isExpanded, mode, onToggleExpand, onRead,
   onPin, onUnpin, onDismiss, onNotoria, isNotoriaPending, onApply, isApplyPending,
 }: LeadStoryProps) {
   const Icon = CATEGORY_ICONS[item.category];
   const isPinned = item.curation?.action === "PINNED";
   const isTriggered = item.curation?.action === "NOTORIA_TRIGGERED";
-  const summary = item.summary?.trim() ?? "";
-  const dropCap = summary.charAt(0);
-  const restSummary = summary.slice(1);
   const hasDetails = Boolean(item.advantages?.length || item.disadvantages?.length);
+  if (item.externalUrl) return <ArticleSpread item={item} onOpen={onRead} onNotoria={onNotoria} isNotoriaPending={isNotoriaPending} onPin={onPin} onUnpin={onUnpin} onDismiss={onDismiss} />;
 
   return (
     <article className={`grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-x-10 gap-y-6 ${isPinned ? "border-l-2 border-accent pl-6" : ""}`}>
       {/* Body */}
       <div>
+        {item.imageUrl && <ArticleThumb src={item.imageUrl} className="mb-5 aspect-[16/9]" />}
         <div className="flex items-center gap-2 font-mono text-2xs uppercase tracking-widest text-foreground-muted mb-3">
           <Icon className="h-3.5 w-3.5 text-accent" />
           <span>{CATEGORY_RUBRIC[item.category]}</span>
@@ -615,9 +674,9 @@ function LeadStory({
           <span>{new Date(item.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
         </div>
 
+        {item.source && <p className="mb-3 text-sm text-foreground-secondary">{item.externalUrl ? <a href={item.externalUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{item.source} · Consulter la source</a> : item.source}</p>}
         <h3
-          className="font-display font-semibold tracking-tight leading-[1.05] text-foreground mb-5"
-          style={{ fontSize: "var(--text-3xl)" }}
+          className="max-w-[28ch] font-display font-semibold tracking-tight leading-tight text-2xl md:text-3xl text-foreground mb-4"
         >
           {item.externalUrl ? (
             <a href={item.externalUrl} target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline">
@@ -628,20 +687,8 @@ function LeadStory({
           )}
         </h3>
 
-        {summary && (
-          <p
-            className="font-serif text-foreground-secondary leading-[1.55] max-w-[58ch]"
-            style={{ fontSize: "var(--text-lg)" }}
-          >
-            <span
-              className="float-left font-display font-semibold leading-[0.85] mr-2 mt-1 text-accent"
-              style={{ fontSize: "calc(var(--text-3xl) * 1.7)" }}
-            >
-              {dropCap}
-            </span>
-            {restSummary}
-          </p>
-        )}
+        <ReceivedObservation text={item.observation} summary={item.summary} lead onRead={item.sourceType === "SIGNAL" ? onRead : undefined} />
+        <SignalSources item={item} />
 
         <div className="mt-6 flex items-center gap-6 flex-wrap">
           <DispatchActions
@@ -656,11 +703,7 @@ function LeadStory({
             onApply={onApply}
             isApplyPending={isApplyPending}
           />
-          {item.source && (
-            <span className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60 ml-auto">
-              source · {item.source}
-            </span>
-          )}
+
         </div>
       </div>
 
@@ -701,15 +744,15 @@ function LeadStory({
           <dl className="space-y-3">
             <div>
               <dt className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">Urgence</dt>
-              <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{URGENCY_LABEL[item.urgency] ?? item.urgency}</dd>
+              <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{item.urgency === null ? "Non renseignée" : URGENCY_LABEL[item.urgency] ?? item.urgency}</dd>
             </div>
             <div>
               <dt className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">Impact</dt>
-              <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{IMPACT_LABEL[item.impact] ?? item.impact}</dd>
+              <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{item.impact === null ? "Non renseigné" : IMPACT_LABEL[item.impact] ?? item.impact}</dd>
             </div>
             <div>
-              <dt className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">Confiance</dt>
-              <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{Math.round(item.confidence * 100)}%</dd>
+              <dt className="font-mono text-2xs uppercase tracking-widest text-foreground-muted/60">Confiance déclarée</dt>
+              <dd className="font-display text-2xl font-semibold tracking-tight text-foreground">{item.confidence === null ? "Non renseignée" : `${Math.round(item.confidence * 100)} %`}</dd>
             </div>
           </dl>
         </aside>
@@ -726,7 +769,7 @@ function LeadStory({
 
       {isTriggered && (
         <div className="lg:col-span-2 border-t border-border-subtle pt-4 -mt-2 font-mono text-2xs uppercase tracking-widest text-accent flex items-center gap-2">
-          <Zap className="h-3 w-3" /> Recommandation en cours d&rsquo;exécution
+          <Zap className="h-3 w-3" /> Analyse assistée déjà demandée
         </div>
       )}
     </article>
@@ -735,6 +778,7 @@ function LeadStory({
 
 interface DispatchProps {
   item: JehutyFeedItem;
+  onRead: () => void;
   mode: "brand" | "agency";
   isExpanded: boolean;
   onToggleExpand: (id: string) => void;
@@ -748,13 +792,14 @@ interface DispatchProps {
 }
 
 function Dispatch({
-  item, mode, isExpanded, onToggleExpand,
+  item, mode, isExpanded, onToggleExpand, onRead,
   onPin, onUnpin, onDismiss, onNotoria, isNotoriaPending, onApply, isApplyPending,
 }: DispatchProps) {
   const Icon = CATEGORY_ICONS[item.category];
   const isPinned = item.curation?.action === "PINNED";
   const isTriggered = item.curation?.action === "NOTORIA_TRIGGERED";
   const hasDetails = Boolean(item.advantages?.length || item.disadvantages?.length);
+  if (item.externalUrl) return <ArticleSpread item={item} onOpen={onRead} onNotoria={onNotoria} isNotoriaPending={isNotoriaPending} onPin={onPin} onUnpin={onUnpin} onDismiss={onDismiss} />;
 
   return (
     <article className={`flex flex-col ${isPinned ? "border-l-2 border-accent pl-4 -ml-4" : ""}`}>
@@ -791,9 +836,8 @@ function Dispatch({
         )}
       </h3>
 
-      <p className="font-serif text-foreground-secondary leading-snug text-base flex-1" style={{ fontSize: "var(--text-base)" }}>
-        {item.summary}
-      </p>
+      <ReceivedObservation text={item.observation} summary={item.summary} onRead={item.sourceType === "SIGNAL" ? onRead : undefined} />
+      <SignalSources item={item} />
 
       {hasDetails && (
         <button
@@ -835,6 +879,7 @@ function Dispatch({
         />
       </div>
 
+      {item.source && <p className="mt-3 text-xs text-foreground-muted">Source : {item.source}</p>}
       {isTriggered && (
         <div className="mt-2 font-mono text-2xs uppercase tracking-widest text-accent flex items-center gap-1.5">
           <Zap className="h-3 w-3" /> Recommandation lancée
@@ -844,3 +889,7 @@ function Dispatch({
   );
 }
 
+function SignalSources({ item }: { item: JehutyFeedItem }) {
+  if (!item.sources?.length) return null;
+  return <ul className="mt-3 space-y-1 text-xs text-foreground-muted" aria-label="Sources de cette analyse">{item.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{source.title}</a></li>)}</ul>;
+}

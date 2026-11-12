@@ -16,6 +16,9 @@ import {
 } from "@/components/upgraders/blocks";
 import { IDENTITY, CLIENT_STRIP, STATS, CTA } from "@/components/upgraders/data";
 import { getBlogIndex } from "@/components/upgraders/blog-data";
+import { publicSalesEntryLink } from "@/server/services/crm-engine/public-entry";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "UPgraders — Cabinet de conseil & stratégie · La passion pour propulseur",
@@ -24,7 +27,7 @@ export const metadata: Metadata = {
 };
 
 /* ── Hero — official logo chrome + framed brand photo + floating brand-stats ── */
-function Hero() {
+function Hero({ salesPath }: { salesPath?: string }) {
   return (
     <header className="relative overflow-hidden pt-28 pb-16 md:pt-32">
       {/* technical grid + accent glow, masked */}
@@ -77,7 +80,7 @@ function Hero() {
             </Lede>
 
             <div className="mt-9 flex flex-wrap gap-3">
-              <PrimaryCta href="/contact">Démarrer un projet</PrimaryCta>
+              <PrimaryCta href={salesPath ?? "/contact"}>{salesPath ? "Parler au commercial" : "Démarrer un projet"}</PrimaryCta>
               <GhostCta href="/methode">Découvrir la méthode</GhostCta>
               <Link
                 href="/services"
@@ -91,7 +94,7 @@ function Hero() {
             </p>
             <p className="mt-4 border-t border-dashed border-border-subtle pt-4 font-mono text-2xs uppercase tracking-widest text-foreground-muted">
               La Fusée — notre OS produit
-              <Link href="/scorer" className="ml-2 text-accent transition-colors hover:underline">→ Scorer ma marque · 1 min</Link>
+              <Link href="/scorer" className="ml-2 text-accent transition-colors hover:underline">→ Scorer ma marque · ~1 min</Link>
               <Link href="/intake" className="ml-2 text-foreground-secondary transition-colors hover:text-accent">→ Diagnostic gratuit</Link>
               <Link href="/lafusee" className="ml-2 text-foreground-secondary transition-colors hover:text-accent">→ Découvrir l&apos;OS</Link>
             </p>
@@ -167,11 +170,12 @@ function ClientsMarquee() {
 
 export default async function UpgradersHomePage() {
   const posts = (await getBlogIndex()).slice(0, 3);
+  const salesEntry = await publicSalesEntryLink("demo-strategy-upgraders").catch(() => null);
 
   return (
     <main>
       <SiteNav />
-      <Hero />
+      <Hero salesPath={salesEntry?.path} />
       <ClientsMarquee />
 
       <Section id="modele">

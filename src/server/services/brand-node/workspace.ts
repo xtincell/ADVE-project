@@ -1,0 +1,141 @@
+import type { BrandNode } from "@prisma/client";
+import { canAccessStrategy } from "@/server/services/operator-isolation";
+import { db } from "@/lib/db";
+import { listBrandSourceSummaries } from "@/server/services/ingestion-pipeline/source-usage";
+import { inspectPortfolioReferences, portfolioReferenceKey, isBarreReference } from "@/domain/portfolio-reference";
+import { projectBarreWorkspace, type BarreWorkspace } from "@/domain/portfolio-barre";
+import { barreUpstreamUrl, barreBinding } from "./barre-connection";
+import { signalObservation } from "@/domain/signal-observation";
+import { metricObservationTime } from "@/domain/external-metric";
+
+/** Short, process-local read cache. A failed refresh is surfaced, never an empty portfolio. */
+let cache: { key: string; data: unknown; fetchedAt: number; etag: string | null } | undefined;
+let pending: { key: string; promise: Promise<NonNullable<typeof cache>> } | undefined;
+export async function readBarreSnapshot(options: { fresh?: boolean } = {}) {
+  const binding = barreBinding();
+  const url = barreUpstreamUrl(["depots", binding.depot]);
+  const key = JSON.stringify([url.href, binding.instance]);
+  const previous = cache?.key === key ? cache : undefined;
+  if (options.fresh && previous?.etag) {
+    // Revocation is checked against the source on every public request. HEAD
+    // avoids sending the entire private corpus for every image in one document.
+    const head = await fetch(url, {
+      method: "HEAD", signal: AbortSignal.timeout(12_000), cache: "no-store", redirect: "error",
+    });
+    if (!head.ok) throw new Error(`La Barre répond ${head.status}`);
+    if (head.headers.get("etag") === previous.etag) return previous;
+  } else if (!options.fresh && previous && Date.now() - previous.fetchedAt < 60_000) return previous;
+  const load = async () => {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(12_000), cache: "no-store", redirect: "error",
+    });
+    if (!response.ok) throw new Error(`La Barre répond ${response.status}`);
+    const data: unknown = await response.json();
+    // Reject invalid successful responses before caching.
+    projectBarreWorkspace(data, [], binding.instance);
+    cache = { key, data, fetchedAt: Date.now(), etag: response.headers.get("etag") };
+    return cache;
+  };
+  // A source grant check never joins a possibly older in-flight cached read.
+  if (options.fresh) return load();
+  if (pending?.key === key) return pending.promise;
+  const entry = { key, promise: load().finally(() => { if (pending === entry) pending = undefined; }) };
+  pending = entry;
+  return entry.promise;
+}
+
+export async function getPortfolioWorkspace(root: BrandNode, options: { allowBarre: boolean; actor: Parameters<typeof canAccessStrategy>[1] }) {
+  const allNodes = await db.brandNode.findMany({ where: { operatorId: root.operatorId }, orderBy: { name: "asc" } });
+  // A directly opened archived dossier remains readable and restorable;
+  // active parents do not silently regain their archived descendants.
+  const availableNodes = allNodes.filter((node) => !node.archivedAt || node.id === root.id);
+  const ids = new Set([root.id]);
+  // Bounded fixed point; corrupt cycles cannot hang a read.
+  for (let i = 0; i < allNodes.length; i++) {
+    const before = ids.size;
+    for (const node of availableNodes) if (node.parentNodeId && ids.has(node.parentNodeId)) ids.add(node.id);
+    if (before === ids.size) break;
+  }
+  const nodes = availableNodes.filter((n) => ids.has(n.id));
+  const ancestors: BrandNode[] = [];
+  let parentId = root.parentNodeId;
+  while (parentId && ancestors.length < allNodes.length) {
+    const parent = allNodes.find((n) => n.id === parentId);
+    if (!parent || parent.archivedAt || ancestors.some((n) => n.id === parent.id)) break;
+    ancestors.push(parent); parentId = parent.parentNodeId;
+  }
+  const inheritedCandidate = root.strategyId ? null : ancestors.find((n) => n.strategyId) ?? null;
+  const inspected = nodes.map((node) => ({ node, ...inspectPortfolioReferences(node.sourceRefs) }));
+  const referenceIssues = inspected.flatMap(({ node, issues }) => issues.map((i) => `${node.name} · ${i.message}`));
+  const references = [...new Map(inspected.flatMap((n) => n.references)
+    .map((r) => [portfolioReferenceKey(r), r])).values()];
+  const strategyIds = [...new Set([...nodes.flatMap((n) => n.strategyId ? [n.strategyId] : []), ...(inheritedCandidate?.strategyId ? [inheritedCandidate.strategyId] : []),
+    ...references.filter((r) => r.system === "LA_FUSEE" && r.kind === "strategy").map((r) => r.id)])];
+  const accessibleIds = (await Promise.all(strategyIds.map(async (id) =>
+    await canAccessStrategy(id, options.actor) ? id : null))).filter((id): id is string => id !== null);
+  // A source reference is not an access grant; apply the native access policy.
+  const strategyRows = await db.strategy.findMany({
+    where: { id: { in: accessibleIds }, archivedAt: null },
+    select: { id: true, name: true, status: true,
+      pillars: { select: { key: true, validationStatus: true, completionLevel: true, staleAt: true, currentVersion: true,
+        // A recorded status does not establish who approved it. Read only the
+        // latest write metadata, never the potentially large historic content.
+        versions: { orderBy: [{ version: "desc" }, { createdAt: "desc" }], take: 1,
+          select: { version: true, author: true, createdAt: true } },
+      } },
+      brandAssets: { select: { id: true, name: true, kind: true, state: true, fileUrl: true, staleAt: true } },
+      campaigns: { select: { id: true, name: true, status: true } },
+    },
+  });
+  const strategies = await Promise.all(strategyRows.map(async (strategy) => ({
+    ...strategy, dataSources: (await listBrandSourceSummaries(strategy.id)).map((source) => ({
+      id: source.id, fileName: source.fileName, certainty: source.certainty,
+      processingStatus: source.processingStatus, updatedAt: source.updatedAt,
+      shared: source.shared, ownerBrandName: source.ownerBrandName, ownerStrategyId: source.ownerStrategyId,
+    })),
+  })));
+  // These are the existing receipts, not a copied portfolio truth. Apply the
+  // readable dossier IDs before LIMIT; a linked source is never an access grant.
+  const activeIds = strategyRows.map((strategy) => strategy.id);
+  const signals = activeIds.length ? await db.signal.findMany({
+    where: { strategyId: { in: activeIds }, type: "EXTERNAL_METRIC" },
+    orderBy: { createdAt: "desc" }, take: 10,
+    select: { id: true, strategyId: true, type: true, data: true, createdAt: true },
+  }) : [];
+  const observations = signals.map((signal) => ({
+    id: signal.id, strategyId: signal.strategyId,
+    strategyName: strategyRows.find((strategy) => strategy.id === signal.strategyId)?.name ?? "Dossier associé",
+    ...signalObservation(signal), observedAt: metricObservationTime(signal.data), receivedAt: signal.createdAt,
+  }));
+  let barre: BarreWorkspace | null = null;
+  let sourceStatus: "LIVE" | "UNAVAILABLE" | "NOT_CONNECTED" = "NOT_CONNECTED";
+  let sourceError: string | null = null, fetchedAt: string | null = null;
+  const binding = barreBinding();
+  const ownIdentities = nodes.filter((n) => n.operatorId === options.actor.operatorId)
+    .map((n) => ({ system: "LA_FUSEE" as const, kind: "brand" as const, id: n.id }));
+  if (references.some((r) => isBarreReference(r, binding.instance)) ||
+      (ownIdentities.length > 0 && Boolean(process.env.PORTFOLIO_BARRE_UPSTREAM))) {
+    if (!options.allowBarre) sourceError = "La connexion de votre équipe à La Barre reste à configurer.";
+    else try {
+      const snapshot = await readBarreSnapshot();
+      barre = projectBarreWorkspace(snapshot.data, [...references, ...ownIdentities], binding.instance);
+      sourceStatus = "LIVE"; fetchedAt = new Date(snapshot.fetchedAt).toISOString();
+    } catch (error) {
+      sourceStatus = "UNAVAILABLE";
+      sourceError = error instanceof Error ? error.message : "La Barre est momentanément indisponible.";
+    }
+  }
+  // Aggregated platforms never substitute for the selected node's own ADVE.
+  const sourceNode = root.strategyId ? root : inheritedCandidate;
+  const sourceStrategy = strategyRows.find((s) => s.id === sourceNode?.strategyId);
+  const dossierContext: PortfolioDossierContext = sourceNode && sourceStrategy
+    ? { kind: root.strategyId ? "OWN" : "INHERITED", strategyId: sourceStrategy.id, sourceNodeId: sourceNode.id, sourceName: sourceNode.name }
+    : { kind: sourceNode ? "UNAVAILABLE" : "NONE" };
+  const inheritedFrom = dossierContext.kind === "INHERITED"
+    ? { name: dossierContext.sourceName, strategyId: dossierContext.strategyId } : null;
+  return { root, nodes, strategies, observations, referenceIssues, barreBinding: binding, dossierContext, inheritedFrom, barre, sourceStatus, sourceError, fetchedAt };
+}
+export type PortfolioDossierContext =
+  | { kind: "OWN" | "INHERITED"; strategyId: string; sourceNodeId: string; sourceName: string }
+  | { kind: "NONE" | "UNAVAILABLE" };
+export type PortfolioWorkspace = Awaited<ReturnType<typeof getPortfolioWorkspace>>;

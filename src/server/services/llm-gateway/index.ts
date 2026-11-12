@@ -16,6 +16,9 @@
  */
 
 import { applySonnet5Parity } from "./parity";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { LlmRateWaitExceededError } from "./rate-policy";
+import type { ResolvedPolicy } from "@/server/services/model-policy";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,13 +26,13 @@ import { applySonnet5Parity } from "./parity";
  * The *purpose* of an LLM call — drives the exact model + provider chosen.
  *
  * The mental model is "fixed model per scenario", not abstract quality tiers:
- * each entry below corresponds to a concrete production scenario and resolves
- * to a specific Anthropic model name (and optionally an Ollama substitute
- * when the local server is configured).
+ * each entry provides defaults from the governed registry. Deployment pins,
+ * provider order and call overrides can change the model actually constructed
+ * by buildProviderModel; the saved Anthropic name is not a serving guarantee.
  *
  *   - "final-report"
- *       Final written deliverable handed to the founder/client. Always Opus,
- *       never substituted. This is what the operator has paid for.
+ *       Final written deliverable handed to the founder/client. Its historical
+ *       fallback names Opus; the selected deployment transport still wins.
  *
  *   - "agent" / "intermediate"
  *       Background reasoning — recommendation generation, narrative section
@@ -57,13 +60,16 @@ export type GatewayPurpose =
   | "extraction";
 
 export interface GatewayCallOptions {
+  video?: import("./audiovisual").GatewayVideo;
+  /** Bounded local image bytes. URLs are never fetched by the provider SDK. */
+  images?: readonly import("./vision").GatewayImage[];
   /** System prompt */
   system: string;
   /** User prompt */
   prompt: string;
   /** Who is calling — used for cost tracking context (e.g. "artemis:fw-01", "mestor:insights") */
   caller: string;
-  /** Strategy ID for cost tracking. If omitted, cost is not tracked. */
+  /** Strategy ID for budget tracking. Unassigned usage is still recorded. */
   strategyId?: string;
   /** Model override. Default: derived from `purpose` (or DEFAULT_MODEL if no purpose). */
   model?: string;
@@ -109,6 +115,8 @@ export interface GatewayCallOptions {
 
 export interface GatewayResult {
   text: string;
+  model?: string;
+  provider?: string;
   usage: {
     inputTokens: number;
     outputTokens: number;
@@ -149,8 +157,6 @@ export const FALLBACK_POLICY: Record<GatewayPurpose, {
 };
 
 // Pricing per 1M tokens (Sonnet 5 — sticker $3/$15, inchangé vs Sonnet 4.x)
-const INPUT_PRICE_PER_M = 3;
-const OUTPUT_PRICE_PER_M = 15;
 
 // v4 — Model priority for budget downgrade (cheaper = higher index)
 export const MODEL_PRIORITY = ["claude-opus-4-6", "claude-opus-4-20250514", "claude-sonnet-5", "claude-haiku-4-5", "claude-haiku-4-5-20251001"];
@@ -158,6 +164,12 @@ export const MODEL_PRIORITY = ["claude-opus-4-6", "claude-opus-4-20250514", "cla
 // ── v4 — Multi-vendor LLM provider abstraction ────────────────────────────
 
 export type LLMProvider = "anthropic" | "openai" | "ollama" | "openrouter";
+
+// Operator-authorized subscription transport, separate from the API key used
+// for embeddings. This access token belongs to the private relay, not OpenAI.
+function hasOpenAiTextRelay(): boolean {
+  return !!process.env.OPENAI_TEXT_RELAY_URL && !!process.env.OPENAI_TEXT_RELAY_TOKEN;
+}
 
 interface ProviderState {
   available: boolean;
@@ -177,7 +189,7 @@ const providerStates: Record<LLMProvider, ProviderState> = {
     circuitOpenUntil: 0,
   },
   openai: {
-    available: !!process.env.OPENAI_API_KEY,
+    available: !!process.env.OPENAI_API_KEY || hasOpenAiTextRelay(),
     priority: 2,
     failureCount: 0,
     circuitOpenUntil: 0,
@@ -201,9 +213,9 @@ const providerStates: Record<LLMProvider, ProviderState> = {
 function selectProvider(): LLMProvider | null {
   const now = Date.now();
   const candidates = (Object.entries(providerStates) as [LLMProvider, ProviderState][])
-    // OpenAI/GPT exclu de la génération de texte — réservé aux embeddings
-    // (directive opérateur). Le texte reste Anthropic → Ollama → OpenRouter.
-    .filter(([p]) => p !== "openai")
+    // A static OpenAI API key remains reserved for embeddings. Text access
+    // requires the operator-authorized independent subscription relay.
+    .filter(([p]) => p !== "openai" || hasOpenAiTextRelay())
     .filter(([, s]) => s.available && (s.circuitOpenUntil === 0 || s.circuitOpenUntil < now))
     .sort((a, b) => a[1].priority - b[1].priority);
 
@@ -225,7 +237,7 @@ export function isProviderHealthy(p: LLMProvider): boolean {
  * Signal canonique « le step LLM vaut-il la peine d'être tenté ? ».
  *
  * Renvoie `true` ssi AU MOINS un provider de **texte** est sain (clé présente +
- * circuit fermé). OpenAI est exclu (réservé aux embeddings, cf. selectProvider).
+ * circuit fermé). OpenAI texte exige le relais OAuth explicitement raccordé.
  *
  * C'est le seul point où le reste de La Fusée décide de **sauter** l'étage LLM
  * proprement, sans partir à l'aveugle et se prendre une exception. Toute
@@ -233,6 +245,9 @@ export function isProviderHealthy(p: LLMProvider): boolean {
  * Knowledge Gateway de Seshat — s'appuie là-dessus.
  */
 export function isTextLLMAvailable(): boolean {
+  if (process.env.LLM_PRIMARY_PROVIDER === "openai") {
+    return hasOpenAiTextRelay() && isProviderHealthy("openai");
+  }
   return (["anthropic", "ollama", "openrouter"] as const).some((p) => isProviderHealthy(p));
 }
 
@@ -259,7 +274,7 @@ export function recordProviderSuccess(provider: LLMProvider): void {
 export function _resetProvidersForTest(overrides?: Partial<Record<LLMProvider, Partial<ProviderState>>>): void {
   const defaults: Record<LLMProvider, ProviderState> = {
     anthropic:  { available: !!process.env.ANTHROPIC_API_KEY,  priority: 1, failureCount: 0, circuitOpenUntil: 0 },
-    openai:     { available: !!process.env.OPENAI_API_KEY,     priority: 2, failureCount: 0, circuitOpenUntil: 0 },
+    openai:     { available: !!process.env.OPENAI_API_KEY || hasOpenAiTextRelay(), priority: 2, failureCount: 0, circuitOpenUntil: 0 },
     ollama:     { available: !!process.env.OLLAMA_BASE_URL,    priority: 3, failureCount: 0, circuitOpenUntil: 0 },
     openrouter: { available: !!process.env.OPENROUTER_API_KEY, priority: 4, failureCount: 0, circuitOpenUntil: 0 },
   };
@@ -329,6 +344,25 @@ function resolveOpenRouterModel(_policyModel: string): string {
 // provider est UNIQUE — la dupliquer dans streaming.ts aurait créé un drift
 // silencieux (ex. le pin OLLAMA_MODEL qui gagne sur les overrides par-appel).
 
+interface ProviderModelOptions {
+  policyOllamaModel?: string | null;
+  ollamaCallOverride?: string;
+  exactModel?: string;
+}
+
+// One name resolver for SDK construction and the existing admin projection.
+// Reading a route must never construct an SDK, send a request or expose secrets.
+function resolveProviderModelName(
+  provider: LLMProvider, anthropicModel: string, opts: ProviderModelOptions = {},
+): string {
+  if (provider === "anthropic") return anthropicModel;
+  if (provider === "openai") {
+    return hasOpenAiTextRelay() ? "gpt-5.6-luna" : OPENAI_MODEL_MAP[anthropicModel] ?? "gpt-4o";
+  }
+  if (provider === "openrouter") return opts.exactModel ?? resolveOpenRouterModel(anthropicModel);
+  return opts.exactModel ?? process.env.OLLAMA_MODEL ?? opts.ollamaCallOverride ?? opts.policyOllamaModel ?? anthropicModel;
+}
+
 export interface BuiltProviderModel {
   /** Instance de modèle AI-SDK prête pour generateText/streamText. */
   aiModel: unknown;
@@ -342,22 +376,27 @@ export interface BuiltProviderModel {
 export async function buildProviderModel(
   provider: LLMProvider,
   anthropicModel: string,
-  opts: { policyOllamaModel?: string | null; ollamaCallOverride?: string } = {},
+  opts: ProviderModelOptions = {},
 ): Promise<BuiltProviderModel> {
+  const servedModel = resolveProviderModelName(provider, anthropicModel, opts);
   if (provider === "anthropic") {
     const { anthropic, createAnthropic } = await import("@ai-sdk/anthropic");
     const aiModel = process.env.HEADROOM_PROXY_URL
-      ? createAnthropic({ baseURL: process.env.HEADROOM_PROXY_URL })(anthropicModel)
-      : anthropic(anthropicModel);
-    return { aiModel, servedModel: anthropicModel, orFallback: null };
+      ? createAnthropic({ baseURL: process.env.HEADROOM_PROXY_URL })(servedModel)
+      : anthropic(servedModel);
+    return { aiModel, servedModel, orFallback: null };
   }
   if (provider === "openai") {
     const { openai, createOpenAI } = await import("@ai-sdk/openai");
-    const openaiModel = OPENAI_MODEL_MAP[anthropicModel] ?? "gpt-4o";
+    if (hasOpenAiTextRelay()) {
+      const relay = createOpenAI({ baseURL: process.env.OPENAI_TEXT_RELAY_URL,
+        apiKey: process.env.OPENAI_TEXT_RELAY_TOKEN });
+      return { aiModel: relay.chat(servedModel), servedModel, orFallback: null };
+    }
     const aiModel = process.env.HEADROOM_PROXY_URL
-      ? createOpenAI({ baseURL: process.env.HEADROOM_PROXY_URL })(openaiModel)
-      : openai(openaiModel);
-    return { aiModel, servedModel: openaiModel, orFallback: null };
+      ? createOpenAI({ baseURL: process.env.HEADROOM_PROXY_URL })(servedModel)
+      : openai(servedModel);
+    return { aiModel, servedModel, orFallback: null };
   }
   if (provider === "openrouter") {
     // OpenRouter via its OpenAI-compatible endpoint. Model slug is
@@ -372,7 +411,6 @@ export async function buildProviderModel(
         "X-Title": "La Fusee",
       },
     });
-    const servedModel = resolveOpenRouterModel(anthropicModel);
     return {
       aiModel: openrouter(servedModel),
       servedModel,
@@ -392,19 +430,23 @@ export async function buildProviderModel(
     baseURL: process.env.OLLAMA_BASE_URL,
     apiKey: process.env.OLLAMA_API_KEY ?? "ollama",
   });
-  const servedModel =
-    process.env.OLLAMA_MODEL ?? opts.ollamaCallOverride ?? opts.policyOllamaModel ?? anthropicModel;
   return { aiModel: ollama(servedModel), servedModel, orFallback: null };
 }
 
 /**
  * Candidats providers texte dans l'ordre structurel (avant resolveTextProviderOrder).
- * Extraction ADR-0179 — partagée callLLM/streaming. OpenAI volontairement exclu
- * (réservé aux embeddings, directive opérateur 2026-06-24).
+ * Extraction ADR-0179 — partagée callLLM/streaming. La clé API OpenAI reste
+ * réservée aux embeddings ; le raccord texte OAuth est distinct.
  * Export intra-Gateway uniquement.
  */
 export function buildTextProviderCandidates(ollamaPreferred: boolean): LLMProvider[] {
+  // An explicit subscription choice must fail visibly rather than switch to
+  // paid API credits, another model, or the retired OpenRouter connection.
+  if (process.env.LLM_PRIMARY_PROVIDER === "openai") {
+    return hasOpenAiTextRelay() && isProviderHealthy("openai") ? ["openai"] : [];
+  }
   const providersToTry: LLMProvider[] = [];
+  if (hasOpenAiTextRelay() && isProviderHealthy("openai")) providersToTry.push("openai");
   if (ollamaPreferred && isProviderHealthy("ollama")) providersToTry.push("ollama");
   if (isProviderHealthy("anthropic")) providersToTry.push("anthropic");
   if (isProviderHealthy("openrouter")) providersToTry.push("openrouter");
@@ -488,6 +530,33 @@ export function resolveTextProviderOrder(
   ];
 }
 
+/**
+ * Read-only snapshot for the existing ModelPolicy admin screen. Uses the SAME
+ * candidate/order/model functions as generation, without calling any provider.
+ * Default plain text only: no call override, strategy budget, vision, rate-slot,
+ * credential validation or subscription quota is exercised by this projection.
+ * Circuit state is local to this process, not a fleet-wide health measurement.
+ */
+export function describeTextRouting(policy: Pick<ResolvedPolicy,
+  "anthropicModel" | "ollamaModel" | "allowOllamaSubstitution" | "version"
+>) {
+  const explicitPrimary = process.env.LLM_PRIMARY_PROVIDER || null;
+  const premium = isPremiumMode();
+  const ollamaPreferred = policy.allowOllamaSubstitution && isProviderHealthy("ollama") && !!policy.ollamaModel;
+  const order = resolveTextProviderOrder(buildTextProviderCandidates(ollamaPreferred), {
+    premium, explicitPrimary: explicitPrimary as LLMProvider | undefined,
+  });
+  return {
+    explicitPrimary, premium, subscriptionOnly: explicitPrimary === "openai",
+    policyVersion: policy.version,
+    attempts: order.map((provider) => ({
+      provider,
+      model: resolveProviderModelName(provider, policy.anthropicModel, { policyOllamaModel: policy.ollamaModel }),
+      eligible: isProviderHealthy(provider),
+    })),
+  };
+}
+
 /** Test-only string-typed wrapper around `resolveTextProviderOrder`. */
 export function _resolveTextProviderOrderForTest(
   candidates: string[],
@@ -518,6 +587,18 @@ export async function withRetry<T>(
       return await fn();
     } catch (err) {
       lastError = err;
+      if (err instanceof LlmRateWaitExceededError) throw err;
+      const apiError = typeof err === "object" && err !== null
+        ? err as { isRetryable?: unknown; statusCode?: unknown } : {};
+      const statusCode = typeof apiError.statusCode === "number" ? apiError.statusCode : 0;
+      // Honour the SDK's refusal classification. Retrying the same invalid
+      // request or access denial cannot repair it; 408/409 can be transient.
+      // Rate limits retain the existing fast-fail policy, even without "429"
+      // in the provider's human-readable message.
+      if (apiError.isRetryable === false ||
+        (statusCode >= 400 && statusCode < 500 && statusCode !== 408 && statusCode !== 409)) {
+        throw err;
+      }
       const errStr = String(err instanceof Error ? err.message : err).toLowerCase();
       // An aborted call (caller's bounded timeout fired) fails fast — no backoff,
       // no point retrying an already-cancelled signal.
@@ -642,41 +723,86 @@ function findBalancedJSON(text: string): string | null {
 
 // ── Cost tracking helper ────────────────────────────────────────────────────
 
+// Correlation belongs to this existing Gateway, separately from tenant/RLS identity.
+// Only internal intake ids enter the ledger; never the public bearer token or source text.
+const intakeCostContext = new AsyncLocalStorage<{ intakeId: string; strategyId?: string }>();
+
+/** Shared by text and streaming budget checks; explicit caller ownership wins. */
+export function resolveCostStrategy(strategyId?: string): string | undefined {
+  return strategyId ?? intakeCostContext.getStore()?.strategyId;
+}
+
+export function withIntakeCostContext<T>(intakeId: string, work: () => Promise<T>): Promise<T> {
+  if (intakeCostContext.getStore()?.intakeId === intakeId) return work();
+  return intakeCostContext.run({ intakeId }, work);
+}
+
+/** Attach pre-brand receipts after the real Strategy exists, without another model call. */
+export async function bindIntakeCostStrategy(strategyId: string): Promise<void> {
+  const context = intakeCostContext.getStore();
+  if (!context) return;
+  if (context.strategyId && context.strategyId !== strategyId) throw new Error("INTAKE_COST_STRATEGY_MISMATCH");
+  context.strategyId = strategyId;
+  try {
+    const { db } = await import("@/lib/db");
+    await db.aICostLog.updateMany({
+      where: { strategyId: null, context: { contains: `:intake[${context.intakeId}]` } },
+      data: { strategyId },
+    });
+  } catch {
+    // The usage remains correlated by intake; ledger trouble never repeats provider work.
+    console.warn("[llm-gateway] intake cost attribution pending", { intakeId: context.intakeId, strategyId });
+  }
+}
+
 /** Export intra-Gateway uniquement (cf. isProviderHealthy) — consommé par streaming.ts. */
 export async function trackCost(
   options: Pick<GatewayCallOptions, "strategyId" | "caller">,
   usage: { inputTokens: number; outputTokens: number },
   model: string,
+  billing?: { provider: string; costUsd: number; estimated: boolean },
+  provider: LLMProvider = "anthropic",
 ): Promise<void> {
-  if (!options.strategyId) return;
-
   try {
     const { db } = await import("@/lib/db");
+    const { calculateCost } = await import("@/server/services/ai-cost-tracker");
+    const subscription = provider === "openai" && hasOpenAiTextRelay() && !billing;
+    const context = intakeCostContext.getStore();
     await db.aICostLog.create({
       data: {
-        strategyId: options.strategyId,
-        provider: "anthropic",
+        strategyId: resolveCostStrategy(options.strategyId) ?? null,
+        provider: subscription ? "openai-codex-oauth" : billing?.provider ?? provider,
         model,
         inputTokens: usage.inputTokens,
         outputTokens: usage.outputTokens,
-        cost:
-          (usage.inputTokens / 1_000_000) * INPUT_PRICE_PER_M +
-          (usage.outputTokens / 1_000_000) * OUTPUT_PRICE_PER_M,
-        context: options.caller,
+        cost: billing?.costUsd ?? calculateCost(model, usage.inputTokens, usage.outputTokens),
+        context: options.caller + (context ? `:intake[${context.intakeId}]` : "")
+          + (subscription ? ":subscription-quota:api-equivalent-estimate"
+          : !billing || billing.estimated ? ":estimated-cost" : ""),
       },
     });
   } catch {
-    // Non-blocking — cost tracking should never break the flow
+    // Non-blocking, but explicit: never hide a missing receipt or repeat provider work.
+    console.warn("[llm-gateway] cost receipt not recorded", { caller: options.caller });
   }
 }
 
 // ── callLLM — Raw text response ─────────────────────────────────────────────
 
 /**
- * Call Claude and return the raw text + usage.
+ * Call the selected text provider and return the raw text + usage.
  * Use this when you need to parse the response yourself.
  */
 export async function callLLM(options: GatewayCallOptions): Promise<GatewayResult> {
+  options = { ...options, strategyId: resolveCostStrategy(options.strategyId) };
+  const { validateGatewayImages, visionConfiguration } = await import("./vision");
+  validateGatewayImages(options.images);
+  const { videoConfiguration, validateGatewayVideo, callNativeVideo } = await import("./audiovisual");
+  if (options.video) validateGatewayVideo(options.video);
+  if (options.video && options.images) throw new Error("Un seul mode multimodal par appel.");
+  const vision = options.video ? videoConfiguration() : options.images ? visionConfiguration() : null;
+  if (options.video && !vision) throw new Error("Connecteur audiovisuel non configuré.");
+  if (options.images && !vision) throw new Error("Connecteur vision non configuré.");
   const { generateText } = await import("ai");
 
   // ── Resolve policy from the governed registry ────────────────────────
@@ -694,7 +820,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
   // The caller can still override `model` explicitly — that takes
   // precedence over the policy. Useful for tests and one-off experiments
   // (e.g. trying Opus for an agent call to compare quality).
-  let anthropicModel = options.model ?? policy.anthropicModel;
+  let anthropicModel = vision?.model ?? options.model ?? policy.anthropicModel;
   const ollamaModel = policy.ollamaModel;
   const ollamaPreferred =
     policy.allowOllamaSubstitution && providerStates.ollama.available && !!ollamaModel;
@@ -708,23 +834,17 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
     if (!budget.allowed) {
       throw new Error(`LLM budget exceeded for strategy ${options.strategyId}. Spent: ${(budget.utilization * 100).toFixed(0)}% of monthly cap.`);
     }
-    if (budget.alertLevel !== "none" && MODEL_PRIORITY.indexOf(budget.suggestedModel) > MODEL_PRIORITY.indexOf(anthropicModel)) {
+    if (!vision && budget.alertLevel !== "none" && MODEL_PRIORITY.indexOf(budget.suggestedModel) > MODEL_PRIORITY.indexOf(anthropicModel)) {
       console.warn(`[llm-gateway] Budget ${budget.alertLevel}: downgrading ${anthropicModel} → ${budget.suggestedModel} for strategy ${options.strategyId}`);
       anthropicModel = budget.suggestedModel;
     }
   }
   let lastError: unknown;
 
-  // Build the provider try-order from the policy.
-  //   - When Ollama is both available AND the policy allows substitution,
-  //     it's first (free local compute).
-  //   - Anthropic is the canonical text-generation provider (Opus pour les
-  //     grosses opérations, Sonnet pour le reste — cf. FALLBACK_POLICY).
-  //   - OpenAI/GPT est VOLONTAIREMENT EXCLU de la génération de texte
-  //     (directive opérateur 2026-06-24) : GPT est réservé aux EMBEDDINGS
-  //     (cf. `embed()` / `selectEmbedProvider`). On ne convertit/génère jamais
-  //     de texte avec ChatGPT — le texte reste Anthropic, avec Ollama (local)
-  //     et OpenRouter (qui sert du Claude) comme seuls replis.
+  // Existing shared admission and order: an explicit OpenAI subscription
+  // selection stays exclusive, including when its relay is incomplete.
+  // The static OpenAI API key remains reserved for embeddings. Otherwise,
+  // policy substitution, explicit priority and premium mode retain their rules.
   const providersToTry: LLMProvider[] = buildTextProviderCandidates(ollamaPreferred);
 
   // ── Ordre des providers texte — Ollama Cloud primaire, premium opt-in ─────
@@ -734,7 +854,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
   // `LLM_PREMIUM_MODE` (Anthropic d'abord, une fois les crédits chargés) >
   // défaut premium OFF (Ollama si configuré, sinon OpenRouter ; Anthropic en
   // dernier repli sans coût).
-  const orderedProviders = resolveTextProviderOrder(providersToTry, {
+  const orderedProviders = vision ? [vision.provider] : resolveTextProviderOrder(providersToTry, {
     premium: isPremiumMode(),
     explicitPrimary: process.env.LLM_PRIMARY_PROVIDER as LLMProvider | undefined,
   });
@@ -743,10 +863,12 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
 
   for (const provider of orderedProviders) {
     try {
+      if (vision && !isProviderHealthy(provider)) throw new Error("Provider vision indisponible.");
       const result = await withRetry(async () => {
         const built = await buildProviderModel(provider, anthropicModel, {
           policyOllamaModel: ollamaModel,
           ollamaCallOverride: options.ollamaModel,
+          exactModel: vision?.model,
         });
         const aiModel = built.aiModel;
         const orFallback = built.orFallback;
@@ -799,8 +921,11 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         // sur OpenRouter) ; attend si la limite RPM/concurrence/RPS est atteinte
         // plutôt que de partir et de se prendre un 429. Local au process.
         const callParams = {
+          // The Gateway owns retries and reacquires a rate slot per attempt.
+          // SDK retries would multiply this budget behind a single slot.
+          maxRetries: 0,
           system: hr.system,
-          prompt: hr.prompt,
+          ...(options.images ? { messages: [{ role: "user" as const, content: [{ type: "text" as const, text: hr.prompt }, ...options.images.map(i => ({ type: "image" as const, image: i.bytes, mediaType: i.mediaType }))] }] } : { prompt: hr.prompt }),
           maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
           temperature: parity.temperature,
           ...(options.signal ? { abortSignal: options.signal } : {}),
@@ -813,13 +938,17 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         };
         const slotKey = await acquireSlot(servedModel);
         let text!: string;
+        let nativeBilling: { provider: string; costUsd: number; estimated: boolean } | undefined;
         let usage!: Awaited<ReturnType<typeof generateText>>["usage"];
         let slotReleased = false;
         try {
-          ({ text, usage } = await generateText({
-            model: aiModel as Parameters<typeof generateText>[0]["model"],
-            ...callParams,
-          }));
+          if (options.video) {
+            const native = await callNativeVideo(options, options.video, servedModel);
+            text = native.text; usage = native.usage as typeof usage;
+            nativeBilling = { provider: "openrouter", costUsd: native.reportedCostUsd ?? 0.15, estimated: native.reportedCostUsd == null };
+          } else {
+            ({ text, usage } = await generateText({ model: aiModel as Parameters<typeof generateText>[0]["model"], ...callParams }));
+          }
         } catch (genErr) {
           // Repli intra-OpenRouter : owl-alpha (ou un modèle gratuit) renvoie
           // souvent "No endpoints found" / 404 / 429 sous charge → on parcourt la
@@ -829,7 +958,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           releaseSlot(slotKey);
           slotReleased = true;
           let lastErr: unknown = genErr;
-          if (provider !== "openrouter" || orFallback == null || !unavailable(String((genErr as Error)?.message ?? genErr))) {
+          if (vision || provider !== "openrouter" || orFallback == null || !unavailable(String((genErr as Error)?.message ?? genErr))) {
             throw genErr;
           }
           let recovered = false;
@@ -863,10 +992,11 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           outputTokens: usage?.outputTokens ?? 0,
         };
 
-        // Non-blocking cost tracking. Use the actually-served model name
-        // (anthropic name when on Anthropic/OpenAI, ollama name when free).
-        const billedModel = provider === "ollama" ? servedModel : anthropicModel;
-        trackCost(options, gatewayUsage, billedModel);
+        // Finish the existing receipt before returning to a finite caller.
+        // A ledger failure remains non-fatal inside trackCost; never regenerate.
+        // Use the actually-served model and provider.
+        const billedModel = provider === "ollama" || provider === "openrouter" || provider === "openai" || options.video ? servedModel : anthropicModel;
+        await trackCost(options, gatewayUsage, billedModel, nativeBilling, provider);
 
         // PostgreSQL jsonb refuse le null byte U+0000 ("unsupported Unicode escape
         // sequence") — un modèle peut en émettre un (brut, ou un littéral qui le devient
@@ -874,12 +1004,15 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         // (DriverAdapterError, trouvé par le scan fonctionnel : brand-audit-scanner).
         // On l'élimine à la source pour TOUS les consommateurs LLM.
         const cleanText = text.split(String.fromCharCode(0)).join("").replace(/\\u0000/g, "");
-        return { text: cleanText, usage: gatewayUsage };
+        return { text: cleanText, usage: gatewayUsage, model: billedModel, provider: hasOpenAiTextRelay() && provider === "openai" ? "openai-codex-oauth" : provider };
       });
 
       recordProviderSuccess(provider);
       return result;
     } catch (err) {
+      if (err instanceof LlmRateWaitExceededError) throw err;
+      // A caller deadline is not an outage of the shared provider.
+      if (options.signal?.aborted) throw err;
       lastError = err;
       const errStr = String(err instanceof Error ? err.message : err).toLowerCase();
       const isHardFailure = errStr.includes("credit balance") || errStr.includes("insufficient_quota") || errStr.includes("429");
@@ -1092,6 +1225,16 @@ export interface EmbedResult {
  */
 const EMBED_TIMEOUT_MS = 20_000;
 
+/**
+ * Taille d'un lot sur l'Ollama natif (`/api/embed`).
+ *
+ * Petit à dessein : le plafond de patience porte sur le LOT, et l'Ollama de
+ * production tourne sur un CPU partagé et bridé (~2-4 s par fragment de 2 500
+ * caractères). Quatre fragments tiennent sous 20 s ; un lot qui dépasse ne
+ * perd que lui-même, pas ce que les lots précédents ont déjà rendu.
+ */
+const OLLAMA_NATIVE_EMBED_BATCH = 4;
+
 const OLLAMA_DIM_BY_MODEL: Record<string, number> = {
   "nomic-embed-text": 768,
 
@@ -1230,24 +1373,50 @@ async function embedViaOllama(
     return { embeddings, dim, model, provider: "ollama", inputTokens: 0 };
   }
 
-  // ── Ollama natif local (/api/embeddings, un prompt à la fois) ──
+  // ── Ollama natif local (/api/embed, par petits lots) ──
+  //
+  // Constaté du 2026-10-21 au 23 en production : ce chemin envoyait un texte à
+  // la fois à `/api/embeddings` et levait au premier dépassement du plafond de
+  // patience. Tout ce que l'appel avait déjà calculé était jeté, puis recalculé
+  // au passage suivant, sur un CPU partagé que ces passages saturaient.
+  //
+  // `/api/embed` accepte un tableau : un aller-retour par lot. Quand un lot
+  // échoue pour indisponibilité APRÈS d'autres lots réussis, les vecteurs déjà
+  // reçus sont rendus et les entrées restantes restent vides (`[]`) : l'appelant
+  // ne retient que ce qui a un vecteur. Un échec dès le premier lot lève comme
+  // avant, pour que la cascade de repli s'applique.
   const embeddings: number[][] = [];
-  for (const text of inputs) {
-    const res = await fetch(`${rawBase}/api/embeddings`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model, prompt: text }),
-      signal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
-    });
-    if (!res.ok) {
-      const errText = await res.text().catch(() => res.statusText);
-      throw new Error(`Ollama embeddings ${res.status}: ${errText}`);
+  for (let i = 0; i < inputs.length; i += OLLAMA_NATIVE_EMBED_BATCH) {
+    const slice = inputs.slice(i, i + OLLAMA_NATIVE_EMBED_BATCH);
+    try {
+      const res = await fetch(`${rawBase}/api/embed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model, input: slice }),
+        signal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
+      });
+      if (!res.ok) {
+        const errText = await res.text().catch(() => res.statusText);
+        throw new Error(`Ollama embeddings ${res.status}: ${errText}`);
+      }
+      const json = (await res.json()) as { embeddings?: number[][] };
+      const vectors = json.embeddings ?? [];
+      if (vectors.length !== slice.length || vectors.some((v) => !Array.isArray(v) || v.length === 0)) {
+        throw new Error(
+          `Ollama returned ${vectors.length}/${slice.length} usable embeddings for caller=${caller}`,
+        );
+      }
+      embeddings.push(...vectors);
+    } catch (err) {
+      if (embeddings.length > 0 && isEmbedProviderUnavailable(err)) {
+        console.warn(
+          `[llm-gateway.embed] Ollama indisponible après ${embeddings.length}/${inputs.length} vecteurs (${err instanceof Error ? err.message : err}) — lot partiel rendu pour caller=${caller}`,
+        );
+        while (embeddings.length < inputs.length) embeddings.push([]);
+        break;
+      }
+      throw err;
     }
-    const json = (await res.json()) as { embedding?: number[] };
-    if (!json.embedding || json.embedding.length === 0) {
-      throw new Error(`Ollama returned empty embedding for caller=${caller}`);
-    }
-    embeddings.push(json.embedding);
   }
 
   return { embeddings, dim, model, provider: "ollama", inputTokens: 0 };

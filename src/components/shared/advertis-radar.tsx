@@ -115,7 +115,7 @@ export function AdvertisRadar({
         height={numericSize}
         viewBox={`0 0 ${numericSize} ${numericSize}`}
         role="img"
-        aria-label={`Radar ADVE-RTIS : score composite ${composite.toFixed(0)} sur 200`}
+        aria-label={`Radar ${PILLAR_ORDER.map(key => key.toUpperCase()).join("/")} : score composite ${composite.toFixed(0)} sur ${PILLAR_ORDER.length * maxScore}`}
       >
         {/* Grid lines */}
         {!isMini &&

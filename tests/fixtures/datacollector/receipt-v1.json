@@ -1,0 +1,178 @@
+{
+  "schema": {
+    "name": "datacollector/observation-receipt",
+    "version": 1
+  },
+  "batch_id": "20261110_0123456789abcdef0123456789abcdef",
+  "timestamp": "2026-11-10T09:00:05.654321Z",
+  "target_entity": "Marque fictive — Été",
+  "target": {
+    "entity": "Marque fictive — Été",
+    "url": "https://example.test/"
+  },
+  "tool": {
+    "name": "datacollector",
+    "version": "1.1.0"
+  },
+  "collector_version": "1.1.0",
+  "scope": {
+    "target_url": "https://example.test/",
+    "subreddit": "fixture",
+    "keyword": "lait caillé Douala",
+    "competitor_url": "http://169.254.169.254/latest/meta-data/",
+    "my_domain": "example.test",
+    "requested_sources": [
+      "web_performance",
+      "community_sentiment",
+      "search_visibility",
+      "competitor_social_spy"
+    ]
+  },
+  "collection_summary": {
+    "received": 2,
+    "expected": 4,
+    "state": "PARTIAL"
+  },
+  "measures": [
+    {
+      "source": "web_performance",
+      "metric": "performance_score",
+      "subject": "https://example.test/",
+      "state": "received",
+      "value": 80.0,
+      "unit": "score_0_100",
+      "observed_at": "2026-11-10T09:00:00.123456Z",
+      "error_code": null,
+      "detail": null
+    },
+    {
+      "source": "web_performance",
+      "metric": "first_contentful_paint_score",
+      "subject": "https://example.test/",
+      "state": "received",
+      "value": 87.5,
+      "unit": "score_0_100",
+      "observed_at": "2026-11-10T09:00:00.123456Z",
+      "error_code": null,
+      "detail": null
+    },
+    {
+      "source": "web_performance",
+      "metric": "speed_index_score",
+      "subject": "https://example.test/",
+      "state": "received",
+      "value": null,
+      "unit": "score_0_100",
+      "observed_at": "2026-11-10T09:00:00.123456Z",
+      "error_code": null,
+      "detail": null
+    },
+    {
+      "source": "community_sentiment",
+      "metric": "posts_retrieved",
+      "subject": "r/fixture",
+      "state": "received",
+      "value": 2,
+      "unit": "count",
+      "observed_at": "2026-11-10T09:00:01Z",
+      "error_code": null,
+      "detail": "Publications récentes non épinglées relevées, au plus la limite de la collecte."
+    },
+    {
+      "source": "search_visibility",
+      "metric": "my_rank",
+      "subject": "lait caillé Douala",
+      "state": "failed",
+      "value": null,
+      "unit": "rank",
+      "observed_at": null,
+      "error_code": null,
+      "detail": "Clé API Serper.dev non configurée (SERPER_API_KEY)"
+    },
+    {
+      "source": "search_visibility",
+      "metric": "total_results_estimated",
+      "subject": "lait caillé Douala",
+      "state": "failed",
+      "value": null,
+      "unit": "count",
+      "observed_at": null,
+      "error_code": null,
+      "detail": "Clé API Serper.dev non configurée (SERPER_API_KEY)"
+    },
+    {
+      "source": "competitor_social_spy",
+      "metric": "followers",
+      "subject": "http://169.254.169.254/latest/meta-data/",
+      "state": "failed",
+      "value": null,
+      "unit": "count",
+      "observed_at": null,
+      "error_code": "URL_METADATA_ADDRESS",
+      "detail": "URL refusée : « 169.254.169.254 » est une adresse interne : service de métadonnées cloud."
+    }
+  ],
+  "data": {
+    "RISK": {
+      "web_performance": {
+        "status": "success",
+        "collected_at": "2026-11-10T09:00:00.123456Z",
+        "target_url": "https://example.test/",
+        "strategy": "mobile",
+        "metrics": {
+          "performance_score": 80.0,
+          "first_contentful_paint": {
+            "value": "1,2 s",
+            "score": 87.5
+          },
+          "speed_index": {
+            "value": "Non mesuré",
+            "score": null
+          }
+        }
+      },
+      "community_sentiment": {
+        "status": "success",
+        "collected_at": "2026-11-10T09:00:01Z",
+        "subreddit": "fixture",
+        "posts_count": 2,
+        "posts": [
+          {
+            "title": "Fusée 🚀 « essai »",
+            "author": "auteur_fictif",
+            "score": 0,
+            "num_comments": 12,
+            "created_utc": 1730000000.0,
+            "permalink": "https://reddit.com/r/fixture/1"
+          },
+          {
+            "title": "Ligne\nsuivante — été",
+            "author": null,
+            "score": -3,
+            "num_comments": null,
+            "created_utc": 1.5e-07,
+            "permalink": null
+          }
+        ]
+      }
+    },
+    "THREAT": {
+      "search_visibility": {
+        "status": "error",
+        "message": "Clé API Serper.dev non configurée (SERPER_API_KEY)",
+        "keyword": "lait caillé Douala"
+      },
+      "competitor_social_spy": {
+        "status": "error",
+        "error_code": "URL_METADATA_ADDRESS",
+        "message": "URL refusée : « 169.254.169.254 » est une adresse interne : service de métadonnées cloud.",
+        "profile_url": "http://169.254.169.254/latest/meta-data/"
+      }
+    }
+  },
+  "fingerprint": {
+    "algorithm": "sha256",
+    "canonicalization": "RFC8785",
+    "value": "b4e58243ccdeba9ee8fe8f6d9912717026788a67585194a7ed316d8813bd5bec"
+  }
+}

@@ -23,6 +23,11 @@ describe("classifyCanonicalSector — mots-clés pertinents, déterministe", () 
     expect(canonicalSectorSlug("Pâtes alimentaires")).toBe("food");
     expect(canonicalSectorSlug("Alimentation & boissons")).toBe("food");
   });
+  it("keeps declared culinary and dairy sectors in the existing food family", () => {
+    expect(canonicalSectorSlug("FoodTech / Découverte culinaire communautaire")).toBe("food");
+    expect(canonicalSectorSlug("Produits laitiers")).toBe("food");
+    expect(canonicalSectorSlug("cartes et modèles")).toBe("autre");
+  });
   it("code canon direct → ce secteur (idempotent)", () => {
     expect(classifyCanonicalSector("FOOD").slug).toBe("food");
     expect(classifyCanonicalSector("TELECOM").slug).toBe("telecom");

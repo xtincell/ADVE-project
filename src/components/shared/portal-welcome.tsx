@@ -182,6 +182,9 @@ export function PortalWelcome({ portal }: PortalWelcomeProps) {
       }}
       size="lg"
       dismissible
+      // Ouvert de lui-même au premier passage, page déjà cliquable : non bloquant,
+      // il ne capte pas le premier geste destiné à la page (même cause que F13).
+      blocking={false}
     >
       <div className="space-y-5">
         <div>

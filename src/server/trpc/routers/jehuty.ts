@@ -6,6 +6,7 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { accessibleStrategyIds } from "../middleware/strategy-scope";
 import { assertStrategyRead } from "./_strategy-read-guard";
@@ -17,15 +18,19 @@ import {
   mapExternalArticleToFeedItem,
   diagnosticBelongsToFeed,
 } from "@/server/services/jehuty/mappers";
+import { selectGazetteEdition, gazetteItemTouchesPillar } from "@/lib/jehuty-editorial";
 import type { JehutyFeedItem } from "@/lib/types/jehuty";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { refreshBrandGazette } from "@/server/services/jehuty/refresh";
+import { signalObservation } from "@/domain/signal-observation";
+import { knowledgeStrategyScope } from "@/server/services/operator-isolation/knowledge-scope";
+import { articleNotoriaInputSchema } from "@/server/services/jehuty/article-notoria";
 
 /* lafusee:governed-active */
 
 const SIGNAL_TYPES_FOR_FEED = [
   "MARKET_SIGNAL", "WEAK_SIGNAL_ALERT", "SCORE_IMPROVEMENT", "SCORE_DECLINE",
-  "NOTORIA_BATCH_READY", "STRONG", "WEAK", "METRIC",
+  "NOTORIA_BATCH_READY", "STRONG", "WEAK", "METRIC", "EXTERNAL_METRIC",
 ];
 
 const categoryEnum = z.enum([
@@ -33,6 +38,14 @@ const categoryEnum = z.enum([
 ]);
 
 export const jehutyRouter = createTRPCRouter({
+
+  readSignal: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1), signalId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      await assertStrategyRead(ctx.session.user.id, input.strategyId);
+      const { readSignalReading } = await import("@/server/services/jehuty/signal-reading");
+      return readSignalReading({ ...input, userId: ctx.session.user.id });
+    }),
 
   // ══════════════════════════════════════════════════════════════════
   // FEED — Merged, priority-sorted intelligence stream
@@ -78,6 +91,12 @@ export const jehutyRouter = createTRPCRouter({
         }
       }
 
+      // Resolve actual readable brands before LIMIT, including the agency view.
+      // Being an operator is not permission to read every operator's portfolio.
+      const accessible = await accessibleStrategyIds(ctx.session.user.id);
+      const feedIds = strategyId ? [strategyId] : accessible;
+      const strategyFilter = feedIds === null ? {} : { strategyId: { in: feedIds } };
+
       // ── Parallel source queries ──
       // When strategyId is provided we also pull signals from OTHER strategies
       // whose Tarsis-tagged affectedStrategyIds includes us — cross-brand spread
@@ -87,7 +106,7 @@ export const jehutyRouter = createTRPCRouter({
             where: {
               type: "WEAK_SIGNAL_ALERT",
               createdAt: { gte: thirtyDaysAgo },
-              strategyId: { not: strategyId },
+              strategyId: { not: strategyId, ...(accessible === null ? {} : { in: accessible }) },
               data: {
                 path: ["affectedStrategyIds"],
                 array_contains: [strategyId],
@@ -102,7 +121,7 @@ export const jehutyRouter = createTRPCRouter({
         // 1. Signals (own strategy or all when no strategyId)
         db.signal.findMany({
           where: {
-            ...(strategyId ? { strategyId } : {}),
+            ...strategyFilter,
             type: { in: SIGNAL_TYPES_FOR_FEED },
             createdAt: { gte: thirtyDaysAgo },
           },
@@ -115,7 +134,7 @@ export const jehutyRouter = createTRPCRouter({
         // 2. Published recommendations
         db.recommendation.findMany({
           where: {
-            ...(strategyId ? { strategyId } : {}),
+            ...strategyFilter,
             publishedAt: { not: null },
             createdAt: { gte: thirtyDaysAgo },
           },
@@ -128,6 +147,7 @@ export const jehutyRouter = createTRPCRouter({
           where: {
             entryType: "DIAGNOSTIC_RESULT",
             createdAt: { gte: thirtyDaysAgo },
+            ...(feedIds === null ? {} : knowledgeStrategyScope(feedIds)),
           },
           orderBy: { createdAt: "desc" },
           take: 50,
@@ -136,13 +156,13 @@ export const jehutyRouter = createTRPCRouter({
         // 4. Curations (for join)
         db.jehutyCuration.findMany({
           where: {
-            ...(strategyId ? { strategyId } : {}),
+            ...strategyFilter,
           },
         }),
 
         // 5. Strategy names (for agency mode)
         !strategyId ? db.strategy.findMany({
-          where: { status: "ACTIVE" },
+          where: { status: "ACTIVE", ...(feedIds === null ? {} : { id: { in: feedIds } }) },
           select: { id: true, name: true },
         }) : Promise.resolve([]),
       ]);
@@ -182,6 +202,7 @@ export const jehutyRouter = createTRPCRouter({
         items.push(mapRecoToFeedItem(reco, curation, strategyNames.get(reco.strategyId)));
       }
 
+      const diagnosticBrands = new Set<string>();
       for (const diag of diagnostics) {
         const data = (diag.data ?? {}) as Record<string, unknown>;
         // Fix fuite 2026-07-20 : un diagnostic SANS data.strategyId (ex :
@@ -191,6 +212,8 @@ export const jehutyRouter = createTRPCRouter({
         // d'autres marques). Règle pure : `diagnosticBelongsToFeed` (testée).
         if (!diagnosticBelongsToFeed(data, strategyId)) continue;
         const diagStrategyId = data.strategyId as string;
+        if (diagnosticBrands.has(diagStrategyId)) continue;
+        diagnosticBrands.add(diagStrategyId);
         const curation = curationMap.get(`DIAGNOSTIC:${diag.id}`);
         items.push(mapDiagnosticToFeedItem(diag, curation, diagStrategyId, strategyNames.get(diagStrategyId)));
       }
@@ -203,23 +226,35 @@ export const jehutyRouter = createTRPCRouter({
       if (strategyId && (!category || category === "EXTERNAL_SIGNAL")) {
         try {
           const digest = await db.knowledgeEntry.findFirst({
-            where: { entryType: "EXTERNAL_FEED_DIGEST", market: `brand:${strategyId}` },
+            where: { entryType: "EXTERNAL_FEED_DIGEST", market: `brand:${strategyId}`,
+              OR: [{ originStrategyId: null }, { originStrategyId: strategyId }],
+            },
             orderBy: { createdAt: "desc" },
             select: { createdAt: true, data: true },
           });
-          const digestItems = ((digest?.data ?? {}) as { items?: Array<{ title?: string; link?: string; source?: string; publishedAt?: string; imageUrl?: string }> }).items ?? [];
+          const digestData = (digest?.data ?? {}) as { strategyId?: string; items?: Array<{ title?: string; link?: string; source?: string; publishedAt?: string; imageUrl?: string; summary?: string }> };
+          const digestItems = digestData.strategyId && digestData.strategyId !== strategyId ? [] : digestData.items ?? [];
           const maxAgeMs = 90 * 24 * 60 * 60 * 1000;
           let rank = 0;
           for (const art of digestItems) {
             if (!art.title || !art.link) continue;
             const published = art.publishedAt ? Date.parse(art.publishedAt) : NaN;
             if (Number.isFinite(published) && Date.now() - published > maxAgeMs) continue;
-            if (rank >= 6) break;
+            if (rank >= 12) break;
             rank += 1;
             items.push(mapExternalArticleToFeedItem(art, strategyId, digest!.createdAt, curationMap.get(`EXTERNAL:${art.link}`)));
           }
         } catch {
-          /* best-effort — la gazette vit sans la veille si la lecture échoue */
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "La lecture des articles collectés a échoué. Actualisez la page pour réessayer." });
+        }
+      }
+
+      if (strategyId) {
+        const articles = items.filter(item => item.externalUrl).map(item => ({ link: item.externalUrl! }));
+        if (articles.length) {
+          const { readArticleBrandInterpretations } = await import("@/server/services/jehuty/article-notoria");
+          const readings = await readArticleBrandInterpretations(strategyId, articles);
+          for (const item of items) if (item.externalUrl) item.articleContext = readings.get(item.externalUrl);
         }
       }
 
@@ -229,25 +264,13 @@ export const jehutyRouter = createTRPCRouter({
         filtered = filtered.filter((i) => i.category === category);
       }
       if (input.pillarKey) {
-        filtered = filtered.filter((i) => i.pillarKey === input.pillarKey?.toLowerCase());
+        filtered = filtered.filter((i) => gazetteItemTouchesPillar(i, input.pillarKey!));
       }
       if (hideDismissed) {
         filtered = filtered.filter((i) => i.curation?.action !== "DISMISSED");
       }
 
-      // ── Sort: curation opérateur d'abord (pinned > notoria-triggered),
-      //    puis priority desc. La curation est un signal de ranking de
-      //    premier rang — un item épinglé reste en tête du feed (ADR-0085 :
-      //    l'opérateur garde la barre, le feed reflète ses décisions). ──
-      const curationRank = (action?: string) =>
-        action === "PINNED" ? 2 : action === "NOTORIA_TRIGGERED" ? 1 : 0;
-      filtered.sort((a, b) => {
-        const rankDiff = curationRank(b.curation?.action) - curationRank(a.curation?.action);
-        if (rankDiff !== 0) return rankDiff;
-        return b.priority - a.priority;
-      });
-
-      return filtered.slice(0, limit);
+      return selectGazetteEdition(filtered, limit);
     }),
 
   // ══════════════════════════════════════════════════════════════════
@@ -282,7 +305,7 @@ export const jehutyRouter = createTRPCRouter({
     } else if (reco.status !== "ACCEPTED") {
       throw new Error(`Recommandation en status ${reco.status} — seules PENDING/ACCEPTED sont applicables.`);
     }
-    const result = await applyRecos(input.strategyId, [input.recoId]);
+    const result = await applyRecos(input.strategyId, [input.recoId], "REVIEW", { intentId: ctx.intentId });
 
     // Trace la curation NOTORIA_TRIGGERED pour le ranking du feed.
     await db.jehutyCuration.upsert({
@@ -322,7 +345,7 @@ export const jehutyRouter = createTRPCRouter({
     kind: "JEHUTY_FEED_REFRESH",
     inputSchema: z.object({
       strategyId: z.string(),
-      withRecos: z.boolean().default(true),
+      withRecos: z.boolean().default(false),
     }),
   }).mutation(async ({ input, ctx }) => {
     await assertStrategyRead(ctx.session.user.id, input.strategyId);
@@ -353,7 +376,10 @@ export const jehutyRouter = createTRPCRouter({
           where: { ...where, type: { in: SIGNAL_TYPES_FOR_FEED }, createdAt: { gte: thirtyDaysAgo } },
         }),
         db.signal.count({
-          where: { ...where, type: "WEAK_SIGNAL_ALERT", createdAt: { gte: thirtyDaysAgo } },
+          where: { ...where, type: { in: SIGNAL_TYPES_FOR_FEED }, createdAt: { gte: thirtyDaysAgo }, OR: [
+            { data: { path: ["severity"], equals: "critical" } },
+            { data: { path: ["severity"], equals: "high" } },
+          ] },
         }),
         strategyId ? db.recommendation.groupBy({
           by: ["status"],
@@ -371,17 +397,19 @@ export const jehutyRouter = createTRPCRouter({
       );
       const accepted = (recoStatusMap.ACCEPTED ?? 0) + (recoStatusMap.APPLIED ?? 0);
       const rejected = recoStatusMap.REJECTED ?? 0;
-      const acceptanceRate = accepted + rejected > 0 ? accepted / (accepted + rejected) : 0;
+      const acceptanceRate = accepted + rejected > 0 ? accepted / (accepted + rejected) : null;
 
       const publishedRecos = await db.recommendation.count({
-        where: { ...(strategyId ? { strategyId } : {}), publishedAt: { not: null }, createdAt: { gte: thirtyDaysAgo } },
+        where: { ...where, publishedAt: { not: null }, createdAt: { gte: thirtyDaysAgo } },
       });
 
       return {
         totalItems: signalCount + publishedRecos,
         criticalCount: criticalSignals,
         acceptanceRate,
-        marketHealthScore: (marketPillar?.confidence ?? 0) * 100,
+        marketHealthScore: typeof marketPillar?.confidence === "number" && Number.isFinite(marketPillar.confidence)
+          && marketPillar.confidence >= 0 && marketPillar.confidence <= 1
+          ? marketPillar.confidence * 100 : null,
       };
     }),
 
@@ -393,7 +421,7 @@ export const jehutyRouter = createTRPCRouter({
     kind: "JEHUTY_CURATE",
     inputSchema: z.object({
       strategyId: z.string(),
-      itemType: z.enum(["SIGNAL", "RECOMMENDATION", "DIAGNOSTIC"]),
+      itemType: z.enum(["SIGNAL", "RECOMMENDATION", "DIAGNOSTIC", "EXTERNAL"]),
       itemId: z.string(),
       action: z.enum(["PINNED", "DISMISSED", "NOTORIA_TRIGGERED"]),
       note: z.string().optional(),
@@ -428,7 +456,7 @@ export const jehutyRouter = createTRPCRouter({
     kind: "JEHUTY_CURATE",
     inputSchema: z.object({
       strategyId: z.string(),
-      itemType: z.enum(["SIGNAL", "RECOMMENDATION", "DIAGNOSTIC"]),
+      itemType: z.enum(["SIGNAL", "RECOMMENDATION", "DIAGNOSTIC", "EXTERNAL"]),
       itemId: z.string(),
     }),
   })
@@ -449,12 +477,14 @@ export const jehutyRouter = createTRPCRouter({
 
   triggerNotoria: governedProcedure({
     kind: "GENERATE_RECOMMENDATIONS",
-    inputSchema: z.object({
-      strategyId: z.string(),
-      signalId: z.string(),
-    }),
+    inputSchema: articleNotoriaInputSchema,
   })
     .mutation(async ({ input, ctx }) => {
+      if (input.articleUrl) {
+        const { triggerArticleNotoria } = await import("@/server/services/jehuty/article-notoria");
+        return triggerArticleNotoria({ strategyId: input.strategyId, articleUrl: input.articleUrl, userId: ctx.session.user.id });
+      }
+      if (!input.signalId) throw new TRPCError({ code: "BAD_REQUEST", message: "Choisissez un signal ou un article." });
       // Load signal
       const signal = await db.signal.findUnique({ where: { id: input.signalId } });
       if (!signal) throw new Error("Signal introuvable.");
@@ -467,14 +497,7 @@ export const jehutyRouter = createTRPCRouter({
       }
 
       // Extract observation text
-      const data = (signal.data ?? {}) as Record<string, unknown>;
-      const observationText = [
-        data.title,
-        data.content,
-        data.thesis,
-        data.brandImpact,
-        data.recommendedAction,
-      ].filter(Boolean).join("\n\n");
+      const observationText = signalObservation(signal).observation;
 
       if (!observationText) throw new Error("Signal vide — pas de contenu a analyser.");
 
@@ -485,6 +508,13 @@ export const jehutyRouter = createTRPCRouter({
         missionType: "SESHAT_OBSERVATION",
         seshatObservation: observationText,
       });
+
+      if (result.totalRecos === 0) {
+        if (result.errors.length > 0) {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "L’analyse n’a pas pu produire de propositions. Vérifiez les sources et la configuration IA, puis réessayez." });
+        }
+        return { batchId: result.batchId, totalRecos: 0, failedParts: 0 };
+      }
 
       // Mark curation
       await db.jehutyCuration.upsert({
@@ -509,6 +539,6 @@ export const jehutyRouter = createTRPCRouter({
         },
       });
 
-      return { batchId: result.batchId, totalRecos: result.totalRecos };
+      return { batchId: result.batchId, totalRecos: result.totalRecos, failedParts: result.errors.length };
     }),
 });

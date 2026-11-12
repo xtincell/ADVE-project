@@ -329,21 +329,7 @@ export interface ScenarioAnalysis {
 
 // ─── Break-Even ─────────────────────────────────────────────────────────────
 
-export interface BreakEvenInput {
-  fixedCosts: number;
-  variableCostPerUnit: number;
-  pricePerUnit: number;
-  monthlyVolume?: number;
-}
-
-export interface BreakEvenAnalysis {
-  breakEvenUnits: number;
-  breakEvenRevenue: number;
-  breakEvenMonths: number | null;
-  marginOfSafety: number;
-  contributionMargin: number;
-  contributionMarginRatio: number;
-}
+export type { BreakEvenInput, BreakEvenAnalysis } from "@/domain/financial-document";
 
 // ─── Elasticity ─────────────────────────────────────────────────────────────
 

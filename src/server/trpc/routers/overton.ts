@@ -21,13 +21,22 @@ import {
   getOvertonSignalsForBrand,
 } from "@/server/services/seshat/overton-graph";
 
+async function assertPositionAccess(userId: string, role: string | undefined, positionId: string) {
+  const position = await db.overtonPosition.findUnique({ where: { id: positionId }, select: { strategyId: true } });
+  if (!position) throw new Error("Position introuvable.");
+  if (position.strategyId) await assertStrategyRead(userId, position.strategyId);
+  else if (role !== "ADMIN") throw new Error("Les positions sectorielles partagées sont réservées à l’administration.");
+}
+
 export const overtonRouter = createTRPCRouter({
   upsertPosition: governedProcedure({
     kind: "SESHAT_UPSERT_OVERTON_POSITION",
     requireOperator: true,
     inputSchema: upsertOvertonPositionInputSchema,
     caller: "overton:upsertPosition",
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ input, ctx }) => {
+    if (input.strategyId) await assertStrategyRead(ctx.session!.user.id, input.strategyId);
+    else if (ctx.session!.user.role !== "ADMIN") throw new Error("Les positions sectorielles partagées sont réservées à l’administration.");
     return upsertOvertonPosition(db, input);
   }),
 
@@ -36,7 +45,9 @@ export const overtonRouter = createTRPCRouter({
     requireOperator: true,
     inputSchema: recordZoneTransitionInputSchema,
     caller: "overton:recordTransition",
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ input, ctx }) => {
+    await assertPositionAccess(ctx.session!.user.id, ctx.session!.user.role, input.positionId);
+    if (input.attributedActorKind === "BRAND" && input.attributedActorRef) await assertStrategyRead(ctx.session!.user.id, input.attributedActorRef);
     return recordZoneTransition(db, input);
   }),
 
@@ -45,7 +56,9 @@ export const overtonRouter = createTRPCRouter({
     requireOperator: true,
     inputSchema: linkActorToPositionInputSchema,
     caller: "overton:linkActor",
-  }).mutation(async ({ input }) => {
+  }).mutation(async ({ input, ctx }) => {
+    await assertPositionAccess(ctx.session!.user.id, ctx.session!.user.role, input.positionId);
+    if (input.actorKind === "BRAND" && input.actorRef) await assertStrategyRead(ctx.session!.user.id, input.actorRef);
     return linkActorToPosition(db, input);
   }),
 

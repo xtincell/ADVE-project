@@ -77,3 +77,23 @@ describe("toFeedItems (ADR-0128)", () => {
     expect(toFeedItems(many, 12)).toHaveLength(12);
   });
 });
+
+
+describe("RSS publisher provenance and complete excerpts", () => {
+  it("keeps the declared publisher, complete content and single-quoted image attributes", () => {
+    const full = "Une enquête publiée, et ses observations finales.".repeat(20);
+    const xml = `<rss><item><title>La cuisine - une culture vivante</title><link>https://press.example/a</link><source url='https://press.example'>Le Journal</source><description>Résumé court</description><content:encoded><![CDATA[<p>${full}</p>]]></content:encoded><media:thumbnail url='https://press.example/a.jpg?x=1&amp;y=2'/></item></rss>`;
+    const [item] = toFeedItems(parseRssItems(xml));
+    expect(item!.title).toBe("La cuisine - une culture vivante");
+    expect(item!.source).toBe("Le Journal");
+    expect(item!.sourceUrl).toBe("https://press.example");
+    expect(item!.summary).toBe(full);
+    expect(item!.imageUrl).toBe("https://press.example/a.jpg?x=1&y=2");
+  });
+  it("uses the alternate Atom article link regardless of attribute order and avoids video enclosures", () => {
+    const xml = `<feed><entry><title>Actualité locale</title><link href='https://press.example/feed' rel='self'/><link href='https://press.example/story?a=1&amp;b=2' rel='alternate'/><media:content type='video/mp4' url='https://press.example/movie.mp4'/><media:thumbnail url='https://press.example/photo.jpg'/></entry></feed>`;
+    const [item] = parseRssItems(xml);
+    expect(item!.link).toBe("https://press.example/story?a=1&b=2");
+    expect(item!.imageUrl).toBe("https://press.example/photo.jpg");
+  });
+});

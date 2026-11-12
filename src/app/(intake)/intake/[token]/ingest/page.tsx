@@ -13,17 +13,17 @@ import { Upload, FileUp, File, X, ArrowLeft, AlertCircle, CheckCircle } from "lu
 import { AiBadge } from "@/components/shared/ai-badge";
 import { IntakeProcessingScreen } from "@/components/intake/intake-processing-screen";
 import { useIntakeProcessingWatch } from "@/components/intake/use-intake-processing-watch";
+import { ReceivedIntakeDocuments, readIntakeFile } from "@/components/intake/received-documents";
 import { useT } from "@/lib/i18n/use-t";
+import { OptionalIntakeWebUrlSchema, intakeErrorMessage } from "@/lib/intake-input";
 
 const ACCEPTED_TYPES = [
   "application/pdf",
-  "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-powerpoint",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "text/plain",
 ];
-const ACCEPTED_EXTENSIONS = ".pdf,.doc,.docx,.ppt,.pptx,.txt";
+const ACCEPTED_EXTENSIONS = ".pdf,.docx,.pptx,.txt";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 interface SelectedFile {
@@ -47,22 +47,24 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   // Pilote l'interstitiel honnête — jamais l'écran « Terminé 100 % » avant un
   // renvoi vers le questionnaire.
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
-  const websitePrefilledRef = useRef(false);
+  const fieldsPrefilledRef = useRef(false);
+  const [savingSources, setSavingSources] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState("");
 
-  const { data: intake, isLoading } = trpc.quickIntake.getByToken.useQuery(
+  const { data: intake, isLoading, refetch } = trpc.quickIntake.getByToken.useQuery(
     { token },
     { enabled: !!token }
   );
 
-  // Le site web déclaré à l'étape contact est pré-rempli — on ne le redemande
-  // jamais « à vide ». L'utilisateur peut le corriger ou l'effacer (le serveur
-  // retombe alors sur la valeur déclarée, jamais de perte).
+  // Hydrate once. Refetching receipts must not replace an edit still in progress.
   useEffect(() => {
-    if (!websitePrefilledRef.current && intake?.websiteUrl) {
-      websitePrefilledRef.current = true;
-      setWebsiteUrl(intake.websiteUrl);
+    if (!fieldsPrefilledRef.current && intake) {
+      fieldsPrefilledRef.current = true;
+      setWebsiteUrl(intake.websiteUrl ?? "");
+      setRawText(intake.rawText ?? "");
     }
   }, [intake]);
+  const saveSourcesMutation = trpc.quickIntake.processIngest.useMutation();
 
   // F1 async : le serveur rend la main immédiatement ({ status: "PROCESSING" }),
   // le hook sonde getByToken jusqu'à l'état TERMINAL réel — redirection sur
@@ -93,7 +95,7 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
       // seul : on s'arrête et on rend la main (cf. écran de décision plus
       // bas) — c'est le founder qui choisit de réessayer ou de passer au
       // questionnaire.
-      setFallbackReason(data.reason);
+      if (data.status === "REJECTED") setFallbackReason(data.reason);
     },
     onError: (err) => {
       // Coupure réseau opaque (« Load failed ») : le serveur a pu recevoir et
@@ -103,7 +105,7 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
         startWatching();
         return;
       }
-      setError(err.message);
+      setError(intakeErrorMessage(err));
     },
   });
 
@@ -111,25 +113,34 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   // référence, et un `const` défini plus bas ne serait jamais initialisé dans
   // cette passe de rendu (TDZ au clic).
   const handleSubmit = async () => {
-    if (files.length === 0 && !rawText.trim() && !websiteUrl.trim()) {
+    if (savingSources || processIngestMutation.isPending) return;
+    if (files.length === 0 && !intake?.documents.length && !rawText.trim() && !websiteUrl.trim()) {
       setError(t("intakeIngest.err.empty"));
       return;
     }
     setError("");
-
-    // Read files as base64 and send to backend
-    const fileData: Array<{ name: string; content: string; type: string }> = [];
-    for (const f of files) {
-      const content = await readFileAsBase64(f.file);
-      fileData.push({ name: f.name, content, type: f.type });
+    setSavingSources(true);
+    try {
+      const fields = { token, prepareOnly: true, rawText, websiteUrl: OptionalIntakeWebUrlSchema.parse(websiteUrl) };
+      // Text is saved independently, then each original gets its own durable receipt.
+      await saveSourcesMutation.mutateAsync({ ...fields, files: [] });
+      for (const [index, selected] of files.entries()) {
+        setUploadProgress(`${index + 1}/${files.length} · ${selected.name}`);
+        await saveSourcesMutation.mutateAsync({ ...fields, files: [{ name: selected.name,
+          type: selected.type, content: await readIntakeFile(selected.file) }] });
+      }
+      setFiles([]);
+      await refetch();
+    } catch (err) {
+      setError(intakeErrorMessage(err));
+      await refetch();
+      return;
+    } finally {
+      setSavingSources(false);
+      setUploadProgress("");
     }
-
-    processIngestMutation.mutate({
-      token,
-      files: fileData,
-      rawText: rawText.trim() || undefined,
-      websiteUrl: websiteUrl.trim() || undefined,
-    });
+    // The analysis reads received bytes. A retry never needs the browser FileList.
+    processIngestMutation.mutate({ token, files: [] });
   };
 
   if (isLoading) {
@@ -227,12 +238,12 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   };
 
   const addFiles = (fileList: FileList | null) => {
-    if (!fileList) return;
+    if (!fileList || savingSources) return;
     setError("");
     const newFiles: SelectedFile[] = [];
 
     for (const file of Array.from(fileList)) {
-      if (!ACCEPTED_TYPES.includes(file.type) && !file.name.match(/\.(pdf|docx?|pptx?|txt)$/i)) {
+      if (!ACCEPTED_TYPES.includes(file.type) && !file.name.match(/\.(pdf|docx|pptx|txt)$/i)) {
         setError(`${t("intakeIngest.err.format")} ${file.name}. ${t("intakeIngest.err.formatAccepted")}`);
         continue;
       }
@@ -291,6 +302,7 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
             {t("intakeIngest.title")}
           </label>
           <textarea
+            disabled={savingSources}
             id="rawText"
             value={rawText}
             onChange={(e) => setRawText(e.target.value)}
@@ -309,8 +321,12 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
             {t("intakeIngest.website.label")}
           </label>
           <input
+            disabled={savingSources}
             id="websiteUrl"
-            type="url"
+            type="text"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
             value={websiteUrl}
             onChange={(e) => setWebsiteUrl(e.target.value)}
             className="w-full rounded-xl border border-border bg-background-raised px-4 py-3 text-base text-foreground outline-none transition-colors placeholder:text-foreground-muted focus:border-primary focus:ring-1 focus:ring-primary"
@@ -350,6 +366,8 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
           />
         </div>
 
+        <ReceivedIntakeDocuments documents={intake.documents} />
+
         {/* File list */}
         {files.length > 0 && (
           <div className="mt-4 space-y-2">
@@ -385,7 +403,7 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
         </div>
 
         {error && (
-          <div className="mt-4 flex items-center gap-2 rounded-lg bg-destructive-subtle/30 px-4 py-3 text-sm text-destructive">
+          <div role="alert" className="mt-4 flex items-center gap-2 rounded-lg bg-destructive-subtle/30 px-4 py-3 text-sm text-destructive">
             <AlertCircle className="h-4 w-4 shrink-0" />
             {error}
           </div>
@@ -395,13 +413,13 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
         <div className="sticky bottom-4 mt-6 sm:static sm:bottom-auto">
           <button
             onClick={handleSubmit}
-            disabled={processIngestMutation.isPending || (files.length === 0 && !rawText.trim() && !websiteUrl.trim())}
+            disabled={savingSources || processIngestMutation.isPending || (files.length === 0 && intake.documents.length === 0 && !rawText.trim() && !websiteUrl.trim())}
             className="w-full rounded-xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary-hover disabled:opacity-50 sm:py-3 sm:shadow-none"
           >
-            {processIngestMutation.isPending ? (
+            {savingSources || processIngestMutation.isPending ? (
               <span className="flex items-center justify-center gap-2">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                {t("intakeIngest.submit.pending")}
+                {savingSources ? `${t("intakeIngest.received.saving")} ${uploadProgress}` : t("intakeIngest.submit.pending")}
               </span>
             ) : (
               t("intakeIngest.submit.cta")
@@ -420,18 +438,4 @@ function isNetworkCut(message: string): boolean {
   return /load failed|failed to fetch|networkerror|network error|timed?\s?out|timeout|aborted|fetch failed|err_/i.test(
     message,
   );
-}
-
-function readFileAsBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // Strip the data:... prefix
-      const base64 = result.split(",")[1] ?? result;
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }

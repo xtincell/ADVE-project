@@ -1,4 +1,6 @@
+import { projectFinancialPillar } from "@/domain/unit-economics";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
+import { hasDocumentedNonProductExchange } from "@/domain/brand-actors";
 
 /**
  * Pillar Maturity Contracts — The Single Source of Truth
@@ -16,6 +18,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { z } from "zod";
+import { ADVE_STORAGE_KEYS } from "@/domain/pillars";
 import { tokenizePillarPath, resolvePillarPath } from "@/lib/pillar-path";
 import type { FieldRequirement, PillarMaturityContract, MaturityStage, FieldValidator } from "./pillar-maturity";
 import { PILLAR_SCHEMAS } from "./pillar-schemas";
@@ -62,6 +65,7 @@ const INTAKE_S: FieldRequirement[] = [];
 // ─── ENRICHED Stage (after RTIS cascade) ────────────────────────────────────
 
 const ENRICHED_A: FieldRequirement[] = [
+  { path: "overtonPositions", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "ai_generation", description: "Conviction, catégorie et marque : publics, départs inférés ou déclarés, cibles et vérifications selon les six zones Overton" },
   ...INTAKE_A,
   { path: "valeurs", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "ai_generation", description: "1-3 valeurs Schwartz (max 3)" },
   { path: "herosJourney", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "ai_generation", description: "3+ actes du parcours du heros" },
@@ -192,12 +196,12 @@ const ENRICHED_I: FieldRequirement[] = [
 
 const ENRICHED_S: FieldRequirement[] = [
   { path: "fenetreOverton", validator: "is_object", derivable: true, derivationSource: "rtis_cascade", description: "Fenetre d'Overton — COEUR DE S (perception actuelle/cible/ecart + strategie deplacement)" },
-  { path: "axesStrategiques", validator: "min_items", validatorArg: 2, derivable: true, derivationSource: "rtis_cascade", description: "2+ axes strategiques" },
-  { path: "sprint90Days", validator: "min_items", validatorArg: 5, derivable: true, derivationSource: "rtis_cascade", description: "5+ actions planifiees avec devotionImpact" },
+  { path: "axesStrategiques", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "rtis_cascade", description: "Axes issus des actions retenues, sans quota artificiel" },
+  { path: "sprint90Days", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "rtis_cascade", description: "Actions retenues pour le sprint, avec critere de reussite" },
   { path: "facteursClesSucces", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "rtis_cascade", description: "3+ facteurs cles de succes" },
-  { path: "roadmap", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "rtis_cascade", description: "3+ phases de roadmap avec objectifDevotion" },
+  { path: "roadmap", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "rtis_cascade", description: "Phases utiles aux actions retenues avec objectifDevotion" },
   // Transitions I→S
-  { path: "selectedFromI", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "rtis_cascade", description: "3+ actions choisies depuis I.catalogue avec tracabilite" },
+  { path: "selectedFromI", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "rtis_cascade", description: "Actions choisies depuis I.catalogue avec tracabilite" },
   { path: "devotionFunnel", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "rtis_cascade", description: "Objectifs Devotion quantifies par phase" },
   { path: "overtonMilestones", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "rtis_cascade", description: "Jalons de deplacement de la fenetre d'Overton" },
 ];
@@ -251,13 +255,62 @@ const NEEDS_HUMAN_BY_PILLAR: Record<string, Set<string>> = {
 const COMPLETE_OPTIONAL_BY_PILLAR: Record<string, Set<string>> = {
   a: new Set<string>(),
   d: new Set<string>(),
-  v: new Set<string>(["productSystem"]),
-  e: new Set<string>(),
+  v: new Set<string>(["productSystem", "financialModel", "strategyBudgetModel"]),
+  e: new Set<string>(["devotionProjection"]),
   r: new Set<string>(),
   t: new Set<string>(),
   i: new Set<string>(),
   s: new Set<string>(),
 };
+
+// ─── Contrat unique : maturité bornée par le schéma strict ───────────────────
+
+/**
+ * Piliers dont la maturité est BORNÉE par leur schéma strict (ADR-0214,
+ * amendement 6.27.564). Pour eux, la maturité, la composition relue et
+ * l'approbation lisent un seul contrat : le schéma Zod strict du pilier, en plus
+ * des exigences de présence par stade.
+ *
+ * Avant, la maturité de S ne vérifiait que la PRÉSENCE des champs : un S de forme
+ * historique (montant en texte, fréquence hors énumération, identifiant lisible à
+ * la place d'un UUID, quatre indicateurs pour cinq exigés…) était déclaré
+ * COMPLETE/100 alors que le schéma strict le refusait et que son approbation
+ * était impossible. Une seule source de vérité : `PILLAR_SCHEMAS`.
+ *
+ * Seul S y figure : c'est un tableau calculé (ADR-0088) dont le schéma décrit la
+ * forme produite par son unique calcul. Les piliers ADVE gardent leur tolérance
+ * documentée aux formes brouillon (ADR-0172) — les y ajouter est une décision
+ * distincte, avec sa propre reprise des données.
+ */
+export const STRICT_CONTENT_PILLARS: ReadonlySet<string> = new Set(["s"]);
+
+export interface StrictContentIssue {
+  /** Chemin exact refusé (`kpiDashboard.0.frequency`), tel que l'approbation le liste. */
+  path: string;
+  /** Clé de premier niveau — le grain des exigences de maturité. */
+  topKey: string;
+  /** Diagnostic Zod d'origine (code, bornes) pour un libellé lisible. */
+  issue: z.core.$ZodIssue;
+}
+
+/**
+ * Chemins d'un pilier refusés par son schéma strict. Vide hors `STRICT_CONTENT_PILLARS`.
+ * Lecture pure du contenu STOCKÉ : aucune normalisation implicite — une forme
+ * historique est listée telle quelle, jamais réécrite ni acceptée en silence.
+ * Sa reprise passe par le recalcul gouverné de S (version archivée, revue retirée).
+ */
+export function strictContentIssues(pillarKey: string, content: Record<string, unknown> | null): StrictContentIssue[] {
+  const key = pillarKey.toLowerCase();
+  if (!STRICT_CONTENT_PILLARS.has(key) || !content) return [];
+  const schema = PILLAR_SCHEMAS[key.toUpperCase() as keyof typeof PILLAR_SCHEMAS];
+  const parsed = schema.safeParse(content);
+  if (parsed.success) return [];
+  return parsed.error.issues.map((issue) => ({
+    path: issue.path.map(String).join("."),
+    topKey: String(issue.path[0] ?? ""),
+    issue,
+  }));
+}
 
 /**
  * Unwrap ZodOptional/ZodNullable/ZodDefault/ZodEffects/ZodPipe/ZodUnion to
@@ -511,6 +564,7 @@ export function listSchemaLeafPaths(pillarKey: string, maxDepth = 4): SchemaLeaf
  * notoria et l'auto-filler → une seule notion de « feuille vide » dans tout l'OS.
  */
 export function findEmptyLeafPaths(pillarKey: string, content: Record<string, unknown>): SchemaLeaf[] {
+  if (pillarKey.toLowerCase() === "v") content = projectFinancialPillar(content);
   const needsHuman = NEEDS_HUMAN_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
   // Champs SCHÉMA légitimement optionnels (ex. `v.productSystem`, ADR-0170) : le
   // contrat COMPLETE les exclut déjà (pas de fabrication forcée d'un « Système Palais »
@@ -548,6 +602,9 @@ export function findEmptyLeafPaths(pillarKey: string, content: Record<string, un
     if (needsHuman.has(leaf.topKey)) continue;
     if (completeOptional.has(leaf.topKey)) continue;
     if (leaf.path.includes(".") && ancestorNotDescendable(leaf.path)) continue;
+    // Known non-applicability is a computed outcome, not a missing premise.
+    const ue = content.unitEconomics as { _financialContext?: { outcomes?: Record<string, string> } } | undefined;
+    if (leaf.path.startsWith("unitEconomics.") && ue?._financialContext?.outcomes?.[leaf.path.slice("unitEconomics.".length)]) continue;
     if (isEmpty(resolvePillarPath(content, leaf.path))) out.push(leaf);
   }
   return out;
@@ -607,11 +664,15 @@ const REF_KEY_SUFFIX = /(Id|Ids|Ref|Refs|Url|Urls)$/;
 export function isNonFabricableLeaf(leaf: { path: string; topKey: string; scalarKind: ScalarKind }): boolean {
   if (!isInferableKind(leaf.scalarKind)) return true;
   if (leaf.topKey === "computed") return true;
+  // Conditions commerciales déclarées : texte ne signifie pas opinion inférable.
+  // Saisie opérateur / extraction sourcée ; jamais compléter une case vide au hasard.
+  if (["produitsCatalogue", "productLadder"].includes(leaf.topKey) && leaf.path.endsWith(".conditionsTarifaires")) return true;
   const last = leaf.path.split(".").pop() ?? leaf.path;
   return leaf.scalarKind !== "enum" && REF_KEY_SUFFIX.test(last);
 }
 
 export function findEmptyArrayCellPaths(pillarKey: string, content: Record<string, unknown>): SchemaLeaf[] {
+  if (pillarKey.toLowerCase() === "v") content = projectFinancialPillar(content);
   const needsHuman = NEEDS_HUMAN_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
   const completeOptional = COMPLETE_OPTIONAL_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
   const evidenceArrays = EVIDENCE_ARRAY_TOPKEYS[pillarKey.toLowerCase()] ?? new Set<string>();
@@ -641,6 +702,7 @@ export function findEmptyArrayCellPaths(pillarKey: string, content: Record<strin
       if (typeof item !== "object" || item === null || Array.isArray(item)) continue; // item non-objet → pas de cellule
       const rec = item as Record<string, unknown>;
       for (const [k, kSchema] of Object.entries(shape)) {
+        if (arrLeaf.path === "personaSegmentMap" && k === "productNames" && hasDocumentedNonProductExchange(rec)) continue;
         if (TECHNICAL_ITEM_KEYS.has(k)) continue; // id/skuRef/… → jamais fabriqués (cohérence FK)
         const rawCtor = (kSchema as { constructor?: { name?: string } })?.constructor?.name ?? "";
         const optional = rawCtor === "ZodOptional" || rawCtor === "ZodDefault" || rawCtor === "ZodNullable";
@@ -649,7 +711,7 @@ export function findEmptyArrayCellPaths(pillarKey: string, content: Record<strin
         // FK/id/URL/ref typés texte|liste (`riskId`, `targetsPersonaIds`, `linkedinUrl`…) →
         // jamais fabriqués (uuid inventé = référence morte, backbone ADR-0088 ; URL réelle).
         // Un enum « …Ref » (choix borné) reste inférable → on ne l'exclut PAS.
-        if (kind !== "enum" && REF_KEY_SUFFIX.test(k)) continue;
+        if (isNonFabricableLeaf({ path: `${arrLeaf.path}[${i}].${k}`, topKey: arrLeaf.topKey, scalarKind: kind })) continue;
         if (isEmpty(rec[k])) out.push({ path: `${arrLeaf.path}[${i}].${k}`, topKey: arrLeaf.topKey, isArray: kind === "array", optional, scalarKind: kind });
       }
     }
@@ -749,7 +811,7 @@ export function deriveSchemaRequirements(pillarKey: string): FieldRequirement[] 
     reqs.push({
       path,
       validator: validatorFinal,
-      validatorArg: arg,
+      validatorArg: pillarKey.toLowerCase() === "s" && path === "rejectedFromI" ? 0 : arg,
       derivable: !isHuman,
       // V7 (2026-07-31) — un champ dont un COMPTEUR DÉTERMINISTE existe est
       // `calculation`, jamais `ai_generation`. `i.totalActions` a son compteur
@@ -764,6 +826,24 @@ export function deriveSchemaRequirements(pillarKey: string): FieldRequirement[] 
     });
   }
   return reqs;
+}
+
+/** An empty conceptual premise must be proposed and verified, even when the
+ * old empty choice was human. Actual zero, false, evidence and documented
+ * non-applicability are values. Exact version-fenced field writes only. */
+export function canInferMissingConceptualField(pillarKey: string, path: string, content: Record<string, unknown>, next: unknown): boolean {
+  const key = pillarKey.toLowerCase();
+  if (!(ADVE_STORAGE_KEYS as readonly string[]).includes(key)) return false;
+  const previous = resolvePillarPath(content, path);
+  const empty = previous == null || (typeof previous === "string" && !previous.trim()) || (Array.isArray(previous) && previous.length === 0);
+  if (!empty || next == null || (typeof next === "string" && !next.trim()) || (Array.isArray(next) && !next.length)) return false;
+  if (EVIDENCE_ARRAY_TOPKEYS[key]?.has(path.split(/[.[]/)[0]!)) return false;
+  const req = deriveSchemaRequirements(key).find(r => r.path === path);
+  const collection = req?.derivable && req.validatorArg !== 0 && ["min_items", "array_items_complete"].includes(req.validator);
+  const leaf = [...findEmptyLeafPaths(key, content), ...findEmptyArrayCellPaths(key, content)]
+    .find(l => l.path === path && !isNonFabricableLeaf(l));
+  if (!collection && !leaf) return false;
+  return !!(getFieldZod(key, path) as z.ZodTypeAny | null)?.safeParse(next).success;
 }
 
 /**

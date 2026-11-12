@@ -76,6 +76,10 @@ type InputStatus = "FENCED" | "INTERNAL" | "RAW";
 
 function classifyInput(src: string): InputStatus {
   if (/\b(wrapUntrusted|sanitizeInline)\s*\(/.test(src)) return "FENCED";
+  // The shared pillar reader still fences through wrapUntrusted. Require its
+  // exact import and an actual call; an arbitrary same-named helper is not proof.
+  if (/import\s*\{\s*serializePillar\s*\}\s*from\s*["']@\/server\/services\/utils\/pillar-context["']/.test(src)
+    && /\bserializePillar\s*\(/.test(src)) return "FENCED";
   if (src.includes("@llm-input-internal")) return "INTERNAL";
   return "RAW";
 }

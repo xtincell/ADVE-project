@@ -1,5 +1,5 @@
-import { PILLAR_STORAGE_KEYS } from "@/domain";
-import { formatIntakeRawContent } from "./strategy";
+
+
 
 // ============================================================================
 // MODULE M05b — Client Router (Multi-tenant entity management)
@@ -17,19 +17,28 @@ import { formatIntakeRawContent } from "./strategy";
 // PROCEDURES: create, update, get, list, delete, addBrand
 // ============================================================================
 
+import { ClientStatus, organizationFields } from "@/domain/client-organization";
+import { writeClientOrganization } from "@/server/services/client-organization";
+import { MarketScaleSchema } from "@/domain";
+import { resolveSessionUserId } from "../resolve-session-user";
+import { seedStrategy } from "@/server/services/strategy-bootstrap";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { classifyCanonicalSector } from "@/domain/sector-taxonomy";
 import { scopeClients, canAccessClient } from "@/server/services/operator-isolation";
-import * as auditTrail from "@/server/services/audit-trail";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { found } from "../entity-access";
 /* lafusee:governed-active */
 
+/** IN1 : un client inconnu reçoit 404 typé, jamais P2025 ni un message Prisma. */
+const CLIENT_NOT_FOUND = "Client introuvable.";
+
 export const clientRouter = createTRPCRouter({
-  create: operatorProcedure
-    .input(z.object({
+  create: governedProcedure({
+    kind: "LEGACY_CLIENT_CREATE", requireOperator: true, caller: "client:create",
+    inputSchema: z.object({
       name: z.string().min(1),
       contactName: z.string().optional(),
       contactEmail: z.string().email().optional(),
@@ -38,7 +47,10 @@ export const clientRouter = createTRPCRouter({
       country: z.string().optional(),
       notes: z.string().optional(),
       operatorId: z.string().optional(),
-    }))
+      status: ClientStatus.optional(),
+      ...organizationFields,
+    }),
+  })
     .mutation(async ({ ctx, input }) => {
       const userOperatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
       const operatorId = ctx.session.user.role === "ADMIN" && input.operatorId
@@ -49,29 +61,10 @@ export const clientRouter = createTRPCRouter({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Aucun opérateur associé" });
       }
 
-      const client = await ctx.db.client.create({
-        data: {
-          name: input.name,
-          contactName: input.contactName,
-          contactEmail: input.contactEmail,
-          contactPhone: input.contactPhone,
-          // ADR-0152 — canonicalisation à l'écriture (le read reste tolérant).
-          sector: input.sector ? classifyCanonicalSector(input.sector).code : input.sector,
-          country: input.country,
-          notes: input.notes,
-          operatorId,
-        },
-      });
-
-      auditTrail.log({
-        userId: ctx.session.user.id,
-        action: "CREATE",
-        entityType: "Client",
-        entityId: client.id,
-        newValue: { name: input.name, sector: input.sector },
-      }).catch((err) => { console.warn("[audit-trail] client create log failed:", err instanceof Error ? err.message : err); });
-
-      return client;
+      const {operatorId: _requestedOperator, ...fields} = input;
+      return writeClientOrganization(ctx.db, ctx.session.user, {operatorId,data:{
+        ...fields,...(input.sector ? {sector:classifyCanonicalSector(input.sector).code} : {}),
+      }});
     }),
 
   update: governedProcedure({
@@ -89,7 +82,9 @@ export const clientRouter = createTRPCRouter({
       sector: z.string().optional(),
       country: z.string().optional(),
       notes: z.string().optional(),
-      status: z.enum(["ACTIVE", "PROSPECT", "ARCHIVED"]).optional(),
+      status: ClientStatus.optional(),
+      expectedUpdatedAt: z.string().datetime().optional(),
+      ...organizationFields,
     }),
 
 
@@ -106,22 +101,10 @@ export const clientRouter = createTRPCRouter({
       });
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
 
-      const { id, ...data } = input;
-      // ADR-0152 — canonicalisation à l'écriture (le read reste tolérant).
-      if (data.sector) data.sector = classifyCanonicalSector(data.sector).code;
-      const previous = await ctx.db.client.findUniqueOrThrow({ where: { id } });
-      const updated = await ctx.db.client.update({ where: { id }, data });
-
-      auditTrail.log({
-        userId: ctx.session.user.id,
-        action: "UPDATE",
-        entityType: "Client",
-        entityId: id,
-        oldValue: { name: previous.name, status: previous.status },
-        newValue: data,
-      }).catch((err) => { console.warn("[audit-trail] client update log failed:", err instanceof Error ? err.message : err); });
-
-      return updated;
+      const {id,expectedUpdatedAt,...data}=input;
+      if (data.sector) data.sector=classifyCanonicalSector(data.sector).code;
+      const client=found(await ctx.db.client.findUnique({where:{id},select:{operatorId:true}}),CLIENT_NOT_FOUND);
+      return writeClientOrganization(ctx.db,ctx.session.user,{operatorId:client.operatorId,id,expectedUpdatedAt,data});
     }),
 
   get: protectedProcedure
@@ -135,22 +118,23 @@ export const clientRouter = createTRPCRouter({
       });
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
 
-      return ctx.db.client.findUniqueOrThrow({
+      return found(await ctx.db.client.findUnique({
         where: { id: input.id },
         include: {
+          parentClient: { select: { id:true,name:true,organizationKind:true } },
           strategies: {
             include: { pillars: true },
             orderBy: { updatedAt: "desc" },
           },
           operator: { select: { id: true, name: true } },
         },
-      });
+      }), CLIENT_NOT_FOUND);
     }),
 
   list: protectedProcedure
     .input(z.object({
       operatorId: z.string().optional(),
-      status: z.enum(["ACTIVE", "PROSPECT", "ARCHIVED"]).optional(),
+      status: ClientStatus.optional(),
       search: z.string().optional(),
       limit: z.number().min(1).max(100).default(50),
       cursor: z.string().optional(),
@@ -167,10 +151,13 @@ export const clientRouter = createTRPCRouter({
         ...(input.search ? { name: { contains: input.search, mode: "insensitive" as const } } : {}),
       };
 
+      const isTeamMember = userRole === "ADMIN" || Boolean(userOperatorId);
+      const visibleStrategies = isTeamMember ? {} : {userId: ctx.session.user.id};
       const items = await ctx.db.client.findMany({
         where,
         include: {
           strategies: {
+            where: visibleStrategies,
             select: {
               id: true,
               name: true,
@@ -180,7 +167,7 @@ export const clientRouter = createTRPCRouter({
             },
           },
           operator: { select: { id: true, name: true } },
-          _count: { select: { strategies: true } },
+          _count: { select: { strategies: {where:visibleStrategies} } },
         },
         take: input.limit + 1,
         cursor: input.cursor ? { id: input.cursor } : undefined,
@@ -193,7 +180,10 @@ export const clientRouter = createTRPCRouter({
         nextCursor = nextItem?.id;
       }
 
-      return { items, nextCursor };
+      return { items: isTeamMember ? items : items.map(client=>({
+        ...client, parentClientId:null,organizationKey:null,organizationSourceRefs:null,
+        contactName:null,contactEmail:null,contactPhone:null,notes:null,billingInfo:null,
+      })), nextCursor };
     }),
 
   delete: governedProcedure({
@@ -202,7 +192,7 @@ export const clientRouter = createTRPCRouter({
     kind: "LEGACY_CLIENT_DELETE",
 
 
-    inputSchema: z.object({ id: z.string() }),
+    inputSchema: z.object({ id: z.string(), expectedUpdatedAt:z.string().datetime().optional() }),
 
 
     caller: "client:delete",
@@ -218,31 +208,23 @@ export const clientRouter = createTRPCRouter({
       });
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
 
-      const result = await ctx.db.client.update({
-        where: { id: input.id },
-        data: { status: "ARCHIVED" },
-      });
-
-      auditTrail.log({
-        userId: ctx.session.user.id,
-        action: "DELETE",
-        entityType: "Client",
-        entityId: input.id,
-        newValue: { status: "ARCHIVED" },
-      }).catch((err) => { console.warn("[audit-trail] client delete log failed:", err instanceof Error ? err.message : err); });
-
-      return result;
+      const client=found(await ctx.db.client.findUnique({where:{id:input.id},select:{operatorId:true}}),CLIENT_NOT_FOUND);
+      return writeClientOrganization(ctx.db,ctx.session.user,{operatorId:client.operatorId,id:input.id,
+        expectedUpdatedAt:input.expectedUpdatedAt,data:{status:"ARCHIVED"}});
     }),
 
-  addBrand: operatorProcedure
-    .input(z.object({
+  addBrand: governedProcedure({
+    kind: "LEGACY_CLIENT_ADD_BRAND", requireOperator: true, caller: "client:addBrand",
+    inputSchema: z.object({
       clientId: z.string(),
       name: z.string().min(1),
       description: z.string().optional(),
       sector: z.string().optional(),
       country: z.string().optional(),
+      marketScale: MarketScaleSchema.optional(),
       businessContext: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+  })
     .mutation(async ({ ctx, input }) => {
       const userOperatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
       const hasAccess = await canAccessClient(input.clientId, {
@@ -252,182 +234,14 @@ export const clientRouter = createTRPCRouter({
       });
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé" });
 
-      const client = await ctx.db.client.findUniqueOrThrow({ where: { id: input.clientId } });
+      const client = found(await ctx.db.client.findUnique({ where: { id: input.clientId } }), CLIENT_NOT_FOUND);
 
-      const sector = input.sector ?? client.sector ?? undefined;
-      const country = input.country ?? client.country ?? undefined;
-      const businessContext = input.businessContext ?? {};
-
-      const strategy = await ctx.db.strategy.create({
-        data: {
-          name: input.name,
-          description: input.description,
-          userId: ctx.session.user.id,
-          operatorId: client.operatorId,
-          clientId: client.id,
-          businessContext: businessContext as Prisma.InputJsonValue,
-        },
-      });
-
-      // Auto-create 8 pillars — seed A and V with Strategy metadata (Chantier -1)
-      const biz = businessContext as Record<string, unknown>;
-      const pillarSeeds: Record<string, Record<string, unknown>> = {
-        a: {
-          nomMarque: input.name,
-          description: input.description ?? "",
-          secteur: sector ?? "",
-          pays: country ?? "",
-          brandNature: biz.brandNature ?? undefined,
-          langue: biz.language ?? "fr",
-        },
-        d: {},
-        v: {
-          businessModel: biz.businessModel ?? undefined,
-          economicModels: biz.economicModels ?? undefined,
-          positioningArchetype: biz.positioningArchetype ?? undefined,
-          salesChannel: biz.salesChannel ?? undefined,
-          freeLayer: biz.freeLayer ?? undefined,
-        },
-        e: {},
-        r: {},
-        t: {},
-        i: {},
-        s: {},
-      };
-      // Clean undefined values to avoid Prisma issues
-      for (const obj of Object.values(pillarSeeds)) {
-        for (const [k, v] of Object.entries(obj)) {
-          if (v === undefined) delete obj[k];
-        }
-      }
-      for (const key of [...PILLAR_STORAGE_KEYS]) {
-        await ctx.db.pillar.create({
-          data: {
-            strategyId: strategy.id,
-            key,
-            content: pillarSeeds[key] as Prisma.InputJsonValue,
-            confidence: key === "a" || key === "v" ? 0.1 : 0,
-          },
-        });
-      }
-
-      // Initialize structured responses object
-      const initialResponses = {
-        biz: {
-          biz_model: biz.businessModel ?? null,
-          biz_nature: biz.brandNature ?? null,
-          biz_revenue: biz.economicModels ?? [],
-          biz_positioning: biz.positioningArchetype ?? null,
-          biz_sales_channel: biz.salesChannel ?? null,
-          biz_free_element: biz.freeLayer ? (biz.freeLayer as any).whatIsFree : "NONE",
-          biz_free_detail: biz.freeLayer ? (biz.freeLayer as any).whatIsPaid : "",
-          biz_premium_scope: biz.premiumScope ?? "NONE",
-        },
-        a: {
-          a_vision: "",
-          a_mission: "",
-          a_noyau: input.name,
-          a_values: "",
-          a_origin: "",
-          a_archetype: "",
-          a_citation: "",
-        },
-        d: {
-          d_positioning: "",
-          d_promise: "",
-          d_persona_principal: "",
-          d_persona_secondary: "",
-          d_visual: "Inexistante",
-          d_voice: "Pas defini",
-          d_competitors: "",
-        },
-        v: {
-          v_promise: "",
-          v_products: "",
-          v_experience: "5",
-        },
-        e: {
-          e_community: "Aucune",
-          e_loyalty: "10-30%",
-          e_advocates: "Rarement",
-          e_rituals: "",
-        },
-        r: {
-          r_threats: "",
-          r_crisis: "Non",
-          r_reputation: "Pas du tout",
-        },
-        t: {
-          t_kpis: "",
-          t_measurement: "Jamais",
-          t_nps: "Non",
-        },
-        i: {
-          i_roadmap: "Non",
-          i_budget: "< 2%",
-          i_team: "Personne de dedie",
-        },
-        s: {
-          s_guidelines: "Non",
-          s_coherence: "5",
-          s_ambition: "",
-        }
-      };
-
-      // Auto-create QuickIntake to act as the biz intake for the cockpit-created brand
-      const quickIntake = await ctx.db.quickIntake.create({
-        data: {
-          contactName: ctx.session.user.name ?? "System",
-          contactEmail: ctx.session.user.email ?? "system@lafusee.io",
-          companyName: input.name,
-          sector: sector ?? null,
-          country: country ?? null,
-          businessModel: biz.businessModel as string ?? null,
-          economicModel: Array.isArray(biz.economicModels) ? (biz.economicModels as string[]).join(",") : null,
-          positioning: biz.positioningArchetype as string ?? null,
-          brandNature: biz.brandNature as string ?? null,
-          responses: initialResponses as Prisma.InputJsonValue,
-          status: "CONVERTED",
-          convertedToId: strategy.id,
-        }
-      });
-
-      // Auto-create BrandDataSource of type MANUAL_INPUT linked to the QuickIntake
-      const rawContent = formatIntakeRawContent(input.name, initialResponses);
-      await ctx.db.brandDataSource.create({
-        data: {
-          strategyId: strategy.id,
-          sourceType: "MANUAL_INPUT",
-          fileName: `Quick Intake — ${input.name}`,
-          rawContent,
-          rawData: initialResponses as Prisma.InputJsonValue,
-          extractedFields: initialResponses as Prisma.InputJsonValue,
-          pillarMapping: { a: true, d: true, v: true, e: true } as Prisma.InputJsonValue,
-          processingStatus: "PROCESSED",
-          certainty: "DECLARED",
-          origin: `intake:${quickIntake.id}`,
-        },
-      }).catch((err) => { console.warn("[client.addBrand] BrandDataSource creation failed:", err); });
-
-      // Auto-create VariableStoreConfig
-      await ctx.db.variableStoreConfig.create({
-        data: { strategyId: strategy.id, stalenessThresholdDays: 30, autoRecalculate: true },
-      }).catch((err) => { console.warn("[client.addBrand] variable-store config creation failed:", err instanceof Error ? err.message : err); });
-
-      // Auto-create BrandOSConfig
-      await ctx.db.brandOSConfig.create({
-        data: { strategyId: strategy.id, config: { currency: "XAF", language: "fr" } },
-      }).catch((err) => { console.warn("[client.addBrand] brandOS config creation failed:", err instanceof Error ? err.message : err); });
-
-      auditTrail.log({
-        userId: ctx.session.user.id,
-        action: "CREATE",
-        entityType: "Strategy",
-        entityId: strategy.id,
-        newValue: { name: input.name, clientId: input.clientId },
-      }).catch((err) => { console.warn("[audit-trail] addBrand log failed:", err instanceof Error ? err.message : err); });
-
-      return strategy;
+      if (client.status === "ARCHIVED") throw new TRPCError({ code: "BAD_REQUEST", message: "Client archivé." });
+      const actor = { ...ctx.session.user, id: await resolveSessionUserId(ctx) };
+      // Le siège du client n'est pas le marché de cette marque.
+      return ctx.db.$transaction(tx => seedStrategy(tx, {
+        ...input, operatorId: client.operatorId, sector: input.sector ?? client.sector ?? undefined
+      }, actor));
     }),
 
   // Chantier 8 — P&L par client
@@ -437,7 +251,8 @@ export const clientRouter = createTRPCRouter({
       from: z.string().optional(),
       to: z.string().optional(),
     }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      if (!await canAccessClient(input.clientId,{operatorId:ctx.session.user.operatorId ?? null,role:ctx.session.user.role ?? "USER",userId:ctx.session.user.id})) throw new TRPCError({code:"FORBIDDEN"});
       const { getClientPnL } = await import("@/server/services/financial-reconciliation");
       const from = input.from ? new Date(input.from) : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
       const to = input.to ? new Date(input.to) : new Date();

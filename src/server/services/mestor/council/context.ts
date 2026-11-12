@@ -23,15 +23,26 @@
 import { db } from "@/lib/db";
 import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 import { loadStrategyContextForFramework } from "@/server/services/seshat/context-store/strategy-context";
-import { getOracleBrandContextByQuery } from "@/server/services/seshat/context-store/oracle-augment";
-import { serializePillar } from "@/server/services/mestor/rtis-cascade";
-import { wrapUntrusted } from "@/server/services/utils/untrusted-content";
+import { getOracleBrandContextByQuery, formatSourceReferences, type OracleContextBlock } from "@/server/services/seshat/context-store/oracle-augment";
+import { serializePillar, serializeVerificationInstructions } from "@/server/services/utils/pillar-context";
+import { untrustedContentBody, wrapUntrusted } from "@/server/services/utils/untrusted-content";
+import { signalObservation } from "@/domain/signal-observation";
+import { metricObservationTime } from "@/domain/external-metric";
+import { SourceReceiptSchema } from "@/domain/source-certainty";
+import { excerptForQuery, sourceQueryForDocument } from "@/server/services/seshat/context-store/chunker";
+import { COUNCIL_EVIDENCE_NOTICE } from "./personas";
+import { coerceProvenance, fieldStatusFor, type FieldVerificationProfile } from "@/domain/field-provenance";
+import type { CouncilEvidenceExcerpt } from "./schemas";
 
 /** Budgets déterministes (caractères) — troncature par bloc, jamais silencieuse. */
 const FOUNDER_PILLAR_MAX = 5_000; // A/D/V/E — profondeur prioritaire
 const DERIVED_PILLAR_MAX = 1_200; // R/T/I/S — résumé diagnostic
-const RAG_BLOCK_MAX = 4_000;
+// Up to six selected documents: each receives text beside its citation and authority.
+// The existing Gateway still governs the final input window, fuel and rate limits.
+const RAG_BLOCK_MAX = 18_000;
+const RAG_DOCUMENT_BUDGET = 3_000;
 const EXPERT_PILLAR_MAX = 9_000; // l'expert ne voit qu'UN pilier → plus de place
+const OBSERVATIONS_MAX = 6_000;
 
 /** Piliers FONDATEURS A/D/V/E (forme stockage) — source canonique du domaine. */
 const FOUNDER_KEYS = ADVE_STORAGE_KEYS;
@@ -40,17 +51,129 @@ function capBlock(text: string, max: number): string {
   return text.length > max ? text.slice(0, max) + "\n…[tronqué — budget de contexte]" : text;
 }
 
+/** Membership is about this supplied block, after the shared security wrapper. */
+function includedEvidence(contextBlock: string, evidence: CouncilEvidenceExcerpt[]) {
+  return evidence.filter((item) => contextBlock.includes(item.text)
+    && contextBlock.includes(JSON.stringify(item.reference)));
+}
+
+/** Carry the existing field authority before the prose can consume its budget. */
+function qualifiedPillar(key: string, pillar: {
+  id?: string; currentVersion?: number; content: unknown; fieldCertainty?: unknown; updatedAt?: Date;
+}, max: number, verificationProfiles: Set<FieldVerificationProfile>): { text: string; evidence: CouncilEvidenceExcerpt[] } {
+  const content = pillar.content && typeof pillar.content === "object" && !Array.isArray(pillar.content)
+    ? pillar.content as Record<string, unknown> : {};
+  const certainty = pillar.fieldCertainty && typeof pillar.fieldCertainty === "object" && !Array.isArray(pillar.fieldCertainty)
+    ? Object.fromEntries(Object.entries(pillar.fieldCertainty).filter((entry): entry is [string, string] => typeof entry[1] === "string"))
+    : null;
+  const status = fieldStatusFor(certainty, key, content._fieldProvenance);
+  const date = pillar.updatedAt?.toISOString() ?? "non renseignée";
+  const lines = [
+    `Pilier ${key.toUpperCase()} — ${date} (date d’édition, pas une date de mesure).`,
+    `Référence du pilier : ${pillar.id || "non renseignée"}. Version d’édition : ${pillar.currentVersion ?? "inconnue"}.`,
+    "Qualification des champs : origine/autorité d’édition, pas une mesure ni une validation du résultat.",
+  ];
+  const evidence: CouncilEvidenceExcerpt[] = [];
+  let remaining = max - lines.join("\n").length;
+  let omitted = 0;
+  for (const [field, value] of Object.entries(content).filter(([field]) => !field.startsWith("_"))) {
+    const provenance = coerceProvenance(status(field));
+    const reference = { kind: "FIELD" as const, sourceId: pillar.id ?? "",
+      sourceVersion: pillar.currentVersion ?? null, source: key, field, provenance,
+      editedAt: pillar.updatedAt?.toISOString() ?? null };
+    // Keep each field packet atomic. A clipped leaf/absent packet cannot be
+    // cited as an entire original field, and a status table must not eat the
+    // whole excerpt budget before any values have reached the caller.
+    const profiles = new Set<FieldVerificationProfile>();
+    const serialized = serializePillar(key, { [field]: value, _fieldProvenance: content._fieldProvenance }, (path) => coerceProvenance(status(path)), profiles);
+    const packet = `${field} : ${provenance}\nRéférence de citation : ${JSON.stringify(reference)}\n${serialized}`;
+    if (packet.length + 1 > remaining) { omitted++; continue; }
+    for (const profile of profiles) verificationProfiles.add(profile);
+    remaining -= packet.length + 1;
+    lines.push(packet);
+    if (pillar.id) {
+      // The serializer already produced the actual JSON excerpt between its
+      // two framing lines. Keep that exact body, including its leaf clipping.
+      const body = serialized.slice(serialized.indexOf("\n") + 1, serialized.lastIndexOf("\n"));
+      evidence.push({ reference, text: untrustedContentBody(body, { max: body.length }) });
+    }
+  }
+  if (omitted) lines.push(`…[tronqué — budget de contexte] ${omitted} champ(s) non fourni(s), aucune absence métier déduite.`);
+  return { text: lines.join("\n"), evidence };
+}
+
+/** Source packets and citations share the same bounded, sanitized excerpt. */
+function qualifiedRag(rag: OracleContextBlock | null, query: string): { text: string; evidence: CouncilEvidenceExcerpt[] } {
+  if (!rag) return { text: "", evidence: [] };
+  const blocks: string[] = [];
+  const evidence: CouncilEvidenceExcerpt[] = [];
+  const validRefs = (rag.sourceReferences ?? []).filter(ref => SourceReceiptSchema.safeParse(ref).success
+    && typeof ref.text === "string" && ref.text.trim());
+  const grouped = new Map<string, typeof validRefs>();
+  for (const ref of validRefs) {
+    const key = `${ref.sourceId}:${ref.contentHash}`;
+    grouped.set(key, [...(grouped.get(key) ?? []), ref]);
+  }
+  const groups = [...grouped.values()];
+  let remaining = Math.min(RAG_BLOCK_MAX, Math.max(6_000, groups.length * RAG_DOCUMENT_BUDGET));
+  let supplied = 0;
+  for (const [index, group] of groups.entries()) {
+    // Match this council reader's two-passage bound. A stale caller cannot exhaust the
+    // source envelope with arbitrarily many citation headers.
+    const refs = group.slice(0, 2);
+    let documentRemaining = Math.floor(remaining / (groups.length - index));
+    const commonNotice = refs[0]?.documentNotice && refs.every(ref => ref.documentNotice === refs[0]!.documentNotice)
+      ? untrustedContentBody(refs[0].documentNotice, { max: refs[0].documentNotice.length }) : "";
+    const prefix = commonNotice ? commonNotice + "\n" : "";
+    if (prefix.length > documentRemaining - 500) continue;
+    documentRemaining -= prefix.length;
+    const documentBlocks: string[] = [];
+    for (const [passageIndex, ref] of refs.entries()) {
+      const reference = { kind: "DOCUMENT" as const, sourceId: ref.sourceId, contentHash: ref.contentHash,
+        certainty: ref.certainty, chunkIndex: ref.chunkIndex };
+      const notice = !commonNotice && ref.documentNotice
+        ? untrustedContentBody(ref.documentNotice, { max: ref.documentNotice.length }) : "";
+      const header = `Référence de citation : ${JSON.stringify(reference)}\n${formatSourceReferences([{ ...ref, text: "" }])}\n${notice ? notice + "\n" : ""}`;
+      // Divide the source envelope between its passages too. Neither the
+      // introduction nor a repeated qualification may hide the next measure.
+      const budget = Math.floor(documentRemaining / (refs.length - passageIndex)) - header.length - 80;
+      if (budget < 60) continue;
+      const original = ref.documentNotice && ref.text.startsWith(ref.documentNotice)
+        ? ref.text.slice(ref.documentNotice.length) : ref.text;
+      const body = untrustedContentBody(original, { max: original.length });
+      const text = excerptForQuery(body, sourceQueryForDocument(query, ref.fileName, { passage: true }), budget);
+      const omitted = text.length < body.length ? "\n…[extrait borné — reste du fragment non fourni]" : "";
+      const block = `${header}${text}${omitted}`;
+      documentBlocks.push(block); documentRemaining -= block.length + 2;
+      evidence.push({ reference, text });
+      supplied++;
+    }
+    if (documentBlocks.length) {
+      const block = prefix + documentBlocks.join("\n\n");
+      blocks.push(block); remaining -= block.length + 2;
+    }
+  }
+  if (validRefs.length > supplied) blocks.push("[Budget documentaire] Autres fragments sélectionnés non fournis ; aucune lecture complète déduite.");
+  // Orientation remains advisory. It never authorizes a documentary citation.
+  if (remaining > 60 && rag.text) blocks.push(capBlock(rag.narrativeBlock || rag.text, remaining - 50));
+  return { text: blocks.join("\n\n"), evidence };
+}
+
 export interface AssistantContextResult {
   /** Bloc de contexte complet, chaque section déjà wrapUntrusted. */
   contextBlock: string;
-  /** True si la recherche sémantique a réellement contribué. */
+  /** True si le contexte documentaire hybride a réellement contribué. */
   ragUsed: boolean;
+  /** True si des références documentaires accompagnent le texte injecté. */
+  sourcesSeen: boolean;
+  /** Only the excerpts actually supplied, never the full selected records. */
+  evidence: CouncilEvidenceExcerpt[];
 }
 
 /** Contexte d'un expert + ce qu'il a réellement pu lire. */
 export interface ExpertContextResult {
   contextBlock: string;
-  /** True si des extraits sémantiques ont contribué. */
+  /** True si le contexte documentaire hybride a réellement contribué. */
   ragUsed: boolean;
   /**
    * True si au moins un document de la marque figure dans le contexte. Un
@@ -58,32 +181,37 @@ export interface ExpertContextResult {
    * opinion pour une vérification.
    */
   sourcesSeen: boolean;
+  evidence: CouncilEvidenceExcerpt[];
 }
 
 /**
- * Contexte du COORDINATEUR (chat interactif + délibération) : dossier complet.
+ * Contexte du COORDINATEUR : extraits bornés du dossier réellement sélectionné.
  */
 export async function buildAssistantContext(
   strategyId: string,
   question: string,
 ): Promise<AssistantContextResult> {
-  const [base, pillars, ragBlock, communityBlock] = await Promise.all([
+  let ragUnavailable = false;
+  const [base, pillars, rag, communityBlock, observationsBlock] = await Promise.all([
     loadStrategyContextForFramework(strategyId),
     db.pillar.findMany({
       where: { strategyId },
-      select: { key: true, content: true, updatedAt: true },
+      select: { id: true, key: true, currentVersion: true, content: true, fieldCertainty: true, updatedAt: true },
     }),
-    getOracleBrandContextByQuery(strategyId, question, { limit: 8, includeSources: true })
-      .then((r) => r?.text ?? null)
-      .catch(() => null),
+    getOracleBrandContextByQuery(strategyId, question, { limit: 8, includeSources: true, passagesPerSource: 2 })
+      .catch(() => { ragUnavailable = true; return null; }),
     buildCommunityBlock(strategyId),
+    buildObservationsBlock(strategyId),
   ]);
 
   const byKey = new Map(pillars.map((p) => [p.key.toLowerCase(), p]));
   const sections: string[] = [];
+  const verificationProfiles = new Set<FieldVerificationProfile>();
+  const evidence: CouncilEvidenceExcerpt[] = [...observationsBlock.evidence];
 
   // Base stratégie (nom, score, business, capacité, résumés) — source canonique.
   sections.push(wrapUntrusted("contexte stratégie", base.lines.join("\n"), { max: 4_000 }));
+  sections.push(observationsBlock.text);
 
   // Piliers fondateurs A/D/V/E — profondeur préservée.
   for (const k of FOUNDER_KEYS) {
@@ -92,10 +220,12 @@ export async function buildAssistantContext(
       sections.push(`[Pilier ${k.toUpperCase()}] non renseigné.`);
       continue;
     }
+    const qualified = qualifiedPillar(k, p, FOUNDER_PILLAR_MAX, verificationProfiles);
+    evidence.push(...qualified.evidence);
     sections.push(
       wrapUntrusted(
-        `pilier ${k.toUpperCase()} (fondateur — verbatim)`,
-        capBlock(serializePillar(k, p.content), FOUNDER_PILLAR_MAX),
+        `pilier ${k.toUpperCase()} (fondateur — valeurs avec leur origine ; pas une mesure reçue)`,
+        qualified.text,
         { max: FOUNDER_PILLAR_MAX + 200 },
       ),
     );
@@ -106,31 +236,78 @@ export async function buildAssistantContext(
   for (const k of [...PILLAR_STORAGE_KEYS].filter((k) => !founderSet.includes(k))) {
     const p = byKey.get(k);
     if (!p?.content || Object.keys(p.content as object).length === 0) continue;
+    const qualified = qualifiedPillar(k, p, DERIVED_PILLAR_MAX, verificationProfiles);
+    evidence.push(...qualified.evidence);
     sections.push(
       wrapUntrusted(
-        `pilier ${k.toUpperCase()} (dérivé — résumé)`,
-        capBlock(serializePillar(k, p.content), DERIVED_PILLAR_MAX),
+        `pilier ${k.toUpperCase()} (dérivé — résumé ; diagnostic, pas une mesure reçue)`,
+        qualified.text,
         { max: DERIVED_PILLAR_MAX + 200 },
       ),
     );
   }
 
-  // Recherche sémantique ciblée sur la question (peut légitimement être absente).
-  if (ragBlock) {
+  // The metadata fallback contributes without pretending to be a semantic match.
+  const qualified = qualifiedRag(rag, question);
+  evidence.push(...qualified.evidence);
+  if (qualified.text) {
     sections.push(
-      wrapUntrusted("extraits pertinents (recherche sémantique)", capBlock(ragBlock, RAG_BLOCK_MAX), {
+      wrapUntrusted(rag?.usedVectorSearch
+        ? "contexte hybride (recherche sémantique et sélection par métadonnées)"
+        : "contexte disponible (sélection par métadonnées)", qualified.text, {
         max: RAG_BLOCK_MAX + 200,
       }),
     );
   }
+  if (ragUnavailable) sections.push("[Documentation] lecture documentaire indisponible — conformité aux sources non vérifiée.");
 
   sections.push(communityBlock);
 
-  return { contextBlock: sections.join("\n\n"), ragUsed: !!ragBlock };
+  const contextBlock = serializeVerificationInstructions(verificationProfiles) + sections.join("\n\n");
+  const supplied = includedEvidence(contextBlock, evidence);
+  return {
+    contextBlock,
+    ragUsed: !!qualified.text,
+    sourcesSeen: supplied.some((item) => item.reference.kind === "DOCUMENT"),
+    evidence: supplied,
+  };
+}
+
+/** Même projection factuelle que les lecteurs ; aucune mesure/KPI n'est écrite. */
+async function buildObservationsBlock(strategyId: string): Promise<{ text: string; evidence: CouncilEvidenceExcerpt[] }> {
+  try {
+    const rows = await db.signal.findMany({
+      where: { strategyId, type: "EXTERNAL_METRIC" },
+      orderBy: { createdAt: "desc" }, take: 5,
+      select: { id: true, type: true, data: true, createdAt: true },
+    });
+    if (!rows.length) return { text: "[Observations] aucune observation externe reçue pour cette marque ; aucune valeur zéro déduite.", evidence: [] };
+    const evidence: CouncilEvidenceExcerpt[] = [];
+    const blocks: string[] = [];
+    let remaining = OBSERVATIONS_MAX;
+    for (const row of rows) {
+      const { title, observation } = signalObservation(row);
+      const data = row.data && typeof row.data === "object" && !Array.isArray(row.data)
+        ? row.data as Record<string, unknown> : {};
+      const reference = { kind: "OBSERVATION" as const, sourceId: row.id,
+        sourceVersion: typeof data.sourceVersion === "string" ? data.sourceVersion : null,
+        observationId: typeof data.observationId === "string" ? data.observationId : null,
+        observedAt: metricObservationTime(data)?.toISOString() ?? null };
+      const header = `${title}\nRéférence interne : ${row.id}.\nReçu : ${row.createdAt.toISOString()}.\nRéférence de citation : ${JSON.stringify(reference)}\n`;
+      if (remaining <= header.length + 60) break;
+      const text = untrustedContentBody(capBlock(observation, remaining - header.length - 50), { max: remaining });
+      blocks.push(`${header}${text}`); remaining -= header.length + text.length + 2;
+      evidence.push({ reference, text });
+    }
+    return { text: wrapUntrusted("observations externes reçues — origine déclarée par la source, pas une validation",
+      blocks.join("\n\n"), { max: OBSERVATIONS_MAX + 200 }), evidence };
+  } catch {
+    return { text: "[Observations] lecture des observations indisponible ; résultats non vérifiés.", evidence: [] };
+  }
 }
 
 /**
- * Contexte d'UN expert de pilier fondateur : SON pilier en profondeur + les
+ * Contexte d'UN expert de pilier fondateur : extrait borné de SON pilier + les
  * extraits sémantiques scopés à son pilier + **la documentation de la marque**.
  * Il ne voit PAS les autres piliers (indépendance des critiques — c'est le
  * coordinateur qui arbitre).
@@ -146,29 +323,37 @@ export async function buildExpertContext(
   pillarKey: "a" | "d" | "v" | "e",
   topic: string,
 ): Promise<ExpertContextResult> {
-  const [pillar, rag, communityBlock] = await Promise.all([
+  let ragUnavailable = false;
+  const [pillar, rag, communityBlock, observationsBlock] = await Promise.all([
     db.pillar.findFirst({
       where: { strategyId, key: { in: [pillarKey, pillarKey.toUpperCase()] } },
-      select: { content: true, updatedAt: true },
+      select: { id: true, currentVersion: true, content: true, fieldCertainty: true, updatedAt: true },
     }),
     getOracleBrandContextByQuery(strategyId, topic, {
       pillarKey,
       limit: 6,
       includeSources: true,
+      passagesPerSource: 2,
     })
-      .then((r) => r ?? null)
-      .catch(() => null),
+      .catch(() => { ragUnavailable = true; return null; }),
     // L'expert Engagement juge sur la communauté RÉELLE ; les autres l'ignorent.
     pillarKey === "e" ? buildCommunityBlock(strategyId) : Promise.resolve(null),
+    buildObservationsBlock(strategyId),
   ]);
 
-  const sourcesSeen = (rag?.sourceReferences?.length ?? 0) > 0;
+  const qualified = qualifiedRag(rag, topic);
+  const sourcesSeen = qualified.evidence.length > 0;
   const sections: string[] = [];
+  const verificationProfiles = new Set<FieldVerificationProfile>();
+  const evidence = [...observationsBlock.evidence, ...qualified.evidence];
+  sections.push(observationsBlock.text);
   if (pillar?.content && Object.keys(pillar.content as object).length > 0) {
+    const qualified = qualifiedPillar(pillarKey, pillar, EXPERT_PILLAR_MAX, verificationProfiles);
+    evidence.push(...qualified.evidence);
     sections.push(
       wrapUntrusted(
-        `pilier ${pillarKey.toUpperCase()} (verbatim complet)`,
-        capBlock(serializePillar(pillarKey, pillar.content), EXPERT_PILLAR_MAX),
+        `pilier ${pillarKey.toUpperCase()} (extrait verbatim borné)`,
+        qualified.text,
         { max: EXPERT_PILLAR_MAX + 200 },
       ),
     );
@@ -177,24 +362,32 @@ export async function buildExpertContext(
       `[Pilier ${pillarKey.toUpperCase()}] NON RENSEIGNÉ — c'est en soi une information critique pour ta critique.`,
     );
   }
-  if (rag?.text) {
+  if (qualified.text) {
     sections.push(
-      wrapUntrusted("extraits pertinents du pilier", capBlock(rag.text, RAG_BLOCK_MAX), {
+      wrapUntrusted(rag?.usedVectorSearch
+        ? "contexte hybride du pilier (recherche sémantique et sélection par métadonnées)"
+        : "contexte du pilier (sélection par métadonnées)", qualified.text, {
         max: RAG_BLOCK_MAX + 200,
       }),
     );
   }
   if (communityBlock) sections.push(communityBlock);
+  sections.push(COUNCIL_EVIDENCE_NOTICE);
 
   // Dit à l'expert ce qu'il a — et surtout ce qu'il n'a pas. Une critique sans
   // documentation reste recevable ; se prétendre vérifié sans elle, non.
   sections.push(
-    sourcesSeen
-      ? "[Documentation] Des extraits de la documentation officielle de la marque figurent ci-dessus. Une affirmation qu'ils contredisent est une erreur factuelle, pas une divergence d'opinion — cite l'extrait."
-      : "[Documentation] AUCUN document de la marque n'est disponible sur ce sujet. Ta critique porte donc sur la cohérence interne, pas sur la conformité aux sources — dis-le explicitement plutôt que d'affirmer qu'un point est vérifié.",
+    ragUnavailable
+      ? "[Documentation] lecture documentaire indisponible — ta critique porte sur la cohérence interne ; la conformité aux sources n'a pas pu être vérifiée."
+      : sourcesSeen
+        ? "[Documentation] Des extraits des documents de la marque figurent ci-dessus avec leur certitude déclarée. Cite l'extrait et son statut pour signaler une contradiction ; n'en déduis ni validation humaine, ni capacité déployée. Une source DECLARED, INFERRED ou ARBITRARY ne devient pas OFFICIAL parce qu'elle est récupérée."
+        : "[Documentation] AUCUN document de la marque n'a été retrouvé par cette sélection. Ta critique porte donc sur la cohérence interne, pas sur la conformité aux sources — dis-le explicitement plutôt que d'affirmer qu'un point est vérifié.",
   );
 
-  return { contextBlock: sections.join("\n\n"), ragUsed: !!rag?.text, sourcesSeen };
+  const contextBlock = serializeVerificationInstructions(verificationProfiles) + sections.join("\n\n");
+  const supplied = includedEvidence(contextBlock, evidence);
+  return { contextBlock, ragUsed: !!qualified.text,
+    sourcesSeen: supplied.some((item) => item.reference.kind === "DOCUMENT"), evidence: supplied };
 }
 
 /**

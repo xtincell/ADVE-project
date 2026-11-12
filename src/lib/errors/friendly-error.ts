@@ -30,7 +30,7 @@ const FIELD_LABELS: Record<string, string> = {
   summary: "Accroche", context: "Contexte", targetAudience: "Cible",
   deliverables: "Livrables", channels: "Canaux", skillsRequired: "Compétences recherchées",
   qualityCriteria: "Critères de qualité", constraints: "Contraintes", references: "Références",
-  brandName: "Nom de la marque", brandWebsite: "Site web", budgetAmount: "Budget",
+  brandName: "Nom de la marque", brandWebsite: "Site web", websiteUrl: "Site web", urls: "Liens web", budgetAmount: "Budget",
   contactName: "Contact", contactEmail: "Email de contact", deadline: "Échéance",
   displayName: "Nom d'affichage", bio: "Bio", skills: "Compétences", payoutPhone: "Mobile money",
   orgName: "Nom de l'organisation", email: "Email", password: "Mot de passe", name: "Nom",

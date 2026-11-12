@@ -21,8 +21,8 @@ import {
   type CreativeProposalContract,
   type CreativeDirectionDraft,
 } from "@/lib/types/creative-proposal";
-import { routeInitiativeSet, ROUTE_SPECS, type RouteKey } from "@/lib/strategy/roadmap-routes";
-import { canonTypeForTimeframe } from "@/server/services/campaign-canon/plan";
+import { routeInitiativeSet, aggregateInitiativeSet, ROUTE_SPECS, type RouteKey } from "@/lib/strategy/roadmap-routes";
+import { canonTypeForInitiative } from "@/server/services/campaign-canon/plan";
 import { executeStructuredLLMCall } from "@/server/services/utils/llm-structured";
 
 const CANON_TYPES = ["GTM_90", "ANNUAL", "ALWAYS_ON"] as const;
@@ -37,7 +37,11 @@ export function toRouteInitiative(a: { id: string; selected: boolean; status: st
     : a.status === "PROPOSED"
       ? "RECOMMENDED"
       : a.status;
-  return { id: a.id, status, timeframe };
+  return { id: a.id, status, timeframe, preference: meta.initiativePreference ?? (a.selected ? "FAVORITE" : "NEUTRAL"),
+    ...(meta.channel ? { channel: meta.channel } : {}), ...(meta.pilierImpact ? { pilierImpact: meta.pilierImpact } : {}),
+    ...(meta.devotionImpact ? { devotionImpact: meta.devotionImpact } : {}),
+    ...(Array.isArray(meta.mitigatesRiskIds) ? { mitigatesRiskIds: meta.mitigatesRiskIds } : {}),
+    ...(Array.isArray(meta.targetsPersonaIds) ? { targetsPersonaIds: meta.targetsPersonaIds } : {}) };
 }
 
 export interface ValidateProposalResult {
@@ -116,12 +120,46 @@ export async function validateCreativeProposal(id: string, validatedBy?: string)
     return { proposalId: id, status: "VALIDATED", routeKey, actionsAttached: attached, briefsGenerated: 0, frames: frameIds.length, alreadyValidated: true };
   }
 
+  // 2) Jeu d'initiatives de la route (ADR-0089) depuis les BrandAction matérialisés.
+  const actions = await db.brandAction.findMany({
+    where: { strategyId: proposal.strategyId },
+    select: { id: true, selected: true, status: true, metadata: true, sourceInitiativeId: true, campaignId: true },
+  });
+  const synthesis = await db.pillar.findUnique({ where: { strategyId_key: { strategyId: proposal.strategyId, key: "s" } }, select: { content: true, staleAt: true } });
+  const computed = ((synthesis?.content as Record<string, unknown> | null)?.computed ?? {}) as Record<string, unknown>;
+  const routes = Array.isArray(computed.roadmapRoutes) ? computed.roadmapRoutes as Array<Record<string, unknown>> : [];
+  const route = routes.find(r => r.key === routeKey && r.selectionBasis === "CATALOGUE_COVERAGE_RULES_V1");
+  if (!route || synthesis?.staleAt) throw new Error("STRATEGY_RECALCULATION_REQUIRED: recalculez le plan avant de lancer la production.");
+  const routeIds = new Set(Array.isArray(route.initiativeIds) ? route.initiativeIds as string[] : []);
+  const selectedActions = actions.filter(a => a.sourceInitiativeId && routeIds.has(a.sourceInitiativeId) && !["EXECUTED", "CANCELLED"].includes(a.status));
+  if (selectedActions.length !== routeIds.size) throw new Error("STRATEGY_ACTION_RECONCILIATION_REQUIRED: synchronisez le catalogue et vérifiez les actions terminées ou annulées avant production.");
+
+  const typeByAction = new Map(selectedActions.map(a => {
+    const meta = (a.metadata ?? {}) as Record<string, unknown>;
+    const canonType = canonTypeForInitiative({ id: a.id,
+      timeframe: typeof meta.timeframe === "string" ? meta.timeframe : null,
+      campaignCanonType: typeof meta.campaignCanonType === "string" ? meta.campaignCanonType : undefined,
+      cadence: typeof meta.cadence === "string" ? meta.cadence : undefined });
+    if (!canonType) throw new Error("CAMPAIGN_CLASSIFICATION_REQUIRED: rattachez les actions à leur campagne de lancement, annuelle, permanente ou ponctuelle avant production.");
+    return [a.id, canonType];
+  }));
+  const punctualActions = selectedActions.filter(a => typeByAction.get(a.id) === "PUNCTUAL");
+  const punctualIds = punctualActions.flatMap(a => a.campaignId ? [a.campaignId] : []);
+  const punctualFrames = punctualIds.length ? await db.campaign.findMany({
+    where: { strategyId: proposal.strategyId, id: { in: punctualIds }, canonType: "PUNCTUAL" }, select: { id: true },
+  }) : [];
+  const punctualFrameIds = new Set(punctualFrames.map(f => f.id));
+  if (punctualActions.some(a => !a.campaignId || !punctualFrameIds.has(a.campaignId))) {
+    throw new Error("PUNCTUAL_CAMPAIGN_REQUIRED: l’activation ponctuelle doit être liée à son cadre dans cette marque avant production.");
+  }
+
   // 1) Frames canon de la route — auto-amorçage si absents.
-  let frames = await db.campaign.findMany({
+  const needsCanonFrames = selectedActions.some(a => typeByAction.get(a.id) !== "PUNCTUAL");
+  let frames = needsCanonFrames ? await db.campaign.findMany({
     where: { strategyId: proposal.strategyId, routeKey, canonType: { in: [...CANON_TYPES] } },
     select: { id: true, canonType: true },
-  });
-  if (frames.length === 0) {
+  }) : [];
+  if (needsCanonFrames && frames.length === 0) {
     const { generateCanonicalCampaigns } = await import("@/server/services/campaign-canon");
     await generateCanonicalCampaigns({ strategyId: proposal.strategyId, routeKey });
     frames = await db.campaign.findMany({
@@ -130,26 +168,15 @@ export async function validateCreativeProposal(id: string, validatedBy?: string)
     });
   }
   const frameByCanonType = new Map<string, string>(frames.map((f) => [f.canonType ?? "ANNUAL", f.id]));
-  const fallbackFrameId = frameByCanonType.get("ANNUAL") ?? frames[0]?.id ?? null;
-
-  // 2) Jeu d'initiatives de la route (ADR-0089) depuis les BrandAction matérialisés.
-  const actions = await db.brandAction.findMany({
-    where: { strategyId: proposal.strategyId },
-    select: { id: true, selected: true, status: true, metadata: true },
-  });
-  const routeSet = routeInitiativeSet(routeKey, actions.map(toRouteInitiative));
-  const routeIds = new Set(routeSet.map((r) => r.id as string));
-  const selectedActions = actions.filter((a) => routeIds.has(a.id));
+  const frameByAction = new Map(selectedActions.map(a => [a.id, typeByAction.get(a.id) === "PUNCTUAL" ? a.campaignId : frameByCanonType.get(typeByAction.get(a.id)!)]));
+  if ([...frameByAction.values()].some(id => !id)) throw new Error("CAMPAIGN_FRAME_REQUIRED: le cadre de campagne prévu est indisponible.");
 
   // 3) Rattache + génère les briefs de production.
   const { generateBriefFromBrandAction } = await import("@/server/services/campaign-manager");
   let attached = 0;
   let briefs = 0;
   for (const a of selectedActions) {
-    const meta = (a.metadata ?? {}) as Record<string, unknown>;
-    const timeframe = typeof meta.timeframe === "string" ? meta.timeframe : null;
-    const frameId = frameByCanonType.get(canonTypeForTimeframe(timeframe)) ?? fallbackFrameId;
-    if (!frameId) continue;
+    const frameId = frameByAction.get(a.id)!;
     await db.brandAction.update({
       where: { id: a.id },
       data: { campaignId: frameId, selected: true, status: "ACCEPTED" },
@@ -169,7 +196,7 @@ export async function validateCreativeProposal(id: string, validatedBy?: string)
     data: { status: "VALIDATED", validatedAt: new Date(), validatedBy: validatedBy ?? null },
   });
 
-  return { proposalId: id, status: "VALIDATED", routeKey, actionsAttached: attached, briefsGenerated: briefs, frames: frames.length, alreadyValidated: false };
+  return { proposalId: id, status: "VALIDATED", routeKey, actionsAttached: attached, briefsGenerated: briefs, frames: frames.length + punctualFrameIds.size, alreadyValidated: false };
 }
 
 export async function listCreativeProposalsByStrategy(strategyId: string) {
@@ -196,7 +223,9 @@ export interface ExecutionLevel {
   /** Nombre d'actions que la validation de ce niveau rattacherait aux frames. */
   actionCount: number;
   /** Budget total des actions de ce niveau (somme budgetMax ?? budgetMin). */
-  totalBudget: number;
+  totalBudget: number | null;
+  budgetSummary?: import("@/lib/types/pillar-schemas").InitiativeBudgetSummary;
+  projectionAssumptions?: { riskCoverage?: number; baseCultIndex?: number };
 }
 
 /**
@@ -206,21 +235,23 @@ export interface ExecutionLevel {
  */
 export function summarizeExecutionLevels(
   initiatives: Array<Record<string, unknown>>,
-  budgetById: Map<string, number>,
+  budgetById: Map<string, number | undefined>,
   storedByKey: Map<string, Record<string, unknown>>,
 ): ExecutionLevel[] {
   return ROUTE_SPECS.map((spec) => {
-    const ids = routeInitiativeSet(spec.key, initiatives).map((r) => r.id as string);
-    const totalBudget = ids.reduce((sum, id) => sum + (budgetById.get(id) ?? 0), 0);
+    const set = routeInitiativeSet(spec.key, initiatives.map(r => ({ ...r, budget: budgetById.get(r.id as string) })));
+    const aggregate = aggregateInitiativeSet(set, []);
     const stored = storedByKey.get(spec.key);
     return {
       key: spec.key,
       label: spec.label,
       recommended: spec.recommended,
       selected: stored?.selected === true,
-      projectedGrowthPct: stored && typeof stored.projectedGrowthPct === "number" ? (stored.projectedGrowthPct as number) : null,
-      actionCount: ids.length,
-      totalBudget,
+      projectedGrowthPct: null,
+      actionCount: set.length,
+      totalBudget: aggregate.totalBudget ?? null,
+      budgetSummary: aggregate.budgetSummary,
+      projectionAssumptions: stored?.projectionAssumptions as ExecutionLevel["projectionAssumptions"],
     };
   });
 }
@@ -237,9 +268,14 @@ export async function getExecutionLevels(strategyId: string): Promise<ExecutionL
   const computed = ((sPillar?.content as Record<string, unknown> | null)?.computed ?? {}) as Record<string, unknown>;
   const storedRoutes = Array.isArray(computed.roadmapRoutes) ? (computed.roadmapRoutes as Array<Record<string, unknown>>) : [];
   const storedByKey = new Map<string, Record<string, unknown>>(storedRoutes.map((r) => [String(r.key), r]));
-  const budgetById = new Map<string, number>(actions.map((a) => [a.id, (a.budgetMax ?? a.budgetMin ?? 0) || 0]));
-  const initiatives = actions.map(toRouteInitiative);
-  return summarizeExecutionLevels(initiatives, budgetById, storedByKey);
+  return ROUTE_SPECS.map(spec => {
+    const route = storedByKey.get(spec.key);
+    return { key: spec.key, label: spec.label, recommended: spec.recommended, selected: route?.selected === true,
+      projectedGrowthPct: null, actionCount: typeof route?.initiativeCount === "number" ? route.initiativeCount : 0,
+      totalBudget: typeof route?.totalBudget === "number" ? route.totalBudget : null,
+      budgetSummary: route?.budgetSummary as ExecutionLevel["budgetSummary"],
+    };
+  });
 }
 
 // ── Voie A IA — brouillon de direction depuis l'ADVE (ADR-0120) ──────────────────

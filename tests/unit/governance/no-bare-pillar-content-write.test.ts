@@ -90,58 +90,25 @@ const ALLOWED_BARE_PILLAR_CONTENT_WRITES: ReadonlyArray<AcceptedBareWrite> = [
   //   part). Entrée C2 retirée (le content write brut n'existe plus).
   {
     file: "src/server/trpc/routers/canon-sync.ts",
-    line: 145,
-    hole: "C3",
-    reason:
-      "Canon-sync god-mode : écrit le pilier S (bloc computed) direct après recompute. Best-effort, push manuel god-mode. Reroute via gateway souhaitable mais basse priorité.",
-    reroutePlanned: true,
-  },
-  {
-    file: "src/server/trpc/routers/canon-sync.ts",
-    line: 155,
+    line: 164,
     hole: "C3",
     reason:
       "Canon-sync god-mode : matérialise le vecteur de score dans un pilier pseudo-`vector` (pas un pilier ADVE/RTIS canonique — projection de score). Légitime hors gateway (le gateway ne gère que les 8 piliers métier).",
     reroutePlanned: false,
   },
   {
-    file: "src/server/trpc/routers/strategy.ts",
-    line: 91,
+    file: "src/server/services/strategy-bootstrap.ts",
+    line: 112,
     hole: "—",
-    reason:
-      "Seed ADVE à la création de marque (client.addBrand voisin) : amorce a/d/v depuis le business-context, e/r/t/i/s vides. Bootstrap de ligne au create. Reroute via gateway = dette P2.",
-    reroutePlanned: true,
-  },
-  {
-    file: "src/server/trpc/routers/client.ts",
-    line: 304,
-    hole: "—",
-    reason:
-      "Seed ADVE à la création de marque via client.addBrand (comme strategy.create voisin) : amorce a/d/v depuis le business-context. Bootstrap de ligne au create. Reroute via gateway = dette P2.",
+    reason: "Bootstrap unique de lignes à la création atomique du dossier. Les modifications ultérieures passent par la gateway.",
     reroutePlanned: true,
   },
   {
     file: "src/server/services/boot-sequence/index.ts",
-    line: 210,
+    line: 212,
     hole: "—",
     reason:
       "Boot-sequence : normalise le content pilier (legacy → schéma courant) avant scoring. Migration de forme, pas mutation métier. Reroute via gateway = dette P2.",
-    reroutePlanned: true,
-  },
-  {
-    file: "src/server/services/pillar-versioning/index.ts",
-    line: 85,
-    hole: "—",
-    reason:
-      "Primitive de rollback : restaure le content d'un `PillarVersion` déjà validé + bump explicite de currentVersion (round-13a : createVersion ne bumpe plus). Sous-service du gateway (createVersion y est appelé) ; la restauration d'une version antérieure est un retour à un état déjà scoré.",
-    reroutePlanned: false,
-  },
-  {
-    file: "src/server/services/rtis-protocols/strategy.ts",
-    line: 722,
-    hole: "—",
-    reason:
-      "Protocole S (lien I→S, ADR-0088) : writeback status-only du blob I — promeut les actions selectedFromI en SELECTED_FOR_ROADMAP avant d'agréger computePillarS, puis re-matérialise BrandAction. Promotion de statut, pas mutation de contenu métier (n'affecte pas le cache completionLevel/D-2). Reroute via gateway = dette P2.",
     reroutePlanned: true,
   },
 ];

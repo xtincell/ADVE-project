@@ -1,5 +1,7 @@
 "use client";
 
+import { CrmSalesFleet } from "@/components/console/crm-sales-fleet";
+import { CrmSalesDesk } from "@/components/console/crm-sales-desk";
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
@@ -35,10 +37,10 @@ const fmtDate = (d: string | Date) =>
     year: "numeric",
   });
 
-const fmtCurrency = (v: number) =>
+const fmtCurrencyFor = (v: number, currency: string) =>
   new Intl.NumberFormat("fr-FR", {
     style: "currency",
-    currency: "XAF",
+    currency,
     maximumFractionDigits: 0,
   }).format(v);
 
@@ -92,11 +94,13 @@ const STAGE_CONFIG: Record<DealStage, { label: string; icon: React.ReactNode; co
 type ViewMode = "kanban" | "forecast" | "metrics";
 
 export default function PipelinePage() {
+  const [currency, setCurrency] = useState("XAF");
+  const fmtCurrency = (value: number) => fmtCurrencyFor(value, currency);
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [showLost, setShowLost] = useState(false);
 
-  const { data: pipeline, isLoading: loadingPipeline } = trpc.crm.getPipeline.useQuery();
-  const { data: forecast, isLoading: loadingForecast } = trpc.crm.getRevenueForecast.useQuery();
+  const { data: pipeline, isLoading: loadingPipeline } = trpc.crm.getPipeline.useQuery({ currency });
+  const { data: forecast, isLoading: loadingForecast } = trpc.crm.getRevenueForecast.useQuery({ currency });
   const { data: metrics, isLoading: loadingMetrics } = trpc.crm.getConversionMetrics.useQuery();
 
   const isLoading = loadingPipeline || loadingForecast;
@@ -112,13 +116,21 @@ export default function PipelinePage() {
     <div className="space-y-6">
       <PageHeader
         title="Pipeline CRM"
-        description="Entonnoir de conversion : Quick Intake -> Deal -> Brand Instance"
+        description="Affaires, engagements et prochaines actions commerciales"
         breadcrumbs={[
           { label: "Console", href: "/console" },
           { label: "Socle" },
           { label: "Pipeline" },
         ]}
       />
+
+      <CrmSalesFleet />
+      <CrmSalesDesk />
+      <label className="block text-sm">Devise des prévisions
+        <select value={currency} onChange={event => setCurrency(event.target.value)} className="ml-3 rounded border border-border bg-background p-2">
+          {["XAF", "XOF", "EUR", "USD"].map(code => <option key={code}>{code}</option>)}
+        </select>
+      </label>
 
       {/* View Mode Tabs */}
       <div className="flex items-center gap-2 border-b border-border pb-3">
@@ -192,7 +204,7 @@ export default function PipelinePage() {
           {kanbanStages.map((stage) => {
             const config = STAGE_CONFIG[stage];
             const stageData = pipeline[stage] ?? { count: 0, totalValue: 0, deals: [] };
-            const deals = (stageData as { deals?: Array<{ id: string; companyName: string; contactName: string; contactEmail: string; value: number | null; createdAt: string | Date; source: string | null; strategy: { id: string; name: string } | null }> }).deals ?? [];
+            const deals = (stageData as { deals?: Array<{ id: string; companyName: string; contactName: string; contactEmail: string | null; value: number | null; createdAt: string | Date; source: string | null; strategy: { id: string; name: string } | null }> }).deals ?? [];
 
             return (
               <div

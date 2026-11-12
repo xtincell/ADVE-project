@@ -8,6 +8,7 @@ import crypto from "crypto";
 import { db } from "@/lib/db";
 import { classifyBrand, createEmptyVector, PILLAR_NAMES, sanitizeVector } from "@/lib/types/advertis-vector";
 import type { AdvertisVector } from "@/lib/types/advertis-vector";
+import { PILLAR_METADATA, type PillarKey } from "@/domain/pillars";
 import {
   mapExecutiveSummary,
   mapContexteDefi,
@@ -41,6 +42,7 @@ import {
   hasDeterministicComposer,
   loadComposerContext,
   composeSectionContent,
+  hasLegacyNpsProxy,
 } from "./deterministic-composers";
 
 // ─── Prisma Include (single comprehensive query) ────────────────────────────
@@ -134,6 +136,13 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
   // persisté, identique au dashboard.
   const vector: AdvertisVector = { ...baseVector };
   const classification = classifyBrand(vector.composite);
+  // Same persisted verdict as the leaderboard; never derive market strength
+  // from documentary completion or silently recompute it while reading.
+  const verdict = await db.scoreVerdict.findFirst({
+    where: { subjectStrategyId: strategyId }, orderBy: [{ computedAt: "desc" }, { id: "desc" }],
+    select: { force: true, tier: true, coveragePct: true, epreuveCount: true, computedAt: true },
+  });
+  const revealedScore = verdict ? { ...verdict, computedAt: verdict.computedAt.toISOString() } : null;
 
   // Phase 13 (B5/B6) — charger les BrandAssets des sections BrandAsset-driven
   // (BIG4 + DISTINCTIFS + Neteru Ground actifs Imhotep/Anubis) pour exposer
@@ -246,6 +255,11 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
   // vide (EmptyState honnête — aucune invention). Contexte chargé UNE fois.
   const hasOwnKeys = (v: unknown): boolean =>
     !!v && typeof v === "object" && !Array.isArray(v) && Object.keys(v as object).length > 0;
+  // Reject the false historical proxy before any fallible context loading.
+  // A failed recomposition must leave an honest empty state, never revive it.
+  if (hasLegacyNpsProxy(phase13ByIdRaw["bain-nps"])) {
+    phase13ByIdRaw["bain-nps"] = {};
+  }
   const needsCompose = phase13Sections.filter(
     (s) => hasDeterministicComposer(s.id) && !hasOwnKeys(phase13ByIdRaw[s.id]),
   );
@@ -288,13 +302,15 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
       brandName: strategy.name,
       operatorName: strategy.operator?.name ?? null,
       generatedAt: new Date().toISOString(),
+      stalePillars: strategy.pillars.filter(p => p.staleAt != null).map(p => PILLAR_METADATA[p.key.toUpperCase() as PillarKey]?.displayName ?? p.key),
       vector,
       classification,
+      revealedScore,
     },
     sections: {
       // Phase 1: ADVE
-      executiveSummary: safeMap("executive-summary", () => mapExecutiveSummary(strategy, vector, classification), { vector, classification, cultIndex: null, devotionScore: null, superfanCount: 0, brandName: strategy.name, topStrengths: [], topWeaknesses: [], highlights: [] }),
-      contexteDefi: safeMap("contexte-defi", () => mapContexteDefi(strategy), { businessContext: { sector: null, businessModel: null, positioningArchetype: null, economicModels: [], salesChannels: [] }, enemy: null, prophecy: null, client: null, personas: [] }),
+      executiveSummary: { ...safeMap("executive-summary", () => mapExecutiveSummary(strategy, vector, classification), { vector, classification, cultIndex: null, devotionScore: null, superfanCount: 0, brandName: strategy.name, topStrengths: [], topWeaknesses: [], highlights: [] }), revealedScore },
+      contexteDefi: safeMap("contexte-defi", () => mapContexteDefi(strategy), { market:{countryCode:null,region:null,scaleLabel:null}, businessContext: { sector: null, businessModel: null, positioningArchetype: null, economicModels: [], salesChannels: [] }, enemy: null, prophecy: null, client: null, personas: [] }),
       plateformeStrategique: safeMap("plateforme-strategique", () => mapPlateformeStrategique(strategy), { archetype: null, citationFondatrice: null, doctrine: null, ikigai: null, valeurs: [], positionnement: null, promesseMaitre: null, sousPromesses: [], tonDeVoix: null, assetsLinguistiques: null, messagingFramework: [] }),
       propositionValeur: safeMap("proposition-valeur", () => mapPropositionValeur(strategy), { pricing: null, proofPoints: [], guarantees: [], innovationPipeline: [], unitEconomics: null }),
       territoireCreatif: safeMap("territoire-creatif", () => mapTerritoireCreatif(strategy), { conceptGenerator: null, moodboard: null, chromaticStrategy: null, directionArtistique: null, kvPrompts: null, typographySystem: null, logoAdvice: null }),
@@ -408,51 +424,21 @@ export async function checkCompleteness(strategyId: string): Promise<Completenes
   );
   if (phase13Sections.length === 0) return baseReport;
 
-  const { db } = await import("@/lib/db");
-  const kinds = [
-    ...new Set(
-      phase13Sections.map((s) => s.brandAssetKind).filter(Boolean) as string[],
-    ),
-  ];
-  const assets = kinds.length > 0
-    ? await db.brandAsset.findMany({
-        where: { strategyId, kind: { in: kinds } },
-        select: { kind: true, state: true, metadata: true },
-      })
-    : [];
-
+  // Completeness measures the content actually rendered, not human approval.
+  // assemblePresentation already resolves ACTIVE/DRAFT assets and deterministic
+  // composition. A state alone cannot prove content (nor its absence).
+  const hasContent = (value: unknown): boolean => {
+    if (typeof value === "string") return value.trim().length > 0;
+    if (typeof value === "number") return Number.isFinite(value);
+    if (typeof value === "boolean") return true;
+    if (Array.isArray(value)) return value.some(hasContent);
+    return value !== null && typeof value === "object" &&
+      Object.entries(value).some(([key, child]) => !key.startsWith("_") && hasContent(child));
+  };
   for (const section of phase13Sections) {
-    // Don't overwrite an entry already produced by the CORE check (rare
-    // overlap when a Phase 13 id collides with a Phase 1-3 id).
     if (section.id in baseReport) continue;
-    if (!section.brandAssetKind) {
-      baseReport[section.id] = "empty";
-      continue;
-    }
-    // Prefer metadata.sectionId when set (Oracle-promoted assets carry it,
-    // cf. promoteSectionToBrandAsset). Fall back to kind-only match for
-    // legacy assets that pre-date the metadata.sectionId convention.
-    const matching = assets.filter((a) => {
-      const md = (a.metadata ?? {}) as Record<string, unknown>;
-      if (md.sectionId === section.id) return true;
-      if (md.sectionId === undefined && a.kind === section.brandAssetKind) return true;
-      return false;
-    });
-    if (matching.some((a) => a.state === "ACTIVE")) {
-      baseReport[section.id] = "complete";
-    } else if (matching.some((a) => a.state === "DRAFT")) {
-      baseReport[section.id] = "partial";
-    } else {
-      // No BrandAsset materialized — but `assemblePresentation` may have
-      // composed the section read-time (deterministic fallback, audit galileo).
-      // If the rendered doc carries content, the counter must say so too
-      // (else the founder sees "14 vides" while the PDF shows them full).
-      const rendered = (doc.sections as Record<string, unknown>)[section.id];
-      const renderedHasContent =
-        !!rendered && typeof rendered === "object" && !Array.isArray(rendered) &&
-        Object.keys(rendered as object).some((k) => !k.startsWith("_"));
-      baseReport[section.id] = renderedHasContent ? "complete" : "empty";
-    }
+    const rendered = (doc.sections as Record<string, unknown>)[section.id];
+    baseReport[section.id] = hasContent(rendered) ? "complete" : "empty";
   }
 
   return baseReport;

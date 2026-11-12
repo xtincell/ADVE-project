@@ -8,15 +8,21 @@
  */
 import { z } from "zod";
 import { defineManifest } from "@/server/governance/manifest";
-import { PillarKeySchema } from "@/domain/pillars";
+import { PillarKeySchema, PillarStorageKeySchema } from "@/domain/pillars";
 
 const StringId = z.string().min(1);
 
 const FeedbackAlertSchema = z.object({
-  kind: z.string(),
-  severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
-  message: z.string(),
-}).passthrough();
+  signalId: StringId,
+  strategyId: StringId,
+  pillar: PillarStorageKeySchema,
+  previousScore: z.number(),
+  currentScore: z.number(),
+  driftPercent: z.number(),
+  severity: z.enum(["low", "medium", "high", "critical"]),
+  diagnostic: z.null(),
+  prescriptionId: z.null(),
+});
 
 const FeedbackThresholdsSchema = z.object({
   socialEngagementMin: z.number().optional(),
@@ -27,7 +33,7 @@ const FeedbackThresholdsSchema = z.object({
 export const manifest = defineManifest({
   service: "feedback-loop",
   governor: "SESHAT",
-  version: "1.1.0",
+  version: "1.2.0",
   acceptsIntents: [],
   emits: ["TIER_EVALUATION_REQUESTED", "TARSIS_SIGNAL_DETECTED"],
   capabilities: [
@@ -45,20 +51,23 @@ export const manifest = defineManifest({
         pillarKey: PillarKeySchema,
       }),
       outputSchema: z.void(),
-      sideEffects: ["DB_WRITE", "LLM_CALL", "EVENT_EMIT"],
+      sideEffects: ["DB_WRITE", "EVENT_EMIT"],
       missionContribution: "DIRECT_BOTH",
     },
     {
       name: "detectStrategyDrift",
       inputSchema: z.object({
         strategyId: StringId,
-        windowDays: z.number().int().positive().optional(),
+        pillarKey: PillarStorageKeySchema,
       }),
       outputSchema: z.object({
-        driftDetected: z.boolean(),
-        magnitude: z.number().optional(),
-        rootPillars: z.array(PillarKeySchema).optional(),
-      }).passthrough(),
+        status: z.enum(["COMPARABLE", "INSUFFICIENT_DATA", "ZERO_BASELINE"]),
+        driftPercent: z.number().nullable(),
+        current: z.number().nullable(),
+        previous: z.number().nullable(),
+        baselineId: z.string().nullable(),
+        baselineAt: z.date().nullable(),
+      }),
       sideEffects: ["DB_READ"],
       idempotent: true,
       missionContribution: "DIRECT_OVERTON",

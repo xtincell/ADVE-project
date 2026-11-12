@@ -8,6 +8,21 @@ interface Props { data: EquipeSection }
 export function EquipeDisplay({ data }: Props) {
   return (
     <div className="space-y-6">
+      {(data.equipeDirigeante?.length ?? 0) > 0 && (
+        <div>
+          <h3 className="mb-3 text-sm font-semibold text-foreground-secondary">Équipe dirigeante déclarée</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {data.equipeDirigeante.map((m, i) => (
+              <div key={i} className="rounded-xl border border-border bg-background/50 p-4">
+                <p className="font-semibold text-foreground">{m.nom}</p>
+                <p className="text-sm text-foreground-secondary">{m.role}</p>
+                {m.bio && <p className="mt-2 text-sm text-foreground-secondary">{m.bio}</p>}
+                {m.competencesCles.length > 0 && <p className="mt-2 text-sm text-foreground-secondary">Compétences : {m.competencesCles.join(" · ")}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {data.operator && (
         <div className="rounded-xl border border-border bg-background/50 p-4">
           <p className="text-xs uppercase text-foreground-muted">Operateur</p>
@@ -15,7 +30,7 @@ export function EquipeDisplay({ data }: Props) {
         </div>
       )}
       <div className="rounded-xl border border-border bg-background/50 p-4">
-        <p className="text-xs uppercase text-foreground-muted">Responsable strategie</p>
+        <p className="text-xs uppercase text-foreground-muted">Gestionnaire du dossier</p>
         <p className="mt-1 text-sm font-semibold text-foreground">{data.owner.name ?? "—"}</p>
         {data.owner.email && <p className="text-xs text-foreground-muted">{data.owner.email}</p>}
       </div>

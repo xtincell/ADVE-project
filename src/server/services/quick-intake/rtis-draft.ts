@@ -24,8 +24,8 @@ import { type Pillar, SHAPE_PER_PILLAR } from "./pillar-shapes";
  *   5. Persisted via `writePillar` so the rows are queryable downstream
  *      AND auditable in the IntentEmission/Pillar versioning.
  *
- * Costs: ~4× Sonnet calls per intake. With Ollama substitution (policy
- * `agent.allowOllamaSubstitution=true`), free locally.
+ * R/T call the configured agent model; I uses its existing specialized agents.
+ * The S calculation makes no additional model call.
  */
 
 import { db } from "@/lib/db";
@@ -318,11 +318,10 @@ ${SHAPE_PER_PILLAR[pillar]}`;
 }
 
 /**
- * Generates and persists RTIS drafts for a strategy. R/T/I run in parallel
- * (independent), then S runs synthesizing the three.
+ * Generates R/T/I sequentially, persists their accepted content, then derives S.
  *
- * Each pillar's content is persisted via `writePillar` with system="INGESTION"
- * so the audit trail lists this as the V3 RTIS draft origin.
+ * R/T/I are saved through the gateway as INGESTION drafts; S uses the common
+ * PROTOCOLE_S calculation and writer, with the current source versions.
  */
 export async function generateAndPersistRtisDraft(input: DraftInput): Promise<RtisDraftResult> {
   // Phase 1 — R, T, I sequentially
@@ -332,6 +331,7 @@ export async function generateAndPersistRtisDraft(input: DraftInput): Promise<Rt
 
   // Persist R, T, I immediately so the true S protocol can read them
   const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+  const saved = { r, t, i };
   for (const [key, content] of [["r", r], ["t", t], ["i", i]] as const) {
     const _w0 = await writePillarAndScore({
       strategyId: input.strategyId,
@@ -340,23 +340,17 @@ export async function generateAndPersistRtisDraft(input: DraftInput): Promise<Rt
       author: { system: "INGESTION", reason: `V3 RTIS draft — pillar ${key}` },
       options: { confidenceDelta: 0.05 },
     });
-    reportRefusedWrite(_w0, "quick-intake:rtis-draft");
+    if (!reportRefusedWrite(_w0, "quick-intake:rtis-draft")) {
+      throw new Error(`rtis-draft[${key}]: ${_w0.error ?? "Écriture refusée"}`);
+    }
+    saved[key] = _w0.newContent;
   }
 
-  // Phase 2 — S synthesizes using the REAL engine so roadmapRoutes & budget are computed
-  const { executeProtocoleStrategy } = await import("@/server/services/rtis-protocols/strategy");
-  const sResult = await executeProtocoleStrategy(input.strategyId);
-  const s = sResult.content;
-
-  // Persist S
-  const _w1 = await writePillarAndScore({
-    strategyId: input.strategyId,
-    pillarKey: "s",
-    operation: { type: "REPLACE_FULL", content: s },
-    author: { system: "INGESTION", reason: `V3 RTIS draft — pillar s` },
-    options: { confidenceDelta: 0.05 },
-  });
-  reportRefusedWrite(_w1, "quick-intake:rtis-draft");
-
-  return { r, t, i, s };
+  // Same versioned full calculation as manual refresh; no confidence is earned
+  // for deterministic arithmetic, and a refused plan is never returned as saved.
+  const { withPillarTransaction } = await import("@/server/services/pillar-gateway");
+  const { recalculateSynthesisInTransaction } = await import("@/server/services/mestor/rtis-cascade");
+  const result = await withPillarTransaction(input.strategyId,
+    (tx, write) => recalculateSynthesisInTransaction(input.strategyId, tx, write));
+  return { ...saved, s: result.persisted.newContent };
 }

@@ -35,6 +35,7 @@ import {
   recordProviderSuccess,
   resolveTextProviderOrder,
   trackCost,
+  resolveCostStrategy,
   type GatewayPurpose,
   type LLMProvider,
 } from "./index";
@@ -188,7 +189,13 @@ async function attemptStream(
   const onCallerAbort = () => attemptAbort.abort();
   opts.signal?.addEventListener("abort", onCallerAbort, { once: true });
 
-  const slotKey = await acquireSlot(servedModel);
+  let slotKey: string;
+  try {
+    slotKey = await acquireSlot(servedModel);
+  } catch (error) {
+    opts.signal?.removeEventListener("abort", onCallerAbort);
+    throw error;
+  }
   let slotReleased = false;
   const releaseOnce = () => {
     if (!slotReleased) {
@@ -200,6 +207,8 @@ async function attemptStream(
 
   try {
     const result = streamText({
+      // One transport attempt before the existing pre-first-byte fallback.
+      maxRetries: 0,
       model: aiModel as Parameters<typeof streamText>[0]["model"],
       system: hr.system,
       messages: opts.messages.map((m) => ({ role: m.role, content: m.content })),
@@ -262,10 +271,12 @@ async function attemptStream(
           inputTokens: usage?.inputTokens ?? 0,
           outputTokens: usage?.outputTokens ?? 0,
         };
-        // Même règle de facturation que callLLM : nom Anthropic sur les chemins
-        // payants, nom du modèle servi sur les chemins gratuits.
-        const billedModel = provider === "ollama" || provider === "openrouter" ? servedModel : anthropicModel;
-        void trackCost({ strategyId: opts.strategyId, caller: opts.caller }, gatewayUsage, billedModel);
+        // Même reçu que callLLM : fournisseur/modèle servis, estimation token
+        // explicitement distincte d'un coût rapporté par le fournisseur.
+        const billedModel = provider === "ollama" || provider === "openrouter" || provider === "openai" ? servedModel : anthropicModel;
+        // Generation has ended: release its slot before awaiting the receipt.
+        releaseOnce();
+        await trackCost({ strategyId: opts.strategyId, caller: opts.caller }, gatewayUsage, billedModel, undefined, provider);
         // Parité callLLM : PostgreSQL jsonb refuse U+0000 — purge à la source.
         const cleanText = text.split(String.fromCharCode(0)).join("").replace(/\\u0000/g, "");
         return { text: cleanText, ...gatewayUsage, provider, model: servedModel };
@@ -302,6 +313,7 @@ function isAttemptFailure(r: StreamChatResult | AttemptFailure): r is AttemptFai
  * la responsabilité du pre-flight `isTextLLMAvailable()` pour l'UX honnête).
  */
 export async function streamChatText(opts: StreamChatOptions): Promise<StreamChatResult> {
+  opts = { ...opts, strategyId: resolveCostStrategy(opts.strategyId) };
   // ── Policy gouvernée (même chemin que callLLM) ────────────────────────
   const purpose: GatewayPurpose = opts.purpose ?? "agent";
   const { resolvePolicy } = await import("@/server/services/model-policy");

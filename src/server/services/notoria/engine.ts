@@ -21,6 +21,9 @@ import {
   DEFAULT_SOURCE_BUDGET,
   type BrandSourceContext,
 } from "./source-context";
+import type { ObjectiveComparison } from "@/domain/recommendation-comparison";
+import { readArticleComparisonScopes } from "./article-comparison";
+import { prepareArticleActions, type PreparedArticleAction } from "./article-actions";
 import { computeRecoGrounding, flattenProposedValue } from "./grounding";
 import type {
   GenerateBatchInput,
@@ -30,6 +33,21 @@ import type {
   RecoSource,
 } from "./types";
 import { MISSION_CONFIG } from "./types";
+import { NotoriaGenerationFailure, describeNotoriaFailure } from "./generation-failure";
+import { serializePillars, ADVE_SOURCE_ALIGNMENT_CONTRACT, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
+
+// A pillar letter is a storage key, not a documentary question. Keep the same
+// scoped reader and version controls; ask it for the actual upstream substance.
+const SOURCE_QUERIES: Record<string, string> = {
+  a: "identité marque fondation histoire mission valeurs doctrine équipe dirigeante biographies expériences compétences responsabilités",
+  d: "positionnement proposition distinction personas segments partenaires audience trafic clients concurrents marché charte marque",
+  v: "modèle économique offres prix produits segments partenaires financeurs charges financement budget marge revenus coûts seuil rentabilité break-even",
+  e: "expérience parcours communauté rituels rites de passage engagement canaux objectifs KPI cibles fréquence North Star fidélisation conversion",
+  r: "risques contraintes vulnérabilités forces faiblesses hypothèses dépendances",
+  t: "études marché entretiens terrain prix traction hypothèses validation concurrence",
+  i: "campagnes lancement go-to-market roadmap programme annuel boucle mensuelle récurrence calendrier budgets fourchettes production média talent logistique technologie actions partenaires trafic client",
+  s: "synthèse stratégie programmes campagnes priorités contraintes objectifs moyens jalons calendrier",
+};
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -61,12 +79,6 @@ async function loadPillars(
   return map;
 }
 
-function serializePillar(key: string, content: unknown): string {
-  if (!content || typeof content !== "object") return `[${key}] Vide`;
-  // LOT 1b — contenu pilier (donnée non fiable) balisé anti-injection.
-  return wrapUntrusted(`PILIER ${key}`, JSON.stringify(content, null, 2), { max: 8000 });
-}
-
 function describeSchemaFields(key: string): string {
   const upperKey = key.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
   const schema = PILLAR_SCHEMAS[upperKey];
@@ -84,7 +96,8 @@ function describeSchemaFields(key: string): string {
 
 const SYSTEM_BASE = `Tu es Notoria, le moteur de recommandation des NETERU.
 Tu produis des recommandations GRANULAIRES pour enrichir les fiches ADVERTIS des marques.
-Chaque recommandation cible un champ precis et utilise l'operation la plus precise possible.`;
+Chaque recommandation cible un champ precis et utilise l'operation la plus precise possible.
+- ${ADVE_SOURCE_ALIGNMENT_CONTRACT}`;
 
 const RECO_SYSTEM = `${SYSTEM_BASE}
 
@@ -127,9 +140,9 @@ Regles:
 - Pour MODIFY : proposedValue = l'item modifie complet, targetMatch requis
 - Pour REMOVE : proposedValue = null, targetMatch requis
 - Si un champ est deja excellent, NE le mentionne PAS
-- 5 a 20 recommandations par pilier, triees par impact decroissant`;
+- Recommandations etayees uniquement, triees par impact decroissant ; aucun minimum impose.`;
 
-const SESHAT_SYSTEM = `${SYSTEM_BASE}
+const SESHAT_SYSTEM = `${RECO_SYSTEM}
 
 Tu recois une OBSERVATION de Seshat (surveillance externe) et tu dois la transformer
 en recommandations structurees pour les piliers ADVERTIS impactes.
@@ -160,9 +173,15 @@ async function generateRecosForPillar(
 
   // Build source context based on mission type
   const config = MISSION_CONFIG[missionType];
-  const sourceContext = config.sourcePillars
-    .map((k) => serializePillar(k.toUpperCase(), pillars[k.toUpperCase()]))
-    .join("\n\n");
+  // The target used to be inserted as raw pretty JSON AND in the qualified
+  // source bundle. Keep it once, with the same authority as every other pillar.
+  // Compact encoding removes whitespace only; the 128K per-pillar admission
+  // guard and every projected record, identifier and value remain unchanged.
+  const contextKeys = [...new Set([targetKey, ...config.sourcePillars].map(k => k.toUpperCase()))];
+  const sourceContext = serializePillars(contextKeys.map(k => [k, pillars[k]]), { compact: true });
+  const { recipeContext } = await import("@/server/services/seshat/creative-intelligence");
+  const empiricalCreativeContext = missionType === "SESHAT_OBSERVATION" || missionType === "I_GENERATION"
+    ? await recipeContext(strategyId) : "";
 
   const sourceLabel =
     missionType === "SESHAT_OBSERVATION"
@@ -284,7 +303,7 @@ async function generateRecosForPillar(
         ? `\nSous-champs imbriques vides (operation EXTEND sur l'objet parent — preserve les sous-champs deja remplis, une reco EXTEND par parent) :\n${[...nestedByParent.entries()].map(([p, leaves]) => `  - ${p} : ${leaves.join(", ")}`).join("\n")}\n`
         : "") +
       cellsSection +
-      `\nToutes ces feuilles/cellules DOIVENT etre remplies. C'est la PRIORITE #1 — ne laisse AUCUNE entree vide listee ci-dessus.`
+      `\nTraiter ces lacunes dans l'ordre source documentée, calcul, puis postulat de départ qualifié dans ADVE. Une inconnue n'est pas un point d'arrivée : établir la prémisse du modèle dans le socle, puis calculer les dépendances. Conserver les identités et décisions déjà renseignées ; les postulats ne deviennent ni faits observés ni adoptions humaines.`
     : "\nTous les champs sont remplis en profondeur. Concentre-toi sur l'enrichissement et la correction.";
 
   const prompt = `SHAPE EXACTE du pilier ${targetKey.toUpperCase()} (arborescence complète, sous-clés + valeurs d'enum RÉELLES — respecte EXACTEMENT cette structure, n'invente aucune clé):
@@ -292,32 +311,38 @@ ${schemaDesc}
 
 BIBLE DE FORMAT (regles de fond pour chaque champ):
 ${bibleInstructions}
+${targetKey === "i" ? INITIATIVE_PLANNING_SOURCE_CONTRACT : ""}
 
 Pilier ${targetKey.toUpperCase()} actuel (${filledFields.length}/${allSchemaKeys.length} champs remplis):
-${JSON.stringify(currentContent, null, 2)}
+Le contenu qualifié de ce pilier est inclus une seule fois dans le contexte ci-dessous.
 ${emptyFieldsSection}
 
 Contexte source (${sourceLabel}):
 ${sourceContext}
+${empiricalCreativeContext ? wrapUntrusted("Recettes et observations créatives revues", empiricalCreativeContext, { max: 12000 }) : ""}
 ${extraContext ? `\nContexte supplementaire:\n${extraContext}` : ""}${fewShotBlock}
 
 Produis les recommandations d'enrichissement GRANULAIRES pour le pilier ${targetKey.toUpperCase()}.
 IMPORTANT:
-1. PRIORITE #1 : remplir les champs VIDES (operation SET) — chaque champ vide = une reco obligatoire
+1. PRIORITE #1 : reconcilier les champs VIDES depuis des sources ou deductions qualifiees ; aucune recommandation fabriquee pour satisfaire un quota
 2. PRIORITE #2 : enrichir/corriger les champs existants (ADD/MODIFY/EXTEND)
 3. Chaque proposedValue DOIT respecter le format defini dans la BIBLE DE FORMAT
 4. Respecter les regles min/max de la bible (ex: valeurs max 3, pas 7)`;
 
   const system =
     missionType === "SESHAT_OBSERVATION" ? SESHAT_SYSTEM : RECO_SYSTEM;
-  const response = await callNotoriaLLM(system, prompt, strategyId);
-  const parsed = extractJSON(response);
+  let response: string;
+  try { response = await callNotoriaLLM(system, prompt, strategyId); }
+  catch (error) { throw new NotoriaGenerationFailure("MODEL_CALL_FAILED", error); }
+  let parsed: Record<string, unknown>;
+  try { parsed = extractJSON(response); }
+  catch (error) { throw new NotoriaGenerationFailure("INVALID_MODEL_OUTPUT", error); }
 
   const recosRaw: RawLLMReco[] = Array.isArray(parsed)
     ? (parsed as RawLLMReco[])
-    : (parsed as Record<string, unknown>).recommendations
-      ? ((parsed as Record<string, unknown>).recommendations as RawLLMReco[])
-      : [];
+    : parsed && Array.isArray(parsed.recommendations)
+      ? parsed.recommendations as RawLLMReco[]
+      : (() => { throw new NotoriaGenerationFailure("INVALID_MODEL_OUTPUT"); })();
 
   // F3 (round-11) : le LLM peut omettre `field` (sortie malformée) — les boucles
   // `reco.field.startsWith(...)`/`.split(...)` plus bas planteraient alors TOUT le
@@ -380,13 +405,15 @@ async function persistBatch(
    * sur des documents qu'on ne lui a jamais montrés n'aurait aucun sens.
    */
   sourceCtx: BrandSourceContext,
+  writer: Pick<Prisma.TransactionClient, "recommendationBatch" | "recommendation"> = db,
+  articleComparisons?: ReadonlyMap<unknown, ObjectiveComparison>,
 ): Promise<{ batchId: string; totalRecos: number; autoApplied: number }> {
   const config = MISSION_CONFIG[missionType];
   const allRecos = [...recosByPillar.entries()].flatMap(([key, recos]) =>
     recos.map((r) => ({ ...r, pillarKey: key })),
   );
 
-  const batch = await db.recommendationBatch.create({
+  const batch = await writer.recommendationBatch.create({
     data: {
       strategyId,
       missionType,
@@ -409,8 +436,11 @@ async function persistBatch(
   // ── ADR-0090 — contexte de simulation chargé UNE fois par batch ──
   // Ruler déterministe par champ + preview d'impact score, zéro LLM.
   const { loadContentsAndWeights, previewCandidateImpact } = await import("./preview-impact");
-  const { evaluateField, computeRecoWeightedScore, compareForReplacement } = await import("./rulers");
+  const { evaluateField, computeRecoWeightedScore } = await import("./rulers");
+  const { fieldComparator } = await import("./compare-proposal");
   const simCtx = await loadContentsAndWeights(strategyId).catch(() => null);
+
+  const compare = simCtx ? fieldComparator(simCtx.contents, simCtx.weights) : null;
 
   for (const reco of allRecos) {
     const gateResult = applyQualityGates(reco, reco.pillarKey);
@@ -436,6 +466,7 @@ async function persistBatch(
           targetPillarKey: pillarKeyLower,
           targetField: reco.field,
           operation,
+          targetMatch: reco.targetMatch,
           proposedValue: reco.proposedValue,
         })
       : null;
@@ -444,29 +475,6 @@ async function persistBatch(
       scoreImpactEstimate,
       confidence: reco.confidence ?? 0.6,
     });
-
-    // Gate de remplacement à la génération : si la valeur EN PLACE bat la
-    // proposition, on ne bloque pas le catalogue (Notoria catalogue tout)
-    // mais on force requires_review + warning visible. Le blocage dur vit
-    // dans lifecycle.applyRecos.
-    let rulerWarning: string | undefined;
-    if (simCtx && (operation === "SET" || operation === "MODIFY")) {
-      const currentValue = (simCtx.contents[pillarKeyLower as keyof typeof simCtx.contents] as Record<string, unknown> | null | undefined)?.[
-        reco.field.split(".")[0] ?? reco.field
-      ];
-      const cmp = compareForReplacement({
-        pillarKey: pillarKeyLower,
-        field: reco.field,
-        oldValue: currentValue,
-        newValue: reco.proposedValue,
-        confidence: reco.confidence ?? 0.6,
-        scoreImpactEstimate,
-      });
-      if (!cmp.replaceAllowed) {
-        gateResult.applyPolicy = "requires_review";
-        rulerWarning = cmp.reason;
-      }
-    }
 
     // ── ADR-0184 — ancrage documentaire, mesuré et non pas supposé ──
     const justification = reco.justification ?? "";
@@ -486,6 +494,13 @@ async function persistBatch(
         "La marque a de la documentation, mais cette proposition n'en reprend rien.";
     }
 
+    const comparison = compare?.({
+      targetPillarKey: pillarKeyLower, targetField: reco.field, operation, targetMatch: reco.targetMatch,
+      proposedValue: reco.proposedValue, confidence: reco.confidence ?? 0.6,
+      unverifiedCitations: grounding.unverifiedCitations,
+    });
+    const rulerWarning = !comparison?.shortlisted ? comparison?.reason : undefined;
+    if (!comparison?.shortlisted) gateResult.applyPolicy = "requires_review";
     const validationWarning = [
       (reco as Record<string, unknown>)._validationWarning as string | undefined,
       rulerWarning,
@@ -495,7 +510,7 @@ async function persistBatch(
       .filter(Boolean)
       .join("; ") || undefined;
 
-    await db.recommendation.create({
+    await writer.recommendation.create({
       data: {
         strategyId,
         targetPillarKey: reco.pillarKey.toLowerCase(),
@@ -521,12 +536,17 @@ async function persistBatch(
         validationWarning: validationWarning ?? null,
         sectionGroup: reco.sectionGroup ?? null,
         rulerScore: rulerVerdict.score,
-        rulerVerdict: rulerVerdict as unknown as Prisma.InputJsonValue,
+        rulerVerdict: { ...rulerVerdict, fieldComparison: comparison,
+          ...(articleComparisons?.has(reco.proposedValue) ? { objectiveComparison: articleComparisons.get(reco.proposedValue) } : {}),
+        } as unknown as Prisma.InputJsonValue,
         scoreImpactEstimate,
         weightedScore,
         groundingScore: grounding.score,
         groundingBand: grounding.band,
         groundedSourceIds: grounding.groundedSourceIds,
+        sourceReceipts: Array.from(new Map(sourceCtx.excerpts
+          .filter((e) => e.contentHash)
+          .map((e) => [e.sourceId, { sourceId: e.sourceId, contentHash: e.contentHash! }])).values()),
         citedSourceIds: grounding.citedSourceIds,
         unverifiedCitations: grounding.unverifiedCitations,
         status: "PENDING",
@@ -537,6 +557,21 @@ async function persistBatch(
   }
 
   return { batchId: batch.id, totalRecos: allRecos.length, autoApplied };
+}
+
+/** Gazette mode uses the same provider and recommendation persistence as a normal batch.
+ * A reported article produces catalogue candidates; it never runs the pillar fill prompts. */
+export async function generateArticleActions(strategyId: string, input: Parameters<typeof prepareArticleActions>[0],
+  anchors: Parameters<typeof prepareArticleActions>[1]) {
+  const scopes = await readArticleComparisonScopes(strategyId);
+  const result = await prepareArticleActions(input, anchors, (system, prompt) => callNotoriaLLM(system, prompt, strategyId), scopes);
+  return { ...result, scopes };
+}
+
+export function persistArticleActions(tx: Prisma.TransactionClient, strategyId: string, actions: PreparedArticleAction[]) {
+  return persistBatch(strategyId, "SESHAT_OBSERVATION", new Map([["i", actions.map(a => a.recommendation)]]),
+    { empty: true, documentsUsed: 0, documentsSkipped: 0, charsUsed: 0, retrieval: "NONE", excerpts: [] }, tx,
+    new Map(actions.map(a => [a.recommendation.proposedValue, a.basis.comparison])));
 }
 
 // ── Public API ────────────────────────────────────────────────────
@@ -642,7 +677,7 @@ export async function generateBatch(
   // un budget explicite, et porte l'identifiant de chaque source pour que ce
   // qui en est tiré reste vérifiable en aval.
   const sourceCtx = await loadBrandSourceContext(strategyId, {
-    query: targets.join(" "),
+    query: targets.map(key => SOURCE_QUERIES[key.toLowerCase()] ?? "documentation actuelle de la marque").join(" "),
     // Mission ASYNCHRONE : ici, payer une passe d'indexation est acceptable —
     // c'est le seul endroit qui rattrape un document deposé jamais indexé.
     ensureIndexed: true,
@@ -677,23 +712,15 @@ export async function generateBatch(
   );
 
   const recosByPillar = new Map<string, RawLLMReco[]>();
-  const errors: Array<{ pillarKey: string; error: string }> = [];
+  const errors: GenerateBatchResult["errors"] = [];
   const countByPillar: Record<string, number> = {};
 
-  for (const result of results) {
+  for (const [index, result] of results.entries()) {
     if (result.status === "fulfilled") {
       recosByPillar.set(result.value.key, result.value.recos);
       countByPillar[result.value.key] = result.value.recos.length;
     } else {
-      const key =
-        (result.reason as { pillarKey?: string })?.pillarKey ?? "unknown";
-      errors.push({
-        pillarKey: key,
-        error:
-          result.reason instanceof Error
-            ? result.reason.message
-            : String(result.reason),
-      });
+      errors.push(describeNotoriaFailure(result.reason, targets[index] ?? "unknown"));
     }
   }
 

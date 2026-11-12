@@ -5,11 +5,35 @@
  */
 
 import { describe, it, expect } from "vitest";
+import type { EnrichedFootprint } from "@/server/services/quick-intake/footprint-types";
 import {
   composeDeterministicReport,
   humanizeValue,
   pillarContentLines,
+  previewIntakeDiagnostic,
+  intakePillarFields,
+  intakeEvidenceEntries,
+  intakeReportContent,
 } from "@/server/services/quick-intake/report-composer";
+
+describe("free report projection", () => {
+  it("preserves the nine-line proposal preview without changing the stored report", () => {
+    const full = Array.from({ length: 10 }, (_, i) => `Ligne ${i + 1}`).join("\n");
+    const original = { narrativeReport: { executiveSummary: "Synthèse", adve: [{ preview: "Aperçu", full: "Texte complet" }], rtis: { pillars: [{ full }] } } };
+    const preview = previewIntakeDiagnostic(original);
+    expect(preview.narrativeReport.adve[0]?.full).toBe("");
+    expect(preview.narrativeReport.rtis.pillars[0]?.full).toContain("Ligne 9");
+    expect(preview.narrativeReport.rtis.pillars[0]?.full).not.toContain("Ligne 10");
+    expect(original.narrativeReport.adve[0]?.full).toBe("Texte complet");
+    expect(original.narrativeReport.rtis.pillars[0]?.full).toBe(full);
+  });
+  it("uses a stable useful field order instead of JSONB order and never counts metadata", () => {
+    const content = { pays: "CM", _private: "secret", _fieldProvenance: { valeurs: "INFERRED" }, narrativeFull: "Texte", valeurs: ["Clarté"], missionStatement: "Réparer avec clarté" };
+    expect(intakePillarFields(content).map(([key]) => key)).toEqual(["missionStatement", "valeurs", "pays"]);
+    expect(pillarContentLines(content).join("\n")).not.toContain("secret");
+    expect(pillarContentLines(content).join("\n")).not.toContain("INFERRED");
+  });
+});
 
 describe("humanizeValue", () => {
   it("humanise chaînes, nombres, tableaux et objets nommés", () => {
@@ -18,6 +42,7 @@ describe("humanizeValue", () => {
     expect(humanizeValue(["transparence", "artisanat"])).toBe("transparence · artisanat");
     expect(humanizeValue({ nom: "Gamme Or", prix: 25000 })).toBe("Gamme Or");
     expect(humanizeValue({ label: "Premium" })).toBe("Premium");
+    expect(humanizeValue({ id: "internal-id", salesChannel: "DIRECT" })).toBe("Canal de vente: Vente directe");
   });
   it("null sur vide/absent — jamais de placeholder inventé", () => {
     expect(humanizeValue("")).toBeNull();
@@ -36,11 +61,57 @@ describe("pillarContentLines", () => {
       footprintScore: { total: 50 },
     });
     expect(lines).toHaveLength(1);
-    expect(lines[0]).toContain("vision");
+    expect(lines[0]).toContain("Vision");
   });
 });
 
 describe("composeDeterministicReport", () => {
+  it("does not conclude absence from unconfigured collectors or ignore a declared offer and channel", () => {
+    const footprint: EnrichedFootprint = {
+      site: null, socials: [], articles: [], channels: [], collectedAt: "2026-10-20T00:00:00.000Z", errors: [],
+      followerCounts: [], press: [], discovery: { attempted: false, queries: [], status: "DEFERRED_NO_KEY" },
+      enrichment: { apify: "DEFERRED", press: "EMPTY", totalMs: 0, errors: [] },
+      score: { total: 0, outOf: 100, measuredWeight: 10, dimensions: ([
+        ["site", 20], ["social", 30], ["reviews", 15], ["press", 10],
+        ["citations", 10], ["email", 10], ["domain", 5], ["perf", 10],
+      ] as const).map(([key, weight]) => ({ key, weight, label: key, measured: key === "press", score: key === "press" ? 0 : null, details: "recette" })) },
+    };
+    const report = composeDeterministicReport({ companyName: "Atelier Kalo", classification: "FRAGILE", compositeScore: 11,
+      extractedValues: { a: { missionStatement: "Réparer avec clarté" }, d: {}, v: { produitsCatalogue: [{ nom: "Ressemelage" }] }, e: { e_channels: "Visites à l'atelier et téléphone" } },
+      pillarScores: { a: 4, d: 2, v: 4, e: 0 }, footprint, sectorLabel: "Services aux particuliers" });
+    expect(report.executiveSummary).not.toContain("vit surtout hors ligne");
+    expect(report.executiveSummary).toContain("9 %");
+    const r = report.rtis.pillars.find(p => p.key === "r")!.full;
+    expect(r).not.toContain("aucun profil social public n'a été trouvé");
+    expect(r).toContain("non mesurés");
+    const i = report.rtis.pillars.find(p => p.key === "i")!.full;
+    expect(i).not.toContain("aucun canal n'est encore formalisé");
+    expect(i).not.toContain("offre » est encore peu documentée");
+  });
+
+  // 4.11.d — recette guidée B : un atelier qui vit de visites et du téléphone
+  // recevait un plan générique (« re-mesurer l'empreinte publique ») et une
+  // affirmation non sourcée (« la preuve marché la moins chère qui existe »).
+  it("relie la fin du plan aux canaux déclarés et n'affirme aucun superlatif non sourcé", () => {
+    const report = composeDeterministicReport({ companyName: "Atelier Kalo", classification: "FRAGILE", compositeScore: 11,
+      extractedValues: { a: { missionStatement: "Réparer avec clarté" }, d: {}, v: { produitsCatalogue: [{ nom: "Ressemelage" }] }, e: { e_channels: "Visites à l'atelier et téléphone" } },
+      pillarScores: { a: 4, d: 2, v: 4, e: 0 }, footprint: null, sectorLabel: "Services aux particuliers" });
+    const s = report.rtis.pillars.find(p => p.key === "s")!.full;
+    expect(s).toContain("Visites à l'atelier et téléphone");
+    expect(s).not.toContain("re-mesurer l'empreinte publique");
+    const t = report.rtis.pillars.find(p => p.key === "t")!.full;
+    expect(t).not.toContain("la moins chère qui existe");
+  });
+
+  it("sans canal déclaré ni empreinte mesurée, la fin du plan reste une question à trancher avec vous", () => {
+    const report = composeDeterministicReport({ companyName: "Marque Y", classification: "LATENT", compositeScore: 5,
+      extractedValues: { a: {}, d: {}, v: {}, e: {} },
+      pillarScores: { a: 1, d: 1, v: 1, e: 1 }, footprint: null, sectorLabel: null });
+    const s = report.rtis.pillars.find(p => p.key === "s")!.full;
+    expect(s).not.toContain("re-mesurer l'empreinte publique");
+    expect(s).toContain("à choisir avec vous");
+  });
+
   it("compose un rapport complet depuis des piliers documentés", () => {
     const report = composeDeterministicReport({
       companyName: "Cimencam",
@@ -115,5 +186,32 @@ describe("composeDeterministicReport", () => {
     expect(i.full).toContain("Plats du jour");
     const s = report.rtis.pillars.find((p) => p.key === "s")!;
     expect(s.full).toContain("communauté");
+  });
+});
+
+describe("report fidelity without model assistance", () => {
+  it("labels all four origins and never calls generated material founder speech", () => {
+    const a = { missionStatement: "Réparer localement", vision: "Leader mondial", citationFondatrice: "À retrouver", valeurs: ["Clarté"], _fieldProvenance: { missionStatement: "SOURCE", vision: "INFERRED", valeurs: "HUMAN" } };
+    expect(intakeEvidenceEntries(a).map(e => e.origin)).toEqual(["SOURCE", "HUMAN", "UNKNOWN", "INFERRED"]);
+    const report = composeDeterministicReport({ companyName: "Atelier", classification: "FRAGILE", compositeScore: 28, extractedValues: { a, d: {}, v: {}, e: {} } });
+    expect(report.adve[0]!.full).toContain("Proposition à valider");
+    expect(report.adve[0]!.full).toContain("Origine non documentée");
+    expect(report.adve[0]!.full).not.toContain("Ce que vous nous avez dit");
+    expect(report.executiveSummary).toContain("complétude du dossier : 28/100");
+    expect(report.adve[1]!.full).not.toContain("collecte publique n'a rien trouvé");
+  });
+  it("excludes narrative and edition metadata from evidence rather than counting them as fields", () => {
+    expect(intakeEvidenceEntries({ confidence: .8, currentVersion: 6, narrativeFull: "Synthèse générée", _fieldProvenance: { x: "SOURCE" }, fieldCertainty: { x: "DECLARED" } })).toEqual([]);
+  });
+});
+
+describe("historical report read projection", () => {
+  it("keeps the stored content unchanged and does not certify legacy SOURCE on regeneration", () => {
+    const content = { missionStatement: "Reçu ou généré autrefois", valeurs: ["Clarté"], _fieldProvenance: { missionStatement: "SOURCE", valeurs: "HUMAN" } };
+    const before = JSON.stringify(content);
+    expect(intakeReportContent(content, "a", 0)._fieldProvenance).toEqual({ missionStatement: "UNKNOWN", valeurs: "HUMAN" });
+    expect(intakeReportContent(content, "a", undefined)._fieldProvenance).toEqual({ missionStatement: "UNKNOWN", valeurs: "HUMAN" });
+    expect(intakeReportContent(content, "a", 1)).toBe(content);
+    expect(JSON.stringify(content)).toBe(before);
   });
 });

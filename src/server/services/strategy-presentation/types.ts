@@ -24,6 +24,8 @@
  * l'auto-trigger pendant l'enrichissement Oracle — cf. ADR-0014).
  */
 
+import type { FinancialMetricContext } from "@/domain/unit-economics";
+
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
 import type { BrandAssetKind } from "@/domain/brand-asset-kinds";
 import type { CultIndexTier } from "@/domain/cult-index-tier";
@@ -216,6 +218,7 @@ export function getSectionsByTier(tier: SectionTier): SectionMeta[] {
 export interface ExecutiveSummarySection {
   vector: AdvertisVector;
   classification: BrandClassification;
+  revealedScore?: { force: number; tier: string; coveragePct: number; epreuveCount: number; computedAt: string } | null;
   /**
    * Cult Index — score /100 + palier de maturité culturelle.
    *
@@ -239,6 +242,7 @@ export interface ExecutiveSummarySection {
 }
 
 export interface ContexteDefiSection {
+  market: {countryCode:string|null; region:string|null; scaleLabel:string|null};
   businessContext: {
     sector: string | null;
     businessModel: string | null;
@@ -263,6 +267,7 @@ export interface ContexteDefiSection {
   } | null;
   personas: Array<{
     nom: string;
+    actorRoles?: string[];
     trancheAge: string;
     csp: string;
     insightCle: string;
@@ -386,6 +391,7 @@ export interface PlanActivationSection {
 }
 
 export interface ProductionLivrablesSection {
+  proposedAssets?: Array<{ asset: string; type: string; usage: string }>;
   missions: Array<{
     title: string;
     status: string;
@@ -414,6 +420,8 @@ export interface MediasDistributionSection {
     name: string;
     category: string;
     budget: number | null;
+    budgetLabel?: string | null;
+    proposed?: boolean;
     driverName: string | null;
   }>;
 }
@@ -424,6 +432,12 @@ export interface KpisMesureSection {
     metricType: string;
     target: string;
     frequency: string;
+    qualification?: "PROPOSED" | "DECLARED";
+    definition?: string;
+    unit?: string;
+    observationWindow?: string;
+    targetContext?: string;
+    sourceNotes?: string;
   }>;
   devotion: {
     spectateur: number;
@@ -462,17 +476,24 @@ export interface BudgetSection {
     cac: number | null;
     ltv: number | null;
     ltvCacRatio: number | null;
+    commentaire?: string | null;
     margeNette: number | null;
     roiEstime: number | null;
     budgetCom: number | null;
     caVise: number | null;
+    paybackPeriod?: number | null;
+    pointMort?: string | null;
+    currency?: string;
+    _financialContext?: FinancialMetricContext;
   } | null;
   campaignBudgets: Array<{
     name: string;
     budget: number | null;
+    budgetCurrency?: string;
     status: string;
   }>;
-  totalBudget: number;
+  totalBudget: number | null;
+  campaignBudgetSummary?: import("@/lib/strategy/roadmap-routes").CampaignBudgetSummary;
   /**
    * Phase 18 (ADR-0043) — Budget annuel/stratégique global, lu depuis
    * `pillarS.globalBudget`. Permet à une marque BOOT (sans Campaign
@@ -480,6 +501,9 @@ export interface BudgetSection {
    * que l'opérateur ait chiffré son enveloppe via `OPERATOR_AMEND_PILLAR`.
    */
   globalBudget: number | null;
+  strategyBudgetSummary?: import("@/lib/types/pillar-schemas").InitiativeBudgetSummary;
+  budgetByDevotion?: Record<string, number>;
+  devotionFunnel?: Array<Record<string, unknown>>;
   /**
    * Phase 18 (ADR-0043) — Ventilation budgétaire par poste, lu depuis
    * `pillarS.budgetBreakdown`. Optionnel, présent si renseigné.
@@ -591,6 +615,15 @@ export interface ConditionsEtapesSection {
 // ─── NEW SECTIONS (v3 Oracle enrichment) ────────────────────────────────────
 
 export interface PropositionValeurSection {
+  valueExchanges?: Array<{
+    actor: string;
+    actorRoles: string[];
+    productNames: string[];
+    valueToBrand: string[];
+    valueToActor: string[];
+    actorCosts: string[];
+    dependencyConditions: string[];
+  }>;
   pricing: { strategy: string; ladderDescription: string; competitorComparison: string | null } | null;
   proofPoints: string[];
   guarantees: string[];
@@ -599,14 +632,18 @@ export interface PropositionValeurSection {
     cac: number | null;
     ltv: number | null;
     ltvCacRatio: number | null;
+    commentaire?: string | null;
+    currency?: string;
+    _financialContext?: FinancialMetricContext;
   } | null;
 }
 
 export interface ExperienceEngagementSection {
-  touchpoints: Array<{ nom: string; canal: string; qualite: string; stadeAarrr: string }>;
+  touchpoints: Array<{ nom: string; canal: string; role?: string; qualite: string; stadeAarrr: string }>;
   rituels: Array<{ nom: string; frequence: string; description: string; adoptionScore: number | null }>;
   devotionPathway: {
     currentDistribution: Record<string, number>;
+    score?: number | null;
     conversionTriggers: Array<{ from: string; to: string; trigger: string }>;
     barriers: string[];
   } | null;
@@ -618,7 +655,7 @@ export interface SwotInterneSection {
   faiblesses: string[];
   menaces: string[];
   opportunites: string[];
-  mitigations: Array<{ risque: string; action: string; priorite: string }>;
+  mitigations: Array<{ risque: string; action: string; priorite: string; owner?: string; timeline?: string; investment?: string }>;
   resilienceScore: number | null;
   artemisResults: Array<{ framework: string; score: number | null; prescriptions: string[] }>;
 }
@@ -627,7 +664,7 @@ export interface SwotExterneSection {
   marche: { tam: string | null; sam: string | null; som: string | null; growth: string | null };
   concurrents: Array<{ nom: string; forces: string[]; faiblesses: string[]; partDeMarche: string | null }>;
   tendances: string[];
-  brandMarketFit: { score: number | null; gaps: string[]; opportunities: string[] } | null;
+  brandMarketFit: { score: number | null; scoreMax?: number | null; provenance?: string; gaps: string[]; opportunities: string[] } | null;
   validationTerrain: string | null;
 }
 
@@ -644,11 +681,12 @@ export interface CatalogueActionsSection {
 }
 
 export interface FenetreOvertonSection {
+  positioning?: import("@/domain/overton-positioning").OvertonPositioning;
   perceptionActuelle: string | null;
   perceptionCible: string | null;
   ecart: string | null;
   strategieDeplacment: Array<{ etape: string; action: string; canal: string; horizon: string }>;
-  roadmap: Array<{ phase: string; objectif: string; livrables: string[]; budget: number | null; duree: string }>;
+  roadmap: Array<{ phase: string; objectif: string; livrables: string[]; budget: number | null; budgetSummary?: import("@/lib/types/pillar-schemas").InitiativeBudgetSummary; duree: string; canonType?: string; cadence?: string; actionRefs?: string[] }>;
   jalons: Array<{ date: string; milestone: string; critereSucces: string }>;
   // ADR-0088 — 3 trajectoires de roadmap pure-computed (S.computed.roadmapRoutes)
   // ADR-0089 — chaque route porte son jeu de stratégie calculé + état sélectionné
@@ -657,12 +695,15 @@ export interface FenetreOvertonSection {
     label: string;
     recommended: boolean;
     selected: boolean;
-    projectedGrowthPct: number;
+    projectedGrowthPct: number | null;
     projectedRevenue: number | null;
-    targetCultIndex: number;
+    targetCultIndex: number | null;
     description: string;
     initiativeCount: number | null;
+    initiatives?: Array<{ id: string; action: string; objectif?: string; timeframe?: string; budget?: number; budgetRange?: { min: number; max: number }; budgetPeriod?: string; budgetBasis?: string; campaignCanonType?: string; cadence?: string }>;
     totalBudget: number | null;
+    budgetSummary?: import("@/lib/types/pillar-schemas").InitiativeBudgetSummary;
+    projectionAssumptions?: { riskCoverage?: number; baseCultIndex?: number };
     riskCoverage: number | null;
   }>;
   // ADR-0089 — ambition retenue (S.computed.selectedRouteKey, default TARGET)
@@ -670,9 +711,11 @@ export interface FenetreOvertonSection {
   // ADR-0088 — tableau de bord calculé de S (S.computed agrégations)
   computedDashboard: {
     totalBudget: number | null;
+    budgetSummary?: import("@/lib/types/pillar-schemas").InitiativeBudgetSummary;
     riskCoverage: number | null;
     selectedInitiativeCount: number | null;
     coherenceScore: number | null;
+    coherenceSummary?: { total: number; valid: number; invalid: number; skipped: number; score: number };
     budgetByPhase: Array<{ phase: string; budget: number }>;
   } | null;
 }
@@ -699,8 +742,10 @@ export interface StrategyPresentationDocument {
     brandName: string;
     operatorName: string | null;
     generatedAt: string;
+    stalePillars?: string[];
     vector: AdvertisVector;
     classification: BrandClassification;
+    revealedScore?: ExecutiveSummarySection["revealedScore"];
   };
   sections: {
     // Phase 1: ADVE

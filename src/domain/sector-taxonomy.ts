@@ -26,7 +26,7 @@ export interface CanonicalSector {
  * Ordre = priorité de départage en cas d'égalité de score.
  */
 export const SECTOR_TAXONOMY: readonly CanonicalSector[] = [
-  { code: "FOOD", slug: "food", label: "Alimentation & boissons", keywords: ["alimentation", "aliment", "boisson", "food", "pates", "snack", "nutrition", "brasserie", "jus", "eau minerale", "biscuit", "confiserie", "lait"] },
+  { code: "FOOD", slug: "food", label: "Alimentation & boissons", keywords: ["alimentation", "aliment", "boisson", "food", "foodtech", "culinaire", "pates", "snack", "nutrition", "brasserie", "jus", "eau minerale", "biscuit", "confiserie", "lait", "laitier"] },
   { code: "AGRO", slug: "agro", label: "Agro-industrie & agriculture", keywords: ["agro", "agriculture", "agroalimentaire", "agro-industrie", "elevage", "ferme", "cacao", "cafe", "coton", "plantation", "semence"] },
   { code: "FMCG", slug: "fmcg", label: "FMCG (grande consommation)", keywords: ["fmcg", "grande consommation", "biens de consommation", "pgc", "produits menagers", "hygiene"] },
   { code: "MODE", slug: "mode", label: "Mode & beauté", keywords: ["mode", "beaute", "fashion", "vetement", "textile", "cosmetique", "maquillage", "pret-a-porter", "chaussure", "bijou", "parfum", "coiffure"] },

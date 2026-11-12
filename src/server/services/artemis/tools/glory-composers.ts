@@ -192,7 +192,7 @@ export function composeSocialCopy(ctx: GloryComposerContext): Blob {
   // Canon = `onNeditPas` (schema) ; `onNeDitPas` toléré (données legacy).
   const onNeDitPas = strArr(pick(ton, "onNeditPas") ?? pick(ton, "onNeDitPas"));
   const slogan = str(pick(ling, "slogan"));
-  const lexique = strArr(pick(ling, "lexique"));
+  const lexique = names(arr(pick(ling, "lexiquePropre")), ["word"]).concat(strArr(pick(ling, "lexique")));
   const promesse = str(pick(d, "promesseMaitre")) ?? str(pick(d, "positionnement"));
   const elevator = str(pick(a, "originMythElevator")) ?? str(pick(a, "noyauIdentitaire"));
   const rituels = names(arr(pick(e, "rituels")));
@@ -284,7 +284,7 @@ export function composeContentCalendar(ctx: GloryComposerContext): Blob {
   const ling = (pick(d, "assetsLinguistiques") ?? {}) as Blob;
   const ton = (pick(d, "tonDeVoix") ?? {}) as Blob;
   const slogan = str(pick(ling, "slogan"));
-  const lexique = strArr(pick(ling, "lexique"));
+  const lexique = names(arr(pick(ling, "lexiquePropre")), ["word"]).concat(strArr(pick(ling, "lexique")));
   const formats = strArr(pick(i, "formatsDisponibles"));
   const rituels = names(arr(pick(e, "rituels")));
   const assets = names(arr(pick(i, "assetsProduisibles")), ["asset", "name", "nom"]);
@@ -432,8 +432,20 @@ export async function composeBenchmarkReferenceFinder(strategyId: string): Promi
   };
 }
 
-const ASYNC_GLORY_COMPOSERS: Record<string, (strategyId: string) => Promise<Blob>> = {
+const ASYNC_GLORY_COMPOSERS: Record<string, (strategyId: string, input: Record<string, string>) => Promise<Blob>> = {
   "benchmark-reference-finder": composeBenchmarkReferenceFinder,
+  "pricing-strategy-advisor": async (strategyId, input) => {
+    const { composeCommercialPricing } = await import("./commercial-offer");
+    return composeCommercialPricing(strategyId, input);
+  },
+  "devis-generator": async (strategyId, input) => {
+    const { composeCommercialQuote } = await import("./commercial-offer");
+    return composeCommercialQuote(strategyId, input);
+  },
+  "break-even-calculator": async (strategyId, input) => {
+    const { composeSourcedBreakEven } = await import("@/server/services/financial-brain/break-even-source");
+    return composeSourcedBreakEven(strategyId, input);
+  },
 };
 
 // ── Registry + dispatch ──────────────────────────────────────────────────────
@@ -464,11 +476,12 @@ export interface DeterministicGloryResult {
 export async function composeGloryDeterministic(
   slug: string,
   strategyId: string,
+  input: Record<string, string> = {},
 ): Promise<DeterministicGloryResult> {
   // Composer async adossé à Seshat (lit le corpus DB, pas l'ADVERTIS seul).
   const asyncComposer = ASYNC_GLORY_COMPOSERS[slug];
   if (asyncComposer) {
-    const output = await asyncComposer(strategyId);
+    const output = await asyncComposer(strategyId, input);
     return { output, ok: true };
   }
 

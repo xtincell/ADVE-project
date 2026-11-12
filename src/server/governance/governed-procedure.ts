@@ -31,7 +31,7 @@ import { findCapability, getManifest } from "./registry";
 import { intentKindExists } from "./intent-kinds";
 import { assertPostConditions, PostconditionFailedError } from "./post-conditions";
 import { assertCollaboratorMayEmit, CollaboratorWriteVetoError } from "./collaborator-firewall";
-import { canAccessStrategy } from "@/server/services/operator-isolation";
+import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import type { Capability, NeteruManifest, ReadinessGateName } from "./manifest";
 import {
   OracleError,
@@ -153,16 +153,10 @@ export function governedProcedure<I extends AnyZod, O extends AnyZod>(
     const guardedStrategyId = extractStrategyId(input);
     if (guardedStrategyId && !PUBLIC_INTENT_KINDS.has(opts.kind)) {
       const userId = ctx.session?.user?.id ?? null;
+      // Auth.js ne projette pas operatorId dans la session. Relire le contexte
+      // canonique courant évite le faux refus staff et un rattachement JWT périmé.
       const allowed = userId
-        ? await canAccessStrategy(guardedStrategyId, {
-            operatorId:
-              ((ctx.session?.user as unknown as Record<string, unknown> | undefined)?.operatorId as
-                | string
-                | null
-                | undefined) ?? null,
-            userId,
-            role: ctx.session?.user?.role ?? "USER",
-          })
+        ? await canAccessStrategy(guardedStrategyId, await getOperatorContext(userId, ctx.db))
         : false;
       if (!allowed) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette marque." });

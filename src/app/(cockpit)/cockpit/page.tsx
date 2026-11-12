@@ -12,7 +12,6 @@ import { SkeletonPage, SkeletonCard } from "@/components/shared/loading-skeleton
 import { Timeline } from "@/components/shared/timeline";
 import { Sparkline } from "@/components/shared/sparkline";
 import { PipelineProgress, buildPipelineSteps } from "@/components/shared/pipeline-progress";
-import { AiBadge } from "@/components/shared/ai-badge";
 import { useStrategy } from "@/components/cockpit/strategy-context";
 import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { OvertonTeaser } from "@/components/cockpit/intelligence/overton-panel";
@@ -582,7 +581,7 @@ export default function CockpitDashboard() {
       {/* Prescriptions Mestor */}
       {showSection("prescriptions") && (
         <div className="ck-presc">
-          <div className="ck-presc__head"><Brain /><h3>Recommandations</h3><AiBadge /></div>
+          <div className="ck-presc__head"><Brain /><h3>Recommandations</h3></div>
           {mestorInsightsQuery.isLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -723,12 +722,23 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
   });
 
   const anyLoading = autoFillAll.isPending || cascadeRTIS.isPending || enrichAll.isPending;
+  const sourceResults = Object.values(enrichAll.data ?? {});
+  const sourceFailures = sourceResults.filter((result) => result.error || result.llmError);
+  const sourceProposals = sourceResults.reduce((sum, result) => sum + result.recommendations.length, 0);
+  const fillFailures = (autoFillAll.data ?? []).flatMap((result) => result.failed);
+  const filledFields = (autoFillAll.data ?? []).reduce((sum, result) => sum + result.filled.length, 0);
+  const cascadeFailures = (cascadeRTIS.data?.results ?? []).filter((result) => result.error);
+  const resetFeedback = () => {
+    autoFillAll.reset();
+    cascadeRTIS.reset();
+    enrichAll.reset();
+  };
 
   if (!canOperate) return null;
 
   return (
     <div className="ck-batch">
-      <span className="ck-batch__lbl">Actions</span>
+      <span className="ck-batch__lbl">Analyse assistée · facultative</span>
 
       <Tooltip
         multiline
@@ -742,7 +752,7 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
           </span>
         }
       >
-        <button className="ck-chip ck-chip--accent" onClick={() => autoFillAll.mutate({ strategyId })} disabled={anyLoading}>
+        <button className="ck-chip ck-chip--accent" onClick={() => { resetFeedback(); autoFillAll.mutate({ strategyId }); }} disabled={anyLoading}>
           {autoFillAll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles />}
           Enrichir ADVE
         </button>
@@ -753,16 +763,16 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
         side="bottom"
         content={
           <span className="block">
-            <strong className="block text-2xs font-bold text-info">Lancer R + T</strong>
+            <strong className="block text-2xs font-bold text-info">Actualiser la stratégie</strong>
             <span className="mt-0.5 block text-2xs leading-snug">
-              Déclenche l'analyse stratégique (Risque, Marché) puis génère des recommandations pour enrichir votre fondation de marque. Requiert une fondation au moins enrichie.
+              Analyse les risques et le marché, puis actualise les recommandations, les possibilités d’innovation et la feuille de route. Requiert une fondation au moins enrichie.
             </span>
           </span>
         }
       >
-        <button className="ck-chip ck-chip--info" onClick={() => cascadeRTIS.mutate({ strategyId, updateADVE: true })} disabled={anyLoading}>
+        <button className="ck-chip ck-chip--info" onClick={() => { resetFeedback(); cascadeRTIS.mutate({ strategyId, updateADVE: true }); }} disabled={anyLoading}>
           {cascadeRTIS.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap />}
-          Lancer R+T
+          Actualiser la stratégie
         </button>
       </Tooltip>
 
@@ -778,14 +788,36 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
           </span>
         }
       >
-        <button className="ck-chip ck-chip--muted" onClick={() => enrichAll.mutate({ strategyId })} disabled={anyLoading}>
+        <button className="ck-chip ck-chip--muted" onClick={() => { resetFeedback(); enrichAll.mutate({ strategyId }); }} disabled={anyLoading}>
           {enrichAll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Database />}
-          Sources
+          Analyser les sources avec l’IA
         </button>
       </Tooltip>
 
-      {(autoFillAll.isSuccess || cascadeRTIS.isSuccess || enrichAll.isSuccess) && (
-        <span className="ck-batch__done"><CheckCircle /> Terminé</span>
+      {enrichAll.isSuccess && (
+        <p role={sourceFailures.length ? "alert" : "status"} className={sourceFailures.length ? "w-full text-xs text-warning" : "ck-batch__done"}>
+          {sourceFailures.length ? <AlertTriangle className="inline h-3.5 w-3.5" /> : <CheckCircle />}
+          {sourceFailures.length ? ` Analyse incomplète : ${sourceFailures.length} volet(s) en échec. ` : " Analyse terminée. "}
+          {sourceProposals} proposition(s) à examiner.
+          {sourceFailures.length ? " Vous pouvez poursuivre manuellement ou réessayer cette analyse." : ""}
+        </p>
+      )}
+      {autoFillAll.isSuccess && (
+        <p role={fillFailures.length ? "alert" : "status"} className={fillFailures.length ? "w-full text-xs text-warning" : "ck-batch__done"}>
+          {filledFields} champ(s) renseigné(s).
+          {fillFailures.length ? ` ${fillFailures.length} champ(s) restent à renseigner. Vous pouvez les compléter manuellement.` : ""}
+          {(autoFillAll.data ?? []).some((result) => result.needsHuman.length > 0) ? " Une saisie manuelle reste nécessaire." : ""}
+        </p>
+      )}
+      {cascadeRTIS.isSuccess && (
+        <p role={cascadeFailures.length ? "alert" : "status"} className={cascadeFailures.length ? "w-full text-xs text-warning" : "ck-batch__done"}>
+          {cascadeFailures.length ? `Actualisation incomplète : ${cascadeFailures[0]?.error}` : cascadeRTIS.data?.skipped ? "La stratégie est déjà à jour." : `${cascadeRTIS.data?.results.filter((result) => result.updated).length ?? 0} volet(s) actualisé(s).`}
+        </p>
+      )}
+      {(autoFillAll.error || cascadeRTIS.error || enrichAll.error) && (
+        <p role="alert" className="w-full text-xs text-error">
+          {autoFillAll.error?.message ?? cascadeRTIS.error?.message ?? enrichAll.error?.message}
+        </p>
       )}
     </div>
   );

@@ -11,7 +11,21 @@ import {
   diagnosticBelongsToFeed,
   mapDiagnosticToFeedItem,
   mapExternalArticleToFeedItem,
+  mapSignalToFeedItem,
 } from "@/server/services/jehuty/mappers";
+
+describe("qualifications declared in the actual source", () => {
+  const signal = { id: "signal-a", strategyId: "s1", type: "SCORE_DECLINE", createdAt: new Date() };
+  it("keeps missing qualifications unknown instead of urgent, low impact and 50% confidence", () => {
+    expect(mapSignalToFeedItem({ ...signal, data: {} }, undefined)).toMatchObject({ urgency: null, impact: null, confidence: null });
+  });
+  it("recognizes the declared weak-signal urgency and retains a real zero confidence", () => {
+    expect(mapSignalToFeedItem({ ...signal, type: "WEAK_SIGNAL_ALERT", data: { urgency: "CRITICAL", confidence: 0 } }, undefined)).toMatchObject({ urgency: "NOW", impact: null, confidence: 0 });
+  });
+  it("uses a valid severity and refuses a malformed confidence", () => {
+    expect(mapSignalToFeedItem({ ...signal, data: { severity: "HIGH", confidence: 75 } }, undefined)).toMatchObject({ urgency: "NOW", impact: "HIGH", confidence: null });
+  });
+});
 
 describe("diagnosticBelongsToFeed — anti-fuite cross-tenant", () => {
   it("mode marque : un événement funnel SANS strategyId est exclu (le cas Motion19)", () => {
@@ -71,4 +85,15 @@ describe("mapExternalArticleToFeedItem — « Le monde dehors »", () => {
     expect(item.summary).toContain("Les Numériques");
     expect(item.createdAt).toContain("2026-07-18");
   });
+});
+
+describe("external observations remain readable beyond the editorial excerpt",()=>{
+ it("retains the six-question measurements and uses the human source label",()=>{
+  const sourceLabel="Quiz Palais — déclarations retenues";
+  const item=mapSignalToFeedItem({id:"external-quiz",strategyId:"s1",type:"EXTERNAL_METRIC",createdAt:new Date(),data:{sourceType:"QUIZ",sourceLabel,observationId:"receipt:"+"x".repeat(150),sourceVersion:"palais-6-radar-v1",observedAt:"2026-10-13T23:00:00.000Z",metrics:[{metric:"Q6 · Ton radar · Personne ne connaît encore",value:1}]}},undefined);
+  expect(item.summary.length).toBeLessThanOrEqual(300);
+  expect(item).toHaveProperty("observation",expect.stringContaining("Q6 · Ton radar · Personne ne connaît encore : 1."));
+  expect(item.source).toBe(sourceLabel);expect(item.confidence).toBeNull();
+  expect(item.category).toBe("MARKET_SIGNAL");
+ });
 });

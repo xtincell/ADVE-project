@@ -17,6 +17,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/config";
 import { renderIntakePdf } from "@/server/services/value-report-generator/intake-pdf";
+import { readIntakeReportAccess } from "@/server/services/quick-intake/paid-fulfillment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,44 +44,26 @@ export async function GET(request: Request, ctx: RouteContext): Promise<Response
   // ── Auth: paid OR admin ──
   const session = await auth().catch(() => null);
   const isAdmin = session?.user?.role === "ADMIN";
-  if (!isAdmin) {
-    const paid = await db.intakePayment.findFirst({
-      where: { intakeToken: token, status: "PAID" },
-      select: { id: true },
-    });
-    if (!paid) {
+  const access = await readIntakeReportAccess(token, session?.user?.role);
+  if (!access.unlocked) {
       return NextResponse.json(
         { error: "PDF verrouillé — déclencher d'abord le paiement (ou être admin)." },
         { status: 402 },
       );
-    }
-  } else if (!(await db.intakePayment.findFirst({ where: { intakeToken: token, status: "PAID" } }))) {
-    // Admin bypass: write a synthetic PAID row so the page renders in paid state.
-    // (renderIntakePdf needs an existing paid ref to pass in the page URL.)
-    await db.intakePayment.create({
-      data: {
-        reference: `lafusee_admin_pdf_${Date.now()}`,
-        intakeToken: token,
-        amount: 0,
-        currency: "EUR",
-        provider: "ADMIN_BYPASS",
-        status: "PAID",
-        paidAt: new Date(),
-      },
-    });
   }
 
   // ── Build the base URL the puppeteer instance will hit ──
   const url = new URL(request.url);
-  const baseUrl = `${url.protocol}//${url.host}`;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? url.origin;
 
   // ── Render ──
   let result;
   try {
-    result = await renderIntakePdf({ token, baseUrl, format: "A4" });
+    result = await renderIntakePdf({ token, baseUrl, format: "A4",
+      ...(isAdmin ? { sessionCookieHeader: request.headers.get("cookie") ?? "" } : {}) });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Échec génération PDF";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[intake-pdf] export failed", err instanceof Error ? err.name : "UnknownError");
+    return NextResponse.json({ error: "Le rapport ne peut pas être exporté pour le moment. Réessayez depuis votre diagnostic." }, { status: 503 });
   }
 
   // ── Stream the buffer ──

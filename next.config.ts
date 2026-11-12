@@ -31,10 +31,17 @@ const nextConfig: NextConfig = {
   // Don't advertise the framework (site-prober finding: x-powered-by leak).
   poweredByHeader: false,
   async headers() {
-    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+    return [
+      { source: "/:path*", headers: SECURITY_HEADERS },
+      { source: "/api/intake/:token/documents/:uploadId", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+    ];
   },
   // Next 16 : reactCompiler stabilized — moved out of `experimental`.
   reactCompiler: true,
+  // A permitted 10 MiB original becomes ~14 MiB in the JSON/base64 envelope.
+  // Next's default 10 MiB proxy clone truncated it before the upload handler.
+  // Keep the file admission cap unchanged; this bounds only the wire buffer.
+  experimental: { proxyClientMaxBodySize: 16 * 1024 * 1024 },
   /**
    * Phase 16 (ADR-0025) — Anubis providers optionnels.
    *
@@ -50,7 +57,19 @@ const nextConfig: NextConfig = {
    * `mjml` retiré 2026-06 : remplacé par un renderer déterministe in-repo
    * (anubis/mjml-render.ts) — 0 dépendance, 0 vulnérabilité transitive.
    */
-  serverExternalPackages: ["web-push", "puppeteer"],
+  // PDF parsing loads a sibling worker at runtime. Bundling it into a Next
+  // chunk breaks that path even though direct Node/unit extraction works.
+  serverExternalPackages: ["web-push", "puppeteer", "pdf-parse", "@napi-rs/canvas", "jsdom"],
+  outputFileTracingIncludes: {
+    "/*": [
+      "./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
+      // pdfjs loads this optional native dependency via createRequire; the
+      // standalone tracer omits it even when it is externalized. Include
+      // both its JS loader and the binary installed for the build platform.
+      "./node_modules/@napi-rs/canvas/**/*",
+      "./node_modules/@napi-rs/canvas-*/**/*",
+    ],
+  },
   // Standalone output — produces `.next/standalone/server.js`, a minimal
   // self-contained Node server (deps traced via nft). This is what the
   // Coolify Docker image runs (`node server.js`, cf. Dockerfile).

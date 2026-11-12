@@ -220,7 +220,7 @@ export const ORACLE_DISTINCTIVE_SEQUENCES: GlorySequenceDef[] = [
     key: "DEVOTION-LADDER",
     family: "ORACLE_DISTINCTIVE",
     name: "Devotion Ladder — Hiérarchie superfans",
-    description: "Échelle visiteur→suiveur→fan→superfan→ambassadeur (extends PLAYBOOK-E + fw-09 ; tools R4 ACTIVE)",
+    description: "Six paliers, du spectateur à l’évangéliste, et les rituels qui relient chaque étape.",
     steps: [
       // Phase 13 R4 — tools désormais ACTIVE (closure résidu B5)
       // Audit 2026-06-11 : slugs dédupliqués — versions phase13 AVEC outputSchema

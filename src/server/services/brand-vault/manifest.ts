@@ -6,13 +6,14 @@
  * avec lineage hash-chain via IntentEmission.
  *
  * Sous tutelle MESTOR — toute mutation respecte LOI 1 (point unique de mutation
- * via Intent kinds CREATE_BRAND_ASSET / SELECT_BRAND_ASSET / SUPERSEDE_BRAND_ASSET
- * traités par mestor.commandant). Les capabilities listées ici sont les helpers
+ * via les quatre commandes cataloguées traitées par artemis.commandant). Les capabilities listées ici sont les helpers
  * de bas niveau exposés aux handlers Mestor + Ptah pour matérialisation post-forge.
  */
 import { z } from "zod";
 import { defineManifest } from "@/server/governance/manifest";
 import { PillarKeySchema } from "@/domain/pillars";
+import { assetTransferInputSchema } from "@/domain/source-original";
+import { PublicBrandPublicationInput, AnyPublicBrandEdition } from "@/domain/public-brand";
 
 const StringId = z.string().min(1);
 
@@ -22,7 +23,7 @@ const FamilyEnum = z.enum(["INTELLECTUAL", "MATERIAL", "HYBRID"]);
 
 const CreateBrandAssetInput = z.object({
   strategyId: StringId,
-  operatorId: StringId,
+  operatorId: StringId.nullable(),
   name: z.string().min(1),
   kind: z.string().min(1),
   format: z.string().optional(),
@@ -57,10 +58,37 @@ const BrandAssetOutput = z.object({
 export const manifest = defineManifest({
   service: "brand-vault",
   governor: "MESTOR",
-  version: "1.0.0",
-  acceptsIntents: [],
+  version: "1.3.0",
+  acceptsIntents: ["SELECT_BRAND_ASSET", "PROMOTE_BRAND_ASSET_TO_ACTIVE", "SUPERSEDE_BRAND_ASSET", "ARCHIVE_BRAND_ASSET"],
   emits: [],
   capabilities: [
+    { name: "transferAssetFile", inputSchema: assetTransferInputSchema.extend({ actorId: StringId, intentId: StringId }),
+      outputSchema: z.object({ assetId: StringId, state: z.enum(["PENDING", "STORED"]), contentHash: z.string(),
+        byteLength: z.number(), receivedParts: z.array(z.number()), partCount: z.number(), chunkBytes: z.number(), receivedAt: z.string() }),
+      sideEffects: ["DB_READ", "DB_WRITE", "FILE_WRITE", "EXTERNAL_API"], idempotent: true,
+      missionContribution: "DIRECT_BOTH" },
+    {
+      name: "previewPublicBrand",
+      inputSchema: z.object({ strategyId: StringId, actorId: StringId }),
+      outputSchema: z.unknown(),
+      sideEffects: ["DB_READ"],
+      missionContribution: "DIRECT_BOTH",
+    },
+    {
+      name: "publishPublicBrand",
+      inputSchema: z.object({ strategyId: StringId, actorId: StringId, intentId: StringId, input: PublicBrandPublicationInput }),
+      outputSchema: BrandAssetOutput,
+      sideEffects: ["DB_WRITE"],
+      idempotent: true,
+      missionContribution: "DIRECT_BOTH",
+    },
+    {
+      name: "readPublicBrand",
+      inputSchema: z.object({ slug: StringId }),
+      outputSchema: AnyPublicBrandEdition.nullable(),
+      sideEffects: ["DB_READ"],
+      missionContribution: "DIRECT_BOTH",
+    },
     {
       name: "createBrandAsset",
       inputSchema: CreateBrandAssetInput,
@@ -107,8 +135,8 @@ export const manifest = defineManifest({
         promoteToActive: z.boolean().optional(),
       }),
       outputSchema: BrandAssetOutput,
-      sideEffects: ["DB_WRITE", "EVENT_EMIT"],
-      idempotent: false,
+      sideEffects: ["DB_WRITE"],
+      idempotent: true,
       missionContribution: "DIRECT_BOTH",
     },
     {
@@ -116,6 +144,7 @@ export const manifest = defineManifest({
       inputSchema: z.object({
         brandAssetId: StringId,
         promotedById: StringId,
+        force: z.boolean().optional(),
       }),
       outputSchema: BrandAssetOutput,
       sideEffects: ["DB_WRITE"],
@@ -125,13 +154,14 @@ export const manifest = defineManifest({
     {
       name: "supersede",
       inputSchema: z.object({
-        previousAssetId: StringId,
+        oldAssetId: StringId,
+        newAssetInput: CreateBrandAssetInput.extend({ operatorId: StringId.nullable().optional() }),
         supersededById: StringId,
         reason: z.string().optional(),
       }),
-      outputSchema: BrandAssetOutput,
+      outputSchema: z.object({ oldAsset: BrandAssetOutput, newAsset: BrandAssetOutput }),
       sideEffects: ["DB_WRITE"],
-      idempotent: true,
+      idempotent: false,
       missionContribution: "DIRECT_BOTH",
     },
     {

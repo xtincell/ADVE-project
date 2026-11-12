@@ -1,10 +1,16 @@
+import { brandMarketScope } from "@/domain/brand-market-scope";
 import { z } from "zod";
+import { readBrandOvertonPositioning } from "@/server/services/seshat/overton-graph";
+import type { OvertonPositioning } from "@/domain/overton-positioning";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { found } from "../entity-access";
 import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { checkPaidTier } from "@/server/services/glory-tools/tier-gate";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import { getOrBuildBrandFeed } from "@/server/services/seshat/external-feeds/brand-feed";
+import { ADVE_KEYS, ADVE_STORAGE_KEYS, readOvertonStrategyPlan } from "@/domain";
+import { evaluatePillarReadiness } from "@/server/governance/pillar-readiness";
 import {
   shapeCommunityDashboard,
   latestFollowerPerPlatform,
@@ -12,7 +18,7 @@ import {
   EVANGELISTE_THRESHOLD,
   type CommunityDashboard,
 } from "@/server/services/community-dashboard";
-import type { ConnectorResult, OvertonRadarSignal } from "@/domain";
+import type { ConnectorResult, OvertonRadarSignal, OvertonStrategyPlan } from "@/domain";
 /* lafusee:governed-active — router read-only (queries dashboard/overtonSignal/getCommunityDashboard uniquement) ; checkPaidTier = garde tier utilitaire, aucune mutation à gouverner */
 
 /** Founder community dashboard result : paid-tier-denial arm (FR32) over the DTO. */
@@ -28,7 +34,7 @@ export type CommunityDashboardResult =
  */
 export type OvertonSignalResult =
   | { state: "TIER_GATE_DENIED"; configureUrl: string }
-  | ConnectorResult<OvertonRadarSignal>;
+  | (ConnectorResult<OvertonRadarSignal> & { strategyPlan?: OvertonStrategyPlan; positioning?: OvertonPositioning });
 
 /**
  * Read the canonical sector slug for a Strategy from `businessContext.sector`
@@ -47,7 +53,7 @@ function extractSectorSlug(businessContext: unknown): string | null {
 /**
  * Extract a brand orientation vector (tag → strength in [0,1]) from pillar D
  * (positioning) content. Tries an `axe` / `tags` object. Absent → `{}` (the
- * radar renders a centred brand polygon — honest "no positioning vector yet",
+ * radar keeps the brand polygon absent — honest "no positioning vector yet",
  * never a fabricated orientation).
  */
 function extractBrandTags(pillarDContent: unknown): Record<string, number> {
@@ -57,7 +63,7 @@ function extractBrandTags(pillarDContent: unknown): Record<string, number> {
   if (!source || typeof source !== "object" || Array.isArray(source)) return {};
   const tags: Record<string, number> = {};
   for (const [k, v] of Object.entries(source as Record<string, unknown>)) {
-    if (typeof v === "number") tags[k] = Math.max(0, Math.min(1, v));
+    if (typeof v === "number" && Number.isFinite(v)) tags[k] = Math.max(0, Math.min(1, v));
   }
   return tags;
 }
@@ -67,14 +73,14 @@ export const cockpitRouter = createTRPCRouter({
   dashboard: strategyScopedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+      const strategy = found(await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
         include: {
           pillars: { select: { key: true, content: true, confidence: true, validationStatus: true } },
           missions: { where: { status: { in: ["IN_PROGRESS", "COMPLETED"] } }, select: { id: true, status: true } },
           campaigns: { where: { status: { not: "ARCHIVED" } }, select: { id: true, status: true } },
         },
-      });
+      }), "Marque introuvable.");
       const vector = strategy.advertis_vector as Record<string, number> | null;
 
       // Extract RTIS key metrics from pillar content for dashboard visibility
@@ -142,7 +148,7 @@ export const cockpitRouter = createTRPCRouter({
           // ADR-0127 — polity de la marque pour la résolution d'axe.
           marketScale: true,
           countryCode: true,
-          pillars: { where: { key: "d" }, select: { content: true } },
+          pillars: { where: { key: { in: ["a", "d", "t", "s"] } }, select: { key: true, content: true, staleAt: true } },
         },
       });
       if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
@@ -171,11 +177,15 @@ export const cockpitRouter = createTRPCRouter({
         }
       }
 
+      const s = strategy.pillars.find((p) => p.key === "s");
+      const t = strategy.pillars.find((p) => p.key === "t");
+      const strategyPlan = readOvertonStrategyPlan(s?.content, t?.content, !!(s?.staleAt || t?.staleAt));
+      const positioning = await readBrandOvertonPositioning(ctx.db, strategy.id, Object.fromEntries(strategy.pillars.map(p => [p.key, p.content])), strategy.countryCode, strategy.marketScale);
       const sectorSlug = extractSectorSlug(strategy.businessContext);
       if (!sectorSlug) {
         // Cause discriminée (audit 2026-07-16) : secteur non renseigné = action
         // à la main du founder, pas « attendez que le signal arrive ».
-        return { state: "DEGRADED", reason: "MISSING_PREREQUISITE" };
+        return { state: "DEGRADED", reason: "MISSING_PREREQUISITE", strategyPlan, positioning };
       }
       // Audit 2026-07-16 `overton-deferred-stale-operator-guard` : le guard
       // `!strategy.operatorId` était MORT depuis le dé-mock du connecteur
@@ -183,14 +193,14 @@ export const cockpitRouter = createTRPCRouter({
       // Un founder self-serve voyait À VIE « en attente d'activation » pendant
       // que le signal RSS dormait. Appel inconditionnel.
       const { fetchSectorSignal } = await import("@/server/services/seshat/tarsis/connector");
-      const signal = await fetchSectorSignal(strategy.operatorId ?? "", sectorSlug);
+      const signal = await fetchSectorSignal(strategy.operatorId ?? "", sectorSlug, { strategyId: input.strategyId, countryCode: strategy.countryCode });
 
       // P22-1 invariant 1 : exhaustive — no default/else.
       switch (signal.state) {
         case "DEFERRED_AWAITING_CREDENTIALS":
-          return signal;
+          return { ...signal, strategyPlan, positioning };
         case "DEGRADED":
-          return signal;
+          return { ...signal, strategyPlan, positioning };
         case "LIVE": {
           // ADR-0127 — l'axe est résolu pour la POLITY de la marque (échelle ×
           // pays), avec fallback honnête vers l'axe global du secteur. Le
@@ -200,7 +210,7 @@ export const cockpitRouter = createTRPCRouter({
             marketScale: strategy.marketScale,
             countryCode: strategy.countryCode,
           });
-          const brandTags = extractBrandTags(strategy.pillars[0]?.content);
+          const brandTags = extractBrandTags(strategy.pillars.find((p) => p.key === "d")?.content);
           const data: OvertonRadarSignal = {
             sectorAxis: resolved
               ? { tags: resolved.axis.tags, confidence: resolved.axis.confidence, samples: resolved.axis.samples }
@@ -210,10 +220,11 @@ export const cockpitRouter = createTRPCRouter({
             embeddingDelta: signal.data.embeddingDelta,
             claimImitations: signal.data.claimImitations,
             unpaidPress: signal.data.unpaidPress,
+            sectorArticles: signal.data.sectorArticles,
             mocked: signal.data._mocked,
             axisPolityResolution: resolved?.resolution ?? null,
           };
-          return { state: "LIVE", data, observedAt: signal.observedAt };
+          return { state: "LIVE", data, observedAt: signal.observedAt, strategyPlan, positioning };
         }
       }
     }),
@@ -438,7 +449,7 @@ export const cockpitRouter = createTRPCRouter({
         lastDigestAt: null as string | null,
         articles: [] as Array<{ title: string; link: string; source: string | null; publishedAt: string | null }>,
         themes: [] as string[],
-        configured: Boolean(strategy.countryCode),
+        configured: Boolean(strategy.countryCode || brandMarketScope(strategy).region),
         watchSubjects: [] as string[],
         watchSource: "NONE" as "MANUAL" | "DERIVED" | "NONE",
       };
@@ -457,12 +468,13 @@ export const cockpitRouter = createTRPCRouter({
         ctx.db,
         strategy.id,
         strategy.businessContext,
-        countryDisplayNameFr(strategy.countryCode),
+        brandMarketScope(strategy).region ?? countryDisplayNameFr(strategy.countryCode),
       );
       const feed = await getOrBuildBrandFeed(ctx.db, {
         strategyId: strategy.id,
         name: strategy.name,
-        countryCode: strategy.countryCode ?? "CM",
+        countryCode: strategy.countryCode,
+        marketRegion: brandMarketScope(strategy).region,
         sector,
         extraSubjects: watch.subjects,
       }).catch(() => null);
@@ -533,23 +545,29 @@ export const cockpitRouter = createTRPCRouter({
           throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
         }
       }
-      const [socialCount, logoCount, filledPillars, scheduledCount, sourceCount] = await Promise.all([
+      const [socialCount, logoCount, pillars, scheduledCount, sourceCount] = await Promise.all([
         ctx.db.socialConnection.count({ where: { strategyId: input.strategyId } }),
         ctx.db.brandAsset.count({
           where: { strategyId: input.strategyId, kind: { in: ["LOGO_FINAL", "LOGO_IDEA"] } },
         }),
-        ctx.db.pillar.count({
+        ctx.db.pillar.findMany({
           where: {
             strategyId: input.strategyId,
-            key: { in: ["A", "D", "V", "E"] },
-            NOT: { content: { equals: {} } },
+            key: { in: [...ADVE_KEYS, ...ADVE_STORAGE_KEYS] },
           },
+          select: { key: true, content: true, validationStatus: true, completionLevel: true, staleAt: true },
         }),
         ctx.db.brandAction.count({
           where: { strategyId: input.strategyId, status: { in: ["SCHEDULED", "IN_PROGRESS", "DONE"] } },
         }),
         ctx.db.knowledgeEntry.count({ where: { entryType: "MARKET_STUDY_TAM" } }).catch(() => 0),
       ]);
+      const foundation = ADVE_KEYS.map((key) => evaluatePillarReadiness(
+        pillars.find((pillar) => pillar.key.toUpperCase() === key) ?? null,
+        key,
+      ));
+      const startedPillars = foundation.filter((pillar) => pillar.completionPct > 0).length;
+      const completePillars = foundation.filter((pillar) => pillar.stage === "COMPLETE" && !pillar.stale).length;
       const items = [
         {
           key: "social",
@@ -575,8 +593,8 @@ export const cockpitRouter = createTRPCRouter({
         {
           key: "pillars",
           label: "Compléter vos 4 piliers de fondation",
-          detail: `${filledPillars}/4 piliers renseignés — le socle de toute la stratégie.`,
-          done: filledPillars >= 4,
+          detail: `${startedPillars}/${ADVE_KEYS.length} piliers commencés · ${completePillars}/${ADVE_KEYS.length} complets.`,
+          done: completePillars === ADVE_KEYS.length,
           href: "/cockpit/brand/fondation",
         },
         {
@@ -640,57 +658,19 @@ export const cockpitRouter = createTRPCRouter({
         }
       }
 
-      const [logos, typographyCount, chromatics, vaultTotal] = await Promise.all([
-        ctx.db.brandAsset.findMany({
-          where: {
-            strategyId: strategy.id,
-            kind: { in: ["LOGO_FINAL", "LOGO_IDEA"] },
-            fileUrl: { not: null },
-            state: { notIn: ["ARCHIVED", "REJECTED"] },
-          },
-          orderBy: { createdAt: "desc" },
-          take: 12,
-          select: { id: true, kind: true, name: true, fileUrl: true, state: true },
-        }),
-        ctx.db.brandAsset.count({
-          where: { strategyId: strategy.id, kind: "TYPOGRAPHY_SYSTEM", state: { notIn: ["ARCHIVED", "REJECTED"] } },
-        }),
-        ctx.db.brandAsset.findMany({
-          where: { strategyId: strategy.id, kind: "CHROMATIC_STRATEGY", state: { notIn: ["ARCHIVED", "REJECTED"] } },
-          orderBy: { createdAt: "desc" },
-          take: 4,
-          select: { content: true, state: true },
-        }),
+      const { resolveBrandIdentity, collectHexes } = await import("@/server/services/brand-theme");
+      const [identity, vaultTotal] = await Promise.all([
+        resolveBrandIdentity(strategy.id, ctx.db),
         ctx.db.brandAsset.count({ where: { strategyId: strategy.id } }),
       ]);
-
-      // Logo actif : LOGO_FINAL ACTIVE > LOGO_FINAL récent > LOGO_IDEA récent.
-      const finals = logos.filter((l) => l.kind === "LOGO_FINAL");
-      const logo =
-        finals.find((l) => l.state === "ACTIVE") ?? finals[0] ?? logos[0] ?? null;
-
-      // ADR-0130 — palette de la marque (actif CHROMATIC_STRATEGY structuré).
-      // Hex STRICTEMENT validés avant de sortir (ils finissent en CSS custom
-      // properties côté client — jamais de chaîne libre injectée).
-      const HEX = /^#[0-9a-fA-F]{6}$/;
-      const chromaticContent = (chromatics.find((c) => c.state === "ACTIVE") ?? chromatics[0])?.content as
-        | { accent?: unknown; primary?: unknown }
-        | null
-        | undefined;
-      const accent = typeof chromaticContent?.accent === "string" && HEX.test(chromaticContent.accent) ? chromaticContent.accent : null;
-      const primary = typeof chromaticContent?.primary === "string" && HEX.test(chromaticContent.primary) ? chromaticContent.primary : null;
-
+      const { logo } = identity;
+      // The same strict color reader is used by guidelines and exports.
+      const { accent, primary } = collectHexes(identity.chromatic?.content);
       return {
         brandName: strategy.name,
         logo: logo ? { url: logo.fileUrl as string, name: logo.name, state: String(logo.state) } : null,
-        // null = pas de palette déclarée → le cockpit garde le thème par défaut.
         palette: accent || primary ? { accent: accent ?? primary, primary: primary ?? accent } : null,
-        assetCounts: {
-          logos: finals.length,
-          typographies: typographyCount,
-          palettes: chromatics.length,
-          total: vaultTotal,
-        },
+        assetCounts: { ...identity.counts, total: vaultTotal },
       };
     }),
 

@@ -25,6 +25,12 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { productionPins } from "@/domain/production-sources";
+import { calendarView, calendarPreparation, calendarProductionLaunch } from "@/domain/calendar-production";
+import { calendarProductionRows, prepareCalendarBriefRows, produceCalendarBrief, readCalendarBriefSource } from "@/server/services/deliverable-orchestrator/calendar-production";
+import { emitIntentTyped } from "@/server/services/mestor/intents";
+import { getCurrentProductionPreview, listProductionPassages } from "@/server/services/deliverable-orchestrator/production-sources";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { assertRawStrategyScope } from "../middleware/strategy-scope";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
@@ -80,6 +86,7 @@ export const deliverableOrchestratorRouter = createTRPCRouter({
       z.object({
         targetKind: targetKindSchema,
         strategyId: z.string().optional(),
+        campaignId: z.string().optional(),
       }),
     )
     .query(async ({ input }) => {
@@ -112,7 +119,7 @@ export const deliverableOrchestratorRouter = createTRPCRouter({
       let vaultMatches = null;
       if (input.strategyId) {
         const upstream = extractUpstreamKinds(briefDag);
-        vaultMatches = await matchVault(input.strategyId, upstream);
+        vaultMatches = await matchVault(input.strategyId, upstream, input.campaignId);
       }
 
       return {
@@ -135,6 +142,33 @@ export const deliverableOrchestratorRouter = createTRPCRouter({
    * Le mode DISPATCHED (status retourné par le composer) viendra avec un
    * commit ultérieur — il fera le dispatch async via sequence-executor.
    */
+  listArtworkLayers: auditedProtected.input(z.object({strategyId:z.string().min(1),assetId:z.string().min(1),version:z.number().int().positive(),campaignId:z.string().optional()}))
+    .query(async ({ctx,input}) => {
+      const row = await ctx.db.brandAsset.findFirst({where:{id:input.assetId, strategyId:input.strategyId,version:input.version},
+        select:{metadata:true,strategy:{select:{operatorId:true}}}});
+      const digest = (row?.metadata as {original?:{contentHash?:string}} | undefined)?.original?.contentHash;
+      if (!row?.strategy.operatorId || !digest) throw new TRPCError({code:"PRECONDITION_FAILED",message:"Le master doit avoir un original versionné dans le coffre de cette marque."});
+      const { readArtworkMaster } = await import("@/server/services/ptah/artwork-master");
+      return (await readArtworkMaster({strategyId:input.strategyId,operatorId:row.strategy.operatorId,campaignId:input.campaignId},{assetId:input.assetId,version:input.version,originalHash:digest})).inspection;
+    }),
+  calendarProductionRows:auditedProtected.input(calendarView).query(({input})=>calendarProductionRows(input)),
+  getCalendarBrief:auditedProtected.input(z.object({strategyId:z.string().min(1),assetId:z.string().min(1),version:z.number().int().positive()}))
+    .query(({input})=>readCalendarBriefSource(input.strategyId,input.assetId,input.version)),
+  prepareCalendarBriefs:auditedProtected.input(calendarPreparation).mutation(({ctx,input})=>
+    emitIntentTyped<Awaited<ReturnType<typeof prepareCalendarBriefRows>>>({kind:"COMPOSE_DELIVERABLE",strategyId:input.strategyId,
+      operatorId:ctx.session.user.id,targetKind:"KV_VISUAL",previewOnly:true,calendarPreparation:input},{caller:"planning.prepare-briefs"})),
+  produceCalendarBrief:auditedProtected.input(calendarProductionLaunch).mutation(({ctx,input})=>produceCalendarBrief(input,ctx.session.user.id)),
+  listSourcePassages: auditedProtected
+    .input(z.object({strategyId: z.string().min(1), assetId: z.string().min(1).max(180), version: z.number().int().positive(), campaignId: z.string().optional()}))
+    .query(({input}) => listProductionPassages(input.strategyId,input.assetId,input.version,input.campaignId)),
+
+  productionProgress: auditedProtected.input(z.object({strategyId:z.string().min(1),previewIntentId:z.string().min(1).max(180)}))
+    .query(async ({input}) => (await import("@/server/services/deliverable-orchestrator/production-sources")).productionProgress(input.strategyId,input.previewIntentId)),
+
+  getProductionPreview: auditedProtected
+    .input(z.object({strategyId: z.string().min(1), previewIntentId: z.string().min(1).max(180)}))
+    .query(({input}) => getCurrentProductionPreview(input.strategyId, input.previewIntentId)),
+
   compose: auditedProtected
     .input(
       z.object({
@@ -145,6 +179,10 @@ export const deliverableOrchestratorRouter = createTRPCRouter({
           .enum(["peddler", "dealer", "facilitator", "entertainer"])
           .optional(),
         previewOnly: z.boolean().optional().default(true),
+        pins: productionPins.optional(),
+        previewIntentId: z.string().min(1).max(180).optional(),
+        creativeProposalId: z.string().min(1).max(180).optional(),
+        calendarBrief:z.object({assetId:z.string().min(1),version:z.number().int().positive()}).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -158,6 +196,7 @@ export const deliverableOrchestratorRouter = createTRPCRouter({
         campaignId: input.campaignId,
         overrideManipulationMode: input.overrideManipulationMode,
         previewOnly: input.previewOnly,
+        pins: input.pins, previewIntentId: input.previewIntentId, creativeProposalId: input.creativeProposalId, calendarBrief:input.calendarBrief,
       });
 
       return {

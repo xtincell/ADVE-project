@@ -1,11 +1,13 @@
 "use client";
 
 import { QueryClient, QueryClientProvider, MutationCache } from "@tanstack/react-query";
-import { httpBatchLink } from "@trpc/client";
+import { httpBatchLink, splitLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
 import { useState } from "react";
 import superjson from "superjson";
 import type { AppRouter } from "@/server/trpc/router";
+import type { inferRouterOutputs } from "@trpc/server";
+export type RouterOutputs = inferRouterOutputs<AppRouter>;
 import { emitToast } from "@/lib/toast-bus";
 
 export const trpc = createTRPCReact<AppRouter>();
@@ -37,9 +39,19 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [
-        httpBatchLink({
-          url: `${getBaseUrl()}/api/trpc`,
-          transformer: superjson,
+        splitLink({
+          // The Council receives a full answer: keep its text out of the URL.
+          // This remains a query with the same explicit-click/cache semantics.
+          condition: (op) => op.path === "mestor.councilDeliberate",
+          true: httpBatchLink({
+            url: `${getBaseUrl()}/api/trpc`,
+            transformer: superjson,
+            methodOverride: "POST",
+          }),
+          false: httpBatchLink({
+            url: `${getBaseUrl()}/api/trpc`,
+            transformer: superjson,
+          }),
         }),
       ],
     })

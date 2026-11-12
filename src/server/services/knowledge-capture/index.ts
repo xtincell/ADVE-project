@@ -79,6 +79,7 @@ export async function captureEvent(
         } as Prisma.InputJsonValue,
         successScore: enrichedContext.successScore,
         sourceHash,
+        originStrategyId: strategyId ?? null,
       },
     });
   } catch {

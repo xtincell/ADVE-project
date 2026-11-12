@@ -23,6 +23,8 @@ export type JsonSchema7 =
   | { type: "null"; description?: string }
   | { type: "array"; description?: string; items: JsonSchema7; minItems?: number; maxItems?: number }
   | { type: "object"; description?: string; properties: Record<string, JsonSchema7>; required?: string[]; additionalProperties?: boolean | JsonSchema7 }
+  // zod ≥ 4.6 collapses a union of primitive types into a type array (valid draft-7).
+  | { type: Array<"string" | "number" | "integer" | "boolean" | "null">; description?: string }
   | { description?: string; oneOf: JsonSchema7[] }
   | { description?: string; anyOf: JsonSchema7[] }
   | { description?: string; const: string | number | boolean | null }

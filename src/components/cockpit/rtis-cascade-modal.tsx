@@ -35,10 +35,10 @@ import { trpc } from "@/lib/trpc/client";
 type Phase = "CONFIRM" | "RUNNING" | "DONE" | "FAILED";
 
 const PILLAR_NAMES = {
-  r: "Risk — Risques & résilience",
-  t: "Track — Tracking marché & traction",
-  i: "Innovation — Actions & roadmap",
-  s: "Strategy — Synthèse stratégique",
+  r: "Risques & résilience",
+  t: "Marché & trajectoire",
+  i: "Catalogue d’actions",
+  s: "Plan stratégique",
 } as const;
 
 type RtisKey = keyof typeof PILLAR_NAMES;
@@ -64,7 +64,7 @@ export function RtisCascadeModal({
   const [elapsed, setElapsed] = useState(0);
 
   // Poll readiness while RUNNING so the user sees R/T/I/S transitioning.
-  const readiness = trpc.pillar.maturityReport.useQuery(
+  const readiness = trpc.pillar.readiness.useQuery(
     { strategyId },
     {
       enabled: open,
@@ -80,8 +80,12 @@ export function RtisCascadeModal({
   const cascade = trpc.pillar.cascadeRTIS.useMutation({
     onSuccess: (result) => {
       void readiness.refetch();
-      const allUpdated = result.results.every((r) => r.updated || r.maturityStage === "ENRICHED" || r.maturityStage === "COMPLETE");
-      if (allUpdated || result.skipped) {
+      const allUpdated = PILLAR_KEYS.every((key) => {
+        const saved = result.results.find((r) => r.pillarKey.toLowerCase() === key);
+        return saved && !saved.error && (saved.updated || (result.skipped
+          && (saved.maturityStage === "ENRICHED" || saved.maturityStage === "COMPLETE")));
+      });
+      if (allUpdated) {
         setPhase("DONE");
         onCompleted?.();
       } else {
@@ -111,69 +115,48 @@ export function RtisCascadeModal({
     return () => clearInterval(id);
   }, [phase]);
 
-  // Optimistic transition to DONE — the polled readiness query updates
-  // every 3s while the mutation is still in-flight. As soon as all 4 RTIS
-  // pillars show ENRICHED+, flip to DONE without waiting for the mutation
-  // to fully resolve (the runner's final readiness re-check + JSON
-  // serialization can add 5-15s of perceived "stuck" time).
-  const allRtisReadyFromPoll = useMemo(
-    () => {
-      const pillars = readiness.data?.pillars as Record<string, { currentStage?: string }> | undefined;
-      if (!pillars) return false;
-      return PILLAR_KEYS.every((k) => {
-        const stage = pillars[k]?.currentStage;
-        return stage === "ENRICHED" || stage === "COMPLETE";
-      });
-    },
-    [readiness.data],
-  );
-  useEffect(() => {
-    if (phase !== "RUNNING") return;
-    if (!allRtisReadyFromPoll) return;
-    setPhase("DONE");
-    onCompleted?.();
-  }, [phase, allRtisReadyFromPoll, onCompleted]);
+  // Polling describes stored data, including previous runs. Only this
+  // mutation's complete response may acknowledge its four saved results.
 
   const sinceRefresh = phase === "RUNNING" && readiness.dataUpdatedAt
     ? Math.max(0, Math.floor((Date.now() - readiness.dataUpdatedAt) / 1000))
     : null;
 
   const rtisStatus = useMemo(() => {
-    const pillars = readiness.data?.pillars ?? {};
+    const pillars = readiness.data?.byPillar;
     return PILLAR_KEYS.map((k) => {
-      const r = (pillars as Record<string, { currentStage?: string }>)[k];
-      const stage = r?.currentStage ?? "EMPTY";
-      const ready = stage === "ENRICHED" || stage === "COMPLETE";
-      const inProgress = stage === "INTAKE";
-      return { key: k, stage, ready, inProgress };
+      const pillar = pillars?.[k.toUpperCase() as "R" | "T" | "I" | "S"];
+      const ready = !!pillar && !pillar.stale && pillar.cacheLevel !== "INCOMPLET";
+      return { key: k, ready, inProgress: false };
     });
   }, [readiness.data]);
 
   const startCascade = () => {
     setPhase("RUNNING");
     setElapsed(0);
-    cascade.mutate({ strategyId, skipIfReady: true });
+    cascade.mutate({ strategyId, skipIfReady: true, updateADVE: false, skipT: false });
   };
 
   return (
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
+      dismissible={phase !== "RUNNING"}
       size="lg"
       title={
         <span className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-accent" />
-          Préparer la stratégie — l'Oracle pourra compiler
+          Préparer la stratégie
         </span>
       }
       description={
         phase === "CONFIRM"
-          ? "Vos 4 fondations sont complètes. Pour compiler l'Oracle sans sections vides, il faut maintenant dériver les 4 piliers stratégiques (diagnostic, marché, innovation, plan) à partir de votre fondation. Cette étape n'a lieu qu'une fois."
+          ? "Calculez le diagnostic, le marché, le catalogue d’actions et le plan depuis les informations de votre marque. Les résultats restent des propositions à relire ; les choix et informations manquantes ne sont pas validés par ce calcul."
           : phase === "RUNNING"
-            ? "Génération en cours — chaque pilier prend 20 à 40 secondes (LLM)."
+            ? "Calcul en cours — les résultats sont enregistrés étape par étape."
             : phase === "DONE"
-              ? "Oracle est maintenant prêt à compiler sans sections vides."
-              : "Certains piliers n'ont pas pu être remplis. Vous pouvez réessayer ou compiler quand même (l'Oracle aura des sections stratégiques partielles)."
+              ? "Les résultats de cet appel sont enregistrés. Vérifiez leur contenu avant de préparer votre livrable."
+              : "La préparation reste incomplète. Consultez les résultats enregistrés avant de réessayer."
       }
     >
       {/* CONFIRM phase */}
@@ -196,10 +179,9 @@ export function RtisCascadeModal({
           </ul>
           <div className="rounded-lg border border-border bg-background/50 p-3 text-xs text-foreground-muted">
             <p>
-              <strong className="text-foreground-secondary">Durée typique :</strong> 1 à 2 minutes.
-              La cascade tourne en série pour respecter l'ordre de dérivation
-              (R d'abord, puis T qui s'appuie sur R + signaux de veille, puis I,
-              puis S).
+              Le diagnostic est calculé en premier, puis le marché et le
+              catalogue d’actions. Le plan reprend les choix conservés dans
+              ce catalogue. Les résultats remplacent les analyses calculées précédentes. La fondation reste conservée. La Gazette et la rédaction de l’Oracle sont des actions séparées. La durée dépend des informations à traiter.
             </p>
           </div>
         </div>
@@ -213,7 +195,7 @@ export function RtisCascadeModal({
             <p className="text-sm text-foreground-secondary">
               Cascade en cours…{" "}
               <span className="font-mono text-foreground">{elapsed}s</span>
-              <span className="text-foreground-muted"> / typiquement 60-120s</span>
+
             </p>
           </div>
 
@@ -244,7 +226,7 @@ export function RtisCascadeModal({
                         : "text-xs font-medium text-foreground-muted"
                   }
                 >
-                  {p.ready ? "Prêt" : p.inProgress ? "En cours" : "En attente"}
+                  {p.ready ? "Contenu enregistré à jour" : p.inProgress ? "En cours" : "En attente"}
                 </span>
               </li>
             ))}
@@ -260,9 +242,7 @@ export function RtisCascadeModal({
           {elapsed > 90 && (
             <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs text-foreground-secondary">
               <strong className="text-warning">Plus long que prévu.</strong>{" "}
-              Le LLM travaille toujours. Tu peux fermer cette fenêtre — la cascade
-              continue en arrière-plan, le bouton d'assemblage virera vert
-              quand la stratégie sera prête.
+              Le calcul attend encore son résultat. Les contenus enregistrés sont affichés au fil du calcul ; sa fin sera confirmée par le serveur.
             </div>
           )}
         </div>
@@ -275,12 +255,12 @@ export function RtisCascadeModal({
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
             <div className="space-y-1">
               <p className="text-sm font-semibold text-success">
-                Préparation terminée — vos 8 piliers sont prêts.
+                Calcul enregistré — propositions à relire.
               </p>
               <p className="text-xs text-foreground-secondary">
-                Oracle peut maintenant compiler ses 35 sections sans risque de
-                sections stratégiques vides. Le bouton d'assemblage est passé au
-                vert sur la page proposition.
+                Relisez le diagnostic, le marché, les actions et le plan avant
+                de préparer votre livrable. Leur enregistrement ne valide pas
+                encore les 35 sections de l’Oracle.
               </p>
             </div>
           </div>
@@ -401,13 +381,9 @@ export function RtisCascadeModal({
 
         {phase === "RUNNING" && (
           <>
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="rounded-md border border-border px-4 py-2 text-sm text-foreground-secondary hover:bg-surface-raised"
-            >
-              Fermer (la cascade continue)
-            </button>
+            <p className="text-sm text-foreground-secondary">
+              Le calcul est en cours. Attendez le résultat avant de fermer cette fenêtre.
+            </p>
             <button
               type="button"
               disabled
@@ -446,7 +422,7 @@ export function RtisCascadeModal({
                 setElapsed(0);
                 // Réessai avec skipIfReady=false : on force la cascade même si
                 // certains piliers étaient déjà ENRICHED. Le user veut un re-run.
-                cascade.mutate({ strategyId, skipIfReady: false });
+                cascade.mutate({ strategyId, skipIfReady: false, updateADVE: false, skipT: false });
               }}
               disabled={cascade.isPending}
               className="flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent disabled:opacity-50"

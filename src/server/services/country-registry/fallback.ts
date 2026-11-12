@@ -6,8 +6,8 @@
  * tables, which makes `getStandardCountry()` (and therefore the public
  * `/pricing` grid + every quote) throw — the customer sees empty cards.
  *
- * This module mirrors the canonical seed values so the registry is NEVER
- * empty: when the DB returns no rows, `load()` falls back to this table.
+ * This module mirrors the canonical seed values to complete the registry:
+ * `load()` fills only absent codes, including partially seeded databases.
  * Deterministic, zero external dependency — consistent with the OS
  * doctrine (ship-able without seeding / external calls).
  *

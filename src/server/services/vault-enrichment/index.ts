@@ -20,6 +20,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
+import { loadBrandSources, type SourceReceipt } from "@/server/services/ingestion-pipeline/source-usage";
 import { z } from "zod";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import { executeStructuredLLMCall, LLMStructuredCallError } from "@/server/services/utils/llm-structured";
@@ -74,24 +75,11 @@ export interface VaultEnrichmentResult {
 
 // ── Load full vault ───────────────────────────────────────────────────
 
-async function loadVault(strategyId: string): Promise<{ text: string; sourceCount: number }> {
-  const sources = await db.brandDataSource.findMany({
-    where: {
-      strategyId,
-      processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
-    },
-    select: {
-      fileName: true,
-      sourceType: true,
-      rawContent: true,
-      rawData: true,
-      extractedFields: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
+async function loadVault(strategyId: string): Promise<{ text: string; sourceCount: number; sourceReceipts: SourceReceipt[] }> {
+  const sources = await loadBrandSources(strategyId, { processingStatus: { in: ["EXTRACTED", "PROCESSED"] } });
+  const sourceReceipts = sources.map((s) => ({ sourceId: s.id, contentHash: s.contentHash }));
 
-  if (sources.length === 0) return { text: "", sourceCount: 0 };
+  if (sources.length === 0) return { text: "", sourceCount: 0, sourceReceipts };
 
   // Compile ALL sources into a single context block
   const blocks: string[] = [];
@@ -131,7 +119,7 @@ async function loadVault(strategyId: string): Promise<{ text: string; sourceCoun
     blocks.push(parts.join("\n"));
   }
 
-  return { text: blocks.join("\n\n---\n\n"), sourceCount: sources.length };
+  return { text: blocks.join("\n\n---\n\n"), sourceCount: sources.length, sourceReceipts };
 }
 
 // ── Describe schema fields ────────────────────────────────────────────
@@ -201,7 +189,7 @@ export async function enrichFromVault(
       }
     }
 
-    const { text: vaultText, sourceCount } = await loadVault(strategyId);
+    const { text: vaultText, sourceCount, sourceReceipts } = await loadVault(strategyId);
 
     // ── Schema analysis ────────────────────────────────────────────
     const schemaKey = pillarKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
@@ -321,7 +309,7 @@ export async function enrichFromVault(
       retrievedSourceBrief = await buildRetrievedSourceBrief(
         strategyId,
         fieldsToScope.map((f) => ({ field: f, query: queryForField(f) })),
-        { perFieldTopK: 3, maxChars: 9000 },
+        { perFieldTopK: 3, maxChars: 9000, sourceReceipts },
       );
     } catch {
       // Best-effort — on retombera sur le dump vault legacy.
@@ -535,6 +523,7 @@ RESPECTE LA SHAPE EXACTE Zod pour chaque proposedValue, sinon la reco est rejet�
             targetMatch: reco.targetMatch ? (reco.targetMatch as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
             agent: "VAULT",
             source: "VAULT",
+            sourceReceipts,
             confidence: 0.65,
             explain: reco.justification ?? `Vault enrichment: ${reco.verdict}`,
             advantages: reco.verdict === "ADD" ? ["Nouvelle donnee depuis les sources"] : reco.verdict === "CONFIRM" ? ["Confirme par les sources"] : [],

@@ -29,12 +29,38 @@ export * from "./revealed-gates";
 export interface ScoreInput {
   readonly subjectRef: string;
   readonly league: LeagueKey;
+  /** Observations de la ligue, dont les duels des rivaux (jamais leurs verdicts). */
   readonly epreuves: readonly CompiledEpreuve[];
   /** θ fixés des ancres + items (la jauge). */
   readonly anchors: Readonly<Record<string, number>>;
   readonly itemsMet: ReadonlySet<string>;
   /** Canon éditable a posteriori (ADR-0150) — défaut = constantes code. */
   readonly canon?: { gauge?: GaugeMap; items?: readonly MustHaveItem[] };
+}
+
+/** Connected observations for one arena; a fixed calibration ends a branch. */
+export function connectedScoreurObservations(
+  subjectRef: string,
+  observed: readonly CompiledEpreuve[],
+  anchors: Readonly<Record<string, number>>,
+): { nodes: string[]; epreuves: CompiledEpreuve[] } {
+  const adjacency = new Map<string, Set<string>>();
+  for (const e of observed) {
+    for (const [a, b] of [[e.subjectRef, e.opponentRef], [e.opponentRef, e.subjectRef]] as const) {
+      if (!adjacency.has(a)) adjacency.set(a, new Set());
+      adjacency.get(a)!.add(b);
+    }
+  }
+  const nodes = new Set<string>([subjectRef]);
+  const frontier = [subjectRef];
+  for (let i = 0; i < frontier.length; i++) {
+    const node = frontier[i]!;
+    if (anchors[node] !== undefined) continue;
+    for (const neighbour of adjacency.get(node) ?? []) {
+      if (!nodes.has(neighbour)) { nodes.add(neighbour); frontier.push(neighbour); }
+    }
+  }
+  return { nodes: [...nodes], epreuves: observed.filter(e => nodes.has(e.subjectRef) && nodes.has(e.opponentRef)) };
 }
 
 /** Estime une arène : θ ± RD du sujet, mappé en force via la jauge de ligue. */
@@ -46,7 +72,12 @@ function estimateArena(
   scale: MarketScale | null | undefined,
   gauge: GaugeMap,
 ): ArenaEstimate {
-  const arenaEpreuves = epreuves.filter((e) => e.arena === arena);
+  const observed = epreuves.filter((e) => e.arena === arena);
+  // Un duel concerne ses deux participants. Le contexte des rivaux étalonne
+  // leur force, mais ne devient ni une victoire ni une couverture du sujet.
+  const arenaEpreuves = observed.filter((e) => e.subjectRef === subjectRef || e.opponentRef === subjectRef)
+    .map((e) => e.subjectRef === subjectRef ? e : { ...e, subjectRef, opponentRef: e.subjectRef,
+      result: e.result === "WIN" ? "LOSS" : e.result === "LOSS" ? "WIN" : "DRAW" });
   const wins = arenaEpreuves.filter((e) => e.result === "WIN").length;
   const losses = arenaEpreuves.filter((e) => e.result === "LOSS").length;
 
@@ -63,20 +94,16 @@ function estimateArena(
     };
   }
 
-  const nodeSet = new Set<string>([subjectRef]);
-  for (const e of arenaEpreuves) {
-    nodeSet.add(e.subjectRef);
-    nodeSet.add(e.opponentRef);
-  }
+  const { nodes, epreuves: connected } = connectedScoreurObservations(subjectRef, observed, anchors);
   // N'inclut que les ancres réellement affrontées (les autres ne contraignent pas).
   const relevantAnchors: Record<string, number> = {};
-  for (const n of nodeSet) {
+  for (const n of nodes) {
     const a = anchors[n];
     if (a !== undefined) relevantAnchors[n] = a;
   }
 
   const { theta, rd } = fitBradleyTerry(
-    { nodes: [...nodeSet], anchors: relevantAnchors, pairwise: toPairwise(arenaEpreuves) },
+    { nodes, anchors: relevantAnchors, pairwise: toPairwise(connected) },
     { defaultTheta: defaultThetaForScale(scale, gauge) },
   );
 

@@ -235,6 +235,11 @@ export const paymentRouter = createTRPCRouter({
           customer: { name: intake.contactName, email: intake.contactEmail },
           metadata: { tierKey: input.tierKey, intakeToken: input.intakeToken },
         });
+        // Persist the provider's receipt before exposing its checkout URL.
+        await ctx.db.intakePayment.update({
+          where: { reference },
+          data: { providerRef: result.providerRef, notificationTokenHash: result.notificationTokenHash },
+        });
         return {
           paymentUrl: result.paymentUrl,
           reference,
@@ -243,8 +248,8 @@ export const paymentRouter = createTRPCRouter({
           currency: resolved.currencyCode,
         };
       } catch (err) {
-        await ctx.db.intakePayment.update({
-          where: { reference },
+        await ctx.db.intakePayment.updateMany({
+          where: { reference, status: { not: "PAID" } },
           data: {
             status: "FAILED",
             failureReason: err instanceof PaymentProviderError ? err.message : (err as Error).message,
@@ -641,7 +646,7 @@ export const paymentRouter = createTRPCRouter({
     .query(({ ctx, input }) => {
       const status = input?.status ?? "PENDING";
       return ctx.db.intakePayment.findMany({
-        where: { provider: "MANUAL_WA", ...(status === "all" ? {} : { status }) },
+        where: { provider: "MANUAL_WA", OR: [{ tierKey: null }, { tierKey: { not: "SALES_COLLECTION" } }], ...(status === "all" ? {} : { status }) },
         orderBy: { createdAt: "desc" },
         take: 200,
       });
@@ -652,6 +657,7 @@ export const paymentRouter = createTRPCRouter({
     .input(z.object({ reference: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const payment = await ctx.db.intakePayment.findUnique({ where: { reference: input.reference } });
+      if (payment?.tierKey === "SALES_COLLECTION") throw new Error("Utiliser le rapprochement financier de l’affaire commerciale.");
       if (!payment || payment.provider !== "MANUAL_WA" || payment.status !== "PENDING") {
         throw new Error("Paiement manuel introuvable ou déjà traité.");
       }
@@ -679,6 +685,7 @@ export const paymentRouter = createTRPCRouter({
     .input(z.object({ reference: z.string(), reason: z.string().max(500).optional() }))
     .mutation(async ({ ctx, input }) => {
       const payment = await ctx.db.intakePayment.findUnique({ where: { reference: input.reference } });
+      if (payment?.tierKey === "SALES_COLLECTION") throw new Error("Utiliser le rapprochement financier de l’affaire commerciale.");
       if (!payment || payment.provider !== "MANUAL_WA" || payment.status !== "PENDING") {
         throw new Error("Paiement manuel introuvable ou déjà traité.");
       }
@@ -693,10 +700,10 @@ export const paymentRouter = createTRPCRouter({
    * Used by the result page after redirect to gate the paid content.
    */
   verifyPayment: publicProcedure
-    .input(z.object({ reference: z.string() }))
+    .input(z.object({ reference: z.string(), intakeToken: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      const payment = await ctx.db.intakePayment.findUnique({
-        where: { reference: input.reference },
+      const payment = await ctx.db.intakePayment.findFirst({
+        where: { reference: input.reference, intakeToken: input.intakeToken },
         select: { status: true, intakeToken: true, provider: true, tierKey: true },
       });
       if (!payment) {

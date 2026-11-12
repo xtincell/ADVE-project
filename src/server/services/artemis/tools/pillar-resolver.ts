@@ -25,6 +25,7 @@
  *   // → { brand_dna: "...", tone: ["Audacieux", "Direct", ...] }
  */
 
+import { projectFinancialPillar } from "@/domain/unit-economics";
 import { db } from "@/lib/db";
 import type { PillarPath } from "./registry";
 
@@ -46,7 +47,8 @@ export class PillarResolver {
   private pillars: Map<string, PillarData>;
 
   private constructor(pillars: PillarData[]) {
-    this.pillars = new Map(pillars.map((p) => [p.key, p]));
+    this.pillars = new Map(pillars.map(p => [p.key.toLowerCase(), p.key.toLowerCase() === "v"
+      ? { ...p, content: projectFinancialPillar(p.content) } : p]));
   }
 
   /**

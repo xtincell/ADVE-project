@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   planCanonicalCampaigns,
   canonTypeForTimeframe,
+  canonTypeForInitiative,
   tierBudgetMultiplier,
   type CanonTemplateLite,
 } from "@/server/services/campaign-canon/plan";
@@ -21,8 +22,12 @@ describe("campaign-canon — canonTypeForTimeframe", () => {
     expect(canonTypeForTimeframe("SPRINT_90")).toBe("GTM_90");
     expect(canonTypeForTimeframe("PHASE_1")).toBe("ANNUAL");
     expect(canonTypeForTimeframe("PHASE_2")).toBe("ANNUAL");
-    expect(canonTypeForTimeframe("LONG_TERM")).toBe("ALWAYS_ON");
-    expect(canonTypeForTimeframe(null)).toBe("ANNUAL");
+    expect(canonTypeForTimeframe("LONG_TERM")).toBeNull();
+    expect(canonTypeForTimeframe(null)).toBeNull();
+    expect(canonTypeForInitiative({ id: "loop", cadence: "MONTHLY" })).toBe("ALWAYS_ON");
+    expect(canonTypeForInitiative({ id: "long-loop", timeframe: "LONG_TERM", cadence: "MONTHLY" })).toBe("ALWAYS_ON");
+    expect(canonTypeForInitiative({ id: "punctual", cadence: "ONE_SHOT" })).toBe("PUNCTUAL");
+    expect(canonTypeForInitiative({ id: "bounded-loop", timeframe: "SPRINT_90", cadence: "WEEKLY" })).toBe("GTM_90");
   });
 });
 
@@ -47,31 +52,32 @@ describe("campaign-canon — planCanonicalCampaigns", () => {
     expect(always.isAlwaysOn).toBe(true);
   });
 
-  it("répartit les initiatives par timeframe + somme les budgets (× multiplicateur tier)", () => {
+  it("répartit les initiatives documentées et conserve leurs coûts sans coefficient de tier", () => {
     const plan = planCanonicalCampaigns({
       initiatives: [
-        { id: "a", timeframe: "SPRINT_90", budgetMax: 100_000 },
-        { id: "b", timeframe: "SPRINT_90", budgetMax: 50_000 },
-        { id: "c", timeframe: "PHASE_1", budgetMax: 200_000 },
-        { id: "d", timeframe: "LONG_TERM", budgetMin: 30_000 },
+        { id: "a", timeframe: "SPRINT_90", budgetMin: 100_000, budgetMax: 100_000 },
+        { id: "b", timeframe: "SPRINT_90", budgetMin: 50_000, budgetMax: 50_000 },
+        { id: "c", timeframe: "PHASE_1", budgetMin: 200_000, budgetMax: 200_000 },
+        { id: "d", campaignCanonType: "ALWAYS_ON", budgetMin: 30_000, budgetMax: 30_000 },
       ],
       templates: TEMPLATES,
-      tierOrdinal: 0, // ×0.7
+      tierOrdinal: 0, // cannot change source costs
       startDate: START,
     });
     const gtm = plan.find((p) => p.canonType === "GTM_90")!;
     expect(gtm.actionIds.sort()).toEqual(["a", "b"]);
-    expect(gtm.recommendedBudget).toBe(Math.round(150_000 * 0.7)); // 105000
+    expect(gtm.recommendedBudget).toBe(150_000);
     const annual = plan.find((p) => p.canonType === "ANNUAL")!;
     expect(annual.actionIds).toEqual(["c"]);
     const always = plan.find((p) => p.canonType === "ALWAYS_ON")!;
     expect(always.actionIds).toEqual(["d"]);
   });
 
-  it("sans budget d'initiative → part du budget global × share", () => {
+  it("sans budget d'initiative, aucune dépense ni allocation de template fabriquée", () => {
     const plan = planCanonicalCampaigns({ initiatives: [], templates: TEMPLATES, tierOrdinal: 7, startDate: START, globalBudget: 1_000_000 });
     const gtm = plan.find((p) => p.canonType === "GTM_90")!; // share 0.4 × 1.05
-    expect(gtm.recommendedBudget).toBe(Math.round(1_000_000 * 0.4 * 1.05));
+    expect(gtm.recommendedBudget).toBeNull();
+    expect(gtm.actionIds).toEqual([]);
   });
 });
 

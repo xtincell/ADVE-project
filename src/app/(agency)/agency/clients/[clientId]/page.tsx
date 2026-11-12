@@ -1,4 +1,5 @@
 "use client";
+import { OrganizationLabels, OrganizationSources } from "@/domain/client-organization";
 
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -40,6 +41,7 @@ export default function AgencyClientDetailPage() {
 
   if (!client) return null;
 
+  const references = OrganizationSources.safeParse(client.organizationSourceRefs);
   const brands = client.strategies ?? [];
   const brandScores = brands.map((s) => {
     const v = s.advertis_vector as Record<string, number> | null;
@@ -53,7 +55,7 @@ export default function AgencyClientDetailPage() {
     <div className="space-y-6">
       <PageHeader
         title={client.name}
-        description={[client.sector, client.country].filter(Boolean).join(" - ") || "Client"}
+        description={[client.sector, client.country && `Siège · ${client.country}`].filter(Boolean).join(" - ") || "Client"}
         breadcrumbs={[
           { label: "Agence", href: "/agency" },
           { label: "Clients", href: "/agency/clients" },
@@ -61,12 +63,23 @@ export default function AgencyClientDetailPage() {
         ]}
       />
 
+      {client.organizationKind !== "UNSPECIFIED" && (
+        <section className="rounded-xl border border-zinc-800 p-5">
+          <h2 className="font-semibold">{OrganizationLabels[client.organizationKind]}</h2>
+          {client.parentClient && <p>Organisation parente · {client.parentClient.name}</p>}
+          {client.country && <p>Pays du siège · {client.country}</p>}
+          {references.success && <details><summary>Sources du rattachement</summary>
+            <ul>{references.data.map(ref=><li key={ref.id}><p>{ref.statement}</p><small>{ref.scope}</small>
+              {ref.url && <a href={ref.url} target="_blank" rel="noreferrer"> Consulter la source</a>}</li>)}</ul>
+          </details>}
+        </section>
+      )}
       {/* Client info */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Marques" value={brands.length} icon={Layers} />
-        <StatCard title="Score ADVE moyen" value={`${avgScore}/200`} icon={TrendingUp} />
+        <StatCard title="Score ADVE moyen" value={client.status === "REFERENCE" && !brands.length ? "Sans marque évaluée" : `${avgScore}/200`} icon={TrendingUp} />
         <StatCard title="Secteur" value={client.sector ?? "-"} icon={Building} />
-        <StatCard title="Statut" value={client.status} icon={Building} />
+        <StatCard title="Statut" value={client.status === "REFERENCE" ? "Référence" : client.status} icon={Building} />
       </div>
 
       {/* Contact info */}

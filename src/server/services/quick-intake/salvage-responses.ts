@@ -29,6 +29,8 @@
  * Pur : aucune IO, aucun LLM. Testé sur fixtures.
  */
 
+import type { FieldProvenance } from "@/domain/field-provenance";
+
 export type AdvePillar = "a" | "d" | "v" | "e";
 
 // ── Shapers (réponse texte → valeur de champ schéma) ─────────────────────
@@ -139,4 +141,22 @@ export function salvageRawResponses(
 /** Vrai si le pilier a au moins une correspondance déterministe. */
 export function hasSalvageMapping(pillar: string): boolean {
   return Boolean(SALVAGE_MAP[pillar as AdvePillar]);
+}
+
+/** Explicit origins for this intake write only; generated context is never a source.
+ * SOURCE means traceable to the received input, not a literal founder quotation.
+ * The existing gateway still protects HUMAN/SOURCE values on subsequent writes.
+ */
+export function intakeFieldOrigins(
+  pillar: string,
+  content: Record<string, unknown>,
+  raw: Record<string, unknown> | null | undefined,
+  sourceFields: readonly string[] = [],
+): Record<string, FieldProvenance> {
+  const received = salvageRawResponses(pillar, raw);
+  return Object.fromEntries(Object.entries(content)
+    .filter(([key]) => !key.startsWith("_") && key !== "fieldCertainty")
+    .map(([key, value]) => [key, sourceFields.includes(key)
+      || (received[key] !== undefined && JSON.stringify(received[key]) === JSON.stringify(value))
+      ? "SOURCE" : "INFERRED"]));
 }

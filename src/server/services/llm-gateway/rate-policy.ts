@@ -55,6 +55,13 @@ function defaultPolicy(): ModelRatePolicy {
  */
 function buildRegistry(): Record<string, ModelRatePolicy> {
   return {
+    // Local operator guardrails for included subscription usage; these are
+    // not advertised OpenAI quotas. The existing queue owns all Luna calls.
+    "gpt-5.6-luna": {
+      rpm: envInt("LUNA_RPM", 12),
+      maxConcurrent: envInt("LUNA_CONCURRENCY", 1),
+      minIntervalMs: envInt("LUNA_MIN_INTERVAL_MS", 1000),
+    },
     // owl-alpha (OpenRouter preview) — limites strictes par défaut, ajustables.
     "owl-alpha": {
       rpm: envInt("OWL_ALPHA_RPM", 20),
@@ -114,6 +121,14 @@ function pruneWindow(b: BucketState, now: number): void {
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+/** Local queue saturation, before provider work; never a provider failure. */
+export class LlmRateWaitExceededError extends Error {
+  constructor(readonly bucketKey: string) {
+    super(`LLM_RATE_WAIT_EXCEEDED:${bucketKey}`);
+    this.name = "LlmRateWaitExceededError";
+  }
+}
+
 /**
  * Acquiert un créneau pour `servedModel`, en respectant concurrence + RPM + RPS.
  * Attend (file) tant que la limite est atteinte. **Toujours** appairer avec
@@ -128,6 +143,7 @@ export async function acquireSlot(servedModel: string): Promise<string> {
 
   for (;;) {
     const now = Date.now();
+    if (now >= deadline) throw new LlmRateWaitExceededError(key);
     pruneWindow(b, now);
 
     const underConcurrency = b.active < policy.maxConcurrent;
@@ -141,21 +157,12 @@ export async function acquireSlot(servedModel: string): Promise<string> {
       return key;
     }
 
-    if (now >= deadline) {
-      // Plutôt que d'attendre indéfiniment, on part quand même (le provider
-      // tranchera) mais on a borné le débit au mieux. On compte le départ.
-      b.active++;
-      b.starts.push(now);
-      b.lastStart = now;
-      return key;
-    }
-
     const waits: number[] = [];
     if (!intervalOk) waits.push(policy.minIntervalMs - (now - b.lastStart));
     if (!underRpm && b.starts.length) waits.push(b.starts[0]! + 60_000 - now);
     if (!underConcurrency) waits.push(40); // sonde la libération d'un slot
     const wait = Math.max(5, Math.min(...waits.filter((w) => w > 0)));
-    await sleep(Math.min(wait, 1000));
+    await sleep(Math.min(wait, 1000, deadline - now));
   }
 }
 

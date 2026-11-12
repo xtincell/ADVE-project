@@ -1,12 +1,14 @@
+import { projectFinancialPillar } from "@/domain/unit-economics";
 /**
  * Cross-Pillar Validator — 17 règles de validation croisée inter-piliers
  * Vérifie la cohérence ontologique entre les 8 piliers ADVE-RTIS
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { SCHWARTZ_VALUES } from "@/lib/types/taxonomies";
-import { danglingProductRefs } from "@/domain/product-catalog";
-import { findDanglingReferences, type PillarBag } from "@/domain/pillar-reference-edges";
+import { catalogueReferencePrice, danglingProductRefs } from "@/domain/product-catalog";
+import { assessPillarReferences, type PillarBag } from "@/domain/pillar-reference-edges";
 
 export interface CrossRefValidation {
   rule: string;
@@ -19,11 +21,12 @@ export interface CrossRefValidation {
 
 type PillarMap = Record<string, Record<string, unknown> | null>;
 
-async function loadPillars(strategyId: string): Promise<PillarMap> {
-  const pillars = await db.pillar.findMany({ where: { strategyId } });
+async function loadPillars(strategyId: string, client: Pick<Prisma.TransactionClient, "pillar">): Promise<PillarMap> {
+  const pillars = await client.pillar.findMany({ where: { strategyId } });
   const map: PillarMap = {};
   for (const p of pillars) {
-    map[p.key.toUpperCase()] = p.content as Record<string, unknown> | null;
+    const content = p.content as Record<string, unknown> | null;
+    map[p.key.toUpperCase()] = p.key.toLowerCase() === "v" && content ? projectFinancialPillar(content) : content;
   }
   return map;
 }
@@ -48,8 +51,16 @@ function similarity(a: string, b: string): number {
 /**
  * Exécute les 17 validations croisées inter-piliers
  */
-export async function validateCrossReferences(strategyId: string): Promise<CrossRefValidation[]> {
-  const p = await loadPillars(strategyId);
+export async function validateCrossReferences(
+  strategyId: string, client: Pick<Prisma.TransactionClient, "pillar"> = db,
+): Promise<CrossRefValidation[]> {
+  return validatePillarCrossReferences(await loadPillars(strategyId, client));
+}
+
+/** Same checks for a persisted dossier and a newly calculated S, before writing it. */
+export function validatePillarCrossReferences(pillars: PillarMap): CrossRefValidation[] {
+  const p: PillarMap = Object.fromEntries(Object.entries(pillars).map(([key, value]) =>
+    [key.toUpperCase(), key.toUpperCase() === "V" && value ? projectFinancialPillar(value) : value]));
   const results: CrossRefValidation[] = [];
 
   // 1. A.archetype → D.directionArtistique.lsiMatrix.concepts
@@ -231,7 +242,8 @@ export async function validateCrossReferences(strategyId: string): Promise<Cross
   const tPillar = p.T as Record<string, unknown> | null;
   const ue = (vPillar?.unitEconomics ?? {}) as Record<string, unknown>;
   const vProduits = vPillar?.produitsCatalogue as Array<Record<string, unknown>> | undefined;
-  const prixProduit = vProduits?.[0]?.prix as number | undefined;
+  const prixProduit = catalogueReferencePrice(vProduits);
+  const outcomes = (ue._financialContext as { outcomes?: Record<string, string> } | undefined)?.outcomes ?? {};
   const cac = ue.cac as number | undefined;
   const ltv = ue.ltv as number | undefined;
   const ltvCacRatio = ue.ltvCacRatio as number | undefined;
@@ -243,51 +255,55 @@ export async function validateCrossReferences(strategyId: string): Promise<Cross
   const tamSamSom = tPillar?.tamSamSom as Record<string, unknown> | undefined;
 
   // 18. CAC < prix produit
-  if (!cac || !prixProduit) {
-    results.push({ rule: "CAC < Prix produit", ruleId: 18, from: "V.unitEconomics.cac", to: "V.produitsCatalogue.prix", status: "SKIPPED", message: "Donnees insuffisantes" });
+  if (typeof cac !== "number" || !Number.isFinite(cac) || cac < 0 || prixProduit == null || prixProduit === 0) {
+    results.push({ rule: "CAC < Prix produit", ruleId: 18, from: "V.unitEconomics.cac", to: "V.produitsCatalogue.prix", status: "SKIPPED", message: "Comparaison non qualifiée : panier, conditions tarifaires ou CAC insuffisamment renseignés. Un accès gratuit ne démontre pas la rentabilité." });
   } else {
-    results.push({ rule: "CAC < Prix produit", ruleId: 18, from: "V.unitEconomics.cac", to: "V.produitsCatalogue.prix", status: cac < prixProduit ? "VALID" : "INVALID", message: cac < prixProduit ? `CAC ${cac} < prix ${prixProduit}` : `CAC ${cac} depasse le prix produit ${prixProduit}` });
+    results.push({ rule: "CAC < Prix produit", ruleId: 18, from: "V.unitEconomics.cac", to: "V.produitsCatalogue.prix", status: cac < prixProduit ? "VALID" : "INVALID", message: cac < prixProduit ? `CAC ${cac} < prix de référence ${prixProduit}. Comparaison nominale, pas une preuve de rentabilité (période, fiscalité, marge et panier à vérifier).` : `CAC ${cac} dépasse le prix de référence ${prixProduit}. Comparaison nominale ; période, fiscalité, marge et panier à vérifier.` });
   }
 
   // 19. LTV/CAC >= 1.0
-  if (ltvCacRatio === undefined) {
-    results.push({ rule: "LTV/CAC >= 1.0", ruleId: 19, from: "V.unitEconomics.ltvCacRatio", to: "V.unitEconomics", status: "SKIPPED", message: "Ratio non calcule" });
+  if (ltvCacRatio == null) {
+    results.push({ rule: "LTV/CAC >= 1.0", ruleId: 19, from: "V.unitEconomics.ltvCacRatio", to: "V.unitEconomics", status: "SKIPPED", message: outcomes.ltvCacRatio ?? "Ratio non calcule" });
   } else {
-    results.push({ rule: "LTV/CAC >= 1.0", ruleId: 19, from: "V.unitEconomics.ltvCacRatio", to: "V.unitEconomics", status: ltvCacRatio >= 1.0 ? "VALID" : "INVALID", message: ltvCacRatio >= 1.0 ? `Ratio ${ltvCacRatio} — rentable` : `Ratio ${ltvCacRatio} < 1.0 — chaque client coute plus qu'il rapporte` });
+    results.push({ rule: "LTV/CAC >= 1.0", ruleId: 19, from: "V.unitEconomics.ltvCacRatio", to: "V.unitEconomics", status: ltvCacRatio >= 1.0 ? "VALID" : "INVALID", message: ltvCacRatio >= 1.0 ? `Ratio ${ltvCacRatio} — contribution supérieure au coût d’acquisition dans le périmètre comparé` : `Ratio ${ltvCacRatio} < 1.0 — chaque client coute plus qu'il rapporte` });
   }
 
   // 20. Budget <= CA vise
-  if (!budgetCom || !caVise) {
+  if (budgetCom == null || caVise == null) {
     results.push({ rule: "Budget <= CA vise", ruleId: 20, from: "V.unitEconomics.budgetCom", to: "V.unitEconomics.caVise", status: "SKIPPED", message: "Donnees insuffisantes" });
   } else {
     results.push({ rule: "Budget <= CA vise", ruleId: 20, from: "V.unitEconomics.budgetCom", to: "V.unitEconomics.caVise", status: budgetCom <= caVise ? "VALID" : "INVALID", message: budgetCom <= caVise ? `Budget ${budgetCom} <= CA ${caVise}` : `Budget ${budgetCom} depasse le CA vise ${caVise}` });
   }
 
   // 21. Budget >= seuil minimum sectoriel (5% du CA comme plancher)
-  if (!budgetCom || !caVise) {
+  if (budgetCom == null || caVise == null) {
     results.push({ rule: "Budget >= seuil minimum", ruleId: 21, from: "V.unitEconomics.budgetCom", to: "V.unitEconomics.caVise", status: "SKIPPED", message: "Donnees insuffisantes" });
+  } else if (caVise === 0) {
+    results.push({ rule: "Budget >= seuil minimum", ruleId: 21, from: "V.unitEconomics.budgetCom", to: "V.unitEconomics.caVise", status: "SKIPPED", message: "Non applicable : aucun revenu dans la trajectoire proposée ; aucun pourcentage de budget sur CA n’est défini." });
   } else {
     const minBudget = caVise * 0.03; // 3% plancher absolu
     results.push({ rule: "Budget >= seuil minimum", ruleId: 21, from: "V.unitEconomics.budgetCom", to: "V.unitEconomics.caVise", status: budgetCom >= minBudget ? "VALID" : "INVALID", message: budgetCom >= minBudget ? `Budget suffisant (${((budgetCom / caVise) * 100).toFixed(1)}% du CA)` : `Budget trop faible: ${((budgetCom / caVise) * 100).toFixed(1)}% du CA (minimum 3%)` });
   }
 
   // 22. Marge nette > 0
-  if (margeNette === undefined) {
-    results.push({ rule: "Marge nette > 0", ruleId: 22, from: "V.unitEconomics.margeNette", to: "V.unitEconomics", status: "SKIPPED", message: "Non renseignee" });
+  if (margeNette == null) {
+    results.push({ rule: "Marge nette > 0", ruleId: 22, from: "V.unitEconomics.margeNette", to: "V.unitEconomics", status: "SKIPPED", message: outcomes.margeNette ?? "Non renseignee" });
   } else {
     results.push({ rule: "Marge nette > 0", ruleId: 22, from: "V.unitEconomics.margeNette", to: "V.unitEconomics", status: margeNette > 0 ? "VALID" : "INVALID", message: margeNette > 0 ? `Marge ${(margeNette * 100).toFixed(1)}% — positive` : `Marge ${(margeNette * 100).toFixed(1)}% — negative` });
   }
 
   // 23. Payback <= 36 mois
-  if (paybackPeriod === undefined) {
-    results.push({ rule: "Payback <= 36 mois", ruleId: 23, from: "V.unitEconomics.paybackPeriod", to: "V.unitEconomics", status: "SKIPPED", message: "Non renseigne" });
+  if (paybackPeriod == null) {
+    results.push({ rule: "Payback <= 36 mois", ruleId: 23, from: "V.unitEconomics.paybackPeriod", to: "V.unitEconomics", status: "SKIPPED", message: outcomes.paybackPeriod ?? "Non renseigne" });
   } else {
     results.push({ rule: "Payback <= 36 mois", ruleId: 23, from: "V.unitEconomics.paybackPeriod", to: "V.unitEconomics", status: paybackPeriod <= 36 ? "VALID" : "INVALID", message: paybackPeriod <= 36 ? `Payback ${paybackPeriod} mois — acceptable` : `Payback ${paybackPeriod} mois — trop long (max 36)` });
   }
 
   // 24. S.globalBudget ~ V.budgetCom (tolerance 30%)
-  if (!globalBudget || !budgetCom) {
+  if (globalBudget == null || budgetCom == null) {
     results.push({ rule: "S.globalBudget ~ V.budgetCom", ruleId: 24, from: "S.globalBudget", to: "V.unitEconomics.budgetCom", status: "SKIPPED", message: "Donnees insuffisantes" });
+  } else if (budgetCom === 0) {
+    results.push({ rule: "S.globalBudget ~ V.budgetCom", ruleId: 24, from: "S.globalBudget", to: "V.unitEconomics.budgetCom", status: globalBudget === 0 ? "VALID" : "INVALID", message: `Plan chiffré à ${globalBudget}, communication chiffrée explicitement à zéro ; comparaison des montants, aucune dépense prouvée.` });
   } else {
     const ratio = globalBudget / budgetCom;
     const coherent = ratio >= 0.7 && ratio <= 1.3;
@@ -296,27 +312,27 @@ export async function validateCrossReferences(strategyId: string): Promise<Cross
 
   // 25. budgetByDevotion sum ~ globalBudget
   const budgetByDevotion = sPillar?.budgetByDevotion as Record<string, number> | undefined;
-  if (!budgetByDevotion || !globalBudget) {
+  if (!budgetByDevotion || globalBudget == null) {
     results.push({ rule: "budgetByDevotion sum = globalBudget", ruleId: 25, from: "S.budgetByDevotion", to: "S.globalBudget", status: "SKIPPED", message: "Donnees insuffisantes" });
   } else {
     const sum = Object.values(budgetByDevotion).reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
-    const ratio = globalBudget > 0 ? sum / globalBudget : 0;
+    const ratio = globalBudget > 0 ? sum / globalBudget : sum === 0 ? 1 : 0;
     const ok = ratio >= 0.8 && ratio <= 1.2;
     results.push({ rule: "budgetByDevotion sum = globalBudget", ruleId: 25, from: "S.budgetByDevotion", to: "S.globalBudget", status: ok ? "VALID" : "INVALID", message: ok ? `Somme ${sum} ~ globalBudget ${globalBudget}` : `Somme ${sum} != globalBudget ${globalBudget}` });
   }
 
   // 26. T.tamSamSom.som > 0 si V.caVise > 0
   const som = (tamSamSom?.som as Record<string, unknown>)?.value as number | undefined;
-  if (!caVise || caVise === 0) {
-    results.push({ rule: "SOM > 0 si CA vise", ruleId: 26, from: "T.tamSamSom.som", to: "V.unitEconomics.caVise", status: "SKIPPED", message: "CA non renseigne" });
+  if (caVise == null || caVise === 0) {
+    results.push({ rule: "SOM > 0 si CA vise", ruleId: 26, from: "T.tamSamSom.som", to: "V.unitEconomics.caVise", status: "SKIPPED", message: caVise === 0 ? "Non applicable : aucun revenu dans la trajectoire proposée ; ce contrôle ne requiert pas un SOM pour un CA nul." : "CA non renseigne" });
   } else {
     results.push({ rule: "SOM > 0 si CA vise", ruleId: 26, from: "T.tamSamSom.som", to: "V.unitEconomics.caVise", status: (som && som > 0) ? "VALID" : "INVALID", message: (som && som > 0) ? `SOM ${som} defini` : `SOM non defini alors que CA vise = ${caVise}` });
   }
 
   // 27. ROI coherent avec LTV/CAC
   const roiEstime = ue.roiEstime as number | undefined;
-  if (roiEstime === undefined || ltvCacRatio === undefined) {
-    results.push({ rule: "ROI coherent avec LTV/CAC", ruleId: 27, from: "V.unitEconomics.roiEstime", to: "V.unitEconomics.ltvCacRatio", status: "SKIPPED", message: "Donnees insuffisantes" });
+  if (roiEstime == null || ltvCacRatio == null) {
+    results.push({ rule: "ROI coherent avec LTV/CAC", ruleId: 27, from: "V.unitEconomics.roiEstime", to: "V.unitEconomics.ltvCacRatio", status: "SKIPPED", message: outcomes.roiEstime ?? "Donnees insuffisantes" });
   } else {
     // ROI and LTV/CAC should correlate: high LTV/CAC → high ROI
     const expectedMinRoi = (ltvCacRatio - 1) * 50; // LTV/CAC=3 → minROI ~100%
@@ -334,9 +350,9 @@ export async function validateCrossReferences(strategyId: string): Promise<Cross
   }
 
   const roadmap = sPillar?.roadmap as Array<Record<string, unknown>> | undefined;
-  if (roadmap && globalBudget && globalBudget > 0) {
+  if (roadmap && globalBudget != null && globalBudget >= 0) {
     const roadmapBudgetSum = roadmap.reduce((sum, phase) => sum + (typeof phase.budget === "number" ? phase.budget : 0), 0);
-    const ratio = roadmapBudgetSum / globalBudget;
+    const ratio = globalBudget > 0 ? roadmapBudgetSum / globalBudget : roadmapBudgetSum === 0 ? 1 : 0;
     const ok = ratio >= 0.7 && ratio <= 1.3;
     results.push({ rule: "Roadmap budget sum ~ globalBudget", ruleId: 30, from: "S.roadmap.budget", to: "S.globalBudget", status: ok ? "VALID" : "INVALID", message: ok ? `Somme phases ${roadmapBudgetSum} ~ globalBudget ${globalBudget}` : `Somme phases ${roadmapBudgetSum} incoherente avec globalBudget ${globalBudget}` });
   } else {
@@ -365,14 +381,28 @@ export async function validateCrossReferences(strategyId: string): Promise<Cross
   // ── 32. Intégrité des arêtes de référence inter-piliers (ADR-0174) ──
   // Généralise rule 31 : liens par nom (persona) + FK UUID (risque/persona/hypothèse/
   // action) résolvent-ils vers leur cible ? Détection seulement (scoring, jamais bloquant).
-  const danglingRefs = findDanglingReferences(p as PillarBag);
-  if (danglingRefs.length === 0) {
-    results.push({ rule: "Arêtes de référence résolvent vers leur cible", ruleId: 32, from: "I/S/V/E refs", to: "R/D/T/I ids & noms", status: "VALID", message: "Toutes les références inter-piliers résolvent" });
-  } else {
+  const assessment = assessPillarReferences(p as PillarBag);
+  const danglingRefs = assessment.dangling;
+  const missingIds = assessment.deferred.filter(ref => ref.reason === "TARGET_IDS_MISSING").length;
+  const malformed = assessment.deferred.filter(ref => ref.reason === "INVALID_REFERENCE_SHAPE").length;
+  const deferredDetail = [
+    missingIds ? `${missingIds} lien(s) non vérifiable(s) : identifiants cibles absents` : "",
+    malformed ? `${malformed} champ(s) non vérifiable(s) : format de référence à rapprocher` : "",
+  ].filter(Boolean).join(" · ");
+  if (danglingRefs.length > 0) {
     const detail = danglingRefs.slice(0, 5).map((d) => `${d.source} → « ${d.ref} »`).join(" · ");
-    results.push({ rule: "Arêtes de référence résolvent vers leur cible", ruleId: 32, from: "I/S/V/E refs", to: "R/D/T/I ids & noms", status: "INVALID", message: `${danglingRefs.length} référence(s) fantôme(s) : ${detail}${danglingRefs.length > 5 ? " …" : ""}` });
+    results.push({ rule: "Arêtes de référence résolvent vers leur cible", ruleId: 32, from: "I/S/V/E refs", to: "R/D/T/I ids & noms", status: "INVALID", message: `${danglingRefs.length} référence(s) fantôme(s) : ${detail}${danglingRefs.length > 5 ? " …" : ""}${deferredDetail ? ` · ${deferredDetail}` : ""}` });
+  } else if (assessment.deferred.length || assessment.checkedCount === 0) {
+    results.push({ rule: "Arêtes de référence résolvent vers leur cible", ruleId: 32, from: "I/S/V/E refs", to: "R/D/T/I ids & noms", status: "SKIPPED", message: deferredDetail || "Aucune référence inter-piliers à vérifier dans ce dossier" });
+  } else {
+    results.push({ rule: "Arêtes de référence résolvent vers leur cible", ruleId: 32, from: "I/S/V/E refs", to: "R/D/T/I ids & noms", status: "VALID", message: `${assessment.checkedCount} référence(s) inter-piliers vérifiée(s) et résolue(s)` });
   }
 
+  if (ue._financialContext) {
+    for (const row of results) if (row.ruleId >= 18 && row.ruleId <= 30) {
+      row.message += " Modèle de travail : mêmes prémisses ADVE, plafond CAC et horizon proposés ; aucune dépense, rentabilité ou disponibilité de trésorerie observée n’est démontrée.";
+    }
+  }
   return results;
 }
 
@@ -386,7 +416,11 @@ export async function getCrossRefSummary(strategyId: string): Promise<{
   skipped: number;
   score: number;
 }> {
-  const results = await validateCrossReferences(strategyId);
+  return summarizeCrossReferences(await validateCrossReferences(strategyId));
+}
+
+/** Ratio of passed checks, with coverage alongside it; never a market performance score. */
+export function summarizeCrossReferences(results: CrossRefValidation[]) {
   const valid = results.filter((r) => r.status === "VALID").length;
   const invalid = results.filter((r) => r.status === "INVALID").length;
   const skipped = results.filter((r) => r.status === "SKIPPED").length;

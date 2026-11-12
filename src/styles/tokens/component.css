@@ -42,6 +42,10 @@
   --card-shadow-hover:          var(--shadow-md);
   --card-radius:                var(--radius-lg);
 
+  /* ──── Asset preview ──── */
+  --asset-preview-bg-light:     var(--color-media-light);
+  --asset-preview-bg-dark:      var(--color-media-dark);
+
   /* ──── Input / Textarea / Select ──── */
   --input-bg:                   var(--color-surface-raised);
   --input-bg-disabled:          var(--color-surface-elevated);

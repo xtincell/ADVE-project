@@ -5,21 +5,29 @@
 
 import { readXlsxWorkbook } from "@/server/services/utils/xlsx-read";
 import type { ExtractionResult } from "./types";
+import { readPptxText } from "./pptx-reader";
 
 /**
  * Extract text from a PDF buffer
  */
 export async function extractPDF(buffer: Buffer): Promise<ExtractionResult> {
-  const pdfModule = await import("pdf-parse");
-  const pdfParse = (pdfModule as any).default ?? pdfModule;
-  const data = await (pdfParse as any)(buffer);
-  return {
-    text: data.text,
-    metadata: {
-      pages: data.numpages,
-      wordCount: data.text.split(/\s+/).length,
-    },
-  };
+  const { PDFParse } = await import("pdf-parse");
+  const parser = new PDFParse({ data: new Uint8Array(buffer) });
+  try {
+    const data = await parser.getText();
+    if (!data.pages.some((page) => page.text.trim().length > 0)) {
+      throw new Error("Ce PDF ne contient pas de texte lisible. Déposez une version avec texte sélectionnable ou ajoutez une note.");
+    }
+    return {
+      text: data.text,
+      metadata: {
+        pages: data.total,
+        wordCount: data.text.trim().split(/\s+/).filter(Boolean).length,
+      },
+    };
+  } finally {
+    await parser.destroy();
+  }
 }
 
 /**
@@ -162,10 +170,15 @@ export async function extractAuto(
     const buf = Buffer.from(content, "base64");
     return extractPDF(buf);
   }
-  if (ft === "DOCX" || ft === "DOC") {
+  if (ft === "DOCX") {
     const buf = Buffer.from(content, "base64");
     return extractDOCX(buf);
   }
+  if (ft === "DOC") {
+    throw new Error("Format .doc (Word ancien) non supporté — convertir en .docx ou .pdf.");
+  }
+  if (ft === "PPTX") return readPptxText(Buffer.from(content, "base64"));
+  if (ft === "PPT") throw new Error("Format .ppt ancien non supporté — convertir en .pptx ou .pdf.");
   if (ft === "XLSX") {
     return extractXLSX(Buffer.from(content, "base64"));
   }
@@ -184,4 +197,18 @@ export async function extractAuto(
   // Texte (TXT/MD/inconnu) : decoder SI c'est du base64 (chemin upload),
   // sinon passer tel quel (chemin re-extraction). Cf. `decodeIfBase64`.
   return extractText(decodeIfBase64(content));
+}
+
+/** Received bytes and already-extracted text are distinct contracts. Opaque bytes
+ * never fall back to a base64 or lossy UTF-8 pseudo-document. */
+export async function extractReceivedFile(fileType: string, bytes: Buffer, strategyId: string): Promise<ExtractionResult> {
+  const ft = fileType.toUpperCase();
+  if (["PDF", "DOC", "DOCX", "PPT", "PPTX", "XLS", "XLSX", "IMG", "PNG", "JPG", "JPEG", "WEBP", "GIF", "SVG"].includes(ft)) {
+    return extractAuto(ft, bytes.toString("base64"), strategyId);
+  }
+  let text: string;
+  try { text = new TextDecoder("utf-8", { fatal: true }).decode(bytes); }
+  catch { throw new Error("Ce fichier binaire ne fournit pas de texte lisible. Déposez-le dans les actifs ou fournissez une version texte."); }
+  if (/[\u0000-\u0008\u000e-\u001f]/.test(text)) throw new Error("Ce fichier contient des données binaires, pas un texte lisible.");
+  return extractText(text);
 }

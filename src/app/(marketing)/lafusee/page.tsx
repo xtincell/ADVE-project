@@ -18,10 +18,10 @@ import { MarketingFooter } from "@/components/landing/marketing-footer";
 export const metadata: Metadata = {
   title: "La Fusée — Industry OS du marché créatif africain | UPgraders",
   description:
-    "La Fusée, le produit d'UPgraders : diagnostic ADVE gratuit en 15 minutes · socle de marque /100 puis score complet /200 · radar 8 piliers · feuille de route stratégique. Gratuit, sans engagement.",
+    "La Fusée, le produit d'UPgraders : diagnostic ADVE gratuit (questionnaire ou import de documents) · complétude du socle /100 · force publique /200 quand une mesure existe · puis stratégie sur les 8 piliers dans votre espace. Sans engagement.",
   openGraph: {
     title: "La Fusée — l'OS qui transforme les marques en icônes",
-    description: "Diagnostic ADVE gratuit en 15 minutes, verdict immédiat. Socle /100 puis score complet /200.",
+    description: "Diagnostic ADVE gratuit : complétude du socle /100, puis force publique /200 quand une mesure existe.",
   },
 };
 

@@ -180,6 +180,18 @@ export const BIBLE_A: Record<string, VariableSpec> = {
     format: "Array d'objets { value (enum Schwartz parmi les 10: POUVOIR, ACCOMPLISSEMENT, HEDONISME, STIMULATION, AUTONOMIE, UNIVERSALISME, BIENVEILLANCE, TRADITION, CONFORMITE, SECURITE), customName, rank, justification (50+ chars), costOfHolding }",
     rules: ["3 maximum (une marque forte se concentre)", "Minimum 1 valeur", "Chaque valeur doit avoir une justification spécifique, pas générique", "Le costOfHolding = ce que ça coûte de maintenir cette valeur", "Les tensions entre valeurs (tensionWith) enrichissent l'identité"],
   },
+  overtonPositions: {
+    description: "Les positions traçables de la conviction incarnée, de la catégorie et de la marque, par public et territoire",
+    format: "Array { id stable, kind CONVICTION|CATEGORY|BRAND, statement, audience, countryCode?, editorialRole?, opposedStatement?, baseline { zone, basis DECLARED|INFERRED, reason, sourceRefs[], verification }, targetZone }. Zones : UNTHINKABLE, RADICAL, ACCEPTABLE, SENSIBLE, POPULAR, POLICY.",
+    rules: [
+      "Séparer la conviction défendue, la place de la catégorie et la préférence pour la marque ; ne jamais substituer l'une à l'autre.",
+      "Déduire le postulat de départ de l'ADVE et de sa documentation, expliquer ce choix et donner une consigne de vérification. Une inférence n'est pas un résultat observé.",
+      "Repères : impensable = illégitime ; radical = minoritaire mais discuté ; acceptable = option légitime ; raisonnable = utile et justifié ; populaire = soutien large dans un public défini ; institué = pratiques, règles ou standards durables.",
+      "Conserver l'id lors d'une révision ; une hausse de visibilité, l'absence d'article ou une note ADVE ne prouve jamais une migration d'acceptabilité.",
+      "La cible peut être plus basse ou plus haute que le départ. Aucun montant, date d'observation ni pourcentage de soutien ne doit être inventé.",
+    ],
+    feedsInto: ["s.overtonMilestones", "s.fenetreOverton", "t.overtonPosition"],
+  },
   enemy: {
     description: "L'ennemi déclaré de la marque — ce contre quoi elle se bat",
     format: "Objet { name, manifesto, narrative, overtonMap { ourPosition, enemyPosition, battleground, shiftDirection } }",
@@ -321,17 +333,17 @@ export const BIBLE_D: Record<string, VariableSpec> = {
     feedsInto: ["e.promesseExperience", "v.promesseDeValeur"],
   },
   personas: {
-    description: "Les 2-5 profils types de clients de la marque",
-    format: "Array d'objets { name, age, csp, location, motivations (texte), fears (texte), hiddenDesire, jobsToBeDone[], devotionPotential (enum Devotion), rank }",
-    rules: ["2 minimum, 5 maximum", "Rank 1 = persona principal", "Chaque persona doit avoir motivations + fears minimum"],
-    derivedFrom: "a.publicCible",
+    description: "Les profils types des différents publics de la marque",
+    format: "Array d'objets { id, name, actorRoles[] (COMMUNICATION_AUDIENCE, USER, PAYER, PARTNER, SUPPLIER, PRESCRIBER, DISTRIBUTOR), age, csp, location, motivations, fears, hiddenDesire, jobsToBeDone[], devotionPotential, rank (si connu) }",
+    rules: ["2 minimum ; conserver tous les profils sourcés utiles", "Rank 1 = persona principal lorsque cette priorité est établie ; sinon laisser le rang absent", "Chaque persona doit avoir motivations + fears minimum", "Rôles cumulables et sourcés : public de communication, utilisateur, payeur, partenaire, fournisseur, prescripteur ou distributeur ne sont pas équivalents", "Un partenaire co-crée la valeur et dépend de contreparties ; un fournisseur fournit une prestation. Le paiement ou le bénéfice mutuel seuls ne tranchent pas le rôle", "Ne pas inventer un achat, un revenu ou une fidélité pour un profil non payeur ; laisser le rôle absent si inconnu", "Une catégorie de profils ne prouve aucun partenaire signé ni client acquis"],
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "a.publicCible",
     feedsInto: ["v.personaSegmentMap", "e.superfanPortrait"],
   },
   tonDeVoix: {
     description: "Le ton et la personnalité verbale de la marque",
     format: "Objet { personnalite (5-7 adjectifs), onDit (3+ phrases qu'on utilise), onNeditPas (2+ phrases qu'on n'utilise jamais) }",
     rules: ["personnalite = adjectifs, pas des phrases", "onDit et onNeditPas = exemples concrets de formulations"],
-    derivedFrom: "a.archetype",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "a.archetype",
   },
   paysageConcurrentiel: {
     description: "Les 3+ concurrents directs avec forces/faiblesses",
@@ -342,7 +354,7 @@ export const BIBLE_D: Record<string, VariableSpec> = {
   archetypalExpression: {
     description: "Comment l archetype A se traduit en expression visuelle et verbale",
     format: "Objet { visualTranslation (description visuelle), verbalTranslation (ton verbal), emotionalRegister (registre émotionnel) }",
-    derivedFrom: "a.archetype",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "a.archetype",
     feedsInto: ["d.directionArtistique"],
   },
   sousPromesses: {
@@ -425,15 +437,23 @@ export const BIBLE_D: Record<string, VariableSpec> = {
 // ── PILIER V — VALEUR ─────────────────────────────────────────────────
 
 export const BIBLE_V: Record<string, VariableSpec> = {
+  strategyBudgetModel: { description: "Prémisses de chiffrage du plan : horizon, fenêtres de phase et ventilation des responsabilités par canal", format: "Objet versionné : source, currency, qualification, horizonMonths, daysPerMonth, envelopePolicy UPPER_BOUND, phaseWindows, profiles (channel, fallbackRange, categoryShares, adHocOccurrences, note), note", editableMode: "STRATEGIC_REWRITE", rules: ["Postulats qualifiés et sourcés ; une estimation ne vaut ni devis ni dépense", "Ventilation exacte de 100 % ; borne haute prudente distincte de la fourchette"] },
   produitsCatalogue: {
     description: "Le catalogue complet des produits/services de la marque",
-    format: "Array d'objets { nom, categorie (enum), prix, cout, margeUnitaire, gainClientConcret, lienPromesse, segmentCible, phaseLifecycle (enum) }",
-    rules: ["1 minimum, 50 maximum", "gainClientConcret = bénéfice tangible, pas marketing", "segmentCible = ref D.personas"],
+    format: "Array d'objets { nom, categorie (enum), prix (scalaire optionnel), conditionsTarifaires? (texte déclaré : périodes, HT/TTC, options, état de publication), cout, margeUnitaire, gainClientConcret, lienPromesse, segmentCible, phaseLifecycle (enum) }",
+    rules: ["1 minimum, 50 maximum", "gainClientConcret = bénéfice tangible, pas marketing", "segmentCible = ref D.personas", "conditionsTarifaires conserve les termes sourcés ou saisis ; jamais inventer prix, fiscalité, période ou disponibilité", "Un prix absent reste inconnu ; gratuit exige zéro explicite. Des conditions ne sont pas un panier moyen"],
+  },
+  financialModel: {
+    description: "Hypothèses du modèle financier : cohorte payeuse, charges, prix et trajectoire",
+    format: "Modèle structuré versionné, montants justifiés et document de référence",
+    rules: ["Prémisses dans V ; tous les lecteurs partagent le même calcul", "Prévisions et plafond CAC proposés, jamais observations ou autorisation de dépense", "Communication identifiée au sein des charges, sans double comptage"],
+    editableMode: "STRATEGIC_REWRITE",
+    feedsInto: ["v.unitEconomics", "r", "t", "i", "s"],
   },
   unitEconomics: {
     description: "Les métriques économiques unitaires de la marque",
     format: "Objet { cac (coût acquisition), ltv (lifetime value), ltvCacRatio (calculé), pointMort, margeNette, budgetCom (annuel), caVise (CA annuel visé) }",
-    rules: ["cac et ltv en devise locale (XAF)", "ltvCacRatio ≥ 3 = sain, < 3 = alarme", "budgetCom et caVise sont des objectifs annuels"],
+    rules: ["Même cohorte, devise et horizon pour CAC et LTV", "Avec financialModel : résultats calculés, réviser les prémisses au lieu des résultats", "budgetCom et caVise sont des objectifs annuels ; un ratio prévisionnel ne prouve pas une performance terrain"],
   },
   productSystem: {
     description: "Le SYSTÈME/mécanisme interne du produit — ce qui le fait fonctionner et crée de la valeur structurellement (distinct du catalogue/économie). Ex. le « Système Palais » de SPAWT.",
@@ -449,28 +469,28 @@ export const BIBLE_V: Record<string, VariableSpec> = {
   businessModel: {
     description: "Le modèle d'affaires fondamental",
     format: "String enum : PRODUCTION, DISTRIBUTION, SERVICES, ABONNEMENT, PLATEFORME, FREEMIUM_AD, LICENSING_IP, etc.",
-    derivedFrom: "Strategy.businessContext",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "Strategy.businessContext",
   },
   pricingJustification: {
     description: "Pourquoi CE prix pour CE positionnement",
     format: "Texte 1-3 phrases qui lie D.positionnement → V.prix",
     examples: ["Notre premium de 15-20% est justifié par la garantie qualité blockchain et le réseau de 5000 distributeurs experts"],
-    derivedFrom: "d.positionnement",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "d.positionnement",
   },
   economicModels: {
     description: "Les modèles économiques de capture de valeur",
     format: "Array de strings : VENTE_DIRECTE, ABONNEMENT, COMMISSION, FREEMIUM, PUBLICITE, LICENCE, etc.",
-    derivedFrom: "Strategy.businessContext",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "Strategy.businessContext",
   },
   positioningArchetype: {
     description: "L'archétype de positionnement prix (de ultra-luxe à low-cost)",
     format: "String enum : ULTRA_LUXE, LUXE, PREMIUM, MASSTIGE, MAINSTREAM, VALUE, LOW_COST",
-    derivedFrom: "Strategy.businessContext",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "Strategy.businessContext",
   },
   salesChannel: {
     description: "Le canal de vente principal — comment le produit atteint le client final",
     format: "String enum : DIRECT, INTERMEDIATED, HYBRID",
-    derivedFrom: "Strategy.businessContext",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "Strategy.businessContext",
   },
   freeLayer: {
     description: "Pour les modèles freemium : ce qui est gratuit vs payant",
@@ -478,15 +498,15 @@ export const BIBLE_V: Record<string, VariableSpec> = {
     rules: ["Rempli uniquement si le modèle est freemium"],
   },
   personaSegmentMap: {
-    description: "Quel persona (D) achète quel produit (V) à quel niveau Devotion",
-    format: "Array d'objets { personaName (ref D.personas), productNames[] (ref V.produits), devotionLevel (enum), revenueContributionPct }",
-    derivedFrom: "d.personas + v.produitsCatalogue",
-    rules: ["Chaque persona de D doit avoir au moins 1 produit", "La somme des revenueContributionPct ≈ 100%"],
+    description: "Quel acteur (D) apporte et reçoit quelle valeur, autour de quelles offres (V)",
+    format: "Array d'objets { personaName (ref D.personas), productNames[] (refs V.produits, vide si sans offre), devotionLevel?, revenueContributionPct?, valueToBrand[], valueToActor[], actorCosts[], dependencyConditions[] }",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "d.personas + v.produitsCatalogue",
+    rules: ["Décrire les échanges monétaires et non monétaires pour chaque rôle utile, sans imposer un achat à chaque persona", "Un partenaire peut apporter audience, trafic, contenu ou offre et recevoir du trafic ou un accès : expliciter ses coûts et les conditions de viabilité", "Ne pas déduire la cible de communication du payeur : un festival peut communiquer aux visiteurs et vendre aux sponsors", "Ne renseigner la part de revenu et un niveau d’engagement que s’ils sont établis ; pas de zéro inventé pour un acteur non payeur", "La somme des revenueContributionPct est comparable seulement sur un même revenu, une même période et un périmètre complet", "Une intention de partenariat ou un profil type ne prouve pas un contrat actif"],
   },
   productLadder: {
     description: "L'échelle de produits par tier (entrée de gamme → premium)",
-    format: "Array de 2-5 objets { tier (nom, pas 'Tier 1'), prix, produitIds[], cible (ref persona), position (rang) }",
-    rules: ["2 minimum", "Prix croissants", "Chaque tier cible un persona ou un usage distinct"],
+    format: "Array de 2-7 objets { tier (nom, pas 'Tier 1'), prix (scalaire historique optionnel), produitIds[], cible (ref persona), position (rang) }",
+    rules: ["2 minimum", "Comparer les prix seulement à période et base comparables", "La gamme lit les conditions du catalogue référencé ; aucune seconde saisie tarifaire ni conversion", "Chaque tier cible un persona ou un usage distinct"],
     feedsInto: ["e.ladderProductAlignment"],
   },
   promesseDeValeur: {
@@ -550,17 +570,18 @@ export const BIBLE_V: Record<string, VariableSpec> = {
 // ── PILIER E — ENGAGEMENT ─────────────────────────────────────────────
 
 export const BIBLE_E: Record<string, VariableSpec> = {
+  devotionProjection: { description: "Prémisses du parcours chiffré de la cohorte audience, distinct des clients payeurs et des partenaires", format: "Objet : source, qualification, cohortPersonaId, cohort, observationWindow, spectators, rates (interest, participation, engagement, advocacy, prescription), phases (phase, scale, note), note", editableMode: "STRATEGIC_REWRITE", rules: ["Coefficients qualifiés entre 0 et 1 ; objectifs sans observation fabriquée", "La projection est calculée dans S et les lecteurs Oracle"] },
   promesseExperience: {
     description: "L'expérience que chaque interaction avec la marque garantit",
     format: "1 phrase, orientée sensation/émotion du client",
     examples: ["La certitude que votre chantier tiendra"],
-    derivedFrom: "d.promesseMaitre",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "d.promesseMaitre",
   },
   superfanPortrait: {
     description: "Le profil du superfan cible — l'évangéliste qu'on vise",
     format: "Objet { personaRef (ref D.personas), motivations[], barriers[], profile (texte) }",
     rules: ["personaRef = le persona de D qui a le plus haut devotionPotential", "barriers = ce qui empêche la montée dans la Devotion Ladder"],
-    derivedFrom: "d.personas (le plus haut devotionPotential)",
+    editableMode: "STRATEGIC_REWRITE", derivedFrom: "d.personas (le plus haut devotionPotential)",
   },
   touchpoints: {
     description: "Les 5-15 points de contact entre la marque et son audience",
@@ -572,16 +593,16 @@ export const BIBLE_E: Record<string, VariableSpec> = {
     format: "Array d'objets { nom, type (enum), frequency (enum), description (texte), devotionLevels[], aarrPrimary (enum), kpiMeasure }",
     rules: ["3 minimum", "Chaque rituel doit cibler au moins 1 niveau Devotion"],
   },
-  primaryChannel: { description: "Canal principal d'engagement de la marque", format: "Enum canal : INSTAGRAM, FACEBOOK, TIKTOK, WEBSITE, EVENT, etc.", derivedFrom: "Strategy.primaryChannel" },
-  productExperienceMap: { description: "Comment chaque produit (V) se traduit en expérience", format: "Array d'objets { productRef (ref V.produit), experienceDescription, touchpointRefs[], emotionalOutcome }", derivedFrom: "v.produitsCatalogue" },
-  ladderProductAlignment: { description: "Mapping Devotion Ladder ↔ Product Ladder", format: "Array d'objets { devotionLevel (enum), productTierRef (ref V.productLadder), entryAction, upgradeAction }", derivedFrom: "v.productLadder + e.touchpoints" },
-  channelTouchpointMap: { description: "Quels touchpoints sur quels canaux de vente", format: "Array d'objets { salesChannel (DIRECT|INTERMEDIATED|HYBRID), touchpointRefs[] }", derivedFrom: "v.salesChannel" },
+  primaryChannel: { description: "Canal principal d'engagement de la marque", format: "Enum canal : INSTAGRAM, FACEBOOK, TIKTOK, WEBSITE, EVENT, etc.", editableMode: "STRATEGIC_REWRITE", derivedFrom: "Strategy.primaryChannel" },
+  productExperienceMap: { description: "Comment chaque produit (V) se traduit en expérience", format: "Array d'objets { productRef (ref V.produit), experienceDescription, touchpointRefs[], emotionalOutcome }", editableMode: "STRATEGIC_REWRITE", derivedFrom: "v.produitsCatalogue" },
+  ladderProductAlignment: { description: "Mapping Devotion Ladder ↔ Product Ladder", format: "Array d'objets { devotionLevel (enum), productTierRef (ref V.productLadder), entryAction, upgradeAction }", editableMode: "STRATEGIC_REWRITE", derivedFrom: "v.productLadder + e.touchpoints" },
+  channelTouchpointMap: { description: "Quels touchpoints sur quels canaux de vente", format: "Array d'objets { salesChannel (DIRECT|INTERMEDIATED|HYBRID), touchpointRefs[] }", editableMode: "STRATEGIC_REWRITE", derivedFrom: "v.salesChannel" },
   conversionTriggers: { description: "Ce qui fait passer quelqu'un d'un niveau Devotion au suivant", format: "Array d'objets { fromLevel (enum), toLevel (enum), trigger (texte), channel }", rules: ["1 trigger par transition de niveau"] },
   barriersEngagement: { description: "Ce qui bloque la montée dans la Devotion Ladder", format: "Array d'objets { level (enum), barrier (texte), mitigation }", rules: ["Identifier les points de friction par niveau"] },
   principesCommunautaires: { description: "Les règles de la communauté de marque", format: "Array d'objets { principle (texte), enforcement (comment c'est appliqué) }", rules: ["3 minimum"] },
   gamification: { description: "Système de progression ludique", format: "Objet { niveaux[] (3+ objets { niveau, condition, reward, duration }), recompenses[] }", rules: ["3 niveaux minimum", "Doit correspondre aux niveaux de A.hierarchieCommunautaire"] },
   aarrr: { description: "Le funnel AARRR appliqué à la marque", format: "Objet { acquisition (80+ chars), activation (80+ chars), retention (80+ chars), revenue (80+ chars), referral (80+ chars) }", rules: ["Chaque étape doit être spécifique à la marque, pas générique"], minLength: 80 },
-  kpis: { description: "Les KPIs de mesure d'engagement", format: "Array de 6+ objets { name, metricType (ENGAGEMENT|FINANCIAL|BEHAVIORAL|SATISFACTION), target (nombre), frequency (DAILY|WEEKLY|MONTHLY) }", rules: ["6 minimum"] },
+  kpis: { description: "Indicateurs d’engagement, objectifs qualifiés et modalités de suivi ; distincts des mesures réellement observées", format: "Array de 6+ objets { name, metricType (ENGAGEMENT|FINANCIAL|BEHAVIORAL|SATISFACTION), target (nombre|string quantifiée|null), frequency (DAILY|WEEKLY|MONTHLY|QUARTERLY|null), qualification? (PROPOSED|DECLARED), definition?, unit?, observationWindow?, targetContext?, sourceNotes? }", rules: ["6 minimum pour le contrat complet, sans inventer des indicateurs ou cibles pour atteindre ce nombre", "Une cible ou fréquence inconnue reste null et ne satisfait pas la complétude", "Séparer fenêtre d’observation, horizon cible et cadence de suivi", "Une proposition documentaire n’est ni décision humaine ni mesure ; conserver la qualification et les sources"] },
   taboos: { description: "Les tabous de la communauté — ce qu'on ne fait JAMAIS", format: "Array d'objets { taboo (texte), consequence }", rules: ["Ce qui est interdit dans l'écosystème de la marque"] },
   sacredCalendar: { description: "Le calendrier sacré de la marque — dates et moments clés", format: "Array de 4+ objets { date, name, significance }", rules: ["4 minimum", "Les dates qui rythment la vie de la communauté"] },
   commandments: { description: "Les commandements de la marque — règles non-négociables", format: "Array de max 10 objets { commandment, justification }", rules: ["Formulés comme des impératifs", "Justifiés par les valeurs"] },
@@ -729,8 +750,8 @@ export const BIBLE_S: Record<string, VariableSpec> = {
   },
   computed: {
     description: "Tableau de bord PUREMENT CALCULÉ de S (ADR-0088 + ADR-0089) — agrégations sur le jeu de stratégie de l'ambition retenue + 3 trajectoires de roadmap (chacune avec son jeu d'initiatives/budget/couverture). Aucune saisie texte ; la seule mutation possible est la sélection d'ambition via l'Intent gouverné SELECT_ROADMAP_ROUTE.",
-    format: "Objet { totalBudget, budgetByPhase, riskCoverage, mitigatedRiskIds[], selectedInitiativeCount, devotionFunnel[], overtonPosition, coherenceScore, roadmapRoutes[3] (key, label, recommended, selected, projectedGrowthPct, projectedRevenue, targetCultIndex, initiativeIds[], initiativeCount, totalBudget, budgetByPhase, riskCoverage), selectedRouteKey (CONSERVATIVE|TARGET|AMBITIOUS), computedAt }",
-    rules: ["100% dérivé par computePillarS", "Agrégations sur le jeu de la route sélectionnée (default TARGET = SELECTED_FOR_ROADMAP)", "CONSERVATIVE = sélection court-terme (SPRINT_90/PHASE_1) · TARGET = sélection complète · AMBITIOUS = sélection + RECOMMENDED", "selectedRouteKey muté uniquement via SELECT_ROADMAP_ROUTE (sélection, jamais texte)", "riskCoverage = % risques R couverts"],
+    format: "Objet { totalBudget? (absent si budget incomplet), budgetSummary (knownSubtotal, declaredSubtotal, estimatedSubtotal, declaredCount, estimatedCount, unknownCount, unassignedTimeframeCount), budgetByPhase (phases chiffrées seulement), riskCoverage, mitigatedRiskIds[], selectedInitiativeCount, devotionFunnel[], overtonPosition, coherenceScore, roadmapRoutes[3] (key, label, recommended, selected, projectedGrowthPct, projectedRevenue, targetCultIndex, projectionAssumptions, initiativeIds[], initiativeCount, totalBudget?, budgetSummary, budgetByPhase, riskCoverage), selectedRouteKey (CONSERVATIVE|TARGET|AMBITIOUS), computedAt }",
+    rules: ["100% dérivé par computePillarS", "Agrégations sur le sous-ensemble proposé par le scénario courant (TARGET par défaut)", "I porte FAVORITE/NEUTRAL/REJECTED : favori prioritaire mais facultatif, neutre admissible, rejeté exclu", "S compose CONSERVATIVE (risques prioritaires), TARGET (risques/publics/piliers), AMBITIOUS (canaux/engagement supplémentaires) ; aucune présélection I requise", "Pas de prévision de croissance, revenu ou attachement déduite du nombre d’actions", "Un scénario ne planifie ni ne publie automatiquement les actions", "selectedRouteKey muté uniquement via SELECT_ROADMAP_ROUTE (sélection, jamais texte)", "riskCoverage = % risques R associés à une action proposée, pas risques effectivement résolus"],
     derivedFrom: "i (initiatives) + r (risques) + t.overtonPosition + sélection opérateur gouvernée SELECT_ROADMAP_ROUTE (calcul computePillarS)",
   },
   selectedFromI: {
@@ -745,26 +766,27 @@ export const BIBLE_S: Record<string, VariableSpec> = {
     rules: ["1 entrée par phase de la roadmap", "Les chiffres sont des objectifs, pas des mesures"],
   },
   northStarKPI: {
-    description: "Le KPI ultime — progression sur la Devotion Ladder",
-    format: "Objet { name, target, frequency (DAILY/WEEKLY/MONTHLY/QUARTERLY), currentValue }",
-    rules: ["Toujours orienté Devotion Ladder", "Le target doit être quantifié"],
-    examples: ["{ name: 'Progression Devotion Ladder', target: '+10% d'évangélistes par trimestre', frequency: 'MONTHLY' }"],
+    description: "Définition principale explicitement nommée dans les KPI sources, distincte de sa cible et d’une mesure de performance",
+    derivedFrom: "e.kpis (unique définition explicitement nommée North Star)",
+    format: "Objet { name, target (texte|null), frequency (DAILY/WEEKLY/MONTHLY/QUARTERLY|null), qualification?, definition?, unit?, observationWindow?, targetContext?, sourceNotes?, currentValue? }",
+    rules: ["Chercher l’unique North Star parmi toutes les définitions E, pas seulement les objectifs chiffrés", "Conserver sa définition, sa qualification et ses métadonnées même si cible ou fréquence restent nulles ; ambigu ou absent reste à préciser", "Une définition seule ne garantit pas la complétude de l’objectif ; ne pas inventer currentValue ou cible quantifiée"],
+    examples: ["Forme uniquement, ne pas inventer la cible : { name: '<North Star explicitement nommé>', target: '<cible source>', frequency: '<fréquence source reconnue>' }"],
   },
   visionStrategique: { description: "La vision stratégique à long terme", format: "Texte 200+ chars qui décrit le futur stratégique de la marque", minLength: 200, derivedFrom: "a.prophecy" },
   syntheseExecutive: { description: "Résumé exécutif de la stratégie complète. @deprecated comme saisie (ADR-0088) — produit par le chemin de synthèse, jamais tapé.", format: "Texte 400+ chars qui répond à : 'Comment on déplace la perception pour transformer des spectateurs en évangélistes'", minLength: 400, derivedFrom: "synthèse a+d+v+e+r+t+i" },
   axesStrategiques: { description: "Les 3+ axes stratégiques de la marque", format: "Array de 3+ objets { axe, pillarsLinked[] (A|D|V|E|R|T|I|S, min 2), kpis[] }", rules: ["3 minimum", "Chaque axe lie au moins 2 piliers"] },
   facteursClesSucces: { description: "Les facteurs clés de succès de la stratégie", format: "Array de 3+ strings", rules: ["3 minimum", "Facteurs spécifiques, pas génériques"] },
   sprint90Days: { description: "Les actions prioritaires des 90 prochains jours", format: "Array de 5+ objets { action, owner, kpi, priority (rang), devotionImpact (enum Devotion), sourceRef (ref I.catalogue), isRiskMitigation (bool) }", rules: ["5 minimum", "Chaque action a un owner et un KPI", "sourceRef trace l'origine dans I"] },
-  roadmap: { description: "La roadmap en 3-4 phases avec objectifs Devotion", format: "Array de 3+ objets { phase, objectif, objectifDevotion (ex: 'spectateur→intéressé'), actions[], budget, duree }", rules: ["3 phases minimum", "Chaque phase a un objectifDevotion explicite"] },
-  globalBudget: { description: "Budget total de la strategie. @deprecated saisie (ADR-0088) — voir computed.totalBudget (Σ des initiatives sélectionnées).", format: "Nombre en XAF", derivedFrom: "i (Σ budget des initiatives status=SELECTED_FOR_ROADMAP)" },
-  budgetBreakdown: { description: "Ventilation du budget par poste", format: "Objet { production, media, talent, logistics, technology, contingency, agencyFees } (en XAF)" },
-  teamStructure: { description: "L'équipe mobilisée pour exécuter la stratégie", format: "Array d'objets { name, title, responsibility }", rules: ["1 minimum"] },
-  kpiDashboard: { description: "Tableau de bord KPIs — 1 KPI par pilier minimum", format: "Array de 5+ objets { name, pillar (A|D|V|E|R|T|I|S), target, frequency (DAILY|WEEKLY|MONTHLY|QUARTERLY) }", rules: ["5 minimum", "Le KPI de S est toujours la progression Devotion"] },
+  roadmap: { description: "Programmes du scénario groupés par famille/cadence sourcées ; horizon, récurrence et période de coût restent distincts", format: "Array d'objets { phase, objectif?, actions[], actionRefs?, canonType?, cadence?, budget?, budgetSummary?, duree? }", rules: ["Reprendre les actions et références du scénario S dérivé d’ADVE qualifié", "Famille/cadence absentes : revenir à la qualification ADVE ; les documents contrôlent l’alignement, pas un socle alternatif", "LONG_TERM ne signifie pas ALWAYS_ON", "Conserver bornes et périodes des coûts ; ne pas inventer dates, owners ou répétitions"] },
+  globalBudget: { description: "Enveloppe comparable du scénario, dérivée et jamais saisie ; absente si bornes, inconnues ou périodes non comparables", format: "Nombre dans la devise du dossier seulement si une enveloppe est calculable ; sinon groupes budgétaires et limites", derivedFrom: "i + r + s.computed.selectedRouteKey (coûts comparables du sous-ensemble proposé, sans annualisation implicite)" },
+  budgetBreakdown: { description: "Ventilation sourcée des coûts comparables du scénario ; aucune répartition arbitraire d’une enveloppe", format: "Objet { production?, media?, talent?, logistics?, technology?, contingency?, agencyFees? } dans la devise et période explicites" },
+  teamStructure: { derivedFrom: "a.equipeDirigeante", description: "Membres et responsabilités déclarés dans A.equipeDirigeante, sans affectation implicite aux actions", format: "Array d'objets { name, title, responsibility }", rules: ["Reprendre les champs nom, rôle et responsabilités présents dans A", "Ne pas inventer de personne, responsabilité ou owner d’action"] },
+  kpiDashboard: { derivedFrom: "e.kpis", description: "Cibles KPI déjà renseignées avec fréquence explicite ; objectifs déclarés, pas résultats mesurés", format: "Array d'objets { name, pillar (A|D|V|E|R|T|I|S), target, frequency (DAILY|WEEKLY|MONTHLY|QUARTERLY) }", rules: ["Projeter E.kpis qualifié si nom, cible et fréquence sont présents ; les cibles sont des objectifs, pas des mesures", "Fréquence absente reste inconnue, ne pas compléter pour atteindre un quota", "Un objectif n’est pas une mesure ; garder North Star ambigu ou absent non renseigné"] },
   coherenceScore: { description: "Score de cohérence entre les piliers (0-100)", format: "Nombre 0-100", derivedFrom: "Cross-pillar coherence analysis (calcul)" },
   rejectedFromI: { description: "Actions de I explicitement non-sélectionnées pour la roadmap", format: "Array d'objets { sourceRef (path dans I), reason }", rules: ["Permet de revoir les choix plus tard"] },
   overtonMilestones: { description: "Jalons de déplacement de la Fenêtre d'Overton par phase", format: "Array d'objets { phase, currentPerception, targetPerception, measurementMethod }" },
   budgetByDevotion: { description: "Répartition du budget par objectif Devotion Ladder", format: "Objet { acquisition, conversion, retention, evangelisation } (en XAF)" },
-  recommandationsPrioritaires: { description: "Recommandations stratégiques prioritaires", format: "Array d'objets { recommendation, source (A|D|V|E|R|T|I|S), priority (rang) }" },
+  recommandationsPrioritaires: { derivedFrom: "i.catalogueParCanal + scénario S courant", description: "Recommandations stratégiques prioritaires", format: "Array d'objets { recommendation, source (A|D|V|E|R|T|I|S), priority (rang) }" },
 };
 
 // ── Master map ────────────────────────────────────────────────────────
@@ -796,7 +818,9 @@ const ADVE_PILLAR_KEYS = new Set<string>([...ADVE_STORAGE_KEYS]);
  *
  * Decision order:
  *   1. Explicit override on the spec wins.
- *   2. `derivedFrom` set → INFERRED_NO_EDIT (calculated from upstream).
+ *   2. `derivedFrom` without an explicit mode → INFERRED_NO_EDIT.
+ *      Qualitative ADVE syntheses explicitly allow strategic correction;
+ *      their inference inputs remain documented without requiring a model.
  *   3. RTIS pillars (R/T/I/S) → INFERRED_NO_EDIT (regenerated via
  *      ENRICH_*_FROM_ADVE intents, never amended manually).
  *   4. Long qualitative text (minLength ≥ 30 OR maxLength ≥ 200) →
@@ -825,7 +849,7 @@ export function getEditableMode(
  * spec. Used by the OPERATOR_AMEND_PILLAR modal dropdown.
  *
  * Returns an empty array for unknown pillars.
- * INFERRED_NO_EDIT entries are excluded from the editable list — RTIS
+ * Computed INFERRED_NO_EDIT entries stay outside the editor — RTIS
  * recalculations go through ENRICH_*_FROM_ADVE intents, not this dropdown.
  */
 export function listEditableFields(pillarKey: string): Array<{

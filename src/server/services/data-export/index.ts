@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import { generate as generateValueReport, exportHtml as generateValueReportHtml } from "@/server/services/value-report-generator";
+/** Anonymous public edition only. The full strategy export below stays private. */
+export { readPublicBrand as exportPublicBrand } from "@/server/services/brand-vault/publication";
 
 // ---------------------------------------------------------------------------
 // Types

@@ -1,3 +1,7 @@
+import { z } from "zod";
+import { FinancialAmountSchema } from "./financial-document";
+import { SourceReceiptSchema } from "./source-certainty";
+
 /**
  * Domain — Devotion Ladder canonique (rungs du parcours superfan).
  *
@@ -100,4 +104,38 @@ export function parseDevotionLadderTier(value: unknown): DevotionLadderTier | nu
  */
 export function devotionLadderPosition(tier: DevotionLadderTier): number {
   return DEVOTION_LADDER_TIERS.indexOf(tier);
+}
+
+/** Prospective cohort, separate from observed DevotionSnapshot populations. */
+export const DevotionProjectionSchema = z.object({
+  source: SourceReceiptSchema, qualification: z.enum(["PROPOSED", "DECLARED"]),
+  cohortPersonaId: z.string().min(1), cohort: z.string().min(1), observationWindow: z.string().min(1),
+  spectators: FinancialAmountSchema,
+  rates: z.object({ interest: FinancialAmountSchema, participation: FinancialAmountSchema,
+    engagement: FinancialAmountSchema, advocacy: FinancialAmountSchema, prescription: FinancialAmountSchema }),
+  phases: z.array(z.object({ phase: z.string().min(1), scale: z.number().finite().min(0).max(1), note: z.string().min(1) })).min(1),
+  note: z.string().min(1),
+}).superRefine((v, ctx) => {
+  if (new Set(v.phases.map(p => p.phase)).size !== v.phases.length)
+    ctx.addIssue({ code: "custom", path: ["phases"], message: "Chaque palier temporel doit être unique." });
+  if (v.spectators.value === null) ctx.addIssue({ code: "custom", path: ["spectators", "value"], message: "Préciser la cohorte de départ." });
+  for (const [key, rate] of Object.entries(v.rates)) if (rate.value === null || rate.value > 1)
+    ctx.addIssue({ code: "custom", path: ["rates", key, "value"], message: "Un coefficient explicite entre 0 et 1 est nécessaire." });
+});
+
+export function projectDevotionFunnel(value: unknown) {
+  const parsed = DevotionProjectionSchema.safeParse(value);
+  if (!parsed.success) return [];
+  const p = parsed.data;
+  return p.phases.map(phase => {
+    const spectateurs = p.spectators.value! * phase.scale;
+    const interesses = spectateurs * p.rates.interest.value!;
+    const participants = interesses * p.rates.participation.value!;
+    const engages = participants * p.rates.engagement.value!;
+    const ambassadeurs = engages * p.rates.advocacy.value!;
+    const evangelistes = ambassadeurs * p.rates.prescription.value!;
+    return { phase: phase.phase, ...Object.fromEntries(Object.entries({ spectateurs, interesses, participants, engages, ambassadeurs, evangelistes }).map(([k, n]) => [k, Math.round(n)])),
+      qualification: p.qualification, cohort: p.cohort, cohortPersonaId: p.cohortPersonaId,
+      observationWindow: p.observationWindow, note: `${p.note} ${phase.note}`, source: p.source };
+  });
 }

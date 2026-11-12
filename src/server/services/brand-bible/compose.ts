@@ -40,6 +40,7 @@ import {
 import { assessAllPillarsHealth } from "@/server/services/neteru-shared/pillar-directors";
 import { coerceProvenance, type FieldProvenance } from "@/domain/field-provenance";
 import type { SourceCertainty } from "@/domain/source-certainty";
+import { CANONICAL_MAP } from "@/lib/types/variable-bible-canonical-map";
 import { FIELD_REGISTRY } from "@/lib/types/field-registry";
 import {
   loadBrandSourceContext,
@@ -49,6 +50,8 @@ import {
 /** Une valeur du livre : ce qu'elle dit, d'où elle vient. */
 export interface BibleEntry {
   field: string;
+  /** Chemin canonique quand la valeur provient d’un autre pilier. */
+  sourceField?: string;
   label: string;
   /** Valeur déclarée, telle quelle. `null` quand le champ est vide. */
   value: unknown;
@@ -60,7 +63,7 @@ export interface BibleEntry {
 export interface BibleCitation {
   sourceId: string;
   fileName: string;
-  certainty: SourceCertainty;
+  certainty: SourceCertainty | null;
   excerpt: string;
 }
 
@@ -148,6 +151,7 @@ export async function composeBrandBible(
     health.map((h) => [String(h.pillarKey).toLowerCase(), h.completeness]),
   );
 
+  const devotionLadder = CANONICAL_MAP["E-DevotionLadder"]!;
   const sections: BibleSection[] = [];
   const citedSources = new Set<string>();
   // Le mode de récupération est le MÊME pour toutes les sections (même index,
@@ -165,7 +169,15 @@ export async function composeBrandBible(
     const missing: Array<{ field: string; label: string }> = [];
 
     for (const [field, def] of Object.entries(registry)) {
-      const value = content[field];
+      let value = content[field];
+      let provenance = provenanceMap[field];
+      let sourceField: string | undefined;
+      if (storageKey === "e" && field === devotionLadder.fieldKey && isEmptyValue(value)) {
+        const source = byKey.get(devotionLadder.pillarKey);
+        value = source?.[devotionLadder.fieldKey];
+        provenance = (source?._fieldProvenance as Record<string, unknown> | undefined)?.[devotionLadder.fieldKey];
+        sourceField = `${devotionLadder.pillarKey.toUpperCase()}.${devotionLadder.fieldKey}`;
+      }
       if (isEmptyValue(value)) {
         missing.push({ field, label: def.label });
         continue;
@@ -174,7 +186,8 @@ export async function composeBrandBible(
         field,
         label: def.label,
         value,
-        provenance: coerceProvenance(provenanceMap[field]),
+        provenance: coerceProvenance(provenance),
+        ...(sourceField ? { sourceField } : {}),
       });
     }
 

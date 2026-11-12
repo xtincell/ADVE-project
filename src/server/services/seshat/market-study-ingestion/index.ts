@@ -3,7 +3,7 @@
  *
  * Workflow :
  *   1. sha256 file → check dedup (existing MARKET_STUDY_RAW with same hash)
- *   2. extractText (PDF/DOCX/XLSX) — réutilise ingestion-pipeline
+ *   2. extractText (PDF/DOCX/PPTX/XLSX) — réutilise ingestion-pipeline
  *   3. extractMarketStudy LLM call → MarketStudyExtraction
  *   4. resolveCountryCode + resolveSector (declared || inferred from extraction)
  *   5. persistMarketStudy → N KnowledgeEntry rows
@@ -14,7 +14,7 @@
 
 import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
-import { extractPDF, extractDOCX, extractXLSX } from "@/server/services/ingestion-pipeline/extractors";
+import { extractPDF, extractDOCX, extractXLSX, extractReceivedFile } from "@/server/services/ingestion-pipeline/extractors";
 import { extractMarketStudy } from "./extractor-llm";
 import { parseStructuredMarketStudy, type StructuredFrontmatter } from "./extractor-structured";
 import { persistMarketStudy, deleteDerivedEntries } from "./persister";
@@ -37,6 +37,9 @@ async function extractText(file: { buffer: Buffer; filename: string; mimeType: s
   if (lower.endsWith(".xlsx") || file.mimeType.includes("spreadsheetml")) {
     const r = await extractXLSX(file.buffer);
     return r.text;
+  }
+  if (lower.endsWith(".pptx") || file.mimeType.includes("presentationml")) {
+    return (await extractReceivedFile("PPTX", file.buffer, "market-study")).text;
   }
   throw new Error(`Unsupported file type: ${file.filename} (${file.mimeType})`);
 }

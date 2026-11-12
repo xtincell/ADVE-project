@@ -157,7 +157,8 @@ export async function assessCapacity(
     select: { content: true },
   });
   const ue = ((vPillar?.content as Record<string, unknown> | null)?.unitEconomics as Record<string, unknown> | undefined) ?? {};
-  const vBudgetCom = typeof ue.budgetCom === "number" && Number.isFinite(ue.budgetCom) && ue.budgetCom > 0 ? ue.budgetCom : null;
+  const hasWorkingModel = (vPillar?.content as Record<string, unknown> | null)?.financialModel != null;
+  const vBudgetCom = !hasWorkingModel && typeof ue.budgetCom === "number" && Number.isFinite(ue.budgetCom) && ue.budgetCom > 0 ? ue.budgetCom : null;
 
   // Real budget = priorité ancre V précise > intent > last year, else null
   const realBudget =

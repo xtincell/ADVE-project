@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { callLLM } from "@/server/services/llm-gateway";
+import { callLLM, isTextLLMAvailable } from "@/server/services/llm-gateway";
 import { wrapUntrusted, sanitizeInline, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { BUSINESS_MODELS, ECONOMIC_MODELS, POSITIONING_ARCHETYPES, BRAND_NATURES } from "@/lib/types/business-context";
 
@@ -189,10 +189,10 @@ const QUESTION_BANK: Record<string, IntakeQuestion[]> = {
     // ADR-0030 Axe 2 — couvre D.promesseMaitre (contrat INTAKE, derivable: false)
     // Sémantiquement distincte de v_promise : promesseMaitre = engagement central de marque (D),
     // v_promise = bénéfice promis par produit/service (V).
-    { id: "d_promise", pillar: "d", question: "Quelle est votre promesse maître — ce que tout client peut attendre de vous, sans condition ?", type: "text", required: true, tooltip: "Votre engagement central. Une seule phrase, garantie à 100% des clients. Exemple : 'Vous repartirez avec une histoire à raconter.' Pas le bénéfice d'un produit, mais ce que VOUS incarnez quoi qu'il arrive." },
+    { id: "d_promise", pillar: "d", question: "Quelle est votre promesse maître — ce que tout client peut attendre de vous, sans condition ?", type: "text", required: true, tooltip: "Votre engagement central. Une seule phrase, garantie à chacun de vos clients. Exemple : 'Vous repartirez avec une histoire à raconter.' Pas le bénéfice d'un produit, mais ce que VOUS incarnez quoi qu'il arrive." },
     // ADR-0030 Axe 2 — couvre D.personas (contrat INTAKE, derivable: false, min_items: 1)
-    { id: "d_persona_principal", pillar: "d", question: "Décrivez votre client idéal en 3 traits comportementaux concrets (pas démographiques).", type: "text", required: true, tooltip: "Pas 'femme 25-34 urbaine'. Plutôt : 'achète par identification, pas par besoin', 'préférence esthétique > prix', 'partage ses achats sur Instagram'. Comportement > démographie." },
-    { id: "d_persona_secondary", pillar: "d", question: "Avez-vous un second persona important ? Décrivez-le pareil.", type: "text", required: false, tooltip: "Optionnel. Beaucoup de marques ont 1-2 personas principaux. Si vous en avez plus, gardez les 2 plus volumiques en CA." },
+    { id: "d_persona_principal", pillar: "d", question: "À qui votre communication s’adresse-t-elle, et qui paie votre offre ? Décrivez leurs comportements concrets.", type: "text", required: true, tooltip: "Il peut s’agir de publics différents : visiteurs et sponsors, audience de blogueurs et restaurateurs. Précisez qui utilise, qui paie et ce que chacun recherche ; plusieurs rôles peuvent se cumuler." },
+    { id: "d_persona_secondary", pillar: "d", question: "Quels autres profils rendent votre modèle possible : partenaires, fournisseurs, prescripteurs ou distributeurs ?", type: "text", required: false, tooltip: "Décrivez ce que chacun apporte, reçoit, supporte comme coût et attend pour participer. Conservez tous les profils utiles, même sans chiffre d’affaires direct. Une intention de partenariat n’est pas un contrat signé." },
     { id: "d_visual", pillar: "d", question: "Comment décririez-vous votre identité visuelle ?", type: "select", options: ["Inexistante", "Basique", "Définie mais incohérente", "Professionnelle et cohérente", "Distinctive et mémorable"], required: true, tooltip: "L'identité visuelle = logo, couleurs, typographie, style photo. 'Basique' = juste un logo. 'Cohérente' = même style partout. 'Mémorable' = on vous reconnaît sans voir le logo." },
     { id: "d_voice", pillar: "d", question: "Quel ton utilisez-vous pour communiquer ?", type: "select", options: ["Pas défini", "Formel", "Décontracté", "Inspirant", "Provocateur", "Expert"], required: true, tooltip: "Le ton de voix, c'est COMMENT vous parlez à vos clients. Formel = 'Nous vous proposons...', Décontracté = 'Hey, on a un truc cool pour toi', Expert = 'Selon nos analyses...'" },
     { id: "d_competitors", pillar: "d", question: "Nommez vos 3 principaux concurrents.", type: "text", required: false, tooltip: "Les entreprises que vos clients considèrent quand ils ne vous choisissent pas. Même si vous pensez ne pas en avoir, vos clients ont toujours des alternatives (y compris ne rien acheter)." },
@@ -211,12 +211,12 @@ const QUESTION_BANK: Record<string, IntakeQuestion[]> = {
   ],
   e: [
     { id: "e_community", pillar: "e", question: "Avez-vous une communauté autour de votre marque ?", type: "select", options: ["Aucune", "Réseaux sociaux basiques", "Communauté active", "Communauté engagée et fidèle"], required: true, tooltip: "Une page Facebook avec des likes n'est pas une communauté. Une communauté ACTIVE = des gens qui commentent, partagent, interagissent entre eux. FIDÈLE = ils reviennent sans que vous les relanciiez." },
-    { id: "e_loyalty", pillar: "e", question: "Quel % de vos clients reviennent régulièrement ?", type: "select", options: ["< 10%", "10-30%", "30-50%", "50-70%", "> 70%"], required: true, tooltip: "Sur 100 clients, combien font un deuxième achat dans les 12 mois ? Si vous ne savez pas exactement, estimez. Moins de 30% = la plupart ne reviennent pas." },
-    { id: "e_advocates", pillar: "e", question: "Vos clients recommandent-ils activement votre marque ?", type: "select", options: ["Jamais", "Rarement", "Parfois", "Souvent", "Systématiquement"], required: true, tooltip: "Le bouche-à-oreille : vos clients parlent-ils de vous à leur entourage sans que vous le demandiez ? 'Souvent' = vous recevez régulièrement des clients qui disent 'un ami m'a parlé de vous'." },
+    { id: "e_loyalty", pillar: "e", question: "Quel % de vos clients reviennent régulièrement ?", type: "select", options: ["< 10%", "10-30%", "30-50%", "50-70%", "> 70%", "Non mesuré / je ne sais pas"], required: true, tooltip: "Sur 100 clients, combien font un deuxième achat dans les 12 mois ? Si vous n'avez pas cette mesure, choisissez « Non mesuré / je ne sais pas » : aucune estimation n'est imposée." },
+    { id: "e_advocates", pillar: "e", question: "Vos clients recommandent-ils activement votre marque ?", type: "select", options: ["Jamais", "Rarement", "Parfois", "Souvent", "Systématiquement", "Non mesuré / je ne sais pas"], required: true, tooltip: "Le bouche-à-oreille : vos clients parlent-ils de vous à leur entourage sans que vous le demandiez ? Sans information, choisissez « Non mesuré / je ne sais pas » ; cela ne signifie pas « Jamais »." },
     // Vague D — profondeur E alignee sur le schema pilier (touchpoints /
     // primaryChannel / superfanPortrait). Toutes optionnelles.
     { id: "e_channels", pillar: "e", question: "Sur quels canaux êtes-vous actif (réseaux, WhatsApp, email, points de vente...) ? Lequel génère le plus d'interactions ?", type: "text", required: false, tooltip: "Listez tout : Instagram, TikTok, WhatsApp Business, newsletter, marchés/salons... Et dites lequel est VOTRE canal — celui où votre communauté vit vraiment." },
-    { id: "e_frequency", pillar: "e", question: "À quelle fréquence communiquez-vous avec votre audience ?", type: "select", options: ["Jamais / très rarement", "Quelques fois par mois", "Chaque semaine", "Plusieurs fois par semaine", "Chaque jour"], required: false, tooltip: "Publications, stories, messages, emails... tout compte. La régularité pèse plus que le volume : mieux vaut 2 posts/semaine constants que 10 puis silence." },
+    { id: "e_frequency", pillar: "e", question: "À quelle fréquence communiquez-vous avec votre audience ?", type: "select", options: ["Jamais / très rarement", "Quelques fois par mois", "Chaque semaine", "Plusieurs fois par semaine", "Chaque jour"], required: false, tooltip: "Publications, stories, messages, emails... tout compte. La régularité pèse plus que le volume : un rythme que vous tenez vaut mieux qu'une rafale suivie de silence." },
     { id: "e_superfan", pillar: "e", question: "Décrivez votre client le plus fan : qui est-il, que fait-il pour la marque ?", type: "text", required: false, tooltip: "La personne qui achète tout, défend la marque, amène ses amis. Qu'est-ce qui l'a rendue fan ? C'est le portrait-robot de vos futurs superfans — le carburant de la Fusée." },
     { id: "e_rituals", pillar: "e", question: "Avez-vous des rituels ou traditions de marque ?", type: "text", required: false, tooltip: "Un rituel de marque = quelque chose de récurrent qui vous est propre. Exemples : un live hebdomadaire, un événement annuel, un packaging signature, une phrase culte que vos clients connaissent." },
   ],
@@ -295,14 +295,12 @@ async function generateAiFollowUps(
   existingResponses: Record<string, unknown>,
   businessContext?: { sector?: string; positioning?: string }
 ): Promise<IntakeQuestion[]> {
-  // Short-circuit when no LLM provider is configured (CI smoke runs, fresh
-  // dev clones without env). Avoids 24s of retry timeouts before falling
-  // back to the static bank — which is the desired outcome anyway.
-  if (
-    !process.env.ANTHROPIC_API_KEY &&
-    !process.env.OPENAI_API_KEY &&
-    !process.env.OLLAMA_BASE_URL
-  ) {
+  // Short-circuit when the Gateway declares no healthy text provider (CI smoke
+  // runs, fresh dev clones without env). Avoids 24s of retry timeouts before
+  // falling back to the static bank. Plan 4.11.c — the signal is the Gateway's
+  // own `isTextLLMAvailable` : a hand-read key list ignored the OAuth text relay
+  // and counted the embeddings-only OpenAI key as a text provider.
+  if (!isTextLLMAvailable()) {
     return [];
   }
 

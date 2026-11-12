@@ -32,6 +32,8 @@ import type { Prisma } from "@prisma/client";
 import { jsPDF } from "jspdf";
 import { resolveBrandTheme, type BrandTheme } from "@/server/services/brand-theme";
 import { SECTION_REGISTRY } from "./types";
+import { getFieldLabel } from "@/lib/types/field-labels";
+import { unitEconomicsMetricRows, unitEconomicsNote } from "@/domain/unit-economics";
 
 export interface ExportOpts {
   /** When set, the export pulls from this snapshot instead of the live state. */
@@ -52,13 +54,24 @@ interface OracleSection {
  * Humanise une clé camelCase/snake_case en libellé lisible.
  * `perceptionActuelle` → « Perception actuelle », `tam_sam_som` → « Tam sam som ».
  */
-function humanizeKey(key: string): string {
-  const spaced = key
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .replace(/[_-]+/g, " ")
-    .trim()
-    .toLowerCase(); // sentence-case (« Perception actuelle »), pas title-case
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+const humanizeKey = getFieldLabel;
+
+function scalarText(value: string | number | boolean): string {
+  if (typeof value === "number") return value.toLocaleString("fr-FR");
+  if (typeof value === "boolean") return value ? "Oui" : "Non";
+  return value;
+}
+
+/** Helvetica's built-in PDF font covers French, but not directional arrows.
+ * Preserve their meaning as words; Markdown and stored source stay unchanged. */
+function pdfText(value: string): string {
+  return value.replace(/[\u00a0\u202f]/g, " ")
+    .replace(/[→⇒⟶]/g, " vers ")
+    .replace(/[←⇐⟵]/g, " depuis ")
+    .replace(/[↔⇔⟷]/g, " — aller-retour — ")
+    .replace(/↑/g, " hausse ").replace(/↓/g, " baisse ")
+    .replace(/≥/g, " supérieur ou égal à ").replace(/≤/g, " inférieur ou égal à ")
+    .replace(/≠/g, " différent de ").replace(/[−–]/g, "-");
 }
 
 function isEmptyValue(v: unknown): boolean {
@@ -75,13 +88,19 @@ function isEmptyValue(v: unknown): boolean {
  * profondeur. Titres de sous-objets en `## `, listes en `• `, clé-valeur en
  * `Label : valeur`. Les clés internes (préfixe `_`) sont ignorées.
  */
-export function renderValue(value: unknown, indent = "", depth = 0): string[] {
+export function renderValue(value: unknown, indent = "", depth = 0, context = ""): string[] {
   if (isEmptyValue(value)) return [];
   if (depth > 6) return [`${indent}…`];
+  if ((context === "unitEconomics" || context.endsWith(".unitEconomics")) && value && typeof value === "object" && !Array.isArray(value)) {
+    const ue = value as Record<string, unknown>;
+    const rows = unitEconomicsMetricRows(ue).filter(r => r.value !== "—");
+    const note = unitEconomicsNote(ue);
+    return [...rows.map(r => `${indent}${r.label} : ${r.value}`), ...(note ? [`${indent}${note}`] : [])];
+  }
 
   if (typeof value === "string") return [`${indent}${value}`];
   if (typeof value === "number" || typeof value === "boolean") {
-    return [`${indent}${String(value)}`];
+    return [`${indent}${scalarText(value)}`];
   }
 
   if (Array.isArray(value)) {
@@ -90,13 +109,13 @@ export function renderValue(value: unknown, indent = "", depth = 0): string[] {
       if (isEmptyValue(item)) continue;
       if (item != null && typeof item === "object") {
         // Élément structuré → bloc puce + champs indentés.
-        const inner = renderValue(item, `${indent}  `, depth + 1);
+        const inner = renderValue(item, `${indent}  `, depth + 1, context);
         if (inner.length > 0) {
           lines.push(`${indent}• ${inner[0]!.trim()}`);
           lines.push(...inner.slice(1));
         }
       } else {
-        lines.push(`${indent}• ${String(item)}`);
+        lines.push(`${indent}• ${scalarText(item as string | number | boolean)}`);
       }
     }
     return lines;
@@ -106,12 +125,12 @@ export function renderValue(value: unknown, indent = "", depth = 0): string[] {
   const lines: string[] = [];
   for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
     if (k.startsWith("_") || isEmptyValue(v)) continue;
-    const label = humanizeKey(k);
+    const label = humanizeKey(k, context);
     if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
-      lines.push(`${indent}${label} : ${String(v)}`);
+      lines.push(`${indent}${label} : ${scalarText(v)}`);
     } else {
       lines.push(`${indent}## ${label}`);
-      lines.push(...renderValue(v, `${indent}  `, depth + 1));
+      lines.push(...renderValue(v, `${indent}  `, depth + 1, context ? `${context}.${k}` : k));
     }
   }
   return lines;
@@ -125,7 +144,7 @@ export function renderValue(value: unknown, indent = "", depth = 0): string[] {
 export function sectionDataToBody(data: unknown): string {
   if (isEmptyValue(data)) return "(section vide)";
   if (typeof data === "string") return data;
-  if (typeof data === "number" || typeof data === "boolean") return String(data);
+  if (typeof data === "number" || typeof data === "boolean") return scalarText(data);
   const lines = renderValue(data);
   return lines.length > 0 ? lines.join("\n") : "(section vide)";
 }
@@ -182,7 +201,9 @@ async function loadOracle(strategyId: string, opts: ExportOpts): Promise<OracleS
     sections.push({
       key: meta.id,
       title: `${meta.number} — ${meta.title}`,
-      body: sectionDataToBody(data),
+      body: [meta.id === "executive-summary" && (doc.meta.stalePillars?.length ?? 0) > 0
+        ? `À réactualiser : ${doc.meta.stalePillars!.join(", ")}. Les sources ont évolué ; des analyses antérieures peuvent subsister.` : "",
+      sectionDataToBody(data)].filter(Boolean).join("\n\n"),
     });
   }
   return sections;
@@ -246,6 +267,7 @@ export async function exportOracleAsPdf(
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const margin = 48;
   const pageHeight = doc.internal.pageSize.getHeight();
+  const contentWidth = doc.internal.pageSize.getWidth() - margin * 2;
   const lineHeight = 14;
   let y = margin;
 
@@ -262,9 +284,10 @@ export async function exportOracleAsPdf(
   y += 6;
   doc.setFontSize(20);
   doc.setTextColor(ar, ag, ab);
-  doc.text(`${lang === "fr" ? "Stratégie" : "Strategy"} — ${brandName}`, margin, y);
+  const titleLines = doc.splitTextToSize(pdfText(`${lang === "fr" ? "Stratégie" : "Strategy"} — ${brandName}`), contentWidth);
+  doc.text(titleLines, margin, y);
   doc.setTextColor(0, 0, 0);
-  y += lineHeight * 2;
+  y += Math.max(1, titleLines.length) * 22 + lineHeight;
   doc.setFontSize(10);
   doc.text(lang === "fr" ? `Version du ${dateStr}` : `Version of ${dateStr}`, margin, y);
   y += lineHeight * 2;
@@ -277,21 +300,23 @@ export async function exportOracleAsPdf(
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(ar, ag, ab);
-    doc.text(s.title, margin, y);
+    const sectionTitle = doc.splitTextToSize(pdfText(s.title), contentWidth);
+    doc.text(sectionTitle, margin, y);
     doc.setTextColor(0, 0, 0);
     doc.setFont("helvetica", "normal");
-    y += lineHeight * 1.5;
+    y += sectionTitle.length * lineHeight + lineHeight * 0.5;
     doc.setFontSize(10);
     // ADR-0138 (T15) — rendu par ligne du corps structuré : `## ` = sous-titre
     // gras, `• ` = puce légèrement indentée, sinon paragraphe. Plus de dump JSON.
     for (const rawLine of (s.body || "(section vide)").split("\n")) {
-      const isHeading = rawLine.startsWith("## ");
-      const text = isHeading ? rawLine.slice(3) : rawLine;
-      const lineIndent = rawLine.startsWith("  ") ? 12 : 0;
-      const wrapped = doc.splitTextToSize(text, 500 - lineIndent);
+      const trimmed = rawLine.trimStart();
+      const isHeading = /^(?:• )?## /.test(trimmed);
+      const text = isHeading ? trimmed.replace(/^(• )?## /, "$1") : trimmed;
+      const lineIndent = Math.min(60, (rawLine.length - trimmed.length) * 4);
       if (isHeading) doc.setFont("helvetica", "bold");
+      const wrapped = doc.splitTextToSize(pdfText(text), contentWidth - lineIndent);
       for (const line of wrapped) {
-        if (y > pageHeight - margin) {
+        if (y > pageHeight - margin - lineHeight) {
           doc.addPage();
           y = margin;
         }
@@ -301,6 +326,15 @@ export async function exportOracleAsPdf(
       if (isHeading) doc.setFont("helvetica", "normal");
     }
     y += lineHeight;
+  }
+
+  const pageCount = doc.getNumberOfPages();
+  for (let page = 1; page <= pageCount; page++) {
+    doc.setPage(page);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`${page} / ${pageCount}`, doc.internal.pageSize.getWidth() - margin, pageHeight - 24, { align: "right" });
   }
 
   const buf = doc.output("arraybuffer");

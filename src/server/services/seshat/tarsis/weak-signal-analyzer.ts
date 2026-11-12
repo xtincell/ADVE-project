@@ -13,6 +13,7 @@ import { callLLM } from "@/server/services/llm-gateway";
 import { UNTRUSTED_NOTICE, wrapUntrusted, sanitizeInline } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
 import type { CollectedSignal } from "./signal-collector";
+import { signalSourceUrl, type SignalInputSnapshot, type WeakSignalProvenance } from "@/domain/signal-provenance";
 
 export interface CausalStep {
   from: string;
@@ -88,13 +89,22 @@ export async function analyzeWeakSignals(
 ): Promise<WeakSignal[]> {
   if (signals.length === 0) return [];
 
+  const inputSignals: SignalInputSnapshot[] = signals.map((signal) => {
+    const kind = signal.provenanceKind === "INFERRED" || signal.sourceType === "INFERRED" ? "INFERRED"
+      : signal.provenanceKind === "COLLECTED" ? "COLLECTED" : "UNSPECIFIED";
+    const sourceUrl = kind !== "INFERRED" ? signalSourceUrl(signal.sourceUrl) : undefined;
+    return { ...(signal.id ? { id: signal.id } : {}), title: signal.title,
+      content: signal.content, sourceType: signal.sourceType, collectedAt: signal.collectedAt, kind,
+      ...(sourceUrl ? { sourceUrl } : {}) };
+  });
+
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : les signaux
   // collectés proviennent de sources marché externes (vecteur attaquant) →
   // encadrés comme donnée dans le user prompt (cf. plus bas).
   const signalsText = wrapUntrusted(
     "SIGNAUX MARCHÉ À ANALYSER",
-    signals
-      .map((s, i) => `[Signal ${i + 1}] ${s.title}\n${s.content} (source: ${s.sourceType}, relevance: ${s.relevance})`)
+    inputSignals
+      .map((s, i) => `[Signal ${i + 1}] ${s.title}\n${s.content} (source: ${s.sourceType}, nature: ${s.kind})`)
       .join("\n\n"),
     { max: 16_000 },
   );
@@ -126,6 +136,13 @@ export async function analyzeWeakSignals(
   const positioningSafe = sanitizeInline(brandContext.positioning, { max: 600 });
   const productsSafe = sanitizeInline(brandContext.products, { max: 600 });
   const riskFactorsSafe = sanitizeInline(brandContext.riskFactors, { max: 600 });
+  const provenance: WeakSignalProvenance = {
+    schema: "weak-signal-provenance-v1", producer: "seshat.tarsis.weak-signal-analyzer", kind: "INFERRED",
+    generatedAt: new Date().toISOString(), inputSignals, inputText: signalsText,
+    brandContext: { sector: sectorSafe, market: marketSafe, brandIdentity: brandIdentitySafe,
+      positioning: positioningSafe, products: productsSafe, riskFactors: riskFactorsSafe,
+      countryContext: countryBlock, brandHealthContext: brandHealthBlock },
+  };
 
   const systemPrompt = `${UNTRUSTED_NOTICE}
 
@@ -144,8 +161,9 @@ Tu dois :
 1. Analyser chaque signal et construire des THÈSES (théories prédictives)
 2. Pour chaque thèse, construire une CHAÎNE CAUSALE (événement → effet 1 → effet 2 → impact marque)
 3. Regrouper les signaux qui RENFORCENT la même thèse (signaux de soutien)
-4. Chaque signal de soutien AUGMENTE le pourcentage de confiance de la thèse
-5. La confiance de base d'une thèse = 0.2, chaque signal de soutien ajoute 0.05-0.30
+4. Les entrées INFERRED sont des hypothèses, UNSPECIFIED ont une provenance non établie. Elles ne démontrent aucun événement.
+5. La confiance est une appréciation prédictive, jamais une mesure ni une probabilité observée. Des hypothèses répétées ne sont pas des confirmations indépendantes.
+6. N'invente aucun article ni lien de preuve. Les signaux de soutien doivent se limiter aux entrées fournies, avec leurs réserves.
 
 Format JSON strict — tableau de WeakSignal :
 [{
@@ -218,6 +236,8 @@ Format JSON strict — tableau de WeakSignal :
             type: "WEAK_SIGNAL_ALERT",
             data: JSON.parse(JSON.stringify({
               thesis: ws.thesis,
+              rawEvent: ws.rawEvent,
+              provenance,
               causalChain: ws.causalChain,
               impactCategory: ws.impactCategory,
               brandImpact: ws.brandImpact,
@@ -281,6 +301,7 @@ Format JSON strict — tableau de WeakSignal :
         countryCode: brandContext.countryCode,
         data: JSON.parse(JSON.stringify({
           type: "weak_signal_analysis",
+          provenance,
           signals: weakSignals,
           analyzedAt: new Date().toISOString(),
           // Attribution canonique — sans elle, cette analyse dérivée d'UNE

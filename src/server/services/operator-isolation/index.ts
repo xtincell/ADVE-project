@@ -3,7 +3,7 @@ import { isGodModeEmail } from "@/lib/auth/god-mode";
 
 // ============================================================================
 // MODULE M05 — Operator Isolation (Multi-tenant)
-// Score: 100/100 | Priority: P0 | Status: FUNCTIONAL
+// Priority: P0 | Helpers présents ; réception bornée par parcours, pas de score global.
 // Spec: §1.5 + §2.2.1 | Division: Transversal
 // ============================================================================
 //
@@ -19,7 +19,7 @@ import { isGodModeEmail } from "@/lib/auth/god-mode";
 // [x] REQ-9  enforceOperatorIsolation middleware (tRPC middleware)
 // [x] REQ-10 Applied to campaign-manager router (all procedures)
 // [x] REQ-11 Applied to strategy router (list, get, update)
-// [x] REQ-12 Applied to ALL remaining routers (driver, mission, glory, signal, etc.)
+// [ ] REQ-12 Réception exhaustive des routers et écritures directes : audit C3/C7 ouvert.
 // [x] REQ-13 Applied to CRM router (deal→strategy→operator chain)
 // [x] REQ-14 Operator dashboard with cross-strategy metrics in /console/ecosystem
 //
@@ -142,11 +142,12 @@ export function scopeMissions(ctx: OperatorContext): Prisma.MissionWhereInput {
  */
 export async function canAccessStrategy(
   strategyId: string,
-  ctx: OperatorContext
+  ctx: OperatorContext,
+  client: Pick<Prisma.TransactionClient, "strategy" | "strategyCollaborator"> = db,
 ): Promise<boolean> {
   if (ctx.role === "ADMIN") return true;
 
-  const strategy = await db.strategy.findUnique({
+  const strategy = await client.strategy.findUnique({
     where: { id: strategyId },
     select: { userId: true, operatorId: true },
   });
@@ -161,7 +162,7 @@ export async function canAccessStrategy(
 
   // ADR-0129 — collaborateur délégué par marque (grant gouverné, révocable).
   // Scopé à UNE strategy — jamais opérateur-large.
-  const collab = await db.strategyCollaborator.findUnique({
+  const collab = await client.strategyCollaborator.findUnique({
     where: { strategyId_userId: { strategyId, userId: ctx.userId } },
     select: { status: true },
   });
@@ -208,6 +209,29 @@ export async function canAccessCampaign(
   return canAccessStrategy(campaign.strategyId, ctx);
 }
 
+/** Bind an already-governed command to its actual campaign, never a supplied audit pivot.
+ * This verifies resource identity; caller authorization remains in Mestor/the router.
+ */
+export interface CampaignScope { strategyId: string; operatorId: string }
+export class CampaignScopeError extends Error {
+  constructor(public readonly code: "NOT_FOUND" | "FORBIDDEN" | "CONFLICT" | "BAD_REQUEST", message: string) {
+    super(message); this.name = "CampaignScopeError";
+  }
+}
+export async function assertCampaignScope(campaignId: string, scope: CampaignScope,
+  client: Pick<Prisma.TransactionClient, "campaign"> = db) {
+  const campaign = await client.campaign.findUnique({ where: { id: campaignId }, select: {
+    id: true, code: true, strategyId: true,
+    strategy: { select: { operatorId: true, client: { select: { operatorId: true } } } },
+  } });
+  if (!campaign) throw new CampaignScopeError("NOT_FOUND", "Campagne introuvable.");
+  const operatorId = campaign.strategy.operatorId ?? campaign.strategy.client?.operatorId;
+  if (campaign.strategyId !== scope.strategyId || operatorId !== scope.operatorId) {
+    throw new CampaignScopeError("FORBIDDEN", "La ressource ne relève pas de la marque et de l’équipe indiquées.");
+  }
+  return campaign;
+}
+
 /**
  * Verify a user has access to a specific mission
  */
@@ -233,8 +257,8 @@ export async function canAccessMission(
 /**
  * Get operator context from a user
  */
-export async function getOperatorContext(userId: string): Promise<OperatorContext> {
-  const user = await db.user.findUnique({
+export async function getOperatorContext(userId: string, client: Pick<Prisma.TransactionClient, "user"> = db): Promise<OperatorContext> {
+  const user = await client.user.findUnique({
     where: { id: userId },
     select: { id: true, email: true, role: true, operatorId: true },
   });
@@ -355,7 +379,7 @@ export async function getOperatorDashboard(operatorId: string): Promise<Operator
       where: { operatorId },
       select: { id: true, name: true, status: true, advertis_vector: true },
     }),
-    db.client.count({ where: { operatorId } }),
+    db.client.count({ where: { operatorId,status:{not:"REFERENCE"} } }),
     db.campaign.count({ where: { strategy: { operatorId } } }),
     db.signal.count({ where: { strategy: { operatorId } } }),
     db.deal.count({ where: { strategy: { operatorId } } }),

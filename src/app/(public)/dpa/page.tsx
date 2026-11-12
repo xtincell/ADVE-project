@@ -1,7 +1,7 @@
 /**
  * /dpa — Accord de traitement des données (Vague 6 — conformité B2B).
  * Transposition de la doctrine de données du Cahier des charges Ch.2 :
- * classes de données, isolation default-deny, non-entraînement des LLM,
+ * classes de données, isolation default-deny, conditions des services IA,
  * chiffrement, hash-chain vs effacement, signal pool opt-in k≥5.
  */
 import { LegalShell, LegalSection, LegalTable } from "@/components/legal/legal-shell";
@@ -9,14 +9,14 @@ import { LegalShell, LegalSection, LegalTable } from "@/components/legal/legal-s
 export const metadata = {
   title: "DPA — La Fusée",
   description:
-    "Accord de traitement des données La Fusée — ingestion, isolation, non-entraînement des LLM, chiffrement, sous-traitants.",
+    "Accord de traitement des données La Fusée — ingestion, isolation, services IA, chiffrement, sous-traitants.",
 };
 
 export default function DpaPage() {
   return (
     <LegalShell
       title="Accord de traitement des données (DPA)"
-      updated="12 juin 2026"
+      updated="11 novembre 2026"
       intro={
         <>
           Le présent accord encadre les traitements opérés par UPgraders / La Fusée SARL pour le compte de ses
@@ -59,27 +59,40 @@ export default function DpaPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="4. LLM — non-entraînement garanti">
+      <LegalSection title="4. Services IA et utilisation des données">
         <ul>
           <li>
-            <strong>Aucune donnée client n&apos;est utilisée pour entraîner ou affiner des modèles d&apos;IA</strong> —
-            ni par UPgraders, ni par ses fournisseurs de modèles.
+            Les conditions de traitement dépendent du service utilisé et des réglages du compte.
+            <strong> Un abonnement ChatGPT et un accès API ne portent pas automatiquement les mêmes garanties.</strong>
           </li>
           <li>
-            Les appels aux fournisseurs LLM (Anthropic, OpenAI) sont effectués via API avec les garanties
-            contractuelles de ces fournisseurs : les données soumises par API <strong>ne servent pas à
-            l&apos;entraînement</strong> de leurs modèles et sont soumises à des durées de rétention limitées.
+            Cette instance utilise OpenAI par abonnement ChatGPT. Son administrateur a confirmé le
+            16 octobre 2026 que le contrôle « Améliorer le modèle pour tous » est désactivé. Cette
+            déclaration n&apos;a pas été vérifiée indépendamment dans l&apos;interface du compte.
           </li>
-          <li>La plateforme minimise la surface : ~95 % des traitements (scores, prix, gates, compilation) sont déterministes et n&apos;envoient <strong>rien</strong> à un LLM ; le LLM est réservé à la génération créative explicite.</li>
-          <li>Sortie structurée validée par schéma : les réponses LLM non conformes sont rejetées, jamais persistées silencieusement.</li>
+          <li>
+            Selon les <a href="https://help.openai.com/en/articles/7730893-data-controls-in-chatgpt" className="text-accent hover:underline">contrôles de données OpenAI</a>,
+            cette désactivation exclut les nouvelles conversations et tâches Codex de l&apos;entraînement.
+            Le partage volontaire de retours et le réglage distinct des environnements Codex ont leurs
+            propres conditions ; ils ne sont pas couverts par la seule confirmation ci-dessus.
+          </li>
+          <li>
+            Pour l&apos;<a href="https://developers.openai.com/api/docs/guides/your-data" className="text-accent hover:underline">API OpenAI</a>,
+            les données sont exclues de l&apos;entraînement par défaut, sauf partage volontaire.
+            Cette règle API ne constitue pas le contrat de l&apos;accès par abonnement de cette instance.
+            Le <a href="https://learn.chatgpt.com/docs/auth" className="text-accent hover:underline">mode d&apos;authentification</a>{" "}
+            détermine les politiques applicables. L&apos;exclusion de l&apos;entraînement ne signifie ni absence de
+            conservation, ni résidence garantie dans un pays.
+          </li>
+          <li>Les calculs déterministes de scores, de prix et de compilation ne nécessitent pas de modèle. Aucun pourcentage global de traitements sans IA n&apos;est établi ici.</li>
         </ul>
       </LegalSection>
 
       <LegalSection title="5. Sécurité et chiffrement">
         <ul>
           <li><strong>En transit</strong> : TLS 1.2+ sur toutes les surfaces (web, API, webhooks).</li>
-          <li><strong>Au repos</strong> : chiffrement AES-256 des bases et sauvegardes (infrastructure Supabase/PostgreSQL managée).</li>
-          <li><strong>Secrets</strong> : les clés de paiement et secrets système vivent en variables d&apos;environnement, jamais en base ; les credentials de connecteurs externes sont stockés chiffrés dans un coffre applicatif ; les clés API émises ne sont conservées qu&apos;en empreinte SHA-256.</li>
+          <li><strong>Au repos</strong> : chiffrement AES-256 des bases et sauvegardes (base PostgreSQL auto-hébergée sur le serveur de production ; chiffrement du disque et des sauvegardes à attester). Les documents originaux, médias archivés et jetons de connexion sont en outre chiffrés par l&apos;application (AES-256-GCM).</li>
+          <li><strong>Secrets</strong> : les clés de paiement et secrets système vivent en variables d&apos;environnement, jamais en base ; les credentials de connecteurs externes sont conservés dans un coffre applicatif en base, jamais renvoyés au client — leur chiffrement applicatif n&apos;est pas encore en place ; les clés API émises ne sont conservées qu&apos;en empreinte SHA-256.</li>
           <li><strong>Authentification</strong> : mots de passe hachés (bcrypt, 12 rounds), double authentification TOTP disponible et exigible pour les administrateurs.</li>
           <li><strong>Cloisonnement</strong> : contrôle d&apos;accès par rôle et par espace client à chaque requête.</li>
         </ul>
@@ -88,10 +101,10 @@ export default function DpaPage() {
       <LegalSection title="6. Traçabilité immuable et droit à l'effacement — coexistence">
         <p>
           Le journal de gouvernance de la plateforme est chaîné par empreintes (hash) pour garantir
-          l&apos;infalsifiabilité de l&apos;historique. <strong>Il ne contient jamais de données personnelles en
-          clair</strong> : les PII vivent hors-chaîne, dans des magasins effaçables. L&apos;effacement d&apos;une
-          personne purge ses données ; la chaîne conserve la seule preuve d&apos;existence (empreinte), vide de
-          contenu. L&apos;immuabilité de la trace et le droit à l&apos;effacement coexistent ainsi sans exception.
+          l&apos;infalsifiabilité de l&apos;historique. Il conserve les données transmises avec chaque opération,
+          qui peuvent inclure des données personnelles (par exemple un nom affiché ou un numéro de paiement).
+          L&apos;effacement d&apos;une personne purge aujourd&apos;hui ses fiches d&apos;identité et ses identifiants
+          rapprochés ; il ne réécrit pas encore le journal, dont l&apos;effacement ciblé reste à outiller.
         </p>
       </LegalSection>
 
@@ -101,12 +114,12 @@ export default function DpaPage() {
           rows={[
             ["Vercel", "Hébergement applicatif", "UE/US (CDN mondial)"],
             ["Supabase (PostgreSQL managé)", "Base de données", "Région contractuelle du projet"],
-            ["Anthropic / OpenAI", "Génération LLM (API, sans entraînement)", "US — données minimisées"],
+            ["OpenAI", "Service IA de cette instance : abonnement ChatGPT — conditions §4", "Localisation et conservation à qualifier au contrat"],
             ["CinetPay / Stripe / PayPal", "Paiements", "Selon prestataire — aucune donnée carte chez UPgraders"],
             ["Mailgun / fournisseurs SMS", "Messages transactionnels", "UE/US"],
           ]}
         />
-        <p>Toute évolution de cette liste est notifiée aux clients sous DPA signé avec faculté d&apos;objection motivée.</p>
+        <p>Le registre, les services effectivement activés et leur localisation sont à confirmer pour chaque déploiement. Les services d&apos;hébergement, de paiement et de messagerie effectivement utilisés restent à documenter pour cette instance. Toute évolution de la liste contractuelle est notifiée aux clients sous DPA signé avec faculté d&apos;objection motivée.</p>
       </LegalSection>
 
       <LegalSection title="8. Durées, portabilité, restitution">

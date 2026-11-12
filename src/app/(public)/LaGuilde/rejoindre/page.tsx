@@ -10,7 +10,7 @@ import { JoinGuildForm } from "@/components/laguilde/join-guild-form";
 export const metadata: Metadata = {
   title: "Rejoindre la Guilde — La Fusée",
   description:
-    "Freelances et agences de prod : créez votre profil, candidatez aux missions, soyez payés en mobile money.",
+    "Freelances et agences de prod : créez votre profil, candidatez aux missions, indiquez votre numéro mobile money pour vos paiements.",
 };
 
 export default function RejoindrePage() {

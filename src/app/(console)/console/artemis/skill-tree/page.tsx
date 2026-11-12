@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
@@ -70,14 +70,16 @@ const ALL_SEQUENCES: SequenceInfo[] = [
     { type: "GLORY", ref: "motion-identity-designer", name: "Identite motion", outputKeys: ["motion_identity"] },
     { type: "GLORY", ref: "brand-guidelines-generator", name: "Generateur guidelines", outputKeys: ["brand_guidelines"] },
   ]},
-  { key: "OFFRE-V", name: "L'Offre Commerciale", family: "PILLAR", tier: 0, description: "Proposition de Valeur", aiPowered: true, requires: [{ type: "PILLAR", key: "v", maturity: "ENRICHED" }], steps: [
-    { type: "PILLAR", ref: "v", name: "Injection pilier V", outputKeys: ["pricing", "proofPoints"] },
-    { type: "GLORY", ref: "value-proposition-canvas", name: "Canvas proposition valeur", outputKeys: ["value_canvas"] },
-    { type: "GLORY", ref: "pricing-strategy-architect", name: "Architecture pricing", outputKeys: ["pricing_strategy"] },
-    { type: "GLORY", ref: "offer-structure-designer", name: "Structure offre", outputKeys: ["offer_structure"] },
-    { type: "GLORY", ref: "proof-point-generator", name: "Generateur preuves", outputKeys: ["proof_points"] },
-    { type: "GLORY", ref: "guarantee-framework-builder", name: "Framework garanties", outputKeys: ["guarantees"] },
-    { type: "GLORY", ref: "sales-pitch-creator", name: "Createur pitch vente", outputKeys: ["sales_pitch"] },
+  { key: "OFFRE-V", name: "L'Offre Commerciale", family: "PILLAR", tier: 0, description: "Proposition de valeur, conditions de vente et devis.", aiPowered: true, requires: [{ type: "PILLAR", key: "v", maturity: "ENRICHED" }], steps: [
+    { type: "PILLAR", ref: "v", name: "Informations de l’offre", outputKeys: ["pricing", "proofPoints", "guarantees", "unitEconomics"] },
+    { type: "SESHAT", ref: "sector-benchmarks", name: "Repères du secteur", outputKeys: ["benchmarks"] },
+    { type: "GLORY", ref: "benchmark-reference-finder", name: "Références de comparaison", outputKeys: ["benchmark_report"] },
+    { type: "GLORY", ref: "value-proposition-builder", name: "Proposition de valeur", outputKeys: ["value_proposition"] },
+    { type: "GLORY", ref: "claim-baseline-factory", name: "Argument principal", outputKeys: ["claims_list"] },
+    { type: "CALC", ref: "pricing-strategy-advisor", name: "Choix du tarif", outputKeys: ["pricing_strategy"] },
+    { type: "GLORY", ref: "devis-generator", name: "Devis", outputKeys: ["devis"] },
+    { type: "GLORY", ref: "client-presentation-strategist", name: "Présentation au client", outputKeys: ["presentation_strategy"] },
+    { type: "GLORY", ref: "sales-deck-builder", name: "Support commercial", outputKeys: ["sales_deck"] },
   ]},
   { key: "PLAYBOOK-E", name: "Le Playbook", family: "PILLAR", tier: 0, description: "Engagement et touchpoints", aiPowered: true, requires: [{ type: "PILLAR", key: "e", maturity: "ENRICHED" }], steps: [
     { type: "PILLAR", ref: "e", name: "Injection pilier E", outputKeys: ["touchpoints", "rituels"] },
@@ -233,7 +235,17 @@ export default function SkillTreePage() {
   const [preflightError, setPreflightError] = useState<string | null>(null);
 
   const { data: strategies } = trpc.strategy.list.useQuery({});
-  const activeStratégies = (strategies ?? []).filter((s) => s.status === "ACTIVE");
+  const initialContextRead = useRef(false);
+  useEffect(() => {
+    if (initialContextRead.current || !strategies) return;
+    initialContextRead.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get("strategy") || params.get("strategyId");
+    if (requested && strategies.some(strategy => strategy.id === requested && !["DELETED", "ARCHIVED", "QUICK_INTAKE"].includes(strategy.status))) setSelectedStrategy(current => current || requested);
+    const sequence = params.get("sequence");
+    if (sequence && ALL_SEQUENCES.some(item => item.key === sequence)) setExpanded(current => new Set([...current, sequence]));
+  }, [strategies]);
+  const activeStratégies = (strategies ?? []).filter((s) => s.status === "ACTIVE" || s.id === selectedStrategy);
 
   // Vault skill tree — live status for each sequence
   const skillTreeQuery = trpc.sequenceVault.skillTree.useQuery(
@@ -340,6 +352,7 @@ export default function SkillTreePage() {
       <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
         <Building2 className="h-4 w-4 text-foreground-muted" />
         <select
+          aria-label="Marque à préparer"
           value={selectedStrategy ?? ""}
           onChange={(e) => setSelectedStrategy(e.target.value || null)}
           className="flex-1 rounded-lg border border-border-subtle bg-background px-3 py-2 text-sm text-foreground"
@@ -405,7 +418,7 @@ export default function SkillTreePage() {
                   const hasRun = isAccepted || isPending;
 
                   return (
-                    <div key={seq.key} className={`rounded-xl border overflow-hidden ${
+                    <div id={`sequence-${seq.key}`} key={seq.key} className={`scroll-mt-6 rounded-xl border overflow-hidden ${
                       isAccepted ? "border-emerald-500/30 bg-emerald-500/5" :
                       isPending ? "border-amber-500/30 bg-amber-500/5" :
                       "border-border-subtle bg-card"
@@ -413,6 +426,7 @@ export default function SkillTreePage() {
                       {/* Header — click to expand */}
                       <div
                         role="button"
+                        aria-expanded={isExpanded}
                         tabIndex={0}
                         onClick={() => toggleExpand(seq.key)}
                         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleExpand(seq.key); } }}

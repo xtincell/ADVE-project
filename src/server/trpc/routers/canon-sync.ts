@@ -115,7 +115,7 @@ export const canonSyncRouter = createTRPCRouter({
         pillarKey: p.key as PillarKey,
         operation: { type: "REPLACE_FULL", content: p.content as Record<string, unknown> },
         author: { system: "OPERATOR", reason: "Sync canon UPgraders (Vague 10 — ADVERTIS 100 %)" },
-        options: { targetStatus: "VALIDATED" },
+        options: { targetStatus: p.key === "s" ? "AI_PROPOSED" : "VALIDATED" },
       });
       results[p.key] = { ok: res.success, warnings: res.warnings.length, error: res.error ?? undefined };
     }
@@ -142,12 +142,21 @@ export const canonSyncRouter = createTRPCRouter({
       // reflète le budget du plan calculé → plus de carte « NaN/— » dans l'éditeur.
       const planBudget = (computed as { totalBudget?: unknown }).totalBudget;
       if (typeof planBudget === "number" && Number.isFinite(planBudget)) sContent.globalBudget = planBudget;
-      await db.pillar.update({
-        where: { strategyId_key: { strategyId: strategy.id, key: "s" } },
-        data: { content: sContent as object },
+      const refreshed = await writePillarAndScore({
+        strategyId: strategy.id,
+        pillarKey: "s",
+        operation: { type: "SET_FIELDS", fields: [
+          { path: "computed", value: computed },
+          ...(typeof planBudget === "number" && Number.isFinite(planBudget) ? [{ path: "globalBudget", value: planBudget }] : []),
+        ] },
+        author: { system: "MESTOR", reason: "Recalcul déterministe du canon S depuis les piliers importés" },
+        options: { expectedVersion: sPillars.find(p => p.key === "s")?.currentVersion, targetStatus: "AI_PROPOSED" },
       });
-    } catch {
-      // best-effort — le filet client garantit l'affichage du sélecteur.
+      if (!refreshed.success) throw new Error(refreshed.error ?? "Recalcul du canon S refusé.");
+      results.s = { ok: results.s?.ok !== false, warnings: (results.s?.warnings ?? 0) + refreshed.warnings.length };
+    } catch (error) {
+      results.s = { ok: false, warnings: results.s?.warnings ?? 0,
+        error: error instanceof Error ? error.message : String(error) };
     }
 
     // ── 3. Score recalculé + pilier vector matérialisé ──

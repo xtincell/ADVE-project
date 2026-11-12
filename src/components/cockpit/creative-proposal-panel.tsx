@@ -12,6 +12,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
+import { initiativeBudgetLabel, roadmapAssumptionsLabel } from "@/lib/strategy/roadmap-routes";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { Button } from "@/components/primitives/button";
 import { Modal } from "@/components/shared/modal";
@@ -40,16 +41,11 @@ const STATUS_CLASS: Record<string, string> = {
   REJECTED: "bg-error/15 text-error",
 };
 
-function fmtBudget(n: number): string {
-  if (!n || !Number.isFinite(n)) return "—";
-  return `${new Intl.NumberFormat("fr-FR").format(Math.round(n))} FCFA`;
-}
-
 // Repli pendant le chargement des niveaux (toujours 3, ADR-0089).
 const FALLBACK_LEVELS = [
-  { key: "CONSERVATIVE", label: "Conservateur", recommended: false, selected: false, projectedGrowthPct: null as number | null, actionCount: 0, totalBudget: 0 },
-  { key: "TARGET", label: "Cible", recommended: true, selected: false, projectedGrowthPct: null as number | null, actionCount: 0, totalBudget: 0 },
-  { key: "AMBITIOUS", label: "Ambitieux", recommended: false, selected: false, projectedGrowthPct: null as number | null, actionCount: 0, totalBudget: 0 },
+  { key: "CONSERVATIVE", label: "Conservateur", recommended: false, selected: false, projectedGrowthPct: null as number | null, actionCount: null as number | null, totalBudget: null, budgetSummary: undefined, projectionAssumptions: undefined },
+  { key: "TARGET", label: "Cible", recommended: true, selected: false, projectedGrowthPct: null as number | null, actionCount: null as number | null, totalBudget: null, budgetSummary: undefined, projectionAssumptions: undefined },
+  { key: "AMBITIOUS", label: "Ambitieux", recommended: false, selected: false, projectedGrowthPct: null as number | null, actionCount: null as number | null, totalBudget: null, budgetSummary: undefined, projectionAssumptions: undefined },
 ];
 
 export function CreativeProposalPanel() {
@@ -132,7 +128,7 @@ export function CreativeProposalPanel() {
       {open ? (
         <div className="mt-4 space-y-3 rounded-lg border border-white/10 bg-background/40 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-2xs text-foreground-muted">Voie A — l'IA propose une direction depuis l'ADVE ; tu corriges avant de créer.</p>
+            <p className="text-2xs text-foreground-muted">Choisissez le niveau de votre proposition puis saisissez votre direction. Le préremplissage par l’IA reste facultatif.</p>
             <Button size="sm" variant="outline" disabled={draft.isPending} onClick={() => draft.mutate({ strategyId })}>
               {draft.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1 h-3.5 w-3.5" />}
               Pré-remplir avec l'IA
@@ -145,7 +141,7 @@ export function CreativeProposalPanel() {
             <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-foreground-muted">
               Niveau d'exécution <span className="font-normal normal-case text-foreground-muted/70">(dérivé de l'Advertis — preview des actions générées)</span>
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid gap-2 sm:grid-cols-3">
               {(levels ?? FALLBACK_LEVELS).map((lvl) => {
                 const active = routeKey === lvl.key;
                 return (
@@ -160,9 +156,10 @@ export function CreativeProposalPanel() {
                       {lvl.recommended ? <span className="rounded bg-accent/15 px-1 py-0.5 text-[8px] font-bold text-accent">conseillé</span> : null}
                     </div>
                     <p className="mt-0.5 text-[10px] text-foreground-muted">
-                      {lvl.actionCount} action(s){lvl.projectedGrowthPct != null ? ` · +${lvl.projectedGrowthPct}%` : ""}
+                      {lvl.actionCount !== null ? `${lvl.actionCount} action(s)` : "Nombre d’actions à préciser"}{lvl.projectedGrowthPct != null ? ` · +${lvl.projectedGrowthPct}% (scénario)` : ""}
                     </p>
-                    <p className="text-[10px] text-foreground-secondary">{fmtBudget(lvl.totalBudget)}</p>
+                    <p className="text-[10px] text-foreground-secondary">{initiativeBudgetLabel(lvl.totalBudget, lvl.budgetSummary)}</p>
+                    {roadmapAssumptionsLabel(lvl.projectionAssumptions) ? <p className="text-[10px] text-foreground-muted">{roadmapAssumptionsLabel(lvl.projectionAssumptions)}</p> : null}
                   </button>
                 );
               })}

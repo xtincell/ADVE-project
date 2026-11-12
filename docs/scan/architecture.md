@@ -61,7 +61,7 @@ sequenceDiagram
   participant Artemis
   participant Ptah
   participant Bus as EventBus
-  participant DB as IntentEmission
+  participant DB as PostgreSQL
 
   Client->>Mestor: emitIntent(kind, payload)
   Mestor->>DB: INSERT IntentEmission (hash-chained)
@@ -73,7 +73,11 @@ sequenceDiagram
     opt asset matérialisation requise
       Mestor->>Mestor: emitIntent(PTAH_MATERIALIZE_BRIEF)
       Mestor->>Ptah: dispatch(forgeBrief)
-      Ptah->>Bus: ASSET_FORGED (post webhook reconcile)
+      Ptah->>Mestor: emitIntent(PTAH_RECONCILE_TASK, webhook ou sync)
+      Mestor->>Ptah: reconcileTask scoped to the brand
+      Ptah->>DB: checkpoint provider result
+      Ptah->>DB: transaction versions + vault + cost + COMPLETED
+      Ptah-->>Mestor: stable admitted version ids
     end
     loop each step
       Artemis->>Bus: publish intent.progress
@@ -90,6 +94,25 @@ sequenceDiagram
     Mestor->>DB: UPDATE IntentEmission (status=VETOED|DOWNGRADED)
   end
 ```
+
+**Ptah boundary, received 2026-10-09:** shipped code 6.27.428 retains the
+checkpoint and atomic versions/vault/reported cost/COMPLETED admission. Business
+references now reach the task with shared scope checks before provider/admission;
+regeneration validates its historical task. Root or Intent-OK-wrapped task output
+accepts DEFERRED without a false HTTP 500, preserving refused outcomes.
+Final suites passed: 4,167 unit / 230 PostgreSQL / 1,617 governance; types/lints
+zero errors / 24 warnings, zero cycles. Oracle HTTP 200/DEFERRED, scope/emission
+and replay are local synthetic fixture evidence, with zero provider calls.
+Source cdd9f6c0, CI 37862693091, image 37862922982 and exact runtime 428 were
+received after deployment on October 9 at 00:19:53 UTC; private RW volume retained.
+426 was not deployed separately. Production reads/refusals, unchanged corpus
+and SPAWT edition, and zero forge tasks/versions before/after are received.
+No real provider/media/invoice/business cycle or native production forge button is accepted.
+Operator guard and request-vs-production UI are received on local synthetic
+fixtures in [shipped 428](../governance/RECEPTION-PTAH-UX.md), with a green local
+gauntlet. Same-task DEFERRED retry/configuration, upstream/documentary lineage,
+bytes/CDN, invoices and journal closure remain open:
+[current receipt](../governance/RECEPTION-PTAH-UX.md).
 
 **Intent lifecycle** — `PROPOSED → DELIBERATED → DISPATCHED → EXECUTING → OBSERVED → COMPLETED` (or `FAILED`/`VETOED`/`DOWNGRADED`). Each transition:
 

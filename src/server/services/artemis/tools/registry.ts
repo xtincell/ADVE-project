@@ -1,5 +1,6 @@
 import { ADVE_KEYS } from "@/domain";
 import { z } from "zod";
+import { commercialPricingOutputSchema, commercialQuoteOutputSchema } from "./commercial-offer-schemas";
 import {
   namingOutputSchema,
   socialCopyOutputSchema,
@@ -706,6 +707,7 @@ Format : challenge → insight → idea → execution → results (avec métriqu
       linguistic_assets: "d.assetsLinguistiques",
     },
     outputFormat: "kv_prompts_list",
+    outputSchema: z.object({prompts:z.array(z.object({format:z.string(),prompt:z.string().trim().min(1),style_notes:z.string().optional(),copy_overlay:z.string().optional()})).min(1).max(4)}),
     promptTemplate: `CONTEXTE MARQUE (données piliers ADVE — ne rien inventer) :
 - Archétype : {{archetype}}
 - Prophétie : {{prophecy}}
@@ -880,17 +882,17 @@ Règles : La clé 'brief' est OBLIGATOIRE et doit contenir l'intégralité du br
     requiredDrivers: [],
     dependencies: [],
     description: "Calcule et formate un devis détaillé (lignes × prix)",
-    inputFields: ["services", "pricing", "timeline", "client_info"],
+    inputFields: ["services", "tier_mapping", "catalogue_terms", "country_code", "quote_request", "owner_authorized_offer_ids"],
     pillarBindings: {
       services: "v.produitsCatalogue",
       pricing: "v.productLadder",
       timeline: "s.sprint90Days",
     },
     outputFormat: "devis",
-    promptTemplate: `Devis détaillé :
-Services : {{services}} | Pricing : {{pricing}}
-Timeline : {{timeline}}
-Format : ligne par ligne avec description, quantité, prix unitaire, total, conditions.`,
+    outputSchema: commercialQuoteOutputSchema,
+    promptTemplate: `Devis déterministe : catalogue chargé depuis V, prix fixes documentés ou moteur monetization avec correspondance explicitement approuvée.
+Sélection et quantités : {{quote_request}}. Aucun prix libre, aucune moyenne d’une fourchette.
+Les devises et périodes restent séparées ; les données absentes sont signalées à compléter. Aucun appel LLM pour produire les tarifs.`,
     status: "ACTIVE",
     // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
     forgeOutput: {
@@ -1618,7 +1620,7 @@ Discipline : n'invente RIEN — ne remplis une dimension QUE si l'offre la porte
     requiredDrivers: [],
     dependencies: [],
     description: "Grille tarifaire, packages, ancrage psychologique, comparatif marché",
-    inputFields: ["products", "product_ladder", "unit_economics", "competitors", "market_size"],
+    inputFields: ["products", "tier_mapping", "catalogue_terms", "country_code", "owner_authorized_offer_ids"],
     pillarBindings: {
       products: "v.produitsCatalogue",
       product_ladder: "v.productLadder",
@@ -1627,12 +1629,11 @@ Discipline : n'invente RIEN — ne remplis une dimension QUE si l'offre la porte
       market_size: "t.tamSamSom",
     },
     outputFormat: "pricing_strategy",
-    promptTemplate: `Stratégie de pricing :
-Catalogue : {{products}}
-Ladder : {{product_ladder}}
-Unit economics : {{unit_economics}}
-Concurrents : {{competitors}} | Marché : {{market_size}}
-Livrable : grille tarifaire, packages (3 tiers), ancrage psychologique, prix psychologiques, marge par tier, comparatif marché.`,
+    outputSchema: commercialPricingOutputSchema,
+    promptTemplate: `Grille tarifaire déterministe depuis le catalogue V courant.
+Prix fixes documentés ou moteur monetization via {{tier_mapping}}, pays {{country_code}}.
+Devise et période explicites via {{catalogue_terms}} si le catalogue ne les porte pas.
+Aucun package, marge, rabais ou montant concurrentiel inventé ; les données absentes restent à compléter.`,
     status: "ACTIVE",
   },
   {
@@ -2712,8 +2713,8 @@ Formule : coût_annuel = (salaire*12)*(1+charges/100)*(1+overhead/100), taux_rev
     pillarKeys: ["V"],
     requiredDrivers: [],
     dependencies: [],
-    description: "Coûts fixes + variables + overhead → seuil de rentabilité",
-    inputFields: ["fixed_costs", "variable_costs", "headcount", "revenue_target", "billable_ratio"],
+    description: "Coûts fixes + variables + overhead ; seuil de rentabilité seulement si prix et coût variable unitaires sont déclarés",
+    inputFields: ["fixed_costs", "variable_costs", "headcount", "revenue_target", "billable_ratio", "price_per_unit", "variable_cost_per_unit"],
     pillarBindings: {},
     outputFormat: "codb",
     promptTemplate: `CODB :
@@ -2722,7 +2723,9 @@ Coûts variables/mois : {{variable_costs}} XAF
 Effectif : {{headcount}}
 CA cible : {{revenue_target}} XAF/an
 Ratio facturable : {{billable_ratio}}%
-Formules : CODB_mensuel = fixes+variables, CODB_annuel = CODB_mensuel*12, seuil_rentabilite = CODB_annuel/marge_moyenne, overhead_rate = CODB/(salaires*12).`,
+Prix unitaire : {{price_per_unit}}
+Coût variable unitaire : {{variable_cost_per_unit}}
+Formules : CODB_mensuel = fixes+variables, CODB_annuel = CODB_mensuel*12, overhead_rate = (100-facturable)/facturable. Seuil (calcul canonique) = coûts fixes mensuels / (prix unitaire - coût variable unitaire), non calculable sans ces entrées ; le CA cible n'entre pas dans le seuil.`,
     status: "ACTIVE",
   },
   {
@@ -3329,6 +3332,7 @@ import { PHASE19_TOOLS } from "./phase19-tools";
 // GlorySequence `MARKET-RESEARCH`. Ajouté à EXTENDED — pas CORE (préserve
 // cardinalité 56).
 import { MARKET_RESEARCH_TOOLS } from "./market-research-tools";
+import { CREATIVE_INTELLIGENCE_TOOLS } from "./creative-intelligence-tools";
 
 // ─── Sales Response Tree — Glory tool commercial (ADR-0104) ───────────────────
 // 1 outil HYBRID `sales-response-tree` : arbre de réponse pour les commerciaux
@@ -3337,6 +3341,7 @@ import { MARKET_RESEARCH_TOOLS } from "./market-research-tools";
 // (pas CORE) — préserve la cardinalité 56 du test `glory-tools.test.ts`.
 import { SALES_RESPONSE_TREE_TOOLS } from "./sales-response-tree-tools";
 import { SEQUENCE_GAP_TOOLS } from "./sequence-gap-tools";
+import { FINANCIAL_DOCUMENT_TOOLS } from "./financial-document-tools";
 
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
@@ -3368,8 +3373,10 @@ export const EXTENDED_GLORY_TOOLS: GloryToolDef[] = [
   ...ADOPS_TOOLS,
   ...PHASE19_TOOLS,
   ...MARKET_RESEARCH_TOOLS,
+  ...CREATIVE_INTELLIGENCE_TOOLS,
   ...SALES_RESPONSE_TREE_TOOLS,
   ...SEQUENCE_GAP_TOOLS, // 6 outils comblant les refs fantômes des séquences (scan NEFER 2026-06-30)
+  ...FINANCIAL_DOCUMENT_TOOLS,
 ];
 
 // Public API canonical export — `ALL_GLORY_TOOLS` = `CORE_GLORY_TOOLS` = 56 tools
@@ -3438,4 +3445,3 @@ export function getBrandPipelineDependencyOrder(): string[] {
 
   return sorted;
 }
-

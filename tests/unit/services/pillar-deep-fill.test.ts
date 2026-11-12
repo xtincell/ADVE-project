@@ -6,7 +6,7 @@
  * catalogue réel du fondateur (anti-fabrication). Tests PURS (sans DB/LLM).
  */
 import { describe, it, expect } from "vitest";
-import { expandArrayItemRequirements } from "@/server/services/pillar-maturity/auto-filler";
+import { expandArrayItemRequirements, completionProvenance } from "@/server/services/pillar-maturity/auto-filler";
 import { buildExampleForPath, getFieldZod } from "@/lib/types/pillar-maturity-contracts";
 import type { FieldRequirement } from "@/lib/types/pillar-maturity";
 
@@ -76,5 +76,18 @@ describe("getFieldZod / buildExampleForPath — shape des cellules (index de tab
   });
   it("la résolution du tableau entier reste intacte (non-régression)", () => {
     expect(Array.isArray(buildExampleForPath("v", "produitsCatalogue"))).toBe(true);
+  });
+});
+
+
+describe("completion authority at an explicit empty choice", () => {
+  it("keeps the documentary input but requires verification of a replacement premise", () => {
+    const previous = { primaryChannel: "", _fieldProvenance: { primaryChannel: "HUMAN" } };
+    expect(completionProvenance("e", "primaryChannel", previous, "APP", true)).toBe("INFERRED");
+    expect(previous.primaryChannel).toBe("");
+    expect(previous._fieldProvenance.primaryChannel).toBe("HUMAN");
+    expect(completionProvenance("e", "primaryChannel", {}, "APP", true)).toBe("SOURCE");
+    expect(completionProvenance("e", "primaryChannel", { primaryChannel: "SITE_WEB", _fieldProvenance: { primaryChannel: "HUMAN" } }, "APP", true)).toBe("SOURCE");
+    expect(completionProvenance("e", "primaryChannel", {}, "APP", false)).toBe("INFERRED");
   });
 });

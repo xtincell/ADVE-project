@@ -9,14 +9,16 @@ import {
   PRODUCT_CATEGORIES, PRODUCT_LIFECYCLE, AARRR_STAGES,
 } from "./taxonomies";
 import { PILLAR_KEYS } from "@/domain/pillars";
+import { BRAND_ACTOR_ROLES, BRAND_ACTOR_ROLE_LABELS } from "@/domain/brand-actors";
 
 // ─── Field type definitions ──────────────────────────────────────────────
 
 export type FieldDef =
   | { kind: "enum"; options: readonly string[]; label: string; nullable?: boolean }
   | { kind: "text"; label: string; maxLength?: number; multiline?: boolean; placeholder?: string }
-  | { kind: "number"; label: string; min?: number; max?: number; unit?: string }
-  | { kind: "multi-enum"; options: readonly string[]; label: string }
+  | { kind: "number"; label: string; min?: number; max?: number; unit?: string; displayScale?: number }
+  | { kind: "financial-model"; label: string }
+  | { kind: "multi-enum"; options: readonly string[]; label: string; optionLabels?: Readonly<Record<string, string>> }
   | { kind: "object"; label: string; fields: Record<string, FieldDef> }
   | { kind: "array-of-objects"; label: string; itemLabel?: string; itemFields: Record<string, FieldDef> }
   | { kind: "array-of-strings"; label: string; placeholder?: string }
@@ -139,7 +141,8 @@ const PILLAR_D: Record<string, FieldDef> = {
   personas: {
     kind: "array-of-objects", label: "Personas", itemLabel: "Persona",
     itemFields: {
-      name: textField("Prenom"),
+      name: textField("Nom du profil"),
+      actorRoles: { kind: "multi-enum", label: "Rôles dans le modèle", options: BRAND_ACTOR_ROLES, optionLabels: BRAND_ACTOR_ROLE_LABELS },
       age: textField("Age"),
       csp: textField("CSP"),
       location: textField("Localisation"),
@@ -158,7 +161,7 @@ const PILLAR_D: Record<string, FieldDef> = {
       jobsToBeDone: stringsField("Jobs to be done"),
       decisionProcess: textField("Processus de decision"),
       devotionPotential: enumField("Potentiel de devotion", ["LOW", "MEDIUM", "HIGH", "FANATIC"] as const),
-      rank: numberField("Rang", { min: 1, max: 10 }),
+      rank: numberField("Priorité (si connue)", { min: 1 }),
     },
   },
   paysageConcurrentiel: {
@@ -216,6 +219,19 @@ const PILLAR_D: Record<string, FieldDef> = {
 // ─── PILLAR V — Valeur ───────────────────────────────────────────────────
 
 const PILLAR_V: Record<string, FieldDef> = {
+  personaSegmentMap: {
+    kind: "array-of-objects", label: "Échanges de valeur par acteur", itemLabel: "Échange",
+    itemFields: {
+      personaName: textField("Profil concerné (nom dans D)"),
+      productNames: stringsField("Offres concernées (si applicable)"),
+      devotionLevel: enumField("Niveau d’engagement visé (si établi)", DEVOTION_LEVELS, true),
+      revenueContributionPct: numberField("Part de revenu (si établie)", { min: 0, max: 100, unit: "%" }),
+      valueToBrand: stringsField("Ce que l’acteur apporte à la marque"),
+      valueToActor: stringsField("Ce que l’acteur reçoit"),
+      actorCosts: stringsField("Ce que cela lui coûte (argent, temps, effort…)"),
+      dependencyConditions: stringsField("Conditions qui rendent sa participation viable"),
+    },
+  },
   promesseDeValeur: textField("Promesse de valeur", { multiline: true }),
   produitsCatalogue: {
     kind: "array-of-objects", label: "Catalogue produits", itemLabel: "Produit",
@@ -223,6 +239,7 @@ const PILLAR_V: Record<string, FieldDef> = {
       nom: textField("Nom"),
       categorie: enumField("Categorie", PRODUCT_CATEGORIES),
       prix: numberField("Prix", { min: 0, unit: "FCFA" }),
+      conditionsTarifaires: textField("Conditions tarifaires", { multiline: true, placeholder: "Montants, période, HT/TTC, options et état de l’offre — sans remplacer l’inconnu par zéro" }),
       cout: numberField("Cout", { min: 0, unit: "FCFA" }),
       margeUnitaire: numberField("Marge unitaire", { min: 0, unit: "FCFA" }),
       gainClientConcret: textField("Gain client concret"),
@@ -231,7 +248,7 @@ const PILLAR_V: Record<string, FieldDef> = {
       gainMarqueAbstrait: textField("Gain marque abstrait"),
       coutClientConcret: textField("Cout client concret"),
       coutClientAbstrait: textField("Cout client abstrait"),
-      coutMarqueConcret: textField("Cout marque concret"),
+      coutMarqueConcret: numberField("Coût marque concret (FCFA)", { min: 0 }),
       coutMarqueAbstrait: textField("Cout marque abstrait"),
       lienPromesse: textField("Lien avec la promesse"),
       segmentCible: textField("Segment cible"),
@@ -248,21 +265,23 @@ const PILLAR_V: Record<string, FieldDef> = {
   productLadder: {
     kind: "array-of-objects", label: "Echelle produit", itemLabel: "Palier",
     itemFields: {
-      tier: enumField("Palier", ["ENTREE", "COEUR", "PREMIUM", "SIGNATURE"] as const),
-      prix: numberField("Prix", { min: 0, unit: "FCFA" }),
+      tier: textField("Palier"),
+      produitIds: stringsField("Produits référencés", "Identifiant ou nom exact du produit dans le catalogue"),
       description: textField("Description"),
       cible: textField("Cible"),
-      position: numberField("Position", { min: 1, max: 4 }),
+      position: numberField("Position", { min: 1 }),
     },
   },
+  financialModel: { kind: "financial-model", label: "Hypothèses du modèle financier" },
   unitEconomics: {
     kind: "object", label: "Unit Economics",
     fields: {
       cac: numberField("CAC", { min: 0, unit: "FCFA" }),
       ltv: numberField("LTV", { min: 0, unit: "FCFA" }),
       ltvCacRatio: numberField("Ratio LTV/CAC", { min: 0 }),
-      pointMort: numberField("Point mort", { min: 0 }),
-      margeNette: numberField("Marge nette", { min: 0, max: 100, unit: "%" }),
+      pointMort: textField("Point mort et unité"),
+      margeNette: numberField("Marge nette", { max: 100, unit: "%", displayScale: 100 }),
+      roiEstime: numberField("ROI estimé", { unit: "%" }),
       paybackPeriod: numberField("Payback period", { min: 0, unit: "mois" }),
       budgetCom: numberField("Budget com", { min: 0, unit: "FCFA/an" }),
       caVise: numberField("CA vise", { min: 0, unit: "FCFA/an" }),

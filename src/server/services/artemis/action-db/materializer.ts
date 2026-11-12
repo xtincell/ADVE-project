@@ -79,22 +79,22 @@ function inferAarrr(init: NormalizedInitiative): string | null {
 function mapStatus(init: NormalizedInitiative): { status: string; selected: boolean } {
   switch (init.status) {
     case "SELECTED_FOR_ROADMAP":
-      return { status: "ACCEPTED", selected: true };
+      return { status: "PROPOSED", selected: false };
     case "RECOMMENDED":
       return { status: "PROPOSED", selected: false };
     case "REJECTED":
-      return { status: "CANCELLED", selected: false };
+      return { status: "PROPOSED", selected: false };
     default:
       return { status: "DRAFT", selected: false };
   }
 }
 
-function mapPriority(init: NormalizedInitiative): string {
+function mapPriority(init: NormalizedInitiative): string | null {
   // SELECTED_FOR_ROADMAP + SPRINT_90 = most urgent; long-term = lowest.
   if (init.timeframe === "SPRINT_90") return init.status === "SELECTED_FOR_ROADMAP" ? "P0" : "P1";
   if (init.timeframe === "PHASE_1") return "P1";
   if (init.timeframe === "PHASE_2") return "P2";
-  return "P3";
+  return init.timeframe === "LONG_TERM" ? "P3" : null;
 }
 
 export interface MaterializeResult {
@@ -108,76 +108,114 @@ export interface MaterializeResult {
  * Materialize the strategy's I-pillar initiatives into BrandAction rows.
  * Idempotent. Operator-authored rows (source !== "MATERIALIZED") are preserved.
  */
-export async function syncBrandActionsFromBlob(strategyId: string): Promise<MaterializeResult> {
-  const [pillar, strategy] = await Promise.all([
-    db.pillar.findUnique({ where: { strategyId_key: { strategyId, key: "i" } }, select: { content: true } }),
-    db.strategy.findUnique({ where: { id: strategyId }, select: { countryCode: true, currencyCode: true } }),
-  ]);
+export async function syncBrandActionsFromBlob(strategyId: string, transaction?: Prisma.TransactionClient): Promise<MaterializeResult> {
+  const perform = async (tx: Prisma.TransactionClient): Promise<MaterializeResult> => {
+    // Same strategy-first lock as the pillar writer and action decision handler.
+    // A source refresh and a human choice cannot interleave their read/write halves.
+    await tx.$queryRaw`SELECT id FROM "Strategy" WHERE id = ${strategyId} FOR UPDATE`;
+    await tx.$queryRaw`SELECT id FROM "BrandAction" WHERE "strategyId" = ${strategyId} FOR UPDATE`;
+    const [pillar, strategy] = await Promise.all([
+      tx.pillar.findUnique({ where: { strategyId_key: { strategyId, key: "i" } }, select: { content: true } }),
+      tx.strategy.findUnique({ where: { id: strategyId }, select: { countryCode: true, currencyCode: true } }),
+    ]);
+    const existing = await tx.brandAction.findMany({ where: { strategyId } });
+    const byInitiative = new Map(existing.filter(row => row.sourceInitiativeId).map(row => [row.sourceInitiativeId!, row]));
 
-  const initiatives = collectNormalizedInitiatives(pillar?.content ?? null);
-  const zoneCode = strategy?.countryCode ?? null;
-  const currency = strategy?.currencyCode ?? "XAF";
+    const initiatives = collectNormalizedInitiatives(pillar?.content ?? null);
+    const zoneCode = strategy?.countryCode ?? null;
+    const currency = strategy?.currencyCode ?? "XAF";
 
-  let upserted = 0;
-  for (const init of initiatives) {
-    const { status, selected } = mapStatus(init);
-    const costTemplateKey = resolveActionTemplateKey({
-      title: init.action,
-      format: init.format,
-      channel: init.channel,
-      touchpoint: mapTouchpoint(init),
-      objectif: init.objectif,
-    });
-    const metadata = {
-      channel: init.channel,
-      format: init.format || null,
-      pilierImpact: init.pilierImpact ?? null,
-      devotionImpact: init.devotionImpact ?? null,
-      overtonPhase: init.overtonPhase ?? null,
-      overtonShift: init.overtonShift ?? null,
-      budgetEstime: init.budgetEstime ?? null,
-      timeframe: init.timeframe,
-      initiativeStatus: init.status,
-      mitigatesRiskIds: init.mitigatesRiskIds,
-      targetsPersonaIds: init.targetsPersonaIds,
-      materializedFrom: "I_BLOB",
-    } satisfies Record<string, unknown>;
+    let upserted = 0;
+    for (const init of initiatives) {
+      const previous = byInitiative.get(init.id);
+      // The unique key can also belong to an operator-authored row. Upsert alone
+      // would change its source and overwrite it despite the old preservation claim.
+      if (previous && previous.source !== MATERIALIZED_SOURCE) continue;
+      const previousMetadata = previous?.metadata && typeof previous.metadata === "object" && !Array.isArray(previous.metadata)
+        ? previous.metadata as Record<string, unknown> : {};
+      const { status, selected } = mapStatus(init);
+      const costTemplateKey = resolveActionTemplateKey({
+        title: init.action,
+        format: init.format,
+        channel: init.channel,
+        touchpoint: mapTouchpoint(init),
+        objectif: init.objectif,
+      });
+      const metadata = {
+        ...previousMetadata,
+        channel: init.channel,
+        format: init.format || null,
+        pilierImpact: init.pilierImpact ?? null,
+        devotionImpact: init.devotionImpact ?? null,
+        overtonPhase: init.overtonPhase ?? null,
+        overtonShift: init.overtonShift ?? null,
+        budgetEstime: init.budgetEstime ?? null,
+        budgetBasis: init.budgetBasis,
+        budgetRange: init.budgetRange ?? null,
+        budgetPeriod: init.budgetPeriod ?? null,
+        campaignCanonType: init.campaignCanonType ?? null,
+        cadence: init.cadence ?? null,
+        timeframe: init.timeframe ?? null,
+        initiativeStatus: init.status,
+        initiativePreference: init.preference,
+        mitigatesRiskIds: init.mitigatesRiskIds,
+        targetsPersonaIds: init.targetsPersonaIds,
+        materializedFrom: "I_BLOB",
+        // Projection baseline, never an authority: lets a later source budget
+        // refresh distinguish its own old estimate from an operational override.
+        projectedBudget: init.budget ?? null,
+        projectedBudgetMin: init.budgetRange?.min ?? init.budget ?? null,
+        projectedBudgetMax: init.budgetRange?.max ?? init.budget ?? null,
+        projectedPriority: mapPriority(init),
+      } satisfies Record<string, unknown>;
 
-    const data = {
-      title: init.action.slice(0, 200) || "(action sans titre)",
-      description: init.objectif || null,
-      touchpoint: mapTouchpoint(init),
-      aarrrIntent: inferAarrr(init),
-      budgetMin: init.budget > 0 ? init.budget : null,
-      budgetMax: init.budget > 0 ? init.budget : null,
-      budgetCurrency: currency,
-      priority: mapPriority(init),
-      selected,
-      status,
-      source: MATERIALIZED_SOURCE,
-      costTemplateKey,
-      costZoneCode: zoneCode,
-      metadata: metadata as Prisma.InputJsonValue,
-    };
+      const data = {
+        title: init.action.slice(0, 200) || "(action sans titre)",
+        description: init.objectif || null,
+        touchpoint: mapTouchpoint(init),
+        aarrrIntent: inferAarrr(init),
+        budgetMin: init.budgetRange?.min ?? init.budget ?? null,
+        budgetMax: init.budgetRange?.max ?? init.budget ?? null,
+        budgetCurrency: currency,
+        priority: mapPriority(init),
+        selected,
+        status,
+        source: MATERIALIZED_SOURCE,
+        costTemplateKey,
+        costZoneCode: zoneCode,
+        metadata: metadata as Prisma.InputJsonValue,
+      };
 
-    await db.brandAction.upsert({
-      where: { strategyId_sourceInitiativeId: { strategyId, sourceInitiativeId: init.id } },
-      create: { strategyId, sourceInitiativeId: init.id, ...data },
-      update: data,
-    });
-    upserted++;
-  }
+      // An empty projection has no operational amount to protect. Fill it
+      // from the actual source; preserve a populated override independently.
+      const emptyBudget = previous?.budgetMin === null && previous?.budgetMax === null;
+      const update = previous ? {
+        ...data,
+        selected: previous.selected,
+        status: ["ACCEPTED", "SCHEDULED", "EXECUTED", "CANCELLED"].includes(previous.status) ? previous.status : data.status,
+        priority: previous.priority === null || previousMetadata.projectedPriority === previous.priority ? data.priority : previous.priority,
+        budgetMin: emptyBudget || (previousMetadata.projectedBudgetMin ?? previousMetadata.projectedBudget) === previous.budgetMin ? data.budgetMin : previous.budgetMin,
+        budgetMax: emptyBudget || (previousMetadata.projectedBudgetMax ?? previousMetadata.projectedBudget) === previous.budgetMax ? data.budgetMax : previous.budgetMax,
+        budgetCurrency: previous.budgetCurrency,
+      } : data;
+      await tx.brandAction.upsert({
+        where: { strategyId_sourceInitiativeId: { strategyId, sourceInitiativeId: init.id } },
+        create: { strategyId, sourceInitiativeId: init.id, ...data },
+        update,
+      });
+      upserted++;
+    }
 
-  // Reconcile: drop materialized rows whose source initiative disappeared from the
-  // blob. Operator-authored rows (source !== MATERIALIZED) are never touched.
-  const currentIds = initiatives.map((i) => i.id);
-  const { count: deleted } = await db.brandAction.deleteMany({
-    where: {
-      strategyId,
-      source: MATERIALIZED_SOURCE,
-      sourceInitiativeId: currentIds.length > 0 ? { notIn: currentIds } : { not: null },
-    },
-  });
+    // Reconcile: drop materialized rows whose source initiative disappeared from the
+    // blob. Operator-authored rows (source !== MATERIALIZED) are never touched.
+    const currentIds = new Set(initiatives.map(i => i.id));
+    const disposable = existing.filter(row => row.source === MATERIALIZED_SOURCE && row.sourceInitiativeId
+      && !currentIds.has(row.sourceInitiativeId) && !row.selected && ["DRAFT", "PROPOSED"].includes(row.status)
+      && !row.timingStart && !row.timingEnd && !row.campaignId && !row.missionId && !row.costEstimateId
+      && !(row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata) && row.metadata.socialPublish));
+    const { count: deleted } = await tx.brandAction.deleteMany({ where: { strategyId, id: { in: disposable.map(row => row.id) } } });
 
-  return { strategyId, initiatives: initiatives.length, upserted, deleted };
+    return { strategyId, initiatives: initiatives.length, upserted, deleted };
+  };
+  return transaction ? perform(transaction) : db.$transaction(perform, { timeout: 30000, maxWait: 15000 });
 }

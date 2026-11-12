@@ -106,6 +106,19 @@ describe("opsDaemonStep — armement et frontières", () => {
     expect(fetchCalls.some((c) => c.url.includes("/api/cron/anubis-digest?frequency=WEEKLY"))).toBe(true);
   });
 
+  it("sixhourly gives the opted-in creative corpus enough time for its bounded batch", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    try {
+      const buckets = new Map<string, string>();
+      await opsDaemonStep(new Date(Date.UTC(2026, 6, 10, 5, 59, 0)), buckets);
+      await opsDaemonStep(new Date(Date.UTC(2026, 6, 10, 6, 0, 30)), buckets);
+      const i = fetchCalls.findIndex(c => c.url.endsWith("/api/cron/argos-hunt?mode=corpus"));
+      expect(i).toBeGreaterThanOrEqual(0);
+      expect(timeout.mock.calls[i]?.[0]).toBe(240000);
+      expect(timeout.mock.calls.some(c => c[0] === 120000)).toBe(true);
+    } finally { timeout.mockRestore(); }
+  });
+
   it("monthly tire le 1er du mois 00h UTC avec ?monthly=1", async () => {
     const buckets = new Map<string, string>();
     await opsDaemonStep(new Date(Date.UTC(2026, 6, 31, 23, 59, 0)), buckets); // 31 juillet — arme

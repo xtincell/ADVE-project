@@ -1,6 +1,7 @@
 /**
  * ADR-0149 — seed du canon jauge : ancres-étalons (θ fixé) + opponents-items
- * (must-have Rasch à difficulté fixée). Idempotent (upsert par slug). PROPOSÉ —
+ * (must-have Rasch à difficulté fixée). Complète les absents sans écraser les
+ * réglages opérateur ; transaction sérialisée et rejeu sans écriture. PROPOSÉ —
  * ratification opérateur des θ.
  */
 
@@ -9,6 +10,7 @@ import { MUST_HAVE_ITEMS } from "@/domain/scoreur";
 import type { BrandTier } from "@/domain/brand-tier";
 import { upsertBrandRef } from "./index";
 import { ITEM_OPPONENTS } from "./compilateur";
+import { db } from "@/lib/db";
 
 /** Difficulté canon des items par palier (échelle Elo, gauge NATION). PROPOSÉ. */
 export const ITEM_DIFFICULTY_BY_TIER: Record<Exclude<BrandTier, "LATENT">, number> = {
@@ -23,41 +25,50 @@ export const ITEM_DIFFICULTY_BY_TIER: Record<Exclude<BrandTier, "LATENT">, numbe
 const MEASURED_ITEM_THETA = ITEM_DIFFICULTY_BY_TIER.CULTE;
 
 export async function seedScoreurCanon(): Promise<{ anchors: number; items: number }> {
-  let anchors = 0;
-  for (const a of ANCHOR_REGISTRY) {
-    await upsertBrandRef({
-      kind: "ANCHOR",
-      slug: `anchor-${a.id}`,
-      name: a.label,
-      marketScale: a.scale,
-      fixedTheta: a.theta,
-      source: "ADR-0149 anchor registry",
-    });
-    anchors++;
-  }
+  return db.$transaction(async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${"scoreur:canon:initialize"}, 0))`;
+    const initialize = async (input: Parameters<typeof upsertBrandRef>[0]) => {
+      const row = await upsertBrandRef(input, { initializeOnly: true, client: tx });
+      if (row.kind !== input.kind) {
+        throw new Error(`Repère ${input.slug} : type incompatible avec le canon. Réconciliez le registre avant de réessayer.`);
+      }
+    };
+    let anchors = 0;
+    for (const a of ANCHOR_REGISTRY) {
+      await initialize({
+        kind: "ANCHOR",
+        slug: `anchor-${a.id}`,
+        name: a.label,
+        marketScale: a.scale,
+        fixedTheta: a.theta,
+        source: "ADR-0149 anchor registry",
+      });
+      anchors++;
+    }
 
-  let items = 0;
-  // Items opponents des must-have (A/D/V + tenue + crise) — Rasch à difficulté fixée.
-  for (const item of MUST_HAVE_ITEMS) {
-    await upsertBrandRef({
-      kind: "ITEM",
-      slug: `item-${item.id}`,
-      name: item.label,
-      fixedTheta: ITEM_DIFFICULTY_BY_TIER[item.tier],
-      source: "ADR-0149 must-have item",
-    });
-    items++;
-  }
-  // Items opponents mesurés (compilateur E/T).
-  for (const slug of Object.values(ITEM_OPPONENTS)) {
-    await upsertBrandRef({
-      kind: "ITEM",
-      slug,
-      name: slug,
-      fixedTheta: MEASURED_ITEM_THETA,
-      source: "ADR-0149 measured item",
-    });
-    items++;
-  }
-  return { anchors, items };
+    let items = 0;
+    // Items opponents des must-have (A/D/V + tenue + crise) — Rasch à difficulté fixée.
+    for (const item of MUST_HAVE_ITEMS) {
+      await initialize({
+        kind: "ITEM",
+        slug: `item-${item.id}`,
+        name: item.label,
+        fixedTheta: ITEM_DIFFICULTY_BY_TIER[item.tier],
+        source: "ADR-0149 must-have item",
+      });
+      items++;
+    }
+    // Items opponents mesurés (compilateur E/T).
+    for (const slug of Object.values(ITEM_OPPONENTS)) {
+      await initialize({
+        kind: "ITEM",
+        slug,
+        name: slug,
+        fixedTheta: MEASURED_ITEM_THETA,
+        source: "ADR-0149 measured item",
+      });
+      items++;
+    }
+    return { anchors, items };
+  }, { timeout: 30_000 });
 }

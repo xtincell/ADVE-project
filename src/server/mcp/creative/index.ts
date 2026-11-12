@@ -10,7 +10,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
 // [x] REQ-1  42 tools: 39 GLORY tools (4 layers) + 3 audit/admin tools
 // [x] REQ-2  7 resources: glory-outputs, brand-assets, guidelines, calendar,
 //            brand-voice, creative-history, brand-pipeline-status
-// [x] REQ-3  AI-powered handlers (Claude) for brand_guardian_check, creative_evaluate,
+// [x] REQ-3  Managed text handlers for brand_guardian_check, creative_evaluate,
 //            concept_generate, script_write, social_copy_generate, storytelling_arc_generate,
 //            storytelling_narrative_check, brand_voice_audit
 // [x] REQ-4  GLORY tool execution via glory-tools service (real AI, persisted outputs)
@@ -47,8 +47,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { executeStructuredLLMCall } from "@/server/services/utils/llm-structured";
 import * as gloryTools from "@/server/services/glory-tools";
 import * as guidelinesRenderer from "@/server/services/guidelines-renderer";
 import * as seshatBridge from "@/server/services/seshat-bridge";
@@ -90,7 +89,7 @@ export interface ResourceDefinition {
 }
 
 // ---------------------------------------------------------------------------
-// AI Helper — shared Claude call for creative analysis/generation
+// AI Helper — existing managed text call for creative analysis/generation
 // ---------------------------------------------------------------------------
 
 async function callCreativeAI(
@@ -101,37 +100,18 @@ async function callCreativeAI(
 ): Promise<{ text: string; parsed: Record<string, unknown> }> {
   const fullSystem = `${systemPrompt}\n\n${context}\n\nRéponds en français. Format de sortie : JSON structuré.`;
 
-  const result = await generateText({
-    model: anthropic("claude-sonnet-4-20250514"),
+  const result = await executeStructuredLLMCall({
+    caller: "mcp:creative",
+    purpose: "agent",
+    strategyId,
+    schema: z.record(z.string(), z.unknown()),
+    retries: 0,
     system: fullSystem,
     prompt: userPrompt,
     maxOutputTokens: 4096,
   });
 
-  // Track AI cost (non-blocking)
-  if (strategyId) {
-    db.aICostLog.create({
-      data: {
-        model: "claude-sonnet-4-20250514",
-        provider: "anthropic",
-        inputTokens: result.usage?.inputTokens ?? 0,
-        outputTokens: result.usage?.outputTokens ?? 0,
-        cost: ((result.usage?.inputTokens ?? 0) / 1_000_000) * 3 + ((result.usage?.outputTokens ?? 0) / 1_000_000) * 15,
-        context: "mcp:creative",
-        strategyId,
-      },
-    }).catch(() => {});
-  }
-
-  let parsed: Record<string, unknown>;
-  try {
-    const jsonMatch = result.text.match(/\{[\s\S]*\}/);
-    parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { content: result.text };
-  } catch {
-    parsed = { content: result.text };
-  }
-
-  return { text: result.text, parsed };
+  return { text: result.rawText, parsed: result.data };
 }
 
 /**

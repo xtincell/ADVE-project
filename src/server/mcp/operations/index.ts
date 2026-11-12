@@ -17,6 +17,7 @@
 // ============================================================================
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { db } from "@/lib/db";
 import * as campaignManager from "@/server/services/campaign-manager";
 import type { CampaignState } from "@/server/services/campaign-manager/state-machine";
@@ -25,6 +26,8 @@ import * as processScheduler from "@/server/services/process-scheduler";
 import * as slaTracker from "@/server/services/sla-tracker";
 import * as teamAllocator from "@/server/services/team-allocator";
 import { listStrategyMissions } from "@/server/mcp/_shared/strategy-activity";
+import { prepareSalesOfferInput } from "@/server/services/crm-engine/offer-contract";
+import { projectPublicSalesHumanContact } from "@/server/services/crm-engine/public-entry-contract";
 
 // ---------------------------------------------------------------------------
 // Operations MCP Server
@@ -93,7 +96,233 @@ async function assertMissionInStrategy(missionId: string, strategyId: string): P
 // Tools
 // ---------------------------------------------------------------------------
 
+async function commercialAgent(input: Record<string, unknown>) {
+  const auth = input.__auth as { scopeKind?: string; scopeStrategyId?: string; apiKeyId?: string; salesRunId?: string; salesRequestId?: string } | undefined;
+  if (auth?.scopeKind !== "BRAND" || auth.scopeStrategyId !== input.strategyId || !auth.apiKeyId) {
+    throw new Error("Une clé d’agent limitée à la marque est nécessaire.");
+  }
+  const key = await db.mcpApiKey.findUnique({ where: { id: auth.apiKeyId }, select: { isActive: true, scopeKind: true, scopeStrategyId: true, expiresAt: true } });
+  if (!key?.isActive || key.scopeStrategyId !== input.strategyId || key.scopeKind !== "BRAND" || (key.expiresAt && key.expiresAt <= new Date())) {
+    throw new Error("Les accès de ce vendeur ont expiré ou ont été désactivés.");
+  }
+  const profile = await db.salesRepresentative.findUnique({ where: { mcpKeyId: auth.apiKeyId }, select: { status: true } });
+  if (profile && profile.status !== "ACTIVE") throw new Error("Commercial suspendu ou non activé.");
+  return { id: `mcp:${auth.apiKeyId}`, admin: false, salesRunId:auth.salesRunId, salesRequestId:auth.salesRequestId };
+}
+
+async function salesDecisionResult(work:()=>Promise<unknown>,dealId:string){
+  try{return await work();}catch(cause){
+    const error=cause instanceof z.ZodError?new TRPCError({code:"BAD_REQUEST",message:"Commande commerciale invalide : "+cause.issues.map(issue=>`${issue.path.join(".")} : ${issue.message}`).join(" ; ").slice(0,3000)}):cause;
+    if(!(error instanceof TRPCError)||!["PRECONDITION_FAILED","CONFLICT","FORBIDDEN","BAD_REQUEST"].includes(error.code))throw error;
+    const current=await db.deal.findUniqueOrThrow({where:{id:dealId},select:{revision:true,commercial:true}});
+    const state=current.commercial as {node?:string;nextAction?:string}|null;
+    return {status:"REFUSED",errorCode:error.code,message:error.message,currentState:{node:state?.node??"DISCOVERY",revision:current.revision,nextAction:state?.nextAction??null}};
+  }
+}
+
 export const tools: ToolDefinition[] = [
+  {
+    name: "sales_portfolio",
+    description: "Retrouver les affaires confiées à cet agent, leurs offres, preuves et prochaines actions sur tous les canaux.",
+    inputSchema: z.object({ strategyId: z.string(), view: z.enum(["FULL", "ACTIONABLE"]).optional() }),
+    handler: async input => {
+      const actor = await commercialAgent(input);
+      const scopedDeal = (input.__auth as {salesDealId?:string|null}|undefined)?.salesDealId;
+      const rows = await db.deal.findMany({ where: { sellerStrategyId: String(input.strategyId), ...(scopedDeal?{id:scopedDeal}:{}) }, orderBy: { updatedAt: "desc" } });
+      const { salesStateSchema, mandateSchema } = await import("@/server/services/crm-engine/commercial");
+      const assigned = rows.filter(row => {
+        const state = salesStateSchema.safeParse(row.commercial);
+        return state.success && state.data.mandate?.sellerId === actor.id;
+      });
+      const activities = await db.cRMActivity.findMany({
+        where: { dealId: { in: assigned.map(row => row.id) } }, orderBy: { performedAt: "asc" },
+      });
+      const inbound = await db.crmMessage.findMany({
+        where: { direction: "IN", status: "RECEIVED", OR: [
+          { salesDealId: { in: assigned.map(deal => deal.id) } },
+          { salesDealId: null, contact: { strategyId: String(input.strategyId), email: { in: assigned.flatMap(deal => deal.contactEmail ? [deal.contactEmail] : []) } } },
+        ] },
+        select: { id: true, salesDealId: true, body: true, subject: true, channel: true, createdAt: true, contact: { select: { email: true } } },
+        orderBy: { createdAt: "asc" },
+      });
+      const publicSessions = await db.salesPublicSession.findMany({ where: { dealId: { in: assigned.map(row => row.id) } }, select: { dealId: true, entryId: true, approvedOffers: true } });
+      const {resolveSalesDeliveryDocument}=await import("@/server/services/crm-engine/customer");
+      return { deals: await Promise.all(assigned.map(async row => {
+        const {customerAccessTokenHash:_hash,customerAccessTokenEncrypted:_secret,...deal}=row;
+        const commercialState=salesStateSchema.parse(deal.commercial??{});
+        const history=activities.filter(item=>item.dealId===deal.id);
+        const publicSession = publicSessions.find(session => session.dealId === deal.id);
+        const creation = publicSession ? history.find(item => item.activityType === "DEAL_CREATED" &&
+          (item.metadata as { publicEntryId?: unknown } | null)?.publicEntryId === publicSession.entryId) : null;
+        const humanContact = projectPublicSalesHumanContact((creation?.metadata as { humanContact?: unknown } | null)?.humanContact);
+        const deliveryDocument=await resolveSalesDeliveryDocument(db,deal,commercialState);
+        const deliveryAvailable=deliveryDocument?{deliveryActivityId:deliveryDocument.activityId}:null;
+        const preparedReceipt = commercialState.proposal ? history.find(item => item.id === `sales-offer:${commercialState.proposal!.id}`) : undefined;
+        const preparedDocument = (preparedReceipt?.metadata as { result?: { proposal?: { id?: string; gloryOutputId?: string; documentUrl?: string } } } | null)?.result?.proposal;
+        const sellerProposal = commercialState.proposal && preparedDocument?.id === commercialState.proposal.id &&
+          preparedDocument.gloryOutputId === commercialState.proposal.gloryOutputId && typeof preparedDocument.documentUrl === "string"
+          ? { ...commercialState.proposal, status: "READY" as const, documentUrl: preparedDocument.documentUrl } : commercialState.proposal;
+        const replies=inbound.filter(item=>item.salesDealId?item.salesDealId===deal.id:item.contact?.email.toLowerCase()===deal.contactEmail?.toLowerCase());
+        const snapshot = publicSessions.find(session => session.dealId === deal.id)?.approvedOffers;
+        const approvedOffers = (Array.isArray(snapshot) ? snapshot : []).flatMap(value => {
+          const parsed = mandateSchema.safeParse(value);
+          if (!parsed.success) return [];
+          const candidate = parsed.data;
+          return [{ offerId: candidate.offerId, offerName: candidate.offerName, expiresAt: candidate.expiresAt,
+            ...(candidate.informationOnly ? { informationOnly: true } : candidate.pricingRule
+              ? { pricingRule: candidate.pricingRule, pricingRequired: true }
+              : { amount: candidate.amount, currency: candidate.currency, billing: candidate.billing }) }];
+        });
+        const currentState={dealId:deal.id,revision:deal.revision,node:commercialState.node,informationOnly:Boolean(commercialState.mandate?.informationOnly),pricingRequired:Boolean(commercialState.mandate?.pricingRule&&!commercialState.proposal),nextAction:commercialState.nextAction??null,treeNodeId:commercialState.treeNodeId??null};
+        const currentTreeNode=commercialState.mandate?.conversationTree?.nodes.find(node=>node.id===commercialState.treeNodeId)??null;
+        if(input.view==="ACTIONABLE"){
+          const {conversationTree:_tree,...mandate}=commercialState.mandate??{};
+          const sent=history.filter(item=>["SALES_WEB_SENT","SALES_EMAIL_SENT"].includes(item.activityType)).slice(-2);
+          const evidence=history.filter(item=>["SALES_DELIVERY_READY","SALES_PAYMENT_RECONCILED"].includes(item.activityType)).slice(-2);
+          return {contextView:"ACTIONABLE",currentState,approvedOffers,currentTreeNode,humanContact,deliveryAvailable,
+            deal:{id:deal.id,revision:deal.revision,sellerStrategyId:deal.sellerStrategyId,contactName:deal.contactName,companyName:deal.companyName,stage:deal.stage,paymentReference:deal.paymentReference,
+              commercial:{...commercialState,proposal:sellerProposal,mandate:{...mandate,conversationTree:undefined, ...(commercialState.mandate?.pricingRule&&!commercialState.proposal?{amount:undefined,currency:undefined}:{})}}},
+            replies:replies.slice(-2),replyEarlierCount:Math.max(0,replies.length-2),historyEarlierCount:Math.max(0,history.length-sent.length-evidence.length),
+            history:[...sent,...evidence].sort((a,b)=>a.performedAt.getTime()-b.performedAt.getTime()).map(item=>({id:item.id,activityType:item.activityType,description:item.description,performedAt:item.performedAt,
+              metadata:item.activityType.startsWith("SALES_WEB")||item.activityType.startsWith("SALES_EMAIL")?{body:(item.metadata as {body?:string}|null)?.body}:undefined})),
+            contextNotice:"Only the current tree node, two latest customer replies, two sent messages and two fulfilment/payment notes are included. Earlier history and inactive tree nodes remain in the canonical dossier."};
+        }
+        return {currentState,humanContact,deliveryAvailable,
+          latestReply:replies.at(-1)??null,approvedOffers,
+          currentTreeNode,
+          deal:{...deal,commercial:{...commercialState,proposal:sellerProposal}},historyEarlierCount:Math.max(0,history.length-8),replyEarlierCount:Math.max(0,replies.length-8),
+          history:history.slice(-8).map(item=>({id:item.id,activityType:item.activityType,description:item.description,performedAt:item.performedAt,
+            metadata:item.activityType.startsWith("SALES_WEB")||item.activityType.startsWith("SALES_EMAIL")?{body:(item.metadata as {body?:string}|null)?.body}:undefined})),
+          replies:replies.slice(-8)};
+      })) };
+    },
+  },
+  {
+    name: "sales_prepare_offer",
+    description: "Préparer la proposition et son devis avec les prix et conditions approuvés. Aucun prix choisi par le vendeur, aucune présentation ni acceptation automatique.",
+    inputSchema: prepareSalesOfferInput.extend({ strategyId: z.string() }),
+    handler: async input => {
+      const actor = await commercialAgent(input);
+      const dealId = String(input.dealId);
+      const deal = await db.deal.findUniqueOrThrow({ where: { id: dealId }, select: { sellerStrategyId: true } });
+      if (deal.sellerStrategyId !== input.strategyId) throw new TRPCError({ code: "FORBIDDEN", message: "Cette affaire appartient à une autre marque." });
+      const { prepareSalesOffer } = await import("@/server/services/crm-engine/offers");
+      return salesDecisionResult(() => prepareSalesOffer({ dealId, requestId: String(input.requestId), expectedRevision: Number(input.expectedRevision),
+        offerId: String(input.offerId), countryCode: String(input.countryCode), quantity: input.quantity as number | undefined,
+        customerMessageId: input.customerMessageId as string | undefined, clientName: input.clientName as string | undefined }, actor), dealId);
+    },
+  },
+  {
+    name: "sales_request_payment",
+    description: "Après accord reçu, préparer le règlement individuel au montant et à la destination approuvés. Aucun débit ni confirmation de paiement.",
+    inputSchema: z.object({strategyId:z.string(),dealId:z.string(),requestId:z.string().uuid(),expectedRevision:z.number().int().nonnegative()}),
+    handler:async input=>{
+      const actor=await commercialAgent(input);
+      const deal=await db.deal.findUniqueOrThrow({where:{id:String(input.dealId)}});
+      if(deal.sellerStrategyId!==input.strategyId)throw new TRPCError({code:'FORBIDDEN',message:'Affaire hors marque.'});
+      const {requestSalesPayment}=await import('@/server/services/crm-engine/payments');
+      return salesDecisionResult(()=>requestSalesPayment(deal.id,String(input.requestId),Number(input.expectedRevision),actor),deal.id);
+    },
+  },
+  {
+    name: "sales_sync_payment",
+    description: "Relire le règlement natif lié par le mandant. Un paiement en attente reste en attente. Ne crée ni débit ni nouveau paiement.",
+    inputSchema: z.object({ strategyId: z.string(), dealId: z.string(), requestId: z.string().uuid(), expectedRevision: z.number().int().nonnegative() }),
+    handler: async input => {
+      const actor = await commercialAgent(input);
+      const deal = await db.deal.findUniqueOrThrow({ where: { id: String(input.dealId) } });
+      const { salesStateSchema } = await import("@/server/services/crm-engine/commercial");
+      const state = salesStateSchema.parse(deal.commercial);
+      if (deal.sellerStrategyId !== input.strategyId || state.mandate?.sellerId !== actor.id) throw new Error("Ce vendeur n’est pas autorisé à agir sur cette affaire.");
+      if (!deal.paymentReference) return {status:"NOT_REQUESTED",nextAction:"Après accord reçu, utiliser sales_request_payment pour ce mandat."};
+      const payment = await db.intakePayment.findUniqueOrThrow({ where: { reference: deal.paymentReference } });
+      if (payment.status !== "PAID" || !payment.paidAt) return { status: payment.status, dealId: deal.id };
+      if (state.node === "PAID" || state.node === "DELIVERED") return { status: "PAID", dealId: deal.id };
+      const { applySalesStep } = await import("@/server/services/crm-engine");
+      const {paymentMajorAmount}=await import("@/server/services/crm-engine/payments");
+      return salesDecisionResult(()=>applySalesStep(deal.id, {
+        requestId: String(input.requestId), expectedRevision: Number(input.expectedRevision),
+        channel: state.mandate!.channels[0]!,
+        command: { type: "PAYMENT", amount: paymentMajorAmount(payment), currency: payment.currency, evidence: `IntakePayment:${payment.reference}` },
+      }, { ...actor, admin: true }),deal.id);
+    },
+  },
+  {
+    name: "sales_send_email",
+    description: "Envoyer au seul contact de l’affaire mandatée via le transport email existant. requestId stable. Un résultat incertain exige un rapprochement avant nouvel envoi.",
+    inputSchema: z.object({ strategyId: z.string(), dealId: z.string(), requestId: z.string().uuid(),
+      subject: z.string().trim().min(1).max(200), text: z.string().trim().min(1).max(20000) }),
+    handler: async input => {
+      const actor = await commercialAgent(input);
+      const deal = await db.deal.findUniqueOrThrow({ where: { id: String(input.dealId) } });
+      if (deal.sellerStrategyId !== input.strategyId) throw new Error("Affaire hors de cette marque.");
+      const { sendSalesEmail } = await import("@/server/services/crm-engine");
+      return salesDecisionResult(()=>sendSalesEmail(deal.id, actor, { requestId: String(input.requestId), subject: String(input.subject), text: String(input.text) }),deal.id);
+    },
+  },
+  {
+    name: "sales_decide",
+    description: "Conduire une affaire mandatée jusqu’à l’accord et la remise. requestId stable au rejeu, expectedRevision relue. Le règlement est attesté par la finance.",
+    inputSchema: z.object({ strategyId: z.string(), dealId: z.string(), step: z.unknown() }),
+    handler: async input => {
+      const actor = await commercialAgent(input);
+      const deal = await db.deal.findUniqueOrThrow({ where: { id: String(input.dealId) } });
+      if (deal.sellerStrategyId !== input.strategyId) throw new Error("Affaire hors de cette marque.");
+      const { salesStepSchema } = await import("@/server/services/crm-engine/commercial");
+      return salesDecisionResult(async()=>{
+        const step=salesStepSchema.parse(input.step);
+        if (["MANDATE", "PAYMENT", "HANDOVER"].includes(step.command.type)) throw new TRPCError({code:"FORBIDDEN",message:"Cette décision doit être prise par le propriétaire de la marque."});
+        const {applySalesStep}=await import("@/server/services/crm-engine");
+        return applySalesStep(deal.id,step,actor);
+      },deal.id);
+    },
+  },
+
+  {
+    name: "sales_claim_run",
+    description: "Réserver une instruction commerciale bornée ; zéro appel modèle si file vide. Rejouer requestId après timeout.",
+    inputSchema: z.object({ strategyId:z.string(),requestId:z.string().uuid() }),
+    handler: async input => {
+      const auth=input.__auth as {scopeKind?:string;scopeStrategyId?:string;apiKeyId?:string}|undefined;
+      if(auth?.scopeKind!=="BRAND"||auth.scopeStrategyId!==input.strategyId||!auth.apiKeyId)throw new Error("Clé commerciale requise.");
+      const {claimRun}=await import("@/server/services/crm-engine/fleet");
+      return claimRun(auth.apiKeyId,String(input.requestId));
+    },
+  },
+  {
+    name: "sales_complete_run",
+    description: "Conserver le résultat d'une instruction déjà réservée, même après suspension. Aucun nouvel effet client.",
+    inputSchema: z.object({strategyId:z.string(),runId:z.string(),leaseToken:z.string(),status:z.enum(["DONE","FAILED","AMBIGUOUS"]),result:z.string().max(20000),tokensUsed:z.number().int().nonnegative().optional()}),
+    handler: async input => {
+      const auth=input.__auth as {scopeKind?:string;scopeStrategyId?:string;apiKeyId?:string}|undefined;
+      if(auth?.scopeKind!=="BRAND"||auth.scopeStrategyId!==input.strategyId||!auth.apiKeyId)throw new Error("Clé commerciale requise.");
+      const {completeRun}=await import("@/server/services/crm-engine/fleet");
+      return completeRun(auth.apiKeyId,String(input.runId),String(input.leaseToken),{status:input.status as "DONE"|"FAILED"|"AMBIGUOUS",result:String(input.result),tokensUsed:input.tokensUsed as number|undefined});
+    },
+  },
+  {
+    name: "sales_send_message",
+    description: "Répondre au client sur sa conversation web. Pour un livrable payé, transmettre deliveryAvailable.deliveryActivityId et un texte sans URL : le serveur joint le lien approuvé, sans recopier son adresse.",
+    inputSchema:z.object({strategyId:z.string(),dealId:z.string(),requestId:z.string().uuid(),text:z.string().trim().min(1).max(12000),channel:z.literal("WEB"),deliveryActivityId:z.string().trim().min(1).max(200).optional()}),
+    handler:async input=>{
+      const actor=await commercialAgent(input);
+      const deal=await db.deal.findUniqueOrThrow({where:{id:String(input.dealId)}});
+      if(deal.sellerStrategyId!==input.strategyId)throw new Error("Affaire hors marque.");
+      const {sendSalesWebMessage}=await import("@/server/services/crm-engine/customer");
+      return salesDecisionResult(()=>sendSalesWebMessage(deal.id,actor,{requestId:String(input.requestId),text:String(input.text),deliveryActivityId:input.deliveryActivityId as string|undefined}),deal.id);
+    },
+  },
+
+  {
+    name:"sales_customer_link",description:"Retrouver le lien sécurisé de conversation du client mandaté pour le lui transmettre sur un canal autorisé.",
+    inputSchema:z.object({strategyId:z.string(),dealId:z.string()}),
+    handler:async input=>{
+      const actor=await commercialAgent(input);const deal=await db.deal.findUniqueOrThrow({where:{id:String(input.dealId)}});
+      const {salesStateSchema}=await import("@/server/services/crm-engine/commercial");const state=salesStateSchema.parse(deal.commercial??{});
+      if(deal.sellerStrategyId!==input.strategyId||state.mandate?.sellerId!==actor.id||!state.mandate.channels.includes("WEB")||state.contactStopped||new Date(state.mandate.expiresAt)<=new Date())throw new Error("Les conditions de vente actuelles ne permettent pas d’ouvrir cette conversation client.");
+      const {issueCustomerAccess}=await import("@/server/services/crm-engine/customer");return salesDecisionResult(()=>issueCustomerAccess(deal.id,actor),deal.id);
+    },
+  },
   // ---- Découverte : les campagnes d'une marque ----
   {
     name: "campaign_list",

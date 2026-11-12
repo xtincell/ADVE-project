@@ -20,6 +20,7 @@ import { PILLAR_KEYS } from "@/domain/pillars";
 import {
   materializeBrief,
   regenerateFadingAsset,
+  resolveResumptionPayload,
 } from "@/server/services/ptah";
 import { emitIntentTyped, type Intent } from "@/server/services/mestor/intents";
 import {
@@ -27,19 +28,29 @@ import {
   MANIPULATION_MODES,
   PROVIDER_NAMES,
 } from "@/server/services/ptah/types";
+import { hasSubmissionClaim } from "@/server/services/ptah/resumption";
+import { publicForgeTask } from "@/server/services/ptah/public-receipt";
 import { listProviders } from "@/server/services/ptah/routing/provider-selector";
+import { getOperatorContext } from "@/server/services/operator-isolation";
 
 /* lafusee:governed-active — Phase 0 migration complete v6.18.17 (Sprint 3) : 2 mutations (materializeBrief/regenerateFadingAsset) traversent mestor.emitIntent({ kind: "PTAH_*" }) via emitIntentTyped. Imports ptah.* sont pour Awaited<ReturnType<>> casts + queries (db direct). */
 
-async function resolveOperatorId(userId: string): Promise<string> {
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { operatorId: true },
-  });
-  if (!user?.operatorId) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "User has no operatorId" });
+async function resolveOperatorId(userId: string, readStrategyId?: string) {
+  const current = await getOperatorContext(userId);
+  let operatorId = current.operatorId;
+  // Only the selected-brand list passes this read scope. Submission and private
+  // task lookup keep the user's actual assignment; never infer a default team.
+  if (readStrategyId && current.role === "ADMIN") {
+    const strategy = await db.strategy.findUnique({ where: { id: readStrategyId }, select: { operatorId: true } });
+    if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Ce dossier n’existe plus." });
+    if (!strategy.operatorId) throw new TRPCError({ code: "PRECONDITION_FAILED",
+      message: "Ce dossier n’est affecté à aucune équipe de production. Faites vérifier son affectation." });
+    operatorId = strategy.operatorId;
   }
-  return user.operatorId;
+  if (!operatorId) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Votre compte n’est affecté à aucune équipe de production. Faites vérifier cette affectation." });
+  }
+  return { operatorId, canResume: current.operatorId === operatorId };
 }
 
 const ForgeSpecSchema = z.object({
@@ -62,30 +73,43 @@ export const ptahRouter = createTRPCRouter({
   // Phase 0 migration v6.18.17 (Sprint 3) — emitIntentTyped wrapper.
   materializeBrief: operatorProcedure
     .input(
-      z.object({
+      z.union([z.object({ strategyId: z.string(), resumeTaskId: z.string().min(1) }).strict(), z.object({
         strategyId: z.string(),
         sourceIntentId: z.string(),
+        campaignId: z.string().nullish(),
+        briefId: z.string().nullish(),
+        sourceBrandAssetId: z.string().nullish(),
         brief: ForgeBriefSchema,
         overrideMixViolation: z.boolean().optional(),
         // C6 (ADR-0103) — « forger quand même » : passe le VETO d'incohérence
         // brief↔ADVE sous C6_COHERENCE_MODE=block. Sans effet en mode WARN.
         coherenceOverride: z.boolean().optional(),
-      }),
+      }).strict()]),
     )
     .mutation(async ({ ctx, input }) => {
-      const operatorId = await resolveOperatorId(ctx.session.user.id);
-      return emitIntentTyped<Awaited<ReturnType<typeof materializeBrief>>>(
+      const { operatorId } = await resolveOperatorId(ctx.session.user.id);
+      const payload = "resumeTaskId" in input ? await (async () => {
+        try { return (await resolveResumptionPayload(input.resumeTaskId, input.strategyId, operatorId)).payload; }
+        catch (error) { throw new TRPCError({ code: "PRECONDITION_FAILED",
+          message: error instanceof Error ? error.message : "Le brief conservé ne peut pas être vérifié." }); }
+      })() : input;
+      const receipt = await emitIntentTyped<Awaited<ReturnType<typeof materializeBrief>>>(
         {
           kind: "PTAH_MATERIALIZE_BRIEF",
-          strategyId: input.strategyId,
+          strategyId: payload.strategyId,
           operatorId,
-          sourceIntentId: input.sourceIntentId,
-          brief: input.brief as Extract<Intent, { kind: "PTAH_MATERIALIZE_BRIEF" }>["brief"],
-          overrideMixViolation: input.overrideMixViolation,
-          coherenceOverride: input.coherenceOverride,
+          resumeTaskId: "resumeTaskId" in payload ? payload.resumeTaskId : undefined,
+          sourceIntentId: payload.sourceIntentId,
+          campaignId: payload.campaignId,
+          briefId: payload.briefId,
+          sourceBrandAssetId: payload.sourceBrandAssetId,
+          brief: payload.brief as Extract<Intent, { kind: "PTAH_MATERIALIZE_BRIEF" }>["brief"],
+          overrideMixViolation: payload.overrideMixViolation,
+          coherenceOverride: "coherenceOverride" in payload ? payload.coherenceOverride : undefined,
         },
         { caller: "ptah-router:materializeBrief" },
       );
+      return publicForgeTask(receipt);
     }),
 
   regenerateFadingAsset: operatorProcedure
@@ -96,7 +120,7 @@ export const ptahRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      const { operatorId } = await resolveOperatorId(ctx.session.user.id);
       return emitIntentTyped<Awaited<ReturnType<typeof regenerateFadingAsset>>>(
         {
           kind: "PTAH_REGENERATE_FADING_ASSET",
@@ -113,12 +137,12 @@ export const ptahRouter = createTRPCRouter({
   getForge: operatorProcedure
     .input(z.object({ taskId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      const { operatorId } = await resolveOperatorId(ctx.session.user.id);
       const task = await db.generativeTask.findFirst({
         where: { id: input.taskId, operatorId },
         include: { versions: true },
       });
-      return task;
+      return task ? publicForgeTask(task) : null;
     }),
 
   listForges: operatorProcedure
@@ -128,31 +152,61 @@ export const ptahRouter = createTRPCRouter({
         forgeKind: z.enum(FORGE_KINDS as readonly [string, ...string[]]).optional(),
         status: z.enum(["CREATED", "IN_PROGRESS", "COMPLETED", "FAILED", "VETOED", "EXPIRED", "DEFERRED"]).optional(),
         limit: z.number().int().min(1).max(100).default(20),
+        cursor: z.object({ createdAt: z.date(), id: z.string() }).nullish(),
       }),
     )
     .query(async ({ ctx, input }) => {
-      const operatorId = await resolveOperatorId(ctx.session.user.id);
-      return db.generativeTask.findMany({
+      const { operatorId, canResume } = await resolveOperatorId(ctx.session.user.id, input.strategyId);
+      const tasks = await db.generativeTask.findMany({
         where: {
           operatorId,
           ...(input.strategyId ? { strategyId: input.strategyId } : {}),
           ...(input.forgeKind ? { forgeKind: input.forgeKind } : {}),
           ...(input.status ? { status: input.status } : {}),
+          ...(input.cursor ? { OR: [{ createdAt: { lt: input.cursor.createdAt } },
+            { createdAt: input.cursor.createdAt, id: { lt: input.cursor.id } }] } : {}),
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: input.limit,
+        // Original bytes belong to the asset reader, never the polled task list.
+        omit: { resultUrls: true },
         include: { versions: true },
+      });
+      const campaigns = await db.campaign.findMany({ where: { id: { in: tasks.flatMap(t => t.campaignId ? [t.campaignId] : []) },
+        strategy: { operatorId }, ...(input.strategyId ? { strategyId: input.strategyId } : {}) }, select: { id: true, name: true } });
+      const briefs = await db.campaignBrief.findMany({ where: { id: { in: tasks.flatMap(t => t.briefId ? [t.briefId] : []) },
+        campaign: { strategy: { operatorId }, ...(input.strategyId ? { strategyId: input.strategyId } : {}) } }, select: { id: true, title: true } });
+      return tasks.map(task => {
+        // Briefs/parameters stay in the detail reader and server-side resumption.
+        const { parameters: _parameters, ...publicTask } = publicForgeTask(task);
+        const versions = task.versions.map(version => {
+          // Reuse the authenticated thumbnail reader; keep the original stored
+          // on AssetVersion and accessible through the existing detail query.
+          if (["image", "icon", "design"].includes(version.kind)
+            && /^data:image\/(?:png|jpeg|webp);base64,/.test(version.url)) {
+            return { ...version, url: `/api/production/image/${encodeURIComponent(version.id)}` };
+          }
+          return version;
+        });
+        return { ...publicTask, versions, canResume,
+          submissionUnknown: task.status === "CREATED" && !task.providerTaskId && hasSubmissionClaim(task),
+          campaignTitle: campaigns.find(c => c.id === task.campaignId)?.name ?? null,
+          briefTitle: briefs.find(b => b.id === task.briefId)?.title ?? null };
       });
     }),
 
   getAssetVersion: operatorProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const operatorId = await resolveOperatorId(ctx.session.user.id);
-      return db.assetVersion.findFirst({
+      const { operatorId } = await resolveOperatorId(ctx.session.user.id);
+      const version = await db.assetVersion.findFirst({
         where: { id: input.id, operatorId },
         include: { generativeTask: true, parent: true, children: true },
       });
+      return version ? {
+        ...version,
+        generativeTask: version.generativeTask ? publicForgeTask(version.generativeTask) : null,
+      } : null;
     }),
 
   listProviderHealth: protectedProcedure.query(async () => {

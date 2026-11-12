@@ -9,10 +9,14 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
+import { Dialog } from "@/components/primitives/dialog";
+import { Button } from "@/components/primitives/button";
+import { Textarea } from "@/components/primitives/textarea";
 import { CampaignChangeRequestForm } from "@/components/portfolio/CampaignChangeRequestForm";
+import { usePortfolioOperator } from "@/components/portfolio/use-portfolio-operator";
 import {
   ArrowLeft, Ticket, AlertTriangle, CheckCircle2,
   Clock, Tag, MapPin, Globe, FileText, Edit3,
@@ -48,21 +52,23 @@ type Tab = (typeof TABS)[number];
 
 export default function DeliverableDetailPage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
   const deliverableId = params.id;
 
   const [tab, setTab] = useState<Tab>("DETAILS");
   const [showTicketForm, setShowTicketForm] = useState(false);
+  const [decision, setDecision] = useState<{ ticketId: string; action: "resolve" | "escalate" } | null>(null);
+  const [decisionNotes, setDecisionNotes] = useState("");
 
-  const { data: operator } = trpc.operator.getOwn.useQuery();
+  const { operator, error: operatorError, isLoading: operatorLoading, refetch: refetchOperator } = usePortfolioOperator();
+  const operatorQuery = operator ? `?operator=${encodeURIComponent(operator.id)}` : "";
 
-  const { data: deliverables } = trpc.campaignDeliverable.listForOperator.useQuery(
+  const { data: deliverables, error: deliverablesError, isLoading: deliverablesLoading, refetch: refetchDeliverables } = trpc.campaignDeliverable.listForOperator.useQuery(
     { operatorId: operator?.id ?? "" },
     { enabled: Boolean(operator?.id) },
   );
   const deliverable = deliverables?.find((d) => d.id === deliverableId);
 
-  const { data: tickets, refetch: refetchTickets } = trpc.campaignChangeRequest.listForDeliverable.useQuery(
+  const { data: tickets, error: ticketsError, isLoading: ticketsLoading, refetch: refetchTickets } = trpc.campaignChangeRequest.listForDeliverable.useQuery(
     { deliverableId },
     { enabled: Boolean(deliverableId) },
   );
@@ -70,19 +76,30 @@ export default function DeliverableDetailPage() {
   const utils = trpc.useUtils();
   const updateMutation = trpc.campaignDeliverable.update.useMutation({
     onSuccess: () => utils.campaignDeliverable.invalidate(),
+    // A refused version means someone else changed the task: show their version.
+    onError: () => { void refetchDeliverables(); },
   });
   const resolveMutation = trpc.campaignChangeRequest.resolve.useMutation({
-    onSuccess: () => refetchTickets(),
+    onSuccess: () => { setDecision(null); setDecisionNotes(""); void refetchTickets(); },
   });
   const escalateMutation = trpc.campaignChangeRequest.escalate.useMutation({
-    onSuccess: () => refetchTickets(),
+    onSuccess: () => { setDecision(null); setDecisionNotes(""); void refetchTickets(); },
   });
 
-  if (!operator) return <div className="p-6 text-sm text-foreground-secondary">Loading…</div>;
+  if (operatorError || deliverablesError) return <div className="space-y-3 p-6" role="alert">
+    <p>{operatorError?.message ?? deliverablesError?.message}</p>
+    <Button variant="outline" onClick={() => { void refetchOperator(); void refetchDeliverables(); }}>Réessayer la lecture</Button>
+  </div>;
+  if (operatorLoading) return <div className="p-6 text-sm text-foreground-secondary">Chargement de l’équipe…</div>;
+  if (!operator) return <div className="space-y-3 p-6">
+    <p>Aucune équipe rattachée à ce compte. Le suivi nécessite une équipe.</p>
+    <Link href="/console" className="text-accent hover:underline">Retour à la console</Link>
+  </div>;
+  if (deliverablesLoading) return <div className="p-6 text-sm text-foreground-secondary">Chargement du livrable…</div>;
   if (!deliverable) {
     return (
       <div className="p-6">
-        <Link href="/console/operate/africa-portfolio" className="text-accent hover:underline">
+        <Link href={`/console/operate/africa-portfolio${operatorQuery}`} className="text-accent hover:underline">
           ← Retour dashboard
         </Link>
         <div className="mt-4 rounded border border-error/30 bg-error/10 p-4 text-sm">
@@ -92,11 +109,13 @@ export default function DeliverableDetailPage() {
     );
   }
 
-  const handleStatusChange = async (newStatus: "TODO" | "IN_PROGRESS" | "DELIVERED" | "VALIDATED") => {
-    await updateMutation.mutateAsync({
-      strategyId: `audit:${operator.id}`,
+  const handleStatusChange = (newStatus: "TODO" | "IN_PROGRESS" | "DELIVERED" | "VALIDATED") => {
+    updateMutation.mutate({
+      strategyId: deliverable.campaign.strategyId,
       operatorId: operator.id,
       deliverableId,
+      // The version read on this screen: a concurrent change is refused, never overwritten.
+      expectedUpdatedAt: new Date(deliverable.updatedAt).toISOString(),
       patches: { status: newStatus },
     });
   };
@@ -105,7 +124,7 @@ export default function DeliverableDetailPage() {
     <div className="flex flex-col gap-6 p-6">
       <header>
         <Link
-          href="/console/operate/africa-portfolio"
+          href={`/console/operate/africa-portfolio${operatorQuery}`}
           className="inline-flex items-center gap-1 text-sm text-foreground-secondary hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" /> Retour dashboard
@@ -116,7 +135,7 @@ export default function DeliverableDetailPage() {
               {deliverable.taskCode ?? deliverable.deliverableType}
             </h1>
             <div className="mt-1 flex items-center gap-2 text-sm">
-              <Link href={`/cockpit/operate/campaigns/${deliverable.campaignId}`} className="text-accent hover:underline">
+              <Link href={`/cockpit/operate/campaigns/${deliverable.campaignId}${operatorQuery}`} className="text-accent hover:underline">
                 {deliverable.campaign.name}
               </Link>
               <span className="text-foreground-secondary">·</span>
@@ -158,10 +177,18 @@ export default function DeliverableDetailPage() {
                 : "border-b-2 border-transparent text-foreground-secondary hover:text-foreground"
             }`}
           >
-            {t === "DETAILS" ? "Détails" : `Tickets modifs (${tickets?.length ?? 0})`}
+            {t === "DETAILS" ? "Détails" : `Tickets modifs (${ticketsError ? "lecture impossible" : ticketsLoading || !tickets ? "…" : tickets.length})`}
           </button>
         ))}
       </nav>
+
+      {ticketsError && <div role="alert" className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm">
+        <p>Lecture des tickets impossible : {ticketsError.message}</p>
+        <Button variant="outline" size="sm" onClick={() => void refetchTickets()}>Réessayer</Button>
+      </div>}
+      {(updateMutation.error || resolveMutation.error || escalateMutation.error) && <p role="alert" className="text-sm text-error">
+        {updateMutation.error?.message ?? resolveMutation.error?.message ?? escalateMutation.error?.message}
+      </p>}
 
       {tab === "DETAILS" && (
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -191,14 +218,14 @@ export default function DeliverableDetailPage() {
             <div className="flex items-center gap-2">
               <Ticket className="h-4 w-4" />
               <span className="text-sm text-foreground-secondary">
-                {tickets?.length ?? 0} tickets · workflow PROTOCOLE ABSENCE V4
+                {ticketsError ? "Lecture impossible" : ticketsLoading || !tickets ? "Lecture des tickets…" : `${tickets.length} demandes de modification`}
               </span>
             </div>
             <button
               onClick={() => setShowTicketForm((v) => !v)}
               className="inline-flex items-center gap-2 rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/80"
             >
-              {showTicketForm ? "Annuler" : "+ Nouveau ticket modif"}
+              {showTicketForm ? "Masquer le formulaire" : "+ Nouveau ticket modif"}
             </button>
           </div>
 
@@ -206,7 +233,7 @@ export default function DeliverableDetailPage() {
             <div className="rounded border border-zinc-700 bg-zinc-900/50">
               <CampaignChangeRequestForm
                 campaignDeliverableId={deliverableId}
-                strategyId={`audit:${operator.id}`}
+                strategyId={deliverable.campaign.strategyId}
                 operatorId={operator.id}
                 onSuccess={() => {
                   setShowTicketForm(false);
@@ -217,7 +244,7 @@ export default function DeliverableDetailPage() {
             </div>
           )}
 
-          {!tickets || tickets.length === 0 ? (
+          {ticketsError ? null : ticketsLoading || !tickets ? <p role="status">Lecture des tickets…</p> : tickets.length === 0 ? (
             <div className="rounded border border-dashed border-zinc-700 p-6 text-center text-sm text-foreground-secondary">
               Aucun ticket modif sur ce livrable. Crée le premier via le bouton ci-dessus si un client demande une modification.
             </div>
@@ -249,35 +276,14 @@ export default function DeliverableDetailPage() {
                     {t.status !== "RESOLVED" && t.status !== "REJECTED" && (
                       <div className="flex flex-col gap-1">
                         <button
-                          onClick={() => {
-                            const notes = prompt("Notes de résolution (obligatoire) :");
-                            if (notes && notes.trim()) {
-                              resolveMutation.mutate({
-                                strategyId: `audit:${operator.id}`,
-                                operatorId: operator.id,
-                                ticketId: t.id,
-                                resolutionNotes: notes,
-                                newBriefVersionId: null,
-                              });
-                            }
-                          }}
+                          onClick={() => { setDecisionNotes(""); setDecision({ ticketId: t.id, action: "resolve" }); }}
                           className="inline-flex items-center gap-1 rounded bg-emerald-500/20 px-2 py-1 text-[10px] text-emerald-300 hover:bg-emerald-500/30"
                         >
                           <CheckCircle2 className="h-3 w-3" /> Résoudre
                         </button>
                         {t.impact === "MAJOR" && t.status !== "ESCALATED" && (
                           <button
-                            onClick={() => {
-                              const notes = prompt("Notes d'escalade Slack (obligatoire) :");
-                              if (notes && notes.trim()) {
-                                escalateMutation.mutate({
-                                  strategyId: `audit:${operator.id}`,
-                                  operatorId: operator.id,
-                                  ticketId: t.id,
-                                  escalationNotes: notes,
-                                });
-                              }
-                            }}
+                            onClick={() => { setDecisionNotes(""); setDecision({ ticketId: t.id, action: "escalate" }); }}
                             className="inline-flex items-center gap-1 rounded bg-error/20 px-2 py-1 text-[10px] text-error hover:bg-error/30"
                           >
                             <AlertTriangle className="h-3 w-3" /> Escalader
@@ -292,6 +298,25 @@ export default function DeliverableDetailPage() {
           )}
         </section>
       )}
+      <Dialog open={decision !== null} onOpenChange={open => { if (!open) setDecision(null); }}
+        title={decision?.action === "resolve" ? "Consigner la résolution" : "Demander un arbitrage"}>
+        <form className="space-y-4" onSubmit={event => {
+          event.preventDefault();
+          if (!decision || !decisionNotes.trim()) return;
+          const scope = { strategyId: deliverable.campaign.strategyId, operatorId: operator.id, ticketId: decision.ticketId };
+          if (decision.action === "resolve") resolveMutation.mutate({ ...scope, resolutionNotes: decisionNotes.trim(), newBriefVersionId: null });
+          else escalateMutation.mutate({ ...scope, escalationNotes: decisionNotes.trim() });
+        }}>
+          <label className="block space-y-2 text-sm"><span>{decision?.action === "resolve" ? "Modification réalisée et éléments vérifiés" : "Motif et décision attendue"}</span>
+            <Textarea required maxLength={2000} value={decisionNotes} onChange={event => setDecisionNotes(event.target.value)} />
+          </label>
+          {(resolveMutation.error || escalateMutation.error) && <p role="alert" className="text-sm text-error">{resolveMutation.error?.message ?? escalateMutation.error?.message}</p>}
+          {decision?.action === "escalate" && <p className="text-xs text-foreground-secondary">Le motif est conservé dans ce dossier. Aucune notification externe n’est envoyée.</p>}
+          <div className="flex justify-end gap-2"><Button variant="outline" type="button" onClick={() => setDecision(null)}>Annuler</Button>
+            <Button type="submit" disabled={!decisionNotes.trim() || resolveMutation.isPending || escalateMutation.isPending}>Enregistrer</Button></div>
+        </form>
+      </Dialog>
+
     </div>
   );
 }

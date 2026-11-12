@@ -1,3 +1,4 @@
+import { projectFinancialPillar } from "@/domain/unit-economics";
 /**
  * PROTOCOLE INNOVATION (I) — Agent spécialisé de l'essaim MESTOR
  *
@@ -25,6 +26,7 @@ import { db } from "@/lib/db";
 import { DEVOTION_LEVELS } from "@/lib/types/taxonomies";
 import { PillarISchema } from "@/lib/types/pillar-schemas";
 import { wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
+import { serializePillars, INITIATIVE_PLANNING_SOURCE_CONTRACT } from "@/server/services/utils/pillar-context";
 
 // ADR-0063 / PR-K3-ter — sous-schémas. Le mega-appel (5 champs) est ÉCLATÉ en
 // 3 sous-appels focalisés ; chacun valide sa sous-partie. `.pick().partial()`
@@ -125,13 +127,7 @@ async function generateCatalogue(
   // LOT 1e — entrée non fiable neutralisée (anti-injection) : le contenu des
   // piliers A/D/V/E/R/T dérive de la saisie fondateur → chaque bloc est encadré
   // comme DONNÉE (jamais instruction) avant d'entrer dans le prompt.
-  const context = ["a", "d", "v", "e", "r", "t"]
-    .map(k => {
-      const c = pillars[k];
-      if (!c || Object.keys(c).length === 0) return `[${k.toUpperCase()}] Vide`;
-      return wrapUntrusted(`PILIER ${k.toUpperCase()}`, JSON.stringify(c, null, 2), { max: 8000 });
-    })
-    .join("\n\n");
+  const context = serializePillars(["a", "d", "v", "e", "r", "t"].map(k => [k.toUpperCase(), pillars[k]]));
 
   // Extract risks and hypotheses for cross-reference
   const r = pillars.r ?? {};
@@ -153,6 +149,9 @@ S (qui vient après) piochera dans I pour construire la roadmap.
 Pour chaque action, indique :
 - devotionImpact : quel niveau de la Devotion Ladder elle active (SPECTATEUR/INTERESSE/PARTICIPANT/ENGAGE/AMBASSADEUR/EVANGELISTE)
 - overtonShift : comment elle déplace la perception du marché
+- targetsPersonaIds / mitigatesRiskIds : seulement les UUID des profils D / risques R réellement concernés dans le contexte. N'invente aucun identifiant ; une liste vide est permise. Une cible documentaire n'est pas un client acquis et une action proposée n'est pas une décision.
+
+${INITIATIVE_PLANNING_SOURCE_CONTRACT}
 
 Sois EXHAUSTIF mais ancré dans les données. Retourne UNIQUEMENT du JSON valide, sans markdown.`;
 
@@ -284,7 +283,8 @@ export async function executeProtocoleInnovation(strategyId: string): Promise<Pr
     });
     const pillars: Record<string, Record<string, unknown> | null> = {};
     for (const p of dbPillars) {
-      pillars[p.key] = (p.content ?? null) as Record<string, unknown> | null;
+      const content = (p.content ?? null) as Record<string, unknown> | null;
+      pillars[p.key] = p.key === "v" && content ? projectFinancialPillar(content) : content;
     }
 
     // Step 1: Plateforme de marque (COMPOSE)

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import crypto from "crypto";
 import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
+import { found } from "../entity-access";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -62,10 +63,10 @@ export const knowledgeGraphRouter = createTRPCRouter({
   getCreatorPatterns: adminProcedure
     .input(z.object({ creatorId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const profile = await ctx.db.talentProfile.findUniqueOrThrow({
+      const profile = found(await ctx.db.talentProfile.findUnique({
         where: { id: input.creatorId },
         include: { portfolioItems: true },
-      });
+      }), "Profil talent introuvable.");
       return {
         tier: profile.tier,
         totalMissions: profile.totalMissions,

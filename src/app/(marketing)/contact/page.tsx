@@ -5,6 +5,9 @@ import { SiteFooter } from "@/components/upgraders/site-footer";
 import { Section, Shell, Eyebrow } from "@/components/upgraders/ui";
 import { ContactForm } from "@/components/upgraders/contact-form";
 import { CONTACT, IDENTITY } from "@/components/upgraders/data";
+import { publicSalesEntryLink } from "@/server/services/crm-engine/public-entry";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Contact — UPgraders · Démarrer un projet",
@@ -12,7 +15,8 @@ export const metadata: Metadata = {
     "Parlons de votre marque. UPgraders — WhatsApp Douala +237 694 17 17 99 · Abidjan +225 05 46 15 64 56 · xtincell@gmail.com. Cabinet de conseil & stratégie, Afrique francophone.",
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const salesEntry = await publicSalesEntryLink("demo-strategy-upgraders").catch(() => null);
   return (
     <main>
       <SiteNav />
@@ -37,6 +41,7 @@ export default function ContactPage() {
             La première conversation est gratuite. WhatsApp est notre canal le plus rapide — on répond sous 24 heures
             ouvrées. {IDENTITY.tagline}
           </p>
+          {salesEntry && <Link href={salesEntry.path} className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Parler au commercial</Link>}
         </Shell>
       </header>
 

@@ -9,6 +9,7 @@ import { describe, it, expect } from "vitest";
 import {
   productSlug,
   ensureProductIds,
+  rebindProductRefs,
   resolveProductRef,
   danglingProductRefs,
 } from "@/domain/product-catalog";
@@ -36,9 +37,22 @@ describe("product-catalog — ids stables & résolution", () => {
 
   it("resolveProductRef résout par id, par nom, par slug (tolérant)", () => {
     expect(resolveProductRef(CATALOGUE, "kit-podcast")?.nom).toBe("Kit Podcast"); // par id
-    expect(resolveProductRef(CATALOGUE, "Caméra RX-100")?.categorie).toBe("PHOTO"); // par nom
-    expect(resolveProductRef(CATALOGUE, "camera-rx-100")?.categorie).toBe("PHOTO"); // par slug
+    expect(resolveProductRef([CATALOGUE[0]!], "Caméra RX-100")?.categorie).toBe("PHOTO"); // nom unique
+    expect(resolveProductRef([CATALOGUE[0]!], "camera-rx-100")?.categorie).toBe("PHOTO"); // slug unique
+    expect(resolveProductRef(CATALOGUE, "Caméra RX-100")).toBeNull(); // homonyme
     expect(resolveProductRef(CATALOGUE, "Produit fantôme")).toBeNull();
+  });
+  it("ne devine pas une identité à partir d'un nom ambigu ou d'un index", () => {
+    const previous = [{ nom: "Commun", id: "ancien-1" }, { nom: "Commun", id: "ancien-2" }];
+    expect(ensureProductIds<Record<string, unknown>>([{ nom: "Commun" }, { nom: "Nouveau" }], previous).map(p => p.id)).toEqual(["commun", "nouveau"]);
+    expect(previous).toEqual([{ nom: "Commun", id: "ancien-1" }, { nom: "Commun", id: "ancien-2" }]);
+  });
+  it("ne rattache ni homonyme ambigu, ni produit retiré, ni nom approximatif", () => {
+    const previous = [{ id: "retire", nom: "Commun" }, { id: "a", nom: "Doublon" }, { id: "b", nom: "Doublon" }];
+    const products = [{ id: "nouveau", nom: "Commun" }, { id: "a", nom: "Renommé" }, { id: "b", nom: "Autre" }];
+    const content = { productLadder: [{ produitIds: ["Commun", "Doublon", "renommé", "a"] }], _fieldProvenance: { productLadder: "HUMAN" } };
+    expect(rebindProductRefs(content, previous, products)).toEqual(content);
+    expect(content.productLadder[0]!.produitIds).toEqual(["Commun", "Doublon", "renommé", "a"]);
   });
 });
 
@@ -62,8 +76,8 @@ describe("product-catalog — détection des références fantômes", () => {
     // les refs valides ne sont PAS signalées.
     expect(refs).not.toContain("kit-podcast");
     expect(refs).not.toContain("Kit Podcast");
-    expect(refs).not.toContain("Caméra RX-100");
-    expect(dangling.length).toBe(3);
+    expect(refs).toContain("Caméra RX-100"); // un homonyme n'est pas un lien reçu
+    expect(dangling.length).toBe(4);
   });
 
   it("catalogue vide → aucune fausse alerte", () => {

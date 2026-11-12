@@ -1,8 +1,6 @@
 "use client";
 
-import { ADVE_STORAGE_KEYS } from "@/domain";
-
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { useCanOperate } from "@/components/cockpit/use-can-operate";
 import { useToast } from "@/components/shared/notification-toast";
@@ -17,6 +15,7 @@ import {
   CheckCircle,
   AlertCircle,
   Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
 import { ArtemisLaunchModal } from "@/components/cockpit/artemis-launch-modal";
@@ -42,6 +41,7 @@ export default function PropositionPage() {
   // l'orchestrateur manual-first `oracle.assembleOracle` (ADR-0071) ; le
   // détail par section vit dans le panel progressif SSE (ADR-0073).
   const [isAssembling, setIsAssembling] = useState(false);
+  const [sectionActivity, setSectionActivity] = useState(false);
   const [launchModalOpen, setLaunchModalOpen] = useState(false);
   const [cascadeModalOpen, setCascadeModalOpen] = useState(false);
   const [externalBlockers, setExternalBlockers] = useState<BlockerHint[] | undefined>(undefined);
@@ -52,7 +52,7 @@ export default function PropositionPage() {
   // Le héro consomme désormais AUSSI la fraîcheur des sections.
   const oracleSections = trpc.oracle.listSections.useQuery(
     { strategyId: strategyId ?? "" },
-    { enabled: !!strategyId },
+    { enabled: !!strategyId, refetchInterval: isAssembling || sectionActivity ? 3000 : 30000, refetchOnWindowFocus: true },
   );
   const completeness = trpc.strategyPresentation.completeness.useQuery(
     { strategyId: strategyId ?? "" },
@@ -76,24 +76,24 @@ export default function PropositionPage() {
     { strategyId: strategyId ?? "" },
     { enabled: !!strategyId, refetchOnWindowFocus: false },
   );
+  const readiness = trpc.pillar.readiness.useQuery(
+    { strategyId: strategyId ?? "" }, { enabled: !!strategyId, refetchOnWindowFocus: true },
+  );
 
-  const adveAllComplete = useMemo(() => {
-    const p = maturity.data?.pillars as Record<string, { currentStage?: string }> | undefined;
-    if (!p) return false;
-    return (ADVE_STORAGE_KEYS).every((k) => {
-      const stage = p[k]?.currentStage;
-      return stage === "ENRICHED" || stage === "COMPLETE";
-    });
-  }, [maturity.data]);
+  // The canonical refresh gate tolerates stale but usable foundations:
+  // rerouting them to foundation preparation prevents the very refresh needed.
+  const adveAllComplete = readiness.data?.gates.RTIS_CASCADE.ok === true;
+  const stalePillars = Object.values(readiness.data?.byPillar ?? {})
+    .filter((pillar) => pillar.stale).map((pillar) => pillar.pillarKey);
 
   const rtisReady = useMemo(() => {
     const p = maturity.data?.pillars as Record<string, { currentStage?: string }> | undefined;
     if (!p) return false;
     return (["r", "t", "i", "s"] as const).every((k) => {
       const stage = p[k]?.currentStage;
-      return stage === "ENRICHED" || stage === "COMPLETE";
+      return (stage === "ENRICHED" || stage === "COMPLETE") && readiness.data?.byPillar[k.toUpperCase() as "R" | "T" | "I" | "S"]?.stale === false;
     });
-  }, [maturity.data]);
+  }, [maturity.data, readiness.data]);
 
   // "Oracle prêt à compiler" = ADVE ENRICHED+ ET RTIS ENRICHED+. RTIS seul ne
   // suffit pas : le gate ORACLE_ENRICH veto si ADVE est sous-ENRICHED, et
@@ -113,15 +113,18 @@ export default function PropositionPage() {
     onMutate: () => {
       setIsAssembling(true);
     },
-    onSuccess: (data) => {
-      completeness.refetch();
-      const d = data as { status?: string; generated?: number; failed?: number };
-      if (d.status === "EMPTY") {
-        toast.info("Rien à assembler — toutes les sections ciblées sont déjà à jour.");
-      } else if (typeof d.failed === "number" && d.failed > 0) {
-        toast.error(`Assemblage terminé avec ${d.failed} section(s) en échec — voir le panel de génération ci-dessous.`);
+    onSuccess: async (data) => {
+      // The intent envelope carries counters in output, not at the top level.
+      const result = data.output as { total?: number; succeeded?: number; failed?: number } | undefined;
+      const received = await oracleSections.refetch();
+      void completeness.refetch();
+      const remaining = received.data?.sections.filter((section) => section.status !== "COMPLETE").length;
+      if (data.status !== "OK" || (result?.failed ?? 0) > 0) {
+        toast.error("Certaines sections n’ont pas pu être actualisées. Consultez leur détail ci-dessous pour les reprendre.");
+      } else if (remaining === 0) {
+        toast.success("L’Oracle est à jour. Relisez-le avant de le partager.");
       } else {
-        toast.success("Assemblage terminé — les sections sont à jour.");
+        toast.info("Actualisation terminée. Des sections restent à reprendre : consultez leur état ci-dessous.");
       }
     },
     onError: (err) => {
@@ -155,7 +158,15 @@ export default function PropositionPage() {
    * Les deux portaient le même dénominateur 35 sans être nommées : sur SPAWT,
    * 35 sections étaient rédigées et la page n'affichait que « 21/35 ».
    */
-  const writtenSections = oracleRows.filter((s) => s.status === "COMPLETE").length;
+  const writtenSections = oracleRows.filter((s) => s.payloadSize > 2).length;
+  const currentSections = oracleRows.filter((s) => s.status === "COMPLETE" && s.payloadSize > 2).length;
+  const refreshIds = oracleRows.filter((s) => s.status === "STALE" || s.status === "FAILED" || s.status === "PENDING" || (s.status === "COMPLETE" && s.payloadSize <= 2)).map((s) => s.sectionId);
+  const generationBusy = isAssembling || sectionActivity || oracleRows.some((s) => s.status === "GENERATING");
+  const oracleCurrent = currentSections === totalSections && oracleReadyToCompile;
+  const refreshOracle = () => {
+    if (!canOperate || generationBusy || refreshIds.length === 0) return;
+    assembleMutation.mutate({ strategyId, scope: refreshIds });
+  };
 
   // ── Ce qu'il faut avant que le diagnostic tienne debout ──
   // Ces trois cartes parlaient en interne : « au moins ENRICHED » (une valeur
@@ -179,10 +190,12 @@ export default function PropositionPage() {
     },
     {
       key: "oracle", title: "Votre diagnostic",
-      ready: oracleReadyToCompile,
-      body: oracleReadyToCompile
-        ? `${completeSections} de ses ${totalSections} sections sont complètes — le document est prêt à être ouvert et partagé.`
-        : "Disponible dès que vos fondations et votre lecture stratégique sont en place.",
+      ready: oracleCurrent,
+      body: writtenSections > 0
+        ? `${writtenSections} sections rédigées, ${currentSections} à jour. ${oracleCurrent ? "Le document peut être relu avant partage." : "Actualisez le document pour reprendre les dernières données de votre marque."}`
+        : oracleReadyToCompile
+          ? "Vos données sont prêtes. Lancez la rédaction de votre diagnostic."
+          : "Disponible dès que vos fondations et votre lecture stratégique sont en place.",
     },
   ];
 
@@ -199,67 +212,6 @@ export default function PropositionPage() {
         </p>
       </div>
 
-      {/* ─ Synthèse vivante (hero) — données réelles ─ */}
-      <div className="ck-oracle-hero">
-        <div className="ck-oracle-hero__glow" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="ck-oracle-hero__rocket" src="/brand/illustrations/rocket-3d.png" alt="" />
-        <span className="ck-oracle-hero__eyebrow"><Sparkles /> Synthèse vivante · réévaluée en continu</span>
-        {/* Le chiffre mis en avant est celui de la MATIÈRE (sections qui
-            contiennent tout ce qu'on en attend), pas celui des générations
-            réussies — les deux étaient appelés « assemblé » indifféremment. */}
-        <h2 className="ck-oracle-hero__h">
-          {completeSections === totalSections
-            ? <>Votre diagnostic est <span className="hl">complet</span> — les {totalSections} sections disent tout ce qu&apos;elles ont à dire.</>
-            : <><span className="hl">{completeSections}</span> de vos {totalSections} sections sont complètes — {totalSections - completeSections} restent à approfondir.</>}
-        </h2>
-        {staleSections > 0 && (
-          <p className="ck-oracle-hero__p">
-            {staleSections} section{staleSections > 1 ? "s" : ""} à réactualiser : un pilier de votre marque a
-            changé depuis leur rédaction. Reprenez-les dans la liste ci-dessous.
-          </p>
-        )}
-        <p className="ck-oracle-hero__p">
-          Chaque section est un volet de conseil rédigé à partir de vos piliers de marque. Vous pouvez l&apos;ouvrir, l&apos;exporter et le partager à tout moment.
-          {isAssembling ? " Rédaction en cours — les sections se mettent à jour en temps réel." : ""}
-        </p>
-        {/* Un seul jeu de compteurs sur la page. Il portait « Complètes /
-            Partielles / Vides / Assemblé % » ici, puis « X complètes /
-            Y partielles / Z vides » cinq centimètres plus bas, puis encore
-            « X complets / Y ratés / Z périmés » dans le panneau. */}
-        <div className="ck-oracle-hero__stats">
-          <div><span className="k">Rédigées</span><b className="text-success">{writtenSections}/{totalSections}</b></div>
-          <div><span className="k">Nourries par vos piliers</span><b>{completeSections}/{totalSections}</b></div>
-          <div><span className="k">À approfondir</span><b>{partialSections + emptySections}</b></div>
-        </div>
-        {/* Deux mesures DIFFÉRENTES portaient le même dénominateur 35 sans que
-            rien ne les distingue — d'où « toujours 21/35 » sur une page dont
-            les 35 sections étaient pourtant rédigées (signalement opérateur
-            2026-07-30). « Rédigées » compte les sections que le moteur a
-            produites ; « nourries » compte celles que VOS piliers alimentent
-            en matière. Un chiffre qui ne dit pas ce qu'il compte est une boîte
-            noire, même juste. */}
-        <p className="mt-2 text-xs text-foreground-muted">
-          « Rédigées » : les sections que le moteur a produites. « Nourries par vos piliers » :
-          celles dont la matière vient de vos fondations — les autres sont écrites, mais
-          gagneront à être enrichies. Ouvrez une section pour lire son contenu.
-        </p>
-      </div>
-
-      {/* ─ 3 cartes de préparation — état réel de la cascade ─ */}
-      <div className="ck-grid--3">
-        {readinessCards.map((c) => {
-          const Icon = c.ready ? CheckCircle : AlertCircle;
-          return (
-            <div className="ck-oracle-card" key={c.key}>
-              <span className="ck-oracle-card__ic" style={c.ready ? { background: "color-mix(in srgb, var(--success) 14%, transparent)", color: "var(--success)" } : undefined}><Icon /></span>
-              <h3 className="ck-oracle-card__t">{c.title}</h3>
-              <p className="ck-oracle-card__b">{c.body}</p>
-            </div>
-          );
-        })}
-      </div>
-
       {/* ─ Assembleur + console live. Lot 13 (audit 2026-07-11 [M05-01]) :
           une seule surface d'assemblage visible du founder — l'outillage
           (console, tracker, partage personas) est opérateur-only ; le
@@ -272,28 +224,21 @@ export default function PropositionPage() {
           </div>
         </div>
 
-        {/* Ce bouton n'a JAMAIS assemblé — dans les trois branches il ouvrait une
-            modale de préparation. Il s'appelait pourtant « Assembler la
-            proposition » quand tout était prêt, en doublon du vrai assembleur du
-            panneau ci-dessous. Il ne s'affiche donc plus que lorsqu'une
-            préparation est réellement requise, et il dit laquelle. */}
         <div className="ck-orc__controls">
-          {canOperate && !oracleReadyToCompile ? (
-          <button
-            className="ck-orc__assemble"
-            title={
-              !adveAllComplete
-                ? "Vos 4 fondations ne sont pas encore enrichies — ouvre la préparation."
-                : "Vos piliers stratégiques ne sont pas encore dérivés — ouvre la préparation."
-            }
-            onClick={() => {
-              if (!adveAllComplete) { setExternalBlockers(undefined); setLaunchModalOpen(true); return; }
-              setCascadeModalOpen(true);
-            }}
-          >
-            <AlertCircle />
-            {!adveAllComplete ? "Préparer la fondation" : "Préparer la stratégie"}
-          </button>
+          {canOperate ? (
+            <button
+              type="button"
+              className="ck-orc__assemble"
+              disabled={generationBusy || oracleSections.isLoading || readiness.isLoading || maturity.isLoading || (oracleReadyToCompile && refreshIds.length === 0)}
+              onClick={() => {
+                if (!adveAllComplete) { setExternalBlockers(undefined); setLaunchModalOpen(true); return; }
+                if (!rtisReady) { setCascadeModalOpen(true); return; }
+                refreshOracle();
+              }}
+            >
+              {generationBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : oracleCurrent ? <CheckCircle /> : <RefreshCw />}
+              {generationBusy ? "Actualisation en cours…" : !adveAllComplete ? "Préparer la fondation" : !rtisReady ? "Préparer la stratégie" : oracleCurrent ? "Oracle à jour" : writtenSections > 0 ? "Réactualiser l’Oracle" : "Rédiger l’Oracle"}
+            </button>
           ) : null}
           <button
             className="ck-orc__preview"
@@ -316,6 +261,12 @@ export default function PropositionPage() {
           </button>
         </div>
 
+        {canOperate && oracleReadyToCompile && refreshIds.length > 0 && (
+          <p className="mt-2 text-sm text-foreground-secondary">
+            {refreshIds.length} section{refreshIds.length > 1 ? "s" : ""} à traiter : périmées, manquantes ou en échec. Les sections à jour sont conservées.
+          </p>
+        )}
+
         {/* La barre de progression vit dans le panneau, alimentée par le flux
             temps réel (section courante, échecs). Celle qui était ici affichait
             un pourcentage de MATIÈRE pendant une génération — deux barres, deux
@@ -324,7 +275,8 @@ export default function PropositionPage() {
         {/* ─ Lien public / partage (strategyPresentation.shareLink) — geste
             opérateur (vues persona destinées au partage vers le client). ─ */}
         {canOperate ? (
-        <div className="ck-orc__share">
+        <details className="ck-orc__share">
+          <summary className="cursor-pointer text-sm font-medium text-foreground">Partager le livrable</summary>
           <div className="ck-orc__share-l">
             <span className="ck-orc__share-h"><Share2 /> Page générée — lien public</span>
             <span className="ck-orc__share-s">Livrable partageable au client. Choisissez la vue (persona) à partager.</span>
@@ -345,8 +297,74 @@ export default function PropositionPage() {
               <a className="ck-orc__share-open" href={shareUrl} target="_blank" rel="noopener"><ExternalLink /> Prévisualiser</a>
             </div>
           )}
-        </div>
+        </details>
         ) : null}
+      </div>
+
+
+      {/* ─ Synthèse vivante (hero) — données réelles ─ */}
+      <div className="ck-oracle-hero">
+        <div className="ck-oracle-hero__glow" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="ck-oracle-hero__rocket" src="/brand/illustrations/rocket-3d.png" alt="" />
+        <span className="ck-oracle-hero__eyebrow"><Sparkles /> Synthèse vivante · réévaluée en continu</span>
+        {/* Le chiffre mis en avant est celui de la MATIÈRE (sections qui
+            contiennent tout ce qu'on en attend), pas celui des générations
+            réussies — les deux étaient appelés « assemblé » indifféremment. */}
+        <h2 className="ck-oracle-hero__h">
+          <span className="hl">{writtenSections}</span> de vos {totalSections} sections sont rédigées.
+        </h2>
+        {stalePillars.length > 0 && (
+          <p className="ck-oracle-hero__p">
+            Analyses à réactualiser : {stalePillars.join(", ")}. Le document peut encore reprendre des
+            conclusions antérieures, même si ses sections ont été rédigées.
+          </p>
+        )}
+        {staleSections > 0 && (
+          <p className="ck-oracle-hero__p">
+            {staleSections} section{staleSections > 1 ? "s" : ""} à réactualiser : un pilier de votre marque a
+            changé depuis leur rédaction. Le bouton « Réactualiser l’Oracle » les reprend ensemble.
+          </p>
+        )}
+        <p className="ck-oracle-hero__p">
+          Les sections sont préparées à partir de vos données de marque. Relisez le contenu produit avant de le partager.
+          {generationBusy ? " Rédaction en cours — les sections se mettent à jour en temps réel." : ""}
+        </p>
+        {/* Un seul jeu de compteurs sur la page. Il portait « Complètes /
+            Partielles / Vides / Assemblé % » ici, puis « X complètes /
+            Y partielles / Z vides » cinq centimètres plus bas, puis encore
+            « X complets / Y ratés / Z périmés » dans le panneau. */}
+        <div className="ck-oracle-hero__stats">
+          <div><span className="k">Rédigées</span><b className="text-success">{writtenSections}/{totalSections}</b></div>
+          <div><span className="k">Nourries par vos piliers</span><b>{completeSections}/{totalSections}</b></div>
+          <div><span className="k">À étoffer dans vos piliers</span><b>{partialSections + emptySections}</b></div>
+        </div>
+        {/* Deux mesures DIFFÉRENTES portaient le même dénominateur 35 sans que
+            rien ne les distingue — d'où « toujours 21/35 » sur une page dont
+            les 35 sections étaient pourtant rédigées (signalement opérateur
+            2026-07-30). « Rédigées » compte les sections que le moteur a
+            produites ; « nourries » compte celles que VOS piliers alimentent
+            en matière. Un chiffre qui ne dit pas ce qu'il compte est une boîte
+            noire, même juste. */}
+        <p className="mt-2 text-xs text-foreground-muted">
+          « Rédigées » compte les résultats enregistrés. Leur rédaction ne valide pas les analyses qui les alimentent.
+          « Nourries par vos piliers » compte les sections dont les données attendues sont renseignées ;
+          cela ne signifie pas qu&apos;elles sont déjà rédigées ou validées. Ouvrez une section pour lire son contenu.
+        </p>
+      </div>
+
+      {/* ─ 3 cartes de préparation — état réel de la cascade ─ */}
+      <div className="ck-grid--3">
+        {readinessCards.map((c) => {
+          const Icon = c.ready ? CheckCircle : AlertCircle;
+          return (
+            <div className="ck-oracle-card" key={c.key}>
+              <span className="ck-oracle-card__ic" style={c.ready ? { background: "color-mix(in srgb, var(--success) 14%, transparent)", color: "var(--success)" } : undefined}><Icon /></span>
+              <h3 className="ck-oracle-card__t">{c.title}</h3>
+              <p className="ck-oracle-card__b">{c.body}</p>
+            </div>
+          );
+        })}
       </div>
 
       {/* ─ LA grille des 35 sections (ADR-0073) ─
@@ -359,7 +377,7 @@ export default function PropositionPage() {
           13 partielles / 1 vide en bas, dans le même écran.
           Une seule grille désormais, et la matière y est dite sous son propre
           nom (« nourrie » / « à étoffer » / « sans matière »). */}
-      <OracleProgressivePanel strategyId={strategyId} contentFillById={report} />
+      <OracleProgressivePanel strategyId={strategyId} contentFillById={report} assemblyPending={isAssembling} generationAllowed={oracleReadyToCompile} onActivityChange={setSectionActivity} />
 
       {/* Export PDF (server-side jspdf walk) */}
       <div className="flex flex-wrap gap-3">
@@ -423,7 +441,7 @@ export default function PropositionPage() {
         open={launchModalOpen}
         onOpenChange={setLaunchModalOpen}
         strategyId={strategyId}
-        onLaunch={() => assembleMutation.mutate({ strategyId, scope: "MISSING" })}
+        onLaunch={refreshOracle}
         externalBlockers={externalBlockers}
       />
 
@@ -435,6 +453,9 @@ export default function PropositionPage() {
           // Cascade succeeded — refresh maturity so the button flips green
           // immediately, before localStorage flag matters.
           void maturity.refetch();
+          void readiness.refetch();
+          void oracleSections.refetch();
+          void completeness.refetch();
         }}
       />
     </div>

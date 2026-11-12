@@ -22,10 +22,103 @@
  * fields) for any output that involves citation or calculation.
  */
 
+import { sourceIsUsable, documentContext, documentIdentity } from "@/domain/source-document";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { embed } from "@/server/services/llm-gateway";
 import { cosineSimilarity } from "./embedder";
+import { sourceScope, sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
+import { isSourceCertainty, type SourceCertainty } from "@/domain/source-certainty";
+import { normalizeSourceQuery, sourceQueryTerms, sourceQueryPhrases, sourcePhraseScore, excerptForQuery } from "./chunker";
+
+/** Pure selection over already authorized candidates, shared by all readers.
+ * Lexical relevance never changes text, authority, edition or citation identity.
+ */
+export function rankDocumentNodes<T extends { sourceId: string | null; payload: unknown; id?: string; similarity?: number }>(
+  nodes: T[], query: string, limit: number, options: { keepSemanticMatches?: boolean } = {},
+): T[] {
+  if (limit <= 0) return [];
+  const payload = (n: T) => (n.payload && typeof n.payload === "object" ? n.payload : {}) as Record<string, unknown>;
+  const key = (n: T) => n.sourceId ?? n.id ?? "unknown";
+  const unique = [...new Map(nodes.map(n => [typeof payload(n).chunkIndex === "number"
+    ? `${key(n)}:${payload(n).sourceContentHash}:${payload(n).chunkIndex}` : n.id ?? key(n), n])).values()];
+  const terms = sourceQueryTerms(query);
+  const phrases = sourceQueryPhrases(query);
+  const words = (text: string) => new Set(normalizeSourceQuery(text).match(/[\p{L}\p{N}]+/gu) ?? []);
+  const rows = unique.map(node => {
+    const p = payload(node);
+    const fileName = typeof p.fileName === "string" ? p.fileName : "";
+    const title = typeof p.documentTitle === "string" && p.documentTitle ? p.documentTitle : fileName;
+    // A classified edition has an explicit identity. Keep its original filename
+    // searchable at body weight, without giving a verbose export heading priority.
+    const alias = title !== fileName ? fileName : "";
+    const fullText = typeof p.text === "string" ? p.text : JSON.stringify(p).replace(/([a-z])([A-Z])/g, "$1 $2");
+    const notice = typeof p.documentNotice === "string" ? p.documentNotice : "";
+    const text = notice && fullText.startsWith(notice) ? fullText.slice(notice.length) : fullText;
+    // Rank the same local passage that can actually reach the reader. Remote
+    // keywords in a long summary must not outrank the requested field's vicinity.
+    const passage = excerptForQuery(text, query, 800);
+    return { node, title: words(title), alias: words(alias), body: words(passage), notice: words(notice), passage,
+      phraseScore: 3 * sourcePhraseScore(title, phrases) + sourcePhraseScore(passage, phrases) };
+  });
+  const documents = new Set(rows.map(r => key(r.node)));
+  const frequency = new Map(terms.map(term => [term, new Set(rows.filter(r => r.title.has(term) || r.alias.has(term) || r.body.has(term)).map(r => key(r.node))).size]));
+  const scored = rows.map(row => ({ ...row, score: terms.reduce((sum, term) =>
+    sum + (row.title.has(term) ? 6 : row.body.has(term) || row.alias.has(term) ? 1 : row.notice.has(term) ? 0.5 : 0)
+      * (1 + Math.log((documents.size + 1) / ((frequency.get(term) ?? 0) + 1))),
+    row.phraseScore + (options.keepSemanticMatches ? row.node.similarity ?? 0 : 0)) }))
+    .filter(row => (!terms.length && !phrases.length) || row.score > 0).sort((a, b) => b.score - a.score);
+  const selected: T[] = []; const seen = new Set<string>();
+  for (const row of scored) if (!seen.has(key(row.node))) {
+    selected.push(row.node); seen.add(key(row.node));
+    if (selected.length >= limit) return selected.slice(0, limit);
+  }
+  // Extra passages should add requested information, rather than repeat the
+  // same field. Title/authority matches cannot masquerade as factual coverage.
+  const covered = new Set<string>(); const coveredPhrases = new Set<string>();
+  const cover = (row: (typeof scored)[number]) => {
+    for (const term of terms) if (row.body.has(term)) covered.add(term);
+    for (const phrase of phrases) if (sourcePhraseScore(row.passage, [phrase])) coveredPhrases.add(phrase);
+  };
+  scored.filter(row => selected.includes(row.node)).forEach(cover);
+  while (selected.length < limit) {
+    const next = scored.filter(row => !selected.includes(row.node)).map(row => ({ row,
+      novelty: terms.reduce((sum, term) => sum + (!covered.has(term) && row.body.has(term)
+        ? 1 + Math.log((documents.size + 1) / ((frequency.get(term) ?? 0) + 1)) : 0), 0)
+        + sourcePhraseScore(row.passage, phrases.filter(phrase => !coveredPhrases.has(phrase))),
+    })).sort((a, b) => b.novelty - a.novelty || b.row.score - a.row.score)[0];
+    if (!next) break;
+    selected.push(next.row.node); cover(next.row);
+  }
+  return selected;
+}
+
+/** A saved fragment is a cache, never an access grant or current proof. */
+export async function currentDocumentNodes<T extends { kind: string; sourceId: string | null; payload: unknown }>(nodes: T[], filter: RankerFilter): Promise<(T & { sourceCertainty: SourceCertainty | null })[]> {
+  const isDocument = (n: T) => n.kind === "BRAND_SOURCE" || n.kind === "SOURCE_CHUNK";
+  const withoutDocument = (n: T): T & { sourceCertainty: SourceCertainty | null } => ({ ...n, sourceCertainty: null });
+  const documentIds = nodes.filter(isDocument).flatMap((n) => n.sourceId ? [n.sourceId] : []);
+  // An orphan document is not a non-document node. It cannot prove an origin.
+  if (!documentIds.length) return nodes.filter((n) => !isDocument(n)).map(withoutDocument);
+  // Comparables cannot turn a private document into global training context.
+  if (!filter.strategyId || filter.excludeStrategyId) return nodes.filter((n) => !isDocument(n)).map(withoutDocument);
+  const sources = await db.brandDataSource.findMany({ where: {
+    AND: [await sourceScope(filter.strategyId)], id: { in: documentIds },
+    processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
+  } });
+  const current = new Map(sources.filter(s => sourceIsUsable(s.rawData)).map((s) => [s.id, {
+    documentNotice: documentContext(s.rawData), documentTitle: documentIdentity(s.rawData),
+    hash: sourceFingerprint(s), certainty: isSourceCertainty(s.certainty) ? s.certainty : null,
+  }]));
+  return nodes.flatMap((n) => {
+    if (!isDocument(n)) return [withoutDocument(n)];
+    const source = n.sourceId ? current.get(n.sourceId) : undefined;
+    if (!source || (n.payload as Record<string, unknown> | null)?.sourceContentHash !== source.hash) return [];
+    // Resolve trust from the same authorized, current source as the fingerprint.
+    // Never promote a cache label or infer validation from a retrieved fragment.
+    return [{ ...n, payload: n.payload && typeof n.payload === "object" ? { ...n.payload, documentTitle: source.documentTitle, documentNotice: source.documentNotice, text: source.documentNotice + String((n.payload as Record<string, unknown>).text ?? "") } : n.payload, sourceCertainty: source.certainty }];
+  });
+}
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -41,6 +134,8 @@ export interface RankedNode {
    * son document : aucune citation, donc aucune vérification possible en aval.
    */
   sourceId: string | null;
+  /** Canonical document certainty; null for context without a document. */
+  sourceCertainty: SourceCertainty | null;
   payload: unknown;
   metadata: unknown;
   similarity: number;
@@ -50,6 +145,8 @@ export interface RankedNode {
 export interface RankerFilter {
   /** Restrict to a specific strategy (default: any strategy — global search) */
   strategyId?: string;
+  /** Drill into one canonical source without widening the strategy scope. */
+  sourceId?: string;
   /** Restrict to specific kinds */
   kinds?: string[];
   /** Restrict to a specific pillar */
@@ -76,6 +173,7 @@ function buildWhere(
 ) {
   const where: Record<string, unknown> = {};
   if (filter.strategyId) where.strategyId = filter.strategyId;
+  if (filter.sourceId) where.sourceId = filter.sourceId;
   if (filter.excludeStrategyId) where.strategyId = { not: filter.excludeStrategyId };
   if (filter.kinds && filter.kinds.length > 0) where.kind = { in: filter.kinds };
   if (filter.pillarKey) where.pillarKey = filter.pillarKey;
@@ -161,7 +259,7 @@ export async function searchByQuery(
     },
   });
 
-  return candidates
+  return (await currentDocumentNodes(candidates, filter))
     .map((c) => ({
       id: c.id,
       strategyId: c.strategyId,
@@ -169,6 +267,7 @@ export async function searchByQuery(
       pillarKey: c.pillarKey,
       field: c.field,
       sourceId: c.sourceId,
+      sourceCertainty: c.sourceCertainty,
       payload: c.payload,
       metadata: c.metadata,
       similarity: cosineSimilarity(qVec, c.embedding ?? []),
@@ -243,8 +342,18 @@ export async function topKWithinStrategy(
  */
 export async function listByMetadata(
   filter: RankerFilter,
+  options: { incompatibleEmbedding?: { dimension: number; model?: string | null } } = {},
 ): Promise<Omit<RankedNode, "similarity" | "embeddingModel">[]> {
-  const where = buildWhere(filter, /*mustHaveEmbedding*/ false);
+  const baseWhere = buildWhere(filter, /*mustHaveEmbedding*/ false);
+  const geometry = options.incompatibleEmbedding;
+  // A document can be current and readable without a vector in this space.
+  // Keep scope and the canonical source/fingerprint guard on this read too.
+  const where = geometry ? { AND: [baseWhere, { OR: [
+    { embeddedAt: null },
+    { embeddingDim: null },
+    { embeddingDim: { not: geometry.dimension } },
+    ...(geometry.model ? [{ embeddingModel: null }, { embeddingModel: { not: geometry.model } }] : []),
+  ] }] } : baseWhere;
   const rows = await db.brandContextNode.findMany({
     where: where as Prisma.BrandContextNodeWhereInput,
     take: filter.candidateLimit ?? 100,
@@ -260,5 +369,26 @@ export async function listByMetadata(
       metadata: true,
     },
   });
+  return currentDocumentNodes(rows, filter);
+}
+
+/** Bound candidates per document; a large table cannot evict all older files.
+ * The canonical metadata reader still checks scope, edition and fingerprint.
+ */
+export async function listDocumentCandidates(strategyId: string,
+  options: Parameters<typeof listByMetadata>[1] = {},
+): Promise<Awaited<ReturnType<typeof listByMetadata>>> {
+  const kinds = ["BRAND_SOURCE", "SOURCE_CHUNK"];
+  const pointers = await db.brandContextNode.findMany({
+    where: { strategyId, kind: { in: kinds }, sourceId: { not: null } },
+    distinct: ["sourceId"], select: { sourceId: true },
+  });
+  const ids = [...new Set(pointers.flatMap(p => p.sourceId ? [p.sourceId] : []))];
+  const rows: Awaited<ReturnType<typeof listByMetadata>> = [];
+  for (let offset = 0; offset < ids.length; offset += 8) {
+    const batch = await Promise.all(ids.slice(offset, offset + 8).map(sourceId =>
+      listByMetadata({ strategyId, sourceId, kinds, candidateLimit: 32 }, options)));
+    rows.push(...batch.flat());
+  }
   return rows;
 }

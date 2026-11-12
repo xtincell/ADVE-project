@@ -36,7 +36,7 @@ describe("anti-drift: cascade staleness Oracle (writePillar chemin commun)", () 
 
     const body = gateway.slice(writePillarStart, postWriteScoreStart);
     expect(
-      body.includes("markAllSectionsStale"),
+      body.includes("invalidateOracleAfterCommit(strategyId)"),
       "la cascade Oracle doit vivre dans le corps de writePillar (chemin commun à TOUS les callers)",
     ).toBe(true);
   });
@@ -45,14 +45,14 @@ describe("anti-drift: cascade staleness Oracle (writePillar chemin commun)", () 
     const calls = gateway.match(/await markAllSectionsStale\(/g) ?? [];
     expect(
       calls.length,
-      "exactement UN call markAllSectionsStale dans pillar-gateway (dans writePillar)",
+      "exactement UN écrivain de péremption, appelé après le commit simple ou du batch",
     ).toBe(1);
 
     const andScoreStart = gateway.indexOf("export async function writePillarAndScore(");
     expect(andScoreStart).toBeGreaterThan(-1);
     const andScoreBody = gateway.slice(
       andScoreStart,
-      gateway.indexOf("export async function reconcileCompletionLevelCache("),
+      gateway.indexOf("\n}\n", andScoreStart) + 2,
     );
     expect(
       andScoreBody.includes("await markAllSectionsStale("),

@@ -24,6 +24,8 @@ import { db } from "@/lib/db";
 import { syncBrandActionsFromBlob } from "@/server/services/artemis/action-db/materializer";
 import { canAccessStrategy, getOperatorContext, getStrategyCollaboratorRole } from "@/server/services/operator-isolation";
 import { collaboratorCanWrite } from "@/domain/collaborator-access";
+import { currentScenarioIds } from "@/lib/strategy/roadmap-routes";
+import { collectNormalizedInitiatives, INITIATIVE_PREFERENCES } from "@/lib/types/pillar-schemas";
 
 const filters = z.object({
   strategyId: z.string().min(1),
@@ -73,15 +75,23 @@ export const actionsRouter = createTRPCRouter({
   /** Flat, homogeneous list of the strategy's actions (optionally filtered). */
   byStrategy: protectedProcedure.input(filters).query(async ({ ctx, input }) => {
     await assertCalendarAccess(ctx.session.user.id, input.strategyId);
-    return ctx.db.brandAction.findMany({
+    const [rows, pillar, synthesis] = await Promise.all([ctx.db.brandAction.findMany({
       where: {
         strategyId: input.strategyId,
         ...(input.touchpoint ? { touchpoint: input.touchpoint } : {}),
         ...(input.status ? { status: input.status } : {}),
-        ...(input.selected !== undefined ? { selected: input.selected } : {}),
       },
       orderBy: [{ selected: "desc" }, { priority: "asc" }, { createdAt: "asc" }],
-    });
+    }), ctx.db.pillar.findUnique({ where: { strategyId_key: { strategyId: input.strategyId, key: "i" } }, select: { content: true } }),
+    ctx.db.pillar.findUnique({ where: { strategyId_key: { strategyId: input.strategyId, key: "s" } }, select: { content: true, staleAt: true } })]);
+    const current = new Map(collectNormalizedInitiatives(pillar?.content).map(i => [i.id, i]));
+    const planIds = synthesis?.staleAt ? new Set<string>() : currentScenarioIds(synthesis?.content);
+    return rows.map(row => ({ ...row,
+      inCurrentCatalogue: !!row.sourceInitiativeId && current.has(row.sourceInitiativeId),
+      preference: row.sourceInitiativeId ? current.get(row.sourceInitiativeId)?.preference ?? "NEUTRAL" : "NEUTRAL",
+      selectedForCurrentPlan: !!row.sourceInitiativeId && current.has(row.sourceInitiativeId) && planIds.has(row.sourceInitiativeId),
+      planNeedsRecalculation: !!synthesis?.staleAt,
+    })).filter(row => input.selected === undefined || (row.selectedForCurrentPlan || row.selected) === input.selected);
   }),
 
   /** Aggregate counts for dashboard chips — honest emptiness when no rows. */
@@ -91,13 +101,19 @@ export const actionsRouter = createTRPCRouter({
       await assertCalendarAccess(ctx.session.user.id, input.strategyId);
       const rows = await ctx.db.brandAction.findMany({
         where: { strategyId: input.strategyId },
-        select: { touchpoint: true, status: true, selected: true, budgetMin: true, costTemplateKey: true },
+        select: { touchpoint: true, status: true, selected: true, budgetMin: true, costTemplateKey: true, sourceInitiativeId: true },
       });
+      const pillar = await ctx.db.pillar.findUnique({ where: { strategyId_key: { strategyId: input.strategyId, key: "i" } }, select: { content: true } });
+      const initiatives = collectNormalizedInitiatives(pillar?.content);
+      const currentIds = new Set(initiatives.map(i => i.id));
+      const synthesis = await ctx.db.pillar.findUnique({ where: { strategyId_key: { strategyId: input.strategyId, key: "s" } }, select: { content: true, staleAt: true } });
+      const retainedIds = synthesis?.staleAt ? new Set<string>() : currentScenarioIds(synthesis?.content);
       const byTouchpoint: Record<string, number> = {};
       const byStatus: Record<string, number> = {};
       let selectedCount = 0;
       let withCost = 0;
       let totalSelectedBudget = 0;
+      let outsideCatalogueSelectedCount = 0;
       for (const r of rows) {
         const tp = r.touchpoint ?? "UNCLASSIFIED";
         byTouchpoint[tp] = (byTouchpoint[tp] ?? 0) + 1;
@@ -105,6 +121,7 @@ export const actionsRouter = createTRPCRouter({
         if (r.selected) {
           selectedCount++;
           totalSelectedBudget += r.budgetMin ?? 0;
+          if (!r.sourceInitiativeId || !currentIds.has(r.sourceInitiativeId)) outsideCatalogueSelectedCount++;
         }
         if (r.costTemplateKey) withCost++;
       }
@@ -115,6 +132,11 @@ export const actionsRouter = createTRPCRouter({
         selectedCount,
         withCostTemplate: withCost,
         totalSelectedBudget,
+        currentCatalogueCount: currentIds.size,
+        currentFavoriteCount: initiatives.filter(i => i.preference === "FAVORITE").length,
+        currentRejectedCount: initiatives.filter(i => i.preference === "REJECTED").length,
+        currentSelectedCount: retainedIds.size,
+        outsideCatalogueSelectedCount,
       };
     }),
 
@@ -125,7 +147,10 @@ export const actionsRouter = createTRPCRouter({
    */
   sync: operatorProcedure
     .input(z.object({ strategyId: z.string().min(1) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      // Rebuilding writes rows: operator membership alone does not grant a
+      // calendar write on every brand, nor on a revoked/read-only delegation.
+      await assertCalendarWrite(ctx.session.user.id, input.strategyId);
       return syncBrandActionsFromBlob(input.strategyId);
     }),
 
@@ -174,7 +199,8 @@ export const actionsRouter = createTRPCRouter({
 
   /** Operator/founder selects (or unselects) an action for the S roadmap. */
   setSelected: protectedProcedure
-    .input(z.object({ strategyId: z.string().min(1), actionId: z.string().min(1), selected: z.boolean() }))
+    .input(z.object({ strategyId: z.string().min(1), actionId: z.string().min(1), selected: z.boolean().optional(), preference: z.enum(INITIATIVE_PREFERENCES).optional() })
+      .refine(v => (v.selected !== undefined) !== (v.preference !== undefined), "Choisissez une préférence ou une décision de planification."))
     .mutation(async ({ ctx, input }) => {
       await assertCalendarWrite(ctx.session.user.id, input.strategyId);
       // B2 — décision opérateur GOUVERNÉE (émission Q1/Q2), comme `propose`.
@@ -184,11 +210,13 @@ export const actionsRouter = createTRPCRouter({
           kind: "SET_BRAND_ACTION_STATUS",
           strategyId: input.strategyId,
           operatorId: ctx.session.user.id,
-          op: { type: "SELECT", actionId: input.actionId, selected: input.selected },
+          op: input.preference ? { type: "PREFERENCE", actionId: input.actionId, preference: input.preference }
+            : { type: "PREFERENCE", actionId: input.actionId, preference: input.selected ? "FAVORITE" : "NEUTRAL" },
         },
         { caller: "actions.setSelected" },
       );
-      return { updated: (result.output as { updated?: number } | undefined)?.updated ?? 0 };
+      if (result.status !== "OK") throw new TRPCError({ code: "BAD_REQUEST", message: result.reason ?? result.summary ?? "Décision refusée." });
+      return { updated: (result.output as { updated?: number } | undefined)?.updated ?? 0, synthesisUpdated: (result.output as { synthesisUpdated?: boolean } | undefined)?.synthesisUpdated };
     }),
 
   /**
@@ -224,6 +252,7 @@ export const actionsRouter = createTRPCRouter({
         },
         { caller: "actions.setTiming" },
       );
+      if (result.status !== "OK") throw new TRPCError({ code: "BAD_REQUEST", message: result.reason ?? result.summary ?? "Décision refusée." });
       return { updated: (result.output as { updated?: number } | undefined)?.updated ?? 0 };
     }),
 
@@ -262,6 +291,7 @@ export const actionsRouter = createTRPCRouter({
         },
         { caller: "actions.autoSchedule" },
       );
+      if (result.status !== "OK") throw new TRPCError({ code: "BAD_REQUEST", message: result.reason ?? result.summary ?? "Planification refusée." });
       const out = result.output as { updated?: number; protectedPublications?: number } | undefined;
       return { scheduled: out?.updated ?? 0, protectedPublications: out?.protectedPublications ?? 0 };
     }),

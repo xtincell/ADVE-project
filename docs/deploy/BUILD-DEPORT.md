@@ -10,6 +10,70 @@
 > ci-dessous est conservée comme **archive de la procédure**, pas comme un
 > reste à faire.
 
+## Acquisition des bases officielles — 438 livré (2026-10-09)
+
+Le [job PostgreSQL 114024488078 du run 37990904417](https://github.com/xtincell/ADVE-project/actions/runs/37990904417/job/114024488078)
+échoue avant checkout/test : quota Docker Hub anonyme, trois retries refusés.
+Les autres jobs applicables sont verts ; cela ne reçoit pas ce job PostgreSQL.
+Le lot applicatif 437/source 406beb67 est conservé et livré dans le bundle 438.
+
+438 acquiert les **mêmes Docker Official Images** sur
+`public.ecr.aws/docker/library`, avec les versions PostgreSQL 16/16-alpine et
+Node 22-bookworm-slim inchangées. AWS décrit cette distribution par le publisher
+Docker et la [disponibilité des Docker Official Images sur ECR Public](https://aws.amazon.com/blogs/containers/docker-official-images-now-available-on-amazon-elastic-container-registry-public/).
+La [documentation ECR Public Gallery](https://docs.aws.amazon.com/AmazonECR/latest/public/public-gallery.html)
+confirme l’acquisition publique sans authentification et le repérage des
+publishers vérifiés. Aucun compte, secret, abonnement ou service nouveau.
+
+Préflight du 2026-10-09, registry-preflight.json : six réponses HTTP 200,
+**corps des manifestes Hub/ECR identiques** et mêmes références linux/amd64
+pour chaque image. ECR ne fournit pas le header digest dans ce relevé ; le
+SHA-256 est calculé sur le corps reçu, sans inventer un header absent.
+
+| Usage existant | Image officielle ECR | Index épinglé, identique au corps Hub |
+|---|---|---|
+| PostgreSQL CI | docker/library/postgres:16 | sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d |
+| PostgreSQL smoke | docker/library/postgres:16-alpine | sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea |
+| Node deps/builder/runner | docker/library/node:22-bookworm-slim | sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 |
+
+Les trois FROM réutilisent NODE_IMAGE épinglé. La directive #syntax est retirée
+pour le frontend BuildKit embarqué ; aucune nouvelle action, version de BuildKit
+ou autre service de build. Le workflow et son smoke restent les chemins existants.
+Préflight manifeste reçu puis **CI/build/smoke/image/runtime 438 reçus** sur
+source 912e481e1131ed1577ae8bab00ca5111783dc3a0 :
+CI 37992424716 success, PostgreSQL effectif 309/seize fichiers, neuf jobs verts/
+trois skips réservés aux PR ; Mission 37992424910/Chromatic 37992424676 success.
+Image 37992697193 success, boot base neuve/migrations/login 200/PDF deux pages ;
+config candidate/publiée identique. Index
+sha256:54066a02f035955680a449513540bbb65046cdcbb45f5298ed31c402a0f89c8f,
+manifest amd64 sha256:c27851290932b346ad2c9f42799b4a47f91c61db99a723dcac14d1f3419b0e1b.
+FABLE existant q9b4m57yh93gxbjykj470giy, déploiement gj2cruddtb8mxcur3wbb7n5g
+terminé à 21:31:35 UTC ; runtime running/nextjs/index exact/volume privé RW/API
+version 200 à 21:33:22 UTC. Aucun modèle/router/page/kind/service ajouté.
+
+La lecture native du plan réel SPAWT est reçue HTTP 200 : 61 réponses/zéro ≥500/
+exception, 14 ERR_ABORTED annulés conservés ; DOM 1 199/load 1 763,6 ms. Titre
+d’abord masqué par « Quoi de neuf », inspecté/fermé dans l’UI ; borne ultérieure
+57 487 ms, pas premier affichage/SLO. Marque ni modifiée, approuvée ou recalculée ;
+aucune réception des sept chantiers/dix gates déduite. Les preuves source/image/
+runtime sont distinctes du présent commit documentaire.
+La Forge SPAWT est également reçue en lecture seule HTTP 200 : 65 réponses/
+zéro ≥500/exception, 17 ERR_ABORTED annulés conservés ; DOM 609,6/load 610,8 ms.
+Borne tardive du titre 61 794 ms incluant le travail du modèle, pas paint/SLO.
+S v3 AI_PROPOSED/91,2 % non approuvable, readiness COMPLETE/100/stale/Périmé
+contredit Complet dans le plan ; contre-exemple métier/UX ouvert, aucun recalcul.
+
+**Maintenance** : les digests ne suivent plus automatiquement leurs tags.
+Toute mise à jour future exige de comparer les manifestes officiels Hub/ECR,
+changer explicitement les pins correspondants dans Dockerfile et workflows,
+puis recevoir la CI PostgreSQL et le build/smoke avant livraison.
+Preuves privées :
+`/Users/imacmatanga1/HOSTINGER/audit-shinkiro-2026-09-25/release/preuves-ecriture-s-437/registry-preflight.json`
+et cadrage-ci.md ; réceptions livrées dans le dossier voisin preuves-ci-438
+(ci.json, image.json, image-digest.json, runtime.json, native-plan-receipt.json,
+native-forge-receipt.json et native-forge-events.json).
+Pas de note client 438 : infrastructure uniquement.
+
 ## Le problème (nuit du 2026-07-12)
 
 Coolify était configuré pour **construire l'app sur le VPS de prod** (`next build`
@@ -101,7 +165,7 @@ sont **inchangés** — c'est la même image, construite ailleurs.
 > n'a **plus aucun trigger automatique** : le push sur `main` ne construit plus
 > d'image et ne redéploie plus. Pour livrer en prod : lancer `build-image` à la
 > main (Actions → *Build image (ghcr)* → *Run workflow*, cocher `notify_coolify`)
-> **ou** `deploy.yml` **ou** un redeploy depuis le dashboard Coolify. **Vérifier
+> **ou** un redeploy depuis le dashboard Coolify. **Vérifier
 > aussi côté Coolify** que l'auto-deploy de l'app (webhook git / watch registry)
 > est désactivé — le repo ne peut pas le couper à distance.
 
@@ -128,7 +192,8 @@ Pour tester à la main sur n'importe quelle machine Docker :
 
 ```sh
 docker run -d --name pg -e POSTGRES_USER=lafusee -e POSTGRES_PASSWORD=lafusee \
-  -e POSTGRES_DB=lafusee postgres:16-alpine
+  -e POSTGRES_DB=lafusee \
+  public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
 docker run --rm -p 3000:3000 --link pg \
   -e DATABASE_URL="postgresql://lafusee:lafusee@pg:5432/lafusee?schema=public" \
   -e NEXTAUTH_SECRET="test-secret-test-secret-32-characters" \

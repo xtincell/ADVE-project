@@ -83,9 +83,9 @@ const BASELINE: Readonly<Record<string, number>> = {
   "mcp-billing.ts": 6, // EXEMPT — infra facturation adminProcedure auto-auditée
   "crm-contacts.ts": 4, // PENDING — CRM
   "anubis.ts": 2, // PENDING — templatesUpsert/Delete (le reste émet via emitIntentTyped)
-  "argos.ts": 2, // mixte — setVerdict (PENDING) + subscribeNewsletter (public)
+  "argos.ts": 1, // subscribeNewsletter (public) ; setVerdict gouverné (ADR-0195)
   "brand-mcp.ts": 2, // EXEMPT — infra credential MCP (canAccessStrategy-gardé)
-  "client.ts": 2, // PENDING — client create/addBrand
+  "client.ts": 0, // Native CRM creation and brand bootstrap use their registered intents.
   "market-study-ingestion.ts": 2, // EXEMPT — preview (dry-run) + export PDF
   "social.ts": 2, // PENDING — upsertSocialConnector / dismissInboxItem
   "brand-node.ts": 1, // EXEMPT — invalidateInheritanceCache (cache, pas métier)
@@ -95,7 +95,7 @@ const BASELINE: Readonly<Record<string, number>> = {
   "mission-applications.ts": 1, // PENDING — withdraw
   "mobile-money.ts": 1, // EXEMPT — webhook externe (secret partagé fail-closed round-8)
   "monetization.ts": 1, // PENDING — initSubscription (public paywall)
-  "strategy.ts": 1, // PENDING — validateSynthesis
+  "strategy.ts": 0, // validateSynthesis shares the governed pillar state decision
   // ── Round-8 (§B) : routeurs NON tagués `governed-active`, désormais scannés ──
   "payment.ts": 8, // EXEMPT — infra paiement (paywall public + admin) + audit IntakePayment/Subscription propre (ADR-0092)
   "newsletter.ts": 7, // MIXTE — 3 emailProvider* EXEMPT (vault ADR-0021) + 4 PENDING (subscribers*/newsletters* → spine, plan round-7 ; kind async NEWSLETTER_SEND_CAMPAIGN déjà déclaré, à câbler)

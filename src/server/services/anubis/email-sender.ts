@@ -14,9 +14,13 @@
 
 export interface SendEmailInput {
   to: string;
+  /** Sales outbox must keep uncertain attempts on one transport. */
+  allowFallback?: boolean;
   subject: string;
   html: string;
   text?: string;
+  /** Transactional category, retained when the account email adapter delegates here. */
+  tag?: string;
   /** En-têtes additionnels (List-Unsubscribe pour la newsletter). */
   headers?: Record<string, string>;
 }
@@ -30,7 +34,13 @@ export type SendEmailResult =
 const TIMEOUT_MS = 10_000;
 
 function from(): string | null {
-  return process.env.EMAIL_FROM ?? null;
+  return process.env.EMAIL_FROM?.trim() || null;
+}
+
+/** Readiness is global and reveals no account existence or credential value. */
+export function systemEmailIsArmed(): boolean {
+  return Boolean(from() && (process.env.RESEND_API_KEY || process.env.SENDGRID_API_KEY
+    || process.env.BREVO_API_KEY || (process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN)));
 }
 
 async function timedFetch(url: string, init: RequestInit): Promise<Response> {
@@ -57,6 +67,7 @@ async function viaResend(input: SendEmailInput, sender: string): Promise<SendEma
       html: input.html,
       ...(input.text ? { text: input.text } : {}),
       ...(input.headers ? { headers: input.headers } : {}),
+      ...(input.tag ? { tags: [{ name: "category", value: input.tag }] } : {}),
     }),
   });
   const data = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
@@ -75,6 +86,7 @@ async function viaMailgun(input: SendEmailInput, sender: string): Promise<SendEm
     html: input.html,
   });
   if (input.text) params.set("text", input.text);
+  if (input.tag) params.set("o:tag", input.tag);
   for (const [k, v] of Object.entries(input.headers ?? {})) params.set(`h:${k}`, v);
 
   const res = await timedFetch(`${base}/v3/${domain}/messages`, {
@@ -105,6 +117,7 @@ async function viaSendgrid(input: SendEmailInput, sender: string): Promise<SendE
         ...(input.text ? [{ type: "text/plain", value: input.text }] : []),
         { type: "text/html", value: input.html },
       ],
+      ...(input.tag ? { categories: [input.tag] } : {}),
     }),
   });
   if (res.status !== 202) {
@@ -146,6 +159,7 @@ export async function sendViaBrevo(
       htmlContent: input.html,
       ...(input.text ? { textContent: input.text } : {}),
       ...(input.headers ? { headers: input.headers } : {}),
+      ...(input.tag ? { tags: [input.tag] } : {}),
     }),
   });
   const data = (await res.json().catch(() => ({}))) as { messageId?: string; message?: string };
@@ -188,8 +202,10 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
       const result = await provider.fn();
       if (result.ok) return result;
       lastError = result.error;
+      if (input.allowFallback === false) return result;
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err);
+      if (input.allowFallback === false) break;
     }
   }
   return { ok: false, provider: "CHAIN", error: `Tous les providers email ont échoué — dernier: ${lastError}` };

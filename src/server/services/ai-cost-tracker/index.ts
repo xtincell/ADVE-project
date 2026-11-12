@@ -3,9 +3,13 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 
 interface CostEntry {
   model: string;
+  provider?: string;
+  /** Provider-reported flat cost for a non-token forge; never substitute an estimate. */
+  realisedCostUsd?: number;
   inputTokens: number;
   outputTokens: number;
   context?: string;
@@ -15,6 +19,18 @@ interface CostEntry {
 
 // Pricing per 1M tokens (USD)
 const PRICING: Record<string, { input: number; output: number }> = {
+  // API-equivalent uncached estimate, checked 2026-10-14; OAuth uses subscription
+  // quota, not this invoice: https://developers.openai.com/api/docs/models/gpt-5.6-luna
+  "gpt-5.6-luna": { input: 0.20, output: 1.20 },
+  // Selected OpenRouter free variants, catalogue checked 2026-10-14:
+  // https://openrouter.ai/api/v1/models — token estimate, not an invoice.
+  "nvidia/nemotron-3-super-120b-a12b:free": { input: 0, output: 0 },
+  "google/gemma-4-26b-a4b-it:free": { input: 0, output: 0 },
+  // Ollama cloud public token rates, checked 2026-10-14:
+  // https://ollama.com/pricing — uncached upper estimate, not an invoice.
+  "gemma4:31b": { input: 0.14, output: 0.40 },
+  // Peak, uncached upper estimate; off-peak/cache discounts remain unverified.
+  "deepseek-v4.1-flash": { input: 0.30, output: 1.20 },
   "claude-sonnet-4-6": { input: 3.0, output: 15.0 },
   "claude-opus-4-6": { input: 15.0, output: 75.0 },
   "claude-haiku-4-5": { input: 0.80, output: 4.0 },
@@ -25,13 +41,14 @@ export function calculateCost(model: string, inputTokens: number, outputTokens: 
   return (inputTokens / 1_000_000) * price!.input + (outputTokens / 1_000_000) * price!.output;
 }
 
-export async function track(entry: CostEntry): Promise<string> {
-  const cost = calculateCost(entry.model, entry.inputTokens, entry.outputTokens);
+export async function track(entry: CostEntry, client: Prisma.TransactionClient = db): Promise<string> {
+  const cost = entry.realisedCostUsd ?? calculateCost(entry.model, entry.inputTokens, entry.outputTokens);
+  if (!Number.isFinite(cost) || cost < 0) throw new Error("INVALID_COST_RECEIPT");
 
-  const log = await db.aICostLog.create({
+  const log = await client.aICostLog.create({
     data: {
       model: entry.model,
-      provider: "anthropic",
+      provider: entry.provider ?? "anthropic",
       inputTokens: entry.inputTokens,
       outputTokens: entry.outputTokens,
       cost,

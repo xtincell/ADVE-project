@@ -4,8 +4,9 @@
  * Le Cockpit est le portail VENDU au client : le vocabulaire à l'écran est
  * 100 % business (KB `docs/governance/context/UPGRADERS-LAFUSEE-KB.md` §3).
  * Les noms mythologiques internes (Neteru), les noms de mécanismes (ADVERTIS,
- * APOGEE) et la plomberie (réfs ADR, IntentEmission, function-calling) ne
- * doivent JAMAIS apparaître dans une chaîne rendue.
+ * APOGEE) et la plomberie (réfs ADR, IntentEmission, function-calling)
+ * n'apparaissent pas dans une chaîne rendue, sauf les déclarations de
+ * responsabilité du DAM expressément demandées par l'opérateur (2026-11-05).
  *
  * Méthode : on scanne les fichiers `.tsx` du portail cockpit, on retire les
  * commentaires (les identifiants de code — `trpc.jehuty.*`, `JehutyFeedItem`,
@@ -39,12 +40,60 @@ const SCAN_DIRS = [
   // interdit exactement ces mots.
   join(ROOT, "src/components/strategy-presentation"),
   join(ROOT, "src/app/(shared)"),
+  // SHK-0002 point 5 (2026-11-11) — la bibliothèque publique Argos dit d'où
+  // vient ce qu'elle affiche : ses textes de source parlent au lecteur public.
+  join(ROOT, "src/app/(public)/argos"),
+  join(ROOT, "src/components/argos"),
 ];
 // Composants hors components/cockpit mais rendus dans le portail founder,
 // + sources de chaînes rendues au prospect (grille /pricing).
 const EXTRA_FILES = [
+  join(ROOT, "src/app/leaderboard/page.tsx"),
+  join(ROOT, "src/lib/i18n/pages/leaderboard.ts"),
+  // 4.11.d — écran d'attente et rapport du diagnostic, lus par le prospect.
+  join(ROOT, "src/lib/i18n/pages/intake-result.ts"),
+  join(ROOT, "src/app/api/intake/[token]/pdf/route.ts"),
+  join(ROOT, "src/app/la-barre/[[...path]]/route.ts"),
+  join(ROOT, "src/app/la-barre/partage/[token]/[[...path]]/route.ts"),
+  join(ROOT, "src/server/services/brand-node/barre-context.ts"),
+  join(ROOT, "src/server/services/brand-node/barre-document.ts"),
+  join(ROOT, "src/server/services/brand-node/barre-document-runtime.ts"),
+  join(ROOT, "src/server/services/brand-node/barre-connection.ts"),
+  // LB4 — refus et accusés du bilan de campagne, lus par La Barre.
+  join(ROOT, "src/server/services/brand-node/barre-review.ts"),
+  join(ROOT, "src/server/services/ingestion-pipeline/barre-review.ts"),
+  join(ROOT, "src/domain/barre-campaign-review.ts"),
+  join(ROOT, "src/components/shared/markdown-content.tsx"),
+  join(ROOT, "src/server/services/notoria/generate-typed-recos.ts"),
+  join(ROOT, "src/lib/strategy/roadmap-routes.ts"),
+  join(ROOT, "src/lib/types/field-labels.ts"),
+  join(ROOT, "src/domain/field-provenance.ts"),
+  join(ROOT, "src/domain/signal-observation.ts"),
+  join(ROOT, "src/lib/release-notes.ts"),
+  join(ROOT, "src/lib/operate-config.ts"),
+  join(ROOT, "src/components/brand/source-preparation-option.tsx"),
+  join(ROOT, "src/components/brand/source-read-dialog.tsx"),
+  join(ROOT, "src/components/brand/document-library.tsx"),
+  join(ROOT, "src/components/brand/asset-dossier.tsx"),
+  join(ROOT, "src/components/brand/financial-document-panel.tsx"),
+  join(ROOT, "src/domain/financial-document.ts"),
+  join(ROOT, "src/server/services/financial-brain/break-even-docx.ts"),
+  join(ROOT, "src/components/brand/public-identity-review.tsx"),
+  join(ROOT, "src/components/brand/guidelines-document.tsx"),
+  join(ROOT, "src/components/creative-intelligence/recipe-cards.tsx"),
+  join(ROOT, "src/components/creative-intelligence/advanced-observations.tsx"),
+  join(ROOT, "src/components/portfolio/BrandWorkspace.tsx"),
+  join(ROOT, "src/components/portfolio/BrandNodeForm.tsx"),
+  join(ROOT, "src/components/portfolio/WorkspaceAssets.tsx"),
+  join(ROOT, "src/components/portfolio/PortfolioReferencesForm.tsx"),
+  join(ROOT, "src/components/portfolio/PortfolioTreeView.tsx"),
+  join(ROOT, "src/components/portfolio/PortfolioShell.tsx"),
+  join(ROOT, "src/components/portfolio/AssetContent.tsx"),
   join(ROOT, "src/components/neteru/overton-radar.tsx"),
   join(ROOT, "src/components/neteru/apogee-maintenance-dashboard.tsx"),
+  join(ROOT, "src/components/neteru/ptah-forge-button.tsx"),
+  join(ROOT, "src/components/neteru/ptah-kiln-tracker.tsx"),
+  join(ROOT, "src/lib/i18n/pages/production.ts"),
   join(ROOT, "src/server/services/monetization/pricing-tiers.ts"),
 ];
 
@@ -56,6 +105,17 @@ const EXTRA_FILES = [
  * nouvelle entrée doit porter une justification.
  */
 const OPERATOR_GATED_ALLOWLIST: ReadonlyArray<string> = [];
+
+/** Directive explicite 2026-11-05 : le DAM est gouverné par un Neteru et
+ * expose son responsable. Exception à ces textes exacts de responsabilité,
+ * jamais au fichier entier ni aux autres règles de vocabulaire. */
+const DAM_RESPONSIBILITY_TEXT: Readonly<Record<string, readonly string[]>> = {
+  "src/app/(cockpit)/cockpit/brand/assets/page.tsx": [
+    "Gouverné par Mestor",
+    "Mestor gouverne la conservation, la provenance et le cycle de vie des actifs. Artemis orchestre les livrables, Glory prépare les contenus et Ptah produit les médias. Votre équipe choisit les éditions à retenir.",
+  ],
+  "src/components/brand/asset-dossier.tsx": ["Mestor"],
+};
 
 const FORBIDDEN: Array<{ name: string; re: RegExp }> = [
   { name: "mythologie/mécanisme", re: /\b(ADVERTIS|APOGEE|Jehuty|Notoria|Mestor|Artemis|Seshat|Ptah|Anubis|Imhotep|Thot|Tarsis|NETERU)\b/ },
@@ -212,6 +272,15 @@ describe("Cockpit — vocabulaire client (lot 11, T1)", () => {
     expect(files.length).toBeGreaterThan(40);
   });
 
+  it("limite la déclaration de responsabilité du DAM aux textes toujours rendus", () => {
+    for (const [file, texts] of Object.entries(DAM_RESPONSIBILITY_TEXT)) {
+      expect(files).toContain(join(ROOT, file));
+      const chunks = renderableChunks(stripComments(readFileSync(join(ROOT, file), "utf-8"))).map(({ chunk }) => chunk.trim());
+      for (const text of texts) expect(chunks.filter(chunk => chunk === text), `${file}: ${text}`).toHaveLength(1);
+    }
+    expect(Object.values(DAM_RESPONSIBILITY_TEXT).flat()).toHaveLength(3);
+  });
+
   it("aucun vocabulaire interne dans les chaînes rendues du portail founder", () => {
     const violations: string[] = [];
     for (const file of files) {
@@ -221,6 +290,7 @@ describe("Cockpit — vocabulaire client (lot 11, T1)", () => {
       for (const { chunk, line } of renderableChunks(src)) {
         if (IDENTIFIER_CHUNK.test(chunk) || CSS_CLASS_CHUNK.test(chunk) || CODE_CHUNK.test(chunk)) continue;
         for (const { name, re } of FORBIDDEN) {
+          if (name === "mythologie/mécanisme" && DAM_RESPONSIBILITY_TEXT[rel]?.includes(chunk.trim())) continue;
           const m = chunk.match(re);
           if (m) violations.push(`${rel}:${line} [${name}] → ${m[0]} dans ${chunk.slice(0, 80)}`);
         }

@@ -16,6 +16,7 @@ import { manifest as auditTrailManifest } from "@/server/services/audit-trail/ma
 import { manifest as autoPromotionManifest } from "@/server/services/auto-promotion/manifest";
 import { manifest as boardExportManifest } from "@/server/services/board-export/manifest";
 import { manifest as bootSequenceManifest } from "@/server/services/boot-sequence/manifest";
+import { manifest as brandBookIngestionManifest } from "@/server/services/brand-book-ingestion/manifest";
 import { manifest as brandNodeManifest } from "@/server/services/brand-node/manifest";
 import { manifest as brandVaultManifest } from "@/server/services/brand-vault/manifest";
 import { manifest as briefIngestManifest } from "@/server/services/brief-ingest/manifest";
@@ -34,6 +35,7 @@ import { manifest as commissionEngineManifest } from "@/server/services/commissi
 import { manifest as communityDashboardManifest } from "@/server/services/community-dashboard/manifest";
 import { manifest as consultingManifest } from "@/server/services/consulting/manifest";
 import { manifest as countryRegistryManifest } from "@/server/services/country-registry/manifest";
+import { manifest as creativeIntelligenceManifest } from "@/server/services/creative-intelligence/manifest";
 import { manifest as creativeProposalManifest } from "@/server/services/creative-proposal/manifest";
 import { manifest as crmEngineManifest } from "@/server/services/crm-engine/manifest";
 import { manifest as crossValidatorManifest } from "@/server/services/cross-validator/manifest";
@@ -136,6 +138,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   autoPromotionManifest,
   boardExportManifest,
   bootSequenceManifest,
+  brandBookIngestionManifest,
   brandNodeManifest,
   brandVaultManifest,
   briefIngestManifest,
@@ -154,6 +157,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   communityDashboardManifest,
   consultingManifest,
   countryRegistryManifest,
+  creativeIntelligenceManifest,
   creativeProposalManifest,
   crmEngineManifest,
   crossValidatorManifest,

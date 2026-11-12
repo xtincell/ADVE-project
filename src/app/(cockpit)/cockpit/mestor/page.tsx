@@ -5,8 +5,11 @@ import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { AiBadge } from "@/components/shared/ai-badge";
 import { EmptyState } from "@/components/shared/empty-state";
-import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { useStrategy } from "@/components/cockpit/strategy-context";
+import { SkeletonList } from "@/components/shared/loading-skeleton";
+import { FriendlyError } from "@/components/shared/friendly-error";
 import { CouncilDeliberationPanel } from "@/components/cockpit/council-deliberation-panel";
+import { MarkdownContent } from "@/components/shared/markdown-content";
 import {
   Bot,
   Send,
@@ -74,12 +77,38 @@ function errorMessageFor(status: number): string {
   return "Désolé, une erreur est survenue lors de la génération de la réponse.";
 }
 
+function AssistantPageHeader({ children }: { children?: React.ReactNode }) {
+  return <PageHeader title="Assistant" description="Votre assistant de marque intelligent."
+    badge={<AiBadge />} breadcrumbs={[{ label: "Cockpit", href: "/cockpit" }, { label: "Assistant" }]}>
+    {children}
+  </PageHeader>;
+}
+
+function AssistantReadState({ loading, error }: { loading: string; error?: string }) {
+  return <div className="space-y-6">
+    <AssistantPageHeader />
+    {error ? <FriendlyError error={new Error(error)} /> : <div role="status" aria-label={loading}>
+      <p className="mb-3 text-sm text-foreground-secondary">{loading}</p>
+      <SkeletonList items={3} />
+    </div>}
+  </div>;
+}
+
 export default function MestorPage() {
-  const strategyId = useCurrentStrategyId();
+  const { strategyId, isLoading, isError } = useStrategy();
+  if (isLoading || isError) return <AssistantReadState loading="Chargement de vos marques…"
+    error={isError ? "Impossible de charger les marques disponibles. Actualisez la page pour réessayer." : undefined} />;
+  // A conversation's state (history, draft, errors, expert panel) belongs to
+  // one strategy. Switching context remounts it; stored threads are untouched.
+  return <MestorConversation key={strategyId ?? "unselected"} strategyId={strategyId} />;
+}
+
+function MestorConversation({ strategyId }: { strategyId: string | null }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copyFailed, setCopyFailed] = useState(false);
   const [streamError, setStreamError] = useState<{ failedContent: string } | null>(null);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -90,7 +119,7 @@ export default function MestorPage() {
     { enabled: !!strategyId },
   );
 
-  // Historique persisté (ADR-0181) — chargé au montage, une seule fois.
+  // Historique persisté (ADR-0181) — une hydratation par marque sélectionnée.
   const historyQuery = trpc.mestor.assistantHistory.useQuery(
     { strategyId: strategyId! },
     { enabled: !!strategyId, refetchOnWindowFocus: false },
@@ -117,12 +146,7 @@ export default function MestorPage() {
   if (!strategyId) {
     return (
       <div className="space-y-6">
-        <PageHeader
-          title="Assistant"
-          description="Votre assistant de marque intelligent."
-          badge={<AiBadge />}
-          breadcrumbs={[{ label: "Cockpit", href: "/cockpit" }, { label: "Assistant" }]}
-        />
+        <AssistantPageHeader />
         <EmptyState
           icon={CloudOff}
           title="Aucune marque sélectionnée"
@@ -131,6 +155,10 @@ export default function MestorPage() {
       </div>
     );
   }
+
+  if (historyQuery.isLoading || historyQuery.error) return <AssistantReadState
+    loading="Chargement de votre conversation…"
+    error={historyQuery.error ? "Impossible de lire votre conversation. Actualisez la page pour réessayer." : undefined} />;
 
   const strategy = strategyQuery.data;
   const strategyName = strategy?.name ?? "votre marque";
@@ -235,10 +263,16 @@ export default function MestorPage() {
     }
   };
 
-  const handleCopy = (id: string, content: string) => {
-    navigator.clipboard.writeText(content);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+  const handleCopy = async (id: string, content: string) => {
+    setCopyFailed(false);
+    setCopiedId(null);
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      setCopyFailed(true);
+    }
   };
 
   // La réponse que les quatre experts vont réellement contester (passée en
@@ -247,26 +281,24 @@ export default function MestorPage() {
   const lastAssistantMessage =
     [...messages].reverse().find((m) => m.role === "assistant" && !m.isError && m.content.trim()) ??
     null;
+  const councilQuestion = lastAssistantMessage
+    ? messages.slice(0, messages.indexOf(lastAssistantMessage)).reverse()
+      .find((m) => m.role === "user")?.content
+    : undefined;
 
   const handleReset = () => {
     setMessages([]);
     setInput("");
     setStreamError(null);
+    setCopyFailed(false);
+    setCopiedId(null);
     // Efface aussi le fil persisté — « Nouvelle conversation » = vraie remise à zéro.
     clearMutation.mutate({ strategyId });
   };
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Assistant"
-        description="Votre assistant de marque intelligent."
-        badge={<AiBadge />}
-        breadcrumbs={[
-          { label: "Cockpit", href: "/cockpit" },
-          { label: "Assistant" },
-        ]}
-      >
+      <AssistantPageHeader>
         {messages.length > 0 && (
           <button
             onClick={handleReset}
@@ -276,7 +308,11 @@ export default function MestorPage() {
             Nouvelle conversation
           </button>
         )}
-      </PageHeader>
+      </AssistantPageHeader>
+
+      {copyFailed && <p role="alert" className="text-sm text-error">
+        La réponse n’a pas pu être copiée. Sélectionnez le texte pour la copier.
+      </p>}
 
       {/* Analyse approfondie — convoque les quatre experts contradictoires sur
           la dernière réponse. Placée dans le CORPS de page et non dans le slot
@@ -287,6 +323,7 @@ export default function MestorPage() {
           key={lastAssistantMessage.id}
           strategyId={strategyId}
           answer={lastAssistantMessage.content}
+          question={councilQuestion}
         />
       )}
 
@@ -306,7 +343,7 @@ export default function MestorPage() {
                 Bienvenue sur votre assistant
               </h3>
               <p className="mt-1 max-w-sm text-center text-sm text-foreground-secondary">
-                Je suis votre assistant de marque. Je connais votre dossier complet — posez-moi vos
+                Je suis votre assistant de marque. Je m’appuie sur les informations disponibles du dossier — posez-moi vos
                 questions sur{strategyName ? ` ${strategyName},` : ""} votre stratégie, ou demandez un
                 diagnostic.
               </p>
@@ -349,15 +386,15 @@ export default function MestorPage() {
                   )}
 
                   <div
-                    className={`group relative max-w-[75%] rounded-2xl px-4 py-3 ${
+                    className={`group relative min-w-0 max-w-[75%] rounded-2xl px-4 py-3 ${
                       msg.role === "user"
                         ? "bg-accent text-white"
                         : "bg-background text-foreground"
                     }`}
                   >
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                      {msg.content}
-                    </div>
+                    {msg.role === "assistant" && !msg.isError
+                      ? <MarkdownContent>{msg.content}</MarkdownContent>
+                      : <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">{msg.content}</div>}
                     <div className="mt-1 flex items-center justify-between gap-2">
                       <span
                         className={`text-2xs ${
@@ -372,7 +409,8 @@ export default function MestorPage() {
                       {msg.role === "assistant" && (
                         <button
                           onClick={() => handleCopy(msg.id, msg.content)}
-                          className="opacity-0 transition-opacity group-hover:opacity-100"
+                          aria-label={copiedId === msg.id ? "Réponse copiée" : "Copier la réponse"}
+                          className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                         >
                           {copiedId === msg.id ? (
                             <Check className="h-3 w-3 text-success" />

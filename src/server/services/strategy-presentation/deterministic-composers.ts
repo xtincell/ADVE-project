@@ -22,7 +22,8 @@
  */
 
 import { db } from "@/lib/db";
-import { collectInitiatives } from "@/lib/types/pillar-schemas";
+import { collectNormalizedInitiatives } from "@/lib/types/pillar-schemas";
+import { aggregateCampaignBudgets, campaignBudgetLabel, currentScenarioIds } from "@/lib/strategy/roadmap-routes";
 import { resolveCultIndexTier } from "@/domain/cult-index-tier";
 import type { SectionMeta } from "./types";
 // Import depuis section-writeback (module feuille) : cassait le cycle
@@ -84,6 +85,7 @@ interface ComposerContext {
   campaigns: Array<{
     name: string;
     budget: unknown;
+    budgetCurrency?: string;
     status: string;
     budgetLines: Array<{ category: string; planned: unknown; currency: string }>;
   }>;
@@ -96,10 +98,10 @@ export interface DeterministicSectionResult {
 
 // ── Helpers purs ───────────────────────────────────────────────────────
 
-function str(v: unknown, max = 400): string | null {
+function str(v: unknown): string | null {
   if (typeof v !== "string") return null;
   const t = v.trim();
-  return t.length === 0 ? null : t.slice(0, max);
+  return t.length === 0 ? null : t;
 }
 
 function arr(v: unknown): unknown[] {
@@ -151,6 +153,7 @@ export async function loadComposerContext(strategyId: string): Promise<ComposerC
         select: {
           name: true,
           budget: true,
+          budgetCurrency: true,
           status: true,
           budgetLines: { select: { category: true, planned: true, currency: true } },
         },
@@ -237,16 +240,16 @@ function compose7S(ctx: ComposerContext): Blob {
   const s = ctx.pillars.s ?? {};
   const i = ctx.pillars.i ?? {};
 
-  const vision = str(s.visionStrategique, 300);
+  const vision = str(s.visionStrategique);
   const roadmapPhases = arr(s.roadmap).length;
   const equipe = arr(a.equipeDirigeante);
   const valeurs = names(arr(a.valeurs));
   const ton = (d.tonDeVoix ?? null) as Blob | null;
   const personnalite = ton ? names(arr(ton.personnalite)).join(", ") : null;
-  const canaux = i.catalogueParCanal && typeof i.catalogueParCanal === "object"
-    ? Object.keys(i.catalogueParCanal as Blob)
-    : [];
-  const initiatives = collectInitiatives(i) as Blob[];
+  const initiatives = collectNormalizedInitiatives(i);
+  // Semantic group fallbacks are not physical distribution channels.
+  const canaux = [...new Set(initiatives.map((it) => it.channel)
+    .filter((channel) => !["DEVOTION", "OVERTON", "GENERAL"].includes(channel)))];
   const competences = equipe.flatMap((m) => names(arr((m as Blob)?.competences ?? (m as Blob)?.skills)));
 
   const dim = (state: string | null, sources: Array<unknown>, gapLabel: string, reco: string) => {
@@ -274,10 +277,11 @@ function compose7S(ctx: ComposerContext): Blob {
         "Renseignez votre équipe dirigeante dans le pilier Authenticité",
       ),
       systems: dim(
-        canaux.length > 0 ? `${initiatives.length} initiative(s) sur ${canaux.length} canal/canaux : ${canaux.slice(0, 5).join(", ")}` : null,
+        initiatives.length > 0 ? `${initiatives.length} initiative(s)` +
+          (canaux.length > 0 ? ` sur ${canaux.length} canal/canaux : ${canaux.slice(0, 5).join(", ")}` : " — Canaux à préciser") : null,
         [canaux.length > 0 ? canaux : null, ctx.campaigns.length > 0 ? ctx.campaigns : null],
-        "Catalogue d'actions vide ou aucune campagne",
-        "Générez votre catalogue d'actions depuis le plan d'actions",
+        initiatives.length === 0 ? "Catalogue d’actions non renseigné" : "Aucune campagne enregistrée à partir du catalogue",
+        initiatives.length === 0 ? "Renseignez votre catalogue d’actions" : "Choisissez les actions à préparer ; leur présence au catalogue ne lance pas de campagne",
       ),
       shared_values: dim(
         valeurs.length > 0 ? `Valeurs hiérarchisées : ${valeurs.slice(0, 5).join(" · ")}` : null,
@@ -304,6 +308,7 @@ function compose7S(ctx: ComposerContext): Blob {
         "Détaillez les compétences de chaque profil de l'équipe dirigeante",
       ),
     },
+    scoreLabel: "Présence des informations dans le dossier, sur 10 ; ce score ne mesure pas l’efficacité de l’organisation.",
   };
 }
 
@@ -336,30 +341,29 @@ function composeBcgPortfolio(ctx: ComposerContext): Blob {
       dogs: [],
     },
     bcgHealthScore: Math.round((quadrantsFilled / 3) * 100) / 10, // /10
+    bcgHealthScale: 10,
+    scoreLabel: "Couverture documentaire des quadrants",
     methodologie:
-      "Classement déterministe : offres V = vaches à lait ; offres investies dans la roadmap S = étoiles ; innovations I = dilemmes. Aucun produit n'est classé 'poids mort' sans donnée de performance mesurée.",
+      "Projection exploratoire du portefeuille : offres V = vaches à lait ; offres citées dans la roadmap S = étoiles ; innovations I = dilemmes. Ces catégories issues des documents ne prouvent ni revenu courant, ni croissance, ni part de marché relative. Elles restent à confronter aux mesures. Aucun produit n’est classé poids mort sans donnée de performance.",
   };
 }
 
 function composeBainNps(ctx: ComposerContext): Blob {
+  const a = ctx.pillars.a ?? {};
   const e = ctx.pillars.e ?? {};
   const d = ctx.pillars.d ?? {};
-  const declared = num((ctx.pillars.a ?? {}).eNps) ?? num(e.eNps);
-
-  let score: number | null = declared;
-  let methode = "eNPS déclaré par l'opérateur";
-  const snap = ctx.devotionSnapshot;
-  if (score === null && snap) {
-    const total =
-      snap.spectateur + snap.interesse + snap.participant + snap.engage + snap.ambassadeur + snap.evangeliste;
-    if (total > 0) {
-      // Proxy déterministe : promoteurs = ambassadeurs+évangélistes ;
-      // détracteurs = spectateurs (audience non convertie).
-      // lafusee:allow-adhoc-completion — score NPS proxy (Devotion Ladder), pas de la complétion pillaire
-      score = Math.round(((snap.ambassadeur + snap.evangeliste - snap.spectateur) / total) * 100);
-      methode = "Proxy déterministe depuis la Devotion Ladder (promoteurs = ambassadeurs+évangélistes, détracteurs = spectateurs)";
-    }
-  }
+  const declared = a.indexReputation as Blob | undefined;
+  const candidate = num(declared?.score);
+  // Only the existing declared customer NPS, with its sample and date, is
+  // usable here. Engagement levels and employee eNPS are different measures.
+  const measured = declared?.source === "NPS" && candidate !== null
+    && candidate >= -100 && candidate <= 100
+    && Number.isInteger(declared.sampleSize) && Number(declared.sampleSize) > 0
+    && typeof declared.lastMeasured === "string" && Number.isFinite(Date.parse(declared.lastMeasured));
+  const score = measured ? candidate : null;
+  const methode = measured
+    ? `NPS client déclaré : ${declared.sampleSize} réponses, relevé du ${declared.lastMeasured}.`
+    : "NPS client non mesuré dans le dossier. Une enquête de recommandation est nécessaire ; les niveaux d’engagement ne permettent pas de le calculer.";
 
   const personas = arr(d.personas) as Blob[];
   const promoterDrivers = personas.flatMap((p) => names(arr(p.motivations))).slice(0, 5);
@@ -368,19 +372,22 @@ function composeBainNps(ctx: ComposerContext): Blob {
     ...names(arr(e.barriersEngagement)),
   ].slice(0, 5);
 
-  if (score === null && promoterDrivers.length === 0 && detractorDrivers.length === 0) return {};
-
-  const snapTotal = snap
-    ? snap.spectateur + snap.interesse + snap.participant + snap.engage + snap.ambassadeur + snap.evangeliste
-    : 0;
   return {
     bainNps: {
       score,
-      promoters: snap && snapTotal > 0 ? Math.round(((snap.ambassadeur + snap.evangeliste) / snapTotal) * 100) : null,
+      promoters: null, // a total NPS does not imply the response distribution
       drivers: { promoters: promoterDrivers, detractors: detractorDrivers },
+      driversLabel: "Pistes d’enquête issues des personas, à vérifier auprès des répondants",
       methode,
     },
   };
+}
+
+/** Preserve old assets while refusing their explicitly identified false NPS proxy. */
+export function hasLegacyNpsProxy(content: unknown): boolean {
+  if (!content || typeof content !== "object") return false;
+  const nps = (content as Blob).bainNps as Blob | undefined;
+  return typeof nps?.methode === "string" && /Devotion Ladder|eNPS déclaré/i.test(nps.methode);
 }
 
 function composeGreenhouse(ctx: ComposerContext): Blob {
@@ -392,7 +399,7 @@ function composeGreenhouse(ctx: ComposerContext): Blob {
   const profiles = equipe.map((m) => ({
     nom: str(m.nom ?? m.name) ?? "Profil",
     role: str(m.role ?? m.poste) ?? null,
-    competences: names(arr(m.competences ?? m.skills)),
+    competences: names(arr(m.competencesCles ?? m.competences ?? m.skills)),
   }));
   const roles = [...new Set(profiles.map((p) => p.role).filter(Boolean))];
   const canaux = i.catalogueParCanal && typeof i.catalogueParCanal === "object" ? Object.keys(i.catalogueParCanal as Blob) : [];
@@ -403,6 +410,7 @@ function composeGreenhouse(ctx: ComposerContext): Blob {
     deloitteGreenhouse: {
       team_profiles: profiles,
       complementarity_score: Math.round((roles.length / Math.max(1, profiles.length)) * 10 * 10) / 10,
+      scoreLabel: "Diversité des rôles déclarés, sur 10 ; ne mesure pas les compétences ou la performance de l’équipe.",
       execution_capacity: `${ctx.campaigns.filter((c) => c.status === "ACTIVE" || c.status === "IN_PROGRESS").length} campagne(s) active(s) / ${ctx.campaigns.length} totale(s)`,
       skill_gaps: gaps.length > 0 ? gaps.map((g) => `Canal ${g} sans compétence interne déclarée`) : ["Aucun gap détecté sur les canaux déclarés"],
     },
@@ -412,18 +420,21 @@ function composeGreenhouse(ctx: ComposerContext): Blob {
 function compose3Horizons(ctx: ComposerContext): Blob {
   const i = ctx.pillars.i ?? {};
   const s = ctx.pillars.s ?? {};
-  const initiatives = collectInitiatives(i) as Blob[];
+  const initiatives = collectNormalizedInitiatives(i);
 
-  const isShort = (it: Blob) => it.timeframe === "SPRINT_90" || it.timeframe === "PHASE_1";
-  const selected = initiatives.filter((it) => it.status === "SELECTED_FOR_ROADMAP");
+  const isShort = (it: (typeof initiatives)[number]) => it.timeframe === "SPRINT_90" || it.timeframe === "PHASE_1";
+  const ids = currentScenarioIds(s);
+  const selected = initiatives.filter(it => ids.has(it.id));
   const h1 = names(selected.filter(isShort), ["action", "titre", "title", "nom"]);
-  const h2 = names(selected.filter((it) => !isShort(it)), ["action", "titre", "title", "nom"]);
+  const h2 = names(selected.filter((it) => it.timeframe === "PHASE_2" || it.timeframe === "LONG_TERM"), ["action", "titre", "title", "nom"]);
+  const unassigned = names(selected.filter((it) => it.timeframe === undefined), ["action"]);
   const h3 = [
     ...names(arr(i.innovationsProduit)),
-    ...(str(s.visionStrategique, 200) ? [str(s.visionStrategique, 200)!] : []),
+    ...(str(s.visionStrategique) ? [str(s.visionStrategique)!] : []),
   ];
 
-  const total = h1.length + h2.length + h3.length;
+  const classified = h1.length + h2.length + h3.length;
+  const total = classified + unassigned.length;
   if (total === 0) return {};
   // lafusee:allow-adhoc-completion — répartition McKinsey 3-Horizons (h1/h2/h3), pas de la complétion pillaire
   const pct = (n: number) => Math.round((n / total) * 100);
@@ -434,6 +445,9 @@ function compose3Horizons(ctx: ComposerContext): Blob {
       h2: { label: "Émergent — phases suivantes de la roadmap", items: h2 },
       h3: { label: "Transformationnel — innovations + vision", items: h3 },
       allocation: { h1: pct(h1.length), h2: pct(h2.length), h3: pct(h3.length) },
+      unassigned: { label: "Échéances à préciser", items: unassigned },
+      coverage: { totalCount: total, classifiedCount: classified, unassignedCount: unassigned.length },
+      methodologie: "Classement exploratoire : actions sélectionnées à court terme en H1, phases suivantes en H2, innovations et vision en H3. Les pourcentages comptent les éléments du dossier ; ils ne mesurent pas une allocation financière ni des délais de réalisation.",
     },
   };
 }
@@ -470,26 +484,27 @@ function composeStrategyPalette(ctx: ComposerContext): Blob {
         signaux_faibles: weakSignals,
         concurrents_declares: concurrents,
       },
-      justification: `Classement déterministe : turbulence observée=${turbulence} (seuil 4), densité concurrentielle=${concurrents} (seuil 3).`,
+      justification: `Hypothèse de posture à valider : la règle utilise ${turbulence} tendances/signaux (seuil 4) et ${concurrents} concurrents déclarés (seuil 3). Ces compteurs ne mesurent pas directement la prévisibilité ni la malléabilité du marché.`,
     },
   };
 }
 
 function composeBudget(ctx: ComposerContext): Blob {
   const i = ctx.pillars.i ?? {};
-  const initiatives = collectInitiatives(i) as Blob[];
+  const initiatives = collectNormalizedInitiatives(i);
 
-  let total = 0;
-  let currency = "FCFA";
+  const campaignBudgetSummary = aggregateCampaignBudgets(ctx.campaigns);
+  let unknownLineCurrencyCount = 0;
   const byCategory: Record<string, number> = {};
   for (const c of ctx.campaigns) {
-    const b = num(c.budget);
-    if (b) total += b;
     for (const line of c.budgetLines) {
       const planned = num(line.planned);
-      if (planned) {
-        byCategory[line.category] = (byCategory[line.category] ?? 0) + planned;
-        currency = line.currency || currency;
+      if (planned !== null && planned >= 0) {
+        // Campaign envelopes and their lines are separate views, never added
+        // together. A line's currency cannot relabel a campaign envelope.
+        const lineCurrency = str(line.currency);
+        const category = `${line.category} (${lineCurrency ?? `devise à préciser · ligne ${++unknownLineCurrencyCount}`})`;
+        byCategory[category] = (byCategory[category] ?? 0) + planned;
       }
     }
   }
@@ -501,15 +516,15 @@ function composeBudget(ctx: ComposerContext): Blob {
   }
   const economiques = names(initiatives.filter((it) => it.budgetEstime === "LOW"), ["action", "titre", "nom"]).slice(0, 5);
 
-  if (total === 0 && Object.keys(byCategory).length === 0 && initiatives.length === 0) return {};
+  if (ctx.campaigns.length === 0 && initiatives.length === 0) return {};
 
   return {
     deloitteBudget: {
-      total_budget: total > 0 ? `${total.toLocaleString("fr-FR")} ${currency}` : "Aucun budget campagne engagé à date",
+      total_budget: campaignBudgetLabel(campaignBudgetSummary),
       allocation_par_categorie: byCategory,
       repartition_initiatives_par_intensite: histo,
       alternatives_economiques: economiques.length > 0 ? economiques : ["Aucune initiative LOW-budget cataloguée"],
-      methodologie: "Consolidation déterministe : budgets campagnes + lignes budgétaires réelles + intensités déclarées du catalogue I.",
+      methodologie: "Budgets déclarés des campagnes, séparés par devise. Ventilation des lignes présentée séparément, sans double comptage ni conversion. Intensités du catalogue sur les mêmes actions dédupliquées.",
     },
   };
 }
@@ -551,18 +566,20 @@ function composeManipulationMatrix(ctx: ComposerContext): Blob {
     facilitator: num(mix?.facilitator) ?? 0.25,
     entertainer: num(mix?.entertainer) ?? 0.25,
   };
-  const dominant = Object.entries(weights).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "facilitator";
+  const ranked = Object.entries(weights).sort((a, b) => b[1] - a[1]);
+  const complete = !!mix && Object.keys(weights).every(k => num(mix[k]) !== null);
+  const dominant = complete && ranked[0]![1] > ranked[1]![1] ? ranked[0]![0] : null;
 
   return {
     manipulationMatrix: {
       evaluations: Object.entries(weights).map(([mode, weight]) => ({
         mode,
         weight,
-        observed: mode === dominant ? "Mode dominant du mix stratégique déclaré" : "Présent dans le mix",
+        observed: !complete ? "Répartition exploratoire complétée par défaut — à valider" : mode === dominant ? "Part la plus élevée du mix déclaré" : "Part du mix déclaré",
       })),
       summary: {
         dominantMode: dominant,
-        mixSource: mix ? "Strategy.manipulationMix déclaré" : "Mix uniforme implicite (0.25 par mode — à back-filler)",
+        mixSource: complete ? "Mix déclaré dans le dossier ; aucune performance d’audience n’en est déduite." : "Mix incomplet ou absent : répartition exploratoire de départ, sans décision de marque validée.",
         rituelsDeclares: rituels.slice(0, 6),
         touchpointsDeclares: touchpoints.slice(0, 6),
       },
@@ -607,9 +624,9 @@ async function composeOverton(ctx: ComposerContext): Promise<Blob> {
   const s = ctx.pillars.s ?? {};
   const d = ctx.pillars.d ?? {};
   const fo = (s.fenetreOverton ?? {}) as Blob;
-  const current = str(fo.perceptionActuelle, 300);
-  const target = str(fo.perceptionCible, 300);
-  const positionnement = str(d.positionnement, 300);
+  const current = str(fo.perceptionActuelle);
+  const target = str(fo.perceptionCible);
+  const positionnement = str(d.positionnement);
 
   const axes: Array<Blob> = [];
   if (current || target) {
@@ -617,7 +634,7 @@ async function composeOverton(ctx: ComposerContext): Promise<Blob> {
       name: "Perception sectorielle (fenêtre Overton)",
       current_position: current ?? "Non mesurée",
       target_position: target ?? "Non définie",
-      gap: str(fo.ecart, 300) ?? (current && target ? "Écart qualitatif déclaré entre perception actuelle et cible" : "Données partielles"),
+      gap: str(fo.ecart) ?? (current && target ? "Écart qualitatif déclaré entre perception actuelle et cible" : "Données partielles"),
     });
   }
   if (positionnement) {
@@ -665,21 +682,38 @@ function composeTarsisSignals(ctx: ComposerContext): Blob {
   const tarsisLike = ctx.signals.filter(
     (sg) => sg.type.toUpperCase().includes("TARSIS") || sg.type.toUpperCase().includes("WEAK") || sg.type.toUpperCase().includes("SIGNAL"),
   );
-  if (tarsisLike.length === 0) return {};
-
-  const signals = tarsisLike.slice(0, 12).map((sg) => {
+  const recorded = tarsisLike.map((sg) => {
     const data = (sg.data ?? {}) as Blob;
     return {
-      description: str(data.description ?? data.summary ?? data.title, 300) ?? sg.type,
+      description: str(data.description ?? data.summary ?? data.title) ?? sg.type,
       category: str(data.category) ?? sg.type,
       impact: num(data.impact) ?? num(data.impactScore) ?? null,
       horizon: str(data.horizon) ?? null,
-      action: str(data.action ?? data.recommendation, 200) ?? null,
+      action: str(data.action ?? data.recommendation) ?? null,
       confidence: num(data.confidence) ?? null,
       detectedAt: sg.createdAt.toISOString(),
+      qualification: "Signal enregistré dans le dossier ; sa date d’enregistrement n’est pas nécessairement la date de l’événement.",
     };
   });
-
+  const t = ctx.pillars.t ?? {};
+  const analyzed = arr(t.weakSignalAnalysis).flatMap(raw => {
+    if (!raw || typeof raw !== "object") return [];
+    const w = raw as Blob;
+    const description = str(w.thesis ?? w.rawEvent);
+    return description ? [{ description, category: str(w.taxonomy ?? w.category) ?? "Analyse du dossier",
+      impact: num(w.impactScore ?? w.impact), horizon: str(w.horizon), action: str(w.recommendedAction ?? w.recommendation ?? w.action),
+      confidence: num(w.confidence), detectedAt: null, qualification: "Analyse du marché issue du dossier, à vérifier avec ses sources ; aucune observation datée ajoutée." }] : [];
+  });
+  const declared = names(arr((t.marketReality as Blob | undefined)?.weakSignals)).map(description => ({
+    description, category: "Signal déclaré", impact: null, horizon: null, action: null, confidence: null, detectedAt: null,
+    qualification: "Signal mentionné dans la lecture de marché ; date, origine et validation à préciser.",
+  }));
+  const seen = new Set<string>();
+  const signals = [...recorded, ...analyzed, ...declared].filter(sg => {
+    if (seen.has(sg.description)) return false;
+    seen.add(sg.description); return true;
+  });
+  if (signals.length === 0) return {};
   return { tarsisWeakSignals: { signals, top3: signals.slice(0, 3) } };
 }
 

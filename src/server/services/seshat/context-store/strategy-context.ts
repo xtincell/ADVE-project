@@ -23,7 +23,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
-import type { PreciseField } from "./oracle-augment";
+import { pillarPreciseFields, strategyPreciseField, type PreciseField } from "./oracle-augment";
 
 export interface FrameworkStrategyContext {
   /** Plain-text lines for system prompt injection (legacy executeFramework format) */
@@ -50,7 +50,7 @@ export async function loadStrategyContextForFramework(
   const strategy = await db.strategy.findUnique({
     where: { id: strategyId },
     include: {
-      pillars: { select: { key: true, content: true, updatedAt: true } },
+      pillars: { select: { id: true, key: true, currentVersion: true, content: true, fieldCertainty: true, updatedAt: true } },
       drivers: {
         where: { deletedAt: null, status: "ACTIVE" },
         select: { id: true, channel: true },
@@ -75,7 +75,7 @@ export async function loadStrategyContextForFramework(
         .reduce((s, k) => s + (vec[k] ?? 0), 0)
         .toFixed(0)}/200`,
     );
-    precise.push({ source: "score", field: "advertisVector", value: vec });
+    precise.push(strategyPreciseField(strategyId, "score", "advertisVector", vec, strategy?.updatedAt));
   }
 
   // Business context (precise)
@@ -83,13 +83,13 @@ export async function loadStrategyContextForFramework(
   if (bizCtx) {
     lines.push(`Modele d'affaires: ${bizCtx.businessModel ?? "N/A"}`);
     lines.push(`Positionnement: ${bizCtx.positioningArchetype ?? "N/A"}`);
-    precise.push({ source: "biz", field: "businessContext", value: bizCtx });
+    precise.push(strategyPreciseField(strategyId, "biz", "businessContext", bizCtx, strategy?.updatedAt));
   }
 
   // Financial capacity (precise — Thot)
   const finCap = strategy?.financialCapacity as Record<string, unknown> | null;
   if (finCap) {
-    precise.push({ source: "thot", field: "financialCapacity", value: finCap });
+    precise.push(strategyPreciseField(strategyId, "thot", "financialCapacity", finCap, strategy?.updatedAt));
     if (typeof finCap.reconciled === "number") {
       lines.push(`Capacité financière (Thot): ${finCap.reconciled} ${finCap.currency ?? "XAF"} (confiance ${finCap.confidence ?? "?"})`);
     }
@@ -100,19 +100,7 @@ export async function loadStrategyContextForFramework(
     for (const p of strategy.pillars) {
       const content = p.content as Record<string, unknown> | null;
       if (content?.summary) lines.push(`Pilier ${p.key}: ${content.summary}`);
-      // Add full content as precise field so frameworks can cite verbatim
-      if (content && Object.keys(content).length > 0) {
-        for (const [field, value] of Object.entries(content)) {
-          if (value === null || value === undefined || value === "") continue;
-          if (Array.isArray(value) && value.length === 0) continue;
-          precise.push({
-            source: p.key,
-            field,
-            value,
-            lastWrittenAt: p.updatedAt,
-          });
-        }
-      }
+      precise.push(...pillarPreciseFields(p));
     }
   }
 

@@ -12,6 +12,7 @@ import { assertCampaignHasBrief } from "@/server/services/campaign-manager/brief
 import * as cm from "@/server/services/campaign-manager";
 import { canAccessStrategy, canAccessMission, getOperatorContext, scopeMissions } from "@/server/services/operator-isolation";
 import { TRPCError } from "@trpc/server";
+import { accessible, entityNotFound, found } from "../entity-access";
 /* lafusee:governed-active */
 
 /**
@@ -25,6 +26,9 @@ function stripGuildContacts(briefData: unknown): unknown {
 }
 
 /** Founder-safe ownership guard (ADR-0144) — résout mission/activité → marque. */
+/** IN1 : une mission inconnue et une mission hors d'atteinte reçoivent le même 404. */
+const MISSION_NOT_FOUND = "Mission introuvable.";
+
 async function enforceStrategyAccess(
   ctx: { session: { user: { id: string; role: string; operatorId?: string | null } } },
   strategyId: string,
@@ -63,12 +67,11 @@ async function enforceDeliverableAccess(
   },
   deliverableId: string,
 ) {
-  const d = await ctx.db.missionDeliverable.findUnique({
+  // IN1 : inconnu ou d'une mission hors d'atteinte, le même 404.
+  await accessible(ctx.db.missionDeliverable.findUnique({
     where: { id: deliverableId },
     select: { missionId: true },
-  });
-  if (!d) throw new TRPCError({ code: "NOT_FOUND", message: "Livrable introuvable" });
-  await enforceMissionAccess(ctx, d.missionId);
+  }), "Livrable introuvable", (d) => enforceMissionAccess(ctx, d.missionId));
 }
 
 /** Résout une activité → sa mission → enforce (activity cluster round-10 IDOR). */
@@ -79,12 +82,11 @@ async function enforceActivityAccess(
   },
   activityId: string,
 ) {
-  const a = await ctx.db.missionActivity.findUnique({
+  // IN1 : inconnue ou d'une mission hors d'atteinte, le même 404.
+  await accessible(ctx.db.missionActivity.findUnique({
     where: { id: activityId },
     select: { missionId: true },
-  });
-  if (!a) throw new TRPCError({ code: "NOT_FOUND", message: "Activité introuvable" });
-  await enforceMissionAccess(ctx, a.missionId);
+  }), "Activité introuvable", (a) => enforceMissionAccess(ctx, a.missionId));
 }
 
 export const missionRouter = createTRPCRouter({
@@ -166,7 +168,7 @@ export const missionRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await enforceMissionAccess(ctx, input.id); // anti-IDOR (update→COMPLETED cascade payout)
       const { id, briefData, slaDeadline, ...data } = input;
-      const previous = await ctx.db.mission.findUniqueOrThrow({ where: { id }, include: { strategy: true } });
+      const previous = found(await ctx.db.mission.findUnique({ where: { id }, include: { strategy: true } }), MISSION_NOT_FOUND);
       const updated = await ctx.db.mission.update({
         where: { id },
         data: {
@@ -273,11 +275,10 @@ export const missionRouter = createTRPCRouter({
     caller: "mission:start",
   })
     .mutation(async ({ ctx, input }) => {
-      const mission = await ctx.db.mission.findUniqueOrThrow({
+      const mission = await accessible(ctx.db.mission.findUnique({
         where: { id: input.missionId },
         select: { id: true, strategyId: true, status: true, title: true },
-      });
-      await enforceStrategyAccess(ctx, mission.strategyId);
+      }), MISSION_NOT_FOUND, (m) => enforceStrategyAccess(ctx, m.strategyId));
       if (mission.status !== "DRAFT") return mission; // déjà lancée/close — no-op honnête
       const updated = await ctx.db.mission.update({
         where: { id: mission.id },
@@ -355,15 +356,16 @@ export const missionRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
 
-      const mission = await ctx.db.mission.findUniqueOrThrow({
+      const mission = await ctx.db.mission.findUnique({
         where: { id: input.missionId },
       });
 
       // anti-IDOR (round-10) : le self-assign ne concerne QUE le mur public de la
       // Guilde. Sans ce gate, une mission DRAFT PRIVÉE (interne, non publiée)
       // était revendicable par n'importe quel talent (mirroir mission-applications.submit).
-      if (!mission.guildPublished) {
-        throw new Error("Mission non disponible sur le mur de la Guilde");
+      // IN1 : inconnue ou privée, la même réponse 404 (plus de 500).
+      if (!mission || !mission.guildPublished) {
+        throw entityNotFound("Mission non disponible sur le mur de la Guilde");
       }
       if (mission.status !== "DRAFT") {
         throw new Error("Mission déjà prise ou non disponible");
@@ -429,7 +431,7 @@ export const missionRouter = createTRPCRouter({
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const mission = await ctx.db.mission.findUniqueOrThrow({
+      const mission = found(await ctx.db.mission.findUnique({
         where: { id: input.id },
         include: {
           deliverables: { include: { qualityReviews: true } },
@@ -438,7 +440,7 @@ export const missionRouter = createTRPCRouter({
           driver: true,
           commissions: true,
         },
-      });
+      }), MISSION_NOT_FOUND);
       const opCtx = await getOperatorContext(ctx.session.user.id);
       if (await canAccessMission(mission.id, opCtx)) return mission;
       // Mission guilde PUBLIÉE encore ouverte : lisible par les talents qui
@@ -451,7 +453,7 @@ export const missionRouter = createTRPCRouter({
           strategy: null,
         };
       }
-      throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette mission" });
+      throw entityNotFound(MISSION_NOT_FOUND); // IN1 : comme une mission inconnue
     }),
 
   list: protectedProcedure
@@ -488,7 +490,9 @@ export const missionRouter = createTRPCRouter({
           ? { assigneeId: ctx.session.user.id }
           : input.strategyId
             ? {}
-            : { OR: [scopeMissions(opCtx), { assigneeId: ctx.session.user.id }] };
+            : opCtx.role === "ADMIN"
+              ? {}
+              : { OR: [scopeMissions(opCtx), { assigneeId: ctx.session.user.id }] };
       const missions = await ctx.db.mission.findMany({
         where: { ...filters, ...accessWhere },
         include: {
@@ -537,16 +541,16 @@ export const missionRouter = createTRPCRouter({
       // Audit 2026-07-16 `creator-active-missions-unscoped-and-deliverable-no-assignee-guard` :
       // n'importe quel compte pouvait créer un livrable sur la mission d'autrui
       // et la basculer en REVIEW. Seuls l'assignee et le périmètre marque passent.
-      const target = await ctx.db.mission.findUniqueOrThrow({
+      await accessible(ctx.db.mission.findUnique({
         where: { id: input.missionId },
         select: { assigneeId: true, strategyId: true },
-      });
-      if (target.assigneeId !== ctx.session.user.id) {
+      }), MISSION_NOT_FOUND, async (target) => {
+        if (target.assigneeId === ctx.session.user.id) return;
         const opCtx = await getOperatorContext(ctx.session.user.id);
         if (!(await canAccessStrategy(target.strategyId, opCtx))) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Seul le talent assigné peut soumettre un livrable sur cette mission." });
         }
-      }
+      });
       const deliverable = await ctx.db.missionDeliverable.create({
         data: {
           missionId: input.missionId,
@@ -831,7 +835,7 @@ export const missionRouter = createTRPCRouter({
     caller: "mission:cancel",
   }).mutation(async ({ ctx, input }) => {
     await enforceMissionAccess(ctx, input.id); // anti-IDOR
-    const m = await ctx.db.mission.findUniqueOrThrow({ where: { id: input.id }, select: { briefData: true } });
+    const m = found(await ctx.db.mission.findUnique({ where: { id: input.id }, select: { briefData: true } }), MISSION_NOT_FOUND);
     const bd = (m.briefData ?? {}) as Record<string, unknown>;
     return ctx.db.mission.update({
       where: { id: input.id },

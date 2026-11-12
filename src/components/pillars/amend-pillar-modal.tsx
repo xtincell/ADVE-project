@@ -12,12 +12,18 @@
  * ADR-0023 §I.2). Zod stays the runtime validator at the gateway.
  */
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useId } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { Modal } from "@/components/shared/modal";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { financialModelDraft } from "@/components/shared/financial-model-editor";
+import { FinancialWorkingModelSchema, BreakEvenDocumentModelSchema } from "@/domain/financial-document";
 import { StructuredFieldControl } from "@/components/shared/smart-field-editor";
 import { hasFieldDef } from "@/lib/types/field-registry";
+import { SourceReadDialog } from "@/components/brand/source-read-dialog";
+import { Button } from "@/components/primitives/button";
+import { FriendlyError, FriendlyWarnings } from "@/components/shared/friendly-error";
+import type { SourceReceipt } from "@/domain/source-certainty";
 import { Sparkles, AlertTriangle, Loader2, Send, Lock } from "lucide-react";
 
 type AdveKey = "A" | "D" | "V" | "E";
@@ -33,29 +39,76 @@ interface AmendPillarModalProps {
   onApplied?: (result: { stalePillars: string[]; staleAssets: number; version: number }) => void;
 }
 
-export function AmendPillarModal({
+export function AmendPillarModal(props: AmendPillarModalProps) {
+  // Une fermeture ou un autre dossier ne réutilise jamais une proposition
+  // non soumise. Les callbacks en vol appartiennent à l'ancienne session.
+  return props.open ? (
+    <AmendPillarSession key={JSON.stringify([props.strategyId, props.pillarKey, props.initialField])} {...props} />
+  ) : null;
+}
+
+function AmendPillarSession(props: AmendPillarModalProps) {
+  const [field, setField] = useState<string | null>(props.initialField ?? null);
+  const [mode, setMode] = useState<Mode>("PATCH_DIRECT");
+  return (
+    <AmendPillarEditor key={JSON.stringify([field, mode])} {...props}
+      field={field} mode={mode} onFieldChange={setField} onModeChange={setMode} />
+  );
+}
+
+interface AmendPillarEditorProps extends AmendPillarModalProps {
+  field: string | null;
+  mode: Mode;
+  onFieldChange: (field: string | null) => void;
+  onModeChange: (mode: Mode) => void;
+}
+
+function AmendPillarEditor({
   open,
   onClose,
   strategyId,
   pillarKey,
-  initialField,
   onApplied,
-}: AmendPillarModalProps) {
-  const [field, setField] = useState<string | null>(initialField ?? null);
-  const [mode, setMode] = useState<Mode>("PATCH_DIRECT");
+  field,
+  mode,
+  onFieldChange,
+  onModeChange,
+}: AmendPillarEditorProps) {
+  const inputId = useId();
+  const active = useRef(true);
+  const previewRevision = useRef(0);
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
   const [proposedValue, setProposedValue] = useState<string>("");
   const [rephrasePrompt, setRephrasePrompt] = useState<string>("");
+  const [previewWarning, setPreviewWarning] = useState<string | null>(null);
   const [reason, setReason] = useState<string>("");
   const [overrideLocked, setOverrideLocked] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   // Brouillon structuré (éditeur récursif) — utilisé en PATCH_DIRECT quand le
   // champ a une shape déclarée au registre (matrices, objets imbriqués).
   const [structuredDraft, setStructuredDraft] = useState<unknown>(null);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [readingSource, setReadingSource] = useState<{ id: string; label: string } | null>(null);
+  const [references, setReferences] = useState<Array<SourceReceipt & { label: string }>>([]);
+  const sources = trpc.ingestion.listSources.useQuery({ strategyId }, {
+    enabled: sourcesOpen && Boolean(field), staleTime: 0, refetchOnMount: "always",
+  });
 
-  const editable = trpc.pillar.listEditableFields.useQuery(
+  const latestEditable = trpc.pillar.listEditableFields.useQuery(
     { strategyId, pillarKey },
     { enabled: open },
   );
+  // Conserver le contenu ET la version à partir desquels ce brouillon est
+  // saisi. Un refetch ne doit ni écraser une cellule, ni actualiser la
+  // précondition d'un patch ancien : le serveur refuse alors le conflit.
+  const [snapshot, setSnapshot] = useState(latestEditable.data);
+  useEffect(() => {
+    if (!snapshot && latestEditable.data) setSnapshot(latestEditable.data);
+  }, [snapshot, latestEditable.data]);
+  const editable = { ...latestEditable, data: snapshot };
   const previewMutation = trpc.pillar.previewAmend.useMutation();
   const amendMutation = trpc.pillar.amend.useMutation();
 
@@ -63,13 +116,17 @@ export function AmendPillarModal({
     () => editable.data?.fields.find((f) => f.field === field) ?? null,
     [editable.data, field],
   );
+  const requiresRewrite = selectedFieldEntry?.spec.editableMode === "STRATEGIC_REWRITE";
+  useEffect(() => {
+    if (requiresRewrite && mode !== "STRATEGIC_REWRITE") onModeChange("STRATEGIC_REWRITE");
+  }, [requiresRewrite, mode, onModeChange]);
 
-  // Édition profonde structurée : PATCH_DIRECT + champ à shape déclarée au
+  // Édition manuelle structurée : champ à shape déclarée au
   // registre → éditeur récursif (matrice/objet imbriqué jusqu'à la feuille) au
   // lieu du textarea JSON brut. Le write reste la voie gouvernée OPERATOR_AMEND_PILLAR.
   const pillarKeyLower = pillarKey.toLowerCase();
   const usesStructured =
-    Boolean(field) && mode === "PATCH_DIRECT" && hasFieldDef(pillarKeyLower, field ?? "");
+    Boolean(field) && mode !== "LLM_REPHRASE" && hasFieldDef(pillarKeyLower, field ?? "");
 
   // Réinitialise le brouillon structuré sur la valeur courante quand le champ
   // (ou son chargement async) change — l'éditeur récursif part de l'existant.
@@ -80,18 +137,30 @@ export function AmendPillarModal({
   const isLocked = editable.data?.validationStatus === "LOCKED";
   const reasonTooShort = mode === "STRATEGIC_REWRITE" && reason.trim().length < 20;
   const cannotApply =
-    !field ||
+    !field || !selectedFieldEntry || !editable.data || !reason.trim() ||
+    (requiresRewrite && mode !== "STRATEGIC_REWRITE") ||
     reasonTooShort ||
     (mode === "PATCH_DIRECT" && !usesStructured && !proposedValue) ||
     (mode === "LLM_REPHRASE" && !proposedValue) ||
-    amendMutation.isPending;
+    amendMutation.isPending ||
+    (field === "financialModel" && !FinancialWorkingModelSchema.safeParse(structuredDraft).success);
 
   function handlePreview() {
     if (!field || !rephrasePrompt) return;
+    const revision = ++previewRevision.current;
+    setPreviewWarning(null);
     previewMutation.mutate(
       { strategyId, pillarKey, field, rephrasePrompt },
       {
         onSuccess: (out) => {
+          if (!active.current || previewRevision.current !== revision) return;
+          // Un repli contient la consigne brute, jamais une reformulation reçue.
+          if (out.source !== "llm_rephrase") {
+            setPreviewWarning(out.source === "passthrough_no_schema"
+              ? "La reformulation n’est pas disponible pour ce champ. Votre saisie est conservée ; vous pouvez la compléter et l’appliquer manuellement."
+              : "La reformulation n’a pas abouti. Votre saisie est conservée ; vous pouvez réessayer ou la compléter et l’appliquer manuellement.");
+            return;
+          }
           if (typeof out.proposedValue === "string") setProposedValue(out.proposedValue);
           else if (out.proposedValue != null) setProposedValue(JSON.stringify(out.proposedValue, null, 2));
         },
@@ -100,7 +169,7 @@ export function AmendPillarModal({
   }
 
   function doApply() {
-    if (!field) return;
+    if (cannotApply || !field) return;
     let parsedValue: unknown;
     if (usesStructured) {
       // L'éditeur récursif a construit la valeur complète (matrice/objet
@@ -128,9 +197,13 @@ export function AmendPillarModal({
         reason,
         overrideLocked: isLocked ? overrideLocked : undefined,
         expectedVersion: editable.data?.version,
+        // Keep the fingerprint actually read, even after a refetch. The
+        // existing writer rejects changed/revoked documents and stale pillars.
+        sourceReceipts: references.length ? references.map(({ sourceId, contentHash }) => ({ sourceId, contentHash })) : undefined,
       },
       {
         onSuccess: (res) => {
+          if (!active.current) return;
           if (res.status === "OK") {
             const out = (res.output ?? {}) as {
               version?: number;
@@ -156,7 +229,7 @@ export function AmendPillarModal({
 
   return (
     <>
-      <Modal open={open} onClose={onClose} size="xl" title={`Amender pilier ${pillarKey}`}>
+      <Modal open={open && !readingSource} onClose={onClose} size="xl" title={`Amender pilier ${pillarKey}`}>
         <div className="space-y-4">
           {/* Header status */}
           <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-surface-raised px-3 py-2 text-xs">
@@ -185,12 +258,14 @@ export function AmendPillarModal({
           </div>
 
           {/* Field selector */}
+          <FriendlyError error={latestEditable.error} />
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-foreground-secondary">Variable à amender</label>
+            <label htmlFor={`${inputId}-field`} className="block text-xs font-medium text-foreground-secondary">Variable à amender</label>
             <select
+              id={`${inputId}-field`}
               className="w-full rounded-lg border border-white/10 bg-background-overlay px-3 py-2 text-sm"
               value={field ?? ""}
-              onChange={(e) => setField(e.target.value || null)}
+              onChange={(e) => onFieldChange(e.target.value || null)}
               disabled={editable.isLoading}
             >
               <option value="">Choisir une variable…</option>
@@ -216,7 +291,8 @@ export function AmendPillarModal({
                   <button
                     key={m}
                     type="button"
-                    onClick={() => setMode(m)}
+                    onClick={() => onModeChange(m)}
+                    disabled={requiresRewrite && m !== "STRATEGIC_REWRITE"}
                     className={`flex-1 rounded-md px-2 py-1 text-xs font-medium ${
                       mode === m ? "bg-accent/20 text-accent" : "text-foreground-muted hover:text-foreground"
                     }`}
@@ -230,7 +306,7 @@ export function AmendPillarModal({
           ) : null}
 
           {/* Current value */}
-          {field ? (
+          {field && field !== "financialModel" ? (
             <div className="space-y-1">
               <label className="block text-xs font-medium text-foreground-secondary">Valeur actuelle</label>
               <pre className="max-h-32 overflow-auto rounded-lg border border-white/5 bg-surface-raised px-3 py-2 text-xs text-foreground-muted">
@@ -246,14 +322,15 @@ export function AmendPillarModal({
           {/* LLM_REPHRASE prompt */}
           {field && mode === "LLM_REPHRASE" ? (
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-foreground-secondary">
+              <label htmlFor={`${inputId}-prompt`} className="block text-xs font-medium text-foreground-secondary">
                 Décris ton intention en langage naturel
               </label>
               <textarea
+                id={`${inputId}-prompt`}
                 className="w-full rounded-lg border border-white/10 bg-background-overlay px-3 py-2 text-sm"
                 rows={3}
                 value={rephrasePrompt}
-                onChange={(e) => setRephrasePrompt(e.target.value)}
+                onChange={(e) => { previewRevision.current++; setRephrasePrompt(e.target.value); }}
                 placeholder="Ex: Renforcer le ton premium, supprimer toute référence au low-cost…"
               />
               <button
@@ -269,13 +346,14 @@ export function AmendPillarModal({
                 )}
                 Prévisualiser
               </button>
+              <FriendlyWarnings warnings={previewWarning ? [previewWarning] : null} />
             </div>
           ) : null}
 
           {/* Proposed value */}
           {field ? (
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-foreground-secondary">
+              <label htmlFor={usesStructured ? undefined : `${inputId}-proposed`} className="block text-xs font-medium text-foreground-secondary">
                 Valeur proposée
                 {selectedFieldEntry?.spec.format && !usesStructured ? (
                   <span className="ml-2 text-[10px] text-foreground-muted">
@@ -294,14 +372,16 @@ export function AmendPillarModal({
                   fieldKey={field}
                   value={structuredDraft}
                   onChange={setStructuredDraft}
+                  payerOptions={editable.data?.payerOptions}
                 />
               ) : (
                 <textarea
+                  id={`${inputId}-proposed`}
                   className="w-full rounded-lg border border-white/10 bg-background-overlay px-3 py-2 text-sm font-mono"
                   rows={5}
                   value={proposedValue}
-                  onChange={(e) => setProposedValue(e.target.value)}
-                  placeholder={selectedFieldEntry?.spec.examples?.[0] ?? ""}
+                  onChange={(e) => { previewRevision.current++; setProposedValue(e.target.value); }}
+                  placeholder="Saisir la valeur de ce champ"
                 />
               )}
               {selectedFieldEntry?.spec.maxLength && !usesStructured ? (
@@ -312,16 +392,19 @@ export function AmendPillarModal({
             </div>
           ) : null}
 
+          {field === "financialModel" && <FriendlyWarnings warnings={previewWarning ? [previewWarning] : null} />}
+
           {/* Reason */}
           {field ? (
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-foreground-secondary">
+              <label htmlFor={`${inputId}-reason`} className="block text-xs font-medium text-foreground-secondary">
                 Raison
                 {mode === "STRATEGIC_REWRITE" ? (
                   <span className="ml-2 text-[10px] text-amber-400">(≥20 caractères)</span>
                 ) : null}
               </label>
               <textarea
+                id={`${inputId}-reason`}
                 className="w-full rounded-lg border border-white/10 bg-background-overlay px-3 py-2 text-sm"
                 rows={2}
                 value={reason}
@@ -332,6 +415,28 @@ export function AmendPillarModal({
           ) : null}
 
           {/* STRATEGIC_REWRITE warning */}
+          {field && <section aria-label="Documents de référence" className="space-y-3 rounded-lg border border-border p-3 text-sm">
+            <p className="font-medium">Documents de référence · facultatif</p>
+            <p className="text-foreground-secondary">Consultez un document pour joindre sa version à cette correction. La saisie manuelle reste disponible sans document ni assistance.</p>
+            {references.length > 0 && <ul className="space-y-2">{references.map(reference => <li key={reference.sourceId} className="flex flex-wrap items-center justify-between gap-2">
+              <span>{reference.label}</span>
+              <Button variant="ghost" size="sm" aria-label={`Retirer la référence ${reference.label}`}
+                onClick={() => { setReferences(current => current.filter(item => item.sourceId !== reference.sourceId));
+                  if (field === "financialModel" && (structuredDraft as { source?: SourceReceipt } | null)?.source?.sourceId === reference.sourceId) setStructuredDraft({ ...financialModelDraft(structuredDraft), source: undefined });
+                }}>Retirer</Button>
+            </li>)}</ul>}
+            <Button variant="outline" size="sm" onClick={() => setSourcesOpen(value => !value)}>{sourcesOpen ? "Masquer les documents" : "Ajouter un document"}</Button>
+            {sourcesOpen && <div className="space-y-2">
+              {(sources.isLoading || sources.isFetching) ? <p role="status">Chargement des documents…</p> : sources.error ? <FriendlyError error={sources.error} /> :
+                !sources.data?.length ? <p className="text-foreground-secondary">Aucun document accessible dans ce dossier.</p> :
+                  <ul className="max-h-48 space-y-2 overflow-y-auto">{sources.data.filter(source => field !== "financialModel" || source.document?.kind === "FINANCE").map(source => {
+                    const label = source.fileName || "Document sans titre";
+                    return <li key={source.id}><Button variant="ghost" size="sm" aria-label={`Consulter ${label}`}
+                      onClick={() => setReadingSource({ id: source.id, label })}>{label}</Button></li>;
+                  })}</ul>}
+            </div>}
+          </section>}
+
           {mode === "STRATEGIC_REWRITE" ? (
             <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
@@ -343,6 +448,8 @@ export function AmendPillarModal({
           ) : null}
 
           {/* Backend errors */}
+          <FriendlyError error={amendMutation.error} />
+          <FriendlyError error={previewMutation.error} />
           {amendMutation.data && amendMutation.data.status !== "OK" ? (
             <div className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs text-error">
               {amendMutation.data.summary}
@@ -374,6 +481,31 @@ export function AmendPillarModal({
           </div>
         </div>
       </Modal>
+
+      {readingSource && <SourceReadDialog sourceId={readingSource.id} strategyId={strategyId}
+        onClose={() => setReadingSource(null)} onCite={(receipt, document) => {
+          if (!active.current || receipt.sourceId !== readingSource.id) return;
+          if (field === "financialModel") {
+            if (document?.kind !== "FINANCE") { setPreviewWarning("Choisissez un document financier pour le modèle."); setReadingSource(null); setSourcesOpen(true); return; }
+            const next = financialModelDraft(structuredDraft);
+            // An unfilled draft may start from the structured financial edition
+            // actually read. Subsequent attachments never overwrite edited premises.
+            if (!structuredDraft) {
+              try {
+                const parsed: unknown = JSON.parse(document.rawContent);
+                const working = FinancialWorkingModelSchema.safeParse(parsed);
+                const basis = BreakEvenDocumentModelSchema.safeParse(parsed);
+                if (working.success) Object.assign(next, working.data);
+                else if (basis.success) next.breakEven = basis.data;
+              } catch { /* A prose edition remains a reference for manual premises. */ }
+            }
+            setStructuredDraft({ ...next, source: receipt });
+            setPreviewWarning(null);
+          }
+          setReferences(current => [...current.filter(reference => reference.sourceId !== receipt.sourceId), { ...receipt, label: readingSource.label }]);
+          setReadingSource(null);
+          setSourcesOpen(false);
+        }} />}
 
       <ConfirmDialog
         open={confirmOpen}

@@ -15,6 +15,7 @@ import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
+import { BrandCreativeIntelligence } from "@/components/cockpit/creative-intelligence";
 import { BarChart3, ArrowRight, TrendingUp, Users, MessageCircle } from "lucide-react";
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -75,6 +76,7 @@ export default function SocialReportPage() {
           ))}
         </div>
       </PageHeader>
+      <BrandCreativeIntelligence strategyId={strategyId} />
 
       {report.isLoading ? (
         <p className="ck-ops__note">Calcul du rapport…</p>

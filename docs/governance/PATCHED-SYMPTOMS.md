@@ -28,10 +28,1827 @@ les lignes qui en dérivaient (+ mention CHANGELOG).
 
 ---
 
+### 4.11.d — restitution intake : nom de modèle et nombre de paliers faux (2026-11-12)
+
+Symptôme : en traitant les chiffres non sourcés, deux défauts voisins rendus au prospect. Le badge de la recommandation affichait le nom du modèle (`intakeResult.reco.badge`, FR/EN/ZH) ; l’écran d’attente annonçait « 7 paliers » alors que `BRAND_TIERS` en compte six. Badge reformulé « Analyse assistée », compte corrigé à 6.
+
+Hypothèse de cause racine : `src/lib/i18n/pages/intake-result.ts` était hors du périmètre de `cockpit-vocabulary` et aucun verrou ne relie un compte écrit en toutes lettres à son registre. Fichier ajouté au verrou de vocabulaire ; les noms de modèles ne figurent pas encore dans ses motifs interdits.
+
+Dette liée : RESIDUAL-DEBT, résidus de la restitution commerciale (plan 4.11.d).
+
+### 570 — cinq écrivains acceptaient une entité d’une autre marque (2026-11-11)
+
+Symptôme : la garde de marque portait sur l’identifiant de tête, pas sur l’entité liée. `campaignManager.createFromValidatedAction` créait une campagne de la marque gardée à partir de l’action d’une autre marque (titre, description, budget copiés, statut de l’action étrangère modifié) ; `consulting.linkRecommendation` rattachait une recommandation à l’hypothèse d’une autre marque ; `pillar.applyGloryOutput` écrivait dans un pilier le résultat d’outil d’une autre marque ; `bureauEtudes.compareWaves` lisait l’échantillon des vagues d’une autre étude ; `campaignTracker.reportFieldProgress` (opérateur) écrivait un rapport terrain sur l’opération d’une autre équipe. Patch (v6.27.570) : l’entité liée doit appartenir à la marque, à l’étude ou à la campagne gardée, sinon le même 404 qu’un id inconnu, avant toute écriture. Croisé en convertissant les lectures `OrThrow` des routeurs (IN1), même commit `fix(trpc)`.
+
+Hypothèse de cause racine : un identifiant secondaire de l’entrée est lu sans garde parce que la garde ADR-0175/ADR-0166 ne voit que l’identifiant de tête, et le verrou `entity-id-idor-proactive` ne contrôle que la présence d’une garde dans la procédure, pas qu’elle couvre chaque identifiant. Dette liée : aucune nouvelle ; le cliquet `router-entity-not-found` impose désormais la lecture sans exception, pas l’appartenance (revue).
+
+### 560 — `/status` affichait « Opérationnel » sans mesure ; la force /200 annoncée sans être affichée (2026-11-11)
+
+Symptôme : `/status` remplaçait chaque lecture échouée par 0 (`.catch(() => 0)`) et posait `successRate = 100` quand il n'y avait ni succès ni échec : base injoignable ou journée sans activité donnaient « Opérationnel 100 % ». Un moyen de paiement à clés posées était « ✓ actif », même refusé par le prestataire (CinetPay, 513). Sur le résultat du diagnostic, la phrase « voici la force qu'elle révèle — le score complet /200 » était posée par la page même quand `ForceSection` ne rendait rien. Patch : `derivePublicStatus` (`src/lib/public-status.ts`), « Non mesuré » avec sa raison, « configuré » ; phrase déplacée dans `ForceSection`. Tests `public-status` et `intake-force-bridge`, rouges puis verts.
+
+Hypothèse de cause racine : une valeur de repli optimiste choisie pour ne jamais casser le rendu (zéro, 100 %, phrase fixe) se lit comme un fait. Même famille que les compteurs inventés purgés en juillet : l'absence de mesure doit rester un état visible. Recette F16 : [RECEPTION-PROMESSES-PUBLIQUES.md](RECEPTION-PROMESSES-PUBLIQUES.md).
+
+### 558 — la console des clés MCP n’offrait pas toutes les portées serveur (2026-11-11)
+
+Symptôme : `/console/anubis/api-billing` tenait sa liste de serveurs en dur, sans `council`, `oracle` ni `ingest` (ADR-0146) ; une clé limitée à l’un de ces serveurs ne pouvait pas y être émise. Le routeur `mcpBilling.createKey` acceptait n’importe quelle chaîne : une clé limitée à un serveur inconnu de l’authentification était créée, puis n’appelait rien. Patch (v6.27.558) : liste unique `MCP_SERVER_NAMES` / `MCP_KEY_SERVER_SCOPES` dans le module feuille `mcp-scope-kind`, reprise par `loadAllServers`, la console et la validation `z.enum` du routeur. Verrou `mcp-key-server-scopes.test.ts` : chaque serveur demandé par une route MCP ou d’ingestion doit être une portée émettable. Croisé en recevant F13 (clé limitée à un serveur), commit `fix(mcp)` dédié.
+
+Hypothèse de cause racine : la console et le dispatch MCP ont été écrits séparément et la liste a été recopiée ; l’ajout de `council`/`oracle` (ADR-0182) et d’`ingest` (ADR-0146) n’a touché que le serveur. Aucune garde ne comparait les portées émises aux noms que l’authentification honore. Dette liée : aucune.
+
+### 557 — `ingestion.getSource` distinguait une source étrangère d’un id inconnu (2026-11-11)
+
+Symptôme : appelé sans dossier, le lecteur `getSource` refusait en 403 dans les deux cas, mais avec deux messages : « Ce document n’est plus accessible dans ce dossier. » pour un id inconnu, « Accès refusé à cette marque » pour la source d’un autre locataire. Le message suffisait à savoir que la source existait. Patch (v6.27.557) : même 403 et même message dans les deux cas ; le contrat 403 du lecteur, retrait d’un partage compris, est conservé. Croisé en corrigeant IN1 (écrivains de source en 500), commit `fix(ingestion)` dédié.
+
+Hypothèse de cause racine : les gardes keyées par id lisent l’entité puis appellent `assertStrategyRead`, dont le refus `FORBIDDEN` porte son propre message ; « inconnu » et « refusé » suivent donc deux chemins de réponse. Le patron commun (lecture sans exception, une seule réponse pour inconnu et refusé) n’existait que dans `assertSourceAccess`. **Cause traitée dans les routeurs en 6.27.570** : patron `src/server/trpc/entity-access.ts` et cliquet `router-entity-not-found` ; restes (brand-node, services) dans RESIDUAL-DEBT § 570.
+
+### 556 — dépendances : 63 alertes npm accumulées, dont 9 critiques (2026-11-11)
+
+Symptôme : `npm audit` sur `main` 6.27.552 relevait 63 alertes (9 critical, 21 high, 27 moderate, 6 low), dont 39 sur l’arbre de production. Le registre en notait 50 le 6 octobre et 51 le 20 octobre. Patch : montées mineures ou correctives des directes (`next` 16.4.6, Auth.js, SDK MCP, Prisma 7.10.1, Puppeteer, SDK IA v6, zod, xmldom), `sharp` 0.35.5 exigé par `next` 16.4, transitives mises à jour dans leurs plages, et un override `exceljs` → `uuid` ^11.1.1. Résultat : 15 moderate de l’outillage de développement, 0 en production. Commit `fix(deps)` de la branche `claude/alertes-dependances`.
+
+Hypothèse de cause racine : les PR Dependabot hebdomadaires (limite de cinq, groupes par framework) ne touchent ni les transitives verrouillées ni les versions épinglées en exact (`sharp`, `@xmldom/xmldom`), et aucune relecture périodique de `npm audit` n’est planifiée. Les alertes s’accumulent donc entre deux lots manuels. Dette liée : RESIDUAL-DEBT, « Alertes npm préexistantes au build Docker » (moderate restantes, majeures et réception de 556).
+
+### CI PostgreSQL — assertion de `source-uses` périmée hors CI (2026-11-10)
+
+`source-uses.postgres.test.ts` attendait un seul `markAllSectionsStale` par écriture atomique. Depuis 519, `markPillarsStale` invalide aussi l’Oracle dans la transaction, une fois par pilier écrit : le test comptait trois appels et échouait. Personne ne l’a vu, car le fichier ne tournait dans aucun job. Patch (v6.27.555) : le test distingue deux invalidations en transaction et une seule après le commit. Cause racine : fichiers PostgreSQL hors CI, fermée par leur branchement et le verrou `ci-postgres-recovery.test.ts`. Dette liée : aucune.
+
+### 554 — cinq défauts isolés du plan Shinkiro 4.11 (2026-11-10)
+
+Chaque défaut a été reproduit par un test rouge avant correction, puis vert.
+
+- **Compte supprimé recréé depuis un jeton signé (4.11.f)** — `resolve-session-user.ts`
+  recréait la ligne `User` depuis les claims (rôle et équipe compris) ou la rattachait
+  à un autre compte par email ; le callback `jwt` de `src/lib/auth/config.ts` réémettait
+  le jeton sans relire le compte. La session d’un compte supprimé est révoquée et aucune
+  recréation n’est possible. Hypothèse de cause racine : le jeton signé était traité
+  comme une source d’identité, alors que seule la ligne persistée l’est ; la même
+  hypothèse couvre le rôle rétrogradé, encore ouvert dans RESIDUAL-DEBT.
+- **Seuil CODB fonction de l’objectif de CA (4.11.b)** — `calculators.ts` calculait
+  codbAnnual² / CA cible. Le seuil est délégué au calcul canonique et reste nul sans
+  prix ni coût variable unitaires. Hypothèse : calculateurs CALC écrits avant le
+  contrat financier canonique, sans entrées déclarées ni statut d’insuffisance.
+- **Questions de suivi aveugles au relais OAuth (4.11.c)** — `question-bank.ts` lisait
+  trois clés d’environnement au lieu du signal du Gateway. Hypothèse : préflights
+  locaux antérieurs au relais, qui dupliquent la sélection des fournisseurs.
+- **Oracle « complet » sans section rédigée (4.11.e)** — la pastille de matière disait
+  « complète » sur des sections à produire, l’en-tête comptait « à jour » une rédaction
+  vide et l’instantané MCP n’exposait que le statut. Hypothèse : deux mesures (matière
+  des piliers, résultat de rédaction) partageaient le même vocabulaire et le statut
+  `COMPLETE` était lu comme une preuve de contenu.
+- **Préréglage Lighthouse invalide (4.11.g)** — `.lighthouserc.json` passait
+  `preset: "mobile"`, refusé par Lighthouse (run 42250705338) ; l’étape non bloquante
+  laissait le job vert. Hypothèse : erreur de collecte masquée par `continue-on-error`.
+
+### Livrables Glory et Artemis — une tentative partielle pouvait remplacer l’édition relue (2026-11-06)
+
+Une erreur Artemis historique avec `error: true` restait lisible comme analyse. Une étape en échec pouvait alimenter sa dépendance ou être comptée comme réussie dans le pipeline BRAND. Le catalogue qualifiait de terminé tout document daté, et le coffre utilisait la dernière tentative pour débloquer les prérequis des séquences suivantes.
+
+Le lecteur rapproche les sections de leur exécution, conserve les éditions lisibles et présente l’auteur enregistré. Le coffre sépare la tentative courante de la dernière édition complète acceptée. La relecture référence les sorties exactes et les actifs antérieurs restent consultables. Pour les anciennes analyses sans référence de section, l’historique garde sa date et sa provenance disponible.
+
+Recette locale dans `tests/integration/glory-edition-recovery.postgres.test.ts` avec la gateway simulée, le vrai compilateur et le coffre PostgreSQL. Elle couvre échec, dépendance suspendue, reprise, validation, tentative partielle après acceptation, conservation des actifs, isolation entre opérateurs et concurrence de version.
+
+### 552 — propositions générales attachées après coup à un article
+
+La demande Koaci en 549 exécutait les missions de fond sur six piliers. Le reçu de l’article était attaché au lot sans exiger une implication de marque étayée. Le mode article borné conserve citation, repère ADVE, interprétation, mesure et comparaison. Les propositions historiques sont séparées et la référence est revérifiée avant une écriture dans I.
+
+### 549 — recommandations bloquées par un contexte dupliqué et une erreur générique (2026-11-05)
+
+Le contexte qualifié de S occupait 133 413 caractères pour une limite de 128 000 ;
+les six cibles Notoria échouaient avant l’appel fournisseur. Le prompt répétait
+aussi la cible en JSON brut. La sérialisation compacte et la cible unique gardent
+les enregistrements et leurs qualifications ; le même snapshot SPAWT prépare
+les six cibles avec S à 89 559 caractères, sans relever le plafond. Le contrat
+de sortie structuré accompagne également les observations. Les pannes conservent
+un reçu sûr même sans lot créé : phase, code et pilier, sans texte fournisseur.
+36 tests ciblés, typage et lint ciblés reçus ; le snapshot est un contrôle local
+sans appel LLM. Un appel Luna réel local distinct reçoit quatre propositions
+non appliquées. Le replay PostgreSQL local les persiste et les relit depuis
+l’article, en attente de relecture, sans modifier les huit piliers ; les cinq
+autres cibles sont des sorties vides simulées. La prose reste bornée à 400
+caractères par la projection existante. Réception du parcours livré et qualité
+métier encore ouvertes dans RESIDUAL-DEBT.
+
+### 549 — article transmis sans reçu d’ancrage de la proposition (2026-11-05)
+
+L’observation issue de l’article atteignait le modèle, mais la relecture qualifiait
+uniquement les sources documentaires. Le signal existant conserve maintenant
+l’extrait exact, ses références et son empreinte ; chaque proposition expose
+sa correspondance à cet extrait, distincte de l’ancrage documentaire. Le lecteur
+vérifie l’entrée et l’empreinte de la proposition. Les 55 tests ciblés finaux et le replay
+PostgreSQL de quatre propositions Luna passent, sans nouvel appel externe.
+Un résultat reste faiblement ancré et trois insuffisamment ancrés : aucune
+pertinence, validation humaine ou publication n’est déduite de cette traçabilité.
+Preuves : `notoria549-article-grounding-persistence.json` et lecture native
+compilée `notoria549-compiled-browser/receipt.json` (quatre propositions en
+attente, qualifications séparées, bureau/mobile, aucune écriture ni erreur).
+Réception du parcours déployé conservée dans RESIDUAL-DEBT.
+
+### 549 — documents partagés absents du retraitement (2026-11-05)
+
+`ingestion.reprocessPillar` présélectionnait les sources du seul propriétaire.
+Le remplissage recevait ensuite cette liste fermée, ce qui excluait un document
+partagé autorisé avant sa lecture. La présélection utilise désormais le lecteur
+canonique `loadBrandSources`, avec les mêmes états de traitement et l’accès
+explicite par `BrandSourceUse`. Aucun document n’est copié et aucune marque
+non destinataire ne gagne d’accès. Trois échecs reproduits, puis 19 tests ciblés
+reçus sur retraitement, usages, préparation et isolation. Réception du retraitement
+Friesland en production encore distincte.
+
+### 549 — résultat reçu inaccessible depuis le suivi Studio (2026-11-05)
+
+Le suivi chargé en 548 affichait l’état des tâches mais pas les versions pourtant
+renvoyées par `listForges`. Le composant affiche les résultats par défaut,
+conserve les proportions d’image, ouvre un lecteur et relie le brief au coffre
+de la même marque. Le téléchargement original réutilise la route privée avec
+les mêmes vérifications d’accès et d’intégrité, sans redimensionnement ; l’aperçu
+reste distinct. Six tests du composant et 17 tests PostgreSQL du coffre passent,
+dont original exact et refus inter-opérateurs. Chrome local reçoit les aperçus,
+le lecteur, le PNG original et le dossier source sur deux tâches de fixture, en
+bureau/mobile sans erreur, écriture ni débordement. Le changement ne valide ni
+ne publie les créations. Preuve : `studio549-local-browser/receipt.json`.
+
+### 549 — secret de rappel présent dans des reçus publics de production (2026-11-05)
+
+Les retours tRPC de lecture et création reprenaient la ligne complète de tâche,
+y compris le secret utilisé pour authentifier le rappel du fournisseur. Une
+projection commune l’exclut des lectures de tâche/version, de la création/reprise
+et du résultat de forge Oracle. Les services internes conservent leur reçu et
+l’authentification du rappel. Les régressions sont reproduites, puis 59 tests
+ciblés sur huit fichiers passent. Portée limitée aux quatre chemins identifiés ;
+aucun audit de tous les journaux ni réception HTTP en production n’est déduit.
+Preuve privée : `ptah-public-receipts549-receipt.json`.
+
+### 549 — complétudes divergentes et cache réécrit après une version plus récente (2026-11-05)
+
+Le tableau de bord utilisait un compteur Zod différent du contrat de maturité ;
+ce compteur incluait en outre les métadonnées et pouvait dépasser 100 %. Les
+écritures sans recalcul de score ne mettaient pas toutes à jour le cache, le
+questionnaire forçait `COMPLET` et un verrouillage conservait l’ancien niveau.
+La réparation séparée pouvait enfin appliquer un résultat calculé avant une
+modification concurrente. Le tableau de bord lit maintenant le contrat canonique,
+le compteur structurel ne compte que ses clés, et chaque écriture persiste le
+cache dans sa transaction de version. La réparation verrouille la ligne avant
+de la relire ; questionnaire et transitions suivent le même évaluateur. Aucun
+contenu, auteur, décision ou numéro de version n’est modifié par cette réparation.
+Le refus d’export d’une proposition IA expose aussi son motif, sans assouplir
+la condition de validation. Régressions reproduites puis 70 tests unitaires et
+28 PostgreSQL isolés reçus, dont une course contrôlée entre transactions.
+Typage et lint des sources sans erreur ; réception de production distincte.
+Commit dédié `fix(readiness): keep canonical completion consistent across writes`.
+
+### 549 — rendu du calendrier sans transmission exacte au composeur (2026-11-05)
+
+Les options du planning avaient leurs briefs et fichiers reçus ; le composeur
+social acceptait une image et du texte indépendants, sans désigner la variante
+retenue ni conserver une relecture de cette version. La cause était un raccord
+absent entre les AssetVersion de Ptah, les BrandAsset de Mestor et la BrandAction
+transmise par Anubis. Le paquet du coffre réutilise ces trois modèles et garde
+une empreinte du contenu et de l’export JPEG. La sélection, la relecture et l’envoi
+sont distincts. Une seconde vérification transactionnelle précède le claim de
+publication ; une URL signée éphémère sert les mêmes octets que l’aperçu privé.
+Les dix tests PostgreSQL isolés reproduisent les changements de source, de
+version, de compte et les rejouements. Transport Meta simulé, aucun envoi réel.
+Décision : ADR0242. Commit dédié `feat(publication): freeze reviewed calendar assets for social delivery`.
+
+
+### 542 — une action longue valide dans I pouvait bloquer S (2026-11-04)
+
+La maturité pouvait afficher 100 % alors que le schéma d’écriture de S refusait
+une action de plus de 200 caractères. Les champs `strategieDeplacement[].action`
+et `recommandationsPrioritaires[].recommendation` utilisaient la limite de longueur
+d’un titre pour un texte venant du catalogue. Le candidat adopte `textMedium`
+pour ces deux champs. La recette doit exercer l’écriture et relire le texte entier.
+
+### 542 — distinguer l’exécution de séquence de la tâche de forge (2026-11-04)
+
+Le lancement direct d’une forge renvoyait son identifiant de tâche dans
+`sequenceExecutionId`. Le candidat retourne désormais `generativeTaskId`
+et laisse l’identifiant de séquence vide en l’absence d’une telle exécution.
+L’ancien contrat d’affichage entretenait la confusion entre les deux objets.
+La suite ciblée de dispatch passe à 5/5.
+
+### 542 — un résultat image dépassait la taille de l’index PostgreSQL (2026-11-04)
+
+La forge synchrone mettait la data URI entière dans `providerTaskId` indexé.
+Le premier passage a échoué avec « index row requires 1447504 bytes, maximum
+size is 8191 ». Le correctif candidat sépare un identifiant court
+`openai-image:<sha256>` et le reçu matériel. `attachProviderTask` écrit cet
+identifiant et `GenerativeTask.resultUrls` ensemble avant réconciliation.
+La suite d’admission PostgreSQL passe à 52/52. Deux réconciliations d’un
+reçu de plus de 1 Mo produisent une version, un actif et une seule imputation
+de coût. Le raccord API local est reçu avec une identité de 77 caractères
+et un fichier de 1 076 193 octets relu depuis `AssetVersion`. La réception
+éditoriale sur DA et texte de marque reste dans le plan de composition.
+
+### 542 — un prérequis accepté restait invisible dans la modale (2026-11-04)
+
+Dans le navigateur local, la préparation pouvait annoncer « Prérequis OK » alors
+que le lancement exigeait une exécution acceptée de PLAYBOOK-E. Le contrôle
+de préparation utilise désormais `checkPrerequisites`, comme le lancement.
+La vérification native est reçue. Le motif PLAYBOOK-E est visible et le lancement
+est bloqué avant tout appel. La version 3 produite reste consultable à l’écran.
+
+### 542 — lecture des valeurs imbriquées (2026-11-04)
+
+Le lecteur abrégait les valeurs de certaines structures à l’affichage.
+Le composant de lecture parcourt les objets et listes et affiche les valeurs
+complètes. Trois tests comportementaux couvrent ce changement. Compilation finale
+et relecture native reçues : 65 valeurs textuelles attendues sur 65 présentes,
+HTTP 200, zéro réponse 5xx et zéro exception de page.
+
+### 540 — contexte métier sans positionnement tarifaire (2026-11-03)
+
+L’avancement intake appelait `extractKeyFromOption` sur `biz_positioning` absent
+alors que l’API peut recevoir le modèle métier seul : exception `.split` avant
+la sauvegarde. La lecture vérifie maintenant que le positionnement est une
+chaîne non vide et conserve sinon la valeur déjà enregistrée. Reproduction et
+réception PostgreSQL dans `intake-overton.postgres.test.ts`, sans appel externe.
+Commit dédié `fix(intake): tolerate absent business positioning`.
+Hypothèse de cause : contrat de formulaire obligatoire appliqué implicitement
+à un flux API partiel. Aucun défaut restant connu sur ce cas.
+
+### 539 — états, lecture, focus et digest mal raccordés (2026-11-03)
+
+Notoria utilisait une autorisation de calcul pour dessiner une coche de production ;
+les états sont désormais dérivés séparément de la matière et de sa fraîcheur.
+Gazette répétait extrait puis corps complet : un seul corps remplace maintenant l’extrait.
+Dialog dépendait de l’identité du callback inline : chaque frappe réexécutait le focus.
+L’effet dépend désormais uniquement de l’ouverture, callback courant par useEffectEvent ;
+régression rouge/verte et saisie native continue reçues. Le radar lisait weakSignals alors
+que brand-feed écrit items : lecteur corrigé et isolé par marque/pays. Hypothèse commune :
+contrats de lecture divergents des producteurs ; la tranche graphe Overton reste en RESIDUAL-DEBT.
+
+### 538 — contenu tronqué et faux états vides, correctif candidat (2026-11-03)
+
+Les mappers Gazette perdaient le texte après120/300 caractères ; seul le signal
+EXTERNAL_METRIC conservait une observation complète. Le rafraîchissement ignorait
+les sujets effectifs de la marque et privilégiait le pays Client. Le candidat
+sépare aperçu et contenu intégral, donne une source lisible, conserve les détails
+des nouveaux diagnostics et dédoublonne leur lecture. Le même chargeur de sujets
+et le contexte Strategy servent au rafraîchissement ; les résumés/images réellement
+reçus du RSS sont transmis sans enrichissement inventé.
+
+Jusqu’à trois aperçus d’articles par rafraîchissement réutilisent Brave et la
+lecture HTML protégée existants. Le rapprochement des liens d’agrégateur vérifie
+éditeur et titre ; seules description et image réellement reçues sont reprises,
+sans inventer de média ni utiliser le logo d’agrégateur comme illustration.
+
+L’agent amendPillar pouvait annoncer une réussite et une nouvelle version alors
+que la Bible rétablissait une proposition interdite : quatre valeurs pour un
+maximum de trois. La gateway refuse avant écriture lorsque
+rejectOnProvenanceRefusal est demandé et qu’un champ modifié déclenche un BLOCK.
+La régression rouge est conservée puis PostgreSQL 18/18 reçu vert : contenu,
+version, historique et score inchangés après refus. Ce premier reçu ciblé est
+historique ; le dernier PostgreSQL21/21 est vert, sans assouplir les limites métier.
+
+Oracle assimilait COMPLETE à « rédigé », cherchait contentFill avec une clé
+numérique au lieu de la clé canonique et déduisait la présence de matière de
+DRAFT/ACTIVE. Les lecteurs candidats distinguent contenu rendu, fraîcheur et
+approbation ; Conditions peut être alimentée par ses prochaines étapes sans
+contrat fabriqué. Hypothèse de cause commune : projections et compteurs ont
+confondu la matière disponible avec un état de production ou de validation.
+Les gardes d’approbation et les contrats métier ne sont pas relâchés.
+
+Extension doctrinale538 distincte des défauts de lecture : un vide conceptuel
+HUMAN/SOURCE pouvait arrêter l’irrigation malgré la possibilité d’un postulat.
+Sur instruction opérateur, le candidat admet une proposition INFERRED conforme,
+au chemin et à la version attendus, puis transmet la consigne de vérification
+au responsable de marque dans l’UI et le contexte RTIS. L’usage est immédiat,
+la confirmation réelle versionnée reste distincte et journalise acteur/consigne.
+Rempli/0/false/preuves/non-applicabilité sont conservés. V reconnaît un échange
+partenaire documenté sans imposer un produit acheté. ADR0236 précise le périmètre
+et amende le traitement du vide d’ADR0231. Le checkpoint5 127/5 128 avait
+détecté un défaut de contexte T ; il ne reproduit plus dans la suite exacte.
+Sur demande opérateur, les consignes sont factorisées dans le candidat testé
+localement : responsabilité/usage communs, six profils, verificationRef par champ
+et registre unique des profils utilisés par contexte. L’UI garde le texte complet ;
+conseillers/R/T/I/Notoria/auto-fill gardent qualification et consigne résoluble.
+Dernier reçu local : 5 132 tests/499 fichiers, 21 PostgreSQL et ciblé enums70/4
+verts ; typage/lints sans erreur (25 avertissements), build exit0, stress sans
+finding et six requêtes USER HTTP200. PG18 antérieur conservé. Natif desktop
+local : cinq rites/consignes lisibles, Gazette dépliée et lecture Oracle reçus ;
+aucune exception/réponse500 dans les fenêtres observées. Le bouton « Valider tel
+quel » est reçu sur la seule fixture : E v3→v4, cinq rites inchangés, origine
+INFERRED→HUMAN, liste3→2 et historique version relue3/consigne RITUALS complète.
+Aucune adoption du dossier réel déduite. Oracle fixture0 rédigée/
+33 sur35 alimentées ne reçoit pas le rapport réel. La tentative390px est restée
+à1 578px ; mobile non reçu et réglage réinitialisé.
+
+Checkpoint local historique ci-dessus. Technique538, conservation et lecture
+native de production reçues selon ADR-0236 ; ADVE huit piliers, Oracle frais,
+Gazette presse/images, mobile et MVP restent ouverts.
+Les formats ADVE legacy
+invalides restent une dette distincte avec normalisation sémantique contrôlée
+par source/version, schémas stricts, cascade et recette huit piliers/35 sections
+dans RESIDUAL-DEBT. Aucune donnée ou valeur métier privée publiée.
+
+### 537 — sorties de budget et progression absentes, candidat (2026-11-03)
+
+Après536, S attend encore une enveloppe comparable, sa ventilation et des cibles
+de cohorte. Cause : absence de prémisses structurées de planification V/E plutôt
+qu’un simple défaut de rendu. Le candidat étend les domaines et rails existants :
+horizon/fenêtres/profils V, cohorte/taux/phases E, calcul S et lectures Oracle
+partagées. Fourchettes conservées, borne haute explicitée, deux ventilations du
+même coût ; le sprint expose action, critère et budget sur pleine largeur.
+Deux autres causes ont été corrigées dans le candidat : ENRICHED_S exigeait
+cinq sprintActions quand COMPLETE acceptait une action ; PER_OCCURRENCE ne
+reconnaissait pas ONE_SHOT et certains coûts n’avaient pas de période. Les
+cardinalités dérivées axes/sprint/roadmap/selectedFromI acceptent une entrée,
+sans remplissage artificiel ; vide, malformé et cellules requises gardent leurs
+refus. ONE_SHOT compte une fois ; fallbackPeriod V complète seulement la période
+I absente/UNSPECIFIED, sans remplacer une unité connue. Sans postulat, refus,
+aucune mensualité tacite.
+Réception locale finale après ces deltas : 5 121 tests/498 fichiers, PostgreSQL
+ciblé 17, typage/lints sans erreur (25 avertissements), zéro cycle, build webpack
+et stress compilé exit 0. HTTP reçoit les trois scénarios COMPLETE à 100 %, frais,
+et la parité exacte des quatre sorties Oracle. Native : roadmap à 100 % socle/
+champs, Complet ; ADVE et S complets dans Notoria. R/T/I périmés dans la fixture
+seulement, faute de cascade demandée. La divergence de cardinalité S est reçue
+corrigée localement. L’attente technique de ce checkpoint est depuis remplacée
+par la réception image/runtime537 avec données stockées conservées ; les écarts
+de validation dérivée sont reproduits avec le code exact. Les amendements réels
+et la réception huit piliers/35 sections restent ouverts dans RESIDUAL-DEBT. Aucun nouveau service, Intent, route ou chiffre
+métier publié. Compléments ADVE préparés hors checkout et défauts Gazette/Oracle
+restent des travaux ouverts, pas des réparations reçues.
+
+### 536 — finance, cohérence et aucun rejet reçus au périmètre (2026-11-03)
+
+Les causes locales de defaults financiers dispersés, score non raccordé et liste
+vide de rejets traitée comme donnée inconnue sont réparées. Le score utilise les
+contrôles évalués du plan courant avec couverture visible ; [] calculé reste
+une absence de rejet, pas une sélection ni un rejet inventés. L’OOM Lighthouse
+pendant TypeScript a été corrigé au seul plafond build6144, sans contrôle supprimé
+ni changement de mémoire runtime VPS. PR1121/merge28db5c248, seize checks verts,
+image/runtime536, conservation métier, amendement financier et cascade réelle
+reçus ; natif roadmap et cartes financières Oracle reçus à portée bornée.
+Les anciens échecs et reçus locaux restent historiques ; aucune réception S,
+Oracle ou MVP entière déduite. Budget/progression encore ouverts dans la tranche537.
+
+
+### 530 — cellules sous validation globale, correctif candidat (2026-11-02)
+
+Symptôme : une lacune sous un objet HUMAN est bloquée par la protection globale,
+ou le complément inféré hérite à tort du statut du parent. Le candidat pose une
+origine au chemin exact, garde identités/voisins, confirme la seule cellule et
+refuse les contournements par remplacement/suppression. Auto-filler sur chemins
+versionnés et schéma canonique, succès compté au persisté ; résolveur partagé
+vers domain. Hypothèse : grain top-level de protection/provenance différent du
+grain des chemins d’écriture et de revue.
+Complément borné à un scalaire ou une liste de scalaires non vides ; objets et
+listes de records restent soumis à la revue normale. Une redéclaration INFERRED
+d’un parent inchangé conserve l’origine HUMAN de ses cellules ; chemins et
+valeurs sont aussi bornés par le schéma canonique de champ. Le premier refus
+global de positions d’allowlist/CODE-MAP est conservé, puis positions existantes
+corrigées/carte régénérée sans nouvelle exception. Suite 5 082 unitaires /
+483 fichiers et reconstruction webpack exit 0 reçues avant le dernier delta ; PostgreSQL 528 / 32 puis
+53 / 3, typage/lints sans erreur et cycles sans dépendance circulaire. Quatre
+contre-épreuves rouges puis restaurées vertes couvrent chirurgie, contrat, parent
+inchangé et bornage scalaire.
+HTTP compilé reçu sur fixture : document PROPOSED, amendement, calcul S/Oracle,
+source PROPOSED / feuille INFERRED / parent HUMAN conservés. Découverte MCP sous
+USER refusée selon la politique, reprise via ADMIN existant séparé sans
+réingestion ni nouveaux droits. Pages HTTP 200, hydratation/native non reçue,
+refus navigateur sans contournement ; latences locales sans SLO. Stress compilé
+exit 0 : 276 pages reçues / 5 non reçues / 0 échec, 3 requêtes, 7 forges/transitions,
+0 finding ; aucune réception native par ces probes.
+Dernier delta, après ces build/HTTP/stress : l’origine la plus précise est
+comparée après retrait du préfixe legacy, afin qu’un parent préfixé HUMAN ne
+masque pas une cellule INFERRED. Ciblé final 54 tests / 3 fichiers verts,
+contre-épreuve rouge puis restauration verte 16 / 1. Le parcours HTTP aux chemins
+nus reste reçu pour l’état précédent ; aucun build/HTTP/stress exact de ce
+nouveau head annoncé. CI/image/runtime exacts et chaîne réelle encore requis.
+Aucune complétude ou adoption humaine déduite de ce candidat.
+
+### 529 — North Star et texte S, correctif candidat (2026-11-02)
+
+Natif 528 reçu : définition North Star perdue en S faute de cible/fréquence,
+prose dense et roadmap objectif coupé à 200 caractères. Hypothèse : même filtre
+pour une définition et un objectif complet, schéma court et listes rendues en tags.
+Le candidat conserve l’unique définition explicite avec nulls sans toucher au
+filtre des objectifs complets ; les candidates multiples restent ambiguës. Il
+retire la coupe de texte et les limites courtes des descriptions, garde les seuils
+de cardinalité et propose listes/détails clavier/suivi mobile. Contrôles reçus :
+5 034 unitaires / 481 fichiers, PostgreSQL 527 tests / 32 fichiers, typage et lints
+sans erreur, cycles sans dépendance circulaire. Le mauvais nom de configuration
+PostgreSQL du premier lancement est conservé comme erreur de commande, sans
+inventer de défaut produit. Build complet exit 0 et HTTP compilé USER reçus sur
+la fixture synthétique existante, sans rejouer ingestion/amendement. North Star
+définie avec cible/cadence nulles, objectifs/définitions, autres sept piliers,
+dates et exécution conservés. Pages HTTP 200, hydratation/UI non reçue ; aucun
+contournement du refus navigateur local. Natif/CI/production 529 ouverts,
+latences locales sans SLO.
+La section 16 d’Oracle 528 est reçue nativement pour définitions, qualifications
+et inconnues seulement ; ses analyses périmées empêchent de recevoir Oracle entier.
+Qualification de campagne et ADVE entière restent dans RESIDUAL-DEBT ; pas de
+réparation globale, de mesure ou de décision déduite de cette mise en forme.
+
+### 528 — qualification et remplissage, correctif candidat (2026-11-02)
+
+Symptôme : une définition documentée peut être rejetée faute de cible/cadence,
+ou une injonction de complétude pousser à les fabriquer ; les lecteurs risquent
+alors de confondre proposition, objectif déclaré et mesure. Le candidat conserve
+les nulls sans les compter complets, porte les qualifications disponibles vers
+S/Oracle et retire les quotas/impératifs de remplissage Notoria. Hypothèse :
+confusion entre validité du brouillon, maturité du socle et validation métier.
+Suite finale locale reçue : 5 032 unitaires / 481 fichiers, PostgreSQL 527 tests /
+32 fichiers, typage vert, lints sans erreur et cycles sans dépendance circulaire.
+HTTP local reçu : brouillon documentaire PROPOSED, amendement ADVE attribué Agent,
+projection S et métadonnées Oracle, inconnues et autres piliers/dates/exécution
+conservés. Réconciliation réelle, natif et livraison 528 restent dans
+RESIDUAL-DEBT ; pas de réparation globale acquise.
+La 527 est depuis reçue en production/lecture native au périmètre des projections
+et de la roadmap ; cela ne valide pas sémantiquement les objectifs hérités.
+
+Contre-épreuve bornée reçue : ancienne consigne de quota et contrat absent →
+rouge attendu, restauration exacte puis 18 tests / 2 fichiers verts. PostgreSQL
+527 tests / 32 fichiers reçu avant les derniers détails de projection. Définition
+E→S et qualification/fenêtre North Star complétées puis couvertes par la suite
+finale locale ci-dessus ; ces contrôles ne constituent pas une preuve native.
+La première recette HTTP s’est arrêtée avant amendement sur une attente MCP USER
+erronée ; reprise avec fixture ADMIN existante, droits USER inchangés et uploads
+non rejoués. Ce diagnostic de recette ne constitue pas un défaut produit découvert.
+
+### 527 — défauts visés, aucun correctif reçu (2026-11-02)
+
+La 526 réelle laisse S à 45 % : objectifs E et équipe A déclarés n’y figurent pas
+encore, cadence/famille des initiatives restent peu qualifiées. Le candidat
+projette les sources existantes ; il retire midpoint, addition de périodes et
+multiplicateurs de cadrage qui altéraient les coûts, ainsi que le filtrage canon
+par selected=true distinct du scénario S. Hypothèse : perte d’unités/provenance et
+confusion entre horizon, récurrence et décision d’exécution dans les projections.
+
+Premiers refus conservés ; 58 tests ciblés / 7 fichiers reçus ensuite, gauntlet
+complet en cours. UI et production 527 non reçues. Ces changements
+restent candidats, sans réception fonctionnelle ou de livraison globale. Chaîne
+SPAWT à recevoir : pièces/inputs attribués → ADVE qualifié → RTIS dérivé, pas
+injection directe dans I/S pour contourner le socle ou recycler un GTM archivé.
+Reprise des contrôles, sans vert final annoncé : première passe unitaire
+5 016 verts / 2 refus ; version transitoire pendant bump et comparaison structurelle
+Buffer de 5 Mio. Le profil synthétique de 162 437 099 octets est effectivement
+chiffré/scellé/relu en 5 619 ms. Correctif de test préparé : `Buffer.equals` sur
+les mêmes octets, taille/hash et budget 30 s inchangés ; reprise isolée encore
+ouverte. Hypothèse de cause du timeout : coût du comparateur structurel, pas
+affirmation de panne du stockage. Premier PostgreSQL 525/526, libellé legacy
+rectifié en « Campagne à qualifier », classe absente toujours vérifiée.
+
+[Plans et déclencheurs](RESIDUAL-DEBT.md) ; calendrier, ponctuel, catégories et
+devis restent à recevoir, aucun S entier ou MVP accepté.
+
+### 526 — réparations au niveau candidat, livraison non reçue (2026-11-02)
+
+S dépendait d’une présélection I, laissant des scénarios vides malgré un catalogue
+recommandé ; ses projections fabriquaient croissance/revenu/indice depuis des
+constantes. Le candidat sépare préférence de catalogue, composition du scénario
+et décision d’exécution, avec couverture/raisons et inconnues explicites. Hypothèse
+de cause : statut d’initiative confondu avec choix de plan et maturité commerciale.
+Premiers ciblés reçus, code final et lecteurs à recevoir ; aucune fermeture sur
+la production ou S réelle. [Recette restante](RESIDUAL-DEBT.md).
+
+Le prototype de calcul devis reste séparé du raccord documentaire/Thot à recevoir.
+Il ne prouve ni ingestion, ni substitution de coûts S en production, ni correction
+de la capture LLM/forfait V. Anciennes valeurs et réceptions restent historiques.
+
+### Statut du 2 novembre — Golden Path reçu, Lighthouse encore ouvert
+
+L’épinglage Ubuntu 24.04 ferme le refus d’installation Chromium sur Ubuntu 26.04 /
+Playwright 1.59.1 : Golden Path PR #1082 est SUCCESS (run 41414616545), sans changer
+les sept étapes ou leurs assertions. Hypothèse de cause confirmée par le refus
+initial : dérive du runner `ubuntu-latest`, pas échec du parcours applicatif.
+
+Le build Lighthouse refuse ensuite la résolution interne JetBrains Mono par
+Turbopack, avant tout audit (run 41414616465). Commande webpack préparée, seuils et
+URLs inchangés ; aucune réparation d’audit reçue à ce stade.
+[Reprise Lighthouse](RESIDUAL-DEBT.md), sans nouvelle note client ni réception MVP.
+
+Le timeout client 600 s de la cascade n’est pas un résultat serveur FAILED :
+`OK` persistant reçu séparément, 465 s, A/D/V/E conservés, R/T/I COMPLETE et S à
+25 %. Ne pas rejouer. Les projections S constantes, CF/CV omis dans T et risques
+`ai_estimate` CONFIRMED sont des défauts ouverts ; aucun patch produit reçu pour
+ces points, ni sélection des 40 recommandations ou du budget estimé ambitieux.
+
+### Lot 525 — correctifs locaux reçus, livraison non reçue (2026-10-26)
+
+Symptômes reproduits nativement sur 523 : 35 sections dites à jour avec sept
+piliers périmés, composite documentaire de 160/200 confondu avec force de 39,5/200,
+NPS −86 proxy sans enquête. Hypothèse : les lecteurs assimilent présence,
+classification et mesure de marché et réutilisent un proxy comme une enquête.
+Le candidat reprend `RTIS_CASCADE`, signale les analyses périmées, lit le dernier
+verdict et conserve le NPS client déclaré avec échantillon/date. Aucun nouveau
+résultat ou asset historique réécrit à la lecture.
+
+Repli NPS reçu localement : cinq cas d’assemblage, réintroduction du proxy avec
+deux rouges puis restauration et cinq verts. Code-map, typage, deux lints et cycles
+exit 0 ; 1 748 tests / 176 fichiers verts ; build webpack terminé exit 0.
+API sous rôle USER réel : assemble 200 / 166 ms, readiness 200 / 86 ms,
+listSections 200 / 78 ms, absence de verdict et NPS non mesuré préservés.
+Preuves : `mvp525-received-gauntlet-results.json`,
+`mvp525-nps-regression-{red,green}.log` et `mvp525-http-received.json`.
+
+UI 525 encore non reçue : même refus de protocole du navigateur local que pour
+524, sans contournement. Réception native à faire en production après livraison ;
+H7, pipeline réel, CI/image/runtime et conservation restent ouverts. Les API ne
+prouvent pas les écrans ou un SLO. Le MVP scoreur / fiche ADVE complète / Oracle,
+NPS réel, Glory, Friesland régional et charge VPS ne sont pas clos.
+[Plan, responsable et déclencheur](RESIDUAL-DEBT.md).
+
+2026-10-26 · **Livraison524 préparée, candidat522 conservé** : le raccord
+documentaire déjà testé dans PR1064 rejoint la base523/PR1067 Seshat. Les preuves
+locales522 restent historiques ; réception sur la base fusionnée, CI finale,
+image/runtime524, conservation et pièces réelles encore ouvertes. Aucun nouveau
+modèle/service/routeur/Intent/page. Derniers reçus inchangés :423/425 documents,
+1920classifications matérielles. Le patch ne reçoit pas le MVP ; priorité scoreur/
+fiche ADVE complète/Oracle avant reprise du reste du Shinkiro. [Plan et déclencheur](RESIDUAL-DEBT.md).
+
+2026-10-22 · **Candidat522 reçu localement — même original, usage documentaire conservé** :
+quatre grands PDF/PPTX SPAWT restent à admettre en production ; le port505→522
+corrige localement le passage coffre→Sources sans recopier FileUpload/objets/
+manifestes. Hypothèse : rôle d’actif et usage documentaire d’un même original
+étaient raccordés par un renvoi physique inutile. Droits/hash/intégrité et rejeu
+protègent le texte corrigé et les décisions ; PDF image FAILED visible avant
+correction manuelle/classement, sans OCR implicite. Pas de nouveau manager.
+
+Quatre rouges réels puis33 verts ciblés reçoivent la garde legacy OTHER→TECHNICAL :
+FILE code/prompt autorisé, statut inchangé, hash exact et aucune décision ; métier/
+BMC restent refusés. Hypothèse : import legacy plus large que les catégories de
+la réparation descriptive.1717tests/172fichiers gouvernance/UI et PostgreSQL25/3
+puis17/2 verts, typage/lints/cycles/code-map/build webpack exit0. Premier refus
+Turbopack/symlink externe conservé sans changer le symlink. FULL ADMIN dédié séparé
+USER : zéro finding,276probes HTTP reçus/cinq démos404 non reçues/zéro authredirect ;
+ce n’est pas une preuve UI. USER natif compilé522 :200/DOM150ms/titre549ms/fenêtre
+complète/zéro≥500/exception. Trois actifs/trois sources/deux éditions/un format,
+originaux/reçus/états/versions conservés, zéro IA/pilier/contexte créé ; historique
+tardif, PDF corrigé, format lié, lien et téléchargements exacts reçus.
+
+P23 `documents522-{final-gauntlet-results,stress-full-received,native-received,native-db-received}.json`.
+CI finale PR1064 après intégration/image/runtime524, quatre pièces réelles et reprise des quatre icônes
+restent [en réception](RESIDUAL-DEBT.md) ; [ADR0227 Proposed](adr/0227-retained-original-document-uses.md).
+Aucune production505 déduite du candidat historique conservé.
+
+Checkpoint amendement522, avant reprise sous524 dans PR1064 : le lot documentaire atteint423/425.
+Deux XLSX réels restent refusés lors de l’étiquetage malgré reprise séquentielle :
+13feuilles, dont14468lignes d’avis,19461739octets JSON et10670491octets de texte
+par pièce (`large-xlsx522-local-cost.json`). Ce corpus d’avis n’est pas un nombre
+de clients acquis. Les refus30s, observés sur32–42s, sont conservés dans NEW
+`documents-521-last-two-reconcile-20261022.log`.
+
+Seule la transaction existante `documentTags` passe de30s à120s bornés ; permissions,
+hash, atomicité et invalidation restent inchangés. Aucun autre délai ni modèle
+modifié. C’est une capacité fonctionnelle ciblée, pas une résolution de cause
+racine, de performance ou du VPS, ni un SLO. Typage exit0 et PostgreSQL
+`document-versions`6/6 reçus, dont cellules volumineuses conservées et refus de
+l’empreinte périmée (`documents522-label-capacity-postgres.log`). Les suites
+précédentes25/3 et17/2 restent reçues sur le candidat antérieur ; la relance6/1
+remplace l’ancien5/1 de versions, soit un périmètre courant43/5, sans relance
+commune de ces43 tests. Les contrôles natifs/build/FULL précédents ne sont pas
+présentés comme rejoués sur cet amendement. CI finale après intégration, image/runtime524,
+récupération effective des deux XLSX et des quatre grandes pièces restent ouverts.
+
+Hypothèse : les étiquettes traversent la source structurée volumineuse sous charge
+et dépassent le budget30s ; la cause racine reste à diagnostiquer. La capacité après
+livraison et la charge70%steal/transaction financière5s restent dans
+[RESIDUAL-DEBT](RESIDUAL-DEBT.md), pas des symptômes déclarés résolus.
+
+Réconciliations de données distinctes du code522 : E14 Vanessa/Grâce et V47
+CAC120B2C/LTV350000B2B/ratio23 retirés au profit d’inconnues avec sources jointes ;
+Gold60000 conservé, nouveaux BMC proposés non adoptés.1920/1920 matériels et
+classements reçus, cinq anciens diagnostics rapprochés sans rejeu aveugle, alias
+résolu.423/425 entrées documentaires reçues ;425 est la population, pas un reçu de425
+pièces métier. Aucun Core/Oracle ou chantier macro clos.
+
+2026-10-22 · **521 livrée — libellés et sources financières lisibles** : `NO_VAT`
+exposé, modèle/historique peu identifiables et URL Word manquante sont corrigés
+dans les lecteurs existants sans montant/calcul/writer changé. Hypothèse : contrat
+structuré exposé directement, contexte d’édition insuffisamment présenté.
+
+Contrôles locaux/natif synthétique reçus puis PR1063 quinze checks/postmerge et
+image/runtime521 exacts.375sources/2083actifs/huit piliers/Friesland, six paiements,
+baseline scoreur et originaux/états conservés par lectures séquentielles, pas un
+snapshot atomique. Mêmes volumes/Luna90s, OpenRouter absent. Bouton réel521 :
+nouveau Word SPAWT sans TVA collectée,37contrôles/URL sources, code absent,
+cinq pages toutes vues lisibles. P23 `production521-{received,data-preserved}.json`
+et `finance521-spawt-native-word-received.json`. Livraison/conservation closes.
+
+Premier refus TVA conditionnelle, transaction5s expirée sur
+`brandDataSource.findFirst` après6917ms sous ingestion à deux workers, conservé.
+La reprise produit ensuite nativement la variante le22octobre à17h17 (Douala),
+sortie `cmvjqvj7f003q01nme177twww`, puis Word reçu/seuil11Gold :
+`finance521-spawt-native-vat-word-received.json`. Contrôle visuel encore en attente ;
+l’attente de génération/téléchargement est retirée, pas la dette de charge/latence.
+[Plan et inspection du fichier reçu](RESIDUAL-DEBT.md), sans relancer le résultat
+reçu ; aucune fiabilité globale, absorption intégrale, Core/Oracle/MVP ou rentabilité
+déduite.
+
+## Clôture technique520 — réceptions bornées, corpus et Core ouverts (2026-10-22)
+
+Source `7d669f5d18014beb9054a90b390e329577ac99b4`, image/runtime520 exacts au digest
+`cd0487cc50fe54cbbe3e7542f8be2ad7d65db254001cc3a1624a9db36c0271dc`, login200.
+Mêmes volumes, relais Luna/90s et OpenRouter absent ; 278 sources/1225 actifs,
+états/originaux/huit piliers/racine Friesland/six paiements conservés par lectures
+séquentielles, sans snapshot atomique. Les anciennes lignes candidates et l’attente
+de livraison520 sont retirées ; leurs premiers refus et reçus ciblés restent dans
+CHANGELOG520 et les preuves, sans réécrire ces checkpoints.
+
+La livraison reprend les corrections du coût des requêtes de lignée, du statut et
+de l’empreinte sémantiques, des inconnues financières et du dispatch des calculateurs,
+ainsi que les lecteurs Oracle/rôles. Ce reçu de code ne qualifie ni vitesse générale,
+ni corpus intégral, ni chaîne Core/Oracle complète. CODB reste une dette séparée.
+
+Deux fiches Catalyse SPAWT produites et exportées par Glory520, zéro appel IA,
+37 champs remplis et cinq pages par Word. Scénario documenté350kCF/18kCV/60kprix :
+9Gold/mois ; variante TVA18% incluse conditionnelle :11. Ces seuils conditionnels
+ne prouvent ni dépenses actuelles, ni fiscalité applicable, ni rentabilité globale.
+Les cinq pages de chacun des deux Word520 ont été vues intégralement, défaut
+`NO_VAT` confirmé ; rendu corrigé reçu ensuite sur production521 pour le Word SPAWT sans TVA ;
+variante conditionnelle ensuite reçue, contrôle visuel et charge ouverts. Trois personas/
+Gold60000 conservés, nouveau BMC proposé. Corpus2346fichiers/350dossiers recensé ;
+1920 matériels reçus (1092+828), population425 documentaire encore en réception,
+comprenant techniques/créatifs ; classements matériels reçus, corpus documentaire ouvert. L’alias de cohorte est résolu par
+navigation Drive normale vers « SPAWT — Cohorte Catalyse » déjà recensé, sans
+original dupliqué ; `alias-canonique-received.json` ferme ce seul repère.
+Preuves P23 `production520-{received,data-preserved}.json` et NEW
+`catalyse-spawt-app-calculations-received.json`, `catalyse-word-*-received.json`.
+[Finalisation et déclencheurs](RESIDUAL-DEBT.md), aucun chantier macro clôturé.
+
+Réception du comparateur527 :6tests verts, cas162437099octets en6322ms ;
+Buffer.equals conserve égalité exacte, taille/hash et seuil30s. La source
+du timeout était le parcours structurel du Buffer, pas le stockage à relâcher.
+
+## Clôture technique 506/507 — 2026-10-20
+
+PR 1039/source `f48a938e494ca286330cab74ff6c4d49ea906281`, seize checks verts,
+build 39454014249/boot PostgreSQL/login 200 et image/runtime 507 exacts reçus.
+Digest `229c8ab49874153f400fdf3b3ee82c31489a057e10a07992fc19e90a107573bd`,
+volumes, relais OpenAI/délai 90 s conservés, OpenRouter absent ; données et
+portefeuille Friesland préservés. Les attentes de livraison 506/507 et leurs
+lignes candidates actives sont retirées. Public cache SPAWT 43/100/couverture
+68 % et préremplissage reçus ; RSC ERR_ABORTED/initiale tronquée conservés,
+pas zéro global/SLO, pas égalité brute du snapshot cache (facts null omis).
+Guidé B reçu localement seulement. Import/reprise/original absents non corrigés,
+rapport commercial, coût/qualité/conversion et MVP entier en [reprise](RESIDUAL-DEBT.md).
+
+## Clôture de l’attente de livraison 504 — 2026-10-20
+
+Source `b7d460f51` / PR 1037 / CI 39419107847 / build 39419232494 et runtime
+6.27.504 exacts reçus, conservation avant/après acquise. L’ancienne ligne
+candidate et l’attente de livraison active sont retirées. Relations et usages
+du corpus restent en [reprise C2-01](RESIDUAL-DEBT.md), sans SLO ou étape entière
+reçus ; baseline avant 506 et portefeuille Friesland conservés.
+
+## Clôture des attentes de livraison 501/503 — 2026-10-20
+
+Runtime 503/source `90b50f9ff` et image exacts reçus, volumes, originaux,
+qualifications et fondamentaux conservés. Ce reçu actuel supprime l’attente de
+bascule des capacités héritées de 501, sans réception rétroactive du runtime
+historique 501. La recherche MCP de production reçoit directement l’étude et
+les deux BMC successifs, sans génération ni adoption : cause de sélection 503
+fermée au périmètre en métadonnées, ancienne ligne candidate retirée. Sortie
+native, unités et qualité générale restent ouvertes ; dernière question Alloco
+sept critères sur huit, sondage A omis. Corpus actif et restauration C7 demeurent
+distincts. [Réceptions et reprise](RESIDUAL-DEBT.md).
+
+## Clôture de la préparation documentaire — 2026-10-20
+
+502 est reçu sur source `636ef287d`, CI/build/boot et image/runtime exacts.
+L’étude réelle fournit 4 462 fragments intégralement conformes au corpus de
+référence, sans embedding/adoption ni changement d’original ou de fondamentaux.
+La préparation hors verrou répare le commit après expiration ; refus, concurrence
+et rejeu restent reçus sur PostgreSQL. L’attente de préparation réelle est retirée
+des entrées actives ; échec 500 et mesures locales restent historiques. Qualité
+du conseil, autres documents et exploitation demeurent en [reprise](RESIDUAL-DEBT.md).
+
+## Clôture du défaut de boot documentaire — 2026-10-20
+
+Le blocage JSZip de l’image 499 est fermé par le chargement à la demande livré
+en 500 : source eb8ffd355210c73cdd6fe40d943afab6c4b388d9, CI/build/boot/session
+JSON et image/runtime exacts reçus, login 200 et 61 sources/994 actifs/huit
+fondamentaux conservés. Un premier pitch réel PROPOSED est ensuite reçu avec
+original exact, texte/notes et alias qualifié, sans modèle/adoption. Les attentes
+de boot 500 et leurs lignes convergentes sont retirées. Les autres présentations,
+visuels, sources/lots/études et l’incident auth dev de cause inconnue restent
+au plan, sans réception entière déduite. [Reprise](RESIDUAL-DEBT.md).
+
+## Clôture technique508 — dépôt reçu et repris (2026-10-20)
+
+Import507 refusé : formulaire vide et texte saisi sans original. FileUpload/
+source-original-v1 existants étendus avant préflight, PENDING/STORED, reprise
+privée du même intake et même source rattachée sans copie. Treize PostgreSQL
+nouveaux/ownership rouge-vert, neuf contrôles et reprise compilée reçus ; PR1041/
+source817539dcef96, seize checks, build39467294504/runtime508 au digest04dce4fe22f8
+et données/volumes conservés. Attentes CI/image/runtime et conservation import
+closes au périmètre technique ; échecs/deadlines initiaux conservés. M02 observé
+borné, complétion Luna locale avec même original/source reçue, pas de parcours
+client complet de production. M03 actif : rapport/provenance/coût/droits commerciaux ouverts
+et datés dans RESIDUAL-DEBT ; aucun client/vente ou MVP entier reçu.
+[ADR0224 Accepted](adr/0224-retained-intake-originals.md).
+
+## Clôture technique509 — droits, export et reprise (2026-10-20)
+
+Cause508 : flag payé client, rendu et état terminal insuffisamment liés aux
+rails existants. Lecteur PAID/même intake ou vraie sessionADMIN, projection
+serveur, cookies PDF bornés, rejeu sans modèle/Deal et refus activation sans
+droit reçus localement avec vrai PDF ; conservation exacte sélectionnée reçue.
+509 livrée au périmètre technique : PR1043/source `f75c6c290dd0672ff29aa2a7529a44348d513eaf`, quinze checks SUCCESS/un SKIPPED ; build39483634646 smoke/push et runtime6.27.509 au digest `a3825f5246e0daa4eb9c25149fc2d5f6c252527238c79c747d234bc0b1277fae` reçus. Déploiement terminé le 20 octobre2026 à19:44:17UTC, mêmes volumes, login/version200, primaire OpenAI/relais/délai90000ms conservés, OpenRouter absent.
+Après livraison,67sources/1041actifs, états/originaux, huit piliers et portefeuille Friesland conservés ; lectures avant/après séquentielles, pas toute base atomique. Version publique509/200 et original d’intake inconnu404/private,no-store/no-referrer reçus : transport public uniquement, pas parcours client payé.
+Ligne candidate active et attente de CI/image/runtime retirées ; checkpoint
+initial conservé dans CHANGELOG. Qualité du rapport refusée (26p/promesse8p,
+page7 quasi vide, champs bruts/propositions en faits) : reprise M03 à la source
+INGESTION/SOURCE et narrateurs/fallback, puis présentation. M04offre/auth et
+M05coût/admission restent au plan ;19sites statiques ne comptent pas les appels
+runtime. Aucun PSP/vente/MVP entier reçu. Preuves privées de livraison : `release/preuves-mvp-commercial-20261020/production509-{received,data-preserved,public-api-received}.json`, `pr509-green-before-merge.json`, `postmerge509-received.json` ; plan de reprise `release/preuves-rapport-commercial-20261020/mvp-report-root-plan.json`.
+
 ## Entrées actives
+
+2026-10-23 · **523 — régénération de CODE-MAP** : sous Windows, `gen-code-map.ts` écrivait
+des chemins à antislashs (281 lignes corrompues par régénération), et le déclencheur du hook
+pre-commit (`src/server/services/` et `src/server/trpc/routers/` ancrés par `$`) ne
+correspondait à aucun fichier réel : la carte n'était jamais régénérée pour un service ou
+un routeur modifié. Chemins POSIX et motifs `.*`. Cause : outillage écrit et vérifié sur un
+seul OS, et regex de déclenchement jamais exercée sur un chemin réel.
+
+2026-10-23 · **523 — embeddings Seshat superposés pendant l'import du corpus** : chaque
+source indexée lançait son propre passage `embedBrandContext` sur toute la file de sa
+marque. Pendant l'import SPAWT (~7 000 fragments `BRAND_SOURCE`, 20-22/10), des dizaines
+de passages ont vectorisé les mêmes fragments sur l'Ollama CPU partagé du VPS, des
+heures durant, jusqu'au bridage de la VM par l'hébergeur (steal ~70 %). Le chemin
+natif jetait en plus les vecteurs d'un appel au premier dépassement du plafond, et
+l'ops-sweep attendait le rattrapage au-delà des 120 s de l'ops-daemon (« ops-sweep
+injoignable » au journal). Corrigé : passage unique par process, bornes et pause
+par lot, arrêt au premier vecteur manquant, `/api/embed` par lots avec lot partiel
+rendu, reprise des vecteurs de même `contentHash`, rattrapage du sweep lancé sans
+être attendu. Cause : déclencheur fire-and-forget par source sans
+coordination, sur un chemin d'embedding pensé pour un service dédié et non partagé.
+
+2026-10-20 · **511 livré — identité revendiquée et autorité partagée au selfserve** : trois défauts reproduits sur fixtures (hashnull revendiqué sur email seul, double consommation concurrente de reset, homonymes fusionnés/accès entre deux TPE). auth.register refuse tout existant, reset existant consommé atomiquement token/date ; nouveau fondateur sans operatorId partagé, propriété Strategy.userId gardée, Client réutilisé seulement sous même propriétaire, opérateurs existants inchangés. Résultat login ou récupération préremplie, register conflict vers récupération, indisponibilité sans transport/accusé demande si armé sans mail prétendu livré. Six PG initiaux puis sept avec refus sans transport/identité inchangée, harnais corrigé séparément ; census admin readonly réservé selfserve production509 zéroop/zéroassocié, aucune mutation réelle. Cause : email/nom et affectation technique partagée traités comme preuve de contrôle/droit. 511 livré, natif reçu localement ; transport externe ouvert, M04offre/CRM et M05coût/différés/admission ouverts, pas PSP/vente/MVP entier. [Plan unique M04/C7](RESIDUAL-DEBT.md). **Blocage de remise M04 confirmé** : lecture seule du runtime509 le 20 octobre
+à21:39UTC : sendEmail sélectionne provider=log, aucun EMAIL_FROM configuré.
+Aucun transport transactionnel actif : le titulaire ne recevrait pas son lien,
+malgré les gardes de reset reçues localement. Réutiliser email/Anubis et le
+raccord/credentials existants, puis recevoir configuration et recette de transport
+autorisée avant remise commerciale. Aucun secret affiché, email externe envoyé
+ou fournisseur ajouté ; le MVP commercial n’est pas reçu.
+
+Preuves privées : `release/preuves-remise-commerciale-20261020/framing.json`, `handover-red-green-received.json`, `production-selfserve-census.json`. Configuration : `release/preuves-remise-commerciale-20261020/production-mail-configuration.json`.
+
+**Factorisation 511 livrée** : email/index.ts délègue au sender système
+Anubis existant, double cascade retirée et catégories transactionnelles conservées.
+Un petit lecteur pur systemEmailIsArmed est ajouté au module Anubis existant :
+expéditeur et provider requis ; brandEmailIsArmed réutilise cette disponibilité
+pour son repli système. Ce helper est neuf, aucun nouveau service/provider/manager.
+forgotPassword sans transport renvoie deliveryAvailable=false pareil pour adresse
+connue/inconnue, sans émettre de jeton. La page existante affiche indisponibilité
+et contact humain : aucun succès d’envoi ni secret journalisé. Raccord réel et
+transport autorisé restent à recevoir via email/Anubis/credentials existants.
+Preuve `release/preuves-remise-commerciale-20261020/email-factorization-received.json`. Deux tests transport rouges/un vert avant ; sept unitaires/deux fichiers et sept PG après. 511 livrée : PR1047, source `252fc551e7a94362271395cece74d4b109e38f04`,
+build 39508092180 et digest `e822a4a7ae96db16c9ca2d3df3d7478524a71d02f3d225a73cc0cb3f0bc61e30`.
+Runtime 6.27.511 reçu le 20 octobre à 22:51 UTC ; conservation à 22:52 UTC :
+mêmes volumes, 67 sources/1 041 actifs, états/originaux/piliers et racine Friesland.
+Lectures séquentielles, pas snapshot atomique ; version/login 200, relais/90s
+conservés, OpenRouter absent. Attente technique 511 close. Remise native locale,
+annulations Next _rsc et effets volontaires conservés dans les reçus P27 ; aucun
+SMTP/PSP/vente/MVP entier déduit. Compte d’envoi et transport autorisé restent ouverts.
+Preuves : `release/preuves-mvp-commercial-20261020/production511-{received,data-preserved,public-api-received}.json`.
+
+2026-10-20 · **512 livré — usage pré-marque perdu et travail implicite** :
+trackCost ignorait l’usage sans Strategy et le rapport public lançait des
+préparations créatives/embeddings ; le claim par intake ne bornait pas l’occupation
+partagée. Gateway/ALS interne et rattachement réel, claim PostgreSQL et capacité
+modèle existants étendus ; index déterministe conservé, extras publics désactivés,
+catalogue borné sans nouveau prix. Coûts : 18 tests/3 fichiers, PG attribution 3/3 et
+admission 4/4 reçus après rouges ; premier DEFAULT : 4 906 verts/3 refus puis reprise
+isolée verte sans garde affaiblie. Cause : corrélation conditionnée par la marque
+et production implicite après audit. Checkpoint local 21 octobre reçu : 12 réponses
+Luna/12 coûts exacts, pré-marque rattachée, admission 409/429/rejeu/original et anciens
+cas conservés ; 19 nœuds sans embeddings/98 PENDING utiles, pas zéro agent.
+DEFAULT 4 909/461, PG 440/27 et contrôles finaux verts. Première grille refusée puis
+correctif 3 colonnes reçu sur build final, cinq tarifs contenus sur ordinateur et
+mobile420 ; livraison 512 reçue, autres parcours/
+coûts et réception commerciale ouverts. [Plan M05/C7](RESIDUAL-DEBT.md).
+
+512 livrée : déploiement terminé le 20 octobre à 23:40:14 UTC, runtime reçu à 23:40:36 UTC,
+source `0c6a3a959145c49a3f2c0b3b645334f8ae25248c`, digest
+`f663b9ea80772547563bfbd1248e485ddb61f77b0cfa26ea391aa85091163f67`.
+Conservation 23:41 UTC : 67 sources/1 041 actifs/huit piliers/racine Friesland, mêmes
+volumes/relais Luna/90s, OpenRouter absent ; lectures séquentielles non atomiques.
+Attente livraison/runtime/conservation 512 close. Preuves P23
+`release/preuves-mvp-commercial-20261020/production512-{received,data-preserved,public-api-received}.json`.
+
+2026-10-21 · **513 livré — signal de paiement confondu avec autorité** :
+adaptateur/webhook/types et IntakePayment existants lient providerRef/hash SHA256
+avant URL, contrat v1 snake_case/PUSH et statut serveur obligatoire ; plus de
+SUCCESS par défaut ni secret global pris pour preuve par paiement. PAID monotone/
+CAS,503/PENDING et anciennes lignes/droits conservés.8 rouges/1 vert puis 9 verts,
+18 PG et10 unitaires verts sur transport/fulfillment simulés, ancienne implémentation
+réellement rouge puis restaurée. Livraison 513 reçue ; paiement PSP et reprise durable
+après PAID non reçus. Cause : liaison du reçu et autorité du statut perdues entre
+initialisation et notification. [Plan M04](RESIDUAL-DEBT.md).
+
+**Réception locale 513 (2026-10-21)** : PostgreSQL 462 tests / 29 fichiers ;
+DEFAULT 4 919 / 462 reçu par union après deux reprises, sans garde affaiblie ;
+gouvernance 1 671 / 169, typage et deux lints sans erreur, cycles 0. Dix réponses
+HTTP Next locales reçues sur simulateur de prestataire : preuve invalide refusée,
+indisponibilité sans promotion, PAID conservé et accès voisin refusé. Persistance
+et retrait de la fixture reçus ; anciens dossiers conservés. Aucun paiement réel.
+Preuves P29 : `local-reception.json` et `http-received.json`. Livraison 513 reçue ;
+paiement PSP, SMTP et reprise durable restent ouverts. Raccord réel : clé reconnue
+live sur origine sandbox ; OAuth seul sur `https://api.cinetpay.co` refusé par
+HTTP 422 / INVALID_CREDENTIALS (1005). Aucun secret sorti, paiement créé ou
+changement de configuration. Compte ou rail de lancement à confirmer, [plan M04](RESIDUAL-DEBT.md).
+
+513 livrée (PR1049) : source `1631ab2e74a9229442b47f8fdc6605f7f09a11d8`,
+runtime 6.27.513 reçu le 21 octobre à 00:18 UTC, digest
+`3d026255e2eb4c60b72ff5dc533c405486b7e9547c169d51c92faab39b0e756a`.
+Mêmes volumes/relais Luna/90s, OpenRouter absent ; 67 sources/1 041 actifs, états/
+originaux/huit piliers et racine Friesland conservés par lectures séquentielles,
+non atomiques. HTTP production : santé 200, notification invalide 400/inconnue 404,
+sans paiement PSP ni mutation métier. Attente technique 513 close ; SMTP/PSP/
+réconciliation legacy/fulfillment durable et réception commerciale restent ouverts.
+Preuves P23 : `production513-{received,data-preserved,public-api-received,payment-http-received}.json`.
+
+2026-10-21 · **514 livré — valeurs sans libellé et responsabilités invisibles** :
+les trois lecteurs d’identité attendaient seulement certaines clés, alors que les
+formats sources déclarent valeur/rang et responsabilités distinctes de bio. Kit
+partagé et deux rendus étendus sans mutation, priorité canonique conservée ; six
+régressions, rouge réel : 4 KO/2 verts puis 22/3 verts ciblés. Cause : divergence des
+lectures du même contenu, pas défaut démontré du canon/score. Natif dev local
+reçu, responsabilités/bio distinctes ; réseau tronqué, pas zéro global/SLO.
+Trois cas PostgreSQL reçoivent l’héritage A entier explicite et priorité d’un A
+propre même vide, sans merge ni bug du resolver démontré. Fixtures retirées,
+production inchangée ; identité masterbrand à recevoir avant rattachement
+corporate. Compilé/gates et livraison/conservation production514 reçus ;
+portefeuille entier distinct et non reçu.
+[Réception et ordre opérationnel](RESIDUAL-DEBT.md).
+
+**514, réception locale finale acquise** : DEFAULT 4 925/463, PostgreSQL 462/29,
+gouvernance 1 671/169, neuf contrôles réussis ; typage/deux lints sans erreur
+(24 avertissements historiques chacun), cycles : 0, code-map/typegen et build webpack
+final reçus. Natif compilé ADMIN/HTTP 200 : valeurs ordonnées et responsabilités
+visibles, maturité toujours incomplète ; DOM 214,6 ms/titre ≤708 ms pilote compris,
+pas SLO. Fenêtre complète 60 réponses, 0 HTTP ≥500 et 0 exception, mais 11 net::ERR_ABORTED
+conservés sans cause supposée ; aucun zéro échec de chargement annoncé.
+Contenu/version/certitude exacts au périmètre local comparé, zéro AICost,
+fixtures retirées, serveur local de recette arrêté. CI/image/runtime514 et
+conservation production reçus au périmètre ci-dessous ; ADVE/portefeuille entier non reçus.
+Preuves P32 : `native-compiled-received.json`, `local-conservation-received.json`,
+`compiled-team-visible.png` ; P23 `gauntlet514-final-results.json`.
+
+
+**514 livrée — réception production bornée** : PR1050/source
+`fbaefc63f8b9f615ef91bacb8b5e38fd6b91050f`, image
+`c7d479accddfe69193fc6bddd233d1e225d786a613dd8b2394b212e2819f1eeb`.
+Identité SPAWT : quatre valeurs/rangs et trois responsabilités exacts ; fenêtre
+complète 46 réponses, 0 HTTP ≥500/exception, mais 5 ERR_ABORTED conservés, pas SLO.
+67 sources/1 041 actifs/huit piliers, racine Friesland/trois marques liées et six lignes
+de paiement conservées par lectures séquentielles, pas snapshot atomique. Attentes
+CI/image/runtime/conservation 514 closes ; aucun onboarding/leaderboard/Oracle
+complet reçu. Preuves P32 `delivery-received.json`, `production-native-received.json`.
+
+2026-10-21 · **515 livré — liaison de calibration et publication du scoreur** :
+épreuves stockées identifiaient l’étalon par ID mais calibration lisait son alias ;
+revue et verdict pouvaient diverger. Chargement par ID/alias filtréligue, rejeu
+exact verrouillé et approval/observation/verdict atomiques dans les services
+existants, sans changer formule/poids/canon. Garde existante sur les accès indirects,
+opérateur DB et sujet UI distinct du rang ; preuve humaine/IA facultative, URLs
+hunter limitées aux vrais résultats. Rouges réels conservés, checkpoint PG 22/22 vert (premier ciblé unitaire 14/4) ; build/
+gauntlet/natif et livraison515 reçus. Cause : identité et frontière de publication
+perdues entre calibration, revue et rendu. [Plan LB02](RESIDUAL-DEBT.md).
+
+Checkpoint 515 : 22/22 PostgreSQL verts. Graphe accepté de la ligue courante
+repris par l’estimateur existant ; aucun ScoreVerdict→observation, formule/poids
+inchangés. Duel entrant compté une fois/résultat inversé, couverture/gains propres
+préservés ; autre ligue exclue. Changement de pays : registre historique conservé,
+confrontations et items gagnés antérieurs exclus du calcul courant.
+APPROVE exige la date du fait, distincte de reviewedAt ; sans date, PENDING reste
+inchangé. Input facultatif au schéma pour REJECT sans date. UI : date par
+proposition, retour local succès/erreur pour saisie humaine et revue.
+**515, réception finale locale acquise** : vrai OPERATOR sur build compilé ;
+A reste sujet lorsque B passe devant. Observation humaine datée, APPROVE daté,
+REJECT sans preuve et hunter indisponible dégradé honnêtement reçus ; deux marques
+synthétiques visibles au public, deux observations sujet/trois verdicts/20% de
+couverture, une validation/un refus. Source/date et contenu/version/certitude
+exacts au périmètre comparé, zéro AICost et fixtures retirées.
+DEFAULT 4 931/465, PostgreSQL 484/30, gouvernance 1 671/169, neuf gates verts :
+typage/deux lints sans erreur (24 avertissements chacun), cycles : 0, code-map/build
+final reçus. Console : fenêtre complète 55 réponses, 0 HTTP ≥500/exception, mais
+16 ERR_ABORTED ; public : 27 réponses, 0 HTTP ≥500/exception/échec. DOM 207,9/95,4 ms et
+titres observés ≤162/146 ms, pilote compris ; pas SLO ni zéro échec console.
+Premières fenêtres incomplètes conservées ; date reçue par calendrier natif,
+outil fill sans commit du champ, aucun correctif produit/bouton forcé.
+CI/image/runtime515 et conservation production reçus ; attente technique close.
+**Premier CI 515 refusé avant les 22 tests PG** : garde locale 55439 incompatible
+avec le conteneur CI détenu 5432 ; 29 fichiers/462 tests verts, 22 non exécutés,
+pas rouge métier. Deux cibles exactes seulement : hostname 127.0.0.1 et base
+shinkiro_verify obligatoires ; local 55439/user shinkiro_fixture OU
+GITHUB_ACTIONS=true, GITHUB_REPOSITORY=xtincell/ADVE-project, port 5432/user postgres.
+Aucune assertion métier retirée ni skip ajouté ; produit/version/build/natif
+inchangés. Relance locale 22/22 et cinq contrôles obligatoires (typage/deux lints/
+cycles/gouvernance) reçus après correction de la garde ; produit inchangé vérifié.
+Nouveau CI/image/runtime515 reçus dans la livraison ; refus initial conservé comme harnais.
+Preuves P23 `ci515-postgres-first-failure.log`, `scoreur515-ci-fixture-local-green.log`,
+`gauntlet515-ci-fixture-results.json`, `ci515-fixture-change-scope.json`.
+ Limite historique515 : contexte rival alors pris en charge par516, sans
+championnat/Oracle entier reçu ; la publication réelle SPAWT516 est reçue plus bas. Preuves P33
+`native-reception-received.json`, `local-conservation-received.json`.
+
+**515 livrée, périmètre technique reçu** : source
+`61c0118534556cc9778623a33516f63821fc221a`, digest
+`cc6658f2e6901d910b2b5a9ce62ced2d0943c44dbd45f47539f5f3341e308f06`, runtime 6.27.515.
+67 sources/1 041 actifs/huit piliers, racine Friesland/trois masterbrands et six
+lignes paiement conservés ; lectures séquentielles, pas snapshot atomique.
+Console production : sélection SPAWT sans publication, 39 réponses complètes,
+0 HTTP ≥500/exception mais 6 ERR_ABORTED ; DOM 440,6 ms, pas SLO ni zéro échec global.
+CI/image/runtime/conservation 515 clos. Preuves P33 `delivery515-received.json`,
+`production-native-hydrated.json`. Pas de championnat réel ou réception macro déduit.
+
+2026-10-21 · **516 livrée — contexte rival et dernier verdict public** : calcul
+ne reprenait pas les mesures vivantes des rivaux ; filtre/limite avant dernier
+verdict par marque pouvait réafficher un ancien placement ou masquer une marque.
+Compilateur/parcours existants étendus sous même client transactionnel, ancres
+fixes terminales, aucune formule/poids changés. Public API/page partagent la lecture,
+rangs par ligue ; repères proposés non mesurés/ratifiés, libellé arène/40 et aliases
+FOOD raccordés. Premier natif refusé : projection perdait theta et rendu mêlait
+force/40 et ±RDθ. Projection nullable/rendu distinct θ±RD, absence de preuve ou
+RD legacy indisponible explicitée sans 0/θ par défaut ; fit/gauge inchangés.
+Deux assertions de rendu réellement rouges puis trois tests de page verts,
+réception locale finale et livraison reçues. Quatre rouges PG réels puis 26/26, trois rouges unitaires puis ciblés
+verts ; première passe 25/26 avait supposé un mouvement du theta arrondi alors que
+l’incertitude réelle 349→348 bougeait : assertion RD corrigée, fit/poids/test
+conservés. Vérifications/égalité computedAt (déjà verte avant ordre explicite,
+pas défaut reproduit), build final/rendu/HTTP/rejeu/cleanup locaux reçus ;
+CI/image/runtime 516 et conservation de bascule reçus. [Plan LB02/03/05/06](RESIDUAL-DEBT.md).
+
+Les refus de réception liés aux majuscules CSS, aux champs emittedAt/statusOK
+et à la performance indisponible dans evaluateDOM relèvent de l’instrumentation ;
+aucun bug ni correctif produit revendiqué pour ces écarts.
+
+**516, réception locale historique avant livraison** : build webpack final terminé,
+cinq contrôles post-unités verts ; PostgreSQL 489/30 dont 27 pipeline, ciblés 52/6
+dont trois tests de page, gouvernance 1 671/169, typage/deux lints sans erreur
+(24 avertissements chacun), zéro cycle. DEFAULT 4 935/466 PAR UNION : 4 933 verts
+initialement avec timeout, reprise 6/6 et page finale 3/3 ; exécutions recouvrantes,
+pas run complet tout vert. Aucun test/délai/fit/poids modifié.
+HTTP OPERATOR/rejeu et lectures anonymes reçus : trois marques fictives/deux
+ligues, rangs VILLE 1,2/NATION 1. Desktop et viewport mobile demandé 420/effectif
+414 : HTTP 200, chacun 27 réponses complètes sans ≥500/exception/échec ; DOM
+126,2/121,8 ms, titres observés ≤232/163 ms pilote compris, pas SLO ni appareil
+physique reçu. Quinze repères proposés distincts, override DB 2151 lu, sans
+ratification. Force/40 séparée de θ1343±347, arènes non observées explicites ;
+captures relues sans débordement. Premier écran refusé et fenêtres partielles
+conservés ; seules les finales 27+27 reçoivent le rendu corrigé.
+Neuf tables locales antérieures exactes pour IDs/champs comparés (SHA), lectures
+séquentielles non atomiques ; contenu/version/certitude/dates conservés, zéro
+AICost, fixtures retirées, serveur arrêté/onglet local fermé/viewport restauré.
+CI/image/runtime et conservation de bascule 516 désormais reçus ; qualification
+complète des marques, rejeu seed/UI, onboarding/championnat et Oracle restent ouverts.
+Preuves P34 `release/preuves-championnat-20261021/native-reception-received.json`,
+`http-final-received.json`, `local-conservation-received.json`, captures desktop/
+mobile finales ; P23 `scoreur516-build-units-final.log`,
+`gauntlet516-units-results.json`.
+
+
+Décision régionale utilisateur : modèle existant à onboarder, pas bug du resolver ;
+instances pays/équipes et international distincts, [réception LB03](RESIDUAL-DEBT.md).
+
+Cause 517 : l’upsert de mise à jour réutilisé pour initialiser écrasait réglages/
+dates et ne refusait pas une collision de type ; correction désormais reçue.
+
+**517 livrée — canon conservatif (2026-10-21)** : PR1054/source `a4770ab55`,
+runtime 6.27.517, digest `4ce654f0635ac49c7f2355ce29e43806730beefaa51976f56be736860c9d29b4`.
+CI distante DEFAULT 4 935 et PostgreSQL 493 verts. Rejeu ADMIN production :
+30 références exactes, sans ratification ; 32 réponses complètes, 0 HTTP ≥500/
+exception, mais deux ERR_ABORTED conservés, pas SLO. SPAWT 39,5/200 et 40 % couverture,
+verdict/piliers/suivi antérieurs, sources/originaux/actifs et six paiements conservés ;
+aucun appel IA demandé. Lectures séparées non atomiques avec bascule/rejeu.
+Attentes techniques CI/image/runtime/conservation et rejeu production 517 closes.
+Historique local conservé : trois rouges puis 31/31 PG, neuf contrôles verts ;
+ancien réglage 2191 exact, 29 absents ajoutés, deuxième clic exact ; fenêtre 64 réponses/
+25 ERR_ABORTED, reprise deux HTTP 200, onze tables locales conservées après retrait
+fixtures. Premier ENOTEMPTY et déplacement réversible de `.next` généré conservés,
+sans suppression de donnée. Preuves P34 `delivery517-received.json` et reçus locaux
+`canon517-{first,replay}-received.json`, `canon517-local-conservation-received.json`.
+
+**519 candidate — réception de cascade et fraîcheur Oracle** : cause reproduite,
+ancien état pollé pouvait valider trop tôt ; invalidation Oracle absente de la
+transaction de correction et résultat tardif accepté malgré changement de source.
+RtisCascadeModal
+attend la réponse complète des quatre R/T/I/S de cet appel ; anciens piliers pollés,
+sous-ensemble ou erreur n’acquittent plus la cascade. Ni huit piliers ni 35 sections
+validés promis. `markPillarsStale` utilise `markAllSectionsStale` dans la même
+transaction : correction documentaire/invalidation Oracle atomiques, payload/
+version/historique et isolation conservés, sans génération. GENERATING garde son
+verrou avec marqueur de changement ; retour tardif refusé SOURCE_CHANGED, statut
+STALE/ancien payload conservé, reprise explicite. Trois rouges PG/1 vert avant,
+puis 4/4 ; cinq cas UI rouges valides puis 13 ciblés verts après correction des
+mocks de table. DEFAULT 4 942/467 reçu PAR UNION : deux runs 4 941/4 942 (cas gros
+original >30s sous concurrence), fichier isolé 6/6 en 17,4s, aucun seuil assoupli.
+PG premier 497/504 refusé (P2037/compteur global croisé), puis 504/31 verts avec
+fichiers sérialisés, concurrence interne conservée. Gouvernance+UI finale 1 684/171
+(1 671+13), typage/deux lints sans erreur (24 avertissements chacun), zéro cycle.
+Premier build vert ; premier dialogue quatre retours HTTP 200/skipIfReady sans
+modèle, mais texte « Oracle prêt … sans sections vides » refusé. Rouge 1/5 puis
+texte corrigé et suite gouvernance+UI verte ; build webpack final reçu.
+Natif compilé final USER équipe locale : RPC cascade HTTP 200, quatre résultats
+courants (R/T/I COMPLETE, S ENRICHED) en skipIfReady sans modèle ; succès enregistré/
+propositions à relire, sans Oracle prêt/35 sections validées/promesse de durée.
+Fenêtre complète 68 réponses, 0 HTTP ≥500/exception, mais 15 ERR_ABORTED conservés ;
+DOM 467,8 ms/titre 1 057 ms pilote compris, pas SLO. Onze tables préexistantes
+comparées exactes par hash après retrait de la fixture ; zéro coût IA propre,
+deux émissions/35 sections de fixture. Réception locale 519 close au périmètre
+reçu ; premier texte refusé conservé, CI/image/runtime production 519 ouverts.
+Preuves P35 `core519-native-local.json/png`, `core519-local-conservation-received.json`.
+Aucun service/router/Intent/modèle/gestionnaire nouveau. Preuves P23 `core519-*.log`.
+Graphe Oracle déclaré 270 nœuds/338 arêtes : lecture statique, pas E2E des dépendances.
+Raccords Friesland réels API sur 518 reçus : racine+trois masterbrands (quatre nœuds)
+et trois Strategy vers le Client régional Abidjan ; autres scalaires/piliers exacts,
+aucun pays/droit/facturation modifié, Client WAMCO Nigeria distinct conservé.
+P35 `friesland-bindings518-received.json` ; instances pays/équipes/leaderboard FRC
+et ADVE entier restent ouverts.
+Sur production 518 : actualisations R et T SPAWT HTTP 200/enregistrements à relire
+reçus, pas fidélité intégrale ; force 39,5 inchangée/structure 160 distincte.
+I→S reste à recevoir : choix courants distincts des anciennes actions retenues,
+via chemin existant ; ADVE, MVP, Oracle et sept chantiers entiers non reçus.
+
+I→S/Oracle restent des constats ouverts : 28 retenues historiques hors I courant,
+aucun choix des 52 actions I reçu ; titre Oracle local 27/35 « complètes » avec
+zéro rédigée non corrigé dans 519 (corrigé depuis : synthèse en 538, grille et
+instantané en 554). Conservation sans réactivation et reprise par
+chemins existants planifiées dans [la même dette Core/Oracle](RESIDUAL-DEBT.md).
+
+**518 livrée — rattachement Client manuel dans le portefeuille** : extension de
+`brandNode.update`/`OPERATOR_UPDATE_BRAND_NODE` et BrandNodeForm existants ; liaison
+nœud/Strategy attachée atomique par CAS, Client actif du même opérateur seulement.
+Strategy partagée ou Clients incohérents refusés ; ADVE, pays, sources, historique
+et frontières professionnelles/juridiques conservés. Aucun modèle/router/Intent/
+provider nouveau. Recette locale compilée reçue : USER du même opérateur,
+un clic HTTP 200 et sélecteur conservé à la réouverture ; deux FK liées, autres
+scalaires/piliers/HUMAN exacts au périmètre comparé, pays marque CM/client CI distincts,
+aucun modèle appelé. Conservation des lignes préexistantes de onze tables reçue
+par hashes après exclusions documentées des ajouts post-capture. Premier refus
+Strategy 81/76 conservé : cinq stratégies et lignes associées attribuées aux suites
+PG document-representations/document-versions dont afterAll ne retire pas ces fixtures,
+laissées en place. Seules fixtures natives 518 retirées ; aucun inconnu effacé.
+Populations/base entière non identiques, aucune conservation atomique globale déduite.
+Preuve P35 `client518-prior-rows-conservation-received.json`.
+Fenêtre complète 58 réponses, 0 HTTP ≥500/exception, huit
+net::ERR_ABORTED conservés ; DOM 331 ms/titre 7 057 ms pilote compris, pas SLO.
+Limite de la recette locale : build antérieur à la dernière prose « Quoi de neuf 518 » ; note finale validée par
+14 tests, mais son rendu natif non recetté sur ce build. DEFAULT 4 937/466 et PG 500/30
+reçus en reprise ; cinq contrôles finaux verts : typage, deux lints sans erreur
+(24 avertissements historiques chacun), cycles zéro, gouvernance 1 671/169.
+Premiers refus de mocks de hook, assertion nullable de test et ENOTEMPTY conservés ;
+cache `.next` déplacé réversiblement avant build réussi. Limites locales historiques
+conservées. 518 livrée : source `290aa20c`, digest
+`ca4ab7e0562a696d5f2b532b872d31e2bcc111a9df7e42c3256410c7165e25d1`, runtime reçu
+à 13:15 UTC ; CI DEFAULT 4 937/PG 500 verts. Conservation 67 sources/1 041 actifs/
+huit piliers/trois enfants/six paiements reçue séparément, pas snapshot atomique ;
+mêmes volumes/relais/90s, OpenRouter absent. Attentes techniques 518 closes.
+Preuves P23 `production518-received.json`, `production518-data-preserved.json` ;
+P35 `client518-native-local.json`, `client518-local-received.json`.
+Reprise après livraison 518 : raccorder commutateur/résolveur existants aux pages de piliers,
+qualifier les 15 usages pays et recevoir deux marchés/décisions/équipes/droits/preuves
+indépendants, sans copie de Strategy ni nouvelle taxonomie ; [plan LB03](RESIDUAL-DEBT.md).
+Les défauts de raccord pays et de fidélité SPAWT restent ouverts, pas corrigés
+par cette liaison Client : commutateur/hook sans lecteur actif repéré, héritage
+entier intentionnel ; pré-lancement/zéros non mesurés et 160/200 latéral ambigus.
+Reprise LB03/FIDÉLITÉ existants avant Oracle, dont 35 COMPLETE SPAWT historiques et
+zéro section FRC ne reçoivent aucun des six stades. [Plan](RESIDUAL-DEBT.md).
+Enrichissement documentaire déjà reçu en production, distinct du correctif 519 :
+42 champs manquants indexés/enregistrés/relus via amendements gouvernés existants
+(Bonnet Rouge 12, Peak 12, Belle Hollandaise 18), tous INFERRED, pas HUMAN ; valeurs
+antérieures et SPAWT conservées. P35 `adve518-fields-received.json`. Aucune adoption
+humaine ni publication de score déduite ; MVP/ADVE/Oracle/corpus Drive entiers non reçus.
+
+**516 livrée — production reçue (2026-10-21)** : PR1053/source
+`5e39fc12f2acf73b42ea795bf99342942c317c64`, runtime 6.27.516 reçu à 09:24:15 UTC,
+image `26f20f644b6584d4d49e4d74f2627fc0783c523c47838431fc572e408b47955c`.
+CI distante : DEFAULT 4 935/466 et PostgreSQL 489/30 en runs complets verts ; la
+borne locale PAR UNION ci-dessus reste historique. Mêmes volumes/relais Luna/90s,
+OpenRouter absent. Bascule : 67 sources/1 041 actifs/huit piliers/FRC+trois masters/
+six lignes de paiement exacts, lectures séquentielles non atomiques. Dette
+CI/image/runtime/conservation 516 close ; sept chantiers/MVP/ADVE entiers non reçus.
+Canon : 15 ancres+15 items chargés une fois par API ADMIN existante sur registre
+frais vide ; pas d’override/ADVE/humain ratifié. À la livraison 516, rejeu conservatif/
+UI alors ouverts : risque du seed 516 corrigé et reçu en 517 ci-dessus.
+Lecture canon : 32 réponses, 0 HTTP ≥500/exception mais 1 ERR_ABORTED conservé,
+DOM 2077,7 ms/titre 2120 ms pilote compris, pas SLO.
+SPAWT : un clic natif, un ScoreVerdict et émission gouvernée OK ; 39,5/200 LATENT,
+couverture 40%, deux épreuves A/V, ligue effective food/VILLE/CI. 189 enregistrements
+antérieurs du suivi des followers et huit piliers exacts, zéro nouveau coût IA ;
+pas nouvelle marque/collecte ni modification/ratification ADVE. Lectures anonymes
+leaderboard/verdict HTTP 200. Public production : 24 réponses complètes sans ≥500/
+exception/échec, DOM 842,1 ms/titre 875 ms pilote compris ; trois arènes non observées,
+15 repères proposés. Anciennes erreurs instrumentales conservées, pas bugs produit
+revendiqués. Sources multi-pays conservées hors pillarOverrides ; pays/ligues et
+instances régionales et placement Friesland restent à recevoir. Plan : LB02 et LB05
+reçus à ce checkpoint 516 (2/6) ; reprise technique LB01 ensuite reçue en 517.
+Championnat entier/Oracle non reçus, dernier Oracle 0/6. Preuves P23 `merge516-received.json`,
+`ci516-suites-received.json`, `postmerge516-received.json`, `production516-*.json`,
+`children516-after-received.json`, `payments-after516.json` ; P34
+`canon516-initialization-received.json`, `spawt516-publication-received.json`,
+`native-canon-production516.json`, `native-spawt-publication516.json`,
+`native-public-production516.json`, `retained-market-source-bridge.json`.
+
+
+510 est reçue en production : source `5c5cc907249ef2123e2d6c7a60c95f81ab7794fe`,
+déploiement `ip02ws80mllbkno6xn7skm1h` terminé le 20 octobre à 21:48:22 UTC,
+runtime 6.27.510 au digest
+`31c3a1b87b4577e781cc0e37b4753e8b58dc91be7932a3138e295d29fd2e2379`.
+Mêmes volumes, Luna/relais et délai de 90 s conservés, OpenRouter absent ; version
+et login HTTP 200. Conservation reçue de 67 sources, 1 041 actifs, états et
+originaux, huit piliers SPAWT et racine Friesland ; lectures avant/après
+séquentielles, pas un snapshot atomique. Aucun changement métier causé par la
+bascule. Attente de livraison/runtime/conservation 510 close ; aucun PSP, vente,
+coût complet ou MVP entier reçu.
+Preuves : `release/preuves-mvp-commercial-20261020/production510-received.json`,
+`production510-data-preserved.json`, `production510-public-api-received.json`.
+
+2026-10-20 · **510 reçue — généré promu en reçu et rapport comme dump** : extraction enrichie puis auteurINGESTION/SOURCE par défaut masquaient les propositions ; narrateurs et fallback les attribuaient au prospect, rendu brut26pages/promesse8pages. Code candidat étend les deux écritures avec intakeFieldOrigins (exact/scellé/web observé SOURCE, généré INFERRED), original/HUMAN conservés ; règle/libellés d’origine partagés par tous les producteurs existants, SOURCE importé sans verbatim implicite. Structured gateway/schéma partiel strict sans retry ajouté ; résultat deux champs clés/détails/annexe et complétude distincte de force, promesse8pages retirée. Cause : origine perdue entre extraction, écriture et restitution. Nouveau cas local Luna COMPLETED, original1139/source/huit piliers/LEAD/huit coûts au snapshot terminal, onze coûts partiels après trois Glory différés, transition75réponses sans ≥500/exception et deux ERR_ABORTED, pas coût total ni vente/SLO. generateDiagnostic devient diagnostic de dossier, pas preuve de maturité depuis longueur/complétude. reportEvidenceVersion1 neuf, historique sans marqueur averti et projeté UNKNOWN sauf HUMAN par intakeReportContent ; régénération explicite historique reste0 pour évaluateur/V1/fallback, aucune mutation/backfill à la lecture. Projection/regen historique sans modèle reçues12/12, HUMAN/0/aucun coût conservés ; premier afterAll FK fixture refusé puis nettoyage seul corrigé, retrait13fixtures/trois snapshots local reçu. Conservation historique reçue au périmètre comparé, mauvais cas/original conservés. ids/métadonnées masqués, e_channels/DIRECT traduits, « Volet » sans fausse pagination. Backend reçu PG426/24/gouvernance1 671/types/deux lints sans erreur/cycles0 ; dernière suite concurrente4 897verts/un timeout historique30s, reprise DEFAULT isolée reçue (4 860/457unitaires plus38/2horsunit, union4 898/459, aucune garde affaiblie ; final-default-test-received.json). Natif payé final compilé45réponses sans erreur/réouverture sans callback/détails reçus. PremierPDF17pages refusé puis print.css/dédup full-preview existants corrigés ; PDFdev13pages/huit textes complets/sans page vide,13pages relues sans chevauchement/clipping. Build final webpack/PDF compilé13pages582937octets/huit sections intégrales et qualité bornée reçus localement ;13pages relues blanches sans vide/chevauchement/clipping, bouton3,4s. Réseau45réponses0erreur/nontronqué/titre≤257ms pilote compris, pasSLO ; original1139/SHAexact200, voisin404/no-store/no-referrer. Six droits/rejeuHTTP200, impayéPDF402/foreignref refusée, complete11ms stocké sans modèle. Conservation finale reçue : ancien périmètre alltrue/mock exact retiré, nouveau cas intake/piliers/upload/source/Deal identiques et huit coûts initiaux inchangés ; première assertion coûts refusée8→11, trois Glory settled20:28:59–20:29:16 après snapshot20:28:53 et avant arrêt Luna20:32, pas durant lecture/PDF sans provider. Onze coûts restent partiels ; M05 reçoit aussi différés/assistance facultative via manager existant. Gratuit sans mock/bouton PDF et origines, historique avertissement/UNKNOWN sans réécriture reçus. 510 reçue en production au digest exact 31c3a1b87b45 et conservation séquentielle reçue ; attente de livraison/runtime/conservation close, qualité universelle non reçue ; aucun coût complet/PSP/vente/MVP entier reçu. Runtime510 reçu ; ancien mauvais cas/original conservés, M04/M05 ouverts. [Réception M03 et M05 différés](RESIDUAL-DEBT.md). Preuves : `release/preuves-rapport-fidelite-20261020/framing.json`, `history-conservation510-final-received.json`, `nori-read-conservation-received.json`.
+
+**472 livré — repli malgré le relais choisi réparé (2026-10-15)** : l’ordre des conditions autorisait un ancien provider malgré le choix OpenAI explicite et un relais incomplet. Deux conditions existantes corrigées/livrées ; admission reçue dans quatre processus de fixture, cible 94 / 8, sans modèle/réseau/DB. Source c92abbc6/CI/image/runtime et reprise native sans génération reçus ; aucune panne réelle injectée. Cause fermée au périmètre ; autres réserves C7/pont manuel C3 et seize réceptions inchangés. Premiers refus AST conservés au [bornage](REFONTE-PLAN.md).
+
+**471 livré — omission documentaire/coupe Q6 réparées (2026-10-15)** : lecture autorisée complétée et extraits exacts, budget 6 000 séquentiel/omissions explicites, aucun nouveau gestionnaire. Source c4d4c6fa/CI/image/runtime reçus ; après déploiement sans génération, un appel production distinct cite la source courante et corrige Q6/Taste Reveal sans mesure inventée. Usage court reçu, pas qualité générale. Nouveau défaut de transmission manuelle des références source tracé dans la dette existante ; C3/C5/C4/C7 et seize réceptions restent ouverts/inchangés. [Reprise](RESIDUAL-DEBT.md).
+
+**470 livré — retour avant journal réparé (2026-10-15)** : deux fichiers Gateway existants attendent le ledger ; créneau libéré avant attente, erreur non fatale sans régénération. CI/image/runtime et conservation du déploiement reçus sans modèle, deux appels de recette sur copie. Après dépôt descriptif SPAWT, un appel production distinct HTTP 200 est reçu mais usage utile refusé : source non citée/Q6 et Taste Reveal mal qualifiés. C3/C5 repris sans cause vectorielle présumée ; C4/C7/seize réceptions inchangés, aucune note client nouvelle. [Reprise](RESIDUAL-DEBT.md).
+
+**469 livré — coupe/ordre de lecture réparés (2026-10-15)** : contrat UI/tRPC partagé, entrées entières ou refusées avant envoi ; décision/priorités/désaccords avant détails dépliables. Texte 9 275 reçu sur copie, qualification limitée à cette question SPAWT. Source 51019356/CI/image/runtime exacts reçus ; lecture ADMIN production conserve fil/cinq réponses sans nouveau modèle. Analyse non persistée, autres réceptions C4/C7 ouvertes. Dix-neuf fichiers gestionnaire/Conseil inchangés ; seize réceptions/zéro chantier sur sept conservés. Clôture documentaire distincte du code/image, sans bump/build. [Reprise](RESIDUAL-DEBT.md).
+
+**468 livré — question, références et partition réparées, réception bornée (2026-10-15)** : contrats existants/DTO public conservés ; source d29c3774/CI-image-runtime exacts reçus, CI 4 540/433 et PG 375/19. Lecture ADMIN production reprend cinq réponses sans nouveau modèle, conservation reçue ; première fenêtre avec 502/HTTP2/annulations préservée, pas zéro global/SLO. Qualification stratégique limitée à la question SPAWT sur copie, pas en production. C4 réponse complète/priorités et C7 ledger/présentation-routage restent ouverts. Clôture documentaire distincte du code/image ; seize réceptions/zéro chantier sur sept inchangés. [Reprise](RESIDUAL-DEBT.md).
+
+**467 livré backend — valeurs qualifiées omises des consommateurs, raccordées au code existant (2026-10-14)** : formatter existant exporté, ARTEMIS preuves avant orientation/brief V2 valeurs plutôt que compte, strategyId aux deux appels. Quatre rouges/deux verts première passe avant extension V1 56 / 4/DEFAULT 4 496 / 430/cinq contrôles verts, harnais corrigés sans invariant affaibli. Dix-neuf fichiers chaîne inchangés, ModelPolicy V1 actif reçu, raccord strategyId V1/complete-regen implémenté sans ID de benchmark inventé ; total baseline cinq rouges/quatre verts/cible finale 59 / 5 verte, finals après V1 DEFAULT 4 499 / 431/six contrôles zéro/CODE-MAP sans diff reçus ; source 18d62990/CI-image-runtime exacts et reprise native cinq réponses/conservation reçus sans modèle ; snapshot avec callbacks simulés borne transmission, sorties utiles/ledger/coûts réels attendus, registre natif V1 lu sans édition ne prouve pas modèle servi ; C5/C7/seize inchangés. [Reprise](RESIDUAL-DEBT.md).
+
+**466 livré C4 — états de conversation isolés/chargement honnête reçus en production (2026-10-14)** : source bee09383/CI-image-runtime exacts, native BR zéro/SPAWT cinq/reload et picker 47/47-19, 36 HTTP complets sans modèle ; copie une/quatre/44 distincte. Sept empreintes/fils/dix messages/huit coûts conservés sans effacement ; premier clic popup cause inconnue/raccourci et clics suivants reçus. Erreurs natives/qualité C4 entière/C5 ouverts, seize inchangés. [Reprise](RESIDUAL-DEBT.md).
+
+**465 livré backend — PreciseField des deux lecteurs réparé au contrat existant (2026-10-14)** : source 046ed251/CI 4 480 / 426/PG 375 / 19/image-runtime exacts, 169 champs copie sans génération/écriture reçus ; circuit/provider et sept empreintes/dix messages/huit coûts conservés. Pas nouveau natif fonctionnel, premiers harnais/version/build conservés sans panne produit déduite. Consommateurs framework/rapport et sorties conseil restent non qualifiés ; seize résultats inchangés. [Reprise](RESIDUAL-DEBT.md).
+
+**464 livré — référence contextuelle et accueil borné reçus, qualité refusée sur copie (2026-10-14)** : source e6897302/CI 4 467 / 425/PG 375 / 19/image-runtime exacts reçus. Accueil ADMIN production/recharge sans modèle reçus, 58 HTTP complets/zéro ≥500 ou exception ; initial tronqué conservé. Sept empreintes/dix messages/huit coûts before/after identiques, post-lecture final identique reçu sans modèle ; copie native/HTTP 2 167-huit messages-349 coûts distincte, citations/cinq→six encore refusés. Reprise par contrats existants en [dette](RESIDUAL-DEBT.md), sans nouveau validateur/manager ; seize résultats inchangés.
+
+**463 livré C4 — lecture/copie/recharge du fil réel reçues (2026-10-14)** : cause de Markdown brut/projection masquée et succès de copie anticipé corrigée dans page/panneau existants. Source 7f0bb03a/CI-image-runtime exacts reçus, CI 4 460 / 425/PG 375 / 19 ; cibles locales initiale 38 / 8/finale 18 / 6 conservées. ADMIN production copie 2 001 exacte/reload même texte sans modèle, sept empreintes/dix messages/huit coûts conservés ; copie locale 2 203/huit/six/348 distincte, échecs initiaux/recharge locale non reçue conservés. Experts natifs/formules legacy/qualité C5 refusée restent ouverts ; widgets dormants/sécurité en [dette et reprise](RESIDUAL-DEBT.md), seize résultats sans crédit ajouté.
+
+**462 livré au périmètre code/runtime — copie reçue, qualité refusée (2026-10-14)** : serializer/fieldStatusFor pour conseil seul, source 68911e1c/CI-image-runtime exacts reçus et sept empreintes/dix messages/huit coûts de fenêtre conservés sans génération. Copie contexte/API/Chrome et ses refus conservés, pas natif/réponse modèle production 462 reçu. UNKNOWN/historique cinq→six/citations et Markdown brut restent ouverts ; prémisse renderer installé fausse, C4 bibliothèque standard sécurisée à implémenter sans parser maison. Tests/timeouts/historiques460-461/seize inchangés, aucun crédit ou capacité backend déduit. [Reprise](RESIDUAL-DEBT.md).
+
+**461 livré — timeout fail-open réparé au périmètre source/API (2026-10-14)** : source d1f82ad5/CI finale/image e1ee22b2…/runtime exact reçus, 429-conservation de copie acquis. Baseline rouge/premier CI du mock/401 expiré/build cancelled puis correction de test seule/DEFAULT 4 447 / 423 conservés. Déploiement sans génération et données/fils/coûts préservés ; erreur UI visuelle non reçue, charge/multi-instance/plafond OAuth/coûts/opt-out restent ouverts. Qualité conseil refusée/seize résultats inchangés, aucun entier fermé. [Reprise](RESIDUAL-DEBT.md).
+
+**460 livré — route OAuth et contexte reçus (2026-10-14)** : chaîne existante/Luna exact/runtime f36dfd55…/sans clé OpenRouter ou repli texte autre provider, fil et ledger reçus ; premiers refus developer conservés, worker corrigé/8 tests/copie distincte. ADMIN réel, sept populations intactes et reload mêmes dix messages/huit coûts sans génération. Réel 0/21 qualifié, plus de bêta 50/1 200 promues en mesures ; qualité refusée sur INFERRED/UNKNOWN dits déclarés et ancien cinq questions non réconcilié avec six. Statut public reçu, sans preuve de santé/SLO/qualité par les Intents ; fail-open/DPA/opt-out/coûts réels ouverts, seize résultats inchangés. [Dette et reprise](RESIDUAL-DEBT.md).
+
+**459 livré — mapping Free et ledger reçus (2026-10-14)** : deux Free au tarif Sonnet de repli corrigés dans le mapping existant, cible 9 / 2/cinq contrôles verts. Source e756187a/trois CI/image df00ee5b…/runtime exact reçus ; vrai OpenRouter/Nemotron Free/13 136 entrée-1 873 sortie/zéro USD estimé. Fil repris sans génération, ERR_ABORTED après réponse persistée conservé. Nettoyage preview borné, comparaison intégrale originales non reçue ; conseil utile toujours refusé, factures/coût entier inconnus. Seize résultats bornés, aucun crédit distinct pour ce raccord. [Dette et reprise](RESIDUAL-DEBT.md).
+
+**458 livré avec 459 — restauration et classification bornées (2026-10-14)** : trou de restauration et affichage Groupe pour SKU corrigés dans les commandes/formulaire existants. PG 10/10/portefeuille 126 / 15/cinq contrôles reçus ; production 26 vues/neuf assets/neuf aperçus, neuf aliases archivés puis restauration du même dossier/réarchivage final sans perte d’identité. Droits/masters inconnus et noms/versions à qualifier ; ancien cache La Barre non diagnostiqué, aucune correction La Barre déduite. C2-02 reste ouvert, un seul reçu de classification et aucun onboarding entier/SLO. [Reprise](RESIDUAL-DEBT.md).
+
+**457 livré, transport et attribution reçus (2026-10-14)** : observations projetées dans le contexte existant et provider Ollama/Gemma/coût estimé reçus en MCP public et natif ADMIN, fil/recharge sans génération/six populations/média conservés. Contrôles code verts, anciens messages préservés. Conseil utile refusé : diagnostic T promu en preuve, quiz obligatoire prescrit sans justification, cohortes historiques ambiguës ; Markdown brut visible, finition via renderer existant non reçue. Ces causes restent en [dette avec reprise](RESIDUAL-DEBT.md), quinze résultats bornés sans crédit supplémentaire ou entier fermé, factures et coût mensuel non reçus.
+
+2026-10-14 · **456 lecteurs et producteur raccordés au périmètre reçu** : sélection Gazette excluant EXTERNAL_METRIC, extrait tronqué et portefeuille sans Signal corrigés dans les lecteurs/formatter existants. Après les vues locales et l’ancien état public vide, PR31 fusionnée/image quiz réelle livrée reçoivent un Signal durable et sa reprise dans un nouveau processus. Portefeuille public déplié/Q6/origine/version/dates reçu, 0 carte vérifiable/21 historiques sans questionnaire ; Gazette publique dépliée/filtre marché/Q6/même référence/inconnus reçus, IA facultative décochée sans action. Neuf tables Fusée/trois quiz inchangées, aucun contact/brut copié ou inscrit synthétique ajouté en production. Quatorze résultats bornés sans crédit répété ; usage/révision gouvernée, autres rôles, SLO et cycle entier restent en [reprise](RESIDUAL-DEBT.md).
+
+2026-10-14 · **455 admission reçue, lecteurs et historiques encore ouverts** : source 0ec300da/image 34d1bd9c…/public 455 reçus, HTTP privé 401/403/409/rejeu nouveau processus même Signal et public anonyme 401. Identité/date/rejeu/atomicité reçus au périmètre ; neuf tables Fusée/trois quiz hashes identiques. Historique fallback dev/timeouts conservé, aucun écran ou vrai résultat joueur reçu. Lecture Gazette/portefeuille en candidat 456, manuel/ambiguïtés en [reprise](RESIDUAL-DEBT.md).
+
+2026-10-13 · **453 présence documentaire reçue sur OCI privée** : source 2135ded7, trois CI success, image/index ad6970… et OCI 3c4fad3/API 200 ; Galahad REST 3×4/reprise 1×4 conserve ID/empreinte/certitude et six populations. Vraie route ask 500/deliberate 200-UNAVAILABLE reçue sans fournisseur ; import `ai` du harnais antérieur non reproduit. Refus sans fournisseur reçu sur copie et code livré en 454 ; cause correspondante purgée, conseil utile/livre-export et observations quiz restent ouverts. Sources publique 454 reçue en lecture 9/129, option assistée décochée/aucune préparation lancée ; rôle complet et SLO non reçus, même unité bornée. Aucune réponse modèle, production publique 453 ou SLO reçu. [Reprise](RESIDUAL-DEBT.md).
+
+2026-10-13 · **452 source/CI/image et lecture OCI privée reçus** : statut source/
+empreinte/ID arrivé à REST 3x4/reprise 1x4 et RPC 25/3x4, refus et six populations
+inchangées/40 appels coût 0 recette ; source e36c9d28/image 25c189…/OCI privé 36f296e.
+HTML inconnu local reçu seulement, CDP tronqué et timeouts historiques conservés.
+Null OCI non reçu (zéro candidat non-doc), public 450 conservé/nonlivraison452 ;
+BibleCitation contentHash/PDF id-empreinte-statut restent en C4. Query embed permis
+avec provider configuré, aucun index/embedding documentaire préparé en lecture,
+provider absent des receivers. Onze unités bornées, aucun entier/SLO/décision modèle.
+[Reprise](RESIDUAL-DEBT.md).
+
+2026-10-13 · **450 livré au périmètre de préparation documentaire** : RAG initial
+0/77 BRAND_SOURCE sans empreinte malgré neuf EXTRACTED sur copie. Writer existant/
+Sources explicite false au reçu/rejeu, operatorId réel/absence≠panne DB, IDs/scopes/
+lecture pure préservés. Sur copie seulement : 129 empreintes/huit ancrages MCP,
+26 HTTP/refus/rejeu et empreintes métier complètes ; query finale 8→8 après
+préparations antérieures, baseline initiale 0. Source 6f38b4b5/CI/image 38410420071/
+runtime 450 exacts reçus. Production : neuf commandes UI sans embedding, 129 fragments,
+IDs/certitudes visibles conservés ; reload neuf sources/aucun bouton/zéro préparation
+par lecture, 120 événements complets sans ≥500/exception observés au périmètre.
+Initial Notoria 500/tentative vide non reçue/attente sélecteur expirée conservés,
+pas SLO/acceptation globale. DEFAULT 4 342/413/CI PostgreSQL 358/18/cinq finals verts,
+gouvernance 1 627/166/24 warnings ; rouge retry/commit de tests
+684e040e80af523ed802c98a7b38b5276b78e5d0 conservés, pas code LLM modifié.
+MCP production/conseil/mandat/C7/lignées restent ouverts ; futur reçu MD distinct.
+[Reprise en dette existante](RESIDUAL-DEBT.md).
+
+2026-10-13 · **449 runtime/lecteur public reçus au périmètre** : hPanel
+humain/running puis source/index/version exacts et private-media RW reçus.
+Blocage d’accès levé ; cause réseau non reçue/token API Hostinger non revalidé.
+Deux sauvegardes privées serveur/hash/archive reçus, aucune restauration reçue.
+Quiz 557a915/PR30 exact, six sources publiques identiques/health DB/cible reçus ;
+lecture native vitrine/landing/jeu de la v6 réelle conservée, cinq fonts/trois Moka
+reçus sans nouveau choix/publication. Six questions jusqu’à inscription sans contact,
+exports mode aperçu reçus, SELECT avant/après identiques ; reader/accès reçus.
+Ne clôt pas incident réseau/token, restauration/coûts/TPE/univers/retours/cycle inscrit.
+[Preuves et reprise](REFONTE-PLAN.md).
+
+2026-10-12 · **449 source/CI/image reçues — CORS public-brand, livraison alors attendue** :
+quiz manifeste/font HTTP 200 sans ACAO, alors que la vitrine avait ACAO. Deux
+allowlists dupliquées omettaient l’origine possédée du quiz ; politique factorisée
+au domaine existant/deux lecteurs, quatrième origine exacte. Deux rouges/onze
+verts→16/2 verts, PG isolée 39/1 et 19 vrais HTTP reçus, origine étrangère 200 sans
+ACAO/privé 401 sans ACAO/304/gardes conservés. Ni auth ni publication élargie,
+aucun provider/delta DB pendant lectures. Vary inclut Origin sur les réponses
+publiques reçues. DEFAULT 4 331/411/gouvernance 1 627/166 et cinq contrôles finaux
+à zéro ; données fixture conservées après arrêt du Next possédé. Pas réception
+du consumer navigateur, d’une vraie marque ou de la production. Source 5a7f11a…,
+CI exacte 4 331/411 + PG 358/18 et image/registre 449 reçus ; redeploy SKIPPED,
+runtime non reçu, pas nouveau build pour le futur commit MD.
+[Preuves](REFONTE-PLAN.md) · [résidus C2](RESIDUAL-DEBT.md).
+
+2026-10-12 · **448 source/CI/image reçues — refus MCP et découverte par serveur** :
+réponses métier error journalisées OK/sans isError RPC ; refus BRAND RPC sans
+journal, scoping REST séparé ; même clé council REST 200/RPC 401 à l’agrégat. Cause :
+lecture du résultat limitée aux exceptions, gardes dupliquées et serveur demandé
+« * » confondu avec droits stockés. Correctif partage outcome/scopeMcpParams,
+conserve résultat/provenance et filtre découverte via scopeServer. Authentification/
+découverte changées vers parité, droits stockés conservés. Initial huit rouges/
+dix verts et scope trois rouges/27 verts puis ciblés 44/3/DEFAULT 4 318/410/gouvernance
+1 627/166 verts/cinq contrôles 0 ; treize cas HTTP/SDK/PG fixture reçus. Facturation
+OK+ERROR inchangée, DENIED exclu usage mais tarif brut conservé, best effort.
+Source fdc759…, CI exacte 4 318/410 + PG 357/18 et image/registre 448 reçus ;
+déploiement SKIPPED, livraison/runtime/native prod non reçus. Pas activation live/
+cycle/SLO ou purge des autres branches. [Preuves](REFONTE-PLAN.md) · [dette existante](RESIDUAL-DEBT.md).
+
+2026-10-12 · **447 source/CI/image reçues — écrivains S et échec de pipeline, livraison en attente** :
+ancien budget conservé par fusion face à absence et FAILED déclaré complet.
+Correctif trois écrivains vers calcul transactionnel/remplacement S/sources/
+provenance/strict, intake sauvegarde/refus/confiance S fidèle et summary d’échec
+reçus localement. CI exacte 4 297/409/PG 357/18, image/registre reçus. Pas génération
+live/job navigateur/cascade entière atomique ni runtime 447. Dernier reçu 446
+le 10 octobre non reconfirmé le 12 : accès distants expirés, état serveur inconnu.
+Preflight .env manquant ; scheduled-ops vert no-op, SLO vert avec ECONNREFUSED :
+limites ops reprises dans dette existante, aucune cause purgée ou santé globale
+certifiée. [Preuves](REFONTE-PLAN.md) · [dette S existante](RESIDUAL-DEBT.md).
+
+
+2026-10-10 · **446 livré — Notoria copies et écriture de décision, réception bornée** :
+lecture brute proposait plusieurs SELECT pour une identité ; mutation limitée à
+la première copie, S/projection dissociés et refus HUMAN masqué par warning.
+Statut périmé d’une copie secondaire influençait aussi les FK risques. Cause :
+contrats de lecture/mutation et transaction distincts du chemin manuel. Réparation
+bornée : collecte normalisée, mutation toutes copies, IDs choisis canoniques/FK
+union brute, gateway/calcul S/projection atomiques et refus strict ; générateur
+respecte le retrait HUMAN. UI métier sans Zod brut reçue localement. CI source
+4 288/407, PG 352/18 et gauntlet final cinq sorties 0/gouvernance 1 626/166.
+Native USER/TRIAL fictive décision/refus reçue ; production ADMIN lecture seule,
+S historique inchangée. Runtime 446 exact reçu, aucune mutation réelle/cycle/SLO.
+Probes fusion d’ancien budget et FAILED déclaré complet non corrigés dans 446,
+repris immédiatement en 447 dans la dette existante ; « zéro marque » au
+chargement observé localement seulement. Clôture doc ce549c0/CI reçue.
+[Preuves](REFONTE-PLAN.md) · [dette S existante](RESIDUAL-DEBT.md).
+
+
+2026-10-10 · **445 livré, réception bornée — Oracle lecteurs/rendu/budgets CORE** :
+lecteurs bruts créaient doublons/H2 implicite, rendus perdaient labels/locale/
+glyphes ; native CORE conservait total zéro trompeur malgré inconnu et perdait
+budgetCurrency. Causes : collecteurs/rendus/agrégations concurrents. Normaliseur
+partagé, getFieldLabel contextuel (« Part du mix »/« Graisse ») et agrégat campagne
+roadmap-routes partagé mapBudget/CORE/Deloitte conservent inconnus/devises/zéro,
+source/snapshot intacts. CORE quatre rouges/quatorze verts, contextes deux rouges/
+neuf verts, ciblé final 73/six verts et cinq contrôles 0. Native USER/TRIAL locale
+CORE/Deloitte zéro partiel+inconnu,7S trois identités/un canal,3H zéro sur trois classés ; PDF 19/contact
+sheet/pages 16/17 sans ##/glyphes remplacement reçus, mobile partiel seulement.
+PG 347/18 avant derniers lecteurs sans persist changé ; unité DEFAULT finale 4 276/407 verte reçue.
+Timeouts/reload tronqué conservés, aucune acceptation globale/stress/SLO.
+Source 15331789/CI/image/runtime 445 exacts reçus ; CI finale 4 276/407+347/18.
+Lecture réelle SPAWT ADMIN seule/Périmé sans recalcul ni mutation métier, warm
+complète 60 réponses/14 ERR_ABORTED ; reçu documentaire 3abd2be distinct clôturé. Autres CORE/ancien S confondent encore DEVOTION/
+OVERTON et canaux : dette existante et reprise avant cycle réel, sans annoncer
+réparation de tous lecteurs. [Preuves](REFONTE-PLAN.md) · [dette](RESIDUAL-DEBT.md).
+
+
+2026-10-10 · **444 livré, réception bornée, fidélité des projections** : le même
+normaliseur transformait absence de budget en zéro et échéance inconnue en
+LONG_TERM, perdait l’origine qualitative et projetait des entrées sans texte ;
+agrégations présentaient un total partiel comme complet. Cause : normalisation,
+estimation de méthode et fait déclaré confondus, états perdus chez consommateurs.
+Correctif conserve absent/zéro/DECLARED/QUALITATIVE_ESTIMATE/UNKNOWN, sous-total/
+couverture et horizon absent ; source brute intacte, overrides opérationnels
+conservés. Scénarios/formules conservés, baselines 30/60 explicitées ; helper
+inutilisé de promotion floue retiré. partialRecord sur phases des routes sans
+modifier seuils S. Onze rouges puis 47/cinq ciblés verts, unité 4 253/406 en
+deux passages/PG 347/18 verts reçus. Trois rouges UI dus à pollution de fixture,
+isolée par beforeEach, aucune garde affaiblie ; chemin ciblé roadmap erroné
+conservé/couvert par suite complète. Native locale a révélé Base d’actions zéro
+rendu « — XAF »/estimation non nommée : formatter falsy et origine non rendue.
+Trois rouges/quatre verts puis sept verts ; relecture Budget à préciser/0 XAF/
+Estimation · 500 k XAF reçue, trois choix USER/TRIAL 200. Estimation seulement
+sur metadata QUAL/budgetMin=projectedBudget, pas sur override opérationnel.
+Premier gauntlet tsc 2/autres quatre 0, annotation type roadmap corrigée ; unité
+4 256/406 ensuite verte avant deux CSS mobiles, PG 347/18 inchangé. Native S
+200/chiffrage partiel fidèle reçue ; titre écrasé par feedback et grille créative
+serrée à 390 corrigés par header responsive/empilement puis visuellement relus.
+UI 38/quatre verts après header ; aperçu créatif partiel/hypothèses 30/60 reçu,
+ouvrir/Annuler sans création/IA. Desktop recapturé/Oracle HTML et PDF 18 pages reçus, données fidèles mais
+finition PDF non reçue ; cinq contrôles finaux après CSS 0/gouvernance 1 624/166,
+fixture nettoyée. CI après toutes CSS 4 256/406 et 347/18 PG verts ;
+image/runtime 444 exacts reçus. Lecture réelle SPAWT ADMIN passive seulement,
+S toujours Périmé, aucune mutation/recalcul réel ; sept réponses 200/trois
+annulations dans la fenêtre complète, aucune mesure production/SLO reçue. Compteurs reçus seulement avant créatif/PDF.
+Doublons McKinsey7S/ThreeHorizons, inconnus assimilés H2/100 %, locale SSR/client
+Oracle et libellés/glyphes PDF non réparés dans 444 : plan/reprise 445 dans la
+dette S existante, avant cycle réel. Aucune nouvelle entité/route/service/
+Intent/ADR/provider, ni correction des budgets réels ou réception globale.
+Devise des ancres, autres chemins S et projection/remap restent en dette.
+[Preuves](REFONTE-PLAN.md) · [dette](RESIDUAL-DEBT.md).
+
+2026-10-10 · **443 livré, causes UI reçues au périmètre** : droits globaux
+opérateur confondus avec l’autorité sur une marque, boutons de mutation visibles
+en lecture seule ; useBrandWriteAccess lit getMyAccess et sépare stratégie/
+calendrier/sync, fermeture en absence/chargement/erreur, propriétaire conserve
+recalcul manuel. Panel permissions false par défaut, proposition MANUAL/IA
+facultative. Compteur I confondait formes du catalogue et projection : même
+collectNormalizedInitiatives sur trois collections/déduplication, absence
+inconnue distincte de zéro. Retour S exposait stage brut ; sauvegarde/proposition
+à relire et refus métier, updated non vrai refusé. Treize rouges/huit verts,
+huit retours rouges, puis 29/trois et 33/quatre verts ; premier checkpoint
+unité/gauntlet reçu. Ambition LOCKED découverte active nativement : un rouge/
+quinze verts puis 34/quatre verts et relecture native reçue. Catalogue source/
+projection distingué, MANUAL sans IA, propriétaire non opérateur garde choix/
+recalcul/Sync absent ; plan vide sauvegardé sans budget fabriqué. Lecture seule
+reçue, fixture nettoyée ; unité finale 4 237/404 verte, cinq contrôles finaux à zéro/
+gouvernance 1 624/166 reçus ; source c2a0b0f6/CI 38016938304/image
+38017164762/runtime exact 443 reçus.
+Lecture réelle ADMIN seulement, source 15/projection 36/28 retenues, formulaire
+manuel sans soumission/ancien S non recalculé ; aucune mutation réelle ni recette
+USER en production. Compilation/timeout conservés. Autorités serveur inchangées ; aucune clôture
+globale des accès, budgets, projections ou autres chemins S.
+[Preuves et bornes](REFONTE-PLAN.md) · [dette en place](RESIDUAL-DEBT.md).
+
+2026-10-10 · **442 livré, deux chemins S convergent** : SYNTHESIZE_S
+retournait des recommandations Notoria, la cascade S complétait par LLM et la
+sauvegarde ne gardait pas les versions source du calcul. Deux entrées partagent
+désormais calcul transactionnel/gateway, huit versions/absences contrôlées avant
+upsert, REPLACE_FULL/historique/retrait de revue ; LOCKED/provenance refusés,
+S exclu de post-complétion IA. Retrait des paddings et splits non sourcés,
+draft sparse non approuvable selon contrat strict inchangé. Cause bornée :
+calcul, assistance narrative et remplissage de forme confondus, snapshot source
+non transporté au writer. Six rouges sur 441 puis 24 verts ; ciblé local final
+70/trois fichiers reçu, full PG 345/18 avant derniers correctifs. Observation
+locale USER/TRIAL recalcul 200/draft 35 %/budget 1 000 ; incohérences observées
+puis patchées : R.coherenceRisks absent ne vaut plus 100, provenance de champ
+INFERRED « Déduit — à vérifier » pour calcul ou IA, autorités inchangées.
+Cause : absence assimilée à absence de risque et déduction assimilée à IA.
+Cohérence un rouge puis un vert ciblé ; renderer fallback 0 erroné : sept rouges/
+treize verts→vingt verts, « — /100 » inconnu/vrai zéro conservé. Cause : absence
+perdue entre calcul et rendu. Native USER/TRIAL relue/rechargée, S v4/trois
+archives/I v2 ; fenêtre recalcul complète/reload tronqué, aucun zéro global/SLO.
+Fixture nettoyée. Premier gauntlet deux repères rouges corrigés sans nouvelle
+exception ; finaux 4 210/401 unitaires/345/18 PG/cinq contrôles 0/gouvernance
+1 624/166 reçus. Source f7f39c23/CI 38012819228/image 38012838924/runtime 442
+exact reçus ; lecture réelle SPAWT ADMIN seulement, aucune mutation/recalcul
+ou réception USER de production. Timeouts conservés, ancien S/budgets/roadmap
+et copie succès technique en dette UX ; aucune acceptation globale.
+Normalisation budget/absence/timeframe, roadmap, protocol index strict et autres
+chemins S en dette Guidance existante ; compteur/boutons readonly ouverts.
+Aucune acceptation globale. [Preuves](REFONTE-PLAN.md) · [dette](RESIDUAL-DEBT.md).
+
+2026-10-10 · **441 livré, choix/projection reçus localement** : SELECT
+modifiait seulement BrandAction, puis le refresh réécrivait le choix/planning
+et le calcul promouvait des propositions. Le choix passe désormais par I
+versionné et BrandAction atomiques, même Intent/contexte ; refus du writer rendu
+au routeur. La matérialisation protège données d’exécution/lignes manuelles ;
+provenance limitée au statut de l’initiative identifiée, sans figer le catalogue.
+Calcul uniquement SELECTED_FOR_ROADMAP, aucune promotion ni LLM implicite.
+Cause bornée : décision, proposition et projection d’exécution confondues ;
+verrouiller toute une collection aurait aussi empêché son renouvellement.
+Onze rouges→onze verts puis régénération un rouge/douze verts→treize verts ;
+PG final 335/18 verts, dix-huit cas de choix, provenance 17/17/gateway 25/trois.
+Transaction partagée withPillarTransaction, deux refus du premier gauntlet
+réparés sans ajouter d’exception. Bump/CODE-MAP effectués, cinq contrôles finaux
+exit 0 (24 avertissements connus), gouvernance 1 624/166 verts. Le panel invalide
+get/assess/readiness après succès, bloque le choix en cours et affiche les refus
+choix/sync en alerte métier ; cause UI bornée : succès/fraîcheur/refus mal relayés.
+La projection suit le statut I dont le gateway conserve le choix humain.
+Budget hérité vide reprenant le montant source 1 000 reçu après un rouge,
+affiché 1k XAF nativement. Native locale USER/TRIAL retenir→sync→retirer/refus
+LOCKED reçus, cache relu ; ART_DIRECTOR ACTIVE d’un autre opérateur refuse
+403/FORBIDDEN avec alerte métier, I/versions/archives inchangés. Stress
+mock/base seulement, pages/tRPC SKIPPED ; source 3a8a2c97/CI 38008417812
+success (4 203/401 unitaires, 335/18 PG), Mission/Chromatic success ;
+image 38008635901/runtime 441 exact reçus, index 5d95a400. Lecture réelle SPAWT
+ADMIN reçue sans mutation ; USER/TRIAL et ART_DIRECTOR uniquement locaux.
+Ancien S/budgets, boutons hors zone/compteur catalogue,
+SYNTHESIZE_S, post-complétion IA et versions source de la cascade, remplissages S historiques demeurent dans
+la dette Guidance ; aucune acceptation globale ni nouvelle capacité.
+[Checkpoint et limites](REFONTE-PLAN.md) · [dette liée](RESIDUAL-DEBT.md).
+
+2026-10-09 · **440 livré, garde d’accès reçue localement** : actions.sync
+rematérialisait BrandAction sous la seule appartenance opérateur. Le contrôle
+calendrier existant assertCalendarWrite est désormais appliqué avant le writer,
+mêmes autorités ; NOT_FOUND pour cible absente USER, contrôle ADMIN conservé.
+Cause bornée : reconstruction de projection traitée comme neutre malgré ses
+écritures. Baseline accès quatre rouges/deux verts puis six verts ; PostgreSQL
+cinq rouges/trois verts puis huit ciblés/complet 317/17 verts. Native locale
+403 conserve la ligne ; propriétaire 200 perd encore selected/SCHEDULED,
+contre-exemple non réparé dans la dette Guidance existante. Source e217c08e/
+CI 38001813652/image 38002258278/runtime 440 exact et contrôles finaux reçus.
+Lecture réelle SPAWT USER PÉRIMÉ/deux 100 % seulement, aucune sync de production,
+décision réelle ou fournisseur ; sept chantiers/dix gates ouverts.
+[Preuves et bornes](REFONTE-PLAN.md) · [dette liée](RESIDUAL-DEBT.md).
+
+2026-10-09 · **439 livré, cause d’affichage/corpus fermée** : PillarPage affichait Complet à partir
+de assess.currentStage malgré readiness stale/Périmé, avec un autre badge de
+validation. Un seul Badge lit désormais pillar.readiness ; chargement/échec
+restent inconnus, pourcentages nommés comme présence des champs, couleurs selon
+DISPLAY_AS_COMPLETE. Rafraîchissement commun contenu/assess/readiness, y compris
+onComplete du recalcul existant, ligne wrap. Cause bornée : présence, fraîcheur
+et revue confondues par deux projections UI et des callbacks incomplets.
+Six cas de rendu rouges puis checkpoint 57/trois verts ; ciblées finales 58/trois,
+sept UI dont fondation needsHuman. Première compilation rouge stageLabel TS2552
+dans le panel needsHuman après retrait du mapping local : badge secondaire
+restant supprimé, tsc-final vert. Cinq contrôles complets relancés exit 0,
+gouvernance 1 620/166 ; gauntlet-final.json/gauntlet.json finaux verts, première
+erreur conservée sous first-gauntlet/ et gauntlet-first.json.
+Six mentions canon
+SPAWT/copy actuelle à cinq questions corrigées en six/cinq axes, sans réimport.
+Cause : corpus réimportable resté sur la description antérieure du quiz.
+Build compilée exit 0/native locale USER/TRIAL fictive reçue : Périmé avec deux
+100 %, captures desktop/mobile inspectées ; 65 réponses/zéro ≥500/exception,
+14 ERR_ABORTED annulés, badge dans les bornes à 384 px mesurés. Fixture nettoyée,
+serveur arrêté/onglet fermé ; premier sélecteur S — Roadmap erroné conservé,
+titre réel Stratégie, pas défaut produit. Source b0399f4f/CI 37997965596 (4 197/401
+unitaires, 309/16 PG)/image 37998236655/runtime 439 exact reçus. Native réelle
+SPAWT USER lecture seule : PÉRIMÉ avec deux 100 %, 116 réponses toutes 200/zéro
+≥500/exception, 32 ERR_ABORTED conservés ; notice initiale fermée normalement,
+capture inspectée. Aucune approbation/réimport/production, budgets/formes strictes/
+cycle et sept chantiers/dix gates ouverts. [Plan et preuves](REFONTE-PLAN.md).
+
+2026-10-09 · Infra 438 livrée, lot applicatif 437 inclus : job PostgreSQL
+114024488078/run 37990904417 bloqué avant checkout après trois retries, quota
+anonyme Docker Hub. Tous les autres jobs applicables sont verts ; aucun test
+PG CI exécuté dans ce job. Acquisition ECR des mêmes Docker Official Images
+PostgreSQL 16/16-alpine et Node 22-bookworm-slim, index épinglés après égalité
+des trois corps Hub/ECR et références amd64, six réponses 200. Frontend BuildKit
+embarqué sans directive #syntax, aucun nouveau job/service/action ni suppression
+du test. Cause bornée : disponibilité d’acquisition externe assimilée à verdict
+applicatif. Préflight puis source 912e481e/CI 37992424716/image 37992697193/runtime
+438 exact reçus, PostgreSQL effectif 309/seize ; pins à maintenir explicitement
+après comparaison et validation. Native plan réel SPAWT en lecture seule reçue,
+61 réponses/zéro ≥500/exception, 14 annulations réseau conservées ; modal
+« Quoi de neuf » masque d’abord le titre, borne tardive pas premier affichage/SLO.
+Forge SPAWT réelle également reçue en lecture seule : 65 réponses/zéro ≥500/
+exception, 17 ERR_ABORTED annulés ; S v3 AI_PROPOSED/91,2 % non approuvable.
+COMPLETE/100 par présence mais stale/Périmé et affichage complet/export refusés
+contredisent le plan Complet : symptôme non corrigé, inscrit dans la dette S.
+Aucune marque réelle modifiée/approuvée/recalculée ; écarts de contenu ouverts,
+sept chantiers/dix gates ouverts. [Périmètre et sources](../deploy/BUILD-DEPORT.md).
+
+2026-10-09 · 437 livré dans le bundle 438, contre-exemples PostgreSQL reçus : régénérations S
+appendant les anciens plans à toute profondeur, writer/PROTOCOLE_S donnant une
+approbation implicite et Strategy VALIDATED survivant à une nouvelle version ou
+dépendance. Le gateway remplace les collections S, archive l’ancien contenu et
+rétracte les anciennes approbations dans la transaction ; dépendance modifiée
+garde S LOCKED/stale. Restauration exige une nouvelle revue et null reste null.
+canon-sync passe son import/recalcul S par le gateway et remonte les refus ;
+exception directe S retirée, vector reste projection légitime. Cause bornée :
+fusion d’une collection source confondue avec remplacement d’un plan dérivé,
+et statut de revue traité comme propriété transmissible du contenu. Ordre source
+→ Strategy UPDATE → piliers évite l’upgrade SHARE→UPDATE entre deux writers.
+Dix rouges/trois verts puis treize verts ; checkpoint 70/quatre fichiers ;
+checkpoint complet 304 PostgreSQL/seize fichiers verts, seize cas S dont rollback réel/retry,
+sources distinctes et refus sans ghost row. Cleanup FK intermédiaire conservé
+puis fixture corrigée/nettoyée. Ce checkpoint précède l’extension et les recettes
+finales ci-dessous ; CI/runtime désormais reçus par 438. Choix/calcul/contrats/
+consommateurs restent dans la dette S unique.
+[Réception livrée et limites métier](RECEPTION-ECRITURE-SYNTHESE.md).
+
+Extension du même lot : review-invalidation.ts factorise la rétraction/staleness
+pour gateway, correction/suppression/révocation documentaires et les deux writers
+du staleness-propagator. Correction réelle ingestion.updateSource et révocation
+d’usage partagé isolées du propriétaire/autre dossier : trois nouveaux PG verts.
+La propagation d’âge recherchait key S alors que le stockage est s : un rouge/
+un vert reproduits, lookup lowercase réparé ; deux PG true/false exécutent
+propagateFromPillar, Process seulement en mode auto existant/zéro fetch. Cause
+bornée supplémentaire : marquage stale dupliqué sans rétraction de revue et casse
+de clé divergente. Strategy UPDATE triées avant piliers/sourceUse directement
+UPDATE ; 21 S ciblés verts. Le complet 304/seize reste antérieur à ces cinq cas,
+suite complète finale 309/seize reçue, 21 S inclus. Premiers offsets gateway des
+gardes unitaires/gouvernance corrigés 724/755. HARD collections rouge exit 1 puis
+restauration exacte/vert exit 0 reçu ; unitaire complet 4 189/4 190, seul délai
+withRetry 102 ms/seuil <50 sous charge build, premier rouge conservé. Recontrôles
+36/1 puis complet 4 190/400 verts sans changer le test, aucune correction produit
+du délai déduite. Cinq contrôles finaux exit 0/gouvernance 1 620/166 verts ; build
+isolé terminé exit 0. Native locale USER/TRIAL : approbation S null v1, vraie
+écriture v2 retire revue S/Strategy, proposition à relire puis nouvelle
+approbation v2/200/null. Stress isolé compilé exit 0/zéro finding, 46 HTTP reçus/
+235 non reçus/sept DEFERRED sans fournisseur, estimation zéro/sans providerTaskId
+dans la fenêtre 20:49:00–20:49:23 UTC. Sept tâches/quatre marques synthétiques
+nettoyées/remaining=0, serveur isolé arrêté ; scan final.json historique écarté.
+Fenêtre native complète bornée avec 17 annulations réseau conservées ; aucun
+import canon-sync privilégié natif, aucun noyau réel approuvé/cycle reçu ; livraison reçue
+par le bundle 438, aucune acceptation globale
+ni réception globale de l’agentique déduite.
+
+2026-10-09 · 436 livré au runtime, correctif reçu sur contre-exemples PostgreSQL locaux
+et quatorze cas ciblés verts : confiance absente rendue 0 %, confirmation transformant la mesure
+en 1.0 et S absent pouvant valider Strategy. Les deux routes de validation utilisent
+la même décision d’état dans pillar-gateway ; composition, version relue et
+sources exigées, confiance conservée, S/Strategy atomiques. La page existante
+sépare confiance inconnue, composition et approbation ; projets issus des
+initiatives contrôlent S approuvé avant leurs effets. Cause bornée : mesure,
+composition et décision humaine confondues, avec deux écritures de validation
+indépendantes. Revue native : la boîte Risque affirmait encore que les briefs/KPI
+reposeraient sur des hypothèses non validées, conclusion non établie par une
+confiance faible/null. Boîte retirée et lien renommé « Relire la synthèse et ses
+sources », même route ; copie finale native reçue, aucune hypothèse certifiée
+par ce retrait. Native locale synthétique absence/partiel, confirmations gardant
+22 % ou mesure inconnue et conflit 409 puis nouvelle lecture reçus, sans production.
+Suites locales complètes 4 190/400 unitaires et 288/15 PG vertes ; stress global
+en échec. Confidence=1.0 réintroduit : trois cas rouges puis
+trois verts après restauration exacte, onze non sélectionnés ; aucune marque réelle approuvée.
+Gauntlet final cinq exit 0/1 620 gouvernance, fixture nettoyée et serveur arrêté ;
+Source 80e2122f/CI 37979818869/image/runtime reçus ; lecture réelle SPAWT S existant,
+confiance 91 %/AI_PROPOSED v3 non approuvable reçue, aucune approbation ou production.
+Contrats de composition en désaccord, dette S maintenue ; documentation/postmerge
+et audit global distincts, aucun stress vert déduit.
+Couverture globale des écrivains/
+consommateurs et concurrence entre
+précondition et création de projets restent dans RESIDUAL-DEBT.
+[Réception en cours](RECEPTION-VALIDATION-SYNTHESE.md).
+
+2026-10-09 · 435 livré, réception partielle : tracker réel 403 en 434 pour compte
+sans affectation malgré rôle ADMIN effectif. listForges seulement résout le dossier
+explicitement choisi via getOperatorContext canonique ; canResume selon
+affectation actuelle, lecture seule sans bouton si absente. Mutations et autres
+lectures gardent cette affectation stricte, aucun droit/équipe/rôle nouveau.
+Deux rouges/49 verts puis 51 PostgreSQL ciblés verts. Cause : supervision du
+dossier choisi et capacité d’exécuter pour son équipe étaient confondues dans
+le même résolveur. Native locale par URL connue sur deux dossiers/deux équipes :
+chacun sa tâche, lecture seule/canResume=false, sans bouton ni secret. Actualiser
+HTTP 200/zéro exception dans une fenêtre complète ; copie FR finale relue,
+fixture nettoyée. Sélecteur local 0/0 historique ; gauntlet 435 cinq exit 0, gouvernance
+1620/166/24 warnings préexistants, PG complet seul 274/14/Ptah 51 inclus reçus.
+CI 435 : 4 180/399 unitaires et 274/14 PG/image/runtime reçus. Cause du403 en supervision
+fermée : native SPAWT listForges HTTP 200/zéro ligne, suivi vide reçu ; fenêtre complète
+63 réponses/aucune ≥500/zéro exception/log. Liste du sélecteur reçue après chargement,
+passage par son lien vers le portefeuille groupe FrieslandCampina non pilotable
+reçu en lecture seule, portée/ambiguïtés rendues, sans métriques isolées. Pas de
+reprise réelle/ADMIN sans affectation reçue ni SLO déduit des reloads ou bornes
+tardives production. [Bornes](RECEPTION-PTAH-REPRISE.md).
+
+2026-10-09 · Fix session 433 dédié : OPERATOR/canOperate=true, mais strategy.list
+vide faute d’operatorId dans la session. Callback auth et types existants relisent
+l’affectation actuelle en base à chaque session, sans tenant JWT ni rôle/droit
+nouveau. Trois rouges puis trois verts réaffectation/révocation/base indisponible ;
+la page native retrouve la marque. Cause : rôle reconnu et portée courante de
+l’équipe étaient assimilés. Code livré avec le bundle 434, recette métier locale,
+sans runtime 433 autonome ni élargissement d’accès annoncé.
+
+2026-10-09 · Code Ptah 434 livré au runtime, recette locale : ACTIVE (valeur Prisma par défaut)
+affichait « Stratégie Validée » sans validation enregistrée. La page forge exige
+aussi synthesisConfidence.validationStatus=VALIDATED. Cause : état de dossier
+et décision de validation confondus. Aucune validation de marque réelle déduite,
+confiance absente affichée 0 %/validation à 1.0 sans S composé restent dans
+RESIDUAL-DEBT. Contrôles finaux post-découplage : suite canonique 4 180/399,
+270 PostgreSQL/14 et 1 620 gouvernance/166, 24 warnings préexistants.
+Stress isolé reçu avant les dernières gardes ; ses limites, les parcours restants
+et les parcours réels demeurent distincts ; native tracker refusée 403,
+correctif de lecture435 séparé livré, suivi vide SPAWT reçu. Timeout PG concurrent conservé,
+relance complète seule verte/cause non démontrée.
+
+2026-10-09 · Code 434 livré au runtime, preuves locales : une émission inchangée
+ne se recalcule pas après lecture JSONB ; l’horodatage pris avant verrou peut
+ordonner les nouvelles lignes avant leur prédécesseur. Spine commun/hash-chain,
+deux rouges observés puis suite ciblée 46 PostgreSQL verte. JSON canonique
+récursif/versionné v2 et temps strictement croissant sous verrou ; v1 et payloads
+historiques conservés, legacy non recalculable dit non vérifiable plutôt
+qu’altéré. Cause bornée : sérialisation et ordre d’écriture n’étaient pas un
+contrat stable de relecture. Tri récursif retiré volontairement : rouge puis
+source restaurée, cinq PostgreSQL verts. Suites canoniques/gauntlet après gardes
+verts après découplage des dates ; parcours restants à recevoir. Contrôle
+individuel hors ascendance/complétion mutable. Le rapprochement historique et
+la fermeture durable restent planifiés dans RESIDUAL-DEBT, aucun journal
+globalement certifié. CLI réellement reçu sur 1 002 lignes synthétiques : fenêtre
+1 000 bornée/--all et refus legacy non vérifiable/sans sceau ; reprise native
+même tâche DEFERRED/refus HTTP 412 reçus localement, pas parcours de production ou contrôle
+de tout l’historique de production. emittedAt forcé après un prédécesseur futur
+constitue un ordre logique, aucune preuve d’heure métier/fraîcheur historique.
+startedAt est désormais réel et séparé après verrou ; scénario horloge future/
+clôture reçu localement, aucune réception de SLO global.
+[ADR-0213 Proposed](adr/0213-deferred-production-resumption-and-seals.md).
+
+2026-10-08 · Ptah écrivait ses coûts de forge dans un journal zéro-token attribué
+à Anthropic : montant zéro même lorsqu’un résultat persisté portait un autre
+montant/fournisseur. v6.27.425 transmet ces valeurs checkpointées dans la
+transaction d’admission et répare ce cas legacy strict sans nouveau reçu ni
+nouvelle charge. Les identifiants de parent inventés dans le commandant sont
+aussi remplacés par la vraie émission pour les futures forges. Cause plus large :
+forme LLM, filiation et preuve fournisseur étaient assimilées. La cause
+COMPLETED avant coffre est corrigée et retirée de RESIDUAL-DEBT.
+Vingt-quatre tests PostgreSQL locaux verts ;
+les factures absentes, références business upstream, octets/CDN et close du spine
+restent distincts, planifiés dans RESIDUAL-DEBT. Code 425 reçu en production
+le 8 octobre ; aucun fournisseur ni cycle de forge réel reçu.
+
+2026-10-08 · L’instrumentation Edge tentait de résoudre `http` via web-push
+malgré le retour anticipé `NEXT_RUNTIME !== "nodejs"`. v6.27.424 enveloppe les
+imports Node dans une branche positive `NEXT_RUNTIME === "nodejs"`, reconnue
+par webpack. Échec de compilation reproduit, puis démarrage et quatre réponses
+HTTP locales reçus. Cause : une garde d’exécution ne délimitait pas les imports
+pour le bundler Edge. Portée démarrage seulement ; aucune production reçue.
+
+2026-10-08 · `strategy.update` recevait id mais pas strategyId : sa mutation
+gouvernée pouvait réussir sans émission scoped sur la marque. Le test de
+publication a échoué sur ce reçu manquant avant correction. v6.27.423 résout
+strategyId dans le schéma avant gouvernance, sans second champ de formulaire.
+Cause : identité du contrat natif et pivot de gouvernance étaient divergents.
+ADR-0209 reçoit cette voie ; la portée des autres écrivains et la fermeture
+durable de l’émission restent au registre de dette, sans succès global présumé.
+
+2026-10-08 · Le système produit affichait ses ids de catalogue et perdait
+l’origine du champ sur les sous-cartes ; le fond des gammes rendait leurs
+conditions peu contrastées. Le lot 420 relit les noms sans changer les données,
+relaie l’origine existante et retire la couleur/largeur progressive par index.
+Le résolveur commun refuse les homonymes au lieu de choisir le premier.
+Cause : relations et provenance étaient rendues comme des données isolées.
+Réception source documentaire, disponibilité et publication restent distinctes.
+
+2026-10-08 · L’amendement ignorait les reçus documentaires, le MCP ne transmettait
+pas la version lue, et Recommendation attribuait une validation humaine à l’agent.
+Un refus de provenance était aussi accusé comme APPLIED. v6.27.419 raccorde le
+contrat existant au contrôle transactionnel des sources, journalise MESTOR sans
+revue humaine et refuse avant version tout amendement agent non autorisé. Cause :
+métadonnées de preuve et accusé d’application divergeaient du writer. ADR-0206.
+
+2026-10-08 · SET_FIELDS profond mutait aussi le précédent état et masquait la
+différence au garde ; une source pouvait écraser une feuille de catalogue humain.
+v6.27.418 clone profondément avant arbitrage. Le même lot factorise les ids au
+point commun, retire les faux « déjà confirmé » des inférences canoniques et
+rend confirmation/version/retrait legacy atomiques. Cause : référence mémoire
+partagée et lecteurs/écrivains divergents. Contrats PostgreSQL adversariaux reçus ;
+corpus réel et anciens remplisseurs séparés restent à recevoir, ADR-0205.
+
+2026-10-08 · Catalogue : gratuit masqué, chaîne historique convertie en NaN,
+conditions HT/TTC et périodes perdues ; prix de repli et moyenne non pondérée
+alimentaient budget/CAC. v6.27.417 factorise lecture et abstention dans
+product-catalog ; éditeur coût réaligné numérique, manifest budget en DB_READ.
+La gamme expose ses références, son nom libre et les rangs admis par le schéma ;
+les liens cassés, vides ou mal formés restent visibles au lieu de relire un vieux prix.
+Hypothèse : les consommateurs assimilaient scalaire, panier et preuve financière.
+Dette liée : projection économique locale / mesures datées, ADR-0204.
+
+2026-10-08 · Les huit volets de marque affichaient « Déclaré » en l’absence
+de fieldCertainty et ignoraient la provenance réelle conservée dans content.
+v6.27.416 branche le kit partagé sur cette trace et rend l’origine absente
+explicitement inconnue. Treize tests de lecture, dont douze rouges sur l’ancien
+lecteur, couvrent les huit volets. Cause : deux métadonnées distinctes et une
+absence de trace transformée en affirmation positive. Aucun contenu confirmé
+automatiquement ; le rapprochement SPAWT reste ouvert dans RESIDUAL-DEBT.
+
+2026-10-08 · Le portefeuille ignorait les BrandSourceUse pourtant reçus dans
+Sources : Peak ne retrouvait pas le brief commun. v6.27.415 factorise la liste
+canonique et ouvre le lecteur avec le dossier consommateur. La recette de
+retrait a révélé un ancien texte en cache pendant la vérification et un refus
+classé en erreur 500 ; le lecteur attend la réponse courante et getSource
+traduit ce refus connu en FORBIDDEN, sans relances automatiques sur ce refus.
+Les erreurs temporaires conservent leurs trois reprises. Causes : projection par propriété seule,
+durée de vie du cache confondue avec la validité de l’accès, frontière tRPC
+sans traduction de l’indisponibilité documentaire. Aucun droit élargi ; les
+recettes bornées ne reçoivent ni arbitrage de corpus ni publication complète.
+
+2026-10-08 · AmendPillarModal conservait proposition/motif entre deux champs et
+acceptait une réponse tardive dans un autre brouillon. Une lecture actualisée
+remplaçait aussi expectedVersion sous une saisie ancienne. v6.27.414 lie la
+session au contexte, isole les brouillons et fige valeur/version ensemble.
+Cause : durée de vie du composant confondue avec celle de la décision éditée.
+Onze contre-exemples rouges ; douze tests verts, écriture/relecture et conflit
+reçus nativement sur fixture locale. La conservation après interruption et le
+raccord vers la publication restent des parcours distincts ouverts au registre.
+Réception production 414 : changement de champ et réouverture dans SPAWT,
+sans soumission ; seize piliers et six sources identiques après livraison.
+
+2026-10-07 · Boot Phase 18 : l’exemple utilisait le littéral `pending`, rejeté
+par l’enum Prisma. Commande corrigée en `PENDING`, exercée sur PostgreSQL local :
+zéro résidu en attente. Cause : exemple non confronté au schéma ; aucun état
+métier ni contrôle de production modifié.
+
+2026-10-07 · Dossier SPAWT : deux cartes et un compteur doublé pour le même
+lien de logo dans deux stratégies. v6.27.407 factorise la projection de lecture
+par source et adresse de fichier, conserve chaque contenu/état/dossier et filtre
+les archives avant regroupement. Trois contre-exemples rouges, rendu statique
+reçu. Cause : une référence de rattachement était comptée comme un fichier distinct.
+Réception native 407 : une carte, deux lectures distinctes, recherche et archives ;
+mobile 390 × 844 et non-régression Noël reçus. Corpus et décisions restent ouverts.
+
+2026-10-07 · Le retour flottant masquait l’action de dernière ligne d’une liste
+filtrée, reçue au clavier mais interceptée à la souris. Le shell commun réserve
+une fin de défilement en 406, pour les portails et la navigation mobile existants.
+Cause : contrôle fixé au viewport sans espace réservé dans le conteneur défilant.
+Réception souris et mobile CSS 390 × 844 confirmée ; le dernier bouton ouvre
+le bon dialogue. Le contrôle reste borné à cette action.
+
+2026-10-07 · Missions : la console affichait zéro alors que le détail ouvrait une
+mission non assignée. PostgreSQL prouve que OR:[{},assigné] réduit au seul assigné.
+v6.27.405 conserve la portée admin existante, sans changer les autres rôles.
+Colonnes métier, besoin et erreurs de lecture remplacent les projections creuses.
+Le cockpit comptait une mission active comme livraison à l'heure et comparait
+un ratio courant à une période inexistante ; mesure déclarée indisponible.
+Cause : portée vide et absence de reçu prises pour des filtres/valeurs ordinaires.
+Réception native 405 reçue ; ADR-0201 borne le cycle déjà reçu en 404.
+
+2026-10-07 · Recette locale : session API valide, pages 307 login ; le stress suivait
+le login et annonçait un succès. v6.27.404 distingue transport HTTP local et TLS
+public pour le nom/salt du cookie, sans changer les droits. Le contrôle HTTP
+classe route finale, refus et absence, et construit correctement la racine.
+Causes : NODE_ENV confondu avec HTTPS ; statut final confondu avec page demandée.
+Contre-test réel : 230 refus détectés avant, zéro après ; 276 réponses reçues,
+cinq routes demo non reçues. Couverture native/métier restante au registre.
+
+2026-10-07 · Demandes : états incohérents, affectation non persistée, SLA et moyenne
+de résolution fabriqués ; conversion/rejet concurrents pouvaient perdre la suite.
+v6.27.404 raccorde le Signal existant à une Mission atomique et à un reçu commun.
+Cause : deux taxonomies confondues et écritures indépendantes sans version lue.
+ADR-0201 traite le cycle ; réception native et table dormante restent au registre.
+
+2026-10-07 · Présentation publique : compteurs Artemis périmés, catalogue confondu
+avec disponibilité, révision automatique et fin du travail manuel promises.
+Le correctif de copy 403 décrit les rôles, choix humains et services configurés.
+Cause : copy promotionnelle non confrontée aux registres et aux reçus de release.
+Sept onglets reçus nativement le 7 octobre en 403. Les promesses des autres
+sections restent une dette distincte ; cette réception ne vaut pas cycle complet.
+
+2026-10-07 · Portfolio : une référence invalide masquait tout le tableau ; deux
+éditions pouvaient écraser les liens récents. v6.27.403 préserve les entrées saines,
+signale les rejets et compare la version dans l’écriture commune. Cause : lecture
+all-or-nothing prise pour absence et remplacement de tableau sans précondition.
+Identité d’instance traitée en ADR-0200. Ajout manuel reçu en production pour
+Bonnet Rouge, Peak et Belle Hollandaise : même brief 491, instance radar-matanga,
+origine barre-matanga / PRJ-EOTY26. La vue groupe reçoit un projet et un seul
+accès FRC-076. Anciens raccords conservés ; aucun état métier recopié. La réception
+de l'écran Radar, des autres rôles natifs et du cycle complet reste ouverte.
+
+2026-10-07 · Gazette : mesure à la une contredite par son état vide, qualifications
+fabriquées, demande assistée échouée affichée en exécution et reprise masquée.
+v6.27.402 rend le constat factuel, les inconnues et l’échec visibles, avec nouvel
+examen explicite. Cause : la curation d’une demande était prise pour l’état de son
+résultat. Portée de marque et séparation observation/décision traitées en ADR-0199 ;
+cycle métier, concurrence et anciennes prescriptions restent au registre de dette.
+
+2026-10-06 · La fraîcheur documentaire ne comparait que la tête du texte et son
+nombre de fragments ; la préparation complète réécrivait un second jeu. v6.27.399
+factorise l’écrivain, compare toutes les empreintes et verrouille la source avant
+le remplacement atomique. Six régressions reproduites ; panne et deux ordres de
+concurrence reçus sur PostgreSQL. Cause : snapshot et projections sans frontière commune.
+
+2026-10-06 · Le tableau de bord cherchait des piliers en majuscules alors que
+les lignes portent les clés de stockage minuscules : A/D renseignés apparaissaient
+vides. v6.27.398 réutilise la maturité canonique et distingue commencé/complet.
+Le bouton « Sources » qui lançait l’IA porte désormais un verbe explicite et ses
+erreurs sont visibles. Cause : résumés et libellés découplés de leur acte réel.
+La recette a aussi montré que « Enrichir ADVE » appelait le remplissage des huit
+piliers et qu’un résultat contenant huit échecs pouvait afficher « Terminé » :
+le périmètre passe aux quatre fondations annoncées et les résultats partiels sont explicites.
+
+2026-10-06 · La correction d’un document laissait son ancien index et ses valeurs
+structurées disponibles pour l’extraction suivante. v6.27.398 invalide les fragments
+avec la correction dans une transaction et retire les valeurs issues du texte changé.
+Cause : les projections n’étaient invalidées qu’à la suppression de la source.
+L’indexation concurrente et les autres écrivains restent suivis dans RESIDUAL-DEBT.
+
+2026-10-06 · Les dépôts de fichier, texte et note lançaient de l’indexation et du
+classement sans choix utilisateur ; un échec de lecture renvoyait pourtant un id
+de succès. v6.27.397 expose le choix explicite et remonte l’échec sans perdre sa
+trace. Cause : dépôt, préparation et exploitation avaient été confondus.
+La consultation du texte réutilise la lecture scopée existante, sans droit d’édition.
+
+2026-10-06 · La lecture PDF appelait une fonction v1 absente de pdf-parse v2 ; le
+premier correctif passait en Node mais échouait dans Next, faute de worker à son
+chemin d’origine. v6.27.397 utilise PDFParse et conserve son worker au build.
+Cause : mise à jour de dépendance et packaging non exercés sur un vrai fichier.
+Une extraction de deux pages dans l’image exacte verrouille désormais cette frontière.
+Cette recette a refusé l’image 397, dont le traçage omettait encore le chargeur et le
+binaire `@napi-rs/canvas`. Leur inclusion explicite est ajoutée en 398 ; la réception
+du conteneur demeure obligatoire, indépendamment des tests sur le poste de travail.
+
+2026-10-06 · Un amendement manuel persisté laissait le contenu de la page pilier
+inchangé, et le formulaire suivant pouvait garder l’ancienne version. v6.27.395
+rafraîchit `pillar.get` et invalide `listEditableFields` au succès. Cause : seul
+`pillar.assess` était rafraîchi ; le score bougeait sans que le champ soit relu.
+Reproduit sur le parcours local réel, puis vérifié par deux amendements consécutifs.
+La bannière assimilait aussi le stade de maturité EMPTY à zéro donnée : elle indique
+désormais « à compléter » pour un contenu partiel, sans compteur inventé.
+
+2026-10-06 · Créer une plateforme par `strategy.create` ajoutait un Deal `WON`
+avec le nom de la marque et le contact de l’opérateur. Couplage retiré en v6.27.394.
+Cause : assimilation d’un dossier opérationnel à une conversion commerciale ; le
+CRM dispose déjà de ses propres commandes. Les anciennes lignes restent à qualifier.
+
+2026-10-05 · `strategy.create` persistait des réponses non données comme source
+`DECLARED` (fidélité 10–30 %, expérience 5, budget <2 %, etc.). v6.27.393 initialise
+le diagnostic vide et conserve seulement le contexte fourni. Cause : confusion
+entre les valeurs proposées par un formulaire et un témoignage effectivement reçu.
+La qualification des anciennes sources reste dans RESIDUAL-DEBT ; aucune purge automatique.
+
+2026-10-06 · Le bouton de plateforme du portefeuille ouvrait l’étage stratégique
+dérivé. v6.27.393 ouvre les fondations et porte l’identité de la stratégie dans
+l’URL. Cause : lien générique d’exploitation réutilisé au point d’entrée du cadrage.
+Création et réouverture reçues en navigateur local, sans changement de contrat.
+
+Recette portfolio du 2026-10-02 : le pied de navigation conservait `v5.0` en dur.
+Il lit désormais `APP_VERSION` (v6.27.390). Cause : une surface d’affichage restée
+hors de la factorisation de version. Le correctif des chemins d’assets introduits
+avec le portfolio est documenté au CHANGELOG, sans dette de donnée supplémentaire.
 
 | Date | Symptôme patché (où / quoi) | Commit | Hypothèse cause racine | Dette liée (RESIDUAL-DEBT) |
 |---|---|---|---|---|
+| 2026-10-06 | `argos.setVerdict` modifiait le verdict des dossiers sans émission gouvernée. La procédure utilise désormais `SESHAT_REVIEW_REFERENCE_DOSSIER` ; nouvelle émission vérifiée dans le parcours PostgreSQL local. Suite gouvernance 157 fichiers / 1547 tests PASS ; baseline Q3 `argos` abaissée de 2 à 1, sans masque supplémentaire. | v6.27.392 (`d128785`, ADR-0195 ; PR #965) | La revue éditoriale legacy avait gardé une écriture directe lors de la généralisation du spine ; mutation opérateur et mutation gouvernée avaient été assimilées. | — (réparation locale prouvée ; projection distante distincte non testée) |
+| 2026-10-06 | `rtis-protocols/track.ts` chargeait dix snapshots concurrentiels récents sans utiliser `strategyId`. Le lecteur partagé filtre secteur/pays et provenance publique ou propre à la stratégie ; aucun repli global. Refus croisés vérifiés par le parcours tRPC PostgreSQL local et le verrou HARD réinjecté/restauré. | v6.27.391 (ADR-0194) | La connaissance de marché mutualisée avait été confondue avec les documents d'étude privés ; le contrat de provenance n'avait pas atteint tous les lecteurs. | — (fix local vérifié ; aucun reçu de production inféré) |
+| 2026-10-06 | `analytics.getCompetitors` autorisait des filtres optionnels sans imposer le propriétaire d'étude. La lecture valide le scope et applique le même périmètre que T ; la saisie opérateur conserve visibilité/pays/source et refuse les associations d'étude incohérentes. Isolement marques/concurrents vérifié par `verify-creative-intelligence.ts`. | v6.27.391 (ADR-0194) | La frontière document/connaissance d'ADR-0186 n'avait pas été propagée aux snapshots concurrentiels. Une provenance historique inconnue doit rester privée, pas être promue en observation publique. | — (backfill depuis les origines d'étude seulement, pas d'identité inventée) |
 | 2026-07-27 | **Test de gouvernance vert ou rouge selon les clés d'API de la machine — `llm-routing.test.ts` rouge sur arbre propre** (3 cas sur 5) : il asseyait la matrice de routage sur `routeModel`, qui applique la décision **puis descend le catalogue** selon les providers réellement configurés. Sur un environnement où seule `OPENAI_API_KEY` est posée, « tier S → opus » retombe légitimement sur `gpt-4o-mini` — comportement runtime CORRECT, assertion FAUSSE. Le test passait en CI (aucune clé) et échouait en local : il protégeait en réalité l'absence de clés, pas la matrice. **Correction de ce constat le jour même (v6.27.338)** : la première réparation avait extrait un `idealModel(ctx)` pour asseoir la matrice — mais l'inspection suivante a montré que **cette matrice était morte ET périmée** (zéro appelant, doctrine « tier S → Opus, Ollama en tier C » contredisant la cascade réelle Ollama Cloud → OpenRouter → Anthropic). `idealModel` et `routeModel` ont donc été SUPPRIMÉS avec les deux modules de routage morts ; le test a été réécrit sur `resolveTextProviderOrder`/`isPremiumMode`, les fonctions pures qui décident vraiment. L'état final ne contient ni `idealModel` ni `routeModel`. | `fix(seshat)` v6.27.337 | **Classe (nouvelle)** : un test qui asserte une **décision** à travers une fonction qui mêle décision **et** disponibilité de l'environnement mesure l'environnement, pas le code — et son verdict s'inverse selon la machine. Signal : un test de gouvernance qui lit une fonction dont le résultat dépend de `process.env` sans le stubber. Remède : extraire la décision pure et l'asserter elle ; garder un cas séparé, à assertion *relationnelle* (ici « jamais plus cher que la décision »), pour le chemin runtime. | — (clos par le fix) |
 | 2026-07-27 | **« Le score renvoie `null` » alors qu'il est calculé, stocké et affiché ailleurs** : trois lecteurs (`mcp/advertis` ×2, `campaign-canon`) lisaient `advertis_vector.compositeScore` — clé **inexistante** dans ce vecteur (le scorer écrit `composite`, `advertis-scorer/index.ts:136`). Effets : tout agent MCP concluait « pas de score » sur une marque à 164/200, et le cadrage de campagne canon résolvait un tier **LATENT systématique** (budgets conseillés sous-dimensionnés, silencieusement). Même commit : `getBrandCard` sélectionnait `sector` sur `Strategy` (colonne portée par `Client`) → `PrismaClientValidationError` renvoyée telle quelle à l'appelant, **énumérant tout le modèle**. Réparés + canon `domain/brand-scores.ts` + test HARD `score-single-truth`. | `fix(seshat)` v6.27.337 | **Classe** : quand un système porte **plusieurs mesures voisines dont les noms se recouvrent** (`advertis_vector.composite` /200 vs `CultIndexSnapshot.compositeScore` /100 vs `ScoreVerdict.force` /200), le nom de l'une migre dans le lecteur de l'autre — et l'échec est **silencieux et plausible** (`null`, pas une exception), donc lu comme « la donnée n'existe pas » au lieu de « je lis mal ». Signal : deux entités du même domaine avec un champ quasi-homonyme d'échelles différentes. Remède : un module canon qui NOMME chaque mesure et détient l'unique lecture, + un test qui interdit la relecture directe du champ. Corollaire : `null` comme échec de lecture est indistinguable de `null` « non mesuré » — d'où l'exigence de passer par un lecteur nommé. | — (clos par le fix) |
 | 2026-07-27 | **« La base est vide / perdue » — en réalité `DATABASE_URL` pointait vers un hôte inexistant** : à la création de la ressource Coolify « Docker Image », `DATABASE_URL` a été recopié avec l'hôte `base` au lieu de `qosouizh7eszymg7z4dupsa7`. L'app démarrait, servait les pages statiques, **et toute lecture base échouait** (`getaddrinfo EAI_AGAIN base`) : `prisma.user.findUnique` → login mort → « 0 utilisateurs » ; `prisma.scoreVerdict.findMany` → `/leaderboard` 500 ; 3 crons en 500. Diagnostiqué par un tiers comme « DB vide, authentification exclusivement OAuth » — les deux affirmations fausses (le repo a bien un provider `Credentials`+bcrypt, `src/lib/auth/config.ts:38`, et c'est lui qui plantait). Réparé : valeur restaurée depuis l'app sœur sur les 2 entrées (prod + preview) via l'API Coolify, redémarrage → 0 `EAI_AGAIN`, 0 erreur Prisma. Les logs de boot prouvaient l'intégrité : `2 migration(s) appliquée(s) sur 91 (le reste déjà en base)` = 89 migrations déjà présentes. | `docs(deploy)` v6.27.334 (garde-fou doc ; correctif = config Coolify, hors repo) | **Classe** : une **panne de résolution de nom** vers la base se présente exactement comme une **perte de données** — l'app est UP, les pages statiques répondent, seules les lectures base échouent — et invite au pire diagnostic possible (« restaurer une sauvegarde », qui écraserait des données saines). Signal discriminant : `EAI_AGAIN <hôte>` dans les logs du conteneur (DNS, jamais données), et le compteur de migrations au boot (`N sur 91, le reste déjà en base` = base historique jointe ; `91 sur 91` = base neuve). Remède : avant tout geste de restauration, exiger la preuve par le compteur de migrations. Corollaire : recopier un secret verrouillé à la main lors d'une recréation de ressource est un vecteur de panne silencieuse — vérifier caractère par caractère. | — (clos par le fix) |
@@ -96,3 +1913,58 @@ Lignes dérivées purgées :
 |---|---|---|
 | ~~2026-07-18~~ | ~~`src/app/api/trpc/[trpc]/route.ts` — `maxDuration = 300` (inerte sous Coolify, contrat Vercel-only)~~ | Root fix F1 v6.27.223 — plus aucune requête longue à plafonner ; `maxDuration` reste inoffensif. |
 | ~~2026-07-18~~ | ~~`intake/[token]/ingest*` — sondage de récupération ~45 s après coupure réseau (mitigation de surface)~~ | Root fix F1 v6.27.223 — remplacé par le suivi de statut `use-intake-processing-watch` (terminal réel, jamais de faux succès, couvre aussi la coupure réseau via row restée `IN_PROGRESS` → « timeout »). |
+
+## 2026-10-02 — Contexte du portefeuille
+
+- Fil d’ancêtres rendu dans un ordre aléatoire : restauration de l’ordre de la chaîne
+  après la requête `IN`. Cause : l’ordre SQL était confondu avec l’ordre hiérarchique.
+- Administrateur sans équipe personnelle laissé en chargement : résolution par les
+  équipes autorisées et paramètre d’URL. Cause : `getOwn` utilisé comme accès global.
+- Navigation inactive avec un paramètre d’équipe : comparaison des chemins sans
+  paramètres tout en conservant le lien complet. Cause : URL confondue avec pathname.
+
+
+## Sources multimarques — 2026-10-07 (401)
+
+- Le sélecteur acceptait une marque issue d’une liste plus récente que celle du
+  contexte, puis revenait silencieusement à la première marque. Rafraîchissement
+  du contexte à la sélection, sans fallback durant ce choix explicite ; cas reçu
+  avec une marque créée après ouverture du cockpit. Le paramètre de lien profond
+  suit aussi le choix afin de le conserver au rechargement. Cause : deux caches indépendants.
+- Une erreur d’acceptation d’une proposition était invisible, et le bouton groupé
+  était imbriqué dans le bouton d’ouverture. Refus documentaire
+  renvoyé comme conflit 409, erreur lisible avec reprise explicite et contrôles séparés.
+  Cause : affichage des succès seul, sans parcours de refus reçu.
+- Les versions de piliers étaient écrites sur une autre connexion que leur contenu.
+  Le gateway transmet désormais sa transaction ; rollback multi-piliers et snapshots
+  reçus ensemble sur PostgreSQL. Cause : versionnement sorti de la frontière atomique.
+
+## 2026-10-07 — Reprises de campagne (ADR-0202)
+
+- Deux tâches produisaient le même code de reprise, et leur propre code n'était
+  pas généré. Verrou PostgreSQL, code tâche et maximum historique rétablis ;
+  retry explicite persistant dans l'identifiant existant. Cause : identité de
+  campagne utilisée au niveau tâche et absence de frontière atomique.
+- Les commandes acceptaient un pivot marque sans comparer la campagne réelle ;
+  le détail utilisait une marque fictive et la liste cherchait MissionDeliverable.
+  Garde commune réelle et bon modèle rétablis, refus visibles. Cause : plusieurs
+  identités supposées équivalentes entre lecture, router et handler.
+- Un arbitrage rouvrait un ticket résolu ; remise automatique du statut de tâche
+  forçait GREEN. Terminaux et reçu protégés, calcul existant réutilisé ; campagne
+  sans calcul refusée explicitement. Cause : écriture de statut sans transition
+  ni preuve de calcul. Réception native et cycle complet restent ouverts.
+- Le portefeuille et le détail chargeaient indéfiniment un compte sans équipe,
+  reçu nativement en 407 avec HTTP 200/null. Absence et refus de contexte rendus
+  explicitement en 408. Cause : null métier assimilé à une requête en cours.
+  Le choix admin multi-équipe reste à raccorder au contexte existant.
+
+- **2026-10-07 — 410, actions et arrivée des campagnes** : pivot de marque fictif,
+  liens non bornés et campagne sans tâche invisible reproduits sur PostgreSQL
+  et rendu. Extension des écrivains et du lecteur existants ; mêmes règles
+  manuel/handler et refus typés. Cause : contexte transverse d’équipe confondu
+  avec un contexte de marque et projection de campagnes dérivée des seules tâches.
+  Réception finale à suivre dans RESIDUAL-DEBT, sans clôture du cycle métier.
+
+- 2026-11-04 · PR1136 : une confirmation humaine du règlement commercial ne donnait pas accès au rapport client ; raccord aux droits et à la préparation existants, reçu humain distinct du prestataire. La clôture du rapport exige maintenant le document prêt et son ACK exact. Cause : collecte, droit et réception restaient traités comme étapes indépendantes sans leur liaison canonique. ADR0240.
+- 2026-11-11 · 6.27.561 : le mur public `/argos` affichait « Aucun dossier publié » quand la lecture échouait, et un lien de source non http(s) saisi dans un dossier du journal était rendu tel quel. Le mur dit désormais que les dossiers ne peuvent pas être affichés ; les liens sont filtrés à http(s) sans identifiants à la lecture (le journal n'est pas réécrit). Cause : lecteur public sans état d'erreur et projection publique faisant confiance au JSON `sources` du journal (schéma manuel `z.string()`).
+- 2026-11-11 · 6.27.563 : une tâche de campagne acceptait le rattachement d'un visuel d'une autre marque ; sa suppression lisait le visuel hors verrou (un rattachement simultané pouvait être perdu, ou refusé par une erreur Prisma non typée) ; une tâche avec reprises échouait sur la clé étrangère brute. Visuel de la même marque exigé (FORBIDDEN), suppression sous le verrou de ligne des éditions, refus CONFLICT explicites. Cause : écrivain de tâche resté hors transaction après la garde de périmètre ADR-0202. Dette : RESIDUAL-DEBT § Reprises de campagne.

@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { useToast } from "@/components/shared/notification-toast";
 import { Button, Input, Textarea } from "@/components/primitives";
 import { Send, CalendarClock, ArrowRight, PenSquare } from "lucide-react";
+import { PublicationPackagePanel } from "@/components/cockpit/social/publication-package-panel";
 import { PublicationManagerPanel } from "@/components/cockpit/social/publication-manager-panel";
 
 const PLATFORM_META: Record<string, { label: string; publishable: boolean; note?: string }> = {
@@ -54,11 +55,14 @@ export default function PublishPage() {
         setLastResults(null);
       } else {
         const ok = r.results.filter((x) => x.state === "PUBLISHED").length;
-        if (ok > 0) toast.success(`Publié sur ${ok} réseau${ok > 1 ? "x" : ""}.`);
+        if (r.mode === "PARTIAL") toast.info(`Envoi partiel. ${ok} réseau(x) confirmé(s), détails ci-dessous.`);
+        else if (r.mode === "UNCONFIRMED") toast.info("Réception à vérifier sur le compte avant toute reprise.");
+        else if (ok > 0) toast.success(`Publié sur ${ok} réseau${ok > 1 ? "x" : ""}.`);
         else toast.error("Aucun réseau n'a accepté la publication — détail ci-dessous.");
         setLastResults(r.results.map((x) => ({ platform: x.platform, state: x.state, detail: x.detail })));
       }
       setText(""); setLinkUrl(""); setImageUrl(""); setScheduleAt(""); setTargets([]);
+      void utils.social.listPublications.invalidate();
       void utils.cockpitDashboard.getOperationsSnapshot.invalidate();
     },
     onError: (e) => toast.error(e.message || "Publication impossible."),
@@ -96,6 +100,8 @@ export default function PublishPage() {
           { label: "Publier" },
         ]}
       />
+
+      <PublicationPackagePanel strategyId={strategyId} />
 
       {connectable.length === 0 && !hub.isLoading ? (
         <div className="ck-card">

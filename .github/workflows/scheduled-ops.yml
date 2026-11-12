@@ -82,7 +82,7 @@ jobs:
           FAILED=0
           hit() {
             path="$1"; label="${2:-$1}"
-            code=$(curl -sS -o /tmp/out.json -w "%{http_code}" --max-time 120 -H "$AUTH" "$BASE$path")
+            code=$(curl -sS -o /tmp/out.json -w "%{http_code}" --max-time "${3:-120}" -H "$AUTH" "$BASE$path")
             body=$(head -c 400 /tmp/out.json)
             if [ "$code" = "200" ]; then
               echo "✓ $label → $code $body"
@@ -99,6 +99,7 @@ jobs:
             hit /api/cron/scheduler "scheduler (séquences planifiées)"
             hit /api/cron/ptah-download "ptah-download (réconciliation forge)"
             hit "/api/cron/social-sync?mode=publish" "social-sync publish (posts planifiés dus — round-15b)"
+            hit "/api/cron/argos-hunt?mode=retention" "creative-media (échéances de conservation)" 90
           fi
 
           if [ "$T" = "sixhourly" ] || [ "$T" = "all" ]; then
@@ -110,6 +111,7 @@ jobs:
             hit /api/cron/auto-promotion "auto-promotion (paliers)"
             hit /api/cron/ops-sweep "ops-sweep (abonnements + recos)"
             hit /api/cron/external-feeds "external-feeds (digests marché pays×secteur)"
+            hit "/api/cron/argos-hunt?mode=corpus" "argos-corpus (veilles créatives activées)" 240
           fi
 
           if [ "$T" = "daily" ] || [ "$T" = "all" ]; then

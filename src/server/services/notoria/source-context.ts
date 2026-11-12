@@ -28,8 +28,11 @@
  * avec `wrapUntrusted` (OWASP LLM01).
  */
 
+import { sourceIsUsable, documentContext, documentIdentity, documentEdition } from "@/domain/source-document";
 import { db } from "@/lib/db";
-import { compareCertainty, type SourceCertainty } from "@/domain/source-certainty";
+import { sourceScope, sourceFingerprint } from "@/server/services/ingestion-pipeline/source-usage";
+import { compareCertainty, isSourceCertainty, type SourceCertainty } from "@/domain/source-certainty";
+import { rankDocumentNodes } from "@/server/services/seshat/context-store/ranker";
 import {
   ensureSourcesIndexed,
   retrieveSourceChunksForField,
@@ -38,8 +41,9 @@ import {
 /** Un extrait de source, traçable jusqu'au document dont il sort. */
 export type SourceExcerpt = {
   sourceId: string;
+  contentHash?: string;
   fileName: string;
-  certainty: SourceCertainty;
+  certainty: SourceCertainty | null;
   /** Position du début de l'extrait dans `rawContent` — rend l'extrait retrouvable. */
   offset: number;
   text: string;
@@ -131,9 +135,10 @@ function selectPassages(raw: string, query: string | undefined, budget: number):
   const kept: typeof paras = [];
   let used = 0;
   for (const p of ranked) {
-    if (used + p.body.length > budget) continue;
+    const separator = kept.length ? "\n\n[…]\n\n".length : 0;
+    if (used + separator + p.body.length > budget) continue;
     kept.push(p);
-    used += p.body.length + 2;
+    used += separator + p.body.length;
     if (used >= budget) break;
   }
   if (kept.length === 0) return { text: text.slice(0, budget), offset: 0 };
@@ -164,6 +169,7 @@ async function retrieveSemantic(
   budget: number,
   maxDocuments: number,
   ensureIndexed: boolean,
+  currentSources: ReadonlyMap<string, { rawData: unknown; fingerprint: string }>,
 ): Promise<SourceExcerpt[] | null> {
   // L'indexation N'EST PAS un effet de bord de la lecture.
   //
@@ -197,8 +203,8 @@ async function retrieveSemantic(
   // une note ARBITRAIRE même si cette dernière colle mieux à la requête.
   const ordered = [...hits].sort((a, b) => {
     const c = compareCertainty(
-      (b.certainty ?? "ARBITRARY") as SourceCertainty,
-      (a.certainty ?? "ARBITRARY") as SourceCertainty,
+      b.certainty ?? "ARBITRARY",
+      a.certainty ?? "ARBITRARY",
     );
     if (c !== 0) return c;
     return b.similarity - a.similarity;
@@ -210,14 +216,21 @@ async function retrieveSemantic(
   for (const h of ordered) {
     if (remaining < MIN_EXCERPT) break;
     if (!h.sourceId) continue;
+    const current = currentSources.get(h.sourceId);
+    // A cached fragment cannot lose the edition's status or survive an update
+    // between the source snapshot and semantic retrieval.
+    if (!current || h.contentHash !== current.fingerprint) continue;
     if (!documents.has(h.sourceId) && documents.size >= maxDocuments) continue;
-    const text = h.text.length > remaining ? h.text.slice(0, remaining) : h.text;
-    if (!text) continue;
+    const notice = documentContext(current.rawData);
+    const passage = h.text.slice(0, Math.max(0, remaining - notice.length));
+    if (!passage) continue;
+    const text = notice + passage;
     documents.add(h.sourceId);
     excerpts.push({
       sourceId: h.sourceId,
+      contentHash: h.contentHash,
       fileName: h.fileName,
-      certainty: (h.certainty ?? "INFERRED") as SourceCertainty,
+      certainty: h.certainty,
       offset: h.charStart ?? 0,
       text,
     });
@@ -240,6 +253,8 @@ export async function loadBrandSourceContext(
     query?: string;
     budget?: number;
     maxDocuments?: number;
+    /** Code/configuration remains consultable but is not business evidence. */
+    includeTechnical?: boolean;
     /**
      * Indexer les sources non encore indexées avant de lire. **Faux par
      * défaut** : réservé aux chemins ASYNCHRONES (enrichissement, mission
@@ -254,16 +269,18 @@ export async function loadBrandSourceContext(
 
   const rows = await db.brandDataSource.findMany({
     where: {
-      strategyId,
+      AND: [await sourceScope(strategyId)],
       processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
       NOT: { rawContent: null },
     },
     // `certainty` était absent du select : une pièce OFFICIELLE et une note
     // ARBITRAIRE pesaient exactement pareil dans le prompt.
-    select: { id: true, fileName: true, certainty: true, rawContent: true, updatedAt: true },
+    select: { id: true, fileName: true, fileType: true, sourceType: true, certainty: true, rawContent: true, rawData: true, extractedFields: true, updatedAt: true },
   });
 
-  const usable = rows.filter((r) => (r.rawContent ?? "").trim().length > 0);
+  const usable = rows.filter((r) => sourceIsUsable(r.rawData)
+    && (opts.includeTechnical || documentEdition(r.rawData)?.kind !== "TECHNICAL")
+    && (r.rawContent ?? "").trim().length > 0);
   // OFFICIAL > DECLARED > INFERRED > ARBITRARY, puis le plus récent.
   //
   // `compareCertainty(a, b)` rend POSITIF quand `a` est plus fiable ; dans un
@@ -271,7 +288,10 @@ export async function loadBrandSourceContext(
   // obtenir « le plus fiable d'abord » — sans ce signe, on servait au modèle les
   // notes ARBITRAIRES avant les pièces OFFICIELLES.
   usable.sort((a, b) => {
-    const c = compareCertainty(b.certainty as SourceCertainty, a.certainty as SourceCertainty);
+    const c = compareCertainty(
+      isSourceCertainty(b.certainty) ? b.certainty : "ARBITRARY",
+      isSourceCertainty(a.certainty) ? a.certainty : "ARBITRARY",
+    );
     if (c !== 0) return c;
     return b.updatedAt.getTime() - a.updatedAt.getTime();
   });
@@ -296,6 +316,7 @@ export async function loadBrandSourceContext(
       budget,
       maxDocuments,
       opts.ensureIndexed ?? false,
+      new Map(usable.map(row => [row.id, { rawData: row.rawData, fingerprint: sourceFingerprint(row) }])),
     );
     if (semantic) {
       const used = new Set(semantic.map((e) => e.sourceId)).size;
@@ -310,7 +331,9 @@ export async function loadBrandSourceContext(
     }
   }
 
-  const candidates = usable.slice(0, maxDocuments);
+  const candidates = rankDocumentNodes(usable.map(row => ({ sourceId: row.id,
+    payload: { fileName: row.fileName, documentTitle: documentIdentity(row.rawData), text: row.rawContent }, row,
+  })), query ?? "", maxDocuments).map(node => node.row);
   const excerpts: SourceExcerpt[] = [];
   let remaining = budget;
 
@@ -319,12 +342,16 @@ export async function loadBrandSourceContext(
     // Part équitable du budget restant, jamais en dessous du plancher utile.
     const share = Math.max(MIN_EXCERPT, Math.floor(remaining / left));
     if (remaining < MIN_EXCERPT) break;
-    const { text, offset } = selectPassages(row.rawContent ?? "", opts.query, Math.min(share, remaining));
+    const notice = documentContext(row.rawData);
+    const selected = selectPassages(row.rawContent ?? "", opts.query, Math.max(0, Math.min(share, remaining) - notice.length));
+    const { offset } = selected;
+    const text = selected.text ? notice + selected.text : "";
     if (!text) continue;
     excerpts.push({
       sourceId: row.id,
+      contentHash: sourceFingerprint(row),
       fileName: row.fileName ?? "(sans nom)",
-      certainty: row.certainty as SourceCertainty,
+      certainty: isSourceCertainty(row.certainty) ? row.certainty : null,
       offset,
       text,
     });
@@ -351,7 +378,7 @@ export async function loadBrandSourceContext(
 export function renderSourceContext(ctx: BrandSourceContext): string {
   if (ctx.empty) return "";
   const parts = ctx.excerpts.map(
-    (e) => `[source:${e.sourceId} | ${e.fileName} | certitude:${e.certainty} | offset:${e.offset}]\n${e.text}`,
+    (e) => `[source:${e.sourceId} | ${e.fileName} | certitude:${e.certainty ?? "non renseignée"} | offset:${e.offset}]\n${e.text}`,
   );
   const skipped =
     ctx.documentsSkipped > 0

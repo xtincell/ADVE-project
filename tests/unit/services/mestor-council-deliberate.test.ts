@@ -20,7 +20,7 @@ vi.mock("@/server/services/llm-gateway", async (importOriginal) => {
 });
 
 vi.mock("@/server/services/mestor/council/context", () => ({
-  buildAssistantContext: vi.fn(async () => ({ contextBlock: "CTX", ragUsed: false })),
+  buildAssistantContext: vi.fn(async () => ({ contextBlock: "CTX", ragUsed: false, sourcesSeen: false })),
   buildExpertContext: vi.fn(async () => "EXPERT CTX"),
 }));
 
@@ -65,7 +65,7 @@ describe("deliberate — dégradations honnêtes", () => {
         throw new Error("expert down");
       }
       if (caller.startsWith("mestor:council:expert-")) return { data: CRITIQUE };
-      return { data: SYNTHESIS };
+      return { data: { ...SYNTHESIS, critiqueDecisions: [] } };
     });
 
     const r = await deliberate({ strategyId: "s1", topic: "t" });
@@ -99,7 +99,7 @@ describe("deliberate — dégradations honnêtes", () => {
       const caller = callerOf(args);
       if (caller === "mestor:council:draft") throw new Error("ne doit pas être appelé");
       if (caller.startsWith("mestor:council:expert-")) return { data: CRITIQUE };
-      return { data: SYNTHESIS };
+      return { data: { ...SYNTHESIS, critiqueDecisions: [] } };
     });
 
     const r = await deliberate({ strategyId: "s1", topic: "t", draft: "ma position" });

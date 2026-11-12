@@ -9,6 +9,7 @@
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
+import { isUsableGeneration } from "@/domain/generation-result";
 import { executeStructuredLLMCall, LLMStructuredCallError } from "@/server/services/utils/llm-structured";
 import { deriveJsonSchemaFromZod } from "@/server/services/utils/zod-to-json-schema";
 import { sanitizeInline, wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
@@ -18,6 +19,9 @@ import { EXTENDED_GLORY_TOOLS, getGloryTool, getBrandPipelineDependencyOrder, ty
 import { checkPaidTier, tierGateDenied } from "@/server/services/glory-tools/tier-gate";
 import { invokeExternalTool as anubisInvokeExternalTool } from "@/server/services/anubis/mcp-client";
 import { hasGloryComposer, composeGloryDeterministic } from "./glory-composers";
+import { directionForPillar, CREATIVE_DIRECTION_RULE } from "@/server/services/creative-direction/context";
+import type { CreativeTarget } from "@/domain/creative-direction";
+import { PRODUCTION_SOURCE_RULE } from "@/server/services/deliverable-orchestrator/production-prompt";
 import { reportRefusedWrite } from "../../pillar-gateway/refusal";
 
 /**
@@ -26,12 +30,12 @@ import { reportRefusedWrite } from "../../pillar-gateway/refusal";
  * tools have access to risks (R), market intelligence (T), action catalogue (I),
  * and strategic roadmap (S) alongside the creative pillars (A/D/V/E).
  */
-async function loadStrategyContext(strategyId: string): Promise<string> {
+async function loadStrategyContext(strategyId: string, target?: CreativeTarget): Promise<{summary:string; direction:string}> {
   const strategy = await db.strategy.findUnique({
     where: { id: strategyId },
     include: { pillars: true, drivers: { where: { deletedAt: null, status: "ACTIVE" } } },
   });
-  if (!strategy) return "";
+  if (!strategy) return {summary:"",direction:""};
 
   const vec = strategy.advertis_vector as Record<string, number> | null;
   const lines = [
@@ -101,7 +105,9 @@ async function loadStrategyContext(strategyId: string): Promise<string> {
     lines.push(strategy.drivers.map((d) => `${d.name} (${d.channel})`).join(", "));
   }
   lines.push("--- FIN CONTEXTE ---");
-  return lines.join("\n");
+  const d = target ? strategy.pillars.find(p=>p.key.toLowerCase()==="d") : undefined;
+  const direction = d ? (await directionForPillar(strategyId,d,target))?.text : undefined;
+  return {summary:lines.join("\n"),direction:direction ?? ""};
 }
 
 /**
@@ -110,10 +116,12 @@ async function loadStrategyContext(strategyId: string): Promise<string> {
 export async function executeTool(
   toolSlug: string,
   strategyId: string,
-  input: Record<string, string>
+  input: Record<string, string>,
+  media: { video?: import("@/server/services/llm-gateway/audiovisual").GatewayVideo; images?: readonly import("@/server/services/llm-gateway/vision").GatewayImage[]; signal?: AbortSignal; production?: { previewIntentId: string; dispatchIntentId?: string; sourceText: string } } = {},
 ): Promise<{ outputId: string; output: Record<string, unknown>; intentId: string | null }> {
   const tool = getGloryTool(toolSlug);
   if (!tool) throw new Error(`GLORY tool inconnu: ${toolSlug}`);
+  if ((media.images || media.video) && !tool.outputSchema) throw new Error("Un tool multimodal doit déclarer un schéma de sortie.");
 
   // ── Phase 16-A — Paid tier gate (ADR-0048) ─────────────────────────────
   // Si le tool exige un abonnement payant, on récupère l'operator (Strategy.userId)
@@ -153,17 +161,23 @@ export async function executeTool(
       data: {
         intentKind: "INVOKE_GLORY_TOOL",
         strategyId,
-        payload: { toolSlug, input } as Prisma.InputJsonValue,
+        payload: { toolSlug, input, ...(media.production ? {previewIntentId:media.production.previewIntentId}: {}) } as Prisma.InputJsonValue,
+        ...(media.production ? {spawnedFrom:media.production.dispatchIntentId ?? media.production.previewIntentId}: {}),
         caller: `glory-tools.executeTool`,
       },
     });
     intentEmissionId = row.id;
   } catch (err) {
+    if (media.production) throw new Error("La filiation du brief n’a pas pu être enregistrée. Aucun appel génératif lancé.");
     // ne bloque pas — IntentEmission est best-effort (Loi 1 conservation)
     console.warn(
       `[glory.executeTool] IntentEmission INVOKE_GLORY_TOOL not persisted for ${toolSlug}:`,
       err instanceof Error ? err.message : err,
     );
+  }
+
+  if (media.production?.sourceText && (tool.executionType === "MCP" || tool.executionType === "DELEGATE" || hasGloryComposer(tool.slug))) {
+    throw new Error("Ce moteur ne prend pas en charge les sources de production sélectionnées.");
   }
 
   // ── Phase 16 — MCP delegation (ADR-0048) ───────────────────────────────
@@ -190,10 +204,13 @@ export async function executeTool(
   // reproductible, garantie par `outputSchema`, provenance DETERMINISTIC_COMPOSE.
   // C'est le chemin canonique (ADVERTIS → Glory → GloryOutput) qui faisait défaut.
   if (hasGloryComposer(tool.slug)) {
-    const composed = await composeGloryDeterministic(tool.slug, strategyId);
+    const composed = await composeGloryDeterministic(tool.slug, strategyId, input);
     if (composed.ok) {
+      // Commercial amounts must never pass a permissive/LLM fallback.
+      const composedOutput = (tool.slug === "devis-generator" || tool.slug === "pricing-strategy-advisor")
+        ? tool.outputSchema!.parse(composed.output) as Record<string, unknown> : composed.output;
       const aiOutput: Record<string, unknown> = {
-        ...composed.output,
+        ...composedOutput,
         _provenance: "DETERMINISTIC_COMPOSE",
         _meta: {
           tool: tool.slug,
@@ -204,14 +221,17 @@ export async function executeTool(
           generatedAt: new Date().toISOString(),
         },
       };
-      const gloryOutput = await db.gloryOutput.create({
-        data: {
+      const data = {
           strategyId,
           toolSlug: tool.slug,
           output: aiOutput as Prisma.InputJsonValue,
           advertis_vector: { pillars: tool.pillarKeys },
-        },
-      });
+      };
+      const gloryOutput = tool.slug === "break-even-calculator" ? await db.$transaction(async tx => {
+        const { assertBreakEvenDocumentCurrent } = await import("@/server/services/financial-brain/break-even-source");
+        await assertBreakEvenDocumentCurrent(tx, strategyId, aiOutput);
+        return tx.gloryOutput.create({ data });
+      }) : await db.gloryOutput.create({ data });
       if (intentEmissionId) {
         try {
           await db.intentEmission.update({
@@ -244,11 +264,19 @@ export async function executeTool(
   // (anti-injection) avant substitution dans le template.
   let userPrompt = tool.promptTemplate;
   for (const [key, value] of Object.entries(input)) {
-    userPrompt = userPrompt.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), sanitizeInline(value));
+    userPrompt = userPrompt.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), () => sanitizeInline(value));
   }
 
+  if (media.production?.sourceText) userPrompt += "\n\n" + PRODUCTION_SOURCE_RULE + "\n" + media.production.sourceText;
+
   // Load strategy context — fencé comme DONNÉE non fiable (anti-injection).
-  const strategyContext = wrapUntrusted("CONTEXTE STRATÉGIE", await loadStrategyContext(strategyId), { max: 12000 });
+  const creative = tool.layer === "CR" || tool.layer === "BRAND" || !!tool.forgeOutput || !!media.production || tool.slug==="brand-guardian-system";
+  const {summary,direction} = await loadStrategyContext(strategyId, creative ? {
+    platform:input.platform || input.channel, format:input.format, theme:input.theme || input.concept || input.topic, angle:input.angle,
+    family:input.creativeFamily, mode:input.creativeMode === "REVISION" ? "REVISION" : "NEW",
+  } : undefined);
+  const strategyContext = wrapUntrusted("CONTEXTE STRATÉGIE", summary, { max: 12000 });
+  if (direction) userPrompt += "\n\n" + CREATIVE_DIRECTION_RULE + "\n" + direction;
 
   // ── Phase 24 (ADR-0108) — Références Seshat (corpus Hunter) pour l'idéation ──
   // Pour les tools d'idéation/benchmark, on injecte les campagnes RÉELLES récoltées
@@ -285,6 +313,9 @@ ${strategyContext}${referenceContext}`;
   if (tool.outputSchema) {
     try {
       const structured = await executeStructuredLLMCall({
+        images: media.images,
+        video: media.video,
+        signal: media.signal,
         system: systemPrompt,
         prompt: userPrompt,
         schema: tool.outputSchema,
@@ -302,6 +333,7 @@ ${strategyContext}${referenceContext}`;
           layer: tool.layer,
           durationMs,
           attempts: structured.attempts,
+          model: structured.model, provider: structured.provider,
           schemaEnforced: true,
           generatedAt: new Date().toISOString(),
         },
@@ -358,7 +390,7 @@ ${strategyContext}${referenceContext}`;
           tool: tool.slug,
           layer: tool.layer,
           durationMs,
-          model: "claude-sonnet-4-5",
+          model: result.model, provider: result.provider,
           schemaEnforced: false,
           schemaOptOut: tool._noSchemaJustification ?? null,
           generatedAt: new Date().toISOString(),
@@ -394,7 +426,7 @@ ${strategyContext}${referenceContext}`;
       await db.intentEmission.update({
         where: { id: intentEmissionId },
         data: {
-          result: { gloryOutputId: gloryOutput.id, status: "OK" } as Prisma.InputJsonValue,
+          result: { gloryOutputId: gloryOutput.id, status: isUsableGeneration(aiOutput) ? "OK" : "FAILED" } as Prisma.InputJsonValue,
           completedAt: new Date(),
         },
       });
@@ -451,7 +483,7 @@ export async function executeHybridTool(
   toolSlug: string,
   strategyId: string,
   input: Record<string, string>,
-  opts: { preferManual?: boolean; manualEntry?: Record<string, unknown>; fullAuto?: boolean } = {},
+  opts: { manualAuthor?: { id: string; name?: string | null }; preferManual?: boolean; manualEntry?: Record<string, unknown>; fullAuto?: boolean; video?: import("@/server/services/llm-gateway/audiovisual").GatewayVideo; images?: readonly import("@/server/services/llm-gateway/vision").GatewayImage[]; signal?: AbortSignal } = {},
 ): Promise<HybridToolResult> {
   const tool = getGloryTool(toolSlug);
   if (!tool) throw new Error(`GLORY tool inconnu: ${toolSlug}`);
@@ -486,13 +518,13 @@ export async function executeHybridTool(
           },
         };
       }
-      return persistManualHybridOutput(tool, strategyId, parsed.data as Record<string, unknown>);
+      return persistManualHybridOutput(tool, strategyId, parsed.data as Record<string, unknown>, opts.manualAuthor);
     }
     return manualEntryRequired(tool, "preferManual=true sans saisie fournie — formulaire manuel requis.");
   }
 
   // ── Branche LLM (réutilise executeTool → executeStructuredLLMCall + retry x2) ──
-  const llm = await executeTool(toolSlug, strategyId, input);
+  const llm = await executeTool(toolSlug, strategyId, input, { images: opts.images, video: opts.video, signal: opts.signal });
   const status = (llm.output as { status?: string }).status;
   const errorCode = (llm.output as { errorCode?: string }).errorCode;
   if (status === "FAILED" && errorCode === "ZOD_VALIDATION_FAILED") {
@@ -582,6 +614,7 @@ async function persistManualHybridOutput(
   tool: GloryToolDef,
   strategyId: string,
   data: Record<string, unknown>,
+  author?: { id: string; name?: string | null },
 ): Promise<HybridToolResult> {
   let intentEmissionId: string | null = null;
   try {
@@ -609,6 +642,7 @@ async function persistManualHybridOutput(
       path: "manual",
       schemaEnforced: true,
       manualEntry: true,
+      ...(author ? { authorId: author.id, author: author.name?.trim() || "Opérateur identifié" } : {}),
       generatedAt: new Date().toISOString(),
     },
   };
@@ -882,6 +916,10 @@ export async function executeBrandPipeline(
       }
 
       const { outputId, output } = await executeTool(slug, strategyId, mergedInput);
+      if (!isUsableGeneration(output)) {
+        results.push({ slug, outputId, status: "FAILED" });
+        continue;
+      }
       pipelineOutputs[slug] = output;
       results.push({ slug, outputId, status: "COMPLETED" });
 

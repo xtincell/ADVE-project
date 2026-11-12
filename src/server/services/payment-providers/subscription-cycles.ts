@@ -155,6 +155,11 @@ export async function startManualSubscriptionCycle(
       metadata: { tierKey: input.tierKey, subscriptionId: subscription.id, kind: "SUBSCRIPTION_CYCLE" },
     });
 
+    await db.intakePayment.update({
+      where: { reference },
+      data: { providerRef: result.providerRef, notificationTokenHash: result.notificationTokenHash },
+    });
+
     // MOCK auto-confirme — étend immédiatement (dev/demo).
     if (providerImpl.id === "MOCK") {
       await applySubscriptionCycleIfPaid(reference);
@@ -170,8 +175,8 @@ export async function startManualSubscriptionCycle(
     };
   } catch (err) {
     await db.intakePayment
-      .update({
-        where: { reference },
+      .updateMany({
+        where: { reference, status: { not: "PAID" } },
         data: {
           status: "FAILED",
           failureReason: err instanceof PaymentProviderError ? err.message : (err as Error).message,
