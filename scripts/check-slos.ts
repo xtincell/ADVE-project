@@ -4,8 +4,14 @@
  *
  * For each Intent kind with declared SLOs (in src/server/governance/slos.ts),
  * compute rolling-N-day p95 latency, error rate, and cost p95 from
- * IntentEmission rows. Compare to declared limits. Output report; fail
- * CI when breach > 2 days consecutive.
+ * IntentEmission rows. Compare to declared limits and print the report.
+ *
+ * Exit codes — `.github/workflows/slo-check.yml` decides on them:
+ *   0  measured, every declared SLO holds;
+ *   1  measured, at least one SLO is breached;
+ *   2  could not measure (no DATABASE_URL, base unreachable, query error).
+ * Only a breach may exit 1: every failure to measure goes through main()'s
+ * catch, so it never reads as a breach.
  *
  * Run via cron `.github/workflows/slo-check.yml`.
  */
@@ -23,8 +29,9 @@ function makeClient() {
   return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 }
 
-
-const prisma = makeClient();
+// Created inside main(): a missing DATABASE_URL must exit 2, not crash the
+// module load with Node's exit code 1, which the workflow reads as a breach.
+let prisma: PrismaClient | undefined;
 const ROLLING_DAYS = parseInt(process.argv.find((a) => a.startsWith("--rolling-days="))?.split("=")[1] ?? "7", 10);
 const REPORT = process.argv.includes("--report");
 
@@ -78,9 +85,9 @@ interface SloMeasurement {
   breaches: string[];
 }
 
-async function measureKind(slo: SloDef): Promise<SloMeasurement | null> {
+async function measureKind(client: PrismaClient, slo: SloDef): Promise<SloMeasurement | null> {
   const since = new Date(Date.now() - ROLLING_DAYS * 24 * 3600 * 1000);
-  const rows = await prisma.intentEmission.findMany({
+  const rows = await client.intentEmission.findMany({
     where: { intentKind: slo.kind, emittedAt: { gte: since } },
     select: { startedAt: true, completedAt: true, status: true, costUsd: true },
   });
@@ -128,9 +135,10 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
+  const client = (prisma = makeClient());
   const measurements: SloMeasurement[] = [];
   for (const slo of slos) {
-    const m = await measureKind(slo);
+    const m = await measureKind(client, slo);
     if (m) measurements.push(m);
   }
 
@@ -158,12 +166,12 @@ async function main(): Promise<void> {
     console.log(`[check-slos] measured ${measurements.length} kinds, ${breached.length} breach(es).`);
   }
 
-  await prisma.$disconnect();
+  await client.$disconnect();
   process.exit(breached.length > 0 ? 1 : 0);
 }
 
 void main().catch((err) => {
   console.error("[check-slos] error:", err);
-  void prisma.$disconnect();
+  void prisma?.$disconnect();
   process.exit(2);
 });

@@ -6,8 +6,16 @@ on:
   workflow_dispatch:
 
 # Reads rolling-7d IntentEmission metrics from prod DB and compares
-# against SLOs declared in src/server/governance/slos.ts. Failure opens
-# an issue with the breached metric.
+# against SLOs declared in src/server/governance/slos.ts.
+#
+# The exit code of scripts/check-slos.ts decides the outcome:
+#   0      ok         — measured, within SLO. The breach issue, if open, is closed.
+#   1      breach     — measured, out of SLO. One issue with a stable title,
+#                       updated in place by comment.
+#   other  unmeasured — could NOT measure (base unreachable, missing secret,
+#                       script error). The job fails; no issue is opened.
+#
+# A monitor that cannot measure must look broken, not report breaches.
 
 permissions:
   contents: read
@@ -17,6 +25,8 @@ jobs:
   slo:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      BREACH_TITLE: 'SLO breach — rolling 7d'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
@@ -25,29 +35,121 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx prisma generate
+
       - name: Run SLO audit
         id: slo
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          if [ -f scripts/check-slos.ts ]; then
-            npx tsx scripts/check-slos.ts --rolling-days 7 --report > slo-report.md
-          else
-            echo "::warning::scripts/check-slos.ts not yet present — placeholder run."
-            echo "SLO check pending implementation (P6 of REFONTE-PLAN)" > slo-report.md
+          if [ ! -f scripts/check-slos.ts ]; then
+            echo "::error::scripts/check-slos.ts absent — le contrôle SLO ne peut pas s'exécuter."
+            echo "Script de contrôle absent." > slo-report.md
+            echo "status=unmeasured" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
-        continue-on-error: true
+
+          set +e
+          npx tsx scripts/check-slos.ts --rolling-days=7 --report > slo-report.md 2> slo-error.log
+          code=$?
+          set -e
+          echo "check-slos exit code: $code"
+
+          case "$code" in
+            0) echo "status=ok" >> "$GITHUB_OUTPUT" ;;
+            1) echo "status=breach" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "status=unmeasured" >> "$GITHUB_OUTPUT"
+              cat slo-error.log
+              ;;
+          esac
+
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: slo-report
-          path: slo-report.md
+          path: |
+            slo-report.md
+            slo-error.log
           retention-days: 14
-      - name: Open issue on breach
-        if: steps.slo.outcome == 'failure'
-        uses: peter-evans/create-issue-from-file@v6
-        with:
-          title: "SLO breach detected — ${{ github.run_id }}"
-          content-filepath: slo-report.md
-          labels: governance, slo, automated
+          if-no-files-found: ignore
+
+      # One issue, updated in place. The title carries no run id, so it does not
+      # multiply. The lookup reads the issues list (live), not the search index.
+      - name: Open or update the breach issue
+        if: steps.slo.outputs.status == 'breach'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # No `| head`: under pipefail, closing the pipe early would fail the step.
+          MATCHES=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues?state=open&labels=slo&per_page=100" \
+                      --jq '.[] | select(.pull_request == null and .title == $ENV.BREACH_TITLE) | .number')
+          NUM=${MATCHES%%$'\n'*}
+          if [ -n "$NUM" ]; then
+            echo "Issue #$NUM déjà ouverte — ajout du rapport."
+            gh api "repos/$GITHUB_REPOSITORY/issues/$NUM/comments" -F body=@slo-report.md > /dev/null
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues" -f title="$BREACH_TITLE" -F body=@slo-report.md \
+              -f 'labels[]=governance' -f 'labels[]=slo' -f 'labels[]=automated' --jq '"Issue #\(.number) ouverte."'
+          fi
+
+      # Back within SLO: close the issue instead of leaving it open.
+      - name: Close the breach issue when back within SLO
+        if: steps.slo.outputs.status == 'ok'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # No `| head`: under pipefail, closing the pipe early would fail the step.
+          MATCHES=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues?state=open&labels=slo&per_page=100" \
+                      --jq '.[] | select(.pull_request == null and .title == $ENV.BREACH_TITLE) | .number')
+          NUM=${MATCHES%%$'\n'*}
+          if [ -n "$NUM" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/$NUM" -f state=closed -f state_reason=completed > /dev/null
+            gh api "repos/$GITHUB_REPOSITORY/issues/$NUM/comments" \
+              -f body="Retour dans les SLO sur la fenêtre glissante de 7 jours." > /dev/null
+          fi
+
+      # No issue: a blind monitor must show red.
+      - name: Fail when SLOs could not be measured
+        if: steps.slo.outputs.status == 'unmeasured'
+        run: |
+          echo "::error::SLO non mesurés — voir slo-error.log dans l'artefact slo-report."
+          echo "Vérifier le secret DATABASE_URL et l'accès réseau de la base depuis GitHub Actions."
+          exit 1
+
+  # One-time cleanup, idempotent. Before this fix, every run opened an issue
+  # titled "SLO breach detected — <run id>", including runs where the base was
+  # unreachable: none of them reports a measurement. This job closes the ones
+  # still open. Once none is left it finds nothing; it can then be removed.
+  close-legacy-issues:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Close the legacy per-run breach issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > closing-comment.md <<'EOF'
+          Fermée automatiquement. Cette issue a été ouverte par l'ancien contrôle SLO, qui créait une issue à chaque exécution, y compris quand la base de production était injoignable depuis GitHub Actions : elle ne rapporte aucune mesure.
+
+          Le contrôle tient désormais une seule issue, « SLO breach — rolling 7d », ouverte uniquement sur un dépassement mesuré. Quand il ne peut pas mesurer, le job échoue sans ouvrir d'issue.
+
+          ---
+          _Generated by [Claude Code](https://claude.ai/code)_
+          EOF
+
+          # List first, then mutate: closing while paginating would shift the pages.
+          gh api --paginate "repos/$GITHUB_REPOSITORY/issues?state=open&labels=slo&per_page=100" \
+            --jq '.[] | select(.pull_request == null and .user.login == "github-actions[bot]" and (.title | test("^SLO breach detected — [0-9]+$"))) | .number' \
+            > legacy-issues.txt
+          echo "$(wc -l < legacy-issues.txt) legacy issue(s) to close."
+
+          # Close before commenting: if a call fails, the next run resumes on the
+          # issues still open and never comments twice on the same one. The pause
+          # keeps the writes under GitHub's secondary rate limit.
+          for NUM in $(cat legacy-issues.txt); do
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/$NUM" -f state=closed -f state_reason=not_planned > /dev/null
+            gh api "repos/$GITHUB_REPOSITORY/issues/$NUM/comments" -F body=@closing-comment.md > /dev/null
+            echo "Issue #$NUM fermée."
+            sleep 2
+          done

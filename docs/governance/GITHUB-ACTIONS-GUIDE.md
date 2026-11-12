@@ -274,7 +274,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 ```
 
-Le script lit `IntentEmission` rolling 7-day, calcule p95 latency / error rate / cost p95 par Intent kind, compare aux SLOs déclarés dans `src/server/governance/slos.ts`. Échec = issue auto.
+Le script lit `IntentEmission` rolling 7-day, calcule p95 latency / error rate / cost p95 par Intent kind, compare aux SLOs déclarés dans `src/server/governance/slos.ts`. Le code de sortie du script décide : 0 = dans les SLO (l’issue de dépassement ouverte est refermée) ; 1 = dépassement mesuré, une seule issue « SLO breach — rolling 7d » mise à jour par commentaire ; tout autre code = mesure impossible (base injoignable, secret absent, erreur du script) : le job échoue, aucune issue n’est ouverte.
 
 **Effet** : tu sais en continu si l'OS tient ses promesses de perf. Si un nouveau model LLM dégrade `EXPORT_ORACLE`, tu le sais en 6h, pas après que 3 clients aient raccroché.
 
