@@ -1,3 +1,14 @@
+## v6.27.572 — fix(intake): la restitution ne présente plus de statistiques sans source (2026-11-12)
+
+**Point 4.11.d du programme Shinkiro. L'écran d'attente et le rapport du diagnostic affirmaient des chiffres que rien ne sourçait (« 98 % des marques échouent sur la Distinction », « 3 % du public », « dix fois plus »). Ils sont reformulés sans chiffre, et un verrou empêche leur retour.**
+
+- Écran d'attente, en français, anglais et chinois : les quatre faits chiffrés sont reformulés sans chiffre ; le nombre de paliers annoncé passe de sept à six, comme dans le code. Le badge des recommandations ne montre plus le nom du modèle (« Analyse assistée »).
+- Questionnaire : « garantie à 100 % des clients » et « 2 posts/semaine plutôt que 10 » deviennent des conseils sans chiffre.
+- Plan proposé sans IA : la collecte de témoignages n'est plus vendue comme « la preuve la moins chère qui existe ». La dernière étape part des canaux déclarés par l'entreprise, ou de l'empreinte publique si elle a été mesurée, ou demande au dirigeant de choisir son indicateur. Un atelier qui vit de visites et du téléphone ne reçoit plus le conseil de mesurer une présence en ligne qu'on n'a pas mesurée.
+- Rapport généré : la consigne commune interdit les statistiques générales absentes des données. Une garde déterministe, `scrubUnsourcedStatistics`, retire avant enregistrement, dans `complete()` comme dans `regenerateAnalysis()`, toute phrase avançant une part de marques, de clients ou de consommateurs dont les nombres ne figurent pas au dossier. Aucun appel de modèle ajouté.
+- Verrou `tests/unit/governance/intake-unsourced-figures.test.ts` sur les textes de l'intake : rouge avec 10 occurrences avant correction, vert après. Sept tests de composition et de garde, rouges d'abord.
+- Restent ouverts (RESIDUAL-DEBT) : la garde ne vise que les statistiques de population ; les paragraphes de piliers V3 n'y passent pas ; la classification à faible couverture et le rapport de la recette B ne sont pas reçus.
+
 ## v6.27.571 — fix(démarrage): l'image 570 ne démarrait pas, le script de démarrage ne dépend plus de tRPC (2026-11-11)
 
 **La construction de l'image 6.27.570 a échoué à son test de démarrage (`Boot smoke-test`) : `public-brand-migration.cjs`, lancé par l'entrypoint, demandait `@trpc/server`, absent de l'image standalone. La production est restée en 6.27.569. La 571 retire cette dépendance et garde les refus typés de la 570.**

@@ -2111,14 +2111,38 @@ du candidat en cours. Aucun nouveau modèle/service/router/page/Intent/provider/
 manager, aucune mutation des données réelles en production. Aucune
 réception d’audit/rapport complet, de coût réel ou de conversion par ces tests.
 
-**Résidus de la restitution commerciale, dans le même MVP** : conseils de trois
-publications/90 jours inadaptés à l’atelier, chiffres « 80 % première impression »
-et « 98 % distinction » non sourcés ; classification complète à faible couverture
-non reçue. **Fermer** : reprendre les textes/propositions existants, relier les
-conseils aux canaux et à l’offre déclarés, sourcer les chiffres ou les retirer,
-recevoir classification et rapport avec couverture explicite sur cette fixture.
-Responsable C6/MVP-FUSEE-03 ; effort une passe ciblée de restitution, déclencheur
-après livraison fonctionnelle 507 avant réception du rapport commercial complet.
+**Résidus de la restitution commerciale, dans le même MVP** (plan 4.11.d, état du
+12 novembre 2026). **Fermé dans le code, non reçu en recette** :
+- « 98 % des marques échouent sur la Distinction » venait de l’écran d’attente du
+  diagnostic (`intakeProcessing.fact.verite3`, FR/EN/ZH) ; aucune source dans le dépôt,
+  phrase reformulée sans chiffre. Même sort pour « 3 % du public » (Overton) et
+  « convertit dix fois plus » ; « 7 paliers » corrigé en 6 (`BRAND_TIERS`), « beaucoup
+  tiennent dans Fragile » retiré. Badge du rapport : nom de modèle remplacé par
+  « Analyse assistée ». Infobulles du questionnaire sans « 2 posts/semaine » ni
+  « 100 % des clients ». Verrou HARD `intake-unsourced-figures` sur les deux fichiers
+  i18n de l’intake et la banque de questions ; `intake-result.ts` entre aussi dans
+  `cockpit-vocabulary`.
+- « 80 % première impression » n’existe dans aucune chaîne déterministe au 12 novembre :
+  attribué au texte généré du rapport. La règle commune des rédacteurs l’interdit
+  désormais, et `scrubUnsourcedStatistics` (evidence-scrub) retire avant persistance,
+  dans `complete()` et `regenerateAnalysis()`, toute phrase portant une statistique de
+  population (« N % des clients », « N fois plus », « 8 sur 10 acheteurs ») absente des
+  réponses, du texte déposé, du contexte déclaré et de la collecte publique.
+- Plan déterministe (`rtis-propositions`) : la dernière étape part des canaux déclarés
+  (atelier : visites et téléphone), puis de l’empreinte publique seulement si elle a
+  été mesurée, sinon d’un indicateur à choisir avec le dirigeant ; « la preuve marché la
+  moins chère qui existe » retiré.
+
+**Reste ouvert** : (1) la garde ne vise que les formes de population ; un autre chiffre
+inventé par le texte généré (taux, durée, montant) passe encore, comme un conseil
+générique sans chiffre ; (2) la voie V3 écrit les paragraphes de piliers de
+`narrateAdvePillars` sans cette garde (le rapport affiché, lui, la traverse) ;
+(3) « trois publications/90 jours » n’a pas été retrouvé en chaîne fixe : seul le texte
+généré peut le produire, sans garde déterministe de rythme ; (4) classification complète
+à faible couverture et rapport avec couverture explicite toujours non reçus sur la fixture.
+**Fermer** : régénérer la fixture guidée B, relire le rapport et le PDF, étendre la garde
+à `narrateAdvePillars` si un chiffre y apparaît. Responsable C6/MVP-FUSEE-03 ; effort une
+recette ciblée ; déclencheur avant réception du rapport commercial complet.
 Import/export, qualité modèle/coût réel, choix agentique utilisateur et
 attribution du propriétaire/offre CRM restent dans les critères MVP02–04 ;
 un Deal LEAD non attribué n’est pas une offre activée ni une conversion.
