@@ -1,3 +1,12 @@
+## v6.27.581 — chore(deps): actions Docker v4/v7, recharts 3.10, commitlint 21 (2026-11-12)
+
+**Tri des anciennes PR (arbitrage 5.14 du programme Shinkiro) : les cinq mises à jour proposées par Dependabot (#483, #484, #701, #702, #703) sont reprises ici en un seul lot, sur `main`, au lieu de cinq branches en conflit.**
+
+- `build-image.yml` passe à `docker/setup-buildx-action@v4`, `docker/login-action@v4` et `docker/build-push-action@v7`. Ces versions tournent sur Node 24. Ce qu'elles retirent (variables `DOCKER_BUILD_NO_SUMMARY` et `DOCKER_BUILD_EXPORT_RETENTION_DAYS`, entrées obsolètes, alias `docker build` → buildx) n'est pas utilisé par le workflow, qui appelle `docker buildx` explicitement. Le build de l'image, son test de démarrage et sa poussée valident ce changement avant toute livraison.
+- `recharts` passe de 3.8.1 à 3.10.1 (publiée le 25 juillet 2026). Un seul composant l'utilise, `financial-document-panel.tsx` ; le typage complet passe.
+- `@commitlint/cli` et `@commitlint/config-conventional` passent de 20.5.3 à 21.2.4 (publiées le 18 octobre 2026), alignés. Ils exigent Node 22.12 ou plus, ce que la CI fournit. Un message conventionnel est accepté, un message libre refusé.
+- Aucun code applicatif, aucun modèle, aucune migration.
+
 ## v6.27.580 — fix(ci): le contrôle SLO n'ouvre plus une issue par exécution (2026-11-12)
 
 **Tri des anciennes PR (arbitrage 5.14 du programme Shinkiro) : la PR #873, encore juste, est remise à jour et livrée. Son acceptation ferme les points 1.2 et 1.3 du plan d'achèvement.**
