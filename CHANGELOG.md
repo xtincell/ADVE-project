@@ -1,3 +1,12 @@
+## v6.27.575 — test(documents): le grand document passe en 2 s, la lenteur venait du test (2026-11-12)
+
+**Point 4.11.l du programme Shinkiro. Le test du grand document tournait en 112 s sous un plafond de 120 s. Profilé étape par étape, le coût venait du test lui-même, pas du produit.**
+
+- Relevé activable par `LARGE_DOCUMENT_PROFILE_OUT=<fichier.json>` (`tests/fixtures/step-profile.ts`) : durée par étape, CPU, ramasse-miettes, mémoire maximale ; inactif sinon.
+- Cause : la comparaison finale des 12 582 949 octets avec `toEqual` parcourait chaque index et occupait 97 % des 81 s, avec 3,9 Go de mémoire ; sous la limite par défaut de 2 Go, le test ne finissait pas.
+- Correctif : longueur puis `Buffer.equals`, avec une contre-épreuve sur une copie dont le dernier octet change. Même correction sur un second cas de 4 Mo chiffrés (16,6 s → 0,8 s). Le cas passe en 2,1 s, le fichier entier en 5,1 s au lieu de 97,6 s ; mémoire maximale 262 Mo.
+- Le chemin produit prend environ 2 s seul, 7,7 à 10,3 s avec huit exécutions simultanées sur quatre processeurs, sans attente de verrou observée. Mesures locales, pas une capacité de production.
+- Aucun plafond relevé (120 s, 60 s, transaction `documentTags` 120 s) et aucun code produit modifié. Récidive consignée dans PATCHED-SYMPTOMS (première en 527).
 ## v6.27.574 — fix(production): le compositeur n'appelle plus son outil avec des entrées vides (2026-11-12)
 
 **Point 4.11.a du programme Shinkiro. Le lancement d'un livrable appelait l'outil producteur avec un objet d'entrée vide : sur le visuel principal (`KV_VISUAL`), les 13 champs, concept et direction de couleur compris, arrivaient au moteur sous la mention « non disponible ».**
