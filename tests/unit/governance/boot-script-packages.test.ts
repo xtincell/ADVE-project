@@ -25,8 +25,13 @@ const packageOf = (specifier: string) =>
   specifier.startsWith("@") ? specifier.split("/").slice(0, 2).join("/") : specifier.split("/")[0]!;
 
 // Scripts bundlés par le Dockerfile et lancés dans l'image : celui du démarrage,
-// et l'inventaire ADVE en lecture seule (4.11.k), lancé à la main en production.
-const IMAGE_SCRIPTS = ["scripts/freeze-public-brands.ts", "scripts/inventory-adve-strict-shapes.ts"];
+// l'inventaire ADVE en lecture seule (4.11.k), lancé à la main en production,
+// et le contrôle SLO (1.4), lancé toutes les 6 h par la tâche Coolify `slo-check`.
+const IMAGE_SCRIPTS = [
+  "scripts/freeze-public-brands.ts",
+  "scripts/inventory-adve-strict-shapes.ts",
+  "scripts/check-slos.ts",
+];
 
 describe("scripts bundlés dans l'image", () => {
   it.each(IMAGE_SCRIPTS)("%s ne demande que des paquets présents dans l'image", async (entry) => {

@@ -1,3 +1,34 @@
+## 585 — contrôle SLO depuis le VPS : tâche Coolify à créer, premier relevé à recevoir (2026-11-12)
+
+**Constaté.** GitHub Actions ne joint pas la base de production : depuis 6.27.580,
+le contrôle SLO y sortait en code 2 (mesure impossible) toutes les six heures,
+sans issue. Décision du propriétaire (geste 1.4) : mesurer depuis le conteneur de
+La Fusée, où la base est joignable.
+**Corrigé dans le code (6.27.585).** L'image embarque `check-slos.cjs` (bundle de
+`scripts/check-slos.ts`, garde `boot-script-packages`). Budgets importés de
+`slos.ts` et taux d'erreur comparé en part : voir PATCHED-SYMPTOMS « 1.4 ». Le
+workflow `slo-check.yml` est retiré : sa mesure ne pouvait pas aboutir, et son
+nettoyage est épuisé (216 issues « SLO breach detected » fermées le 12 novembre
+entre 14:03 et 14:16 UTC par le run 43233172338 ; aucune issue `slo` ouverte à
+14:46 UTC ; plus rien ne crée ces issues). Recette locale du bundle sur un
+PostgreSQL jetable : codes 0, 1 et 2 reçus.
+**Où se lit le relevé.** Journal des exécutions de la tâche planifiée Coolify
+`slo-check` de l'application La Fusée (ressource prod `q9b4m57yh93gxbjykj470giy`) :
+commande `node check-slos.cjs`, fréquence `0 */6 * * *`. Une ligne par exécution,
+par exemple `[check-slos] 2026-11-12T18:00:00.000Z · fenêtre 7 j · déclarés 635 ·
+mesurés 2 · tenus 1 · dépassés 1 · code 1 | FILL_ADVE tenu (n=40) | RUN_RTIS_CASCADE
+dépassé (n=3 ; latence p95 52000 ms > 45000 ms)`. Code 0 : tenus ; 1 : au moins un
+dépassement mesuré ; 2 : mesure impossible, raison en fin de ligne. Seuls des
+Intent kinds et des nombres y figurent. `node check-slos.cjs --report` ajoute le détail.
+Aucune issue ni alerte n'est ouverte : la lecture du journal est la surveillance.
+**Non reçu.** Image 585 en production, création de la tâche, premier relevé réel.
+**Plan.** (1) Livrer l'image 585. (2) Le propriétaire crée la tâche `slo-check`
+sur l'application prod (pas sur l'app git arrêtée qui sert de rollback).
+(3) Lire la première exécution : code 0 ou 1 attendu ; un code 2 dit pourquoi.
+(4) Si des kinds dépassent, les traiter un par un (budget ou cause), sans relever
+un budget pour faire passer la mesure. **Déclencheur** : livraison de l'image 585.
+**Responsable** : propriétaire pour la tâche Coolify ; agent pour la lecture du relevé.
+
 ## 571 — image 570 refusée au démarrage ; script de démarrage sans tRPC (2026-11-11)
 
 **Constaté.** L'image 6.27.570 a échoué à son test de démarrage (`Boot smoke-test`,
