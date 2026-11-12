@@ -77,6 +77,16 @@ export function readCompositeFromVector(vector: unknown): number | null {
   return null;
 }
 
+/** Moyenne de portefeuille : chaque marque évaluée compte une fois, un zéro compris. */
+export function meanBrandComposite(vectors: readonly unknown[]): number | null {
+  const scores = vectors.map(readCompositeFromVector).filter((score): score is number => score !== null);
+  return scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : null;
+}
+
+export function formatBrandComposite(score: number | null): string {
+  return score === null ? "Non évalué" : `${Math.round(score)}/${ADVE_COMPOSITE_MAX}`;
+}
+
 /** Une mesure bornée, ou l'aveu honnête qu'elle n'est pas mesurée. */
 export interface ScoreReading {
   /** Valeur mesurée, ou `null` = non mesuré (jamais 0 de remplacement). */
