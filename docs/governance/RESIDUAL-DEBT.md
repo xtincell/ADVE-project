@@ -1,4 +1,4 @@
-## 585 — contrôle SLO depuis le VPS : tâche Coolify à créer, premier relevé à recevoir (2026-11-12)
+## 585 — contrôle SLO depuis le VPS : mesuré en production, quatre dépassements à trier (2026-11-12)
 
 **Constaté.** GitHub Actions ne joint pas la base de production : depuis 6.27.580,
 le contrôle SLO y sortait en code 2 (mesure impossible) toutes les six heures,
@@ -21,13 +21,32 @@ dépassé (n=3 ; latence p95 52000 ms > 45000 ms)`. Code 0 : tenus ; 1 : au moin
 dépassement mesuré ; 2 : mesure impossible, raison en fin de ligne. Seuls des
 Intent kinds et des nombres y figurent. `node check-slos.cjs --report` ajoute le détail.
 Aucune issue ni alerte n'est ouverte : la lecture du journal est la surveillance.
-**Non reçu.** Image 585 en production, création de la tâche, premier relevé réel.
-**Plan.** (1) Livrer l'image 585. (2) Le propriétaire crée la tâche `slo-check`
-sur l'application prod (pas sur l'app git arrêtée qui sert de rollback).
-(3) Lire la première exécution : code 0 ou 1 attendu ; un code 2 dit pourquoi.
-(4) Si des kinds dépassent, les traiter un par un (budget ou cause), sans relever
-un budget pour faire passer la mesure. **Déclencheur** : livraison de l'image 585.
-**Responsable** : propriétaire pour la tâche Coolify ; agent pour la lecture du relevé.
+**Reçu en production le 12 novembre.** Le code 585 est livré dans l'image 6.27.586
+(build 43243595495, `/api/version` 6.27.586, 0 migration à appliquer sur 108).
+La tâche `slo-check` est créée sur l'application prod (`node check-slos.cjs`,
+`0 */6 * * *`, activée). Une tâche temporaire à la minute, supprimée après usage,
+a donné le premier relevé réel à 15:16 UTC : **fenêtre 7 j, 635 kinds déclarés,
+23 mesurés, 19 tenus, 4 dépassés, code 1**. Première mesure SLO réelle du dépôt.
+Les quatre dépassements :
+
+| Kind | n | Mesuré | Budget |
+|---|---|---|---|
+| `GENERATE_RECOMMENDATIONS` | 3 | latence p95 241 181 ms ; erreurs 66,67 % | 20 000 ms ; 2 % |
+| `INVOKE_GLORY_TOOL` | 7 | latence p95 120 291 ms | 15 000 ms |
+| `LEGACY_GLORY_EXECUTE_SEQUENCE` | 1 | latence p95 344 457 ms | 5 000 ms |
+| `LEGACY_INGESTION_UPLOAD_FILE` | 28 | erreurs 10,71 % (3 sur 28) | 5 % |
+
+Les échantillons sont petits (1 à 28) : une p95 sur un seul appel est cet appel.
+Les trois premiers kinds appellent un modèle ; leurs budgets ont été posés sans
+mesure. Aucun budget n'est relevé ici.
+**Plan.** Trier chaque kind, un par un : lire les émissions concernées
+(`IntentEmission`, statut et durée) et décider s'il s'agit d'un défaut (cause à
+corriger) ou d'un budget irréaliste (budget à fixer d'après une mesure documentée,
+jamais pour faire passer le contrôle). Commencer par `GENERATE_RECOMMENDATIONS`
+(2 échecs sur 3) et `LEGACY_INGESTION_UPLOAD_FILE` (3 échecs sur 28), qui sont
+des erreurs et non des lenteurs. **Déclencheur** : ce relevé ; chaque exécution
+suivante de `slo-check` met les chiffres à jour. **Responsable** : agent pour le
+tri et les causes ; propriétaire pour toute modification de budget.
 
 ## 571 — image 570 refusée au démarrage ; script de démarrage sans tRPC (2026-11-11)
 
