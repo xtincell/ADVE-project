@@ -1,3 +1,10 @@
+## v6.27.579 — fix(canons): points de contact au bon contrat, deux nombres retirés au modèle (2026-11-12)
+
+**Tri des anciennes PR (arbitrage 5.14 du programme Shinkiro) : la PR #696 (V6 canons, V7 anti-fabrication), encore juste, est remise à jour sur main et livrée.**
+
+- Les canons de démonstration SPAWT et Motion19 décrivent leurs points de contact dans la forme du contrat (nature, canal, rôle, étape AARRR). Leur score Engagement devient juste ; le niveau de dévotion reste à déclarer par l'équipe. L'application SPAWT pointe vers le canal `APP`, non plus `WEBSITE`.
+- Deux nombres ne passent plus par le modèle : le taux de rotation interne du personnel (`turnoverRate`) attend une saisie humaine, et le total d'actions du catalogue (`totalActions`) est calculé. Un verrou échoue si l'un des deux sort du contrat ou si `totalActions` n'est plus marqué « calcul ».
+- Un score issu de l'intake (/100) se distingue désormais d'un score canon (/200).
 ## v6.27.578 — fix(playbook): canaux et calendrier repris des pièces de référence (2026-11-12)
 
 **Tri des anciennes PR (arbitrage 5.14 du programme Shinkiro) : la PR #1152, préparée au temps de la 553 et jamais fusionnée, est remise à jour et livrée.**

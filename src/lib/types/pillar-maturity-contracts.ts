@@ -226,7 +226,14 @@ const NEEDS_HUMAN_BY_PILLAR: Record<string, Set<string>> = {
   // Aucun champ structurel n'est verrouillé needsHuman. Même equipeDirigeante
   // est inférable (l'IA propose un casting fictif aligné avec l'archetype +
   // secteur ; l'opérateur amend a posteriori si nominal réel disponible).
-  a: new Set<string>(),
+  // V7 (2026-07-31) — `turnoverRate` est un NOMBRE de la vie réelle (taux de
+  // rotation interne : part des collaborateurs partis sur 12 mois, cf.
+  // variable-bible A11bis). `deriveSchemaRequirements` marquait tout nombre
+  // top-level `derivable: ai_generation` : le LLM le FABRIQUAIT. Un nombre
+  // inventé est une donnée réelle inventée — l'interdit n°3. Le repère
+  // sectoriel déterministe d'`infer-needs-human-fields` reste une proposition
+  // INFERRED à valider, pas une mesure.
+  a: new Set<string>(["turnoverRate"]),
   d: new Set<string>(),
   v: new Set<string>(),
   e: new Set<string>(),
@@ -768,6 +775,9 @@ export function buildFieldAnchor(content: Record<string, unknown>, path: string)
   return json.length > 600 ? json.slice(0, 600) + "…}" : json;
 }
 
+/** Chemins dont un compteur déterministe existe (`deriveByCalculation`). */
+const CALCULATED_LEAF_PATHS = new Set(["totalActions"]);
+
 /**
  * Dérive un FieldRequirement[] depuis la shape top-level d'un PillarSchema Zod.
  * Tous les champs (required + optional) deviennent des requirements pour la
@@ -806,7 +816,13 @@ export function deriveSchemaRequirements(pillarKey: string): FieldRequirement[] 
       validator: validatorFinal,
       validatorArg: pillarKey.toLowerCase() === "s" && path === "rejectedFromI" ? 0 : arg,
       derivable: !isHuman,
-      derivationSource: isHuman ? undefined : "ai_generation",
+      // V7 (2026-07-31) — un champ dont un COMPTEUR DÉTERMINISTE existe est
+      // `calculation`, jamais `ai_generation`. `i.totalActions` a son compteur
+      // exact dans `auto-filler.deriveByCalculation` (somme des actions du
+      // catalogue par canal) : le routage par défaut le rendait MORT — le LLM
+      // ESTIMAIT un nombre que le code savait COMPTER. Une donnée réelle
+      // estimée est une donnée réelle inventée (interdit n°3).
+      derivationSource: isHuman ? undefined : CALCULATED_LEAF_PATHS.has(path) ? "calculation" : "ai_generation",
       description: `Schema ${pillarKey.toUpperCase()}.${path}`,
       ...(allKeys.length > 0 ? { expectedKeys: allKeys, requiredKeys: required } : {}),
       ...(isArrayOfObjects ? { requiredItemKeys: required } : {}),

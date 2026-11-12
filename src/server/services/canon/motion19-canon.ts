@@ -407,14 +407,14 @@ export const PILLAR_E = {
     "Un fournisseur qui te suit : le conseil avant (usage + budget), la transaction sans risque (paiement à la livraison), l'accompagnement après (mise en route, SAV) — et une boutique qui célèbre tes créations, pas seulement tes achats.", // INFERRED
   primaryChannel: "Boutique Akwa + WhatsApp Business (+237 656 99 99 89) — le conseil personnalisé comme colonne vertébrale de la relation",
   touchpoints: [
-    { canal: "Boutique physique (1203 Bvd de la Liberté, Akwa)", type: "Showroom + conseil + retrait", stadeAarrr: "Activation" },
-    { canal: "motion19.com (e-commerce)", type: "Catalogue + commande + précommandes", stadeAarrr: "Acquisition" },
-    { canal: "WhatsApp Business", type: "Conseil personnalisé + commande + SAV", stadeAarrr: "Retention" },
-    { canal: "Instagram @motion19store (1 602 posts)", type: "« La vitrine du faire » — partage de travail créatif et d'inspiration (rôle officiel, Brand Book §10)", stadeAarrr: "Acquisition" },
-    { canal: "TikTok @motion19sarl (136 vidéos)", type: "Contenu créateurs + démos (canal observé, hors Brand Book)", stadeAarrr: "Acquisition" },
-    { canal: "Facebook /motion19store (4 252 likes)", type: "Développement de la communauté créative (rôle officiel, Brand Book §10)", stadeAarrr: "Acquisition" },
-    { canal: "X @motion19store", type: "Mise en avant de l'expertise + engagement direct (rôle officiel, Brand Book §10)", stadeAarrr: "Retention" },
-    { canal: "Motion19 Academy (blog)", type: "Guides par budget et par usage", stadeAarrr: "Acquisition" },
+    { canal: "Boutique physique (1203 Bvd de la Liberté, Akwa)", type: "PHYSIQUE", role: "Showroom + conseil + retrait", aarrStage: "ACTIVATION" },
+    { canal: "motion19.com (e-commerce)", type: "DIGITAL", channelRef: "WEBSITE", role: "Catalogue + commande + précommandes", aarrStage: "ACQUISITION" },
+    { canal: "WhatsApp Business", type: "HUMAIN", channelRef: "WHATSAPP", role: "Conseil personnalisé + commande + SAV", aarrStage: "RETENTION" },
+    { canal: "Instagram @motion19store (1 602 posts)", type: "DIGITAL", channelRef: "INSTAGRAM", role: "« La vitrine du faire » — partage de travail créatif et d'inspiration (rôle officiel, Brand Book §10)", aarrStage: "ACQUISITION" },
+    { canal: "TikTok @motion19sarl (136 vidéos)", type: "DIGITAL", channelRef: "TIKTOK", role: "Contenu créateurs + démos (canal observé, hors Brand Book)", aarrStage: "ACQUISITION" },
+    { canal: "Facebook /motion19store (4 252 likes)", type: "DIGITAL", channelRef: "FACEBOOK", role: "Développement de la communauté créative (rôle officiel, Brand Book §10)", aarrStage: "ACQUISITION" },
+    { canal: "X @motion19store", type: "DIGITAL", channelRef: "TWITTER", role: "Mise en avant de l'expertise + engagement direct (rôle officiel, Brand Book §10)", aarrStage: "RETENTION" },
+    { canal: "Motion19 Academy (blog)", type: "DIGITAL", channelRef: "WEBSITE", role: "Guides par budget et par usage", aarrStage: "ACQUISITION" },
   ],
   channelTouchpointMap: [
     { salesChannel: "Vente boutique", touchpointRefs: ["showroom Akwa", "conseil vendeur", "test matériel"] },
