@@ -111,6 +111,39 @@ describe("Source → aperçu → Glory → forge",()=>{
     h.strategy.mockResolvedValue({status:"ARCHIVED"});
     expect((await composeDeliverable({...input,previewOnly:true})).status).toBe("MISSING_PRECONDITIONS");
   });
+  it("l’outil cible reçoit ses entrées obligatoires résolues depuis les briefs amont, jamais un champ « non disponible »",async()=>{
+    await preview();
+    await composeDeliverable({...input,previewOnly:false,previewIntentId:"preview-id",sourceIntentId:"launch-id"});
+    const call=h.create.mock.calls.find(c=>c[0]?.data?.intentKind==="INVOKE_GLORY_TOOL");
+    const sent=call?.[0].data.payload.input as Record<string,string>;
+    expect(sent.concept).toContain("Idée directrice");
+    expect(sent.chromatic_strategy).toContain("Palette de couleurs");
+    expect(sent.concept).not.toMatch(/non disponible/); expect(sent.chromatic_strategy).not.toMatch(/non disponible/);
+  });
+  it("une entrée obligatoire introuvable est listée dans l’aperçu puis refusée avant toute réservation ou tout appel",async()=>{
+    h.asset.mockImplementation(async (q:{where:{id?:unknown}})=>q.where.id ? [] : [...activeBriefs,{...asset,id:"positionnement",kind:"POSITIONING",version:1,name:"Positionnement",state:"ACTIVE",content:{axe:"Proximité"}}]);
+    const job={...input,pins:[],targetKind:"BCG_PORTFOLIO"};
+    const first=await composeDeliverable({...job,previewOnly:true,sourceIntentId:"preview-id"});
+    expect(first.status).toBe("PREVIEW");
+    expect(first.missingInputs).toEqual([{code:"MISSING_REQUIRED_INPUT",field:"business_units",label:expect.any(String),expected:[{from:"BRAND_FILE"}]}]);
+    expect(first.summary).toMatch(/fiche de marque/); expect(first.summary).not.toMatch(/\b(Glory|Ptah|Mestor|Artemis|PREVIEW)\b/);
+    h.preview.mockResolvedValue({payload:job,result:{output:first}});
+    const refused=await composeDeliverable({...job,previewOnly:false,previewIntentId:"preview-id",sourceIntentId:"launch-id"});
+    expect(refused.status).toBe("MISSING_INPUTS");
+    expect(refused.missingInputs?.[0]).toMatchObject({code:"MISSING_REQUIRED_INPUT",field:"business_units"});
+    expect(h.claim).not.toHaveBeenCalled(); expect(h.create).not.toHaveBeenCalled();
+    expect(h.structured).not.toHaveBeenCalled(); expect(h.capture).not.toHaveBeenCalled(); expect(h.ptah).not.toHaveBeenCalled();
+  });
+  it("un document amont sans version active ni préparation possible est signalé dès l’aperçu",async()=>{
+    const first=await composeDeliverable({...input,pins:[],targetKind:"PRINT_AD_SPEC",previewOnly:true,sourceIntentId:"preview-id"});
+    expect(first.missingInputs).toContainEqual({code:"PREREQUISITE_UNAVAILABLE",kind:"CONCEPT"});
+  });
+  it("le moteur refuse une entrée déclarée obligatoire et absente avant toute émission ou tout appel",async()=>{
+    const { executeTool, MissingToolInputsError } = await import("@/server/services/artemis/tools/engine");
+    await expect(executeTool("kv-banana-prompt-generator","spawt",{format:"Story",concept:"  "},{requiredInputs:["concept","chromatic_strategy"]}))
+      .rejects.toBeInstanceOf(MissingToolInputsError);
+    expect(h.create).not.toHaveBeenCalled(); expect(h.structured).not.toHaveBeenCalled(); expect(h.capture).not.toHaveBeenCalled();
+  });
   it("un élément promis au montage bloque avant Glory",async()=>{
     const pins=[{role:"MATERIAL" as const,assetId:"da-v2",version:2}];
     const first=await composeDeliverable({...input,pins,sourceIntentId:"preview-id",previewOnly:true});

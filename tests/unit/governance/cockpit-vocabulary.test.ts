@@ -94,6 +94,10 @@ const EXTRA_FILES = [
   join(ROOT, "src/components/neteru/ptah-forge-button.tsx"),
   join(ROOT, "src/components/neteru/ptah-kiln-tracker.tsx"),
   join(ROOT, "src/lib/i18n/pages/production.ts"),
+  // Dette 4.11.a — entrées manquantes du livrable et résumés de production,
+  // rendus dans l'atelier Production du cockpit.
+  join(ROOT, "src/domain/production-inputs.ts"),
+  join(ROOT, "src/server/services/deliverable-orchestrator/composer.ts"),
   join(ROOT, "src/server/services/monetization/pricing-tiers.ts"),
 ];
 

@@ -82,7 +82,13 @@ export interface ComposeDeliverableOutput {
   readonly briefOutputId?: string;
   readonly materialBlock?: string | null;
   readonly materialStatus?: string;
-  readonly status: "PREVIEW" | "DISPATCHED" | "MISSING_PRECONDITIONS";
+  /**
+   * Dette 4.11.a — entrées obligatoires de l'outil cible encore introuvables.
+   * Vide ou absent = toutes résolues. En lancement, un manque arrête la
+   * production avec `MISSING_INPUTS` avant toute réservation ou tout appel.
+   */
+  readonly missingInputs?: readonly import("@/domain/production-inputs").MissingProductionInput[];
+  readonly status: "PREVIEW" | "DISPATCHED" | "MISSING_PRECONDITIONS" | "MISSING_INPUTS";
   /** Présent quand status=DISPATCHED — pointer vers la SequenceExecution lancée. */
   readonly sequenceExecutionId: string | null;
   /** Material generation task; never a SequenceExecution identity. */
@@ -109,6 +115,15 @@ export class TargetNotForgeableError extends Error {
         `(see deliverable-orchestrator/target-mapping.ts to register one).`,
     );
     this.name = "TargetNotForgeableError";
+  }
+}
+
+/** Raised when an input checked before the cascade disappears before the target call. */
+export class MissingProductionInputsError extends Error {
+  readonly code = "MISSING_PRODUCTION_INPUTS";
+  constructor(public readonly missing: readonly import("@/domain/production-inputs").MissingProductionInput[], message: string) {
+    super(message);
+    this.name = "MissingProductionInputsError";
   }
 }
 
