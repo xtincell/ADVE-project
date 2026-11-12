@@ -3,7 +3,9 @@
  *
  * Layer 2.
  *
- * One entry per Intent kind. Used by `slo-check` (CI weekly + dashboard).
+ * One entry per Intent kind. Measured every 6 h from the production container
+ * by the Coolify scheduled task `slo-check` (`node check-slos.cjs`, see
+ * scripts/check-slos.ts and slo-measure.ts). `errorRatePct` is a share (0..1).
  * Numbers are starting targets — tightened as performance work lands.
  */
 
