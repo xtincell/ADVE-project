@@ -3468,7 +3468,13 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
   opérateur qualifié, reçu/spine séparé ; aucune seconde bibliothèque. Fermer par
   POST authentifié autorisé vers l'environnement canonique ; les tests de
   contrat/scope/secret/panne/reprise sont déjà reçus sur fixtures. Le GET Vault de handshake ne constitue pas
-  ce reçu. Où : seshat/argos/studio-client et domaine argos-projection.
+  ce reçu. Depuis 6.27.582 (F14), la projection lit la version courante et envoie `If-Match` ;
+  création, amendement, contenu rejoué, conflits 409 et clé refusée sont reçus sur un studio
+  simulé fidèle à son code, pas sur le studio réel. Limite connue : la version est lue juste
+  avant l'écriture, donc une fiche retouchée dans le studio entre deux projections est
+  remplacée (le studio archive l'ancienne version) ; seul un changement pendant la projection
+  est refusé. Fermer aussi par une première projection réelle puis un second envoi modifié
+  (200 amendé) et un envoi à version périmée (409 qualifié). Où : seshat/argos/studio-client et domaine argos-projection.
   Effort : un lot d'intégration ; reprise dès accès à Argos-studio et
   credentials/contrat complet qualifiés. La publication locale
   des dossiers PASS ne prouve pas la projection distante.

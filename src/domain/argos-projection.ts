@@ -1,5 +1,9 @@
-/** Conservative wire validation. Argos-studio remains authority for its full taxonomy. */
+/**
+ * Projection vers Argos-studio (SHK-0002) : contrat research-dossier-v1, slug, version et issues.
+ * Conservative wire validation. Argos-studio remains authority for its full taxonomy.
+ */
 import { z } from "zod";
+import type { ConnectorDegradationReason } from "./connector-result";
 const text = z.string().trim().min(1).max(4000);
 const index = z.number().int().nonnegative();
 const attribution = z.enum(["PROVEN_CAUSAL", "CORRELATED", "ESTIMATED", "CLAIMED"]);
@@ -28,3 +32,92 @@ export const argosResearchDossierSchema = z.object({
   if (JSON.stringify(v).length > 100000) ctx.addIssue({ code: "custom", message: "Dossier trop volumineux." });
 });
 export const projectArgosInput = z.object({ dossierId: z.string().min(1), dossier: argosResearchDossierSchema });
+
+// ── Projection vers Argos-studio : slug, version, issues (SHK-0002, F14) ──────
+
+/**
+ * Slug que la bibliothèque attribue à un dossier : `generateSlug` + `slugify`
+ * d'Argos-studio (`app/src/lib/research-dossier.ts`, `app/src/lib/utils.ts`) —
+ * `marque-titre-année`, accents retirés, coupé à 80 caractères sans retouche.
+ * Sert seulement à lire la version courante avant un amendement ; le reçu du
+ * studio porte le slug faisant foi. Distinct de `seshat/argos/uid.ts` (refs du
+ * journal, 60 caractères).
+ */
+export function argosStudioSlug(operation: { brandEmitter: string; title: string; emissionYear: number }): string {
+  return `${operation.brandEmitter}-${operation.title}-${operation.emissionYear}`
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+/**
+ * Version courante d'une fiche : ETag de `GET /api/v1/references/{slug}?format=dossier`
+ * (horodatage ISO entre guillemets). Le studio compare `If-Match` à cette valeur
+ * sans ses guillemets ; une marque faible `W/` ajoutée par un intermédiaire est
+ * donc retirée. Rend la valeur seule, ou null si l'en-tête est absent ou illisible.
+ */
+export function parseArgosStudioVersion(etag: string | null | undefined): string | null {
+  const match = etag?.trim().match(/^(?:W\/)?"([^"\\\r\n]{1,100})"$/);
+  return match ? match[1]! : null;
+}
+
+/** Motif précis d'une projection non aboutie, en plus de la raison commune du connecteur. */
+export const ARGOS_PROJECTION_DETAILS = [
+  /** 400/422 : le studio refuse le contrat du dossier ; rien n'est enregistré. */
+  "REMOTE_CONTRACT_REJECTED",
+  /** 409 : la fiche a changé entre la lecture de sa version et l'écriture ; rien n'est écrasé. */
+  "VERSION_CONFLICT",
+  /** 409 : la visibilité demandée contredit celle de la fiche. */
+  "VISIBILITY_CONFLICT",
+  /** 409 à la lecture : fiche ancienne sans dossier d'origine, version illisible. */
+  "SOURCE_DOSSIER_UNAVAILABLE",
+  /** Lecture de version hors contrat (ETag absent, 404 non conforme). */
+  "VERSION_UNREADABLE",
+  /** Adresse du connecteur refusée (HTTPS public, sans paramètres ni identifiants). */
+  "ENDPOINT_REFUSED",
+] as const;
+export type ArgosProjectionDetail = (typeof ARGOS_PROJECTION_DETAILS)[number];
+
+/** Effet de l'écriture, déduit du reçu : création, amendement, ou même contenu rejoué. */
+export type ArgosProjectionChange = "CREATED" | "AMENDED" | "UNCHANGED";
+
+export type ArgosProjectionOutcome =
+  | { state: "LIVE"; change: ArgosProjectionChange; receipt: { slug: string } }
+  | { state: "DEFERRED_AWAITING_CREDENTIALS" }
+  | { state: "DEGRADED"; reason: ConnectorDegradationReason; detail?: ArgosProjectionDetail };
+
+const DETAIL_MESSAGE: Record<ArgosProjectionDetail, string> = {
+  REMOTE_CONTRACT_REJECTED: "La bibliothèque refuse le contenu du dossier ; rien n'a été enregistré.",
+  VERSION_CONFLICT: "La fiche a changé dans la bibliothèque pendant la projection ; rien n'a été écrasé. Relancez la projection : elle relira la version courante.",
+  VISIBILITY_CONFLICT: "La visibilité demandée contredit celle de la fiche ; elle se change dans Argos-studio, pas par une projection.",
+  SOURCE_DOSSIER_UNAVAILABLE: "Cette fiche ancienne n'a pas conservé son dossier d'origine : sa version ne peut pas être lue, la projection ne l'amende pas.",
+  VERSION_UNREADABLE: "La bibliothèque n'a pas donné de version lisible pour cette fiche ; la projection s'est arrêtée avant d'écrire.",
+  ENDPOINT_REFUSED: "L'adresse du connecteur Argos-studio est refusée : HTTPS public, sans paramètres ni identifiants.",
+};
+
+const REASON_MESSAGE: Record<ConnectorDegradationReason, string> = {
+  VENDOR_OUTAGE: "La bibliothèque n'a pas répondu (délai, réseau ou erreur serveur) ; l'enregistrement n'est pas confirmé.",
+  RATE_LIMITED: "La bibliothèque limite les envois pour l'instant ; réessayez plus tard.",
+  AUTH_REVOKED: "La bibliothèque refuse la clé du connecteur ; vérifiez-la dans les connexions.",
+  INSUFFICIENT_DATA: "La réponse de la bibliothèque est incomplète ; l'enregistrement n'est pas confirmé.",
+  MISSING_PREREQUISITE: "Un prérequis manque pour projeter ce dossier.",
+};
+
+/** Phrase opérateur pour l'issue d'une projection (console, journal). */
+export function describeArgosProjection(outcome: ArgosProjectionOutcome): string {
+  switch (outcome.state) {
+    case "LIVE":
+      return outcome.change === "CREATED"
+        ? `Fiche « ${outcome.receipt.slug} » créée dans la bibliothèque.`
+        : outcome.change === "AMENDED"
+          ? `Fiche « ${outcome.receipt.slug} » amendée depuis sa version courante.`
+          : `Fiche « ${outcome.receipt.slug} » déjà à jour : même contenu, rien n'a changé.`;
+    case "DEFERRED_AWAITING_CREDENTIALS":
+      return "Connecteur Argos-studio non configuré : rien n'a été envoyé.";
+    case "DEGRADED":
+      return outcome.detail ? DETAIL_MESSAGE[outcome.detail] : REASON_MESSAGE[outcome.reason];
+  }
+}

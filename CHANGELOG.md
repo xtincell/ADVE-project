@@ -1,3 +1,12 @@
+## v6.27.582 — fix(argos): projection vers le studio avec sa version courante (2026-11-12)
+
+**Point F14 du programme Shinkiro : un second envoi d'un dossier déjà présent dans la bibliothèque Argos n'est plus refusé puis annoncé comme une panne.**
+
+- Le studio n'amende une fiche existante que si l'envoi porte sa version courante (en-tête `If-Match`, lue sur `GET /api/v1/references/<slug>?format=dossier`). La projection lit désormais cette version avec la même clé, sans redirection et dans un délai borné, puis écrit une seule fois. Le slug lu est calculé comme le calcule le studio (marque, titre, année, 80 caractères).
+- Une fiche modifiée entre la lecture et l'écriture, ou une visibilité contradictoire, donne un état « dégradé » nommé (`VERSION_CONFLICT`, `VISIBILITY_CONFLICT`) : rien n'est écrasé, rien n'est relancé, et la console le dit en une phrase. Une fiche ancienne sans dossier d'origine, ou une version illisible, arrête la projection avant l'écriture. Une clé refusée (401/403) reste un problème d'accès.
+- Le reçu distingue création, amendement et même contenu rejoué ; l'empreinte du dossier et la version lue sont conservées avec chaque issue, y compris un refus.
+- Vérifié sur un studio simulé fidèle au code du studio ; aucune écriture n'a été faite sur le studio réel. Aucun modèle, migration, Intent, service ou ADR.
+
 ## v6.27.581 — chore(deps): actions Docker v4/v7, recharts 3.10, commitlint 21 (2026-11-12)
 
 **Tri des anciennes PR (arbitrage 5.14 du programme Shinkiro) : les cinq mises à jour proposées par Dependabot (#483, #484, #701, #702, #703) sont reprises ici en un seul lot, sur `main`, au lieu de cinq branches en conflit.**
