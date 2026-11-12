@@ -17,6 +17,7 @@ import { deriveJsonSchemaFromZod } from "@/server/services/utils/zod-to-json-sch
 import { sanitizeInline, wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { toolEmissionStatus } from "./emission-status";
 import { EXTENDED_GLORY_TOOLS, getGloryTool, getBrandPipelineDependencyOrder, type GloryToolDef } from "./registry";
 import { checkPaidTier, tierGateDenied } from "@/server/services/glory-tools/tier-gate";
 import { invokeExternalTool as anubisInvokeExternalTool } from "@/server/services/anubis/mcp-client";
@@ -261,6 +262,7 @@ export async function executeTool(
             where: { id: intentEmissionId },
             data: {
               result: { gloryOutputId: gloryOutput.id, status: "OK", deterministic: true } as Prisma.InputJsonValue,
+              status: toolEmissionStatus("OK"),
               completedAt: new Date(),
             },
           });
@@ -454,6 +456,7 @@ ${strategyContext}${referenceContext}`;
         where: { id: intentEmissionId },
         data: {
           result: { gloryOutputId: gloryOutput.id, status: isUsableGeneration(aiOutput) ? "OK" : "FAILED" } as Prisma.InputJsonValue,
+          status: toolEmissionStatus(isUsableGeneration(aiOutput) ? "OK" : "FAILED"),
           completedAt: new Date(),
         },
       });
@@ -689,6 +692,7 @@ async function persistManualHybridOutput(
         where: { id: intentEmissionId },
         data: {
           result: { gloryOutputId: gloryOutput.id, status: "OK", path: "manual" } as Prisma.InputJsonValue,
+          status: toolEmissionStatus("OK"),
           completedAt: new Date(),
         },
       });
@@ -814,6 +818,7 @@ async function executeMcpTool(
         where: { id: intentEmissionId },
         data: {
           result: { gloryOutputId: gloryOutput.id, status: aiOutput.status as string } as Prisma.InputJsonValue,
+          status: toolEmissionStatus(aiOutput.status),
           completedAt: new Date(),
         },
       });
@@ -908,6 +913,7 @@ async function executeDelegateTool(
         where: { id: intentEmissionId },
         data: {
           result: { gloryOutputId: gloryOutput.id, status: finalOutput.status as string } as Prisma.InputJsonValue,
+          status: toolEmissionStatus(finalOutput.status),
           completedAt: new Date(),
         },
       });

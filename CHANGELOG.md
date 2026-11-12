@@ -1,3 +1,12 @@
+## v6.27.587 — fix(seshat): deux défauts révélés par le premier relevé SLO réel (2026-11-12)
+
+**Suite du geste 1.4 du programme Shinkiro : le premier relevé SLO mesuré en production (23 kinds, 4 dépassés) a été trié en lisant les émissions, en lecture seule. Deux dépassements sont des défauts, corrigés ici ; deux sont des budgets posés sans mesure, soumis au propriétaire.**
+
+- **Émissions Glory restées « en attente ».** Les sept émissions `INVOKE_GLORY_TOOL` de la fenêtre avaient leur résultat et leur date de fin, mais leur colonne `status` restait PENDING : les cinq points de clôture du moteur ne l'écrivaient pas. Le contrôle SLO ne compte comme erreur que FAILED, et le balayage des émissions abandonnées ne vise que celles sans date de fin : un outil échoué passait pour réussi. La clôture écrit désormais OK, FAILED, ou DOWNGRADED pour un résultat différé ou à saisir à la main (`toolEmissionStatus`).
+- **Dépôt de fichier refusé par la base.** Deux dépôts sur 28 avaient échoué sur `invalid byte sequence for encoding "UTF8": 0x00` : PostgreSQL refuse le caractère U+0000, que les extracteurs de documents (PDF notamment) produisent comme artefact. Il est retiré du texte et des données structurées extraites d'un PDF, DOCX, PPTX ou XLSX, et de rien d'autre ; un fichier texte qui en contient reste refusé comme binaire. Le troisième échec du relevé est un refus volontaire (format illisible), conservé.
+- Tests : statut de clôture et garde structurelle sur les cinq clôtures du moteur, PDF simulé portant U+0000, données structurées avec date préservée, fichier texte toujours refusé ; rouges avant correction.
+- Aucun budget SLO modifié, aucun modèle, migration, Intent ou route.
+
 ## v6.27.586 — fix(la-barre): le bilan de campagne peut porter le compte des reprises (2026-11-12)
 
 **Arbitrage du propriétaire du 12 novembre (programme Shinkiro, geste 4.8) : La Barre compte désormais, dans chaque version arrêtée du bilan de campagne, les reprises facturables au client et celles à la charge de l'agence (la-barre#27). La Fusée doit accepter ce champ avant que La Barre ne soit déployée, sinon une version arrêtée après ce changement serait refusée à la transmission.**

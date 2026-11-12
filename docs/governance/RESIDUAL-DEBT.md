@@ -1,4 +1,4 @@
-## 585 — contrôle SLO depuis le VPS : mesuré en production, quatre dépassements à trier (2026-11-12)
+## 585 — contrôle SLO depuis le VPS : mesuré en production, deux défauts corrigés, deux budgets à arbitrer (2026-11-12)
 
 **Constaté.** GitHub Actions ne joint pas la base de production : depuis 6.27.580,
 le contrôle SLO y sortait en code 2 (mesure impossible) toutes les six heures,
@@ -39,14 +39,28 @@ Les quatre dépassements :
 Les échantillons sont petits (1 à 28) : une p95 sur un seul appel est cet appel.
 Les trois premiers kinds appellent un modèle ; leurs budgets ont été posés sans
 mesure. Aucun budget n'est relevé ici.
-**Plan.** Trier chaque kind, un par un : lire les émissions concernées
-(`IntentEmission`, statut et durée) et décider s'il s'agit d'un défaut (cause à
-corriger) ou d'un budget irréaliste (budget à fixer d'après une mesure documentée,
-jamais pour faire passer le contrôle). Commencer par `GENERATE_RECOMMENDATIONS`
-(2 échecs sur 3) et `LEGACY_INGESTION_UPLOAD_FILE` (3 échecs sur 28), qui sont
-des erreurs et non des lenteurs. **Déclencheur** : ce relevé ; chaque exécution
-suivante de `slo-check` met les chiffres à jour. **Responsable** : agent pour le
-tri et les causes ; propriétaire pour toute modification de budget.
+**Tri fait le 12 novembre** (lecture seule des émissions de la fenêtre, sortie hors dépôt) :
+- `INVOKE_GLORY_TOOL` : les 7 émissions étaient closes (résultat, date de fin) mais
+  leur colonne `status` restait PENDING ; un échec passait pour un succès. **Défaut,
+  corrigé en 6.27.587** (`toolEmissionStatus` aux cinq clôtures du moteur). La
+  latence (p95 120 s) reste celle d'appels au modèle face à un budget de 15 s.
+- `LEGACY_INGESTION_UPLOAD_FILE` : 2 échecs sur `invalid byte sequence for encoding
+  "UTF8": 0x00` — **défaut, corrigé en 6.27.587** (U+0000 retiré du texte extrait
+  des documents). Le troisième échec est un refus volontaire d'un format illisible :
+  il reste compté comme échec, à 1 sur 28 il passerait le budget de 5 %.
+- `GENERATE_RECOMMENDATIONS` : 2 échecs sur 3 sont des réponses du modèle hors
+  format (`INVALID_MODEL_OUTPUT`) ou sans proposition, en 16 et 34 s ; le seul
+  succès a pris 241 s. Budget 20 s posé sans mesure.
+- `LEGACY_GLORY_EXECUTE_SEQUENCE` : une seule exécution, 344 s, réussie ; c'est une
+  séquence de plusieurs outils appelant le modèle, face à un budget de 5 s.
+**Plan.** (1) Livrer 6.27.587 et relire les relevés suivants de `slo-check` : les
+émissions Glory doivent y porter OK, FAILED ou DOWNGRADED. (2) Le propriétaire
+fixe les budgets de latence des trois kinds qui appellent un modèle, d'après les
+mesures qui s'accumulent, ou décide de les garder comme alerte. (3) Les sorties
+hors format de `GENERATE_RECOMMENDATIONS` relèvent de la dette d'admission des
+sorties de modèle existante, pas d'un budget. **Déclencheur** : livraison 6.27.587,
+puis chaque relevé. **Responsable** : agent pour les causes ; propriétaire pour
+toute modification de budget.
 
 ## 571 — image 570 refusée au démarrage ; script de démarrage sans tRPC (2026-11-11)
 

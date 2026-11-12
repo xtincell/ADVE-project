@@ -8,6 +8,29 @@ import type { ExtractionResult } from "./types";
 import { readPptxText } from "./pptx-reader";
 
 /**
+ * PostgreSQL refuse U+0000 dans `text` comme dans `jsonb` (« invalid byte
+ * sequence for encoding "UTF8": 0x00 ») ; les extracteurs de documents, PDF
+ * notamment, en produisent comme artefact. Retiré du texte et des données
+ * structurées extraites d'un document, rien d'autre : les fichiers texte
+ * restent refusés s'ils portent des caractères de contrôle.
+ */
+const NUL = /\u0000/g;
+function stripNul(value: unknown): unknown {
+  if (typeof value === "string") return value.replace(NUL, "");
+  if (Array.isArray(value)) return value.map(stripNul);
+  if (value !== null && typeof value === "object") {
+    const proto = Object.getPrototypeOf(value);
+    if (proto !== Object.prototype && proto !== null) return value;
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k.replace(NUL, ""), stripNul(v)]));
+  }
+  return value;
+}
+
+export function withoutNulCharacters(result: ExtractionResult): ExtractionResult {
+  return stripNul(result) as ExtractionResult;
+}
+
+/**
  * Extract text from a PDF buffer
  */
 export async function extractPDF(buffer: Buffer): Promise<ExtractionResult> {
@@ -168,19 +191,19 @@ export async function extractAuto(
 
   if (ft === "PDF") {
     const buf = Buffer.from(content, "base64");
-    return extractPDF(buf);
+    return withoutNulCharacters(await extractPDF(buf));
   }
   if (ft === "DOCX") {
     const buf = Buffer.from(content, "base64");
-    return extractDOCX(buf);
+    return withoutNulCharacters(await extractDOCX(buf));
   }
   if (ft === "DOC") {
     throw new Error("Format .doc (Word ancien) non supporté — convertir en .docx ou .pdf.");
   }
-  if (ft === "PPTX") return readPptxText(Buffer.from(content, "base64"));
+  if (ft === "PPTX") return withoutNulCharacters(await readPptxText(Buffer.from(content, "base64")));
   if (ft === "PPT") throw new Error("Format .ppt ancien non supporté — convertir en .pptx ou .pdf.");
   if (ft === "XLSX") {
-    return extractXLSX(Buffer.from(content, "base64"));
+    return withoutNulCharacters(await extractXLSX(Buffer.from(content, "base64")));
   }
   if (ft === "XLS") {
     // exceljs ne lit pas le .xls binaire legacy (BIFF) — message clair plutôt
