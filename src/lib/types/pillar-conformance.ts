@@ -137,20 +137,38 @@ export function classifyConformanceError(err: RawPillarError): ConformanceClass 
 }
 
 /**
+ * Valide `value` contre le schéma strict du pilier et classe chaque divergence.
+ * Enrichit `received` avec le TYPE RÉEL de la valeur au chemin quand Zod ne le donne
+ * pas (cas `invalid_union` notamment) — permet de distinguer un scalaire toléré d'un
+ * conteneur structurellement corrompu.
+ */
+function classifyValidationErrors(key: PillarKey, value: unknown): ClassifiedError[] {
+  const errors = validatePillarContent(key, value).errors ?? [];
+  return errors.map((e) => {
+    const received = e.received ?? runtimeType(valueAtPath(value, e.path));
+    return { ...e, received, kind: classifyConformanceError({ ...e, received }) };
+  });
+}
+
+/**
+ * Divergences du contenu TEL QU'IL EST STOCKÉ, sans normalisation : même validateur
+ * strict et même classification que le gate, mais aucune coercion n'est appliquée
+ * avant (une coercion d'enum, de nombre ou d'identifiant pourrait changer le sens).
+ * Sert l'inventaire en lecture seule des formes ADVE legacy (RESIDUAL-DEBT « Formats
+ * ADVE legacy ») : chaque chemin listé est un chemin réellement refusé aujourd'hui.
+ */
+export function classifyStoredPillarContent(key: PillarKey, content: unknown): ClassifiedError[] {
+  return classifyValidationErrors(key, content);
+}
+
+/**
  * Normalise `content` puis classe ses divergences au schéma strict du pilier.
  * `ok` est vrai ssi il ne reste **aucune** corruption structurelle (SHAPE).
  */
 export function classifyPillarConformance(key: PillarKey, content: unknown): PillarConformance {
   const schema = PILLAR_SCHEMAS[key];
   const normalized = schema ? normalizeToSchema(content, schema) : content;
-  const errors = validatePillarContent(key, normalized).errors ?? [];
-  // Enrichit `received` avec le TYPE RÉEL de la valeur au chemin quand Zod ne le donne
-  // pas (cas `invalid_union` notamment) — permet de distinguer un scalaire toléré d'un
-  // conteneur structurellement corrompu.
-  const all: ClassifiedError[] = errors.map((e) => {
-    const received = e.received ?? runtimeType(valueAtPath(normalized, e.path));
-    return { ...e, received, kind: classifyConformanceError({ ...e, received }) };
-  });
+  const all = classifyValidationErrors(key, normalized);
   const by = (k: ConformanceClass) => all.filter((e) => e.kind === k);
   const shape = by("SHAPE");
   return {
