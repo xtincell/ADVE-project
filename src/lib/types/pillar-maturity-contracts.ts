@@ -227,9 +227,12 @@ const NEEDS_HUMAN_BY_PILLAR: Record<string, Set<string>> = {
   // est inférable (l'IA propose un casting fictif aligné avec l'archetype +
   // secteur ; l'opérateur amend a posteriori si nominal réel disponible).
   // V7 (2026-07-31) — `turnoverRate` est un NOMBRE de la vie réelle (taux de
-  // rotation clients). `deriveSchemaRequirements` marquait tout nombre
+  // rotation interne : part des collaborateurs partis sur 12 mois, cf.
+  // variable-bible A11bis). `deriveSchemaRequirements` marquait tout nombre
   // top-level `derivable: ai_generation` : le LLM le FABRIQUAIT. Un nombre
-  // inventé est une donnée réelle inventée — l'interdit n°3.
+  // inventé est une donnée réelle inventée — l'interdit n°3. Le repère
+  // sectoriel déterministe d'`infer-needs-human-fields` reste une proposition
+  // INFERRED à valider, pas une mesure.
   a: new Set<string>(["turnoverRate"]),
   d: new Set<string>(),
   v: new Set<string>(),
@@ -772,14 +775,14 @@ export function buildFieldAnchor(content: Record<string, unknown>, path: string)
   return json.length > 600 ? json.slice(0, 600) + "…}" : json;
 }
 
+/** Chemins dont un compteur déterministe existe (`deriveByCalculation`). */
+const CALCULATED_LEAF_PATHS = new Set(["totalActions"]);
+
 /**
  * Dérive un FieldRequirement[] depuis la shape top-level d'un PillarSchema Zod.
  * Tous les champs (required + optional) deviennent des requirements pour la
  * stage COMPLETE — c'est ce qui matérialise la promesse "100% = tous remplis".
  */
-/** Chemins dont un compteur déterministe existe (`deriveByCalculation`). */
-const CALCULATED_LEAF_PATHS = new Set(["totalActions"]);
-
 export function deriveSchemaRequirements(pillarKey: string): FieldRequirement[] {
   const upper = pillarKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
   const schema = PILLAR_SCHEMAS[upper];

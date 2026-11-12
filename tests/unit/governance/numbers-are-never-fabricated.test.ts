@@ -5,8 +5,8 @@
  * marquait TOUT champ nombre top-level `derivable: ai_generation`. Deux champs
  * atteignaient donc le LLM :
  *
- *   - `a.turnoverRate` — taux de rotation clients : une donnée d'entreprise
- *     réelle, que personne ne peut deviner ;
+ *   - `a.turnoverRate` — taux de rotation interne (collaborateurs partis sur
+ *     12 mois) : une donnée d'entreprise réelle, que personne ne peut deviner ;
  *   - `i.totalActions` — pire encore : `auto-filler.deriveByCalculation` a un
  *     COMPTEUR EXACT (somme des actions du catalogue par canal), rendu mort par
  *     le routage `ai_generation`. Le LLM estimait ce que le code savait compter.
@@ -18,16 +18,16 @@ import { getContract } from "@/server/services/pillar-maturity/contracts-loader"
 import { compositeScaleOf } from "@/domain/brand-scores";
 
 describe("les nombres réels ne passent jamais par le LLM", () => {
-  it("a.turnoverRate exige un HUMAIN (aucune IA ne connaît votre churn)", () => {
+  it("a.turnoverRate exige un HUMAIN (aucune IA ne connaît votre rotation interne)", () => {
     const req = getContract("a")!.stages.COMPLETE.find((r) => r.path === "turnoverRate");
-    if (!req) return; // le champ peut ne pas être requis à ce stade — rien à prouver
-    expect(req.derivable, "turnoverRate ne doit pas être dérivable par IA").toBe(false);
+    expect(req, "turnoverRate fait partie du contrat COMPLETE de A").toBeDefined();
+    expect(req!.derivable, "turnoverRate ne doit pas être dérivable par IA").toBe(false);
   });
 
   it("i.totalActions est CALCULÉ, pas estimé (son compteur existe)", () => {
     const req = getContract("i")!.stages.COMPLETE.find((r) => r.path === "totalActions");
-    if (!req) return;
-    expect(req.derivationSource, "totalActions a un compteur déterministe").not.toBe("ai_generation");
+    expect(req, "totalActions fait partie du contrat COMPLETE de I").toBeDefined();
+    expect(req!.derivationSource, "totalActions a un compteur déterministe").toBe("calculation");
   });
 });
 

@@ -378,7 +378,7 @@ export const PILLAR_E = {
   primaryChannel: "App mobile SPAWT (Android-first) — le compagnon quotidien du spawter",
   touchpoints: [
     { canal: "Landing + Quiz Palais (waitlist)", type: "DIGITAL", channelRef: "WEBSITE", role: "Acquisition", aarrStage: "ACQUISITION" },
-    { canal: "App SPAWT (3 modes)", type: "DIGITAL", channelRef: "WEBSITE", role: "Découverte quotidienne", aarrStage: "RETENTION" },
+    { canal: "App SPAWT (3 modes)", type: "DIGITAL", channelRef: "APP", role: "Découverte quotidienne", aarrStage: "RETENTION" },
     { canal: "WhatsApp Community « La Meute Abidjan »", type: "HUMAIN", channelRef: "WHATSAPP", role: "Weekly Digest + relation", aarrStage: "RETENTION" },
     { canal: "Le Chat (notifications)", type: "HUMAIN", role: "Conciergerie & relances contextuelles", aarrStage: "ACTIVATION" },
     { canal: "Créateurs / TikTok / Instagram", type: "DIGITAL", channelRef: "INSTAGRAM", role: "Trouvailles & viralité", aarrStage: "ACQUISITION" },

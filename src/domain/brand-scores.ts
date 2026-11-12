@@ -58,14 +58,6 @@ export function measuredScoreCoverage(dimensions: readonly { weight: number; mea
 export const ADVE_VECTOR_COMPOSITE_KEY = "composite" as const;
 
 /**
- * Lecture UNIQUE du composite structurel depuis un `advertis_vector` (JSON
- * Prisma, forme non garantie).
- *
- * Retourne `null` si le vecteur est absent, malformé, ou si le composite n'est
- * pas un nombre fini — jamais 0 par défaut. Tolère un vecteur legacy portant
- * `compositeScore` (des snapshots anciens en ont), mais `composite` prime.
- */
-/**
  * Échelle d'un vecteur ADVE-RTIS (V7, 2026-07-31).
  *
  * Piège inscrit au registre : l'INTAKE persiste un composite 4 piliers × 25
@@ -88,6 +80,14 @@ export function compositeScaleOf(vector: unknown): 100 | 200 {
   return rtisMeasured ? 200 : 100;
 }
 
+/**
+ * Lecture UNIQUE du composite structurel depuis un `advertis_vector` (JSON
+ * Prisma, forme non garantie).
+ *
+ * Retourne `null` si le vecteur est absent, malformé, ou si le composite n'est
+ * pas un nombre fini — jamais 0 par défaut. Tolère un vecteur legacy portant
+ * `compositeScore` (des snapshots anciens en ont), mais `composite` prime.
+ */
 export function readCompositeFromVector(vector: unknown): number | null {
   if (!vector || typeof vector !== "object" || Array.isArray(vector)) return null;
   const rec = vector as Record<string, unknown>;
