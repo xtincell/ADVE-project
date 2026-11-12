@@ -18,6 +18,7 @@ import { auditedProcedure } from "@/server/governance/governed-procedure";
 import { promoteToActive as enginePromoteToActive } from "@/server/services/brand-vault/engine";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import { db } from "@/lib/db";
+import { accessible, found } from "../entity-access";
 import { assertAssetSourceCurrent, resolveBrandSource } from "@/server/services/ingestion-pipeline/source-usage";
 
 /**
@@ -28,16 +29,16 @@ import { assertAssetSourceCurrent, resolveBrandSource } from "@/server/services/
  * marque et on passe le chokepoint `canAccessStrategy` (DB-résolu). Symétrique
  * de `brand-vault.assertBrandAssetAccess` sur la même entité.
  */
+// IN1 : une proposition inconnue et celle d'une autre marque reçoivent le même 404.
+const PROPOSAL_NOT_FOUND = "Proposition introuvable.";
 async function assertProposalAccess(userId: string, brandAssetId: string): Promise<void> {
-  const asset = await db.brandAsset.findUnique({
+  await accessible(db.brandAsset.findUnique({
     where: { id: brandAssetId },
     select: { strategyId: true },
+  }), PROPOSAL_NOT_FOUND, async (asset) => {
+    const opCtx = await getOperatorContext(userId);
+    return canAccessStrategy(asset.strategyId, opCtx);
   });
-  if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "Proposition introuvable." });
-  const opCtx = await getOperatorContext(userId);
-  if (!(await canAccessStrategy(asset.strategyId, opCtx))) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Cette proposition n'appartient pas à une marque à laquelle vous avez accès." });
-  }
 }
 
 /* lafusee:governed-active — write paths (acceptProposal/rejectProposal/acceptAllForSource) traverse mestor.emitIntent dynamically; promoteToActive is a sync helper invoked inside the emitIntent handler */
@@ -124,9 +125,9 @@ export const sourceClassifierRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       await assertProposalAccess(ctx.session.user.id, input.brandAssetId);
-      const asset = await ctx.db.brandAsset.findUniqueOrThrow({
+      const asset = found(await ctx.db.brandAsset.findUnique({
         where: { id: input.brandAssetId },
-      });
+      }), PROPOSAL_NOT_FOUND);
       if (asset.state !== "DRAFT") {
         throw new Error(`BrandAsset ${input.brandAssetId} is not in DRAFT state (current: ${asset.state})`);
       }
@@ -162,7 +163,7 @@ export const sourceClassifierRouter = createTRPCRouter({
         });
       }
 
-      return ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.brandAssetId } });
+      return found(await ctx.db.brandAsset.findUnique({ where: { id: input.brandAssetId } }), PROPOSAL_NOT_FOUND);
     }),
 
   rejectProposal: auditedProtected
@@ -172,9 +173,9 @@ export const sourceClassifierRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       await assertProposalAccess(ctx.session.user.id, input.brandAssetId);
-      const asset = await ctx.db.brandAsset.findUniqueOrThrow({
+      const asset = found(await ctx.db.brandAsset.findUnique({
         where: { id: input.brandAssetId },
-      });
+      }), PROPOSAL_NOT_FOUND);
       if (asset.state !== "DRAFT") {
         throw new Error(`BrandAsset ${input.brandAssetId} is not in DRAFT state (current: ${asset.state})`);
       }

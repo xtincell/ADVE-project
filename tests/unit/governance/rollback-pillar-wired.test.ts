@@ -34,7 +34,7 @@ vi.mock("@/server/services/operator-isolation", () => ({
 }));
 vi.mock("@/server/governance/collaborator-firewall", () => ({ assertCollaboratorMayEmit: vi.fn(async () => {}) }));
 
-import { rollbackPillar } from "@/server/services/pillar-gateway/rollback";
+import { rollbackPillar, restoreRefusal } from "@/server/services/pillar-gateway/rollback";
 import { buildCompensatingIntent, COMPENSATING_MAP } from "@/server/governance/compensating-intents";
 import { intentTouchesPillars } from "@/server/services/mestor/intents";
 import { intentKindExists } from "@/server/governance/intent-kinds";
@@ -132,10 +132,43 @@ describe("rollbackPillar — restaure réellement OU refuse honnêtement (ADR-01
     expect(mocks.writePillarAndScore).not.toHaveBeenCalled();
   });
 
-  it("pilier introuvable → refus, aucune écriture", async () => {
+  it("pilier introuvable → refus typé 404, aucune écriture", async () => {
     mocks.pillarFindUnique.mockResolvedValue(null);
     const r = await rollbackPillar({ strategyId: "s1", pillarKey: "D", compensatedFrom: "int-1", reason: "x" });
-    expect(r.restored).toBe(false);
+    expect(r).toMatchObject({ restored: false, refusal: "NOT_FOUND" });
     expect(mocks.writePillarAndScore).not.toHaveBeenCalled();
+  });
+
+  it("action d'historique : même restaurateur, archive choisie, aucune écriture brute (ADR-0207)", async () => {
+    mocks.pillarFindUnique.mockResolvedValue({ id: "pil-v", currentVersion: 3 });
+    mocks.writePillarAndScore.mockResolvedValue({ success: true, version: 4 });
+    const r = await rollbackPillar({ strategyId: "s1", pillarKey: "V", versionId: "v-old", operatorId: "op-1", intentId: "undo-1", reason: "historique" });
+    expect(r).toMatchObject({ restored: true, alreadyRecorded: false, version: 4 });
+    expect(mocks.pvFindMany).not.toHaveBeenCalled();
+    expect(mocks.writePillarAndScore).toHaveBeenCalledWith(expect.objectContaining({
+      strategyId: "s1", pillarKey: "v", operation: { type: "RESTORE_VERSION", versionId: "v-old" },
+      author: expect.objectContaining({ system: "OPERATOR", userId: "op-1", intentId: "undo-1" }), options: { expectedVersion: 3 },
+    }));
+  });
+
+  it("exactement une cible : écriture ou archive", async () => {
+    for (const target of [{}, { compensatedFrom: "int-1", versionId: "v-old" }]) {
+      const r = await rollbackPillar({ strategyId: "s1", pillarKey: "V", reason: "x", ...target });
+      expect(r).toMatchObject({ restored: false, refusal: "PRECONDITION_FAILED" });
+    }
+    expect(mocks.pillarFindUnique).not.toHaveBeenCalled();
+    expect(mocks.writePillarAndScore).not.toHaveBeenCalled();
+  });
+
+  it("refus du gateway rendus avec le même code par toutes les surfaces", () => {
+    expect(restoreRefusal("RESTORE_ACCESS_REFUSED")).toBe("FORBIDDEN");
+    expect(restoreRefusal("RESTORE_ACCESS_REFUSED: Votre rôle sur cette marque est en lecture seule")).toBe("FORBIDDEN");
+    expect(restoreRefusal("RESTORE_EMISSION_REQUIRED: intention introuvable")).toBe("FORBIDDEN");
+    expect(restoreRefusal("RESTORE_ARCHIVE_UNAVAILABLE: archive étrangère ou absente.")).toBe("NOT_FOUND");
+    expect(restoreRefusal("RESTORE_PILLAR_NOT_FOUND: pilier V introuvable")).toBe("NOT_FOUND");
+    for (const conflict of ["RESTORE_CONFLICT: content.x", "PILLAR_VERSION_CONFLICT: x", "RESTORE_CHECKPOINT_UNAVAILABLE: x",
+      "RESTORE_AMBIGUOUS: x", "RESTORE_ARCHIVE_UNLINKED: x", "SOURCE_CHANGED: x"]) {
+      expect(restoreRefusal(conflict)).toBe("PRECONDITION_FAILED");
+    }
   });
 });

@@ -1,3 +1,4 @@
+import { applyResolvedRecoOps } from "../pillar-gateway/apply-resolved-ops";
 /**
  * FUNCTION-CALLING RECOMMENDATION EXECUTOR (ADR-0088)
  *
@@ -128,7 +129,9 @@ export function applyPayloadToPillars(
       // toLowerCase, l'écriture créait un pilier fantôme "A" jamais persisté.
       const storageKey = payload.pillar.toLowerCase();
       const p = (pillars[storageKey] ??= {});
-      p[payload.field] = payload.value;
+      const result = applyResolvedRecoOps(p, [{ field: payload.field, operation: "SET", proposedValue: payload.value, recoId: "typed-update" }]);
+      if (!result.appliedCount) { warnings.push(...result.warnings); break; }
+      pillars[storageKey] = result.content;
       changed.add(storageKey);
       break;
     }
@@ -184,6 +187,10 @@ export async function dispatchTypedRecos(
     const results = await withPillarTransaction(strategyId, async (tx, write) => {
       // Documentary locks precede the strategy lock, as in the shared gateway.
       await assertCurrentSourceReceipts(tx, strategyId, sourceReceipts, requiredSourceIds, "UPDATE");
+      if (typed.some(row => row.payload.kind === "ADD_INITIATIVE")) {
+        const { assertArticleDecisionsCurrent } = await import("./article-comparison");
+        await assertArticleDecisionsCurrent(tx, strategyId, typed.filter(row => row.payload.kind === "ADD_INITIATIVE").map(row => row.id));
+      }
       const written: PillarWriteResult[] = [];
       let firstWrite = true;
       for (const key of changed) {

@@ -539,6 +539,12 @@ export async function execute(intent: Intent, context?: { intentId: string }): P
         return wrap({ ...base, ...(await ingestExternalMetric(intent)) });
       }
 
+      // ── Bilan de campagne La Barre (ADR-0244) — édition documentaire ──
+      case "INGEST_BARRE_CAMPAIGN_REVIEW": {
+        const { ingestBarreCampaignReview } = await import("@/server/services/ingestion-pipeline/barre-review");
+        return wrap({ ...base, ...(await ingestBarreCampaignReview(intent)) });
+      }
+
       // ── Auto-promotion (ADR-0054) — Sprint 9 v6.18.22 ─────────────
       case "AUTO_PROMOTION_EVALUATE": {
         const { runAutoPromotion } = await import("@/server/services/auto-promotion");

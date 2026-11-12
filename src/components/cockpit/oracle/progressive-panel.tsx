@@ -9,7 +9,7 @@
  *   - `oracle.assembleOracle` (mutation)             → bouton "Assembler" avec scope dropdown
  *
  * Layout :
- *   ┌─ Header avec stats (X complets / Y partiels / Z FAILED / W STALE)
+ *   ┌─ Header avec stats (X rédigées · Y à jour / Z en échec / W à réactualiser)
  *   ├─ Bouton "Assembler L'Oracle" + scope dropdown (ALL / MISSING / STALE)
  *   ├─ Console live (OracleLiveConsole)
  *   └─ Grid 35 sections (OracleSectionCard)
@@ -41,6 +41,15 @@ const SECTION_REGISTRY_BY_NUMBER = (() => {
   }
   return map;
 })();
+
+/**
+ * Un contenu rédigé est enregistré : `payloadSize` mesure le JSON du résultat,
+ * et `{}` / `[]` / `""` (≤ 2 caractères) ne sont pas une rédaction. Même seuil
+ * que les compteurs « Rédigées » de la page proposition.
+ */
+function isWrittenSection(row: { payloadSize: number }): boolean {
+  return row.payloadSize > 2;
+}
 
 type AssembleScope = "ALL" | "MISSING" | "STALE";
 
@@ -110,14 +119,21 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
     return map;
   }, [sections]);
 
+  // « À jour » = rédigée ET terminée : une rédaction COMPLETE sans contenu
+  // enregistré ne compte ni comme rédigée ni comme à jour (plan 4.11.e), même
+  // règle que les compteurs de la page proposition.
   const stats = useMemo(() => {
-    const tally = { pending: 0, generating: 0, complete: 0, written: 0, failed: 0, stale: 0 };
+    const tally = { pending: 0, generating: 0, current: 0, emptyResult: 0, written: 0, failed: 0, stale: 0 };
     for (const s of sections) {
       const k = s.status as SectionDbStatus;
-      if (s.payloadSize > 2) tally.written++;
+      const written = isWrittenSection(s);
+      if (written) tally.written++;
       if (k === "PENDING") tally.pending++;
       else if (k === "GENERATING") tally.generating++;
-      else if (k === "COMPLETE") tally.complete++;
+      else if (k === "COMPLETE") {
+        if (written) tally.current++;
+        else tally.emptyResult++;
+      }
       else if (k === "FAILED") tally.failed++;
       else if (k === "STALE") tally.stale++;
     }
@@ -160,10 +176,13 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
             </span>
           </div>
           <div className="flex items-center gap-3 text-xs">
-            <span className="text-success">{stats.written} rédigées · {stats.complete} à jour</span>
+            <span className="text-success">{stats.written} rédigées · {stats.current} à jour</span>
             <span className="text-error">{stats.failed} en échec</span>
             <span className="text-warning">{stats.stale} à réactualiser</span>
             <span className="text-foreground-muted">{stats.pending + stats.generating} à produire</span>
+            {stats.emptyResult > 0 ? (
+              <span className="text-warning">{stats.emptyResult} sans contenu enregistré</span>
+            ) : null}
           </div>
         </div>
 
@@ -292,6 +311,7 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
               lastError={dbSection.lastError as { errorCode?: string | null; errorMessage?: string | null } | null}
               isStale={dbSection.staleAt != null}
               contentFill={contentFillById?.[meta.id]}
+              written={isWrittenSection(dbSection)}
               disabled={!canOperate || !generationAllowed || anyMutationPending || isAssemblerRunning}
               onAction={(mode) => {
                 if (mode === "RETRY") {
@@ -304,7 +324,9 @@ export function OracleProgressivePanel(props: OracleProgressivePanelProps): Reac
                 dbSection.status === "FAILED" ? () => setFailureModalSectionId(dbSection.sectionId) : undefined
               }
               onRead={
-                dbSection.status === "COMPLETE" ? () => setReaderSectionId(dbSection.sectionId) : undefined
+                dbSection.status === "COMPLETE" && isWrittenSection(dbSection)
+                  ? () => setReaderSectionId(dbSection.sectionId)
+                  : undefined
               }
             />
           );

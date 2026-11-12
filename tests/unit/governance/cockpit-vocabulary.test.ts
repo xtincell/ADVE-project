@@ -40,6 +40,10 @@ const SCAN_DIRS = [
   // interdit exactement ces mots.
   join(ROOT, "src/components/strategy-presentation"),
   join(ROOT, "src/app/(shared)"),
+  // SHK-0002 point 5 (2026-11-11) — la bibliothèque publique Argos dit d'où
+  // vient ce qu'elle affiche : ses textes de source parlent au lecteur public.
+  join(ROOT, "src/app/(public)/argos"),
+  join(ROOT, "src/components/argos"),
 ];
 // Composants hors components/cockpit mais rendus dans le portail founder,
 // + sources de chaînes rendues au prospect (grille /pricing).
@@ -53,6 +57,10 @@ const EXTRA_FILES = [
   join(ROOT, "src/server/services/brand-node/barre-document.ts"),
   join(ROOT, "src/server/services/brand-node/barre-document-runtime.ts"),
   join(ROOT, "src/server/services/brand-node/barre-connection.ts"),
+  // LB4 — refus et accusés du bilan de campagne, lus par La Barre.
+  join(ROOT, "src/server/services/brand-node/barre-review.ts"),
+  join(ROOT, "src/server/services/ingestion-pipeline/barre-review.ts"),
+  join(ROOT, "src/domain/barre-campaign-review.ts"),
   join(ROOT, "src/components/shared/markdown-content.tsx"),
   join(ROOT, "src/server/services/notoria/generate-typed-recos.ts"),
   join(ROOT, "src/lib/strategy/roadmap-routes.ts"),

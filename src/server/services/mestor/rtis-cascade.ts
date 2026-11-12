@@ -747,8 +747,8 @@ export async function applyAcceptedRecommendations(
     if (selectedIds.length === 0) return { applied: 0 };
 
     // Accept then apply through Notoria lifecycle
-    await acceptRecos(strategyId, selectedIds, "MESTOR");
-    const result = await applyRecos(strategyId, selectedIds);
+    await acceptRecos(strategyId, selectedIds, "MESTOR", "SHORTLIST");
+    const result = await applyRecos(strategyId, selectedIds, "SHORTLIST");
 
     return { applied: result.applied };
   } catch (err) {

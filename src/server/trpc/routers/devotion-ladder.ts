@@ -24,6 +24,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { assertStrategyRead } from "./_strategy-read-guard";
+import { found } from "../entity-access";
 /* lafusee:governed-active */
 
 // ── REQ-5: The 6 devotion levels (canon: src/domain/devotion-ladder.ts) ─────
@@ -102,10 +103,10 @@ export const devotionLadderRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+      const strategy = found(await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
         select: { advertis_vector: true },
-      });
+      }), "Marque introuvable.");
       const existing = (strategy.advertis_vector as Record<string, unknown>) ?? {};
       return ctx.db.strategy.update({
         where: { id: input.strategyId },
@@ -169,10 +170,10 @@ export const devotionLadderRouter = createTRPCRouter({
         latest.evangeliste * 0.33;
 
       // Update strategy's advertis_vector with cult devotion sub-score
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+      const strategy = found(await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
         select: { advertis_vector: true },
-      });
+      }), "Marque introuvable.");
       const existing = (strategy.advertis_vector as Record<string, unknown>) ?? {};
       await ctx.db.strategy.update({
         where: { id: input.strategyId },
@@ -255,10 +256,10 @@ export const devotionLadderRouter = createTRPCRouter({
       });
 
       // Get objective from strategy
-      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+      const strategy = found(await ctx.db.strategy.findUnique({
         where: { id: input.strategyId },
         select: { advertis_vector: true },
-      });
+      }), "Marque introuvable.");
       const vector = (strategy.advertis_vector as Record<string, unknown>) ?? {};
       const objective = (vector.devotionObjective as number) ?? null;
 

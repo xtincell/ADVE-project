@@ -46,6 +46,7 @@ import { db } from "@/lib/db";
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import { accessibleStrategyIds } from "../middleware/strategy-scope";
 import { assertStrategyRead } from "./_strategy-read-guard";
+import { found } from "../entity-access";
 
 /* lafusee:governed-active — Phase 18/19 router. Toutes les mutations utilisent governedProcedure (ADR-0004 strict cible atteinte) ; tag corrigé 2026-05-06 strangler→governed (faux positif initial — le router a toujours utilisé governedProcedure depuis sa création). */
 
@@ -194,7 +195,7 @@ export const brandNodeRouter = createTRPCRouter({
     await assertNodeAccess(ctx.session.user.id, input.nodeId);
     if ("clientId" in input.patches) {
       const actor = await getOperatorContext(ctx.session.user.id);
-      const target = await db.brandNode.findUniqueOrThrow({ where: { id: input.nodeId }, select: { operatorId: true } });
+      const target = found(await db.brandNode.findUnique({ where: { id: input.nodeId }, select: { operatorId: true } }), "Nœud introuvable");
       if (actor.role !== "ADMIN" && actor.operatorId !== target.operatorId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Le rattachement client est pris en charge par votre équipe." });
       }
@@ -310,7 +311,7 @@ export const brandNodeRouter = createTRPCRouter({
   /** Read model of existing nodes, native records and source references. */
   workspace: protectedProcedure.input(z.object({ nodeId: StringId })).query(async ({ ctx, input }) => {
     await assertNodeAccess(ctx.session.user.id, input.nodeId);
-    const node = await db.brandNode.findUniqueOrThrow({ where: { id: input.nodeId } });
+    const node = found(await db.brandNode.findUnique({ where: { id: input.nodeId } }), "Nœud introuvable");
     const opCtx = await getOperatorContext(ctx.session.user.id);
     // A portfolio can contain several clients. Ancestor access for a founder
     // must never grant the agency-wide workspace.

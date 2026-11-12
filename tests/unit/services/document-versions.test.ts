@@ -11,7 +11,7 @@ const raw = (id: string) => ({ id, strategyId: "own", fileName: id, sourceType: 
 function fixture() {
   const rows = [raw("old"), raw("new"), raw("next")];
   const db = { $queryRaw: vi.fn(async () => []), brandDataSource: {
-    findUniqueOrThrow: vi.fn(async ({ where }: any) => rows.find(r => r.id === where.id)!),
+    findUnique: vi.fn(async ({ where }: any) => rows.find(r => r.id === where.id) ?? null),
     findMany: vi.fn(async ({ where }: any) => rows.filter(r => r.strategyId === where.strategyId && (!where.rawData || documentEdition(r.rawData)?.family === where.rawData.equals))),
     update: vi.fn(async ({ where, data }: any) => { const r = rows.find(r => r.id === where.id)!; Object.assign(r, data); return r; }),
   } } as unknown as SourceDb;
@@ -232,5 +232,42 @@ describe("document lineage and strategic authority", () => {
     expect(sourceIsUsable({ _document: {} })).toBe(false);
     expect(sourceIsUsable({ legacy: true })).toBe(true);
     expect(sourceIsUsable(null)).toBe(true);
+  });
+});
+
+/**
+ * 557 → 570 : les refus métier des éditions répondaient HTTP 500 (Error nu ou
+ * P2025 sous verrou). Ils sont typés, avec les mêmes messages.
+ */
+describe("typed document refusals keep their messages", () => {
+  async function refusal(call: Promise<unknown>) {
+    const error = await call.then(() => null, (e: unknown) => e) as { code?: string; message?: string } | null;
+    expect(error).toBeInstanceOf(Error);
+    return { code: error!.code, message: error!.message };
+  }
+  it("SOURCE_CHANGED répond CONFLICT, une lignée incohérente CONFLICT, une demande contradictoire BAD_REQUEST", async () => {
+    const f = fixture(); await f.classify("old", "REFERENCE"); await f.classify("new", "PROPOSED", "old");
+    expect(await refusal(f.classify("next", "PROPOSED", "old"))).toEqual({ code: "CONFLICT",
+      message: "SOURCE_CHANGED: une autre édition existe. Relisez la dernière édition avant de poursuivre." });
+    expect(await refusal(f.classify("old", "PROPOSED"))).toEqual({ code: "CONFLICT",
+      message: "Cette édition est conservée. Déposez un nouveau fichier pour créer une nouvelle édition." });
+    expect(await refusal(registerDocumentRepresentation(f.db, { id: "old", expectedSourceHash: sourceFingerprint(f.rows[0]!), userId: "owner",
+      representation: { canonical: { sourceId: "old", contentHash: sourceFingerprint(f.rows[0]!) }, reason: "Même pièce." } })))
+      .toEqual({ code: "BAD_REQUEST", message: "Ce document est déjà sa propre référence." });
+    expect(await refusal(clarifyDocumentEdition(f.db, { id: "next", expectedSourceHash: sourceFingerprint(f.rows[2]!), userId: "owner", clarification: "Préciser." })))
+      .toEqual({ code: "CONFLICT", message: "Classez ce document avant de préciser sa place." });
+  });
+  it("une source retirée sous verrou répond NOT_FOUND, jamais P2025 ; une référence inconnue ou d'un autre dossier, la même réponse", async () => {
+    const f = fixture(); await f.classify("old", "REFERENCE");
+    const gone = await refusal(labelDocumentEdition(f.db, { id: "removed", expectedSourceHash: "a".repeat(64), userId: "owner", tags: ["Brief"], reason: "Recette" }));
+    expect(gone).toEqual({ code: "NOT_FOUND", message: "Ce document n’est plus accessible dans ce dossier." });
+    expect(await refusal(decideDocumentEdition(f.db, { id: "removed", expectedSourceHash: "a".repeat(64), userId: "owner",
+      decision: { status: "ARCHIVED", reason: "Recette" } }))).toEqual(gone);
+    const input = (canonicalId: string) => registerDocumentRepresentation(f.db, { id: "new", expectedSourceHash: sourceFingerprint(f.rows[1]!), userId: "owner",
+      representation: { canonical: { sourceId: canonicalId, contentHash: "a".repeat(64) }, reason: "Autre format." } });
+    const unknown = await refusal(input("absent-of-this-installation"));
+    expect(unknown).toEqual({ code: "NOT_FOUND", message: "Ce format doit appartenir au même dossier de marque." });
+    f.rows[0]!.strategyId = "foreign";
+    expect(await refusal(input("old"))).toEqual(unknown);
   });
 });

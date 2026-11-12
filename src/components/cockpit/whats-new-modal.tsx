@@ -61,6 +61,9 @@ export function WhatsNewModal() {
       onOpenChange={(o) => {
         if (!o) dismiss();
       }}
+      // La note s'ouvre d'elle-même après l'hydratation, page déjà cliquable :
+      // non bloquante, elle ne vole plus le premier geste (F13 — clic « Sources »).
+      blocking={false}
       size="lg"
       title={
         <span className="flex items-center gap-2">

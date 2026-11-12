@@ -34,6 +34,42 @@ export interface ReleaseNote {
  */
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: "6.27.568", date: "2026-11-11", headline: "Retrouver l’histoire de chaque produit de votre catalogue",
+    highlights: [
+      { emoji: "🗂️", title: "Entrées, retraits et retours", body: "La page Offre & Pricing propose un historique du catalogue : pour chaque produit, quand il est entré, a été renommé, retiré ou réintroduit, par quelle modification, avec son identifiant. Il se lit dans les versions conservées, sans rien modifier." },
+      { emoji: "🔐", title: "Un produit retiré garde son identité", body: "Un nouveau produit portant le même nom qu’un produit retiré reçoit un nouvel identifiant, et les liens vers l’ancien ne basculent plus vers lui. Pour faire revenir un produit retiré sous son identifiant, on restaure la version qui le contenait." },
+    ],
+  },
+  {
+    version: "6.27.564", date: "2026-11-11", headline: "Un plan stratégique annoncé complet est un plan relisible",
+    highlights: [
+      { emoji: "🧭", title: "Un seul verdict pour votre plan", body: "Votre plan stratégique n’est plus présenté comme complet lorsqu’un de ses éléments ne peut pas être relu en l’état, par exemple un montant écrit en texte ou un nombre d’indicateurs insuffisant. L’avancement affiché et la possibilité d’approuver le plan disent désormais la même chose." },
+      { emoji: "📝", title: "Savoir quoi reprendre", body: "Chaque élément à reprendre est listé. Vos données ne sont ni modifiées ni complétées automatiquement : l’actualisation du plan le recompose depuis vos informations de marque." },
+    ],
+  },
+  {
+    version: "6.27.558", date: "2026-11-11", headline: "Votre premier clic n’est plus perdu",
+    highlights: [
+      { emoji: "👆", title: "Naviguer dès l’ouverture", body: "Les messages d’accueil et de nouveautés s’affichent sans bloquer la page. Un clic sur un menu, par exemple Sources, ouvre directement la rubrique et referme le message." },
+    ],
+  },
+  {
+    version: "6.27.554", date: "2026-11-10", headline: "Lire l’état réel de votre diagnostic",
+    highlights: [
+      { emoji: "📑", title: "Distinguer informations et rédaction", body: "Chaque section du diagnostic indique séparément si vos informations de marque l’alimentent et si elle est rédigée. Une section encore à produire n’est plus présentée comme complète." },
+      { emoji: "🔁", title: "Repérer une rédaction vide", body: "Une section dont la rédaction s’est terminée sans contenu est signalée à reprendre. Elle n’est plus comptée à jour et n’ouvre plus un lecteur vide." },
+      { emoji: "🔒", title: "Retirer un accès sans délai", body: "Une ancienne connexion ne donne plus accès à un compte supprimé et ne peut plus le recréer." },
+    ],
+  },
+  {
+    version: "6.27.552", date: "2026-11-06", headline: "Choisir les propositions qui méritent une action",
+    highlights: [
+      { emoji: "📰", title: "Partir d’un article précis", body: "La Gazette rapproche un passage de l’article d’un élément de votre marque. Chaque piste explique ce qu’elle suggère de tester et comment lire le résultat." },
+      { emoji: "⚖️", title: "Comparer avant de choisir", body: "Les recommandations distinguent les améliorations étayées, les alternatives équivalentes et les idées qui demandent encore une comparaison. Vous pouvez relire la source depuis la proposition." },
+      { emoji: "🗂️", title: "Appliquer les choix relus", body: "La sélection par lot conserve les propositions applicables. Si le plan qui justifiait une action issue d’un article a changé, La Fusée demande une nouvelle comparaison." },
+    ],
+  },
+  {
     version: "6.27.551", date: "2026-11-06", headline: "Travailler marque par marque, pays par pays",
     highlights: [
       { emoji: "🗂️", title: "Ouvrir un dossier pays", body: "Créez le dossier en brouillon et retrouvez la même plateforme après une interruption. Le portefeuille distingue ses propres fondations de celles qu’il hérite." },

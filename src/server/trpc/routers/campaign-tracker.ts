@@ -30,7 +30,9 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
+import { accessible } from "../entity-access";
 import { assertRawStrategyScope } from "../middleware/strategy-scope";
+import { canAccessCampaign, getOperatorContext } from "@/server/services/operator-isolation";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 import { checkPaidTier } from "@/server/services/glory-tools/tier-gate";
 import {
@@ -863,9 +865,11 @@ export const campaignTrackerRouter = createTRPCRouter({
       }).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const fieldOp = await ctx.db.campaignFieldOp.findUniqueOrThrow({
+      // Résout l'opération terrain → sa campagne : inconnue ou d'une autre équipe,
+      // le même 404 (IN1), avant toute écriture.
+      const fieldOp = await accessible(ctx.db.campaignFieldOp.findUnique({
         where: { id: input.fieldOpId },
-      });
+      }), "Opération terrain introuvable.", async (op) => canAccessCampaign(op.campaignId, await getOperatorContext(ctx.session.user.id)));
 
        const report = await ctx.db.campaignFieldReport.create({
         data: {

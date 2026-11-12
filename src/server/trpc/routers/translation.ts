@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { found } from "../entity-access";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -38,6 +39,6 @@ export const translationRouter = createTRPCRouter({
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.translationDocument.findUniqueOrThrow({ where: { id: input.id } });
+      return found(await ctx.db.translationDocument.findUnique({ where: { id: input.id } }), "Document de traduction introuvable.");
     }),
 });

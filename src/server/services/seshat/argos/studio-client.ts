@@ -3,17 +3,13 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { db } from "@/lib/db";
-import { assertPublicUrl } from "@/lib/net/ssrf-guard";
 import { projectArgosInput } from "@/domain/argos-projection";
 import { credentialVault } from "@/server/services/anubis/credential-vault";
 import { readBoundedJson, SourceReadError } from "../creative-intelligence/source-adapters";
 import { computeSafetyVerdict, type DossierDnaLike, type DossierEditorialLike } from "./safety";
+import { studioEndpoint } from "./studio-url";
 
-export async function studioEndpoint(baseUrl: string) {
-  const url = await assertPublicUrl(baseUrl);
-  if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) throw new Error("Endpoint Argos HTTPS public requis, sans paramètres ni identifiants.");
-  return new URL("api/v1/ingest/dossier", url.toString().replace(/\/?$/, "/"));
-}
+export { studioEndpoint } from "./studio-url";
 const receiptSchema = z.object({ ok: z.literal(true), slug: z.string().min(1).max(200), assetCount: z.number().int().nonnegative(), newlyCreated: z.boolean() });
 export async function projectToArgosStudio(input: z.infer<typeof projectArgosInput>, operatorId: string | null) {
   input = projectArgosInput.parse(input);

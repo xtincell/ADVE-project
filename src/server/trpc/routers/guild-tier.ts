@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { found } from "../entity-access";
 import { evaluateCreator } from "@/server/services/tier-evaluator";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { assertTalentProfileAccess } from "./_talent-access-guard";
@@ -12,11 +13,11 @@ export const guildTierRouter = createTRPCRouter({
       // IDOR round-10 : historique COMPLET d'adhésions + `payoutPhone` (PII) →
       // self-or-operator + omit du téléphone (la surface publique = guilde.getProfile).
       await assertTalentProfileAccess(ctx.session.user.id, input.talentProfileId);
-      return ctx.db.talentProfile.findUniqueOrThrow({
+      return found(await ctx.db.talentProfile.findUnique({
         where: { id: input.talentProfileId },
         omit: { payoutPhone: true },
         include: { portfolioItems: true, memberships: true },
-      });
+      }), "Profil talent introuvable");
     }),
 
   checkPromotion: protectedProcedure

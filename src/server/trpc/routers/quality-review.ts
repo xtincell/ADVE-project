@@ -28,6 +28,7 @@ import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure
 import { canAccessStrategy, getOperatorContext } from "@/server/services/operator-isolation";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { isStaff } from "./_talent-access-guard";
+import { accessible, found } from "../entity-access";
 /* lafusee:governed-active */
 
 /**
@@ -37,6 +38,10 @@ import { isStaff } from "./_talent-access-guard";
  * LÉGITIME = membre de la Guilde (peer review, cross-tenant par design) OU
  * partie prenante de la mission (owner/opérateur/collaborateur, ex. revue CLIENT/FIXER).
  */
+/** IN1 : un livrable ou une revue inconnus, ou hors d'atteinte, reçoivent le même 404. */
+const DELIVERABLE_NOT_FOUND = "Livrable introuvable.";
+const REVIEW_NOT_FOUND = "Revue introuvable.";
+
 async function assertQcParticipant(
   ctx: { session: { user: { id: string; role?: string | null } }; db: typeof import("@/lib/db").db },
   deliverableId: string,
@@ -226,10 +231,10 @@ export const qualityReviewRouter = createTRPCRouter({
 
       if (!reviewerId) {
         // REQ-5: Auto-select reviewer based on tier routing rules
-        const deliverable = await ctx.db.missionDeliverable.findUniqueOrThrow({
+        const deliverable = found(await ctx.db.missionDeliverable.findUnique({
           where: { id: input.deliverableId },
           include: { mission: true },
-        });
+        }), DELIVERABLE_NOT_FOUND);
 
         // Get creator's tier
         let creatorTier: GuildTier = "APPRENTI";
@@ -286,10 +291,10 @@ export const qualityReviewRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const review = await ctx.db.qualityReview.findUniqueOrThrow({
+      const review = found(await ctx.db.qualityReview.findUnique({
         where: { id: input.reviewId },
         include: { deliverable: { include: { mission: true } } },
-      });
+      }), REVIEW_NOT_FOUND);
 
       // Mark current review as escalated
       await ctx.db.qualityReview.update({
@@ -346,10 +351,10 @@ export const qualityReviewRouter = createTRPCRouter({
   getReviewerCandidates: operatorProcedure
     .input(z.object({ deliverableId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const deliverable = await ctx.db.missionDeliverable.findUniqueOrThrow({
+      const deliverable = found(await ctx.db.missionDeliverable.findUnique({
         where: { id: input.deliverableId },
         include: { mission: true },
-      });
+      }), DELIVERABLE_NOT_FOUND);
 
       // Determine creator's tier
       let creatorTier: GuildTier = "APPRENTI";
@@ -391,17 +396,18 @@ export const qualityReviewRouter = createTRPCRouter({
   calculateReviewPriority: protectedProcedure
     .input(z.object({ deliverableId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const deliverable = await ctx.db.missionDeliverable.findUniqueOrThrow({
-        where: { id: input.deliverableId },
-        include: { mission: true },
-      });
-
       // IDOR round-10 : `factors.budget` = budget CLIENT (privé) → réservé au
       // stakeholder de la marque ou au staff (pas à un membre Guilde quelconque).
-      const opCtx = await getOperatorContext(ctx.session.user.id);
-      if (!isStaff(opCtx) && !(await canAccessStrategy(deliverable.mission.strategyId, opCtx))) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Priorité de review réservée aux parties prenantes de la mission." });
-      }
+      // IN1 : inconnu ou hors d'atteinte, le même 404.
+      const deliverable = await accessible(ctx.db.missionDeliverable.findUnique({
+        where: { id: input.deliverableId },
+        include: { mission: true },
+      }), DELIVERABLE_NOT_FOUND, async (deliverable) => {
+        const opCtx = await getOperatorContext(ctx.session.user.id);
+        if (!isStaff(opCtx) && !(await canAccessStrategy(deliverable.mission.strategyId, opCtx))) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Priorité de review réservée aux parties prenantes de la mission." });
+        }
+      });
 
       const mission = deliverable.mission;
       const priority = mission.priority ?? 5;
@@ -485,15 +491,15 @@ export const qualityReviewRouter = createTRPCRouter({
   calculateReviewerCompensation: protectedProcedure
     .input(z.object({ reviewId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const review = await ctx.db.qualityReview.findUniqueOrThrow({
-        where: { id: input.reviewId },
-      });
-
       // IDOR round-10 : la compensation d'une review est privée à son auteur.
-      if (review.reviewerId !== ctx.session.user.id) {
+      // IN1 : inconnue ou d'un autre auteur, le même 404.
+      const review = await accessible(ctx.db.qualityReview.findUnique({
+        where: { id: input.reviewId },
+      }), REVIEW_NOT_FOUND, async (review) => {
+        if (review.reviewerId === ctx.session.user.id) return;
         const opCtx = await getOperatorContext(ctx.session.user.id);
         if (!isStaff(opCtx)) throw new TRPCError({ code: "FORBIDDEN", message: "Compensation réservée à l'auteur de la review." });
-      }
+      });
 
       // Only PEER reviews are compensated
       if (review.reviewType !== "PEER") {

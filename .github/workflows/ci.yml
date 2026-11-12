@@ -75,6 +75,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql://postgres:receipt-ci@127.0.0.1:5432/shinkiro_verify
+      # Node 22's default heap (about 2 GiB) runs out in asset-original's large
+      # originals. 6 GiB is the value the typecheck job already uses, and it still
+      # leaves room for PostgreSQL on the 16 GiB public-repository runner.
+      NODE_OPTIONS: --max-old-space-size=6144
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
@@ -120,6 +124,14 @@ jobs:
             --to-schema prisma/schema.prisma \
             --exit-code
       - run: npx vitest run --config vitest.feedback-postgres.config.mts
+      - name: Social publication receipt (empty dedicated database)
+        # Its cron reads every due publication, so it refuses a shared database.
+        env:
+          DATABASE_URL: postgresql://postgres:receipt-ci@127.0.0.1:5432/shinkiro_social_receipt_ci
+        run: |
+          docker exec shinkiro-ci-postgres createdb -U postgres shinkiro_social_receipt_ci
+          npx prisma migrate deploy
+          npx vitest run --config vitest.social-receipt-postgres.config.mts
       - name: Remove the isolated PostgreSQL container
         if: always()
         run: docker rm --force shinkiro-ci-postgres >/dev/null 2>&1 || true

@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
+// Recette F16 (11 novembre 2026) : le diagnostic gratuit lit les 4 piliers
+// ADVE (radar 4 piliers du résultat intake) ; les données d'entrée et le
+// verdict affichés ici sont un exemple fictif, signalé comme tel.
 // Ce que chaque pilier mesure — en clair. Les anciens pseudo-outils
 // (« Mestor.scan », « Thot.audit »…) étaient du jargon interne inventé
 // face lead (audit intention/exécution 2026-07-16, ADR-0123).
@@ -54,11 +57,11 @@ export function MarketingDiagnostic() {
         </div>
         <header className="mb-12 max-w-4xl">
           <h2 className="font-display font-semibold tracking-tight mb-5" style={{ fontSize: "var(--text-display)", lineHeight: 0.96, color: "var(--color-foreground)" }}>
-            Tu colles ta marque.<br />
-            <span className="relative inline-block">15 minutes plus tard, le verdict.<span className="absolute inset-x-[-2%] bottom-1 h-[0.18em] bg-accent -z-10" style={{ transform: "skewX(-12deg)" }} /></span>
+            Tu décris ta marque.<br />
+            <span className="relative inline-block">Le diagnostic te répond.<span className="absolute inset-x-[-2%] bottom-1 h-[0.18em] bg-accent -z-10" style={{ transform: "skewX(-12deg)" }} /></span>
           </h2>
           <p className="max-w-[60ch] text-base md:text-lg" style={{ color: "var(--color-foreground-secondary)" }}>
-            Pas de questionnaire de 40 pages. Pas de réunion de cadrage. La méthode <strong style={{ color: "var(--color-foreground)" }}>ADVE/RTIS</strong> scanne 8 piliers via un combo d&rsquo;outils maison, et te rend un rapport + une recommandation.
+            Pas de réunion de cadrage. Le diagnostic gratuit lit tes 4 piliers <strong style={{ color: "var(--color-foreground)" }}>ADVE</strong> (questionnaire guidé ou import de documents) et ton empreinte publique, puis te rend un rapport et des recommandations à valider. Les 4 piliers de stratégie (R, T, I, S) de la méthode <strong style={{ color: "var(--color-foreground)" }}>ADVE/RTIS</strong> se calculent ensuite dans ton espace.
           </p>
         </header>
 
@@ -89,7 +92,7 @@ export function MarketingDiagnostic() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-px" style={{ background: "color-mix(in oklab, var(--color-foreground) 14%, transparent)", border: "1px solid color-mix(in oklab, var(--color-foreground) 14%, transparent)" }}>
           <div className="p-6" style={{ background: "var(--color-background)" }}>
-            <div className="font-mono text-xs text-accent uppercase tracking-widest mb-4">⌖ INPUT</div>
+            <div className="font-mono text-xs text-accent uppercase tracking-widest mb-4">⌖ INPUT · exemple fictif</div>
             <div className="space-y-3 mb-4">
               <div className="p-3 border bg-bone-2" style={{ borderColor: "color-mix(in oklab, var(--color-foreground) 12%, transparent)", background: "white" }}>
                 <div className="text-2xs uppercase tracking-widest font-mono mb-1" style={{ color: "var(--color-foreground-secondary)" }}>URL marque</div>
@@ -110,7 +113,7 @@ export function MarketingDiagnostic() {
           </div>
 
           <div className="p-6" style={{ background: "var(--color-background)" }}>
-            <div className="font-mono text-xs text-accent uppercase tracking-widest mb-4">⌖ SCAN · 8 piliers</div>
+            <div className="font-mono text-xs text-accent uppercase tracking-widest mb-4">⌖ MÉTHODE · 8 piliers (ADVE au diagnostic)</div>
             <ol className="flex flex-col">
               {LETTERS.map((letter, i) => {
                 const isActive = i === active && !done;
@@ -129,14 +132,14 @@ export function MarketingDiagnostic() {
           </div>
 
           <div className="p-6" style={{ background: "var(--color-background)" }}>
-            <div className="font-mono text-xs text-accent uppercase tracking-widest mb-4">⌖ OUTPUT · rapport + reco</div>
+            <div className="font-mono text-xs text-accent uppercase tracking-widest mb-4">⌖ OUTPUT · exemple fictif</div>
             <div className={`transition-opacity ${done ? "opacity-100" : "opacity-50"}`}>
               <div className="font-mono text-2xs uppercase tracking-widest mb-1" style={{ color: "var(--color-foreground-secondary)" }}>SCORE ADVE/RTIS</div>
               <div className="font-serif font-medium text-5xl mb-1" style={{ color: "var(--color-foreground)" }}>{done ? "115" : "—"}<span className="text-xl" style={{ color: "var(--color-foreground-secondary)" }}>/200</span></div>
               <div className="font-mono text-xs uppercase tracking-widest text-accent mb-4">TIER · ORDINAIRE</div>
               <div className="text-sm leading-relaxed mb-4" style={{ color: "var(--color-foreground)" }}>
                 {done
-                  ? "Marque FORTE en voix et identité. Mais l'expérience client et le système opérationnel sont sous-développés. Tier ORDINAIRE → potentiel FORTE atteignable en un cycle APOGEE."
+                  ? "Identité et voix nettes. Expérience client et organisation encore peu documentées. Palier ORDINAIRE : pistes pour viser FORTE, à valider avec ton équipe."
                   : "Analyse en cours…"}
               </div>
               <a href="#apogee" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors">
@@ -148,7 +151,7 @@ export function MarketingDiagnostic() {
         </div>
 
         <p className="mt-6 font-mono text-xs text-center" style={{ color: "var(--color-foreground-secondary)" }}>
-          ⌖ Diagnostic = ~15 min de questionnaire, verdict immédiat à la fin. Production (stratégie écrite, missions, livrables) = 48h. Trajectoire complète = APOGEE.
+          ⌖ Diagnostic : questionnaire d&rsquo;environ 10 min ou import de documents (durées indicatives), puis génération du rapport, qui peut prendre plusieurs minutes. Production : délais convenus à la mission, livrables relus avant validation. Trajectoire complète = APOGEE.
         </p>
       </div>
     </section>

@@ -71,3 +71,49 @@ suppression, sources corrigées/retirées/partagées, filiation réelle, retry e
 au persist, restitution des origines/certitudes/états, compensation de compensation,
 archive insuffisante/ambiguë et deux opérateurs. Surface tRPC réelle sur fixtures,
 lecture native, CI/image/runtime exacts avant revendication de livraison.
+
+## Amendement 6.27.562 (2026-11-11) — un seul restaurateur
+
+**Constat.** Trois surfaces restauraient du contenu pilier. Le journal
+(`ROLLBACK_PILLAR`) et l’action d’historique (`LEGACY_PILLAR_ROLLBACK_VERSION`)
+atteignaient bien `RESTORE_VERSION`, mais par deux enveloppes distinctes
+(`pillar-gateway/rollback.ts` et `pillarVersioning.rollback`). Les refus de
+l’historique sortaient en 500 (conflit, archive sans checkpoint, archive d’une
+autre marque) et un pilier absent répondait 200 `success:false`. Le retrait Notoria
+(`revertReco`, `LEGACY_NOTORIA_REVERT_RECO`) restait un restaurateur parallèle :
+archive choisie par la date (« la dernière avant `appliedAt` »), contenu entier
+réécrit en `REPLACE_FULL` sans version attendue ni contrôle d’accès, décisions
+ultérieures effacées, et proposition marquée `REVERTED` même quand le gateway
+refusait. Reçu sur PostgreSQL réel : 10 rouges sur 14 avant correction.
+
+**Décision.**
+- `rollbackPillar` est l’unique entrée de restauration, avec exactement une cible :
+  l’écriture (`compensatedFrom`) ou l’archive choisie (`versionId`).
+  `pillarVersioning.rollback` est supprimé ; versioning archive et lit seulement.
+- Refus typés partagés (`restoreRefusal`) : 403 pour l’accès, l’autorité,
+  l’émission ou un rôle délégué hors de sa zone ; 404 pour un pilier ou une archive
+  absente ou étrangère ; 412 pour le reste (conflit, archive sans checkpoint, non
+  liée ou ambiguë, sources). Journal, historique et retrait rendent le même code.
+- Le gateway accepte `LEGACY_NOTORIA_REVERT_RECO` comme émission de restauration ;
+  le veto collaborateur y devient `RESTORE_ACCESS_REFUSED`.
+- `Recommendation.appliedIntentId` (nullable, additif) garde l’émission de
+  l’écriture d’application ; `applyRecos` la transmet au gateway, qui la porte sur
+  l’archive. Les routes `notoria.applyRecos`, `notoria.applyBatch` et
+  `jehuty.applyRecommendation` la fournissent. Le retrait compense exactement cette
+  écriture ; `REVERTED` n’est posé qu’après la compensation, ou son reçu au retry.
+- Refus sans estimation : application sans filiation (antérieure, ou appelant sans
+  émission comme `applyAcceptedRecommendations`) ; proposition typée (une écriture
+  multi-piliers avec S et BrandAction recalculés) ; écriture qui a appliqué
+  plusieurs propositions sur le même pilier.
+- Garde HARD `single-pillar-restorer.test.ts` : `RESTORE_VERSION` n’est construit
+  que dans le gateway, et aucun module hors gateway ne lit une archive pour écrire
+  un pilier. Contre-épreuves rouges sur l’ancien code, vertes après.
+
+**Conséquences.** Aucune application antérieure n’est rattachée par supposition ;
+les 76 archives SPAWT historiques restent sans checkpoint inventé. Deux cas
+demandent une décision métier et restent refusés : retirer ensemble les
+propositions d’une même écriture, et compenser une proposition typée sur tous ses
+piliers et projections. Le retrait lui-même n’est pas compensable depuis le
+journal (`LEGACY_NOTORIA_REVERT_RECO` absent de `COMPENSATING_MAP`, payload sans
+pilier) ; l’action d’historique peut compenser son archive, mais la proposition
+reste alors `REVERTED`. Ces limites sont suivies dans RESIDUAL-DEBT (G).

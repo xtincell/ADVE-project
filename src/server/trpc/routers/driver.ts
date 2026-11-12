@@ -32,6 +32,7 @@ import { strategyScopedProcedure } from "../middleware/strategy-scope";
 import { generateSpecs as engineGenerateSpecs, translateBrief as engineTranslateBrief } from "@/server/services/driver-engine";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { db } from "@/lib/db";
+import { accessible, found } from "../entity-access";
 import {
   MEDIA_CONNECTION_PUBLIC_SELECT,
   SOCIAL_CONNECTION_PUBLIC_SELECT,
@@ -43,13 +44,15 @@ import {
  * de tête, donc ni la garde ADR-0175 de `governedProcedure` ni `strategyScoped`
  * ne s'appliquent. Résout le driver → sa marque et garde lecture/écriture.
  * Retourne le strategyId pour réutilisation.
+ *
+ * IN1 : un id inconnu et un driver d'une autre marque reçoivent le même 404.
  */
+const DRIVER_NOT_FOUND = "Canal introuvable.";
 async function assertDriverAccess(userId: string, driverId: string): Promise<string> {
-  const driver = await db.driver.findUniqueOrThrow({
+  const driver = await accessible(db.driver.findUnique({
     where: { id: driverId },
     select: { strategyId: true },
-  });
-  await assertStrategyRead(userId, driver.strategyId);
+  }), DRIVER_NOT_FOUND, (d) => assertStrategyRead(userId, d.strategyId));
   return driver.strategyId;
 }
 
@@ -234,7 +237,7 @@ export const driverRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertDriverAccess(ctx.session.user.id, input.id);
-      const driver = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.id } });
+      const driver = found(await ctx.db.driver.findUnique({ where: { id: input.id } }), DRIVER_NOT_FOUND);
       // Transaction: unset all primary for this strategy, then set this one
       await ctx.db.$transaction([
         ctx.db.driver.updateMany({
@@ -246,7 +249,7 @@ export const driverRouter = createTRPCRouter({
           data: { isPrimary: true },
         }),
       ]);
-      return ctx.db.driver.findUniqueOrThrow({ where: { id: input.id } });
+      return found(await ctx.db.driver.findUnique({ where: { id: input.id } }), DRIVER_NOT_FOUND);
     }),
 
   generateSpecs: governedProcedure({
@@ -366,11 +369,10 @@ export const driverRouter = createTRPCRouter({
   getSocialConnection: protectedProcedure
     .input(z.object({ driverId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const driver = await ctx.db.driver.findUniqueOrThrow({
+      const driver = await accessible(ctx.db.driver.findUnique({
         where: { id: input.driverId },
         include: { strategy: true },
-      });
-      await assertStrategyRead(ctx.session.user.id, driver.strategyId);
+      }), DRIVER_NOT_FOUND, (d) => assertStrategyRead(ctx.session.user.id, d.strategyId));
       // Map DriverChannel to SocialPlatform where applicable
       const platformMap: Record<string, string> = {
         INSTAGRAM: "INSTAGRAM", FACEBOOK: "FACEBOOK", TIKTOK: "TIKTOK",
@@ -436,11 +438,10 @@ export const driverRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       // Keyé sur driverGloryTool.id → résoudre le lien → son driver → sa marque.
-      const link = await ctx.db.driverGloryTool.findUniqueOrThrow({
+      await accessible(ctx.db.driverGloryTool.findUnique({
         where: { id: input.id },
         select: { driverId: true },
-      });
-      await assertDriverAccess(ctx.session.user.id, link.driverId);
+      }), "Outil lié introuvable.", (link) => assertDriverAccess(ctx.session.user.id, link.driverId));
       return ctx.db.driverGloryTool.delete({ where: { id: input.id } });
     }),
 
@@ -448,8 +449,8 @@ export const driverRouter = createTRPCRouter({
   getMediaConnection: protectedProcedure
     .input(z.object({ driverId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const driver = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.driverId } });
-      await assertStrategyRead(ctx.session.user.id, driver.strategyId);
+      const driver = await accessible(ctx.db.driver.findUnique({ where: { id: input.driverId } }), DRIVER_NOT_FOUND,
+        (d) => assertStrategyRead(ctx.session.user.id, d.strategyId));
       // Map paid-relevant channels to media platform names
       const mediaMap: Record<string, string> = {
         INSTAGRAM: "meta_ads", FACEBOOK: "meta_ads", TIKTOK: "tiktok_ads",
@@ -470,10 +471,10 @@ export const driverRouter = createTRPCRouter({
     .input(z.object({ driverId: z.string() }))
     .query(async ({ ctx, input }) => {
       await assertDriverAccess(ctx.session.user.id, input.driverId);
-      const driver = await ctx.db.driver.findUniqueOrThrow({
+      const driver = found(await ctx.db.driver.findUnique({
         where: { id: input.driverId },
         include: { strategy: { include: { pillars: true } } },
-      });
+      }), DRIVER_NOT_FOUND);
       if (driver.channel !== "PR") {
         return { error: "generatePRAngles is only applicable to PR drivers" };
       }
@@ -516,7 +517,7 @@ export const driverRouter = createTRPCRouter({
   })
     .mutation(async ({ ctx, input }) => {
       await assertDriverAccess(ctx.session.user.id, input.driverId);
-      const source = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.driverId } });
+      const source = found(await ctx.db.driver.findUnique({ where: { id: input.driverId } }), DRIVER_NOT_FOUND);
       const clonedName = input.nameOverride ?? `${source.name} (${input.targetMarket.toUpperCase()})`;
 
       const cloned = await ctx.db.driver.create({

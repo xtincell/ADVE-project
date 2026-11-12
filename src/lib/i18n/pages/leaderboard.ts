@@ -13,11 +13,11 @@ export const leaderboardFr = {
     "La force d'une marque ne se note pas — elle se révèle par les épreuves qu'elle gagne ou perd dans le réel. Voici le classement, par ligue, à force θ révélée (Bradley-Terry ancré sur les étalons). Chaque score se lit avec sa couverture d'épreuves.",
   "lb.cta.title": "Où se classe VOTRE marque ?",
   "lb.cta.body":
-    "Commencez par scorer votre empreinte publique — gratuit, une minute, sans email. L'entrée au championnat se fait ensuite, par une mesure officielle sur épreuves.",
+    "Commencez par scorer votre empreinte publique — gratuit, environ une minute, sans email. L'entrée au championnat se fait ensuite, par une mesure officielle sur épreuves.",
   "lb.cta.btn": "Scorer mon empreinte",
   "lb.empty.title": "Le championnat n'a pas encore de participants.",
   "lb.empty.body":
-    "Le classement se remplit dès qu'une marque est mesurée par une épreuve du réel (mesure officielle, validée par un opérateur). En attendant, scorez votre empreinte publique — gratuit, une minute — puis demandez votre mesure officielle.",
+    "Le classement se remplit dès qu'une marque est mesurée par une épreuve du réel (mesure officielle, validée par un opérateur). En attendant, scorez votre empreinte publique — gratuit, environ une minute — puis demandez votre mesure officielle.",
   "lb.empty.btn": "Scorer mon empreinte — gratuit",
   "lb.scale.QUARTIER": "échelle de quartier",
   "lb.scale.VILLE": "échelle d'une ville",
@@ -81,12 +81,12 @@ export const leaderboardEn: Record<keyof typeof leaderboardFr, string> = {
     "A brand's force isn't graded — it is revealed by the trials it wins or loses in the real world. Here is the ranking, by league, by revealed Force θ (Bradley-Terry anchored on the benchmarks). Every score reads with its trial coverage.",
   "lb.cta.title": "Where does YOUR brand rank?",
   "lb.cta.body":
-    "Start by scoring your public footprint — free, one minute, no email. Entry into the championship comes next, through an official trial-based measurement.",
-  "lb.cta.btn": "Score my brand — 1 min",
+    "Start by scoring your public footprint — free, about one minute, no email. Entry into the championship comes next, through an official trial-based measurement.",
+  "lb.cta.btn": "Score my brand — ~1 min",
   "lb.empty.title": "The brand championship has no contenders yet.",
   "lb.empty.body":
-    "The ranking fills up as soon as a brand is measured by a real-world trial (official measurement, validated by an operator). In the meantime, score your public footprint — free, one minute — then request your official measurement.",
-  "lb.empty.btn": "Score my brand — 1 min, free",
+    "The ranking fills up as soon as a brand is measured by a real-world trial (official measurement, validated by an operator). In the meantime, score your public footprint — free, about one minute — then request your official measurement.",
+  "lb.empty.btn": "Score my brand — ~1 min, free",
   "lb.scale.QUARTIER": "neighbourhood scale",
   "lb.scale.VILLE": "city scale",
   "lb.scale.REGION": "regional scale",
@@ -149,11 +149,11 @@ export const leaderboardZh: Record<keyof typeof leaderboardFr, string> = {
     "品牌的实力不是打分打出来的——而是在真实世界中一场场胜负考验里揭晓的。这里是按联赛划分、以揭晓的 θ 战力排出的榜单（以基准锚定的 Bradley-Terry 模型）。每个分数都要连同其考验覆盖率一起解读。",
   "lb.cta.title": "您的品牌排在哪里？",
   "lb.cta.body":
-    "先为您的公开足迹评分——免费、一分钟、无需邮箱。之后再通过基于考验的官方测量进入锦标赛。",
-  "lb.cta.btn": "为我的品牌评分——1 分钟",
+    "先为您的公开足迹评分——免费、约一分钟、无需邮箱。之后再通过基于考验的官方测量进入锦标赛。",
+  "lb.cta.btn": "为我的品牌评分——约 1 分钟",
   "lb.empty.title": "锦标赛暂无参赛品牌。",
   "lb.empty.body":
-    "只要有品牌通过真实世界的考验被测量（官方测量，由操作员验证），榜单就会开始填充。在此之前，先为您的公开足迹评分——免费、一分钟——然后申请官方测量。",
+    "只要有品牌通过真实世界的考验被测量（官方测量，由操作员验证），榜单就会开始填充。在此之前，先为您的公开足迹评分——免费、约一分钟——然后申请官方测量。",
   "lb.empty.btn": "为我的品牌评分——免费",
   "lb.scale.QUARTIER": "街区级",
   "lb.scale.VILLE": "城市级",

@@ -41,7 +41,9 @@ export function MarketingHero() {
       />
 
       <div className="relative z-10 flex items-center gap-4 px-[var(--pad-page)] py-3.5 text-2xs font-mono text-foreground-muted border-b border-border-subtle flex-wrap">
-        <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-success animate-pulse mr-1.5"></span>SYSTEM · NOMINAL</span>
+        {/* L'état du service se lit sur /status, calculé sur le journal des
+            opérations — plus de « SYSTEM · NOMINAL » statique (recette F16). */}
+        <a href="/status" className="hover:text-accent transition-colors">ÉTAT DU SERVICE ↗</a>
         {typeof diagnosedCount === "number" && diagnosedCount > 0 ? (
           <>
             <span className="text-[color-mix(in_oklab,var(--color-foreground-muted)_60%,transparent)]">·</span>
@@ -51,7 +53,7 @@ export function MarketingHero() {
         <span className="text-[color-mix(in_oklab,var(--color-foreground-muted)_60%,transparent)]">·</span>
         <span>ABIDJAN · DOUALA · DAKAR · LAGOS</span>
         <span className="text-[color-mix(in_oklab,var(--color-foreground-muted)_60%,transparent)]">·</span>
-        <span>DIAGNOSTIC GRATUIT · 15 MIN</span>
+        <span>DIAGNOSTIC GRATUIT</span>
       </div>
 
       <div className="relative z-10 mx-auto max-w-[var(--maxw-content)] w-full px-[var(--pad-page)] flex-1 flex flex-col pt-12 md:pt-20">
@@ -68,9 +70,9 @@ export function MarketingHero() {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.9fr)] gap-12 lg:gap-24 items-end mt-auto pb-12">
           <div className="flex flex-col gap-7">
             <p className="text-foreground-secondary text-pretty max-w-[60ch]" style={{ fontSize: "var(--text-lg)", lineHeight: 1.45 }}>
-              Tu colles ton site, tes réseaux, ton brief.{" "}
-              <strong className="text-foreground">Le rapport diagnostic tombe en 15 minutes</strong>
-              {" — score sur 200, radar 8 piliers, plan d’action priorisé. Puis l’OS prend le relais : stratégie écrite, missions en production, freelances qui livrent."}
+              Tu réponds au questionnaire ou tu importes tes documents.{" "}
+              <strong className="text-foreground">Le diagnostic gratuit mesure ton socle ADVE sur 100</strong>
+              {" — radar des 4 piliers ADVE, force publique sur 200 quand une mesure existe, recommandations à valider. Ensuite, l’OS outille ton équipe : stratégie proposée puis relue, missions confiées à des talents, livrables revus avant validation."}
             </p>
             <div className="flex flex-col gap-2.5">
               <div className="flex gap-3 flex-wrap">
@@ -81,7 +83,7 @@ export function MarketingHero() {
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
                 </DiagnosticCta>
                 <a href="/scorer" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium border border-accent text-accent hover:bg-accent/10 transition-colors">
-                  Scorer ma marque — 1 min
+                  Scorer ma marque — ~1 min
                 </a>
                 <a href="#manifesto" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium border border-border-strong text-foreground hover:bg-surface-elevated transition-colors">
                   Lire le manifeste
@@ -90,7 +92,7 @@ export function MarketingHero() {
                   Voir les offres
                 </a>
               </div>
-              <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">↳ gratuit · 15 min · sans engagement · PDF brandé en option payante</p>
+              <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted">↳ gratuit · questionnaire ~10 min, durée indicative · sans engagement · PDF en option payante</p>
               <p className="font-mono text-2xs uppercase tracking-widest text-foreground-muted pt-3 mt-1 border-t border-dashed border-border-subtle">
                 Pas founder ?
                 <a href="#portails" className="ml-2 text-foreground-secondary hover:text-accent transition-colors">→ Agence</a>
@@ -110,7 +112,7 @@ export function MarketingHero() {
             <ul className="font-mono text-xs">
               {[
                 ["marques.diagnostiquées", typeof diagnosedCount === "number" ? String(diagnosedCount) : "—"],
-                ["piliers.scannés", "8"],
+                ["piliers.méthode", "8"],
                 ["sections.stratégie", "35"],
                 ["paliers.trajectoire", "6"],
                 ["score.échelle", "/200"],
@@ -122,8 +124,8 @@ export function MarketingHero() {
               ))}
             </ul>
             <footer className="flex justify-between px-3.5 py-2.5 text-2xs font-mono text-foreground-muted border-t border-border">
-              <span>↳ vos métriques réelles</span>
-              <span>dès le diagnostic</span>
+              <span>↳ vos mesures réelles</span>
+              <span>selon les sources disponibles</span>
             </footer>
           </aside>
         </div>

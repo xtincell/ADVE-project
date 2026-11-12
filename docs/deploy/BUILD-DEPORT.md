@@ -165,7 +165,7 @@ sont **inchangés** — c'est la même image, construite ailleurs.
 > n'a **plus aucun trigger automatique** : le push sur `main` ne construit plus
 > d'image et ne redéploie plus. Pour livrer en prod : lancer `build-image` à la
 > main (Actions → *Build image (ghcr)* → *Run workflow*, cocher `notify_coolify`)
-> **ou** `deploy.yml` **ou** un redeploy depuis le dashboard Coolify. **Vérifier
+> **ou** un redeploy depuis le dashboard Coolify. **Vérifier
 > aussi côté Coolify** que l'auto-deploy de l'app (webhook git / watch registry)
 > est désactivé — le repo ne peut pas le couper à distance.
 

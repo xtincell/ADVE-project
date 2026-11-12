@@ -1,3 +1,7 @@
+## 552 — Gazette et recommandations comparables
+
+Le mode article fournit un passage exact, son implication pour la marque et un contrôle de pertinence. Le choix dépend ensuite d’une référence comparable. Le mode général suit le référentiel de qualité du champ concerné. Le lecteur de l’article et la file des recommandations distinguent la présélection et l’instruction. Le replay Koaci local conserve une piste à instruire. La réception de la version déployée reste ouverte.
+
 ## 551 — Portefeuille de marques et territoire de travail
 
 Le portefeuille reçoit les dossiers pays en brouillon et distingue les fondations propres et héritées. Le CRM rattache bureaux et filiales à une organisation de référence avec preuves. L’Oracle et la Gazette consomment le territoire de la marque. Recette locale sur PostgreSQL et 25 associations documentées. La ventilation du brief Noël et la relecture du déploiement constituent des réceptions distinctes. Voir ADR0243.
@@ -889,10 +893,10 @@ parcours, déclencheur fin du candidat en cours. Source 506
 `2c5c2b276`/PR 1038/CI 39444684044 reçues, désormais intégrées à 507 livré.
 Guidé B local uniquement, pas de complétion guidée production reçue. Audit/rapport complets, coût, conversion et MVP entier ouverts.
 
-Point statique séparé à vérifier sur le préflight `generateAiFollowUps` :
-configuration par clés ignorant le relais OAuth seul. Reprise bornée MVP02,
-s’appuyer sur `isTextLLMAvailable` existant après vérification ; aucun nouveau
-gestionnaire/policy/provider ni correctif runtime déduit. [Dette](RESIDUAL-DEBT.md).
+Point statique séparé du préflight `generateAiFollowUps` (configuration par clés
+ignorant le relais OAuth seul) : écart reproduit puis corrigé en 554 par
+`isTextLLMAvailable` existant, sans nouveau gestionnaire/policy/provider. L’appel
+réel par le relais sur le parcours intake reste à recevoir. [Dette](RESIDUAL-DEBT.md).
 
 ## Sprint MVP1 — couverture et information publique, candidat 506 (2026-10-20)
 

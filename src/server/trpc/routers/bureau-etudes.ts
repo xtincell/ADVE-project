@@ -12,21 +12,29 @@ import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { canAccessStrategy } from "@/server/services/operator-isolation";
 import * as be from "@/server/services/bureau-etudes";
+import { accessible, entityNotFound } from "../entity-access";
 /* lafusee:governed-active */
 
 interface AccessCtx {
   session: { user: { id: string; role: string; operatorId?: string | null } };
-  db: { marketStudy: { findUniqueOrThrow: (args: { where: { id: string }; select: { strategyId: true } }) => Promise<{ strategyId: string }> } };
+  db: { marketStudy: { findUnique: (args: { where: { id: string }; select: { strategyId: true } }) => Promise<{ strategyId: string } | null> } };
 }
 
+/**
+ * IN1 : une étude inconnue et l'étude d'une autre marque reçoivent le même 404,
+ * avant tout effet. Une vague ou une source s'y résout et reçoit le même refus.
+ */
+const STUDY_NOT_FOUND = "Étude introuvable.";
+const WAVE_NOT_FOUND = "Vague introuvable.";
 async function assertStudyAccess(ctx: AccessCtx, studyId: string) {
-  const study = await ctx.db.marketStudy.findUniqueOrThrow({ where: { id: studyId }, select: { strategyId: true } });
-  const ok = await canAccessStrategy(study.strategyId, {
-    operatorId: ctx.session.user.operatorId ?? null,
-    userId: ctx.session.user.id,
-    role: ctx.session.user.role ?? "USER",
+  await accessible(ctx.db.marketStudy.findUnique({ where: { id: studyId }, select: { strategyId: true } }), STUDY_NOT_FOUND, async (study) => {
+    const ok = await canAccessStrategy(study.strategyId, {
+      operatorId: ctx.session.user.operatorId ?? null,
+      userId: ctx.session.user.id,
+      role: ctx.session.user.role ?? "USER",
+    });
+    if (!ok) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette étude." });
   });
-  if (!ok) throw new TRPCError({ code: "FORBIDDEN", message: "Accès refusé à cette étude." });
 }
 
 export const bureauEtudesRouter = createTRPCRouter({
@@ -55,6 +63,10 @@ export const bureauEtudesRouter = createTRPCRouter({
     }))
     .query(async ({ ctx, input }) => {
       await assertStudyAccess(ctx, input.studyId);
+      // Les deux vagues doivent appartenir à l'étude gardée (sinon : échantillon d'une autre marque).
+      const waveIds = [...new Set([input.waveIdA, input.waveIdB])];
+      const owned = await ctx.db.researchWave.count({ where: { id: { in: waveIds }, studyId: input.studyId } });
+      if (owned !== waveIds.length) throw entityNotFound(WAVE_NOT_FOUND);
       return be.compareWaves(input);
     }),
 
@@ -83,8 +95,8 @@ export const bureauEtudesRouter = createTRPCRouter({
     inputSchema: z.object({ waveId: z.string(), achievedN: z.number().int().nonnegative() }),
     caller: "bureau-etudes:recordAchieved",
   }).mutation(async ({ ctx, input }) => {
-    const wave = await ctx.db.researchWave.findUniqueOrThrow({ where: { id: input.waveId }, select: { studyId: true } });
-    await assertStudyAccess(ctx, wave.studyId);
+    await accessible(ctx.db.researchWave.findUnique({ where: { id: input.waveId }, select: { studyId: true } }),
+      WAVE_NOT_FOUND, (wave) => assertStudyAccess(ctx, wave.studyId));
     return be.recordWaveAchieved(input);
   }),
 
@@ -132,8 +144,8 @@ export const bureauEtudesRouter = createTRPCRouter({
     }),
     caller: "bureau-etudes:setProvenance",
   }).mutation(async ({ ctx, input }) => {
-    const src = await ctx.db.marketSource.findUniqueOrThrow({ where: { id: input.sourceId }, select: { studyId: true } });
-    await assertStudyAccess(ctx, src.studyId);
+    await accessible(ctx.db.marketSource.findUnique({ where: { id: input.sourceId }, select: { studyId: true } }),
+      "Source d’étude introuvable.", (src) => assertStudyAccess(ctx, src.studyId));
     return be.setSourceProvenance(input);
   }),
 });

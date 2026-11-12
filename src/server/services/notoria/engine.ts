@@ -21,6 +21,9 @@ import {
   DEFAULT_SOURCE_BUDGET,
   type BrandSourceContext,
 } from "./source-context";
+import type { ObjectiveComparison } from "@/domain/recommendation-comparison";
+import { readArticleComparisonScopes } from "./article-comparison";
+import { prepareArticleActions, type PreparedArticleAction } from "./article-actions";
 import { computeRecoGrounding, flattenProposedValue } from "./grounding";
 import type {
   GenerateBatchInput,
@@ -402,13 +405,15 @@ async function persistBatch(
    * sur des documents qu'on ne lui a jamais montrés n'aurait aucun sens.
    */
   sourceCtx: BrandSourceContext,
+  writer: Pick<Prisma.TransactionClient, "recommendationBatch" | "recommendation"> = db,
+  articleComparisons?: ReadonlyMap<unknown, ObjectiveComparison>,
 ): Promise<{ batchId: string; totalRecos: number; autoApplied: number }> {
   const config = MISSION_CONFIG[missionType];
   const allRecos = [...recosByPillar.entries()].flatMap(([key, recos]) =>
     recos.map((r) => ({ ...r, pillarKey: key })),
   );
 
-  const batch = await db.recommendationBatch.create({
+  const batch = await writer.recommendationBatch.create({
     data: {
       strategyId,
       missionType,
@@ -431,8 +436,11 @@ async function persistBatch(
   // ── ADR-0090 — contexte de simulation chargé UNE fois par batch ──
   // Ruler déterministe par champ + preview d'impact score, zéro LLM.
   const { loadContentsAndWeights, previewCandidateImpact } = await import("./preview-impact");
-  const { evaluateField, computeRecoWeightedScore, compareForReplacement } = await import("./rulers");
+  const { evaluateField, computeRecoWeightedScore } = await import("./rulers");
+  const { fieldComparator } = await import("./compare-proposal");
   const simCtx = await loadContentsAndWeights(strategyId).catch(() => null);
+
+  const compare = simCtx ? fieldComparator(simCtx.contents, simCtx.weights) : null;
 
   for (const reco of allRecos) {
     const gateResult = applyQualityGates(reco, reco.pillarKey);
@@ -458,6 +466,7 @@ async function persistBatch(
           targetPillarKey: pillarKeyLower,
           targetField: reco.field,
           operation,
+          targetMatch: reco.targetMatch,
           proposedValue: reco.proposedValue,
         })
       : null;
@@ -466,29 +475,6 @@ async function persistBatch(
       scoreImpactEstimate,
       confidence: reco.confidence ?? 0.6,
     });
-
-    // Gate de remplacement à la génération : si la valeur EN PLACE bat la
-    // proposition, on ne bloque pas le catalogue (Notoria catalogue tout)
-    // mais on force requires_review + warning visible. Le blocage dur vit
-    // dans lifecycle.applyRecos.
-    let rulerWarning: string | undefined;
-    if (simCtx && (operation === "SET" || operation === "MODIFY")) {
-      const currentValue = (simCtx.contents[pillarKeyLower as keyof typeof simCtx.contents] as Record<string, unknown> | null | undefined)?.[
-        reco.field.split(".")[0] ?? reco.field
-      ];
-      const cmp = compareForReplacement({
-        pillarKey: pillarKeyLower,
-        field: reco.field,
-        oldValue: currentValue,
-        newValue: reco.proposedValue,
-        confidence: reco.confidence ?? 0.6,
-        scoreImpactEstimate,
-      });
-      if (!cmp.replaceAllowed) {
-        gateResult.applyPolicy = "requires_review";
-        rulerWarning = cmp.reason;
-      }
-    }
 
     // ── ADR-0184 — ancrage documentaire, mesuré et non pas supposé ──
     const justification = reco.justification ?? "";
@@ -508,6 +494,13 @@ async function persistBatch(
         "La marque a de la documentation, mais cette proposition n'en reprend rien.";
     }
 
+    const comparison = compare?.({
+      targetPillarKey: pillarKeyLower, targetField: reco.field, operation, targetMatch: reco.targetMatch,
+      proposedValue: reco.proposedValue, confidence: reco.confidence ?? 0.6,
+      unverifiedCitations: grounding.unverifiedCitations,
+    });
+    const rulerWarning = !comparison?.shortlisted ? comparison?.reason : undefined;
+    if (!comparison?.shortlisted) gateResult.applyPolicy = "requires_review";
     const validationWarning = [
       (reco as Record<string, unknown>)._validationWarning as string | undefined,
       rulerWarning,
@@ -517,7 +510,7 @@ async function persistBatch(
       .filter(Boolean)
       .join("; ") || undefined;
 
-    await db.recommendation.create({
+    await writer.recommendation.create({
       data: {
         strategyId,
         targetPillarKey: reco.pillarKey.toLowerCase(),
@@ -543,7 +536,9 @@ async function persistBatch(
         validationWarning: validationWarning ?? null,
         sectionGroup: reco.sectionGroup ?? null,
         rulerScore: rulerVerdict.score,
-        rulerVerdict: rulerVerdict as unknown as Prisma.InputJsonValue,
+        rulerVerdict: { ...rulerVerdict, fieldComparison: comparison,
+          ...(articleComparisons?.has(reco.proposedValue) ? { objectiveComparison: articleComparisons.get(reco.proposedValue) } : {}),
+        } as unknown as Prisma.InputJsonValue,
         scoreImpactEstimate,
         weightedScore,
         groundingScore: grounding.score,
@@ -562,6 +557,21 @@ async function persistBatch(
   }
 
   return { batchId: batch.id, totalRecos: allRecos.length, autoApplied };
+}
+
+/** Gazette mode uses the same provider and recommendation persistence as a normal batch.
+ * A reported article produces catalogue candidates; it never runs the pillar fill prompts. */
+export async function generateArticleActions(strategyId: string, input: Parameters<typeof prepareArticleActions>[0],
+  anchors: Parameters<typeof prepareArticleActions>[1]) {
+  const scopes = await readArticleComparisonScopes(strategyId);
+  const result = await prepareArticleActions(input, anchors, (system, prompt) => callNotoriaLLM(system, prompt, strategyId), scopes);
+  return { ...result, scopes };
+}
+
+export function persistArticleActions(tx: Prisma.TransactionClient, strategyId: string, actions: PreparedArticleAction[]) {
+  return persistBatch(strategyId, "SESHAT_OBSERVATION", new Map([["i", actions.map(a => a.recommendation)]]),
+    { empty: true, documentsUsed: 0, documentsSkipped: 0, charsUsed: 0, retrieval: "NONE", excerpts: [] }, tx,
+    new Map(actions.map(a => [a.recommendation.proposedValue, a.basis.comparison])));
 }
 
 // ── Public API ────────────────────────────────────────────────────

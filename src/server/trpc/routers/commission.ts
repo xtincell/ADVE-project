@@ -30,6 +30,7 @@ import {
   effectiveTalentRate,
 } from "@/server/services/commission-engine";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { found } from "../entity-access";
 /* lafusee:governed-active */
 
 /**
@@ -271,9 +272,9 @@ export const commissionRouter = createTRPCRouter({
   getOperatorFees: adminProcedure
     .input(z.object({ operatorId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const operator = await ctx.db.operator.findUniqueOrThrow({
+      const operator = found(await ctx.db.operator.findUnique({
         where: { id: input.operatorId },
-      });
+      }), "Opérateur introuvable.");
 
       // Sum all commission operator fees for this operator's strategies
       const strategies = await ctx.db.strategy.findMany({
@@ -313,9 +314,9 @@ export const commissionRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
-      const mission = await ctx.db.mission.findUniqueOrThrow({
+      const mission = found(await ctx.db.mission.findUnique({
         where: { id: input.missionId },
-      });
+      }), "Mission introuvable.");
 
       // Only process completed missions
       if (mission.status !== "COMPLETED" && mission.status !== "DELIVERED") {

@@ -955,9 +955,9 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             la preuve publique captée. Lecture seule, honnête (couverture +
             palier suivant). Le classement public reste un choix (payant/opérateur).
         ════════════════════════════════════════════════════════════ */}
-        <p className="mx-auto mt-10 max-w-[60ch] text-center text-sm text-foreground-secondary">
-          {t("intakeResult.bridge.force")}
-        </p>
+        {/* La phrase-pont vers la force /200 est rendue par ForceSection,
+            seulement quand une force est affichée (recette F16). */}
+        <div className="mt-10" />
         <ForceSection token={token} />
 
 

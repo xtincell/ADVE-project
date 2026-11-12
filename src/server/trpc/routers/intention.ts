@@ -10,6 +10,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { accessible } from "../entity-access";
 import { canAccessStrategy } from "@/server/services/operator-isolation";
 
 const intentionTypeEnum = z.enum([
@@ -62,9 +63,8 @@ export const intentionRouter = createTRPCRouter({
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const row = await ctx.db.intention.findUniqueOrThrow({ where: { id: input.id } });
-      await assertStrategyAccess(ctx, row.strategyId);
-      return row;
+      return accessible(ctx.db.intention.findUnique({ where: { id: input.id } }), "Intention introuvable.",
+        (row) => assertStrategyAccess(ctx, row.strategyId));
     }),
 
   /** Capture déterministe d'une intention net-new (status CAPTURED). */

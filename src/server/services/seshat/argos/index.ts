@@ -220,46 +220,15 @@ export async function setDossierVerdict(args: {
   });
 }
 
-// ── Projection publique (apps Argos /argos) ────────────────────────────────────
-
-export interface PublicDossier {
-  ref: string;
-  brand: string;
-  campaign: string | null;
-  sector: string | null;
-  market: string | null;
-  dna: unknown;
-  editorial: unknown;
-  sources: Array<{ title: string; url: string }>;
-  publishedAt: string | null;
-}
-
-function toPublicDossier(d: DossierRow): PublicDossier {
-  return {
-    ref: d.ref,
-    brand: d.brand,
-    campaign: d.campaign,
-    sector: d.sector,
-    market: d.market,
-    dna: d.dna,
-    editorial: d.editorial,
-    sources: Array.isArray(d.sources) ? (d.sources as Array<{ title: string; url: string }>) : [],
-    publishedAt: d.publishedAt?.toISOString() ?? null,
-  };
-}
-
-/** Mur public : dossiers publiés ET PASS uniquement. */
-export async function listPublicDossiers(args?: { sector?: string; limit?: number }): Promise<PublicDossier[]> {
-  const rows = await db.campaignReferenceDossier.findMany({
-    where: { published: true, safetyVerdict: "PASS", ...(args?.sector ? { sector: args.sector } : {}) },
-    orderBy: { publishedAt: "desc" },
-    take: args?.limit ?? 60,
-  });
-  return rows.map(toPublicDossier);
-}
-
-export async function getPublicDossierByRef(ref: string): Promise<PublicDossier | null> {
-  const d = await db.campaignReferenceDossier.findUnique({ where: { ref } });
-  if (!d || !d.published || d.safetyVerdict !== "PASS") return null;
-  return toPublicDossier(d);
-}
+// ── Lectures publiques (apps Argos /argos) — SHK-0002 point 5 ─────────────────
+// Bibliothèque canonique Argos-studio quand elle est raccordée, sinon dossiers
+// publiés (PASS) du journal, toujours avec leur source : `./library-read`.
+export {
+  listPublicDossiers,
+  getPublicDossierByRef,
+  listPublicDossierEntries,
+  resetArgosLibraryReadState,
+  type PublicDossier,
+  type PublicDossierList,
+  type PublicDossierRead,
+} from "./library-read";

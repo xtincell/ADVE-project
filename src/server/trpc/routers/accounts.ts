@@ -47,6 +47,21 @@ export const ASSIGNABLE_ROLES = [
   "ADMIN",
 ] as const;
 
+/**
+ * Tables dont la clé étrangère vers `User` est RESTRICT : `purgeAccount` les
+ * vérifie toutes avant d'écrire. La réception PostgreSQL compare cette liste
+ * au catalogue réel de la base (`account-lifecycle.postgres.test.ts`).
+ */
+export const PURGE_RESTRICTING_TABLES = [
+  "Strategy",
+  "TalentProfile",
+  "MissionApplication",
+  "CampaignTeamMember",
+  "CampaignApproval",
+  "QualityReview",
+  "SocialConnection",
+] as const;
+
 export const accountsRouter = createTRPCRouter({
   /** Liste paginée + recherche des comptes, avec stats d'activité légères. */
   list: adminProcedure
@@ -110,21 +125,29 @@ export const accountsRouter = createTRPCRouter({
       reason: z.string().min(3).max(500),
     }),
   }).mutation(async ({ input, ctx }) => {
+    // Refus typés (403/400/404) : des `Error` nus sortaient en 500 (IN7).
     const actor = ctx.session.user;
-    if (actor.role !== "ADMIN") throw new Error("Seul un ADMIN peut modifier les rôles.");
+    if (actor.role !== "ADMIN") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Seul un ADMIN peut modifier les rôles." });
+    }
     if (input.userId === actor.id) {
-      throw new Error("Auto-modification refusée — demande à un autre administrateur.");
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Auto-modification refusée — demande à un autre administrateur.",
+      });
     }
     const target = await db.user.findUnique({
       where: { id: input.userId },
       select: { id: true, role: true, email: true },
     });
-    if (!target) throw new Error("Compte introuvable.");
+    if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Compte introuvable." });
     if (target.role === input.role) return { id: target.id, role: target.role, unchanged: true };
 
     if (target.role === "ADMIN" && input.role !== "ADMIN") {
       const adminCount = await db.user.count({ where: { role: "ADMIN" } });
-      if (adminCount <= 1) throw new Error("Impossible de rétrograder le dernier ADMIN.");
+      if (adminCount <= 1) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Impossible de rétrograder le dernier ADMIN." });
+      }
     }
 
     const updated = await db.user.update({
@@ -608,6 +631,11 @@ export const accountsRouter = createTRPCRouter({
    *
    * Les lignes `StrategyCollaborator` tombent en cascade (`onDelete: Cascade`) :
    * les accès délégués disparaissent avec le compte, ce qui est le but.
+   *
+   * Les autres données que la base refuse de rendre orphelines (clés étrangères
+   * RESTRICT vers `User`, `PURGE_RESTRICTING_TABLES`) sont refusées de la même
+   * façon, avant l'écriture : un profil de talent, une candidature ou une
+   * approbation faisait échouer la suppression en 500 (IN7).
    */
   purgeAccount: governedProcedure({
     kind: "ADMIN_PURGE_USER_ACCOUNT",
@@ -630,6 +658,16 @@ export const accountsRouter = createTRPCRouter({
         role: true,
         Strategy: { select: { id: true, name: true } },
         strategyCollaborations: { select: { id: true } },
+        talentProfile: { select: { id: true } },
+        _count: {
+          select: {
+            missionApplications: true,
+            campaignTeam: true,
+            campaignApprovals: true,
+            qualityReviews: true,
+            socialConnections: true,
+          },
+        },
       },
     });
     if (!user) return { deleted: false, reason: "not-found" as const, email };
@@ -647,6 +685,21 @@ export const accountsRouter = createTRPCRouter({
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: `${email} est PROPRIÉTAIRE de ${user.Strategy.map((s) => s.name).join(", ")}. Transfère la propriété avant de supprimer le compte.`,
+      });
+    }
+
+    const linked = [
+      user.talentProfile ? "un profil de talent" : null,
+      user._count.missionApplications ? `${user._count.missionApplications} candidature(s) de mission` : null,
+      user._count.campaignTeam ? `${user._count.campaignTeam} place(s) dans une équipe de campagne` : null,
+      user._count.campaignApprovals ? `${user._count.campaignApprovals} approbation(s) de campagne` : null,
+      user._count.qualityReviews ? `${user._count.qualityReviews} revue(s) qualité` : null,
+      user._count.socialConnections ? `${user._count.socialConnections} connexion(s) de réseau social` : null,
+    ].filter((label): label is string => label !== null);
+    if (linked.length > 0) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `${email} porte ${linked.join(", ")}. Ces données sont conservées : ce compte ne se supprime pas par cette voie.`,
       });
     }
 
