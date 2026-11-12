@@ -1,3 +1,11 @@
+## v6.27.584 — feat(audit): l'inventaire des formes ADVE se lance dans l'image de production (2026-11-12)
+
+**Suite de 6.27.583 (geste 4.11.k du programme Shinkiro).** L'inventaire en lecture seule des formes ADVE hors schéma strict ne se lançait qu'avec `tsx` et le dépôt complet, absents de l'image : la production ne pouvait pas être inventoriée sans accès à l'hôte.
+
+- Le Dockerfile bundle l'inventaire comme le script de démarrage (`esbuild`, `--packages=external`) et le copie dans l'image : `node adve-shapes-audit.cjs --sans-extraits` s'exécute dans le conteneur, avec sa `DATABASE_URL`, dans la même transaction `READ ONLY` / `REPEATABLE READ`. Rien n'est lancé au démarrage.
+- La garde `boot-script-packages` couvre désormais les deux scripts bundlés dans l'image : chacun ne doit demander que des paquets présents (`@prisma/client`, `@prisma/adapter-pg`, `zod`). Contre-épreuve : `zod` retiré de la liste, les deux cas rougissent.
+- La consigne de lancement en production est mise à jour dans RESIDUAL-DEBT (« Formats ADVE legacy »). Aucun modèle, migration, Intent ou écriture.
+
 ## v6.27.583 — fix(adve): inventaire en lecture seule des formes refusées par le schéma strict (2026-11-12)
 
 **Point 4.11.k du programme Shinkiro, première étape de la dette « Formats ADVE legacy » : savoir exactement quels chemins A/D/V/E le schéma strict refuse, avant toute normalisation.**

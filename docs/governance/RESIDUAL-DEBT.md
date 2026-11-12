@@ -671,7 +671,10 @@ chemins relus en base sur un PostgreSQL jetable peuplé par les seeds du dépôt
 (plus 7 pour la démonstration CIMENCAM), instantané `READ ONLY` confirmé ; UPgraders
 A/D/V/E et La Fusée D/V/E y sont VALIDATED et complets à 100 % malgré 7 à 46
 chemins refusés chacun. Pas encore lancé sur la production.
-**Lancer en production** (opérateur, accès lecture à la base) :
+**Lancer en production.** Depuis 6.27.584, l'image embarque l'inventaire, bundlé
+comme le script de démarrage : `node adve-shapes-audit.cjs --sans-extraits` dans le
+conteneur (commande ponctuelle ou tâche planifiée Coolify supprimée après usage), avec
+la `DATABASE_URL` du conteneur. Hors de l'image, un opérateur ayant un accès lecture :
 `DATABASE_URL=<lecture prod> npm run audit:adve-shapes -- --json <fichier hors dépôt>`
 (`--strategie <id>` répétable, `--piliers a,v`, `--sans-extraits`). Le JSON contient
 des extraits courts de données de marque : il reste hors checkout avec les autres
