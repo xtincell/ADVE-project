@@ -1,3 +1,13 @@
+## v6.27.573 — fix(lint): la garde de couches ESLint refonctionne (2026-11-12)
+
+**Constat du lot 556 : la règle de couches `boundaries/dependencies` était inerte. Sans résolveur d'imports, ESLint ne reconnaissait ni les fichiers `.ts` ni l'alias `@/`, et laissait passer n'importe quel import entre couches. Elle refonctionne, en erreur.**
+
+- Cause : aucun `import/resolver` n'était configuré. Le résolveur `node` par défaut ignore `.ts`, `.tsx` et l'alias `@/*` : aucun import n'était résolu, et la règle sautait chaque dépendance sans rien dire.
+- Correctif : un résolveur local sans dépendance (`eslint-plugin-lafusee/import-resolver.js`) lit les alias de `tsconfig.json`, les chemins relatifs, les `index.*` et les spécificateurs `.js` écrits pour un `.ts`. Le modèle des couches passe dans `eslint-plugin-lafusee/boundaries-layering.js`, mêmes dix politiques en syntaxe v7, sans avertissement de dépréciation.
+- Sondes : domain → lib, lib → governance, services → trpc, components → services, app → services et app → governance, en alias et en relatif, ne levaient rien ; toutes sont désormais signalées, imports de type et dynamiques compris.
+- Les 374 imports qui enfreignaient déjà les couches (149 couples fichier → couche, 146 fichiers) sont listés un à un avec leur motif dans `eslint-plugin-lafusee/boundaries-allowlist.js` : gestionnaires de routes Next qui appellent un service (73), contrats de type déclarés trop haut (37), pages serveur (14), gouvernance qui appelle un service (8), schémas partagés vers l'UI (7), et quelques cas isolés. Une violation corrigée au passage : `classification-coherence.ts` lit `BrandTier` dans le domaine.
+- Verrou `tests/unit/governance/boundaries-layering.test.ts` (24 cas) : les sondes contre la configuration réelle, les imports permis, le résolveur ; la liste ne peut que diminuer, chaque entrée ne couvre qu'un fichier et une couche. Retirer le résolveur casse 13 cas sur 24.
+- Restent ouverts (RESIDUAL-DEBT) : résorber les 149 entrées ; les routes HTTP et les composants Neteru demandent une décision de modèle ; `src/server/mcp/**`, `src/proxy.ts` et `src/instrumentation.ts` n'appartiennent à aucune couche.
 ## v6.27.572 — fix(intake): la restitution ne présente plus de statistiques sans source (2026-11-12)
 
 **Point 4.11.d du programme Shinkiro. L'écran d'attente et le rapport du diagnostic affirmaient des chiffres que rien ne sourçait (« 98 % des marques échouent sur la Distinction », « 3 % du public », « dix fois plus »). Ils sont reformulés sans chiffre, et un verrou empêche leur retour.**
