@@ -250,33 +250,19 @@ jobs:
 
 ---
 
-### Phase 6 — `slo-check.yml` (Performance budgets)
+### Phase 6 — contrôle SLO (Performance budgets) : tâche Coolify, plus de workflow
 
-**Pourquoi** : tu n'as aucune idée de la latence p95 de `EXPORT_ORACLE`, du coût p95 de `ENRICH_ORACLE`, ni du taux d'erreur de `RANK_PEERS`. Les SLOs sans alerte = du décor.
+**Pourquoi** : tu n'as aucune idée de la latence p95 de `EXPORT_ORACLE`, du coût p95 de `ENRICH_ORACLE`, ni du taux d'erreur de `RANK_PEERS`. Les SLOs sans mesure = du décor.
 
-```yaml
-name: SLO Check
-on:
-  schedule:
-    - cron: '0 */6 * * *'  # toutes les 6h
-  workflow_dispatch:
+**Depuis 6.27.585, le contrôle ne tourne plus dans GitHub Actions** : la base de production n'y est pas joignable, la mesure sortait toujours en « mesure impossible ». `slo-check.yml` est retiré. La mesure tourne dans le conteneur de La Fusée, par une tâche planifiée Coolify de l'application prod :
 
-jobs:
-  slo:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
-      - run: npm ci
-      - run: npx tsx scripts/check-slos.ts --rolling-days 7
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-```
+| Nom | Commande | Fréquence |
+|---|---|---|
+| `slo-check` | `node check-slos.cjs` | `0 */6 * * *` |
 
-Le script lit `IntentEmission` rolling 7-day, calcule p95 latency / error rate / cost p95 par Intent kind, compare aux SLOs déclarés dans `src/server/governance/slos.ts`. Le code de sortie du script décide : 0 = dans les SLO (l’issue de dépassement ouverte est refermée) ; 1 = dépassement mesuré, une seule issue « SLO breach — rolling 7d » mise à jour par commentaire ; tout autre code = mesure impossible (base injoignable, secret absent, erreur du script) : le job échoue, aucune issue n’est ouverte.
+`check-slos.cjs` est le bundle de `scripts/check-slos.ts`, construit par le Dockerfile ; il lit `IntentEmission` sur 7 jours glissants avec la `DATABASE_URL` du conteneur, en lecture seule, et compare aux SLOs de `src/server/governance/slos.ts` (embarqués dans le bundle). Il écrit une ligne datée dans le journal de la tâche : chaque kind mesuré, tenu ou dépassé, et le code de sortie — 0 tenus, 1 au moins un dépassement mesuré, 2 mesure impossible (raison en fin de ligne, sans secret). `--report` ajoute le détail par kind. Aucune issue n'est ouverte ; le relevé se lit dans le journal des exécutions de la tâche. En local : `npx tsx scripts/check-slos.ts`.
 
-**Effet** : tu sais en continu si l'OS tient ses promesses de perf. Si un nouveau model LLM dégrade `EXPORT_ORACLE`, tu le sais en 6h, pas après que 3 clients aient raccroché.
+**Effet** : tu sais toutes les 6 h si l'OS tient ses promesses de perf, mesuré là où sont les données.
 
 ---
 
@@ -396,7 +382,6 @@ GitHub offre 2000 minutes/mois gratuites sur les repos privés (illimité sur le
 | `ci.yml` | par PR | 3 min × 5 jobs | ~150 min/PR × 20 PR/mois = 3000 min |
 | `e2e.yml` | par PR | 8 min | 160 min/mois |
 | `governance-drift.yml` | hebdo | 2 min | 8 min/mois |
-| `slo-check.yml` | 6h | 1 min | 120 min/mois |
 | `lighthouse.yml` | par PR UI | 4 min | 40 min/mois |
 | `claude.yml` | sur trigger `@claude` | variable (5-15 min) | dépend de l'usage |
 
@@ -414,7 +399,7 @@ Si le repo passe en public (ce qui semble être le cas — `xtincell/ADVE-projec
 | **3** Bus + Intent v2 | extension de `governance-audit.yml` (no-direct-service-from-router error) + tenant isolation check | `emitIntent` migré côté routers |
 | **4** Layering | `dep-cycle` strict, `boundaries` lint | `eslint-plugin-boundaries` configuré |
 | **5** NSP + UI Kit | `e2e.yml` + visual regression Playwright | Storybook publié |
-| **6** Filets | `governance-drift.yml`, `slo-check.yml`, chaos suite | scripts SLO + hash-chain |
+| **6** Filets | `governance-drift.yml`, chaos suite (SLO : tâche Coolify `slo-check`, hors Actions) | scripts SLO + hash-chain |
 | **7** UI/Oracle/Landing | `lighthouse.yml` | `.lighthouserc.json` configuré |
 | **8** Hardening + Docs | `release.yml` (retiré, voir Phase 8), `docs-deploy.yml` | SDK packagé en workspace |
 

@@ -1,7 +1,7 @@
 # Deployment Guide
 
 > Target platform: **Vercel** ([vercel.json](../../vercel.json)) with PostgreSQL (Supabase or any Postgres).
-> CI: **GitHub Actions** (15 workflows, recounted 2026-11-10, under [.github/workflows/](../../.github/workflows/)).
+> CI: **GitHub Actions** (14 workflows, recounted 2026-11-12, under [.github/workflows/](../../.github/workflows/)).
 
 ---
 
@@ -94,7 +94,6 @@ All 11 workflows live under [.github/workflows/](../../.github/workflows/). Summ
 | [`e2e.yml`](../../.github/workflows/e2e.yml) | PR + push | Playwright e2e against ephemeral DB | yes |
 | [`golden-path.yml`](../../.github/workflows/golden-path.yml) | PR + push | E2E golden path scenario (intake → strategy → Oracle → forge → broadcast) | yes |
 | [`preflight.yml`](../../.github/workflows/preflight.yml) | PR | Aggregate pre-merge checks (full preflight equivalent) | yes |
-| [`slo-check.yml`](../../.github/workflows/slo-check.yml) | nightly | SLO breach detection per Intent kind | informational, alerts on breach |
 | [`governance-drift.yml`](../../.github/workflows/governance-drift.yml) | cron Sun 06:00 UTC | Re-runs governance audit + hash-chain integrity on last 1000 IntentEmissions; opens issue on drift | non-blocking |
 | [`mission-drift.yml`](../../.github/workflows/mission-drift.yml) | PR + push | Mission drift test ([audit-mission-drift.ts](../../scripts/audit-mission-drift.ts)) | yes |
 | [`chromatic.yml`](../../.github/workflows/chromatic.yml) | PR + push | Visual regression on Storybook | informational |
@@ -138,7 +137,7 @@ Webhook handling is **idempotent**. Each provider's handler dedupes on the provi
 | Runtime errors | `ErrorEvent` model + `/console/governance/error-vault/page.tsx` |
 | Oracle incidents | clustered by `ORACLE-NNN` code at `/console/governance/oracle-incidents/page.tsx` ([ADR-0022](../governance/adr/0022-oracle-error-codes.md)) |
 | Intent log | `IntentEmission` + `IntentEmissionEvent` — replayable via NSP `since` param |
-| SLOs | `slos.ts` config per Intent kind + `slo-check.yml` cron |
+| SLOs | `slos.ts` config per Intent kind, measured every 6 h by the Coolify scheduled task `slo-check` (`node check-slos.cjs` in the production container; the GitHub workflow was retired in 6.27.585) |
 | Cost tracking | `AICostLog` + `CostDecision` per intent emission |
 | Audit log | `AuditLog` — high-level events |
 | App metrics | `/api/admin/metrics` |

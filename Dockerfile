@@ -45,6 +45,9 @@ RUN ./node_modules/.bin/esbuild scripts/freeze-public-brands.ts --bundle --platf
 # Inventaire ADVE en lecture seule (4.11.k) : lançable dans le conteneur de production,
 # `node adve-shapes-audit.cjs --sans-extraits` (transaction READ ONLY, aucune écriture).
 RUN ./node_modules/.bin/esbuild scripts/inventory-adve-strict-shapes.ts --bundle --platform=node --packages=external --format=cjs --outfile=adve-shapes-audit.cjs
+# Contrôle SLO (1.4) : lancé toutes les 6 h par la tâche planifiée Coolify `slo-check`,
+# `node check-slos.cjs` (lecture seule ; code 0 tenu, 1 dépassé, 2 mesure impossible).
+RUN ./node_modules/.bin/esbuild scripts/check-slos.ts --bundle --platform=node --packages=external --format=cjs --outfile=check-slos.cjs
 
 # ── runner ───────────────────────────────────────────────────────────────────
 FROM ${NODE_IMAGE} AS runner
@@ -101,6 +104,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-entrypoint.sh ./sc
 COPY --from=builder --chown=nextjs:nodejs /app/import-editorial-calendar.cjs ./scripts/import-editorial-calendar.cjs
 COPY --from=builder --chown=nextjs:nodejs /app/public-brand-migration.cjs ./public-brand-migration.cjs
 COPY --from=builder --chown=nextjs:nodejs /app/adve-shapes-audit.cjs ./adve-shapes-audit.cjs
+COPY --from=builder --chown=nextjs:nodejs /app/check-slos.cjs ./check-slos.cjs
 RUN chmod +x ./scripts/docker-entrypoint.sh
 
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/check-production-browser.mjs ./scripts/check-production-browser.mjs
