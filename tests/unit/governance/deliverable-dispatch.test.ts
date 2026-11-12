@@ -61,6 +61,47 @@ describe("ADR-0136 — COMPOSE_DELIVERABLE dispatch", () => {
     expect(composer.includes("void getGloryTool")).toBe(false);
   });
 
+  it("dette 4.11.a — l'outil cible n'est jamais appelé sans ses entrées obligatoires résolues", () => {
+    const fn = composer.slice(composer.indexOf("async function dispatchForge"));
+    expect(fn).toContain("planTargetInputs(");
+    expect(fn).toContain("requiredInputs:");
+    // Le manque est refusé avant la réservation de l'aperçu (aucun appel, aperçu réutilisable).
+    expect(composer.indexOf('status: "MISSING_INPUTS"')).toBeGreaterThan(-1);
+    expect(composer.indexOf('status: "MISSING_INPUTS"')).toBeLessThan(composer.indexOf("await claimProductionPreview("));
+    const commandant = read("src/server/services/artemis/commandant.ts");
+    expect(commandant).toContain('result.status === "MISSING_INPUTS"');
+    expect(commandant).toContain("missingInputs");
+    // Le moteur refuse une entrée obligatoire absente avant l'émission INVOKE_GLORY_TOOL.
+    const engine = read("src/server/services/artemis/tools/engine.ts");
+    const guard = engine.indexOf("throw new MissingToolInputsError(");
+    expect(guard).toBeGreaterThan(-1);
+    expect(guard).toBeLessThan(engine.indexOf('intentKind: "INVOKE_GLORY_TOOL"'));
+  });
+
+  it("dette 4.11.a — chaque livrable cible déclare ses entrées obligatoires et leur origine", async () => {
+    const { TARGET_INPUT_CONTRACT } = await import("@/server/services/deliverable-orchestrator/target-inputs");
+    const { SUPPORTED_TARGET_KINDS, getProducerSlug } = await import("@/server/services/deliverable-orchestrator/target-mapping");
+    const { getGloryTool } = await import("@/server/services/artemis/tools/registry");
+    const { resolveRequirements } = await import("@/server/services/deliverable-orchestrator/resolver");
+    for (const kind of SUPPORTED_TARGET_KINDS) {
+      const tool = getGloryTool(getProducerSlug(kind)!)!;
+      const contract = TARGET_INPUT_CONTRACT[kind];
+      // Chaque champ déclaré par l'outil est classé, et rien d'autre.
+      expect(Object.keys(contract).sort(), kind).toEqual([...tool.inputFields].sort());
+      const rules = Object.entries(contract);
+      expect(rules.some(([, r]) => r.required), `${kind} sans entrée obligatoire`).toBe(true);
+      const requires = resolveRequirements(kind).briefDag.find(n => n.depth === 0)!.requires;
+      for (const [field, rule] of rules) {
+        if (rule.required) expect(rule.sources.length, `${kind}.${field}`).toBeGreaterThan(0);
+        expect(rule.label.trim().length, `${kind}.${field}`).toBeGreaterThan(0);
+        for (const source of rule.sources) {
+          if (source.from === "BRAND_FILE") expect(tool.pillarBindings[field], `${kind}.${field} sans liaison`).toBeTruthy();
+          if (source.from === "PREREQUISITE") expect(requires, `${kind}.${field}`).toContain(source.kind);
+        }
+      }
+    }
+  });
+
   it("le livrable brief-only (sans forgeOutput) est un dispatch valide sans forge", () => {
     const fn = composer.slice(composer.indexOf("async function dispatchForge"));
     expect(fn).toContain("if (!chain.shouldChain)");

@@ -50,6 +50,8 @@ const SCAN_DIRS = [
 const EXTRA_FILES = [
   join(ROOT, "src/app/leaderboard/page.tsx"),
   join(ROOT, "src/lib/i18n/pages/leaderboard.ts"),
+  // 4.11.d — écran d'attente et rapport du diagnostic, lus par le prospect.
+  join(ROOT, "src/lib/i18n/pages/intake-result.ts"),
   join(ROOT, "src/app/api/intake/[token]/pdf/route.ts"),
   join(ROOT, "src/app/la-barre/[[...path]]/route.ts"),
   join(ROOT, "src/app/la-barre/partage/[token]/[[...path]]/route.ts"),
@@ -92,6 +94,10 @@ const EXTRA_FILES = [
   join(ROOT, "src/components/neteru/ptah-forge-button.tsx"),
   join(ROOT, "src/components/neteru/ptah-kiln-tracker.tsx"),
   join(ROOT, "src/lib/i18n/pages/production.ts"),
+  // Dette 4.11.a — entrées manquantes du livrable et résumés de production,
+  // rendus dans l'atelier Production du cockpit.
+  join(ROOT, "src/domain/production-inputs.ts"),
+  join(ROOT, "src/server/services/deliverable-orchestrator/composer.ts"),
   join(ROOT, "src/server/services/monetization/pricing-tiers.ts"),
 ];
 

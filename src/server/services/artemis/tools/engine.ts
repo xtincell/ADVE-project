@@ -11,6 +11,7 @@
 import { EDITORIAL_REFERENCE_RULE, type EditorialEvidence } from "./editorial-references";
 import { callLLM } from "@/server/services/llm-gateway";
 import { isUsableGeneration } from "@/domain/generation-result";
+import { isProvidedInputValue } from "@/domain/production-inputs";
 import { executeStructuredLLMCall, LLMStructuredCallError } from "@/server/services/utils/llm-structured";
 import { deriveJsonSchemaFromZod } from "@/server/services/utils/zod-to-json-schema";
 import { sanitizeInline, wrapUntrusted, UNTRUSTED_NOTICE } from "@/server/services/utils/untrusted-content";
@@ -111,6 +112,15 @@ async function loadStrategyContext(strategyId: string, target?: CreativeTarget):
   return {summary:lines.join("\n"),direction:direction ?? ""};
 }
 
+/** Typed refusal: a field the caller declared required is absent. No call was made. */
+export class MissingToolInputsError extends Error {
+  readonly code = "MISSING_REQUIRED_INPUT";
+  constructor(public readonly toolSlug: string, public readonly fields: readonly string[]) {
+    super(`Entrées obligatoires absentes (${fields.join(", ")}). Aucun appel n’a été lancé.`);
+    this.name = "MissingToolInputsError";
+  }
+}
+
 /**
  * Execute a GLORY tool with real Claude AI call and persist the output
  */
@@ -118,10 +128,22 @@ export async function executeTool(
   toolSlug: string,
   strategyId: string,
   input: Record<string, string>,
-  media: { editorial?: EditorialEvidence; video?: import("@/server/services/llm-gateway/audiovisual").GatewayVideo; images?: readonly import("@/server/services/llm-gateway/vision").GatewayImage[]; signal?: AbortSignal; production?: { previewIntentId: string; dispatchIntentId?: string; sourceText: string } } = {},
+  media: {
+    editorial?: EditorialEvidence;
+    video?: import("@/server/services/llm-gateway/audiovisual").GatewayVideo;
+    images?: readonly import("@/server/services/llm-gateway/vision").GatewayImage[];
+    signal?: AbortSignal;
+    production?: { previewIntentId: string; dispatchIntentId?: string; sourceText: string };
+    /** Fields the caller declared required. Never replaced by a placeholder (dette 4.11.a). */
+    requiredInputs?: readonly string[];
+  } = {},
 ): Promise<{ outputId: string; output: Record<string, unknown>; intentId: string | null }> {
   const tool = getGloryTool(toolSlug);
   if (!tool) throw new Error(`GLORY tool inconnu: ${toolSlug}`);
+  // A declared-required field is refused here, before any emission, cost or model call.
+  // Only undeclared fields keep the legacy « (champ non disponible) » placeholder below.
+  const absentRequired = (media.requiredInputs ?? []).filter((field) => !isProvidedInputValue(input[field]));
+  if (absentRequired.length) throw new MissingToolInputsError(toolSlug, absentRequired);
   if ((media.images || media.video) && !tool.outputSchema) throw new Error("Un tool multimodal doit déclarer un schéma de sortie.");
 
   // ── Phase 16-A — Paid tier gate (ADR-0048) ─────────────────────────────

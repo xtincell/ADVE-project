@@ -116,6 +116,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 - **product-system** — product-system.ts — le SYSTÈME produit d'une marque (ADR-0170, pilier V).
 - **production-artwork**
 - **production-image-reference**
+- **production-inputs** — Entrées du livrable cible (dette 4.11.a, ADR-0050 / ADR-0136).
 - **production-mix**
 - **production-passages**
 - **production-pin**

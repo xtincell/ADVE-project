@@ -137,3 +137,91 @@ export function scrubUnfoundedEvidence(
   }
   return { content: out, dropped };
 }
+
+// ── Statistiques non sourcées dans le texte GÉNÉRÉ (plan 4.11.d) ──────────
+//
+// Constat (recette guidée B, 507) : le rapport affichait « 80 % » sur la
+// première impression et « 98 % » sur la Distinction — des chiffres qu'aucune
+// réponse, aucune mesure et aucun document du dossier ne portaient. La règle de
+// prompt ne suffit pas (même doctrine qu'en tête de module) : une STATISTIQUE
+// DE POPULATION (« N % des clients », « dix fois plus », « 8 sur 10 acheteurs »)
+// ne survit que si chacun de ses nombres figure dans le texte source du dossier.
+//
+// Volontairement étroit : seules ces formes sont visées. Une complétude
+// « 4/25 », une couverture « 9 % du poids », une note, un montant ou une date
+// ne sont pas des statistiques de population et restent intacts. La phrase
+// fautive est retirée, jamais réécrite ; rien n'est inventé à sa place.
+
+/** Populations dont une part chiffrée se présente comme un fait de marché. */
+const POPULATION_NOUN =
+  "(?:marques?|consommat(?:eurs?|rices?)|clients?|clientes?|acheteu(?:rs?|ses?)|gens|personnes?|entreprises?|PME|start-?ups?|soci[ée]t[ée]s|utilisat(?:eurs?|rices?)|internautes?|visiteu(?:rs?|ses?)|abonn[ée]s?|fans?|prospects?|jeunes|femmes|hommes|m[ée]nages|foyers|d[ée]cideurs?|dirigeants?|fondat(?:eurs?|rices?)|d[ée]cisions?|achats?|ventes?|public|population|march[ée]s?|Africains?|brands?|consumers?|customers?|buyers?|shoppers?|people|businesses|compan(?:y|ies)|users?|visitors?|followers?|decisions?|purchases?|sales|startups?|founders?)";
+
+const SPACE = "[\\s\\u00a0\\u202f]";
+
+const STATISTIC_PATTERNS: RegExp[] = [
+  // « 80 % des clients », « 80 % des petites entreprises », « 98% of brands »
+  new RegExp(
+    `\\b\\d{1,3}(?:[.,]\\d+)?${SPACE}?%${SPACE}+(?:des|de la|de l['’]|du|d['’]|de vos|de nos|de leurs|of|of the|of your|of their)?${SPACE}*(?:\\p{L}+${SPACE}+)?${POPULATION_NOUN}\\b`,
+    "iu",
+  ),
+  // « dix fois plus », « 3 fois mieux », « ten times more »
+  /\b(?:\d+|deux|trois|quatre|cinq|dix|cent)\s+fois\s+(?:plus|moins|mieux)\b/iu,
+  /\b(?:\d+|two|three|four|five|ten|hundred)\s+times\s+(?:more|less|better|as likely|as much|as many)\b/iu,
+  // « 8 sur 10 acheteurs », « 8 personnes sur 10 », « 8 in 10 consumers »
+  new RegExp(`\\b\\d{1,2}${SPACE}+(?:sur|out of|in)${SPACE}+(?:10|dix|ten)${SPACE}+(?:\\p{L}+${SPACE}+)?${POPULATION_NOUN}\\b`, "iu"),
+  new RegExp(`\\b\\d{1,2}${SPACE}+${POPULATION_NOUN}${SPACE}+(?:sur|out of|in)${SPACE}+(?:10|dix|ten)\\b`, "iu"),
+];
+
+/** Une statistique est fondée si chacun de ses nombres (ou, sans nombre, la tournure entière) figure dans la source. */
+function isStatisticFounded(match: string, normalizedSource: string, lowerSource: string): boolean {
+  const numbers = normalizeDigits(match).match(/\d+(?:[.,]\d+)?/g) ?? [];
+  if (numbers.length === 0) return lowerSource.includes(match.toLowerCase());
+  return numbers.every((n) => new RegExp(`(?<![\\d.,])${n.replace(/[.,]/g, "[.,]")}(?![\\d])`).test(normalizedSource));
+}
+
+function unsourcedStatisticIn(sentence: string, normalizedSource: string, lowerSource: string): boolean {
+  return STATISTIC_PATTERNS.some((re) => {
+    const m = sentence.match(re);
+    return m !== null && !isStatisticFounded(m[0], normalizedSource, lowerSource);
+  });
+}
+
+const LINE_PREFIX = /^(\s*(?:[•\-*·]|\d{1,2}[.)])\s+)/;
+
+function scrubStatisticText(text: string, normalizedSource: string, lowerSource: string, dropped: string[]): string {
+  const lines: string[] = [];
+  for (const line of text.split("\n")) {
+    const prefix = line.match(LINE_PREFIX)?.[1] ?? "";
+    const body = line.slice(prefix.length);
+    const sentences = body.split(/(?<=[.!?…])\s+/);
+    const kept = sentences.filter((sentence) => {
+      if (!unsourcedStatisticIn(sentence, normalizedSource, lowerSource)) return true;
+      dropped.push(sentence.trim());
+      return false;
+    });
+    if (kept.length === sentences.length) lines.push(line);
+    else if (kept.join("").trim()) lines.push(`${prefix}${kept.join(" ")}`);
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Retire du texte généré (rapport, narratif) chaque phrase qui avance une
+ * statistique de population sans appui dans `sourceText` (réponses brutes,
+ * texte déposé, faits déclarés et mesurés). Parcourt chaînes, tableaux et
+ * objets ; toute autre valeur est rendue telle quelle. Pur, zéro IO, zéro LLM.
+ */
+export function scrubUnsourcedStatistics<T>(value: T, sourceText: string): { value: T; dropped: string[] } {
+  const normalizedSource = normalizeDigits(sourceText);
+  const lowerSource = sourceText.toLowerCase();
+  const dropped: string[] = [];
+  const walk = (node: unknown): unknown => {
+    if (typeof node === "string") return scrubStatisticText(node, normalizedSource, lowerSource, dropped);
+    if (Array.isArray(node)) return node.map(walk);
+    if (node && typeof node === "object" && Object.getPrototypeOf(node) === Object.prototype) {
+      return Object.fromEntries(Object.entries(node as Record<string, unknown>).map(([k, v]) => [k, walk(v)]));
+    }
+    return node;
+  };
+  return { value: walk(value) as T, dropped };
+}

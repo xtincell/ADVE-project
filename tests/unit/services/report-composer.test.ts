@@ -89,6 +89,29 @@ describe("composeDeterministicReport", () => {
     expect(i).not.toContain("offre » est encore peu documentée");
   });
 
+  // 4.11.d — recette guidée B : un atelier qui vit de visites et du téléphone
+  // recevait un plan générique (« re-mesurer l'empreinte publique ») et une
+  // affirmation non sourcée (« la preuve marché la moins chère qui existe »).
+  it("relie la fin du plan aux canaux déclarés et n'affirme aucun superlatif non sourcé", () => {
+    const report = composeDeterministicReport({ companyName: "Atelier Kalo", classification: "FRAGILE", compositeScore: 11,
+      extractedValues: { a: { missionStatement: "Réparer avec clarté" }, d: {}, v: { produitsCatalogue: [{ nom: "Ressemelage" }] }, e: { e_channels: "Visites à l'atelier et téléphone" } },
+      pillarScores: { a: 4, d: 2, v: 4, e: 0 }, footprint: null, sectorLabel: "Services aux particuliers" });
+    const s = report.rtis.pillars.find(p => p.key === "s")!.full;
+    expect(s).toContain("Visites à l'atelier et téléphone");
+    expect(s).not.toContain("re-mesurer l'empreinte publique");
+    const t = report.rtis.pillars.find(p => p.key === "t")!.full;
+    expect(t).not.toContain("la moins chère qui existe");
+  });
+
+  it("sans canal déclaré ni empreinte mesurée, la fin du plan reste une question à trancher avec vous", () => {
+    const report = composeDeterministicReport({ companyName: "Marque Y", classification: "LATENT", compositeScore: 5,
+      extractedValues: { a: {}, d: {}, v: {}, e: {} },
+      pillarScores: { a: 1, d: 1, v: 1, e: 1 }, footprint: null, sectorLabel: null });
+    const s = report.rtis.pillars.find(p => p.key === "s")!.full;
+    expect(s).not.toContain("re-mesurer l'empreinte publique");
+    expect(s).toContain("à choisir avec vous");
+  });
+
   it("compose un rapport complet depuis des piliers documentés", () => {
     const report = composeDeterministicReport({
       companyName: "Cimencam",

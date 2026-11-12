@@ -9,7 +9,9 @@
  * unique, exposable comme assertion test ou pre-flight gate.
  */
 
-import type { BrandClassification } from "@/lib/types/advertis-vector";
+// `BrandClassification` (lib) n'est qu'un alias déprécié de `BrandTier` : le
+// domaine lit le type canonique et ne dépend pas de la couche lib.
+import type { BrandTier as BrandClassification } from "./brand-tier";
 
 /**
  * Seuils plancher de superfans actifs requis par tier de classification
