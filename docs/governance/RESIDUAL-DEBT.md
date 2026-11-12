@@ -332,7 +332,7 @@ dans le routeur (`CONFLICT`, `FORBIDDEN`, `NOT_FOUND`), sans changer les message
 
 ## 556 — dépendances : réception et alertes moderate restantes
 
-Le lot 556 ferme les 9 critical, 21 high et 6 low du relevé npm du 10 novembre ; l’arbre de production ne porte plus d’alerte. Restent 15 moderate (`minimatch` dans l’outillage lint et madge), les majeures de frameworks non appliquées et la réception CI, image et runtime de 556. Le lot a aussi constaté que la garde de couches `boundaries/dependencies` est inerte. Le plan et les déclencheurs sont dans les entrées « Alertes npm préexistantes au build Docker » et « Garde de couches ESLint inerte » de la section « Maintenance des voies de livraison et dépendances ».
+Le lot 556 ferme les 9 critical, 21 high et 6 low du relevé npm du 10 novembre ; l’arbre de production ne porte plus d’alerte. Restent 15 moderate (`minimatch` dans l’outillage lint et madge), les majeures de frameworks non appliquées et la réception CI, image et runtime de 556. Le lot a aussi constaté que la garde de couches `boundaries/dependencies` était inerte ; elle est rendue effective le 12 novembre (branche `claude/ach-couches`), avec 149 exceptions préexistantes à résorber. Le plan et les déclencheurs sont dans les entrées « Alertes npm préexistantes au build Docker » et « Garde de couches ESLint » de la section « Maintenance des voies de livraison et dépendances ».
 
 ## 554 — cinq correctifs isolés du plan 4.11 : réceptions restantes (2026-11-10)
 
@@ -463,14 +463,33 @@ La modification ultérieure du lecteur imbriqué a trois tests de comportement
 verts. Sa compilation finale et sa relecture native sont reçues : 65 valeurs textuelles sur 65 présentes, HTTP 200, zéro 5xx et zéro exception.
 Le post éditorial SPAWT reste ouvert.
 
-**Manque précis.** Le compositeur recense les dépendances et appelle son outil
-cible avec un objet d’entrée vide. Le moteur générique peut remplacer un champ absent
-par « non disponible ». Pour une recette, l’étape doit résoudre chaque entrée
-obligatoire ou exposer le manque avant tout appel. Les entrées facultatives peuvent
-recevoir un postulat qualifié. Le manifeste doit fixer les versions de la DA et du
-texte, permettre une révision indépendante et relier les sorties à leurs sources
-jusqu’à la remise. Le candidat identifie déjà la tâche Ptah et l’exécution de séquence
-dans deux champs distincts.
+**Premier lot 4.11.a reçu localement (12 novembre 2026).** Le compositeur
+n’appelle plus son outil cible avec une entrée vide. Pour les neuf livrables cibles,
+chaque champ déclaré de l’outil producteur est classé obligatoire ou facultatif,
+avec ses origines admises : fiche de marque, brief du post, proposition créative
+validée ou brief amont (`target-inputs.ts`). L’aperçu liste les entrées obligatoires
+introuvables et les documents amont sans version active ni producteur. Le
+lancement refuse ces manques avant la réservation de l’aperçu, avec le statut
+`MISSING_INPUTS` et une liste typée. Aucune cascade ni aucun appel n’est alors lancé.
+Une entrée obligatoire issue d’un brief amont cite les versions exactes préparées ;
+leur texte intégral passe dans les sources de production. Le moteur refuse aussi,
+avant toute émission, un champ déclaré obligatoire et absent. Une entrée facultative
+absente n’est pas inventée : la consigne la signale absente, sans postulat.
+L’atelier Production affiche les manques et bloque le lancement.
+Contrôles reçus : 11 nouveaux tests rouges puis verts, 5 890 tests unitaires sur
+594 fichiers, 1 752 de gouvernance sur 177, PostgreSQL ciblé 15 sur 3, typage, lints
+sans erreur avec 25 avertissements préexistants, aucun cycle. Aucune recette native,
+production réelle ni livraison n’est reçue par ce lot.
+
+**Reste ouvert.** Les outils amont produits par la cascade reçoivent encore
+« non disponible » pour leurs champs absents : leur contrat d’entrée n’est pas déclaré.
+Le format cible reste facultatif hors brief du post, faute de saisie dans l’atelier.
+Les postulats qualifiés des entrées facultatives restent à concevoir. Le manifeste
+doit encore fixer les versions de la DA et du texte, permettre une révision
+indépendante et relier les sorties à leurs sources jusqu’à la remise. L’autonomie par
+étape et ses limites d’appels, de coût ou d’autorité ne sont pas commencées. Le
+candidat identifie déjà la tâche Ptah et l’exécution de séquence dans deux champs
+distincts.
 
 **Conduite à recevoir.** Proposer les réglages avec référence, version et raison.
 Conserver tout remplacement explicite au sein d’une nouvelle révision. Exercer le
@@ -691,23 +710,60 @@ ne prouvent ni 35 sections actuelles ni une livraison Oracle/MVP globale.
 **Devis et fournisseur** : remplacement de l’estimation sur la responsabilité
 réellement couverte reste à recevoir selon ADR0228 §§5–6. La ventilation estimée537
 ne clôt pas ce volet. **Taxonomies legacy** : finition via lexique existant avant
-Oracle global. Les dettes de capacité sous charge ci-dessous restent distinctes.
+Oracle global. Les dettes de capacité sous charge restent distinctes (grand document
+fermé par profilage ci-dessous ; transaction lente sous charge du lot financier521).
 Données, montants et preuves de marque privés hors checkout.
 [ADR-0235 Proposed](adr/0235-strategy-planning-premises-and-projections.md).
 
-## Performance — marge faible sur grand document, toujours ouverte
+## Performance — marge faible sur grand document : profilée et fermée (4.11.l, 12 novembre 2026)
 
-**Faible marge sur grand document** : passage antérieur isolé en111,86 s sous le
-plafond120 s, puis timeout du candidat535. Reprise ciblée536 : 16/1 verts en60,9 s
-après redémarrage de la base locale éteinte ; aucun plafond augmenté. Ces passages
-ne reçoivent pas la capacité sous charge. **Fermer** par profilage borné
-du cas conservé : durée par étape de lecture/désérialisation, scellement/empreinte,
-écriture/transaction et contention base/CPU/IO ; comparer un passage isolé puis
-une concurrence contrôlée, conserver taille et invariants, sans relever une limite
-pour masquer le coût. Responsable Core/admission et infrastructure existants ;
-effort : une passe de profilage ciblée ; **déclencheur** après livraison du gros
-œuvre fonctionnel, avant toute réception de capacité sous charge ou engagement
-de latence. La reprise verte ne ferme ni cette dette ni la contention VPS déjà tracée.
+**Historique conservé** : passage isolé en 111,86 s sous le plafond de 120 s, puis
+timeout du candidat 535 ; reprise 536 en 60,9 s. Le cas conservé est
+`tests/integration/asset-original.postgres.test.ts`, « reads a large chunked
+document… » : 12 582 949 octets (trois fragments de 4 Mio + 37 octets), dépôt
+fragmenté, deux classements documentaires concurrents, relecture par la route.
+
+**Profil par étape** : `LARGE_DOCUMENT_PROFILE_OUT=<fichier.json>` active
+`tests/fixtures/step-profile.ts` (durée par étape, CPU du processus, pauses GC,
+pic de tas) ; sans cette variable, tout reste un simple passage, sans espion.
+Mesures locales seulement : 4 vCPU, 15 Gio, PostgreSQL 16.15 local, Node 22.23.4,
+tas par défaut 2 096 Mio. Ce ne sont ni des SLO ni une capacité de production.
+
+- **Avant, isolé, tas par défaut** : le worker s’arrête, tas épuisé à 2 048 Mio ;
+  le cas n’aboutit pas.
+- **Avant, isolé, tas de 8 Gio** : 81,1 s, dont 78,8 s pour la seule comparaison
+  des octets servis, avec 55,5 s de GC et un pic de tas de 3,86 Gio. Fichier entier :
+  17/17 en 97,6 s, dont 78,3 s pour ce cas et 16,6 s pour la reprise de fragments.
+- **Avant, deux processus concurrents (8 Gio chacun)** : 93,6 s et 91,0 s, dont
+  91,0 s et 88,1 s de comparaison.
+- **Chemin produit mesuré dans ce même passage** : ouverture du transfert 0,23 s,
+  quatre fragments 0,47 s, fin du transfert 0,07 s, paire de classements
+  concurrents 1,0 s, route et corps 0,28 s ; lecture et déchiffrement 0,41 s
+  sur 29 appels, empreintes de source 0,13 s (deux), scellement des journaux
+  0,19 s, 18 transactions pour 2,0 s cumulées.
+
+**Coût dominant** : l’assertion du test, pas le stockage ni la base. Le
+`toEqual` structurel de Vitest parcourait les 12,6 millions d’index du Buffer servi,
+soit 97 % du temps et l’essentiel du tas. Même cause que le comparateur du test
+unitaire de 527 (PATCHED-SYMPTOMS). Correctif côté test : longueur puis
+`Buffer.equals`, avec une contre-épreuve à un octet modifié qui doit échouer ; même
+comparaison native pour le chiffré de 4 Mio de la reprise de fragments. Octets,
+empreintes, reçus et assertions de base sont conservés. Aucun plafond n’est relevé :
+120 s pour le test, 60 s pour les transactions de dépôt et 120 s pour `documentTags`
+restent inchangés. Le code produit n’est pas modifié.
+
+- **Après, isolé, tas par défaut** : 2,1 s, 0,11 s de GC, pic de tas de 262 Mio ;
+  comparaison 14 ms. Fichier entier 17/17 en 5,1 s.
+- **Après, concurrence contrôlée du même cas** : deux processus 1,8 s chacun ;
+  quatre 4,9 à 6,0 s ; huit, soit deux fois les vCPU, 7,7 à 10,3 s. La hausse suit
+  la surcharge CPU, sans signe d’attente de verrou entre marques distinctes.
+
+Pistes produit chiffrées et volontairement non retenues : deux empreintes du texte
+de 12 Mo dans la transaction d’écriture (environ 70 ms chacune) et relectures de
+vérification après écriture. Elles portent la garde de version et l’intégrité ;
+leur gain resterait marginal. La capacité sous charge en production, la latence
+CI et la contention VPS restent des réceptions distinctes, déjà tracées ailleurs.
+Prochaine observation : la durée de ce cas dans la CI de la branche.
 
 ## 530 — réception ciblée puis chaîne entière encore ouvertes (2026-11-02)
 
@@ -2111,14 +2167,38 @@ du candidat en cours. Aucun nouveau modèle/service/router/page/Intent/provider/
 manager, aucune mutation des données réelles en production. Aucune
 réception d’audit/rapport complet, de coût réel ou de conversion par ces tests.
 
-**Résidus de la restitution commerciale, dans le même MVP** : conseils de trois
-publications/90 jours inadaptés à l’atelier, chiffres « 80 % première impression »
-et « 98 % distinction » non sourcés ; classification complète à faible couverture
-non reçue. **Fermer** : reprendre les textes/propositions existants, relier les
-conseils aux canaux et à l’offre déclarés, sourcer les chiffres ou les retirer,
-recevoir classification et rapport avec couverture explicite sur cette fixture.
-Responsable C6/MVP-FUSEE-03 ; effort une passe ciblée de restitution, déclencheur
-après livraison fonctionnelle 507 avant réception du rapport commercial complet.
+**Résidus de la restitution commerciale, dans le même MVP** (plan 4.11.d, état du
+12 novembre 2026). **Fermé dans le code, non reçu en recette** :
+- « 98 % des marques échouent sur la Distinction » venait de l’écran d’attente du
+  diagnostic (`intakeProcessing.fact.verite3`, FR/EN/ZH) ; aucune source dans le dépôt,
+  phrase reformulée sans chiffre. Même sort pour « 3 % du public » (Overton) et
+  « convertit dix fois plus » ; « 7 paliers » corrigé en 6 (`BRAND_TIERS`), « beaucoup
+  tiennent dans Fragile » retiré. Badge du rapport : nom de modèle remplacé par
+  « Analyse assistée ». Infobulles du questionnaire sans « 2 posts/semaine » ni
+  « 100 % des clients ». Verrou HARD `intake-unsourced-figures` sur les deux fichiers
+  i18n de l’intake et la banque de questions ; `intake-result.ts` entre aussi dans
+  `cockpit-vocabulary`.
+- « 80 % première impression » n’existe dans aucune chaîne déterministe au 12 novembre :
+  attribué au texte généré du rapport. La règle commune des rédacteurs l’interdit
+  désormais, et `scrubUnsourcedStatistics` (evidence-scrub) retire avant persistance,
+  dans `complete()` et `regenerateAnalysis()`, toute phrase portant une statistique de
+  population (« N % des clients », « N fois plus », « 8 sur 10 acheteurs ») absente des
+  réponses, du texte déposé, du contexte déclaré et de la collecte publique.
+- Plan déterministe (`rtis-propositions`) : la dernière étape part des canaux déclarés
+  (atelier : visites et téléphone), puis de l’empreinte publique seulement si elle a
+  été mesurée, sinon d’un indicateur à choisir avec le dirigeant ; « la preuve marché la
+  moins chère qui existe » retiré.
+
+**Reste ouvert** : (1) la garde ne vise que les formes de population ; un autre chiffre
+inventé par le texte généré (taux, durée, montant) passe encore, comme un conseil
+générique sans chiffre ; (2) la voie V3 écrit les paragraphes de piliers de
+`narrateAdvePillars` sans cette garde (le rapport affiché, lui, la traverse) ;
+(3) « trois publications/90 jours » n’a pas été retrouvé en chaîne fixe : seul le texte
+généré peut le produire, sans garde déterministe de rythme ; (4) classification complète
+à faible couverture et rapport avec couverture explicite toujours non reçus sur la fixture.
+**Fermer** : régénérer la fixture guidée B, relire le rapport et le PDF, étendre la garde
+à `narrateAdvePillars` si un chiffre y apparaît. Responsable C6/MVP-FUSEE-03 ; effort une
+recette ciblée ; déclencheur avant réception du rapport commercial complet.
 Import/export, qualité modèle/coût réel, choix agentique utilisateur et
 attribution du propriétaire/offre CRM restent dans les critères MVP02–04 ;
 un Deal LEAD non attribué n’est pas une offre activée ni une conversion.
@@ -3519,7 +3599,13 @@ Procédure de reprise : [runbook](../deploy/CREATIVE-INTELLIGENCE.md).
   - **15 moderate de l’outillage de développement.** Toutes viennent de GHSA-g3hv-75wg-m249, `minimatch` < 11.0.1, via ESLint 10 (`@eslint/config-array` 0.23.5), typescript-eslint 8.72.2 et madge 8 (`detective-typescript`, `precinct`). Ces outils sont absents de l’image et leurs motifs de glob viennent de la configuration du dépôt. Aucun correctif n’existe dans ces majeures ; `npm audit fix` ne propose que des retours en arrière (eslint 9, eslint-config-next 15, madge 7), refusés. Un override `minimatch` 11 dans ESLint franchirait une majeure interne non supportée par ses éditeurs. **Fermer** en montant les trois outils quand une version dépend de `minimatch` ≥ 11.0.1, puis lancer typage, deux lints, cycles et `npm audit`. **Déclencheur** : alerte Dependabot ou publication de typescript-eslint, `@eslint/config-array` ou madge corrigés. Effort : un lot de maintenance outillage.
   - **Majeures de frameworks non appliquées.** `prisma` 8 n’existe qu’en 8.0.0-rc.33, et `next-auth` 5 qu’en bêta. `next` 17 et `zod` 5 ne sont pas publiés. `vitest` 5.1.0 et `ai` 7 / `@ai-sdk/*` 4 existent mais ne corrigent aucune alerte restante. **Fermer** par un lot dédié par framework : notes de migration, typage, suites unitaire et PostgreSQL, build, smoke de l’image, puis recette native du parcours touché (authentification, client Prisma et migrations, passerelle LLM, outillage de test). **Déclencheur** : version stable publiée (Prisma 8, Auth.js 5), fin de support annoncée de la ligne courante, ou nouvelle alerte sans correctif dans la majeure en place.
   - **Réception de 556.** CI, image (smoke de boot, JSDOM, lecture PDF, navigateur de production) et runtime de 556 n’ont pas été reçus : aucun workflow ni déploiement n’a été déclenché dans ce lot. **Fermer** après fusion par la CI de la PR, le build de l’image et, au déploiement, la lecture de `/api/version`, de la connexion et d’un export PDF. **Déclencheur** : fusion de la branche `claude/alertes-dependances`. Responsable : session NEFER de livraison.
-- **Garde de couches ESLint inerte — constat du 11 novembre (lot 556).** La règle `boundaries/dependencies` d’`eslint.config.mjs` ne signale aucune violation. Les sondes temporaires suivantes n’ont produit aucun avertissement, en alias `@/` comme en chemin relatif : domain → lib, lib → governance, services → trpc, components → services, app → services. Constat fait avec eslint-plugin-boundaries 7.4.2 ; la configuration et l’absence de résolveur sont les mêmes sur `main` (7.0.0). Cause probable : aucun `import/resolver` TypeScript n’est configuré, donc le plugin ne résout pas les imports `.ts` et ignore la dépendance. Un essai hors dépôt avec le résolveur `typescript` échoue sur « invalid interface loaded as resolver ». Dans les faits, la cascade de couches n’est tenue que par madge (cycles) et les règles `lafusee/*`, ce que les mentions « ESLint + madge » de CLAUDE.md surestiment. La configuration garde aussi le format `rules` et les sélecteurs nus, dépréciés en v7. **Fermer** : configurer un résolveur compatible avec eslint-module-utils, passer à `policies` et aux sélecteurs d’entité, prouver chaque frontière par une sonde rouge puis verte, recenser les violations existantes et décider pour chacune (correction ou exception motivée) avant de passer la règle en `error`, puis requalifier la mention dans CLAUDE.md. **Déclencheur** : prochaine maintenance de l’outillage lint (le même lot que les moderate `minimatch`) ou prochain chantier d’architecture. Effort : un lot d’outillage, plus l’arbitrage des violations.
+- **Garde de couches ESLint — inerte jusqu’au 11 novembre, effective depuis le 12 (branche `claude/ach-couches`) ; 149 exceptions à résorber.**
+  - **Constat d’origine (lot 556).** La règle `boundaries/dependencies` d’`eslint.config.mjs` ne signalait aucune violation : les sondes domain → lib, lib → governance, services → trpc, components → services et app → services, en alias `@/` comme en relatif, passaient sans avertissement. La cascade n’était tenue que par madge (cycles) et les règles `lafusee/*`.
+  - **Cause, confirmée.** Sans `import/resolver`, `eslint-module-utils` retombait sur le résolveur `node`, qui ne connaît ni `.ts`/`.tsx` ni l’alias `@/*` : aucun import du dépôt n’était résolu, donc aucune dépendance n’était classée. Le résolveur `typescript` n’est présent qu’imbriqué sous `eslint-config-next`, ce qui explique l’échec de l’essai hors dépôt.
+  - **Fermé.** Résolveur local sans dépendance `eslint-plugin-lafusee/import-resolver.js` (interface v2 : alias lus dans `tsconfig.json`, relatifs, `index.*`, `./x.js` écrit pour `./x.ts`), `node` en second pour les paquets. Modèle de couches déplacé dans `eslint-plugin-lafusee/boundaries-layering.js`, mêmes dix politiques réécrites en syntaxe v7 (`policies`, sélecteurs d’entité ; plus d’avertissement de dépréciation). Règle en `error` : toute nouvelle violation casse le lint et la CI. Une violation corrigée en passant (domain → lib dans `src/domain/classification-coherence.ts`, alias déprécié remplacé par `BrandTier` du domaine, sans changement de type). Verrou `tests/unit/governance/boundaries-layering.test.ts` : dix sondes rouges, quatre imports conformes, le résolveur, et le cliquet de la liste d’exceptions ; retirer le résolveur fait échouer 13 des 24 cas.
+  - **Reste : 149 exceptions (374 imports, 146 fichiers),** listées une à une dans `eslint-plugin-lafusee/boundaries-allowlist.js`, chacune limitée à un fichier et à une couche cible, avec son motif. Répartition : app → services 87 (70 gestionnaires de route, 14 pages ou layouts serveur, 3 pages en import de type seul) et app → governance 3 (gestionnaires de route) ; components → services 37 (30 contrats de type, 7 schémas ou constantes d’exécution) ; governance → services 10 (registre généré des manifests, abonnés, évaluateurs, un contrat de type) et governance → trpc 1 (`governedProcedure`) ; services → trpc 2 ; neteru-ui → components 3 et → services 1 ; hooks → services 2 ; lib → services 1 et lib → trpc 1 (client tRPC typé par `AppRouter`) ; components → styles 1. Le plafond (149) ne peut que baisser : une entrée qui ne correspond plus à une violation fait échouer le verrou. **Fermer**, par lots : (1) déplacer vers `domain` ou `lib` les contrats de type et schémas partagés (types de sections Oracle, contrats CRM, événements NSP, `ForgeKind`) ; (2) trancher le modèle pour deux familles plutôt que les corriger fichier par fichier : les gestionnaires de route `src/app/**/route.ts` sont un transport HTTP au même rang que tRPC (politique dédiée à décider), et les composants Neteru bâtis sur `components/primitives` (couche primitives à introduire sous neteru-ui) ; (3) inverser les dépendances governance → services/trpc et services → trpc (injection ou déplacement), après revue du spine d’émission et de `governedProcedure`. Chaque lot retire ses entrées et abaisse le plafond. **Déclencheur** : tout chantier qui touche l’un de ces fichiers retire son entrée dans le même lot ; revue d’ensemble au prochain chantier d’architecture. Effort : lot (1) une session, lots (2) et (3) une décision d’architecture chacun.
+  - **Zones hors modèle.** `src/server/mcp/**`, `src/assets/**` et les fichiers à la racine de `src/` (`proxy.ts`, `instrumentation.ts`) n’appartiennent à aucune couche : leurs imports ne sont pas contrôlés. **Fermer** en les rattachant à une couche (mcp au rang de trpc, proxy et instrumentation au rang de app) puis en recensant leurs violations. **Déclencheur** : lot (2) ci-dessus.
+  - **Mention CLAUDE.md.** « ESLint 10 + madge 8 enforce the layering cascade » devient exact pour les nouveaux imports ; la formulation reste à nuancer (exceptions listées) lors de la prochaine mise à jour du fichier.
 
 ## Couverture documentaire des extensions de marque — 2026-10-02
 
