@@ -42,6 +42,9 @@ ENV NODE_OPTIONS="--max-old-space-size=6144"
 RUN npm run build
 RUN node scripts/release/build-editorial-calendar-cli.mjs
 RUN ./node_modules/.bin/esbuild scripts/freeze-public-brands.ts --bundle --platform=node --packages=external --format=cjs --outfile=public-brand-migration.cjs
+# Inventaire ADVE en lecture seule (4.11.k) : lançable dans le conteneur de production,
+# `node adve-shapes-audit.cjs --sans-extraits` (transaction READ ONLY, aucune écriture).
+RUN ./node_modules/.bin/esbuild scripts/inventory-adve-strict-shapes.ts --bundle --platform=node --packages=external --format=cjs --outfile=adve-shapes-audit.cjs
 
 # ── runner ───────────────────────────────────────────────────────────────────
 FROM ${NODE_IMAGE} AS runner
@@ -97,6 +100,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/scripts/apply-migrations.mjs ./sc
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
 COPY --from=builder --chown=nextjs:nodejs /app/import-editorial-calendar.cjs ./scripts/import-editorial-calendar.cjs
 COPY --from=builder --chown=nextjs:nodejs /app/public-brand-migration.cjs ./public-brand-migration.cjs
+COPY --from=builder --chown=nextjs:nodejs /app/adve-shapes-audit.cjs ./adve-shapes-audit.cjs
 RUN chmod +x ./scripts/docker-entrypoint.sh
 
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/check-production-browser.mjs ./scripts/check-production-browser.mjs

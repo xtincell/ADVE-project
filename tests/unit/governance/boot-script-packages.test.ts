@@ -24,10 +24,14 @@ const builtin = (name: string) => name.startsWith("node:") || builtinModules.inc
 const packageOf = (specifier: string) =>
   specifier.startsWith("@") ? specifier.split("/").slice(0, 2).join("/") : specifier.split("/")[0]!;
 
-describe("script de démarrage de l'image", () => {
-  it("ne demande que des paquets présents dans l'image", async () => {
+// Scripts bundlés par le Dockerfile et lancés dans l'image : celui du démarrage,
+// et l'inventaire ADVE en lecture seule (4.11.k), lancé à la main en production.
+const IMAGE_SCRIPTS = ["scripts/freeze-public-brands.ts", "scripts/inventory-adve-strict-shapes.ts"];
+
+describe("scripts bundlés dans l'image", () => {
+  it.each(IMAGE_SCRIPTS)("%s ne demande que des paquets présents dans l'image", async (entry) => {
     const result = await build({
-      entryPoints: ["scripts/freeze-public-brands.ts"],
+      entryPoints: [entry],
       bundle: true,
       platform: "node",
       packages: "external",
