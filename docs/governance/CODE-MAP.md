@@ -60,7 +60,7 @@ table dit ce qui tourne et ce qui attend d'être branché. **On câble l'existan
 
 - **__tests__/pillars.test**
 - **argos-library** — SHK-0002 point 5 — lecture publique de la bibliothèque canonique Argos-studio.
-- **argos-projection**
+- **argos-projection** — Projection vers Argos-studio (SHK-0002) : contrat research-dossier-v1, slug, version et issues.
 - **barre-actor-attestation** — Acteur authentifié des décisions La Barre (point LB3 du programme Shinkiro, ADR-0245).
 - **barre-brand-context**
 - **barre-campaign-review** — Bilan de campagne arrêté dans La Barre (point LB4 du programme Shinkiro).
