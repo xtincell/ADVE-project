@@ -1,3 +1,14 @@
+## v6.27.574 — fix(production): le compositeur n'appelle plus son outil avec des entrées vides (2026-11-12)
+
+**Point 4.11.a du programme Shinkiro. Le lancement d'un livrable appelait l'outil producteur avec un objet d'entrée vide : sur le visuel principal (`KV_VISUAL`), les 13 champs, concept et direction de couleur compris, arrivaient au moteur sous la mention « non disponible ».**
+
+- Contrat d'entrée (`src/domain/production-inputs.ts`, `deliverable-orchestrator/target-inputs.ts`) : pour les neuf livrables pris en charge, chaque champ de l'outil producteur est obligatoire ou facultatif, avec ses sources possibles — fiche de marque, brief du post, proposition créative validée, brief amont.
+- Aperçu : il liste les entrées obligatoires manquantes et les documents amont sans version active que rien ne peut produire automatiquement (le `CONCEPT` de l'annonce presse), qui jusqu'ici échouaient au milieu de la cascade après des appels payés.
+- Lancement : refusé avec le statut `MISSING_INPUTS` avant toute cascade et tout appel ; l'aperçu se relance une fois les informations ajoutées. Le moteur (`executeTool`, option `requiredInputs`) refuse aussi un champ obligatoire absent avant toute émission. Une entrée facultative absente n'est jamais inventée.
+- Écrans : l'atelier Production et le calendrier affichent les manques et bloquent le lancement ; un aperçu rouvert les recalcule. Les messages du compositeur parlent la langue du client et entrent dans le test de vocabulaire du cockpit.
+- 11 tests nouveaux, rouges puis verts ; suite unitaire complète 5 890 verte, PostgreSQL ciblé 15/15. Même Intent, même passerelle, aucun modèle, service ou Intent nouveau.
+- Restent ouverts (RESIDUAL-DEBT) : entrées des outils amont non déclarées ; épinglage des versions de DA et de texte, révision indépendante et autonomie par étape non commencés.
+
 ## v6.27.571 — fix(démarrage): l'image 570 ne démarrait pas, le script de démarrage ne dépend plus de tRPC (2026-11-11)
 
 **La construction de l'image 6.27.570 a échoué à son test de démarrage (`Boot smoke-test`) : `public-brand-migration.cjs`, lancé par l'entrypoint, demandait `@trpc/server`, absent de l'image standalone. La production est restée en 6.27.569. La 571 retire cette dépendance et garde les refus typés de la 570.**
