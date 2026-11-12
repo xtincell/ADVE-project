@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { materialHandoffBlock, productionSourceManifest } from "@/domain/production-sources";
+import { describeMissingProductionInput, describeProductionPrecondition, missingProductionInputs, productionKindLabel } from "@/domain/production-inputs";
 import { trpc } from "@/lib/trpc/client";
 import { ProductionMixReview } from "@/components/cockpit/production-mix-review";
 import { ProductionSourcePicker, type SourceChoice } from "@/components/cockpit/production-source-picker";
@@ -43,24 +44,25 @@ const VAULT_STATUS_LABELS: Record<string, string> = {
   MISSING_GENERATE: "À générer dans la cascade",
 };
 
-const PRODUCTION_LABELS: Record<string, string> = {
-  KV_VISUAL: "Visuel principal", PRINT_AD_SPEC: "Annonce imprimée", STORYBOARD: "Storyboard",
-  PITCH: "Présentation", VOICEOVER_BRIEF: "Voix off", VENDOR_BRIEF: "Brief prestataire",
-  CASTING_BRIEF: "Brief casting", BCG_PORTFOLIO: "Matrice de portefeuille",
-  MCK_3H: "Trois horizons", KV_ART_DIRECTION_BRIEF: "Direction artistique",
-  BIG_IDEA: "Idée directrice", CHROMATIC_STRATEGY: "Palette de couleurs",
-  TYPOGRAPHY_SYSTEM: "Système typographique", SEMIOTIC_ANALYSIS:"Analyse sémiotique", VISUAL_LANDSCAPE_MAP:"Paysage visuel", MOODBOARD:"Planche d’inspiration", CREATIVE_BRIEF: "Brief créatif",
-  SCRIPT: "Script", SOUND_BRIEF: "Direction sonore", PERSONA: "Persona",
-  VALUE_PROPOSITION: "Proposition de valeur", POSITIONING: "Positionnement",
-  SOCIAL_COPY: "Texte social", TONE_CHARTER: "Ton éditorial",
-};
-const productionLabel = (kind: string) => PRODUCTION_LABELS[kind] ?? kind.toLowerCase().replaceAll("_", " ");
+const productionLabel = productionKindLabel;
 
 const VAULT_STATUS_VARIANTS: Record<string, string> = {
   ACTIVE_REUSE: "bg-success/15 text-success ring-success/30",
   STALE_REFRESH: "bg-warning/15 text-warning ring-warning/30",
   MISSING_GENERATE: "bg-accent/15 text-accent ring-accent/30",
 };
+
+function MissingInputsList({ items }: { items: readonly import("@/domain/production-inputs").MissingProductionInput[] }) {
+  return (
+    <ul className="mt-2 ml-4 list-disc space-y-1 text-xs text-foreground-secondary">
+      {items.map((item) => (
+        <li key={item.code === "PREREQUISITE_UNAVAILABLE" ? `prerequisite:${item.kind}` : `field:${item.field}`}>
+          {describeMissingProductionInput(item)}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export function ProductionWorkbench() {
   const strategyId = useCurrentStrategyId();
@@ -185,7 +187,7 @@ function StrategyWorkbench({ strategyId }: { strategyId: string | null }) {
     },
   });
   const composition = composeMutation.data?.intentResult ?? null;
-  const output = composition?.output as { status?: string; generativeTaskId?: string | null; materialStatus?: string | null; missingPreconditions?: string[]; composition?: {missingPreconditions?: string[]}; sourceManifest?: unknown } | undefined;
+  const output = composition?.output as { status?: string; generativeTaskId?: string | null; materialStatus?: string | null; missingPreconditions?: string[]; missingInputs?: unknown; composition?: {missingPreconditions?: string[]}; sourceManifest?: unknown } | undefined;
   const progress = trpc.deliverableOrchestrator.productionProgress.useQuery(
     {strategyId: strategyId ?? "", previewIntentId: previewId ?? ""},
     {enabled: !!strategyId && !!previewId, refetchInterval: q => {
@@ -205,6 +207,10 @@ function StrategyWorkbench({ strategyId }: { strategyId: string | null }) {
   const manifest = parsed.success ? parsed.data : undefined;
   const handoff = manifest ? materialHandoffBlock(manifest) : null;
   const missing = saved.data?.missingPreconditions ?? output?.composition?.missingPreconditions ?? output?.missingPreconditions ?? [];
+  // Dette 4.11.a — required inputs of the deliverable still missing; an unreadable list blocks like a missing one.
+  const parsedInputs = missingProductionInputs.safeParse(saved.data?.missingInputs ?? output?.missingInputs ?? []);
+  const missingInputs = parsedInputs.success ? parsedInputs.data : null;
+  const inputsBlocked = missingInputs === null || missingInputs.length > 0;
   const previewReady = (composition?.status === "OK" && output?.status === "PREVIEW") || (!composition && restored);
   const dispatched = composition?.status === "OK" && output?.status === "DISPATCHED";
 
@@ -241,8 +247,8 @@ function StrategyWorkbench({ strategyId }: { strategyId: string | null }) {
       previewOnly: true,
       pins, ...scope,
     }, { onSuccess: ({intentResult}) => {
-      const receipt = intentResult.output as {status?: string; materialBlock?: string; missingPreconditions?: string[]; composition?: {missingPreconditions?: string[]}};
-      if (startProduction && intentResult.status === "OK" && receipt?.status === "PREVIEW" && !receipt.materialBlock && !(receipt.missingPreconditions ?? receipt.composition?.missingPreconditions)?.length)
+      const receipt = intentResult.output as {status?: string; materialBlock?: string; missingPreconditions?: string[]; missingInputs?: unknown[]; composition?: {missingPreconditions?: string[]}};
+      if (startProduction && intentResult.status === "OK" && receipt?.status === "PREVIEW" && !receipt.materialBlock && !(receipt.missingPreconditions ?? receipt.composition?.missingPreconditions)?.length && !receipt.missingInputs?.length)
         setConfirmForge(true);
     }});
   }
@@ -261,7 +267,7 @@ function StrategyWorkbench({ strategyId }: { strategyId: string | null }) {
   function handleForge() {
     if (!strategyId || !targetKind) return;
     setConfirmForge(false);
-    if (!previewReady || handoff || missing.length || !previewId || previousDispatch || unresolvedDispatch) return;
+    if (!previewReady || handoff || missing.length || inputsBlocked || !previewId || previousDispatch || unresolvedDispatch) return;
     composeMutation.mutate({ strategyId, targetKind, previewOnly: false, previewIntentId: previewId, pins, ...scope });
   }
 
@@ -872,6 +878,7 @@ function StrategyWorkbench({ strategyId }: { strategyId: string | null }) {
                     {(composition as { summary?: string }).summary ??
                       "Les pré-conditions ne sont pas réunies (fiche de marque incomplète ou budget). Complétez puis réessayez."}
                   </p>
+                  {missingInputs && missingInputs.length > 0 && <MissingInputsList items={missingInputs} />}
                 </div>
               </div>
               <button
@@ -906,7 +913,12 @@ function StrategyWorkbench({ strategyId }: { strategyId: string | null }) {
                   </li>)}
                 </ul>
               </div>}
-              {missing.length > 0 && <p role="status" className="rounded border border-warning/40 p-3 text-sm text-warning">Le brief peut être relu. Avant la forge, vérifiez les prérequis de la marque : {missing.map(code => ({MISSING_ACTIVE_ADVE_PILLAR:"activer un pilier ADVE", MISSING_MANIPULATION_MIX_PRIMARY:"définir le mode stratégique principal"}[code] ?? code)).join(" · ")}. {missing.includes("MISSING_MANIPULATION_MIX_PRIMARY") && <a href="#forge-mix-strategique" className="underline">Relire et choisir le mode</a>}</p>}
+              {missing.length > 0 && <p role="status" className="rounded border border-warning/40 p-3 text-sm text-warning">Le brief peut être relu. Avant la forge, vérifiez les prérequis de la marque : {missing.map(describeProductionPrecondition).join(" · ")}. {missing.includes("MISSING_MANIPULATION_MIX_PRIMARY") && <a href="#forge-mix-strategique" className="underline">Relire et choisir le mode</a>}</p>}
+              {missingInputs === null && <p role="status" className="rounded border border-warning/40 p-3 text-sm text-warning">Le contrôle des entrées de ce livrable est illisible. Préparez un nouvel aperçu avant la production.</p>}
+              {missingInputs && missingInputs.length > 0 && <div role="status" className="rounded border border-warning/40 p-3 text-sm text-warning">
+                <p>Le brief peut être relu. La production reste bloquée tant que ces entrées obligatoires manquent ; aucun appel n’est lancé.</p>
+                <MissingInputsList items={missingInputs} />
+              </div>}
               {previousDispatch && <p role="status" className="rounded border border-border p-3 text-sm">Tentative enregistrée · {previousDispatch.materialStatus ?? previousDispatch.status}
                 {previousDispatch.generativeTaskId && <span className="block break-all">Tâche {previousDispatch.generativeTaskId}</span>}
               </p>}
@@ -916,7 +928,7 @@ function StrategyWorkbench({ strategyId }: { strategyId: string | null }) {
                   <button
                     type="button"
                     onClick={() => setConfirmForge(true)}
-                    disabled={composeMutation.isPending || Boolean(handoff) || missing.length > 0 || !previewId || Boolean(unresolvedDispatch)}
+                    disabled={composeMutation.isPending || Boolean(handoff) || missing.length > 0 || inputsBlocked || !previewId || Boolean(unresolvedDispatch)}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-medium text-accent hover:bg-accent/15 disabled:opacity-40"
                   >
                     <Hammer className="h-3.5 w-3.5" />
