@@ -1,177 +1,123 @@
 #!/usr/bin/env tsx
 /**
- * check-slos.ts — SLO breach detection.
+ * check-slos.ts — mesure des SLO déclarés, depuis le conteneur de production.
  *
- * For each Intent kind with declared SLOs (in src/server/governance/slos.ts),
- * compute rolling-N-day p95 latency, error rate, and cost p95 from
- * IntentEmission rows. Compare to declared limits and print the report.
+ * Lancé toutes les 6 h par la tâche planifiée Coolify `slo-check` de l'application
+ * La Fusée : `node check-slos.cjs`, bundle construit par le Dockerfile, avec la
+ * `DATABASE_URL` du conteneur. GitHub Actions ne joint pas la base de production
+ * et ne mesure plus (6.27.585). En local : `npx tsx scripts/check-slos.ts`.
  *
- * Exit codes — `.github/workflows/slo-check.yml` decides on them:
- *   0  measured, every declared SLO holds;
- *   1  measured, at least one SLO is breached;
- *   2  could not measure (no DATABASE_URL, base unreachable, query error).
- * Only a breach may exit 1: every failure to measure goes through main()'s
- * catch, so it never reads as a breach.
+ * Fenêtre glissante (`--rolling-days=N`, 7 par défaut) sur `IntentEmission` ;
+ * budgets importés de `src/server/governance/slos.ts`, donc embarqués dans le
+ * bundle (l'image ne contient pas `src/`). Comparaison et mise en forme :
+ * `src/server/governance/slo-measure.ts`.
  *
- * Run via cron `.github/workflows/slo-check.yml`.
+ * Sortie : toujours une ligne de résumé datée sur stdout ; `--report` affiche
+ * avant elle le détail par kind en Markdown. Aucune marque, aucun secret.
+ *
+ * Codes de sortie :
+ *   0  mesuré, chaque SLO mesuré est tenu ;
+ *   1  mesuré, au moins un SLO dépassé ;
+ *   2  mesure impossible (DATABASE_URL absente, base injoignable, requête en
+ *      erreur, option invalide). Seul un dépassement mesuré sort en 1.
  */
 
-import { PrismaClient, type Prisma } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { INTENT_SLOS } from "../src/server/governance/slos";
+import {
+  describeMeasureFailure,
+  formatSloFailure,
+  formatSloSummary,
+  measureSlo,
+  sloExitCode,
+  type SloExitCode,
+  type SloMeasurement,
+} from "../src/server/governance/slo-measure";
 
-function makeClient() {
+const rollingArg = process.argv.find((a) => a.startsWith("--rolling-days="))?.split("=")[1] ?? "7";
+const ROLLING_DAYS = /^\d+$/.test(rollingArg) ? Number(rollingArg) : Number.NaN;
+const REPORT = process.argv.includes("--report");
+
+let prisma: PrismaClient | undefined;
+
+function makeClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error("DATABASE_URL not set — Prisma 7 driver adapter requires it.");
-  }
+  if (!connectionString) throw new Error("DATABASE_URL absente");
   return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 }
 
-// Created inside main(): a missing DATABASE_URL must exit 2, not crash the
-// module load with Node's exit code 1, which the workflow reads as a breach.
-let prisma: PrismaClient | undefined;
-const ROLLING_DAYS = parseInt(process.argv.find((a) => a.startsWith("--rolling-days="))?.split("=")[1] ?? "7", 10);
-const REPORT = process.argv.includes("--report");
-
-interface SloDef {
-  kind: string;
-  p95LatencyMs?: number;
-  errorRatePct?: number;
-  costP95Usd?: number;
-}
-
-/**
- * Parse SLO declarations from src/server/governance/slos.ts. We do AST-light
- * regex parse to avoid bundling the TS file. The expected source format is:
- *   { kind: "FILL_ADVE", p95LatencyMs: 8000, errorRatePct: 5, costP95Usd: 0.20 }
- */
-function parseSlos(): SloDef[] {
-  const path = join(process.cwd(), "src/server/governance/slos.ts");
-  if (!existsSync(path)) return [];
-  const src = readFileSync(path, "utf8");
-  const out: SloDef[] = [];
-  const blockRe = /\{\s*kind:\s*"([A-Z_]+)"[^}]*\}/g;
-  let m;
-  while ((m = blockRe.exec(src))) {
-    const block = m[0];
-    const kind = m[1]!;
-    const lat = block.match(/p95LatencyMs:\s*(\d+)/);
-    const err = block.match(/errorRatePct:\s*([\d.]+)/);
-    const cost = block.match(/costP95Usd:\s*([\d.]+)/);
-    out.push({
-      kind,
-      p95LatencyMs: lat ? parseInt(lat[1]!, 10) : undefined,
-      errorRatePct: err ? parseFloat(err[1]!) : undefined,
-      costP95Usd: cost ? parseFloat(cost[1]!) : undefined,
-    });
+function printReport(measurements: readonly SloMeasurement[]): void {
+  const breached = measurements.filter((m) => m.breaches.length > 0);
+  console.log(`# Rapport SLO — fenêtre glissante de ${ROLLING_DAYS} j\n`);
+  console.log(`Kinds mesurés : ${measurements.length}`);
+  console.log(`Dépassés      : ${breached.length}\n`);
+  for (const m of measurements) {
+    console.log(`## ${m.kind}`);
+    console.log(`- Échantillon : ${m.sample}`);
+    console.log(`- Latence p95 : ${m.p95LatencyMs} ms`);
+    console.log(`- Erreurs     : ${(m.errorRate * 100).toFixed(2)} %`);
+    console.log(`- Coût p95    : ${m.costP95Usd.toFixed(4)} $`);
+    if (m.breaches.length > 0) {
+      console.log(`- Dépassements :`);
+      for (const b of m.breaches) console.log(`  - ${b}`);
+    } else {
+      console.log(`- Tenu`);
+    }
+    console.log("");
   }
-  return out;
 }
 
-function quantile(sorted: number[], q: number): number {
-  if (sorted.length === 0) return 0;
-  const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * q));
-  return sorted[idx]!;
-}
-
-interface SloMeasurement {
-  kind: string;
-  sample: number;
-  p95LatencyMs: number;
-  errorRatePct: number;
-  costP95Usd: number;
-  breaches: string[];
-}
-
-async function measureKind(client: PrismaClient, slo: SloDef): Promise<SloMeasurement | null> {
-  const since = new Date(Date.now() - ROLLING_DAYS * 24 * 3600 * 1000);
-  const rows = await client.intentEmission.findMany({
-    where: { intentKind: slo.kind, emittedAt: { gte: since } },
-    select: { startedAt: true, completedAt: true, status: true, costUsd: true },
-  });
-  if (rows.length === 0) return null;
-
-  const latencies = rows
-    .filter((r) => r.completedAt && r.startedAt)
-    .map((r) => r.completedAt!.getTime() - r.startedAt!.getTime())
-    .sort((a, b) => a - b);
-  const failed = rows.filter((r) => r.status === "FAILED").length;
-  const costs = rows
-    .filter((r) => r.costUsd !== null)
-    .map((r) => Number((r.costUsd as Prisma.Decimal | null)?.toString() ?? "0"))
-    .sort((a, b) => a - b);
-
-  const p95Latency = quantile(latencies, 0.95);
-  const errorRate = (failed / rows.length) * 100;
-  const costP95 = quantile(costs, 0.95);
-
-  const breaches: string[] = [];
-  if (slo.p95LatencyMs && p95Latency > slo.p95LatencyMs) {
-    breaches.push(`p95 latency ${p95Latency}ms > ${slo.p95LatencyMs}ms`);
+async function run(at: Date): Promise<SloExitCode> {
+  if (!Number.isInteger(ROLLING_DAYS) || ROLLING_DAYS < 1) {
+    console.log(formatSloFailure(at, rollingArg, `--rolling-days invalide : ${rollingArg}`));
+    return 2;
   }
-  if (slo.errorRatePct !== undefined && errorRate > slo.errorRatePct) {
-    breaches.push(`error rate ${errorRate.toFixed(2)}% > ${slo.errorRatePct}%`);
-  }
-  if (slo.costP95Usd && costP95 > slo.costP95Usd) {
-    breaches.push(`cost p95 $${costP95.toFixed(4)} > $${slo.costP95Usd}`);
-  }
-
-  return {
-    kind: slo.kind,
-    sample: rows.length,
-    p95LatencyMs: p95Latency,
-    errorRatePct: errorRate,
-    costP95Usd: costP95,
-    breaches,
-  };
-}
-
-async function main(): Promise<void> {
-  const slos = parseSlos();
-  if (slos.length === 0) {
-    console.log("[check-slos] no SLO declarations found in src/server/governance/slos.ts");
-    process.exit(0);
+  if (INTENT_SLOS.length === 0) {
+    console.log(formatSloFailure(at, ROLLING_DAYS, "aucun SLO déclaré dans slos.ts"));
+    return 2;
   }
 
   const client = (prisma = makeClient());
+  const since = new Date(at.getTime() - ROLLING_DAYS * 24 * 3600 * 1000);
+
+  // Kinds émis dans la fenêtre : une requête, puis le détail des seuls kinds dotés d'un SLO.
+  const emitted = await client.intentEmission.groupBy({
+    by: ["intentKind"],
+    where: { emittedAt: { gte: since } },
+  });
+  const emittedKinds = new Set(emitted.map((e) => e.intentKind));
+
   const measurements: SloMeasurement[] = [];
-  for (const slo of slos) {
-    const m = await measureKind(client, slo);
-    if (m) measurements.push(m);
+  for (const slo of INTENT_SLOS) {
+    if (!emittedKinds.has(slo.kind)) continue;
+    const rows = await client.intentEmission.findMany({
+      where: { intentKind: slo.kind, emittedAt: { gte: since } },
+      select: { startedAt: true, completedAt: true, status: true, costUsd: true },
+    });
+    const measurement = measureSlo(
+      slo,
+      rows.map((r) => ({ ...r, costUsd: r.costUsd === null ? null : Number(r.costUsd.toString()) })),
+    );
+    if (measurement) measurements.push(measurement);
   }
 
-  const breached = measurements.filter((m) => m.breaches.length > 0);
-
-  if (REPORT) {
-    console.log(`# SLO Report — rolling ${ROLLING_DAYS}d\n`);
-    console.log(`Kinds measured : ${measurements.length}`);
-    console.log(`Breaches       : ${breached.length}\n`);
-    for (const m of measurements) {
-      console.log(`## ${m.kind}`);
-      console.log(`- Sample size : ${m.sample}`);
-      console.log(`- p95 latency : ${m.p95LatencyMs} ms`);
-      console.log(`- Error rate  : ${m.errorRatePct.toFixed(2)} %`);
-      console.log(`- Cost p95    : $${m.costP95Usd.toFixed(4)}`);
-      if (m.breaches.length > 0) {
-        console.log(`- ❌ Breaches :`);
-        for (const b of m.breaches) console.log(`  - ${b}`);
-      } else {
-        console.log(`- ✓ within budget`);
-      }
-      console.log("");
-    }
-  } else {
-    console.log(`[check-slos] measured ${measurements.length} kinds, ${breached.length} breach(es).`);
-  }
-
-  await client.$disconnect();
-  process.exit(breached.length > 0 ? 1 : 0);
+  if (REPORT) printReport(measurements);
+  console.log(formatSloSummary({ at, rollingDays: ROLLING_DAYS, declared: INTENT_SLOS.length, measurements }));
+  return sloExitCode(measurements);
 }
 
-void main().catch((err) => {
-  console.error("[check-slos] error:", err);
-  void prisma?.$disconnect();
-  process.exit(2);
-});
+async function main(): Promise<void> {
+  const at = new Date();
+  let code: SloExitCode;
+  try {
+    code = await run(at);
+  } catch (err) {
+    console.log(formatSloFailure(at, rollingArg, describeMeasureFailure(err)));
+    code = 2;
+  }
+  await prisma?.$disconnect().catch(() => undefined);
+  process.exit(code);
+}
+
+void main();

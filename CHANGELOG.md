@@ -6,6 +6,14 @@
 - Le champ est couvert par l'empreinte de La Barre : un compte modifié après l'arrêt est refusé comme une version altérée. Le calcul de l'empreinte ne change pas, et une version arrêtée avant reste acceptée telle quelle.
 - Jeu commun aux deux dépôts : `tests/fixtures/la-barre/bilan-campagne-reprises-v1.json`, copié de La Barre. Le test était rouge avant la modification du schéma.
 - Aucun modèle, migration, Intent, route ou écriture nouvelle : la version reçue reste rangée entière dans la source, comme avant.
+## v6.27.585 — fix(ops): le contrôle SLO mesure depuis le serveur de production (2026-11-12)
+
+**Geste 1.4 du programme Shinkiro, décision du propriétaire : le contrôle SLO quitte GitHub Actions, qui ne joint pas la base de production, et se lance dans le conteneur de La Fusée.**
+
+- L'image embarque `check-slos.cjs`, bundlé comme les deux autres scripts de l'image ; la garde `boot-script-packages` le couvre (il ne demande que `@prisma/client` et `@prisma/adapter-pg`). Une tâche planifiée Coolify, `slo-check`, le lancera toutes les 6 h : `node check-slos.cjs`. Elle reste à créer après la livraison.
+- Chaque exécution écrit une ligne datée dans le journal de la tâche : chaque opération mesurée, tenue ou dépassée, et le code de sortie (0 tout est tenu, 1 au moins un dépassement mesuré, 2 mesure impossible avec sa raison). Aucune marque, aucun identifiant de connexion n'y figure.
+- Réparé en passant, jamais vu faute de mesure : les budgets étaient relus dans `slos.ts` par expression régulière, qui lisait `25_000` comme 25 ms (547 latences sur 635) et ignorait un kind ; le taux d'erreur en pourcentage était comparé à une part. La table est désormais importée et la comparaison faite en part (`slo-measure.ts`, testée). Recette du bundle sur un PostgreSQL jetable : codes 0, 1 et 2.
+- `slo-check.yml` est retiré : sa mesure ne pouvait pas aboutir, et son nettoyage a fermé les 216 anciennes issues le 12 novembre ; il n'en reste aucune ouverte. Plus rien n'ouvre d'issue SLO depuis GitHub.
 
 ## v6.27.584 — feat(audit): l'inventaire des formes ADVE se lance dans l'image de production (2026-11-12)
 

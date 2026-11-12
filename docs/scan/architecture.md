@@ -237,7 +237,7 @@ Tools that issue LLM calls must declare `outputSchema?: ZodType` or `_noSchemaJu
 | Mission drift | yes | [mission-drift.yml](../../.github/workflows/mission-drift.yml) |
 | Governance drift (cron Sun 06:00 UTC) | n/a | [governance-drift.yml](../../.github/workflows/governance-drift.yml) |
 | Golden path E2E | yes | [golden-path.yml](../../.github/workflows/golden-path.yml) |
-| SLO check | yes | [slo-check.yml](../../.github/workflows/slo-check.yml) |
+| SLO check | n/a | Coolify scheduled task `slo-check` (`node check-slos.cjs`, every 6 h) — not a GitHub workflow since 6.27.585 |
 | Lighthouse | informational | [lighthouse.yml](../../.github/workflows/lighthouse.yml) |
 | Chromatic visual | informational | [chromatic.yml](../../.github/workflows/chromatic.yml) |
 | Playwright E2E | yes | [e2e.yml](../../.github/workflows/e2e.yml) |
