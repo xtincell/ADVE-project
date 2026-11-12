@@ -12,7 +12,9 @@
 //
 // The Phase markers above are tracked in REFONTE-PLAN.md.
 
+import { fileURLToPath } from "node:url";
 import lafusee from "./eslint-plugin-lafusee/index.js";
+import layering from "./eslint-plugin-lafusee/boundaries-layering.js";
 import boundaries from "eslint-plugin-boundaries";
 import tsParser from "@typescript-eslint/parser";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
@@ -56,21 +58,21 @@ export default [
       reportUnusedDisableDirectives: false,
     },
     settings: {
-      // eslint-plugin-boundaries — Phase 4 layering enforcement.
-      // Layer order: domain < lib < server/governance < server/services <
-      // server/trpc < components/neteru < app/components.
-      "boundaries/elements": [
-        { type: "domain", pattern: "src/domain/**" },
-        { type: "lib", pattern: "src/lib/**" },
-        { type: "governance", pattern: "src/server/governance/**" },
-        { type: "services", pattern: "src/server/services/**" },
-        { type: "trpc", pattern: "src/server/trpc/**" },
-        { type: "neteru-ui", pattern: "src/components/neteru/**" },
-        { type: "components", pattern: "src/components/**" },
-        { type: "hooks", pattern: "src/hooks/**" },
-        { type: "app", pattern: "src/app/**" },
-        { type: "styles", pattern: "src/styles/**" },
-      ],
+      // Résolution des imports pour eslint-plugin-boundaries. Sans résolveur,
+      // `eslint-module-utils` retombait sur `node` (ni `.ts` ni alias `@/*`) :
+      // aucun import n'était résolu et la garde de couches était inerte.
+      // Le résolveur local lit les alias de tsconfig.json ; `node` reste en
+      // second pour les paquets de node_modules.
+      "import/resolver": {
+        [fileURLToPath(new URL("./eslint-plugin-lafusee/import-resolver.js", import.meta.url))]: {
+          project: fileURLToPath(new URL("./tsconfig.json", import.meta.url)),
+        },
+        node: {},
+      },
+      // eslint-plugin-boundaries — couches et politiques définies dans
+      // eslint-plugin-lafusee/boundaries-layering.js (source unique, partagée
+      // avec le verrou de gouvernance).
+      "boundaries/elements": layering.LAYER_ELEMENTS,
     },
     rules: {
       "lafusee/no-hardcoded-pillar-enum": "warn",
@@ -88,31 +90,15 @@ export default [
       // casse l'ordre des hooks au rendu suivant (React #310). Error dès j0.
       "react-hooks/rules-of-hooks": "error",
 
-      // Layering — strict downward imports only. Severity is "warn" until
-      // end-of-Phase-4, then escalates to "error" via the override above.
-      // v6 syntax : `{ from: { type }, allow: { to: { type: [...] } } }`
-      // (migration v5→v6 effectuée v6.18.13, cf. CHANGELOG).
-      "boundaries/dependencies": [
-        "warn",
-        {
-          default: "disallow",
-          rules: [
-            { from: { type: "domain" }, disallow: { to: { type: "*" } } },
-            { from: { type: "lib" }, allow: { to: { type: ["domain", "lib"] } } },
-            { from: { type: "governance" }, allow: { to: { type: ["domain", "lib", "governance"] } } },
-            { from: { type: "services" }, allow: { to: { type: ["domain", "lib", "governance", "services"] } } },
-            { from: { type: "trpc" }, allow: { to: { type: ["domain", "lib", "governance", "services", "trpc"] } } },
-            { from: { type: "neteru-ui" }, allow: { to: { type: ["domain", "lib", "hooks", "neteru-ui"] } } },
-            { from: { type: "components" }, allow: { to: { type: ["domain", "lib", "hooks", "components", "neteru-ui"] } } },
-            { from: { type: "hooks" }, allow: { to: { type: ["domain", "lib", "hooks"] } } },
-            {
-              from: { type: "app" },
-              allow: { to: { type: ["domain", "lib", "hooks", "components", "neteru-ui", "trpc", "styles", "app"] } },
-            },
-            { from: { type: "styles" }, disallow: { to: { type: "*" } } },
-          ],
-        },
-      ],
+      // Couches — imports strictement descendants vers domain (CLAUDE.md
+      // §Conventions). Garde active depuis que le résolveur ci-dessus résout
+      // `.ts` et l'alias `@/*` ; auparavant aucune dépendance n'était classée.
+      // Sévérité `error` : toute NOUVELLE violation casse le lint (et la CI).
+      // Les violations préexistantes sont listées une à une, avec leur motif,
+      // dans `eslint-plugin-lafusee/boundaries-allowlist.js` ; cette liste ne
+      // peut que décroître (tests/unit/governance/boundaries-layering.test.ts).
+      // Syntaxe v7 : `policies` + sélecteurs d'entité `{ element: { type } }`.
+      "boundaries/dependencies": ["error", layering.boundariesDependenciesOptions()],
     },
   },
   {

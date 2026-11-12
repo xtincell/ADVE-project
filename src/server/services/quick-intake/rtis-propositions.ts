@@ -150,7 +150,7 @@ export function composeRtisPropositions(input: ComposeInput): Record<"r" | "t" |
   if (t.length < 2) {
     t.push(
       {
-        action: "Collecter 3 témoignages clients datés et signés ce mois-ci — c'est la preuve marché la moins chère qui existe.",
+        action: "Rassembler quelques témoignages clients datés et signés : une preuve marché que vous pouvez réunir vous-même.",
         because: "les pièces captées ici ne suffisent pas à documenter la validation commerciale ; des exemples datés peuvent les compléter.",
       },
       {
@@ -193,11 +193,43 @@ export function composeRtisPropositions(input: ComposeInput): Record<"r" | "t" |
       action: `Semaines 5-8 : renforcer ${PILLAR_HUMAN[w2[0]]}, juste derrière.`,
       because: `complétude structurelle ${Math.round(w2[1])}/25.`,
     },
-    {
-      action: "Semaines 9-12 : re-mesurer l'empreinte publique et comparer — le rapport suivant doit montrer la progression, pas la raconter.",
-      because: "la collecte publique est re-exécutable à tout moment ; c'est votre preuve de progression.",
-    },
+    closingStep({ canaux, hasOffer, footprintMeasured: measured.size > 0 }),
   ];
 
   return { r: pack(r.slice(0, 3)), t: pack(t.slice(0, 3)), i: pack(i.slice(0, 3)), s: pack(s) };
+}
+
+/**
+ * Dernière étape du plan : mesurer le progrès LÀ OÙ la marque vit (4.11.d).
+ *
+ * Recette guidée B : un atelier qui travaille par visites et par téléphone se
+ * voyait conseiller de « re-mesurer l'empreinte publique », un conseil hors de
+ * sa réalité. L'étape part donc des canaux DÉCLARÉS ; l'empreinte publique ne
+ * sert de repère que si elle a réellement été mesurée ; sans l'un ni l'autre,
+ * l'indicateur reste une question à trancher avec le dirigeant — jamais un
+ * rythme ou un volume imposé par défaut.
+ */
+function closingStep(input: { canaux: string | null; hasOffer: boolean; footprintMeasured: boolean }): RtisProposition {
+  const { canaux, hasOffer, footprintMeasured } = input;
+  if (canaux) {
+    const quoted = `${canaux.slice(0, 80)}${canaux.length > 80 ? "…" : ""}`;
+    return {
+      action: `Semaines 9-12 : relever ce que vos canaux déclarés (« ${quoted} ») ont produit — demandes, ventes, recommandations — et le comparer au point de départ.`,
+      because: footprintMeasured
+        ? "vos canaux inscrits au dossier, à confirmer, sont le premier lieu où mesurer la progression ; l'empreinte publique déjà mesurée peut servir de repère complémentaire."
+        : "vos canaux inscrits au dossier, à confirmer, sont le lieu où votre activité se mesure ; votre empreinte publique n'a pas été mesurée ici.",
+    };
+  }
+  if (footprintMeasured) {
+    return {
+      action: "Semaines 9-12 : re-mesurer l'empreinte publique et comparer — le rapport suivant doit montrer la progression, pas la raconter.",
+      because: "une partie de votre empreinte publique a été mesurée ici ; la même collecte peut être relancée pour comparer.",
+    };
+  }
+  return {
+    action: hasOffer
+      ? "Semaines 9-12 : un indicateur de suivi de votre offre, à choisir avec vous (ventes, demandes, devis), et son point de départ relevé."
+      : "Semaines 9-12 : un indicateur de suivi simple, à choisir avec vous, et son point de départ relevé.",
+    because: "aucun canal n'est encore inscrit au dossier et votre empreinte publique n'a pas été mesurée ici : l'indicateur ne peut pas être fixé à votre place.",
+  };
 }
